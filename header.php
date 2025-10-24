@@ -4,6 +4,7 @@
 
 echo "GROUP: $access_group";
 include_once "site_config.php";
+#include_once realpath("site_config.php");
 
 ?>
 
@@ -11,7 +12,7 @@ include_once "site_config.php";
     <title>SIMRbase</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href=<?php echo "$images_path/favicon.ico";?>>
+    <link rel="icon" href=<?php echo "/$images_path/favicon.ico";?>>
 
     <!-- compiled and minified CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">

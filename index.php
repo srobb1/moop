@@ -1,76 +1,87 @@
 <?php
-
 session_start();
 
 $logged_in = $_SESSION["logged_in"] ?? false;
 $username  = $_SESSION["username"] ?? '';
-$groups    = $_SESSION["groups"] ?? [];
+$user_access = $_SESSION["access"] ?? [];
 
 // Get visitor IP address
 $ip = $_SERVER['REMOTE_ADDR'];
 
 // Define allowed IP range
-$start_ip = ip2long("127.0.0.1");  // Start of range
-$end_ip   = ip2long("127.0.0.1"); // End of range
+$start_ip = ip2long("127.0.0.11");  // Start of range
+$end_ip   = ip2long("127.0.0.11"); // End of range
 
 // Convert user IP to number
 $user_ip = ip2long($ip);
 
-$all_cards = [
-    "bats" => [
-        "title" => "Bats",
-        "text"  => "Explore Bat Data",
-        "link"  => "bats/index.php"
-    ],
-    "corals" => [
-        "title" => "Corals",
-        "text"  => "Explore Coral Data",
-        "link"  => "corals"
-    ],
-    "others" => [
-        "title" => "Others",
-        "text"  => "More to come",
-        "link"  => ""
-    ]
-];
-
-
-// Check if user IP is in range
-if ($user_ip >= $start_ip && $user_ip <= $end_ip) {
-    #$conf_path = "/var/www/html/SIMR/SIMR_data/egdb_conf";
-    #include_once "$conf_path/easyGDB_conf.php";
-    $access_group='SIMR';
-
-    $cards = [
-        $all_cards["bats"],
-        $all_cards["corals"],
-        $all_cards["others"]
-    ];
-
-}elseif($logged_in){ 
-  echo "User: $username";
-  $groups_str = implode(", ", $groups);
-  echo " Access: $groups_str";
-  $access_group = 'Collaborator';
-
-  $cards = [];
-
-  // Only add cards for groups they belong to
-  foreach ($groups as $g) {
-      $g = strtolower($g); // normalize
-      if (isset($all_cards[$g])) {
-          $cards[] = $all_cards[$g];
-      }
-  }
-} else {
-    // Show other content
-    $access_group='Public';
-    $cards = [
-        $all_cards["bats"],
-        $all_cards["others"],
-        $all_cards["others"]
-    ];
+function get_group_data() {
+    $groups_file = '/var/www/html/moop/organisms/groups.txt';
+    $groups_data = [];
+    if (file_exists($groups_file)) {
+        $lines = file($groups_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $parts = preg_split('/\s+/', $line, 3);
+            $groups = explode(',', $parts[0]);
+            $organism = $parts[1];
+            $assembly = $parts[2];
+            $groups_data[] = [
+                'groups' => $groups,
+                'organism' => $organism,
+                'assembly' => $assembly
+            ];
+        }
+    }
+    return $groups_data;
 }
+
+$group_data = get_group_data();
+
+function get_all_cards($group_data) {
+    $cards = [];
+    foreach ($group_data as $data) {
+        foreach ($data['groups'] as $group) {
+            if (!isset($cards[$group])) {
+                $cards[$group] = [
+                    'title' => $group,
+                    'text' => "Explore $group Data",
+                    'link' => strtolower($group) . '/index.php'
+                ];
+            }
+        }
+    }
+    return $cards;
+}
+
+$all_cards = get_all_cards($group_data);
+
+$access_group = '';
+$cards_to_display = [];
+
+if ($user_ip >= $start_ip && $user_ip <= $end_ip) {
+    $access_group = 'ALL';
+    $cards_to_display = $all_cards;
+} elseif ($logged_in) {
+    $access_group = 'Collaborator';
+    if (isset($all_cards['Public'])) {
+        $cards_to_display['Public'] = $all_cards['Public'];
+    }
+    foreach ($user_access as $organism => $assemblies) {
+        if (!isset($cards_to_display[$organism])) {
+            $cards_to_display[$organism] = [
+                'title' => $organism,
+                'text'  => "Explore $organism Data",
+                'link'  => strtolower($organism) . '/index.php'
+            ];
+        }
+    }
+} else {
+    $access_group = 'Public';
+    if (isset($all_cards['Public'])) {
+        $cards_to_display['Public'] = $all_cards['Public'];
+    }
+}
+
 include_once realpath("header.php");
 ?>
 
@@ -89,7 +100,7 @@ include_once realpath("header.php");
 
   <!-- Card Grid -->
   <div class="row g-4">
-    <?php foreach ($cards as $card): ?>
+    <?php foreach ($cards_to_display as $card): ?>
       <div class="col-md-6 col-lg-4">
         <a href="<?= htmlspecialchars($card['link']) ?>" class="text-decoration-none">
           <div class="card h-100 shadow-sm border-0 rounded-3 hover-shadow">
@@ -113,4 +124,3 @@ include_once realpath("header.php");
     transition: all 0.25s ease-in-out;
   }
 </style>
-

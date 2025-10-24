@@ -29,7 +29,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Add to users array
         $users[$username] = [
             "password" => $hashedPassword,
-            "groups"   => $groups
+            "access"   => $groups
         ];
 
         // Save back to JSON
@@ -40,6 +40,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $message = "User created successfully!";
     }
 }
+
+function getOrganisms() {
+    $orgs = [];
+    $path = 'organisms';
+    if (!is_dir($path)) {
+        return $orgs;
+    }
+    $organisms = scandir($path);
+    foreach ($organisms as $organism) {
+        if ($organism[0] === '.' || !is_dir("$path/$organism")) {
+            continue;
+        }
+        $assemblies = [];
+        $assemblyPath = "$path/$organism";
+        $files = scandir($assemblyPath);
+        foreach ($files as $file) {
+            if ($file[0] === '.' || !is_dir("$assemblyPath/$file")) {
+                continue;
+            }
+            $assemblies[] = $file;
+        }
+        $orgs[$organism] = $assemblies;
+    }
+    return $orgs;
+}
+
+$organisms = getOrganisms();
 ?>
 
 <!DOCTYPE html>
@@ -75,22 +102,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <div class="mb-3">
               <label class="form-label">Groups</label>
-              <div class="form-check">
-                <input type="checkbox" name="groups[]" value="bats" id="groupBats" class="form-check-input">
-                <label class="form-check-label" for="groupBats">Bats</label>
-              </div>
-              <div class="form-check">
-                <input type="checkbox" name="groups[]" value="corals" id="groupMice" class="form-check-input">
-                <label class="form-check-label" for="groupCorals">Corals</label>
-              </div>
-              <div class="form-check">
-                <input type="checkbox" name="groups[]" value="Public" id="groupHumans" class="form-check-input">
-                <label class="form-check-label" for="groupHumans">Public</label>
-              </div>
-              <div class="form-check">
-                <input type="checkbox" name="groups[]" value="all" id="groupAll" class="form-check-input">
-                <label class="form-check-label" for="groupAll">All</label>
-              </div>
+              <?php foreach ($organisms as $organism => $assemblies): ?>
+                <div class="form-check">
+                  <input type="checkbox" id="org-<?= htmlspecialchars($organism) ?>" class="form-check-input select-all">
+                  <label class="form-check-label" for="org-<?= htmlspecialchars($organism) ?>"><b><?= htmlspecialchars($organism) ?></b></label>
+                </div>
+                <div class="ms-4">
+                  <?php foreach ($assemblies as $assembly): ?>
+                    <div class="form-check">
+                      <input type="checkbox" name="groups[<?= htmlspecialchars($organism) ?>][]" value="<?= htmlspecialchars($assembly) ?>" id="assembly-<?= htmlspecialchars($assembly) ?>" class="form-check-input assembly-checkbox" data-organism="<?= htmlspecialchars($organism) ?>">
+                      <label class="form-check-label" for="assembly-<?= htmlspecialchars($assembly) ?>"><?= htmlspecialchars($assembly) ?></label>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              <?php endforeach; ?>
             </div>
 
             <button type="submit" class="btn btn-success w-100">Create Account</button>
@@ -102,6 +127,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.select-all').forEach(function(selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            let organism = this.id.replace('org-', '');
+            document.querySelectorAll('.assembly-checkbox[data-organism="' + organism + '"]').forEach(function(assemblyCheckbox) {
+                assemblyCheckbox.checked = this.checked;
+            }, this);
+        });
+    });
+});
+</script>
+
 </body>
 </html>
-

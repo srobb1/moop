@@ -2,7 +2,7 @@
 session_start();
 
 // Path to your users.json file
-$usersFile = __DIR__ . "/users.json";
+$usersFile = "/var/www/html/users.json";
 $users = json_decode(file_get_contents($usersFile), true);
 
 $error = "";
@@ -15,7 +15,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Store login info in session
         $_SESSION["logged_in"] = true;
         $_SESSION["username"] = $username;
-        $_SESSION["groups"]   = $users[$username]["groups"];
+        $_SESSION["access"]   = $users[$username]["access"];
 
         // Redirect to index.php
         header("Location: index.php");
