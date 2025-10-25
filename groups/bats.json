@@ -1,0 +1,16 @@
+{
+  "title": "SIMRbase Bats",
+  "images": [
+    [
+      "bats.png",
+      "Image <em>Chiroptera</em> from Ernst Haeckel's <em>Kunstformen der Natur</em>, 1904"
+    ]
+  ],
+  "text_html": {
+    "p": [
+      "Bats are among the most diverse and ecologically important mammals on Earth, with over 1,400 species—nearly 20% of all mammalian species. These extraordinary creatures have evolved the unique ability to fly, with sizes ranging from the tiny 2-gram bumblebee bat, which has a wingspan of just 6 inches, to the impressive flying foxes, weighing up to 1.6 kilograms and spanning up to 5 feet 7 inches. This vast diversity in size, along with other fascinating phenotypic traits such as echolocation and specialized dietary habits, makes bats a compelling subject of study.",
+      "Bats also play a crucial role in sustaining healthy ecosystems by providing essential services like pollination, seed dispersal, and insect control. These contributions not only support the natural world but also benefit humanity by enhancing agricultural productivity and reducing the need for pesticides. Beyond their ecological importance, bats hold significant cultural value worldwide. In many Eastern cultures, bats are revered as symbols of good fortune, happiness, and longevity, while in the West, they are often associated with mystery and the supernatural. Understanding these diverse cultural perspectives enriches our appreciation of bats and underscores their multifaceted significance.",
+      "By examining their genomes, we can gain deep insights into the genetic basis of  these adaptations and the evolutionary processes that have driven their success  across various environments. This genome browser offers easy and intuitive access  to all 50 publicly available bat genomes, serving as a valuable resource for  researchers, students, and enthusiasts alike. Whether you are a seasoned scientist  or a curious learner, this tool empowers you to explore the genetic blueprints  that underlie the remarkable diversity and adaptations of bats. Explore the realm  of bat genomics and discover the genetic insights that make these creatures so  vital to our ecosystems and cultures."
+    ]
+  }
+}
