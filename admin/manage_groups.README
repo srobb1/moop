@@ -1,0 +1,40 @@
+Organism data is organized in the organisms directory. Each organism is represented by its genus_species. each genus_species can have one or more genome assembly directories like GCA_011751065.1. 
+
+/moop/organisms
+├── Anoura_caudifer
+│   ├── Anoura_caudifer.genes.sqlite
+│   ├── GCA_004027475.1_AnoCau_v1_BIUU_genomic
+│   │   ├── cds.nt.fa
+│   │   ├── protein.aa.fa
+│   │   └── transcript.nt.fa
+│   ├── assembly_v1
+│   ├── assembly_v2
+│   └── genes.sqlite
+├── Lasiurus_cinereus
+│   ├── GCA_011751065.1
+│   │   ├── cds.nt.fa
+│   │   ├── protein.aa.fa
+│   │   └── transcript.nt.fa
+│   ├── Lasiurus_cinereus.genes.sqlite
+│   └── assembly_v1
+├── Montipora_capitata
+│   ├── HIv3
+│   │   ├── cds.nt.fa
+│   │   └── protein.aa.fa
+│   └── Montipora_capitata.genes.sqlite
+├── README.md
+├── groups.json
+
+
+Groups are annotations or metadata tags on indvidual assemblies of an organism.
+These groups will be used for displaying organisms together on one page on the site as well as being used to limit database queries
+
+I want to manage the annotations of all the actual present organism data. I want the manage group script to 
+1. read the organism directory to retrieve the actual data present
+2. read the /moop/organisms/groups.json file to check to see if any new organisms or assemblies are present in the file structure.
+3. identify any organism and/or assemblies that are in the json but not in the file sturcture. These should be removed from the json. the json should alway represent the data files present in the file structure
+4. an interactive interface should list each organism and assembly with any groups annotated in the json file. 
+5. it should also list organisms and/or assemblies that are present in the file structure but not in the json
+6. an admin user should be able to edit/update any group metadata. 
+7. if group metadata has been added or updated the json file should be changed to reflect the changes. This means new groups should be added and any removed groups should be removed.
+8. group tags should be presented in someway to make it easy for a user to select existing group tags or to create a new group. if no group tags exisit a user will need to create a new custom group tag. 

@@ -22,8 +22,8 @@ $end_ip   = ip2long("127.0.0.11"); // End of range
 // Convert user IP to number
 $user_ip = ip2long($ip);
 
-function get_group_data() {
-    $groups_file = '/var/www/html/moop/organisms/groups.json';
+function get_group_data($path) {
+    $groups_file = "$path/groups.json";
     $groups_data = [];
     if (file_exists($groups_file)) {
         $groups_data = json_decode(file_get_contents($groups_file), true);
@@ -31,7 +31,7 @@ function get_group_data() {
     return $groups_data;
 }
 
-$group_data = get_group_data();
+$group_data = get_group_data($organism_data);
 
 function get_all_cards($group_data) {
     $cards = [];
@@ -87,7 +87,7 @@ include_once realpath("header.php");
 <div class="container py-5">
   <!-- Page Header -->
   <div class="text-center mb-5">
-    <h1 class="fw-bold">SIMRbase</h1>
+  <h1 class="fw-bold"><?=$siteTitle?></h1>
 <br><hr><br>
     <h2 class="fw-bold">Available Organisms</h2>
     <p class="text-muted">

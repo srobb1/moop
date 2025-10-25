@@ -11,6 +11,7 @@ $images_path = "$site/$images_dir";
 $favicon_path = "/$site/$images_dir/favicon.ico";
 $header_img = "header_img.png";
 $users_file = "/var/www/html/users.json";
+$organism_data = "$root_path/$site/organisms";
 
 //$json_files_path = "$root_path/$egdb_files_folder/json_files";
 
