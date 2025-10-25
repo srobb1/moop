@@ -5,6 +5,13 @@ $logged_in = $_SESSION["logged_in"] ?? false;
 $username  = $_SESSION["username"] ?? '';
 $user_access = $_SESSION["access"] ?? [];
 
+include_once __DIR__ . '/site_config.php';
+$usersFile = $users_file;
+$users = [];
+if (file_exists($usersFile)) {
+    $users = json_decode(file_get_contents($usersFile), true);
+}
+
 // Get visitor IP address
 $ip = $_SERVER['REMOTE_ADDR'];
 
@@ -16,21 +23,10 @@ $end_ip   = ip2long("127.0.0.11"); // End of range
 $user_ip = ip2long($ip);
 
 function get_group_data() {
-    $groups_file = '/var/www/html/moop/organisms/groups.txt';
+    $groups_file = '/var/www/html/moop/organisms/groups.json';
     $groups_data = [];
     if (file_exists($groups_file)) {
-        $lines = file($groups_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        foreach ($lines as $line) {
-            $parts = preg_split('/\s+/', $line, 3);
-            $groups = explode(',', $parts[0]);
-            $organism = $parts[1];
-            $assembly = $parts[2];
-            $groups_data[] = [
-                'groups' => $groups,
-                'organism' => $organism,
-                'assembly' => $assembly
-            ];
-        }
+        $groups_data = json_decode(file_get_contents($groups_file), true);
     }
     return $groups_data;
 }
@@ -57,10 +53,12 @@ $all_cards = get_all_cards($group_data);
 
 $access_group = '';
 $cards_to_display = [];
-
 if ($user_ip >= $start_ip && $user_ip <= $end_ip) {
     $access_group = 'ALL';
     $cards_to_display = $all_cards;
+} elseif ($logged_in && isset($users[$username]) && isset($users[$username]['role']) && $users[$username]['role'] === 'admin') {
+    $access_group = 'Admin';
+    $cards_to_display = $all_cards; // Admins can see all cards
 } elseif ($logged_in) {
     $access_group = 'Collaborator';
     if (isset($all_cards['Public'])) {

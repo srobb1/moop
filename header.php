@@ -1,15 +1,21 @@
 <!doctype html>
 <html lang="en">
 <?php
+session_start();
+include_once __DIR__ . '/site_config.php';
 
-echo "GROUP: $access_group";
-include_once "site_config.php";
+$logged_in = $_SESSION["logged_in"] ?? false;
+$username  = $_SESSION["username"] ?? "";
+
+if (!isset($access_group)) {
+    $access_group = '';
+}
 #include_once realpath("site_config.php");
 
 ?>
 
   <head>
-    <title>SIMRbase</title>
+    <title><?php echo $siteTitle; ?></title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href=<?php echo "/$images_path/favicon.ico";?>>
@@ -75,8 +81,8 @@ include_once "site_config.php";
 <?php
 if (file_exists("toolbar.php") ) {
   include_once "toolbar.php";
-}elseif (file_exists("$root_path/toolbar.php") ) {
-  include_once "$root_path/toolbar.php";
+}elseif (file_exists("$site_path/toolbar.php") ) {
+  include_once "$site_path/toolbar.php";
 }
 ?>
 

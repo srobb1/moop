@@ -1,8 +1,8 @@
 <?php
 session_start();
 
-// Path to your users.json file
-$usersFile = "/var/www/html/users.json";
+include_once __DIR__ . '/site_config.php';
+$usersFile = $users_file;
 $users = json_decode(file_get_contents($usersFile), true);
 
 $error = "";
