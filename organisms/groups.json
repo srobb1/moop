@@ -11,7 +11,9 @@
         "organism": "Anoura_caudifer",
         "assembly": "assembly_v1",
         "groups": [
-            "Bats"
+            "Bats",
+            "Cute",
+            "New"
         ]
     },
     {
@@ -33,6 +35,14 @@
         "assembly": "HIv3",
         "groups": [
             "Corals"
+        ]
+    },
+    {
+        "organism": "Anoura_caudifer",
+        "assembly": "new_assembly",
+        "groups": [
+            "New",
+            "Bats"
         ]
     }
 ]

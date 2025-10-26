@@ -146,34 +146,35 @@ include_once '../header.php';
 
 <div class="container mt-5">
   <h2>Manage Organism Assembly Groups</h2>
-  
-  <?php if (!empty($existing_groups)): ?>
-    <div class="alert alert-info">
-      <strong>Existing Group Tags:</strong> <?= implode(', ', $existing_groups) ?>
-    </div>
-  <?php else: ?>
-    <div class="alert alert-warning">
-      No group tags defined yet. You can create new ones by typing them below.
-    </div>
-  <?php endif; ?>
 
   <h3>Assemblies with Groups</h3>
-  <table class="table">
+  <table class="table table-hover">
     <thead>
       <tr>
-        <th>Organism</th>
-        <th>Assembly</th>
+        <th style="cursor: pointer;" onclick="sortTable(0)">Organism <span id="sort-icon-0">⇅</span></th>
+        <th style="cursor: pointer;" onclick="sortTable(1)">Assembly <span id="sort-icon-1">⇅</span></th>
         <th>Groups</th>
         <th>Action</th>
       </tr>
     </thead>
-    <tbody>
+    <tbody id="assemblies-tbody">
       <?php foreach ($groups_data as $index => $data): ?>
         <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>">
           <td><?= htmlspecialchars($data['organism']) ?></td>
           <td><?= htmlspecialchars($data['assembly']) ?></td>
           <td>
-            <span class="groups-display"><?= htmlspecialchars(implode(', ', $data['groups'])) ?></span>
+            <span class="groups-display">
+              <?php 
+                $sorted_groups = $data['groups'];
+                sort($sorted_groups);
+                foreach ($sorted_groups as $group): 
+              ?>
+                <span class="tag-chip selected" style="cursor: default;"><?= htmlspecialchars($group) ?></span>
+              <?php endforeach; ?>
+              <?php if (empty($data['groups'])): ?>
+                <span class="text-muted">(no groups)</span>
+              <?php endif; ?>
+            </span>
           </td>
           <td>
             <button type="button" class="btn btn-info btn-sm edit-groups">Edit</button>
@@ -188,31 +189,29 @@ include_once '../header.php';
   <?php if (!empty($unrepresented_organisms)): ?>
     <h3 class="mt-4">Assemblies Without Groups</h3>
     <p class="text-muted">Add group tags to these assemblies to include them in the system.</p>
-    <table class="table">
+    <table class="table table-hover">
       <thead>
         <tr>
-          <th>Organism</th>
-          <th>Assembly</th>
+          <th style="cursor: pointer;" onclick="sortTable(2)">Organism <span id="sort-icon-2">⇅</span></th>
+          <th style="cursor: pointer;" onclick="sortTable(3)">Assembly <span id="sort-icon-3">⇅</span></th>
           <th>Groups</th>
           <th>Action</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="new-assemblies-tbody">
         <?php foreach ($unrepresented_organisms as $organism => $assemblies): ?>
           <?php foreach ($assemblies as $assembly): ?>
-            <tr>
-              <form method="post">
-                <input type="hidden" name="organism" value="<?= htmlspecialchars($organism) ?>">
-                <input type="hidden" name="assembly" value="<?= htmlspecialchars($assembly) ?>">
-                <td><?= htmlspecialchars($organism) ?></td>
-                <td><?= htmlspecialchars($assembly) ?></td>
-                <td>
-                  <input type="text" name="groups" class="form-control form-control-sm" placeholder="Enter groups (comma-separated)" value="">
-                </td>
-                <td>
-                  <button type="submit" name="add" class="btn btn-success btn-sm">Add</button>
-                </td>
-              </form>
+            <tr data-organism="<?= htmlspecialchars($organism) ?>" data-assembly="<?= htmlspecialchars($assembly) ?>" class="new-assembly-row">
+              <td><?= htmlspecialchars($organism) ?></td>
+              <td><?= htmlspecialchars($assembly) ?></td>
+              <td>
+                <span class="groups-display-new">(no groups)</span>
+              </td>
+              <td>
+                <button type="button" class="btn btn-info btn-sm add-groups-btn">Add Groups</button>
+                <button type="button" class="btn btn-success btn-sm save-new-btn" style="display:none;">Save</button>
+                <button type="button" class="btn btn-secondary btn-sm cancel-new-btn" style="display:none;">Cancel</button>
+              </td>
             </tr>
           <?php endforeach; ?>
         <?php endforeach; ?>
@@ -222,9 +221,130 @@ include_once '../header.php';
 
 </div>
 
+<style>
+  .tag-editor {
+    display: none;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    margin-top: 5px;
+  }
+  .tag-chip {
+    display: inline-block;
+    padding: 5px 10px;
+    margin: 3px;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+  }
+  .tag-chip.available {
+    background: #e9ecef;
+    color: #495057;
+    border: 2px solid #dee2e6;
+  }
+  .tag-chip.available:hover {
+    background: #d3d6da;
+    border-color: #adb5bd;
+  }
+  .tag-chip.selected {
+    background: #007bff;
+    color: white;
+    border: 2px solid #0056b3;
+  }
+  .tag-chip.selected:hover {
+    background: #0056b3;
+  }
+  .tag-chip.display-only {
+    cursor: default;
+  }
+  .tag-chip .remove {
+    margin-left: 5px;
+    font-weight: bold;
+  }
+  .new-tag-input {
+    display: inline-block;
+    margin-top: 5px;
+  }
+  .selected-tags-display {
+    margin-bottom: 10px;
+    padding: 5px;
+    min-height: 30px;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    background: white;
+  }
+</style>
+
 <script>
+  // Sorting functionality for tables
+  const sortStates = [0, 0, 0, 0]; // 0 = unsorted, 1 = ascending, -1 = descending
+  
+  function sortTable(columnIndex) {
+    const tableId = columnIndex < 2 ? 'assemblies-tbody' : 'new-assemblies-tbody';
+    const tbody = document.getElementById(tableId);
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const colIndex = columnIndex % 2; // 0 for organism, 1 for assembly
+    
+    // Toggle sort state
+    sortStates[columnIndex] = sortStates[columnIndex] === 1 ? -1 : 1;
+    const isAscending = sortStates[columnIndex] === 1;
+    
+    // Update icons
+    document.querySelectorAll('[id^="sort-icon-"]').forEach(icon => {
+      if (icon.id === `sort-icon-${columnIndex}`) {
+        icon.textContent = isAscending ? '↑' : '↓';
+      } else if (icon.id.startsWith(`sort-icon-${Math.floor(columnIndex / 2) * 2}`)) {
+        icon.textContent = '⇅';
+      }
+    });
+    
+    // Sort rows
+    rows.sort((a, b) => {
+      const aText = a.cells[colIndex].textContent.trim().toLowerCase();
+      const bText = b.cells[colIndex].textContent.trim().toLowerCase();
+      
+      if (aText < bText) return isAscending ? -1 : 1;
+      if (aText > bText) return isAscending ? 1 : -1;
+      return 0;
+    });
+    
+    // Re-append rows in sorted order
+    rows.forEach(row => tbody.appendChild(row));
+  }
+  
   document.addEventListener('DOMContentLoaded', function() {
     const existingGroups = <?= json_encode($existing_groups) ?>;
+    const colors = [
+      '#007bff', '#28a745', '#17a2b8', '#ffc107', '#dc3545', 
+      '#6f42c1', '#fd7e14', '#20c997', '#e83e8c', '#6610f2',
+      '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688',
+      '#4caf50', '#8bc34a', '#cddc39', '#ff9800', '#ff5722',
+      '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#00897b',
+      '#5e35b1', '#1e88e5', '#43a047'
+    ];
+    
+    // Create a persistent color mapping for tags
+    const tagColorMap = {};
+    let nextColorIndex = 0;
+    
+    function getColorForTag(tag) {
+      // If we've already assigned a color to this tag, use it
+      if (tagColorMap[tag]) {
+        return tagColorMap[tag];
+      }
+      
+      // Assign the next available color
+      tagColorMap[tag] = colors[nextColorIndex % colors.length];
+      nextColorIndex++;
+      
+      return tagColorMap[tag];
+    }
+    
+    // Pre-assign colors to all existing groups to ensure consistency
+    existingGroups.forEach(tag => {
+      getColorForTag(tag);
+    });
     
     document.querySelectorAll('.edit-groups').forEach(button => {
       const row = button.closest('tr');
@@ -233,36 +353,108 @@ include_once '../header.php';
       const cancelButton = row.querySelector('.cancel-btn');
       const organism = row.getAttribute('data-organism');
       const assembly = row.getAttribute('data-assembly');
-
-      // Create a new text input for editing
-      const editText = document.createElement('input');
-      editText.type = 'text';
-      editText.name = 'groups';
-      editText.className = 'form-control form-control-sm edit-text-input';
-      editText.style.display = 'none';
-      editText.placeholder = 'Enter groups (comma-separated)';
-      groupsSpan.parentNode.insertBefore(editText, groupsSpan.nextSibling);
       
-      // Create suggestion helper
-      if (existingGroups.length > 0) {
-        const helpText = document.createElement('small');
-        helpText.className = 'form-text text-muted edit-help';
-        helpText.style.display = 'none';
-        helpText.textContent = 'Existing tags: ' + existingGroups.join(', ');
-        editText.parentNode.insertBefore(helpText, editText.nextSibling);
+      // Get current tags from chip elements
+      const chipElements = groupsSpan.querySelectorAll('.tag-chip');
+      let selectedTags = Array.from(chipElements).map(chip => chip.textContent.trim());
+      const originalTags = [...selectedTags]; // Store original state
+      
+      // Color the chips on page load
+      chipElements.forEach((chip, index) => {
+        if (selectedTags[index]) {
+          chip.style.background = getColorForTag(selectedTags[index]);
+          chip.style.borderColor = getColorForTag(selectedTags[index]);
+        }
+      });
+      
+      // Create tag editor container
+      const tagEditor = document.createElement('div');
+      tagEditor.className = 'tag-editor';
+      
+      // Create selected tags display
+      const selectedDisplay = document.createElement('div');
+      selectedDisplay.className = 'selected-tags-display';
+      selectedDisplay.innerHTML = '<small class="text-muted">Selected tags:</small>';
+      tagEditor.appendChild(selectedDisplay);
+      
+      // Create available tags section
+      const availableSection = document.createElement('div');
+      availableSection.innerHTML = '<small class="text-muted">Available tags (click to add):</small><br>';
+      tagEditor.appendChild(availableSection);
+      
+      // Create new tag input
+      const newTagDiv = document.createElement('div');
+      newTagDiv.className = 'new-tag-input';
+      newTagDiv.innerHTML = `
+        <small class="text-muted">Add new tag:</small><br>
+        <input type="text" class="form-control form-control-sm d-inline-block" style="width: 150px;" placeholder="New tag name">
+        <button type="button" class="btn btn-sm btn-primary add-new-tag">Add</button>
+      `;
+      tagEditor.appendChild(newTagDiv);
+      
+      groupsSpan.parentNode.insertBefore(tagEditor, groupsSpan.nextSibling);
+      
+      function renderTags() {
+        // Render selected tags
+        selectedDisplay.innerHTML = '<small class="text-muted">Selected tags:</small><br>';
+        selectedTags.forEach(tag => {
+          const chip = document.createElement('span');
+          chip.className = 'tag-chip selected';
+          chip.style.background = getColorForTag(tag);
+          chip.style.borderColor = getColorForTag(tag);
+          chip.innerHTML = `${tag} <span class="remove">×</span>`;
+          chip.onclick = function() {
+            selectedTags = selectedTags.filter(t => t !== tag);
+            renderTags();
+          };
+          selectedDisplay.appendChild(chip);
+        });
+        
+        // Render available tags
+        availableSection.innerHTML = '<small class="text-muted">Available tags (click to add):</small><br>';
+        existingGroups.forEach(tag => {
+          if (!selectedTags.includes(tag)) {
+            const chip = document.createElement('span');
+            chip.className = 'tag-chip available';
+            chip.textContent = tag;
+            chip.onclick = function() {
+              selectedTags.push(tag);
+              renderTags();
+            };
+            availableSection.appendChild(chip);
+          }
+        });
       }
+      
+      // Add new tag functionality
+      const newTagInput = newTagDiv.querySelector('input');
+      const addNewTagBtn = newTagDiv.querySelector('.add-new-tag');
+      
+      addNewTagBtn.addEventListener('click', function() {
+        const newTag = newTagInput.value.trim();
+        if (newTag && !selectedTags.includes(newTag)) {
+          selectedTags.push(newTag);
+          if (!existingGroups.includes(newTag)) {
+            existingGroups.push(newTag);
+          }
+          newTagInput.value = '';
+          renderTags();
+        }
+      });
+      
+      newTagInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          addNewTagBtn.click();
+        }
+      });
 
       button.addEventListener('click', function() {
         groupsSpan.style.display = 'none';
         button.style.display = 'none';
-        editText.value = groupsSpan.textContent.trim();
-        editText.style.display = 'block';
+        tagEditor.style.display = 'block';
         updateButton.style.display = 'inline-block';
         cancelButton.style.display = 'inline-block';
-        if (row.querySelector('.edit-help')) {
-          row.querySelector('.edit-help').style.display = 'block';
-        }
-        editText.focus();
+        renderTags();
       });
 
       updateButton.addEventListener('click', function() {
@@ -284,7 +476,7 @@ include_once '../header.php';
         const groupsInput = document.createElement('input');
         groupsInput.type = 'hidden';
         groupsInput.name = 'groups';
-        groupsInput.value = editText.value;
+        groupsInput.value = selectedTags.join(', ');
         
         const updateInput = document.createElement('input');
         updateInput.type = 'hidden';
@@ -303,13 +495,159 @@ include_once '../header.php';
       cancelButton.addEventListener('click', function(event) {
         event.preventDefault();
         groupsSpan.style.display = 'inline';
-        editText.style.display = 'none';
+        tagEditor.style.display = 'none';
         button.style.display = 'inline-block';
         updateButton.style.display = 'none';
         cancelButton.style.display = 'none';
-        if (row.querySelector('.edit-help')) {
-          row.querySelector('.edit-help').style.display = 'none';
+        // Reset selected tags
+        selectedTags = [...originalTags];
+      });
+    });
+    
+    // Handle "Add Groups" for new assemblies
+    document.querySelectorAll('.add-groups-btn').forEach(button => {
+      const row = button.closest('tr');
+      const groupsSpan = row.querySelector('.groups-display-new');
+      const saveButton = row.querySelector('.save-new-btn');
+      const cancelButton = row.querySelector('.cancel-new-btn');
+      const organism = row.getAttribute('data-organism');
+      const assembly = row.getAttribute('data-assembly');
+      
+      let selectedTags = [];
+      
+      // Create tag editor container
+      const tagEditor = document.createElement('div');
+      tagEditor.className = 'tag-editor';
+      
+      // Create selected tags display
+      const selectedDisplay = document.createElement('div');
+      selectedDisplay.className = 'selected-tags-display';
+      selectedDisplay.innerHTML = '<small class="text-muted">Selected tags:</small>';
+      tagEditor.appendChild(selectedDisplay);
+      
+      // Create available tags section
+      const availableSection = document.createElement('div');
+      availableSection.innerHTML = '<small class="text-muted">Available tags (click to add):</small><br>';
+      tagEditor.appendChild(availableSection);
+      
+      // Create new tag input
+      const newTagDiv = document.createElement('div');
+      newTagDiv.className = 'new-tag-input';
+      newTagDiv.innerHTML = `
+        <small class="text-muted">Add new tag:</small><br>
+        <input type="text" class="form-control form-control-sm d-inline-block" style="width: 150px;" placeholder="New tag name">
+        <button type="button" class="btn btn-sm btn-primary add-new-tag-new">Add</button>
+      `;
+      tagEditor.appendChild(newTagDiv);
+      
+      groupsSpan.parentNode.insertBefore(tagEditor, groupsSpan.nextSibling);
+      
+      function renderTags() {
+        // Render selected tags
+        selectedDisplay.innerHTML = '<small class="text-muted">Selected tags:</small><br>';
+        selectedTags.forEach(tag => {
+          const chip = document.createElement('span');
+          chip.className = 'tag-chip selected';
+          chip.style.background = getColorForTag(tag);
+          chip.style.borderColor = getColorForTag(tag);
+          chip.innerHTML = `${tag} <span class="remove">×</span>`;
+          chip.onclick = function() {
+            selectedTags = selectedTags.filter(t => t !== tag);
+            renderTags();
+          };
+          selectedDisplay.appendChild(chip);
+        });
+        
+        // Render available tags
+        availableSection.innerHTML = '<small class="text-muted">Available tags (click to add):</small><br>';
+        existingGroups.forEach(tag => {
+          if (!selectedTags.includes(tag)) {
+            const chip = document.createElement('span');
+            chip.className = 'tag-chip available';
+            chip.textContent = tag;
+            chip.onclick = function() {
+              selectedTags.push(tag);
+              renderTags();
+            };
+            availableSection.appendChild(chip);
+          }
+        });
+      }
+      
+      // Add new tag functionality
+      const newTagInput = newTagDiv.querySelector('input');
+      const addNewTagBtn = newTagDiv.querySelector('.add-new-tag-new');
+      
+      addNewTagBtn.addEventListener('click', function() {
+        const newTag = newTagInput.value.trim();
+        if (newTag && !selectedTags.includes(newTag)) {
+          selectedTags.push(newTag);
+          if (!existingGroups.includes(newTag)) {
+            existingGroups.push(newTag);
+          }
+          newTagInput.value = '';
+          renderTags();
         }
+      });
+      
+      newTagInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          addNewTagBtn.click();
+        }
+      });
+      
+      button.addEventListener('click', function() {
+        groupsSpan.style.display = 'none';
+        button.style.display = 'none';
+        tagEditor.style.display = 'block';
+        saveButton.style.display = 'inline-block';
+        cancelButton.style.display = 'inline-block';
+        renderTags();
+      });
+      
+      saveButton.addEventListener('click', function() {
+        // Create a form and submit
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = 'manage_groups.php';
+        
+        const orgInput = document.createElement('input');
+        orgInput.type = 'hidden';
+        orgInput.name = 'organism';
+        orgInput.value = organism;
+        
+        const asmInput = document.createElement('input');
+        asmInput.type = 'hidden';
+        asmInput.name = 'assembly';
+        asmInput.value = assembly;
+        
+        const groupsInput = document.createElement('input');
+        groupsInput.type = 'hidden';
+        groupsInput.name = 'groups';
+        groupsInput.value = selectedTags.join(', ');
+        
+        const addInput = document.createElement('input');
+        addInput.type = 'hidden';
+        addInput.name = 'add';
+        addInput.value = '1';
+        
+        form.appendChild(orgInput);
+        form.appendChild(asmInput);
+        form.appendChild(groupsInput);
+        form.appendChild(addInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+      });
+      
+      cancelButton.addEventListener('click', function(event) {
+        event.preventDefault();
+        groupsSpan.style.display = 'inline';
+        tagEditor.style.display = 'none';
+        button.style.display = 'inline-block';
+        saveButton.style.display = 'none';
+        cancelButton.style.display = 'none';
+        selectedTags = [];
       });
     });
   });
