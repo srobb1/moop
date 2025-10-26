@@ -87,24 +87,34 @@ include_once realpath("header.php");
 <div class="container py-5">
   <!-- Page Header -->
   <div class="text-center mb-5">
-  <h1 class="fw-bold"><?=$siteTitle?></h1>
-<br><hr><br>
-    <h2 class="fw-bold">Available Organisms</h2>
+    <h1 class="fw-bold mb-3"><?=$siteTitle?></h1>
+    <hr class="mx-auto" style="width: 100px; height: 3px; opacity: 1; background: linear-gradient(to right, #007bff, #0056b3);">
+    <h2 class="fw-bold mt-4 mb-3">Available Organisms</h2>
     <p class="text-muted">
-      For your IP: <span class="fw-semibold"><?= htmlspecialchars($ip) ?></span>  
-      &nbsp;|&nbsp; Group: <span class="fw-semibold"><?= htmlspecialchars($access_group) ?> </span>
+      <i class="fa fa-network-wired"></i> IP: <span class="fw-semibold"><?= htmlspecialchars($ip) ?></span>  
+      &nbsp;|&nbsp; <i class="fa fa-user-shield"></i> Access: <span class="fw-semibold"><?= htmlspecialchars($access_group) ?></span>
     </p>
   </div>
 
   <!-- Card Grid -->
-  <div class="row g-4">
+  <div class="row g-4 justify-content-center">
     <?php foreach ($cards_to_display as $card): ?>
       <div class="col-md-6 col-lg-4">
         <a href="<?= htmlspecialchars($card['link']) ?>" class="text-decoration-none">
-          <div class="card h-100 shadow-sm border-0 rounded-3 hover-shadow">
-            <div class="card-body text-center">
-              <h5 class="card-title mb-3"><?= htmlspecialchars($card['title']) ?></h5>
-              <p class="card-text text-muted"><?= htmlspecialchars($card['text']) ?></p>
+          <div class="card h-100 shadow-sm border-0 rounded-3 organism-card">
+            <div class="card-body text-center d-flex flex-column">
+              <div class="mb-3">
+                <div class="organism-icon mx-auto">
+                  <i class="fa fa-dna"></i>
+                </div>
+              </div>
+              <h5 class="card-title mb-3 fw-bold text-dark"><?= htmlspecialchars($card['title']) ?></h5>
+              <p class="card-text text-muted mb-3"><?= htmlspecialchars($card['text']) ?></p>
+              <div class="mt-auto">
+                <span class="btn btn-primary btn-sm">
+                  View Details <i class="fa fa-arrow-right"></i>
+                </span>
+              </div>
             </div>
           </div>
         </a>
@@ -113,12 +123,52 @@ include_once realpath("header.php");
   </div>
 </div>
 
-<!-- Small CSS enhancement -->
+<!-- Enhanced CSS -->
 <style>
-  /* Subtle hover effect */
-  .hover-shadow:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 0.75rem 1.25rem rgba(0,0,0,0.15);
-    transition: all 0.25s ease-in-out;
+  /* Organism card styling */
+  .organism-card {
+    transition: all 0.3s ease-in-out;
+    border: 1px solid rgba(0,0,0,0.05) !important;
+  }
+  
+  .organism-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 1rem 2rem rgba(0,0,0,0.15) !important;
+  }
+  
+  /* Icon circle */
+  .organism-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 28px;
+    transition: all 0.3s ease;
+  }
+  
+  .organism-card:hover .organism-icon {
+    transform: scale(1.1) rotate(5deg);
+  }
+  
+  /* Card text colors */
+  .organism-card .card-title {
+    color: #2c3e50;
+  }
+  
+  .organism-card:hover .card-title {
+    color: #667eea;
+  }
+  
+  /* Button styling */
+  .organism-card .btn {
+    transition: all 0.3s ease;
+  }
+  
+  .organism-card:hover .btn {
+    transform: translateX(5px);
   }
 </style>
