@@ -19,22 +19,21 @@
 
 echo '<li class="nav-item"><a class="nav-link" href="/Public/help/00_help.php">Help</a></li>';
 
+if ($logged_in && isset($users[$username]) && isset($users[$username]['role']) && $users[$username]['role'] === 'admin') {
+    echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/admin/index.php"><i class="fa fa-tools" style="font-size:14px;"></i> Admin Tools</a></li>';
+}
+
 ?>
       
     </ul>
   
-  <?php
-    echo '<form class="ml-auto form-inline" id="egdb_search_form" action="/easy_gdb/tools/search/search_output.php" method="get">
-';
-        echo '<input type="search_box" class="form-control mr-sm-2" id="search_box" name="search_keywords" placeholder="Search">
-';
-        echo '<button type="submit" class="btn btn-info"><i class="fa fa-search" style="font-size:16px;color:white"></i></button>';
-        echo '</form>';
+<?php
+//    echo '<form class="ml-auto form-inline" id="egdb_search_form" action="/easy_gdb/tools/search/search_output.php" method="get">';
+//        echo '<input type="search_box" class="form-control mr-sm-2" id="search_box" name="search_keywords" placeholder="Search">';
+//        echo '<button type="submit" class="btn btn-info"><i class="fa fa-search" style="font-size:16px;color:white"></i></button>';
+//        echo '</form>';
 
 if ($logged_in) {
-    if (isset($users[$username]) && isset($users[$username]['role']) && $users[$username]['role'] === 'admin') {
-        echo '<a id="admin_link" class="ml-auto" style="color:white; cursor:pointer; margin-right: 10px;" href="/' . $site . '/admin/index.php">Admin Tools</a>';
-    }
     echo'<a id="logout_link" class="ml-auto" style="color:white; cursor:pointer;" href="logout.php">Log Out <i class="fa fa-sign-out-alt" style="font-size:16px;color:white"></i></a>';
 } else {
     echo'<a id="login_link" class="ml-auto" style="color:white; cursor:pointer" href="login.php">Log In <i class="fa fa-sign-in-alt" style="font-size:16px;color:white"></i></a>';
