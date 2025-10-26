@@ -1,0 +1,50 @@
+[
+    {
+        "organism": "Anoura_caudifer",
+        "assembly": "GCA_004027475.1_AnoCau_v1_BIUU_genomic",
+        "groups": [
+            "Bats",
+            "Cute",
+            "Public"
+        ]
+    },
+    {
+        "organism": "Anoura_caudifer",
+        "assembly": "assembly_v1",
+        "groups": [
+            "Bats",
+            "Cute",
+            "New"
+        ]
+    },
+    {
+        "organism": "Lasiurus_cinereus",
+        "assembly": "GCA_011751065.1",
+        "groups": [
+            "Bats"
+        ]
+    },
+    {
+        "organism": "Lasiurus_cinereus",
+        "assembly": "assembly_v1",
+        "groups": [
+            "Bats"
+        ]
+    },
+    {
+        "organism": "Montipora_capitata",
+        "assembly": "HIv3",
+        "groups": [
+            "Corals",
+            "Public"
+        ]
+    },
+    {
+        "organism": "Anoura_caudifer",
+        "assembly": "new_assembly",
+        "groups": [
+            "New",
+            "Bats"
+        ]
+    }
+]

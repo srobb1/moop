@@ -1,0 +1,87 @@
+[
+    {
+        "group_name": "Bats",
+        "images": [
+            {
+                "file": "",
+                "caption": ""
+            }
+        ],
+        "html_p": [
+            {
+                "text": "",
+                "style": "",
+                "class": ""
+            }
+        ],
+        "in_use": true
+    },
+    {
+        "group_name": "Corals",
+        "images": [
+            {
+                "file": "Reef0607_0.jpg",
+                "caption": "Text and Image is sourced from <a href=\"https:\/\/en.wikipedia.org\/wiki\/Montipora_capitata\">Wikipedia<\/a>\""
+            }
+        ],
+        "html_p": [
+            {
+                "text": "<em>Montipora capitata<\/em> is an encrusting, colonial coral which develops arborescent forms as it matures. The corallites are tiny and well separated by coenosteum. Their walls and the septa are indistinct. The skeleton is porous and there are small smooth surface projections known as verrucae which give the coral its common name of rice coral. These are irregularly spaced and may be fused near the tips of branches. The colour is normally pale brown with white verrucae. [<a href=\"https:\/\/en.wikipedia.org\/wiki\/Montipora_capitata\">from wikipedia<\/a>]",
+                "style": "",
+                "class": ""
+            }
+        ],
+        "in_use": true
+    },
+    {
+        "group_name": "Cute",
+        "images": [
+            {
+                "file": "",
+                "caption": ""
+            }
+        ],
+        "html_p": [
+            {
+                "text": "",
+                "style": "",
+                "class": ""
+            }
+        ],
+        "in_use": true
+    },
+    {
+        "group_name": "New",
+        "images": [
+            {
+                "file": "",
+                "caption": ""
+            }
+        ],
+        "html_p": [
+            {
+                "text": "",
+                "style": "",
+                "class": ""
+            }
+        ],
+        "in_use": true
+    },
+    {
+        "group_name": "Public",
+        "images": [
+            {
+                "file": "",
+                "caption": ""
+            }
+        ],
+        "html_p": [
+            {
+                "text": "",
+                "style": "",
+                "class": ""
+            }
+        ],
+        "in_use": true
+    }
+]
