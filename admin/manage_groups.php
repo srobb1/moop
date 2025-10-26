@@ -175,10 +175,13 @@ include_once '../header.php';
 <body class="bg-light">
 
 <div class="container mt-5">
-  <h2>Manage Organism Assembly Groups</h2>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="fa fa-layer-group"></i> Manage Organism Assembly Groups</h2>
+    <a href="manage_group_descriptions.php" class="btn btn-secondary">Manage Group Descriptions ↗</a>
+  </div>
   
   <div class="mb-3">
-    <a href="manage_group_descriptions.php" class="btn btn-secondary">Manage Group Descriptions ↗</a>
+    <a href="index.php" class="btn btn-secondary">← Back to Admin Tools</a>
   </div>
 
   <h3>Assemblies with Groups</h3>
