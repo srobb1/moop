@@ -4,7 +4,7 @@ include_once 'admin_header.php';
 include_once __DIR__ . '/../site_config.php';
 
 $access_group = 'Admin';
-$groups_file = $organism_data . '/groups.json';
+$groups_file = $organism_data . '/organism_assembly_groups.json';
 $groups_data = [];
 if (file_exists($groups_file)) {
     $groups_data = json_decode(file_get_contents($groups_file), true);
@@ -68,6 +68,10 @@ if ($groups_data !== $cleaned_groups_data) {
 
 // Handle POST requests for updates, additions, and deletions
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $log_file = $organism_data . '/organism_assembly_groups_changes.log';
+    $timestamp = date('Y-m-d H:i:s');
+    $username = $_SESSION['username'] ?? 'unknown';
+    
     if (isset($_POST['update'])) {
         $organism = $_POST['organism'];
         $assembly = $_POST['assembly'];
@@ -79,13 +83,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $groups = array_values(array_filter(array_map('trim', explode(',', $groups_input))));
         }
 
+        // Find old groups for logging
+        $old_groups = [];
         foreach ($groups_data as &$data) {
             if ($data['organism'] === $organism && $data['assembly'] === $assembly) {
+                $old_groups = $data['groups'];
                 $data['groups'] = $groups;
                 break;
             }
         }
         unset($data);
+        
+        // Log the change
+        $log_entry = sprintf(
+            "[%s] UPDATE by %s | Organism: %s | Assembly: %s | Old groups: [%s] | New groups: [%s]\n",
+            $timestamp,
+            $username,
+            $organism,
+            $assembly,
+            implode(', ', $old_groups),
+            implode(', ', $groups)
+        );
+        file_put_contents($log_file, $log_entry, FILE_APPEND);
         
     } elseif (isset($_POST['add'])) {
         $organism = $_POST['organism'];
@@ -103,10 +122,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             'assembly' => $assembly,
             'groups' => $groups
         ];
+        
+        // Log the addition
+        $log_entry = sprintf(
+            "[%s] ADD by %s | Organism: %s | Assembly: %s | Groups: [%s]\n",
+            $timestamp,
+            $username,
+            $organism,
+            $assembly,
+            implode(', ', $groups)
+        );
+        file_put_contents($log_file, $log_entry, FILE_APPEND);
     }
 
     if (file_put_contents($groups_file, json_encode(array_values($groups_data), JSON_PRETTY_PRINT)) === false) {
-        echo "Error writing to groups.json.";
+        echo "Error writing to organism_assembly_groups.json.";
         exit;
     }
 
@@ -146,6 +176,10 @@ include_once '../header.php';
 
 <div class="container mt-5">
   <h2>Manage Organism Assembly Groups</h2>
+  
+  <div class="mb-3">
+    <a href="manage_group_descriptions.php" class="btn btn-secondary">Manage Group Descriptions ↗</a>
+  </div>
 
   <h3>Assemblies with Groups</h3>
   <table class="table table-hover">

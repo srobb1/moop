@@ -1,6 +1,6 @@
 <?php
 $groups_file = '/var/www/html/moop/organisms/groups.txt';
-$json_file = '/var/www/html/moop/organisms/groups.json';
+$json_file = '/var/www/html/moop/organisms/organism_assembly_groups.json';
 $backup_file = '/var/www/html/moop/organisms/groups.txt.bak';
 
 $groups_data = [];
@@ -21,9 +21,9 @@ if (file_exists($groups_file)) {
 
 if (copy($groups_file, $backup_file)) {
     if (file_put_contents($json_file, json_encode($groups_data, JSON_PRETTY_PRINT))) {
-        echo "Successfully converted groups.txt to groups.json.";
+        echo "Successfully converted groups.txt to organism_assembly_groups.json.";
     } else {
-        echo "Error writing to groups.json.";
+        echo "Error writing to organism_assembly_groups.json.";
     }
 } else {
     echo "Error creating backup file.";

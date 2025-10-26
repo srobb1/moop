@@ -23,7 +23,7 @@ $end_ip   = ip2long("127.0.0.11"); // End of range
 $user_ip = ip2long($ip);
 
 function get_group_data($path) {
-    $groups_file = "$path/groups.json";
+    $groups_file = "$path/organism_assembly_groups.json";
     $groups_data = [];
     if (file_exists($groups_file)) {
         $groups_data = json_decode(file_get_contents($groups_file), true);
