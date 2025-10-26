@@ -7,6 +7,7 @@ $site = "moop";
 $site_path = "$root_path/$site";
 $images_dir = "images";
 $images_path = "$site/$images_dir";
+$absolute_images_path = "$root_path/$site/$images_dir";
 #$absolute_images_path = "$site_path/$images_dir";
 $favicon_path = "/$site/$images_dir/favicon.ico";
 $header_img = "header_img.png";

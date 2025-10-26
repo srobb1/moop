@@ -185,6 +185,7 @@ include_once '../header.php';
   <h2>Manage Group Descriptions</h2>
   
   <div class="mb-3">
+    <a href="index.php" class="btn btn-secondary">← Back to Admin Tools</a>
     <a href="manage_groups.php" class="btn btn-secondary">← Back to Manage Groups</a>
   </div>
 

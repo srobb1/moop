@@ -61,23 +61,6 @@
         "in_use": true
     },
     {
-        "group_name": "New",
-        "images": [
-            {
-                "file": "",
-                "caption": ""
-            }
-        ],
-        "html_p": [
-            {
-                "text": "These are all new",
-                "style": "",
-                "class": ""
-            }
-        ],
-        "in_use": true
-    },
-    {
         "group_name": "Public",
         "images": [
             {
@@ -93,5 +76,22 @@
             }
         ],
         "in_use": true
+    },
+    {
+        "group_name": "New",
+        "images": [
+            {
+                "file": "",
+                "caption": ""
+            }
+        ],
+        "html_p": [
+            {
+                "text": "These are all new",
+                "style": "",
+                "class": ""
+            }
+        ],
+        "in_use": false
     }
 ]

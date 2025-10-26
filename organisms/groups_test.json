@@ -3,9 +3,21 @@
         "organism": "Anoura_caudifer",
         "assembly": "GCA_004027475.1_AnoCau_v1_BIUU_genomic",
         "groups": [
-            "Bats",
-            "Cute",
-            "Public"
+            "Bats"
+        ]
+    },
+    {
+        "organism": "Anoura_caudifer",
+        "assembly": "assembly_v1",
+        "groups": [
+            "Bats"
+        ]
+    },
+    {
+        "organism": "Anoura_caudifer",
+        "assembly": "new3",
+        "groups": [
+            "Bats"
         ]
     },
     {
@@ -26,8 +38,7 @@
         "organism": "Montipora_capitata",
         "assembly": "HIv3",
         "groups": [
-            "Corals",
-            "Public"
+            "Corals"
         ]
     }
 ]

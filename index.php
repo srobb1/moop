@@ -41,7 +41,7 @@ function get_all_cards($group_data) {
                 $cards[$group] = [
                     'title' => $group,
                     'text' => "Explore $group Data",
-                    'link' => strtolower($group) . '/index.php'
+                    'link' => 'tools/display/groups_display.php?group=' . urlencode($group)
                 ];
             }
         }
@@ -66,10 +66,18 @@ if ($user_ip >= $start_ip && $user_ip <= $end_ip) {
     }
     foreach ($user_access as $organism => $assemblies) {
         if (!isset($cards_to_display[$organism])) {
+            // Format organism name: split on underscores, capitalize first word, lowercase rest, italicize
+            $parts = explode('_', $organism);
+            $formatted_name = ucfirst(strtolower($parts[0]));
+            for ($i = 1; $i < count($parts); $i++) {
+                $formatted_name .= ' ' . strtolower($parts[$i]);
+            }
+            $formatted_name = '<i>' . $formatted_name . '</i>';
+            
             $cards_to_display[$organism] = [
-                'title' => $organism,
-                'text'  => "Explore $organism Data",
-                'link'  => strtolower($organism) . '/index.php'
+                'title' => $formatted_name,
+                'text'  => "Explore " . $formatted_name . " Data",
+                'link'  => 'tools/display/organism_display.php?organism=' . urlencode($organism)
             ];
         }
     }
@@ -108,8 +116,8 @@ include_once realpath("header.php");
                   <i class="fa fa-dna"></i>
                 </div>
               </div>
-              <h5 class="card-title mb-3 fw-bold text-dark"><?= htmlspecialchars($card['title']) ?></h5>
-              <p class="card-text text-muted mb-3"><?= htmlspecialchars($card['text']) ?></p>
+              <h5 class="card-title mb-3 fw-bold text-dark"><?= $card['title'] ?></h5>
+              <p class="card-text text-muted mb-3"><?= $card['text'] ?></p>
               <div class="mt-auto">
                 <span class="btn btn-primary btn-sm">
                   View Details <i class="fa fa-arrow-right"></i>

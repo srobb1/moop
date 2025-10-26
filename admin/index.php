@@ -37,6 +37,16 @@ include_once '../header.php';
         </div>
       </div>
     </div>
+    
+    <div class="col-md-6 mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fa fa-file-alt"></i> Manage Group Descriptions</h5>
+          <p class="card-text">Edit and manage descriptions for organism assembly groups.</p>
+          <a href="manage_group_descriptions.php" class="btn btn-primary">Go to Group Descriptions</a>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
