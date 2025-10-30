@@ -13,6 +13,7 @@ $favicon_path = "/$site/$images_dir/favicon.ico";
 $header_img = "header_img.png";
 $users_file = "/var/www/html/users.json";
 $organism_data = "$root_path/$site/organisms";
+$admin_email = "admin@example.com"; // Contact email for access issues
 
 //$json_files_path = "$root_path/$egdb_files_folder/json_files";
 

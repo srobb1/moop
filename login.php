@@ -16,6 +16,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $_SESSION["logged_in"] = true;
         $_SESSION["username"] = $username;
         $_SESSION["access"]   = $users[$username]["access"];
+        // Set access level based on role
+        if (isset($users[$username]["role"]) && $users[$username]["role"] === 'admin') {
+            $_SESSION["access_level"] = 'Admin';
+        } else {
+            $_SESSION["access_level"] = 'Collaborator';
+        }
 
         // Redirect to index.php
         header("Location: index.php");

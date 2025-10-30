@@ -1,26 +1,14 @@
 <?php
-session_start();
+include_once __DIR__ . '/access_control.php';
 
-$logged_in = $_SESSION["logged_in"] ?? false;
-$username  = $_SESSION["username"] ?? '';
-$user_access = $_SESSION["access"] ?? [];
-
-include_once __DIR__ . '/site_config.php';
 $usersFile = $users_file;
 $users = [];
 if (file_exists($usersFile)) {
     $users = json_decode(file_get_contents($usersFile), true);
 }
 
-// Get visitor IP address
-$ip = $_SERVER['REMOTE_ADDR'];
-
-// Define allowed IP range
-$start_ip = ip2long("127.0.0.11");  // Start of range
-$end_ip   = ip2long("127.0.0.11"); // End of range
-
-// Convert user IP to number
-$user_ip = ip2long($ip);
+// Get visitor IP for display purposes only
+$ip = $visitor_ip;
 
 function get_group_data($path) {
     $groups_file = "$path/organism_assembly_groups.json";
@@ -51,16 +39,12 @@ function get_all_cards($group_data) {
 
 $all_cards = get_all_cards($group_data);
 
-$access_group = '';
+// Determine cards to display based on access_level (access_group is set by access_control.php)
 $cards_to_display = [];
-if ($user_ip >= $start_ip && $user_ip <= $end_ip) {
-    $access_group = 'ALL';
+
+if ($access_level === 'ALL' || $access_level === 'Admin') {
     $cards_to_display = $all_cards;
-} elseif ($logged_in && isset($users[$username]) && isset($users[$username]['role']) && $users[$username]['role'] === 'admin') {
-    $access_group = 'Admin';
-    $cards_to_display = $all_cards; // Admins can see all cards
 } elseif ($logged_in) {
-    $access_group = 'Collaborator';
     if (isset($all_cards['Public'])) {
         $cards_to_display['Public'] = $all_cards['Public'];
     }
@@ -82,7 +66,6 @@ if ($user_ip >= $start_ip && $user_ip <= $end_ip) {
         }
     }
 } else {
-    $access_group = 'Public';
     if (isset($all_cards['Public'])) {
         $cards_to_display['Public'] = $all_cards['Public'];
     }

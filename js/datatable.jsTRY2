@@ -1,0 +1,157 @@
+function datatable(table_id, select_id) {
+  if (!$.fn.DataTable.isDataTable(table_id)) {
+
+    // Add Select column header + checkboxes
+    $(table_id + ' thead tr').prepend('<th>Select</th>');
+    $(table_id + ' tbody tr').each(function () {
+      $(this).prepend('<td><input type="checkbox" class="row-select"></td>');
+    });
+
+    // Clone header row for search inputs
+    $(table_id + ' thead tr').clone(true).appendTo(table_id + ' thead');
+    $(table_id + ' thead tr:eq(0) th').each(function (i) {
+      var title = $(this).text();
+      if (title !== "Select") {
+        $(this).html(
+          '<input style="text-align:center; border: solid 1px #808080; border-radius: 4px; width: calc(' +
+            title.length +
+            'ch + 80px);" type="text" placeholder="Search ' + title + '" />'
+        );
+
+        $('input', this).on('keyup change', function () {
+          if (table.column(i).search() !== this.value) {
+            var colIndex = table.colReorder.transpose(i);
+            table.column(colIndex).search(this.value).draw();
+          }
+        });
+      } else {
+        $(this).html(
+          '<button style="width:110px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0;" class="btn btn_select_all" id="toggle-select-btn' +
+            select_id +
+            '"><span">Select All</span></button>'
+        );
+      }
+    });
+
+    // Initialize DataTable
+    var table = $(table_id).DataTable({
+      dom: 'Bfrtlpi',
+      oLanguage: { sSearch: "Filter by:" },
+      pageLength: 25,
+      stateSave: true, // persist filters/search/etc
+      buttons: [
+        { extend: 'copy', exportOptions: { rows: exportSelectedRows }, action: exportAction('copyHtml5') },
+        { extend: 'csv', exportOptions: { rows: exportSelectedRows }, action: exportAction('csvHtml5') },
+        { extend: 'excel', exportOptions: { rows: exportSelectedRows }, action: exportAction('excelHtml5') },
+        { text: 'FASTA', action: fastaExportAction },
+        { extend: 'pdf', orientation: 'landscape', pageSize: 'LEGAL', exportOptions: { rows: exportSelectedRows }, action: exportAction('pdfHtml5') },
+        { extend: 'print', exportOptions: { rows: exportSelectedRows }, action: exportAction('print') },
+        'colvis'
+      ],
+      sScrollX: "100%",
+      sScrollXInner: "110%",
+      bScrollCollapse: true,
+      colReorder: true,
+      retrieve: true,
+      drawCallback: function () {
+        $(".dataTables_filter input").css("border-radius", "5px");
+        $("table.dataTable tbody tr").hover(
+          function () { $(this).css("background-color", "#d1d1d1"); },
+          function () { $(this).css("background-color", ""); }
+        );
+        restoreSelections(); // reapply persisted checkboxes
+      }
+    });
+
+    // --- Selection persistence store ---
+    var selectedRows = new Set(); // track selected Feature IDs
+
+    // Get Feature ID column index
+    var featureIdColumnIndex = table.columns().indexes().toArray().find(function (index) {
+      return table.column(index).header().innerText.trim() === "Feature ID";
+    });
+
+    // FASTA button hide if no Feature ID column
+    if (featureIdColumnIndex == -1) {
+      $('.dt-buttons button:contains("FASTA")').hide();
+    }
+
+    // Checkbox select events
+    $(table_id + ' tbody').on('click', 'input.row-select', function () {
+      var row = table.row($(this).closest('tr'));
+      var rowData = row.data();
+      var rowId = featureIdColumnIndex >= 0 ? rowData[featureIdColumnIndex] : row.index();
+
+      if (this.checked) {
+        selectedRows.add(rowId);
+      } else {
+        selectedRows.delete(rowId);
+      }
+      updateToggleButton();
+      toggleExportButtons();
+    });
+
+    // Select All / Unselect All
+    $('#toggle-select-btn' + select_id).on('click', function () {
+      var allChecked = $(table_id + ' tbody input.row-select:checked').length > 0;
+      table.rows({ search: 'applied' }).every(function () {
+        var rowData = this.data();
+        var rowId = featureIdColumnIndex >= 0 ? rowData[featureIdColumnIndex] : this.index();
+        if (allChecked) {
+          selectedRows.delete(rowId);
+        } else {
+          selectedRows.add(rowId);
+        }
+      });
+      restoreSelections();
+      updateToggleButton();
+      toggleExportButtons();
+    });
+
+    // --- Helpers ---
+    function restoreSelections() {
+      table.rows().every(function () {
+        var rowData = this.data();
+        var rowId = featureIdColumnIndex >= 0 ? rowData[featureIdColumnIndex] : this.index();
+        var checked = selectedRows.has(rowId);
+        $(this.node()).find('input.row-select').prop('checked', checked);
+        $(this.node()).toggleClass('selected', checked);
+      });
+    }
+
+    function updateToggleButton() {
+      var selectedCount = selectedRows.size;
+      $('#toggle-select-btn' + select_id).text(selectedCount > 0 ? 'Unselect All' : 'Select All');
+    }
+
+    function toggleExportButtons() {
+      var selectedCount = selectedRows.size;
+      $('.dt-button').prop('disabled', selectedCount === 0);
+    }
+
+    function exportSelectedRows(idx, data, node) {
+      var rowId = featureIdColumnIndex >= 0 ? data[featureIdColumnIndex] : idx;
+      return selectedRows.has(rowId);
+    }
+
+    function exportAction(type) {
+      return function (e, dt, button, config) {
+        if (selectedRows.size > 0) {
+          $.fn.dataTable.ext.buttons[type].action.call(this, e, dt, button, config);
+        } else {
+          alert("Please select rows first.");
+        }
+      };
+    }
+
+    function fastaExportAction(e, dt, button, config) {
+      var featureIds = Array.from(selectedRows);
+      if (featureIds.length === 0) {
+        alert("Please select at least one row.");
+        return;
+      }
+      var url = "/easy_gdb/tools/fasta_download.php?uniquenames=" + encodeURIComponent(featureIds.join(","));
+      window.open(url, "_blank");
+    }
+  }
+}

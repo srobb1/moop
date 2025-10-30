@@ -259,6 +259,7 @@ function buildLikeConditions($columns, $search, $quoted = false) {
 
     // If quoted, treat the search as a single phrase
     if ($quoted) {
+        $searchConditions = [];
         foreach ($columns as $col) {
             $searchConditions[] = "$col LIKE ?";
             $params[] = "%" . $search . "%";

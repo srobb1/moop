@@ -22,9 +22,9 @@ if (!isset($access_group)) {
 
     <!-- compiled and minified CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/css/easy_gdb.css">
-    <link rel="stylesheet" href="/css/loading_datatable.css">
-    <link rel="stylesheet" href="/css/tree.css">
+    <link rel="stylesheet" href="/<?= $site ?>/css/easy_gdb.css">
+    <link rel="stylesheet" href="/<?= $site ?>/css/loading_datatable.css">
+    <link rel="stylesheet" href="/<?= $site ?>/css/tree.css">
 
 
     <?php
@@ -47,7 +47,7 @@ if (!isset($access_group)) {
     <!-- compiled JavaScript -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
-    <script src="/<?php echo $group;?>/js/download2.js"></script>
+    <script src="/<?= $site ?>/js/download2.js"></script>
 
     <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
     <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script>

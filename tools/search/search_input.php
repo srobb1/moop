@@ -33,77 +33,7 @@
     </div>
 
 
-    <!-- IS BETTER TO SET IN ANOTHER FILE -->
     <?php
-      if ($file_database) {
-        include_once realpath("$easy_gdb_path/tools/common_functions.php");
-
-        $all_datasets = get_dir_and_files($annotations_path); // call the function
-        asort($all_datasets);
-
-        $dir_counter = 0;
-        $data_counter = count($all_datasets);
-
-        foreach ($all_datasets as $annot_dataset) {
-          if (is_dir($annotations_path."/".$annot_dataset)){ // get dirs and print categories
-            $dir_counter++;
-          }
-        }
-
-        // CHECK ANNOTATION FILES
-        if ($dir_counter) {
-          echo  "<div class=\"form-group\"><span style=\"font-size:16px\">Select your annotation/s file</span>";
-
-          foreach ($all_datasets as $dirs_and_files) {
-            if (is_dir($annotations_path."/".$dirs_and_files)){ // get dirs and print categories
-              $all_dir_datasets = get_dir_and_files($annotations_path."/".$dirs_and_files); // call the function
-              $dir_name = str_replace("_"," ",$dirs_and_files);
-              echo "<div class=\"card\" style=\"margin-bottom: 5px;\">";
-              echo "<div class=\"card-body\" style=\"widht: 100%\">";
-              echo "<h4>$dir_name</h4>";
-              echo "<div class=\"row\" style=\"margin:0px\">";
-              sort($all_dir_datasets);
-
-              foreach ($all_dir_datasets as $annot_dataset) {
-                if ( !preg_match('/\.php$/i', $annot_dataset) && !is_dir($annotations_path.'/'.$dirs_and_files.'/'.$annot_dataset) &&  !preg_match('/\.json$/i', $annot_dataset) && file_exists($annotations_path.'/'.$dirs_and_files.'/'.$annot_dataset)) {
-                  $data_set_name = preg_replace('/\.[a-z]{3}$/',"",$annot_dataset);
-                  $data_set_name = str_replace("_"," ",$data_set_name);
-                  echo "<div class=\"col-sm-6 col-md-4 col-lg-4\">";
-                  echo "<label class=\"form-check-label\" style=\"cursor:pointer\">";
-                  echo "<input type=\"checkbox\" class=\"form-check-input sample_checkbox\" name=\"sample_names[]\" value=\"$annotations_path/$dirs_and_files/$annot_dataset@$data_set_name\">$data_set_name";
-                  echo "</label>";
-                  echo "<br>";
-                  echo "</div>";
-                  echo "<br>";
-                }//if preg_match
-              }//foreach all_dir
-              echo "</div>";
-              echo "</div>";
-              echo "</div>";
-            }//if is_dir
-          }// foreach dir
-        }//if dir_counter
-
-        elseif ($dir_counter === 0 && $data_counter === 1) {
-          echo "<div class=\"form-group\">";
-          echo "</div>";
-        }
-
-        else {
-          echo "<div class=\"form-group\">";
-          echo "<label for=\"search_box\" style=\"font-size:16px\">Select your annotation file</label>";
-          echo "<select class=\"form-control\" name=\"sample_names[]\">";
-          foreach ($all_datasets as $dataset) {
-            $dataset_name = preg_replace('/\.[a-z]{3}$/',"",$dataset);
-            $dataset_name = str_replace("_"," ",$dataset_name);
-            echo "<option value=\"$annotations_path/$dataset@$dataset_name\">$dataset_name</option>";
-          }
-          echo "</select>";
-          echo "</div>";
-        }
-
-      }//if file_database
-      else {
           if ($database_type == 'sqlite'){
             $db = $sqlite_db_path;
           }
@@ -128,7 +58,6 @@
 echo "</div>"; // close row
 
 
-      }
     ?>
 
     <br>
