@@ -1,0 +1,301 @@
+/* Shared Results Table Styles */
+/* Used by organism_display.php and groups_display.php */
+
+.organism-results {
+  margin-bottom: 30px;
+}
+
+.organism-thumbnail {
+  height: 40px;
+  width: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.search-progress-bar {
+  width: 100%;
+  height: 30px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.search-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: width 0.3s ease;
+}
+
+.results-table {
+  font-size: 0.9rem;
+}
+
+.results-table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f8f9fa;
+  z-index: 10;
+}
+
+.wrap-text {
+  white-space: normal !important;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 3px solid rgba(0,123,255,.3);
+  border-radius: 50%;
+  border-top-color: #007bff;
+  animation: spinner .6s linear infinite;
+}
+
+@keyframes spinner {
+  to {transform: rotate(360deg);}
+}
+
+/* DataTables Buttons styling */
+.dt-buttons {
+  margin-bottom: 10px;
+}
+
+.dt-button {
+  margin-right: 5px;
+  margin-bottom: 5px;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 5px 10px;
+}
+
+.results-table tbody tr.selected {
+  background-color: #e7f3ff !important;
+}
+
+.results-table thead tr:first-child input[type="text"] {
+  font-size: 12px;
+  padding: 6px 8px;
+  line-height: 1.2;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.results-table thead tr:first-child input[type="text"]::placeholder {
+  text-align: center;
+}
+
+.results-table thead tr:first-child th {
+  height: auto !important;
+  padding: 4px !important;
+  vertical-align: middle !important;
+}
+
+/* Fix sorting arrows - remove DataTables default sorting icons from search row */
+.results-table thead tr:first-child th.sorting::before,
+.results-table thead tr:first-child th.sorting::after,
+.results-table thead tr:first-child th.sorting_asc::before,
+.results-table thead tr:first-child th.sorting_asc::after,
+.results-table thead tr:first-child th.sorting_desc::before,
+.results-table thead tr:first-child th.sorting_desc::after {
+  display: none !important;
+}
+
+/* Remove sorting arrows from Select column (first column in second row) */
+.results-table thead tr:nth-child(2) th:first-child::before,
+.results-table thead tr:nth-child(2) th:first-child::after {
+  display: none !important;
+}
+
+.results-table thead tr:nth-child(2) th:first-child {
+  cursor: default !important;
+}
+
+/* Keep sorting arrows only on label row (second row) */
+.results-table thead tr:nth-child(2) th.sorting::before,
+.results-table thead tr:nth-child(2) th.sorting::after,
+.results-table thead tr:nth-child(2) th.sorting_asc::before,
+.results-table thead tr:nth-child(2) th.sorting_asc::after,
+.results-table thead tr:nth-child(2) th.sorting_desc::before,
+.results-table thead tr:nth-child(2) th.sorting_desc::after {
+  display: inline-block !important;
+}
+
+/* Fix spacing for DataTables sorting arrows - only in label row */
+.results-table thead tr:nth-child(2) th.sorting::before,
+.results-table thead tr:nth-child(2) th.sorting_asc::before,
+.results-table thead tr:nth-child(2) th.sorting_desc::before {
+  right: 1em !important;
+  content: "↑" !important;
+  opacity: 0.3;
+}
+
+.results-table thead tr:nth-child(2) th.sorting::after,
+.results-table thead tr:nth-child(2) th.sorting_asc::after,
+.results-table thead tr:nth-child(2) th.sorting_desc::after {
+  right: 0.5em !important;
+  content: "↓" !important;
+  opacity: 0.3;
+}
+
+.results-table thead tr:nth-child(2) th.sorting_asc::before {
+  opacity: 1 !important;
+}
+
+.results-table thead tr:nth-child(2) th.sorting_desc::after {
+  opacity: 1 !important;
+}
+
+/* Add padding to header cells to make room for arrows */
+.results-table thead tr:nth-child(2) th {
+  padding-right: 2.5em !important;
+  position: relative;
+}
+
+.btn_select_all {
+  font-size: 12px;
+  background-color: #f8f9fa;
+}
+
+.btn_select_all:hover {
+  background-color: #e9ecef;
+}
+
+/* Force header rows to display */
+.results-table thead tr {
+  display: table-row !important;
+}
+
+.results-table thead tr th {
+  display: table-cell !important;
+  font-weight: bold;
+  background-color: #f8f9fa !important;
+  border-bottom: 2px solid #dee2e6 !important;
+  padding: 8px !important;
+  color: #212529 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+/* Label row styling (second row) */
+.results-table thead tr:nth-child(2) th {
+  background-color: #e9ecef !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+}
+
+/* Search row styling (first row) */
+.results-table thead tr:first-child th {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #dee2e6 !important;
+  padding: 5px !important;
+}
+
+/* Override any DataTables CSS that might hide headers */
+table.dataTable thead {
+  display: table-header-group !important;
+}
+
+table.dataTable thead tr {
+  display: table-row !important;
+  visibility: visible !important;
+  height: auto !important;
+}
+
+table.dataTable thead th {
+  display: table-cell !important;
+  visibility: visible !important;
+  height: auto !important;
+  min-height: 30px !important;
+}
+
+/* Table scrolling and width */
+.dataTables_wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-responsive {
+  overflow-x: auto !important;
+}
+
+.results-table {
+  width: 100% !important;
+}
+
+.dataTables_scroll {
+  overflow-x: auto !important;
+}
+
+.dataTables_scrollHead {
+  overflow: visible !important;
+  width: 100% !important;
+}
+
+.dataTables_scrollHeadInner {
+  width: 100% !important;
+}
+
+.dataTables_scrollHeadInner table {
+  width: 100% !important;
+}
+
+.dataTables_scrollBody {
+  overflow-x: auto !important;
+}
+
+/* Force header visibility when scrollX is enabled */
+.dataTables_scrollHead table thead {
+  display: table-header-group !important;
+}
+
+.dataTables_scrollHead table thead tr {
+  display: table-row !important;
+}
+
+.dataTables_scrollHead table thead th {
+  display: table-cell !important;
+}
+
+/* Prevent other columns from wrapping */
+.results-table tbody td {
+  white-space: nowrap;
+}
+
+/* Allow wrapping in Description columns with width limits */
+.results-table tbody td:nth-child(6) {  /* Description column */
+  white-space: normal !important;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 200px;
+  min-width: 150px;
+}
+
+/* Annotation Description column - last column */
+.results-table tbody td:last-child {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  max-width: 400px !important;
+  min-width: 350px !important;
+  width: 400px !important;
+}
+
+/* Force width on Annotation Description column header */
+.results-table thead th:last-child {
+  min-width: 350px !important;
+  max-width: 400px !important;
+  width: 400px !important;
+}
