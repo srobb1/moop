@@ -15,27 +15,28 @@ function generateResultsTableHTML($organism_name, $is_uniquename_search = false)
     
     ob_start();
     ?>
-    <div class="table-container" style="width: 100%; overflow-x: auto; margin-top: 20px;">
-        <table id="<?php echo $table_id; ?>" class="display nowrap results-table" style="width:100%; font-size: 14px;">
-            <thead>
-                <tr>
-                    <th>Select</th>
-                    <th>Species</th>
-                    <th>Type</th>
-                    <th>Feature ID</th>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <?php if (!$is_uniquename_search): ?>
-                    <th>Annotation Source</th>
-                    <th>Annotation ID</th>
-                    <th>Annotation Description</th>
-                    <?php endif; ?>
-                </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
-    </div>
+    <table id="<?php echo $table_id; ?>" class="table table-sm table-striped table-hover results-table" style="width: 100%; max-width: none;">
+        <thead>
+            <tr>
+                <?php if (!$is_uniquename_search): ?>
+                <th data-col-name="type">Type</th>
+                <th data-col-name="feature_id">Feature ID</th>
+                <th data-col-name="name">Name</th>
+                <th data-col-name="description">Description</th>
+                <th data-col-name="annotation_source">Annotation Source</th>
+                <th data-col-name="annotation_id">Annotation ID</th>
+                <th data-col-name="annotation_description">Annotation Description</th>
+                <?php else: ?>
+                <th data-col-name="type">Type</th>
+                <th data-col-name="feature_id">Feature ID</th>
+                <th data-col-name="name">Name</th>
+                <th data-col-name="description">Description</th>
+                <?php endif; ?>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
     <?php
     return ob_get_clean();
 }
@@ -67,128 +68,127 @@ function initializeResultTable_<?php echo $safe_organism; ?>(data) {
     // Add data rows
     data.forEach(row => {
         let rowHtml = '<tr>';
-        rowHtml += '<td><input type="checkbox" class="row-select" data-row=\'' + JSON.stringify(row) + '\'></td>';
-        rowHtml += '<td>' + (row.species || '') + '</td>';
-        rowHtml += '<td>' + (row.type || '') + '</td>';
-        rowHtml += '<td><a href="/moop/tools/display/parent.php?id=' + encodeURIComponent(row.feature_uniquename) + '">' + (row.feature_uniquename || '') + '</a></td>';
-        rowHtml += '<td>' + (row.feature_name || '') + '</td>';
-        rowHtml += '<td>' + (row.feature_description || '') + '</td>';
+        rowHtml += '<td><input type="checkbox" class="row-select"></td>';
+        rowHtml += '<td data-col-name="type">' + (row.type || '') + '</td>';
+        rowHtml += '<td data-col-name="feature_id"><a href="/moop/tools/display/parent.php?organism=' + encodeURIComponent(row.species) + '&uniquename=' + encodeURIComponent(row.feature_uniquename) + '" target="_blank">' + (row.feature_uniquename || '') + '</a></td>';
+        rowHtml += '<td data-col-name="name">' + (row.feature_name || '') + '</td>';
+        rowHtml += '<td data-col-name="description">' + (row.feature_description || '') + '</td>';
         
         if (!isUniquenameSearch) {
-            rowHtml += '<td>' + (row.annotation_source || '') + '</td>';
-            rowHtml += '<td>' + (row.annotation_id || '') + '</td>';
-            rowHtml += '<td>' + (row.annotation_description || '') + '</td>';
+            rowHtml += '<td data-col-name="annotation_source">' + (row.annotation_source || '') + '</td>';
+            rowHtml += '<td data-col-name="annotation_id">' + (row.annotation_id || '') + '</td>';
+            rowHtml += '<td data-col-name="annotation_description" class="wrap-text">' + (row.annotation_description || '') + '</td>';
         }
         
         rowHtml += '</tr>';
         $(tableId + ' tbody').append(rowHtml);
     });
     
+    // Add select column header
+    $(tableId + ' thead tr').prepend('<th data-col-name="select">Select</th>');
+    
+    // Create search row with column names
+    let searchRowHtml = '<tr>';
+    searchRowHtml += '<th data-col-name="select"><button style="width:110px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0;" class="btn btn_select_all" id="toggle-select-btn<?php echo $safe_organism; ?>"><span>Select All</span></button></th>';
+    
+    const columnNames = isUniquenameSearch 
+        ? ['type', 'feature_id', 'name', 'description']
+        : ['type', 'feature_id', 'name', 'description', 'annotation_source', 'annotation_id', 'annotation_description'];
+    
+    columnNames.forEach(colName => {
+        searchRowHtml += '<th data-col-name="' + colName + '"><input style="text-align:center; border: solid 1px #808080; border-radius: 4px; width: 100%; max-width: 200px; padding: 8px; line-height: 1.2; height: auto; vertical-align: middle; display: flex; align-items: center; justify-content: center;" type="text" placeholder="Filter..." class="column-search" data-col-name="' + colName + '" /></th>';
+    });
+    searchRowHtml += '</tr>';
+    
+    $(tableId + ' thead').prepend(searchRowHtml);
+    
     // Initialize DataTable
     const table = $(tableId).DataTable({
-        dom: 'Bfrtip',
+        dom: 'Brtlpi',
+        pageLength: 25,
+        stateSave: false,
+        orderCellsTop: true,
+        stripeClasses: ['odd', 'even'],
         buttons: [
-            { 
-                extend: 'copy', 
-                text: 'Copy',
-                exportOptions: { 
-                    columns: function(idx, data, node) {
-                        return idx !== 0; // Exclude Select column
-                    }
-                }
-            },
-            { 
-                extend: 'csv', 
-                text: 'CSV',
-                exportOptions: { 
-                    columns: function(idx, data, node) {
-                        return idx !== 0; // Exclude Select column
-                    }
-                }
-            },
-            { 
-                extend: 'excel', 
-                text: 'Excel',
-                exportOptions: { 
-                    columns: function(idx, data, node) {
-                        return idx !== 0; // Exclude Select column
-                    }
-                }
-            },
-            { 
-                extend: 'pdf', 
-                text: 'PDF',
-                exportOptions: { 
-                    columns: function(idx, data, node) {
-                        return idx !== 0; // Exclude Select column
-                    }
-                }
-            },
-            { 
-                extend: 'print', 
-                text: 'Print',
-                exportOptions: { 
-                    columns: function(idx, data, node) {
-                        return idx !== 0; // Exclude Select column
-                    }
-                }
-            },
+            { extend: 'copy', text: 'Copy', exportOptions: { columns: ':visible' } },
+            { extend: 'csv', text: 'CSV', exportOptions: { columns: ':visible' } },
+            { extend: 'excel', text: 'Excel', exportOptions: { columns: ':visible' } },
+            { extend: 'pdf', text: 'PDF', exportOptions: { columns: ':visible' } },
+            { extend: 'print', text: 'Print', exportOptions: { columns: ':visible' } },
             { extend: 'colvis', text: 'Column Visibility' }
         ],
-        scrollX: true,
-        scrollY: '500px',
+        scrollX: false,
         scrollCollapse: false,
         autoWidth: false,
-        fixedHeader: false,
         columnDefs: isUniquenameSearch ? [
-            { width: "80px", targets: 0, orderable: false },  // Select - not sortable
-            { width: "150px", targets: 1, visible: false }, // Species - hidden but included in exports
-            { width: "80px", targets: 2 },  // Type
-            { width: "180px", targets: 3 }, // Feature ID
-            { width: "100px", targets: 4 }, // Name
-            { width: "200px", targets: 5 }  // Description
+            { width: "80px", targets: 0, orderable: false },
+            { width: "80px", targets: 1 },
+            { width: "180px", targets: 2 },
+            { width: "100px", targets: 3 },
+            { width: "200px", targets: 4 }
         ] : [
-            { width: "80px", targets: 0, orderable: false },  // Select - not sortable
-            { width: "150px", targets: 1, visible: false }, // Species - hidden but included in exports
-            { width: "80px", targets: 2 },  // Type
-            { width: "180px", targets: 3 }, // Feature ID
-            { width: "100px", targets: 4 }, // Name
-            { width: "200px", targets: 5 }, // Description
-            { width: "200px", targets: 6 }, // Annotation Source
-            { width: "150px", targets: 7 }, // Annotation ID
-            { width: "250px", targets: 8, className: "wrap-text" }  // Annotation Description
+            { width: "80px", targets: 0, orderable: false },
+            { width: "80px", targets: 1 },
+            { width: "180px", targets: 2 },
+            { width: "100px", targets: 3 },
+            { width: "200px", targets: 4 },
+            { width: "200px", targets: 5 },
+            { width: "150px", targets: 6 },
+            { width: "400px", targets: 7, className: "wrap-text" }
         ],
-        paging: true,
-        pageLength: 50,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        order: [[3, 'asc']], // Sort by Feature ID by default
+        colReorder: true,
+        retrieve: true,
         initComplete: function() {
             const api = this.api();
             
-            // Add filter inputs to header
-            $(tableId + ' thead tr:eq(0) th').each(function(i) {
-                if (i === 0) {
-                    // Select All button for first column
-                    $(this).html('<button style="width:110px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 5px;" class="btn btn_select_all" id="toggle-select-btn<?php echo $safe_organism; ?>"><span>Select All</span></button>');
-                } else {
-                    const title = $(this).text();
-                    $(this).html('<input type="text" placeholder="Filter..." style="width: 100%; text-align: center; border: solid 1px #808080; border-radius: 4px; padding: 5px; box-sizing: border-box;" class="column-filter" data-column="' + i + '" />');
-                }
+            // Apply styling to table
+            $(tableId).css({
+                'font-size': '13px'
             });
             
-            // Set up column filtering
-            $(tableId + ' .column-filter').on('keyup change', function() {
-                const colIdx = parseInt($(this).data('column'));
-                if (!isNaN(colIdx)) {
-                    api.column(colIdx).search(this.value).draw();
+            // Set up column filtering by column name
+            $(tableId + ' thead tr:eq(0) th').each(function(thIndex) {
+                const $th = $(this);
+                const colName = $th.data('col-name');
+                const $input = $th.find('input.column-search');
+                
+                if ($input.length && colName && colName !== 'select') {
+                    // Find the actual column index by matching data-col-name in second header row
+                    let columnIndex = -1;
+                    $(tableId + ' thead tr:eq(1) th').each(function(idx) {
+                        if ($(this).data('col-name') === colName) {
+                            columnIndex = idx;
+                            return false; // break
+                        }
+                    });
+                    
+                    if (columnIndex !== -1) {
+                        $input.on('keyup change', function() {
+                            const searchValue = this.value;
+                            if (api.column(columnIndex).search() !== searchValue) {
+                                api.column(columnIndex).search(searchValue).draw();
+                            }
+                        });
+                    }
                 }
             });
             
             // Select all functionality
-            $('#toggle-select-btn<?php echo $safe_organism; ?>').on('click', function() {
-                const allChecked = $(tableId + ' tbody .row-select:checked').length === $(tableId + ' tbody .row-select').length;
-                $(tableId + ' tbody .row-select').prop('checked', !allChecked);
-                $(this).find('span').text(allChecked ? 'Select All' : 'Deselect All');
+            $('#toggle-select-btn<?php echo $safe_organism; ?>').on('click', function(e) {
+                e.preventDefault();
+                const $btn = $(this);
+                const allRows = api.rows().nodes();
+                const checkedCount = $(allRows).find('.row-select:checked').length;
+                const totalCount = $(allRows).find('.row-select').length;
+                const allChecked = checkedCount === totalCount;
+                
+                if (allChecked) {
+                    $(allRows).find('.row-select').prop('checked', false);
+                    $btn.find('span').text('Select All');
+                } else {
+                    $(allRows).find('.row-select').prop('checked', true);
+                    $btn.find('span').text('Deselect All');
+                }
             });
         }
     });
@@ -220,13 +220,6 @@ function generateResultsSection($organism_name, $is_uniquename_search = false, $
             <a href="<?php echo htmlspecialchars($organism_link); ?>" style="font-size: 14px; margin-left: 10px;">Read more</a>
             <?php endif; ?>
         </h3>
-        
-        <div style="margin-bottom: 10px;">
-            <small style="color: #666;">
-                <strong>Download selected results:</strong> Select rows using checkboxes, then click a download button above the table (Copy, CSV, Excel, PDF, Print). 
-                Use "Column Visibility" to show/hide columns.
-            </small>
-        </div>
         
         <?php echo generateResultsTableHTML($organism_name, $is_uniquename_search); ?>
     </div>

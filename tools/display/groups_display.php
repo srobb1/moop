@@ -670,7 +670,8 @@ function displayOrganismResults(data) {
     const organism = data.organism;
     const results = data.results;
     const uniquenameSearch = results[0]?.uniquename_search;
-    const tableId = `resultsTable_${organism.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const safeOrganism = organism.replace(/[^a-zA-Z0-9]/g, '_');
+    const tableId = `resultsTable_${safeOrganism}`;
     
     // Get organism display info from first result
     const genus = results[0]?.genus || '';
@@ -684,12 +685,11 @@ function displayOrganismResults(data) {
     // Get organism image or use DNA icon fallback
     const imagePath = sitePath + '/images/';
     const imageFile = organism + '.jpg';
-    const fallbackId = 'icon-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
+    const fallbackId = 'icon-' + safeOrganism;
     const imageHtml = `<img src="${imagePath}${imageFile}" class="organism-thumbnail" onerror="this.style.display='none'; document.getElementById('${fallbackId}').style.display='inline';" onload="document.getElementById('${fallbackId}').style.display='none';" style="margin-right: 8px;">
                        <i class="fa fa-dna" id="${fallbackId}" style="margin-right: 8px; display: none;"></i>`;
     
-    const anchorId = 'results-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
-    
+    const anchorId = 'results-' + safeOrganism;
     const organismUrl = sitePath + '/tools/display/organism_display.php?organism=' + encodeURIComponent(organism);
     
     let html = `
@@ -701,22 +701,38 @@ function displayOrganismResults(data) {
                 </a>
             </h5>
             <div class="table-responsive" style="overflow-x: auto; width: 100%;">
-                <table id="${tableId}" class="table table-sm table-striped table-hover results-table" style="display: none; width: 100%; max-width: none;">
+                <table id="${tableId}" class="table table-sm table-striped table-hover results-table" style="width:100%; font-size: 14px;">
                     <thead>
                         <tr>
-                            <th>Species</th>
-                            <th>Type</th>
-                            <th>Feature ID</th>
-                            <th>Name</th>
-                            <th>Description</th>
-    `;
+                            <th></th>
+                            <th data-column-index="1"></th>
+                            <th data-column-index="2"></th>
+                            <th data-column-index="3"></th>
+                            <th data-column-index="4"></th>
+                            <th data-column-index="5"></th>`;
     
     if (!uniquenameSearch) {
         html += `
-                            <th>Annotation Source</th>
-                            <th>Annotation ID</th>
-                            <th>Annotation Description</th>
-        `;
+                            <th data-column-index="6"></th>
+                            <th data-column-index="7"></th>
+                            <th data-column-index="8"></th>`;
+    }
+    
+    html += `
+                        </tr>
+                        <tr>
+                            <th style="width: 80px;">Select</th>
+                            <th style="width: 150px;">Species</th>
+                            <th style="width: 80px;">Type</th>
+                            <th style="width: 180px;">Feature ID</th>
+                            <th style="width: 100px;">Name</th>
+                            <th style="width: 200px;">Description</th>`;
+    
+    if (!uniquenameSearch) {
+        html += `
+                            <th style="width: 200px;">Annotation Source</th>
+                            <th style="width: 150px;">Annotation ID</th>
+                            <th style="width: 400px;">Annotation Description</th>`;
     }
     
     html += `
@@ -725,22 +741,21 @@ function displayOrganismResults(data) {
                     <tbody>
     `;
     
+    // Add data rows
     results.forEach(function(row) {
-        html += `
-            <tr>
+        html += `<tr>
+                <td><input type="checkbox" class="row-select"></td>
                 <td><em>${row.genus} ${row.species}</em><br><small class="text-muted">${row.common_name}</small></td>
                 <td>${row.feature_type}</td>
                 <td><a href="${sitePath}/tools/search/parent.php?name=${encodeURIComponent(row.feature_uniquename)}" target="_blank">${row.feature_uniquename}</a></td>
                 <td>${row.feature_name}</td>
-                <td>${row.feature_description}</td>
-        `;
+                <td>${row.feature_description}</td>`;
         
         if (!uniquenameSearch) {
             html += `
                 <td>${row.annotation_source}</td>
                 <td>${row.annotation_accession}</td>
-                <td>${row.annotation_description}</td>
-            `;
+                <td>${row.annotation_description}</td>`;
         }
         
         html += `</tr>`;
@@ -749,11 +764,6 @@ function displayOrganismResults(data) {
     html += `
                     </tbody>
                 </table>
-                <div class="loader text-center my-3">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
             </div>
         </div>
     `;
@@ -761,45 +771,20 @@ function displayOrganismResults(data) {
     $('#resultsContainer').append(html);
     
     // Initialize datatable with export functionality
-    initializeResultTable(`#${tableId}`, organism);
+    initializeResultTable(`#${tableId}`, safeOrganism, uniquenameSearch);
 }
 
-function initializeResultTable(tableId, organism) {
-    const selectId = organism.replace(/[^a-zA-Z0-9]/g, '_');
-    
-    // Store original column titles before ANY modification
-    const columnTitles = [];
-    $(tableId + ' thead tr:first th').each(function() {
-        columnTitles.push($(this).text().trim());
+function initializeResultTable(tableId, selectId, isUniquenameSearch) {
+    // Populate the first row (filter row) with Select All button and filter inputs
+    $(tableId + ' thead tr:eq(0) th').each(function(i) {
+        const columnIndex = $(this).data('column-index');
+        if (i === 0) {
+            // Select All button for first column
+            $(this).html('<button style="width:110px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0;" class="btn btn_select_all" id="toggle-select-btn' + selectId + '"><span>Select All</span></button>');
+        } else if (columnIndex !== undefined) {
+            $(this).html('<input style="text-align:center; border: solid 1px #808080; border-radius: 4px; width: 100%; max-width: 200px;" type="text" placeholder="Filter..." class="column-search">');
+        }
     });
-    
-    // Determine if this is a uniquename search (fewer columns)
-    const isUniquenameSearch = columnTitles.length === 5; // Species, Type, Feature ID, Name, Description
-    const numColumns = columnTitles.length + 1; // +1 for Select column
-    
-    // Add Select column to the existing header row
-    $(tableId + ' thead tr:first').prepend('<th>Select</th>');
-    
-    // Add checkboxes to body rows
-    $(tableId + ' tbody tr').each(function () {
-        $(this).prepend('<td><input type="checkbox" class="row-select"></td>');
-    });
-    
-    // Create a NEW row for search inputs and insert it BEFORE the header row
-    let searchRowHtml = '<tr>';
-    // First column is Select All button
-    searchRowHtml += '<th><button style="width:110px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0;" class="btn btn_select_all" id="toggle-select-btn' +
-        selectId + '"><span>Select All</span></button></th>';
-    // Rest are search inputs with simplified placeholders
-    columnTitles.forEach(function(title, index) {
-        // Add data-column-index attribute (index + 1 to account for Select column)
-        const colIndex = index + 1;
-        searchRowHtml += '<th data-column-index="' + colIndex + '"><input style="text-align:center; border: solid 1px #808080; border-radius: 4px; width: 100%; max-width: 200px;" type="text" placeholder="Filter..." class="column-search" /></th>';
-    });
-    searchRowHtml += '</tr>';
-    
-    // Prepend search row to thead
-    $(tableId + ' thead').prepend(searchRowHtml);
     
     // Initialize DataTable
     const table = $(tableId).DataTable({
@@ -857,10 +842,6 @@ function initializeResultTable(tableId, organism) {
             },
             'colvis'
         ],
-        scrollX: false,
-        scrollCollapse: false,
-        autoWidth: false,
-        fixedHeader: false,
         columnDefs: isUniquenameSearch ? [
             { width: "80px", targets: 0, orderable: false },  // Select - not sortable
             { width: "150px", targets: 1, visible: false }, // Species - hidden but included in exports
@@ -881,62 +862,24 @@ function initializeResultTable(tableId, organism) {
         ],
         colReorder: true,
         retrieve: true,
+        scrollX: false,
+        scrollCollapse: false,
+        autoWidth: false,
+        fixedHeader: false,
         initComplete: function() {
-            $(tableId).show();
-            $(tableId).closest('.table-responsive').find('.loader').remove();
-            
-            // Force headers to show with proper height
-            const $scrollHead = $(tableId).closest('.dataTables_wrapper').find('.dataTables_scrollHead');
-            const $scrollHeadTable = $scrollHead.find('table');
-            
-            $scrollHead.css({
-                'display': 'block',
-                'visibility': 'visible',
-                'height': 'auto',
-                'min-height': '80px',
-                'overflow': 'visible'
-            });
-            
-            $scrollHeadTable.css({
-                'display': 'table',
-                'visibility': 'visible',
-                'height': 'auto'
-            });
-            
-            $scrollHead.find('thead').css({
-                'display': 'table-header-group',
-                'visibility': 'visible',
-                'height': 'auto'
-            });
-            
-            $scrollHead.find('thead tr').css({
-                'display': 'table-row',
-                'visibility': 'visible',
-                'height': 'auto'
-            });
-            
-            $scrollHead.find('thead th').css({
-                'display': 'table-cell',
-                'visibility': 'visible',
-                'height': 'auto',
-                'padding': '8px'
-            });
-            
             // Force remove sorting classes from Select column
             const selectHeader = $(tableId + ' thead tr:nth-child(2) th:first-child');
             selectHeader.removeClass('sorting sorting_asc sorting_desc');
-        }
-    });
-    
-    // Add search functionality to column search inputs
-    // Use data-column-index attribute set during header creation
-    $(tableId + ' thead tr:eq(0) th').each(function() {
-        const $searchInput = $(this).find('input.column-search');
-        if ($searchInput.length > 0) {
-            const columnIndex = parseInt($(this).attr('data-column-index'));
-            $searchInput.on('keyup change', function () {
-                if (table.column(columnIndex).search() !== this.value) {
-                    table.column(columnIndex).search(this.value).draw();
+            
+            // Set up column filtering
+            $(tableId + ' thead tr:eq(0) th').each(function(i) {
+                const columnIndex = $(this).data('column-index');
+                if (columnIndex !== undefined) {
+                    $('input.column-search', this).on('keyup change', function() {
+                        if (table.column(columnIndex).search() !== this.value) {
+                            table.column(columnIndex).search(this.value).draw();
+                        }
+                    });
                 }
             });
         }
