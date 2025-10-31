@@ -398,14 +398,250 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 3px solid rgba(0,0,0,.1);
+    border: 3px solid rgba(0,123,255,.3);
     border-radius: 50%;
     border-top-color: #007bff;
-    animation: spin 1s ease-in-out infinite;
+    animation: spinner .6s linear infinite;
   }
   
-  @keyframes spin {
-    to { transform: rotate(360deg); }
+  @keyframes spinner {
+    to {transform: rotate(360deg);}
+  }
+  
+  /* DataTables Buttons styling */
+  .dt-buttons {
+    margin-bottom: 10px;
+  }
+  
+  .dt-button {
+    margin-right: 5px;
+    margin-bottom: 5px;
+  }
+  
+  .dataTables_wrapper .dataTables_filter input {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 5px 10px;
+  }
+  
+  .results-table tbody tr.selected {
+    background-color: #e7f3ff !important;
+  }
+  
+  .results-table thead tr:first-child input[type="text"] {
+    font-size: 12px;
+    padding: 6px 8px;
+    line-height: 1.2;
+    height: 32px;
+    box-sizing: border-box;
+  }
+  
+  .results-table thead tr:first-child input[type="text"]::placeholder {
+    text-align: center;
+  }
+  
+  .results-table thead tr:first-child th {
+    height: auto !important;
+    padding: 4px !important;
+    vertical-align: middle !important;
+  }
+  
+  /* Fix sorting arrows - remove DataTables default sorting icons from search row */
+  .results-table thead tr:first-child th.sorting::before,
+  .results-table thead tr:first-child th.sorting::after,
+  .results-table thead tr:first-child th.sorting_asc::before,
+  .results-table thead tr:first-child th.sorting_asc::after,
+  .results-table thead tr:first-child th.sorting_desc::before,
+  .results-table thead tr:first-child th.sorting_desc::after {
+    display: none !important;
+  }
+  
+  /* Remove sorting arrows from Select column (first column in second row) */
+  .results-table thead tr:nth-child(2) th:first-child::before,
+  .results-table thead tr:nth-child(2) th:first-child::after {
+    display: none !important;
+  }
+  
+  .results-table thead tr:nth-child(2) th:first-child {
+    cursor: default !important;
+  }
+  
+  /* Keep sorting arrows only on label row (second row) */
+  .results-table thead tr:nth-child(2) th.sorting::before,
+  .results-table thead tr:nth-child(2) th.sorting::after,
+  .results-table thead tr:nth-child(2) th.sorting_asc::before,
+  .results-table thead tr:nth-child(2) th.sorting_asc::after,
+  .results-table thead tr:nth-child(2) th.sorting_desc::before,
+  .results-table thead tr:nth-child(2) th.sorting_desc::after {
+    display: inline-block !important;
+  }
+  
+  /* Fix spacing for DataTables sorting arrows - only in label row */
+  .results-table thead tr:nth-child(2) th.sorting::before,
+  .results-table thead tr:nth-child(2) th.sorting_asc::before,
+  .results-table thead tr:nth-child(2) th.sorting_desc::before {
+    right: 1em !important;
+    content: "↑" !important;
+    opacity: 0.3;
+  }
+  
+  .results-table thead tr:nth-child(2) th.sorting::after,
+  .results-table thead tr:nth-child(2) th.sorting_asc::after,
+  .results-table thead tr:nth-child(2) th.sorting_desc::after {
+    right: 0.5em !important;
+    content: "↓" !important;
+    opacity: 0.3;
+  }
+  
+  .results-table thead tr:nth-child(2) th.sorting_asc::before {
+    opacity: 1 !important;
+  }
+  
+  .results-table thead tr:nth-child(2) th.sorting_desc::after {
+    opacity: 1 !important;
+  }
+  
+  /* Add padding to header cells to make room for arrows */
+  .results-table thead tr:nth-child(2) th {
+    padding-right: 2.5em !important;
+    position: relative;
+  }
+  
+  .btn_select_all {
+    font-size: 12px;
+    background-color: #f8f9fa;
+  }
+  
+  .btn_select_all:hover {
+    background-color: #e9ecef;
+  }
+  
+  /* Force header rows to display */
+  .results-table thead tr {
+    display: table-row !important;
+  }
+  
+  .results-table thead tr th {
+    display: table-cell !important;
+    font-weight: bold;
+    background-color: #f8f9fa !important;
+    border-bottom: 2px solid #dee2e6 !important;
+    padding: 8px !important;
+    color: #212529 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+  }
+  
+  /* Label row styling (second row) */
+  .results-table thead tr:nth-child(2) th {
+    background-color: #e9ecef !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+  }
+  
+  /* Search row styling (first row) */
+  .results-table thead tr:first-child th {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    padding: 5px !important;
+  }
+  
+  /* Override any DataTables CSS that might hide headers */
+  table.dataTable thead {
+    display: table-header-group !important;
+  }
+  
+  table.dataTable thead tr {
+    display: table-row !important;
+    visibility: visible !important;
+    height: auto !important;
+  }
+  
+  table.dataTable thead th {
+    display: table-cell !important;
+    visibility: visible !important;
+    height: auto !important;
+    min-height: 30px !important;
+  }
+  
+  /* Table scrolling and width */
+  .dataTables_wrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+  
+  .table-responsive {
+    overflow-x: auto !important;
+  }
+  
+  .results-table {
+    width: 100% !important;
+  }
+  
+  .dataTables_scroll {
+    overflow-x: auto !important;
+  }
+  
+  .dataTables_scrollHead {
+    overflow: visible !important;
+    width: 100% !important;
+  }
+  
+  .dataTables_scrollHeadInner {
+    width: 100% !important;
+  }
+  
+  .dataTables_scrollHeadInner table {
+    width: 100% !important;
+  }
+  
+  .dataTables_scrollBody {
+    overflow-x: auto !important;
+  }
+  
+  /* Force header visibility when scrollX is enabled */
+  .dataTables_scrollHead table thead {
+    display: table-header-group !important;
+  }
+  
+  .dataTables_scrollHead table thead tr {
+    display: table-row !important;
+  }
+  
+  .dataTables_scrollHead table thead th {
+    display: table-cell !important;
+  }
+  
+  /* Prevent other columns from wrapping */
+  .results-table tbody td {
+    white-space: nowrap;
+  }
+  
+  /* Allow wrapping in Description columns with width limits */
+  .results-table tbody td:nth-child(6) {  /* Description column */
+    white-space: normal !important;
+    word-wrap: break-word;
+    word-break: break-word;
+    max-width: 200px;
+    min-width: 150px;
+  }
+  
+  /* Annotation Description column - last column */
+  .results-table tbody td:last-child {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    max-width: 400px !important;
+    min-width: 350px !important;
+    width: 400px !important;
+  }
+  
+  /* Force width on Annotation Description column header */
+  .results-table thead th:last-child {
+    min-width: 350px !important;
+    max-width: 400px !important;
+    width: 400px !important;
   }
 </style>
 
@@ -422,7 +658,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-<script src="/<?= $site ?>/js/datatable.js"></script>
+<script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
 
 <script>
 const sitePath = '/<?= $site ?>';
@@ -579,20 +815,38 @@ function createOrganismResultsTable(organism, results) {
                 <span class="badge bg-primary">${results.length} result${results.length !== 1 ? 's' : ''}</span>
             </h5>
             <div class="table-responsive" style="overflow-x: auto; width: 100%;">
-                <table id="${tableId.substring(1)}" class="table table-sm table-striped table-hover results-table" style="display: none; width: 100%; max-width: none;">
+                <table id="${tableId.substring(1)}" class="table table-sm table-striped table-hover results-table" style="width:100%; font-size: 14px;">
                     <thead>
                         <tr>
-                            <th>Species</th>
-                            <th>Type</th>
-                            <th>Feature ID</th>
-                            <th>Name</th>
-                            <th>Description</th>`;
+                            <th></th>
+                            <th data-column-index="1"></th>
+                            <th data-column-index="2"></th>
+                            <th data-column-index="3"></th>
+                            <th data-column-index="4"></th>
+                            <th data-column-index="5"></th>`;
     
     if (!isUniquenameSearch) {
         html += `
-                            <th>Annotation Source</th>
-                            <th>Annotation ID</th>
-                            <th>Annotation Description</th>`;
+                            <th data-column-index="6"></th>
+                            <th data-column-index="7"></th>
+                            <th data-column-index="8"></th>`;
+    }
+    
+    html += `
+                        </tr>
+                        <tr>
+                            <th style="width: 80px;">Select</th>
+                            <th style="width: 150px;">Species</th>
+                            <th style="width: 80px;">Type</th>
+                            <th style="width: 180px;">Feature ID</th>
+                            <th style="width: 100px;">Name</th>
+                            <th style="width: 200px;">Description</th>`;
+    
+    if (!isUniquenameSearch) {
+        html += `
+                            <th style="width: 200px;">Annotation Source</th>
+                            <th style="width: 150px;">Annotation ID</th>
+                            <th style="width: 400px;">Annotation Description</th>`;
     }
     
     html += `
@@ -603,7 +857,8 @@ function createOrganismResultsTable(organism, results) {
     results.forEach(result => {
         html += `
             <tr>
-                <td>${result.genus} ${result.species}</td>
+                <td><input type="checkbox" class="row-select"></td>
+                <td><em>${result.genus} ${result.species}</em><br><small class="text-muted">${result.common_name}</small></td>
                 <td>${result.feature_type}</td>
                 <td><a href="${sitePath}/tools/display/parent.php?organism=${encodeURIComponent(organism)}&uniquename=${encodeURIComponent(result.feature_uniquename)}" target="_blank">${result.feature_uniquename}</a></td>
                 <td>${result.feature_name}</td>
@@ -623,47 +878,26 @@ function createOrganismResultsTable(organism, results) {
     html += `
                     </tbody>
                 </table>
-                <div class="loader" style="text-align: center; padding: 20px;">
-                    <div class="loading-spinner"></div>
-                    <p>Initializing table...</p>
-                </div>
             </div>
         </div>
     `;
     
-    setTimeout(() => initializeResultsTable(tableId, selectId), 100);
+    setTimeout(() => initializeResultsTable(tableId, selectId, isUniquenameSearch), 100);
     
     return html;
 }
 
-function initializeResultsTable(tableId, selectId) {
-    const originalThead = $(tableId + ' thead').clone();
-    const columnTitles = [];
-    $(tableId + ' thead tr th').each(function() {
-        columnTitles.push($(this).text());
+function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
+    // Populate the first row (filter row) with Select All button and filter inputs
+    $(tableId + ' thead tr:eq(0) th').each(function(i) {
+        const columnIndex = $(this).data('column-index');
+        if (i === 0) {
+            // Select All button for first column
+            $(this).html('<button style="width:110px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0;" class="btn btn_select_all" id="toggle-select-btn' + selectId + '"><span>Select All</span></button>');
+        } else if (columnIndex !== undefined) {
+            $(this).html('<input style="text-align:center; border: solid 1px #808080; border-radius: 4px; width: 100%; max-width: 200px;" type="text" placeholder="Filter..." class="column-search">');
+        }
     });
-    
-    // Determine if this is a uniquename search (fewer columns)
-    const isUniquenameSearch = columnTitles.length === 5; // Species, Type, Feature ID, Name, Description
-    
-    // Add checkbox column to header row
-    $(tableId + ' thead tr').prepend('<th>Select</th>');
-    
-    // Add checkboxes to each row
-    $(tableId + ' tbody tr').each(function() {
-        $(this).prepend('<td><input type="checkbox" class="row-select"></td>');
-    });
-    
-    // Create search row
-    let searchRowHtml = '<tr>';
-    searchRowHtml += '<th><button style="width:110px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0;" class="btn btn_select_all" id="toggle-select-btn' + selectId + '"><span>Select All</span></button></th>';
-    columnTitles.forEach(function(title, index) {
-        const colIndex = index + 1;
-        searchRowHtml += '<th data-column-index="' + colIndex + '"><input style="text-align:center; border: solid 1px #808080; border-radius: 4px; width: 100%; max-width: 200px;" type="text" placeholder="Filter..." class="column-search" /></th>';
-    });
-    searchRowHtml += '</tr>';
-    
-    $(tableId + ' thead').prepend(searchRowHtml);
     
     // Initialize DataTable
     const table = $(tableId).DataTable({
@@ -672,12 +906,54 @@ function initializeResultsTable(tableId, selectId) {
         stateSave: false,
         orderCellsTop: false,
         buttons: [
-            { extend: 'copy', text: 'Copy', exportOptions: { columns: ':visible' } },
-            { extend: 'csv', text: 'CSV', exportOptions: { columns: ':visible' } },
-            { extend: 'excel', text: 'Excel', exportOptions: { columns: ':visible' } },
-            { extend: 'pdf', text: 'PDF', exportOptions: { columns: ':visible' } },
-            { extend: 'print', text: 'Print', exportOptions: { columns: ':visible' } },
-            { extend: 'colvis', text: 'Column Visibility' }
+            {
+                extend: 'copy',
+                exportOptions: { 
+                    rows: function (idx, data, node) {
+                        return $(node).find('input.row-select').is(':checked');
+                    },
+                    columns: ':visible'
+                }
+            },
+            {
+                extend: 'csv',
+                exportOptions: { 
+                    rows: function (idx, data, node) {
+                        return $(node).find('input.row-select').is(':checked');
+                    },
+                    columns: isUniquenameSearch ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 7, 8] // Include Species column (1) in exports
+                }
+            },
+            {
+                extend: 'excel',
+                exportOptions: { 
+                    rows: function (idx, data, node) {
+                        return $(node).find('input.row-select').is(':checked');
+                    },
+                    columns: isUniquenameSearch ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 7, 8] // Include Species column (1) in exports
+                }
+            },
+            {
+                extend: 'pdf',
+                orientation: 'landscape',
+                pageSize: 'LEGAL',
+                exportOptions: { 
+                    rows: function (idx, data, node) {
+                        return $(node).find('input.row-select').is(':checked');
+                    },
+                    columns: isUniquenameSearch ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 7, 8] // Include Species column (1) in exports
+                }
+            },
+            {
+                extend: 'print',
+                exportOptions: { 
+                    rows: function (idx, data, node) {
+                        return $(node).find('input.row-select').is(':checked');
+                    },
+                    columns: isUniquenameSearch ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 7, 8] // Include Species column (1) in exports
+                }
+            },
+            'colvis'
         ],
         scrollX: false,
         scrollCollapse: false,
@@ -704,86 +980,25 @@ function initializeResultsTable(tableId, selectId) {
         colReorder: true,
         retrieve: true,
         initComplete: function() {
-            $(tableId).show();
-            $(tableId).closest('.table-responsive').find('.loader').remove();
+            // Force remove sorting classes from Select column
+            const selectHeader = $(tableId + ' thead tr:nth-child(2) th:first-child');
+            selectHeader.removeClass('sorting sorting_asc sorting_desc');
             
-            const $scrollHead = $(tableId).closest('.dataTables_wrapper').find('.dataTables_scrollHead');
-            const $scrollHeadTable = $scrollHead.find('table');
-            
-            $scrollHead.css({
-                'display': 'block',
-                'visibility': 'visible',
-                'height': 'auto',
-                'min-height': '80px',
-                'overflow': 'visible'
-            });
-            
-            $scrollHeadTable.css({
-                'display': 'table',
-                'visibility': 'visible',
-                'height': 'auto'
-            });
-            
-            $scrollHead.find('thead').css({
-                'display': 'table-header-group',
-                'visibility': 'visible',
-                'height': 'auto'
-            });
-            
-            $scrollHead.find('thead tr').css({
-                'display': 'table-row',
-                'visibility': 'visible',
-                'height': 'auto'
-            });
-            
-            $scrollHead.find('thead th').css({
-                'display': 'table-cell',
-                'visibility': 'visible',
-                'height': 'auto',
-                'line-height': 'normal',
-                'padding': '8px'
-            });
-            
-            setTimeout(() => {
-                $scrollHead.find('thead tr:eq(0) th input').css({
-                    'height': '32px',
-                    'line-height': '1.2',
-                    'padding': '4px 8px',
-                    'font-size': '13px'
-                });
-                $scrollHead.find('thead tr:eq(0) th button').css({
-                    'height': '32px',
-                    'line-height': '1.2',
-                    'padding': '4px 8px',
-                    'font-size': '13px'
-                });
-                $scrollHead.find('thead tr:eq(0) th').css({
-                    'height': '40px',
-                    'padding': '4px'
-                });
-                $scrollHead.find('thead tr:eq(1) th').css({
-                    'height': '36px',
-                    'padding': '8px',
-                    'text-align': 'center'
-                });
-            }, 100);
-        }
-    });
-    
-    // Add column search functionality
-    $(tableId + ' thead tr:eq(0) th').each(function() {
-        const $searchInput = $(this).find('input.column-search');
-        if ($searchInput.length > 0) {
-            const columnIndex = parseInt($(this).attr('data-column-index'));
-            $searchInput.on('keyup change', function () {
-                if (table.column(columnIndex).search() !== this.value) {
-                    table.column(columnIndex).search(this.value).draw();
+            // Set up column filtering
+            $(tableId + ' thead tr:eq(0) th').each(function(i) {
+                const columnIndex = $(this).data('column-index');
+                if (columnIndex !== undefined) {
+                    $('input.column-search', this).on('keyup change', function() {
+                        if (table.column(columnIndex).search() !== this.value) {
+                            table.column(columnIndex).search(this.value).draw();
+                        }
+                    });
                 }
             });
         }
     });
     
-    // Select/Deselect all handler
+    // Select/Deselect all handler - works across ALL pages
     $('#toggle-select-btn' + selectId).on('click', function (e) {
         e.preventDefault();
         const $btn = $(this);
