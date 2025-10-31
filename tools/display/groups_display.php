@@ -393,7 +393,7 @@ function displayOrganismResults(data) {
     const results = data.results;
     
     // Add "Read More" button after organism name by wrapping the shared function
-    const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/search/parent.php');
+    const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent.php');
     
     // Insert the "Read More" button into the generated HTML
     const safeOrganism = organism.replace(/[^a-zA-Z0-9]/g, '_');

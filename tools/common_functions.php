@@ -184,7 +184,7 @@ $html .=  "<div class=\"collapse_section pointer_cursor\" data-toggle=\"collapse
 }
 function getChildren($feature_id, $dbFile) {
     $children = [];
-    $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
+    $query = "SELECT feature_id, feature_uniquename, feature_name, feature_description, feature_type, parent_feature_id 
               FROM feature WHERE parent_feature_id = ?";
     
     $results = fetchData($query, [$feature_id], $dbFile);
@@ -196,15 +196,11 @@ function getChildren($feature_id, $dbFile) {
         $children = array_merge($children, $child_descendants);
     }
 
-    # [[feature_id, feature_uniquename, feature_type, parent_feature_id], [child1], [child2], ..., [grandchild1], ...]
+    # [[feature_id, feature_uniquename, feature_name, feature_description, feature_type, parent_feature_id], [child1], [child2], ..., [grandchild1], ...]
     return $children;
 }
 
 function generateFeatureTreeHTML($feature_id, $dbFile) {
-    #$top_query = "SELECT feature_id, feature_uniquename, feature_type from feature WHERE feature_id = ?" ;
-    #$top_results = fetchData($top_query, [$feature_id], $dbFile);
-    #$top_row = array_shift($top_results);
-
     $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
               FROM feature WHERE parent_feature_id = ?";
     $results = fetchData($query, [$feature_id], $dbFile);
@@ -212,16 +208,29 @@ function generateFeatureTreeHTML($feature_id, $dbFile) {
     if (empty($results)) {
         return ''; // No children, stop recursion
     }
+    
     $html = "<ul>";
-    #$html .= "<li>{$top_row['feature_uniquename']} ({$top_row['feature_type']})";
-    #$html .= "  <ul>";
     foreach ($results as $row) {
-        $html .= "<li>{$row['feature_uniquename']} ({$row['feature_type']})";
+        $feature_type = htmlspecialchars($row['feature_type']);
+        $feature_name = htmlspecialchars($row['feature_uniquename']);
+        
+        // Color code by type
+        $badge_class = 'bg-secondary';
+        if ($feature_type == 'mRNA') {
+            $badge_class = 'bg-success';
+        } elseif ($feature_type == 'CDS') {
+            $badge_class = 'bg-info';
+        } elseif ($feature_type == 'exon') {
+            $badge_class = 'bg-warning';
+        }
+        
+        $html .= "<li>";
+        $html .= "<span class=\"text-dark\">$feature_name</span> ";
+        $html .= "<small><span class=\"badge $badge_class\" style=\"font-size: 0.7em;\">$feature_type</span></small>";
         $html .= generateFeatureTreeHTML($row['feature_id'], $dbFile); // Recursive call
         $html .= "</li>";
     }
     $html .= "</ul>";
-    #$html .= "  </li></ul>";
 
     return $html;
 }

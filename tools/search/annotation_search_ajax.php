@@ -9,7 +9,7 @@ ob_start();
 
 session_start();
 include_once __DIR__ . '/../../access_control.php';
-include_once __DIR__ . '/../common_functions.php';
+include_once __DIR__ . '/search_functions.php';
 
 // Clear any output that might have occurred
 ob_end_clean();
@@ -47,30 +47,7 @@ if (!$is_admin && !$user_has_group_access && !$organism_is_public && !$user_has_
     exit;
 }
 
-// Sanitize search input
-function sanitize_search_input($data, $quoted_search) {
-    // Remove quotes if quoted search
-    if ($quoted_search) {
-        $data = trim($data, '"');
-    }
-    
-    $data = preg_replace('/[\<\>\t\;]+/', ' ', $data);
-    $data = htmlspecialchars($data);
-    
-    if (preg_match('/\s+/', $data)) {
-        $data_array = explode(' ', $data, 99);
-        foreach ($data_array as $key => &$value) {
-            if (strlen($value) < 3 && !$quoted_search) {
-                unset($data_array[$key]);
-            }
-        }
-        $data = implode(' ', $data_array);
-    }
-    
-    $data = stripslashes($data);
-    return $data;
-}
-
+// Sanitize search input using function from search_functions.php
 $search_input = sanitize_search_input($search_keywords, $quoted_search);
 
 // Build database path

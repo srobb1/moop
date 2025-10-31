@@ -1,23 +1,92 @@
 {
-  "analysis_order": [
-    "Orthology",
-    "Orthologs",
-    "Homology",
-    "Homologs",
-    "AI Annotations",
-    "Domains",
-    "Gene Ontology",
-    "Gene Families",
-    "Mapping",
-    "Aliases",
-    "Publications"
-  ],
-  "analysis_descriptions": {
-    "AI Annotations": "AI-based protein function prediction uses computational techniques, such as machine learning and protein sequence language models to infer the biological roles of proteins from their sequences",
-    "Orthology": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs</strong>. Genes separated by gene duplication events are called paralogs.",
-    "Homology": "<strong>Homologous</strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
-    "Orthologs": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs</strong>. Genes separated by gene duplication events are called paralogs.",
-    "Homologs": "<strong>Homologous</strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs."
+  "annotation_types": {
+    "Orthology": {
+      "display_name": "Orthology",
+      "color": "primary",
+      "order": 1,
+      "description": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs</strong>. Genes separated by gene duplication events are called paralogs.",
+      "enabled": true
+    },
+    "Orthologs": {
+      "display_name": "Orthologs",
+      "color": "primary",
+      "order": 2,
+      "description": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs</strong>. Genes separated by gene duplication events are called paralogs.",
+      "enabled": true
+    },
+    "Homology": {
+      "display_name": "Homology",
+      "color": "info",
+      "order": 3,
+      "description": "<strong>Homologous</strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
+      "enabled": true
+    },
+    "Homologs": {
+      "display_name": "Homologs",
+      "color": "info",
+      "order": 4,
+      "description": "<strong>Homologous</strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
+      "enabled": true
+    },
+    "AI Annotations": {
+      "display_name": "AI Annotations",
+      "color": "purple",
+      "order": 5,
+      "description": "AI-based protein function prediction uses computational techniques, such as machine learning and protein sequence language models to infer the biological roles of proteins from their sequences",
+      "enabled": true
+    },
+    "Domains": {
+      "display_name": "Domains",
+      "color": "success",
+      "order": 6,
+      "description": "Protein domains are conserved structural and functional units that can evolve, function, and exist independently. Domain annotations identify these conserved regions using databases like InterPro, Pfam, and SMART.",
+      "enabled": true
+    },
+    "Gene Ontology": {
+      "display_name": "Gene Ontology",
+      "color": "warning",
+      "order": 7,
+      "description": "Gene Ontology (GO) provides a controlled vocabulary to describe gene products in terms of their biological processes, cellular components, and molecular functions in a species-independent manner.",
+      "enabled": true
+    },
+    "Gene Families": {
+      "display_name": "Gene Families",
+      "color": "danger",
+      "order": 8,
+      "description": "Gene families are groups of genes that share similar sequences and often similar functions, typically arising from gene duplication events. Examples include PANTHER, TreeFam, and other classification systems.",
+      "enabled": true
+    },
+    "Mapping": {
+      "display_name": "Mapping",
+      "color": "secondary",
+      "order": 9,
+      "description": "Genomic mapping information including chromosomal locations, genetic markers, and physical positions of genes.",
+      "enabled": true
+    },
+    "Aliases": {
+      "display_name": "Aliases",
+      "color": "secondary",
+      "order": 10,
+      "description": "Alternative names and identifiers for genes and gene products from various databases and nomenclature systems.",
+      "enabled": true
+    },
+    "Publications": {
+      "display_name": "Publications",
+      "color": "dark",
+      "order": 11,
+      "description": "Scientific literature and publications associated with genes, including references from PubMed and other sources.",
+      "enabled": true
+    }
+  },
+  "color_definitions": {
+    "primary": "#007bff",
+    "secondary": "#6c757d",
+    "success": "#28a745",
+    "danger": "#dc3545",
+    "warning": "#ffc107",
+    "info": "#17a2b8",
+    "purple": "#6f42c1",
+    "dark": "#343a40"
   },
   "organisms": {}
 }
