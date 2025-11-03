@@ -1,0 +1,92 @@
+{
+  "tree": {
+    "name": "Life",
+    "children": [
+      {
+        "name": "Eukaryota",
+        "children": [
+          {
+            "name": "Animalia",
+            "children": [
+              {
+                "name": "Cnidaria",
+                "children": [
+                  {
+                    "name": "Anthozoa",
+                    "children": [
+                      {
+                        "name": "Scleractinia",
+                        "children": [
+                          {
+                            "name": "Acroporidae",
+                            "children": [
+                              {
+                                "name": "Montipora",
+                                "children": [
+                                  {
+                                    "name": "Montipora capitata",
+                                    "organism": "Montipora_capitata",
+                                    "common_name": "Rice Coral"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "name": "Chordata",
+                "children": [
+                  {
+                    "name": "Mammalia",
+                    "children": [
+                      {
+                        "name": "Chiroptera",
+                        "children": [
+                          {
+                            "name": "Phyllostomidae",
+                            "children": [
+                              {
+                                "name": "Anoura",
+                                "children": [
+                                  {
+                                    "name": "Anoura caudifer",
+                                    "organism": "Anoura_caudifer",
+                                    "common_name": "Tailed Tailless Bat"
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "name": "Vespertilionidae",
+                            "children": [
+                              {
+                                "name": "Lasiurus",
+                                "children": [
+                                  {
+                                    "name": "Lasiurus cinereus",
+                                    "organism": "Lasiurus_cinereus",
+                                    "common_name": "Hoary Bat"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

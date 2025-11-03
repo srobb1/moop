@@ -1,6 +1,9 @@
 <nav class="navbar navbar-expand-md bg-dark navbar-dark sticky-top" style="padding-left:10px">
- 
+
 <?php
+    include_once __DIR__ . '/site_config.php';
+    include_once __DIR__ . '/access_control.php';
+    
     echo "<a class=\"navbar-brand\" href=\"/$site/index.php\" style=\"margin-right:5px\"><img id=\"site_logo\" src=\"$favicon_path\" alt=\"DB_Logo\" style=\"height:25px; vertical-align:text-bottom;\"></a>";
 ?>
 
@@ -19,7 +22,7 @@
 
 echo '<li class="nav-item"><a class="nav-link" href="/Public/help/00_help.php">Help</a></li>';
 
-if ($logged_in && isset($users[$username]) && isset($users[$username]['role']) && $users[$username]['role'] === 'admin') {
+if ($logged_in && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
     echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/admin/index.php"><i class="fa fa-tools" style="font-size:14px;"></i> Admin Tools</a></li>';
 }
 
