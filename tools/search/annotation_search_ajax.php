@@ -34,11 +34,6 @@ $user_has_group_access = has_access('Collaborator', $group);
 $organism_is_public = is_public_organism($organism);
 $user_has_organism_access = has_access('Collaborator', $organism);
 
-// DEBUG - remove after testing
-error_log("Session role: " . ($_SESSION['role'] ?? 'not set'));
-error_log("Is admin: " . ($is_admin ? 'yes' : 'no'));
-error_log("Organism: $organism, Group: $group");
-
 if (!$is_admin && !$user_has_group_access && !$organism_is_public && !$user_has_organism_access) {
     echo json_encode(['error' => 'Access denied', 'results' => [], 'debug' => [
         'session_role' => $_SESSION['role'] ?? 'not set',
