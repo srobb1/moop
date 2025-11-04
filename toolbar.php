@@ -30,20 +30,17 @@ if ($logged_in && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
       
     </ul>
   
-<?php
-//    echo '<form class="ml-auto form-inline" id="egdb_search_form" action="/easy_gdb/tools/search/search_output.php" method="get">';
-//        echo '<input type="search_box" class="form-control mr-sm-2" id="search_box" name="search_keywords" placeholder="Search">';
-//        echo '<button type="submit" class="btn btn-info"><i class="fa fa-search" style="font-size:16px;color:white"></i></button>';
-//        echo '</form>';
-
-if ($logged_in) {
-    echo'<a id="logout_link" class="ml-auto" style="color:white; cursor:pointer;" href="logout.php">Log Out <i class="fa fa-sign-out-alt" style="font-size:16px;color:white"></i></a>';
-} else {
-    echo'<a id="login_link" class="ml-auto" style="color:white; cursor:pointer" href="login.php">Log In <i class="fa fa-sign-in-alt" style="font-size:16px;color:white"></i></a>';
-}
-?>
-  
   </div>
+
+  <ul class="navbar-nav ml-auto">
+    <?php
+    if ($logged_in) {
+        echo'<li class="nav-item"><a id="logout_link" class="nav-link" style="color:white;" href="/' . $site . '/logout.php">Log Out <i class="fa fa-sign-out-alt" style="font-size:16px;color:white"></i></a></li>';
+    } else {
+        echo'<li class="nav-item"><a id="login_link" class="nav-link" style="color:white;" href="/' . $site . '/login.php">Log In <i class="fa fa-sign-in-alt" style="font-size:16px;color:white"></i></a></li>';
+    }
+    ?>
+  </ul>
 
 </nav>
 
