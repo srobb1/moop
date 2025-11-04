@@ -77,6 +77,16 @@ include_once '../header.php';
         </div>
       </div>
     </div>
+    
+    <div class="col-md-6 mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fa fa-exclamation-triangle"></i> Error Logs</h5>
+          <p class="card-text">View and manage application error logs for debugging and monitoring.</p>
+          <a href="error_log.php" class="btn btn-primary">View Error Logs</a>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
