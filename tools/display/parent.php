@@ -5,74 +5,33 @@ include_once realpath(__DIR__ . '/../../site_config.php');
 include_once realpath(__DIR__ . '/../common_functions.php');
 include_once __DIR__ . '/display_functions.php';
 
-// Get parameters - support both old and new parameter formats
-// Old format: ?name=GENE123
-// New format: ?organism=Organism_name&uniquename=GENE123
+// Get parameters - require new format
+// Format: ?organism=Organism_name&uniquename=GENE123
 $organism_name = $_GET['organism'] ?? '';
-$uniquename = test_input($_GET['uniquename'] ?? $_GET['name'] ?? '');
+$uniquename = test_input($_GET['uniquename'] ?? '');
 
-if (empty($uniquename)) {
-    die("Error: No feature identifier provided. Please provide a uniquename or name parameter.");
+if (empty($organism_name) || empty($uniquename)) {
+    die("Error: Missing required parameters. Please provide both 'organism' and 'uniquename' parameters.");
 }
 
 // Determine database path
 $db = null;
 $organism_info = null;
 
-if (!empty($organism_name)) {
-    // New format: organism is specified
-    $organism_json_path = "$organism_data/$organism_name/organism.json";
-    if (file_exists($organism_json_path)) {
-        $organism_info = json_decode(file_get_contents($organism_json_path), true);
-    }
-    
-    // Try organism-specific database first
-    $db_path = "$organism_data/$organism_name/$organism_name.genes.sqlite";
-    if (!file_exists($db_path)) {
-        // Fallback to genes.sqlite
-        $db_path = "$organism_data/$organism_name/genes.sqlite";
-    }
-    
-    if (file_exists($db_path)) {
-        $db = $db_path;
-    }
-} else {
-    // Old format: search for the feature across all organism databases
-    $organisms = glob("$organism_data/*", GLOB_ONLYDIR);
-    foreach ($organisms as $org_dir) {
-        $org_name = basename($org_dir);
-        $db_paths = [
-            "$org_dir/$org_name.genes.sqlite",
-            "$org_dir/genes.sqlite"
-        ];
-        
-        foreach ($db_paths as $test_db) {
-            if (file_exists($test_db)) {
-                // Check if the feature exists in this database
-                $query = "SELECT feature_uniquename FROM feature WHERE feature_uniquename = ? LIMIT 1";
-                try {
-                    $results = fetchData($query, [$uniquename], $test_db);
-                    if (!empty($results)) {
-                        $db = $test_db;
-                        $organism_name = $org_name;
-                        $organism_json_path = "$org_dir/organism.json";
-                        if (file_exists($organism_json_path)) {
-                            $organism_info = json_decode(file_get_contents($organism_json_path), true);
-                        }
-                        break 2;
-                    }
-                } catch (Exception $e) {
-                    // Continue searching
-                    continue;
-                }
-            }
-        }
-    }
+// Load organism info
+$organism_json_path = "$organism_data/$organism_name/organism.json";
+if (file_exists($organism_json_path)) {
+    $organism_info = json_decode(file_get_contents($organism_json_path), true);
 }
 
-if (!$db || !file_exists($db)) {
-    die("Error: Could not find database for the specified feature.");
+// Use standardized database naming
+$db_path = "$organism_data/$organism_name/$organism_name.genes.sqlite";
+
+if (!file_exists($db_path)) {
+    die("Error: Database not found for organism '$organism_name'. Please ensure the organism is properly configured.");
 }
+
+$db = $db_path;
 
 // Check access control
 if (!empty($organism_name)) {
@@ -94,7 +53,7 @@ $annotation_colors = [];
 if (file_exists($annotation_config_file)) {
     $annotation_config = json_decode(file_get_contents($annotation_config_file), true);
     
-    // New format with annotation_types
+    // Require new format with annotation_types
     if (isset($annotation_config['annotation_types'])) {
         $types = $annotation_config['annotation_types'];
         // Sort by order
@@ -109,15 +68,8 @@ if (file_exists($annotation_config_file)) {
                 $annotation_colors[$key] = $config['color'] ?? 'secondary';
             }
         }
-    }
-    // Legacy format fallback
-    else {
-        $analysis_order = $annotation_config['analysis_order'] ?? [];
-        $analysis_desc = $annotation_config['analysis_descriptions'] ?? [];
-        // Default colors for legacy
-        foreach ($analysis_order as $type) {
-            $annotation_colors[$type] = 'warning';
-        }
+    } else {
+        die("Error: annotation_config.json must use the new 'annotation_types' format. Legacy format is no longer supported.");
     }
 }
 
@@ -202,170 +154,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
 
 <title><?= htmlspecialchars($feature_uniquename) ?> - <?= $siteTitle ?></title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
-
-<style>
-    .feature-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 0.5rem;
-        margin-bottom: 2rem;
-    }
-    .info-table th {
-        width: 200px;
-        background-color: #f8f9fa;
-    }
-    .collapse-section {
-        cursor: pointer;
-        user-select: none;
-    }
-    .card-header {
-        background-color: #f8f9fa;
-    }
-    .annotation-card {
-        margin-bottom: 1rem;
-        transition: all 0.3s ease;
-    }
-    .annotation-card:hover {
-        box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.1);
-        transform: translateX(5px);
-    }
-    .page_container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-    .badge {
-        vertical-align: middle;
-    }
-    .tree-container {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border: 1px solid #dee2e6;
-        font-size: 14px;
-        line-height: 1.8;
-    }
-    .tree-container .tree-char {
-        font-family: 'Courier New', Courier, monospace;
-        display: inline-block;
-        vertical-align: middle;
-        line-height: 1;
-    }
-    /* Override global tree.css */
-    .tree-container .tree ul {
-        list-style-type: none !important;
-        margin: 0 !important;
-        padding: 0 0 0 20px !important;
-        border: none !important;
-        background: none !important;
-    }
-    .tree-container .tree li {
-        margin: 0 !important;
-        padding: 2px 0 !important;
-        border: none !important;
-        background: none !important;
-        position: static !important;
-    }
-    /* Feature type colors */
-    .feature-color-gene {
-        color: #764ba2 !important;
-    }
-    .bg-feature-gene {
-        background-color: #764ba2 !important;
-    }
-    .feature-color-mrna {
-        color: #17a2b8 !important;
-    }
-    .bg-feature-mrna {
-        background-color: #17a2b8 !important;
-    }
-    .tree-container .tree li::before,
-    .tree-container .tree li::after {
-        display: none !important;
-        content: none !important;
-        border: none !important;
-    }
-    .tree-container .tree .indicator {
-        display: none !important;
-    }
-    .tree-container .tree .branch {
-        border: none !important;
-        background: none !important;
-        padding: 0 !important;
-    }
-    .tree-container .tree a {
-        text-decoration: none !important;
-    }
-    /* Modern annotation tables */
-    .annotation-section {
-        border-left: 3px solid;
-        padding-left: 1rem;
-        margin-bottom: 1.5rem;
-    }
-    .annotation-section.border-primary { border-left-color: #007bff; }
-    .annotation-section.border-secondary { border-left-color: #6c757d; }
-    .annotation-section.border-success { border-left-color: #28a745; }
-    .annotation-section.border-danger { border-left-color: #dc3545; }
-    .annotation-section.border-warning { border-left-color: #ffc107; }
-    .annotation-section.border-info { border-left-color: #17a2b8; }
-    .annotation-section.border-purple { border-left-color: #6f42c1; }
-    .annotation-section.border-dark { border-left-color: #343a40; }
-    .annotation-section .table {
-        margin-bottom: 0;
-    }
-    .annotation-section h6 {
-        font-weight: 600;
-    }
-    /* Compact DataTables buttons */
-    .dt-buttons {
-        margin-bottom: 0.5rem;
-    }
-    .dt-button {
-        padding: 0.25rem 0.5rem !important;
-        font-size: 0.875rem !important;
-        margin-right: 0.25rem !important;
-    }
-    /* Clean table styling */
-    table.dataTable thead th {
-        background-color: #f8f9fa;
-        font-weight: 600;
-        font-size: 0.875rem;
-    }
-    table.dataTable tbody td {
-        padding: 0.5rem !important;
-    }
-    /* Purple badge support */
-    .bg-purple {
-        background-color: #6f42c1 !important;
-    }
-    .badge.bg-purple {
-        color: #fff;
-    }
-    /* Hide export-only columns in display */
-    th.export-only,
-    td.export-only {
-        display: none;
-    }
-    /* Smooth scrolling for anchor links */
-    html {
-        scroll-behavior: smooth;
-    }
-    /* Hover effect for clickable annotation badges */
-    a.badge:hover {
-        opacity: 0.85;
-        transform: translateY(-1px);
-        transition: all 0.2s ease;
-    }
-    /* Highlight animation for scrolled-to annotation sections */
-    .annotation-section:target {
-        animation: highlight-fade 2s ease-in-out;
-    }
-    @keyframes highlight-fade {
-        0% { background-color: rgba(255, 193, 7, 0.3); }
-        100% { background-color: transparent; }
-    }
-</style>
+<link rel="stylesheet" href="/<?= $site ?>/css/parent.css">
 
 <div class="page_container">
 
@@ -385,34 +174,52 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
 
     <!-- Feature Header -->
     <div class="feature-header shadow">
-        <h1 class="mb-3">
-            <?= htmlspecialchars($feature_uniquename) ?>
-            <?php if (!empty($children) && count($children) > 0): ?>
-                <span class="badge text-white ms-2" style="font-size: 0.5em; background-color: #17a2b8;">
-                    <?= count($children) ?> child<?= count($children) > 1 ? 'ren' : '' ?>
-                </span>
+        <div class="d-flex align-items-start justify-content-between">
+            <div class="flex-grow-1">
+                <h1 class="mb-3">
+                    <?= htmlspecialchars($feature_uniquename) ?>
+                    <span class="badge text-white ms-2" style="font-size: 0.6em; background-color: rgba(255,255,255,0.3);">
+                        <?= htmlspecialchars($type) ?>
+                    </span>
+                    <?php if (!empty($children) && count($children) > 0): 
+                        $first_child_type = $children[0]['feature_type'] ?? 'mRNA';
+                        $child_color_map = ['mRNA' => '#17a2b8', 'gene' => '#764ba2'];
+                        $child_bg_color = $child_color_map[strtoupper($first_child_type)] ?? '#17a2b8';
+                    ?>
+                        <span class="badge text-white ms-2" style="font-size: 0.6em; background-color: <?= $child_bg_color ?>;">
+                            <?= count($children) ?> <?= htmlspecialchars($first_child_type) ?> child<?= count($children) > 1 ? 'ren' : '' ?>
+                        </span>
+                    <?php endif; ?>
+                </h1>
+                <?php if (!empty($description)): ?>
+                    <p class="mb-4 feature-description"><?= htmlspecialchars($description) ?></p>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <div>
+            <div class="feature-info-item">
+                <strong>Organism:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" style="color: inherit; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.3);"><em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em></a></span>
+            </div>
+            <?php if ($common_name): ?>
+                <div class="feature-info-item">
+                    <strong>Common Name:</strong> <span class="feature-value"><?= htmlspecialchars($common_name) ?></span>
+                </div>
             <?php endif; ?>
-        </h1>
-        <p class="mb-2"><?= htmlspecialchars($description) ?></p>
-        <p class="mb-2"><strong>Type:</strong> <?= htmlspecialchars($type) ?></p>
-        <p class="mb-2"><strong>Organism:</strong> <em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em></p>
-        <?php if ($common_name): ?>
-            <p class="mb-0"><strong>Common Name:</strong> <?= htmlspecialchars($common_name) ?></p>
-        <?php endif; ?>
-        <p class="mb-2"><strong>Assembly:</strong> <?= htmlspecialchars($genome_name) ?></p>
+            <div class="feature-info-item">
+                <strong>Assembly:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/display/assembly_display.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" style="color: inherit; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.3);"><?= htmlspecialchars($genome_name) ?> (<?= htmlspecialchars($genome_accession) ?>)</a></span>
+            </div>
+        </div>
     </div>
 
 
     <!-- Feature Hierarchy Section -->
     <div class="card shadow-sm mb-4">
-        <div class="card-header">
-            <div class="collapse-section" data-toggle="collapse" data-target="#hierarchySection" aria-expanded="true">
+        <div class="card-header d-flex align-items-center">
+            <span class="collapse-section" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#hierarchySection" aria-expanded="true">
                 <i class="fas fa-sitemap toggle-icon text-primary"></i>
-                <strong class="ms-2">Feature Hierarchy</strong>
-                <?php if (!empty($children)): ?>
-                    <span class="badge bg-info ms-2"><?= count($children) ?> child feature<?= count($children) > 1 ? 's' : '' ?></span>
-                <?php endif; ?>
-            </div>
+            </span>
+            <strong class="ms-2">Feature Hierarchy</strong>
         </div>
         <div id="hierarchySection" class="collapse show">
             <div class="card-body">
@@ -422,7 +229,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
                             <li>
                                 <span class="feature-color-gene"><strong><?= htmlspecialchars($feature_uniquename) ?></strong></span> 
                                 <span class="badge bg-feature-gene text-white" style="font-size: 0.85em;"><?= htmlspecialchars($type) ?></span>
-                                <?= generateBashStyleTreeHTML($feature_id, $db) ?>
+                                <?= generateTreeHTML($feature_id, $db) ?>
                             </li>
                         </ul>
                     </div>
@@ -433,11 +240,11 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
 
     <!-- Annotations Section -->
     <div class="card shadow-sm mb-4">
-        <div class="card-header">
-            <div class="collapse-section" data-toggle="collapse" data-target="#annotationsSection" aria-expanded="true">
+        <div class="card-header d-flex align-items-center">
+            <span class="collapse-section" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="true">
                 <i class="fas fa-minus toggle-icon text-primary"></i>
-                <strong class="ms-2">Annotations</strong>
-            </div>
+            </span>
+            <strong class="ms-2">Annotations</strong>
         </div>
         <div id="annotationsSection" class="collapse show">
             <div class="card-body">
@@ -451,8 +258,9 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
                     $annot_results = $all_annotations[$feature_id][$annotation_type] ?? [];
                     if (!empty($annot_results)) {
                         $has_annotations = true;
+			// color is defined and configurable in the annotation_config.json. example "gene ontology" : "#ffc107" 
                         $color = $annotation_colors[$annotation_type] ?? 'warning';
-                        echo generateModernAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);
+                        echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);
                     }
                 }
                 
@@ -484,10 +292,11 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
                         }
                         
                         echo '<div class="card annotation-card border-info">';
-                        echo '  <div class="card-header" style="background-color: rgba(23, 162, 184, 0.1);">';
-                        echo "    <div class=\"collapse-section\" data-bs-toggle=\"collapse\" data-target=\"#child_$child_feature_id\" aria-expanded=\"true\">";
+                        echo '  <div class="card-header d-flex align-items-center" style="background-color: rgba(23, 162, 184, 0.1);">';
+                        echo "    <span class=\"collapse-section\" style=\"cursor: pointer;\" data-bs-toggle=\"collapse\" data-bs-target=\"#child_$child_feature_id\" aria-expanded=\"true\">";
                         echo "      <i class=\"fas fa-minus toggle-icon text-info\"></i>";
-                        echo "      <strong class=\"ms-2 text-dark\"><span class=\"text-white px-2 py-1 rounded\" style=\"background-color: #17a2b8;\">$child_uniquename</span> ($child_type)</strong>";
+                        echo "    </span>";
+                        echo "    <strong class=\"ms-2 text-dark\"><span class=\"text-white px-2 py-1 rounded\" style=\"background-color: #17a2b8;\">$child_uniquename ($child_type)</span></strong>";
                         
                         // Show colored annotation type badges as clickable links
                         if ($child_annotation_count > 0) {
@@ -501,7 +310,6 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
                             echo " <span class=\"badge bg-secondary ms-2\">No annotations</span>";
                         }
                         
-                        echo '    </div>';
                         echo '  </div>';
                         echo "  <div id=\"child_$child_feature_id\" class=\"collapse show\">";
                         echo '    <div class="card-body">';
@@ -514,7 +322,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
                                 $child_has_annotations = true;
                                 $has_annotations = true;
                                 $color = $annotation_colors[$annotation_type] ?? 'warning';
-                                echo generateModernAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);
+                                echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);
                             }
                         }
                         
@@ -544,8 +352,8 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
     sort($retrieve_these_seqs);
     $gene_name = implode(",", $retrieve_these_seqs);
     
-    // Check if display_sequences.php exists
-    $sequences_file = __DIR__ . '/../../display_sequences.php';
+    // Include sequences display component
+    $sequences_file = __DIR__ . '/sequences_display.php';
     if (file_exists($sequences_file)) {
         include_once $sequences_file;
     }
@@ -556,149 +364,10 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
 
 <!-- DataTables JS -->
 <script src="/<?= $site ?>/js/datatable.js"></script>
+<script src="/<?= $site ?>/js/datatable-config.js"></script>
+<script src="/<?= $site ?>/js/parent.js"></script>
 
-<script>
-$(document).ready(function() {
-    // Initialize DataTables for annotation tables with export buttons
-    $('table[id^="annotTable_"]').each(function() {
-        var tableId = '#' + $(this).attr('id');
-        
-        if ($.fn.DataTable.isDataTable(tableId)) {
-            $(tableId).DataTable().destroy();
-        }
-        
-        $(tableId).DataTable({
-            dom: 'Bfrtlip',
-            pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-            buttons: [
-                {
-                    extend: 'copy',
-                    text: '<i class="far fa-copy"></i> Copy',
-                    className: 'btn btn-sm btn-secondary',
-                    exportOptions: {
-                        columns: ':visible, .export-only'
-                    }
-                },
-                {
-                    extend: 'csv',
-                    text: '<i class="fas fa-file-csv"></i> CSV',
-                    className: 'btn btn-sm btn-secondary',
-                    exportOptions: {
-                        columns: ':visible, .export-only'
-                    }
-                },
-                {
-                    extend: 'excel',
-                    text: '<i class="fas fa-file-excel"></i> Excel',
-                    className: 'btn btn-sm btn-secondary',
-                    exportOptions: {
-                        columns: ':visible, .export-only'
-                    }
-                },
-                {
-                    extend: 'pdf',
-                    text: '<i class="fas fa-file-pdf"></i> PDF',
-                    className: 'btn btn-sm btn-secondary',
-                    exportOptions: {
-                        columns: ':visible, .export-only'
-                    }
-                },
-                {
-                    extend: 'print',
-                    text: '<i class="fas fa-print"></i> Print',
-                    className: 'btn btn-sm btn-secondary',
-                    exportOptions: {
-                        columns: ':visible, .export-only'
-                    }
-                }
-            ],
-            order: [[4, 'asc']],
-            language: {
-                search: "Search:",
-                lengthMenu: "Show _MENU_ entries",
-                info: "Showing _START_ to _END_ of _TOTAL_ entries"
-            },
-            columnDefs: [
-                { targets: '_all', className: 'dt-body-left' },
-                { targets: [0, 1, 2, 3], visible: false, className: 'export-only' }
-            ]
-        });
-    });
-
-    // Initialize tooltips
-    $('[data-toggle="tooltip"]').tooltip({ html: true });
-
-    // Tree functionality
-    $.fn.extend({
-        treed: function(o) {
-            var openedClass = 'fa-minus';
-            var closedClass = 'fa-plus';
-
-            if (typeof o != 'undefined') {
-                if (typeof o.openedClass != 'undefined') {
-                    openedClass = o.openedClass;
-                }
-                if (typeof o.closedClass != 'undefined') {
-                    closedClass = o.closedClass;
-                }
-            }
-
-            var tree = $(this);
-            tree.addClass("tree");
-            tree.find('li').has("ul").each(function() {
-                var branch = $(this);
-                branch.prepend("<i class='indicator fa " + openedClass + "'></i>");
-                branch.addClass('branch');
-                branch.children("ul").show();
-
-                branch.on('click', function(e) {
-                    if (this == e.target) {
-                        var icon = $(this).children('i:first');
-                        icon.toggleClass(openedClass + " " + closedClass);
-                        $(this).children("ul").toggle();
-                    }
-                });
-            });
-
-            tree.find('.branch .indicator').each(function() {
-                $(this).on('click', function() {
-                    $(this).closest('li').click();
-                });
-            });
-
-            tree.find('.branch>a, .branch>button').each(function() {
-                $(this).on('click', function(e) {
-                    $(this).closest('li').click();
-                    e.preventDefault();
-                });
-            });
-        }
-    });
-
-    // Initialize tree - DISABLED: Using bash-style tree instead
-    // $('#tree1').treed();
-
-    // Toggle icons on collapse
-    $('.collapse').on('show.bs.collapse', function(e) {
-        if (e.target !== this) return;
-        $('[data-target="#' + this.id + '"] .toggle-icon')
-            .removeClass('fa-plus')
-            .addClass('fa-minus');
-    });
-
-    $('.collapse').on('hide.bs.collapse', function(e) {
-        if (e.target !== this) return;
-        $('[data-target="#' + this.id + '"] .toggle-icon')
-            .removeClass('fa-minus')
-            .addClass('fa-plus');
-    });
-});
-</script>
+<?php include_once __DIR__ . '/../../footer.php'; ?>
 
 </body>
 </html>
-
-<?php
-include_once __DIR__ . '/../../footer.php';
-?>
