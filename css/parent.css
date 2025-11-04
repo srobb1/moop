@@ -1,0 +1,225 @@
+/* Parent Feature Display Styles */
+
+.feature-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.feature-header h1 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.feature-description {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    opacity: 0.95;
+    margin-bottom: 2rem !important;
+}
+
+.feature-info-item {
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+.feature-info-item strong {
+    display: inline-block;
+    min-width: 120px;
+    font-weight: 600;
+}
+
+.feature-value {
+    opacity: 0.95;
+}
+
+.info-table th {
+    width: 200px;
+    background-color: #f8f9fa;
+}
+
+.collapse-section {
+    cursor: pointer;
+    user-select: none;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+}
+
+.annotation-card {
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.annotation-card:hover {
+    box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.1);
+    transform: translateX(5px);
+}
+
+.page_container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.badge {
+    vertical-align: middle;
+}
+
+.tree-container {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #dee2e6;
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.tree-container .tree-char {
+    font-family: 'Courier New', Courier, monospace;
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 1;
+}
+
+/* Override global tree.css */
+.tree-container .tree ul {
+    list-style-type: none !important;
+    margin: 0 !important;
+    padding: 0 0 0 20px !important;
+    border: none !important;
+    background: none !important;
+}
+
+.tree-container .tree li {
+    margin: 0 !important;
+    padding: 2px 0 !important;
+    border: none !important;
+    background: none !important;
+    position: static !important;
+}
+
+/* Feature type colors */
+.feature-color-gene {
+    color: #764ba2 !important;
+}
+
+.bg-feature-gene {
+    background-color: #764ba2 !important;
+}
+
+.feature-color-mrna {
+    color: #17a2b8 !important;
+}
+
+.bg-feature-mrna {
+    background-color: #17a2b8 !important;
+}
+
+.tree-container .tree li::before,
+.tree-container .tree li::after {
+    display: none !important;
+    content: none !important;
+    border: none !important;
+}
+
+.tree-container .tree .indicator {
+    display: none !important;
+}
+
+.tree-container .tree .branch {
+    border: none !important;
+    background: none !important;
+    padding: 0 !important;
+}
+
+.tree-container .tree a {
+    text-decoration: none !important;
+}
+
+/* Modern annotation tables */
+.annotation-section {
+    border-left: 3px solid;
+    padding-left: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.annotation-section.border-primary { border-left-color: #007bff; }
+.annotation-section.border-secondary { border-left-color: #6c757d; }
+.annotation-section.border-success { border-left-color: #28a745; }
+.annotation-section.border-danger { border-left-color: #dc3545; }
+.annotation-section.border-warning { border-left-color: #ffc107; }
+.annotation-section.border-info { border-left-color: #17a2b8; }
+.annotation-section.border-purple { border-left-color: #6f42c1; }
+.annotation-section.border-dark { border-left-color: #343a40; }
+
+.annotation-section .table {
+    margin-bottom: 0;
+}
+
+.annotation-section h6 {
+    font-weight: 600;
+}
+
+/* Compact DataTables buttons */
+.dt-buttons {
+    margin-bottom: 0.5rem;
+}
+
+.dt-button {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.875rem !important;
+    margin-right: 0.25rem !important;
+}
+
+/* Clean table styling */
+table.dataTable thead th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+table.dataTable tbody td {
+    padding: 0.5rem !important;
+}
+
+/* Purple badge support */
+.bg-purple {
+    background-color: #6f42c1 !important;
+}
+
+.badge.bg-purple {
+    color: #fff;
+}
+
+/* Hide export-only columns in display */
+th.export-only,
+td.export-only {
+    display: none;
+}
+
+/* Smooth scrolling for anchor links */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Hover effect for clickable annotation badges */
+a.badge:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
+
+/* Highlight animation for scrolled-to annotation sections */
+.annotation-section:target {
+    animation: highlight-fade 2s ease-in-out;
+}
+
+@keyframes highlight-fade {
+    0% { background-color: rgba(255, 193, 7, 0.3); }
+    100% { background-color: transparent; }
+}
