@@ -5,7 +5,7 @@
  */
 
 /**
- * Generate modern annotation table with export buttons (like search results)
+ * Generate annotation table with export buttons
  * 
  * @param array $results - Annotation results
  * @param string $uniquename - Feature uniquename
@@ -13,17 +13,18 @@
  * @param int $count - Table counter for unique IDs
  * @param string $annotation_type - Type of annotation
  * @param string $desc - Description of annotation type
- * @param string $color - Bootstrap color class for badge
+ * @param string $color - Bootstrap color class for badge (sourced from annotation_config.json)
  * @param string $organism - Organism name (genus_species)
  * @return string HTML for the table
  */
-function generateModernAnnotationTableHTML($results, $uniquename, $type, $count, $annotation_type, $desc, $color = 'warning', $organism = '') {
+function generateAnnotationTableHTML($results, $uniquename, $type, $count, $annotation_type, $desc, $color = 'warning', $organism = '') {
     if (empty($results)) {
         return '';
     }
     
     $table_id = "annotTable_$count";
     $result_count = count($results);
+    $desc_id = "annotDesc_$count";
     
     // Determine text color based on background color
     $text_color = in_array($color, ['warning', 'info', 'secondary']) ? 'text-dark' : 'text-white';
@@ -34,20 +35,31 @@ function generateModernAnnotationTableHTML($results, $uniquename, $type, $count,
     // Create unique ID for this annotation section
     $section_id = "annot_section_" . preg_replace('/[^a-zA-Z0-9_]/', '_', $uniquename . '_' . $annotation_type);
     
-    $html = '<div class="annotation-section mb-3 ' . $border_class . '" id="' . $section_id . '">';
+    $html = '<div class="annotation-section mb-3 ' . htmlspecialchars($border_class) . '" id="' . htmlspecialchars($section_id) . '">';
     $html .= '<div class="d-flex justify-content-between align-items-center mb-2">';
-    $html .= "<h5 class=\"mb-0\"><span class=\"badge bg-$color $text_color\" style=\"font-size: 1rem; padding: 0.5rem 0.75rem;\">$annotation_type</span> ";
-    $html .= "<span class=\"badge bg-secondary\" style=\"font-size: 1rem; padding: 0.5rem 0.75rem;\">$result_count result" . ($result_count > 1 ? 's' : '') . "</span></h5>";
+    $html .= "<h5 class=\"mb-0\"><span class=\"badge bg-" . htmlspecialchars($color) . " $text_color\" style=\"font-size: 1rem; padding: 0.5rem 0.75rem;\">" . htmlspecialchars($annotation_type) . "</span>";
+    $html .= " <span class=\"badge bg-secondary\" style=\"font-size: 1rem; padding: 0.5rem 0.75rem;\">" . htmlspecialchars($result_count) . " result" . ($result_count > 1 ? 's' : '') . "</span>";
     
     if ($desc) {
-        $html .= "<i class=\"fas fa-info-circle text-info\" data-toggle=\"tooltip\" title=\"" . htmlspecialchars($desc) . "\" style=\"font-size: 1.1rem;\"></i>";
+        $html .= "&nbsp;<button class=\"btn btn-sm btn-link p-0\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#" . htmlspecialchars($desc_id) . "\" aria-expanded=\"false\" style=\"color: #17a2b8; text-decoration: none;\">";
+        $html .= "<i class=\"fas fa-info-circle\" style=\"font-size: 1rem;\"></i>";
+        $html .= "</button>";
     }
     
+    $html .= "</h5>";
     $html .= '</div>';
+    
+    if ($desc) {
+        $html .= '<div class="collapse mb-3" id="' . htmlspecialchars($desc_id) . '">';
+        $html .= '<div class="alert alert-info mb-0" style="font-size: 0.95rem;">';
+        $html .= $desc;
+        $html .= '</div>';
+        $html .= '</div>';
+    }
     
     // Table with DataTables
     $html .= "<div class=\"table-responsive\">";
-    $html .= "<table id=\"$table_id\" class=\"table table-sm table-striped table-hover\" style=\"width:100%; font-size: 13px;\">";
+    $html .= "<table id=\"" . htmlspecialchars($table_id) . "\" class=\"table table-sm table-striped table-hover\" style=\"width:100%; font-size: 13px;\">";
     $html .= "<thead><tr>";
     $html .= "<th class=\"export-only\">Organism</th>";
     $html .= "<th class=\"export-only\">Feature ID</th>";
@@ -65,18 +77,18 @@ function generateModernAnnotationTableHTML($results, $uniquename, $type, $count,
         $hit_description = htmlspecialchars($row['annotation_description']);
         $hit_score = htmlspecialchars($row['score']);
         $annotation_source = htmlspecialchars($row['annotation_source_name']);
-        $annotation_accession_url = $row['annotation_accession_url'];
-        $hit_id_link = str_replace(' ', '', $annotation_accession_url . $row['annotation_accession']);
+        $annotation_accession_url = htmlspecialchars($row['annotation_accession_url']);
+        $hit_id_link = $annotation_accession_url . urlencode($row['annotation_accession']);
         
         $html .= "<tr>";
         $html .= "<td class=\"export-only\">" . htmlspecialchars($organism) . "</td>";
         $html .= "<td class=\"export-only\">" . htmlspecialchars($uniquename) . "</td>";
         $html .= "<td class=\"export-only\">" . htmlspecialchars($type) . "</td>";
         $html .= "<td class=\"export-only\">" . htmlspecialchars($annotation_type) . "</td>";
-        $html .= "<td><a href=\"$hit_id_link\" target=\"_blank\">$hit_id</a></td>";
-        $html .= "<td>$hit_description</td>";
-        $html .= "<td>$hit_score</td>";
-        $html .= "<td>$annotation_source</td>";
+        $html .= "<td><a href=\"" . htmlspecialchars($hit_id_link) . "\" target=\"_blank\">" . $hit_id . "</a></td>";
+        $html .= "<td>" . $hit_description . "</td>";
+        $html .= "<td>" . $hit_score . "</td>";
+        $html .= "<td>" . $annotation_source . "</td>";
         $html .= "</tr>";
     }
     
@@ -145,7 +157,7 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile) {
  * @param bool $is_last - Internal use for recursion, indicates if this is the last child
  * @return string HTML string with tree structure
  */
-function generateBashStyleTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true) {
+function generateTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true) {
     $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
               FROM feature WHERE parent_feature_id = ?";
     $results = fetchData($query, [$feature_id], $dbFile);
@@ -190,7 +202,7 @@ function generateBashStyleTreeHTML($feature_id, $dbFile, $prefix = '', $is_last 
         $html .= "<span class=\"badge $badge_class $text_color\" style=\"font-size: 0.85em;\">$feature_type</span>";
         
         // Recursive call for nested children
-        $html .= generateBashStyleTreeHTML($row['feature_id'], $dbFile, $prefix, $is_last_child);
+        $html .= generateTreeHTML($row['feature_id'], $dbFile, $prefix, $is_last_child);
         $html .= "</li>";
     }
     $html .= "</ul>";
