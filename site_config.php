@@ -19,6 +19,22 @@ $admin_email = "admin@example.com"; // Contact email for access issues
 // Custom css file
 $custom_css_path = "$site_path/css/custom.css";
 
+// Sequence type configuration for FASTA file discovery
+// Maps sequence types to their filename patterns and display labels
+$sequence_types = [
+    'protein' => [
+        'pattern' => 'protein.aa.fa',
+        'label' => 'Protein',
+    ],
+    'transcript' => [
+        'pattern' => 'transcript.nt.fa',
+        'label' => 'mRNA',
+    ],
+    'cds' => [
+        'pattern' => 'cds.nt.fa',
+        'label' => 'CDS',
+    ]
+];
 
 ?>
 
