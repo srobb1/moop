@@ -3,6 +3,7 @@ include_once __DIR__ . '/../../access_control.php';
 
 // Get organism name from query parameter
 $organism_name = $_GET['organism'] ?? '';
+$parent_uniquename = $_GET['parent'] ?? '';
 
 if (empty($organism_name)) {
     header("Location: /$site/index.php");
@@ -67,6 +68,11 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
 <div class="container mt-5">
   <!-- Navigation Buttons -->
   <div class="mb-3">
+    <?php if (!empty($parent_uniquename)): ?>
+      <a href="/<?= $site ?>/tools/display/parent.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($parent_uniquename) ?>" class="btn btn-secondary">
+        <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($parent_uniquename) ?>
+      </a>
+    <?php endif; ?>
     <a href="/<?= $site ?>/index.php" class="btn btn-secondary"><i class="fa fa-home"></i> Back to Home</a>
     <button class="btn btn-secondary" id="backToOrganismBtn" style="display: none;">
       <i class="fa fa-arrow-left"></i> Back to <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em> Page
