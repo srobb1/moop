@@ -111,77 +111,7 @@ function getAnnotations($feature_id,$dbFile,$annotation_type){
    $results = fetchData($query, $params, $dbFile);
    return $results;
 }
-function generateAnnotationTableHTML($results,$uniquename,$type,$count,$annotation_type,$desc){
- // generateAnnotationTableHTML($results,$child_uniquename,$child_type,$count);
- $html = '';	
 
-
- if (count($results) > 0) {
-   $html .= '<div class="card-header">';
-   #$html .=  "<div class=\"collapse_section pointer_cursor\" data-toggle=\"collapse\" data-target=\"#Annot_table_$count\" aria-expanded=\"true\"><i class=\"fas fa-minus toggle-icon\" style=\"color:#229dff\"></i>  <span class=\"alert alert-warning\">$annotation_type</span></div>";
-   #$html .= "<div><p>$desc</p></div>";
-$html .=  "<div class=\"collapse_section pointer_cursor\" data-toggle=\"collapse\" data-target=\"#Annot_table_$count\" aria-expanded=\"true\">
-    <i class=\"fas fa-minus toggle-icon\" style=\"color:#229dff\"></i>  
-    <span class=\"alert alert-warning\">$annotation_type</span>
-    <i class=\"fas fa-info-circle ml-2\" 
-        data-toggle=\"tooltip\" 
-        data-html=\"true\" 
-        data-placement=\"right\" 
-        title=\"$desc\" 
-        style=\"color:#007bff; cursor: pointer;\">
-    </i>
-</div>";
-
-
-   // Printing results in HTML
-   $html .= "<div id=\"Annot_table_$count\" class=\"collapse show\"><table id=\"tblAnnotations_$count\" class=\"tblAnnotations table table-striped table-bordered\"style=\"display:none\">\n";
-   $html .= "<div id=\"load_$count\" class=\"loader_$count\"></div>";
-   $html .= "<thead>\n";
-   $html .= "  <tr>\n";
-   
-   $html .= "    <th>Feature ID</th>\n";
-   $html .= "    <th>Feature Type</th>\n";
-   $html .= "    <th>Annotation Accession</th>\n";
-   $html .= "    <th>Annotation Description</th>\n";
-   $html .= "    <th>Score</th>\n";
-   $html .= "    <th>Annotation Source</th>\n";
-   $html .= "    <th>Annotation Type</th>\n";
-   $html .= "  </tr>\n";
-   $html .= "  <tbody>\n";
-   foreach ($results as $row) { 
-       $hit_id = $row['annotation_accession'];
-       $hit_description = $row['annotation_description'];
-       $hit_score = $row['score'];
-       $analysis_date = $row['date'];
-       $annotation_source = $row['annotation_source_name'];
-       $annotation_type = $row['annotation_type'];
-       $annotation_accession_url = $row['annotation_accession_url'];
-       $hit_id_link = $annotation_accession_url . $hit_id;
-       $hit_id_link = str_replace(' ', '', $hit_id_link);
-
-       $html .= "  <tr>\n";
-       $html .= "    <td>$uniquename</td>\n";
-       $html .= "    <td>$type</td>\n";
-       $html .= "    <td><a href=\"$hit_id_link\" target=\"_blank\">$hit_id</a></td>\n";
-       $html .= "    <td>$hit_description</td>\n";
-       $html .= "    <td>$hit_score</td>\n";
-       $html .= "    <td>$annotation_source</td>\n";
-       $html .= "    <td>$annotation_type</td>\n";
-        $html .= "  </tr>\n";
-  }
-
-  $html .= "</tbody>\n";
-  $html .= "</table>\n\n";
-  $html .= "</br>\n";
-  $html .= "</br>\n";
-  $html .= "</div>\n";
-  $html .= "</div>\n";
-  $html .= "</br>\n";
- }
-  return $html;
-
-
-}
 function getChildren($feature_id, $dbFile) {
     $children = [];
     $query = "SELECT feature_id, feature_uniquename, feature_name, feature_description, feature_type, parent_feature_id 

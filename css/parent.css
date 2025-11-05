@@ -171,9 +171,11 @@
 }
 
 .dt-button {
-    padding: 0.25rem 0.5rem !important;
-    font-size: 0.875rem !important;
+    padding: 0.15rem 0.4rem !important;
+    font-size: 0.75rem !important;
     margin-right: 0.25rem !important;
+    height: auto !important;
+    line-height: 1 !important;
 }
 
 /* Clean table styling */
