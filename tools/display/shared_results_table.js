@@ -139,56 +139,7 @@ function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
         pageLength: 25,
         stateSave: false,
         orderCellsTop: false,
-        buttons: [
-            {
-                extend: 'copy',
-                exportOptions: { 
-                    rows: function (idx, data, node) {
-                        return $(node).find('input.row-select').is(':checked');
-                    },
-                    columns: ':visible'
-                }
-            },
-            {
-                extend: 'csv',
-                exportOptions: { 
-                    rows: function (idx, data, node) {
-                        return $(node).find('input.row-select').is(':checked');
-                    },
-                    columns: isUniquenameSearch ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 7, 8]
-                }
-            },
-            {
-                extend: 'excel',
-                exportOptions: { 
-                    rows: function (idx, data, node) {
-                        return $(node).find('input.row-select').is(':checked');
-                    },
-                    columns: isUniquenameSearch ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 7, 8]
-                }
-            },
-            {
-                extend: 'pdf',
-                orientation: 'landscape',
-                pageSize: 'LEGAL',
-                exportOptions: { 
-                    rows: function (idx, data, node) {
-                        return $(node).find('input.row-select').is(':checked');
-                    },
-                    columns: isUniquenameSearch ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 7, 8]
-                }
-            },
-            {
-                extend: 'print',
-                exportOptions: { 
-                    rows: function (idx, data, node) {
-                        return $(node).find('input.row-select').is(':checked');
-                    },
-                    columns: isUniquenameSearch ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 7, 8]
-                }
-            },
-            'colvis'
-        ],
+        buttons: DataTableExportConfig.getSearchResultsButtons(),
         scrollX: false,
         scrollCollapse: false,
         autoWidth: false,
