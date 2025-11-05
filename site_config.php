@@ -36,5 +36,3 @@ $sequence_types = [
     ]
 ];
 
-?>
-

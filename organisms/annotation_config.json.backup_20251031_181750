@@ -1,0 +1,23 @@
+{
+  "analysis_order": [
+    "Orthology",
+    "Orthologs",
+    "Homology",
+    "Homologs",
+    "AI Annotations",
+    "Domains",
+    "Gene Ontology",
+    "Gene Families",
+    "Mapping",
+    "Aliases",
+    "Publications"
+  ],
+  "analysis_descriptions": {
+    "AI Annotations": "AI-based protein function prediction uses computational techniques, such as machine learning and protein sequence language models to infer the biological roles of proteins from their sequences",
+    "Orthology": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs</strong>. Genes separated by gene duplication events are called paralogs.",
+    "Homology": "<strong>Homologous</strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
+    "Orthologs": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs</strong>. Genes separated by gene duplication events are called paralogs.",
+    "Homologs": "<strong>Homologous</strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs."
+  },
+  "organisms": {}
+}

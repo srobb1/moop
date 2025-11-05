@@ -190,6 +190,35 @@ Testing confirmed that removing any of these breaks button functionality.
 4. ✅ **DONE** - Removed dead code: download2.js (tested - NEVER CALLED anywhere)
 5. ✅ **DONE** - Refactor datatable-config.js to eliminate button duplication (tested - buttons work identically)
 6. ✅ **DONE** - Implement selected rows only export (tested - validation and exports working)
+7. ✅ **DONE** - Created FASTA download tool (fasta_extract.php) with blastdbcmd integration
+
+---
+
+## Final Implementation
+
+### FASTA Download Feature
+- **New file:** `/moop/tools/extract/fasta_extract.php`
+- **Features:**
+  - Displays form to select sequence type (mRNA, CDS, Protein)
+  - Dynamically shows available FASTA files for each organism
+  - Validates user has access to organism
+  - Uses `blastdbcmd` with `proc_open()` for clean output (no leading newlines)
+  - Exports selected rows only (via checkbox selection)
+  - Shows helpful validation alert if no rows selected
+  - Proper error handling for missing sequences
+
+### Code Simplifications
+- **Removed:** download2.js (~130 lines of dead code)
+- **Refactored:** datatable-config.js (-37% code, DRY principles)
+- **Created:** fasta_extract.php (clean, ~185 lines including HTML form)
+- **Total:** ~188 lines of code eliminated + new focused FASTA tool
+
+### Button Configuration Consolidation
+- Unified all export button creation into single `createButton()` helper
+- Selected rows validation prevents empty downloads
+- Both annotation and search results tables use same config
+- FASTA button uses custom action for blastdbcmd extraction
+- Organism context extracted from table DOM structure (robust, no global state needed)
 
 ---
 
