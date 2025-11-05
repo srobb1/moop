@@ -1,0 +1,25 @@
+/* MOOP Base Styles */
+/* Global styles for MOOP (Modern Organism Observation Platform) */
+
+/* Global resets */
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+/* Page container for consistent spacing */
+.page_container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Margin utility */
+.margin-20 {
+  margin: 20px;
+}
+
+/* Pointer cursor for interactive elements */
+.pointer_cursor {
+  cursor: pointer;
+}
