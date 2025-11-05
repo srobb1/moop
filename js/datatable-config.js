@@ -19,7 +19,85 @@ const DataTableExportConfig = {
         print: {
             extend: 'print',
             text: '<i class="fas fa-print"></i> Print / PDF'
+        },
+        fasta: {
+            text: '<i class="fa fa-dna"></i> FASTA'
         }
+    },
+
+    // Extract Feature IDs from selected rows for FASTA download
+    extractFeatureIds: function(dt) {
+        const featureIds = [];
+        let columnIndex = -1;
+        
+        // Find Feature ID column
+        dt.columns().every(function(idx) {
+            if ($(dt.column(idx).header()).text().trim().toLowerCase() === 'feature id') {
+                columnIndex = idx;
+            }
+        });
+        
+        if (columnIndex === -1) {
+            alert('Feature ID column not found.');
+            return null;
+        }
+        
+        // Extract from selected rows
+        dt.rows(function(idx, data, node) {
+            return $(node).find('input.row-select:checked').length > 0;
+        }).data().each(function(row) {
+            const div = document.createElement('div');
+            div.innerHTML = row[columnIndex] || '';
+            const text = (div.textContent || div.innerText || '').trim();
+            if (text) featureIds.push(text);
+        });
+        
+        return [...new Set(featureIds)]; // Remove duplicates
+    },
+
+    // FASTA export action
+    fastaExportAction: function(e, dt, button, config) {
+        if (!DataTableExportConfig.validateSelectedRows()) {
+            return;
+        }
+        
+        const featureIds = DataTableExportConfig.extractFeatureIds(dt);
+        if (!featureIds || featureIds.length === 0) {
+            alert('No valid Feature IDs found.');
+            return;
+        }
+        
+        // Get organism from the table element's closest ancestor with class "organism-results"
+        const tableElement = dt.table().node();
+        const organismDiv = $(tableElement).closest('.organism-results');
+        const anchorId = organismDiv.attr('id'); // Format: "results-Organism_name"
+        
+        let organism = window.currentOrganism;
+        
+        if (!organism && anchorId) {
+            // Extract organism from anchor ID (format: results-Organism_name)
+            organism = anchorId.replace('results-', '');
+        }
+        
+        if (!organism) {
+            alert('Organism information not available.');
+            return;
+        }
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = sitePath + '/tools/extract/fasta_extract.php?organism=' + encodeURIComponent(organism);
+        form.target = '_blank';
+        
+        const idInput = document.createElement('input');
+        idInput.type = 'hidden';
+        idInput.name = 'uniquenames';
+        idInput.value = featureIds.join(',');
+        
+        form.appendChild(idInput);
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
     },
 
     // Validate that at least one row is selected before export
@@ -79,6 +157,21 @@ const DataTableExportConfig = {
             this.createButton('csv', true),
             this.createButton('excel', true),
             this.createButton('print', true),
+            {
+                text: '<i class="fa fa-dna"></i> FASTA',
+                className: 'btn btn-sm btn-secondary',
+                action: this.fastaExportAction,
+                init: function(dt, node, config) {
+                    $(node).on('click.dt', function(e) {
+                        if ($('input.row-select:checked').length === 0) {
+                            e.preventDefault();
+                            e.stopImmediatePropagation();
+                            DataTableExportConfig.validateSelectedRows();
+                            return false;
+                        }
+                    });
+                }
+            },
             'colvis'
         ];
     },
