@@ -1,5 +1,7 @@
 // Parent Feature Display JavaScript
 
+// Parent Feature Display JavaScript
+
 $(document).ready(function() {
     // Initialize DataTables for annotation tables with export buttons
     $('table[id^="annotTable_"]').each(function() {
@@ -28,3 +30,4 @@ $(document).ready(function() {
             .addClass('fa-plus');
     });
 });
+
