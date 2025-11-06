@@ -2,13 +2,13 @@
 // Include access control and configuration
 include_once __DIR__ . '/../../access_control.php';
 include_once realpath(__DIR__ . '/../../site_config.php');
-include_once realpath(__DIR__ . '/../common_functions.php');
-include_once __DIR__ . '/display_functions.php';
+include_once realpath(__DIR__ . '/../moop_functions.php');
+include_once __DIR__ . '/parent_functions.php';
 
 // Get parameters - require new format
 // Format: ?organism=Organism_name&uniquename=GENE123
 $organism_name = $_GET['organism'] ?? '';
-$uniquename = test_input($_GET['uniquename'] ?? '');
+$uniquename = $_GET['uniquename'] ?? '';
 
 if (empty($organism_name) || empty($uniquename)) {
     die("Error: Missing required parameters. Please provide both 'organism' and 'uniquename' parameters.");
