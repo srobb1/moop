@@ -14,23 +14,42 @@
  * @return array - Array of features: [self, parent, grandparent, ...]
  */
 function getAncestors($feature_uniquename, $dbFile) {
-    $ancestors = [];
     $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id FROM feature WHERE feature_uniquename = ?";
     $results = fetchData($query, [$feature_uniquename], $dbFile);
-    foreach ($results as $row) {
-        $ancestors[] = $row;
-        while ($row['parent_feature_id']) {
-            $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id FROM feature WHERE feature_id = ?";
-            $parent_results = fetchData($query, [$row['parent_feature_id']], $dbFile);
-            $parent_row = array_shift($parent_results);
-            if ($parent_row) {
-                $ancestors[] = $parent_row;
-                $row = $parent_row;
-            } else {
-                break;
-            }
-        }
+    if (empty($results)) return [];
+    
+    $feature = $results[0];
+    $ancestors = [$feature];
+    
+    if ($feature['parent_feature_id']) {
+        $parent_ancestors = getAncestorsByFeatureId($feature['parent_feature_id'], $dbFile);
+        $ancestors = array_merge($ancestors, $parent_ancestors);
     }
+    
+    return $ancestors;
+}
+
+/**
+ * Helper function for recursive ancestor traversal
+ * Fetches ancestors by feature_id (used internally by getAncestors)
+ *
+ * @param int $feature_id - The feature ID to start from
+ * @param string $dbFile - Path to SQLite database
+ * @return array - Array of ancestor features
+ */
+function getAncestorsByFeatureId($feature_id, $dbFile) {
+    $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id FROM feature WHERE feature_id = ?";
+    $results = fetchData($query, [$feature_id], $dbFile);
+    if (empty($results)) return [];
+    
+    $feature = $results[0];
+    $ancestors = [$feature];
+    
+    if ($feature['parent_feature_id']) {
+        $parent_ancestors = getAncestorsByFeatureId($feature['parent_feature_id'], $dbFile);
+        $ancestors = array_merge($ancestors, $parent_ancestors);
+    }
+    
     return $ancestors;
 }
 
