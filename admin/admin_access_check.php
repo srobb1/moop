@@ -8,12 +8,12 @@ if (file_exists($usersFile)) {
 }
 
 $is_admin = false;
-if ($logged_in && isset($users[$username]) && isset($users[$username]['role']) && $users[$username]['role'] === 'admin') {
+if (is_logged_in() && isset($users[get_username()]) && isset($users[get_username()]['role']) && $users[get_username()]['role'] === 'admin') {
     $is_admin = true;
 }
 
 // Only allow Admin access level (not ALL, as IP users shouldn't have admin panel access)
-if (!$is_admin || $access_level !== 'Admin') {
+if (!$is_admin || get_access_level() !== 'Admin') {
     header("HTTP/1.1 403 Forbidden");
     echo "<h1>403 Forbidden</h1>";
     echo "You don't have permission to access this page.";

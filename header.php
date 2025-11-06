@@ -3,13 +3,8 @@
 <?php
 session_start();
 include_once __DIR__ . '/site_config.php';
+include_once __DIR__ . '/access_control.php';
 
-$logged_in = $_SESSION["logged_in"] ?? false;
-$username  = $_SESSION["username"] ?? "";
-
-if (!isset($access_group)) {
-    $access_group = '';
-}
 #include_once realpath("site_config.php");
 
 ?>

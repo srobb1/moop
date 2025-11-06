@@ -1,9 +1,8 @@
 <?php
 session_start();
-include_once 'admin_header.php';
+include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
 
-$access_group = 'Admin';
 
 $config_file = "$organism_data/annotation_config.json";
 $config = [];

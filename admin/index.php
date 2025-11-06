@@ -1,7 +1,6 @@
 <?php
 session_start();
-$access_group = 'Admin';
-include_once 'admin_header.php';
+include_once 'admin_access_check.php';
 include_once '../header.php';
 ?>
 
