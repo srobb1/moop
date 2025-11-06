@@ -1,6 +1,6 @@
 <?php
 include_once __DIR__ . '/../../access_control.php';
-include_once __DIR__ . '/../common_functions.php';
+include_once __DIR__ . '/../moop_functions.php';
 
 // Get organism and assembly from query parameters
 $organism_name = $_GET['organism'] ?? '';
