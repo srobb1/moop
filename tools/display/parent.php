@@ -27,6 +27,10 @@ if (file_exists($organism_json_path)) {
 // Use standardized database naming
 $db_path = "$organism_data/$organism_name/$organism_name.genes.sqlite";
 
+// TO DO: we are building a reports page to list all organisms that do not have a sqlite file. add that info to the message.
+// TO DO: also add this error to MOOP system logging. 
+// TO DO: we should find all Errors and warning messages and write them to the error log also. We need and error function that prints to the screen
+// and logs the message in the log
 if (!file_exists($db_path)) {
     die("Error: Database not found for organism '$organism_name'. Please ensure the organism is properly configured.");
 }
@@ -267,6 +271,8 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
                 // Children annotations
                 if (!empty($children)) {
                     // Add summary if multiple children
+		    // TO DO: have the 'alternative transcripts/isoforms (mRNA)' statment only be generated for gene-mRNA parent-child relations, and have something more general for other relationships
+		    // TO DO: also find every hardcoded 'gene' and 'mRNA' (transcript,isoform) and replace with code generated from the types we pull from the db
                     if (count($children) > 1) {
                         echo '<div class="alert alert-info mt-3">';
                         echo '  <i class="fas fa-info-circle"></i> ';
@@ -327,6 +333,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
                         }
                         
                         if (!$child_has_annotations) {
+		            // TO DO: transcript is fine for mRNA but not fine if the child is something else. But the customization is nice, it is better than going generic for everything
                             echo "<p class=\"text-muted\"><i class=\"fas fa-info-circle\"></i> No annotations loaded for this transcript.</p>";
                         }
                         
