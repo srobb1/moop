@@ -39,16 +39,16 @@ function get_all_cards($group_data) {
 
 $all_cards = get_all_cards($group_data);
 
-// Determine cards to display based on access_level (access_group is set by access_control.php)
+// Determine cards to display based on access_level
 $cards_to_display = [];
 
-if ($access_level === 'ALL' || $access_level === 'Admin') {
+if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {
     $cards_to_display = $all_cards;
-} elseif ($logged_in) {
+} elseif (is_logged_in()) {
     if (isset($all_cards['Public'])) {
         $cards_to_display['Public'] = $all_cards['Public'];
     }
-    foreach ($user_access as $organism => $assemblies) {
+    foreach (get_user_access() as $organism => $assemblies) {
         if (!isset($cards_to_display[$organism])) {
             // Format organism name: split on underscores, capitalize first word, lowercase rest, italicize
             $parts = explode('_', $organism);
@@ -76,7 +76,7 @@ $phylo_tree_data = json_decode(file_get_contents(__DIR__ . '/phylo_tree_config.j
 
 // Build user access for phylo tree - include all organisms if admin/ALL access
 $phylo_user_access = [];
-if ($access_level === 'ALL' || $access_level === 'Admin') {
+if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {
     // Admin gets access to all organisms
     foreach ($group_data as $data) {
         $organism = $data['organism'];
@@ -84,9 +84,9 @@ if ($access_level === 'ALL' || $access_level === 'Admin') {
             $phylo_user_access[$organism] = true;
         }
     }
-} elseif ($logged_in) {
+} elseif (is_logged_in()) {
     // Logged-in users get their specific access
-    $phylo_user_access = $user_access;
+    $phylo_user_access = get_user_access();
 } else {
     // Public users: get organisms in Public group
     foreach ($group_data as $data) {
@@ -114,7 +114,7 @@ include_once realpath("header.php");
     <h2 class="fw-bold mt-4 mb-3">Available Organisms</h2>
     <p class="text-muted">
       <i class="fa fa-network-wired"></i> IP: <span class="fw-semibold"><?= htmlspecialchars($ip) ?></span>  
-      &nbsp;|&nbsp; <i class="fa fa-user-shield"></i> Access: <span class="fw-semibold"><?= htmlspecialchars($access_group) ?></span>
+      &nbsp;|&nbsp; <i class="fa fa-user-shield"></i> Access: <span class="fw-semibold"><?= htmlspecialchars(get_access_level()) ?></span>
     </p>
   </div>
 

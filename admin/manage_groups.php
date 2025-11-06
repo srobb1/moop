@@ -1,9 +1,8 @@
 <?php
 session_start();
-include_once 'admin_header.php';
+include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
 
-$access_group = 'Admin';
 $groups_file = $organism_data . '/organism_assembly_groups.json';
 $groups_data = [];
 if (file_exists($groups_file)) {

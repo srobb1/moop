@@ -1,7 +1,6 @@
 <?php
 session_start();
-$access_group = 'Admin';
-include_once 'admin_header.php';
+include_once 'admin_access_check.php';
 include_once __DIR__ . '/../header.php';
 $organism_data_dir = $organism_data;
 $tree_config_file = __DIR__ . '/../phylo_tree_config.json';

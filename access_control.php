@@ -28,14 +28,25 @@ if ($visitor_ip_long >= $all_access_start_ip && $visitor_ip_long <= $all_access_
     }
 }
 
-// Set access variables (read from session, never from GET/POST)
-$logged_in = $_SESSION["logged_in"] ?? false;
-$username  = $_SESSION["username"] ?? '';
-$user_access = $_SESSION["access"] ?? [];
-$access_level = $_SESSION["access_level"] ?? 'Public';
+/**
+ * Helper functions to access session data securely
+ * These functions always read from $_SESSION (single source of truth)
+ */
+function get_access_level() {
+    return $_SESSION["access_level"] ?? 'Public';
+}
 
-// For backward compatibility, set access_group based on access_level
-$access_group = $access_level;
+function get_user_access() {
+    return $_SESSION["access"] ?? [];
+}
+
+function is_logged_in() {
+    return $_SESSION["logged_in"] ?? false;
+}
+
+function get_username() {
+    return $_SESSION["username"] ?? '';
+}
 
 /**
  * Check if an organism belongs to a public group
@@ -78,7 +89,8 @@ function is_public_organism($organism_name) {
  */
 if (!function_exists('has_access')) {
 function has_access($required_level = 'Public', $resource_name = null) {
-    global $access_level, $user_access;
+    $access_level = get_access_level();
+    $user_access = get_user_access();
     
     // ALL and Admin have access to everything
     if ($access_level === 'ALL' || $access_level === 'Admin') {
