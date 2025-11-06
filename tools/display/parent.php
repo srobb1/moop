@@ -49,6 +49,7 @@ if (!empty($organism_name)) {
 }
 
 // Load annotation configuration
+// TO DO: re-evaluate where config json files are stored
 $annotation_config_file = "$organism_data/annotation_config.json";
 $analysis_order = [];
 $analysis_desc = [];
@@ -78,6 +79,7 @@ if (file_exists($annotation_config_file)) {
 }
 
 // Define parent types (typically genes are parent features)
+// TO DO: not all organisms in the future will have gene as a parent, this should go in a config somewhere
 $parents = ['gene', 'pseudogene'];
 
 // Get ancestors for the feature
