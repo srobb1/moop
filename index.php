@@ -110,7 +110,7 @@ include_once realpath("header.php");
   <!-- Page Header -->
   <div class="text-center mb-5">
     <h1 class="fw-bold mb-3"><?=$siteTitle?></h1>
-    <hr class="mx-auto" style="width: 100px; height: 3px; opacity: 1; background: linear-gradient(to right, #007bff, #0056b3);">
+    <hr class="mx-auto page-header-divider">
     <h2 class="fw-bold mt-4 mb-3">Available Organisms</h2>
     <p class="text-muted">
       <i class="fa fa-network-wired"></i> IP: <span class="fw-semibold"><?= htmlspecialchars($ip) ?></span>  
@@ -159,7 +159,7 @@ include_once realpath("header.php");
   </div>
 
   <!-- Phylogenetic Tree View -->
-  <div id="tree-view" class="view-container" style="display: none;">
+  <div id="tree-view" class="view-container hidden">
     <div class="row">
       <div class="col-lg-8">
         <div class="card shadow-sm">
@@ -172,7 +172,7 @@ include_once realpath("header.php");
         </div>
       </div>
       <div class="col-lg-4">
-        <div class="card shadow-sm sticky-top" style="top: 20px;">
+        <div class="card shadow-sm sticky-card">
           <div class="card-header bg-success text-white">
             <h5 class="mb-0">
               Selected Organisms 
