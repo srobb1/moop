@@ -166,15 +166,20 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
 
 <!-- Navigation -->
 <div class="margin-20">
-    <div class="mb-3">
-        <?php if (!empty($organism_name)): ?>
-            <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism_name) ?>" 
-               class="btn btn-secondary">
-                <i class="fa fa-arrow-left"></i> Back to <em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em>
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div>
+            <?php if (!empty($organism_name)): ?>
+                <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism_name) ?>" 
+                   class="btn btn-secondary">
+                    <i class="fa fa-arrow-left"></i> Back to <em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em>
+                </a>
+            <?php endif; ?>
+            <a href="/<?= $site ?>/index.php" class="btn btn-secondary">
+                <i class="fa fa-home"></i> Home
             </a>
-        <?php endif; ?>
-        <a href="/<?= $site ?>/index.php" class="btn btn-secondary">
-            <i class="fa fa-home"></i> Home
+        </div>
+        <a href="#sequencesSection" class="btn btn-info" title="Jump to sequences section">
+            <i class="fas fa-dna"></i> Jump to Sequences
         </a>
     </div>
 
@@ -246,11 +251,16 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
 
     <!-- Annotations Section -->
     <div class="card shadow-sm mb-4">
-        <div class="card-header d-flex align-items-center">
-            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="true">
-                <i class="fas fa-minus toggle-icon text-primary"></i>
-            </span>
-            <strong class="ms-2">Annotations</strong>
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="true">
+                    <i class="fas fa-minus toggle-icon text-primary"></i>
+                </span>
+                <strong class="ms-2">Annotations</strong>
+            </div>
+            <a href="#" class="btn btn-sm btn-outline-secondary" title="Back to top">
+                <i class="fas fa-arrow-up"></i> Back to Top
+            </a>
         </div>
         <div id="annotationsSection" class="collapse show">
             <div class="card-body">
@@ -304,7 +314,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
                         echo "    <span class=\"collapse-section\" data-bs-toggle=\"collapse\" data-bs-target=\"#child_$child_feature_id\" aria-expanded=\"true\">";
                         echo "      <i class=\"fas fa-minus toggle-icon text-info\"></i>";
                         echo "    </span>";
-                        echo "    <strong class=\"ms-2 text-dark\"><span class=\"text-white px-2 py-1 rounded child-feature-badge\">$child_uniquename ($child_type)</span></strong>";
+                        echo "    <strong class=\"ms-2 text-dark\"><span class=\"text-white px-2 py-1 rounded child-feature-badge badge-xlg\">$child_uniquename ($child_type)</span></strong>";
                         
                         // Show colored annotation type badges as clickable links
                         if ($child_annotation_count > 0) {
@@ -312,7 +322,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
                                 $badge_color = $annotation_colors[$type_name] ?? 'warning';
                                 $text_color = in_array($badge_color, ['warning', 'info', 'secondary']) ? 'text-dark' : 'text-white';
                                 $section_id = "annot_section_" . preg_replace('/[^a-zA-Z0-9_]/', '_', $child_uniquename . '_' . $type_name);
-                                echo " <a href=\"#$section_id\" class=\"badge bg-$badge_color $text_color ms-1 text-decoration-none badge-xs\" style=\"cursor: pointer;\">$type_name</a>";
+                                echo " <a href=\"#$section_id\" class=\"badge bg-$badge_color $text_color ms-1 text-decoration-none badge-s\" style=\"cursor: pointer;\">$type_name</a>";
                             }
                         } else {
                             echo " <span class=\"badge bg-secondary ms-2\">No annotations</span>";
