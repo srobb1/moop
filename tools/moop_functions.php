@@ -61,6 +61,31 @@ function sanitize_input($data) {
  * @param string $dbFile - Path to SQLite database file
  * @return array - Validation results with status and details
  */
+
+/**
+ * Validates database file is readable and accessible
+ * 
+ * @param string $dbFile - Path to SQLite database file
+ * @return array - Validation results with 'valid' and 'error' keys
+ */
+function validateDatabaseFile($dbFile) {
+    if (!file_exists($dbFile)) {
+        return ['valid' => false, 'error' => 'Database file not found'];
+    }
+    
+    if (!is_readable($dbFile)) {
+        return ['valid' => false, 'error' => 'Database file not readable (permission denied)'];
+    }
+    
+    try {
+        $db = new PDO('sqlite:' . $dbFile);
+        $db = null;
+        return ['valid' => true, 'error' => ''];
+    } catch (Exception $e) {
+        return ['valid' => false, 'error' => $e->getMessage()];
+    }
+}
+
 function validateDatabaseIntegrity($dbFile) {
     $result = [
         'valid' => false,
