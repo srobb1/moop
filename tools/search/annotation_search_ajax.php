@@ -51,7 +51,7 @@ if (!file_exists($db)) {
     // Try alternative naming
     $db = "$organism_data/$organism/$organism.genes.sqlite";
     if (!file_exists($db)) {
-        include_once __DIR__ . '/../../error_logger.php';
+        include_once __DIR__ . '/../moop_functions.php';
         logError('Database not found for organism', $organism, [
             'search_term' => $search_keywords,
             'searched_paths' => [
