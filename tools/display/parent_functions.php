@@ -131,7 +131,7 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
     
     // Table with DataTables
     $html .= "<div class=\"table-responsive\">";
-    $html .= "<table id=\"" . htmlspecialchars($table_id) . "\" class=\"table table-sm table-striped table-hover\" style=\"width:100%; font-size: 13px;\">";
+    $html .= "<table id=\"" . htmlspecialchars($table_id) . "\" class=\"table table-sm table-striped table-hover\" style=\"width:100%;\">";
     $html .= "<thead><tr>";
     $html .= "<th class=\"export-only\">Organism</th>";
     $html .= "<th class=\"export-only\">Feature ID</th>";
@@ -270,9 +270,9 @@ function generateTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true) {
         $tree_char = $is_last_child ? '└── ' : '├── ';
         
         $html .= "<li>";
-        $html .= "<span class=\"tree-char\" style=\"color: #495057; font-weight: bold;\">$tree_char</span>";
+        $html .= "<span class=\"tree-char\">$tree_char</span>";
         $html .= "<span class=\"text-dark\">$feature_name</span> ";
-        $html .= "<span class=\"badge $badge_class $text_color\" style=\"font-size: 0.85em;\">$feature_type</span>";
+        $html .= "<span class=\"badge $badge_class $text_color\">$feature_type</span>";
         
         // Recursive call for nested children
         $html .= generateTreeHTML($row['feature_id'], $dbFile, $prefix, $is_last_child);
