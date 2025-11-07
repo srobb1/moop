@@ -146,7 +146,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
   <!-- Navigation Buttons -->
   <div class="mb-3">
     <?php if (!empty($parent_uniquename)): ?>
-      <a href="/<?= $site ?>/tools/display/parent.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($parent_uniquename) ?>" class="btn btn-secondary">
+      <a href="/<?= $site ?>/tools/display/parent_display.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($parent_uniquename) ?>" class="btn btn-secondary">
         <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($parent_uniquename) ?>
       </a>
     <?php endif; ?>
@@ -160,7 +160,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
 
   <!-- Assembly Header -->
   <div class="assembly-header shadow">
-    <h1><?= htmlspecialchars($assembly_info['genome_name']) ?> <span style="font-size: 0.6em; font-weight: normal;">(<?= htmlspecialchars($assembly_info['genome_accession']) ?>)</span></h1>
+    <h1><?= htmlspecialchars($assembly_info['genome_name']) ?> <span class="heading-small">(<?= htmlspecialchars($assembly_info['genome_accession']) ?>)</span></h1>
   </div>
 
   <!-- Statistics Section -->
