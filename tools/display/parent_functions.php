@@ -2,7 +2,7 @@
 /**
  * Parent Feature Display Functions
  * Functions for displaying parent feature data, hierarchies, and annotations
- * Used by parent.php to render feature information
+ * Used by parent_display.php to render feature information
  */
 
 /**
@@ -109,12 +109,12 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
     
     $html = '<div class="annotation-section mb-3 ' . htmlspecialchars($border_class) . '" id="' . htmlspecialchars($section_id) . '">';
     $html .= '<div class="d-flex justify-content-between align-items-center mb-2">';
-    $html .= "<h5 class=\"mb-0\"><span class=\"badge bg-" . htmlspecialchars($color) . " $text_color\" style=\"font-size: 1rem; padding: 0.5rem 0.75rem;\">" . htmlspecialchars($annotation_type) . "</span>";
-    $html .= " <span class=\"badge bg-secondary\" style=\"font-size: 1rem; padding: 0.5rem 0.75rem;\">" . htmlspecialchars($result_count) . " result" . ($result_count > 1 ? 's' : '') . "</span>";
+    $html .= "<h5 class=\"mb-0\"><span class=\"badge bg-" . htmlspecialchars($color) . " $text_color badge-lg\">" . htmlspecialchars($annotation_type) . "</span>";
+    $html .= " <span class=\"badge bg-secondary badge-lg\">" . htmlspecialchars($result_count) . " result" . ($result_count > 1 ? 's' : '') . "</span>";
     
     if ($desc) {
-        $html .= "&nbsp;<button class=\"btn btn-sm btn-link p-0\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#" . htmlspecialchars($desc_id) . "\" aria-expanded=\"false\" style=\"color: #17a2b8; text-decoration: none;\">";
-        $html .= "<i class=\"fas fa-info-circle\" style=\"font-size: 1rem;\"></i>";
+        $html .= "&nbsp;<button class=\"btn btn-sm btn-link p-0 annotation-info-btn\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#" . htmlspecialchars($desc_id) . "\" aria-expanded=\"false\">";
+        $html .= "<i class=\"fas fa-info-circle\"></i>";
         $html .= "</button>";
     }
     
