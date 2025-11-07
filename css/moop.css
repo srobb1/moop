@@ -1,10 +1,12 @@
 /* MOOP Base Styles */
 /* Global styles for MOOP (Modern Organism Observation Platform) */
+/* Last updated: Nov 2024 - Consolidated styling from inline styles */
 
 /* Global resets */
 html, body {
   margin: 0;
   padding: 0;
+  scroll-behavior: smooth;
 }
 
 /* Page container for consistent spacing */
@@ -22,4 +24,259 @@ html, body {
 /* Pointer cursor for interactive elements */
 .pointer_cursor {
   cursor: pointer;
+}
+
+/* ========== FOOTER STYLES ========== */
+footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  padding: 2rem 3rem;
+}
+
+footer .footer-content {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 2rem;
+}
+
+footer .footer-section {
+  flex: 1;
+}
+
+footer .footer-section.footer-center {
+  text-align: center;
+}
+
+footer .footer-section.footer-right {
+  text-align: right;
+}
+
+footer .footer-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+footer .footer-logo {
+  width: 50px;
+  height: 50px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #999;
+  flex-shrink: 0;
+}
+
+footer .footer-text {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+footer .footer-subtitle {
+  font-size: 0.85rem;
+}
+
+footer p {
+  margin-bottom: 0.5rem;
+}
+
+footer p:last-child {
+  margin-bottom: 0;
+}
+
+footer a {
+  color: #0066cc;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+footer a:hover {
+  color: #0052a3;
+}
+
+footer strong {
+  color: #333;
+}
+
+footer .footer-meta {
+  display: block;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+/* ========== NAVBAR STYLES ========== */
+.navbar {
+  padding-left: 10px;
+}
+
+.navbar-brand {
+  margin-right: 5px;
+}
+
+.navbar-brand img {
+  height: 25px;
+  vertical-align: text-bottom;
+}
+
+.nav-link {
+  color: white !important;
+}
+
+.nav-link i {
+  transition: all 0.2s ease;
+}
+
+.fa-tools {
+  font-size: 14px;
+}
+
+.fa-sign-out-alt,
+.fa-sign-in-alt {
+  font-size: 16px;
+  color: white;
+}
+
+#tbp_link {
+  display: none;
+  color: #d44;
+}
+
+#tbp_link:hover {
+  color: #f44;
+}
+
+/* ========== INDEX PAGE STYLES ========== */
+.page-header-divider {
+  width: 100px;
+  height: 3px;
+  opacity: 1;
+  background: linear-gradient(to right, #007bff, #0056b3);
+}
+
+/* Organism card styling */
+.organism-card {
+  transition: all 0.3s ease-in-out;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.organism-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Icon circle */
+.organism-icon {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 28px;
+  transition: all 0.3s ease;
+}
+
+.organism-card:hover .organism-icon {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* Card text colors */
+.organism-card .card-title {
+  color: #2c3e50;
+}
+
+.organism-card:hover .card-title {
+  color: #667eea;
+}
+
+/* Button styling */
+.organism-card .btn {
+  transition: all 0.3s ease;
+}
+
+.organism-card:hover .btn {
+  transform: translateX(5px);
+}
+
+/* Phylogenetic Tree Styling */
+.phylo-tree-scroll {
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.view-container {
+  display: block;
+}
+
+.view-container.hidden {
+  display: none;
+}
+
+.sticky-card {
+  position: sticky;
+  top: 20px;
+}
+
+/* Phylogenetic node styling */
+.phylo-node {
+  padding: 8px 12px;
+  margin: 2px 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 3px;
+}
+
+.phylo-node:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.phylo-node.selected {
+  background-color: rgba(102, 126, 234, 0.2);
+  font-weight: 500;
+}
+
+.phylo-node.locked {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ========== HEADER STYLES ========== */
+.header-image {
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-attachment: fixed;
+}
+
+.cover-img {
+  visibility: hidden;
+  width: 100%;
+  height: auto;
+}
+
+/* ========== RESPONSIVE DESIGN ========== */
+@media (max-width: 575px) {
+  #search_box {
+    width: 193px;
+    margin-right: 0.5rem !important;
+  }
+
+  footer .footer-content {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  footer .footer-section.footer-center,
+  footer .footer-section.footer-right {
+    text-align: left;
+  }
 }
