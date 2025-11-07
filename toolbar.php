@@ -1,9 +1,9 @@
-<nav class="navbar navbar-expand-md bg-dark navbar-dark sticky-top" style="padding-left:10px">
+<nav class="navbar navbar-expand-md bg-dark navbar-dark sticky-top">
 
 <?php
     include_once __DIR__ . '/site_config.php';
     
-    echo "<a class=\"navbar-brand\" href=\"/$site/index.php\" style=\"margin-right:5px\"><img id=\"site_logo\" src=\"$favicon_path\" alt=\"DB_Logo\" style=\"height:25px; vertical-align:text-bottom;\"></a>";
+    echo "<a class=\"navbar-brand\" href=\"/$site/index.php\"><img id=\"site_logo\" src=\"$favicon_path\" alt=\"DB_Logo\"></a>";
 ?>
 
   <!-- Toggler/collapsibe Button -->
@@ -22,7 +22,7 @@
 echo '<li class="nav-item"><a class="nav-link" href="/Public/help/00_help.php">Help</a></li>';
 
 if (is_logged_in() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/admin/index.php"><i class="fa fa-tools" style="font-size:14px;"></i> Admin Tools</a></li>';
+    echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/admin/index.php"><i class="fa fa-tools"></i> Admin Tools</a></li>';
 }
 
 ?>
@@ -34,30 +34,11 @@ if (is_logged_in() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin')
   <ul class="navbar-nav ml-auto">
     <?php
     if (is_logged_in()) {
-        echo'<li class="nav-item"><a id="logout_link" class="nav-link" style="color:white;" href="/' . $site . '/logout.php">Log Out <i class="fa fa-sign-out-alt" style="font-size:16px;color:white"></i></a></li>';
+        echo'<li class="nav-item"><a id="logout_link" class="nav-link" href="/' . $site . '/logout.php">Log Out <i class="fa fa-sign-out-alt"></i></a></li>';
     } else {
-        echo'<li class="nav-item"><a id="login_link" class="nav-link" style="color:white;" href="/' . $site . '/login.php">Log In <i class="fa fa-sign-in-alt" style="font-size:16px;color:white"></i></a></li>';
+        echo'<li class="nav-item"><a id="login_link" class="nav-link" href="/' . $site . '/login.php">Log In <i class="fa fa-sign-in-alt"></i></a></li>';
     }
     ?>
   </ul>
 
 </nav>
-
-<style>
-   @media (max-width: 575px) {
-     #search_box {
-       width: 193px;
-       margin-right: .5rem!important;
-     }
-   }
-   
-   #tbp_link {
-     display:none;
-     color:#d44;
-   }
-  
-   #tbp_link:hover {
-     color:#f44;
-   }
-  
-</style>
