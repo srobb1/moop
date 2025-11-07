@@ -3,7 +3,7 @@
  * Sequences Display Component for MOOP
  * Displays sequences for parent feature and all child features grouped by sequence type
  * 
- * Expected variables from parent.php:
+ * Expected variables from parent_display.php:
  * - $organism_name: Name of the organism
  * - $organism_data: Path to organism data directory
  * - $gene_name: Comma-separated list of feature uniquenames (parent and children)
@@ -11,7 +11,7 @@
  * - $admin_email: Administrator email (from site_config.php)
  */
 
-// Ensure site_config is included (should be from parent.php, but double-check)
+// Ensure site_config is included (should be from parent_display.php, but double-check)
 if (!isset($sequence_types)) {
     include_once __DIR__ . '/../../site_config.php';
 }
