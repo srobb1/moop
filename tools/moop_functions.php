@@ -49,6 +49,149 @@ function sanitize_input($data) {
 }
 
 /**
+ * Validate database integrity and data quality
+ * 
+ * Checks:
+ * - File is readable
+ * - Valid SQLite database
+ * - All required tables exist
+ * - Tables have data
+ * - Data completeness (no orphaned records)
+ * 
+ * @param string $dbFile - Path to SQLite database file
+ * @return array - Validation results with status and details
+ */
+function validateDatabaseIntegrity($dbFile) {
+    $result = [
+        'valid' => false,
+        'readable' => false,
+        'database_valid' => false,
+        'tables_present' => [],
+        'tables_missing' => [],
+        'row_counts' => [],
+        'data_issues' => [],
+        'errors' => []
+    ];
+    
+    // Check if file exists and is readable
+    if (!file_exists($dbFile)) {
+        $result['errors'][] = 'Database file not found';
+        return $result;
+    }
+    
+    if (!is_readable($dbFile)) {
+        $result['errors'][] = 'Database file not readable (permission denied)';
+        return $result;
+    }
+    
+    $result['readable'] = true;
+    
+    // Try to connect to database
+    try {
+        $dbh = new PDO("sqlite:" . $dbFile);
+        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    } catch (PDOException $e) {
+        $result['errors'][] = 'Invalid SQLite database: ' . $e->getMessage();
+        return $result;
+    }
+    
+    $result['database_valid'] = true;
+    
+    // Required tables based on schema
+    $required_tables = [
+        'organism',
+        'genome',
+        'feature',
+        'annotation_source',
+        'annotation',
+        'feature_annotation'
+    ];
+    
+    // Check which tables exist
+    try {
+        $stmt = $dbh->query("SELECT name FROM sqlite_master WHERE type='table'");
+        $existing_tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        foreach ($required_tables as $table) {
+            if (in_array($table, $existing_tables)) {
+                $result['tables_present'][] = $table;
+            } else {
+                $result['tables_missing'][] = $table;
+            }
+        }
+    } catch (PDOException $e) {
+        $result['errors'][] = 'Cannot query tables: ' . $e->getMessage();
+        $dbh = null;
+        return $result;
+    }
+    
+    // Check row counts and data quality
+    try {
+        foreach ($result['tables_present'] as $table) {
+            $stmt = $dbh->query("SELECT COUNT(*) FROM $table");
+            $count = $stmt->fetchColumn();
+            $result['row_counts'][$table] = $count;
+        }
+        
+        // Check for data quality issues
+        
+        // 1. Check for annotations without sources (orphaned)
+        if (in_array('annotation', $result['tables_present']) && in_array('annotation_source', $result['tables_present'])) {
+            $stmt = $dbh->query("
+                SELECT COUNT(*) FROM annotation a 
+                LEFT JOIN annotation_source ans ON a.annotation_source_id = ans.annotation_source_id 
+                WHERE ans.annotation_source_id IS NULL
+            ");
+            $orphaned_count = $stmt->fetchColumn();
+            if ($orphaned_count > 0) {
+                $result['data_issues'][] = "Orphaned annotations (no source): $orphaned_count";
+            }
+        }
+        
+        // 2. Check for incomplete annotations (missing accession or description)
+        if (in_array('annotation', $result['tables_present'])) {
+            $stmt = $dbh->query("
+                SELECT COUNT(*) FROM annotation 
+                WHERE annotation_accession IS NULL OR annotation_accession = ''
+            ");
+            $missing_accession = $stmt->fetchColumn();
+            if ($missing_accession > 0) {
+                $result['data_issues'][] = "Annotations with missing accession: $missing_accession";
+            }
+        }
+        
+        // 3. Check for features without organisms
+        if (in_array('feature', $result['tables_present']) && in_array('organism', $result['tables_present'])) {
+            $stmt = $dbh->query("
+                SELECT COUNT(*) FROM feature f 
+                LEFT JOIN organism o ON f.organism_id = o.organism_id 
+                WHERE o.organism_id IS NULL
+            ");
+            $orphaned_features = $stmt->fetchColumn();
+            if ($orphaned_features > 0) {
+                $result['data_issues'][] = "Features without organism: $orphaned_features";
+            }
+        }
+        
+    } catch (PDOException $e) {
+        $result['errors'][] = 'Data quality check failed: ' . $e->getMessage();
+    }
+    
+    $dbh = null;
+    
+    // Determine overall validity
+    $result['valid'] = (
+        $result['readable'] && 
+        $result['database_valid'] && 
+        empty($result['tables_missing']) && 
+        empty($result['data_issues']) &&
+        empty($result['errors'])
+    );
+    
+    return $result;
+}
+
+/**
  * Get database connection
  * 
  * @param string $dbFile - Path to SQLite database file
@@ -234,4 +377,414 @@ function is_quoted_search($search_term) {
     return preg_match('/^".+"$/', trim($search_term)) === 1;
 }
 
+/**
+ * Validate assembly directories against database genome records
+ * 
+ * Checks if assembly directories exist for each genome record
+ * and if genome_name/genome_accession match directory names
+ * 
+ * @param string $dbFile - Path to SQLite database
+ * @param string $organism_data_dir - Path to organism data directory
+ * @return array - Validation results with mismatches and genome info
+ */
+function validateAssemblyDirectories($dbFile, $organism_data_dir) {
+    $result = [
+        'valid' => true,
+        'genomes' => [],
+        'mismatches' => [],
+        'errors' => []
+    ];
+    
+    if (!file_exists($dbFile) || !is_readable($dbFile)) {
+        $result['valid'] = false;
+        $result['errors'][] = 'Database not readable';
+        return $result;
+    }
+    
+    if (!is_dir($organism_data_dir)) {
+        $result['valid'] = false;
+        $result['errors'][] = 'Organism directory not found';
+        return $result;
+    }
+    
+    try {
+        $dbh = new PDO("sqlite:" . $dbFile);
+        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        // Get all genome records
+        $stmt = $dbh->query("SELECT genome_id, genome_name, genome_accession FROM genome ORDER BY genome_name");
+        $genomes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Get list of directories in organism folder
+        $dirs = array_diff(scandir($organism_data_dir), ['.', '..']);
+        $dir_names = [];
+        foreach ($dirs as $dir) {
+            $full_path = "$organism_data_dir/$dir";
+            if (is_dir($full_path)) {
+                $dir_names[] = $dir;
+            }
+        }
+        
+        // Check each genome record
+        foreach ($genomes as $genome) {
+            $name = $genome['genome_name'];
+            $accession = $genome['genome_accession'];
+            $genome_id = $genome['genome_id'];
+            
+            // Check if either name or accession matches a directory
+            $found_dir = null;
+            if (in_array($name, $dir_names)) {
+                $found_dir = $name;
+            } elseif (in_array($accession, $dir_names)) {
+                $found_dir = $accession;
+            }
+            
+            $result['genomes'][] = [
+                'genome_id' => $genome_id,
+                'genome_name' => $name,
+                'genome_accession' => $accession,
+                'directory_found' => $found_dir,
+                'exists' => $found_dir !== null
+            ];
+            
+            if ($found_dir === null) {
+                $result['valid'] = false;
+                $result['mismatches'][] = [
+                    'type' => 'missing_directory',
+                    'genome_name' => $name,
+                    'genome_accession' => $accession,
+                    'message' => "No directory found matching genome_name '$name' or genome_accession '$accession'"
+                ];
+            } elseif ($found_dir !== $name && $found_dir !== $accession) {
+                // Directory exists but doesn't match expected names
+                $result['mismatches'][] = [
+                    'type' => 'name_mismatch',
+                    'genome_name' => $name,
+                    'genome_accession' => $accession,
+                    'found_directory' => $found_dir,
+                    'message' => "Directory '$found_dir' found, but doesn't match genome_name '$name' or genome_accession '$accession'"
+                ];
+            }
+        }
+        
+        $dbh = null;
+    } catch (PDOException $e) {
+        $result['valid'] = false;
+        $result['errors'][] = 'Database query failed: ' . $e->getMessage();
+    }
+    
+    return $result;
+}
+
+/**
+ * Validate assembly FASTA files exist
+ * 
+ * Checks if each assembly directory contains the required FASTA files
+ * based on sequence_types patterns from site config
+ * 
+ * @param string $organism_dir - Path to organism directory
+ * @param array $sequence_types - Sequence type patterns from site_config
+ * @return array - Validation results for each assembly
+ */
+function validateAssemblyFastaFiles($organism_dir, $sequence_types) {
+    $result = [
+        'assemblies' => [],
+        'missing_files' => []
+    ];
+    
+    if (!is_dir($organism_dir)) {
+        return $result;
+    }
+    
+    // Get all directories in organism folder
+    $dirs = array_diff(scandir($organism_dir), ['.', '..']);
+    
+    foreach ($dirs as $dir) {
+        $full_path = "$organism_dir/$dir";
+        if (!is_dir($full_path)) {
+            continue;
+        }
+        
+        $assembly_info = [
+            'name' => $dir,
+            'fasta_files' => [],
+            'missing_patterns' => []
+        ];
+        
+        // Check for each sequence type pattern
+        foreach ($sequence_types as $type => $config) {
+            $pattern = $config['pattern'];
+            $files = glob("$full_path/*$pattern");
+            
+            if (!empty($files)) {
+                $assembly_info['fasta_files'][$type] = [
+                    'found' => true,
+                    'pattern' => $pattern,
+                    'file' => basename($files[0])
+                ];
+            } else {
+                $assembly_info['fasta_files'][$type] = [
+                    'found' => false,
+                    'pattern' => $pattern
+                ];
+                $assembly_info['missing_patterns'][] = $pattern;
+            }
+        }
+        
+        $result['assemblies'][$dir] = $assembly_info;
+        
+        if (!empty($assembly_info['missing_patterns'])) {
+            $result['missing_files'][$dir] = $assembly_info['missing_patterns'];
+        }
+    }
+    
+    return $result;
+}
+
+/**
+ * Rename an assembly directory
+ * 
+ * Renames a directory within an organism folder from old_name to new_name
+ * Used to align directory names with genome_name or genome_accession
+ * Returns manual command if automatic rename fails
+ * 
+ * @param string $organism_dir - Path to organism directory
+ * @param string $old_name - Current directory name
+ * @param string $new_name - New directory name
+ * @return array - ['success' => bool, 'message' => string, 'command' => string (if manual fix needed)]
+ */
+function renameAssemblyDirectory($organism_dir, $old_name, $new_name) {
+    $result = [
+        'success' => false,
+        'message' => '',
+        'command' => ''
+    ];
+    
+    if (!is_dir($organism_dir)) {
+        $result['message'] = 'Organism directory not found';
+        return $result;
+    }
+    
+    $old_path = "$organism_dir/$old_name";
+    $new_path = "$organism_dir/$new_name";
+    
+    // Validate old directory exists
+    if (!is_dir($old_path)) {
+        $result['message'] = "Directory '$old_name' not found";
+        return $result;
+    }
+    
+    // Check new name doesn't already exist
+    if (is_dir($new_path) || file_exists($new_path)) {
+        $result['message'] = "Directory '$new_name' already exists";
+        return $result;
+    }
+    
+    // Sanitize names to prevent path traversal
+    if (strpos($old_name, '/') !== false || strpos($new_name, '/') !== false ||
+        strpos($old_name, '..') !== false || strpos($new_name, '..') !== false) {
+        $result['message'] = 'Invalid directory name (contains path separators)';
+        return $result;
+    }
+    
+    // Build command for admin to run if automatic rename fails
+    $result['command'] = "cd " . escapeshellarg($organism_dir) . " && mv " . escapeshellarg($old_name) . " " . escapeshellarg($new_name);
+    
+    // Try to rename
+    if (@rename($old_path, $new_path)) {
+        $result['success'] = true;
+        $result['message'] = "Successfully renamed '$old_name' to '$new_name'";
+    } else {
+        $result['message'] = 'Web server lacks permission to rename directory.';
+    }
+    
+    return $result;
+}
+
+/**
+ * Delete an assembly directory
+ * 
+ * Recursively deletes a directory within an organism folder
+ * Used to remove incorrectly named or unused assembly directories
+ * Returns manual command if automatic delete fails
+ * 
+ * @param string $organism_dir - Path to organism directory
+ * @param string $dir_name - Directory name to delete
+ * @return array - ['success' => bool, 'message' => string, 'command' => string (if manual fix needed)]
+ */
+function deleteAssemblyDirectory($organism_dir, $dir_name) {
+    $result = [
+        'success' => false,
+        'message' => '',
+        'command' => ''
+    ];
+    
+    if (!is_dir($organism_dir)) {
+        $result['message'] = 'Organism directory not found';
+        return $result;
+    }
+    
+    $dir_path = "$organism_dir/$dir_name";
+    
+    // Validate directory exists
+    if (!is_dir($dir_path)) {
+        $result['message'] = "Directory '$dir_name' not found";
+        return $result;
+    }
+    
+    // Prevent deletion of non-assembly directories
+    if ($dir_name === '.' || $dir_name === '..' || strpos($dir_name, '/') !== false || 
+        strpos($dir_name, '..') !== false || $dir_name === 'organism.json') {
+        $result['message'] = 'Invalid directory name (security check failed)';
+        return $result;
+    }
+    
+    // Build command for admin to run if automatic delete fails
+    $result['command'] = "rm -rf " . escapeshellarg($dir_path);
+    
+    // Try to delete recursively
+    if (rrmdir($dir_path)) {
+        $result['success'] = true;
+        $result['message'] = "Successfully deleted directory '$dir_name'";
+    } else {
+        $result['message'] = 'Web server lacks permission to delete directory.';
+    }
+    
+    return $result;
+}
+
+/**
+ * Recursively remove directory
+ * 
+ * Helper function to delete a directory and all its contents
+ * 
+ * @param string $dir - Directory path
+ * @return bool - True if successful
+ */
+function rrmdir($dir) {
+    if (!is_dir($dir)) {
+        return false;
+    }
+    
+    $items = scandir($dir);
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') {
+            continue;
+        }
+        $path = $dir . '/' . $item;
+        if (is_dir($path)) {
+            if (!rrmdir($path)) {
+                return false;
+            }
+        } else {
+            if (!@unlink($path)) {
+                return false;
+            }
+        }
+    }
+    
+    return @rmdir($dir);
+}
+
+/**
+ * Get the web server user and group
+ * 
+ * Detects the user running the current PHP process (web server)
+ * 
+ * @return array - ['user' => string, 'group' => string]
+ */
+function getWebServerUser() {
+    $user = 'www-data';
+    $group = 'www-data';
+    
+    // Try to get the actual user running this process
+    if (function_exists('posix_getuid')) {
+        $uid = posix_getuid();
+        $pwinfo = posix_getpwuid($uid);
+        if ($pwinfo !== false) {
+            $user = $pwinfo['name'];
+        }
+    }
+    
+    // Try to get the actual group
+    if (function_exists('posix_getgid')) {
+        $gid = posix_getgid();
+        $grinfo = posix_getgrgid($gid);
+        if ($grinfo !== false) {
+            $group = $grinfo['name'];
+        }
+    }
+    
+    return ['user' => $user, 'group' => $group];
+}
+
+/**
+ * Attempt to fix database file permissions
+ * 
+ * Tries to make database readable by web server user.
+ * Returns instructions if automatic fix fails.
+ * 
+ * @param string $dbFile - Path to database file
+ * @return array - ['success' => bool, 'message' => string, 'command' => string (if manual fix needed)]
+ */
+function fixDatabasePermissions($dbFile) {
+    $result = [
+        'success' => false,
+        'message' => '',
+        'command' => ''
+    ];
+    
+    if (!file_exists($dbFile)) {
+        $result['message'] = 'Database file not found';
+        return $result;
+    }
+    
+    if (!is_file($dbFile)) {
+        $result['message'] = 'Path is not a file';
+        return $result;
+    }
+    
+    // Get web server user
+    $webserver = getWebServerUser();
+    $web_user = $webserver['user'];
+    $web_group = $webserver['group'];
+    
+    // Get file info for reporting
+    $file_owner = function_exists('posix_getpwuid') ? posix_getpwuid(fileowner($dbFile))['name'] : 'unknown';
+    $file_group = function_exists('posix_getgrgid') ? posix_getgrgid(filegroup($dbFile))['name'] : 'unknown';
+    $current_perms = substr(sprintf('%o', fileperms($dbFile)), -4);
+    
+    // Build command for admin to run if automatic fix fails
+    $result['command'] = "sudo chmod 644 " . escapeshellarg($dbFile) . " && sudo chown " . escapeshellarg("$web_user:$web_group") . " " . escapeshellarg($dbFile);
+    
+    // Try to fix permissions
+    try {
+        // Try chmod to make readable (644 = rw-r--r--)
+        $chmod_result = @chmod($dbFile, 0644);
+        
+        if (!$chmod_result) {
+            $result['message'] = 'Web server lacks permission to change file permissions.';
+            return $result;
+        }
+        
+        // Try to change ownership to web server user (may fail if not root)
+        @chown($dbFile, $web_user);
+        @chgrp($dbFile, $web_group);
+        
+        // Verify it worked
+        if (is_readable($dbFile)) {
+            $result['success'] = true;
+            $result['message'] = 'Permissions fixed successfully! Database is now readable.';
+        } else {
+            $result['message'] = 'Permissions were modified but file still not readable.';
+        }
+        
+    } catch (Exception $e) {
+        $result['message'] = 'Error: ' . $e->getMessage();
+    }
+    
+    return $result;
+}
+
 ?>
+
