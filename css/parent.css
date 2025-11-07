@@ -36,6 +36,28 @@
     opacity: 0.95;
 }
 
+.feature-header a {
+    color: #e8d5f2;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.feature-header a:hover {
+    color: #fff;
+    text-decoration: none;
+}
+
+.link-light-bordered {
+    color: #e8d5f2 !important;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.link-light-bordered:hover {
+    color: #fff !important;
+    text-decoration: none;
+}
+
 .info-table th {
     width: 200px;
     background-color: #f8f9fa;
@@ -120,6 +142,14 @@
     background-color: #17a2b8 !important;
 }
 
+.child-feature-badge {
+    background-color: #17a2b8 !important;
+}
+
+.parent-feature-badge {
+    background-color: #764ba2 !important;
+}
+
 .tree-container .tree li::before,
 .tree-container .tree li::after {
     display: none !important;
@@ -157,6 +187,20 @@
 .annotation-section.border-purple { border-left-color: #6f42c1; }
 .annotation-section.border-dark { border-left-color: #343a40; }
 
+.annotation-section .table {
+    margin-bottom: 0;
+}
+
+.annotation-section h6 {
+    font-weight: 600;
+}
+
+.tree-char {
+    color: #495057;
+    font-weight: bold;
+}
+
+/* Annotation tables */
 .annotation-section .table {
     margin-bottom: 0;
 }
@@ -207,6 +251,27 @@ td.export-only {
 /* Smooth scrolling for anchor links */
 html {
     scroll-behavior: smooth;
+}
+
+/* Badge size variants */
+.badge-xlg {
+    font-size: 1rem !important;
+    padding: 0.5rem 0.75rem !important;
+}
+
+.badge-lg {
+    font-size: 1rem !important;
+    padding: 0.5rem 0.75rem !important;
+}
+
+.badge-sm {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+}
+
+.badge-xs {
+    font-size: 0.65rem !important;
+    padding: 0.15rem 0.4rem !important;
 }
 
 /* Hover effect for clickable annotation badges */
