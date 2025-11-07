@@ -12,10 +12,10 @@
  * @param {string} organism - The organism identifier
  * @param {Array} results - Array of result objects
  * @param {string} sitePath - The site base path
- * @param {string} linkBasePath - Base path for feature links (e.g., 'tools/display/parent.php' or 'tools/search/parent.php')
+ * @param {string} linkBasePath - Base path for feature links (e.g., 'tools/display/parent_display.php' or 'tools/search/parent_display.php')
  * @returns {string} HTML string for the table
  */
-function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 'tools/display/parent.php') {
+function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 'tools/display/parent_display.php') {
     const tableId = '#resultsTable_' + organism.replace(/[^a-zA-Z0-9]/g, '_');
     const selectId = organism.replace(/[^a-zA-Z0-9]/g, '_');
     const genus = results[0]?.genus || '';
@@ -34,7 +34,8 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
     const anchorId = 'results-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
     
     // Check if this is a uniquename search (no annotation columns)
-    const isUniquenameSearch = !results[0]?.annotation_source;
+    // Use the uniquename_search flag from the result data
+    const isUniquenameSearch = results[0]?.uniquename_search ?? false;
     
     let html = `
         <div class="organism-results" id="${anchorId}">

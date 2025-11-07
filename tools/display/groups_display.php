@@ -76,19 +76,14 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
   <!-- DataTables Buttons 1.6.4 CSS - NOT NECESSARY (v2.3.6 provides all needed styling) -->
   <!-- <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.4/css/buttons.dataTables.min.css"> -->
   <link rel="stylesheet" href="shared_results_table.css">
-  <style>
-    #searchKeywords::placeholder {
-      color: #999;
-      opacity: 1;
-    }
-  </style>
+  <link rel="stylesheet" href="display_styles.css">
 </head>
 <body class="bg-light">
 
 <div class="container mt-5">
   <div class="mb-3">
     <a href="/<?= $site ?>/index.php" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> Back to Home</a>
-    <button id="backToGroupBtn" class="btn btn-secondary ms-2" style="display: none;" onclick="location.reload();">
+    <button id="backToGroupBtn" class="btn btn-secondary ms-2 hidden" onclick="location.reload();">
       <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($group_name) ?>
     </button>
   </div>
@@ -102,12 +97,12 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
     <div class="card-header bg-primary text-white">
       <h4 class="mb-0"><i class="fa fa-search"></i> <?= htmlspecialchars($group_name) ?>: Search Gene IDs and Annotations</h4>
     </div>
-    <div class="card-body" style="background-color: rgba(13, 110, 253, 0.08);">
+    <div class="card-body bg-search-light">
       <form id="groupSearchForm">
         <div class="row">
           <div class="col-md-10">
             <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
-            <small class="form-text" style="color: #999;">
+            <small class="form-text text-muted-gray">
               Use quotes for exact phrases (e.g., "ABC transporter"). Searches across all organisms in this group.
             </small>
           </div>
@@ -122,7 +117,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
   </div>
 
   <!-- Search Results Section -->
-  <div id="searchResults" style="display: none;">
+  <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-5">
       <div class="card-header bg-info text-white">
         <h4 class="mb-0"><i class="fa fa-list"></i> Search Results</h4>
@@ -225,66 +220,6 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
 
 </div>
 
-<style>
-  .organism-card {
-    transition: all 0.3s ease;
-    border: 1px solid rgba(0,0,0,0.1);
-    cursor: pointer;
-  }
-  
-  .organism-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.15) !important;
-  }
-  
-  .organism-image-container {
-    height: 150px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-  
-  .organism-card-image {
-    max-width: 100%;
-    max-height: 150px;
-    object-fit: cover;
-    border-radius: 8px;
-  }
-  
-  .organism-card-icon {
-    height: 150px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .organism-card .card-title {
-    color: #2c3e50;
-    font-size: 1.1rem;
-  }
-  
-  .organism-card:hover .card-title {
-    color: #007bff;
-  }
-  
-  .jump-link {
-    text-decoration: none;
-    color: #0d6efd;
-    padding: 2px 6px;
-    border-radius: 3px;
-    transition: background-color 0.2s;
-  }
-  
-  .jump-link:hover {
-    background-color: #e7f1ff;
-    text-decoration: none;
-  }
-  
-  .jump-link .badge {
-    margin-left: 4px;
-  }
-</style>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
@@ -405,7 +340,7 @@ function displayOrganismResults(data) {
     const results = data.results;
     
     // Add "Read More" button after organism name by wrapping the shared function
-    const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent.php');
+    const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php');
     
     // Insert the "Read More" button into the generated HTML
     const safeOrganism = organism.replace(/[^a-zA-Z0-9]/g, '_');
