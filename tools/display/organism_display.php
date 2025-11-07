@@ -62,12 +62,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
   <!-- TEST: Commenting out to test if Buttons 2.3.6 CSS is sufficient -->
   <!-- <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.4/css/buttons.dataTables.min.css"> -->
   <link rel="stylesheet" href="shared_results_table.css">
-  <style>
-    #searchKeywords::placeholder {
-      color: #999;
-      opacity: 1;
-    }
-  </style>
+  <link rel="stylesheet" href="display_styles.css">
 </head>
 <body class="bg-light">
 
@@ -75,12 +70,12 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
   <!-- Navigation Buttons -->
   <div class="mb-3">
     <?php if (!empty($parent_uniquename)): ?>
-      <a href="/<?= $site ?>/tools/display/parent.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($parent_uniquename) ?>" class="btn btn-secondary">
+      <a href="/<?= $site ?>/tools/display/parent_display.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($parent_uniquename) ?>" class="btn btn-secondary">
         <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($parent_uniquename) ?>
       </a>
     <?php endif; ?>
     <a href="/<?= $site ?>/index.php" class="btn btn-secondary"><i class="fa fa-home"></i> Back to Home</a>
-    <button class="btn btn-secondary" id="backToOrganismBtn" style="display: none;">
+    <button class="btn btn-secondary hidden" id="backToOrganismBtn">
       <i class="fa fa-arrow-left"></i> Back to <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em> Page
     </button>
   </div>
@@ -90,12 +85,12 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
     <div class="card-header bg-primary text-white">
       <h4 class="mb-0"><i class="fa fa-search"></i> <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>: Search Gene IDs and Annotations</h4>
     </div>
-    <div class="card-body" style="background-color: rgba(13, 110, 253, 0.08);">
+    <div class="card-body bg-search-light">
       <form id="organismSearchForm">
         <div class="row">
           <div class="col-md-10">
             <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
-            <small class="form-text" style="color: #999;">
+            <small class="form-text text-muted-gray">
               Use quotes for exact phrases (e.g., "ABC transporter"). Searches this organism only.
             </small>
           </div>
@@ -110,7 +105,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
   </div>
 
   <!-- Search Results Section -->
-  <div id="searchResults" style="display: none;">
+  <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-4">
       <div class="card-header bg-info text-white">
         <h4 class="mb-0"><i class="fa fa-list"></i> Search Results</h4>
@@ -328,35 +323,6 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
   </div><!-- End organismContent -->
 </div>
 
-<style>
-  .organism-text {
-    text-align: justify;
-    line-height: 1.6;
-  }
-  
-  .organism-text p {
-    margin-bottom: 1rem;
-  }
-  
-  .resource-card {
-    background-color: #f8f9fa;
-    transition: all 0.3s ease;
-  }
-  
-  .resource-card:hover {
-    background-color: #e9ecef;
-    transform: translateY(-2px);
-    box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.1);
-  }
-  
-  .card {
-    border: 1px solid rgba(0,0,0,0.1);
-  }
-  
-  code {
-    word-break: break-all;
-  }
-</style>
 
 <!-- Include jQuery and DataTables -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -504,7 +470,7 @@ function displayResults() {
         // Display results for the organism using shared function
         Object.keys(resultsByOrganism).forEach(organism => {
             const results = resultsByOrganism[organism];
-            $('#resultsContainer').append(createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent.php'));
+            $('#resultsContainer').append(createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php'));
         });
     }
 }
