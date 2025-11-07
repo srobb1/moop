@@ -142,11 +142,14 @@ if (!empty($sequence_errors)) {
     // Display Sequences Section - only if no errors and sequences exist
     ?>
     <div class="card shadow-sm mb-4">
-        <div class="card-header">
-            <div class="collapse-section" data-toggle="collapse" data-target="#sequencesSection" aria-expanded="true">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="collapse-section d-flex align-items-center" data-toggle="collapse" data-target="#sequencesSection" aria-expanded="true">
                 <i class="fas fa-minus toggle-icon text-primary"></i>
                 <strong class="ms-2">Sequences</strong>
             </div>
+            <a href="#" class="btn btn-sm btn-outline-secondary" title="Back to top">
+                <i class="fas fa-arrow-up"></i> Back to Top
+            </a>
         </div>
         <div id="sequencesSection" class="collapse show">
             <div class="card-body">
