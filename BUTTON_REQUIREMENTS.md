@@ -71,13 +71,13 @@ The download buttons require a **hybrid approach** combining OLD and NEW librari
 ### 8. Button Configuration (REQUIRED for initialization)
 - **File**: `/js/datatable-config.js`
 - **Functions**:
-  - `getAnnotationButtons()` - Returns button config for parent.php (Copy, CSV, Excel, Print/PDF)
+  - `getAnnotationButtons()` - Returns button config for parent_display.php (Copy, CSV, Excel, Print/PDF)
   - `getSearchResultsButtons()` - Returns button config for search pages (Copy, CSV, Excel, Print/PDF, Column Visibility)
-- **Location**: Loaded in parent.php, organism_display.php, groups_display.php
+- **Location**: Loaded in parent_display.php, organism_display.php, groups_display.php
 - **Status**: ✅ Created and functional
 
 ### 9. Page Initialization Scripts (REQUIRED)
-- **parent.php**: `/js/parent.js` - Calls `DataTableExportConfig.reinitialize()` for annotation tables
+- **parent_display.php**: `/js/parent.js` - Calls `DataTableExportConfig.reinitialize()` for annotation tables
 - **search pages**: `shared_results_table.js` - Calls `DataTableExportConfig.getSearchResultsButtons()` for search results
 - **Status**: ✅ Functional
 
@@ -99,7 +99,7 @@ The download buttons require a **hybrid approach** combining OLD and NEW librari
 <script src="https://cdn.datatables.net/colreorder/1.5.5/js/dataTables.colReorder.min.js"></script>
 ```
 - **Reason**: Column reordering functionality (not essential)
-- **Status**: TESTED - Sort works fine without it (parent.php, groups_display.php)
+- **Status**: TESTED - Sort works fine without it (parent_display.php, groups_display.php)
 - **Action**: SAFE TO REMOVE
 
 ### ❌ DataTables Buttons 1.6.4 CSS (line 43 in header.php) - NOT NEEDED
@@ -131,7 +131,7 @@ The download buttons require a **hybrid approach** combining OLD and NEW librari
 
 ## Complete Button Stack by Page
 
-### parent.php (Annotation Tables)
+### parent_display.php (Annotation Tables)
 **Required includes (from header.php):**
 1. jQuery
 2. Bootstrap 5.3.2

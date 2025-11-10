@@ -28,8 +28,8 @@ This document describes the secure access control system implemented to prevent 
 ### 1. Centralized Access Control (`access_control.php`)
 All pages now include this file which:
 - Checks visitor IP and auto-logs in authorized IP users
-- Sets `$access_level` from session (never from GET/POST parameters)
-- Provides `has_access()` and `require_access()` functions
+- Provides helper functions to read access data from `$_SESSION` (single source of truth)
+- Provides `has_access()` and `require_access()` functions for access validation
 
 ### 2. IP-Based Auto-Login
 Users from IP range 127.0.0.11 are automatically:
@@ -48,7 +48,98 @@ Through `login.php`:
 Each protected page:
 - Includes `access_control.php` at the top
 - Calls `has_access()` or `require_access()` to validate access
-- Redirects unauthorized users to index.php
+- Redirects unauthorized users to access_denied.php
+
+## Access Helper Functions
+
+The `access_control.php` file provides the following helper functions to securely access session data:
+
+```php
+// Get current access level from session
+get_access_level()  // Returns: 'Public', 'Collaborator', 'Admin', or 'ALL'
+
+// Get current user's resource access list
+get_user_access()   // Returns: array of organisms/resources user can access
+
+// Check if user is logged in
+is_logged_in()      // Returns: true/false
+
+// Get currently logged-in username
+get_username()      // Returns: username string
+```
+
+These functions always read from `$_SESSION` (the authoritative source) rather than relying on cached global variables, ensuring access checks are always based on current session state.
+
+## Session-Based Flow
+
+### Complete Access Control Flow
+
+```
+login.php
+  └─> Validates username/password
+  └─> Sets $_SESSION["logged_in"] = true
+  └─> Sets $_SESSION["username"] = username
+  └─> Sets $_SESSION["access"] = user_access_array
+  └─> Sets $_SESSION["role"] = 'admin' or null
+  └─> Sets $_SESSION["access_level"] = 'Admin' or 'Collaborator'
+  
+header.php
+  └─> Includes access_control.php
+      └─> Defines helper functions that read from $_SESSION:
+          ├─ is_logged_in()       → reads $_SESSION["logged_in"]
+          ├─ get_access_level()   → reads $_SESSION["access_level"]
+          ├─ get_user_access()    → reads $_SESSION["access"]
+          └─ get_username()       → reads $_SESSION["username"]
+      
+toolbar.php (included by header.php)
+  └─> Uses is_logged_in() helper
+  └─> Uses $_SESSION['role'] directly for admin check
+  └─> Displays Login/Logout buttons based on fresh session state
+  
+Protected pages (admin/*, tools/display/*, tools/extract/*)
+  └─> Include access_control.php
+  └─> Call has_access() function
+      └─> has_access() calls helpers for fresh reads:
+          ├─ get_access_level()
+          └─ get_user_access()
+  └─> Validate against protected resources
+  
+admin_access_check.php (called by all admin pages)
+  └─> Validates admin access:
+      ├─ is_logged_in() → check session exists
+      ├─ get_username() → get current user
+      ├─ Check user role in JSON file
+      └─ get_access_level() → validate is 'Admin' (not 'ALL')
+  └─> Blocks if any check fails (403 Forbidden)
+
+logout.php
+  └─> Calls session_destroy()
+  └─> Clears all session data
+  └─> Redirects to login
+```
+
+### Key Security Properties
+
+✅ **Single Source of Truth:** `$_SESSION` only
+- All access checks read from session
+- No cached global variables
+- No stale data possible
+
+✅ **Fresh Reads on Every Check**
+- Helper functions call `$_SESSION` directly
+- No per-page initialization cache
+- Access changes take effect immediately
+
+✅ **Defense in Depth**
+- login.php: Sets access level based on user role
+- admin_access_check.php: Re-validates against JSON + session
+- toolbar.php: Uses current session for UI
+- All layers independent and consistent
+
+✅ **No Parameter Injection**
+- Access level never read from GET/POST
+- Only from `$_SESSION` (server-side secure)
+- URL parameters have no effect
 
 ## Usage Examples
 
@@ -81,11 +172,13 @@ if (has_access('ALL')) {
 
 ## Security Benefits
 
-1. **No URL Parameter Manipulation** - Access level is stored in session, not in URLs
-2. **Consistent Validation** - All pages use the same access control logic
-3. **Session-Based Security** - Proper session management with server-side validation
-4. **IP-Based Auto-Login** - Seamless access for authorized IP users without compromising security
-5. **Granular Control** - Each page can check for specific resource access
+1. **Session-Based Single Source of Truth** - All access checks read directly from `$_SESSION`, never from cached globals
+2. **No URL Parameter Manipulation** - Access level is stored in session, not in URLs
+3. **No Stale Cache Issues** - Helper functions always read fresh from `$_SESSION`
+4. **Consistent Validation** - All pages use the same access control logic
+5. **IP-Based Auto-Login** - Seamless access for authorized IP users without compromising security
+6. **Granular Control** - Each page can check for specific resource access
+7. **Admin Protection** - Admin panel validates both user role and access level, rejecting IP-based 'ALL' access
 
 ## Configuration
 

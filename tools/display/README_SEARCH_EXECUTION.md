@@ -536,7 +536,7 @@ function buildLikeConditions($columns, $search, $quoted = false) {
 | **Progress Bar** | Simple (0% → 100%) | Incremental (N/M organisms) |
 | **Results Display** | All at once | Incremental (as each completes) |
 | **Button Behavior** | Enabled throughout | Disabled during search |
-| **Feature Link Path** | `tools/display/parent.php` | `tools/search/parent.php` |
+| **Feature Link Path** | `tools/display/parent_display.php` | `tools/search/parent_display.php` |
 | **"Read More" Button** | ❌ No | ✅ Yes (links to organism page) |
 | **Jump Navigation** | ❌ No | ✅ Yes (if multiple organisms) |
 | **Group Parameter** | Empty string | Group name |
