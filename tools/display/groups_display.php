@@ -69,6 +69,8 @@ if ($group_name !== 'Public') {
 </head>
 <body class="bg-light">
 
+<?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
+
 <div class="container mt-5">
   <div class="mb-3">
     <a href="/<?= $site ?>/index.php" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> Back to Home</a>

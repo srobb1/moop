@@ -1,15 +1,14 @@
 <?php
 session_start();
 include_once 'admin_access_check.php';
-include_once '../header.php';
+include_once '../includes/head.php';
+include_once '../includes/navbar.php';
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
   <title>Admin Tools</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 
