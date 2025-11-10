@@ -11,7 +11,8 @@
         "organism": "Lasiurus_cinereus",
         "assembly": "assembly_v1",
         "groups": [
-            "Bats"
+            "Bats",
+            "No Data"
         ]
     },
     {
