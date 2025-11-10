@@ -2,15 +2,36 @@
 session_start();
 include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
+include_once __DIR__ . '/../tools/moop_functions.php';
 include_once '../includes/head.php';
 include_once '../includes/navbar.php';
 
 
 $config_file = "$organism_data/annotation_config.json";
 $config = [];
+$file_write_error = null;
 
 if (file_exists($config_file)) {
     $config = json_decode(file_get_contents($config_file), true);
+}
+
+// Check if file is writable
+if (file_exists($config_file) && !is_writable($config_file)) {
+    $webserver = getWebServerUser();
+    $web_user = $webserver['user'];
+    $web_group = $webserver['group'];
+    $current_owner = function_exists('posix_getpwuid') ? posix_getpwuid(fileowner($config_file))['name'] ?? 'unknown' : 'unknown';
+    $current_perms = substr(sprintf('%o', fileperms($config_file)), -4);
+    $fix_command = "sudo chown " . escapeshellarg("$web_user:$web_group") . " " . escapeshellarg($config_file) . " && sudo chmod 644 " . escapeshellarg($config_file);
+    
+    $file_write_error = [
+        'owner' => $current_owner,
+        'perms' => $current_perms,
+        'web_user' => $web_user,
+        'web_group' => $web_group,
+        'command' => $fix_command,
+        'file' => $config_file
+    ];
 }
 
 // Transform annotation_types to analysis_order and descriptions if needed
@@ -52,7 +73,7 @@ $message = "";
 $messageType = "";
 
 // Handle form submissions
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
+if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
     if (isset($_POST['add_section'])) {
         $section_name = trim($_POST['section_name'] ?? '');
         $section_desc = trim($_POST['section_description'] ?? '');
@@ -141,6 +162,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     </div>
   <?php endif; ?>
 
+  <?php if ($file_write_error): ?>
+    <div class="alert alert-warning alert-dismissible fade show">
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      <h4><i class="fa fa-exclamation-circle"></i> File Permission Issue Detected</h4>
+      <p><strong>Problem:</strong> The file <code>organisms/annotation_config.json</code> is not writable by the web server.</p>
+      
+      <p><strong>Current Status:</strong></p>
+      <ul class="mb-3">
+        <li>File owner: <code><?= htmlspecialchars($file_write_error['owner']) ?></code></li>
+        <li>Current permissions: <code><?= $file_write_error['perms'] ?></code></li>
+        <li>Web server user: <code><?= htmlspecialchars($file_write_error['web_user']) ?></code></li>
+        <?php if ($file_write_error['web_group']): ?>
+        <li>Web server group: <code><?= htmlspecialchars($file_write_error['web_group']) ?></code></li>
+        <?php endif; ?>
+      </ul>
+      
+      <p><strong>To Fix:</strong> Run this command on the server:</p>
+      <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+        <code style="word-break: break-all; display: block; font-size: 0.9em;">
+          <?= htmlspecialchars($file_write_error['command']) ?>
+        </code>
+      </div>
+      
+      <p><small class="text-muted">After running the command, refresh this page.</small></p>
+    </div>
+  <?php endif; ?>
+
   <!-- Info Panel -->
   <div class="card mb-4">
     <div class="card-header bg-info text-white">
@@ -171,7 +219,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <small class="text-muted">Optional: Explain what this section represents</small>
           </div>
         </div>
-        <button type="submit" name="add_section" class="btn btn-success">
+        <button type="submit" name="add_section" class="btn btn-success" <?= $file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
           <i class="fa fa-plus"></i> Add Section
         </button>
       </form>
@@ -212,10 +260,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                   </p>
                 </div>
                 <div class="btn-group">
-                  <button class="btn btn-sm btn-outline-primary edit-desc-btn" data-section="<?= htmlspecialchars($section) ?>">
+                  <button class="btn btn-sm btn-outline-primary edit-desc-btn" data-section="<?= htmlspecialchars($section) ?>" <?= $file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
                     <i class="fa fa-edit"></i> Edit
                   </button>
-                  <button class="btn btn-sm btn-outline-danger delete-section-btn" data-section="<?= htmlspecialchars($section) ?>">
+                  <button class="btn btn-sm btn-outline-danger delete-section-btn" data-section="<?= htmlspecialchars($section) ?>" <?= $file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
                     <i class="fa fa-trash"></i>
                   </button>
                 </div>
@@ -224,7 +272,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
           <?php endforeach; ?>
         </div>
         
-        <button id="saveOrder" class="btn btn-primary mt-3" style="display: none;">
+        <button id="saveOrder" class="btn btn-primary mt-3" style="display: none;" <?= $file_write_error ? 'disabled' : '' ?>>
           <i class="fa fa-save"></i> Save New Order
         </button>
       <?php endif; ?>
@@ -255,6 +303,40 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
           <button type="submit" class="btn btn-primary">Save Changes</button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- Permission Error Modal -->
+<div class="modal fade" id="permissionModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title"><i class="fa fa-exclamation-circle"></i> File Permission Error</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>The annotation configuration file is not writable by the web server.</strong></p>
+        <p>You cannot make changes until this is fixed.</p>
+        
+        <p><strong>Current Status:</strong></p>
+        <ul>
+          <li>File: <code><?php echo htmlspecialchars($file_write_error['file'] ?? ''); ?></code></li>
+          <li>Owner: <code><?php echo htmlspecialchars($file_write_error['owner'] ?? ''); ?></code></li>
+          <li>Permissions: <code><?php echo htmlspecialchars($file_write_error['perms'] ?? ''); ?></code></li>
+          <li>Web server user: <code><?php echo htmlspecialchars($file_write_error['web_user'] ?? ''); ?></code></li>
+        </ul>
+        
+        <p><strong>To Fix:</strong> Run this command on the server:</p>
+        <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd; word-break: break-all;">
+          <code><?php echo htmlspecialchars($file_write_error['command'] ?? ''); ?></code>
+        </div>
+        
+        <p><small class="text-muted">After running the command, refresh this page.</small></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
     </div>
   </div>
 </div>
