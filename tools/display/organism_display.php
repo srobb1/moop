@@ -42,25 +42,13 @@ if (!$has_organism_access && !$is_public) {
     header("Location: /$site/access_denied.php");
     exit;
 }
-
-include_once realpath(__DIR__ . '/../../header.php');
-include_once realpath(__DIR__ . '/../../toolbar.php');
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
   <title><?= htmlspecialchars($organism_info['common_name'] ?? str_replace('_', ' ', $organism_name)) ?> - <?= $siteTitle ?></title>
-  <!-- Bootstrap 5.3.2 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- DataTables 1.13.4 core and Bootstrap 5 theme CSS -->
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
-  <!-- DataTables Buttons 2.3.6 with Bootstrap 5 theme CSS -->
-  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.bootstrap5.min.css">
-  <!-- DataTables Buttons 1.6.4 CSS for button styling -->
-  <!-- TEST: Commenting out to test if Buttons 2.3.6 CSS is sufficient -->
-  <!-- <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.4/css/buttons.dataTables.min.css"> -->
+  <?php include_once __DIR__ . '/../../includes/head.php'; ?>
   <!-- Display page styles (consolidated from display_styles.css and shared_results_table.css) -->
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
 </head>
