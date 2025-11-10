@@ -153,14 +153,17 @@ foreach ($children as $child) {
     $all_feature_ids[] = $child['feature_id'];
 }
 $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
-
-include_once realpath(__DIR__ . '/../../header.php');
-include_once realpath(__DIR__ . '/../../toolbar.php');
 ?>
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
 <title><?= htmlspecialchars($feature_uniquename) ?> - <?= $siteTitle ?></title>
+<?php include_once __DIR__ . '/../../includes/head.php'; ?>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
 <link rel="stylesheet" href="/<?= $site ?>/css/parent.css">
+</head>
+<body>
 
 <div class="page_container">
 
