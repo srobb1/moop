@@ -436,9 +436,9 @@ $organisms = get_all_organisms_info();
           <div class="card mb-3">
             <div class="card-body">
               <?php if ($validation['valid']): ?>
-                <span class="badge bg-success" style="font-size: 1rem;"><i class="fa fa-check-circle"></i> Database is Healthy</span>
+                <span class="badge bg-success h6"><i class="fa fa-check-circle"></i> Database is Healthy</span>
               <?php else: ?>
-                <span class="badge bg-danger" style="font-size: 1rem;"><i class="fa fa-times-circle"></i> Database has Issues</span>
+                <span class="badge bg-danger h6"><i class="fa fa-times-circle"></i> Database has Issues</span>
                 <p class="mt-2 mb-0 text-muted small">Please fix the issues listed below before using this organism.</p>
               <?php endif; ?>
             </div>
@@ -446,11 +446,11 @@ $organisms = get_all_organisms_info();
 
           <!-- Database File Info -->
           <h6 class="fw-bold mb-2"><i class="fa fa-info-circle"></i> Database File</h6>
-          <div class="alert alert-info" style="font-size: 0.85rem; margin-bottom: 12px;">
+          <div class="alert alert-info small mb-3">
             <strong>Required:</strong> A valid SQLite database file (genes.sqlite or organism_name.genes.sqlite) must exist in the organism directory with read permissions for the web server.
           </div>
           <div class="card mb-3">
-            <div class="card-body" style="font-size: 0.9rem;">
+            <div class="card-body small">
               <p class="mb-1"><strong>Path:</strong> <?= htmlspecialchars($data['db_file'] ?? 'N/A') ?></p>
               <p class="mb-0">
                 <strong>Readable:</strong> 
@@ -461,11 +461,11 @@ $organisms = get_all_organisms_info();
 
           <!-- Database Validity -->
           <h6 class="fw-bold mb-2"><i class="fa fa-check-square"></i> Database Validity</h6>
-          <div class="alert alert-info" style="font-size: 0.85rem; margin-bottom: 12px;">
+          <div class="alert alert-info small mb-3">
             <strong>Required:</strong> Database must be a valid SQLite3 file with proper structure. It should contain all required tables from the schema.
           </div>
           <div class="card mb-3">
-            <div class="card-body" style="font-size: 0.9rem;">
+            <div class="card-body small">
               <p class="mb-1">
                 <strong>Valid SQLite:</strong> 
                 <?= $validation['database_valid'] ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-danger">No</span>' ?>
@@ -483,11 +483,11 @@ $organisms = get_all_organisms_info();
 
           <!-- Tables -->
           <h6 class="fw-bold mb-2"><i class="fa fa-table"></i> Database Tables</h6>
-          <div class="alert alert-info" style="font-size: 0.85rem; margin-bottom: 12px;">
+          <div class="alert alert-info small mb-3">
             <strong>Required Tables:</strong> organism, genome, feature, annotation_source, annotation, feature_annotation. Each table should have relevant data.
           </div>
           <div class="card mb-3">
-            <div class="card-body" style="font-size: 0.9rem;">
+            <div class="card-body small">
               <?php if (!empty($validation['tables_present'])): ?>
                 <p class="mb-2"><strong>Present (<?= count($validation['tables_present']) ?>):</strong></p>
                 <ul class="mb-2">
@@ -513,11 +513,11 @@ $organisms = get_all_organisms_info();
 
           <!-- Data Quality -->
           <h6 class="fw-bold mb-2"><i class="fa fa-exclamation-triangle"></i> Data Quality</h6>
-          <div class="alert alert-info" style="font-size: 0.85rem; margin-bottom: 12px;">
+          <div class="alert alert-info small mb-3">
             <strong>Check:</strong> Database records should have valid relationships and complete data. This checks for orphaned annotations, missing accessions, and features without proper organism links.
           </div>
           <div class="card mb-3 <?= empty($validation['data_issues']) ? 'border-success' : 'border-danger border-2' ?>">
-            <div class="card-body" style="font-size: 0.9rem;">
+            <div class="card-body small">
               <?php if (empty($validation['data_issues'])): ?>
                 <p class="mb-0"><span class="badge bg-success"><i class="fa fa-check"></i></span> No data quality issues found</p>
               <?php else: ?>
@@ -552,12 +552,12 @@ $organisms = get_all_organisms_info();
               <div class="card-header bg-warning bg-opacity-25">
                 <h6 class="mb-0"><i class="fa fa-wrench"></i> Fix Permissions</h6>
               </div>
-              <div class="card-body" style="font-size: 0.9rem;">
+              <div class="card-body small">
                 <p class="mb-2">The database file is not readable by the web server. Click the button below to attempt an automatic fix.</p>
                 <button class="btn btn-warning btn-sm" onclick="fixDatabasePermissions(event, '<?= $org_safe ?>')">
                   <i class="fa fa-wrench"></i> Fix Permissions
                 </button>
-                <div id="fixResult<?= $org_safe ?>" class="mt-3" style="display:none;"></div>
+                <div id="fixResult<?= $org_safe ?>" class="mt-3" class="d-none"></div>
               </div>
             </div>
           <?php endif; ?>
@@ -618,9 +618,9 @@ $organisms = get_all_organisms_info();
               <div class="card mb-3">
                 <div class="card-body">
                   <?php if (!$has_db_mismatch && !$is_missing): ?>
-                    <span class="badge bg-success" style="font-size: 1rem;"><i class="fa fa-check-circle"></i> Assembly is Complete</span>
+                    <span class="badge bg-success h6"><i class="fa fa-check-circle"></i> Assembly is Complete</span>
                   <?php else: ?>
-                    <span class="badge bg-danger" style="font-size: 1rem;"><i class="fa fa-times-circle"></i> Assembly has Issues</span>
+                    <span class="badge bg-danger h6"><i class="fa fa-times-circle"></i> Assembly has Issues</span>
                     <p class="mt-2 mb-0 text-muted small">Please fix the issues listed below.</p>
                   <?php endif; ?>
                 </div>
@@ -629,7 +629,7 @@ $organisms = get_all_organisms_info();
               <!-- Assembly Overview -->
               <h6 class="fw-bold mb-2"><i class="fa fa-info-circle"></i> Assembly Information</h6>
               <div class="card mb-3">
-                <div class="card-body" style="font-size: 0.9rem;">
+                <div class="card-body small">
                   <p class="mb-1"><strong>Name:</strong> <?= htmlspecialchars($assembly) ?></p>
                   <p class="mb-1"><strong>Organism:</strong> <?= htmlspecialchars($organism) ?></p>
                   <p class="mb-0"><strong>Path:</strong> <?= htmlspecialchars($data['path'] . '/' . $assembly) ?></p>
@@ -639,11 +639,11 @@ $organisms = get_all_organisms_info();
               <!-- Directory Name Validation (from Database) -->
               <?php if ($assembly_validation): ?>
                 <h6 class="fw-bold mb-2"><i class="fa fa-database"></i> Database Directory Matching</h6>
-                <div class="alert alert-info" style="font-size: 0.85rem; margin-bottom: 12px;">
+                <div class="alert alert-info small mb-3">
                   <strong>Required:</strong> Assembly directory name must match either the <code>genome_name</code> or <code>genome_accession</code> from the database.
                 </div>
                 <div class="card mb-3 <?= $has_db_mismatch ? 'border-danger border-2' : 'border-success' ?>">
-                  <div class="card-body" style="font-size: 0.9rem;">
+                  <div class="card-body small">
                     <?php 
                       if ($matching_genome) {
                         echo '<p class="mb-2"><strong>The assembly directory name "' . htmlspecialchars($assembly) . '" matches:</strong></p>';
@@ -676,7 +676,7 @@ $organisms = get_all_organisms_info();
                     <div class="card-header bg-warning bg-opacity-25">
                       <h6 class="mb-0"><i class="fa fa-exclamation-circle"></i> Action Needed: Rename existing directory to match database</h6>
                     </div>
-                    <div class="card-body" style="font-size: 0.9rem;">
+                    <div class="card-body small">
                       <p class="mb-3">If you have an assembly directory with the wrong name, you can rename it to match the database records.</p>
                       
                       <div class="row mb-3">
@@ -724,12 +724,12 @@ $organisms = get_all_organisms_info();
                           </button>
                         </div>
                       </div>
-                      <div id="renameResult<?= htmlspecialchars($safe_asm_id) ?>" style="display:none;"></div>
+                      <div id="renameResult<?= htmlspecialchars($safe_asm_id) ?>" class="d-none"></div>
                       
                       <hr class="my-3">
                       
                       <h6 class="fw-bold mb-3"><i class="fa fa-trash-alt"></i> Delete Directory</h6>
-                      <p class="mb-3" style="font-size: 0.85rem;">If you no longer need this assembly directory, you can delete it permanently. This action cannot be undone.</p>
+                      <p class="mb-3" class="small">If you no longer need this assembly directory, you can delete it permanently. This action cannot be undone.</p>
                       
                       <div class="row mb-3">
                         <div class="col-md-6">
@@ -757,7 +757,7 @@ $organisms = get_all_organisms_info();
                           </button>
                         </div>
                       </div>
-                      <div id="deleteResult<?= htmlspecialchars($safe_asm_id) ?>" style="display:none;"></div>
+                      <div id="deleteResult<?= htmlspecialchars($safe_asm_id) ?>" class="d-none"></div>
                     </div>
                   </div>
                 <?php endif; ?>
@@ -765,13 +765,13 @@ $organisms = get_all_organisms_info();
 
               <!-- FASTA Files Status -->
               <h6 class="fw-bold mb-2"><i class="fa fa-dna"></i> FASTA Files</h6>
-              <div class="alert alert-info" style="font-size: 0.85rem; margin-bottom: 12px;">
+              <div class="alert alert-info small mb-3">
                 <strong>Required:</strong> Each assembly directory should contain FASTA files matching the configured sequence type patterns.
               </div>
               <div class="card mb-3 <?= $is_missing ? 'border-danger border-2' : 'border-success' ?>">
-                <div class="card-body" style="font-size: 0.9rem;">
+                <div class="card-body small">
                   <?php if ($asm_fasta): ?>
-                    <ul class="mb-0" style="list-style: none; padding-left: 0;">
+                    <ul class="mb-0" class="list-unstyled">
                       <?php foreach ($asm_fasta['fasta_files'] as $type => $file_info): ?>
                         <li class="mb-2 pb-2 border-bottom" style="<?= $file_info['found'] ? '' : 'background-color: #fff3cd;' ?>">
                           <?php if ($file_info['found']): ?>
@@ -848,9 +848,9 @@ function fixDatabasePermissions(event, organism) {
         html += '<p>' + data.message + '</p>';
         
         if (data.command) {
-            html += '<div class="alert alert-info" style="margin-top: 10px; font-size: 0.85rem;">';
+            html += '<div class="alert alert-info mt-2 small">';
             html += '<strong>Run this command on the server:</strong><br>';
-            html += '<code style="word-break: break-all;">' + data.command + '</code><br>';
+            html += '<code class="text-break">' + data.command + '</code><br>';
             html += '<small class="mt-2 d-block text-muted">After running the command, refresh this page to verify the fix.</small>';
             html += '</div>';
         }
@@ -922,9 +922,9 @@ function renameAssemblyDirectory(event, organism, safeAsmId) {
         html += '<p>' + data.message + '</p>';
         
         if (data.command) {
-            html += '<div class="alert alert-info" style="margin-top: 10px; font-size: 0.85rem;">';
+            html += '<div class="alert alert-info mt-2 small">';
             html += '<strong>Run this command on the server:</strong><br>';
-            html += '<code style="word-break: break-all;">' + data.command + '</code><br>';
+            html += '<code class="text-break">' + data.command + '</code><br>';
             html += '<small class="mt-2 d-block text-muted">After running the command, refresh this page to verify the fix.</small>';
             html += '</div>';
         }
@@ -992,9 +992,9 @@ function deleteAssemblyDirectory(event, organism, safeAsmId) {
         html += '<p>' + data.message + '</p>';
         
         if (data.command) {
-            html += '<div class="alert alert-info" style="margin-top: 10px; font-size: 0.85rem;">';
+            html += '<div class="alert alert-info mt-2 small">';
             html += '<strong>Web server lacks permissions. Run this command on the server:</strong><br>';
-            html += '<code style="word-break: break-all;">' + data.command + '</code><br>';
+            html += '<code class="text-break">' + data.command + '</code><br>';
             html += '<small class="mt-2 d-block text-muted">After running the command, refresh this page to verify the deletion.</small>';
             html += '</div>';
         }

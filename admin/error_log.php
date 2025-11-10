@@ -196,7 +196,7 @@ sort($organisms);
                                 <?php if (!empty($error['details'])): ?>
                                     <dt class="col-sm-2">Details:</dt>
                                     <dd class="col-sm-10">
-                                        <pre style="background-color: #f5f5f5; padding: 0.5rem; border-radius: 3px; font-size: 0.8rem;"><?= htmlspecialchars(json_encode($error['details'], JSON_PRETTY_PRINT)) ?></pre>
+                                        <pre class="bg-light p-2 rounded small"><?= htmlspecialchars(json_encode($error['details'], JSON_PRETTY_PRINT)) ?></pre>
                                     </dd>
                                 <?php endif; ?>
                             </dl>
