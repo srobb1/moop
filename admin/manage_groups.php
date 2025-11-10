@@ -829,14 +829,15 @@ foreach ($all_organisms as $organism => $assemblies) {
   if (modalElement) {
     const permissionModal = new bootstrap.Modal(modalElement, {});
     
-    document.querySelectorAll('button[disabled]').forEach(button => {
-      button.addEventListener('click', function(e) {
+    // Use event delegation to capture clicks on disabled buttons
+    // Disabled buttons don't respond to click events, so we catch them in capture phase
+    document.addEventListener('click', function(e) {
+      if (e.target.hasAttribute('disabled') && e.target.tagName === 'BUTTON') {
         e.preventDefault();
         e.stopPropagation();
         permissionModal.show();
-        return false;
-      });
-    });
+      }
+    }, true); // true = use capture phase
   }
 </script>
 
