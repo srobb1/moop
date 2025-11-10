@@ -30,5 +30,23 @@
             "Corals",
             "Public"
         ]
+    },
+    {
+        "organism": "Anoura_caudifer",
+        "assembly": "GCA_004027475.1",
+        "groups": [
+            "Bats",
+            "Cute",
+            "Public"
+        ]
+    },
+    {
+        "organism": "Anoura_caudifer",
+        "assembly": "GCA_004027475.1",
+        "groups": [
+            "Bats",
+            "Cute",
+            "Public"
+        ]
     }
 ]

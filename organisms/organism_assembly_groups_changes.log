@@ -1,1 +1,7 @@
 [2025-11-03 17:57:43] UPDATE by admin | Organism: Lasiurus_cinereus | Assembly: GCA_011751065.1 | Old groups: [Bats] | New groups: [Bats, Cute]
+[2025-11-10 20:51:20] ADD by admin | Organism: Lasiurus_cinereus | Assembly: GCA_011751095.1 | Groups: [Bats, Cute, Public]
+[2025-11-10 20:57:08] ADD by admin | Organism: Anoura_caudifer | Assembly: GCA_004027475.1 | Groups: [Bats, Cute, Public]
+[2025-11-10 20:57:30] ADD by admin | Organism: Anoura_caudifer | Assembly: GCA_004027475.1 | Groups: [Bats, Cute, Public]
+[2025-11-10 20:57:33] ADD by admin | Organism: Anoura_caudifer | Assembly: GCA_004027475.1 | Groups: [Bats, Cute, Public]
+[2025-11-10 21:00:57] ADD by admin | Organism: Lasiurus_cinereus | Assembly: GCA_011751095.1 | Groups: [Bats, Cute]
+[2025-11-10 21:23:46] UPDATE by admin | Organism: Anoura_caudifer | Assembly: GCA_004027475.1_AnoCau_v1_BIUU_genomic | Old groups: [Bats, Cute, Public] | New groups: [Bats, Cute, Public]
