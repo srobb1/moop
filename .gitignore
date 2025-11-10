@@ -1,12 +1,16 @@
 # Documentation/Reference files (not part of core codebase)
 
+
+images/*
+
 # Directories
 tools/not_using/
 notes/
+not_used/
 
 # Logs
-logs/
 *.log
+
 
 # OS files
 .DS_Store
