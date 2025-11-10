@@ -2,6 +2,7 @@
 session_start();
 
 include_once __DIR__ . '/site_config.php';
+
 $usersFile = $users_file;
 $users = json_decode(file_get_contents($usersFile), true);
 
@@ -31,14 +32,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $error = "Invalid username or password.";
     }
 }
+
+// ONLY include head.php AFTER authentication logic
+include_once 'includes/head.php';
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
   <title>Login</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="container py-5">
 
