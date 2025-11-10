@@ -24,9 +24,9 @@ Creates the HTML structure for an organism results table.
 - `organism` - The organism identifier
 - `results` - Array of result objects from the search
 - `sitePath` - The site base path (e.g., '/moop')
-- `linkBasePath` - Base path for feature links (default: 'tools/display/parent.php')
-  - Use 'tools/display/parent.php' for organism_display.php
-  - Use 'tools/search/parent.php' for groups_display.php
+- `linkBasePath` - Base path for feature links (default: 'tools/display/parent_display.php')
+  - Use 'tools/display/parent_display.php' for organism_display.php
+  - Use 'tools/search/parent_display.php' for groups_display.php
 
 **Returns:** HTML string for the complete table
 
@@ -44,14 +44,14 @@ Initializes a DataTable with all features including export, filtering, and selec
 ```javascript
 // Display results using shared function
 $('#resultsContainer').append(
-    createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent.php')
+    createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php')
 );
 ```
 
 ### In groups_display.php
 ```javascript
 // Display results using shared function with custom link path
-const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/search/parent.php');
+const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/search/parent_display.php');
 $('#resultsContainer').append(tableHtml);
 ```
 

@@ -39,12 +39,12 @@ This refactoring consolidated duplicate code from the search and display systems
 **`organism_display.php`**
 - Added includes for shared CSS and JS
 - Removed ~330 lines of duplicate code
-- Now calls `createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent.php')`
+- Now calls `createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php')`
 
 **`groups_display.php`**
 - Added includes for shared CSS and JS
 - Removed ~340 lines of duplicate code
-- Now calls `createOrganismResultsTable(organism, results, sitePath, 'tools/search/parent.php')`
+- Now calls `createOrganismResultsTable(organism, results, sitePath, 'tools/search/parent_display.php')`
 
 #### Benefits:
 ✅ Single source of truth for results tables  
@@ -304,7 +304,7 @@ const tableHtml = createOrganismResultsTable(
     organism, 
     results, 
     sitePath, 
-    'tools/display/parent.php'
+    'tools/display/parent_display.php'
 );
 $('#resultsContainer').append(tableHtml);
 ```

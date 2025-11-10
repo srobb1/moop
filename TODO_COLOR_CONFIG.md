@@ -7,13 +7,13 @@ Allow admins to customize the colors used for parent and child features througho
 - Parent features: Hard-coded colors in PHP files
 - Child features: Hard-coded to `#17a2b8` (teal/info color)
 - These colors are scattered throughout:
-  - `/data/moop/tools/display/parent.php`
+  - `/data/moop/tools/display/parent_display.php`
   - `/data/moop/tools/display/display_functions.php`
   - Other display pages
 
 ## Current Color References
-- **Parent feature badge:** `#17a2b8` (used in line 180 of parent.php)
-- **Child feature badge:** `#17a2b8` (used in lines 203, 280 of parent.php)
+- **Parent feature badge:** `#17a2b8` (used in line 180 of parent_display.php)
+- **Child feature badge:** `#17a2b8` (used in lines 203, 280 of parent_display.php)
 - **Child card header background:** `rgba(23, 162, 184, 0.1)` (light teal, line 276)
 - **Annotation section borders:** Various Bootstrap colors based on annotation type
 
@@ -78,7 +78,7 @@ Feature Colors Configuration
 1. Create configuration file structure
 2. Build helper function for color retrieval
 3. Create admin management page with color pickers
-4. Update parent.php to use dynamic colors
+4. Update parent_display.php to use dynamic colors
 5. Update display_functions.php to use dynamic colors
 6. Add link to admin index
 7. Test color changes propagate across all pages
@@ -87,7 +87,7 @@ Feature Colors Configuration
 - `/data/moop/admin/manage_colors.php` (NEW)
 - `/data/moop/admin/index.php` (ADD LINK)
 - `/data/moop/common_functions.php` (ADD HELPER)
-- `/data/moop/tools/display/parent.php` (USE DYNAMIC COLORS)
+- `/data/moop/tools/display/parent_display.php` (USE DYNAMIC COLORS)
 - `/data/moop/tools/display/display_functions.php` (USE DYNAMIC COLORS)
 - Configuration file (new or updated site_config)
 
