@@ -53,19 +53,17 @@ function get_all_existing_groups($groups_data) {
 
 $all_organisms = get_all_organisms();
 
-// Phase 1: Synchronize Data (JSON to Filesystem)
-$cleaned_groups_data = [];
+// Create a mapping of which entries exist in the filesystem
+$groups_data_with_status = [];
 foreach ($groups_data as $data) {
-    if (isset($all_organisms[$data['organism']]) && in_array($data['assembly'], $all_organisms[$data['organism']])) {
-        $cleaned_groups_data[] = $data;
-    }
+    $exists_in_fs = isset($all_organisms[$data['organism']]) && 
+                    in_array($data['assembly'], $all_organisms[$data['organism']]);
+    $data['_fs_exists'] = $exists_in_fs;
+    $groups_data_with_status[] = $data;
 }
 
-// Only write if there are changes to prevent unnecessary file writes
-if ($groups_data !== $cleaned_groups_data) {
-    $groups_data = $cleaned_groups_data;
-    file_put_contents($groups_file, json_encode($groups_data, JSON_PRETTY_PRINT));
-}
+// Keep the status-marked data, but don't modify the original JSON file
+// The original JSON is preserved as-is for user review
 
 // Handle POST requests for updates, additions, and deletions
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -189,12 +187,15 @@ foreach ($all_organisms as $organism => $assemblies) {
         <th style="cursor: pointer;" onclick="sortTable(0)">Organism <span id="sort-icon-0">⇅</span></th>
         <th style="cursor: pointer;" onclick="sortTable(1)">Assembly <span id="sort-icon-1">⇅</span></th>
         <th>Groups</th>
+        <th>Status</th>
         <th>Action</th>
       </tr>
     </thead>
     <tbody id="assemblies-tbody">
-      <?php foreach ($groups_data as $index => $data): ?>
-        <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>">
+      <?php foreach ($groups_data_with_status as $index => $data): ?>
+        <?php if (!empty($data['groups'])): ?>
+        <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>" 
+            style="<?= !$data['_fs_exists'] ? 'background-color: #fff3cd;' : '' ?>">
           <td><?= htmlspecialchars($data['organism']) ?></td>
           <td><?= htmlspecialchars($data['assembly']) ?></td>
           <td>
@@ -206,10 +207,14 @@ foreach ($all_organisms as $organism => $assemblies) {
               ?>
                 <span class="tag-chip selected" style="cursor: default;"><?= htmlspecialchars($group) ?></span>
               <?php endforeach; ?>
-              <?php if (empty($data['groups'])): ?>
-                <span class="text-muted">(no groups)</span>
-              <?php endif; ?>
             </span>
+          </td>
+          <td>
+            <?php if (!$data['_fs_exists']): ?>
+              <span class="badge bg-warning text-dark" title="Directory not found in filesystem">⚠️ Stale (dir missing)</span>
+            <?php else: ?>
+              <span class="badge bg-success">✓ Synced</span>
+            <?php endif; ?>
           </td>
           <td>
             <button type="button" class="btn btn-info btn-sm edit-groups">Edit</button>
@@ -217,6 +222,7 @@ foreach ($all_organisms as $organism => $assemblies) {
             <button type="button" class="btn btn-secondary btn-sm cancel-btn" style="display:none;">Cancel</button>
           </td>
         </tr>
+        <?php endif; ?>
       <?php endforeach; ?>
     </tbody>
   </table>
@@ -249,6 +255,50 @@ foreach ($all_organisms as $organism => $assemblies) {
               </td>
             </tr>
           <?php endforeach; ?>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  <?php endif; ?>
+
+  <?php 
+    // Find stale entries (in JSON but directory doesn't exist)
+    $stale_entries = array_filter($groups_data_with_status, function($data) {
+      return !$data['_fs_exists'];
+    });
+  ?>
+  
+  <?php if (!empty($stale_entries)): ?>
+    <h3 class="mt-4"><span class="badge bg-warning text-dark">⚠️ Stale Entries</span></h3>
+    <p class="text-muted">These entries are in the JSON file but the corresponding directories were moved or deleted. You can delete them or find the renamed directories.</p>
+    <table class="table table-hover" style="background-color: #fff3cd;">
+      <thead>
+        <tr>
+          <th>Organism</th>
+          <th>Assembly</th>
+          <th>Groups</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($stale_entries as $index => $data): ?>
+          <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>">
+            <td><?= htmlspecialchars($data['organism']) ?></td>
+            <td><?= htmlspecialchars($data['assembly']) ?></td>
+            <td>
+              <span class="groups-display">
+                <?php 
+                  $sorted_groups = $data['groups'];
+                  sort($sorted_groups);
+                  foreach ($sorted_groups as $group): 
+                ?>
+                  <span class="tag-chip selected" style="cursor: default;"><?= htmlspecialchars($group) ?></span>
+                <?php endforeach; ?>
+              </span>
+            </td>
+            <td>
+              <button type="button" class="btn btn-warning btn-sm delete-stale-btn" data-index="<?= htmlspecialchars(json_encode($data)) ?>">Delete Entry</button>
+            </td>
+          </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
