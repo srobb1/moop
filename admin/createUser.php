@@ -156,7 +156,7 @@ $organisms = getOrganisms();
 </head>
 <body class="bg-light">
 
-<div class="container-fluid mt-5">
+<div class="container mt-5">
   <h2><i class="fa fa-users"></i> Manage Users</h2>
   
   <div class="mb-3">

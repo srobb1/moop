@@ -101,7 +101,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </head>
 <body class="bg-light">
 
-<div class="container-fluid mt-5">
+<div class="container mt-5">
   <h2><i class="fa fa-tags"></i> Manage Annotation Sections</h2>
   
   <div class="mb-3">

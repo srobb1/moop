@@ -216,7 +216,7 @@ $organisms = get_organisms_metadata($organism_data_dir);
 </head>
 <body class="bg-light">
 
-<div class="container-fluid py-4">
+<div class="container py-4">
     <div class="row">
         <div class="col-12">
             <h2><i class="fa fa-project-diagram"></i> Manage Phylogenetic Tree</h2>

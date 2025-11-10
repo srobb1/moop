@@ -173,7 +173,7 @@ $organisms = get_all_organisms_info();
 
 <?php include_once '../includes/navbar.php'; ?>
 
-<div class="container-fluid mt-5">
+<div class="container mt-5">
   <h2><i class="fa fa-dna"></i> Manage Organisms</h2>
   
   <div class="mb-3">
