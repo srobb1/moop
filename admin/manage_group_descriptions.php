@@ -304,7 +304,7 @@ include_once '../includes/header.php';
             <span style="color: #ffc107; font-size: 18px; margin-right: 5px;" title="No content">⚠</span>
           <?php endif; ?>
           <strong><?= htmlspecialchars($desc['group_name']) ?></strong>
-          <span class="badge badge-<?= $desc['in_use'] ? 'success' : 'danger' ?> ml-2">
+          <span class="badge bg-<?= $desc['in_use'] ? 'success' : 'danger' ?> ms-2">
             <?= $desc['in_use'] ? 'In Use' : 'Not In Use' ?>
           </span>
         </div>
@@ -385,10 +385,11 @@ include_once '../includes/header.php';
   function addImage(groupName) {
     const container = document.getElementById('images-container-' + groupName);
     const newIndex = container.children.length;
+    const isDisabled = <?php echo $file_write_error ? 'true' : 'false'; ?>;
     
     const html = `
       <div class="image-item" data-index="${newIndex}">
-        <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeImage('${groupName}', ${newIndex})">Remove</button>
+        <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeImage('${groupName}', ${newIndex})" ${isDisabled ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : ''}>Remove</button>
         <div class="form-group">
           <label>Image File</label>
           <input type="text" class="form-control image-file" value="" placeholder="e.g., Reef0607_0.jpg">
@@ -416,10 +417,11 @@ include_once '../includes/header.php';
   function addParagraph(groupName) {
     const container = document.getElementById('paragraphs-container-' + groupName);
     const newIndex = container.children.length;
+    const isDisabled = <?php echo $file_write_error ? 'true' : 'false'; ?>;
     
     const html = `
       <div class="paragraph-item" data-index="${newIndex}">
-        <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeParagraph('${groupName}', ${newIndex})">Remove</button>
+        <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeParagraph('${groupName}', ${newIndex})" ${isDisabled ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : ''}>Remove</button>
         <div class="form-group">
           <label>Text (HTML allowed)</label>
           <textarea class="form-control para-text" rows="4"></textarea>
