@@ -547,6 +547,13 @@ foreach ($all_organisms as $organism => $assemblies) {
       getColorForTag(tag);
     });
     
+    // Color all stale entry chips with consistent colors
+    document.querySelectorAll('.table-hover .tag-chip.selected').forEach(chip => {
+      const tag = chip.textContent.trim();
+      chip.style.background = getColorForTag(tag);
+      chip.style.borderColor = getColorForTag(tag);
+    });
+    
     document.querySelectorAll('.edit-groups').forEach(button => {
       const row = button.closest('tr');
       const groupsSpan = row.querySelector('.groups-display');
