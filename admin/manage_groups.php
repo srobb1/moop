@@ -2,13 +2,35 @@
 session_start();
 include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
+include_once __DIR__ . '/../tools/moop_functions.php';
 include_once '../includes/head.php';
 include_once '../includes/navbar.php';
 
 $groups_file = $organism_data . '/organism_assembly_groups.json';
 $groups_data = [];
+$file_write_error = null;
+
 if (file_exists($groups_file)) {
     $groups_data = json_decode(file_get_contents($groups_file), true);
+}
+
+// Check if file is writable
+if (file_exists($groups_file) && !is_writable($groups_file)) {
+    $webserver = getWebServerUser();
+    $web_user = $webserver['user'];
+    $web_group = $webserver['group'];
+    $current_owner = function_exists('posix_getpwuid') ? posix_getpwuid(fileowner($groups_file))['name'] ?? 'unknown' : 'unknown';
+    $current_perms = substr(sprintf('%o', fileperms($groups_file)), -4);
+    $fix_command = "sudo chown " . escapeshellarg("$web_user:$web_group") . " " . escapeshellarg($groups_file) . " && sudo chmod 644 " . escapeshellarg($groups_file);
+    
+    $file_write_error = [
+        'owner' => $current_owner,
+        'perms' => $current_perms,
+        'web_user' => $web_user,
+        'web_group' => $web_group,
+        'command' => $fix_command,
+        'file' => $groups_file
+    ];
 }
 
 function get_all_organisms() {
@@ -135,12 +157,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     if (file_put_contents($groups_file, json_encode(array_values($groups_data), JSON_PRETTY_PRINT)) === false) {
-        echo "Error writing to organism_assembly_groups.json.";
+        // File write failed - log it
+        logError('manage_groups.php', "Failed to write to organism_assembly_groups.json", [
+            'file' => $groups_file,
+            'action' => 'update_groups',
+            'organism' => $organism ?? 'unknown',
+            'assembly' => $assembly ?? 'unknown'
+        ]);
+        // The page-level check will detect the permission issue and show alert
+    } else {
+        // Success - redirect to refresh
+        header("Location: manage_groups.php");
         exit;
     }
-
-    header("Location: manage_groups.php");
-    exit;
 }
 
 // Get all existing group tags
@@ -170,7 +199,59 @@ foreach ($all_organisms as $organism => $assemblies) {
 </head>
 <body class="bg-light">
 
-<div class="container mt-5">
+<div class="container mt-5" id="top">
+  
+  <?php if ($file_write_error): ?>
+    <div class="alert alert-warning alert-dismissible fade show">
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      <h4><i class="fa fa-exclamation-circle"></i> File Permission Issue Detected</h4>
+      <p><strong>Problem:</strong> The file <code>organisms/organism_assembly_groups.json</code> is not writable by the web server.</p>
+      
+      <p><strong>Current Status:</strong></p>
+      <ul class="mb-3">
+        <li>File owner: <code><?= htmlspecialchars($file_write_error['owner']) ?></code></li>
+        <li>Current permissions: <code><?= $file_write_error['perms'] ?></code></li>
+        <li>Web server user: <code><?= htmlspecialchars($file_write_error['web_user']) ?></code></li>
+        <?php if ($file_write_error['web_group']): ?>
+        <li>Web server group: <code><?= htmlspecialchars($file_write_error['web_group']) ?></code></li>
+        <?php endif; ?>
+      </ul>
+      
+      <p><strong>To Fix:</strong> Run this command on the server:</p>
+      <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+        <code style="word-break: break-all; display: block; font-size: 0.9em;">
+          <?= htmlspecialchars($file_write_error['command']) ?>
+        </code>
+      </div>
+      
+      <p><small class="text-muted">After running the command, refresh this page.</small></p>
+    </div>
+  <?php endif; ?>
+  
+  <?php if (isset($_SESSION['permission_error'])): ?>
+    <div class="alert alert-danger alert-dismissible fade show">
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      <h4><i class="fa fa-exclamation-triangle"></i> File Write Permission Error</h4>
+      <p><strong>Problem:</strong> Unable to save changes to <code>organisms/organism_assembly_groups.json</code></p>
+      
+      <p><strong>Current Status:</strong></p>
+      <ul>
+        <li>File owner: <code><?= htmlspecialchars($_SESSION['permission_error']['owner']) ?></code></li>
+        <li>Current permissions: <code><?= $_SESSION['permission_error']['perms'] ?></code></li>
+        <li>Web server user: <code><?= htmlspecialchars($_SESSION['permission_error']['web_user']) ?></code></li>
+      </ul>
+      
+      <p><strong>To Fix:</strong> Run this command on the server:</p>
+      <div style="margin-top: 10px; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+        <code style="word-break: break-all; display: block;">
+          <?= htmlspecialchars($_SESSION['permission_error']['command']) ?>
+        </code>
+      </div>
+      
+      <p class="mt-3"><small class="text-muted">After running the command, refresh this page to try again.</small></p>
+    </div>
+    <?php unset($_SESSION['permission_error']); ?>
+  <?php endif; ?>
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2><i class="fa fa-layer-group"></i> Manage Organism Assembly Groups</h2>
     <a href="manage_group_descriptions.php" class="btn btn-secondary">Manage Group Descriptions ↗</a>
@@ -217,7 +298,7 @@ foreach ($all_organisms as $organism => $assemblies) {
             <?php endif; ?>
           </td>
           <td>
-            <button type="button" class="btn btn-info btn-sm edit-groups">Edit</button>
+            <button type="button" class="btn btn-info btn-sm edit-groups" <?= $file_write_error ? 'disabled' : '' ?>>Edit</button>
             <button type="button" class="btn btn-success btn-sm update-btn" style="display:none;">Save</button>
             <button type="button" class="btn btn-secondary btn-sm cancel-btn" style="display:none;">Cancel</button>
           </td>
@@ -226,6 +307,12 @@ foreach ($all_organisms as $organism => $assemblies) {
       <?php endforeach; ?>
     </tbody>
   </table>
+
+  <?php if ($file_write_error): ?>
+    <div class="alert alert-info mt-3">
+      <i class="fa fa-info-circle"></i> <strong>Note:</strong> Edit and Add buttons are disabled because the file is not writable. Fix the permissions (see warning above) to enable editing.
+    </div>
+  <?php endif; ?>
 
   <?php if (!empty($unrepresented_organisms)): ?>
     <h3 class="mt-4">Assemblies Without Groups</h3>
@@ -249,7 +336,7 @@ foreach ($all_organisms as $organism => $assemblies) {
                 <span class="groups-display-new">(no groups)</span>
               </td>
               <td>
-                <button type="button" class="btn btn-info btn-sm add-groups-btn">Add Groups</button>
+                <button type="button" class="btn btn-info btn-sm add-groups-btn" <?= $file_write_error ? 'disabled' : '' ?>>Add Groups</button>
                 <button type="button" class="btn btn-success btn-sm save-new-btn" style="display:none;">Save</button>
                 <button type="button" class="btn btn-secondary btn-sm cancel-new-btn" style="display:none;">Cancel</button>
               </td>
@@ -296,7 +383,7 @@ foreach ($all_organisms as $organism => $assemblies) {
               </span>
             </td>
             <td>
-              <button type="button" class="btn btn-warning btn-sm delete-stale-btn" data-index="<?= htmlspecialchars(json_encode($data)) ?>">Delete Entry</button>
+              <button type="button" class="btn btn-warning btn-sm delete-stale-btn" data-index="<?= htmlspecialchars(json_encode($data)) ?>" <?= $file_write_error ? 'disabled' : '' ?>>Delete Entry</button>
             </td>
           </tr>
         <?php endforeach; ?>
@@ -736,7 +823,50 @@ foreach ($all_organisms as $organism => $assemblies) {
       });
     });
   });
+
+  // Modal for disabled buttons due to file permissions
+  const modalElement = document.getElementById('permissionModal');
+  if (modalElement) {
+    const permissionModal = new bootstrap.Modal(modalElement, {});
+    
+    document.querySelectorAll('button[disabled]').forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        permissionModal.show();
+        return false;
+      });
+    });
+  }
 </script>
+
+<!-- Permission Issue Modal -->
+<div class="modal fade" id="permissionModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title"><i class="fa fa-lock"></i> Actions Disabled</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>File permissions issue detected.</strong></p>
+        <p>The configuration file <code>organism_assembly_groups.json</code> is not writable by the web server, so editing, adding, and deleting groups is temporarily disabled.</p>
+        
+        <p class="mb-0"><strong>To fix:</strong></p>
+        <ol class="mt-2">
+          <li>Scroll to the top of this page</li>
+          <li>Copy the command from the <span class="badge bg-warning text-dark">Permission Issue</span> alert</li>
+          <li>Run it on the server terminal</li>
+          <li>Refresh this page</li>
+        </ol>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <a href="#top" class="btn btn-warning" data-bs-dismiss="modal">Jump to Warning</a>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
