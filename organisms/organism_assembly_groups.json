@@ -1,18 +1,28 @@
 [
     {
-        "organism": "Lasiurus_cinereus",
-        "assembly": "GCA_011751065.1",
+        "organism": "Anoura_caudifer",
+        "assembly": "GCA_004027475.1",
         "groups": [
             "Bats",
-            "Cute"
+            "Cute",
+            "Public"
         ]
     },
     {
         "organism": "Lasiurus_cinereus",
-        "assembly": "assembly_v1",
+        "assembly": "GCA_011751065.1",
         "groups": [
             "Bats",
+            "Cute",
             "No Data"
+        ]
+    },
+    {
+        "organism": "Lasiurus_cinereus",
+        "assembly": "GCA_011751095.1",
+        "groups": [
+            "Bats",
+            "Cute"
         ]
     },
     {
@@ -24,37 +34,11 @@
         ]
     },
     {
-        "organism": "Anoura_caudifer",
-        "assembly": "GCA_004027475.1",
-        "groups": [
-            "Bats",
-            "Cute",
-            "Public"
-        ]
-    },
-    {
-        "organism": "Anoura_caudifer",
-        "assembly": "GCA_004027475.1",
-        "groups": [
-            "Bats",
-            "Cute",
-            "Public"
-        ]
-    },
-    {
         "organism": "Lasiurus_cinereus",
-        "assembly": "GCA_011751095.1",
+        "assembly": "assembly_v1",
         "groups": [
             "Bats",
-            "Cute"
-        ]
-    },
-    {
-        "organism": "Lasiurus_cinereus",
-        "assembly": "GCA_011751095.1",
-        "groups": [
-            "Bats",
-            "Cute"
+            "No Data"
         ]
     }
 ]

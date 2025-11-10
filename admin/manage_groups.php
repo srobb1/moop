@@ -252,11 +252,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $groups = array_values(array_filter(array_map('trim', explode(',', $groups_input))));
         }
 
-        $groups_data[] = [
-            'organism' => $organism,
-            'assembly' => $assembly,
-            'groups' => $groups
-        ];
+        // Check for duplicate entry
+        $duplicate_found = false;
+        foreach ($groups_data as $data) {
+            if ($data['organism'] === $organism && $data['assembly'] === $assembly) {
+                $duplicate_found = true;
+                break;
+            }
+        }
+
+        if ($duplicate_found) {
+            $_SESSION['error_message'] = "Error: An entry for $organism / $assembly already exists. Please update the existing entry instead.";
+        } else {
+            $groups_data[] = [
+                'organism' => $organism,
+                'assembly' => $assembly,
+                'groups' => $groups
+            ];
         
         // Log the addition
         $log_entry = sprintf(
@@ -268,6 +280,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             implode(', ', $groups)
         );
         file_put_contents($log_file, $log_entry, FILE_APPEND);
+        }
     } elseif (isset($_POST['delete'])) {
         $organism = $_POST['organism'];
         $assembly = $_POST['assembly'];
