@@ -61,8 +61,8 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
   <!-- DataTables Buttons 1.6.4 CSS for button styling -->
   <!-- TEST: Commenting out to test if Buttons 2.3.6 CSS is sufficient -->
   <!-- <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.4/css/buttons.dataTables.min.css"> -->
-  <link rel="stylesheet" href="shared_results_table.css">
-  <link rel="stylesheet" href="display_styles.css">
+  <!-- Display page styles (consolidated from display_styles.css and shared_results_table.css) -->
+  <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
 </head>
 <body class="bg-light">
 
