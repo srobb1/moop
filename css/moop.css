@@ -263,6 +263,24 @@ footer .footer-meta {
   height: auto;
 }
 
+/* ========== LOADING ANIMATION ========== */
+/* HTML: <div class="loader"></div> */
+.loader {
+  font-weight: bold;
+  font-family: sans-serif;
+  font-size: 20px;
+  animation: l1 1s linear infinite alternate;
+  text-align: center;
+}
+
+.loader:before {
+  content: "Loading...";
+}
+
+@keyframes l1 {
+  to { opacity: 0; }
+}
+
 /* ========== RESPONSIVE DESIGN ========== */
 @media (max-width: 575px) {
   #search_box {
