@@ -2,9 +2,11 @@
 session_start();
 include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
+include_once __DIR__ . '/../tools/moop_functions.php';
 
 $groups_file = $organism_data . '/organism_assembly_groups.json';
 $descriptions_file = $organism_data . '/group_descriptions.json';
+$file_write_error = null;
 
 // Load organism assembly groups
 $groups_data = [];
@@ -16,6 +18,25 @@ if (file_exists($groups_file)) {
 $descriptions_data = [];
 if (file_exists($descriptions_file)) {
     $descriptions_data = json_decode(file_get_contents($descriptions_file), true);
+}
+
+// Check if file is writable
+if (file_exists($descriptions_file) && !is_writable($descriptions_file)) {
+    $webserver = getWebServerUser();
+    $web_user = $webserver['user'];
+    $web_group = $webserver['group'];
+    $current_owner = function_exists('posix_getpwuid') ? posix_getpwuid(fileowner($descriptions_file))['name'] ?? 'unknown' : 'unknown';
+    $current_perms = substr(sprintf('%o', fileperms($descriptions_file)), -4);
+    $fix_command = "sudo chown " . escapeshellarg("$web_user:$web_group") . " " . escapeshellarg($descriptions_file) . " && sudo chmod 644 " . escapeshellarg($descriptions_file);
+    
+    $file_write_error = [
+        'owner' => $current_owner,
+        'perms' => $current_perms,
+        'web_user' => $web_user,
+        'web_group' => $web_group,
+        'command' => $fix_command,
+        'file' => $descriptions_file
+    ];
 }
 
 // Get all existing groups from organism_assembly_groups.json
@@ -90,7 +111,7 @@ if ($sync_result === false) {
 }
 
 // Handle POST request to update descriptions
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['save_description'])) {
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['save_description']) && !$file_write_error) {
     $group_name = $_POST['group_name'];
     $images = json_decode($_POST['images_json'], true);
     $html_p = json_decode($_POST['html_p_json'], true);
@@ -219,6 +240,33 @@ include_once '../includes/header.php';
     </div>
   <?php endif; ?>
 
+  <?php if ($file_write_error): ?>
+    <div class="alert alert-warning alert-dismissible fade show">
+      <button type="button" class="close" data-dismiss="alert">&times;</button>
+      <h4><i class="fa fa-exclamation-circle"></i> File Permission Issue Detected</h4>
+      <p><strong>Problem:</strong> The file <code>organisms/group_descriptions.json</code> is not writable by the web server.</p>
+      
+      <p><strong>Current Status:</strong></p>
+      <ul class="mb-3">
+        <li>File owner: <code><?= htmlspecialchars($file_write_error['owner']) ?></code></li>
+        <li>Current permissions: <code><?= $file_write_error['perms'] ?></code></li>
+        <li>Web server user: <code><?= htmlspecialchars($file_write_error['web_user']) ?></code></li>
+        <?php if ($file_write_error['web_group']): ?>
+        <li>Web server group: <code><?= htmlspecialchars($file_write_error['web_group']) ?></code></li>
+        <?php endif; ?>
+      </ul>
+      
+      <p><strong>To Fix:</strong> Run this command on the server:</p>
+      <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+        <code style="word-break: break-all; display: block; font-size: 0.9em;">
+          <?= htmlspecialchars($file_write_error['command']) ?>
+        </code>
+      </div>
+      
+      <p><small class="text-muted">After running the command, refresh this page.</small></p>
+    </div>
+  <?php endif; ?>
+
   <div class="alert alert-info">
     <strong>Legend:</strong><br>
     <span style="color: #28a745; font-size: 18px;">✓</span> Has content (images or paragraphs) |
@@ -273,7 +321,7 @@ include_once '../includes/header.php';
           <div id="images-container-<?= htmlspecialchars($desc['group_name']) ?>">
             <?php foreach ($desc['images'] as $idx => $image): ?>
               <div class="image-item" data-index="<?= $idx ?>">
-                <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeImage('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)">Remove</button>
+                <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeImage('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)" <?= $file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Remove</button>
                 <div class="form-group">
                   <label>Image File</label>
                   <input type="text" class="form-control image-file" value="<?= htmlspecialchars($image['file']) ?>" placeholder="e.g., Reef0607_0.jpg">
@@ -285,13 +333,13 @@ include_once '../includes/header.php';
               </div>
             <?php endforeach; ?>
           </div>
-          <button type="button" class="btn btn-sm btn-primary mb-3" onclick="addImage('<?= htmlspecialchars($desc['group_name']) ?>')">+ Add Image</button>
+          <button type="button" class="btn btn-sm btn-primary mb-3" onclick="addImage('<?= htmlspecialchars($desc['group_name']) ?>')" <?= $file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>+ Add Image</button>
           
           <h5>HTML Paragraphs</h5>
           <div id="paragraphs-container-<?= htmlspecialchars($desc['group_name']) ?>">
             <?php foreach ($desc['html_p'] as $idx => $para): ?>
               <div class="paragraph-item" data-index="<?= $idx ?>">
-                <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeParagraph('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)">Remove</button>
+                <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeParagraph('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)" <?= $file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Remove</button>
                 <div class="form-group">
                   <label>Text (HTML allowed)</label>
                   <textarea class="form-control para-text" rows="4"><?= htmlspecialchars($para['text']) ?></textarea>
@@ -309,10 +357,10 @@ include_once '../includes/header.php';
               </div>
             <?php endforeach; ?>
           </div>
-          <button type="button" class="btn btn-sm btn-primary mb-3" onclick="addParagraph('<?= htmlspecialchars($desc['group_name']) ?>')">+ Add Paragraph</button>
+          <button type="button" class="btn btn-sm btn-primary mb-3" onclick="addParagraph('<?= htmlspecialchars($desc['group_name']) ?>')" <?= $file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>+ Add Paragraph</button>
           
           <div class="mt-3">
-            <button type="submit" name="save_description" class="btn btn-success">Save Changes</button>
+            <button type="submit" name="save_description" class="btn btn-success" <?= $file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Save Changes</button>
           </div>
         </form>
       </div>
@@ -434,6 +482,40 @@ include_once '../includes/header.php';
     });
   });
 </script>
+
+<!-- Permission Error Modal -->
+<div class="modal fade" id="permissionModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title"><i class="fa fa-exclamation-circle"></i> File Permission Error</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>The group descriptions configuration file is not writable by the web server.</strong></p>
+        <p>You cannot make changes until this is fixed.</p>
+        
+        <p><strong>Current Status:</strong></p>
+        <ul>
+          <li>File: <code><?php echo htmlspecialchars($file_write_error['file'] ?? ''); ?></code></li>
+          <li>Owner: <code><?php echo htmlspecialchars($file_write_error['owner'] ?? ''); ?></code></li>
+          <li>Permissions: <code><?php echo htmlspecialchars($file_write_error['perms'] ?? ''); ?></code></li>
+          <li>Web server user: <code><?php echo htmlspecialchars($file_write_error['web_user'] ?? ''); ?></code></li>
+        </ul>
+        
+        <p><strong>To Fix:</strong> Run this command on the server:</p>
+        <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd; word-break: break-all;">
+          <code><?php echo htmlspecialchars($file_write_error['command'] ?? ''); ?></code>
+        </div>
+        
+        <p><small class="text-muted">After running the command, refresh this page.</small></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
