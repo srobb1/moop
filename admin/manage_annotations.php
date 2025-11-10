@@ -13,8 +13,34 @@ if (file_exists($config_file)) {
     $config = json_decode(file_get_contents($config_file), true);
 }
 
+// Transform annotation_types to analysis_order and descriptions if needed
+if (!empty($config) && isset($config['annotation_types']) && !isset($config['analysis_order'])) {
+    $analysis_order = [];
+    $analysis_descriptions = [];
+    
+    foreach ($config['annotation_types'] as $key => $annotation) {
+        $analysis_order[] = $key;
+        $analysis_descriptions[$key] = [
+            'display_name' => $annotation['display_name'] ?? $key,
+            'description' => $annotation['description'] ?? '',
+            'color' => $annotation['color'] ?? 'secondary',
+            'enabled' => $annotation['enabled'] ?? true
+        ];
+    }
+    
+    // Sort by order field
+    usort($analysis_order, function($a, $b) use ($config) {
+        $orderA = $config['annotation_types'][$a]['order'] ?? 999;
+        $orderB = $config['annotation_types'][$b]['order'] ?? 999;
+        return $orderA - $orderB;
+    });
+    
+    $config['analysis_order'] = $analysis_order;
+    $config['analysis_descriptions'] = $analysis_descriptions;
+}
+
 // Initialize if empty
-if (empty($config)) {
+if (empty($config) || !isset($config['analysis_order'])) {
     $config = [
         'analysis_order' => [],
         'analysis_descriptions' => [],
@@ -155,7 +181,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   <!-- Current Sections -->
   <div class="card mb-4">
     <div class="card-header bg-primary text-white">
-      <h5 class="mb-0"><i class="fa fa-list"></i> Current Sections (<?= count($config['analysis_order']) ?>)</h5>
+      <h5 class="mb-0"><i class="fa fa-list"></i> Current Sections (<?php echo count($config['analysis_order']); ?>)</h5>
     </div>
     <div class="card-body">
       <?php if (empty($config['analysis_order'])): ?>
@@ -172,10 +198,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <div class="flex-grow-1">
                   <h6 class="mb-1">
                     <i class="fa fa-grip-vertical text-muted"></i>
-                    <strong><?= htmlspecialchars($section) ?></strong>
+                    <strong><?= htmlspecialchars($config['analysis_descriptions'][$section]['display_name'] ?? $section) ?></strong>
                   </h6>
                   <p class="mb-2 text-muted" id="desc-<?= htmlspecialchars($section) ?>">
-                    <?= htmlspecialchars($config['analysis_descriptions'][$section] ?? 'No description') ?>
+                    <?php 
+                      $desc_data = $config['analysis_descriptions'][$section];
+                      if (is_array($desc_data)) {
+                          echo htmlspecialchars($desc_data['description'] ?? 'No description');
+                      } else {
+                          echo htmlspecialchars($desc_data ?? 'No description');
+                      }
+                    ?>
                   </p>
                 </div>
                 <div class="btn-group">
@@ -330,9 +363,9 @@ $(document).ready(function() {
   }
 </style>
 
-</body>
-</html>
-
 <?php
 include_once '../includes/footer.php';
 ?>
+
+</body>
+</html>
