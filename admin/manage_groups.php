@@ -298,7 +298,7 @@ foreach ($all_organisms as $organism => $assemblies) {
             <?php endif; ?>
           </td>
           <td>
-            <button type="button" class="btn btn-info btn-sm edit-groups" <?= $file_write_error ? 'disabled' : '' ?>>Edit</button>
+            <button type="button" class="btn btn-info btn-sm edit-groups" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Edit</button>
             <button type="button" class="btn btn-success btn-sm update-btn" style="display:none;">Save</button>
             <button type="button" class="btn btn-secondary btn-sm cancel-btn" style="display:none;">Cancel</button>
           </td>
@@ -336,7 +336,7 @@ foreach ($all_organisms as $organism => $assemblies) {
                 <span class="groups-display-new">(no groups)</span>
               </td>
               <td>
-                <button type="button" class="btn btn-info btn-sm add-groups-btn" <?= $file_write_error ? 'disabled' : '' ?>>Add Groups</button>
+                <button type="button" class="btn btn-info btn-sm add-groups-btn" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Add Groups</button>
                 <button type="button" class="btn btn-success btn-sm save-new-btn" style="display:none;">Save</button>
                 <button type="button" class="btn btn-secondary btn-sm cancel-new-btn" style="display:none;">Cancel</button>
               </td>
@@ -383,7 +383,7 @@ foreach ($all_organisms as $organism => $assemblies) {
               </span>
             </td>
             <td>
-              <button type="button" class="btn btn-warning btn-sm delete-stale-btn" data-index="<?= htmlspecialchars(json_encode($data)) ?>" <?= $file_write_error ? 'disabled' : '' ?>>Delete Entry</button>
+              <button type="button" class="btn btn-warning btn-sm delete-stale-btn" data-index="<?= htmlspecialchars(json_encode($data)) ?>" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Delete Entry</button>
             </td>
           </tr>
         <?php endforeach; ?>
@@ -823,22 +823,6 @@ foreach ($all_organisms as $organism => $assemblies) {
       });
     });
   });
-
-  // Modal for disabled buttons due to file permissions
-  const modalElement = document.getElementById('permissionModal');
-  if (modalElement) {
-    const permissionModal = new bootstrap.Modal(modalElement, {});
-    
-    // Use event delegation to capture clicks on disabled buttons
-    // Disabled buttons don't respond to click events, so we catch them in capture phase
-    document.addEventListener('click', function(e) {
-      if (e.target.hasAttribute('disabled') && e.target.tagName === 'BUTTON') {
-        e.preventDefault();
-        e.stopPropagation();
-        permissionModal.show();
-      }
-    }, true); // true = use capture phase
-  }
 </script>
 
 <!-- Permission Issue Modal -->
