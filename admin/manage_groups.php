@@ -3,8 +3,6 @@ session_start();
 include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
-include_once '../includes/head.php';
-include_once '../includes/navbar.php';
 
 $groups_file = $organism_data . '/organism_assembly_groups.json';
 $groups_data = [];
@@ -154,6 +152,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             implode(', ', $groups)
         );
         file_put_contents($log_file, $log_entry, FILE_APPEND);
+    } elseif (isset($_POST['delete'])) {
+        $organism = $_POST['organism'];
+        $assembly = $_POST['assembly'];
+        
+        // Find and store old groups for logging
+        $old_groups = [];
+        foreach ($groups_data as $data) {
+            if ($data['organism'] === $organism && $data['assembly'] === $assembly) {
+                $old_groups = $data['groups'];
+                break;
+            }
+        }
+        
+        // Remove the entry
+        $groups_data = array_values(array_filter($groups_data, function($data) use ($organism, $assembly) {
+            return !($data['organism'] === $organism && $data['assembly'] === $assembly);
+        }));
+        
+        // Log the deletion
+        $log_entry = sprintf(
+            "[%s] DELETE by %s | Organism: %s | Assembly: %s | Deleted groups: [%s]\n",
+            $timestamp,
+            $username,
+            $organism,
+            $assembly,
+            implode(', ', $old_groups)
+        );
+        file_put_contents($log_file, $log_entry, FILE_APPEND);
     }
 
     if (file_put_contents($groups_file, json_encode(array_values($groups_data), JSON_PRETTY_PRINT)) === false) {
@@ -196,8 +222,11 @@ foreach ($all_organisms as $organism => $assemblies) {
 <html lang="en">
 <head>
   <title>Manage Groups</title>
+  <?php include_once '../includes/head.php'; ?>
 </head>
 <body class="bg-light">
+
+<?php include_once '../includes/navbar.php'; ?>
 
 <div class="container mt-5" id="top">
   
@@ -820,6 +849,44 @@ foreach ($all_organisms as $organism => $assemblies) {
         saveButton.style.display = 'none';
         cancelButton.style.display = 'none';
         selectedTags = [];
+      });
+    });
+    
+    // Handle "Delete Entry" for stale entries
+    document.querySelectorAll('.delete-stale-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const row = button.closest('tr');
+        const organism = row.getAttribute('data-organism');
+        const assembly = row.getAttribute('data-assembly');
+        
+        if (confirm(`Delete entry for ${organism} / ${assembly}? This cannot be undone.`)) {
+          // Create a form and submit
+          const form = document.createElement('form');
+          form.method = 'post';
+          form.action = 'manage_groups.php';
+          
+          const orgInput = document.createElement('input');
+          orgInput.type = 'hidden';
+          orgInput.name = 'organism';
+          orgInput.value = organism;
+          
+          const asmInput = document.createElement('input');
+          asmInput.type = 'hidden';
+          asmInput.name = 'assembly';
+          asmInput.value = assembly;
+          
+          const deleteInput = document.createElement('input');
+          deleteInput.type = 'hidden';
+          deleteInput.name = 'delete';
+          deleteInput.value = '1';
+          
+          form.appendChild(orgInput);
+          form.appendChild(asmInput);
+          form.appendChild(deleteInput);
+          
+          document.body.appendChild(form);
+          form.submit();
+        }
       });
     });
   });

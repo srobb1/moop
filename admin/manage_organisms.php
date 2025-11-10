@@ -3,8 +3,6 @@ session_start();
 include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
-include_once '../includes/head.php';
-include_once '../includes/navbar.php';
 
 // Handle AJAX fix permissions request
 if (isset($_POST['action']) && $_POST['action'] === 'fix_permissions' && isset($_POST['organism'])) {
@@ -155,6 +153,7 @@ $organisms = get_all_organisms_info();
 <html lang="en">
 <head>
   <title>Manage Organisms</title>
+  <?php include_once '../includes/head.php'; ?>
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
   <style>
     .structure-box {
@@ -171,6 +170,8 @@ $organisms = get_all_organisms_info();
   </style>
 </head>
 <body class="bg-light">
+
+<?php include_once '../includes/navbar.php'; ?>
 
 <div class="container-fluid mt-5">
   <h2><i class="fa fa-dna"></i> Manage Organisms</h2>
