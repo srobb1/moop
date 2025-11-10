@@ -13,5 +13,6 @@ not_used/
 
 
 # OS files
+.php-cs-fixer.cache
 .DS_Store
 Thumbs.db
