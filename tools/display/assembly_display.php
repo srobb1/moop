@@ -1,5 +1,7 @@
 <?php
 include_once __DIR__ . '/../../access_control.php';
+include_once __DIR__ . '/../../includes/head.php';
+include_once __DIR__ . '/../../includes/navbar.php';
 include_once __DIR__ . '/../moop_functions.php';
 
 // Get organism and assembly from query parameters
@@ -78,10 +80,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
   <title><?= htmlspecialchars($assembly_info['genome_name']) ?> - <?= $siteTitle ?></title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css">
   <style>
     .assembly-header {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
