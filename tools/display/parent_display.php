@@ -391,7 +391,7 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 <script src="/<?= $site ?>/js/datatable-config.js"></script>
 <script src="/<?= $site ?>/js/parent.js"></script>
 
-<?php include_once __DIR__ . '/../../footer.php'; ?>
+<?php include_once __DIR__ . '/../../includes/footer.php'; ?>
 
 </body>
 </html>

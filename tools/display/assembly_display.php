@@ -73,7 +73,7 @@ $assembly_info = $results[0];
 // Get parent page info from referer
 $parent_uniquename = $_GET['parent'] ?? '';
 
-include_once realpath(__DIR__ . '/../../header.php');
+include_once __DIR__ . '/../../includes/header.php';
 include_once realpath(__DIR__ . '/../../toolbar.php');
 ?>
 
@@ -180,7 +180,7 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
 
 </div>
 
-<?php include_once __DIR__ . '/../../footer.php'; ?>
+<?php include_once __DIR__ . '/../../includes/footer.php'; ?>
 
 </body>
 </html>

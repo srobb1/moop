@@ -1,14 +1,5 @@
 [
     {
-        "organism": "Anoura_caudifer",
-        "assembly": "GCA_004027475.1_AnoCau_v1_BIUU_genomic",
-        "groups": [
-            "Bats",
-            "Cute",
-            "Public"
-        ]
-    },
-    {
         "organism": "Lasiurus_cinereus",
         "assembly": "GCA_011751065.1",
         "groups": [
@@ -47,6 +38,22 @@
             "Bats",
             "Cute",
             "Public"
+        ]
+    },
+    {
+        "organism": "Lasiurus_cinereus",
+        "assembly": "GCA_011751095.1",
+        "groups": [
+            "Bats",
+            "Cute"
+        ]
+    },
+    {
+        "organism": "Lasiurus_cinereus",
+        "assembly": "GCA_011751095.1",
+        "groups": [
+            "Bats",
+            "Cute"
         ]
     }
 ]

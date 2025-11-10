@@ -134,7 +134,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['save_description'])) 
     exit;
 }
 
-include_once '../header.php';
+include_once '../includes/header.php';
 ?>
 
 <style>

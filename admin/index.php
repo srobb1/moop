@@ -92,5 +92,5 @@ include_once '../includes/navbar.php';
 </html>
 
 <?php
-include_once '../footer.php';
+include_once '../includes/footer.php';
 ?>

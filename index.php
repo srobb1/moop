@@ -102,7 +102,7 @@ if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {
 // Convert user_access to JSON for JavaScript
 $user_access_json = json_encode($phylo_user_access);
 
-include_once realpath("header.php");
+include_once __DIR__ . '/includes/header.php';
 ?>
 
 <body class="bg-light">

@@ -392,5 +392,5 @@ function finishSearch() {
 </html>
 
 <?php
-include_once __DIR__ . '/../../footer.php';
+include_once __DIR__ . '/../../includes/footer.php';
 ?>
