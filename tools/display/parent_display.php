@@ -165,6 +165,8 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 </head>
 <body>
 
+<?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
+
 <div class="page_container">
 
 <!-- Navigation -->

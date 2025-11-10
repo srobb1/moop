@@ -54,6 +54,8 @@ if (!$has_organism_access && !$is_public) {
 </head>
 <body class="bg-light">
 
+<?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
+
 <div class="container mt-5">
   <!-- Navigation Buttons -->
   <div class="mb-3">

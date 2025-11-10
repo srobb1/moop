@@ -2,6 +2,8 @@
 session_start();
 include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
+include_once '../includes/head.php';
+include_once '../includes/navbar.php';
 
 
 $config_file = "$organism_data/annotation_config.json";
@@ -89,15 +91,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 
-include_once '../header.php';
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
   <title>Manage Annotation Sections</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
 </head>
 <body class="bg-light">
