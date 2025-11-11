@@ -273,14 +273,20 @@ include_once __DIR__ . '/../../includes/navbar.php';
             <div class="fasta-source-selector">
                 <label class="form-label"><strong>Select Source</strong></label>
                 
-                <!-- Filter input -->
+                <!-- Filter input with clear button -->
                 <div class="fasta-source-filter">
-                    <input 
-                        type="text" 
-                        class="form-control form-control-sm" 
-                        id="sourceFilter" 
-                        placeholder="Filter by group, organism, or assembly..."
-                        >
+                    <div class="input-group input-group-sm">
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="sourceFilter" 
+                            placeholder="Filter by group, organism, or assembly..."
+                            value="<?= htmlspecialchars($context_organism ?: $context_group) ?>"
+                            >
+                        <button class="btn btn-success" type="button" id="clearFilterBtn">
+                            <i class="fa fa-times"></i> Clear Filters
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Scrollable list of sources -->
@@ -378,10 +384,25 @@ include_once __DIR__ . '/../../includes/navbar.php';
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const filterInput = document.getElementById('sourceFilter');
+        const clearFilterBtn = document.getElementById('clearFilterBtn');
         const sourceLines = document.querySelectorAll('.fasta-source-line');
         const radios = document.querySelectorAll('input[name="selected_source"]');
         const form = document.getElementById('downloadForm');
         const errorAlert = document.querySelector('.alert-danger');
+        
+        // Function to apply filter
+        function applyFilter() {
+            const filterText = (filterInput.value || '').toLowerCase();
+            
+            sourceLines.forEach(line => {
+                const searchText = line.dataset.search || '';
+                if (filterText === '' || searchText.includes(filterText)) {
+                    line.classList.remove('hidden');
+                } else {
+                    line.classList.add('hidden');
+                }
+            });
+        }
         
         // Dismiss error alert on form submission
         if (form) {
@@ -393,19 +414,18 @@ include_once __DIR__ . '/../../includes/navbar.php';
             });
         }
         
-        // Handle filter
+        // Handle filter input
         if (filterInput) {
-            filterInput.addEventListener('keyup', function() {
-                const filterText = this.value.toLowerCase();
-                
-                sourceLines.forEach(line => {
-                    const searchText = line.dataset.search || '';
-                    if (filterText === '' || searchText.includes(filterText)) {
-                        line.classList.remove('hidden');
-                    } else {
-                        line.classList.add('hidden');
-                    }
-                });
+            filterInput.addEventListener('keyup', applyFilter);
+        }
+        
+        // Handle clear filter button
+        if (clearFilterBtn) {
+            clearFilterBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                filterInput.value = '';
+                applyFilter();
+                filterInput.focus();
             });
         }
         
@@ -436,6 +456,9 @@ include_once __DIR__ . '/../../includes/navbar.php';
                 }
             });
         }
+        
+        // Apply initial filter on page load if context_organism was set
+        applyFilter();
     });
 </script>
 
