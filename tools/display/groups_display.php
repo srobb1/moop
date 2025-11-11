@@ -73,6 +73,9 @@ if ($group_name !== 'Public') {
 
 <div class="container mt-5">
   <div class="mb-3">
+    <a href="/<?= $site ?>/tools/extract/download_fasta.php?referrer=groups" class="btn btn-success" title="Search and download sequences">
+      <i class="fa fa-dna"></i> Download FASTA
+    </a>
     <a href="/<?= $site ?>/index.php" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> Back to Home</a>
     <button id="backToGroupBtn" class="btn btn-secondary ms-2 hidden" onclick="location.reload();">
       <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($group_name) ?>

@@ -627,3 +627,74 @@ code {
     overflow-x: visible !important;
   }
 }
+
+/* ========== FASTA DOWNLOAD TOOL STYLES ========== */
+
+.fasta-sequence-option {
+  padding: 15px;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.fasta-sequence-option:hover {
+  background-color: #f8f9fa;
+  border-color: #0d6efd;
+}
+
+.fasta-sequence-option input[type="radio"] {
+  margin-right: 10px;
+}
+
+.fasta-textarea-ids {
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.fasta-info-box {
+  background-color: #e7f3ff;
+  padding: 15px;
+  border-left: 4px solid #0d6efd;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.fasta-source-selector {
+  margin-bottom: 20px;
+}
+
+.fasta-source-filter {
+  margin-bottom: 10px;
+}
+
+.fasta-source-list {
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 8px;
+  background-color: #fafafa;
+}
+
+.fasta-source-line {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  margin-bottom: 2px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  transition: background-color 0.2s;
+}
+
+.fasta-source-line:hover {
+  background-color: #f0f0f0;
+}
+
+.fasta-source-line.hidden {
+  display: none;
+}
+
+.fasta-source-line input[type="radio"] {
+  margin: 0;
+}

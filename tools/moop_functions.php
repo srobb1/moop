@@ -922,5 +922,104 @@ function clearErrorLog() {
     return false;
 }
 
+/**
+ * Get all accessible assemblies organized by group and organism
+ * 
+ * Returns assemblies that the user has access to, organized hierarchically:
+ * Group -> Organism -> Assembly
+ * 
+ * Access is determined by is_public_organism() and has_access() functions:
+ * - Admin: sees all assemblies in all groups
+ * - Collaborator: sees assemblies in groups they have organism access to, plus Public groups
+ * - Public: sees only assemblies in Public groups
+ * 
+ * @param string $specific_organism Optional: filter to single organism
+ * @param string $specific_assembly Optional: filter to single assembly
+ * @return array Organized by group => organism => [sources array]
+ *              Each source contains: ['organism', 'assembly', 'path', 'groups']
+ */
+function getAccessibleAssemblies($specific_organism = null, $specific_assembly = null) {
+    global $organism_data, $metadata_path;
+    
+    // Load groups data
+    $groups_data = [];
+    $groups_file = "$metadata_path/organism_assembly_groups.json";
+    if (file_exists($groups_file)) {
+        $groups_data = json_decode(file_get_contents($groups_file), true) ?: [];
+    }
+    
+    $accessible_sources = [];
+    
+    // Filter entries based on referrer (specific org/assembly or all)
+    $entries_to_process = $groups_data;
+    
+    if (!empty($specific_organism)) {
+        $entries_to_process = array_filter($groups_data, function($entry) use ($specific_organism) {
+            return $entry['organism'] === $specific_organism;
+        });
+    }
+    
+    if (!empty($specific_assembly)) {
+        $entries_to_process = array_filter($entries_to_process, function($entry) use ($specific_assembly) {
+            return $entry['assembly'] === $specific_assembly;
+        });
+    }
+    
+    // Build list of accessible sources using existing access functions
+    foreach ($entries_to_process as $entry) {
+        $org = $entry['organism'];
+        $assembly = $entry['assembly'];
+        $entry_groups = $entry['groups'] ?? [];
+        
+        // Check if user has access to this entry
+        // Admin (ALL/Admin access level) has access to everything
+        // Otherwise check if it's public or user is collaborator with access
+        $has_access = has_access('ALL') || is_public_organism($org) || has_access('Collaborator', $org);
+        
+        if ($has_access) {
+            $assembly_path = "$organism_data/$org/$assembly";
+            
+            if (is_dir($assembly_path)) {
+                $accessible_sources[] = [
+                    'organism' => $org,
+                    'assembly' => $assembly,
+                    'path' => $assembly_path,
+                    'groups' => $entry_groups
+                ];
+            }
+        }
+    }
+    
+    // Organize by group -> organism
+    $organized = [];
+    foreach ($accessible_sources as $source) {
+        foreach ($source['groups'] as $group) {
+            if (!isset($organized[$group])) {
+                $organized[$group] = [];
+            }
+            $org = $source['organism'];
+            if (!isset($organized[$group][$org])) {
+                $organized[$group][$org] = [];
+            }
+            $organized[$group][$org][] = $source;
+        }
+    }
+    
+    // Sort groups (Public first, then alphabetically)
+    uksort($organized, function($a, $b) {
+        if ($a === 'Public') return -1;
+        if ($b === 'Public') return 1;
+        return strcasecmp($a, $b);
+    });
+    
+    // Sort organisms within each group alphabetically
+    foreach ($organized as &$group_data) {
+        ksort($group_data);
+    }
+    
+    return $organized;
+}
+
 ?>
+
 

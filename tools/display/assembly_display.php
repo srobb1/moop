@@ -96,6 +96,9 @@ $parent_uniquename = $_GET['parent'] ?? '';
     <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism_name) ?>" class="btn btn-secondary">
       <i class="fa fa-arrow-left"></i> Back to <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>
     </a>
+    <a href="/<?= $site ?>/tools/extract/download_fasta.php?referrer=assembly&organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>" class="btn btn-success" title="Search and download sequences">
+      <i class="fa fa-dna"></i> Download FASTA
+    </a>
     <a href="/<?= $site ?>/index.php" class="btn btn-secondary">
       <i class="fa fa-home"></i> Home
     </a>
