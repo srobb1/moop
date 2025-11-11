@@ -189,44 +189,57 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
         </a>
     </div>
 
-    <!-- Feature Header -->
-    <div class="feature-header shadow">
-        <div class="d-flex align-items-start justify-content-between">
-            <div class="flex-grow-1">
-                <h1 class="mb-3">
-                    <?= htmlspecialchars($feature_uniquename) ?>
-                    <span class="badge text-white ms-2 badge-accent">
-                        <?= htmlspecialchars($type) ?>
-                    </span>
-                    <?php if (!empty($children) && count($children) > 0): 
-                        $first_child_type = $children[0]['feature_type'] ?? 'mRNA';
-                        $child_color_map = ['mRNA' => '#17a2b8', 'gene' => '#764ba2'];
-                        $child_bg_color = $child_color_map[strtoupper($first_child_type)] ?? '#17a2b8';
-                    ?>
-                        <span class="badge text-white ms-2" style="font-size: 0.6em; background-color: <?= $child_bg_color ?>;">
-                            <?= count($children) ?> <?= htmlspecialchars($first_child_type) ?> child<?= count($children) > 1 ? 'ren' : '' ?>
+    <!-- Feature Header and Tools Row -->
+    <div class="row mb-4">
+      <!-- Feature Header Column -->
+      <div class="col-lg-8">
+        <div class="feature-header shadow h-100">
+            <div class="d-flex align-items-start justify-content-between">
+                <div class="flex-grow-1">
+                    <h1 class="mb-3">
+                        <?= htmlspecialchars($feature_uniquename) ?>
+                        <span class="badge text-white ms-2 badge-accent">
+                            <?= htmlspecialchars($type) ?>
                         </span>
+                        <?php if (!empty($children) && count($children) > 0): 
+                            $first_child_type = $children[0]['feature_type'] ?? 'mRNA';
+                            $child_color_map = ['mRNA' => '#17a2b8', 'gene' => '#764ba2'];
+                            $child_bg_color = $child_color_map[strtoupper($first_child_type)] ?? '#17a2b8';
+                        ?>
+                            <span class="badge text-white ms-2" style="font-size: 0.6em; background-color: <?= $child_bg_color ?>;">
+                                <?= count($children) ?> <?= htmlspecialchars($first_child_type) ?> child<?= count($children) > 1 ? 'ren' : '' ?>
+                            </span>
+                        <?php endif; ?>
+                    </h1>
+                    <?php if (!empty($description)): ?>
+                        <p class="mb-4 feature-description"><?= htmlspecialchars($description) ?></p>
                     <?php endif; ?>
-                </h1>
-                <?php if (!empty($description)): ?>
-                    <p class="mb-4 feature-description"><?= htmlspecialchars($description) ?></p>
-                <?php endif; ?>
-            </div>
-        </div>
-        
-        <div>
-            <div class="feature-info-item">
-                <strong>Organism:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em></a></span>
-            </div>
-            <?php if ($common_name): ?>
-                <div class="feature-info-item">
-                    <strong>Common Name:</strong> <span class="feature-value"><?= htmlspecialchars($common_name) ?></span>
                 </div>
-            <?php endif; ?>
-            <div class="feature-info-item">
-                <strong>Assembly:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/display/assembly_display.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars($genome_name) ?> (<?= htmlspecialchars($genome_accession) ?>)</a></span>
+            </div>
+            
+            <div>
+                <div class="feature-info-item">
+                    <strong>Organism:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em></a></span>
+                </div>
+                <?php if ($common_name): ?>
+                    <div class="feature-info-item">
+                        <strong>Common Name:</strong> <span class="feature-value"><?= htmlspecialchars($common_name) ?></span>
+                    </div>
+                <?php endif; ?>
+                <div class="feature-info-item">
+                    <strong>Assembly:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/display/assembly_display.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars($genome_name) ?> (<?= htmlspecialchars($genome_accession) ?>)</a></span>
+                </div>
             </div>
         </div>
+      </div>
+
+      <!-- Tools Column -->
+      <div class="col-lg-4">
+        <?php 
+        $context = ['organism' => $organism_name, 'assembly' => $genome_accession, 'display_name' => $feature_uniquename];
+        include_once __DIR__ . '/tool_section.php';
+        ?>
+      </div>
     </div>
 
 
