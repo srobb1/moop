@@ -14,8 +14,6 @@ $sequence_type = trim($_POST['sequence_type'] ?? '');
 
 include_once __DIR__ . '/../../site_config.php';
 include_once __DIR__ . '/../../includes/access_control.php';
-include_once __DIR__ . '/../../includes/head.php';
-include_once __DIR__ . '/../../includes/navbar.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
@@ -155,6 +153,10 @@ if (is_dir($organism_dir)) {
         }
     }
 }
+
+// Now include the HTML headers
+include_once __DIR__ . '/../../includes/head.php';
+include_once __DIR__ . '/../../includes/navbar.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
