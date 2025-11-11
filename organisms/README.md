@@ -1,18 +1,20 @@
 # Single organism data organization
 
-## this `organisms` directrory has one sub-directory for each organism
-- Each sub-directory is named for each organism with it's genus and species and optional subclassification. 
-- the genus and species and sub-classification are separated with underscores
-- Examples: Anoura_caudifer, Pantera_pardus_fusca
+## Directory Structure
 
-## Each organism specific sub-directory 
-  - contains a database file that houses gene, transcript, and annotation information
-  - contains subdirectories for different genome assemblies
-    - each genome assembly directory contains FASTA files  
+This `organisms` directory contains one sub-directory for each organism. Each sub-directory is named with the organism's genus and species, and optional subclassification, all separated with underscores.
+
+Examples: `Anoura_caudifer`, `Pantera_pardus_fusca`
+
+## Organism Sub-Directory Contents
+
+Each organism-specific sub-directory contains:
+- A SQLite database file (named `[organism].genes.sqlite`) - houses gene, transcript, and annotation information
+- One or more genome assembly directories - each containing FASTA sequence files
 
 ```text
 Anoura_caudifer [genus_species]
-|--> genes.sqlite
+|--> Anoura_caudifer.genes.sqlite
 |--> GCA_004027475.1_AnoCau_v1_BIUU_genomic [genome_uniquename]
      |--> transcript.nt.fa [transcript/mRNA fasta]
      |--> protein.aa.fa [peptides/protein fasta]
@@ -20,14 +22,15 @@ Anoura_caudifer [genus_species]
      |--> genome.nt.fa [genome fasta]
 ```
 
-public.txt contains all the organisms and assemblies that are available to the public
-`for i in `ls  -1` ; do for j in `ls -d $i/*` ; do BASE=`basename $j` ; echo  "$i"$'\t'"$BASE" >> public.txt ; done ; done`
-```
-Anoura_caudifer	GCA_004027475.1_AnoCau_v1_BIUU_genomic
-Anoura_caudifer	assembly_v1
-Lasiurus_cinereus	GCA_011751065.1
-Lasiurus_cinereus	assembly_v1
-```
+## Visibility and Configuration
+
+Organism and assembly visibility is managed through the metadata directory (`../metadata/`):
+- `organism_assembly_groups.json` - Defines which organisms and assemblies are available and their access level
+- `group_descriptions.json` - Provides grouping and display information
+- `phylo_tree_config.json` - Defines the phylogenetic tree structure
+- `annotation_config.json` - Specifies annotation types and properties
+
+The configuration determines which organisms/assemblies are visible to different users and how they are displayed in the application.
 
 
 
