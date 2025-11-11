@@ -49,8 +49,8 @@ if (!empty($organism_name)) {
 }
 
 // Load annotation configuration
-// TO DO: re-evaluate where config json files are stored
-$annotation_config_file = "$organism_data/annotation_config.json";
+// Configuration files are centralized in the metadata directory
+$annotation_config_file = "$metadata_path/annotation_config.json";
 $analysis_order = [];
 $analysis_desc = [];
 $annotation_colors = [];

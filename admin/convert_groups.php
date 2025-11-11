@@ -1,6 +1,7 @@
 <?php
-$groups_file = '/var/www/html/moop/organisms/groups.txt';
-$json_file = '/var/www/html/moop/organisms/organism_assembly_groups.json';
+include_once __DIR__ . '/../site_config.php';
+
+$json_file = "$metadata_path/organism_assembly_groups.json";
 $backup_file = '/var/www/html/moop/organisms/groups.txt.bak';
 
 $groups_data = [];

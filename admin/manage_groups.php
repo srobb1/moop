@@ -4,7 +4,7 @@ include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
 
-$groups_file = $organism_data . '/organism_assembly_groups.json';
+$groups_file = $metadata_path . '/organism_assembly_groups.json';
 $groups_data = [];
 $file_write_error = null;
 $desc_file_write_error = null;
@@ -14,7 +14,7 @@ if (file_exists($groups_file)) {
 }
 
 // Load group descriptions
-$descriptions_file = $organism_data . '/group_descriptions.json';
+$descriptions_file = $metadata_path . '/group_descriptions.json';
 $descriptions_data = [];
 if (file_exists($descriptions_file)) {
     $descriptions_data = json_decode(file_get_contents($descriptions_file), true);
@@ -363,7 +363,7 @@ foreach ($all_organisms as $organism => $assemblies) {
     <div class="alert alert-warning alert-dismissible fade show">
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       <h4><i class="fa fa-exclamation-circle"></i> File Permission Issue Detected</h4>
-      <p><strong>Problem:</strong> The file <code>organisms/organism_assembly_groups.json</code> is not writable by the web server.</p>
+      <p><strong>Problem:</strong> The file <code>metadata/organism_assembly_groups.json</code> is not writable by the web server.</p>
       
       <p><strong>Current Status:</strong></p>
       <ul class="mb-3">
@@ -390,7 +390,7 @@ foreach ($all_organisms as $organism => $assemblies) {
     <div class="alert alert-danger alert-dismissible fade show">
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       <h4><i class="fa fa-exclamation-triangle"></i> File Write Permission Error</h4>
-      <p><strong>Problem:</strong> Unable to save changes to <code>organisms/organism_assembly_groups.json</code></p>
+      <p><strong>Problem:</strong> Unable to save changes to <code>metadata/organism_assembly_groups.json</code></p>
       
       <p><strong>Current Status:</strong></p>
       <ul>
@@ -556,7 +556,7 @@ foreach ($all_organisms as $organism => $assemblies) {
     <div class="alert alert-warning alert-dismissible fade show">
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       <h4><i class="fa fa-exclamation-circle"></i> File Permission Issue Detected</h4>
-      <p><strong>Problem:</strong> The file <code>organisms/group_descriptions.json</code> is not writable by the web server.</p>
+      <p><strong>Problem:</strong> The file <code>metadata/group_descriptions.json</code> is not writable by the web server.</p>
       
       <p><strong>Current Status:</strong></p>
       <ul class="mb-3">

@@ -7,7 +7,7 @@ include_once '../includes/head.php';
 include_once '../includes/navbar.php';
 
 
-$config_file = "$organism_data/annotation_config.json";
+$config_file = "$metadata_path/annotation_config.json";
 $config = [];
 $file_write_error = null;
 
@@ -166,7 +166,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
     <div class="alert alert-warning alert-dismissible fade show">
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       <h4><i class="fa fa-exclamation-circle"></i> File Permission Issue Detected</h4>
-      <p><strong>Problem:</strong> The file <code>organisms/annotation_config.json</code> is not writable by the web server.</p>
+      <p><strong>Problem:</strong> The file <code>metadata/annotation_config.json</code> is not writable by the web server.</p>
       
       <p><strong>Current Status:</strong></p>
       <ul class="mb-3">

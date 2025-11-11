@@ -4,7 +4,7 @@ include_once 'admin_access_check.php';
 include_once '../includes/head.php';
 include_once '../includes/navbar.php';
 $organism_data_dir = $organism_data;
-$tree_config_file = __DIR__ . '/../phylo_tree_config.json';
+$tree_config_file = "$metadata_path/phylo_tree_config.json";
 $message = '';
 $error = '';
 

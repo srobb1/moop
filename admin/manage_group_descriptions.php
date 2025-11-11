@@ -4,8 +4,8 @@ include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
 
-$groups_file = $organism_data . '/organism_assembly_groups.json';
-$descriptions_file = $organism_data . '/group_descriptions.json';
+$groups_file = $metadata_path . '/organism_assembly_groups.json';
+$descriptions_file = $metadata_path . '/group_descriptions.json';
 $file_write_error = null;
 
 // Load organism assembly groups
@@ -133,7 +133,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['save_description']) &
         $_SESSION['error_message'] = "Error: Could not write to group_descriptions.json. Check file permissions.";
     } else {
         // Log the change
-        $log_file = $organism_data . '/group_descriptions_changes.log';
+        $log_file = $metadata_path . '/backups/group_descriptions_changes.log';
         $timestamp = date('Y-m-d H:i:s');
         $username = $_SESSION['username'] ?? 'unknown';
         $log_entry = sprintf(
@@ -244,7 +244,7 @@ include_once '../includes/header.php';
     <div class="alert alert-warning alert-dismissible fade show">
       <button type="button" class="close" data-dismiss="alert">&times;</button>
       <h4><i class="fa fa-exclamation-circle"></i> File Permission Issue Detected</h4>
-      <p><strong>Problem:</strong> The file <code>organisms/group_descriptions.json</code> is not writable by the web server.</p>
+      <p><strong>Problem:</strong> The file <code>metadata/group_descriptions.json</code> is not writable by the web server.</p>
       
       <p><strong>Current Status:</strong></p>
       <ul class="mb-3">

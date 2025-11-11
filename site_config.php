@@ -14,7 +14,9 @@ $users_file = "/var/www/html/users.json";
 $organism_data = "$root_path/$site/organisms";
 $admin_email = "admin@example.com"; // Contact email for access issues
 
-//$json_files_path = "$root_path/$egdb_files_folder/json_files";
+// Metadata path for application customizations: phylogenetic tree configuration,
+// group descriptions, assembly group mappings, and annotation type definitions
+$metadata_path = "$site_path/metadata";
 
 // Custom css file
 $custom_css_path = "$site_path/css/custom.css";

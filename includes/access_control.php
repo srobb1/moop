@@ -56,9 +56,9 @@ function get_username() {
  */
 if (!function_exists('is_public_organism')) {
 function is_public_organism($organism_name) {
-    global $organism_data;
+    global $metadata_path;
     
-    $groups_file = "$organism_data/organism_assembly_groups.json";
+    $groups_file = "$metadata_path/organism_assembly_groups.json";
     if (!file_exists($groups_file)) {
         return false;
     }

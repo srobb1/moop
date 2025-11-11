@@ -10,14 +10,14 @@ if (empty($group_name)) {
 }
 
 // Load group descriptions
-$group_descriptions_file = "$organism_data/group_descriptions.json";
+$group_descriptions_file = "$metadata_path/group_descriptions.json";
 $group_descriptions = [];
 if (file_exists($group_descriptions_file)) {
     $group_descriptions = json_decode(file_get_contents($group_descriptions_file), true);
 }
 
 // Load organism assembly groups
-$groups_file = "$organism_data/organism_assembly_groups.json";
+$groups_file = "$metadata_path/organism_assembly_groups.json";
 $groups_data = [];
 if (file_exists($groups_file)) {
     $groups_data = json_decode(file_get_contents($groups_file), true);

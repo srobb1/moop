@@ -10,8 +10,9 @@ if (file_exists($usersFile)) {
 // Get visitor IP for display purposes only
 $ip = $visitor_ip;
 
-function get_group_data($path) {
-    $groups_file = "$path/organism_assembly_groups.json";
+function get_group_data() {
+    global $metadata_path;
+    $groups_file = "$metadata_path/organism_assembly_groups.json";
     $groups_data = [];
     if (file_exists($groups_file)) {
         $groups_data = json_decode(file_get_contents($groups_file), true);
@@ -19,7 +20,7 @@ function get_group_data($path) {
     return $groups_data;
 }
 
-$group_data = get_group_data($organism_data);
+$group_data = get_group_data();
 
 function get_all_cards($group_data) {
     $cards = [];
@@ -72,7 +73,7 @@ if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {
 }
 
 // Load phylogenetic tree data
-$phylo_tree_data = json_decode(file_get_contents(__DIR__ . '/phylo_tree_config.json'), true);
+$phylo_tree_data = json_decode(file_get_contents("$metadata_path/phylo_tree_config.json"), true);
 
 // Build user access for phylo tree - include all organisms if admin/ALL access
 $phylo_user_access = [];
