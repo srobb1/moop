@@ -105,7 +105,7 @@ if (!$has_organism_access && !$is_public) {
     <!-- Tools Column -->
     <div class="col-lg-4">
       <?php 
-      $context = ['organism' => $organism_name, 'display_name' => $organism_info['common_name'] ?? $organism_name];
+      $context = ['organism' => $organism_name, 'display_name' => $organism_info['common_name'] ?? $organism_name, 'page' => 'organism'];
       include_once __DIR__ . '/tool_section.php';
       ?>
     </div>

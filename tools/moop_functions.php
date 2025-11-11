@@ -1050,8 +1050,16 @@ function getAvailableTools($context = []) {
         return [];
     }
     
+    // Get current page from context (optional)
+    $current_page = $context['page'] ?? null;
+    
     $tools = [];
     foreach ($available_tools as $tool_id => $tool) {
+        // Check page visibility - skip if tool doesn't show on this page
+        if ($current_page && !isToolVisibleOnPage($tool, $current_page)) {
+            continue;
+        }
+        
         $url = buildToolUrl($tool_id, $context, $site);
         if ($url) {
             $tools[$tool_id] = array_merge($tool, ['url' => $url]);

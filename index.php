@@ -196,7 +196,7 @@ include_once __DIR__ . '/includes/header.php';
 
         <!-- Tools Card -->
         <?php 
-        $context = ['display_name' => 'Multi-Organism Search'];
+        $context = ['display_name' => 'Multi-Organism Search', 'page' => 'index'];
         include_once __DIR__ . '/tools/tool_config.php';
         include_once __DIR__ . '/tools/moop_functions.php';
         $tools = getAvailableTools($context);

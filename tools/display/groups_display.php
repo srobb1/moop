@@ -114,7 +114,7 @@ if ($group_name !== 'Public') {
     <!-- Tools Column -->
     <div class="col-lg-4">
       <?php 
-      $context = ['group' => $group_name, 'display_name' => $group_name];
+      $context = ['group' => $group_name, 'display_name' => $group_name, 'page' => 'group'];
       include_once __DIR__ . '/tool_section.php';
       ?>
     </div>

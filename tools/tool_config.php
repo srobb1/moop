@@ -14,6 +14,7 @@ $available_tools = [
         'btn_class' => 'btn-success',
         'url_path' => '/tools/extract/download_fasta.php',
         'context_params' => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
+        'pages' => 'all',  // Show on all pages
     ],
     'phylo_search' => [
         'id' => 'phylo_search',
@@ -23,8 +24,13 @@ $available_tools = [
         'btn_class' => 'btn-info',
         'url_path' => '/tools/search/multi_organism_search.php',
         'context_params' => ['display_name'],
+        'pages' => ['index'],  // Show only on index page
     ],
     // Future tools can be added here
+    // Pages can be:
+    //   'all' - Show on all pages
+    //   ['page1', 'page2'] - Show on specific pages (index, organism, group, assembly, parent, multi_organism_search)
+    //   Omit 'pages' key - defaults to 'all'
 ];
 
 /**
@@ -77,6 +83,31 @@ function buildToolUrl($tool_id, $context, $site) {
     }
     
     return $url;
+}
+
+/**
+ * Check if a tool should be visible on a specific page
+ * 
+ * @param array $tool - Tool configuration
+ * @param string $page - Page identifier (index, organism, group, assembly, parent, multi_organism_search)
+ * @return bool - True if tool should be visible on this page
+ */
+function isToolVisibleOnPage($tool, $page) {
+    // If 'pages' key not defined, default to 'all'
+    $pages = $tool['pages'] ?? 'all';
+    
+    // 'all' means show on all pages
+    if ($pages === 'all') {
+        return true;
+    }
+    
+    // If pages is an array, check if current page is in it
+    if (is_array($pages)) {
+        return in_array($page, $pages);
+    }
+    
+    // If pages is a string (and not 'all'), treat as single page name
+    return $page === $pages;
 }
 
 ?>

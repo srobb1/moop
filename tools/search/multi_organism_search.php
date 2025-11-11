@@ -78,7 +78,7 @@ foreach ($organisms as $organism) {
     <!-- Tools Column -->
     <div class="col-lg-4">
       <?php 
-      $context = ['organisms' => $organisms, 'display_name' => 'Multi-Organism Search'];
+      $context = ['organisms' => $organisms, 'display_name' => 'Multi-Organism Search', 'page' => 'multi_organism_search'];
       include_once __DIR__ . '/../display/tool_section.php';
       ?>
     </div>
