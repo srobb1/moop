@@ -90,11 +90,7 @@ include_once __DIR__ . '/access_control.php';
 
 
 <?php
-if (file_exists("toolbar.php") ) {
-  include_once "toolbar.php";
-}elseif (file_exists("$site_path/toolbar.php") ) {
-  include_once "$site_path/toolbar.php";
-}
+include_once __DIR__ . '/toolbar.php';
 ?>
 
 <div class="page_container">

@@ -26,7 +26,5 @@ if (!empty($header_img)) {
 ?>
 
 <?php
-if (file_exists(__DIR__ . "/../toolbar.php")) {
-  include_once __DIR__ . "/../toolbar.php";
-}
+include_once __DIR__ . '/toolbar.php';
 ?>
