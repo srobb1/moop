@@ -1032,6 +1032,36 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
     return $organized;
 }
 
+/**
+ * Get available tools filtered by context
+ * Returns only tools that have the required context parameters available
+ * 
+ * @param array $context - Context array with optional keys: organism, assembly, group, display_name
+ * @return array - Array of available tools with built URLs
+ */
+function getAvailableTools($context = []) {
+    global $site, $available_tools;
+    
+    // Include tool configuration
+    include_once __DIR__ . '/tool_config.php';
+    
+    // If $available_tools not set by include, return empty array
+    if (!isset($available_tools) || !is_array($available_tools)) {
+        return [];
+    }
+    
+    $tools = [];
+    foreach ($available_tools as $tool_id => $tool) {
+        $url = buildToolUrl($tool_id, $context, $site);
+        if ($url) {
+            $tools[$tool_id] = array_merge($tool, ['url' => $url]);
+        }
+    }
+    
+    return $tools;
+}
+
 ?>
+
 
 

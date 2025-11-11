@@ -73,9 +73,6 @@ if ($group_name !== 'Public') {
 
 <div class="container mt-5">
   <div class="mb-3">
-    <a href="/<?= $site ?>/tools/extract/download_fasta.php?group=<?= urlencode($group_name) ?>&display_name=<?= urlencode($group_name) ?>" class="btn btn-success" title="Search and download sequences">
-      <i class="fa fa-dna"></i> Download FASTA
-    </a>
     <a href="/<?= $site ?>/index.php" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> Back to Home</a>
     <button id="backToGroupBtn" class="btn btn-secondary ms-2 hidden" onclick="location.reload();">
       <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($group_name) ?>
@@ -85,6 +82,12 @@ if ($group_name !== 'Public') {
   <div class="text-center mb-4">
     <h1 class="fw-bold"><i class="fa fa-layer-group"></i> <?= htmlspecialchars($group_name) ?></h1>
   </div>
+
+  <!-- Tools Section -->
+  <?php 
+  $context = ['group' => $group_name, 'display_name' => $group_name];
+  include_once __DIR__ . '/tool_section.php';
+  ?>
 
   <!-- Search Section -->
   <div class="card shadow-sm mb-5">
