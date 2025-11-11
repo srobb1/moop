@@ -72,74 +72,18 @@ $assembly_info = $results[0];
 
 // Get parent page info from referer
 $parent_uniquename = $_GET['parent'] ?? '';
-
-include_once __DIR__ . '/../../includes/header.php';
-include_once realpath(__DIR__ . '/../../toolbar.php');
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <title><?= htmlspecialchars($assembly_info['genome_name']) ?> - <?= $siteTitle ?></title>
-  <style>
-    .assembly-header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 2rem;
-      border-radius: 0.5rem;
-      margin-bottom: 2rem;
-    }
-    
-    .assembly-header h1 {
-      font-weight: 700;
-      margin-bottom: 1rem;
-    }
-
-    .stat-card {
-      background: white;
-      border-left: 4px solid;
-      padding: 1.5rem;
-      border-radius: 0.5rem;
-      box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
-    }
-
-    .stat-card.gene {
-      border-left-color: #764ba2;
-    }
-
-    .stat-card.mrna {
-      border-left-color: #17a2b8;
-    }
-
-    .stat-count {
-      font-size: 2.5rem;
-      font-weight: 700;
-      margin: 0.5rem 0;
-    }
-
-    .stat-label {
-      font-size: 1rem;
-      color: #666;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .stat-card.gene .stat-count {
-      color: #764ba2;
-    }
-
-    .stat-card.mrna .stat-count {
-      color: #17a2b8;
-    }
-  </style>
+  <?php include_once __DIR__ . '/../../includes/head.php'; ?>
+  <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
 </head>
 <body class="bg-light">
+
+<?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
 
 <div class="container mt-5">
   <!-- Navigation Buttons -->
@@ -158,22 +102,35 @@ include_once realpath(__DIR__ . '/../../toolbar.php');
   </div>
 
   <!-- Assembly Header -->
-  <div class="assembly-header shadow">
-    <h1><?= htmlspecialchars($assembly_info['genome_name']) ?> <span class="heading-small">(<?= htmlspecialchars($assembly_info['genome_accession']) ?>)</span></h1>
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+      <h4 class="mb-0"><i class="fa fa-dna"></i> <?= htmlspecialchars($assembly_info['genome_name']) ?></h4>
+    </div>
+    <div class="card-body">
+      <p class="mb-0"><strong>Accession:</strong> <?= htmlspecialchars($assembly_info['genome_accession']) ?></p>
+    </div>
   </div>
 
   <!-- Statistics Section -->
   <div class="row g-4 mb-5">
     <div class="col-md-6">
-      <div class="stat-card gene">
-        <div class="stat-label"><i class="fas fa-dna"></i> Genes</div>
-        <div class="stat-count"><?= number_format($assembly_info['gene_count'] ?? 0) ?></div>
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="text-center">
+            <h6 class="text-muted mb-3"><i class="fas fa-dna"></i> Genes</h6>
+            <h2 class="fw-bold text-primary"><?= number_format($assembly_info['gene_count'] ?? 0) ?></h2>
+          </div>
+        </div>
       </div>
     </div>
     <div class="col-md-6">
-      <div class="stat-card mrna">
-        <div class="stat-label"><i class="fas fa-scroll"></i> mRNA Transcripts</div>
-        <div class="stat-count"><?= number_format($assembly_info['mrna_count'] ?? 0) ?></div>
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="text-center">
+            <h6 class="text-muted mb-3"><i class="fas fa-scroll"></i> mRNA Transcripts</h6>
+            <h2 class="fw-bold text-info"><?= number_format($assembly_info['mrna_count'] ?? 0) ?></h2>
+          </div>
+        </div>
       </div>
     </div>
   </div>
