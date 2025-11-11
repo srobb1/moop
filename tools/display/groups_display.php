@@ -86,7 +86,7 @@ if ($group_name !== 'Public') {
       <div class="card shadow-sm h-100">
         <!-- Title Card -->
         <div class="card-header bg-light border-bottom">
-          <h1 class="fw-bold mb-0 text-center"><i class="fa fa-layer-group"></i> <?= htmlspecialchars($group_name) ?></h1>
+          <h1 class="fw-bold mb-0 text-center"><?= htmlspecialchars($group_name) ?></h1>
         </div>
 
         <!-- Search Section -->

@@ -64,9 +64,6 @@ if (!$has_organism_access && !$is_public) {
         <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($parent_uniquename) ?>
       </a>
     <?php endif; ?>
-    <a href="/<?= $site ?>/tools/extract/download_fasta.php?organism=<?= urlencode($organism_name) ?>&display_name=<?= urlencode($organism_name) ?>" class="btn btn-success" title="Search and download sequences">
-      <i class="fa fa-dna"></i> Download FASTA
-    </a>
     <a href="/<?= $site ?>/index.php" class="btn btn-secondary"><i class="fa fa-home"></i> Back to Home</a>
     <button class="btn btn-secondary hidden" id="backToOrganismBtn">
       <i class="fa fa-arrow-left"></i> Back to <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em> Page
@@ -74,26 +71,43 @@ if (!$has_organism_access && !$is_public) {
   </div>
 
   <!-- Search Section -->
-  <div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-      <h4 class="mb-0"><i class="fa fa-search"></i> <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>: Search Gene IDs and Annotations</h4>
-    </div>
-    <div class="card-body bg-search-light">
-      <form id="organismSearchForm">
-        <div class="row">
-          <div class="col-md-10">
-            <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
-            <small class="form-text text-muted-gray">
-              Use quotes for exact phrases (e.g., "ABC transporter"). Searches this organism only.
-            </small>
-          </div>
-          <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100" id="searchBtn">
-              <i class="fa fa-search"></i> Search
-            </button>
-          </div>
+  <div class="row mb-4">
+    <!-- Title and Search Column -->
+    <div class="col-lg-8">
+      <div class="card shadow-sm h-100">
+        <!-- Title Card -->
+        <div class="card-header bg-light border-bottom">
+          <h1 class="fw-bold mb-0 text-center"><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></h1>
         </div>
-      </form>
+
+        <!-- Search Section -->
+        <div class="card-body bg-search-light">
+          <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> Search Gene IDs and Annotations</h4>
+          <form id="organismSearchForm">
+            <div class="row">
+              <div class="col-md-10">
+                <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
+                <small class="form-text text-muted-gray">
+                  Use quotes for exact phrases (e.g., "ABC transporter"). Searches this organism only.
+                </small>
+              </div>
+              <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100" id="searchBtn">
+                  <i class="fa fa-search"></i> Search
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tools Column -->
+    <div class="col-lg-4">
+      <?php 
+      $context = ['organism' => $organism_name, 'display_name' => $organism_info['common_name'] ?? $organism_name];
+      include_once __DIR__ . '/tool_section.php';
+      ?>
     </div>
   </div>
 
