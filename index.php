@@ -173,7 +173,7 @@ include_once __DIR__ . '/includes/header.php';
         </div>
       </div>
       <div class="col-lg-4">
-        <div class="card shadow-sm sticky-card">
+        <div class="card shadow-sm sticky-card mb-3">
           <div class="card-header bg-success text-white">
             <h5 class="mb-0">
               Selected Organisms 
@@ -185,34 +185,6 @@ include_once __DIR__ . '/includes/header.php';
               <div class="text-muted fst-italic">No organisms selected</div>
             </div>
             
-            <!-- Tools Section -->
-            <div class="mt-3">
-              <?php 
-              // For phylogenetic tree, we pass empty context - tools will determine what's available
-              // The search tool will be available for searching selected organisms
-              $context = ['type' => 'phylo_search', 'display_name' => 'Multi-Organism Search'];
-              include_once __DIR__ . '/tools/tool_config.php';
-              include_once __DIR__ . '/tools/moop_functions.php';
-              $tools = getAvailableTools($context ?? []);
-              if (!empty($tools)):
-              ?>
-              <div class="d-flex flex-wrap gap-2">
-                <?php foreach ($tools as $tool_id => $tool): ?>
-                  <?php if ($tool_id === 'phylo_search'): ?>
-                    <button 
-                       class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm w-100"
-                       title="<?= htmlspecialchars($tool['description']) ?>"
-                       id="phylo-search-tool-btn"
-                       onclick="navigateToPhyloSearch()">
-                      <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
-                      <span><?= htmlspecialchars($tool['name']) ?></span>
-                    </button>
-                  <?php endif; ?>
-                <?php endforeach; ?>
-              </div>
-              <?php endif; ?>
-            </div>
-            
             <div class="mt-3">
               <small class="text-muted">
                 <i class="fa fa-info-circle"></i> Click any node to select/deselect organisms. 
@@ -221,6 +193,45 @@ include_once __DIR__ . '/includes/header.php';
             </div>
           </div>
         </div>
+
+        <!-- Tools Card -->
+        <?php 
+        $context = ['type' => 'phylo_search', 'display_name' => 'Multi-Organism Search'];
+        include_once __DIR__ . '/tools/tool_config.php';
+        include_once __DIR__ . '/tools/moop_functions.php';
+        $tools = getAvailableTools($context ?? []);
+        
+        if (!empty($tools)):
+        ?>
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fa fa-toolbox"></i> Tools</h5>
+            </div>
+            <div class="card-body p-2">
+                <div class="d-flex flex-wrap gap-2">
+                    <?php foreach ($tools as $tool_id => $tool): ?>
+                        <?php if ($tool_id === 'phylo_search'): ?>
+                            <button 
+                               class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
+                               title="<?= htmlspecialchars($tool['description']) ?>"
+                               id="phylo-search-tool-btn"
+                               onclick="navigateToPhyloSearch()">
+                              <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
+                              <span><?= htmlspecialchars($tool['name']) ?></span>
+                            </button>
+                        <?php elseif ($tool_id === 'download_fasta'): ?>
+                            <a href="<?= htmlspecialchars($tool['url']) ?>" 
+                               class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
+                               title="<?= htmlspecialchars($tool['description']) ?>">
+                              <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
+                              <span><?= htmlspecialchars($tool['name']) ?></span>
+                            </a>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
       </div>
     </div>
   </div>
