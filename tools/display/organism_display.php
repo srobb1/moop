@@ -64,7 +64,7 @@ if (!$has_organism_access && !$is_public) {
         <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($parent_uniquename) ?>
       </a>
     <?php endif; ?>
-    <a href="/<?= $site ?>/tools/extract/download_fasta.php?referrer=organism&organism=<?= urlencode($organism_name) ?>" class="btn btn-success" title="Search and download sequences">
+    <a href="/<?= $site ?>/tools/extract/download_fasta.php?organism=<?= urlencode($organism_name) ?>&display_name=<?= urlencode($organism_name) ?>" class="btn btn-success" title="Search and download sequences">
       <i class="fa fa-dna"></i> Download FASTA
     </a>
     <a href="/<?= $site ?>/index.php" class="btn btn-secondary"><i class="fa fa-home"></i> Back to Home</a>

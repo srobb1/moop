@@ -29,8 +29,11 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
     exit;
 }
 
-// Get referrer context (for UI only, doesn't filter results)
-$referrer = trim($_GET['referrer'] ?? $_POST['referrer'] ?? '');
+// Get context parameters for back button
+$context_organism = trim($_GET['organism'] ?? $_POST['organism'] ?? '');
+$context_assembly = trim($_GET['assembly'] ?? $_POST['assembly'] ?? '');
+$context_group = trim($_GET['group'] ?? $_POST['group'] ?? '');
+$display_name = trim($_GET['display_name'] ?? $_POST['display_name'] ?? '');
 
 // Get uniquenames (may be empty on initial page load)
 $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
@@ -211,6 +214,27 @@ include_once __DIR__ . '/../../includes/navbar.php';
 <?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
 
 <div class="container mt-5">
+    <!-- Navigation Buttons -->
+    <div class="mb-3">
+        <?php if (!empty($context_assembly) && !empty($context_organism)): ?>
+            <a href="/<?= $site ?>/tools/display/assembly_display.php?organism=<?= urlencode($context_organism) ?>&assembly=<?= urlencode($context_assembly) ?>" class="btn btn-secondary">
+                <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($display_name ?: $context_assembly) ?>
+            </a>
+        <?php elseif (!empty($context_organism)): ?>
+            <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($context_organism) ?>" class="btn btn-secondary">
+                <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($display_name ?: 'Organism') ?>
+            </a>
+        <?php elseif (!empty($context_group)): ?>
+            <a href="/<?= $site ?>/tools/display/groups_display.php?group=<?= urlencode($context_group) ?>" class="btn btn-secondary">
+                <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($display_name ?: $context_group) ?>
+            </a>
+        <?php else: ?>
+            <a href="/<?= $site ?>/index.php" class="btn btn-secondary">
+                <i class="fa fa-home"></i> Home
+            </a>
+        <?php endif; ?>
+    </div>
+
     <h2 class="mb-4"><i class="fa fa-dna"></i> FASTA Sequence Search & Download</h2>
 
     <?php if (empty($accessible_sources)): ?>
@@ -239,7 +263,11 @@ include_once __DIR__ . '/../../includes/navbar.php';
         <form method="POST" id="downloadForm">
             <input type="hidden" name="organism" value="">
             <input type="hidden" name="assembly" value="">
-            <input type="hidden" name="referrer" value="<?= htmlspecialchars($referrer) ?>">
+            <!-- Hidden context fields for back button -->
+            <input type="hidden" name="context_organism" value="<?= htmlspecialchars($context_organism) ?>">
+            <input type="hidden" name="context_assembly" value="<?= htmlspecialchars($context_assembly) ?>">
+            <input type="hidden" name="context_group" value="<?= htmlspecialchars($context_group) ?>">
+            <input type="hidden" name="display_name" value="<?= htmlspecialchars($display_name) ?>">
 
             <!-- Source Selection with Compact Badges -->
             <div class="fasta-source-selector">
