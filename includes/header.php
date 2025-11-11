@@ -2,7 +2,7 @@
 <html lang="en">
 <?php
 session_start();
-include_once __DIR__ . '/site_config.php';
+include_once __DIR__ . '/../site_config.php';
 include_once __DIR__ . '/access_control.php';
 
 #include_once realpath("site_config.php");

@@ -1,6 +1,6 @@
 <?php
 // Include access control and configuration
-include_once __DIR__ . '/../../access_control.php';
+include_once __DIR__ . '/../../includes/access_control.php';
 include_once realpath(__DIR__ . '/../../site_config.php');
 include_once realpath(__DIR__ . '/../moop_functions.php');
 include_once __DIR__ . '/parent_functions.php';

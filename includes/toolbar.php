@@ -1,7 +1,7 @@
 <nav class="navbar navbar-expand-md bg-dark navbar-dark sticky-top">
 
 <?php
-    include_once __DIR__ . '/site_config.php';
+    include_once __DIR__ . '/../site_config.php';
     
     echo "<a class=\"navbar-brand\" href=\"/$site/index.php\"><img id=\"site_logo\" src=\"$favicon_path\" alt=\"DB_Logo\"></a>";
 ?>

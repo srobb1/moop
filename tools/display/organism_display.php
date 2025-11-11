@@ -1,5 +1,5 @@
 <?php
-include_once __DIR__ . '/../../access_control.php';
+include_once __DIR__ . '/../../includes/access_control.php';
 
 // Get organism name from query parameter
 $organism_name = $_GET['organism'] ?? '';

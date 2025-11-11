@@ -13,7 +13,7 @@ session_start();
 $sequence_type = trim($_POST['sequence_type'] ?? '');
 
 include_once __DIR__ . '/../../site_config.php';
-include_once __DIR__ . '/../../access_control.php';
+include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../../includes/head.php';
 include_once __DIR__ . '/../../includes/navbar.php';
 

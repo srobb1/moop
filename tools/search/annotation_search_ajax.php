@@ -8,7 +8,7 @@
 ob_start();
 
 session_start();
-include_once __DIR__ . '/../../access_control.php';
+include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/search_functions.php';
 
 // Clear any output that might have occurred

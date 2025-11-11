@@ -1,5 +1,5 @@
 <?php
-include_once __DIR__ . '/../../access_control.php';
+include_once __DIR__ . '/../../includes/access_control.php';
 
 // Get the group name from query parameter
 $group_name = $_GET['group'] ?? '';

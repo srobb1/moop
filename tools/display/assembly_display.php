@@ -1,5 +1,5 @@
 <?php
-include_once __DIR__ . '/../../access_control.php';
+include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../../includes/head.php';
 include_once __DIR__ . '/../../includes/navbar.php';
 include_once __DIR__ . '/../moop_functions.php';

@@ -3,7 +3,7 @@
 session_start();
 include_once __DIR__ . '/../site_config.php';
 include_once __DIR__ . '/admin_access_check.php';
-include_once __DIR__ . '/../access_control.php';
+include_once __DIR__ . '/../includes/access_control.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
 include_once __DIR__ . '/../includes/head.php';
 include_once __DIR__ . '/../includes/navbar.php';
