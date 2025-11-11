@@ -396,8 +396,8 @@ $organisms = get_all_organisms_info();
         </div>
         <div class="col-md-4">
           <div class="d-grid">
-            <a href="manage_group_descriptions.php" class="btn btn-primary">
-              <i class="fa fa-edit"></i> Edit Group Descriptions
+            <a href="manage_groups.php" class="btn btn-primary">
+              <i class="fa fa-layer-group"></i> Manage Groups & Descriptions
             </a>
             <small class="text-muted mt-2">Manage group metadata</small>
           </div>

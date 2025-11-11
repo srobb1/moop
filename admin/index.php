@@ -49,9 +49,9 @@ include_once '../includes/navbar.php';
     <div class="col-md-6 mb-3">
       <div class="card h-100">
         <div class="card-body">
-          <h5 class="card-title"><i class="fa fa-file-alt"></i> Manage Group Descriptions</h5>
-          <p class="card-text">Edit and manage descriptions for organism assembly groups.</p>
-          <a href="manage_group_descriptions.php" class="btn btn-primary">Go to Group Descriptions</a>
+          <h5 class="card-title"><i class="fa fa-layer-group"></i> Manage Groups & Descriptions</h5>
+          <p class="card-text">Manage organism assembly groups and their descriptions.</p>
+          <a href="manage_groups.php" class="btn btn-primary">Go to Groups</a>
         </div>
       </div>
     </div>

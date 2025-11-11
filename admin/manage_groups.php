@@ -411,8 +411,7 @@ foreach ($all_organisms as $organism => $assemblies) {
     <?php unset($_SESSION['permission_error']); ?>
   <?php endif; ?>
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2><i class="fa fa-layer-group"></i> Manage Organism Assembly Groups</h2>
-    <a href="manage_group_descriptions.php" class="btn btn-secondary">Manage Group Descriptions ↗</a>
+    <h2><i class="fa fa-layer-group"></i> Manage Organism Assembly Groups & Descriptions</h2>
   </div>
   
   <div class="mb-3">
