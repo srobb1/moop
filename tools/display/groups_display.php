@@ -83,19 +83,15 @@ if ($group_name !== 'Public') {
   <div class="row mb-4">
     <!-- Title and Search Column -->
     <div class="col-lg-8">
-      <!-- Title Card -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-body text-center">
-          <h1 class="fw-bold mb-0"><i class="fa fa-layer-group"></i> <?= htmlspecialchars($group_name) ?></h1>
+      <div class="card shadow-sm h-100">
+        <!-- Title Card -->
+        <div class="card-header bg-light border-bottom">
+          <h1 class="fw-bold mb-0 text-center"><i class="fa fa-layer-group"></i> <?= htmlspecialchars($group_name) ?></h1>
         </div>
-      </div>
 
-      <!-- Search Section -->
-      <div class="card shadow-sm mb-5">
-        <div class="card-header bg-primary text-white">
-          <h4 class="mb-0"><i class="fa fa-search"></i> <?= htmlspecialchars($group_name) ?>: Search Gene IDs and Annotations</h4>
-        </div>
+        <!-- Search Section -->
         <div class="card-body bg-search-light">
+          <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> <?= htmlspecialchars($group_name) ?>: Search Gene IDs and Annotations</h4>
           <form id="groupSearchForm">
             <div class="row">
               <div class="col-md-10">

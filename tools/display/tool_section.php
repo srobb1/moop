@@ -30,7 +30,7 @@ if (empty($tools)) {
     <div class="card-header bg-info text-white">
         <h5 class="mb-0"><i class="fa fa-toolbox"></i> Tools</h5>
     </div>
-    <div class="card-body">
+    <div class="card-body p-2">
         <div class="d-flex flex-wrap gap-2">
             <?php foreach ($tools as $tool_id => $tool): ?>
                 <a href="<?= htmlspecialchars($tool['url']) ?>" 
