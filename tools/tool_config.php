@@ -15,6 +15,15 @@ $available_tools = [
         'url_path' => '/tools/extract/download_fasta.php',
         'context_params' => ['organism', 'assembly', 'group', 'display_name'],
     ],
+    'phylo_search' => [
+        'id' => 'phylo_search',
+        'name' => 'Search Organisms',
+        'icon' => 'fa-search',
+        'description' => 'Search selected organisms',
+        'btn_class' => 'btn-info',
+        'url_path' => '/tools/search/multi_organism_search.php',
+        'context_params' => ['display_name'],
+    ],
     // Future tools can be added here
 ];
 

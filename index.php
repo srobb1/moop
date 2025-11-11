@@ -184,9 +184,35 @@ include_once __DIR__ . '/includes/header.php';
             <div id="selected-organisms-list" class="mb-3">
               <div class="text-muted fst-italic">No organisms selected</div>
             </div>
-            <button class="btn btn-primary w-100" id="phylo-search-btn" disabled onclick="phyloTree.navigateToSearch()">
-              <i class="fa fa-search"></i> Search Selected
-            </button>
+            
+            <!-- Tools Section -->
+            <div class="mt-3">
+              <?php 
+              // For phylogenetic tree, we pass empty context - tools will determine what's available
+              // The search tool will be available for searching selected organisms
+              $context = ['type' => 'phylo_search', 'display_name' => 'Multi-Organism Search'];
+              include_once __DIR__ . '/tools/tool_config.php';
+              include_once __DIR__ . '/tools/moop_functions.php';
+              $tools = getAvailableTools($context ?? []);
+              if (!empty($tools)):
+              ?>
+              <div class="d-flex flex-wrap gap-2">
+                <?php foreach ($tools as $tool_id => $tool): ?>
+                  <?php if ($tool_id === 'phylo_search'): ?>
+                    <button 
+                       class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm w-100"
+                       title="<?= htmlspecialchars($tool['description']) ?>"
+                       id="phylo-search-tool-btn"
+                       onclick="navigateToPhyloSearch()">
+                      <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
+                      <span><?= htmlspecialchars($tool['name']) ?></span>
+                    </button>
+                  <?php endif; ?>
+                <?php endforeach; ?>
+              </div>
+              <?php endif; ?>
+            </div>
+            
             <div class="mt-3">
               <small class="text-muted">
                 <i class="fa fa-info-circle"></i> Click any node to select/deselect organisms. 
@@ -204,6 +230,17 @@ include_once __DIR__ . '/includes/header.php';
 <script>
 const userAccess = <?= $user_access_json ?>;
 const treeData = <?= json_encode($phylo_tree_data) ?>;
+
+function navigateToPhyloSearch() {
+  if (!phyloTree || phyloTree.selectedOrganisms.size === 0) {
+    alert('Please select at least one organism');
+    return;
+  }
+  
+  const organisms = Array.from(phyloTree.selectedOrganisms);
+  const params = organisms.map(org => `organisms[]=${encodeURIComponent(org)}`).join('&');
+  window.location.href = `tools/search/multi_organism_search.php?${params}`;
+}
 
 function switchView(view) {
   const cardView = document.getElementById('card-view');
