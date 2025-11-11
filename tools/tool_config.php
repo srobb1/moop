@@ -13,7 +13,7 @@ $available_tools = [
         'description' => 'Search and download sequences',
         'btn_class' => 'btn-success',
         'url_path' => '/tools/extract/download_fasta.php',
-        'context_params' => ['organism', 'assembly', 'group', 'display_name'],
+        'context_params' => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
     ],
     'phylo_search' => [
         'id' => 'phylo_search',

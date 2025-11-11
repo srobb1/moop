@@ -220,12 +220,14 @@ include_once __DIR__ . '/includes/header.php';
                               <span><?= htmlspecialchars($tool['name']) ?></span>
                             </button>
                         <?php elseif ($tool_id === 'download_fasta'): ?>
-                            <a href="<?= htmlspecialchars($tool['url']) ?>" 
+                            <button 
                                class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
-                               title="<?= htmlspecialchars($tool['description']) ?>">
+                               title="<?= htmlspecialchars($tool['description']) ?>"
+                               id="phylo-download-fasta-btn"
+                               onclick="navigateToDownloadFasta()">
                               <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
                               <span><?= htmlspecialchars($tool['name']) ?></span>
-                            </a>
+                            </button>
                         <?php endif; ?>
                     <?php endforeach; ?>
                 </div>
@@ -251,6 +253,17 @@ function navigateToPhyloSearch() {
   const organisms = Array.from(phyloTree.selectedOrganisms);
   const params = organisms.map(org => `organisms[]=${encodeURIComponent(org)}`).join('&');
   window.location.href = `tools/search/multi_organism_search.php?${params}`;
+}
+
+function navigateToDownloadFasta() {
+  if (!phyloTree || phyloTree.selectedOrganisms.size === 0) {
+    alert('Please select at least one organism');
+    return;
+  }
+  
+  const organisms = Array.from(phyloTree.selectedOrganisms);
+  const params = organisms.map(org => encodeURIComponent(org)).join(',');
+  window.location.href = `tools/extract/download_fasta.php?organisms=${params}`;
 }
 
 function switchView(view) {

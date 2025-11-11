@@ -35,6 +35,16 @@ $context_assembly = trim($_GET['assembly'] ?? $_POST['assembly'] ?? '');
 $context_group = trim($_GET['group'] ?? $_POST['group'] ?? '');
 $display_name = trim($_GET['display_name'] ?? $_POST['display_name'] ?? '');
 
+// Get comma-separated organisms for filtering (from URL or POST)
+$filter_organisms_string = trim($_GET['organisms'] ?? $_POST['organisms'] ?? '');
+
+// Parse filter organisms if provided
+$filter_organisms = [];
+if (!empty($filter_organisms_string)) {
+    $filter_organisms = array_map('trim', explode(',', $filter_organisms_string));
+    $filter_organisms = array_filter($filter_organisms);
+}
+
 // Get uniquenames (may be empty on initial page load)
 $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
 
@@ -288,6 +298,9 @@ include_once __DIR__ . '/../../includes/navbar.php';
                         </button>
                     </div>
                 </div>
+                <?php if (!empty($filter_organisms)): ?>
+                    <small class="form-text text-muted d-block mt-2"><i class="fa fa-filter"></i> Showing only: <?= htmlspecialchars(implode(', ', $filter_organisms)) ?></small>
+                <?php endif; ?>
                 
                 <!-- Scrollable list of sources -->
                 <div class="fasta-source-list">
@@ -306,6 +319,11 @@ include_once __DIR__ . '/../../includes/navbar.php';
                         foreach ($organisms as $organism => $assemblies): 
                             foreach ($assemblies as $source): 
                                 $search_text = strtolower("$group_name $organism $source[assembly]");
+                                
+                                // Skip if organism filter is set and this organism is not in the filter list
+                                if (!empty($filter_organisms) && !in_array($organism, $filter_organisms)) {
+                                    continue;
+                                }
                                 ?>
                                 <div class="fasta-source-line" data-search="<?= htmlspecialchars($search_text) ?>">
                                     <!-- Radio selector at far left -->
