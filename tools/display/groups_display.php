@@ -79,37 +79,48 @@ if ($group_name !== 'Public') {
     </button>
   </div>
 
-  <div class="text-center mb-4">
-    <h1 class="fw-bold"><i class="fa fa-layer-group"></i> <?= htmlspecialchars($group_name) ?></h1>
-  </div>
-
-  <!-- Tools Section -->
-  <?php 
-  $context = ['group' => $group_name, 'display_name' => $group_name];
-  include_once __DIR__ . '/tool_section.php';
-  ?>
-
-  <!-- Search Section -->
-  <div class="card shadow-sm mb-5">
-    <div class="card-header bg-primary text-white">
-      <h4 class="mb-0"><i class="fa fa-search"></i> <?= htmlspecialchars($group_name) ?>: Search Gene IDs and Annotations</h4>
-    </div>
-    <div class="card-body bg-search-light">
-      <form id="groupSearchForm">
-        <div class="row">
-          <div class="col-md-10">
-            <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
-            <small class="form-text text-muted-gray">
-              Use quotes for exact phrases (e.g., "ABC transporter"). Searches across all organisms in this group.
-            </small>
-          </div>
-          <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100" id="searchBtn">
-              <i class="fa fa-search"></i> Search
-            </button>
-          </div>
+  <!-- Header and Tools Row -->
+  <div class="row mb-4">
+    <!-- Title and Search Column -->
+    <div class="col-lg-8">
+      <!-- Title Card -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-body text-center">
+          <h1 class="fw-bold mb-0"><i class="fa fa-layer-group"></i> <?= htmlspecialchars($group_name) ?></h1>
         </div>
-      </form>
+      </div>
+
+      <!-- Search Section -->
+      <div class="card shadow-sm mb-5">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0"><i class="fa fa-search"></i> <?= htmlspecialchars($group_name) ?>: Search Gene IDs and Annotations</h4>
+        </div>
+        <div class="card-body bg-search-light">
+          <form id="groupSearchForm">
+            <div class="row">
+              <div class="col-md-10">
+                <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
+                <small class="form-text text-muted-gray">
+                  Use quotes for exact phrases (e.g., "ABC transporter"). Searches across all organisms in this group.
+                </small>
+              </div>
+              <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100" id="searchBtn">
+                  <i class="fa fa-search"></i> Search
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tools Column -->
+    <div class="col-lg-4">
+      <?php 
+      $context = ['group' => $group_name, 'display_name' => $group_name];
+      include_once __DIR__ . '/tool_section.php';
+      ?>
     </div>
   </div>
 

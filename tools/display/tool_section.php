@@ -26,15 +26,15 @@ if (empty($tools)) {
 ?>
 
 <!-- Tools Section -->
-<div class="card shadow-sm mb-4">
+<div class="card shadow-sm h-100">
     <div class="card-header bg-info text-white">
         <h5 class="mb-0"><i class="fa fa-toolbox"></i> Tools</h5>
     </div>
     <div class="card-body">
-        <div class="d-flex flex-wrap gap-3">
+        <div class="d-flex flex-wrap gap-2">
             <?php foreach ($tools as $tool_id => $tool): ?>
                 <a href="<?= htmlspecialchars($tool['url']) ?>" 
-                   class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-lg"
+                   class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
                    title="<?= htmlspecialchars($tool['description']) ?>">
                     <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
                     <span><?= htmlspecialchars($tool['name']) ?></span>
