@@ -96,34 +96,45 @@ $parent_uniquename = $_GET['parent'] ?? '';
     <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism_name) ?>" class="btn btn-secondary">
       <i class="fa fa-arrow-left"></i> Back to <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>
     </a>
-    <a href="/<?= $site ?>/tools/extract/download_fasta.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&display_name=<?= urlencode($assembly_accession) ?>" class="btn btn-success" title="Search and download sequences">
-      <i class="fa fa-dna"></i> Download FASTA
-    </a>
     <a href="/<?= $site ?>/index.php" class="btn btn-secondary">
       <i class="fa fa-home"></i> Home
     </a>
   </div>
 
-  <!-- Assembly Header -->
-  <div class="assembly-header shadow mb-4">
-    <div class="d-flex align-items-start justify-content-between">
-      <div class="flex-grow-1">
-        <h1 class="mb-3">
-          <?= htmlspecialchars($assembly_info['genome_name']) ?>
-          <span class="badge bg-warning text-dark ms-2">
-            Assembly
-          </span>
-        </h1>
+  <!-- Assembly and Tools Row -->
+  <div class="row mb-4">
+    <!-- Assembly Column -->
+    <div class="col-lg-8">
+      <!-- Assembly Header Card -->
+      <div class="assembly-header shadow mb-4 h-100">
+        <div class="d-flex align-items-start justify-content-between">
+          <div class="flex-grow-1">
+            <h1 class="mb-3">
+              <?= htmlspecialchars($assembly_info['genome_name']) ?>
+              <span class="badge bg-warning text-dark ms-2">
+                Assembly
+              </span>
+            </h1>
+          </div>
+        </div>
+        
+        <div>
+          <div class="feature-info-item">
+            <strong>Accession:</strong> <span class="assembly-value"><?= htmlspecialchars($assembly_info['genome_accession']) ?></span>
+          </div>
+          <div class="feature-info-item">
+            <strong>Organism:</strong> <span class="assembly-value"><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></span>
+          </div>
+        </div>
       </div>
     </div>
-    
-    <div>
-      <div class="feature-info-item">
-        <strong>Accession:</strong> <span class="assembly-value"><?= htmlspecialchars($assembly_info['genome_accession']) ?></span>
-      </div>
-      <div class="feature-info-item">
-        <strong>Organism:</strong> <span class="assembly-value"><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></span>
-      </div>
+
+    <!-- Tools Column -->
+    <div class="col-lg-4">
+      <?php 
+      $context = ['organism' => $organism_name, 'assembly' => $assembly_accession, 'display_name' => $assembly_info['genome_name']];
+      include_once __DIR__ . '/tool_section.php';
+      ?>
     </div>
   </div>
 
