@@ -562,6 +562,54 @@ code {
   }
 }
 
+/* ========== FEATURE TYPE COLORS (Shared across all display pages) ========== */
+/* One place to change parent/child colors across entire site */
+
+.feature-color-gene {
+  color: #764ba2 !important;
+}
+
+.bg-feature-gene {
+  background-color: #764ba2 !important;
+}
+
+.feature-color-mrna {
+  color: #17a2b8 !important;
+}
+
+.bg-feature-mrna {
+  background-color: #17a2b8 !important;
+}
+
+/* ========== ASSEMBLY DISPLAY STYLES ========== */
+/* Reuses .feature-header structure from parent.css, with assembly-specific colors */
+
+.assembly-header {
+  background: linear-gradient(135deg, #0066cc 0%, #004a99 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.assembly-header h1 {
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.assembly-value {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.bg-assembly {
+  background-color: #ffc107 !important;
+  color: #333 !important;
+}
+
+.text-assembly {
+  color: #0066cc;
+}
+
 /* Print styles */
 @media print {
   .dt-buttons,

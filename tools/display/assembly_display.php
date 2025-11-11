@@ -102,12 +102,25 @@ $parent_uniquename = $_GET['parent'] ?? '';
   </div>
 
   <!-- Assembly Header -->
-  <div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-      <h4 class="mb-0"><i class="fa fa-dna"></i> <?= htmlspecialchars($assembly_info['genome_name']) ?></h4>
+  <div class="assembly-header shadow mb-4">
+    <div class="d-flex align-items-start justify-content-between">
+      <div class="flex-grow-1">
+        <h1 class="mb-3">
+          <?= htmlspecialchars($assembly_info['genome_name']) ?>
+          <span class="badge bg-warning text-dark ms-2">
+            Assembly
+          </span>
+        </h1>
+      </div>
     </div>
-    <div class="card-body">
-      <p class="mb-0"><strong>Accession:</strong> <?= htmlspecialchars($assembly_info['genome_accession']) ?></p>
+    
+    <div>
+      <div class="feature-info-item">
+        <strong>Accession:</strong> <span class="assembly-value"><?= htmlspecialchars($assembly_info['genome_accession']) ?></span>
+      </div>
+      <div class="feature-info-item">
+        <strong>Organism:</strong> <span class="assembly-value"><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></span>
+      </div>
     </div>
   </div>
 
@@ -118,7 +131,7 @@ $parent_uniquename = $_GET['parent'] ?? '';
         <div class="card-body">
           <div class="text-center">
             <h6 class="text-muted mb-3"><i class="fas fa-dna"></i> Genes</h6>
-            <h2 class="fw-bold text-primary"><?= number_format($assembly_info['gene_count'] ?? 0) ?></h2>
+            <h2 class="fw-bold feature-color-gene"><?= number_format($assembly_info['gene_count'] ?? 0) ?></h2>
           </div>
         </div>
       </div>
@@ -128,7 +141,7 @@ $parent_uniquename = $_GET['parent'] ?? '';
         <div class="card-body">
           <div class="text-center">
             <h6 class="text-muted mb-3"><i class="fas fa-scroll"></i> mRNA Transcripts</h6>
-            <h2 class="fw-bold text-info"><?= number_format($assembly_info['mrna_count'] ?? 0) ?></h2>
+            <h2 class="fw-bold feature-color-mrna"><?= number_format($assembly_info['mrna_count'] ?? 0) ?></h2>
           </div>
         </div>
       </div>

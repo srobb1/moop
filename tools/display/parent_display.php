@@ -161,6 +161,7 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 <title><?= htmlspecialchars($feature_uniquename) ?> - <?= $siteTitle ?></title>
 <?php include_once __DIR__ . '/../../includes/head.php'; ?>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+<link rel="stylesheet" href="/<?= $site ?>/css/display.css">
 <link rel="stylesheet" href="/<?= $site ?>/css/parent.css">
 </head>
 <body>
