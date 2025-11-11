@@ -196,10 +196,10 @@ include_once __DIR__ . '/includes/header.php';
 
         <!-- Tools Card -->
         <?php 
-        $context = ['type' => 'phylo_search', 'display_name' => 'Multi-Organism Search'];
+        $context = ['display_name' => 'Multi-Organism Search'];
         include_once __DIR__ . '/tools/tool_config.php';
         include_once __DIR__ . '/tools/moop_functions.php';
-        $tools = getAvailableTools($context ?? []);
+        $tools = getAvailableTools($context);
         
         if (!empty($tools)):
         ?>
@@ -210,25 +210,14 @@ include_once __DIR__ . '/includes/header.php';
             <div class="card-body p-2">
                 <div class="d-flex flex-wrap gap-2">
                     <?php foreach ($tools as $tool_id => $tool): ?>
-                        <?php if ($tool_id === 'phylo_search'): ?>
-                            <button 
-                               class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
-                               title="<?= htmlspecialchars($tool['description']) ?>"
-                               id="phylo-search-tool-btn"
-                               onclick="navigateToPhyloSearch()">
-                              <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
-                              <span><?= htmlspecialchars($tool['name']) ?></span>
-                            </button>
-                        <?php elseif ($tool_id === 'download_fasta'): ?>
-                            <button 
-                               class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
-                               title="<?= htmlspecialchars($tool['description']) ?>"
-                               id="phylo-download-fasta-btn"
-                               onclick="navigateToDownloadFasta()">
-                              <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
-                              <span><?= htmlspecialchars($tool['name']) ?></span>
-                            </button>
-                        <?php endif; ?>
+                        <button 
+                           class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
+                           title="<?= htmlspecialchars($tool['description']) ?>"
+                           id="tool-btn-<?= htmlspecialchars($tool_id) ?>"
+                           onclick="handleToolClick('<?= htmlspecialchars($tool_id) ?>')">
+                          <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
+                          <span><?= htmlspecialchars($tool['name']) ?></span>
+                        </button>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -244,26 +233,21 @@ include_once __DIR__ . '/includes/header.php';
 const userAccess = <?= $user_access_json ?>;
 const treeData = <?= json_encode($phylo_tree_data) ?>;
 
-function navigateToPhyloSearch() {
+function handleToolClick(toolId) {
   if (!phyloTree || phyloTree.selectedOrganisms.size === 0) {
     alert('Please select at least one organism');
     return;
   }
   
   const organisms = Array.from(phyloTree.selectedOrganisms);
-  const params = organisms.map(org => `organisms[]=${encodeURIComponent(org)}`).join('&');
-  window.location.href = `tools/search/multi_organism_search.php?${params}`;
-}
-
-function navigateToDownloadFasta() {
-  if (!phyloTree || phyloTree.selectedOrganisms.size === 0) {
-    alert('Please select at least one organism');
-    return;
-  }
   
-  const organisms = Array.from(phyloTree.selectedOrganisms);
-  const params = organisms.map(org => encodeURIComponent(org)).join(',');
-  window.location.href = `tools/extract/download_fasta.php?organisms=${params}`;
+  if (toolId === 'phylo_search') {
+    const params = organisms.map(org => `organisms[]=${encodeURIComponent(org)}`).join('&');
+    window.location.href = `tools/search/multi_organism_search.php?${params}`;
+  } else if (toolId === 'download_fasta') {
+    const params = organisms.map(org => encodeURIComponent(org)).join(',');
+    window.location.href = `tools/extract/download_fasta.php?organisms=${params}`;
+  }
 }
 
 function switchView(view) {

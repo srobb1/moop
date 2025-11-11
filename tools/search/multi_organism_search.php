@@ -77,18 +77,10 @@ foreach ($organisms as $organism) {
 
     <!-- Tools Column -->
     <div class="col-lg-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-header bg-info text-white">
-          <h5 class="mb-0"><i class="fa fa-toolbox"></i> Tools</h5>
-        </div>
-        <div class="card-body p-2">
-          <div class="d-flex flex-wrap gap-2">
-            <a href="#downloadSection" class="btn btn-success btn-sm w-100">
-              <i class="fa fa-dna"></i> Download FASTA
-            </a>
-          </div>
-        </div>
-      </div>
+      <?php 
+      $context = ['organisms' => $organisms, 'display_name' => 'Multi-Organism Search'];
+      include_once __DIR__ . '/../display/tool_section.php';
+      ?>
     </div>
   </div>
 
