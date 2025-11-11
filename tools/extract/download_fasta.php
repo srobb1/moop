@@ -8,6 +8,10 @@
 
 session_start();
 
+// Start output buffering to prevent any stray whitespace from includes
+// affecting file downloads or headers
+ob_start();
+
 // Get parameters for processing
 $sequence_type = trim($_POST['sequence_type'] ?? '');
 $selected_assembly = trim($_POST['selected_assembly'] ?? '');
@@ -15,6 +19,9 @@ $selected_assembly = trim($_POST['selected_assembly'] ?? '');
 include_once __DIR__ . '/../../site_config.php';
 include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../moop_functions.php';
+
+// Discard any output from includes
+ob_end_clean();
 
 // Check if user is logged in
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
@@ -123,7 +130,13 @@ if (!empty($sequence_type)) {
     $file_format = $_POST['file_format'] ?? 'fasta';
     $ext = ($file_format === 'txt') ? 'txt' : 'fasta';
     $filename = "sequences_{$sequence_type}_" . date("Y-m-d_His") . ".{$ext}";
-    $content = trim($content);
+    
+    // Remove blank lines from output
+    $lines = explode("\n", $content);
+    $lines = array_filter($lines, function($line) {
+        return trim($line) !== '';
+    });
+    $content = implode("\n", $lines);
     
     header('Content-Type: application/octet-stream');
     header("Content-Disposition: attachment; filename={$filename}");
