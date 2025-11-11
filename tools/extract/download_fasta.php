@@ -48,101 +48,137 @@ foreach ($sources_by_group as $group => $organisms) {
 
 // If sequence_type is set, this is the download request
 if (!empty($sequence_type)) {
+    $download_error = null;
+    
     // Validate inputs
     if (empty($uniquenames_string)) {
-        die('Error: No feature IDs provided.');
+        $download_error = "No feature IDs provided.";
+        logError($download_error, "download_fasta", ['user' => $_SESSION['username'] ?? 'unknown']);
     }
     
     // Get the selected source from the form
     $selected_organism = trim($_POST['organism'] ?? '');
     $selected_assembly = trim($_POST['assembly'] ?? '');
     
-    if (empty($selected_organism) || empty($selected_assembly)) {
-        die('Error: No assembly selected.');
+    if (!$download_error && (empty($selected_organism) || empty($selected_assembly))) {
+        $download_error = "No assembly selected.";
+        logError($download_error, "download_fasta", ['user' => $_SESSION['username'] ?? 'unknown']);
     }
     
     // Find the selected assembly in accessible sources
     $fasta_source = null;
-    foreach ($accessible_sources as $source) {
-        if ($source['assembly'] === $selected_assembly && $source['organism'] === $selected_organism) {
-            $fasta_source = $source;
-            break;
+    if (!$download_error) {
+        foreach ($accessible_sources as $source) {
+            if ($source['assembly'] === $selected_assembly && $source['organism'] === $selected_organism) {
+                $fasta_source = $source;
+                break;
+            }
+        }
+        
+        if (!$fasta_source) {
+            $download_error = "You do not have access to the selected assembly.";
+            logError($download_error, "download_fasta", [
+                'user' => $_SESSION['username'] ?? 'unknown',
+                'organism' => $selected_organism,
+                'assembly' => $selected_assembly
+            ]);
         }
     }
     
-    if (!$fasta_source) {
-        die('Error: You do not have access to the selected assembly.');
-    }
-    
     // Parse feature IDs
-    $uniquenames = array_filter(array_map('trim', explode(',', $uniquenames_string)));
-    if (empty($uniquenames)) {
-        die('Error: No valid feature IDs provided.');
+    $uniquenames = [];
+    if (!$download_error) {
+        $uniquenames = array_filter(array_map('trim', explode(',', $uniquenames_string)));
+        if (empty($uniquenames)) {
+            $download_error = "No valid feature IDs provided.";
+            logError($download_error, "download_fasta", ['user' => $_SESSION['username'] ?? 'unknown']);
+        }
     }
     
     // Find FASTA file for selected sequence type
     $fasta_file = null;
-    $assembly_dir = $fasta_source['path'];
-    
-    if (isset($sequence_types[$sequence_type])) {
-        $files = glob("$assembly_dir/*{$sequence_types[$sequence_type]['pattern']}");
-        if (!empty($files)) {
-            $fasta_file = $files[0];
+    if (!$download_error) {
+        $assembly_dir = $fasta_source['path'];
+        
+        if (isset($sequence_types[$sequence_type])) {
+            $files = glob("$assembly_dir/*{$sequence_types[$sequence_type]['pattern']}");
+            if (!empty($files)) {
+                $fasta_file = $files[0];
+            }
         }
-    }
-    
-    if (!$fasta_file || !file_exists($fasta_file)) {
-        die("Error: FASTA file not found for $sequence_type sequences.");
+        
+        if (!$fasta_file || !file_exists($fasta_file)) {
+            $download_error = "FASTA file not found for $sequence_type sequences.";
+            logError($download_error, "download_fasta", [
+                'user' => $_SESSION['username'] ?? 'unknown',
+                'sequence_type' => $sequence_type,
+                'organism' => $selected_organism
+            ]);
+        }
     }
     
     // Extract sequences using blastdbcmd
-    $cmd = "blastdbcmd -db " . escapeshellarg($fasta_file) . " -entry " . escapeshellarg(implode(',', $uniquenames));
-    
-    $descriptors = [
-        0 => ["pipe", "r"],
-        1 => ["pipe", "w"],
-        2 => ["pipe", "w"],
-    ];
-    
-    $process = proc_open($cmd, $descriptors, $pipes);
-    if (!is_resource($process)) {
-        die("Error: Failed to execute blastdbcmd");
-    }
-    
-    fclose($pipes[0]);
-    $content = stream_get_contents($pipes[1]);
-    fclose($pipes[1]);
-    $stderr = stream_get_contents($pipes[2]);
-    fclose($pipes[2]);
-    $return_var = proc_close($process);
-    
-    // Check for errors
-    if ($return_var > 1 || empty(trim($content))) {
-        $error = "No sequences found for the requested feature IDs.\n";
-        $error .= "Requested IDs: " . implode(", ", array_slice($uniquenames, 0, 5));
-        if (count($uniquenames) > 5) {
-            $error .= " ... and " . (count($uniquenames) - 5) . " more";
+    if (!$download_error) {
+        $cmd = "blastdbcmd -db " . escapeshellarg($fasta_file) . " -entry " . escapeshellarg(implode(',', $uniquenames));
+        
+        $descriptors = [
+            0 => ["pipe", "r"],
+            1 => ["pipe", "w"],
+            2 => ["pipe", "w"],
+        ];
+        
+        $process = proc_open($cmd, $descriptors, $pipes);
+        if (!is_resource($process)) {
+            $download_error = "Failed to execute blastdbcmd.";
+            logError($download_error, "download_fasta", ['user' => $_SESSION['username'] ?? 'unknown']);
+        } else {
+            fclose($pipes[0]);
+            $content = stream_get_contents($pipes[1]);
+            fclose($pipes[1]);
+            $stderr = stream_get_contents($pipes[2]);
+            fclose($pipes[2]);
+            $return_var = proc_close($process);
+            
+            // Check for errors
+            if ($return_var > 1 || empty(trim($content))) {
+                $download_error = "No sequences found for the requested feature IDs.";
+                logError($download_error, "download_fasta", [
+                    'user' => $_SESSION['username'] ?? 'unknown',
+                    'ids' => implode(', ', array_slice($uniquenames, 0, 5)),
+                    'stderr' => $stderr
+                ]);
+            }
         }
-        die($error);
     }
     
-    // Send download
-    $file_format = $_POST['file_format'] ?? 'fasta';
-    $ext = ($file_format === 'txt') ? 'txt' : 'fasta';
-    $filename = "sequences_{$sequence_type}_" . date("Y-m-d_His") . ".{$ext}";
+    // If there was an error, set error message and show form later
+    $download_error_msg = $download_error;
     
-    // Remove blank lines from output
-    $lines = explode("\n", $content);
-    $lines = array_filter($lines, function($line) {
-        return trim($line) !== '';
-    });
-    $content = implode("\n", $lines);
-    
-    header('Content-Type: application/octet-stream');
-    header("Content-Disposition: attachment; filename={$filename}");
-    header('Content-Length: ' . strlen($content));
-    echo $content;
-    exit;
+    // If no error, proceed with download
+    if (!$download_error_msg) {
+        // Remove blank lines from output
+        $lines = explode("\n", $content);
+        $lines = array_filter($lines, function($line) {
+            return trim($line) !== '';
+        });
+        $content = implode("\n", $lines);
+        
+        // Send download
+        $file_format = $_POST['file_format'] ?? 'fasta';
+        $ext = ($file_format === 'txt') ? 'txt' : 'fasta';
+        $filename = "sequences_{$sequence_type}_" . date("Y-m-d_His") . ".{$ext}";
+        
+        header('Content-Type: application/octet-stream');
+        header("Content-Disposition: attachment; filename={$filename}");
+        header('Content-Length: ' . strlen($content));
+        echo $content;
+        exit;
+    }
+}
+
+// Initialize error message if not set
+if (!isset($download_error_msg)) {
+    $download_error_msg = null;
 }
 
 // Organize sources by group -> organism for tree view
@@ -192,6 +228,13 @@ include_once __DIR__ . '/../../includes/navbar.php';
                 <li>Download your sequences</li>
             </ol>
         </div>
+
+        <?php if (!empty($download_error_msg)): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong><i class="fa fa-exclamation-circle"></i> Error:</strong> <?= htmlspecialchars($download_error_msg) ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
 
         <form method="POST" id="downloadForm">
             <input type="hidden" name="organism" value="">
@@ -307,9 +350,20 @@ include_once __DIR__ . '/../../includes/navbar.php';
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const filterInput = document.getElementById('sourceFilter');
-        const sourceLines = document.querySelectorAll('.source-line');
+        const sourceLines = document.querySelectorAll('.fasta-source-line');
         const radios = document.querySelectorAll('input[name="selected_source"]');
         const form = document.getElementById('downloadForm');
+        const errorAlert = document.querySelector('.alert-danger');
+        
+        // Dismiss error alert on form submission
+        if (form) {
+            form.addEventListener('submit', function() {
+                if (errorAlert) {
+                    const bsAlert = new bootstrap.Alert(errorAlert);
+                    bsAlert.close();
+                }
+            });
+        }
         
         // Handle filter
         if (filterInput) {

@@ -979,13 +979,25 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
         if ($has_access) {
             $assembly_path = "$organism_data/$org/$assembly";
             
+            // Only include assembly if directory exists AND has FASTA files
             if (is_dir($assembly_path)) {
-                $accessible_sources[] = [
-                    'organism' => $org,
-                    'assembly' => $assembly,
-                    'path' => $assembly_path,
-                    'groups' => $entry_groups
-                ];
+                // Check if assembly has any FASTA files (protein, transcript, cds, or genome)
+                $has_fasta = false;
+                foreach (['.fa', '.fasta', '.faa', '.nt.fa', '.aa.fa'] as $ext) {
+                    if (glob("$assembly_path/*$ext")) {
+                        $has_fasta = true;
+                        break;
+                    }
+                }
+                
+                if ($has_fasta) {
+                    $accessible_sources[] = [
+                        'organism' => $org,
+                        'assembly' => $assembly,
+                        'path' => $assembly_path,
+                        'groups' => $entry_groups
+                    ];
+                }
             }
         }
     }
