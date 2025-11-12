@@ -212,115 +212,80 @@ if (!$has_organism_access && !$is_public) {
     </div>
   <?php endif; ?>
 
-  <!-- Data Resources Section -->
+  <!-- Assemblies Section -->
   <?php
-  // Scan organism directory for data files
-  $organism_dir = "$organism_data/$organism_name";
-  $data_files = [];
+  // Get accessible assemblies for this organism
+  $group_data = getGroupData();
+  $accessible_assemblies = [];
   
-  if (is_dir($organism_dir)) {
-      // Look for subdirectories with assembly data
-      $subdirs = glob($organism_dir . '/*', GLOB_ONLYDIR);
+  foreach ($group_data as $data) {
+      if ($data['organism'] === $organism_name) {
+          if (has_assembly_access($organism_name, $data['assembly'])) {
+              $accessible_assemblies[] = $data['assembly'];
+          }
+      }
+  }
+  
+  // Function to get FASTA files for an assembly
+  function getAssemblyFastaFiles($organism_name, $assembly_name) {
+      global $organism_data, $sequence_types;
+      $fasta_files = [];
+      $assembly_dir = "$organism_data/$organism_name/$assembly_name";
       
-      foreach ($subdirs as $subdir) {
-          $subdir_name = basename($subdir);
-          
-          // Look for FASTA files
-          $fasta_files = glob($subdir . '/*.fa');
-          foreach ($fasta_files as $fasta_file) {
+      if (is_dir($assembly_dir)) {
+          $fasta_files_found = glob($assembly_dir . '/*.fa');
+          foreach ($fasta_files_found as $fasta_file) {
               $filename = basename($fasta_file);
-              $relative_path = "$organism_name/$subdir_name/$filename";
+              $relative_path = "$organism_name/$assembly_name/$filename";
               
-              // Categorize by file type
-              if (strpos($filename, '.cds.nt.fa') !== false) {
-                  $data_files['cds'][] = $relative_path;
-              } elseif (strpos($filename, '.protein.aa.fa') !== false) {
-                  $data_files['protein'][] = $relative_path;
-              } elseif (strpos($filename, '.transcript.nt.fa') !== false) {
-                  $data_files['transcript'][] = $relative_path;
-              } elseif (strpos($filename, '.genome.fa') !== false || strpos($filename, '_genomic.') !== false) {
-                  $data_files['genome'][] = $relative_path;
+              foreach ($sequence_types as $type => $config) {
+                  if (strpos($filename, $config['pattern']) !== false) {
+                      $fasta_files[$type] = [
+                          'path' => $relative_path,
+                          'label' => $config['label']
+                      ];
+                      break;
+                  }
               }
           }
       }
-      
-      // Look for SQLite database files
-      $sqlite_files = glob($organism_dir . '/*.sqlite');
-      foreach ($sqlite_files as $sqlite_file) {
-          $filename = basename($sqlite_file);
-          $relative_path = "$organism_name/$filename";
-          $data_files['database'][] = $relative_path;
-      }
+      return $fasta_files;
   }
   ?>
   
-  <?php if (!empty($data_files)): ?>
+  <?php if (!empty($accessible_assemblies)): ?>
   <div class="row mb-5">
     <div class="col-12">
       <div class="card shadow-sm">
         <div class="card-body">
-          <h3 class="card-title mb-4"><i class="fa fa-database"></i> Available Resources</h3>
-          
+          <h3 class="card-title mb-4">Available Assemblies</h3>
           <div class="row g-3">
-            <?php if (!empty($data_files['genome'])): ?>
-              <?php foreach ($data_files['genome'] as $file): ?>
-              <div class="col-md-6">
-                <div class="resource-card p-3 border rounded">
-                  <h5 class="text-primary mb-2"><i class="fa fa-dna"></i> Genome FASTA</h5>
-                  <p class="text-muted small mb-2">Complete genome sequence</p>
-                  <code class="small"><?= htmlspecialchars($file) ?></code>
+            <?php foreach ($accessible_assemblies as $assembly): ?>
+              <?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?>
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm organism-card">
+                  <div class="card-body text-center">
+                    <a href="/<?= $site ?>/tools/display/assembly_display.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>" 
+                       class="text-decoration-none">
+                      <h5 class="card-title mb-3">
+                        <?= htmlspecialchars($assembly) ?> <i class="fa fa-external-link-alt"></i>
+                      </h5>
+                    </a>
+                    <?php if (!empty($fasta_files)): ?>
+                      <div class="mt-3 pt-2 border-top">
+                        <?php foreach ($fasta_files as $type => $file_info): ?>
+                          <a href="/<?= $site ?>/data/<?= htmlspecialchars($file_info['path']) ?>" 
+                             class="btn btn-sm btn-primary w-100 mb-2"
+                             download>
+                            <i class="fa fa-download"></i> <?= htmlspecialchars($file_info['label']) ?>
+                          </a>
+                        <?php endforeach; ?>
+                      </div>
+                    <?php endif; ?>
+                  </div>
                 </div>
               </div>
-              <?php endforeach; ?>
-            <?php endif; ?>
-
-            <?php if (!empty($data_files['protein'])): ?>
-              <?php foreach ($data_files['protein'] as $file): ?>
-              <div class="col-md-6">
-                <div class="resource-card p-3 border rounded">
-                  <h5 class="text-primary mb-2"><i class="fa fa-atom"></i> Protein FASTA</h5>
-                  <p class="text-muted small mb-2">Amino acid sequences</p>
-                  <code class="small"><?= htmlspecialchars($file) ?></code>
-                </div>
-              </div>
-              <?php endforeach; ?>
-            <?php endif; ?>
-
-            <?php if (!empty($data_files['cds'])): ?>
-              <?php foreach ($data_files['cds'] as $file): ?>
-              <div class="col-md-6">
-                <div class="resource-card p-3 border rounded">
-                  <h5 class="text-primary mb-2"><i class="fa fa-code"></i> CDS FASTA</h5>
-                  <p class="text-muted small mb-2">Coding sequences</p>
-                  <code class="small"><?= htmlspecialchars($file) ?></code>
-                </div>
-              </div>
-              <?php endforeach; ?>
-            <?php endif; ?>
-
-            <?php if (!empty($data_files['transcript'])): ?>
-              <?php foreach ($data_files['transcript'] as $file): ?>
-              <div class="col-md-6">
-                <div class="resource-card p-3 border rounded">
-                  <h5 class="text-primary mb-2"><i class="fa fa-file-code"></i> Transcript FASTA</h5>
-                  <p class="text-muted small mb-2">Transcript sequences</p>
-                  <code class="small"><?= htmlspecialchars($file) ?></code>
-                </div>
-              </div>
-              <?php endforeach; ?>
-            <?php endif; ?>
-            
-            <?php if (!empty($data_files['database'])): ?>
-              <?php foreach ($data_files['database'] as $file): ?>
-              <div class="col-md-6">
-                <div class="resource-card p-3 border rounded">
-                  <h5 class="text-primary mb-2"><i class="fa fa-database"></i> Gene Database</h5>
-                  <p class="text-muted small mb-2">SQLite database</p>
-                  <code class="small"><?= htmlspecialchars($file) ?></code>
-                </div>
-              </div>
-              <?php endforeach; ?>
-            <?php endif; ?>
+            <?php endforeach; ?>
           </div>
         </div>
       </div>
