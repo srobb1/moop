@@ -1,5 +1,6 @@
 <?php
 include_once __DIR__ . '/../../includes/access_control.php';
+include_once __DIR__ . '/../moop_functions.php';
 
 // Get organism name from query parameter
 $organism_name = $_GET['organism'] ?? '';
@@ -231,32 +232,6 @@ if (!$has_organism_access && !$is_public) {
           }
       }
   }
-  
-  // Function to get FASTA files for an assembly
-  function getAssemblyFastaFiles($organism_name, $assembly_name) {
-      global $organism_data, $sequence_types;
-      $fasta_files = [];
-      $assembly_dir = "$organism_data/$organism_name/$assembly_name";
-      
-      if (is_dir($assembly_dir)) {
-          $fasta_files_found = glob($assembly_dir . '/*.fa');
-          foreach ($fasta_files_found as $fasta_file) {
-              $filename = basename($fasta_file);
-              $relative_path = "$organism_name/$assembly_name/$filename";
-              
-              foreach ($sequence_types as $type => $config) {
-                  if (strpos($filename, $config['pattern']) !== false) {
-                      $fasta_files[$type] = [
-                          'path' => $relative_path,
-                          'label' => $config['label']
-                      ];
-                      break;
-                  }
-              }
-          }
-      }
-      return $fasta_files;
-  }
   ?>
   
   <?php if (!empty($accessible_assemblies)): ?>
@@ -280,7 +255,7 @@ if (!$has_organism_access && !$is_public) {
                     <?php if (!empty($fasta_files)): ?>
                       <div class="mt-3 pt-2 border-top">
                         <?php foreach ($fasta_files as $type => $file_info): ?>
-                          <a href="/<?= $site ?>/data/<?= htmlspecialchars($file_info['path']) ?>" 
+                          <a href="/organisms_data/<?= htmlspecialchars($file_info['path']) ?>" 
                              class="btn btn-sm btn-primary w-100 mb-2"
                              download>
                             <i class="fa fa-download"></i> <?= htmlspecialchars($file_info['label']) ?>

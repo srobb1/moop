@@ -1222,6 +1222,41 @@ function getAccessibleOrganismsInGroup($group_name, $group_data) {
 }
 
 /**
+ * Get FASTA files for an assembly
+ * 
+ * Scans the assembly directory for FASTA files matching configured sequence types.
+ * Uses patterns from $sequence_types global to identify file types (genome, protein, transcript, cds).
+ * 
+ * @param string $organism_name The organism name
+ * @param string $assembly_name The assembly name (accession)
+ * @return array Associative array of type => ['path' => relative_path, 'label' => label]
+ */
+function getAssemblyFastaFiles($organism_name, $assembly_name) {
+    global $organism_data, $sequence_types;
+    $fasta_files = [];
+    $assembly_dir = "$organism_data/$organism_name/$assembly_name";
+    
+    if (is_dir($assembly_dir)) {
+        $fasta_files_found = glob($assembly_dir . '/*.fa');
+        foreach ($fasta_files_found as $fasta_file) {
+            $filename = basename($fasta_file);
+            $relative_path = "$organism_name/$assembly_name/$filename";
+            
+            foreach ($sequence_types as $type => $config) {
+                if (strpos($filename, $config['pattern']) !== false) {
+                    $fasta_files[$type] = [
+                        'path' => $relative_path,
+                        'label' => $config['label']
+                    ];
+                    break;
+                }
+            }
+        }
+    }
+    return $fasta_files;
+}
+
+/**
  * Check file write permission and return error info if not writable
  * Keeps original owner, changes group to web server only
  * 

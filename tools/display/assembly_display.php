@@ -162,6 +162,32 @@ $parent_uniquename = $_GET['parent'] ?? '';
     </div>
   </div>
 
+  <!-- Assembly Downloads Section -->
+  <?php
+  $fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);
+  ?>
+  
+  <?php if (!empty($fasta_files)): ?>
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h3 class="card-title mb-4"><i class="fa fa-download"></i> Download Sequence Files</h3>
+          <div class="d-flex flex-wrap gap-2">
+            <?php foreach ($fasta_files as $type => $file_info): ?>
+              <a href="/organisms_data/<?= htmlspecialchars($file_info['path']) ?>" 
+                 class="btn btn-primary"
+                 download>
+                <i class="fa fa-download"></i> <?= htmlspecialchars($file_info['label']) ?>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
+
 </div>
 
 <?php include_once __DIR__ . '/../../includes/footer.php'; ?>
