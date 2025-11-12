@@ -3,10 +3,13 @@ session_start();
 include_once 'admin_access_check.php';
 include_once '../includes/head.php';
 include_once '../includes/navbar.php';
+include_once '../tools/moop_functions.php';
 $organism_data_dir = $organism_data;
 $tree_config_file = "$metadata_path/phylo_tree_config.json";
 $message = '';
 $error = '';
+$file_write_error = getFileWriteError($tree_config_file);
+$dir_error = getDirectoryError($absolute_images_path . '/ncbi_taxonomy');
 
 // Function to get organism metadata
 function get_organisms_metadata($organism_data_dir) {
@@ -31,70 +34,110 @@ function get_organisms_metadata($organism_data_dir) {
     return $organisms;
 }
 
-// Function to fetch taxonomic lineage from NCBI
-function fetch_taxonomy_lineage($taxon_id) {
-    $url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id={$taxon_id}&retmode=xml";
+// Function to fetch and cache organism image from NCBI to ncbi_taxonomy directory
+function fetch_organism_image($taxon_id, $organism_name = null) {
+    global $absolute_images_path;
     
-    // Try curl first, fall back to file_get_contents
-    if (function_exists('curl_init')) {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        $response = curl_exec($ch);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        if ($http_code !== 200 || !$response) {
-            return null;
-        }
-    } else {
-        // Fallback to file_get_contents
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 10,
-                'user_agent' => 'MOOP Phylo Tree Generator'
-            ]
-        ]);
-        $response = @file_get_contents($url, false, $context);
-        
-        if ($response === false) {
-            return null;
-        }
+    $ncbi_dir = $absolute_images_path . '/ncbi_taxonomy';
+    $image_path = $ncbi_dir . '/' . $taxon_id . '.jpg';
+    
+    // Check if image already cached
+    if (file_exists($image_path)) {
+        return 'images/ncbi_taxonomy/' . $taxon_id . '.jpg';
     }
     
-    $xml = simplexml_load_string($response);
-    if (!$xml || !isset($xml->Taxon)) {
+    // Ensure directory exists
+    if (!is_dir($ncbi_dir)) {
+        @mkdir($ncbi_dir, 0755, true);
+    }
+    
+    // Download from NCBI
+    $image_url = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon/{$taxon_id}/image";
+    
+    $context = stream_context_create(['http' => ['timeout' => 10, 'user_agent' => 'MOOP']]);
+    $image_data = @file_get_contents($image_url, false, $context);
+    
+    if ($image_data === false || strlen($image_data) < 100) {
         return null;
     }
     
-    $lineage = [];
-    $taxon = $xml->Taxon;
+    // Save image
+    if (file_put_contents($image_path, $image_data) !== false) {
+        return 'images/ncbi_taxonomy/' . $taxon_id . '.jpg';
+    }
     
-    // Parse lineage
-    if (isset($taxon->LineageEx->Taxon)) {
-        foreach ($taxon->LineageEx->Taxon as $rank_taxon) {
-            $rank = (string)$rank_taxon->Rank;
-            $sci_name = (string)$rank_taxon->ScientificName;
+    return null;
+}
+
+// Function to fetch taxonomic lineage from NCBI using XML parsing
+// Uses file_get_contents for maximum compatibility
+function fetch_taxonomy_lineage($taxon_id) {
+    $url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id={$taxon_id}&retmode=xml";
+    
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 10,
+            'user_agent' => 'MOOP Phylo Tree Generator'
+        ]
+    ]);
+    $response = @file_get_contents($url, false, $context);
+    
+    if ($response === false) {
+        return null;
+    }
+    
+    // Parse XML using regex since SimpleXML isn't always available
+    $lineage = [];
+    
+    // Extract Lineage text (semicolon-separated)
+    if (preg_match('/<Lineage>(.+?)<\/Lineage>/s', $response, $matches)) {
+        $lineage_text = trim($matches[1]);
+        $lineage_parts = array_filter(array_map('trim', explode(';', $lineage_text)));
+        
+        // Extract ranks from LineageEx
+        $rank_map = [];
+        if (preg_match_all('/<Taxon>.*?<ScientificName>(.+?)<\/ScientificName>.*?<Rank>(.+?)<\/Rank>.*?<\/Taxon>/s', $response, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $sci_name = trim($match[1]);
+                $rank = trim($match[2]);
+                $rank_map[$sci_name] = $rank;
+            }
+        }
+        
+        // Build lineage array with matched ranks
+        $valid_ranks = ['superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
+        foreach ($lineage_parts as $name) {
+            $rank = $rank_map[$name] ?? null;
             
-            // Only include standard taxonomic ranks
-            $valid_ranks = ['superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
-            if (in_array($rank, $valid_ranks)) {
+            // Map domain to superkingdom
+            if ($rank === 'domain') {
+                $rank = 'superkingdom';
+            }
+            
+            // Only include standard taxonomic ranks (skip intermediate ranks like 'clade')
+            // $rank exists AND $rank is one of the major taxonomic levels
+            if ($rank && in_array($rank, $valid_ranks)) {
                 $lineage[] = [
                     'rank' => $rank,
-                    'name' => $sci_name
+                    'name' => $name
                 ];
             }
         }
     }
     
     // Add the species itself
-    $lineage[] = [
-        'rank' => 'species',
-        'name' => (string)$taxon->ScientificName
-    ];
+    if (preg_match('/<ScientificName>(.+?)<\/ScientificName>/', $response, $matches)) {
+        $sci_name = trim($matches[1]);
+        // Only add if it's not already in lineage
+        if (empty($lineage) || $lineage[count($lineage)-1]['name'] !== $sci_name) {
+            $lineage[] = [
+                'rank' => 'species',
+                'name' => $sci_name
+            ];
+        }
+    }
     
-    return $lineage;
+    return !empty($lineage) ? $lineage : null;
 }
 
 // Function to build tree from organisms
@@ -107,10 +150,12 @@ function build_tree_from_organisms($organisms) {
         }
         
         $lineage = fetch_taxonomy_lineage($data['taxon_id']);
+        $image = fetch_organism_image($data['taxon_id'], $organism_name);
         if ($lineage) {
             $all_lineages[$organism_name] = [
                 'lineage' => $lineage,
-                'common_name' => $data['common_name']
+                'common_name' => $data['common_name'],
+                'image' => $image
             ];
         }
         
@@ -145,6 +190,9 @@ function build_tree_from_organisms($organisms) {
                 if ($rank === 'species') {
                     $new_node['organism'] = $organism_name;
                     $new_node['common_name'] = $info['common_name'];
+                    if ($info['image']) {
+                        $new_node['image'] = $info['image'];
+                    }
                 } else {
                     $new_node['children'] = [];
                 }
@@ -161,7 +209,9 @@ function build_tree_from_organisms($organisms) {
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
-        if ($_POST['action'] === 'generate') {
+        if ($file_write_error) {
+            $error = "File is not writable. Please fix permissions first.";
+        } elseif ($_POST['action'] === 'generate') {
             try {
                 $organisms = get_organisms_metadata($organism_data_dir);
                 
@@ -172,10 +222,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // Save to file
                     $json = json_encode($tree_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-                    if (file_put_contents($tree_config_file, $json) !== false) {
+                    if ($json === false) {
+                        $error = "Failed to encode tree data as JSON: " . json_last_error_msg();
+                    } elseif (file_put_contents($tree_config_file, $json) !== false) {
                         $message = "Phylogenetic tree generated successfully! Found " . count($organisms) . " organisms.";
                     } else {
-                        $error = "Failed to write tree config file";
+                        $error = "Failed to write tree config file to: " . $tree_config_file;
+                        if (!is_writable($tree_config_file)) {
+                            $error .= " (File is not writable by current process)";
+                        }
                     }
                 }
             } catch (Exception $e) {
@@ -187,10 +242,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Validate JSON
             $tree_data = json_decode($tree_json, true);
             if (json_last_error() === JSON_ERROR_NONE) {
-                if (file_put_contents($tree_config_file, json_encode($tree_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) !== false) {
+                $json = json_encode($tree_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                if ($json === false) {
+                    $error = "Failed to encode tree data as JSON: " . json_last_error_msg();
+                } elseif (file_put_contents($tree_config_file, $json) !== false) {
                     $message = "Tree configuration saved successfully!";
                 } else {
-                    $error = "Failed to save tree configuration";
+                    $error = "Failed to save tree configuration to: " . $tree_config_file;
+                    if (!is_writable($tree_config_file)) {
+                        $error .= " (File is not writable by current process)";
+                    }
                 }
             } else {
                 $error = "Invalid JSON: " . json_last_error_msg();
@@ -239,6 +300,66 @@ $organisms = get_organisms_metadata($organism_data_dir);
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             <?php endif; ?>
+            
+            <?php if ($file_write_error): ?>
+                <div class="alert alert-warning alert-dismissible fade show">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <h4><i class="fa fa-exclamation-circle"></i> File Permission Issue Detected</h4>
+                    <p><strong>Problem:</strong> The file <code>metadata/phylo_tree_config.json</code> is not writable by the web server.</p>
+                    
+                    <p><strong>Current Status:</strong></p>
+                    <ul class="mb-3">
+                        <li>File owner: <code><?= htmlspecialchars($file_write_error['owner']) ?></code></li>
+                        <li>Current permissions: <code><?= $file_write_error['perms'] ?></code></li>
+                        <li>Web server user: <code><?= htmlspecialchars($file_write_error['web_user']) ?></code></li>
+                        <?php if ($file_write_error['web_group']): ?>
+                        <li>Web server group: <code><?= htmlspecialchars($file_write_error['web_group']) ?></code></li>
+                        <?php endif; ?>
+                    </ul>
+                    
+                    <p><strong>To Fix:</strong> Run this command on the server:</p>
+                    <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+                        <code style="word-break: break-all; display: block; font-size: 0.9em;">
+                            <?= htmlspecialchars($file_write_error['command']) ?>
+                        </code>
+                    </div>
+                    
+                    <p><small class="text-muted">After running the command, refresh this page.</small></p>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($dir_error): ?>
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <h4><i class="fa fa-folder-times"></i> Directory Setup Required</h4>
+                    
+                    <?php if ($dir_error['type'] === 'missing'): ?>
+                        <p><strong>Problem:</strong> The image cache directory does not exist.</p>
+                        <p><strong>Missing Directory:</strong> <code><?= htmlspecialchars($dir_error['dir']) ?></code></p>
+                    <?php else: ?>
+                        <p><strong>Problem:</strong> The image cache directory is not writable by the web server.</p>
+                        <p><strong>Directory:</strong> <code><?= htmlspecialchars($dir_error['dir']) ?></code></p>
+                        
+                        <p><strong>Current Status:</strong></p>
+                        <ul class="mb-3">
+                            <li>Owner: <code><?= htmlspecialchars($dir_error['owner']) ?></code></li>
+                            <li>Permissions: <code><?= $dir_error['perms'] ?></code></li>
+                            <li>Web server group: <code><?= htmlspecialchars($dir_error['web_group']) ?></code></li>
+                        </ul>
+                    <?php endif; ?>
+                    
+                    <p><strong>To Fix:</strong> Run <?php echo count($dir_error['commands']) > 1 ? 'these commands' : 'this command'; ?> on the server:</p>
+                    <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+                        <?php foreach ($dir_error['commands'] as $cmd): ?>
+                            <code style="word-break: break-all; display: block; font-size: 0.9em; margin-bottom: 5px;">
+                                <?= htmlspecialchars($cmd) ?>
+                            </code>
+                        <?php endforeach; ?>
+                    </div>
+                    
+                    <p><small class="text-muted">After running the commands, refresh this page.</small></p>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
     
@@ -280,7 +401,7 @@ $organisms = get_organisms_metadata($organism_data_dir);
                     
                     <form method="post" id="generateForm">
                         <input type="hidden" name="action" value="generate">
-                        <button type="submit" class="btn btn-primary" id="generateBtn">
+                        <button type="submit" class="btn btn-primary" id="generateBtn" <?= $file_write_error ? 'disabled' : '' ?>>
                             <i class="fa fa-sync-alt"></i> Generate Tree from NCBI
                         </button>
                         <small class="text-muted d-block mt-2">
@@ -311,7 +432,7 @@ $organisms = get_organisms_metadata($organism_data_dir);
                             <textarea class="form-control font-monospace" name="tree_json" id="tree_json" rows="15"><?= htmlspecialchars(json_encode($current_tree, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) ?></textarea>
                             <small class="form-text text-muted">Edit carefully - invalid JSON will not be saved</small>
                         </div>
-                        <button type="submit" class="btn btn-success">
+                        <button type="submit" class="btn btn-success" <?= $file_write_error ? 'disabled' : '' ?>>
                             <i class="fa fa-save"></i> Save Manual Changes
                         </button>
                     </form>

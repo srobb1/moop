@@ -1221,6 +1221,129 @@ function getAccessibleOrganismsInGroup($group_name, $group_data) {
     return $accessible_organisms;
 }
 
+/**
+ * Check file write permission and return error info if not writable
+ * Keeps original owner, changes group to web server only
+ * 
+ * @param string $filepath Path to file to check
+ * @return array|null Array with error details if not writable, null if writable
+ */
+function getFileWriteError($filepath) {
+    if (!file_exists($filepath) || is_writable($filepath)) {
+        return null;
+    }
+    
+    $webserver = getWebServerUser();
+    $web_user = $webserver['user'];
+    $web_group = $webserver['group'];
+    
+    $current_owner = function_exists('posix_getpwuid') ? posix_getpwuid(fileowner($filepath))['name'] ?? 'unknown' : 'unknown';
+    $current_perms = substr(sprintf('%o', fileperms($filepath)), -4);
+    
+    // Command keeps original owner but changes group to webserver and sets perms to 664
+    $fix_command = "sudo chgrp " . escapeshellarg($web_group) . " " . escapeshellarg($filepath) . " && sudo chmod 664 " . escapeshellarg($filepath);
+    
+    return [
+        'owner' => $current_owner,
+        'perms' => $current_perms,
+        'web_user' => $web_user,
+        'web_group' => $web_group,
+        'command' => $fix_command,
+        'file' => $filepath
+    ];
+}
+
+/**
+ * Check directory existence and writeability, return error info if issues found
+ * Uses owner of /moop directory and web server group
+ * Automatically detects if sudo is needed for the commands
+ * 
+ * Usage:
+ *   $dir_error = getDirectoryError('/path/to/directory');
+ *   if ($dir_error) {
+ *       // Display error alert with fix instructions
+ *   }
+ * 
+ * Can be used in any admin page that needs to ensure a directory exists and is writable.
+ * Common use cases:
+ *   - Image cache directories (ncbi_taxonomy, organisms, etc)
+ *   - Log directories
+ *   - Upload/temp directories
+ *   - Any other required filesystem paths
+ * 
+ * @param string $dirpath Path to directory to check
+ * @return array|null Array with error details if directory missing/not writable, null if ok
+ */
+function getDirectoryError($dirpath) {
+    if (is_dir($dirpath) && is_writable($dirpath)) {
+        return null;
+    }
+    
+    $webserver = getWebServerUser();
+    $web_group = $webserver['group'];
+    
+    // Get owner from /moop directory
+    $moop_owner = 'ubuntu';  // Default fallback
+    if (function_exists('posix_getpwuid')) {
+        $moop_info = @stat(__DIR__ . '/..');  // Get stat of /moop parent directory
+        if ($moop_info) {
+            $moop_pwd = posix_getpwuid($moop_info['uid']);
+            if ($moop_pwd) {
+                $moop_owner = $moop_pwd['name'];
+            }
+        }
+    }
+    
+    // Detect if sudo is needed
+    $current_uid = function_exists('posix_getuid') ? posix_getuid() : null;
+    $need_sudo = false;
+    
+    if ($current_uid !== null && $current_uid !== 0) {
+        // Not running as root, check if we're the moop owner
+        $current_user = function_exists('posix_getpwuid') ? posix_getpwuid($current_uid)['name'] ?? null : null;
+        if ($current_user !== $moop_owner) {
+            $need_sudo = true;
+        }
+    }
+    
+    // Helper function to add sudo if needed
+    $cmd_prefix = $need_sudo ? 'sudo ' : '';
+    
+    if (!is_dir($dirpath)) {
+        // Directory doesn't exist
+        return [
+            'type' => 'missing',
+            'dir' => $dirpath,
+            'owner' => $moop_owner,
+            'group' => $web_group,
+            'need_sudo' => $need_sudo,
+            'commands' => [
+                "{$cmd_prefix}mkdir -p " . escapeshellarg($dirpath),
+                "{$cmd_prefix}chown {$moop_owner}:{$web_group} " . escapeshellarg($dirpath),
+                "{$cmd_prefix}chmod 775 " . escapeshellarg($dirpath)
+            ]
+        ];
+    }
+    
+    // Directory exists but not writable
+    $current_owner = function_exists('posix_getpwuid') ? posix_getpwuid(fileowner($dirpath))['name'] ?? 'unknown' : 'unknown';
+    $current_perms = substr(sprintf('%o', fileperms($dirpath)), -4);
+    
+    return [
+        'type' => 'not_writable',
+        'dir' => $dirpath,
+        'owner' => $current_owner,
+        'perms' => $current_perms,
+        'target_owner' => $moop_owner,
+        'target_group' => $web_group,
+        'need_sudo' => $need_sudo,
+        'commands' => [
+            "{$cmd_prefix}chown {$moop_owner}:{$web_group} " . escapeshellarg($dirpath),
+            "{$cmd_prefix}chmod 775 " . escapeshellarg($dirpath)
+        ]
+    ];
+}
+
 ?>
 
 

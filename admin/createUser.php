@@ -3,9 +3,11 @@ session_start();
 include_once 'admin_access_check.php';
 include_once '../includes/head.php';
 include_once '../includes/navbar.php';
+include_once '../tools/moop_functions.php';
 
 $usersFile = $users_file;
 $users = [];
+$file_write_error = null;
 
 if (file_exists($usersFile)) {
     $users = json_decode(file_get_contents($usersFile), true);
@@ -14,12 +16,19 @@ if (file_exists($usersFile)) {
     }
 }
 
+// Check if users file is writable
+$file_write_error = getFileWriteError($usersFile);
+
 $message = "";
 $messageType = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    if ($file_write_error) {
+        $message = "Users file is not writable. Please fix permissions first.";
+        $messageType = "danger";
+    }
     // Handle user creation
-    if (isset($_POST['create_user'])) {
+    elseif (isset($_POST['create_user'])) {
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
         $email = trim($_POST['email'] ?? '');
@@ -169,6 +178,33 @@ $organisms = getOrganisms();
       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
   <?php endif; ?>
+  
+  <?php if ($file_write_error): ?>
+    <div class="alert alert-warning alert-dismissible fade show">
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      <h4><i class="fa fa-exclamation-circle"></i> File Permission Issue Detected</h4>
+      <p><strong>Problem:</strong> The file <code>includes/users.json</code> is not writable by the web server.</p>
+      
+      <p><strong>Current Status:</strong></p>
+      <ul class="mb-3">
+        <li>File owner: <code><?= htmlspecialchars($file_write_error['owner']) ?></code></li>
+        <li>Current permissions: <code><?= $file_write_error['perms'] ?></code></li>
+        <li>Web server user: <code><?= htmlspecialchars($file_write_error['web_user']) ?></code></li>
+        <?php if ($file_write_error['web_group']): ?>
+        <li>Web server group: <code><?= htmlspecialchars($file_write_error['web_group']) ?></code></li>
+        <?php endif; ?>
+      </ul>
+      
+      <p><strong>To Fix:</strong> Run this command on the server:</p>
+      <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+        <code style="word-break: break-all; display: block; font-size: 0.9em;">
+          <?= htmlspecialchars($file_write_error['command']) ?>
+        </code>
+      </div>
+      
+      <p><small class="text-muted">After running the command, refresh this page.</small></p>
+    </div>
+  <?php endif; ?>
 
   <!-- Create New User Section -->
   <div class="row mb-4">
@@ -246,7 +282,7 @@ $organisms = getOrganisms();
               <div id="create-selected-hidden"></div>
             </div>
 
-            <button type="submit" class="btn btn-success">
+            <button type="submit" class="btn btn-success" <?= $file_write_error ? 'disabled' : '' ?>>
               <i class="fa fa-user-plus"></i> Create User
             </button>
             <a href="index.php" class="btn btn-secondary">Cancel</a>
@@ -389,7 +425,7 @@ $organisms = getOrganisms();
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="submit" class="btn btn-primary" <?= $file_write_error ? 'disabled' : '' ?>>Save Changes</button>
         </div>
       </form>
     </div>

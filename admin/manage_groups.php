@@ -21,42 +21,10 @@ if (file_exists($descriptions_file)) {
 }
 
 // Check if groups file is writable
-if (file_exists($groups_file) && !is_writable($groups_file)) {
-    $webserver = getWebServerUser();
-    $web_user = $webserver['user'];
-    $web_group = $webserver['group'];
-    $current_owner = function_exists('posix_getpwuid') ? posix_getpwuid(fileowner($groups_file))['name'] ?? 'unknown' : 'unknown';
-    $current_perms = substr(sprintf('%o', fileperms($groups_file)), -4);
-    $fix_command = "sudo chown " . escapeshellarg("$web_user:$web_group") . " " . escapeshellarg($groups_file) . " && sudo chmod 644 " . escapeshellarg($groups_file);
-    
-    $file_write_error = [
-        'owner' => $current_owner,
-        'perms' => $current_perms,
-        'web_user' => $web_user,
-        'web_group' => $web_group,
-        'command' => $fix_command,
-        'file' => $groups_file
-    ];
-}
+$file_write_error = getFileWriteError($groups_file);
 
 // Check if descriptions file is writable
-if (file_exists($descriptions_file) && !is_writable($descriptions_file)) {
-    $webserver = getWebServerUser();
-    $web_user = $webserver['user'];
-    $web_group = $webserver['group'];
-    $current_owner = function_exists('posix_getpwuid') ? posix_getpwuid(fileowner($descriptions_file))['name'] ?? 'unknown' : 'unknown';
-    $current_perms = substr(sprintf('%o', fileperms($descriptions_file)), -4);
-    $fix_command = "sudo chown " . escapeshellarg("$web_user:$web_group") . " " . escapeshellarg($descriptions_file) . " && sudo chmod 644 " . escapeshellarg($descriptions_file);
-    
-    $desc_file_write_error = [
-        'owner' => $current_owner,
-        'perms' => $current_perms,
-        'web_user' => $web_user,
-        'web_group' => $web_group,
-        'command' => $fix_command,
-        'file' => $descriptions_file
-    ];
-}
+$desc_file_write_error = getFileWriteError($descriptions_file);
 
 function get_all_organisms() {
     global $organism_data;

@@ -102,7 +102,12 @@ class PhyloTree {
         const isLeaf = !!node.organism;
         const indent = level * 20;
         const nodeClass = isLeaf ? 'phylo-leaf' : 'phylo-branch';
-        const icon = isLeaf ? '🔬' : (level === 0 ? '🌳' : '├');
+        let icon = level === 0 ? '🌳' : '├';
+        if (isLeaf) {
+            icon = node.image 
+                ? `<img src="${node.image}" alt="${node.name}" style="width:18px;height:18px;border-radius:4px;object-fit:cover;vertical-align:middle;">`
+                : '🌳';
+        }
         
         // Create unique ID for this node
         const nodeId = parentPath ? `${parentPath}/${node.name}` : node.name;

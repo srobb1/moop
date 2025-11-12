@@ -16,23 +16,7 @@ if (file_exists($config_file)) {
 }
 
 // Check if file is writable
-if (file_exists($config_file) && !is_writable($config_file)) {
-    $webserver = getWebServerUser();
-    $web_user = $webserver['user'];
-    $web_group = $webserver['group'];
-    $current_owner = function_exists('posix_getpwuid') ? posix_getpwuid(fileowner($config_file))['name'] ?? 'unknown' : 'unknown';
-    $current_perms = substr(sprintf('%o', fileperms($config_file)), -4);
-    $fix_command = "sudo chown " . escapeshellarg("$web_user:$web_group") . " " . escapeshellarg($config_file) . " && sudo chmod 644 " . escapeshellarg($config_file);
-    
-    $file_write_error = [
-        'owner' => $current_owner,
-        'perms' => $current_perms,
-        'web_user' => $web_user,
-        'web_group' => $web_group,
-        'command' => $fix_command,
-        'file' => $config_file
-    ];
-}
+$file_write_error = getFileWriteError($config_file);
 
 // Transform annotation_types to analysis_order and descriptions if needed
 if (!empty($config) && isset($config['annotation_types']) && !isset($config['analysis_order'])) {
