@@ -81,6 +81,39 @@ function is_public_organism($organism_name) {
 }
 
 /**
+ * Check if a specific assembly is public (in Public group)
+ * 
+ * @param string $organism_name The organism name
+ * @param string $assembly_name The assembly name
+ * @return bool True if this specific assembly is in the Public group
+ */
+if (!function_exists('is_public_assembly')) {
+function is_public_assembly($organism_name, $assembly_name) {
+    global $metadata_path;
+    
+    $groups_file = "$metadata_path/organism_assembly_groups.json";
+    if (!file_exists($groups_file)) {
+        return false;
+    }
+    
+    $groups_data = json_decode(file_get_contents($groups_file), true);
+    if (!$groups_data) {
+        return false;
+    }
+    
+    foreach ($groups_data as $entry) {
+        if ($entry['organism'] === $organism_name && $entry['assembly'] === $assembly_name) {
+            if (isset($entry['groups']) && in_array('Public', $entry['groups'])) {
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+}
+
+/**
  * Check if user has access to a specific resource
  * 
  * @param string $required_level Required access level: 'Public', 'Collaborator', 'Admin', or 'ALL'
@@ -131,5 +164,36 @@ function require_access($required_level = 'Collaborator', $resource_name = null)
         header("Location: /$site/access_denied.php");
         exit;
     }
+}
+}
+
+/**
+ * Check if user has access to a specific assembly
+ * 
+ * @param string $organism_name The organism name
+ * @param string $assembly_name The assembly name
+ * @return bool True if user has access to this assembly
+ */
+if (!function_exists('has_assembly_access')) {
+function has_assembly_access($organism_name, $assembly_name) {
+    // ALL and Admin have access to everything
+    if (has_access('ALL')) {
+        return true;
+    }
+    
+    // Public assemblies are accessible to everyone
+    if (is_public_assembly($organism_name, $assembly_name)) {
+        return true;
+    }
+    
+    // Collaborators check their specific access list
+    if (has_access('Collaborator')) {
+        $user_access = get_user_access();
+        if (isset($user_access[$organism_name]) && is_array($user_access[$organism_name]) && in_array($assembly_name, $user_access[$organism_name])) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 }

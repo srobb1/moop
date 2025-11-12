@@ -23,7 +23,11 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
 
 // Get all parameters
 $organism_name = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
+$assembly_name = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
 $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
+
+// Check if user is logged in OR if trying to access public assembly
+$is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
 
 // If sequence_type is set, this is the download request - process it
 if (!empty($sequence_type)) {
@@ -32,9 +36,28 @@ if (!empty($sequence_type)) {
         die('Error: Missing required parameters.');
     }
 
-    // Check access
-    if (!is_public_organism($organism_name) && !has_access('Collaborator', $organism_name)) {
-        header("Location: /$site/access_denied.php");
+    // If assembly not specified, try to find first one for organism
+    if (empty($assembly_name)) {
+        // Find first accessible assembly for this organism
+        $groups_file = $metadata_path . '/organism_assembly_groups.json';
+        if (file_exists($groups_file)) {
+            $groups_data = json_decode(file_get_contents($groups_file), true) ?: [];
+            foreach ($groups_data as $entry) {
+                if ($entry['organism'] === $organism_name) {
+                    $assembly_name = $entry['assembly'];
+                    break;
+                }
+            }
+        }
+    }
+
+    // Check access - allow if public OR if logged in and has access
+    if (!has_assembly_access($organism_name, $assembly_name)) {
+        if (!$is_logged_in) {
+            header("Location: /$site/login.php");
+        } else {
+            header("Location: /$site/access_denied.php");
+        }
         exit;
     }
 
@@ -121,8 +144,13 @@ if (empty($organism_name)) {
     die('Error: Organism not specified.');
 }
 
-if (!is_public_organism($organism_name) && !has_access('Collaborator', $organism_name)) {
-    header("Location: /$site/access_denied.php");
+// Check access for form display
+if (!has_assembly_access($organism_name, $assembly_name)) {
+    if (!$is_logged_in) {
+        header("Location: /$site/login.php");
+    } else {
+        header("Location: /$site/access_denied.php");
+    }
     exit;
 }
 

@@ -8,21 +8,34 @@
 /**
  * Get hierarchy of features (ancestors)
  * Traverses up the feature hierarchy from a given feature to its parents/grandparents
+ * Optionally filters by genome_ids for permission-based access
  *
  * @param string $feature_uniquename - The feature uniquename to start from
  * @param string $dbFile - Path to SQLite database
+ * @param array $genome_ids - Optional: Array of genome IDs to filter results (empty = no filtering)
  * @return array - Array of features: [self, parent, grandparent, ...]
  */
-function getAncestors($feature_uniquename, $dbFile) {
-    $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id FROM feature WHERE feature_uniquename = ?";
-    $results = fetchData($query, [$feature_uniquename], $dbFile);
+function getAncestors($feature_uniquename, $dbFile, $genome_ids = []) {
+    if (!empty($genome_ids)) {
+        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
+        $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
+                  FROM feature 
+                  WHERE feature_uniquename = ? AND genome_id IN ($placeholders)";
+        $params = array_merge([$feature_uniquename], $genome_ids);
+        $results = fetchData($query, $params, $dbFile);
+    } else {
+        $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
+                  FROM feature WHERE feature_uniquename = ?";
+        $results = fetchData($query, [$feature_uniquename], $dbFile);
+    }
+    
     if (empty($results)) return [];
     
     $feature = $results[0];
     $ancestors = [$feature];
     
     if ($feature['parent_feature_id']) {
-        $parent_ancestors = getAncestorsByFeatureId($feature['parent_feature_id'], $dbFile);
+        $parent_ancestors = getAncestorsByFeatureId($feature['parent_feature_id'], $dbFile, $genome_ids);
         $ancestors = array_merge($ancestors, $parent_ancestors);
     }
     
@@ -32,21 +45,34 @@ function getAncestors($feature_uniquename, $dbFile) {
 /**
  * Helper function for recursive ancestor traversal
  * Fetches ancestors by feature_id (used internally by getAncestors)
+ * Optionally filters by genome_ids for permission-based access
  *
  * @param int $feature_id - The feature ID to start from
  * @param string $dbFile - Path to SQLite database
+ * @param array $genome_ids - Optional: Array of genome IDs to filter results
  * @return array - Array of ancestor features
  */
-function getAncestorsByFeatureId($feature_id, $dbFile) {
-    $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id FROM feature WHERE feature_id = ?";
-    $results = fetchData($query, [$feature_id], $dbFile);
+function getAncestorsByFeatureId($feature_id, $dbFile, $genome_ids = []) {
+    if (!empty($genome_ids)) {
+        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
+        $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
+                  FROM feature 
+                  WHERE feature_id = ? AND genome_id IN ($placeholders)";
+        $params = array_merge([$feature_id], $genome_ids);
+        $results = fetchData($query, $params, $dbFile);
+    } else {
+        $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
+                  FROM feature WHERE feature_id = ?";
+        $results = fetchData($query, [$feature_id], $dbFile);
+    }
+    
     if (empty($results)) return [];
     
     $feature = $results[0];
     $ancestors = [$feature];
     
     if ($feature['parent_feature_id']) {
-        $parent_ancestors = getAncestorsByFeatureId($feature['parent_feature_id'], $dbFile);
+        $parent_ancestors = getAncestorsByFeatureId($feature['parent_feature_id'], $dbFile, $genome_ids);
         $ancestors = array_merge($ancestors, $parent_ancestors);
     }
     
@@ -56,20 +82,32 @@ function getAncestorsByFeatureId($feature_id, $dbFile) {
 /**
  * Get all children and descendants of a feature
  * Recursively fetches all child features at any depth
+ * Optionally filters by genome_ids for permission-based access
  *
  * @param int $feature_id - The parent feature ID
  * @param string $dbFile - Path to SQLite database
+ * @param array $genome_ids - Optional: Array of genome IDs to filter results (empty = no filtering)
  * @return array - Flat array of all children and descendants
  */
-function getChildren($feature_id, $dbFile) {
+function getChildren($feature_id, $dbFile, $genome_ids = []) {
     $children = [];
-    $query = "SELECT feature_id, feature_uniquename, feature_name, feature_description, feature_type, parent_feature_id 
-              FROM feature WHERE parent_feature_id = ?";
-    $results = fetchData($query, [$feature_id], $dbFile);
+    
+    if (!empty($genome_ids)) {
+        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
+        $query = "SELECT feature_id, feature_uniquename, feature_name, feature_description, feature_type, parent_feature_id 
+                  FROM feature 
+                  WHERE parent_feature_id = ? AND genome_id IN ($placeholders)";
+        $params = array_merge([$feature_id], $genome_ids);
+        $results = fetchData($query, $params, $dbFile);
+    } else {
+        $query = "SELECT feature_id, feature_uniquename, feature_name, feature_description, feature_type, parent_feature_id 
+                  FROM feature WHERE parent_feature_id = ?";
+        $results = fetchData($query, [$feature_id], $dbFile);
+    }
 
     foreach ($results as $row) {
         $children[] = $row;
-        $child_descendants = getChildren($row['feature_id'], $dbFile);
+        $child_descendants = getChildren($row['feature_id'], $dbFile, $genome_ids);
         $children = array_merge($children, $child_descendants);
     }
     return $children;
@@ -174,17 +212,29 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
 /**
  * Get all annotations for multiple features at once (optimized)
  * Fetches annotations for multiple features in a single query
+ * Optionally filters by genome_ids for permission-based access
  *
  * @param array $feature_ids - Array of feature IDs to fetch annotations for
  * @param string $dbFile - Path to SQLite database
+ * @param array $genome_ids - Optional: Array of genome IDs to filter results (empty = no filtering)
  * @return array - Organized as [$feature_id => [$annotation_type => [results]]]
  */
-function getAllAnnotationsForFeatures($feature_ids, $dbFile) {
+function getAllAnnotationsForFeatures($feature_ids, $dbFile, $genome_ids = []) {
     if (empty($feature_ids)) {
         return [];
     }
     
     $placeholders = implode(',', array_fill(0, count($feature_ids), '?'));
+    
+    // Build WHERE clause with optional genome filtering
+    $where_clause = "f.feature_id IN ($placeholders)";
+    $params = $feature_ids;
+    
+    if (!empty($genome_ids)) {
+        $genome_placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
+        $where_clause .= " AND f.genome_id IN ($genome_placeholders)";
+        $params = array_merge($params, $genome_ids);
+    }
     
     $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_type, 
               a.annotation_accession, a.annotation_description, 
@@ -196,10 +246,10 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile) {
           AND ans.annotation_source_id = a.annotation_source_id
           AND f.feature_id = fa.feature_id
           AND fa.annotation_id = a.annotation_id
-          AND f.feature_id IN ($placeholders)
+          AND $where_clause
         ORDER BY f.feature_id, ans.annotation_type";
     
-    $results = fetchData($query, $feature_ids, $dbFile);
+    $results = fetchData($query, $params, $dbFile);
     
     // Organize by feature_id and annotation_type
     $organized = [];
@@ -230,10 +280,19 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile) {
  * @param bool $is_last - Internal use for recursion
  * @return string - HTML string with nested ul/li tree structure
  */
-function generateTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true) {
-    $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
-              FROM feature WHERE parent_feature_id = ?";
-    $results = fetchData($query, [$feature_id], $dbFile);
+function generateTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true, $genome_ids = []) {
+    if (!empty($genome_ids)) {
+        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
+        $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
+                  FROM feature 
+                  WHERE parent_feature_id = ? AND genome_id IN ($placeholders)";
+        $params = array_merge([$feature_id], $genome_ids);
+        $results = fetchData($query, $params, $dbFile);
+    } else {
+        $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
+                  FROM feature WHERE parent_feature_id = ?";
+        $results = fetchData($query, [$feature_id], $dbFile);
+    }
 
     if (empty($results)) {
         return '';
@@ -275,7 +334,7 @@ function generateTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true) {
         $html .= "<span class=\"badge $badge_class $text_color\">$feature_type</span>";
         
         // Recursive call for nested children
-        $html .= generateTreeHTML($row['feature_id'], $dbFile, $prefix, $is_last_child);
+        $html .= generateTreeHTML($row['feature_id'], $dbFile, $prefix, $is_last_child, $genome_ids);
         $html .= "</li>";
     }
     $html .= "</ul>";

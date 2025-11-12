@@ -965,18 +965,31 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
         });
     }
     
-    // Build list of accessible sources using existing access functions
+    // Build list of accessible sources using assembly-based permissions
     foreach ($entries_to_process as $entry) {
         $org = $entry['organism'];
         $assembly = $entry['assembly'];
         $entry_groups = $entry['groups'] ?? [];
         
-        // Check if user has access to this entry
-        // Admin (ALL/Admin access level) has access to everything
-        // Otherwise check if it's public or user is collaborator with access
-        $has_access = has_access('ALL') || is_public_organism($org) || has_access('Collaborator', $org);
+        // Check if user has access to this specific assembly
+        // 1. ALL/Admin users have access to everything
+        // 2. Public assemblies are accessible to everyone
+        // 3. Collaborators can access assemblies in their $_SESSION['access'] list
+        $access_granted = false;
         
-        if ($has_access) {
+        if (has_access('ALL')) {
+            $access_granted = true;
+        } elseif (is_public_assembly($org, $assembly)) {
+            $access_granted = true;
+        } elseif (has_access('Collaborator')) {
+            // Check if user has access to this specific assembly
+            $user_access = get_user_access();
+            if (isset($user_access[$org]) && is_array($user_access[$org]) && in_array($assembly, $user_access[$org])) {
+                $access_granted = true;
+            }
+        }
+        
+        if ($access_granted) {
             $assembly_path = "$organism_data/$org/$assembly";
             
             // Only include assembly if directory exists AND has FASTA files
@@ -1069,7 +1082,34 @@ function getAvailableTools($context = []) {
     return $tools;
 }
 
+/**
+ * Get genome IDs for accessible assemblies
+ * Converts assembly names/accessions to genome_ids for efficient querying
+ * 
+ * @param string $organism_name The organism name
+ * @param array $accessible_assemblies Array of assembly names/accessions user can access
+ * @param string $db_path Path to SQLite database
+ * @return array Array of genome_ids
+ */
+function getAccessibleGenomeIds($organism_name, $accessible_assemblies, $db_path) {
+    if (empty($accessible_assemblies)) {
+        return [];
+    }
+    
+    $placeholders = implode(',', array_fill(0, count($accessible_assemblies), '?'));
+    $query = "SELECT DISTINCT genome_id FROM genome 
+              WHERE genome_name IN ($placeholders) 
+              OR genome_accession IN ($placeholders)";
+    
+    // Pass accessible_assemblies twice - once for names, once for accessions
+    $params = array_merge($accessible_assemblies, $accessible_assemblies);
+    $results = fetchData($query, $params, $db_path);
+    
+    return array_column($results, 'genome_id');
+}
+
 ?>
+
 
 
 

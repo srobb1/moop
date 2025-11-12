@@ -23,10 +23,20 @@ include_once __DIR__ . '/../moop_functions.php';
 // Discard any output from includes
 ob_end_clean();
 
-// Check if user is logged in
-if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
-    header("Location: /$site/login.php");
-    exit;
+// Check if user is logged in OR if trying to access public assembly
+// Visitors can access public assemblies without login
+$is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
+$trying_public_access = !empty($_POST['selected_assembly']) && !empty($_POST['organism']);
+
+// If trying to download from an assembly, check if it's public
+if ($trying_public_access) {
+    if (!is_public_assembly($_POST['organism'], $_POST['selected_assembly']) && !$is_logged_in) {
+        header("Location: /$site/login.php");
+        exit;
+    }
+} elseif (!$is_logged_in) {
+    // For viewing the form itself, visitors can see public assemblies
+    // Only redirect if no accessible assemblies will be shown
 }
 
 // Get context parameters for back button
