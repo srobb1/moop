@@ -599,8 +599,8 @@ foreach ($all_organisms as $organism => $assemblies) {
             <?php else: ?>
               <span style="color: #ffc107; font-size: 18px; margin-right: 5px;" title="No content">⚠</span>
             <?php endif; ?>
-            <strong><?= htmlspecialchars($desc['group_name']) ?></strong>
-            <span class="badge bg-<?= $desc['in_use'] ? 'success' : 'danger' ?> ms-2">
+            <span class="tag-chip selected" data-group-name="<?= htmlspecialchars($desc['group_name']) ?>" style="cursor: default; margin-right: 10px;"><?= htmlspecialchars($desc['group_name']) ?></span>
+            <span class="badge bg-<?= $desc['in_use'] ? 'success' : 'danger' ?>">
               <?= $desc['in_use'] ? 'In Use' : 'Not In Use' ?>
             </span>
           </div>
@@ -881,6 +881,13 @@ foreach ($all_organisms as $organism => $assemblies) {
       const tag = chip.textContent.trim();
       chip.style.background = getColorForTag(tag);
       chip.style.borderColor = getColorForTag(tag);
+    });
+    
+    // Color group name badges in descriptions section with consistent colors
+    document.querySelectorAll('.group-card .tag-chip[data-group-name]').forEach(chip => {
+      const groupName = chip.getAttribute('data-group-name');
+      chip.style.background = getColorForTag(groupName);
+      chip.style.borderColor = getColorForTag(groupName);
     });
     
     document.querySelectorAll('.edit-groups').forEach(button => {
