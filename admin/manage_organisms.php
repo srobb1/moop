@@ -813,6 +813,13 @@ $organisms = get_all_organisms_info();
 
             <!-- Images Section -->
             <h5 class="mb-3"><i class="fa fa-image"></i> Images</h5>
+            <div class="alert alert-info small mb-3">
+              <strong>Note:</strong> If no images are provided here, the image from 
+              <a href="https://www.ncbi.nlm.nih.gov/datasets/taxonomy/<?= htmlspecialchars($data['info']['taxon_id'] ?? '') ?>/" target="_blank">
+                NCBI Taxonomy (ID: <?= htmlspecialchars($data['info']['taxon_id'] ?? '[taxon_id]') ?>)
+              </a>
+              will be used as the default.
+            </div>
             <div id="images-container-<?= htmlspecialchars($organism) ?>">
               <?php 
                 $images = $data['info']['images'] ?? [['file' => '', 'caption' => '']];
