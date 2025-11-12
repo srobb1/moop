@@ -1,5 +1,6 @@
 <?php
 include_once __DIR__ . '/../../includes/access_control.php';
+include_once __DIR__ . '/../moop_functions.php';
 
 // Get organisms from query parameters
 $organisms = $_GET['organisms'] ?? [];
@@ -108,15 +109,13 @@ foreach ($organisms as $organism) {
             <?php
             $organism_list = is_array($organisms) ? $organisms : [$organisms];
             foreach ($organism_list as $organism): 
-                $organism_json_path = "$organism_data/$organism/organism.json";
-                $organism_info = [];
-                if (file_exists($organism_json_path)) {
-                    $organism_info = json_decode(file_get_contents($organism_json_path), true);
-                }
+                $organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);
+                $organism_info = $organism_data_result['organism_info'];
+                $image_src = $organism_data_result['image_path'];
+                $show_image = !empty($image_src);
                 $genus = $organism_info['genus'] ?? '';
                 $species = $organism_info['species'] ?? '';
                 $common_name = $organism_info['common_name'] ?? '';
-                $image_file = "$organism.jpg";
             ?>
               <div class="col-md-6 col-lg-4">
                 <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism) ?>" 
@@ -124,11 +123,13 @@ foreach ($organisms as $organism) {
                   <div class="card h-100 shadow-sm organism-card">
                     <div class="card-body text-center">
                       <div class="organism-image-container mb-3">
-                        <img src="/<?= $site ?>/images/<?= htmlspecialchars($image_file) ?>" 
-                             alt="<?= htmlspecialchars($organism) ?>"
-                             class="organism-card-image"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div class="organism-card-icon" style="display: none;">
+                        <?php if ($show_image): ?>
+                          <img src="<?= $image_src ?>" 
+                               alt="<?= htmlspecialchars($organism) ?>"
+                               class="organism-card-image"
+                               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <?php endif; ?>
+                        <div class="organism-card-icon" style="<?= $show_image ? 'display: none;' : '' ?>">
                           <i class="fa fa-dna fa-4x text-primary"></i>
                         </div>
                       </div>
@@ -253,8 +254,9 @@ function searchNextOrganism(keywords, quotedSearch, index) {
 function displayOrganismResults(data) {
     const organism = data.organism;
     const results = data.results;
+    const imageUrl = data.organism_image_path || '';
     
-    const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php');
+    const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php', imageUrl);
     const safeOrganism = organism.replace(/[^a-zA-Z0-9]/g, '_');
     const organismUrl = sitePath + '/tools/display/organism_display.php?organism=' + encodeURIComponent(organism);
     const readMoreBtn = `<a href="${organismUrl}" class="btn btn-sm btn-outline-primary ms-2" style="font-size: 0.8rem;">
