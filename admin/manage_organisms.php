@@ -317,24 +317,30 @@ $organisms = get_all_organisms_info();
             </h6>
             <div class="collapse" id="jsonExample">
               <pre class="bg-light p-2 rounded" style="font-size: 0.85em;">{
-  "genus": "Anoura",
-  "species": "caudifer",
-  "common_name": "Tailed tailless bat",
-  "taxon_id": "9999",
-  "images": [
-    {
-      "file": "Anoura_caudifer.jpg",
-      "caption": "Image of Tailed tailless bat"
-    }
-  ],
-  "text_html": {
-    "p": [
-      "Diet: Feeds on nectar and insects...",
-      "Fun Fact: Uses echolocation..."
+    "genus": "Lasiurus",
+    "species": "cinereus",
+    "common_name": "Hoary bat",
+    "taxon_id": "257879",
+    "images": [
+        {
+            "file": "Lasiurus_cinereus.jpg",
+            "caption": "Image of a Hoary bat"
+        }
+    ],
+    "html_p": [
+        {
+            "text": "&lt;u&gt;Diet:&lt;/u&gt; Hoary bats feed primarily on moths...",
+            "style": "",
+            "class": "fs-5"
+        },
+        {
+            "text": "&lt;u&gt;Fun Fact:&lt;/u&gt; Hoary bats produce short, quiet micro calls...",
+            "style": "",
+            "class": "fs-5"
+        }
     ]
-  }
 }</pre>
-              <small class="text-muted"><strong>Note:</strong> Images should be placed in <code>/moop/images/</code></small>
+              <small class="text-muted"><strong>Note:</strong> Required fields: genus, species, common_name, taxon_id. Optional fields: images, html_p. Images should be placed in <code>/moop/images/</code></small>
             </div>
           </div>
         </div>
