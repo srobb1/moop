@@ -268,7 +268,7 @@ if (!$has_organism_access && !$is_public) {
                     <?php if (!empty($fasta_files)): ?>
                       <div class="mt-3 pt-2 border-top">
                         <?php foreach ($fasta_files as $type => $file_info): ?>
-                          <a href="/organisms_data/<?= htmlspecialchars($file_info['path']) ?>" 
+                          <a href="/<?= $site ?>/tools/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>&type=<?= urlencode($type) ?>" 
                              class="btn btn-sm btn-primary w-100 mb-2"
                              download>
                             <i class="fa fa-download"></i> <?= htmlspecialchars($file_info['label']) ?>

@@ -175,7 +175,7 @@ $parent_uniquename = $_GET['parent'] ?? '';
           <h3 class="card-title mb-4"><i class="fa fa-download"></i> Download Sequence Files</h3>
           <div class="d-flex flex-wrap gap-2">
             <?php foreach ($fasta_files as $type => $file_info): ?>
-              <a href="/organisms_data/<?= htmlspecialchars($file_info['path']) ?>" 
+              <a href="/<?= $site ?>/tools/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&type=<?= urlencode($type) ?>" 
                  class="btn btn-primary"
                  download>
                 <i class="fa fa-download"></i> <?= htmlspecialchars($file_info['label']) ?>
