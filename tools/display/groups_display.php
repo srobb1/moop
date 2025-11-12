@@ -172,11 +172,21 @@ if (!is_public_group($group_name)) {
                   $organism_info = [];
                   if (file_exists($organism_json_path)) {
                     $organism_info = json_decode(file_get_contents($organism_json_path), true);
+                    
+                    // Handle improperly wrapped JSON (extra outer braces)
+                    if ($organism_info && !isset($organism_info['genus']) && !isset($organism_info['common_name'])) {
+                      $keys = array_keys($organism_info);
+                      if (count($keys) > 0 && is_array($organism_info[$keys[0]]) && isset($organism_info[$keys[0]]['genus'])) {
+                        $organism_info = $organism_info[$keys[0]];
+                      }
+                    }
                   }
                   $genus = $organism_info['genus'] ?? '';
                   $species = $organism_info['species'] ?? '';
                   $common_name = $organism_info['common_name'] ?? '';
-                  $image_file = "$organism.jpg";
+                  
+                  $image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);
+                  $show_image = !empty($image_src);
                 ?>
                 <div class="col-md-6 col-lg-4">
                   <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
@@ -184,11 +194,13 @@ if (!is_public_group($group_name)) {
                     <div class="card h-100 shadow-sm organism-card">
                       <div class="card-body text-center">
                         <div class="organism-image-container mb-3">
-                          <img src="/<?= $site ?>/images/<?= htmlspecialchars($image_file) ?>" 
-                               alt="<?= htmlspecialchars($organism) ?>"
-                               class="organism-card-image"
-                               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                          <div class="organism-card-icon" style="display: none;">
+                          <?php if ($show_image): ?>
+                            <img src="<?= $image_src ?>" 
+                                 alt="<?= htmlspecialchars($organism) ?>"
+                                 class="organism-card-image"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                          <?php endif; ?>
+                          <div class="organism-card-icon" style="<?= $show_image ? 'display: none;' : '' ?>">
                             <i class="fa fa-dna fa-4x text-primary"></i>
                           </div>
                         </div>
@@ -330,9 +342,10 @@ function searchNextOrganism(keywords, quotedSearch, index) {
 function displayOrganismResults(data) {
     const organism = data.organism;
     const results = data.results;
+    const imageUrl = data.organism_image_path || '';
     
     // Add "Read More" button after organism name by wrapping the shared function
-    const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php');
+    const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php', imageUrl);
     
     // Insert the "Read More" button into the generated HTML
     const safeOrganism = organism.replace(/[^a-zA-Z0-9]/g, '_');

@@ -10,6 +10,7 @@ ob_start();
 session_start();
 include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/search_functions.php';
+include_once __DIR__ . '/../moop_functions.php';
 
 // Clear any output that might have occurred
 ob_end_clean();
@@ -76,6 +77,10 @@ if (!$db_validation['valid']) {
     echo json_encode(['error' => 'Database file not accessible: ' . $db_validation['error'], 'results' => []]);
     exit;
 }
+
+// Load organism info and get image path
+$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);
+$organism_image_path = $organism_data_result['image_path'];
 
 // Check if searching by feature uniquename first
 $columns = ["f.feature_uniquename"];
@@ -183,6 +188,7 @@ if (!empty($incomplete_records)) {
 
 echo json_encode([
     'organism' => $organism,
+    'organism_image_path' => $organism_image_path,
     'results' => $formatted_results,
     'count' => count($formatted_results),
     'search_type' => $uniquename_search ? 'Gene/Transcript ID' : ($quoted_search ? 'Quoted' : 'Keyword')

@@ -13,9 +13,10 @@
  * @param {Array} results - Array of result objects
  * @param {string} sitePath - The site base path
  * @param {string} linkBasePath - Base path for feature links (e.g., 'tools/display/parent_display.php' or 'tools/search/parent_display.php')
+ * @param {string} imageUrl - Optional URL to organism image thumbnail
  * @returns {string} HTML string for the table
  */
-function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 'tools/display/parent_display.php') {
+function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 'tools/display/parent_display.php', imageUrl = '') {
     const tableId = '#resultsTable_' + organism.replace(/[^a-zA-Z0-9]/g, '_');
     const selectId = organism.replace(/[^a-zA-Z0-9]/g, '_');
     const genus = results[0]?.genus || '';
@@ -25,11 +26,15 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
     const organismDisplay = `<em>${genus} ${species}</em>`;
     const commonNameDisplay = commonName ? ` (${commonName})` : '';
     
-    const imagePath = sitePath + '/images/';
-    const imageFile = organism + '.jpg';
     const fallbackId = 'icon-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
-    const imageHtml = `<img src="${imagePath}${imageFile}" class="organism-thumbnail" onerror="this.style.display='none'; document.getElementById('${fallbackId}').style.display='inline';" onload="document.getElementById('${fallbackId}').style.display='none';" style="margin-right: 8px;">
-                       <i class="fa fa-dna" id="${fallbackId}" style="margin-right: 8px; display: none;"></i>`;
+    
+    let imageHtml = '';
+    if (imageUrl) {
+        imageHtml = `<img src="${imageUrl}" class="organism-thumbnail" style="height: 24px; width: 24px; margin-right: 8px; border-radius: 3px;" onerror="this.style.display='none'; document.getElementById('${fallbackId}').style.display='inline';" onload="document.getElementById('${fallbackId}').style.display='none';">
+                     <i class="fa fa-dna" id="${fallbackId}" style="margin-right: 8px; display: none;"></i>`;
+    } else {
+        imageHtml = `<i class="fa fa-dna" style="margin-right: 8px;"></i>`;
+    }
     
     const anchorId = 'results-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
     

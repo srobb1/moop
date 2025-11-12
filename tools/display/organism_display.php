@@ -135,31 +135,10 @@ if (!$has_organism_access && !$is_public) {
   <!-- Organism Header Section -->
   <div class="row mb-4" id="organismHeader">
     <?php 
-    // Determine which image to display
-    $show_image = false;
-    $image_src = '';
-    $image_caption = '';
-    $image_caption_link = '';
+    $image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);
+    $image_info = getOrganismImageCaption($organism_info, $absolute_images_path);
+    $show_image = !empty($image_src);
     $image_alt = htmlspecialchars($organism_info['common_name'] ?? $organism_name);
-    
-    // Check if organism has a custom image
-    if (!empty($organism_info['images']) && is_array($organism_info['images'])) {
-      $show_image = true;
-      $image_src = "/$images_path/" . htmlspecialchars($organism_info['images'][0]['file']);
-      if (!empty($organism_info['images'][0]['caption'])) {
-        $image_caption = $organism_info['images'][0]['caption'];
-      }
-    } 
-    // Fall back to NCBI taxonomy image if taxon_id is available
-    elseif (!empty($organism_info['taxon_id'])) {
-      $ncbi_image_file = __DIR__ . '/../../images/ncbi_taxonomy/' . $organism_info['taxon_id'] . '.jpg';
-      if (file_exists($ncbi_image_file)) {
-        $show_image = true;
-        $image_src = "/moop/images/ncbi_taxonomy/" . $organism_info['taxon_id'] . ".jpg";
-        $image_caption = "Image from NCBI Taxonomy";
-        $image_caption_link = "https://www.ncbi.nlm.nih.gov/datasets/taxonomy/" . htmlspecialchars($organism_info['taxon_id']);
-      }
-    }
     ?>
     
     <?php if ($show_image): ?>
@@ -168,15 +147,15 @@ if (!$has_organism_access && !$is_public) {
           <img src="<?= $image_src ?>" 
                class="card-img-top" 
                alt="<?= $image_alt ?>">
-          <?php if (!empty($image_caption)): ?>
+          <?php if (!empty($image_info['caption'])): ?>
             <div class="card-body">
               <p class="card-text small text-muted">
-                <?php if (!empty($image_caption_link)): ?>
-                  <a href="<?= $image_caption_link ?>" target="_blank" class="text-decoration-none">
-                    <?= $image_caption ?> <i class="fa fa-external-link-alt fa-xs"></i>
+                <?php if (!empty($image_info['link'])): ?>
+                  <a href="<?= $image_info['link'] ?>" target="_blank" class="text-decoration-none">
+                    <?= $image_info['caption'] ?> <i class="fa fa-external-link-alt fa-xs"></i>
                   </a>
                 <?php else: ?>
-                  <?= $image_caption ?>
+                  <?= $image_info['caption'] ?>
                 <?php endif; ?>
               </p>
             </div>
@@ -340,6 +319,7 @@ const organismName = '<?= $organism_name ?>';
 let allResults = [];
 let searchedOrganisms = 0;
 const totalOrganisms = 1; // Single organism search
+let organismImagePaths = {}; // Store image paths by organism
 
 $('#organismSearchForm').on('submit', function(e) {
     e.preventDefault();
@@ -409,6 +389,10 @@ function searchOrganism(organism, keywords, quotedSearch) {
             
             if (response.results && response.results.length > 0) {
                 allResults = allResults.concat(response.results);
+                // Store organism image path
+                if (response.organism_image_path) {
+                    organismImagePaths[response.organism] = response.organism_image_path;
+                }
             }
             
             // Update progress
@@ -457,7 +441,8 @@ function displayResults() {
         // Display results for the organism using shared function
         Object.keys(resultsByOrganism).forEach(organism => {
             const results = resultsByOrganism[organism];
-            $('#resultsContainer').append(createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php'));
+            const imageUrl = organismImagePaths[organism] || '';
+            $('#resultsContainer').append(createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php', imageUrl));
         });
     }
 }
