@@ -1512,6 +1512,77 @@ function getDirectoryError($dirpath) {
     ];
 }
 
+/**
+ * Validate organism.json file
+ * 
+ * Checks:
+ * - File exists
+ * - File is readable
+ * - Valid JSON format
+ * - Contains required fields (genus, species, common_name, taxon_id)
+ * 
+ * @param string $json_path - Path to organism.json file
+ * @return array - Validation results with status and details
+ */
+function validateOrganismJson($json_path) {
+    $validation = [
+        'exists' => false,
+        'readable' => false,
+        'valid_json' => false,
+        'has_required_fields' => false,
+        'required_fields' => ['genus', 'species', 'common_name', 'taxon_id'],
+        'missing_fields' => [],
+        'errors' => []
+    ];
+    
+    if (!file_exists($json_path)) {
+        $validation['errors'][] = 'organism.json file does not exist';
+        return $validation;
+    }
+    
+    $validation['exists'] = true;
+    
+    if (!is_readable($json_path)) {
+        $validation['errors'][] = 'organism.json file is not readable';
+        return $validation;
+    }
+    
+    $validation['readable'] = true;
+    
+    $content = file_get_contents($json_path);
+    $json_data = json_decode($content, true);
+    
+    if ($json_data === null) {
+        $validation['errors'][] = 'organism.json contains invalid JSON: ' . json_last_error_msg();
+        return $validation;
+    }
+    
+    $validation['valid_json'] = true;
+    
+    // Handle wrapped JSON (single-level wrapping)
+    if (!isset($json_data['genus']) && !isset($json_data['common_name'])) {
+        $keys = array_keys($json_data);
+        if (count($keys) > 0 && is_array($json_data[$keys[0]])) {
+            $json_data = $json_data[$keys[0]];
+        }
+    }
+    
+    // Check for required fields
+    foreach ($validation['required_fields'] as $field) {
+        if (!isset($json_data[$field]) || empty($json_data[$field])) {
+            $validation['missing_fields'][] = $field;
+        }
+    }
+    
+    $validation['has_required_fields'] = empty($validation['missing_fields']);
+    
+    if (!$validation['has_required_fields']) {
+        $validation['errors'][] = 'Missing required fields: ' . implode(', ', $validation['missing_fields']);
+    }
+    
+    return $validation;
+}
+
 ?>
 
 

@@ -84,6 +84,7 @@ function get_all_organisms_info() {
         // Get organism.json info if exists
         $organism_json = "$organism_data/$organism/organism.json";
         $info = [];
+        $json_validation = validateOrganismJson($organism_json);
         if (file_exists($organism_json)) {
             $json_data = json_decode(file_get_contents($organism_json), true);
             if ($json_data) {
@@ -139,6 +140,7 @@ function get_all_organisms_info() {
             'db_validation' => $db_validation,
             'assembly_validation' => $assembly_validation,
             'fasta_validation' => $fasta_validation,
+            'json_validation' => $json_validation,
             'path' => "$organism_data/$organism"
         ];
     }
@@ -545,6 +547,54 @@ $organisms = get_all_organisms_info();
             </div>
           </div>
 
+
+          <!-- Organism Metadata (organism.json) -->
+          <h6 class="fw-bold mb-2"><i class="fa fa-file-code"></i> Organism Metadata (organism.json)</h6>
+          <div class="alert alert-info small mb-3">
+            <strong>Required:</strong> An organism.json file must exist in the organism directory containing metadata with required fields: genus, species, common_name, and taxon_id.
+          </div>
+          <div class="card mb-3 <?= $data['json_validation']['has_required_fields'] && $data['json_validation']['valid_json'] ? 'border-success' : 'border-danger border-2' ?>">
+            <div class="card-body small">
+              <p class="mb-2">
+                <strong>File Status:</strong>
+                <?php if ($data['json_validation']['exists']): ?>
+                  <span class="badge bg-success"><i class="fa fa-check"></i> Exists</span>
+                <?php else: ?>
+                  <span class="badge bg-danger"><i class="fa fa-times"></i> Missing</span>
+                <?php endif; ?>
+                
+                <?php if ($data['json_validation']['readable']): ?>
+                  <span class="badge bg-success"><i class="fa fa-check"></i> Readable</span>
+                <?php elseif ($data['json_validation']['exists']): ?>
+                  <span class="badge bg-danger"><i class="fa fa-times"></i> Not Readable</span>
+                <?php endif; ?>
+                
+                <?php if ($data['json_validation']['valid_json']): ?>
+                  <span class="badge bg-success"><i class="fa fa-check"></i> Valid JSON</span>
+                <?php elseif ($data['json_validation']['readable']): ?>
+                  <span class="badge bg-danger"><i class="fa fa-times"></i> Invalid JSON</span>
+                <?php endif; ?>
+              </p>
+              
+              <?php if (!empty($data['json_validation']['errors'])): ?>
+                <p class="mb-2"><strong class="text-danger"><i class="fa fa-exclamation-circle"></i> Errors:</strong></p>
+                <ul class="mb-0">
+                  <?php foreach ($data['json_validation']['errors'] as $error): ?>
+                    <li class="text-danger"><?= htmlspecialchars($error) ?></li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php else: ?>
+                <p class="mb-2"><strong><i class="fa fa-check-circle"></i> Required Fields:</strong></p>
+                <ul class="mb-0">
+                  <?php foreach ($data['json_validation']['required_fields'] as $field): ?>
+                    <li>
+                      <span class="badge bg-success"><i class="fa fa-check"></i></span> <?= htmlspecialchars($field) ?>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php endif; ?>
+            </div>
+          </div>
 
           <!-- Actions -->
           <?php if (!$validation['readable']): ?>
