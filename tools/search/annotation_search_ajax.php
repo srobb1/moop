@@ -47,22 +47,15 @@ if (!$is_admin && !$user_has_group_access && !$organism_is_public && !$user_has_
 $search_input = sanitize_search_input($search_keywords, $quoted_search);
 
 // Build database path
-$db = "$organism_data/$organism/genes.sqlite";
+$db = "$organism_data/$organism/organism.sqlite";
 if (!file_exists($db)) {
-    // Try alternative naming
-    $db = "$organism_data/$organism/$organism.genes.sqlite";
-    if (!file_exists($db)) {
-        include_once __DIR__ . '/../moop_functions.php';
-        logError('Database not found for organism', $organism, [
-            'search_term' => $search_keywords,
-            'searched_paths' => [
-                "$organism_data/$organism/genes.sqlite",
-                "$organism_data/$organism/$organism.genes.sqlite"
-            ]
-        ]);
-        echo json_encode(['error' => 'Database not found for organism', 'results' => []]);
-        exit;
-    }
+    include_once __DIR__ . '/../moop_functions.php';
+    logError('Database not found for organism', $organism, [
+        'search_term' => $search_keywords,
+        'searched_path' => $db
+    ]);
+    echo json_encode(['error' => 'Database not found for organism', 'results' => []]);
+    exit;
 }
 
 // Validate database is readable and accessible

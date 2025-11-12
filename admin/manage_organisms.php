@@ -207,10 +207,8 @@ function get_all_organisms_info() {
         
         // Check for database file
         $db_file = null;
-        if (file_exists("$organism_data/$organism/genes.sqlite")) {
-            $db_file = "$organism_data/$organism/genes.sqlite";
-        } elseif (file_exists("$organism_data/$organism/$organism.genes.sqlite")) {
-            $db_file = "$organism_data/$organism/$organism.genes.sqlite";
+        if (file_exists("$organism_data/$organism/organism.sqlite")) {
+            $db_file = "$organism_data/$organism/organism.sqlite";
         }
         
         $has_db = !is_null($db_file);
@@ -290,7 +288,7 @@ $organisms = get_all_organisms_info();
           <h6 class="fw-bold">Required Structure:</h6>
           <div class="structure-box">
             <i class="fa fa-folder folder-icon"></i> <strong>Genus_species</strong> (e.g., Anoura_caudifer)<br>
-            &nbsp;&nbsp;<i class="fa fa-database db-icon"></i> genes.sqlite or Genus_species.genes.sqlite<br>
+            &nbsp;&nbsp;<i class="fa fa-database db-icon"></i> organism.sqlite<br>
             &nbsp;&nbsp;<i class="fa fa-file file-icon"></i> organism.json<br>
             &nbsp;&nbsp;<i class="fa fa-folder folder-icon"></i> <strong>assembly_name</strong> (e.g., GCA_004027475.1)<br>
             &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.cds.nt.fa (coding sequences)<br>
@@ -305,7 +303,7 @@ $organisms = get_all_organisms_info();
           <ul class="mb-0">
             <li><strong>Organism Directory:</strong> Genus_species_subspecies (underscores separate components)</li>
             <li><strong>Assembly Directory:</strong> Unique assembly identifier (e.g., GCA_004027475.1, assembly_v1)</li>
-            <li><strong>Database File:</strong> genes.sqlite or Genus_species.genes.sqlite</li>
+            <li><strong>Database File:</strong> organism.sqlite</li>
             <li><strong>Organism metadata file:</strong> organism.json</li>
           </ul>
           
@@ -650,7 +648,7 @@ $organisms = get_all_organisms_info();
           <!-- Database File Info -->
           <h6 class="fw-bold mb-2"><i class="fa fa-info-circle"></i> Database File</h6>
           <div class="alert alert-info small mb-3">
-            <strong>Required:</strong> A valid SQLite database file (genes.sqlite or organism_name.genes.sqlite) must exist in the organism directory with read permissions for the web server.
+            <strong>Required:</strong> A valid SQLite database file named <code>organism.sqlite</code> must exist in the organism directory with read permissions for the web server.
           </div>
           <div class="card mb-3">
             <div class="card-body small">
@@ -1284,7 +1282,7 @@ $organisms = get_all_organisms_info();
         <h6 class="fw-bold">Step-by-Step Guide:</h6>
         <ol>
           <li><strong>Create organism directory:</strong> <code>mkdir <?= htmlspecialchars($organism_data) ?>/Genus_species</code></li>
-          <li><strong>Add database file:</strong> Upload or create <code>genes.sqlite</code></li>
+          <li><strong>Add database file:</strong> Upload or create <code>organism.sqlite</code></li>
           <li><strong>Create organism.json:</strong> Add metadata about the organism</li>
           <li><strong>Create assembly directory:</strong> <code>mkdir Genus_species/assembly_name</code></li>
           <li><strong>Upload FASTA files:</strong> Add CDS, protein, transcript, and genome files to the assembly directory</li>

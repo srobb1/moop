@@ -44,7 +44,7 @@ if (!$has_organism_access && !$is_public) {
 }
 
 // Get database path
-$db_path = "$organism_data/$organism_name/$organism_name.genes.sqlite";
+$db_path = "$organism_data/$organism_name/organism.sqlite";
 
 if (!file_exists($db_path)) {
     die("Error: Database not found for organism '$organism_name'.");

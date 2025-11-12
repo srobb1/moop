@@ -25,7 +25,7 @@ if (file_exists($organism_json_path)) {
 }
 
 // Use standardized database naming
-$db_path = "$organism_data/$organism_name/$organism_name.genes.sqlite";
+$db_path = "$organism_data/$organism_name/organism.sqlite";
 
 // TO DO: we are building a reports page to list all organisms that do not have a sqlite file. add that info to the message.
 // TO DO: also add this error to MOOP system logging. 
