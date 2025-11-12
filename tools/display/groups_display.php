@@ -179,7 +179,7 @@ if (!is_public_group($group_name)) {
                   $image_file = "$organism.jpg";
                 ?>
                 <div class="col-md-6 col-lg-4">
-                  <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism) ?>" 
+                  <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
                      class="text-decoration-none">
                     <div class="card h-100 shadow-sm organism-card">
                       <div class="card-body text-center">

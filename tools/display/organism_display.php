@@ -4,6 +4,7 @@ include_once __DIR__ . '/../../includes/access_control.php';
 // Get organism name from query parameter
 $organism_name = $_GET['organism'] ?? '';
 $parent_uniquename = $_GET['parent'] ?? '';
+$group_name = $_GET['group'] ?? '';
 
 if (empty($organism_name)) {
     header("Location: /$site/index.php");
@@ -59,6 +60,11 @@ if (!$has_organism_access && !$is_public) {
 <div class="container mt-5">
   <!-- Navigation Buttons -->
   <div class="mb-3">
+    <?php if (!empty($group_name)): ?>
+      <a href="/<?= $site ?>/tools/display/groups_display.php?group=<?= urlencode($group_name) ?>" class="btn btn-secondary">
+        <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($group_name) ?>
+      </a>
+    <?php endif; ?>
     <?php if (!empty($parent_uniquename)): ?>
       <a href="/<?= $site ?>/tools/display/parent_display.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($parent_uniquename) ?>" class="btn btn-secondary">
         <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($parent_uniquename) ?>
