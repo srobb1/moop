@@ -75,10 +75,12 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_metadata' && isset($_P
     $species = $_POST['species'] ?? '';
     $common_name = $_POST['common_name'] ?? '';
     $taxon_id = $_POST['taxon_id'] ?? '';
+    $images_json = $_POST['images_json'] ?? '[]';
+    $html_p_json = $_POST['html_p_json'] ?? '[]';
     
     // Validate inputs
     if (empty($genus) || empty($species) || empty($common_name) || empty($taxon_id)) {
-        echo json_encode(['success' => false, 'message' => 'All fields are required']);
+        echo json_encode(['success' => false, 'message' => 'All required fields must be filled']);
         exit;
     }
     
@@ -92,6 +94,13 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_metadata' && isset($_P
     $organism_dir = $all_organisms[$organism]['path'];
     $organism_json_path = $organism_dir . '/organism.json';
     
+    // Parse JSON fields
+    $images = json_decode($images_json, true);
+    $html_p = json_decode($html_p_json, true);
+    
+    if (!is_array($images)) $images = [];
+    if (!is_array($html_p)) $html_p = [];
+    
     // Build the metadata array
     $metadata = [
         'genus' => $genus,
@@ -99,6 +108,16 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_metadata' && isset($_P
         'common_name' => $common_name,
         'taxon_id' => $taxon_id
     ];
+    
+    // Add images if provided
+    if (!empty($images)) {
+        $metadata['images'] = $images;
+    }
+    
+    // Add html paragraphs if provided
+    if (!empty($html_p)) {
+        $metadata['html_p'] = $html_p;
+    }
     
     // If file already exists, merge with existing data to preserve other fields
     if (file_exists($organism_json_path) && is_readable($organism_json_path)) {
@@ -111,7 +130,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_metadata' && isset($_P
                     $existing = $existing[$keys[0]];
                 }
             }
-            // Merge, keeping other fields but updating required ones
+            // Merge, keeping other fields but updating required ones and images/html_p
             $metadata = array_merge($existing, $metadata);
         }
     }
@@ -758,7 +777,10 @@ $organisms = get_all_organisms_info();
           <h6 class="fw-bold mb-2"><i class="fa fa-edit"></i> Metadata Editor</h6>
           <form id="metadataForm<?= htmlspecialchars($organism) ?>" class="metadata-form">
             <input type="hidden" name="organism" value="<?= $org_safe ?>">
+            <input type="hidden" name="images_json" id="images-json-<?= htmlspecialchars($organism) ?>">
+            <input type="hidden" name="html_p_json" id="html-p-json-<?= htmlspecialchars($organism) ?>">
             
+            <!-- Basic Fields -->
             <div class="mb-3">
               <label for="genus<?= htmlspecialchars($organism) ?>" class="form-label">Genus <span class="text-danger">*</span></label>
               <input type="text" class="form-control" id="genus<?= htmlspecialchars($organism) ?>" name="genus" 
@@ -786,6 +808,67 @@ $organisms = get_all_organisms_info();
                      value="<?= htmlspecialchars($data['info']['taxon_id'] ?? '') ?>" required>
               <small class="text-muted">NCBI taxonomy ID, e.g., 27642</small>
             </div>
+
+            <hr class="my-4">
+
+            <!-- Images Section -->
+            <h5 class="mb-3"><i class="fa fa-image"></i> Images</h5>
+            <div id="images-container-<?= htmlspecialchars($organism) ?>">
+              <?php 
+                $images = $data['info']['images'] ?? [['file' => '', 'caption' => '']];
+                foreach ($images as $idx => $image): 
+              ?>
+                <div class="image-item" data-index="<?= $idx ?>" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
+                  <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataImage('<?= $org_safe ?>', <?= $idx ?>)" style="float: right;">Remove</button>
+                  <div class="form-group mb-3">
+                    <label>Image File</label>
+                    <input type="text" class="form-control image-file" value="<?= htmlspecialchars($image['file'] ?? '') ?>" placeholder="e.g., organism_image.jpg">
+                    <small class="text-muted">Place images in /moop/images/ directory</small>
+                  </div>
+                  <div class="form-group">
+                    <label>Caption (HTML allowed)</label>
+                    <textarea class="form-control image-caption" rows="2"><?= htmlspecialchars($image['caption'] ?? '') ?></textarea>
+                  </div>
+                </div>
+              <?php endforeach; ?>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary mb-4" onclick="addMetadataImage('<?= $org_safe ?>')">
+              <i class="fa fa-plus"></i> Add Image
+            </button>
+
+            <!-- HTML Paragraphs Section -->
+            <h5 class="mb-3"><i class="fa fa-paragraph"></i> HTML Paragraphs</h5>
+            <div id="paragraphs-container-<?= htmlspecialchars($organism) ?>">
+              <?php 
+                $paragraphs = $data['info']['html_p'] ?? [['text' => '', 'style' => '', 'class' => '']];
+                foreach ($paragraphs as $idx => $para): 
+              ?>
+                <div class="paragraph-item" data-index="<?= $idx ?>" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
+                  <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataParagraph('<?= $org_safe ?>', <?= $idx ?>)" style="float: right;">Remove</button>
+                  <div class="form-group mb-3">
+                    <label>Text (HTML allowed)</label>
+                    <textarea class="form-control para-text" rows="4"><?= htmlspecialchars($para['text'] ?? '') ?></textarea>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label>CSS Style</label>
+                        <input type="text" class="form-control para-style" value="<?= htmlspecialchars($para['style'] ?? '') ?>" placeholder="e.g., color: red;">
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label>CSS Class</label>
+                        <input type="text" class="form-control para-class" value="<?= htmlspecialchars($para['class'] ?? '') ?>" placeholder="e.g., lead">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <?php endforeach; ?>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary mb-4" onclick="addMetadataParagraph('<?= $org_safe ?>')">
+              <i class="fa fa-plus"></i> Add Paragraph
+            </button>
 
             <div id="saveResult<?= htmlspecialchars($organism) ?>"></div>
 
