@@ -138,12 +138,17 @@ if (!$has_organism_access && !$is_public) {
     // Determine which image to display
     $show_image = false;
     $image_src = '';
+    $image_caption = '';
+    $image_caption_link = '';
     $image_alt = htmlspecialchars($organism_info['common_name'] ?? $organism_name);
     
     // Check if organism has a custom image
     if (!empty($organism_info['images']) && is_array($organism_info['images'])) {
       $show_image = true;
       $image_src = "/$images_path/" . htmlspecialchars($organism_info['images'][0]['file']);
+      if (!empty($organism_info['images'][0]['caption'])) {
+        $image_caption = $organism_info['images'][0]['caption'];
+      }
     } 
     // Fall back to NCBI taxonomy image if taxon_id is available
     elseif (!empty($organism_info['taxon_id'])) {
@@ -151,6 +156,8 @@ if (!$has_organism_access && !$is_public) {
       if (file_exists($ncbi_image_file)) {
         $show_image = true;
         $image_src = "/moop/images/ncbi_taxonomy/" . $organism_info['taxon_id'] . ".jpg";
+        $image_caption = "Image from NCBI Taxonomy";
+        $image_caption_link = "https://www.ncbi.nlm.nih.gov/datasets/taxonomy/" . htmlspecialchars($organism_info['taxon_id']);
       }
     }
     ?>
@@ -161,10 +168,16 @@ if (!$has_organism_access && !$is_public) {
           <img src="<?= $image_src ?>" 
                class="card-img-top" 
                alt="<?= $image_alt ?>">
-          <?php if (!empty($organism_info['images']) && !empty($organism_info['images'][0]['caption'])): ?>
+          <?php if (!empty($image_caption)): ?>
             <div class="card-body">
               <p class="card-text small text-muted">
-                <?= $organism_info['images'][0]['caption'] ?>
+                <?php if (!empty($image_caption_link)): ?>
+                  <a href="<?= $image_caption_link ?>" target="_blank" class="text-decoration-none">
+                    <?= $image_caption ?> <i class="fa fa-external-link-alt fa-xs"></i>
+                  </a>
+                <?php else: ?>
+                  <?= $image_caption ?>
+                <?php endif; ?>
               </p>
             </div>
           <?php endif; ?>
