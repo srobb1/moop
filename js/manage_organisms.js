@@ -11,7 +11,7 @@ function fixDatabasePermissions(event, organism) {
     
     button.disabled = true;
     button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Fixing...';
-    resultDiv.style.display = 'none';
+    resultDiv.classList.add('d-none');
     
     fetch('manage_organisms.php', {
         method: 'POST',
@@ -32,7 +32,7 @@ function fixDatabasePermissions(event, organism) {
         if (data.command) {
             html += '<div class="alert alert-info mt-2 small">';
             html += '<strong>Run this command on the server:</strong><br>';
-            html += '<code class="text-break">' + data.command + '</code><br>';
+            html += '<code class="text-break">' + escapeHtml(data.command) + '</code><br>';
             html += '<small class="mt-2 d-block text-muted">After running the command, refresh this page to verify the fix.</small>';
             html += '</div>';
         }
@@ -48,13 +48,13 @@ function fixDatabasePermissions(event, organism) {
         }
         
         resultDiv.innerHTML = html;
-        resultDiv.style.display = 'block';
+        resultDiv.classList.remove('d-none');
     })
     .catch(error => {
         button.disabled = false;
         button.innerHTML = '<i class="fa fa-wrench"></i> Fix Permissions';
         resultDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error + '</div>';
-        resultDiv.style.display = 'block';
+        resultDiv.classList.remove('d-none');
     });
 }
 
@@ -131,6 +131,25 @@ function saveMetadata(event, organism) {
         let html = '<div class="alert ' + alertClass + ' mt-3">';
         html += '<strong>' + (response.success ? '✓ Success!' : '✗ Failed!') + '</strong><br>';
         html += '<p>' + response.message + '</p>';
+        
+        if (response.error) {
+            html += '<p class="mt-2 mb-2"><strong>Current Status:</strong></p>';
+            html += '<ul class="mb-3">';
+            html += '<li>File owner: <code>' + escapeHtml(response.error.owner) + '</code></li>';
+            html += '<li>Current permissions: <code>' + response.error.perms + '</code></li>';
+            html += '<li>Web server user: <code>' + escapeHtml(response.error.web_user) + '</code></li>';
+            if (response.error.web_group) {
+                html += '<li>Web server group: <code>' + escapeHtml(response.error.web_group) + '</code></li>';
+            }
+            html += '</ul>';
+            
+            html += '<p><strong>To Fix:</strong> Run this command on the server:</p>';
+            html += '<div class="bg-light p-2 rounded border">';
+            html += '<code class="text-break">' + escapeHtml(response.error.command) + '</code>';
+            html += '</div>';
+            html += '<p class="small text-muted mt-2">After running the command, try saving again.</p>';
+        }
+        
         html += '</div>';
         
         if (response.success) {
@@ -151,6 +170,17 @@ function saveMetadata(event, organism) {
         button.innerHTML = '<i class="fa fa-save"></i> Save Metadata';
         resultDiv.innerHTML = '<div class="alert alert-danger mt-3">Error: ' + error + '</div>';
     });
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 function addMetadataImage(organism) {
@@ -238,19 +268,19 @@ function renameAssemblyDirectory(event, organism, safeAsmId) {
     
     if (!oldDir || !newDir) {
         resultDiv.innerHTML = '<div class="alert alert-warning">Please select both current and new directory names</div>';
-        resultDiv.style.display = 'block';
+        resultDiv.classList.remove('d-none');
         return;
     }
     
     if (oldDir === newDir) {
         resultDiv.innerHTML = '<div class="alert alert-warning">Current and new names are the same</div>';
-        resultDiv.style.display = 'block';
+        resultDiv.classList.remove('d-none');
         return;
     }
     
     button.disabled = true;
     button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Renaming...';
-    resultDiv.style.display = 'none';
+    resultDiv.classList.add('d-none');
     
     fetch('manage_organisms.php', {
         method: 'POST',
@@ -273,7 +303,7 @@ function renameAssemblyDirectory(event, organism, safeAsmId) {
         if (data.command) {
             html += '<div class="alert alert-info mt-2 small">';
             html += '<strong>Run this command on the server:</strong><br>';
-            html += '<code class="text-break">' + data.command + '</code><br>';
+            html += '<code class="text-break">' + escapeHtml(data.command) + '</code><br>';
             html += '<small class="mt-2 d-block text-muted">After running the command, refresh this page to verify the fix.</small>';
             html += '</div>';
         }
@@ -291,13 +321,13 @@ function renameAssemblyDirectory(event, organism, safeAsmId) {
         }
         
         resultDiv.innerHTML = html;
-        resultDiv.style.display = 'block';
+        resultDiv.classList.remove('d-none');
     })
     .catch(error => {
         button.disabled = false;
         button.innerHTML = '<i class="fa fa-exchange-alt"></i> Rename';
         resultDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error + '</div>';
-        resultDiv.style.display = 'block';
+        resultDiv.classList.remove('d-none');
     });
 }
 
@@ -310,7 +340,7 @@ function deleteAssemblyDirectory(event, organism, safeAsmId) {
     
     if (!dirToDelete) {
         resultDiv.innerHTML = '<div class="alert alert-warning">Please select a directory to delete</div>';
-        resultDiv.style.display = 'block';
+        resultDiv.classList.remove('d-none');
         return;
     }
     
@@ -320,7 +350,7 @@ function deleteAssemblyDirectory(event, organism, safeAsmId) {
     
     button.disabled = true;
     button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Deleting...';
-    resultDiv.style.display = 'none';
+    resultDiv.classList.add('d-none');
     
     fetch('manage_organisms.php', {
         method: 'POST',
@@ -342,7 +372,7 @@ function deleteAssemblyDirectory(event, organism, safeAsmId) {
         if (data.command) {
             html += '<div class="alert alert-info mt-2 small">';
             html += '<strong>Web server lacks permissions. Run this command on the server:</strong><br>';
-            html += '<code class="text-break">' + data.command + '</code><br>';
+            html += '<code class="text-break">' + escapeHtml(data.command) + '</code><br>';
             html += '<small class="mt-2 d-block text-muted">After running the command, refresh this page to verify the deletion.</small>';
             html += '</div>';
         }
@@ -359,12 +389,23 @@ function deleteAssemblyDirectory(event, organism, safeAsmId) {
         }
         
         resultDiv.innerHTML = html;
-        resultDiv.style.display = 'block';
+        resultDiv.classList.remove('d-none');
     })
     .catch(error => {
         button.disabled = false;
         button.innerHTML = '<i class="fa fa-trash-alt"></i> Delete Directory';
         resultDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error + '</div>';
-        resultDiv.style.display = 'block';
+        resultDiv.classList.remove('d-none');
     });
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
 }

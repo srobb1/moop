@@ -1528,6 +1528,7 @@ function validateOrganismJson($json_path) {
     $validation = [
         'exists' => false,
         'readable' => false,
+        'writable' => false,
         'valid_json' => false,
         'has_required_fields' => false,
         'required_fields' => ['genus', 'species', 'common_name', 'taxon_id'],
@@ -1548,6 +1549,7 @@ function validateOrganismJson($json_path) {
     }
     
     $validation['readable'] = true;
+    $validation['writable'] = is_writable($json_path);
     
     $content = file_get_contents($json_path);
     $json_data = json_decode($content, true);

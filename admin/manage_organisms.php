@@ -144,7 +144,16 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_metadata' && isset($_P
     }
     
     if (@file_put_contents($organism_json_path, $json_string) === false) {
-        echo json_encode(['success' => false, 'message' => 'Failed to write organism.json. Check file permissions.']);
+        $write_error = getFileWriteError($organism_json_path);
+        if ($write_error) {
+            echo json_encode([
+                'success' => false, 
+                'message' => 'File not writable',
+                'error' => $write_error
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to write organism.json file.']);
+        }
         exit;
     }
     
@@ -374,7 +383,8 @@ $organisms = get_all_organisms_info();
         <div class="mb-0">
           <h6 class="fw-bold mb-2"><i class="fa fa-file-code"></i> Metadata Status</h6>
           <p class="mb-2">
-            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete</button> - organism.json exists with all required fields
+            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete</button> - organism.json exists with all required fields and is writable
+            <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-lock"></i> Not Writable</button> - File has all required data but is not writable by web server
             <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Missing</button> - organism.json file does not exist
             <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-lock"></i> Unreadable</button> - File exists but cannot be read
             <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Invalid JSON</button> - File exists but contains invalid JSON
@@ -517,9 +527,13 @@ $organisms = get_all_organisms_info();
                <td>
                  <?php 
                    $json_val = $data['json_validation'];
-                   if ($json_val['exists'] && $json_val['readable'] && $json_val['valid_json'] && $json_val['has_required_fields']): ?>
+                   if ($json_val['exists'] && $json_val['readable'] && $json_val['valid_json'] && $json_val['has_required_fields'] && $json_val['writable']): ?>
                      <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#metadataModal<?= htmlspecialchars($organism) ?>">
                        <i class="fa fa-check-circle"></i> Complete
+                     </button>
+                   <?php elseif ($json_val['exists'] && $json_val['readable'] && $json_val['valid_json'] && $json_val['has_required_fields'] && !$json_val['writable']): ?>
+                     <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#metadataModal<?= htmlspecialchars($organism) ?>">
+                       <i class="fa fa-lock"></i> Not Writable
                      </button>
                    <?php elseif (!$json_val['exists']): ?>
                      <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#metadataModal<?= htmlspecialchars($organism) ?>">
@@ -729,6 +743,39 @@ $organisms = get_all_organisms_info();
           </div>
 
 
+          <!-- Assembly Validation (if issues detected) -->
+          <?php if ($assembly_validation): ?>
+            <h6 class="fw-bold mb-2"><i class="fa fa-folder"></i> Assembly Validation</h6>
+            <div class="alert alert-info small mb-3">
+              <strong>Required:</strong> For each genome record in the database, at least one directory must exist in the organism folder with a name matching either the <code>genome_name</code> or <code>genome_accession</code> value from the database. This links the filesystem assembly directories to the database genome records.
+            </div>
+            <div class="card mb-3 <?= $assembly_validation['valid'] ? 'border-success' : 'border-danger border-2' ?>">
+              <div class="card-body small">
+                <?php if ($assembly_validation['valid'] && empty($assembly_validation['mismatches'])): ?>
+                  <p class="mb-0"><span class="badge bg-success"><i class="fa fa-check"></i></span> All assembly directories match database records</p>
+                <?php else: ?>
+                  <p class="mb-2"><strong class="text-danger"><i class="fa fa-exclamation-circle"></i> Assembly Issues Found:</strong></p>
+                  <p class="mb-2 text-danger"><small>One or more genome records in the database do not have corresponding directories in the organism folder. Each genome must have a matching directory.</small></p>
+                  <ul class="mb-0">
+                    <?php if (!empty($assembly_validation['mismatches'])): ?>
+                      <?php foreach ($assembly_validation['mismatches'] as $mismatch): ?>
+                        <li class="mb-2">
+                          <span class="text-danger"><strong><?= htmlspecialchars($mismatch['type'] === 'missing_directory' ? 'Missing Directory' : 'Name Mismatch') ?>:</strong></span>
+                          <br>
+                          <?php if ($mismatch['type'] === 'missing_directory'): ?>
+                            <small class="text-muted">No directory found matching genome_name "<?= htmlspecialchars($mismatch['genome_name']) ?>" or genome_accession "<?= htmlspecialchars($mismatch['genome_accession']) ?>". The genome record in the database has no corresponding assembly directory.</small>
+                          <?php else: ?>
+                            <small class="text-muted">Directory "<?= htmlspecialchars($mismatch['found_directory']) ?>" exists but doesn't match genome_name "<?= htmlspecialchars($mismatch['genome_name']) ?>" or genome_accession "<?= htmlspecialchars($mismatch['genome_accession']) ?>". You can rename the directory to fix this.</small>
+                          <?php endif; ?>
+                        </li>
+                      <?php endforeach; ?>
+                    <?php endif; ?>
+                  </ul>
+                <?php endif; ?>
+              </div>
+            </div>
+          <?php endif; ?>
+
           <!-- Actions -->
           <?php if (!$validation['readable']): ?>
             <div class="card border-warning">
@@ -800,6 +847,15 @@ $organisms = get_all_organisms_info();
                   <strong>Readable:</strong> <span class="badge bg-success"><i class="fa fa-check"></i> Yes</span>
                 <?php elseif ($json_val['exists']): ?>
                   <strong>Readable:</strong> <span class="badge bg-danger"><i class="fa fa-times"></i> No (Permission denied)</span>
+                <?php endif; ?>
+              </p>
+              <p class="mb-2">
+                <?php if ($json_val['readable']): ?>
+                  <?php if ($json_val['writable']): ?>
+                    <strong>Writable:</strong> <span class="badge bg-success"><i class="fa fa-check"></i> Yes</span>
+                  <?php else: ?>
+                    <strong>Writable:</strong> <span class="badge bg-warning"><i class="fa fa-lock"></i> No (Read-only)</span>
+                  <?php endif; ?>
                 <?php endif; ?>
               </p>
               <p class="mb-0">
