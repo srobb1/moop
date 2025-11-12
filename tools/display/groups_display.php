@@ -1,5 +1,6 @@
 <?php
 include_once __DIR__ . '/../../includes/access_control.php';
+include_once __DIR__ . '/../moop_functions.php';
 
 // Get the group name from query parameter
 $group_name = $_GET['group'] ?? '';
@@ -17,11 +18,7 @@ if (file_exists($group_descriptions_file)) {
 }
 
 // Load organism assembly groups
-$groups_file = "$metadata_path/organism_assembly_groups.json";
-$groups_data = [];
-if (file_exists($groups_file)) {
-    $groups_data = json_decode(file_get_contents($groups_file), true);
-}
+$group_data = getGroupData();
 
 // Find the description for this group
 $group_info = null;
@@ -32,22 +29,8 @@ foreach ($group_descriptions as $desc) {
     }
 }
 
-// Find all organisms that belong to this group
-$group_organisms = [];
-foreach ($groups_data as $data) {
-    if (in_array($group_name, $data['groups'])) {
-        $organism = $data['organism'];
-        $assembly = $data['assembly'];
-        
-        if (!isset($group_organisms[$organism])) {
-            $group_organisms[$organism] = [];
-        }
-        $group_organisms[$organism][] = $assembly;
-    }
-}
-
-// Sort organisms alphabetically
-ksort($group_organisms);
+// Get organisms in this group that user has access to
+$group_organisms = getAccessibleOrganismsInGroup($group_name, $group_data);
 
 // Access control: Check if user has access to this group
 // Groups with public assemblies are accessible to everyone, others require proper access

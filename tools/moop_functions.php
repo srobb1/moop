@@ -1173,6 +1173,54 @@ function getPublicGroupCards($group_data) {
     return $public_groups;
 }
 
+/**
+ * Filter organisms in a group to only those with at least one accessible assembly
+ * Respects user permissions for assembly access
+ * 
+ * @param string $group_name The group name to filter
+ * @param array $group_data Array of organism/assembly/groups data
+ * @return array Filtered array of organism => [accessible_assemblies]
+ */
+function getAccessibleOrganismsInGroup($group_name, $group_data) {
+    $group_organisms = [];
+    
+    // Find all organisms/assemblies in this group
+    foreach ($group_data as $data) {
+        if (in_array($group_name, $data['groups'])) {
+            $organism = $data['organism'];
+            $assembly = $data['assembly'];
+            
+            if (!isset($group_organisms[$organism])) {
+                $group_organisms[$organism] = [];
+            }
+            $group_organisms[$organism][] = $assembly;
+        }
+    }
+    
+    // Filter: only keep organisms with at least one accessible assembly
+    $accessible_organisms = [];
+    foreach ($group_organisms as $organism => $assemblies) {
+        $has_accessible_assembly = false;
+        
+        foreach ($assemblies as $assembly) {
+            // Check if user has access to this specific assembly
+            if (has_assembly_access($organism, $assembly)) {
+                $has_accessible_assembly = true;
+                break;
+            }
+        }
+        
+        if ($has_accessible_assembly) {
+            $accessible_organisms[$organism] = $assemblies;
+        }
+    }
+    
+    // Sort organisms alphabetically
+    ksort($accessible_organisms);
+    
+    return $accessible_organisms;
+}
+
 ?>
 
 
