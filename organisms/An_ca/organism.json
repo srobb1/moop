@@ -1,0 +1,17 @@
+{
+    "genus": "Anoura caudifer",
+    "species": "Anoura caudifer",
+    "subclassification": {
+        "type": "",
+        "value": ""
+    },
+    "taxon_id": "27642",
+    "common_name": "Tailed Tailless Bat",
+    "genome_fasta": "Anoura_caudifer/Anoura_caudifer.genome.fa",
+    "protein_fasta": "Anoura_caudifer/Anoura_caudifer.protein.aa.fa",
+    "cds_fasta": "Anoura_caudifer/Anoura_caudifer.cds.nt.fa",
+    "transcript_fasta": "Anoura_caudifer/Anoura_caudifer.transcript.nt.fa",
+    "image": "Anoura_caudifer.jpg",
+    "image_src": "https://commons.wikimedia.org/wiki/File:Anoura_caudifer_164090981.jpg",
+    "text": "<p>The <strong>tailed tailless bat</strong> is one of the smaller bat species, with a total head and body length of 4.7 to 7.0 cm (1.9 to 2.8 in), and weighing just 8.5 to 13 g (0.30 to 0.46 oz). It has silky, dark-brown hair covering the body and parts of the wings and upper arms. Some individuals have paler, often reddish, patches on the upper back, and extending onto the back of the neck and head. The hairless parts of the wing membranes are dark brown or black in color.</p><p>The head is relatively long and narrow, and the tongue is long and extensible, reaching up to 3 cm (1.2 in). A small, narrow, nose-leaf is found on the upper lip, which is otherwise smooth. Compared with some other bats, the ears are relatively small and widely separated, and lack an antitragus. As its name implies, the tailed tailless bat does normally have a tail, although this is very short, only 3 to 7 mm (0.1 to 0.3 in) in length, and does not reach beyond the edge of the uropatagium (membrane between the legs), in which it is embedded. Some individuals, however, have no tail at all, and these were once thought to represent a different species.</p><p><a href='https://en.wikipedia.org/wiki/Tailed_tailless_bat'>Wikipedia</a></p>"
+}

@@ -339,47 +339,68 @@ $organisms = get_all_organisms_info();
 
   <!-- Legend Box -->
   <div class="card mb-4">
-    <div class="card-header bg-light">
-      <h6 class="mb-0"><i class="fa fa-book"></i> <strong>Legend & Status Guide</strong></h6>
+    <div class="card-header bg-light" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#legendContent" role="button">
+      <h6 class="mb-0">
+        <i class="fa fa-book"></i> <strong>Legend & Status Guide</strong>
+        <i class="fa fa-chevron-down float-end" id="legendChevron"></i>
+      </h6>
     </div>
-    <div class="card-body">
-      <!-- Assemblies Legend -->
-      <div class="mb-4">
-        <h6 class="fw-bold mb-2"><i class="fa fa-folder"></i> Assemblies Status</h6>
-        <p class="mb-2">
-          <span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete</span> - Assembly directory exists with valid FASTA files
-          <br><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Name Mismatch</span> - Directory name doesn't match database genome name
-          <br><span class="badge bg-info"><i class="fa fa-times-circle"></i> Missing Files</span> - Assembly missing required FASTA files
-        </p>
-        <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click an assembly button for detailed information and available tools.</p>
-      </div>
+    <div class="collapse" id="legendContent">
+      <div class="card-body">
+        <!-- Assemblies Legend -->
+        <div class="mb-4">
+          <h6 class="fw-bold mb-2"><i class="fa fa-folder"></i> Assemblies Status</h6>
+          <p class="mb-2">
+            <span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete</span> - Assembly directory exists with valid FASTA files
+            <br><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Name Mismatch</span> - Directory name doesn't match database genome name
+            <br><span class="badge bg-info"><i class="fa fa-times-circle"></i> Missing Files</span> - Assembly missing required FASTA files
+          </p>
+          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click an assembly button for detailed information and available tools.</p>
+        </div>
 
-      <!-- Database Status Legend -->
-      <div class="mb-4">
-        <h6 class="fw-bold mb-2"><i class="fa fa-database"></i> Database Status</h6>
-        <p class="mb-2">
-          <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Ready</button> - Database exists, is readable, and valid
-          <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete</button> - Database valid but has assembly issues
-          <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-lock"></i> Unreadable</button> - Database file exists but web server cannot read it
-          <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Invalid</button> - Database file is corrupted or invalid
-        </p>
-        <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the database status button to view detailed validation information and troubleshooting options.</p>
-      </div>
+        <!-- Database Status Legend -->
+        <div class="mb-4">
+          <h6 class="fw-bold mb-2"><i class="fa fa-database"></i> Database Status</h6>
+          <p class="mb-2">
+            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Ready</button> - Database exists, is readable, and valid
+            <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete</button> - Database valid but has assembly issues
+            <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-lock"></i> Unreadable</button> - Database file exists but web server cannot read it
+            <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Invalid</button> - Database file is corrupted or invalid
+          </p>
+          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the database status button to view detailed validation information and troubleshooting options.</p>
+        </div>
 
-      <!-- Metadata Status Legend -->
-      <div class="mb-0">
-        <h6 class="fw-bold mb-2"><i class="fa fa-file-code"></i> Metadata Status</h6>
-        <p class="mb-2">
-          <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete</button> - organism.json exists with all required fields
-          <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Missing</button> - organism.json file does not exist
-          <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-lock"></i> Unreadable</button> - File exists but cannot be read
-          <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Invalid JSON</button> - File exists but contains invalid JSON
-          <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete</button> - JSON valid but missing required fields
-        </p>
-        <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the metadata status button to edit metadata, add images, and write organism descriptions.</p>
+        <!-- Metadata Status Legend -->
+        <div class="mb-0">
+          <h6 class="fw-bold mb-2"><i class="fa fa-file-code"></i> Metadata Status</h6>
+          <p class="mb-2">
+            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete</button> - organism.json exists with all required fields
+            <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Missing</button> - organism.json file does not exist
+            <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-lock"></i> Unreadable</button> - File exists but cannot be read
+            <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Invalid JSON</button> - File exists but contains invalid JSON
+            <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete</button> - JSON valid but missing required fields
+          </p>
+          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the metadata status button to edit metadata, add images, and write organism descriptions.</p>
+        </div>
       </div>
     </div>
   </div>
+
+  <script>
+    // Legend collapse arrow animation
+    const legendContent = document.getElementById('legendContent');
+    const legendChevron = document.getElementById('legendChevron');
+    
+    legendContent.addEventListener('show.bs.collapse', function() {
+      legendChevron.style.transform = 'rotate(180deg)';
+      legendChevron.style.transition = 'transform 0.3s ease';
+    });
+    
+    legendContent.addEventListener('hide.bs.collapse', function() {
+      legendChevron.style.transform = 'rotate(0deg)';
+      legendChevron.style.transition = 'transform 0.3s ease';
+    });
+  </script>
 
   <!-- Current Organisms Table -->
   <div class="card">
