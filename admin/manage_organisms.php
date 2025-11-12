@@ -66,6 +66,73 @@ if (isset($_POST['action']) && $_POST['action'] === 'delete_assembly' && isset($
     exit;
 }
 
+// Handle AJAX save metadata request
+if (isset($_POST['action']) && $_POST['action'] === 'save_metadata' && isset($_POST['organism'])) {
+    header('Content-Type: application/json');
+    
+    $organism = $_POST['organism'];
+    $genus = $_POST['genus'] ?? '';
+    $species = $_POST['species'] ?? '';
+    $common_name = $_POST['common_name'] ?? '';
+    $taxon_id = $_POST['taxon_id'] ?? '';
+    
+    // Validate inputs
+    if (empty($genus) || empty($species) || empty($common_name) || empty($taxon_id)) {
+        echo json_encode(['success' => false, 'message' => 'All fields are required']);
+        exit;
+    }
+    
+    $all_organisms = get_all_organisms_info();
+    
+    if (!isset($all_organisms[$organism])) {
+        echo json_encode(['success' => false, 'message' => 'Organism not found']);
+        exit;
+    }
+    
+    $organism_dir = $all_organisms[$organism]['path'];
+    $organism_json_path = $organism_dir . '/organism.json';
+    
+    // Build the metadata array
+    $metadata = [
+        'genus' => $genus,
+        'species' => $species,
+        'common_name' => $common_name,
+        'taxon_id' => $taxon_id
+    ];
+    
+    // If file already exists, merge with existing data to preserve other fields
+    if (file_exists($organism_json_path) && is_readable($organism_json_path)) {
+        $existing = json_decode(file_get_contents($organism_json_path), true);
+        if (is_array($existing)) {
+            // Handle wrapped JSON
+            if (!isset($existing['genus']) && !isset($existing['common_name'])) {
+                $keys = array_keys($existing);
+                if (count($keys) > 0 && is_array($existing[$keys[0]])) {
+                    $existing = $existing[$keys[0]];
+                }
+            }
+            // Merge, keeping other fields but updating required ones
+            $metadata = array_merge($existing, $metadata);
+        }
+    }
+    
+    // Write the file
+    $json_string = json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    
+    if ($json_string === false) {
+        echo json_encode(['success' => false, 'message' => 'Failed to encode JSON']);
+        exit;
+    }
+    
+    if (@file_put_contents($organism_json_path, $json_string) === false) {
+        echo json_encode(['success' => false, 'message' => 'Failed to write organism.json. Check file permissions.']);
+        exit;
+    }
+    
+    echo json_encode(['success' => true, 'message' => 'Metadata saved successfully']);
+    exit;
+}
+
 // Get all organisms
 function get_all_organisms_info() {
     global $organism_data, $sequence_types;
@@ -264,6 +331,7 @@ $organisms = get_all_organisms_info();
              <th>Common Name</th>
              <th>Assemblies</th>
              <th>DB Status</th>
+             <th>Metadata Status</th>
              <th>Status</th>
              <th>Path</th>
            </tr>
@@ -361,6 +429,35 @@ $organisms = get_all_organisms_info();
                  <?php else: ?>
                    <span class="text-muted">-</span>
                  <?php endif; ?>
+               </td>
+               <td>
+                 <?php 
+                   $json_val = $data['json_validation'];
+                   if ($json_val['exists'] && $json_val['readable'] && $json_val['valid_json'] && $json_val['has_required_fields']): ?>
+                     <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#metadataModal<?= htmlspecialchars($organism) ?>">
+                       <i class="fa fa-check-circle"></i> Complete
+                     </button>
+                   <?php elseif (!$json_val['exists']): ?>
+                     <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#metadataModal<?= htmlspecialchars($organism) ?>">
+                       <i class="fa fa-times-circle"></i> Missing
+                     </button>
+                   <?php elseif (!$json_val['readable']): ?>
+                     <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#metadataModal<?= htmlspecialchars($organism) ?>">
+                       <i class="fa fa-lock"></i> Unreadable
+                     </button>
+                   <?php elseif (!$json_val['valid_json']): ?>
+                     <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#metadataModal<?= htmlspecialchars($organism) ?>">
+                       <i class="fa fa-times-circle"></i> Invalid JSON
+                     </button>
+                   <?php elseif (!$json_val['has_required_fields']): ?>
+                     <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#metadataModal<?= htmlspecialchars($organism) ?>">
+                       <i class="fa fa-exclamation-triangle"></i> Incomplete
+                     </button>
+                   <?php else: ?>
+                     <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#metadataModal<?= htmlspecialchars($organism) ?>">
+                       <i class="fa fa-exclamation-triangle"></i> Issues
+                     </button>
+                   <?php endif; ?>
                </td>
                <td>
                  <?php if ($data['has_db'] && !empty($data['assemblies'])): ?>
@@ -548,54 +645,6 @@ $organisms = get_all_organisms_info();
           </div>
 
 
-          <!-- Organism Metadata (organism.json) -->
-          <h6 class="fw-bold mb-2"><i class="fa fa-file-code"></i> Organism Metadata (organism.json)</h6>
-          <div class="alert alert-info small mb-3">
-            <strong>Required:</strong> An organism.json file must exist in the organism directory containing metadata with required fields: genus, species, common_name, and taxon_id.
-          </div>
-          <div class="card mb-3 <?= $data['json_validation']['has_required_fields'] && $data['json_validation']['valid_json'] ? 'border-success' : 'border-danger border-2' ?>">
-            <div class="card-body small">
-              <p class="mb-2">
-                <strong>File Status:</strong>
-                <?php if ($data['json_validation']['exists']): ?>
-                  <span class="badge bg-success"><i class="fa fa-check"></i> Exists</span>
-                <?php else: ?>
-                  <span class="badge bg-danger"><i class="fa fa-times"></i> Missing</span>
-                <?php endif; ?>
-                
-                <?php if ($data['json_validation']['readable']): ?>
-                  <span class="badge bg-success"><i class="fa fa-check"></i> Readable</span>
-                <?php elseif ($data['json_validation']['exists']): ?>
-                  <span class="badge bg-danger"><i class="fa fa-times"></i> Not Readable</span>
-                <?php endif; ?>
-                
-                <?php if ($data['json_validation']['valid_json']): ?>
-                  <span class="badge bg-success"><i class="fa fa-check"></i> Valid JSON</span>
-                <?php elseif ($data['json_validation']['readable']): ?>
-                  <span class="badge bg-danger"><i class="fa fa-times"></i> Invalid JSON</span>
-                <?php endif; ?>
-              </p>
-              
-              <?php if (!empty($data['json_validation']['errors'])): ?>
-                <p class="mb-2"><strong class="text-danger"><i class="fa fa-exclamation-circle"></i> Errors:</strong></p>
-                <ul class="mb-0">
-                  <?php foreach ($data['json_validation']['errors'] as $error): ?>
-                    <li class="text-danger"><?= htmlspecialchars($error) ?></li>
-                  <?php endforeach; ?>
-                </ul>
-              <?php else: ?>
-                <p class="mb-2"><strong><i class="fa fa-check-circle"></i> Required Fields:</strong></p>
-                <ul class="mb-0">
-                  <?php foreach ($data['json_validation']['required_fields'] as $field): ?>
-                    <li>
-                      <span class="badge bg-success"><i class="fa fa-check"></i></span> <?= htmlspecialchars($field) ?>
-                    </li>
-                  <?php endforeach; ?>
-                </ul>
-              <?php endif; ?>
-            </div>
-          </div>
-
           <!-- Actions -->
           <?php if (!$validation['readable']): ?>
             <div class="card border-warning">
@@ -619,6 +668,138 @@ $organisms = get_all_organisms_info();
     </div>
   </div>
   <?php endif; ?>
+<?php endforeach; ?>
+
+<!-- Metadata Modals -->
+<?php foreach ($organisms as $organism => $data): ?>
+  <?php 
+    $json_val = $data['json_validation'];
+    $org_safe = htmlspecialchars($organism);
+  ?>
+  <div class="modal fade" id="metadataModal<?= $org_safe ?>" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa fa-file-code"></i> Organism Metadata: <?= $org_safe ?></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Validation Status -->
+          <h6 class="fw-bold mb-2"><i class="fa fa-star"></i> Validation Status</h6>
+          <div class="card mb-3">
+            <div class="card-body">
+              <?php if ($json_val['exists'] && $json_val['readable'] && $json_val['valid_json'] && $json_val['has_required_fields']): ?>
+                <span class="badge bg-success h6"><i class="fa fa-check-circle"></i> Metadata is Complete</span>
+              <?php elseif (!$json_val['exists']): ?>
+                <span class="badge bg-danger h6"><i class="fa fa-times-circle"></i> Metadata File Missing</span>
+                <p class="mt-2 mb-0 text-muted small">The organism.json file does not exist. Click "Create Metadata File" below to create one.</p>
+              <?php else: ?>
+                <span class="badge bg-warning h6"><i class="fa fa-exclamation-triangle"></i> Metadata has Issues</span>
+                <p class="mt-2 mb-0 text-muted small">Please fix the issues listed below.</p>
+              <?php endif; ?>
+            </div>
+          </div>
+
+          <!-- File Status -->
+          <h6 class="fw-bold mb-2"><i class="fa fa-info-circle"></i> File Status</h6>
+          <div class="card mb-3">
+            <div class="card-body small">
+              <p class="mb-2">
+                <?php if ($json_val['exists']): ?>
+                  <strong>Exists:</strong> <span class="badge bg-success"><i class="fa fa-check"></i> Yes</span>
+                <?php else: ?>
+                  <strong>Exists:</strong> <span class="badge bg-danger"><i class="fa fa-times"></i> No</span>
+                <?php endif; ?>
+              </p>
+              <p class="mb-2">
+                <?php if ($json_val['readable']): ?>
+                  <strong>Readable:</strong> <span class="badge bg-success"><i class="fa fa-check"></i> Yes</span>
+                <?php elseif ($json_val['exists']): ?>
+                  <strong>Readable:</strong> <span class="badge bg-danger"><i class="fa fa-times"></i> No (Permission denied)</span>
+                <?php endif; ?>
+              </p>
+              <p class="mb-0">
+                <?php if ($json_val['valid_json']): ?>
+                  <strong>JSON Valid:</strong> <span class="badge bg-success"><i class="fa fa-check"></i> Yes</span>
+                <?php elseif ($json_val['readable']): ?>
+                  <strong>JSON Valid:</strong> <span class="badge bg-danger"><i class="fa fa-times"></i> No (Invalid JSON)</span>
+                <?php endif; ?>
+              </p>
+            </div>
+          </div>
+
+          <!-- Required Fields -->
+          <h6 class="fw-bold mb-2"><i class="fa fa-check-square"></i> Required Fields</h6>
+          <div class="alert alert-info small mb-3">
+            <strong>Required:</strong> All fields must be present and non-empty: genus, species, common_name, taxon_id
+          </div>
+          <div class="card mb-3">
+            <div class="card-body small">
+              <?php if (!empty($json_val['errors'])): ?>
+                <p class="mb-2"><strong class="text-danger"><i class="fa fa-exclamation-circle"></i> Errors:</strong></p>
+                <ul class="mb-0">
+                  <?php foreach ($json_val['errors'] as $error): ?>
+                    <li class="text-danger"><?= htmlspecialchars($error) ?></li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php else: ?>
+                <ul class="mb-0" class="list-unstyled">
+                  <?php foreach ($json_val['required_fields'] as $field): ?>
+                    <li class="mb-1">
+                      <span class="badge bg-success"><i class="fa fa-check"></i></span> <strong><?= htmlspecialchars($field) ?></strong>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php endif; ?>
+            </div>
+          </div>
+
+          <!-- Editor Section -->
+          <h6 class="fw-bold mb-2"><i class="fa fa-edit"></i> Metadata Editor</h6>
+          <form id="metadataForm<?= htmlspecialchars($organism) ?>" class="metadata-form">
+            <input type="hidden" name="organism" value="<?= $org_safe ?>">
+            
+            <div class="mb-3">
+              <label for="genus<?= htmlspecialchars($organism) ?>" class="form-label">Genus <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="genus<?= htmlspecialchars($organism) ?>" name="genus" 
+                     value="<?= htmlspecialchars($data['info']['genus'] ?? '') ?>" required>
+              <small class="text-muted">e.g., Anoura</small>
+            </div>
+
+            <div class="mb-3">
+              <label for="species<?= htmlspecialchars($organism) ?>" class="form-label">Species <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="species<?= htmlspecialchars($organism) ?>" name="species" 
+                     value="<?= htmlspecialchars($data['info']['species'] ?? '') ?>" required>
+              <small class="text-muted">e.g., caudifer</small>
+            </div>
+
+            <div class="mb-3">
+              <label for="common_name<?= htmlspecialchars($organism) ?>" class="form-label">Common Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="common_name<?= htmlspecialchars($organism) ?>" name="common_name" 
+                     value="<?= htmlspecialchars($data['info']['common_name'] ?? '') ?>" required>
+              <small class="text-muted">e.g., Tailed Tailless Bat</small>
+            </div>
+
+            <div class="mb-3">
+              <label for="taxon_id<?= htmlspecialchars($organism) ?>" class="form-label">Taxon ID <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="taxon_id<?= htmlspecialchars($organism) ?>" name="taxon_id" 
+                     value="<?= htmlspecialchars($data['info']['taxon_id'] ?? '') ?>" required>
+              <small class="text-muted">NCBI taxonomy ID, e.g., 27642</small>
+            </div>
+
+            <div id="saveResult<?= htmlspecialchars($organism) ?>"></div>
+
+            <button type="button" class="btn btn-success" onclick="saveMetadata(event, '<?= $org_safe ?>')">
+              <i class="fa fa-save"></i> Save Metadata
+            </button>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 <?php endforeach; ?>
 
 <!-- Assembly Detail Modals -->
@@ -869,208 +1050,10 @@ $organisms = get_all_organisms_info();
   <?php endif; ?>
 <?php endforeach; ?>
 
-<!-- Fix Permissions Script -->
-<script>
-function fixDatabasePermissions(event, organism) {
-    event.preventDefault();
-    
-    const resultDiv = document.getElementById('fixResult' + organism);
-    const button = event.target.closest('button');
-    
-    button.disabled = true;
-    button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Fixing...';
-    resultDiv.style.display = 'none';
-    
-    fetch('manage_organisms.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: 'action=fix_permissions&organism=' + encodeURIComponent(organism)
-    })
-    .then(response => response.json())
-    .then(data => {
-        button.disabled = false;
-        
-        let alertClass = data.success ? 'alert-success' : 'alert-danger';
-        let html = '<div class="alert ' + alertClass + '">';
-        html += '<strong>' + (data.success ? '✓ Success!' : '✗ Failed!') + '</strong><br>';
-        html += '<p>' + data.message + '</p>';
-        
-        if (data.command) {
-            html += '<div class="alert alert-info mt-2 small">';
-            html += '<strong>Run this command on the server:</strong><br>';
-            html += '<code class="text-break">' + data.command + '</code><br>';
-            html += '<small class="mt-2 d-block text-muted">After running the command, refresh this page to verify the fix.</small>';
-            html += '</div>';
-        }
-        
-        html += '</div>';
-        
-        if (data.success) {
-            button.innerHTML = '<i class="fa fa-check"></i> Fixed!';
-            button.classList.remove('btn-warning');
-            button.classList.add('btn-success');
-        } else {
-            button.innerHTML = '<i class="fa fa-wrench"></i> Try Again';
-        }
-        
-        resultDiv.innerHTML = html;
-        resultDiv.style.display = 'block';
-    })
-    .catch(error => {
-        button.disabled = false;
-        button.innerHTML = '<i class="fa fa-wrench"></i> Fix Permissions';
-        resultDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error + '</div>';
-        resultDiv.style.display = 'block';
-    });
-}
 
-function renameAssemblyDirectory(event, organism, safeAsmId) {
-    event.preventDefault();
-    
-    // Use safeAsmId if provided (for assembly modal), otherwise use organism (for db modal)
-    const elementId = safeAsmId || organism;
-    
-    const oldDir = document.getElementById('oldDirName' + elementId).value;
-    const newDir = document.getElementById('newDirName' + elementId).value;
-    const resultDiv = document.getElementById('renameResult' + elementId);
-    const button = event.target;
-    
-    if (!oldDir || !newDir) {
-        resultDiv.innerHTML = '<div class="alert alert-warning">Please select both current and new directory names</div>';
-        resultDiv.style.display = 'block';
-        return;
-    }
-    
-    if (oldDir === newDir) {
-        resultDiv.innerHTML = '<div class="alert alert-warning">Current and new names are the same</div>';
-        resultDiv.style.display = 'block';
-        return;
-    }
-    
-    button.disabled = true;
-    button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Renaming...';
-    resultDiv.style.display = 'none';
-    
-    fetch('manage_organisms.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: 'action=rename_assembly&organism=' + encodeURIComponent(organism) + 
-              '&old_name=' + encodeURIComponent(oldDir) + 
-              '&new_name=' + encodeURIComponent(newDir)
-    })
-    .then(response => response.json())
-    .then(data => {
-        button.disabled = false;
-        
-        let alertClass = data.success ? 'alert-success' : 'alert-danger';
-        let html = '<div class="alert ' + alertClass + '">';
-        html += '<strong>' + (data.success ? '✓ Success!' : '✗ Failed!') + '</strong><br>';
-        html += '<p>' + data.message + '</p>';
-        
-        if (data.command) {
-            html += '<div class="alert alert-info mt-2 small">';
-            html += '<strong>Run this command on the server:</strong><br>';
-            html += '<code class="text-break">' + data.command + '</code><br>';
-            html += '<small class="mt-2 d-block text-muted">After running the command, refresh this page to verify the fix.</small>';
-            html += '</div>';
-        }
-        
-        html += '</div>';
-        
-        if (data.success) {
-            button.innerHTML = '<i class="fa fa-check"></i> Renamed!';
-            button.classList.remove('btn-info');
-            button.classList.add('btn-success');
-            document.getElementById('oldDirName' + elementId).value = '';
-            document.getElementById('newDirName' + elementId).value = '';
-        } else {
-            button.innerHTML = '<i class="fa fa-exchange-alt"></i> Try Again';
-        }
-        
-        resultDiv.innerHTML = html;
-        resultDiv.style.display = 'block';
-    })
-    .catch(error => {
-        button.disabled = false;
-        button.innerHTML = '<i class="fa fa-exchange-alt"></i> Rename';
-        resultDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error + '</div>';
-        resultDiv.style.display = 'block';
-    });
-}
+<- Backwards compatible with existing Organism Management Scripts -->
+<script src="../js/manage_organisms.js"></script>
 
-function deleteAssemblyDirectory(event, organism, safeAsmId) {
-    event.preventDefault();
-    
-    const dirToDelete = document.getElementById('dirToDelete' + safeAsmId).value;
-    const resultDiv = document.getElementById('deleteResult' + safeAsmId);
-    const button = event.target;
-    
-    if (!dirToDelete) {
-        resultDiv.innerHTML = '<div class="alert alert-warning">Please select a directory to delete</div>';
-        resultDiv.style.display = 'block';
-        return;
-    }
-    
-    // Ask for confirmation - this is serious!
-    if (!confirm('⚠️  CAUTION: You are about to permanently delete the directory "' + dirToDelete + '". This action CANNOT be undone!\n\nAre you absolutely sure you want to continue?')) {
-        return;
-    }
-    
-    button.disabled = true;
-    button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Deleting...';
-    resultDiv.style.display = 'none';
-    
-    fetch('manage_organisms.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: 'action=delete_assembly&organism=' + encodeURIComponent(organism) + 
-              '&dir_name=' + encodeURIComponent(dirToDelete)
-    })
-    .then(response => response.json())
-    .then(data => {
-        button.disabled = false;
-        
-        let alertClass = data.success ? 'alert-success' : 'alert-danger';
-        let html = '<div class="alert ' + alertClass + '">';
-        html += '<strong>' + (data.success ? '✓ Deleted!' : '✗ Failed!') + '</strong><br>';
-        html += '<p>' + data.message + '</p>';
-        
-        if (data.command) {
-            html += '<div class="alert alert-info mt-2 small">';
-            html += '<strong>Web server lacks permissions. Run this command on the server:</strong><br>';
-            html += '<code class="text-break">' + data.command + '</code><br>';
-            html += '<small class="mt-2 d-block text-muted">After running the command, refresh this page to verify the deletion.</small>';
-            html += '</div>';
-        }
-        
-        html += '</div>';
-        
-        if (data.success) {
-            button.innerHTML = '<i class="fa fa-check"></i> Deleted!';
-            button.classList.remove('btn-danger');
-            button.classList.add('btn-success');
-            document.getElementById('dirToDelete' + safeAsmId).value = '';
-        } else {
-            button.innerHTML = '<i class="fa fa-trash-alt"></i> Try Again';
-        }
-        
-        resultDiv.innerHTML = html;
-        resultDiv.style.display = 'block';
-    })
-    .catch(error => {
-        button.disabled = false;
-        button.innerHTML = '<i class="fa fa-trash-alt"></i> Delete Directory';
-        resultDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error + '</div>';
-        resultDiv.style.display = 'block';
-    });
-}
-</script>
 
 <!-- Help Modal -->
 <div class="modal fade" id="helpModal" tabindex="-1">
