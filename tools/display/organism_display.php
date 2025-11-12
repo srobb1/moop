@@ -134,13 +134,34 @@ if (!$has_organism_access && !$is_public) {
 
   <!-- Organism Header Section -->
   <div class="row mb-4" id="organismHeader">
-    <?php if (!empty($organism_info['images']) && is_array($organism_info['images'])): ?>
+    <?php 
+    // Determine which image to display
+    $show_image = false;
+    $image_src = '';
+    $image_alt = htmlspecialchars($organism_info['common_name'] ?? $organism_name);
+    
+    // Check if organism has a custom image
+    if (!empty($organism_info['images']) && is_array($organism_info['images'])) {
+      $show_image = true;
+      $image_src = "/$images_path/" . htmlspecialchars($organism_info['images'][0]['file']);
+    } 
+    // Fall back to NCBI taxonomy image if taxon_id is available
+    elseif (!empty($organism_info['taxon_id'])) {
+      $ncbi_image_file = __DIR__ . '/../../images/ncbi_taxonomy/' . $organism_info['taxon_id'] . '.jpg';
+      if (file_exists($ncbi_image_file)) {
+        $show_image = true;
+        $image_src = "/moop/images/ncbi_taxonomy/" . $organism_info['taxon_id'] . ".jpg";
+      }
+    }
+    ?>
+    
+    <?php if ($show_image): ?>
       <div class="col-md-4 mb-3">
         <div class="card shadow-sm">
-          <img src="/<?= $images_path ?>/<?= htmlspecialchars($organism_info['images'][0]['file']) ?>" 
+          <img src="<?= $image_src ?>" 
                class="card-img-top" 
-               alt="<?= htmlspecialchars($organism_info['common_name'] ?? $organism_name) ?>">
-          <?php if (!empty($organism_info['images'][0]['caption'])): ?>
+               alt="<?= $image_alt ?>">
+          <?php if (!empty($organism_info['images']) && !empty($organism_info['images'][0]['caption'])): ?>
             <div class="card-body">
               <p class="card-text small text-muted">
                 <?= $organism_info['images'][0]['caption'] ?>
@@ -151,7 +172,7 @@ if (!$has_organism_access && !$is_public) {
       </div>
     <?php endif; ?>
 
-    <div class="<?= !empty($organism_info['images']) ? 'col-md-8' : 'col-12' ?>">
+    <div class="<?= $show_image ? 'col-md-8' : 'col-12' ?>">
       <div class="card shadow-sm">
         <div class="card-body">
           <h1 class="fw-bold mb-2">
