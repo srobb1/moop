@@ -155,54 +155,59 @@ if (!is_public_group($group_name)) {
   <?php endif; ?>
 
   <!-- Organisms Section -->
-  <div class="mb-5" id="organismsSection">
-    <h2 class="fw-bold mb-4"><i class="fa fa-dna"></i> Organisms in <?= htmlspecialchars($group_name) ?> Group</h2>
-    
-    <?php if (empty($group_organisms)): ?>
-      <div class="alert alert-info">
-        <i class="fa fa-info-circle"></i> No organisms are currently available in this group.
-      </div>
-    <?php else: ?>
-      <div class="row g-4">
-        <?php foreach ($group_organisms as $organism => $assemblies): ?>
-          <?php
-            $organism_json_path = "$organism_data/$organism/organism.json";
-            $organism_info = [];
-            if (file_exists($organism_json_path)) {
-              $organism_info = json_decode(file_get_contents($organism_json_path), true);
-            }
-            $genus = $organism_info['genus'] ?? '';
-            $species = $organism_info['species'] ?? '';
-            $common_name = $organism_info['common_name'] ?? '';
-            $image_file = "$organism.jpg";
-          ?>
-          <div class="col-md-6 col-lg-4">
-            <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism) ?>" 
-               class="text-decoration-none">
-              <div class="card h-100 shadow-sm organism-card">
-                <div class="card-body text-center">
-                  <div class="organism-image-container mb-3">
-                    <img src="/<?= $site ?>/images/<?= htmlspecialchars($image_file) ?>" 
-                         alt="<?= htmlspecialchars($organism) ?>"
-                         class="organism-card-image"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                    <div class="organism-card-icon" style="display: none;">
-                      <i class="fa fa-dna fa-4x text-primary"></i>
+  <div class="row mb-5" id="organismsSection">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h3 class="card-title mb-4">Organisms in <?= htmlspecialchars($group_name) ?> Group</h3>
+          <?php if (empty($group_organisms)): ?>
+            <div class="alert alert-info mb-0">
+              <i class="fa fa-info-circle"></i> No organisms are currently available in this group.
+            </div>
+          <?php else: ?>
+            <div class="row g-3">
+              <?php foreach ($group_organisms as $organism => $assemblies): ?>
+                <?php
+                  $organism_json_path = "$organism_data/$organism/organism.json";
+                  $organism_info = [];
+                  if (file_exists($organism_json_path)) {
+                    $organism_info = json_decode(file_get_contents($organism_json_path), true);
+                  }
+                  $genus = $organism_info['genus'] ?? '';
+                  $species = $organism_info['species'] ?? '';
+                  $common_name = $organism_info['common_name'] ?? '';
+                  $image_file = "$organism.jpg";
+                ?>
+                <div class="col-md-6 col-lg-4">
+                  <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism) ?>" 
+                     class="text-decoration-none">
+                    <div class="card h-100 shadow-sm organism-card">
+                      <div class="card-body text-center">
+                        <div class="organism-image-container mb-3">
+                          <img src="/<?= $site ?>/images/<?= htmlspecialchars($image_file) ?>" 
+                               alt="<?= htmlspecialchars($organism) ?>"
+                               class="organism-card-image"
+                               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                          <div class="organism-card-icon" style="display: none;">
+                            <i class="fa fa-dna fa-4x text-primary"></i>
+                          </div>
+                        </div>
+                        <h5 class="card-title mb-2">
+                          <em><?= htmlspecialchars($genus . ' ' . $species) ?></em>
+                        </h5>
+                        <?php if ($common_name): ?>
+                          <p class="text-muted mb-0"><?= htmlspecialchars($common_name) ?></p>
+                        <?php endif; ?>
+                      </div>
                     </div>
-                  </div>
-                  <h5 class="card-title mb-2">
-                    <em><?= htmlspecialchars($genus . ' ' . $species) ?></em>
-                  </h5>
-                  <?php if ($common_name): ?>
-                    <p class="text-muted mb-0"><?= htmlspecialchars($common_name) ?></p>
-                  <?php endif; ?>
+                  </a>
                 </div>
-              </div>
-            </a>
-          </div>
-        <?php endforeach; ?>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </div>
       </div>
-    <?php endif; ?>
+    </div>
   </div>
 
 </div>
