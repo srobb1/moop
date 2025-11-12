@@ -114,6 +114,36 @@ function is_public_assembly($organism_name, $assembly_name) {
 }
 
 /**
+ * Check if a group has at least one public assembly
+ * 
+ * @param string $group_name The group name
+ * @return bool True if this group contains at least one assembly in Public group
+ */
+if (!function_exists('is_public_group')) {
+function is_public_group($group_name) {
+    global $metadata_path;
+    
+    $groups_file = "$metadata_path/organism_assembly_groups.json";
+    if (!file_exists($groups_file)) {
+        return false;
+    }
+    
+    $groups_data = json_decode(file_get_contents($groups_file), true);
+    if (!$groups_data) {
+        return false;
+    }
+    
+    foreach ($groups_data as $entry) {
+        if (in_array($group_name, $entry['groups']) && in_array('Public', $entry['groups'])) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+}
+
+/**
  * Check if user has access to a specific resource
  * 
  * @param string $required_level Required access level: 'Public', 'Collaborator', 'Admin', or 'ALL'

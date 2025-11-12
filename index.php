@@ -1,5 +1,6 @@
 <?php
 include_once __DIR__ . '/includes/access_control.php';
+include_once __DIR__ . '/tools/moop_functions.php';
 
 $usersFile = $users_file;
 $users = [];
@@ -10,35 +11,8 @@ if (file_exists($usersFile)) {
 // Get visitor IP for display purposes only
 $ip = $visitor_ip;
 
-function get_group_data() {
-    global $metadata_path;
-    $groups_file = "$metadata_path/organism_assembly_groups.json";
-    $groups_data = [];
-    if (file_exists($groups_file)) {
-        $groups_data = json_decode(file_get_contents($groups_file), true);
-    }
-    return $groups_data;
-}
-
-$group_data = get_group_data();
-
-function get_all_cards($group_data) {
-    $cards = [];
-    foreach ($group_data as $data) {
-        foreach ($data['groups'] as $group) {
-            if (!isset($cards[$group])) {
-                $cards[$group] = [
-                    'title' => $group,
-                    'text' => "Explore $group Data",
-                    'link' => 'tools/display/groups_display.php?group=' . urlencode($group)
-                ];
-            }
-        }
-    }
-    return $cards;
-}
-
-$all_cards = get_all_cards($group_data);
+$group_data = getGroupData();
+$all_cards = getAllGroupCards($group_data);
 
 // Determine cards to display based on access_level
 $cards_to_display = [];
@@ -46,9 +20,9 @@ $cards_to_display = [];
 if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {
     $cards_to_display = $all_cards;
 } elseif (is_logged_in()) {
-    if (isset($all_cards['Public'])) {
-        $cards_to_display['Public'] = $all_cards['Public'];
-    }
+    // Logged-in users see: public groups + their permitted organisms
+    $cards_to_display = getPublicGroupCards($group_data);
+    
     foreach (get_user_access() as $organism => $assemblies) {
         if (!isset($cards_to_display[$organism])) {
             // Format organism name: split on underscores, capitalize first word, lowercase rest, italicize
@@ -67,9 +41,8 @@ if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {
         }
     }
 } else {
-    if (isset($all_cards['Public'])) {
-        $cards_to_display['Public'] = $all_cards['Public'];
-    }
+    // Visitors see only groups with public assemblies
+    $cards_to_display = getPublicGroupCards($group_data);
 }
 
 // Load phylogenetic tree data

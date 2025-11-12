@@ -1108,6 +1108,71 @@ function getAccessibleGenomeIds($organism_name, $accessible_assemblies, $db_path
     return array_column($results, 'genome_id');
 }
 
+/**
+ * Get group metadata from organism_assembly_groups.json
+ * 
+ * @return array Array of organism/assembly/groups data
+ */
+function getGroupData() {
+    global $metadata_path;
+    $groups_file = "$metadata_path/organism_assembly_groups.json";
+    $groups_data = [];
+    if (file_exists($groups_file)) {
+        $groups_data = json_decode(file_get_contents($groups_file), true);
+    }
+    return $groups_data;
+}
+
+/**
+ * Get all group cards from metadata
+ * Returns card objects for every group in the system
+ * 
+ * @param array $group_data Array of organism/assembly/groups data
+ * @return array Associative array of group_name => card_info
+ */
+function getAllGroupCards($group_data) {
+    $cards = [];
+    foreach ($group_data as $data) {
+        foreach ($data['groups'] as $group) {
+            if (!isset($cards[$group])) {
+                $cards[$group] = [
+                    'title' => $group,
+                    'text' => "Explore $group Data",
+                    'link' => 'tools/display/groups_display.php?group=' . urlencode($group)
+                ];
+            }
+        }
+    }
+    return $cards;
+}
+
+/**
+ * Get group cards that have at least one public assembly
+ * Returns card objects only for groups containing assemblies in the "Public" group
+ * 
+ * @param array $group_data Array of organism/assembly/groups data
+ * @return array Associative array of group_name => card_info for public groups only
+ */
+function getPublicGroupCards($group_data) {
+    $public_groups = [];
+    
+    // Find all groups that contain at least one public assembly
+    foreach ($group_data as $data) {
+        if (in_array('Public', $data['groups'])) {
+            foreach ($data['groups'] as $group) {
+                if (!isset($public_groups[$group])) {
+                    $public_groups[$group] = [
+                        'title' => $group,
+                        'text' => "Explore $group Data",
+                        'link' => 'tools/display/groups_display.php?group=' . urlencode($group)
+                    ];
+                }
+            }
+        }
+    }
+    return $public_groups;
+}
+
 ?>
 
 

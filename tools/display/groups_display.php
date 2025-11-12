@@ -50,8 +50,8 @@ foreach ($groups_data as $data) {
 ksort($group_organisms);
 
 // Access control: Check if user has access to this group
-// Public group is accessible to everyone, others require proper access
-if ($group_name !== 'Public') {
+// Groups with public assemblies are accessible to everyone, others require proper access
+if (!is_public_group($group_name)) {
     if (!has_access('Collaborator', $group_name)) {
         header("Location: /$site/access_denied.php");
         exit;
