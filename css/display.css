@@ -698,3 +698,82 @@ code {
 .fasta-source-line input[type="radio"] {
   margin: 0;
 }
+
+/* Sequence Type Information Box - for BLAST and sequence tools */
+.sequence-type-info {
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #0d6efd;
+  font-size: 0.9em;
+}
+
+.sequence-type-info small {
+  color: #495057;
+  font-weight: 500;
+}
+
+/* BLAST Results Visualization Styles */
+.blast-visualization {
+  margin-top: 20px;
+}
+
+.blast-hits-table {
+  font-size: 0.9em;
+}
+
+.blast-hits-table tbody tr:hover {
+  background-color: #f8f9fa !important;
+  cursor: pointer;
+}
+
+.blast-identity-bar {
+  min-height: 25px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.blast-coverage-map {
+  background: #fff;
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.blast-subject-stats {
+  background: #fff;
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.evalue-bar {
+  padding: 8px 10px;
+  border-radius: 3px;
+  color: white;
+  font-size: 0.85em;
+}
+
+.blast-alignment-viewer {
+  background: #fff;
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.blast-alignment-viewer pre {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 3px;
+  overflow-x: auto;
+  border: 1px solid #dee2e6;
+}
+
+/* Tooltips for coverage map */
+.blast-coverage-map div[title] {
+  cursor: pointer;
+}
+
+.blast-coverage-map div[title]:hover {
+  opacity: 1 !important;
+}

@@ -35,6 +35,11 @@ $sequence_types = [
     'cds' => [
         'pattern' => 'cds.nt.fa',
         'label' => 'CDS',
+    ],
+    'genome' => [
+        'pattern' => 'genome.fa',
+        'label' => 'GENOME',
     ]
+
 ];
 

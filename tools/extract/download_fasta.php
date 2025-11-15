@@ -19,6 +19,7 @@ $selected_assembly = trim($_POST['selected_assembly'] ?? '');
 include_once __DIR__ . '/../../site_config.php';
 include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../moop_functions.php';
+include_once __DIR__ . '/../blast_functions.php';
 
 // Discard any output from includes
 ob_end_clean();
@@ -140,37 +141,15 @@ if (!empty($sequence_type)) {
         }
     }
     
-    // Extract sequences using blastdbcmd
+    // Extract sequences using blast function
     if (!$download_error) {
-        $cmd = "blastdbcmd -db " . escapeshellarg($fasta_file) . " -entry " . escapeshellarg(implode(',', $uniquenames));
+        $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames);
         
-        $descriptors = [
-            0 => ["pipe", "r"],
-            1 => ["pipe", "w"],
-            2 => ["pipe", "w"],
-        ];
-        
-        $process = proc_open($cmd, $descriptors, $pipes);
-        if (!is_resource($process)) {
-            $download_error = "Failed to execute blastdbcmd.";
+        if (!$extract_result['success']) {
+            $download_error = $extract_result['error'];
             logError($download_error, "download_fasta", ['user' => $_SESSION['username'] ?? 'unknown']);
         } else {
-            fclose($pipes[0]);
-            $content = stream_get_contents($pipes[1]);
-            fclose($pipes[1]);
-            $stderr = stream_get_contents($pipes[2]);
-            fclose($pipes[2]);
-            $return_var = proc_close($process);
-            
-            // Check for errors
-            if ($return_var > 1 || empty(trim($content))) {
-                $download_error = "No sequences found for the requested feature IDs.";
-                logError($download_error, "download_fasta", [
-                    'user' => $_SESSION['username'] ?? 'unknown',
-                    'ids' => implode(', ', array_slice($uniquenames, 0, 5)),
-                    'stderr' => $stderr
-                ]);
-            }
+            $content = $extract_result['content'];
         }
     }
     

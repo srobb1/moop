@@ -1,0 +1,818 @@
+<?php
+/**
+ * BLAST Results Visualizer
+ * Parses BLAST XML/text output and creates interactive visualizations
+ * Displays: summary table, coverage maps, alignment viewer
+ */
+
+/**
+ * Parse BLAST results from XML output
+ * Maintains Hit/HSP hierarchy
+ * 
+ * @param string $blast_xml Raw BLAST XML output
+ * @return array Parsed results with hits array (each hit contains hsps)
+ */
+function parseBlastResults($blast_xml) {
+    $results = [
+        'hits' => [],
+        'query_length' => 0,
+        'query_name' => '',
+        'query_desc' => '',
+        'total_hits' => 0,
+        'error' => ''
+    ];
+    
+    // Parse XML
+    try {
+        $xml = simplexml_load_string($blast_xml);
+        
+        if ($xml === false) {
+            $results['error'] = 'Failed to parse BLAST XML output';
+            return $results;
+        }
+        
+        // Get query info using XPath to handle hyphens in element names
+        $query_len = $xml->xpath('//BlastOutput_query-len');
+        if (!empty($query_len)) {
+            $results['query_length'] = (int)$query_len[0];
+        }
+        
+        $query_id = $xml->xpath('//BlastOutput_query-ID');
+        if (!empty($query_id)) {
+            $results['query_name'] = (string)$query_id[0];
+        }
+        
+        $query_def = $xml->xpath('//BlastOutput_query-def');
+        if (!empty($query_def)) {
+            $results['query_desc'] = (string)$query_def[0];
+        }
+        
+        // Parse each hit using XPath - maintain Hit/HSP hierarchy
+        $iterations = $xml->xpath('//Iteration');
+        foreach ($iterations as $iteration) {
+            $hits = $iteration->xpath('.//Hit');
+            foreach ($hits as $hit_node) {
+                // Get hit info
+                $hit_id = $hit_node->xpath('./Hit_id');
+                $hit_def = $hit_node->xpath('./Hit_def');
+                $hit_len = $hit_node->xpath('./Hit_len');
+                
+                $hit_id_str = !empty($hit_id) ? (string)$hit_id[0] : '';
+                $hit_def_str = !empty($hit_def) ? (string)$hit_def[0] : '';
+                $hit_len_int = !empty($hit_len) ? (int)$hit_len[0] : 0;
+                
+                // Get all HSPs (High-scoring Segment Pairs) for this hit
+                $hsps = $hit_node->xpath('.//Hsp');
+                if (!empty($hsps)) {
+                    $hsps_array = [];
+                    $best_evalue = PHP_FLOAT_MAX;
+                    $cumulative_coverage = [];
+                    
+                    // Process each HSP for this hit
+                    foreach ($hsps as $hsp) {
+                        // Use XPath for HSP elements with hyphens
+                        $identities = $hsp->xpath('./Hsp_identity');
+                        $align_len = $hsp->xpath('./Hsp_align-len');
+                        $evalue = $hsp->xpath('./Hsp_evalue');
+                        $bit_score = $hsp->xpath('./Hsp_bit-score');
+                        $score = $hsp->xpath('./Hsp_score');
+                        $query_from = $hsp->xpath('./Hsp_query-from');
+                        $query_to = $hsp->xpath('./Hsp_query-to');
+                        $hit_from = $hsp->xpath('./Hsp_hit-from');
+                        $hit_to = $hsp->xpath('./Hsp_hit-to');
+                        $qseq = $hsp->xpath('./Hsp_qseq');
+                        $hseq = $hsp->xpath('./Hsp_hseq');
+                        $midline = $hsp->xpath('./Hsp_midline');
+                        
+                        $identities_int = !empty($identities) ? (int)$identities[0] : 0;
+                        $align_len_int = !empty($align_len) ? (int)$align_len[0] : 0;
+                        $evalue_float = !empty($evalue) ? (float)$evalue[0] : 0;
+                        $hit_from_int = !empty($hit_from) ? (int)$hit_from[0] : 0;
+                        $hit_to_int = !empty($hit_to) ? (int)$hit_to[0] : 0;
+                        
+                        // Track best (smallest) evalue
+                        if ($evalue_float < $best_evalue) {
+                            $best_evalue = $evalue_float;
+                        }
+                        
+                        // Track coverage regions for cumulative calculation
+                        $cumulative_coverage[] = [
+                            'from' => min($hit_from_int, $hit_to_int),
+                            'to' => max($hit_from_int, $hit_to_int)
+                        ];
+                        
+                        // Count gaps and similarities with gap lengths
+                        $query_seq = !empty($qseq) ? (string)$qseq[0] : '';
+                        $hit_seq = !empty($hseq) ? (string)$hseq[0] : '';
+                        $midline_str = !empty($midline) ? (string)$midline[0] : '';
+                        
+                        // Count gaps and track individual gap lengths
+                        $gap_count = 0;
+                        $gap_lengths = [];
+                        
+                        // Find gaps in query sequence
+                        $in_gap = false;
+                        $gap_len = 0;
+                        for ($i = 0; $i < strlen($query_seq); $i++) {
+                            if ($query_seq[$i] === '-') {
+                                if (!$in_gap) {
+                                    $in_gap = true;
+                                    $gap_len = 1;
+                                } else {
+                                    $gap_len++;
+                                }
+                            } else {
+                                if ($in_gap) {
+                                    $gap_lengths[] = $gap_len;
+                                    $gap_count += $gap_len;
+                                    $in_gap = false;
+                                }
+                            }
+                        }
+                        if ($in_gap) {
+                            $gap_lengths[] = $gap_len;
+                            $gap_count += $gap_len;
+                        }
+                        
+                        // Find gaps in hit sequence
+                        $in_gap = false;
+                        $gap_len = 0;
+                        for ($i = 0; $i < strlen($hit_seq); $i++) {
+                            if ($hit_seq[$i] === '-') {
+                                if (!$in_gap) {
+                                    $in_gap = true;
+                                    $gap_len = 1;
+                                } else {
+                                    $gap_len++;
+                                }
+                            } else {
+                                if ($in_gap) {
+                                    $gap_lengths[] = $gap_len;
+                                    $gap_count += $gap_len;
+                                    $in_gap = false;
+                                }
+                            }
+                        }
+                        if ($in_gap) {
+                            $gap_lengths[] = $gap_len;
+                            $gap_count += $gap_len;
+                        }
+                        
+                        $total_gap_length = $gap_count;
+                        $gaps = count($gap_lengths);
+                        $gap_lengths_str = implode(', ', $gap_lengths);
+                        
+                        $similarities = strlen($midline_str) - $identities_int - substr_count($midline_str, ' ');
+                        
+                        // Calculate HSP subject coverage percentage
+                        $subject_coverage_percent = $hit_len_int > 0 ? round((abs($hit_to_int - $hit_from_int) + 1) / $hit_len_int * 100, 2) : 0;
+                        
+                        $hsp_data = [
+                            'identities' => $identities_int,
+                            'alignment_length' => $align_len_int,
+                            'evalue' => $evalue_float,
+                            'bit_score' => !empty($bit_score) ? (float)$bit_score[0] : 0,
+                            'score' => !empty($score) ? (int)$score[0] : 0,
+                            'percent_identity' => $align_len_int > 0 ? round(($identities_int / $align_len_int) * 100, 2) : 0,
+                            'query_from' => !empty($query_from) ? (int)$query_from[0] : 0,
+                            'query_to' => !empty($query_to) ? (int)$query_to[0] : 0,
+                            'hit_from' => $hit_from_int,
+                            'hit_to' => $hit_to_int,
+                            'query_seq' => $query_seq,
+                            'hit_seq' => $hit_seq,
+                            'midline' => $midline_str,
+                            'gaps' => $gaps,
+                            'gap_lengths' => $gap_lengths,
+                            'gap_lengths_str' => $gap_lengths_str,
+                            'total_gap_length' => $total_gap_length,
+                            'similarities' => $similarities,
+                            'subject_coverage_percent' => $subject_coverage_percent
+                        ];
+                        
+                        $hsps_array[] = $hsp_data;
+                    }
+                    
+                    // Calculate cumulative coverage for this hit across all HSPs
+                    // Track query coverage (not subject coverage)
+                    $query_coverage = [];
+                    foreach ($hsps_array as $hsp_data) {
+                        $query_coverage[] = [
+                            'from' => $hsp_data['query_from'],
+                            'to' => $hsp_data['query_to']
+                        ];
+                    }
+                    
+                    usort($query_coverage, function($a, $b) { return $a['from'] - $b['from']; });
+                    $merged = [];
+                    foreach ($query_coverage as $region) {
+                        if (empty($merged) || $merged[count($merged)-1]['to'] < $region['from']) {
+                            $merged[] = $region;
+                        } else {
+                            $merged[count($merged)-1]['to'] = max($merged[count($merged)-1]['to'], $region['to']);
+                        }
+                    }
+                    $total_covered = 0;
+                    foreach ($merged as $region) {
+                        $total_covered += $region['to'] - $region['from'] + 1;
+                    }
+                    $query_coverage_percent = $results['query_length'] > 0 ? round(($total_covered / $results['query_length']) * 100, 2) : 0;
+                    
+                    // Also calculate subject cumulative coverage for display
+                    $subject_cumulative_coverage = [];
+                    foreach ($results['hits'] as $hit_test) {
+                        if ($hit_test['subject'] === $hit_def_str) {
+                            foreach ($hit_test['hsps'] as $hsp_test) {
+                                $subject_cumulative_coverage[] = [
+                                    'from' => min($hsp_test['hit_from'], $hsp_test['hit_to']),
+                                    'to' => max($hsp_test['hit_from'], $hsp_test['hit_to'])
+                                ];
+                            }
+                        }
+                    }
+                    usort($subject_cumulative_coverage, function($a, $b) { return $a['from'] - $b['from']; });
+                    $merged_subject = [];
+                    foreach ($subject_cumulative_coverage as $region) {
+                        if (empty($merged_subject) || $merged_subject[count($merged_subject)-1]['to'] < $region['from']) {
+                            $merged_subject[] = $region;
+                        } else {
+                            $merged_subject[count($merged_subject)-1]['to'] = max($merged_subject[count($merged_subject)-1]['to'], $region['to']);
+                        }
+                    }
+                    $total_subject_covered = 0;
+                    foreach ($merged_subject as $region) {
+                        $total_subject_covered += $region['to'] - $region['from'] + 1;
+                    }
+                    $subject_cumulative_coverage_percent = $hit_len_int > 0 ? round(($total_subject_covered / $hit_len_int) * 100, 2) : 0;
+                    
+                    // Create hit entry with all its HSPs
+                    $hit = [
+                        'id' => $hit_id_str,
+                        'subject' => $hit_def_str,
+                        'length' => $hit_len_int,
+                        'hsps' => $hsps_array,
+                        'best_evalue' => $best_evalue,
+                        'num_hsps' => count($hsps_array),
+                        'query_coverage_percent' => $query_coverage_percent,
+                        'subject_cumulative_coverage_percent' => $subject_cumulative_coverage_percent
+                    ];
+                    
+                    $results['hits'][] = $hit;
+                }
+            }
+        }
+        
+        $results['total_hits'] = count($results['hits']);
+        
+    } catch (Exception $e) {
+        $results['error'] = 'XML parsing error: ' . $e->getMessage();
+    }
+    
+    return $results;
+}
+
+/**
+ * Generate HTML for hits summary table
+ * 
+ * @param array $results Parsed BLAST results
+ * @return string HTML table
+ */
+function generateHitsSummaryTable($results) {
+    $html = '<div class="blast-hits-summary mb-4">';
+    $html .= '<h6><i class="fa fa-table"></i> Hits Summary (' . $results['total_hits'] . ' hits found)</h6>';
+    $html .= '<div style="overflow-x: auto;">';
+    $html .= '<table class="table table-sm table-striped blast-hits-table">';
+    $html .= '<thead class="table-light">';
+    $html .= '<tr>';
+    $html .= '<th style="width: 5%">#</th>';
+    $html .= '<th style="width: 40%">Subject</th>';
+    $html .= '<th style="width: 20%">Query Coverage %</th>';
+    $html .= '<th style="width: 12%">E-value</th>';
+    $html .= '<th style="width: 12%">HSPs</th>';
+    $html .= '<th style="width: 11%">Action</th>';
+    $html .= '</tr>';
+    $html .= '</thead>';
+    $html .= '<tbody>';
+    
+    foreach ($results['hits'] as $idx => $hit) {
+        $hit_num = $idx + 1;
+        $evalue_display = $hit['best_evalue'] < 1e-100 ? '0' : sprintf('%.2e', $hit['best_evalue']);
+        $query_coverage = $hit['query_coverage_percent'];
+        $coverage_bar_width = min(100, $query_coverage);
+        
+        // Color based on coverage percentage
+        if ($query_coverage >= 80) {
+            $coverage_color = '#28a745'; // Green - excellent coverage
+        } elseif ($query_coverage >= 50) {
+            $coverage_color = '#ffc107'; // Yellow - good coverage
+        } elseif ($query_coverage >= 30) {
+            $coverage_color = '#fd7e14'; // Orange - moderate coverage
+        } else {
+            $coverage_color = '#dc3545'; // Red - low coverage
+        }
+        
+        $html .= '<tr>';
+        $html .= '<td><strong>' . $hit_num . '</strong></td>';
+        $html .= '<td><small>' . htmlspecialchars(substr($hit['subject'], 0, 60)) . '</small></td>';
+        $html .= '<td>';
+        $html .= '<div class="blast-coverage-bar" style="width: 100%; background: #e9ecef; border-radius: 4px; overflow: hidden;">';
+        $html .= '<div style="width: ' . $coverage_bar_width . '%; background: ' . $coverage_color . '; height: 20px; display: flex; align-items: center; justify-content: center;">';
+        $html .= '<small style="font-weight: bold; color: white;">' . $query_coverage . '%</small>';
+        $html .= '</div>';
+        $html .= '</div>';
+        $html .= '</td>';
+        $html .= '<td><small>' . $evalue_display . '</small></td>';
+        $html .= '<td>' . $hit['num_hsps'] . '</td>';
+        $html .= '<td><button class="btn btn-xs btn-primary" onclick="document.getElementById(\'hit-' . $hit_num . '\').scrollIntoView({behavior: \'smooth\', block: \'start\'})" title="Scroll to alignment">View</button></td>';
+        $html .= '</tr>';
+    }
+    
+    $html .= '</tbody>';
+    $html .= '</table>';
+    $html .= '</div>';
+    $html .= '</div>';
+    
+    return $html;
+}
+
+/**
+ * Generate BLAST graphical results using SVG
+ * Displays hits/HSPs as colored rectangles with score-based coloring
+ * Similar to canvas graph but with better styling and E-value display
+ * 
+ * @param array $results Parsed BLAST results
+ * @return string SVG HTML
+ */
+function generateBlastGraphicalView($results) {
+    if ($results['query_length'] <= 0 || empty($results['hits'])) {
+        return '';
+    }
+    
+    $query_len = $results['query_length'];
+    $canvas_width = 1000;
+    $canvas_height_per_row = 25;
+    $total_rows = 0;
+    
+    // Count total rows (one row per HSP) - limit to top 2 HSPs per hit
+    foreach ($results['hits'] as $hit) {
+        $total_rows += min(2, count($hit['hsps']));
+    }
+    
+    $canvas_height = 120 + ($total_rows * $canvas_height_per_row) + 40;
+    $img_width = 850;
+    $xscale = $img_width / $query_len;
+    $top_margin = 100;
+    $left_margin = 200;
+    $right_margin = 100;
+    
+    // Determine tick distance based on query length
+    $tick_dist = 100;
+    if ($query_len > 2450) $tick_dist = 150;
+    if ($query_len > 3900) $tick_dist = 200;
+    if ($query_len > 5000) $tick_dist = 300;
+    if ($query_len > 7500) $tick_dist = round($query_len / 5);
+    
+    $html = '<div style="margin: 20px 0; overflow-x: auto; border: 1px solid #ddd; border-radius: 8px; background: white;">';
+    $html .= '<svg width="' . ($canvas_width + $left_margin + $right_margin) . '" height="' . $canvas_height . '" style="font-family: Arial, sans-serif;">';
+    
+    // Background
+    $html .= '<rect width="' . ($canvas_width + $left_margin + $right_margin) . '" height="' . $canvas_height . '" fill="#f9f9f9"/>';
+    
+    // Title
+    $html .= '<text x="' . ($left_margin + ($img_width / 2)) . '" y="30" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">Query Length (' . $query_len . ' bp)</text>';
+    
+    // Score legend
+    $legend_y = 50;
+    $legend_items = [
+        ['label' => '<40', 'color' => '#000000', 'range' => '<40'],
+        ['label' => '40-50', 'color' => '#0047c8', 'range' => '40-50'],
+        ['label' => '50-80', 'color' => '#77de75', 'range' => '50-80'],
+        ['label' => '80-200', 'color' => '#e967f5', 'range' => '80-200'],
+        ['label' => '≥200', 'color' => '#e83a2d', 'range' => '200+']
+    ];
+    
+    $legend_x = $left_margin;
+    $legend_width = $img_width / count($legend_items);
+    foreach ($legend_items as $item) {
+        $html .= '<rect x="' . $legend_x . '" y="' . $legend_y . '" width="' . $legend_width . '" height="20" fill="' . $item['color'] . '"/>';
+        $html .= '<text x="' . ($legend_x + ($legend_width / 2)) . '" y="' . ($legend_y + 15) . '" font-size="11" font-weight="bold" text-anchor="middle" fill="white">' . $item['label'] . '</text>';
+        $legend_x += $legend_width;
+    }
+    
+    // Horizontal line under legend
+    $html .= '<line x1="' . $left_margin . '" y1="' . ($legend_y + 25) . '" x2="' . ($left_margin + $img_width) . '" y2="' . ($legend_y + 25) . '" stroke="#333" stroke-width="2"/>';
+    
+    // Tick marks and labels
+    $vline_tag = $tick_dist;
+    for ($l = $tick_dist; $l + ($tick_dist / 2) < $query_len; $l += $tick_dist) {
+        $x = $left_margin + ($l * $xscale);
+        // Vertical line
+        $html .= '<line x1="' . $x . '" y1="' . ($legend_y + 25) . '" x2="' . $x . '" y2="' . $canvas_height . '" stroke="#ccc" stroke-width="1"/>';
+        // Tick label
+        $html .= '<text x="' . $x . '" y="' . ($legend_y + 45) . '" font-size="12" text-anchor="middle" fill="#333">' . $vline_tag . '</text>';
+        $vline_tag += $tick_dist;
+    }
+    
+    // E-value column header
+    $html .= '<text x="' . ($left_margin + $img_width + 15) . '" y="' . ($legend_y + 45) . '" font-size="12" font-weight="bold" fill="#333">E-value</text>';
+    
+    // Draw hits/HSPs
+    $current_y = $top_margin;
+    $prev_subject = '';
+    
+    foreach ($results['hits'] as $hit_idx => $hit) {
+        $subject_name = substr($hit['subject'], 0, 40);
+        $is_new_subject = ($prev_subject !== $hit['subject']);
+        
+        if ($is_new_subject && $prev_subject !== '') {
+            $current_y += 5; // Add spacing between different subjects
+        }
+        
+        // Subject name (only once per hit)
+        if ($is_new_subject) {
+            $html .= '<text x="5" y="' . ($current_y + 15) . '" font-size="11" font-weight="bold" fill="#333">' . htmlspecialchars($subject_name) . '</text>';
+        }
+        
+        // HSPs for this hit - limit to top 2
+        foreach ($hit['hsps'] as $hsp_idx => $hsp) {
+            if ($hsp_idx >= 2) break; // Only show top 2 HSPs
+            
+            $start_pos = $hsp['query_from'];
+            $end_pos = $hsp['query_to'];
+            $score = $hsp['bit_score'];
+            
+            // Determine color based on bit score
+            if ($score >= 200) {
+                $fill_color = 'rgba(255, 50, 40, 0.8)';
+            } elseif ($score >= 80) {
+                $fill_color = 'rgba(235,96,247, 0.8)';
+            } elseif ($score >= 50) {
+                $fill_color = 'rgba(119,222,117, 0.8)';
+            } elseif ($score >= 40) {
+                $fill_color = 'rgba(0,62,203, 0.8)';
+            } else {
+                $fill_color = 'rgba(10,10,10, 0.8)';
+            }
+            
+            $rect_x = $left_margin + ($start_pos * $xscale);
+            $rect_width = (($end_pos - $start_pos + 1) * $xscale);
+            
+            // Convert rgba to hex for SVG
+            if ($score >= 200) {
+                $fill_hex = '#ff3228';
+            } elseif ($score >= 80) {
+                $fill_hex = '#eb60f7';
+            } elseif ($score >= 50) {
+                $fill_hex = '#77de75';
+            } elseif ($score >= 40) {
+                $fill_hex = '#003ecb';
+            } else {
+                $fill_hex = '#0a0a0a';
+            }
+            
+            // HSP rectangle - clickable
+            $html .= '<g onclick="document.getElementById(\'hit-' . ($hit_idx + 1) . '\').scrollIntoView({behavior: \'smooth\', block: \'start\'})" style="cursor: pointer;">';
+            $html .= '<title>Hit ' . ($hit_idx + 1) . ' HSP ' . ($hsp_idx + 1) . ': ' . round($hsp['percent_identity'], 1) . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']) . '</title>';
+            $html .= '<rect x="' . $rect_x . '" y="' . ($current_y) . '" width="' . $rect_width . '" height="16" fill="' . $fill_hex . '" stroke="#333" stroke-width="0.5" rx="2"/>';
+            $html .= '</g>';
+            
+            // E-value on the right
+            $evalue_display = $hsp['evalue'] < 1e-100 ? '0' : sprintf('%.2e', $hsp['evalue']);
+            $html .= '<text x="' . ($left_margin + $img_width + 15) . '" y="' . ($current_y + 12) . '" font-size="10" fill="#333">' . $evalue_display . '</text>';
+            
+            $current_y += $canvas_height_per_row;
+        }
+        
+        $prev_subject = $hit['subject'];
+    }
+    
+    $html .= '</svg>';
+    $html .= '</div>';
+    
+    // Add legend explaining the colors
+    $html .= '<div style="margin: 15px 0; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 15px;">';
+    $html .= '<strong style="display: block; margin-bottom: 10px;"><i class="fa fa-info-circle"></i> Legend - Bit Score Color Coding:</strong>';
+    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
+    
+    $legend_items = [
+        ['color' => '#0a0a0a', 'label' => '< 40', 'desc' => 'Weak alignment'],
+        ['color' => '#003ecb', 'label' => '40 - 50', 'desc' => 'Moderate alignment'],
+        ['color' => '#77de75', 'label' => '50 - 80', 'desc' => 'Good alignment'],
+        ['color' => '#eb60f7', 'label' => '80 - 200', 'desc' => 'Very good alignment'],
+        ['color' => '#ff3228', 'label' => '≥ 200', 'desc' => 'Excellent alignment']
+    ];
+    
+    foreach ($legend_items as $item) {
+        $html .= '<div style="display: flex; align-items: center;">';
+        $html .= '<div style="width: 24px; height: 24px; background: ' . $item['color'] . '; border-radius: 3px; margin-right: 10px;"></div>';
+        $html .= '<div>';
+        $html .= '<strong>' . $item['label'] . '</strong><br>';
+        $html .= '<small style="color: #666;">' . $item['desc'] . '</small>';
+        $html .= '</div>';
+        $html .= '</div>';
+    }
+    
+    $html .= '</div>';
+    $html .= '</div>';
+    
+    return $html;
+}
+/**
+ * Generate alignment viewer section
+ * Displays alignments organized by Hit, with multiple HSPs per Hit
+ * 
+ * @param array $results Parsed BLAST results from parseBlastResults()
+ * @return string HTML with alignment viewer
+ */
+function generateAlignmentViewer($results, $blast_program = 'blastn') {
+    $html = '<div class="blast-alignment-viewer mt-4">';
+    $html .= '<h6><i class="fa fa-align-justify"></i> Detailed Alignments (HSPs)</h6>';
+    $html .= '<small class="text-muted d-block mb-3">Each Hit section contains one or more High-Scoring Segment Pairs (HSPs)</small>';
+    
+    if (empty($results['hits'])) {
+        $html .= '<div class="alert alert-info"><small>No alignments to display</small></div>';
+        return $html . '</div>';
+    }
+    
+    // Determine correct unit based on program
+    $unit = 'bp';
+    if (strpos($blast_program, 'blastp') !== false || strpos($blast_program, 'tblastn') !== false) {
+        $unit = 'aa';
+    }
+    
+    $html .= '<div style="background: #f8f9fa; border-radius: 4px; overflow-x: auto;">';
+    
+    foreach ($results['hits'] as $hit_idx => $hit) {
+        $hit_num = $hit_idx + 1;
+        $evalue_display = $hit['best_evalue'] < 1e-100 ? '0' : sprintf('%.2e', $hit['best_evalue']);
+        
+        // Hit header card
+        $html .= '<div id="hit-' . $hit_num . '" style="padding: 15px; border-bottom: 2px solid #007bff; scroll-margin-top: 20px; background: #f0f7ff; margin-bottom: 15px;">';
+        $html .= '<h5 style="margin-bottom: 10px; color: #007bff;">';
+        $html .= '<strong>Hit ' . $hit_num . ': ' . htmlspecialchars($hit['subject']) . '</strong>';
+        $html .= '</h5>';
+        $html .= '<small class="d-block" style="margin-bottom: 10px;">';
+        $html .= '<strong>Hit ID:</strong> ' . htmlspecialchars($hit['id']) . ' | ';
+        $html .= '<strong>Length:</strong> ' . $hit['length'] . ' ' . $unit . ' | ';
+        $html .= '<strong>Best E-value:</strong> ' . $evalue_display . ' | ';
+        $html .= '<strong>Number of HSPs:</strong> ' . $hit['num_hsps'] . ' | ';
+        $html .= '<strong>Query Coverage:</strong> ' . $hit['query_coverage_percent'] . '% | ';
+        $html .= '<strong>Subject Coverage:</strong> ' . $hit['subject_cumulative_coverage_percent'] . '%';
+        $html .= '</small>';
+        $html .= '</div>';
+        
+        // HSPs for this hit
+        foreach ($hit['hsps'] as $hsp_idx => $hsp) {
+            $hsp_num = $hsp_idx + 1;
+            
+            $html .= '<div style="padding: 15px; border-bottom: 1px solid #dee2e6; margin-left: 15px; background: #ffffff; margin-bottom: 10px; border-left: 4px solid #28a745;">';
+            $html .= '<h6 style="margin-bottom: 10px;"><strong>HSP ' . $hsp_num . '</strong></h6>';
+            $html .= '<small class="text-muted d-block" style="margin-bottom: 10px;">';
+            $html .= 'E-value: ' . sprintf('%.2e', $hsp['evalue']) . ' | ';
+            $html .= 'Alignment length: ' . $hsp['alignment_length'] . ' | ';
+            $html .= 'Identity: ' . $hsp['identities'] . '/' . $hsp['alignment_length'] . ' (' . $hsp['percent_identity'] . '%) | ';
+            $html .= 'Similarities: ' . $hsp['similarities'] . ' | ';
+            $html .= 'Gaps: ' . $hsp['gaps'];
+            if ($hsp['gaps'] > 0) {
+                $html .= ' (lengths: ' . $hsp['gap_lengths_str'] . ', total: ' . $hsp['total_gap_length'] . ')';
+            }
+            $html .= '</small>';
+            
+            // Query coverage information for this HSP
+            $query_hsp_coverage = $results['query_length'] > 0 ? round((($hsp['query_to'] - $hsp['query_from'] + 1) / $results['query_length']) * 100, 2) : 0;
+            $html .= '<small class="d-block" style="margin-bottom: 10px; background: #e7f3ff; padding: 8px; border-radius: 3px; border-left: 3px solid #007bff;">';
+            $html .= '<strong>Query Coverage (This HSP):</strong> ';
+            $html .= $query_hsp_coverage . '% (' . ($hsp['query_to'] - $hsp['query_from'] + 1) . '/' . $results['query_length'] . ') | ';
+            $html .= '<strong>Subject Coverage (This HSP):</strong> ';
+            $html .= $hsp['subject_coverage_percent'] . '% (' . abs($hsp['hit_to'] - $hsp['hit_from']) + 1 . '/' . $results['hits'][$hit_idx]['length'] . ')';
+            $html .= '</small>';
+            
+            // Display alignment in monospace
+            $html .= '<pre style="background: white; border: 1px solid #dee2e6; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 11px; margin: 0; font-family: \'Courier New\', monospace;">';
+            
+            // Format alignment - query_seq, midline, hit_seq are already aligned with gaps
+            // Calculate label length: "Query  " (7) + position (right-padded to 8) = 15 chars
+            $label_width = 15;
+            $query_label = str_pad('Query  ' . $hsp['query_from'], $label_width);
+            $midline_label = str_pad('', $label_width);
+            $sbjct_label = str_pad('Sbjct  ' . $hsp['hit_from'], $label_width);
+            
+            $html .= $query_label . htmlspecialchars($hsp['query_seq']) . ' ' . $hsp['query_to'] . "\n";
+            $html .= $midline_label . htmlspecialchars($hsp['midline']) . "\n";
+            $html .= $sbjct_label . htmlspecialchars($hsp['hit_seq']) . ' ' . $hsp['hit_to'] . "\n";
+            
+            $html .= '</pre>';
+            
+            $html .= '</div>';
+        }
+    }
+    
+    $html .= '</div>';
+    $html .= '</div>';
+    
+    return $html;
+}
+
+/**
+ * Generate BLAST results statistics summary
+ * Pretty card showing overall results statistics
+ * 
+ * @param array $results Parsed BLAST results
+ * @param string $query_seq Query sequence
+ * @param string $blast_program BLAST program name
+ * @return string HTML statistics card
+ */
+function generateBlastStatisticsSummary($results, $query_seq, $blast_program) {
+    if ($results['total_hits'] === 0) {
+        return '';
+    }
+    
+    $html = '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">';
+    
+    // Title
+    $html .= '<h4 style="margin: 0 0 20px 0; font-weight: bold;"><i class="fa fa-chart-bar"></i> BLAST Search Statistics</h4>';
+    
+    // Statistics grid
+    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">';
+    
+    // Query info
+    $html .= '<div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 6px; border-left: 4px solid #4fc3f7;">';
+    $html .= '<div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">Query</div>';
+    $html .= '<div style="font-size: 24px; font-weight: bold;">' . strlen($query_seq) . ' bp</div>';
+    if (!empty($results['query_name'])) {
+        $html .= '<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">' . htmlspecialchars(substr($results['query_name'], 0, 30)) . '</div>';
+    }
+    $html .= '</div>';
+    
+    // Hits found
+    $html .= '<div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 6px; border-left: 4px solid #81c784;">';
+    $html .= '<div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">Hits Found</div>';
+    $html .= '<div style="font-size: 24px; font-weight: bold;">' . $results['total_hits'] . '</div>';
+    $html .= '<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Subject sequences</div>';
+    $html .= '</div>';
+    
+    // Best hit info
+    $best_hit = $results['hits'][0];
+    $best_hsp = $best_hit['hsps'][0];
+    $html .= '<div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 6px; border-left: 4px solid #ffa726;">';
+    $html .= '<div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">Best E-value</div>';
+    $evalue_display = $best_hit['best_evalue'] < 1e-100 ? '0' : sprintf('%.2e', $best_hit['best_evalue']);
+    $html .= '<div style="font-size: 24px; font-weight: bold;">' . $evalue_display . '</div>';
+    $html .= '<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Top hit</div>';
+    $html .= '</div>';
+    
+    // Best identity
+    $html .= '<div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 6px; border-left: 4px solid #ef5350;">';
+    $html .= '<div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">Best Identity</div>';
+    $html .= '<div style="font-size: 24px; font-weight: bold;">' . $best_hsp['percent_identity'] . '%</div>';
+    $html .= '<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">' . $best_hsp['identities'] . '/' . $best_hsp['alignment_length'] . ' bp/aa</div>';
+    $html .= '</div>';
+    
+    // Total HSPs
+    $total_hsps = 0;
+    foreach ($results['hits'] as $hit) {
+        $total_hsps += $hit['num_hsps'];
+    }
+    $html .= '<div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 6px; border-left: 4px solid #ab47bc;">';
+    $html .= '<div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">Total HSPs</div>';
+    $html .= '<div style="font-size: 24px; font-weight: bold;">' . $total_hsps . '</div>';
+    $html .= '<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Alignments</div>';
+    $html .= '</div>';
+    
+    // Program
+    $html .= '<div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 6px; border-left: 4px solid #29b6f6;">';
+    $html .= '<div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">Program</div>';
+    $html .= '<div style="font-size: 18px; font-weight: bold;">' . strtoupper(htmlspecialchars($blast_program)) . '</div>';
+    $html .= '<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Sequence search</div>';
+    $html .= '</div>';
+    
+    $html .= '</div>'; // End grid
+    
+    $html .= '</div>'; // End container
+    
+    return $html;
+}
+
+/**
+ * Generate complete BLAST results visualization
+ * Combines all visualization components
+ * 
+ * @param array $blast_result Result from executeBlastSearch()
+ * @param string $query_seq The query sequence
+ * @param string $blast_program The BLAST program used
+ * @return string Complete HTML visualization
+ */
+function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_program) {
+    if (!$blast_result['success']) {
+        return '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> No results to visualize</div>';
+    }
+    
+    $results = parseBlastResults($blast_result['output']);
+    
+    // Check for parsing errors
+    if (!empty($results['error'])) {
+        return '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> Error parsing results: ' . htmlspecialchars($results['error']) . '</div>';
+    }
+    
+    if ($results['total_hits'] === 0) {
+        return '<div class="alert alert-info"><i class="fa fa-info-circle"></i> No significant matches found</div>';
+    }
+    
+    $html = '<div class="blast-visualization">';
+    
+    // Determine correct unit based on program
+    $unit = 'bp';
+    if (strpos($blast_program, 'blastp') !== false || strpos($blast_program, 'tblastn') !== false) {
+        $unit = 'aa';
+    }
+    
+    // Query info section (first)
+    $html .= '<div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 20px;">';
+    $html .= '<h6 style="margin-bottom: 10px; color: #333;"><i class="fa fa-dna"></i> Query</h6>';
+    $html .= '<small>';
+    if (!empty($results['query_name'])) {
+        $html .= '<strong>Name:</strong> ' . htmlspecialchars($results['query_name']) . '<br>';
+    }
+    if (!empty($results['query_desc'])) {
+        $html .= '<strong>Description:</strong> ' . htmlspecialchars($results['query_desc']) . '<br>';
+    }
+    $html .= '<strong>Length:</strong> ' . $results['query_length'] . ' ' . $unit . '<br>';
+    $html .= '<strong>Total Hits:</strong> ' . $results['total_hits'];
+    $html .= '</small>';
+    $html .= '</div>';
+    
+    // Collapsible search parameters section
+    $html .= '<div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px;">';
+    $html .= '<div style="padding: 15px; cursor: pointer; background: #f8f9fa; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;" onclick="document.getElementById(\'search-params\').style.display = document.getElementById(\'search-params\').style.display === \'none\' ? \'block\' : \'none\'; this.querySelector(\'i\').style.transform = document.getElementById(\'search-params\').style.display === \'none\' ? \'rotate(0deg)\' : \'rotate(180deg)\';">';
+    $html .= '<h6 style="margin: 0; color: #333;"><i class="fa fa-cog"></i> Search Parameters</h6>';
+    $html .= '<i class="fa fa-chevron-down" style="transition: transform 0.2s; transform: rotate(0deg);"></i>';
+    $html .= '</div>';
+    
+    $html .= '<div id="search-params" style="display: none; padding: 15px;">';
+    
+    // First row: Database and Program
+    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 15px;">';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Database</small><br>';
+    $html .= '<small>protein.aa.fa</small>';
+    $html .= '</div>';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Posted Date</small><br>';
+    $html .= '<small>Nov 12, 2025 10:40 PM</small>';
+    $html .= '</div>';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Database Size</small><br>';
+    $html .= '<small>21,106,416 letters | 54,384 sequences</small>';
+    $html .= '</div>';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Program</small><br>';
+    $html .= '<small>' . strtoupper(htmlspecialchars($blast_program)) . '</small>';
+    $html .= '</div>';
+    
+    $html .= '</div>';
+    
+    // Second row: Matrix and Parameters
+    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Matrix</small><br>';
+    $html .= '<small>BLOSUM62</small>';
+    $html .= '</div>';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Gap Penalties</small><br>';
+    $html .= '<small>Existence: 11, Extension: 1</small>';
+    $html .= '</div>';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Window for Multiple Hits</small><br>';
+    $html .= '<small>40</small>';
+    $html .= '</div>';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Threshold</small><br>';
+    $html .= '<small>11</small>';
+    $html .= '</div>';
+    
+    $html .= '</div>';
+    
+    $html .= '</div>';
+    $html .= '</div>';
+    
+    // Graphical view (canvas-style but SVG-based) - moved above summary table
+    $html .= generateBlastGraphicalView($results);
+    
+    // Summary table
+    $html .= generateHitsSummaryTable($results);
+    
+    // Alignment viewer
+    $html .= generateAlignmentViewer($results, $blast_program);
+    
+    $html .= '</div>';
+    
+    return $html;
+}
+?>

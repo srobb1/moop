@@ -14,6 +14,7 @@ $sequence_type = trim($_POST['sequence_type'] ?? '');
 
 include_once __DIR__ . '/../../site_config.php';
 include_once __DIR__ . '/../../includes/access_control.php';
+include_once __DIR__ . '/../blast_functions.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
@@ -93,42 +94,24 @@ if (!empty($sequence_type)) {
         die("Error: FASTA file not found for $sequence_type sequences.");
     }
 
-    // Extract sequences using blastdbcmd
-    $cmd = "blastdbcmd -db " . escapeshellarg($fasta_file) . " -entry " . escapeshellarg(implode(',', $uniquenames));
+    // Extract sequences using blast function
+    $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames);
     
-    $descriptors = [
-        0 => ["pipe", "r"],
-        1 => ["pipe", "w"],
-        2 => ["pipe", "w"],
-    ];
-
-    $process = proc_open($cmd, $descriptors, $pipes);
-    if (!is_resource($process)) {
-        die("Error: Failed to execute blastdbcmd");
-    }
-
-    fclose($pipes[0]);
-    $content = stream_get_contents($pipes[1]);
-    fclose($pipes[1]);
-    $stderr = stream_get_contents($pipes[2]);
-    fclose($pipes[2]);
-    $return_var = proc_close($process);
-
-    // Check for errors
-    if ($return_var > 1 || empty(trim($content))) {
-        $error = "No sequences found for the requested feature IDs.\n";
-        $error .= "Requested IDs: " . implode(", ", array_slice($uniquenames, 0, 5));
+    if (!$extract_result['success']) {
+        $error = $extract_result['error'];
+        $error .= "\nRequested IDs: " . implode(", ", array_slice($uniquenames, 0, 5));
         if (count($uniquenames) > 5) {
             $error .= " ... and " . (count($uniquenames) - 5) . " more";
         }
         die($error);
     }
 
+    $content = $extract_result['content'];
+
     // Send download
     $file_format = $_POST['file_format'] ?? 'fasta';
     $ext = ($file_format === 'txt') ? 'txt' : 'fasta';
     $filename = "sequences_{$sequence_type}_" . date("Y-m-d_His") . ".{$ext}";
-    $content = trim($content);
 
     header('Content-Type: application/octet-stream');
     header("Content-Disposition: attachment; filename={$filename}");

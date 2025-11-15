@@ -16,6 +16,16 @@ $available_tools = [
         'context_params' => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
         'pages' => 'all',  // Show on all pages
     ],
+    'blast_search' => [
+        'id' => 'blast_search',
+        'name' => 'BLAST Search',
+        'icon' => 'fa-dna',
+        'description' => 'Search sequences against databases',
+        'btn_class' => 'btn-warning',
+        'url_path' => '/tools/blast/index.php',
+        'context_params' => ['organism', 'assembly', 'group', 'display_name'],
+        'pages' => 'all',  // Show on all pages
+    ],
     'phylo_search' => [
         'id' => 'phylo_search',
         'name' => 'Search Organisms',

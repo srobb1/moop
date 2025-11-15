@@ -16,8 +16,8 @@ if (!isset($sequence_types)) {
     include_once __DIR__ . '/../../site_config.php';
 }
 
-// Include error logger
-include_once __DIR__ . '/../../error_logger.php';
+// Include error logging (logError function)
+include_once __DIR__ . '/../moop_functions.php';
 
 // Initialize error tracking
 $sequence_errors = [];
@@ -228,8 +228,18 @@ function extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, &$error
         return $sequences;
     }
     
+    // Build list of IDs to search, including variants for parent/child relationships
+    $search_ids = [];
+    foreach ($feature_ids as $id) {
+        $search_ids[] = $id;
+        // Also try with .1 suffix if not already present (for parent->child relationships)
+        if (substr($id, -2) !== '.1') {
+            $search_ids[] = $id . '.1';
+        }
+    }
+    
     // Use blastdbcmd to extract sequences - it accepts comma-separated IDs
-    $ids_string = implode(',', $feature_ids);
+    $ids_string = implode(',', $search_ids);
     $cmd = "blastdbcmd -db " . escapeshellarg($fasta_file) . " -entry " . escapeshellarg($ids_string) . " 2>/dev/null";
     $output = [];
     $return_var = 0;
@@ -243,8 +253,9 @@ function extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, &$error
     }
     
     // Check if we got any output
+    // If empty, it just means these IDs don't exist in this file type (e.g., gene IDs won't be in genome.fa)
+    // Return empty sequences gracefully - not an error
     if (empty($output)) {
-        $errors[] = "No sequences found for requested features in $seq_type file. Requested: " . implode(', ', $feature_ids);
         return $sequences;
     }
     
