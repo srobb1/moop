@@ -196,7 +196,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
         <?php
         $nav_context = [
             'page' => 'tool',
-            'tool_page' => 'fasta_extract',
+            'tool_page' => 'download_selected_sequences',
             'organism' => $context_organism,
             'assembly' => $context_assembly,
             'group' => $context_group,

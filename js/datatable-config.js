@@ -86,7 +86,7 @@ const DataTableExportConfig = {
         
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = sitePath + '/tools/extract/fasta_extract.php?organism=' + encodeURIComponent(organism);
+        form.action = sitePath + '/tools/extract/download_selected_sequences.php?organism=' + encodeURIComponent(organism);
         form.target = '_blank';
         
         const idInput = document.createElement('input');
