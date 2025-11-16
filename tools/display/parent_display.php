@@ -184,9 +184,6 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
         echo render_navigation_buttons($nav_context);
         ?>
     </div>
-    <a href="#sequencesSection" class="btn btn-info" title="Jump to sequences section">
-        <i class="fas fa-dna"></i> Jump to Sequences
-    </a>
 </div>
 
     <!-- Feature Header and Tools Row -->
