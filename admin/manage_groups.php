@@ -2,6 +2,7 @@
 session_start();
 include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
+include_once __DIR__ . '/../includes/navigation.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
 
 $groups_file = $metadata_path . '/organism_assembly_groups.json';
@@ -382,9 +383,10 @@ foreach ($all_organisms as $organism => $assemblies) {
     <h2><i class="fa fa-layer-group"></i> Manage Organism Assembly Groups & Descriptions</h2>
   </div>
   
-  <div class="mb-3">
-    <a href="index.php" class="btn btn-secondary">← Back to Admin Tools</a>
-  </div>
+  <?php
+  $nav_context = ['page' => 'admin_tool', 'tool' => 'manage_groups'];
+  echo render_navigation_buttons($nav_context);
+  ?>
 
   <h3>Assemblies with Groups</h3>
   <table class="table table-hover">

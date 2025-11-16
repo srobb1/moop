@@ -1,5 +1,6 @@
 <?php
 include_once __DIR__ . '/../../includes/access_control.php';
+include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 
 // Get organism name from query parameter
@@ -59,23 +60,15 @@ if (!$has_organism_access && !$is_public) {
 <?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
 
 <div class="container mt-5">
-  <!-- Navigation Buttons -->
-  <div class="mb-3">
-    <?php if (!empty($group_name)): ?>
-      <a href="/<?= $site ?>/tools/display/groups_display.php?group=<?= urlencode($group_name) ?>" class="btn btn-secondary">
-        <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($group_name) ?>
-      </a>
-    <?php endif; ?>
-    <?php if (!empty($parent_uniquename)): ?>
-      <a href="/<?= $site ?>/tools/display/parent_display.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($parent_uniquename) ?>" class="btn btn-secondary">
-        <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($parent_uniquename) ?>
-      </a>
-    <?php endif; ?>
-    <a href="/<?= $site ?>/index.php" class="btn btn-secondary"><i class="fa fa-home"></i> Back to Home</a>
-    <button class="btn btn-secondary hidden" id="backToOrganismBtn">
-      <i class="fa fa-arrow-left"></i> Back to <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em> Page
-    </button>
-  </div>
+  <?php
+  $nav_context = [
+      'page' => 'organism',
+      'organism' => $organism_name,
+      'group' => $group_name,
+      'parent' => $parent_uniquename
+  ];
+  echo render_navigation_buttons($nav_context);
+  ?>
 
   <!-- Search Section -->
   <div class="row mb-4">

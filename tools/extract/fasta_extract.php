@@ -14,6 +14,7 @@ $sequence_type = trim($_POST['sequence_type'] ?? '');
 
 include_once __DIR__ . '/../../site_config.php';
 include_once __DIR__ . '/../../includes/access_control.php';
+include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../blast_functions.php';
 
 // Check if user is logged in
@@ -26,6 +27,12 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
 $organism_name = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
 $assembly_name = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
 $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
+
+// Get context parameters for back button
+$context_organism = trim($_POST['context_organism'] ?? $_GET['context_organism'] ?? $_GET['organism'] ?? '');
+$context_assembly = trim($_POST['context_assembly'] ?? $_GET['context_assembly'] ?? $_GET['assembly'] ?? '');
+$context_group = trim($_POST['context_group'] ?? $_GET['context_group'] ?? '');
+$display_name = trim($_POST['display_name'] ?? $_GET['display_name'] ?? '');
 
 // Check if user is logged in OR if trying to access public assembly
 $is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
@@ -186,7 +193,17 @@ include_once __DIR__ . '/../../includes/navbar.php';
 <body>
 <div class="container">
     <div class="mb-4">
-        <a href="javascript:history.back();" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> Back</a>
+        <?php
+        $nav_context = [
+            'page' => 'tool',
+            'tool_page' => 'fasta_extract',
+            'organism' => $context_organism,
+            'assembly' => $context_assembly,
+            'group' => $context_group,
+            'display_name' => $display_name
+        ];
+        echo render_navigation_buttons($nav_context);
+        ?>
     </div>
 
     <h2 class="mb-4"><i class="fa fa-dna"></i> Download FASTA Sequences</h2>

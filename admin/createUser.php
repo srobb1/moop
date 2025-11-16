@@ -3,6 +3,7 @@ session_start();
 include_once 'admin_access_check.php';
 include_once '../includes/head.php';
 include_once '../includes/navbar.php';
+include_once '../includes/navigation.php';
 include_once '../tools/moop_functions.php';
 
 $usersFile = $users_file;
@@ -166,11 +167,12 @@ $organisms = getOrganisms();
 <body class="bg-light">
 
 <div class="container mt-5">
-  <h2><i class="fa fa-users"></i> Manage Users</h2>
+  <?php
+  $nav_context = ['page' => 'admin_tool', 'tool' => 'createUser'];
+  echo render_navigation_buttons($nav_context);
+  ?>
   
-  <div class="mb-3">
-    <a href="index.php" class="btn btn-secondary">← Back to Admin Tools</a>
-  </div>
+  <h2><i class="fa fa-users"></i> Manage Users</h2>
 
   <?php if ($message): ?>
     <div class="alert alert-<?= htmlspecialchars($messageType) ?> alert-dismissible fade show" role="alert">

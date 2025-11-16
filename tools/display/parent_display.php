@@ -1,6 +1,7 @@
 <?php
 // Include access control and configuration
 include_once __DIR__ . '/../../includes/access_control.php';
+include_once __DIR__ . '/../../includes/navigation.php';
 include_once realpath(__DIR__ . '/../../site_config.php');
 include_once realpath(__DIR__ . '/../moop_functions.php');
 include_once __DIR__ . '/parent_functions.php';
@@ -172,22 +173,21 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 
 <!-- Navigation -->
 <div class="margin-20">
-    <div class="mb-3 d-flex justify-content-between align-items-center">
-        <div>
-            <?php if (!empty($organism_name)): ?>
-                <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism_name) ?>" 
-                   class="btn btn-secondary">
-                    <i class="fa fa-arrow-left"></i> Back to <em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em>
-                </a>
-            <?php endif; ?>
-            <a href="/<?= $site ?>/index.php" class="btn btn-secondary">
-                <i class="fa fa-home"></i> Home
-            </a>
-        </div>
-        <a href="#sequencesSection" class="btn btn-info" title="Jump to sequences section">
-            <i class="fas fa-dna"></i> Jump to Sequences
-        </a>
+    <div class="mb-3">
+        <?php
+        $nav_context = [
+            'page' => 'parent',
+            'organism' => $organism_name,
+            'genus' => $genus ?? '',
+            'species' => $species ?? ''
+        ];
+        echo render_navigation_buttons($nav_context);
+        ?>
     </div>
+    <a href="#sequencesSection" class="btn btn-info" title="Jump to sequences section">
+        <i class="fas fa-dna"></i> Jump to Sequences
+    </a>
+</div>
 
     <!-- Feature Header and Tools Row -->
     <div class="row mb-4">

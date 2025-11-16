@@ -2,6 +2,25 @@
 /* Global styles for MOOP (Modern Organism Observation Platform) */
 /* Last updated: Nov 2024 - Consolidated styling from inline styles */
 
+/* ========== NAVIGATION BUTTON STYLES ========== */
+.navigation-buttons-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.btn-navigation {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.btn-navigation i {
+    margin-right: 0.25rem;
+}
+
 /* Global resets */
 html, body {
   margin: 0;

@@ -2,6 +2,7 @@
 session_start();
 include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
+include_once __DIR__ . '/../includes/navigation.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
 
 // Handle AJAX fix permissions request
@@ -269,11 +270,12 @@ $organisms = get_all_organisms_info();
 <?php include_once '../includes/navbar.php'; ?>
 
 <div class="container mt-5">
-  <h2><i class="fa fa-dna"></i> Manage Organisms</h2>
+  <?php
+  $nav_context = ['page' => 'admin_tool', 'tool' => 'manage_organisms'];
+  echo render_navigation_buttons($nav_context);
+  ?>
   
-  <div class="mb-3">
-    <a href="index.php" class="btn btn-secondary">← Back to Admin Tools</a>
-  </div>
+  <h2><i class="fa fa-dna"></i> Manage Organisms</h2>
 
   <!-- Information Panel -->
   <div class="card mb-4">

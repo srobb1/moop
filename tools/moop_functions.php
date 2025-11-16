@@ -68,6 +68,7 @@ function sanitize_input($data) {
  * @param string $dbFile - Path to SQLite database file
  * @return array - Validation results with 'valid' and 'error' keys
  */
+/* TO DO: determine if both validateDatabaseFile and validateDatabaseIntegrity are needed */
 function validateDatabaseFile($dbFile) {
     if (!file_exists($dbFile)) {
         return ['valid' => false, 'error' => 'Database file not found'];

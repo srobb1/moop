@@ -14,8 +14,6 @@ if (is_logged_in() && isset($users[get_username()]) && isset($users[get_username
 
 // Only allow Admin access level (not ALL, as IP users shouldn't have admin panel access)
 if (!$is_admin || get_access_level() !== 'Admin') {
-    header("HTTP/1.1 403 Forbidden");
-    echo "<h1>403 Forbidden</h1>";
-    echo "You don't have permission to access this page.";
+    header('Location: ../access_denied.php', true, 302);
     exit;
 }

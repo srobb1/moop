@@ -2,6 +2,7 @@
 include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../../includes/head.php';
 include_once __DIR__ . '/../../includes/navbar.php';
+include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 
 // Get organism and assembly from query parameters
@@ -86,20 +87,17 @@ $parent_uniquename = $_GET['parent'] ?? '';
 <?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
 
 <div class="container mt-5">
-  <!-- Navigation Buttons -->
-  <div class="mb-3">
-    <?php if (!empty($parent_uniquename)): ?>
-      <a href="/<?= $site ?>/tools/display/parent_display.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($parent_uniquename) ?>" class="btn btn-secondary">
-        <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($parent_uniquename) ?>
-      </a>
-    <?php endif; ?>
-    <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism_name) ?>" class="btn btn-secondary">
-      <i class="fa fa-arrow-left"></i> Back to <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>
-    </a>
-    <a href="/<?= $site ?>/index.php" class="btn btn-secondary">
-      <i class="fa fa-home"></i> Home
-    </a>
-  </div>
+  <?php
+  $nav_context = [
+      'page' => 'assembly',
+      'organism' => $organism_name,
+      'assembly' => $assembly_accession,
+      'parent' => $parent_uniquename
+  ];
+  echo render_navigation_buttons($nav_context);
+  ?>
+
+  <!-- Assembly Header Section -->
 
   <!-- Assembly and Tools Row -->
   <div class="row mb-4">

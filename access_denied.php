@@ -1,5 +1,6 @@
 <?php
 include_once __DIR__ . '/site_config.php';
+include_once __DIR__ . '/includes/navigation.php';
 session_start();
 include_once 'includes/head.php';
 ?>
@@ -59,11 +60,13 @@ include_once 'includes/head.php';
     </div>
     
     <div class="d-grid gap-2">
+      <?php
+      $nav_context = ['page' => 'access_denied'];
+      $nav_html = render_navigation_buttons($nav_context, ['include_home' => false]);
+      echo str_replace('btn-secondary', 'btn-outline-secondary btn-lg', $nav_html);
+      ?>
       <a href="/<?= htmlspecialchars($site) ?>/index.php" class="btn btn-primary btn-lg">
         <i class="fas fa-home"></i> Return to Home
-      </a>
-      <a href="javascript:history.back()" class="btn btn-outline-secondary">
-        <i class="fas fa-arrow-left"></i> Go Back
       </a>
     </div>
   </div>

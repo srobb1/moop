@@ -10,6 +10,7 @@ session_start();
 
 include_once __DIR__ . '/../../site_config.php';
 include_once __DIR__ . '/../../includes/access_control.php';
+include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 include_once __DIR__ . '/../blast_functions.php';
 include_once __DIR__ . '/../blast_results_visualizer.php';
@@ -144,23 +145,17 @@ include_once __DIR__ . '/../../includes/navbar.php';
 <div class="container mt-5">
     <!-- Navigation Buttons -->
     <div class="mb-3">
-        <?php if (!empty($context_assembly) && !empty($context_organism)): ?>
-            <a href="/<?= $site ?>/tools/display/assembly_display.php?organism=<?= urlencode($context_organism) ?>&assembly=<?= urlencode($context_assembly) ?>" class="btn btn-secondary">
-                <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($display_name ?: $context_assembly) ?>
-            </a>
-        <?php elseif (!empty($context_organism)): ?>
-            <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($context_organism) ?>" class="btn btn-secondary">
-                <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($display_name ?: 'Organism') ?>
-            </a>
-        <?php elseif (!empty($context_group)): ?>
-            <a href="/<?= $site ?>/tools/display/groups_display.php?group=<?= urlencode($context_group) ?>" class="btn btn-secondary">
-                <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($display_name ?: $context_group) ?>
-            </a>
-        <?php else: ?>
-            <a href="/<?= $site ?>/index.php" class="btn btn-secondary">
-                <i class="fa fa-home"></i> Home
-            </a>
-        <?php endif; ?>
+        <?php
+        $nav_context = [
+            'page' => 'tool',
+            'tool_page' => 'blast_search',
+            'organism' => $context_organism,
+            'assembly' => $context_assembly,
+            'group' => $context_group,
+            'display_name' => $display_name
+        ];
+        echo render_navigation_buttons($nav_context);
+        ?>
     </div>
 
     <h2 class="mb-4"><i class="fa fa-dna"></i> BLAST Search</h2>

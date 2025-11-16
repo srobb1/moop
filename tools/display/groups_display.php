@@ -1,5 +1,6 @@
 <?php
 include_once __DIR__ . '/../../includes/access_control.php';
+include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 
 // Get the group name from query parameter
@@ -55,12 +56,13 @@ if (!is_public_group($group_name)) {
 <?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
 
 <div class="container mt-5">
-  <div class="mb-3">
-    <a href="/<?= $site ?>/index.php" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> Back to Home</a>
-    <button id="backToGroupBtn" class="btn btn-secondary ms-2 hidden" onclick="location.reload();">
-      <i class="fa fa-arrow-left"></i> Back to <?= htmlspecialchars($group_name) ?>
-    </button>
-  </div>
+  <?php
+  $nav_context = [
+      'page' => 'group',
+      'group' => $group_name
+  ];
+  echo render_navigation_buttons($nav_context);
+  ?>
 
   <!-- Header and Tools Row -->
   <div class="row mb-4">

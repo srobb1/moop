@@ -3,6 +3,7 @@ session_start();
 include_once 'admin_access_check.php';
 include_once '../includes/head.php';
 include_once '../includes/navbar.php';
+include_once '../includes/navigation.php';
 include_once '../tools/moop_functions.php';
 $organism_data_dir = $organism_data;
 $tree_config_file = "$metadata_path/phylo_tree_config.json";
@@ -283,9 +284,10 @@ $organisms = get_organisms_metadata($organism_data_dir);
             <h2><i class="fa fa-project-diagram"></i> Manage Phylogenetic Tree</h2>
             <p class="text-muted">Generate and customize the phylogenetic tree displayed on the homepage.</p>
             
-            <div class="mb-3">
-                <a href="index.php" class="btn btn-secondary">← Back to Admin Tools</a>
-            </div>
+            <?php
+            $nav_context = ['page' => 'admin_tool', 'tool' => 'manage_phylo_tree'];
+            echo render_navigation_buttons($nav_context);
+            ?>
             
             <?php if ($message): ?>
                 <div class="alert alert-success alert-dismissible fade show">

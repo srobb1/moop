@@ -4,6 +4,7 @@ session_start();
 include_once __DIR__ . '/../site_config.php';
 include_once __DIR__ . '/admin_access_check.php';
 include_once __DIR__ . '/../includes/access_control.php';
+include_once __DIR__ . '/../includes/navigation.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
 include_once __DIR__ . '/../includes/head.php';
 include_once __DIR__ . '/../includes/navbar.php';
@@ -90,6 +91,11 @@ sort($organisms);
         <div class="col-md-12">
             <h1><i class="fas fa-exclamation-triangle"></i> Error Log Viewer</h1>
             <p class="text-muted">Last 100 logged errors</p>
+            
+            <?php
+            $nav_context = ['page' => 'admin_tool', 'tool' => 'error_log'];
+            echo render_navigation_buttons($nav_context);
+            ?>
         </div>
     </div>
 

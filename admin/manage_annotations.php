@@ -2,6 +2,7 @@
 session_start();
 include_once 'admin_access_check.php';
 include_once __DIR__ . '/../site_config.php';
+include_once __DIR__ . '/../includes/navigation.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
 include_once '../includes/head.php';
 include_once '../includes/navbar.php';
@@ -133,11 +134,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
 <body class="bg-light">
 
 <div class="container mt-5">
-  <h2><i class="fa fa-tags"></i> Manage Annotation Sections</h2>
+  <?php
+  $nav_context = ['page' => 'admin_tool', 'tool' => 'manage_annotations'];
+  echo render_navigation_buttons($nav_context);
+  ?>
   
-  <div class="mb-3">
-    <a href="index.php" class="btn btn-secondary">← Back to Admin Tools</a>
-  </div>
+  <h2><i class="fa fa-tags"></i> Manage Annotation Sections</h2>
 
   <?php if ($message): ?>
     <div class="alert alert-<?= htmlspecialchars($messageType) ?> alert-dismissible fade show" role="alert">
