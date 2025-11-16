@@ -157,6 +157,10 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
     }
     
     $html .= "</h5>";
+    $html .= '<div class="d-flex gap-2 align-items-center">';
+    $html .= '<div id="' . htmlspecialchars($table_id) . '_filter" class="dataTables_filter"></div>';
+    $html .= '<a href="#sequencesSection" class="btn btn-sm btn-info" title="Jump to sequences section"><i class="fas fa-dna"></i> Jump to Sequences</a>';
+    $html .= '</div>';
     $html .= '</div>';
     
     if ($desc) {
