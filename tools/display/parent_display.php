@@ -195,7 +195,7 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
                 <div class="flex-grow-1">
                     <h1 class="mb-3">
                         <?= htmlspecialchars($feature_uniquename) ?>
-                        <span class="badge text-white ms-2 badge-accent">
+                        <span class="badge text-white ms-2 badge-accent badge-md">
                             <?= htmlspecialchars($type) ?>
                         </span>
                         <?php if (!empty($children) && count($children) > 0): 
@@ -203,7 +203,7 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
                             $child_color_map = ['mRNA' => '#17a2b8', 'gene' => '#764ba2'];
                             $child_bg_color = $child_color_map[strtoupper($first_child_type)] ?? '#17a2b8';
                         ?>
-                            <span class="badge text-white ms-2" style="font-size: 0.6em; background-color: <?= $child_bg_color ?>;">
+                            <span class="badge text-white ms-2 badge-md" style="background-color: <?= $child_bg_color ?>;">
                                 <?= count($children) ?> <?= htmlspecialchars($first_child_type) ?> child<?= count($children) > 1 ? 'ren' : '' ?>
                             </span>
                         <?php endif; ?>
@@ -216,13 +216,8 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
             
             <div>
                 <div class="feature-info-item">
-                    <strong>Organism:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em></a></span>
+                    <strong>Organism:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em></a><?php if ($common_name): ?> ( <?= htmlspecialchars($common_name) ?> )<?php endif; ?></span>
                 </div>
-                <?php if ($common_name): ?>
-                    <div class="feature-info-item">
-                        <strong>Common Name:</strong> <span class="feature-value"><?= htmlspecialchars($common_name) ?></span>
-                    </div>
-                <?php endif; ?>
                 <div class="feature-info-item">
                     <strong>Assembly:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/display/assembly_display.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars($genome_name) ?> (<?= htmlspecialchars($genome_accession) ?>)</a></span>
                 </div>
