@@ -205,7 +205,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>FASTA Sequence Search - <?= htmlspecialchars($siteTitle) ?></title>
+    <title>Sequence Search - <?= htmlspecialchars($siteTitle) ?></title>
     <?php include_once __DIR__ . '/../../includes/head.php'; ?>
     <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
 </head>
@@ -229,7 +229,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
         ?>
     </div>
 
-    <h2 class="mb-4"><i class="fa fa-dna"></i> FASTA Sequence Search & Download</h2>
+    <h2 class="mb-4"><i class="fa fa-dna"></i> Sequence Retrieval & Download</h2>
 
     <?php if (empty($accessible_sources)): ?>
         <div class="alert alert-warning">

@@ -8,7 +8,7 @@
 $available_tools = [
     'download_fasta' => [
         'id' => 'download_fasta',
-        'name' => 'Download Sequences',
+        'name' => 'Retrieve Sequences',
         'icon' => 'fa-dna',
         'description' => 'Search and download sequences',
         'btn_class' => 'btn-success',
