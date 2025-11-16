@@ -219,7 +219,7 @@ function handleToolClick(toolId) {
     window.location.href = `tools/search/multi_organism_search.php?${params}`;
   } else if (toolId === 'download_fasta') {
     const params = organisms.map(org => encodeURIComponent(org)).join(',');
-    window.location.href = `tools/extract/download_fasta.php?organisms=${params}`;
+    window.location.href = `tools/extract/download_sequences.php?organisms=${params}`;
   }
 }
 

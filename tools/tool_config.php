@@ -8,11 +8,11 @@
 $available_tools = [
     'download_fasta' => [
         'id' => 'download_fasta',
-        'name' => 'Download FASTA',
+        'name' => 'Download Sequences',
         'icon' => 'fa-dna',
         'description' => 'Search and download sequences',
         'btn_class' => 'btn-success',
-        'url_path' => '/tools/extract/download_fasta.php',
+        'url_path' => '/tools/extract/download_sequences.php',
         'context_params' => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
         'pages' => 'all',  // Show on all pages
     ],
