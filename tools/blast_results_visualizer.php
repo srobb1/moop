@@ -880,31 +880,11 @@ function generateHspVisualizationWithLines($results) {
     // Pixel unit calculation based on query length (800px width)
     $px_unit = 800 / $results['query_length'];
     
-    // Score legend
-    $html .= '<div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #ddd;">';
-    $html .= '<strong style="display: block; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-info-circle"></i> Bit Score Legend:</strong>';
-    $html .= '<div style="display: flex; gap: 15px; flex-wrap: wrap;">';
-    
-    $colors = [
-        ['class' => 'color-black', 'label' => '≤ 40', 'desc' => 'Weak'],
-        ['class' => 'color-blue', 'label' => '40-50', 'desc' => 'Moderate'],
-        ['class' => 'color-green', 'label' => '50-80', 'desc' => 'Good'],
-        ['class' => 'color-purple', 'label' => '80-200', 'desc' => 'Very Good'],
-        ['class' => 'color-red', 'label' => '> 200', 'desc' => 'Excellent']
-    ];
-    
-    foreach ($colors as $color) {
-        $html .= '<div style="display: flex; align-items: center;">';
-        $html .= '<div style="width: 20px; height: 20px; border: 1px solid #333; margin-right: 6px; ' . getColorStyle($color['class']) . '"></div>';
-        $html .= '<div><strong>' . $color['label'] . '</strong> - ' . $color['desc'] . '</div>';
-        $html .= '</div>';
-    }
-    
-    $html .= '</div>';
-    $html .= '</div>';
-    
     // Add query scale bar with intelligent tick spacing
-    $html .= generateQueryScale($results['query_length'], $results['query_name']);
+    // Calculate total number of hits for tick line height
+    $num_hits = count($results['hits']);
+    $hsp_area_height = ($num_hits * 12) + 40; // Each hit row is ~12px, plus padding
+    $html .= generateQueryScale($results['query_length'], $results['query_name'], $hsp_area_height);
     
     foreach ($results['hits'] as $hit_idx => $hit) {
         $hit_num = $hit_idx + 1;
@@ -952,7 +932,8 @@ function generateHspVisualizationWithLines($results) {
             }
             
             $hsp = $hsp_details[$first_idx];
-            $title = 'Hit ' . $hit_num . ' HSP ' . ($first_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
+            $hit_desc = !empty($hit['description']) ? ' | ' . htmlspecialchars(substr($hit['description'], 0, 50)) : '';
+            $title = 'Hit ' . $hit_num . $hit_desc . ' - HSP ' . ($first_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
             $html .= '<div class="hsp-segment ' . $color . '" style="width: ' . $segment_width . 'px;" title="' . htmlspecialchars($title) . '"></div>';
             
             // Additional HSPs with connecting logic
@@ -982,7 +963,8 @@ function generateHspVisualizationWithLines($results) {
                 $color = getHspColorClass($hsp_scores[$current_idx]);
                 $segment_width = ($current['end'] - $current['start']) * $px_unit;
                 $hsp = $hsp_details[$current_idx];
-                $title = 'Hit ' . $hit_num . ' HSP ' . ($current_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
+                $hit_desc = !empty($hit['description']) ? ' | ' . htmlspecialchars(substr($hit['description'], 0, 50)) : '';
+                $title = 'Hit ' . $hit_num . $hit_desc . ' - HSP ' . ($current_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
                 $html .= '<div class="hsp-segment ' . $color . '" style="width: ' . $segment_width . 'px;" title="' . htmlspecialchars($title) . '"></div>';
             }
             
@@ -1202,9 +1184,10 @@ function formatBlastAlignment($length, $query_seq, $query_seq_from, $query_seq_t
  * 
  * @param int $query_length Total query length
  * @param string $query_name Optional query name/ID
+ * @param int $hsp_area_height Height of HSP area for tick line extension
  * @return string HTML for scale labels, ticks, and query bar
  */
-function generateQueryScale($query_length, $query_name = '') {
+function generateQueryScale($query_length, $query_name = '', $hsp_area_height = 200) {
     $pxls = 800 / $query_length;  // Wider 800px instead of 500px
     $output = '<div style="margin: 0 auto 20px auto; width: 1000px;">';
     
@@ -1214,17 +1197,17 @@ function generateQueryScale($query_length, $query_name = '') {
     $output .= '<div style="display: flex; gap: 0; width: 800px;">';
     
     $score_ranges = [
-        ['color' => '#000000', 'label' => '&le;40'],
+        ['color' => '#000000', 'label' => '≤40<br><small>(Weak)</small>'],
         ['color' => '#0047c8', 'label' => '40-50'],
         ['color' => '#77de75', 'label' => '50-80'],
         ['color' => '#e967f5', 'label' => '80-200'],
-        ['color' => '#e83a2d', 'label' => '&ge;200']
+        ['color' => '#e83a2d', 'label' => '≥200<br><small>(Excellent)</small>']
     ];
     
     $box_width = (800 / 5); // Divide 800px by 5 color ranges evenly
     foreach ($score_ranges as $range) {
         $output .= '<div style="width: ' . $box_width . 'px; height: 25px; background-color: ' . $range['color'] . '; border-right: 1px solid #333; display: flex; align-items: center; justify-content: center;">';
-        $output .= '<span style="color: white; font-size: 10px; font-weight: bold; text-align: center;">' . $range['label'] . '</span>';
+        $output .= '<span style="color: white; font-size: 10px; font-weight: bold; text-align: center; line-height: 1.2;">' . $range['label'] . '</span>';
         $output .= '</div>';
     }
     
@@ -1265,8 +1248,8 @@ function generateQueryScale($query_length, $query_name = '') {
     // Draw tick marks with vertical lines (gray) extending down through HSPs
     foreach ($tick_numbers as $num) {
         $pos = (int)($pxls * ($num - 1)); // Subtract 1 since we start at position 1
-        // Vertical line from top through HSP area (gray color, height 200px to extend behind HSPs)
-        $output .= '<div style="position: absolute; left: ' . $pos . 'px; top: 0; width: 1px; height: 200px; background: #cccccc; pointer-events: none;"></div>';
+        // Vertical line from top through HSP area (gray color, height based on hsp_area_height)
+        $output .= '<div style="position: absolute; left: ' . $pos . 'px; top: 0; width: 1px; height: ' . $hsp_area_height . 'px; background: #cccccc; pointer-events: none;"></div>';
         // Tick mark at top (darker)
         $output .= '<div style="position: absolute; left: ' . $pos . 'px; top: 0; width: 1px; height: 8px; background: #999;"></div>';
         // Number label below tick
