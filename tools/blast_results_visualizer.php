@@ -728,7 +728,7 @@ function generateBlastStatisticsSummary($results, $query_seq, $blast_program) {
  * @param string $blast_program The BLAST program used
  * @return string Complete HTML visualization
  */
-function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_program) {
+function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_program, $blast_options = []) {
     if (!$blast_result['success']) {
         return '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> No results to visualize</div>';
     }
@@ -761,51 +761,106 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     $html .= '</div>';
     
     $html .= '<div id="search-params" style="display: none; padding: 15px;">';
-    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 15px;">';
+    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">';
     
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Database</small><br>';
-    $html .= '<small>protein.aa.fa</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Posted Date</small><br>';
-    $html .= '<small>Nov 12, 2025 10:40 PM</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Database Size</small><br>';
-    $html .= '<small>21,106,416 letters | 54,384 sequences</small>';
-    $html .= '</div>';
-    
+    // Basic parameters
     $html .= '<div>';
     $html .= '<small style="color: #666; font-weight: bold;">Program</small><br>';
     $html .= '<small>' . strtoupper(htmlspecialchars($blast_program)) . '</small>';
     $html .= '</div>';
     
-    $html .= '</div>';
-    
-    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">';
-    
     $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Matrix</small><br>';
-    $html .= '<small>BLOSUM62</small>';
+    $html .= '<small style="color: #666; font-weight: bold;">E-value Threshold</small><br>';
+    $html .= '<small>' . htmlspecialchars($blast_options['evalue'] ?? '1e-3') . '</small>';
     $html .= '</div>';
     
     $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Gap Penalties</small><br>';
-    $html .= '<small>Existence: 11, Extension: 1</small>';
+    $html .= '<small style="color: #666; font-weight: bold;">Maximum Hits</small><br>';
+    $html .= '<small>' . ($blast_options['max_hits'] ?? 10) . '</small>';
     $html .= '</div>';
     
     $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Window for Multiple Hits</small><br>';
-    $html .= '<small>40</small>';
+    $html .= '<small style="color: #666; font-weight: bold;">Scoring Matrix</small><br>';
+    $html .= '<small>' . htmlspecialchars($blast_options['matrix'] ?? 'BLOSUM62') . '</small>';
     $html .= '</div>';
     
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Threshold</small><br>';
-    $html .= '<small>11</small>';
-    $html .= '</div>';
+    // Advanced parameters
+    if (!empty($blast_options['word_size'])) {
+        $html .= '<div>';
+        $html .= '<small style="color: #666; font-weight: bold;">Word Size</small><br>';
+        $html .= '<small>' . htmlspecialchars($blast_options['word_size']) . '</small>';
+        $html .= '</div>';
+    }
+    
+    if (!empty($blast_options['gapopen'])) {
+        $html .= '<div>';
+        $html .= '<small style="color: #666; font-weight: bold;">Gap Open Penalty</small><br>';
+        $html .= '<small>' . htmlspecialchars($blast_options['gapopen']) . '</small>';
+        $html .= '</div>';
+    }
+    
+    if (!empty($blast_options['gapextend'])) {
+        $html .= '<div>';
+        $html .= '<small style="color: #666; font-weight: bold;">Gap Extend Penalty</small><br>';
+        $html .= '<small>' . htmlspecialchars($blast_options['gapextend']) . '</small>';
+        $html .= '</div>';
+    }
+    
+    if (!empty($blast_options['max_hsps'])) {
+        $html .= '<div>';
+        $html .= '<small style="color: #666; font-weight: bold;">Max HSPs</small><br>';
+        $html .= '<small>' . htmlspecialchars($blast_options['max_hsps']) . '</small>';
+        $html .= '</div>';
+    }
+    
+    if (!empty($blast_options['perc_identity'])) {
+        $html .= '<div>';
+        $html .= '<small style="color: #666; font-weight: bold;">Percent Identity</small><br>';
+        $html .= '<small>' . htmlspecialchars($blast_options['perc_identity']) . '%</small>';
+        $html .= '</div>';
+    }
+    
+    if (!empty($blast_options['culling_limit'])) {
+        $html .= '<div>';
+        $html .= '<small style="color: #666; font-weight: bold;">Culling Limit</small><br>';
+        $html .= '<small>' . htmlspecialchars($blast_options['culling_limit']) . '</small>';
+        $html .= '</div>';
+    }
+    
+    if (!empty($blast_options['threshold'])) {
+        $html .= '<div>';
+        $html .= '<small style="color: #666; font-weight: bold;">Threshold</small><br>';
+        $html .= '<small>' . htmlspecialchars($blast_options['threshold']) . '</small>';
+        $html .= '</div>';
+    }
+    
+    if (!empty($blast_options['strand'])) {
+        $html .= '<div>';
+        $html .= '<small style="color: #666; font-weight: bold;">Strand</small><br>';
+        $html .= '<small>' . htmlspecialchars($blast_options['strand']) . '</small>';
+        $html .= '</div>';
+    }
+    
+    if ($blast_options['soft_masking'] ?? false) {
+        $html .= '<div>';
+        $html .= '<small style="color: #666; font-weight: bold;">Soft Masking</small><br>';
+        $html .= '<small><i class="fa fa-check" style="color: green;"></i> Enabled</small>';
+        $html .= '</div>';
+    }
+    
+    if ($blast_options['filter'] ?? false) {
+        $html .= '<div>';
+        $html .= '<small style="color: #666; font-weight: bold;">Filter Low Complexity</small><br>';
+        $html .= '<small><i class="fa fa-check" style="color: green;"></i> Enabled</small>';
+        $html .= '</div>';
+    }
+    
+    if ($blast_options['ungapped'] ?? false) {
+        $html .= '<div>';
+        $html .= '<small style="color: #666; font-weight: bold;">Ungapped</small><br>';
+        $html .= '<small><i class="fa fa-check" style="color: green;"></i> Enabled</small>';
+        $html .= '</div>';
+    }
     
     $html .= '</div>';
     $html .= '</div>';
@@ -819,11 +874,10 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     $html .= '<thead class="table-light">';
     $html .= '<tr>';
     $html .= '<th style="width: 5%">#</th>';
-    $html .= '<th style="width: 30%">Query Name</th>';
+    $html .= '<th style="width: 35%">Query Name</th>';
     $html .= '<th style="width: 15%">Length</th>';
     $html .= '<th style="width: 15%">Hits</th>';
-    $html .= '<th style="width: 20%">Best E-value</th>';
-    $html .= '<th style="width: 15%">Action</th>';
+    $html .= '<th style="width: 30%">Best E-value</th>';
     $html .= '</tr>';
     $html .= '</thead>';
     $html .= '<tbody>';
@@ -834,13 +888,12 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
         $best_evalue = $query['total_hits'] > 0 ? $query['hits'][0]['best_evalue'] : PHP_FLOAT_MAX;
         $best_evalue_display = $best_evalue < 1e-100 ? '0' : sprintf('%.2e', $best_evalue);
         
-        $html .= '<tr>';
+        $html .= '<tr style="cursor: pointer;" onclick="document.getElementById(\'query-' . $query_num . '\').scrollIntoView({behavior: \'smooth\', block: \'start\'}); document.getElementById(\'query-' . $query_num . '-header\').click();">';
         $html .= '<td><strong>' . $query_num . '</strong></td>';
         $html .= '<td><small>' . $query_name . '</small></td>';
         $html .= '<td>' . $query['query_length'] . ' ' . $unit . '</td>';
         $html .= '<td>' . $query['total_hits'] . '</td>';
         $html .= '<td><small>' . $best_evalue_display . '</small></td>';
-        $html .= '<td><button class="btn btn-xs btn-primary" onclick="document.getElementById(\'query-' . $query_num . '\').scrollIntoView({behavior: \'smooth\', block: \'start\'})" title="Jump to query results">View</button></td>';
         $html .= '</tr>';
     }
     
@@ -858,7 +911,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
         $html .= '<div id="query-' . $query_num . '" style="background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px; scroll-margin-top: 20px;">';
         
         // Query header (collapsible)
-        $html .= '<div style="padding: 15px; cursor: pointer; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;" onclick="toggleQuerySection(\'query-' . $query_num . '-content\', this);">';
+        $html .= '<div id="query-' . $query_num . '-header" style="padding: 15px; cursor: pointer; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;" onclick="toggleQuerySection(\'query-' . $query_num . '-content\', this);">';
         $html .= '<h5 style="margin: 0;"><i class="fa fa-dna"></i> Query ' . $query_num . ': ' . $query_name . '</h5>';
         $html .= '<i class="fa fa-chevron-down" style="transition: transform 0.2s; transform: rotate(0deg);"></i>';
         $html .= '</div>';

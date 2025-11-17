@@ -541,7 +541,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
                     <?= getToggleQuerySectionScript() ?>
                     
                     <!-- Visualization -->
-                    <?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program) ?>
+                    <?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? []) ?>
                     
                     <!-- Store pairwise output in hidden element for download -->
                     <?php if (isset($blast_result['pairwise'])): ?>
