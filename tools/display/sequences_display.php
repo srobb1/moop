@@ -9,6 +9,11 @@
  * - $gene_name: Comma-separated list of feature uniquenames (parent and children)
  * - $sequence_types: Array of sequence type configurations (from site_config.php)
  * - $admin_email: Administrator email (from site_config.php)
+ * 
+ * Optional variables for download functionality:
+ * - $enable_downloads: (bool) Set to true to show download buttons
+ * - $assembly_name: Name of assembly (required if enable_downloads is true)
+ * - $download_script_url: URL to download script (default: for parent_display context)
  */
 
 // Ensure site_config is included (should be from parent_display.php, but double-check)
@@ -18,6 +23,11 @@ if (!isset($sequence_types)) {
 
 // Include error logging (logError function)
 include_once __DIR__ . '/../moop_functions.php';
+
+// Initialize download settings
+$enable_downloads = $enable_downloads ?? false;
+$assembly_name = $assembly_name ?? '';
+$download_script_url = $download_script_url ?? '';
 
 // Initialize error tracking
 $sequence_errors = [];
@@ -179,13 +189,26 @@ if (!empty($sequence_errors)) {
                         
                         echo '      <div class="card bg-light">';
                         echo '        <div class="card-body copyable" ';
-                        echo '             style="font-family: monospace; font-size: 0.85rem; cursor: pointer; white-space: pre-wrap; word-break: break-all;" ';
-                        echo '             data-bs-toggle="tooltip" ';
-                        echo '             data-bs-placement="top" ';
-                        echo '             title="Click to copy">';
+                        echo '             style="font-family: monospace; font-size: 0.85rem; cursor: pointer; white-space: pre-wrap; word-break: break-all;">';
                         echo htmlspecialchars($concatenated_sequences);
                         echo '        </div>';
                         echo '      </div>';
+                        
+                        // Add download button if enabled
+                        if ($enable_downloads && !empty($assembly_name) && !empty($organism_name) && !empty($gene_name)) {
+                            echo '      <div style="margin-top: 10px;">';
+                            echo '        <form method="POST" style="display: inline;">';
+                            echo '          <input type="hidden" name="organism" value="' . htmlspecialchars($organism_name) . '">';
+                            echo '          <input type="hidden" name="assembly" value="' . htmlspecialchars($assembly_name) . '">';
+                            echo '          <input type="hidden" name="sequence_type" value="' . htmlspecialchars($seq_type) . '">';
+                            echo '          <input type="hidden" name="uniquenames" value="' . htmlspecialchars($gene_name) . '">';
+                            echo '          <input type="hidden" name="download_file" value="1">';
+                            echo '          <button type="submit" class="btn btn-sm btn-success">';
+                            echo '            <i class="fa fa-download"></i> Download ' . htmlspecialchars($config['label']);
+                            echo '          </button>';
+                            echo '        </form>';
+                            echo '      </div>';
+                        }
                         
                         echo '    </div>';
                         echo '  </div>';
@@ -293,11 +316,45 @@ document.addEventListener("DOMContentLoaded", function () {
     const copyables = document.querySelectorAll(".copyable");
 
     copyables.forEach(el => {
-        // Initialize tooltip
-        const tooltip = new bootstrap.Tooltip(el, {
-            trigger: "hover",
-            title: "Click to copy",
-            placement: "top"
+        // Custom simple tooltip that follows cursor
+        el.addEventListener("mouseenter", function() {
+            // Remove any existing tooltip
+            const existing = document.getElementById("custom-copy-tooltip");
+            if (existing) existing.remove();
+            
+            // Create simple tooltip
+            const tooltip = document.createElement("div");
+            tooltip.id = "custom-copy-tooltip";
+            tooltip.textContent = "Click to copy";
+            tooltip.style.cssText = `
+                position: fixed;
+                background-color: #000;
+                color: #fff;
+                padding: 5px 10px;
+                border-radius: 4px;
+                font-size: 12px;
+                white-space: nowrap;
+                pointer-events: none;
+                z-index: 9999;
+            `;
+            document.body.appendChild(tooltip);
+            
+            // Update position on mousemove
+            const updatePosition = (e) => {
+                tooltip.style.left = (e.clientX + 10) + "px";
+                tooltip.style.top = (e.clientY - 30) + "px";
+            };
+            
+            el.addEventListener("mousemove", updatePosition);
+            
+            // Initial position
+            updatePosition(event);
+            
+            el.addEventListener("mouseleave", function() {
+                const existing = document.getElementById("custom-copy-tooltip");
+                if (existing) existing.remove();
+                el.removeEventListener("mousemove", updatePosition);
+            }, { once: true });
         });
 
         let resetColorTimeout;
@@ -309,8 +366,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 // Change color to indicate copy
                 el.classList.add("bg-success", "text-white");
 
-                // Hide the tooltip
-                tooltip.hide();
+                // Hide the custom tooltip
+                const existing = document.getElementById("custom-copy-tooltip");
+                if (existing) existing.remove();
 
                 // Clear previous timeout if exists
                 if (resetColorTimeout) clearTimeout(resetColorTimeout);
@@ -324,7 +382,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         el.addEventListener("mouseleave", function () {
-            tooltip.hide();
+            // Custom tooltip is removed on mouseleave in mouseenter handler
         });
     });
 });

@@ -13,8 +13,10 @@ session_start();
 ob_start();
 
 // Get parameters for processing
-$sequence_type = trim($_POST['sequence_type'] ?? '');
+$sequence_ids_provided = !empty($_POST['uniquenames']);
 $selected_assembly = trim($_POST['selected_assembly'] ?? '');
+$download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
+$sequence_type = trim($_POST['sequence_type'] ?? '');
 
 include_once __DIR__ . '/../../site_config.php';
 include_once __DIR__ . '/../../includes/access_control.php';
@@ -71,28 +73,27 @@ foreach ($sources_by_group as $group => $organisms) {
     }
 }
 
-// If sequence_type is set, this is the download request
-if (!empty($sequence_type)) {
-    $download_error = null;
+// Initialize selected organism/assembly variables
+$selected_organism = trim($_POST['organism'] ?? '');
+$selected_assembly = trim($_POST['assembly'] ?? '');
+$displayed_content = [];  // Store all sequence types
+
+// If sequence IDs are provided, extract ALL sequence types
+if (!empty($sequence_ids_provided)) {
+    $extraction_errors = [];
     
     // Validate inputs
     if (empty($uniquenames_string)) {
-        $download_error = "No feature IDs provided.";
-        logError($download_error, "download_fasta", ['user' => $_SESSION['username'] ?? 'unknown']);
+        $extraction_errors[] = "No feature IDs provided.";
     }
     
-    // Get the selected source from the form
-    $selected_organism = trim($_POST['organism'] ?? '');
-    $selected_assembly = trim($_POST['assembly'] ?? '');
-    
-    if (!$download_error && (empty($selected_organism) || empty($selected_assembly))) {
-        $download_error = "No assembly selected.";
-        logError($download_error, "download_fasta", ['user' => $_SESSION['username'] ?? 'unknown']);
+    if (empty($selected_organism) || empty($selected_assembly)) {
+        $extraction_errors[] = "No assembly selected.";
     }
     
     // Find the selected assembly in accessible sources
     $fasta_source = null;
-    if (!$download_error) {
+    if (empty($extraction_errors)) {
         foreach ($accessible_sources as $source) {
             if ($source['assembly'] === $selected_assembly && $source['organism'] === $selected_organism) {
                 $fasta_source = $source;
@@ -101,87 +102,61 @@ if (!empty($sequence_type)) {
         }
         
         if (!$fasta_source) {
-            $download_error = "You do not have access to the selected assembly.";
-            logError($download_error, "download_fasta", [
-                'user' => $_SESSION['username'] ?? 'unknown',
-                'organism' => $selected_organism,
-                'assembly' => $selected_assembly
-            ]);
+            $extraction_errors[] = "You do not have access to the selected assembly.";
         }
     }
     
     // Parse feature IDs
     $uniquenames = [];
-    if (!$download_error) {
+    if (empty($extraction_errors)) {
         $uniquenames = array_filter(array_map('trim', explode(',', $uniquenames_string)));
         if (empty($uniquenames)) {
-            $download_error = "No valid feature IDs provided.";
-            logError($download_error, "download_fasta", ['user' => $_SESSION['username'] ?? 'unknown']);
+            $extraction_errors[] = "No valid feature IDs provided.";
         }
     }
     
-    // Find FASTA file for selected sequence type
-    $fasta_file = null;
-    if (!$download_error) {
+    // Extract sequences for ALL available types
+    if (empty($extraction_errors)) {
         $assembly_dir = $fasta_source['path'];
         
-        if (isset($sequence_types[$sequence_type])) {
-            $files = glob("$assembly_dir/*{$sequence_types[$sequence_type]['pattern']}");
+        foreach ($sequence_types as $seq_type => $config) {
+            $files = glob("$assembly_dir/*{$config['pattern']}");
+            
             if (!empty($files)) {
                 $fasta_file = $files[0];
+                $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames);
+                
+                if ($extract_result['success']) {
+                    // Remove blank lines
+                    $lines = explode("\n", $extract_result['content']);
+                    $lines = array_filter($lines, function($line) {
+                        return trim($line) !== '';
+                    });
+                    $displayed_content[$seq_type] = implode("\n", $lines);
+                }
             }
         }
-        
-        if (!$fasta_file || !file_exists($fasta_file)) {
-            $download_error = "FASTA file not found for $sequence_type sequences.";
-            logError($download_error, "download_fasta", [
-                'user' => $_SESSION['username'] ?? 'unknown',
-                'sequence_type' => $sequence_type,
-                'organism' => $selected_organism
-            ]);
+    }
+    
+    // Log any errors
+    if (!empty($extraction_errors)) {
+        foreach ($extraction_errors as $err) {
+            logError($err, "download_fasta", ['user' => $_SESSION['username'] ?? 'unknown']);
         }
     }
     
-    // Extract sequences using blast function
-    if (!$download_error) {
-        $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames);
-        
-        if (!$extract_result['success']) {
-            $download_error = $extract_result['error'];
-            logError($download_error, "download_fasta", ['user' => $_SESSION['username'] ?? 'unknown']);
-        } else {
-            $content = $extract_result['content'];
-        }
-    }
-    
-    // If there was an error, set error message and show form later
-    $download_error_msg = $download_error;
-    
-    // If no error, proceed with download
-    if (!$download_error_msg) {
-        // Remove blank lines from output
-        $lines = explode("\n", $content);
-        $lines = array_filter($lines, function($line) {
-            return trim($line) !== '';
-        });
-        $content = implode("\n", $lines);
-        
-        // Send download
+    // If download flag is set and we have content, send the specific sequence type
+    if ($download_file_flag && !empty($sequence_type) && isset($displayed_content[$sequence_type])) {
         $file_format = $_POST['file_format'] ?? 'fasta';
         $ext = ($file_format === 'txt') ? 'txt' : 'fasta';
         $filename = "sequences_{$sequence_type}_" . date("Y-m-d_His") . ".{$ext}";
         
         header('Content-Type: application/octet-stream');
         header("Content-Disposition: attachment; filename={$filename}");
-        header('Content-Length: ' . strlen($content));
-        echo $content;
+        header('Content-Length: ' . strlen($displayed_content[$sequence_type]));
+        echo $displayed_content[$sequence_type];
         exit;
     }
-}
-
-// Initialize error message if not set
-if (!isset($download_error_msg)) {
-    $download_error_msg = null;
 }
 
 // Organize sources by group -> organism for tree view
@@ -208,6 +183,12 @@ include_once __DIR__ . '/../../includes/navbar.php';
     <title>Sequence Search - <?= htmlspecialchars($siteTitle) ?></title>
     <?php include_once __DIR__ . '/../../includes/head.php'; ?>
     <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
+    <style>
+        .tooltip { z-index: 9999 !important; }
+        .tooltip-inner { background-color: #000 !important; }
+        /* Ensure tooltip is positioned relative to body, not constrained containers */
+        body { position: relative; }
+    </style>
 </head>
 <body class="bg-light">
 
@@ -219,7 +200,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
         <?php
         $nav_context = [
             'page' => 'tool',
-            'tool_page' => 'download_sequences',
+            'tool_page' => 'retrieve_sequences',
             'organism' => $context_organism,
             'assembly' => $context_assembly,
             'group' => $context_group,
@@ -242,8 +223,8 @@ include_once __DIR__ . '/../../includes/navbar.php';
             <ol class="mb-0 mt-2">
                 <li>Select which organism and assembly to extract from</li>
                 <li>Enter gene/feature IDs (one per line or comma-separated)</li>
-                <li>Select sequence type (genome, protein, CDS, or transcript)</li>
-                <li>Download your sequences</li>
+                <li>Click "Display Sequences" to see all available sequence types</li>
+                <li>Copy or download as needed</li>
             </ol>
         </div>
 
@@ -254,7 +235,8 @@ include_once __DIR__ . '/../../includes/navbar.php';
             </div>
         <?php endif; ?>
 
-        <form method="POST" id="downloadForm">
+        <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <form method="POST" id="downloadForm">
             <input type="hidden" name="organism" value="">
             <input type="hidden" name="assembly" value="">
             <!-- Hidden context fields for back button -->
@@ -292,6 +274,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
                     // Define a color palette for groups only
                     $group_colors = ['primary', 'success', 'info', 'warning', 'danger', 'secondary', 'dark'];
                     $group_color_map = []; // Map group names to colors
+                    $first_source = true; // Track first source for auto-checking
                     
                     foreach ($sources_by_group as $group_name => $organisms): 
                         // Assign color to this group
@@ -317,6 +300,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
                                         value="<?= htmlspecialchars($source['organism'] . '|' . $source['assembly']) ?>"
                                         data-organism="<?= htmlspecialchars($source['organism']) ?>"
                                         data-assembly="<?= htmlspecialchars($source['assembly']) ?>"
+                                        <?php if ($first_source): ?>checked<?php $first_source = false; endif; ?>
                                         >
                                     
                                     <!-- Group badge - colorful -->
@@ -354,37 +338,43 @@ include_once __DIR__ . '/../../includes/navbar.php';
                 <small class="form-text text-muted">Enter one ID per line, or use commas to separate multiple IDs on one line.</small>
             </div>
 
-            <!-- Sequence Type Selection -->
-            <?php if (!empty($available_types)): ?>
-                <div class="mb-4">
-                    <label class="form-label"><strong>Select Sequence Type</strong></label>
-                    <?php foreach ($available_types as $seq_type => $label): ?>
-                        <div class="fasta-sequence-option">
-                            <label>
-                                <input type="radio" name="sequence_type" value="<?= htmlspecialchars($seq_type) ?>" required>
-                                <strong><?= htmlspecialchars($label) ?></strong>
-                            </label>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fa fa-download"></i> Download Sequences
-                    </button>
-                </div>
-            <?php else: ?>
-                <div class="alert alert-danger">
-                    <strong>No FASTA files available</strong>
-                    <p class="mb-0">No sequence files were found for the accessible assemblies.</p>
-                </div>
-            <?php endif; ?>
+            <!-- Submit button to display all sequences -->
+            <div class="d-grid gap-2 d-md-flex gap-md-2">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fa fa-eye"></i> Display All Sequences
+                </button>
+            </div>
         </form>
+        </div>
+    <?php endif; ?>
+
+    <!-- Sequences Display Section -->
+    <?php if (!empty($displayed_content)): ?>
+        <hr class="my-5">
+        <?php
+        // Set up variables for sequences_display.php
+        $gene_name = $uniquenames_string;
+        $organism_name = $selected_organism;
+        $assembly_name = $selected_assembly;
+        $enable_downloads = true;
+        
+        // Create mock available_sequences array that sequences_display.php expects
+        $available_sequences = [];
+        foreach ($displayed_content as $seq_type => $content) {
+            $available_sequences[$seq_type] = [
+                'label' => $sequence_types[$seq_type]['label'] ?? ucfirst($seq_type),
+                'sequences' => [$content]  // Wrap in array since sequences_display expects array
+            ];
+        }
+        
+        // Include the reusable sequences display component
+        include_once __DIR__ . '/../display/sequences_display.php';
+        ?>
     <?php endif; ?>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener("DOMContentLoaded", function() {
         const filterInput = document.getElementById('sourceFilter');
         const clearFilterBtn = document.getElementById('clearFilterBtn');
         const sourceLines = document.querySelectorAll('.fasta-source-line');
@@ -443,10 +433,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
         });
         
         // Auto-select first sequence type (but NOT the first assembly)
-        const firstRadio = document.querySelector('input[name="sequence_type"]');
-        if (firstRadio) {
-            firstRadio.checked = true;
-        }
+        // (No longer needed - we show all sequence types)
         
         // Update hidden fields on form submit
         if (form) {
@@ -461,7 +448,70 @@ include_once __DIR__ . '/../../includes/navbar.php';
         
         // Apply initial filter on page load if context_organism was set
         applyFilter();
+
+        // Handle copy to clipboard for sequences
+        const copyables = document.querySelectorAll(".copyable");
+        copyables.forEach(el => {
+            let resetColorTimeout;
+            el.addEventListener("click", function () {
+                const text = el.innerText.trim();
+                navigator.clipboard.writeText(text).then(() => {
+                    el.classList.add("bg-success", "text-white");
+                    if (resetColorTimeout) clearTimeout(resetColorTimeout);
+                    resetColorTimeout = setTimeout(() => {
+                        el.classList.remove("bg-success", "text-white");
+                    }, 1500);
+                }).catch(err => console.error("Copy failed:", err));
+            });
+        });
     });
+
+    // Reinitialize tooltips after a small delay to ensure Bootstrap is fully loaded
+    setTimeout(() => {
+        const copyables = document.querySelectorAll(".copyable");
+        copyables.forEach(el => {
+            // Custom simple tooltip that follows cursor
+            el.addEventListener("mouseenter", function() {
+                // Remove any existing tooltip
+                const existing = document.getElementById("custom-copy-tooltip");
+                if (existing) existing.remove();
+                
+                // Create simple tooltip
+                const tooltip = document.createElement("div");
+                tooltip.id = "custom-copy-tooltip";
+                tooltip.textContent = "Click to copy";
+                tooltip.style.cssText = `
+                    position: fixed;
+                    background-color: #000;
+                    color: #fff;
+                    padding: 5px 10px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    white-space: nowrap;
+                    pointer-events: none;
+                    z-index: 9999;
+                `;
+                document.body.appendChild(tooltip);
+                
+                // Update position on mousemove
+                const updatePosition = (e) => {
+                    tooltip.style.left = (e.clientX + 10) + "px";
+                    tooltip.style.top = (e.clientY - 30) + "px";
+                };
+                
+                el.addEventListener("mousemove", updatePosition);
+                
+                // Initial position
+                updatePosition(event);
+                
+                el.addEventListener("mouseleave", function() {
+                    const existing = document.getElementById("custom-copy-tooltip");
+                    if (existing) existing.remove();
+                    el.removeEventListener("mousemove", updatePosition);
+                }, { once: true });
+            });
+        });
+    }, 500);
 </script>
 
 <?php include_once __DIR__ . '/../../includes/footer.php'; ?>

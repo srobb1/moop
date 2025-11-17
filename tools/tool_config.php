@@ -12,7 +12,7 @@ $available_tools = [
         'icon' => 'fa-dna',
         'description' => 'Search and download sequences',
         'btn_class' => 'btn-success',
-        'url_path' => '/tools/extract/download_sequences.php',
+        'url_path' => '/tools/extract/retrieve_sequences.php',
         'context_params' => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
         'pages' => 'all',  // Show on all pages
     ],

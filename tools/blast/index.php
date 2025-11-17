@@ -261,7 +261,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
                 </div>
             </div>
 
-            <!-- Source Selection with Compact Badges (matching download_sequences.php) -->
+            <!-- Source Selection with Compact Badges (matching retrieve_sequences.php) -->
             <div class="fasta-source-selector">
                 <label class="form-label"><strong>Select Source</strong></label>
                 
