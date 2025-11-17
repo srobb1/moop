@@ -920,7 +920,7 @@ function generateHspVisualizationWithLines($results) {
         
         // Build HTML row
         $html .= '<div class="hsp-row">';
-        $html .= '<div class="hsp-label">Hit ' . $hit_num . '</div>';
+        $html .= '<div class="hsp-label"></div>';
         $html .= '<div class="hsp-segments">';
         
         // First HSP
@@ -937,8 +937,17 @@ function generateHspVisualizationWithLines($results) {
             }
             
             $hsp = $hsp_details[$first_idx];
-            $hit_desc = !empty($hit['description']) ? ' | ' . htmlspecialchars(substr($hit['description'], 0, 50)) : '';
-            $title = 'Hit ' . $hit_num . $hit_desc . ' - HSP ' . ($first_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
+            // Extract just the subject name (first word/identifier before space or bracket)
+            $hit_name = 'Hit ' . $hit_num;
+            if (!empty($hit['subject'])) {
+                $desc = htmlspecialchars($hit['subject']);
+                // Extract first word or identifier (up to first space, bracket, or pipe)
+                preg_match('/^([^\s\[\|\-]+)/', $desc, $matches);
+                if (!empty($matches[1])) {
+                    $hit_name = $matches[1];
+                }
+            }
+            $title = $hit_name . ' - HSP ' . ($first_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
             $html .= '<div class="hsp-segment ' . $color . '" style="width: ' . $segment_width . 'px;" title="' . htmlspecialchars($title) . '"></div>';
             
             // Additional HSPs with connecting logic
@@ -968,8 +977,17 @@ function generateHspVisualizationWithLines($results) {
                 $color = getHspColorClass($hsp_scores[$current_idx]);
                 $segment_width = ($current['end'] - $current['start']) * $px_unit;
                 $hsp = $hsp_details[$current_idx];
-                $hit_desc = !empty($hit['description']) ? ' | ' . htmlspecialchars(substr($hit['description'], 0, 50)) : '';
-                $title = 'Hit ' . $hit_num . $hit_desc . ' - HSP ' . ($current_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
+                // Extract just the subject name (first word/identifier before space or bracket)
+                $hit_name = 'Hit ' . $hit_num;
+                if (!empty($hit['subject'])) {
+                    $desc = htmlspecialchars($hit['subject']);
+                    // Extract first word or identifier (up to first space, bracket, or pipe)
+                    preg_match('/^([^\s\[\|\-]+)/', $desc, $matches);
+                    if (!empty($matches[1])) {
+                        $hit_name = $matches[1];
+                    }
+                }
+                $title = $hit_name . ' - HSP ' . ($current_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
                 $html .= '<div class="hsp-segment ' . $color . '" style="width: ' . $segment_width . 'px;" title="' . htmlspecialchars($title) . '"></div>';
             }
             
