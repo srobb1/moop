@@ -206,7 +206,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
         ?>
     </div>
 
-    <h2 class="mb-4"><i class="fa fa-dna"></i> Download FASTA Sequences</h2>
+    <h2 class="mb-4"><i class="fa fa-dna"></i> Download Selected Sequences</h2>
 
     <div class="alert alert-info">
         <strong>Organism:</strong> <em><?= htmlspecialchars($organism_name) ?></em><br>
