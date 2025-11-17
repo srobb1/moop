@@ -881,9 +881,14 @@ function generateHspVisualizationWithLines($results) {
     $px_unit = 800 / $results['query_length'];
     
     // Add query scale bar with intelligent tick spacing
-    // Calculate total number of hits for tick line height
+    // Calculate total number of hits and HSPs for tick line height
     $num_hits = count($results['hits']);
-    $hsp_area_height = ($num_hits * 12) + 40; // Each hit row is ~12px, plus padding
+    $total_hsp_rows = 0;
+    foreach ($results['hits'] as $hit) {
+        $total_hsp_rows += count($hit['hsps']);
+    }
+    // Each HSP row is ~12px margin-bottom, each hit has title row ~20px
+    $hsp_area_height = ($num_hits * 20) + ($total_hsp_rows * 12) + 60;
     $html .= generateQueryScale($results['query_length'], $results['query_name'], $hsp_area_height);
     
     foreach ($results['hits'] as $hit_idx => $hit) {
