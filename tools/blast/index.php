@@ -39,11 +39,32 @@ $search_query = trim($_POST['query'] ?? '');
 $blast_program = trim($_POST['blast_program'] ?? 'blastx');
 $selected_source = trim($_POST['selected_source'] ?? '');
 $blast_db = trim($_POST['blast_db'] ?? '');
-$max_hits = (int)($_POST['max_hits'] ?? 10);
+
+// Handle evalue with custom option
 $evalue = trim($_POST['evalue'] ?? '1e-3');
+if ($evalue === 'custom' && !empty($_POST['evalue_custom'])) {
+    $evalue = trim($_POST['evalue_custom']);
+}
+
+// Handle max_hits with custom option
+$max_hits = (int)($_POST['max_hits'] ?? 10);
+if ($_POST['max_hits'] === 'custom' && !empty($_POST['max_hits_custom'])) {
+    $max_hits = (int)$_POST['max_hits_custom'];
+}
+
 $matrix = trim($_POST['matrix'] ?? 'BLOSUM62');
 $filter_seq = isset($_POST['filter_seq']);
 $task = trim($_POST['task'] ?? '');
+$word_size = (int)($_POST['word_size'] ?? 0);
+$gapopen = (int)($_POST['gapopen'] ?? 0);
+$gapextend = (int)($_POST['gapextend'] ?? 0);
+$max_hsps = (int)($_POST['max_hsps'] ?? 0);
+$perc_identity = trim($_POST['perc_identity'] ?? '');
+$culling_limit = (int)($_POST['culling_limit'] ?? 0);
+$threshold = trim($_POST['threshold'] ?? '');
+$soft_masking = isset($_POST['soft_masking']);
+$ungapped = isset($_POST['ungapped']);
+$strand = trim($_POST['strand'] ?? 'plus');
 
 // Get accessible assemblies organized by group -> organism
 $sources_by_group = getAccessibleAssemblies();
@@ -112,7 +133,17 @@ if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
                     'max_hits' => $max_hits,
                     'matrix' => $matrix,
                     'filter' => $filter_seq,
-                    'task' => $task
+                    'task' => $task,
+                    'word_size' => $word_size,
+                    'gapopen' => $gapopen,
+                    'gapextend' => $gapextend,
+                    'max_hsps' => $max_hsps,
+                    'perc_identity' => $perc_identity,
+                    'culling_limit' => $culling_limit,
+                    'threshold' => $threshold,
+                    'soft_masking' => $soft_masking,
+                    'ungapped' => $ungapped,
+                    'strand' => $strand
                 ];
                 
                 $blast_result = executeBlastSearch($query_with_header, $blast_db, $blast_program, $blast_options);
@@ -339,34 +370,42 @@ include_once __DIR__ . '/../../includes/navbar.php';
 
             <!-- Advanced Options (Collapsible) -->
             <div class="mt-4">
-                <div class="collapse-section pointer-cursor" data-toggle="collapse" data-target="#advOptions" style="text-align: center; cursor: pointer; padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
+                <button class="btn btn-outline-secondary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#advOptions" aria-expanded="false" aria-controls="advOptions">
                     <i class="fas fa-sliders-h"></i> <strong>Advanced Options</strong>
-                </div>
+                </button>
                 
                 <div id="advOptions" class="collapse mt-3">
                     <div class="row">
                         <div class="col-md-6">
                             <label for="evalue" class="form-label"><strong>E-value Threshold</strong></label>
-                            <select id="evalue" name="evalue" class="form-control">
+                            <select id="evalue" name="evalue" class="form-select" onchange="toggleEvalueCustom()">
                                 <option value="10" <?= $evalue === '10' ? 'selected' : '' ?>>10</option>
                                 <option value="1" <?= $evalue === '1' ? 'selected' : '' ?>>1</option>
                                 <option value="0.1" <?= $evalue === '0.1' ? 'selected' : '' ?>>0.1</option>
-                                <option value="1e-3" <?= $evalue === '1e-3' ? 'selected' : '' ?> selected>1e-3 (default)</option>
+                                <option value="1e-3" <?= $evalue === '1e-3' ? 'selected' : '' ?>>1e-3 (default)</option>
                                 <option value="1e-6" <?= $evalue === '1e-6' ? 'selected' : '' ?>>1e-6</option>
                                 <option value="1e-9" <?= $evalue === '1e-9' ? 'selected' : '' ?>>1e-9</option>
                                 <option value="1e-12" <?= $evalue === '1e-12' ? 'selected' : '' ?>>1e-12</option>
+                                <option value="custom" <?= !in_array($evalue, ['10', '1', '0.1', '1e-3', '1e-6', '1e-9', '1e-12']) && !empty($evalue) ? 'selected' : '' ?>>Custom</option>
                             </select>
+                            <div id="evalue_custom_container" style="display: <?= !in_array($evalue, ['10', '1', '0.1', '1e-3', '1e-6', '1e-9', '1e-12']) && !empty($evalue) ? 'block' : 'none' ?>; margin-top: 8px;">
+                                <input type="text" id="evalue_custom" name="evalue_custom" class="form-control" placeholder="e.g., 1e-15, 0.05" value="<?= !in_array($evalue, ['10', '1', '0.1', '1e-3', '1e-6', '1e-9', '1e-12']) && !empty($evalue) ? htmlspecialchars($evalue) : '' ?>">
+                            </div>
                         </div>
                         
                         <div class="col-md-6">
                             <label for="max_hits" class="form-label"><strong>Maximum Hits</strong></label>
-                            <select id="max_hits" name="max_hits" class="form-control">
-                                <option value="10" <?= $max_hits === 10 ? 'selected' : '' ?> selected>10</option>
+                            <select id="max_hits" name="max_hits" class="form-select" onchange="toggleMaxHitsCustom()">
+                                <option value="10" <?= $max_hits === 10 ? 'selected' : '' ?>>10</option>
                                 <option value="20" <?= $max_hits === 20 ? 'selected' : '' ?>>20</option>
                                 <option value="40" <?= $max_hits === 40 ? 'selected' : '' ?>>40</option>
                                 <option value="60" <?= $max_hits === 60 ? 'selected' : '' ?>>60</option>
                                 <option value="100" <?= $max_hits === 100 ? 'selected' : '' ?>>100</option>
+                                <option value="custom" <?= !in_array($max_hits, [10, 20, 40, 60, 100]) && $max_hits > 0 ? 'selected' : '' ?>>Custom</option>
                             </select>
+                            <div id="max_hits_custom_container" style="display: <?= !in_array($max_hits, [10, 20, 40, 60, 100]) && $max_hits > 0 ? 'block' : 'none' ?>; margin-top: 8px;">
+                                <input type="number" id="max_hits_custom" name="max_hits_custom" class="form-control" placeholder="e.g., 50, 250" value="<?= !in_array($max_hits, [10, 20, 40, 60, 100]) && $max_hits > 0 ? htmlspecialchars($max_hits) : '' ?>" min="1">
+                            </div>
                         </div>
                     </div>
 
@@ -392,6 +431,91 @@ include_once __DIR__ . '/../../includes/navbar.php';
                                     Filter low complexity regions
                                 </label>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Advanced Options -->
+                    <hr class="my-4">
+                    <h6 class="text-muted mb-3">Additional Parameters</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="word_size" class="form-label"><strong>Word Size</strong></label>
+                            <input type="number" id="word_size" name="word_size" class="form-control" value="<?= $word_size ?: '' ?>" placeholder="Default (program-specific)" min="1">
+                            <small class="form-text text-muted">Length of initial exact match (typically 11 for blastn, 3 for blastp)</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="max_hsps" class="form-label"><strong>Max HSPs</strong></label>
+                            <input type="number" id="max_hsps" name="max_hsps" class="form-control" value="<?= $max_hsps ?: '' ?>" placeholder="Unlimited" min="1">
+                            <small class="form-text text-muted">Maximum number of HSPs to return per subject</small>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label for="perc_identity" class="form-label"><strong>Percent Identity</strong></label>
+                            <input type="number" id="perc_identity" name="perc_identity" class="form-control" value="<?= $perc_identity ?: '' ?>" placeholder="No threshold" min="0" max="100" step="0.1">
+                            <small class="form-text text-muted">Minimum percent identity (0-100)</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="culling_limit" class="form-label"><strong>Culling Limit</strong></label>
+                            <input type="number" id="culling_limit" name="culling_limit" class="form-control" value="<?= $culling_limit ?: '' ?>" placeholder="No limit" min="0">
+                            <small class="form-text text-muted">Max alignments per subject (0 = unlimited)</small>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label for="gapopen" class="form-label"><strong>Gap Open Penalty</strong></label>
+                            <input type="number" id="gapopen" name="gapopen" class="form-control" value="<?= $gapopen ?: '' ?>" placeholder="Default" min="1">
+                            <small class="form-text text-muted">Cost to open a gap</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="gapextend" class="form-label"><strong>Gap Extend Penalty</strong></label>
+                            <input type="number" id="gapextend" name="gapextend" class="form-control" value="<?= $gapextend ?: '' ?>" placeholder="Default" min="1">
+                            <small class="form-text text-muted">Cost to extend a gap</small>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label for="threshold" class="form-label"><strong>Threshold</strong></label>
+                            <input type="number" id="threshold" name="threshold" class="form-control" value="<?= $threshold ?: '' ?>" placeholder="Default" step="0.1">
+                            <small class="form-text text-muted">Minimum score for extending HSP (protein searches)</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="strand" class="form-label"><strong>Strand (DNA only)</strong></label>
+                            <select id="strand" name="strand" class="form-control">
+                                <option value="plus" <?= $strand === 'plus' ? 'selected' : '' ?>>Plus strand</option>
+                                <option value="minus" <?= $strand === 'minus' ? 'selected' : '' ?>>Minus strand</option>
+                                <option value="both" <?= $strand === 'both' ? 'selected' : '' ?>>Both strands</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="soft_masking" id="soft_masking" <?= $soft_masking ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="soft_masking">
+                                    <strong>Soft Masking</strong>
+                                </label>
+                            </div>
+                            <small class="form-text text-muted d-block">Apply soft masking to query and database</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="ungapped" id="ungapped" <?= $ungapped ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="ungapped">
+                                    <strong>Ungapped</strong>
+                                </label>
+                            </div>
+                            <small class="form-text text-muted d-block">Perform ungapped alignment only</small>
                         </div>
                     </div>
                 </div>
@@ -684,6 +808,32 @@ document.addEventListener('DOMContentLoaded', function() {
     if (searchBtn) {
         searchBtn.disabled = false;
     }
+    
+    // Toggle custom evalue input visibility
+    window.toggleEvalueCustom = function() {
+        const select = document.getElementById('evalue');
+        const customContainer = document.getElementById('evalue_custom_container');
+        if (select.value === 'custom') {
+            customContainer.style.display = 'block';
+            document.getElementById('evalue_custom').focus();
+        } else {
+            customContainer.style.display = 'none';
+            document.getElementById('evalue_custom').value = '';
+        }
+    };
+    
+    // Toggle custom max_hits input visibility
+    window.toggleMaxHitsCustom = function() {
+        const select = document.getElementById('max_hits');
+        const customContainer = document.getElementById('max_hits_custom_container');
+        if (select.value === 'custom') {
+            customContainer.style.display = 'block';
+            document.getElementById('max_hits_custom').focus();
+        } else {
+            customContainer.style.display = 'none';
+            document.getElementById('max_hits_custom').value = '';
+        }
+    };
 });
 </script>
 
