@@ -4,6 +4,13 @@
  * Integrated tool for performing BLAST searches against organism databases
  * Respects user permissions for accessing specific assemblies
  * Context-aware: Can be limited to specific organism/assembly/group from referring page
+ * 
+ * TODO: Implement cleanup mechanism for old BLAST result files
+ * - Results are stored in temporary files on the filesystem
+ * - Need to implement periodic cleanup (cron job or on-demand) to remove old results
+ * - Should delete files older than X days (suggest 7-30 days)
+ * - Consider storing results in database instead of filesystem for better management
+ * - See: blast_functions.php executeBlastSearch() function for result file handling
  */
 
 session_start();
@@ -529,7 +536,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
 
         <!-- Results -->
         <?php if (isset($blast_result) && $blast_result['success'] && !empty($blast_result['output'])): ?>
-            <div class="mt-4 card">
+            <div class="mt-4 card" id="blast-results-section">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fa fa-chart-bar"></i> BLAST Results</h5>
                     <button type="button" class="btn btn-sm btn-light" onclick="clearResults();" title="Clear results and start new search">
@@ -537,6 +544,13 @@ include_once __DIR__ . '/../../includes/navbar.php';
                     </button>
                 </div>
                 <div class="card-body">
+                    <!-- Download button - positioned at top -->
+                    <div class="mb-4">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadResultsText();">
+                            <i class="fa fa-download"></i> Download Results as TXT
+                        </button>
+                    </div>
+                    
                     <!-- Toggle query sections script -->
                     <?= getToggleQuerySectionScript() ?>
                     
@@ -549,15 +563,18 @@ include_once __DIR__ . '/../../includes/navbar.php';
                             <?= htmlspecialchars($blast_result['pairwise']) ?>
                         </div>
                     <?php endif; ?>
-                    
-                    <!-- Download button -->
-                    <div class="mt-4">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadResultsText();">
-                            <i class="fa fa-download"></i> Download TXT
-                        </button>
-                    </div>
                 </div>
             </div>
+            
+            <script>
+                // Auto-scroll to results section when page loads with results
+                document.addEventListener('DOMContentLoaded', function() {
+                    const resultsSection = document.getElementById('blast-results-section');
+                    if (resultsSection) {
+                        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            </script>
         <?php endif; ?>
         
     <?php endif; ?>

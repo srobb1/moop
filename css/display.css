@@ -777,3 +777,20 @@ code {
 .blast-coverage-map div[title]:hover {
   opacity: 1 !important;
 }
+
+/* ========== BLAST HIT HIGHLIGHTING ANIMATION ========== */
+@keyframes blast-hit-highlight {
+  0% {
+    background-color: rgba(255, 193, 7, 0.3);
+  }
+  80% {
+    background-color: rgba(255, 193, 7, 0.3);
+  }
+  100% {
+    background-color: #f0f7ff;
+  }
+}
+
+.hit-highlighted {
+  animation: blast-hit-highlight 3.5s ease-out forwards !important;
+}

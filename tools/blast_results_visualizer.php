@@ -282,9 +282,10 @@ function parseBlastResults($blast_xml) {
  * Generate HTML for hits summary table
  * 
  * @param array $results Parsed BLAST results
+ * @param int $query_num Query number for linking to hit sections
  * @return string HTML table
  */
-function generateHitsSummaryTable($results) {
+function generateHitsSummaryTable($results, $query_num = 1) {
     $html = '<div class="blast-hits-summary mb-4">';
     $html .= '<h6><i class="fa fa-table"></i> Hits Summary (' . $results['total_hits'] . ' hits found)</h6>';
     $html .= '<div style="overflow-x: auto;">';
@@ -292,11 +293,10 @@ function generateHitsSummaryTable($results) {
     $html .= '<thead class="table-light">';
     $html .= '<tr>';
     $html .= '<th style="width: 5%">#</th>';
-    $html .= '<th style="width: 40%">Subject</th>';
+    $html .= '<th style="width: 45%">Subject</th>';
     $html .= '<th style="width: 20%">Query Coverage %</th>';
     $html .= '<th style="width: 12%">E-value</th>';
-    $html .= '<th style="width: 12%">HSPs</th>';
-    $html .= '<th style="width: 11%">Action</th>';
+    $html .= '<th style="width: 18%">HSPs</th>';
     $html .= '</tr>';
     $html .= '</thead>';
     $html .= '<tbody>';
@@ -318,7 +318,7 @@ function generateHitsSummaryTable($results) {
             $coverage_color = '#dc3545'; // Red - low coverage
         }
         
-        $html .= '<tr>';
+        $html .= '<tr style="cursor: pointer;" onclick="document.getElementById(\'query-' . $query_num . '-hit-' . $hit_num . '\').scrollIntoView({behavior: \'smooth\', block: \'start\'});">';
         $html .= '<td><strong>' . $hit_num . '</strong></td>';
         $html .= '<td><small>' . htmlspecialchars(substr($hit['subject'], 0, 60)) . '</small></td>';
         $html .= '<td>';
@@ -330,7 +330,6 @@ function generateHitsSummaryTable($results) {
         $html .= '</td>';
         $html .= '<td><small>' . $evalue_display . '</small></td>';
         $html .= '<td>' . $hit['num_hsps'] . '</td>';
-        $html .= '<td><button class="btn btn-xs btn-primary" onclick="document.getElementById(\'hit-' . $hit_num . '\').scrollIntoView({behavior: \'smooth\', block: \'start\'})" title="Scroll to alignment">View</button></td>';
         $html .= '</tr>';
     }
     
@@ -531,7 +530,7 @@ function generateBlastGraphicalView($results) {
  * @param array $results Parsed BLAST results from parseBlastResults()
  * @return string HTML with alignment viewer
  */
-function generateAlignmentViewer($results, $blast_program = 'blastn') {
+function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num = 1) {
     $html = '<div class="blast-alignment-viewer mt-4">';
     $html .= '<h6><i class="fa fa-align-justify"></i> Detailed Alignments (HSPs)</h6>';
     $html .= '<small class="text-muted d-block mb-3">Each Hit section contains one or more High-Scoring Segment Pairs (HSPs)</small>';
@@ -554,7 +553,7 @@ function generateAlignmentViewer($results, $blast_program = 'blastn') {
         $evalue_display = $hit['best_evalue'] < 1e-100 ? '0' : sprintf('%.2e', $hit['best_evalue']);
         
         // Hit header card
-        $html .= '<div id="hit-' . $hit_num . '" style="padding: 15px;  scroll-margin-top: 20px; background: #f0f7ff; margin-bottom: 15px;">';
+        $html .= '<div id="query-' . $query_num . '-hit-' . $hit_num . '" style="padding: 15px;  scroll-margin-top: 20px; background: #f0f7ff; margin-bottom: 15px;">';
         $html .= '<h5 style="margin-bottom: 10px; color: #007bff;">';
         $html .= '<strong>Hit ' . $hit_num . ': ' . htmlspecialchars($hit['subject']) . '</strong>';
         $html .= '</h5>';
@@ -983,13 +982,13 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
             $html .= '<div class="alert alert-info"><small>No significant matches found for this query</small></div>';
         } else {
             // HSP visualization for this query
-            $html .= generateHspVisualizationWithLines($query, $blast_program);
+            $html .= generateHspVisualizationWithLines($query, $blast_program, $query_num);
             
             // Hits summary table for this query
-            $html .= generateHitsSummaryTable($query);
+            $html .= generateHitsSummaryTable($query, $query_num);
             
             // Alignment viewer for this query
-            $html .= generateAlignmentViewer($query, $blast_program);
+            $html .= generateAlignmentViewer($query, $blast_program, $query_num);
         }
         
         $html .= '</div>'; // End query content
@@ -1010,7 +1009,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
  * @param string $blast_program BLAST program name (blastn, blastp, etc.)
  * @return string HTML with HSP visualization
  */
-function generateHspVisualizationWithLines($results, $blast_program = 'blastn') {
+function generateHspVisualizationWithLines($results, $blast_program = 'blastn', $query_num = 1) {
     if (empty($results['hits']) || $results['query_length'] <= 0) {
         return '';
     }
@@ -1039,46 +1038,34 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn') 
     $html .= '.color-purple { background-color: #e967f5; }';
     $html .= '.color-red { background-color: #e83a2d; }';
     $html .= '.hit-highlight { background-color: #ffffcc !important; transition: background-color 0.3s ease-out; }';
-    $html .= '@keyframes highlightFade { 0% { background-color: #ffff99; } 100% { background-color: transparent; } }';
-    $html .= '.hit-highlighted { animation: highlightFade 2s ease-out; }';
     $html .= '.hsp-row:hover { background-color: rgba(100, 150, 255, 0.1); }';
     $html .= '</style>';
     
-    // Add JavaScript for hit navigation and highlighting
-    $html .= '<script>';
-    $html .= 'function jumpToHit(hitIndex) {';
-    $html .= '  const hitId = "hit-" + (hitIndex + 1);';
-    $html .= '  const element = document.getElementById(hitId);';
-    $html .= '  if (element) {';
-    $html .= '    element.scrollIntoView({ behavior: "smooth", block: "start" });';
-    $html .= '  }';
-    $html .= '}';
-    $html .= 'function highlightHit(hitIndex) {';
-    $html .= '  const hitId = "hit-" + (hitIndex + 1);';
-    $html .= '  const hitHeader = document.getElementById(hitId);';
-    $html .= '  if (!hitHeader) return;';
-    $html .= '  ';
-    $html .= '  const elementsToHighlight = [hitHeader];';
-    $html .= '  let nextElement = hitHeader.nextElementSibling;';
-    $html .= '  ';
-    $html .= '  while (nextElement && !nextElement.id) {';
-    $html .= '    elementsToHighlight.push(nextElement);';
-    $html .= '    nextElement = nextElement.nextElementSibling;';
-    $html .= '  }';
-    $html .= '  ';
-    $html .= '  elementsToHighlight.forEach(el => {';
-    $html .= '    el.classList.remove("hit-highlighted");';
-    $html .= '    void el.offsetWidth;';
-    $html .= '    el.classList.add("hit-highlighted");';
-    $html .= '  });';
-    $html .= '  ';
-    $html .= '  setTimeout(() => {';
-    $html .= '    elementsToHighlight.forEach(el => {';
-    $html .= '      el.classList.remove("hit-highlighted");';
-    $html .= '    });';
-    $html .= '  }, 2000);';
-    $html .= '}';
-    $html .= '</script>';
+     // Add JavaScript for hit navigation and highlighting
+     $html .= '<script>';
+     $html .= 'function jumpToHit(hitIndex, queryNum) {';
+     $html .= '  if (queryNum === undefined) queryNum = 1;';
+     $html .= '  const hitId = "query-" + queryNum + "-hit-" + (hitIndex + 1);';
+     $html .= '  const element = document.getElementById(hitId);';
+     $html .= '  if (element) {';
+     $html .= '    element.scrollIntoView({ behavior: "smooth", block: "start" });';
+     $html .= '    highlightHitElement(element);';
+     $html .= '  }';
+     $html .= '}';
+     $html .= 'function highlightHitElement(element) {';
+     $html .= '  if (!element) return;';
+     $html .= '  element.classList.remove("hit-highlighted");';
+     $html .= '  void element.offsetWidth;';
+     $html .= '  element.classList.add("hit-highlighted");';
+     $html .= '  setTimeout(() => {';
+     $html .= '    element.classList.remove("hit-highlighted");';
+     $html .= '  }, 3500);';
+     $html .= '}';
+     $html .= 'function highlightHit(hitIndex, queryNum) {';
+     $html .= '  if (queryNum === undefined) queryNum = 1;';
+     $html .= '  jumpToHit(hitIndex, queryNum);';
+     $html .= '}';
+     $html .= '</script>';
     
     $html .= '<div style="margin-top: 15px; margin: 0 auto; width: 1000px; text-align: center;">';
 
@@ -1146,7 +1133,7 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn') 
         });
         
         // Build HTML row
-        $html .= '<div class="hsp-row" style="cursor: pointer;" onclick="jumpToHit(' . $hit_idx . '); highlightHit(' . $hit_idx . ');">';
+        $html .= '<div class="hsp-row" style="cursor: pointer;" onclick="jumpToHit(' . $hit_idx . ', ' . $query_num . '); highlightHit(' . $hit_idx . ', ' . $query_num . ');">';
         $html .= '<div class="hsp-label"></div>';
         $html .= '<div class="hsp-segments">';
         
