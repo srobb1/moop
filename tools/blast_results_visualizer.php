@@ -937,7 +937,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
         $best_evalue = $query['total_hits'] > 0 ? $query['hits'][0]['best_evalue'] : PHP_FLOAT_MAX;
         $best_evalue_display = $best_evalue < 1e-100 ? '0' : sprintf('%.2e', $best_evalue);
         
-        $html .= '<tr style="cursor: pointer;" onclick="document.getElementById(\'query-' . $query_num . '\').scrollIntoView({behavior: \'smooth\', block: \'start\'}); document.getElementById(\'query-' . $query_num . '-header\').click();">';
+        $html .= '<tr style="cursor: pointer;" onclick="document.getElementById(\'query-' . $query_num . '\').scrollIntoView({behavior: \'smooth\', block: \'start\'});">';
         $html .= '<td><strong>' . $query_num . '</strong></td>';
         $html .= '<td><small>' . $query_name . '</small></td>';
         $html .= '<td>' . $query['query_length'] . ' ' . $unit . '</td>';
