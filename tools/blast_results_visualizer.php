@@ -3,6 +3,10 @@
  * BLAST Results Visualizer
  * Parses BLAST XML/text output and creates interactive visualizations
  * Displays: summary table, coverage maps, alignment viewer
+ * 
+ * HSP visualization with connecting lines adapted from locBLAST
+ * (https://github.com/cobilab/locBLAST)
+ * Licensed under GNU General Public License v3.0 (GPL-3.0)
  */
 
 /**
@@ -802,6 +806,9 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     $html .= '</div>';
     $html .= '</div>';
     
+    // HSP visualization with connecting lines (locBLAST style)
+    $html .= generateHspVisualizationWithLines($results);
+    
     // Graphical view (canvas-style but SVG-based) - moved above summary table
     $html .= generateBlastGraphicalView($results);
     
@@ -814,5 +821,203 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     $html .= '</div>';
     
     return $html;
+}
+
+/**
+ * Generate HSP visualization with connecting lines (ported from locBLAST)
+ * Displays HSPs as colored segments with lines connecting adjacent HSPs
+ * Adapted from: https://github.com/cobilab/locBLAST (GPL-3.0)
+ * 
+ * @param array $results Parsed BLAST results
+ * @return string HTML with HSP visualization
+ */
+function generateHspVisualizationWithLines($results) {
+    if (empty($results['hits']) || $results['query_length'] <= 0) {
+        return '';
+    }
+    
+    $html = '<div class="blast-hsp-visualization" style="margin: 20px 0; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px;">';
+    $html .= '<h6><i class="fa fa-align-left"></i> HSP Coverage Map (with connecting lines)</h6>';
+    $html .= '<small class="text-muted">Each color represents a different bit score range. Lines connect adjacent HSPs on the query sequence.</small>';
+    
+    // Add CSS for HSP visualization
+    $html .= '<style>';
+    $html .= '.hsp-row { display: flex; align-items: center; margin-bottom: 12px; }';
+    $html .= '.hsp-label { min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; word-break: break-all; }';
+    $html .= '.hsp-segments { display: flex; align-items: center; flex: 1; }';
+    $html .= '.hsp-segment { height: 16px; display: inline-block; margin-right: 0; cursor: pointer; border: 1px solid #333; transition: opacity 0.2s; }';
+    $html .= '.hsp-segment:hover { opacity: 0.8; }';
+    $html .= '.hsp-gap { height: 4px; background: #e0e0e0; display: inline-block; margin-top: 6px; }';
+    $html .= '.hsp-connector { width: 1px; height: 6px; background: #000; display: inline-block; margin: 5px 0; }';
+    $html .= '.color-black { background-color: #000000; }';
+    $html .= '.color-blue { background-color: #0047c8; }';
+    $html .= '.color-green { background-color: #77de75; }';
+    $html .= '.color-purple { background-color: #e967f5; }';
+    $html .= '.color-red { background-color: #e83a2d; }';
+    $html .= '</style>';
+    
+    $html .= '<div style="margin-top: 15px;">';
+    
+    // Pixel unit calculation based on query length
+    $px_unit = 500 / $results['query_length'];
+    
+    foreach ($results['hits'] as $hit_idx => $hit) {
+        $hit_num = $hit_idx + 1;
+        
+        // Organize HSPs by their query coordinates
+        $hsp_positions = [];
+        $hsp_scores = [];
+        $hsp_details = [];
+        
+        foreach ($hit['hsps'] as $hsp_idx => $hsp) {
+            $q_start = min($hsp['query_from'], $hsp['query_to']);
+            $q_end = max($hsp['query_from'], $hsp['query_to']);
+            
+            $hsp_positions[] = [
+                'start' => $q_start,
+                'end' => $q_end,
+                'index' => $hsp_idx
+            ];
+            
+            $hsp_scores[$hsp_idx] = $hsp['bit_score'];
+            $hsp_details[$hsp_idx] = $hsp;
+        }
+        
+        // Sort by start position
+        usort($hsp_positions, function($a, $b) {
+            return $a['start'] - $b['start'];
+        });
+        
+        // Build HTML row
+        $html .= '<div class="hsp-row">';
+        $html .= '<div class="hsp-label">Hit ' . $hit_num . '</div>';
+        $html .= '<div class="hsp-segments">';
+        
+        // First HSP
+        if (!empty($hsp_positions)) {
+            $first_hsp = $hsp_positions[0];
+            $first_idx = $first_hsp['index'];
+            $color = getHspColorClass($hsp_scores[$first_idx]);
+            $segment_width = ($first_hsp['end'] - $first_hsp['start']) * $px_unit;
+            
+            // Add leading gap if needed
+            if ($first_hsp['start'] > 1) {
+                $gap_width = ($first_hsp['start'] - 1) * $px_unit;
+                $html .= '<div class="hsp-gap" style="width: ' . $gap_width . 'px;"></div>';
+            }
+            
+            $hsp = $hsp_details[$first_idx];
+            $title = 'Hit ' . $hit_num . ' HSP ' . ($first_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
+            $html .= '<div class="hsp-segment ' . $color . '" style="width: ' . $segment_width . 'px;" title="' . htmlspecialchars($title) . '"></div>';
+            
+            // Additional HSPs with connecting logic
+            for ($k = 1; $k < count($hsp_positions); $k++) {
+                $current = $hsp_positions[$k];
+                $previous = $hsp_positions[$k - 1];
+                $current_idx = $current['index'];
+                
+                $gap = $current['start'] - $previous['end'];
+                
+                if ($gap > 0) {
+                    // Add connector lines for gaps
+                    $html .= '<div class="hsp-connector"></div>';
+                    
+                    // Add gap
+                    $gap_width = $gap * $px_unit;
+                    $html .= '<div class="hsp-gap" style="width: ' . $gap_width . 'px;"></div>';
+                    
+                    // Add connector on other side
+                    $html .= '<div class="hsp-connector"></div>';
+                } else {
+                    // Overlapping or adjacent HSPs - just connector line
+                    $html .= '<div class="hsp-connector"></div>';
+                }
+                
+                // Add current segment
+                $color = getHspColorClass($hsp_scores[$current_idx]);
+                $segment_width = ($current['end'] - $current['start']) * $px_unit;
+                $hsp = $hsp_details[$current_idx];
+                $title = 'Hit ' . $hit_num . ' HSP ' . ($current_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
+                $html .= '<div class="hsp-segment ' . $color . '" style="width: ' . $segment_width . 'px;" title="' . htmlspecialchars($title) . '"></div>';
+            }
+            
+            // Trailing gap
+            $last_end = $hsp_positions[count($hsp_positions) - 1]['end'];
+            if ($last_end < $results['query_length']) {
+                $trailing_gap = ($results['query_length'] - $last_end) * $px_unit;
+                $html .= '<div class="hsp-gap" style="width: ' . $trailing_gap . 'px;"></div>';
+            }
+        }
+        
+        $html .= '</div>';
+        $html .= '</div>';
+    }
+    
+    $html .= '</div>';
+    
+    // Color legend
+    $html .= '<div style="margin-top: 20px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 15px;">';
+    $html .= '<strong style="display: block; margin-bottom: 10px;"><i class="fa fa-info-circle"></i> Bit Score Color Legend:</strong>';
+    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">';
+    
+    $colors = [
+        ['class' => 'color-black', 'label' => '≤ 40', 'desc' => 'Weak'],
+        ['class' => 'color-blue', 'label' => '40-50', 'desc' => 'Moderate'],
+        ['class' => 'color-green', 'label' => '50-80', 'desc' => 'Good'],
+        ['class' => 'color-purple', 'label' => '80-200', 'desc' => 'Very Good'],
+        ['class' => 'color-red', 'label' => '> 200', 'desc' => 'Excellent']
+    ];
+    
+    foreach ($colors as $color) {
+        $html .= '<div style="display: flex; align-items: center;">';
+        $html .= '<div style="width: 24px; height: 24px; border: 1px solid #333; margin-right: 8px; ' . getColorStyle($color['class']) . '"></div>';
+        $html .= '<div><strong>' . $color['label'] . '</strong> - ' . $color['desc'] . '</div>';
+        $html .= '</div>';
+    }
+    
+    $html .= '</div>';
+    $html .= '</div>';
+    $html .= '</div>';
+    
+    return $html;
+}
+
+/**
+ * Get HSP color class based on bit score
+ * Mirrors locBLAST color_key function
+ * 
+ * @param float $score Bit score
+ * @return string CSS class name for color
+ */
+function getHspColorClass($score) {
+    if ($score <= 40) {
+        return 'color-black';
+    } elseif ($score <= 50) {
+        return 'color-blue';
+    } elseif ($score <= 80) {
+        return 'color-green';
+    } elseif ($score <= 200) {
+        return 'color-purple';
+    } else {
+        return 'color-red';
+    }
+}
+
+/**
+ * Get inline CSS style for color class
+ * 
+ * @param string $colorClass CSS class name
+ * @return string Inline style
+ */
+function getColorStyle($colorClass) {
+    $styles = [
+        'color-black' => 'background-color: #000000;',
+        'color-blue' => 'background-color: #0047c8;',
+        'color-green' => 'background-color: #77de75;',
+        'color-purple' => 'background-color: #e967f5;',
+        'color-red' => 'background-color: #e83a2d;'
+    ];
+    
+    return isset($styles[$colorClass]) ? $styles[$colorClass] : '';
 }
 ?>
