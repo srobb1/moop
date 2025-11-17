@@ -863,7 +863,7 @@ function generateHspVisualizationWithLines($results) {
     $html .= '<style>';
     $html .= '.hsp-row { display: flex; align-items: center; margin-bottom: 12px; }';
     $html .= '.hsp-label { min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; word-break: break-all; }';
-    $html .= '.hsp-segments { display: flex; align-items: center; width: 500px; }';
+    $html .= '.hsp-segments { display: flex; align-items: center; width: 800px; position: relative; }';
     $html .= '.hsp-segment { height: 16px; display: inline-block; margin-right: 0; cursor: pointer; border: 1px solid #333; transition: opacity 0.2s; }';
     $html .= '.hsp-segment:hover { opacity: 0.8; }';
     $html .= '.hsp-gap { height: 4px; background: #e0e0e0; display: inline-block; margin-top: 6px; }';
@@ -875,10 +875,10 @@ function generateHspVisualizationWithLines($results) {
     $html .= '.color-red { background-color: #e83a2d; }';
     $html .= '</style>';
     
-    $html .= '<div style="margin-top: 15px;">';
+    $html .= '<div style="margin-top: 15px; margin: 0 auto; width: 1000px; text-align: center;">';
     
-    // Pixel unit calculation based on query length
-    $px_unit = 500 / $results['query_length'];
+    // Pixel unit calculation based on query length (800px width)
+    $px_unit = 800 / $results['query_length'];
     
     // Score legend
     $html .= '<div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #ddd;">';
@@ -1205,97 +1205,70 @@ function formatBlastAlignment($length, $query_seq, $query_seq_from, $query_seq_t
  * @return string HTML for scale labels, ticks, and query bar
  */
 function generateQueryScale($query_length, $query_name = '') {
-    $pxls = 500 / $query_length;
-    $output = '<div style="margin-left: 0; margin-bottom: 20px;">';
+    $pxls = 800 / $query_length;  // Wider 800px instead of 500px
+    $output = '<div style="margin: 0 auto 20px auto; width: 1000px;">';
     
-    // Query bar - 500px width like locBLAST
-    $output .= '<div style="display: flex; align-items: center; margin-bottom: 5px;">';
+    // Score legend bar - discrete colored boxes (800px total width to match query)
+    $output .= '<div style="display: flex; align-items: center; margin-bottom: 10px;">';
+    $output .= '<div style="min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; text-align: right;">Score:</div>';
+    $output .= '<div style="display: flex; gap: 0; width: 800px;">';
+    
+    $score_ranges = [
+        ['color' => '#000000', 'label' => '&le;40'],
+        ['color' => '#0047c8', 'label' => '40-50'],
+        ['color' => '#77de75', 'label' => '50-80'],
+        ['color' => '#e967f5', 'label' => '80-200'],
+        ['color' => '#e83a2d', 'label' => '&ge;200']
+    ];
+    
+    $box_width = (800 / 5); // Divide 800px by 5 color ranges evenly
+    foreach ($score_ranges as $range) {
+        $output .= '<div style="width: ' . $box_width . 'px; height: 25px; background-color: ' . $range['color'] . '; border-right: 1px solid #333; display: flex; align-items: center; justify-content: center;">';
+        $output .= '<span style="color: white; font-size: 10px; font-weight: bold; text-align: center;">' . $range['label'] . '</span>';
+        $output .= '</div>';
+    }
+    
+    $output .= '</div>';
+    $output .= '</div>';
+    
+    // Query bar - 800px width
+    $output .= '<div style="display: flex; align-items: center; margin-bottom: 0;">';
     $output .= '<div style="min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; text-align: right;">';
     $output .= 'Query:';
     if (!empty($query_name)) {
         $output .= '<br><small style="font-weight: normal; color: #666;">' . htmlspecialchars(substr($query_name, 0, 20)) . '</small>';
     }
     $output .= '</div>';
-    $output .= '<div style="width: 500px; height: 20px; position: relative; background: #f0f0f0; border: 1px solid #999; border-radius: 3px; margin-right: 10px;">';
-    $output .= '<div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: linear-gradient(to right, #4CAF50 0%, #45a049 100%); border-radius: 2px;"></div>';
+    $output .= '<div style="width: 800px; height: 20px; position: relative; background: #f0f0f0; border-left: 1px solid #999; border-right: 1px solid #999; border-bottom: 1px solid #999; border-radius: 0 0 3px 3px; margin-right: 10px;">';
+    $output .= '<div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: linear-gradient(to right, #4CAF50 0%, #45a049 100%); border-radius: 0 0 2px 2px;"></div>';
     $output .= '<div style="position: absolute; left: 5px; top: 2px; color: white; font-size: 11px; font-weight: bold;">1 - ' . $query_length . ' bp</div>';
     $output .= '</div>';
     $output .= '</div>';
     
-    // Scale ruler with ticks and numbers
+    // Generate exactly 10 evenly spaced tick positions
+    $tick_numbers = [];
+    $tick_interval = $query_length / 10;
+    for ($i = 1; $i <= 10; $i++) {
+        $tick_numbers[] = round($i * $tick_interval);
+    }
+    
+    // Scale ruler with ticks and vertical lines down to HSPs
     $output .= '<div style="display: flex; align-items: flex-start;">';
     $output .= '<div style="min-width: 100px; padding-right: 15px;"></div>';
     
-    // Calculate which numbers to display
-    $numbers = [];
+    // Container for ruler - 800px width, extended height for vertical lines
+    $output .= '<div style="position: relative; height: 40px; width: 800px; margin-right: 10px;">';
     
-    if ($query_length <= 50) {
-        $nq = (int)($query_length / 5);
-        $x = $nq;
-        while ($x <= $query_length) {
-            $numbers[] = $x;
-            $x += $nq;
-        }
-    } elseif ($query_length > 50 && $query_length <= 500) {
-        $nq = (int)($query_length / 10);
-        $nqn = $nq * 10;
-        $nqnq = (int)($nqn / 5);
-        if ($nqnq % 10 > 0) {
-            $nqnqx = (int)($nqnq / 10);
-            $new = $nqnqx * 10;
-            $newx = $new;
-            while ($newx <= $query_length) {
-                $numbers[] = $newx;
-                $newx += $new;
-            }
-        } else {
-            $new = $nqnq;
-            $newx = $new;
-            while ($newx <= $query_length) {
-                $numbers[] = $newx;
-                $newx += $new;
-            }
-        }
-    } elseif ($query_length > 500 && $query_length <= 5000) {
-        $nq = (int)($query_length / 10);
-        $nqn = $nq * 10;
-        $nqnq = (int)($nqn / 5);
-        if ($nqnq % 50 > 0) {
-            $nqnqx = (int)($nqnq / 50);
-            $new = $nqnqx * 50;
-            $newx = $new;
-            while ($newx <= $query_length) {
-                $numbers[] = $newx;
-                $newx += $new;
-            }
-        } else {
-            $new = $nqnq;
-            $newx = $new;
-            while ($newx <= $query_length) {
-                $numbers[] = $newx;
-                $newx += $new;
-            }
-        }
-    } else {
-        $nq = (int)($query_length / 5);
-        $x = $nq;
-        while ($x <= $query_length) {
-            $numbers[] = $x;
-            $x += $nq;
-        }
-    }
+    // Draw starting "1" position
+    $output .= '<div style="position: absolute; left: -15px; top: 10px; width: 30px; text-align: center; font-size: 11px; font-weight: bold;">1</div>';
     
-    // Container for ruler - 500px width like locBLAST .masterLen
-    $output .= '<div style="position: relative; height: 35px; width: 500px; margin-right: 10px;">';
-    
-    // Draw starting "0" position
-    $output .= '<div style="position: absolute; left: -15px; top: 10px; width: 30px; text-align: center; font-size: 11px; font-weight: bold;">0</div>';
-    
-    // Draw tick marks and labels
-    foreach ($numbers as $num) {
-        $pos = (int)($pxls * $num);
-        // Tick mark
-        $output .= '<div style="position: absolute; left: ' . $pos . 'px; top: 0; width: 1px; height: 8px; background: #333;"></div>';
+    // Draw tick marks with vertical lines (gray) extending down through HSPs
+    foreach ($tick_numbers as $num) {
+        $pos = (int)($pxls * ($num - 1)); // Subtract 1 since we start at position 1
+        // Vertical line from top through HSP area (gray color, height 200px to extend behind HSPs)
+        $output .= '<div style="position: absolute; left: ' . $pos . 'px; top: 0; width: 1px; height: 200px; background: #cccccc; pointer-events: none;"></div>';
+        // Tick mark at top (darker)
+        $output .= '<div style="position: absolute; left: ' . $pos . 'px; top: 0; width: 1px; height: 8px; background: #999;"></div>';
         // Number label below tick
         $output .= '<div style="position: absolute; left: ' . ($pos - 15) . 'px; top: 10px; width: 30px; text-align: center; font-size: 11px; font-weight: bold;">' . $num . '</div>';
     }
