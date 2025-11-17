@@ -425,6 +425,9 @@ include_once __DIR__ . '/../../includes/navbar.php';
                     </button>
                 </div>
                 <div class="card-body">
+                    <!-- Toggle query sections script -->
+                    <?= getToggleQuerySectionScript() ?>
+                    
                     <!-- Visualization -->
                     <?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program) ?>
                     

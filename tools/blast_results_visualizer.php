@@ -11,49 +11,52 @@
 
 /**
  * Parse BLAST results from XML output
- * Maintains Hit/HSP hierarchy
+ * Supports multiple queries, each with Hit/HSP hierarchy
  * 
  * @param string $blast_xml Raw BLAST XML output
- * @return array Parsed results with hits array (each hit contains hsps)
+ * @return array Array of parsed query results, each with hits array
  */
 function parseBlastResults($blast_xml) {
-    $results = [
-        'hits' => [],
-        'query_length' => 0,
-        'query_name' => '',
-        'query_desc' => '',
-        'total_hits' => 0,
-        'error' => ''
-    ];
+    $all_queries = [];
     
     // Parse XML
     try {
         $xml = simplexml_load_string($blast_xml);
         
         if ($xml === false) {
-            $results['error'] = 'Failed to parse BLAST XML output';
-            return $results;
+            return ['error' => 'Failed to parse BLAST XML output', 'queries' => []];
         }
         
-        // Get query info using XPath to handle hyphens in element names
-        $query_len = $xml->xpath('//BlastOutput_query-len');
-        if (!empty($query_len)) {
-            $results['query_length'] = (int)$query_len[0];
-        }
-        
-        $query_id = $xml->xpath('//BlastOutput_query-ID');
-        if (!empty($query_id)) {
-            $results['query_name'] = (string)$query_id[0];
-        }
-        
-        $query_def = $xml->xpath('//BlastOutput_query-def');
-        if (!empty($query_def)) {
-            $results['query_desc'] = (string)$query_def[0];
-        }
-        
-        // Parse each hit using XPath - maintain Hit/HSP hierarchy
+        // Parse each iteration (each query gets one iteration)
         $iterations = $xml->xpath('//Iteration');
+        
         foreach ($iterations as $iteration) {
+            $query_result = [
+                'hits' => [],
+                'query_length' => 0,
+                'query_name' => '',
+                'query_desc' => '',
+                'total_hits' => 0,
+                'error' => ''
+            ];
+            
+            // Get query info using XPath to handle hyphens in element names
+            $query_len = $iteration->xpath('./Iteration_query-len');
+            if (!empty($query_len)) {
+                $query_result['query_length'] = (int)$query_len[0];
+            }
+            
+            $query_id = $iteration->xpath('./Iteration_query-ID');
+            if (!empty($query_id)) {
+                $query_result['query_name'] = (string)$query_id[0];
+            }
+            
+            $query_def = $iteration->xpath('./Iteration_query-def');
+            if (!empty($query_def)) {
+                $query_result['query_desc'] = (string)$query_def[0];
+            }
+            
+            // Parse each hit using XPath - maintain Hit/HSP hierarchy
             $hits = $iteration->xpath('.//Hit');
             foreach ($hits as $hit_node) {
                 // Get hit info
@@ -219,11 +222,11 @@ function parseBlastResults($blast_xml) {
                     foreach ($merged as $region) {
                         $total_covered += $region['to'] - $region['from'] + 1;
                     }
-                    $query_coverage_percent = $results['query_length'] > 0 ? round(($total_covered / $results['query_length']) * 100, 2) : 0;
+                    $query_coverage_percent = $query_result['query_length'] > 0 ? round(($total_covered / $query_result['query_length']) * 100, 2) : 0;
                     
                     // Also calculate subject cumulative coverage for display
                     $subject_cumulative_coverage = [];
-                    foreach ($results['hits'] as $hit_test) {
+                    foreach ($query_result['hits'] as $hit_test) {
                         if ($hit_test['subject'] === $hit_def_str) {
                             foreach ($hit_test['hsps'] as $hsp_test) {
                                 $subject_cumulative_coverage[] = [
@@ -260,18 +263,19 @@ function parseBlastResults($blast_xml) {
                         'subject_cumulative_coverage_percent' => $subject_cumulative_coverage_percent
                     ];
                     
-                    $results['hits'][] = $hit;
+                    $query_result['hits'][] = $hit;
                 }
             }
+            
+            $query_result['total_hits'] = count($query_result['hits']);
+            $all_queries[] = $query_result;
         }
         
-        $results['total_hits'] = count($results['hits']);
-        
     } catch (Exception $e) {
-        $results['error'] = 'XML parsing error: ' . $e->getMessage();
+        return ['error' => 'XML parsing error: ' . $e->getMessage(), 'queries' => []];
     }
     
-    return $results;
+    return ['queries' => $all_queries, 'error' => ''];
 }
 
 /**
@@ -729,15 +733,16 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
         return '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> No results to visualize</div>';
     }
     
-    $results = parseBlastResults($blast_result['output']);
+    $parse_result = parseBlastResults($blast_result['output']);
     
     // Check for parsing errors
-    if (!empty($results['error'])) {
-        return '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> Error parsing results: ' . htmlspecialchars($results['error']) . '</div>';
+    if (!empty($parse_result['error'])) {
+        return '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> Error parsing results: ' . htmlspecialchars($parse_result['error']) . '</div>';
     }
     
-    if ($results['total_hits'] === 0) {
-        return '<div class="alert alert-info"><i class="fa fa-info-circle"></i> No significant matches found</div>';
+    $queries = $parse_result['queries'] ?? [];
+    if (empty($queries)) {
+        return '<div class="alert alert-info"><i class="fa fa-info-circle"></i> No queries found in results</div>';
     }
     
     $html = '<div class="blast-visualization">';
@@ -748,22 +753,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
         $unit = 'aa';
     }
     
-    // Query info section (first)
-    $html .= '<div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 20px;">';
-    $html .= '<h6 style="margin-bottom: 10px; color: #333;"><i class="fa fa-dna"></i> Query</h6>';
-    $html .= '<small>';
-    if (!empty($results['query_name'])) {
-        $html .= '<strong>Name:</strong> ' . htmlspecialchars($results['query_name']) . '<br>';
-    }
-    if (!empty($results['query_desc'])) {
-        $html .= '<strong>Description:</strong> ' . htmlspecialchars($results['query_desc']) . '<br>';
-    }
-    $html .= '<strong>Length:</strong> ' . $results['query_length'] . ' ' . $unit . '<br>';
-    $html .= '<strong>Total Hits:</strong> ' . $results['total_hits'];
-    $html .= '</small>';
-    $html .= '</div>';
-    
-    // Collapsible search parameters section
+    // Search Parameters Section (moved up, collapsible)
     $html .= '<div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px;">';
     $html .= '<div style="padding: 15px; cursor: pointer; background: #f8f9fa; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;" onclick="document.getElementById(\'search-params\').style.display = document.getElementById(\'search-params\').style.display === \'none\' ? \'block\' : \'none\'; this.querySelector(\'i\').style.transform = document.getElementById(\'search-params\').style.display === \'none\' ? \'rotate(0deg)\' : \'rotate(180deg)\';">';
     $html .= '<h6 style="margin: 0; color: #333;"><i class="fa fa-cog"></i> Search Parameters</h6>';
@@ -771,8 +761,6 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     $html .= '</div>';
     
     $html .= '<div id="search-params" style="display: none; padding: 15px;">';
-    
-    // First row: Database and Program
     $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 15px;">';
     
     $html .= '<div>';
@@ -797,7 +785,6 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     
     $html .= '</div>';
     
-    // Second row: Matrix and Parameters
     $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">';
     
     $html .= '<div>';
@@ -821,18 +808,91 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     $html .= '</div>';
     
     $html .= '</div>';
-    
     $html .= '</div>';
     $html .= '</div>';
     
-    // HSP visualization with connecting lines (locBLAST style)
-    $html .= generateHspVisualizationWithLines($results, $blast_program);
+    // Query Summary Table - all queries with links to their sections
+    $html .= '<div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 20px;">';
+    $html .= '<h6 style="margin-bottom: 15px;"><i class="fa fa-list"></i> Query Summary</h6>';
+    $html .= '<div style="overflow-x: auto;">';
+    $html .= '<table class="table table-sm table-striped">';
+    $html .= '<thead class="table-light">';
+    $html .= '<tr>';
+    $html .= '<th style="width: 5%">#</th>';
+    $html .= '<th style="width: 30%">Query Name</th>';
+    $html .= '<th style="width: 15%">Length</th>';
+    $html .= '<th style="width: 15%">Hits</th>';
+    $html .= '<th style="width: 20%">Best E-value</th>';
+    $html .= '<th style="width: 15%">Action</th>';
+    $html .= '</tr>';
+    $html .= '</thead>';
+    $html .= '<tbody>';
     
-    // Summary table
-    $html .= generateHitsSummaryTable($results);
+    foreach ($queries as $query_idx => $query) {
+        $query_num = $query_idx + 1;
+        $query_name = !empty($query['query_name']) ? htmlspecialchars($query['query_name']) : 'Query ' . $query_num;
+        $best_evalue = $query['total_hits'] > 0 ? $query['hits'][0]['best_evalue'] : PHP_FLOAT_MAX;
+        $best_evalue_display = $best_evalue < 1e-100 ? '0' : sprintf('%.2e', $best_evalue);
+        
+        $html .= '<tr>';
+        $html .= '<td><strong>' . $query_num . '</strong></td>';
+        $html .= '<td><small>' . $query_name . '</small></td>';
+        $html .= '<td>' . $query['query_length'] . ' ' . $unit . '</td>';
+        $html .= '<td>' . $query['total_hits'] . '</td>';
+        $html .= '<td><small>' . $best_evalue_display . '</small></td>';
+        $html .= '<td><button class="btn btn-xs btn-primary" onclick="document.getElementById(\'query-' . $query_num . '\').scrollIntoView({behavior: \'smooth\', block: \'start\'})" title="Jump to query results">View</button></td>';
+        $html .= '</tr>';
+    }
     
-    // Alignment viewer
-    $html .= generateAlignmentViewer($results, $blast_program);
+    $html .= '</tbody>';
+    $html .= '</table>';
+    $html .= '</div>';
+    $html .= '</div>';
+    
+    // Individual Query Sections - each query with all its results
+    foreach ($queries as $query_idx => $query) {
+        $query_num = $query_idx + 1;
+        $query_name = !empty($query['query_name']) ? htmlspecialchars($query['query_name']) : 'Query ' . $query_num;
+        
+        // Collapsible query section
+        $html .= '<div id="query-' . $query_num . '" style="background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px; scroll-margin-top: 20px;">';
+        
+        // Query header (collapsible)
+        $html .= '<div style="padding: 15px; cursor: pointer; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;" onclick="toggleQuerySection(\'query-' . $query_num . '-content\', this);">';
+        $html .= '<h5 style="margin: 0;"><i class="fa fa-dna"></i> Query ' . $query_num . ': ' . $query_name . '</h5>';
+        $html .= '<i class="fa fa-chevron-down" style="transition: transform 0.2s; transform: rotate(0deg);"></i>';
+        $html .= '</div>';
+        
+        // Query content (collapsible)
+        $html .= '<div id="query-' . $query_num . '-content" style="padding: 15px;">';
+        
+        // Query info
+        $html .= '<div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 12px; margin-bottom: 15px; border-radius: 4px;">';
+        $html .= '<small>';
+        if (!empty($query['query_desc'])) {
+            $html .= '<strong>Description:</strong> ' . htmlspecialchars($query['query_desc']) . '<br>';
+        }
+        $html .= '<strong>Length:</strong> ' . $query['query_length'] . ' ' . $unit . ' | ';
+        $html .= '<strong>Total Hits:</strong> ' . $query['total_hits'];
+        $html .= '</small>';
+        $html .= '</div>';
+        
+        if ($query['total_hits'] === 0) {
+            $html .= '<div class="alert alert-info"><small>No significant matches found for this query</small></div>';
+        } else {
+            // HSP visualization for this query
+            $html .= generateHspVisualizationWithLines($query, $blast_program);
+            
+            // Hits summary table for this query
+            $html .= generateHitsSummaryTable($query);
+            
+            // Alignment viewer for this query
+            $html .= generateAlignmentViewer($query, $blast_program);
+        }
+        
+        $html .= '</div>'; // End query content
+        $html .= '</div>'; // End query section
+    }
     
     $html .= '</div>';
     
@@ -866,7 +926,7 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn') 
     $html .= '<style>';
     $html .= '.hsp-row { display: flex; align-items: center; margin-bottom: 12px; }';
     $html .= '.hsp-label { min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; word-break: break-all; }';
-    $html .= '.hsp-segments { display: flex; align-items: center; width: 800px; position: relative; }';
+    $html .= '.hsp-segments { display: flex; align-items: center; width: 800px; position: relative; z-index: 5; }';
     $html .= '.hsp-segment { height: 16px; display: inline-block; margin-right: 0; cursor: pointer; border: 1px solid #333; transition: opacity 0.2s; }';
     $html .= '.hsp-segment:hover { opacity: 0.8; }';
     $html .= '.hsp-gap { height: 4px; background: #e0e0e0; display: inline-block; margin-top: 6px; }';
@@ -920,14 +980,29 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn') 
     
     $html .= '<div style="margin-top: 15px; margin: 0 auto; width: 1000px; text-align: center;">';
 
+    // Generate just the score legend (outside overflow:hidden)
+    $html .= generateQueryScoreLegend($results['query_length'], $results['query_name']);
+
     // Pixel unit calculation based on query length (800px width)
     $px_unit = 800 / $results['query_length'];
 
-    // Create a container for scale + HSPs with relative positioning for tick lines
-    $html .= '<div style="position: relative; overflow: hidden;">';
+    // Calculate height needed for HSP rows (each row ~25px + spacing)
+    // Add 80px for the ticks at the top
+    $total_hsp_rows = 0;
+    foreach ($results['hits'] as $hit) {
+        $total_hsp_rows += count($hit['hsps']) + 1; // +1 for spacing between hits
+    }
+    $container_height = max(160, ($total_hsp_rows * 25) + 80 + 50);
 
-    // Add query scale bar with intelligent tick spacing
-    $html .= generateQueryScale($results['query_length'], $results['query_name']);
+    // Create a container for scale ticks and HSPs with relative positioning
+    // Set explicit height to clip the vertical lines properly
+    $html .= '<div style="position: relative; overflow: hidden; height: ' . $container_height . 'px;">';
+    
+    // Generate the query scale ruler with ticks (inside overflow:hidden to be clipped properly)
+    $html .= generateQueryScaleTicks($results['query_length']);
+    
+    // Wrapper for HSP rows with top padding to avoid overlap with ticks
+    $html .= '<div style="padding-top: 30px;">';
     
     foreach ($results['hits'] as $hit_idx => $hit) {
         $hit_num = $hit_idx + 1;
@@ -1041,6 +1116,10 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn') 
         $html .= '</div>';
     }
     
+    // Close the HSP rows padding wrapper
+    $html .= '</div>';
+    
+    // Close the overflow:hidden container and outer div
     $html .= '</div>';
     $html .= '</div>';
     
@@ -1242,6 +1321,123 @@ function formatBlastAlignment($length, $query_seq, $query_seq_from, $query_seq_t
 }
 
 /**
+ * Generate query score legend (outside overflow container)
+ * Shows score color ranges and query bar info
+ * 
+ * @param int $query_length Total query length
+ * @param string $query_name Optional query name/ID
+ * @return string HTML for legend and query bar
+ */
+function generateQueryScoreLegend($query_length, $query_name = '') {
+    $output = '<div style="margin: 0 auto 0px auto; width: 1000px;">';
+    
+    // Score legend bar - discrete colored boxes (800px total width to match query)
+    $output .= '<div style="display: flex; align-items: center; margin-bottom: 0;">';
+    $output .= '<div style="min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; text-align: right;">Score:</div>';
+    $output .= '<div style="display: flex; gap: 0; width: 800px;">';
+    
+    $score_ranges = [
+        ['color' => '#000000', 'label' => '≤40<br><small>(Weak)</small>'],
+        ['color' => '#0047c8', 'label' => '40-50'],
+        ['color' => '#77de75', 'label' => '50-80'],
+        ['color' => '#e967f5', 'label' => '80-200'],
+        ['color' => '#e83a2d', 'label' => '≥200<br><small>(Excellent)</small>']
+    ];
+    
+    $box_width = (800 / 5); // Divide 800px by 5 color ranges evenly
+    foreach ($score_ranges as $range) {
+        $output .= '<div style="width: ' . $box_width . 'px; height: 25px; background-color: ' . $range['color'] . '; border-right: 1px solid #333; display: flex; align-items: center; justify-content: center;">';
+        $output .= '<span style="color: white; font-size: 10px; font-weight: bold; text-align: center; line-height: 1.2;">' . $range['label'] . '</span>';
+        $output .= '</div>';
+    }
+    
+    $output .= '</div>';
+    $output .= '</div>';
+    
+    // Query bar - 800px width (no margins or padding, directly touches everything)
+    $output .= '<div style="display: flex; align-items: center; margin: 0; padding: 0;">';
+    $output .= '<div style="min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; text-align: right;">';
+    $output .= 'Query:';
+    if (!empty($query_name)) {
+        $output .= '<br><small style="font-weight: normal; color: #666;">' . htmlspecialchars(substr($query_name, 0, 20)) . '</small>';
+    }
+    $output .= '</div>';
+    $output .= '<div style="width: 800px; height: 20px; position: relative; background: #f0f0f0; border-left: 1px solid #999; border-right: 1px solid #999; margin: 0; padding: 0;">';
+    $output .= '<div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: linear-gradient(to right, #4CAF50 0%, #45a049 100%); margin: 0; padding: 0;"></div>';
+    $output .= '<div style="position: absolute; left: 5px; top: 2px; color: white; font-size: 11px; font-weight: bold;">1 - ' . $query_length . ' bp</div>';
+    $output .= '</div>';
+    $output .= '</div>';
+    
+    $output .= '</div>';
+    
+    return $output;
+}
+
+/**
+ * Generate query scale ticks (inside overflow container to be clipped)
+ * Shows tick marks and vertical reference lines
+ * Must be positioned at top of the HSP rows
+ * 
+ * @param int $query_length Total query length
+ * @return string HTML for scale ticks and vertical lines
+ */
+function generateQueryScaleTicks($query_length) {
+    $pxls = 800 / $query_length;
+    $output = '';
+    
+    // Generate exactly 10 evenly-spaced ticks across the query length
+    $tick_numbers = [];
+    
+    // Calculate the spacing to get 10 ticks
+    $tick_interval = $query_length / 10;
+    
+    // Generate 10 ticks
+    for ($i = 1; $i <= 10; $i++) {
+        $tick_numbers[] = (int)($tick_interval * $i);
+    }
+    
+    // Ensure the last tick is exactly the query length
+    if (!empty($tick_numbers)) {
+        $tick_numbers[count($tick_numbers) - 1] = $query_length;
+    }
+    
+    // Scale ruler container with absolute positioning at the top
+    // Use lower z-index so HSP bars appear on top of the reference lines
+    $output .= '<div style="position: absolute; top: 0; left: 0; width: 100%; height: 80px; z-index: 1; margin: 0; padding: 0;">';
+    
+    // Flex container for alignment
+    $output .= '<div style="display: flex; align-items: flex-start; width: 100%; margin: 0; padding: 0;">';
+    $output .= '<div style="min-width: 100px; padding-right: 15px; margin: 0;"></div>';
+    
+    // Container for ruler - 800px width
+    $output .= '<div style="position: relative; width: 800px; height: 80px; margin: 0; padding: 0;">';
+    
+    // Draw "1" marker at the start (aligned with other tick numbers at top: 10px)
+    $output .= '<div style="position: absolute; left: -15px; top: 10px; width: 30px; text-align: center; font-size: 11px; font-weight: bold;">1</div>';
+    
+    // Draw tick marks with labels and vertical reference lines
+    foreach ($tick_numbers as $tick_num) {
+        // Calculate pixel position for this tick number (accounting for 1-based indexing)
+        $pixel_pos = (int)($pxls * ($tick_num - 1));
+        
+        // Vertical reference line - extends from top through ticks to HSP boxes below
+        $output .= '<div style="position: absolute; left: ' . $pixel_pos . 'px; top: 0px; width: 1px; height: 2000px; background: #cccccc; pointer-events: none;"></div>';
+        
+        // Tick mark at the top (dark gray)
+        $output .= '<div style="position: absolute; left: ' . $pixel_pos . 'px; top: 0px; width: 1px; height: 8px; background: #999;"></div>';
+        
+        // Tick label number (aligned with "1" marker)
+        $output .= '<div style="position: absolute; left: ' . ($pixel_pos - 15) . 'px; top: 10px; width: 30px; text-align: center; font-size: 11px; font-weight: bold;">' . $tick_num . '</div>';
+    }
+    
+    $output .= '</div>';
+    $output .= '</div>';
+    $output .= '</div>';
+    
+    return $output;
+}
+
+/**
  * Generate query scale ruler with intelligent tick spacing
  * Ported from locBLAST unit() function - displays as positioned overlay
  * Includes horizontal query bar representation aligned with HSP boxes
@@ -1351,4 +1547,28 @@ function generateQueryScale($query_length, $query_name = '') {
     
     return $output;
 }
+
+/**
+ * JavaScript function for toggling query sections (embedded in PHP output)
+ * Called onclick from query section headers
+ */
+function getToggleQuerySectionScript() {
+    return <<<'JS'
+<script>
+function toggleQuerySection(contentId, headerElement) {
+    const content = document.getElementById(contentId);
+    const chevron = headerElement.querySelector('i');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        chevron.style.transform = 'rotate(180deg)';
+    } else {
+        content.style.display = 'none';
+        chevron.style.transform = 'rotate(0deg)';
+    }
+}
+</script>
+JS;
+}
 ?>
+

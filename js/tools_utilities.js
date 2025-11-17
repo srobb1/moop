@@ -17,14 +17,9 @@ function detectSequenceType(sequence) {
         return { type: 'unknown', message: '' };
     }
     
-    // Extract just the sequence part (remove FASTA header if present)
-    let seq = sequence;
-    if (seq.startsWith('>')) {
-        const lines = seq.split('\n');
-        seq = lines.slice(1).join('').toUpperCase();
-    } else {
-        seq = seq.toUpperCase();
-    }
+    // Remove all header lines (lines starting with >)
+    const lines = sequence.split('\n');
+    let seq = lines.filter(line => !line.trim().startsWith('>')).join('').toUpperCase();
     
     // Remove whitespace
     seq = seq.replace(/\s/g, '');
