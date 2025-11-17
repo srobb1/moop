@@ -46,11 +46,8 @@ if ($evalue === 'custom' && !empty($_POST['evalue_custom'])) {
     $evalue = trim($_POST['evalue_custom']);
 }
 
-// Handle max_hits with custom option
+// Handle max_hits as number input
 $max_hits = (int)($_POST['max_hits'] ?? 10);
-if ($_POST['max_hits'] === 'custom' && !empty($_POST['max_hits_custom'])) {
-    $max_hits = (int)$_POST['max_hits_custom'];
-}
 
 $matrix = trim($_POST['matrix'] ?? 'BLOSUM62');
 $filter_seq = isset($_POST['filter_seq']);
@@ -395,17 +392,8 @@ include_once __DIR__ . '/../../includes/navbar.php';
                         
                         <div class="col-md-6">
                             <label for="max_hits" class="form-label"><strong>Maximum Hits</strong></label>
-                            <select id="max_hits" name="max_hits" class="form-select" onchange="toggleMaxHitsCustom()">
-                                <option value="10" <?= $max_hits === 10 ? 'selected' : '' ?>>10</option>
-                                <option value="20" <?= $max_hits === 20 ? 'selected' : '' ?>>20</option>
-                                <option value="40" <?= $max_hits === 40 ? 'selected' : '' ?>>40</option>
-                                <option value="60" <?= $max_hits === 60 ? 'selected' : '' ?>>60</option>
-                                <option value="100" <?= $max_hits === 100 ? 'selected' : '' ?>>100</option>
-                                <option value="custom" <?= !in_array($max_hits, [10, 20, 40, 60, 100]) && $max_hits > 0 ? 'selected' : '' ?>>Custom</option>
-                            </select>
-                            <div id="max_hits_custom_container" style="display: <?= !in_array($max_hits, [10, 20, 40, 60, 100]) && $max_hits > 0 ? 'block' : 'none' ?>; margin-top: 8px;">
-                                <input type="number" id="max_hits_custom" name="max_hits_custom" class="form-control" placeholder="e.g., 50, 250" value="<?= !in_array($max_hits, [10, 20, 40, 60, 100]) && $max_hits > 0 ? htmlspecialchars($max_hits) : '' ?>" min="1">
-                            </div>
+                            <input type="number" id="max_hits" name="max_hits" class="form-control" value="<?= $max_hits ?: 10 ?>" min="1">
+                            <small class="form-text text-muted">Maximum number of hits to return</small>
                         </div>
                     </div>
 
@@ -819,19 +807,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             customContainer.style.display = 'none';
             document.getElementById('evalue_custom').value = '';
-        }
-    };
-    
-    // Toggle custom max_hits input visibility
-    window.toggleMaxHitsCustom = function() {
-        const select = document.getElementById('max_hits');
-        const customContainer = document.getElementById('max_hits_custom_container');
-        if (select.value === 'custom') {
-            customContainer.style.display = 'block';
-            document.getElementById('max_hits_custom').focus();
-        } else {
-            customContainer.style.display = 'none';
-            document.getElementById('max_hits_custom').value = '';
         }
     };
 });
