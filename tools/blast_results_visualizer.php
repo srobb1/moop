@@ -1233,11 +1233,32 @@ function generateQueryScale($query_length, $query_name = '', $hsp_area_height = 
     $output .= '</div>';
     $output .= '</div>';
     
-    // Generate exactly 10 evenly spaced tick positions
+    // Generate scale tick numbers: Calculate evenly spaced rounded intervals
     $tick_numbers = [];
-    $tick_interval = $query_length / 10;
+    $tick_interval = $query_length / 10;  // Base interval for 10 ticks
+    
+    // Determine rounding interval based on query length for clean numbers
+    if ($query_length <= 100) {
+        $round_to = 10;
+    } elseif ($query_length <= 500) {
+        $round_to = 50;
+    } elseif ($query_length <= 1000) {
+        $round_to = 100;
+    } elseif ($query_length <= 5000) {
+        $round_to = 500;
+    } else {
+        $round_to = 1000;
+    }
+    
+    // Round the base interval to get consistent tick spacing
+    $rounded_interval = round($tick_interval / $round_to) * $round_to;
+    
+    // Generate 10 tick numbers using the rounded interval
     for ($i = 1; $i <= 10; $i++) {
-        $tick_numbers[] = round($i * $tick_interval);
+        $tick_num = $i * $rounded_interval;
+        if ($tick_num <= $query_length) {
+            $tick_numbers[] = $tick_num;
+        }
     }
     
     // Scale ruler with ticks and vertical lines down to HSPs
@@ -1247,18 +1268,22 @@ function generateQueryScale($query_length, $query_name = '', $hsp_area_height = 
     // Container for ruler - 800px width, extended height for vertical lines
     $output .= '<div style="position: relative; height: 40px; width: 800px; margin-right: 10px;">';
     
-    // Draw starting "1" position
+    // Draw "1" marker at the start
     $output .= '<div style="position: absolute; left: -15px; top: 10px; width: 30px; text-align: center; font-size: 11px; font-weight: bold;">1</div>';
     
-    // Draw tick marks with vertical lines (gray) extending down through HSPs
-    foreach ($tick_numbers as $num) {
-        $pos = (int)($pxls * ($num - 1)); // Subtract 1 since we start at position 1
-        // Vertical line from top through HSP area (gray color, height based on hsp_area_height)
-        $output .= '<div style="position: absolute; left: ' . $pos . 'px; top: 0; width: 1px; height: ' . $hsp_area_height . 'px; background: #cccccc; pointer-events: none;"></div>';
-        // Tick mark at top (darker)
-        $output .= '<div style="position: absolute; left: ' . $pos . 'px; top: 0; width: 1px; height: 8px; background: #999;"></div>';
-        // Number label below tick
-        $output .= '<div style="position: absolute; left: ' . ($pos - 15) . 'px; top: 10px; width: 30px; text-align: center; font-size: 11px; font-weight: bold;">' . $num . '</div>';
+    // Draw tick marks with labels and vertical reference lines
+    foreach ($tick_numbers as $tick_num) {
+        // Calculate pixel position for this tick number (accounting for 1-based indexing)
+        $pixel_pos = (int)($pxls * ($tick_num - 1));
+        
+        // Vertical reference line (light gray) extending through entire HSP area
+        $output .= '<div style="position: absolute; left: ' . $pixel_pos . 'px; top: 0; width: 1px; height: ' . $hsp_area_height . 'px; background: #cccccc; pointer-events: none;"></div>';
+        
+        // Tick mark at the top (dark gray)
+        $output .= '<div style="position: absolute; left: ' . $pixel_pos . 'px; top: 0; width: 1px; height: 8px; background: #999;"></div>';
+        
+        // Tick label number (centered below tick mark)
+        $output .= '<div style="position: absolute; left: ' . ($pixel_pos - 15) . 'px; top: 10px; width: 30px; text-align: center; font-size: 11px; font-weight: bold;">' . $tick_num . '</div>';
     }
     
     $output .= '</div>';
