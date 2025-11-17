@@ -826,10 +826,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     $html .= '</div>';
     
     // HSP visualization with connecting lines (locBLAST style)
-    $html .= generateHspVisualizationWithLines($results);
-    
-    // Graphical view (canvas-style but SVG-based) - moved above summary table
-    $html .= generateBlastGraphicalView($results);
+    $html .= generateHspVisualizationWithLines($results, $blast_program);
     
     // Summary table
     $html .= generateHitsSummaryTable($results);
@@ -848,16 +845,22 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
  * Adapted from: https://github.com/cobilab/locBLAST (GPL-3.0)
  * 
  * @param array $results Parsed BLAST results
+ * @param string $blast_program BLAST program name (blastn, blastp, etc.)
  * @return string HTML with HSP visualization
  */
-function generateHspVisualizationWithLines($results) {
+function generateHspVisualizationWithLines($results, $blast_program = 'blastn') {
     if (empty($results['hits']) || $results['query_length'] <= 0) {
         return '';
     }
     
+    // Determine unit based on program
+    $unit = 'bp';
+    if (strpos($blast_program, 'blastp') !== false || strpos($blast_program, 'tblastn') !== false) {
+        $unit = 'aa';
+    }
+    
     $html = '<div class="blast-hsp-visualization" style="margin: 20px 0; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px;">';
-    $html .= '<h6><i class="fa fa-align-left"></i> HSP Coverage Map (with connecting lines)</h6>';
-    $html .= '<small class="text-muted">Each color represents a different bit score range. Lines connect adjacent HSPs on the query sequence.</small>';
+    $html .= '<h6 style="text-align: center;"><i class="fa fa-ruler-horizontal"></i> Query Length (' . $results['query_length'] . ' ' . $unit . ')</h6>';
     
     // Add CSS for HSP visualization
     $html .= '<style>';
@@ -916,20 +919,15 @@ function generateHspVisualizationWithLines($results) {
     $html .= '</script>';
     
     $html .= '<div style="margin-top: 15px; margin: 0 auto; width: 1000px; text-align: center;">';
-    
+
     // Pixel unit calculation based on query length (800px width)
     $px_unit = 800 / $results['query_length'];
-    
+
+    // Create a container for scale + HSPs with relative positioning for tick lines
+    $html .= '<div style="position: relative; overflow: hidden;">';
+
     // Add query scale bar with intelligent tick spacing
-    // Calculate total number of hits and HSPs for tick line height
-    $num_hits = count($results['hits']);
-    $total_hsp_rows = 0;
-    foreach ($results['hits'] as $hit) {
-        $total_hsp_rows += count($hit['hsps']);
-    }
-    // Each HSP row is ~12px margin-bottom, each hit has title row ~20px
-    $hsp_area_height = ($num_hits * 20) + ($total_hsp_rows * 12) + 60;
-    $html .= generateQueryScale($results['query_length'], $results['query_name'], $hsp_area_height);
+    $html .= generateQueryScale($results['query_length'], $results['query_name']);
     
     foreach ($results['hits'] as $hit_idx => $hit) {
         $hit_num = $hit_idx + 1;
@@ -1042,6 +1040,9 @@ function generateHspVisualizationWithLines($results) {
         $html .= '</div>';
         $html .= '</div>';
     }
+    
+    // Add description below the HSP visualization
+    $html .= '<small class="text-muted" style="display: block; margin-top: 15px;">Each color represents a different bit score range. Lines connect adjacent HSPs on the query sequence.</small>';
     
     $html .= '</div>';
     $html .= '</div>';
@@ -1244,13 +1245,13 @@ function formatBlastAlignment($length, $query_seq, $query_seq_from, $query_seq_t
  * Generate query scale ruler with intelligent tick spacing
  * Ported from locBLAST unit() function - displays as positioned overlay
  * Includes horizontal query bar representation aligned with HSP boxes
+ * Tick lines are positioned absolutely and will be clipped by parent container
  * 
  * @param int $query_length Total query length
  * @param string $query_name Optional query name/ID
- * @param int $hsp_area_height Height of HSP area for tick line extension
  * @return string HTML for scale labels, ticks, and query bar
  */
-function generateQueryScale($query_length, $query_name = '', $hsp_area_height = 200) {
+function generateQueryScale($query_length, $query_name = '') {
     $pxls = 800 / $query_length;  // Wider 800px instead of 500px
     $output = '<div style="margin: 0 auto 20px auto; width: 1000px;">';
     
@@ -1334,8 +1335,8 @@ function generateQueryScale($query_length, $query_name = '', $hsp_area_height = 
         // Calculate pixel position for this tick number (accounting for 1-based indexing)
         $pixel_pos = (int)($pxls * ($tick_num - 1));
         
-        // Vertical reference line (light gray) extending through entire HSP area
-        $output .= '<div style="position: absolute; left: ' . $pixel_pos . 'px; top: 0; width: 1px; height: ' . $hsp_area_height . 'px; background: #cccccc; pointer-events: none;"></div>';
+        // Vertical reference line (light gray) extending down - will be clipped by parent container's overflow:hidden
+        $output .= '<div style="position: absolute; left: ' . $pixel_pos . 'px; top: 0; width: 1px; height: 2000px; background: #cccccc; pointer-events: none;"></div>';
         
         // Tick mark at the top (dark gray)
         $output .= '<div style="position: absolute; left: ' . $pixel_pos . 'px; top: 0; width: 1px; height: 8px; background: #999;"></div>';
