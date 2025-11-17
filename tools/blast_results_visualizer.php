@@ -554,7 +554,7 @@ function generateAlignmentViewer($results, $blast_program = 'blastn') {
         $evalue_display = $hit['best_evalue'] < 1e-100 ? '0' : sprintf('%.2e', $hit['best_evalue']);
         
         // Hit header card
-        $html .= '<div id="hit-' . $hit_num . '" style="padding: 15px; border-bottom: 2px solid #007bff; scroll-margin-top: 20px; background: #f0f7ff; margin-bottom: 15px;">';
+        $html .= '<div id="hit-' . $hit_num . '" style="padding: 15px;  scroll-margin-top: 20px; background: #f0f7ff; margin-bottom: 15px;">';
         $html .= '<h5 style="margin-bottom: 10px; color: #007bff;">';
         $html .= '<strong>Hit ' . $hit_num . ': ' . htmlspecialchars($hit['subject']) . '</strong>';
         $html .= '</h5>';
@@ -830,7 +830,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     
     foreach ($queries as $query_idx => $query) {
         $query_num = $query_idx + 1;
-        $query_name = !empty($query['query_name']) ? htmlspecialchars($query['query_name']) : 'Query ' . $query_num;
+        $query_name = !empty($query['query_desc']) ? htmlspecialchars($query['query_desc']) : 'Query ' . $query_num;
         $best_evalue = $query['total_hits'] > 0 ? $query['hits'][0]['best_evalue'] : PHP_FLOAT_MAX;
         $best_evalue_display = $best_evalue < 1e-100 ? '0' : sprintf('%.2e', $best_evalue);
         
@@ -852,7 +852,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     // Individual Query Sections - each query with all its results
     foreach ($queries as $query_idx => $query) {
         $query_num = $query_idx + 1;
-        $query_name = !empty($query['query_name']) ? htmlspecialchars($query['query_name']) : 'Query ' . $query_num;
+        $query_name = !empty($query['query_desc']) ? htmlspecialchars($query['query_desc']) : 'Query ' . $query_num;
         
         // Collapsible query section
         $html .= '<div id="query-' . $query_num . '" style="background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px; scroll-margin-top: 20px;">';
@@ -986,23 +986,35 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn') 
     // Pixel unit calculation based on query length (800px width)
     $px_unit = 800 / $results['query_length'];
 
-    // Calculate height needed for HSP rows (each row ~25px + spacing)
-    // Add 80px for the ticks at the top
+    // Calculate total HSP rows
     $total_hsp_rows = 0;
     foreach ($results['hits'] as $hit) {
         $total_hsp_rows += count($hit['hsps']) + 1; // +1 for spacing between hits
     }
-    $container_height = max(160, ($total_hsp_rows * 25) + 80 + 50);
+    
+    // Calculate height needed for HSP rows (each row ~25px + spacing)
+    $hsp_content_height = ($total_hsp_rows * 25) + 50;
+    // Set max height before scrolling (e.g., 400px)
+    $max_hsp_height = 400;
+    $use_scroll = $hsp_content_height > $max_hsp_height;
+    
+    // Total container height: ticks (80px) + HSP area (either content height or max height)
+    $hsp_display_height = min($hsp_content_height, $max_hsp_height);
+    $total_container_height = 80 + $hsp_display_height;
 
     // Create a container for scale ticks and HSPs with relative positioning
-    // Set explicit height to clip the vertical lines properly
-    $html .= '<div style="position: relative; overflow: hidden; height: ' . $container_height . 'px;">';
+    // This must be tall enough for all tick lines to extend down
+    $html .= '<div style="position: relative; overflow: hidden; height: ' . $total_container_height . 'px;">';
     
     // Generate the query scale ruler with ticks (inside overflow:hidden to be clipped properly)
     $html .= generateQueryScaleTicks($results['query_length']);
     
-    // Wrapper for HSP rows with top padding to avoid overlap with ticks
-    $html .= '<div style="padding-top: 30px;">';
+    // Create a scrollable wrapper for HSP rows positioned below the ticks
+    $scroll_style = $use_scroll ? 'overflow-y: scroll;' : 'overflow: hidden;';
+    $html .= '<div style="position: absolute; top: 80px; left: 0; right: 0; height: ' . $hsp_display_height . 'px; ' . $scroll_style . '">';
+    
+    // Wrapper for HSP rows
+    $html .= '<div style="padding-top: 0;">';
     
     foreach ($results['hits'] as $hit_idx => $hit) {
         $hit_num = $hit_idx + 1;
@@ -1116,10 +1128,13 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn') 
         $html .= '</div>';
     }
     
-    // Close the HSP rows padding wrapper
+    // Close the HSP rows wrapper
     $html .= '</div>';
     
-    // Close the overflow:hidden container and outer div
+    // Close the scrollable HSP container
+    $html .= '</div>';
+    
+    // Close the main overflow:hidden container and outer div
     $html .= '</div>';
     $html .= '</div>';
     
