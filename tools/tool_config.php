@@ -22,7 +22,7 @@ $available_tools = [
         'icon' => 'fa-dna',
         'description' => 'Search sequences against databases',
         'btn_class' => 'btn-warning',
-        'url_path' => '/tools/blast/index.php',
+        'url_path' => '/tools/blast/blast.php',
         'context_params' => ['organism', 'assembly', 'group', 'display_name'],
         'pages' => 'all',  // Show on all pages
     ],
