@@ -1041,11 +1041,11 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn') 
         $html .= '</div>';
     }
     
-    // Add description below the HSP visualization
-    $html .= '<small class="text-muted" style="display: block; margin-top: 15px;">Each color represents a different bit score range. Lines connect adjacent HSPs on the query sequence.</small>';
+    $html .= '</div>';
+    $html .= '</div>';
     
-    $html .= '</div>';
-    $html .= '</div>';
+    // Add description below the HSP visualization (outside the relative container so ticks don't overlap)
+    $html .= '<small class="text-muted" style="display: block; margin-top: 15px; margin-bottom: 30px; text-align: center;">Each color represents a different bit score range. Lines connect adjacent HSPs on the query sequence.</small>';
     
     return $html;
 }
