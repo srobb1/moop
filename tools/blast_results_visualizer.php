@@ -1020,4 +1020,239 @@ function getColorStyle($colorClass) {
     
     return isset($styles[$colorClass]) ? $styles[$colorClass] : '';
 }
+
+/**
+ * Format BLAST alignment output with frame-aware coordinate tracking
+ * Ported from locBLAST fmtprint() - handles frame shifts for BLASTx/tBLASTx
+ * 
+ * @param int $length Alignment length
+ * @param string $query_seq Query sequence with gaps
+ * @param int $query_seq_from Query start coordinate
+ * @param int $query_seq_to Query end coordinate
+ * @param string $align_seq Midline (match indicators)
+ * @param string $sbjct_seq Subject sequence with gaps
+ * @param int $sbjct_seq_from Subject start coordinate
+ * @param int $sbjct_seq_to Subject end coordinate
+ * @param string $p_m Plus/Minus strand
+ * @param int $query_frame Query reading frame (0=none, ±1,2,3 for proteins)
+ * @param int $hit_frame Subject reading frame
+ * @return string Formatted alignment text
+ */
+function formatBlastAlignment($length, $query_seq, $query_seq_from, $query_seq_to, $align_seq, $sbjct_seq, $sbjct_seq_from, $sbjct_seq_to, $p_m = 'Plus', $query_frame = 0, $hit_frame = 0) {
+    $output = '';
+    $large = max(array((int)$query_seq_from, (int)$query_seq_to, (int)$sbjct_seq_from, (int)$sbjct_seq_to));
+    $large_len = strlen($large);
+    $n = (int)($length / 60);
+    $r = $length % 60;
+    if ($r > 0) $t = $n + 1;
+    else $t = $n;
+    
+    if ($query_frame != 0 && $hit_frame != 0) {
+        // Both query and subject are in frames (protein vs protein or translated)
+        for ($i = 0; $i < $t; $i++) {
+            if ($query_frame > 0) {
+                $xn4 = $query_seq_from;
+                $xs4 = substr($query_seq, 60*$i, 60);
+                $xs4 = preg_replace("/-/", "", $xs4);
+                $yn4 = $xn4 + (strlen($xs4) * 3) - 1;
+                $output .= "\nQuery  " . str_pad($xn4, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn4;
+                $xn4 = $yn4 + 1;
+                $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
+            } else {
+                $xn = $query_seq_to;
+                $xs = substr($query_seq, 60*$i, 60);
+                $xs = preg_replace("/-/", "", $xs);
+                $yn = $xn - (strlen($xs) * 3) + 1;
+                $output .= "\nQuery  " . str_pad($xn, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn;
+                $xn = $yn - 1;
+                $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
+            }
+            if ($hit_frame > 0) {
+                $an4 = $sbjct_seq_from;
+                $ys4 = substr($sbjct_seq, 60*$i, 60);
+                $ys4 = preg_replace("/-/", "", $ys4);
+                $bn4 = $an4 + (strlen($ys4) *3) - 1;
+                $output .= "\nSbjct  " . str_pad($an4, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn4 . "\n";
+                $an4 = $bn4 + 1;
+            } else {
+                $an = $sbjct_seq_to;
+                $ys = substr($sbjct_seq, 60*$i, 60);
+                $ys = preg_replace("/-/", "", $ys);
+                $bn = $an - (strlen($ys) *3) + 1;
+                $output .= "\nSbjct  " . str_pad($an, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn . "\n";
+                $an = $bn - 1;
+            }
+        }
+    } elseif ($query_frame != 0 && $hit_frame == 0) {
+        // Query is framed (tBLASTx, BLASTx), subject is not
+        if ($query_frame > 0) { $xn1 = $query_seq_from; } else { $xn1 = $query_seq_to; }
+        $an1 = $sbjct_seq_from;
+        for ($i = 0; $i < $t; $i++) {
+            if ($query_frame > 0) {
+                $xs1 = substr($query_seq, 60*$i, 60);
+                $xs1 = preg_replace("/-/", "", $xs1);
+                $yn1 = $xn1 + (strlen($xs1) * 3) - 1;
+                $output .= "\nQuery  " . str_pad($xn1, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn1;
+                $xn1 = $yn1 + 1;
+                $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
+                $ys1 = substr($sbjct_seq, 60*$i, 60);
+                $ys1 = preg_replace("/-/", "", $ys1);
+                $bn1 = $an1 + strlen($ys1) - 1;
+                $output .= "\nSbjct  " . str_pad($an1, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn1 . "\n";
+                $an1 = $bn1 + 1;
+            } else {
+                $xs1 = substr($query_seq, 60*$i, 60);
+                $xs1 = preg_replace("/-/", "", $xs1);
+                $yn1 = $xn1 - (strlen($xs1) * 3) + 1;
+                $output .= "\nQuery  " . str_pad($xn1, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn1;
+                $xn1 = $yn1 - 1;
+                $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
+                $ys1 = substr($sbjct_seq, 60*$i, 60);
+                $ys1 = preg_replace("/-/", "", $ys1);
+                $bn1 = $an1 + strlen($ys1) - 1;
+                $output .= "\nSbjct  " . str_pad($an1, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn1 . "\n";
+                $an1 = $bn1 + 1;
+            }
+        }
+    } elseif ($query_frame == 0 && $hit_frame != 0) {
+        // Subject is framed, query is not
+        if ($hit_frame > 0) { $an3 = $sbjct_seq_from; } else { $an3 = $sbjct_seq_to; }
+        $xn3 = $query_seq_from;
+        for ($i = 0; $i < $t; $i++) {
+            if ($hit_frame > 0) {
+                $xs3 = substr($query_seq, 60*$i, 60);
+                $xs3 = preg_replace("/-/", "", $xs3);
+                $yn3 = $xn3 + strlen($xs3) - 1;
+                $output .= "\nQuery  " . str_pad($xn3, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn3;
+                $xn3 = $yn3 + 1;
+                $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
+                $ys3 = substr($sbjct_seq, 60*$i, 60);
+                $ys3 = preg_replace("/-/", "", $ys3);
+                $bn3 = $an3 + (strlen($ys3) * 3) - 1;
+                $output .= "\nSbjct  " . str_pad($an3, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn3 . "\n";
+                $an3 = $bn3 + 1;
+            } else {
+                $xs3 = substr($query_seq, 60*$i, 60);
+                $xs3 = preg_replace("/-/", "", $xs3);
+                $yn3 = $xn3 + strlen($xs3) - 1;
+                $output .= "\nQuery  " . str_pad($xn3, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn3;
+                $xn3 = $yn3 + 1;
+                $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
+                $ys3 = substr($sbjct_seq, 60*$i, 60);
+                $ys3 = preg_replace("/-/", "", $ys3);
+                $bn3 = $an3 - (strlen($ys3) * 3) + 1;
+                $output .= "\nSbjct  " . str_pad($an3, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn3 . "\n";
+                $an3 = $bn3 - 1;
+            }
+        }
+    } else {
+        // No frames - standard nucleotide vs nucleotide
+        $xn2 = $query_seq_from;
+        $an2 = $sbjct_seq_from;
+        for ($i = 0; $i < $t; $i++) {
+            $xs2 = substr($query_seq, 60*$i, 60);
+            $xs2 = preg_replace("/-/", "", $xs2);
+            $yn2 = $xn2 + strlen($xs2) - 1;
+            $output .= "\nQuery  " . str_pad($xn2, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn2;
+            $xn2 = $yn2 + 1;
+            $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
+            $ys2 = substr($sbjct_seq, 60*$i, 60);
+            $ys2 = preg_replace("/-/", "", $ys2);
+            if ($p_m == "Plus") {
+                $bn2 = $an2 + strlen($ys2) - 1;
+                $output .= "\nSbjct  " . str_pad($an2, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn2 . "\n";
+                $an2 = $bn2 + 1;
+            } else {
+                $bn2 = $an2 - strlen($ys2) + 1;
+                $output .= "\nSbjct  " . str_pad($an2, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn2 . "\n";
+                $an2 = $bn2 - 1;
+            }
+        }
+    }
+    
+    return $output;
+}
+
+/**
+ * Generate query scale ruler with intelligent tick spacing
+ * Ported from locBLAST unit() function
+ * 
+ * @param int $query_length Total query length
+ * @return string HTML for scale labels
+ */
+function generateQueryScale($query_length) {
+    $pxls = 500 / $query_length;
+    $output = '<div style="display: flex; margin-left: 100px; margin-bottom: 15px;">';
+    
+    if ($query_length <= 50) {
+        $nq = (int)($query_length / 5);
+        $x = $nq;
+        while ($x <= $query_length) {
+            $w = strlen($x);
+            $margin = (int)(($pxls * $nq) - (9 * $w));
+            $output .= '<div style="margin-left: ' . $margin . 'px; width: ' . ($w * 9) . 'px;">' . $x . '</div>';
+            $x += $nq;
+        }
+    } elseif ($query_length > 50 && $query_length <= 500) {
+        $nq = (int)($query_length / 10);
+        $nqn = $nq * 10;
+        $nqnq = (int)($nqn / 5);
+        if ($nqnq % 10 > 0) {
+            $nqnqx = (int)($nqnq / 10);
+            $new = $nqnqx * 10;
+            $newx = $new;
+            while ($newx <= $query_length) {
+                $w = strlen($newx);
+                $margin = (int)(($pxls * $new) - (9 * $w));
+                $output .= '<div style="margin-left: ' . $margin . 'px; width: ' . ($w * 9) . 'px;">' . $newx . '</div>';
+                $newx += $new;
+            }
+        } else {
+            $new = $nqnq;
+            $newx = $new;
+            while ($newx <= $query_length) {
+                $w = strlen($newx);
+                $margin = (int)(($pxls * $new) - (9 * $w));
+                $output .= '<div style="margin-left: ' . $margin . 'px; width: ' . ($w * 9) . 'px;">' . $newx . '</div>';
+                $newx += $new;
+            }
+        }
+    } elseif ($query_length > 500 && $query_length <= 5000) {
+        $nq = (int)($query_length / 10);
+        $nqn = $nq * 10;
+        $nqnq = (int)($nqn / 5);
+        if ($nqnq % 50 > 0) {
+            $nqnqx = (int)($nqnq / 50);
+            $new = $nqnqx * 50;
+            $newx = $new;
+            while ($newx <= $query_length) {
+                $w = strlen($newx);
+                $margin = (int)(($pxls * $new) - (9 * $w));
+                $output .= '<div style="margin-left: ' . $margin . 'px; width: ' . ($w * 9) . 'px;">' . $newx . '</div>';
+                $newx += $new;
+            }
+        } else {
+            $new = $nqnq;
+            $newx = $new;
+            while ($newx <= $query_length) {
+                $w = strlen($newx);
+                $margin = (int)(($pxls * $new) - (9 * $w));
+                $output .= '<div style="margin-left: ' . $margin . 'px; width: ' . ($w * 9) . 'px;">' . $newx . '</div>';
+                $newx += $new;
+            }
+        }
+    } else {
+        $nq = (int)($query_length / 5);
+        $x = $nq;
+        while ($x <= $query_length) {
+            $w = strlen($x);
+            $margin = (int)(($pxls * $nq) - (9 * $w));
+            $output .= '<div style="margin-left: ' . $margin . 'px; width: ' . ($w * 9) . 'px;">' . $x . '</div>';
+            $x += $nq;
+        }
+    }
+    
+    $output .= '</div>';
+    return $output;
+}
 ?>
