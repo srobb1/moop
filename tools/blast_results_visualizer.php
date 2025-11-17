@@ -590,19 +590,38 @@ function generateAlignmentViewer($results, $blast_program = 'blastn') {
             $html .= $hsp['subject_coverage_percent'] . '% (' . abs($hsp['hit_to'] - $hsp['hit_from']) + 1 . '/' . $results['hits'][$hit_idx]['length'] . ')';
             $html .= '</small>';
             
-            // Display alignment in monospace
+            // Display alignment in monospace with frame-aware formatting
             $html .= '<pre style="background: white; border: 1px solid #dee2e6; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 11px; margin: 0; font-family: \'Courier New\', monospace;">';
             
-            // Format alignment - query_seq, midline, hit_seq are already aligned with gaps
-            // Calculate label length: "Query  " (7) + position (right-padded to 8) = 15 chars
-            $label_width = 15;
-            $query_label = str_pad('Query  ' . $hsp['query_from'], $label_width);
-            $midline_label = str_pad('', $label_width);
-            $sbjct_label = str_pad('Sbjct  ' . $hsp['hit_from'], $label_width);
-            
-            $html .= $query_label . htmlspecialchars($hsp['query_seq']) . ' ' . $hsp['query_to'] . "\n";
-            $html .= $midline_label . htmlspecialchars($hsp['midline']) . "\n";
-            $html .= $sbjct_label . htmlspecialchars($hsp['hit_seq']) . ' ' . $hsp['hit_to'] . "\n";
+            // Use frame-aware alignment formatter if frames are available
+            if (isset($hsp['query_frame']) || isset($hsp['hit_frame'])) {
+                $query_frame = isset($hsp['query_frame']) ? (int)$hsp['query_frame'] : 0;
+                $hit_frame = isset($hsp['hit_frame']) ? (int)$hsp['hit_frame'] : 0;
+                $alignment_text = formatBlastAlignment(
+                    $hsp['alignment_length'],
+                    $hsp['query_seq'],
+                    $hsp['query_from'],
+                    $hsp['query_to'],
+                    $hsp['midline'],
+                    $hsp['hit_seq'],
+                    $hsp['hit_from'],
+                    $hsp['hit_to'],
+                    'Plus',
+                    $query_frame,
+                    $hit_frame
+                );
+                $html .= htmlspecialchars($alignment_text);
+            } else {
+                // Fallback to simple formatting
+                $label_width = 15;
+                $query_label = str_pad('Query  ' . $hsp['query_from'], $label_width);
+                $midline_label = str_pad('', $label_width);
+                $sbjct_label = str_pad('Sbjct  ' . $hsp['hit_from'], $label_width);
+                
+                $html .= $query_label . htmlspecialchars($hsp['query_seq']) . ' ' . $hsp['query_to'] . "\n";
+                $html .= $midline_label . htmlspecialchars($hsp['midline']) . "\n";
+                $html .= $sbjct_label . htmlspecialchars($hsp['hit_seq']) . ' ' . $hsp['hit_to'] . "\n";
+            }
             
             $html .= '</pre>';
             
@@ -844,7 +863,7 @@ function generateHspVisualizationWithLines($results) {
     $html .= '<style>';
     $html .= '.hsp-row { display: flex; align-items: center; margin-bottom: 12px; }';
     $html .= '.hsp-label { min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; word-break: break-all; }';
-    $html .= '.hsp-segments { display: flex; align-items: center; flex: 1; }';
+    $html .= '.hsp-segments { display: flex; align-items: center; width: 500px; }';
     $html .= '.hsp-segment { height: 16px; display: inline-block; margin-right: 0; cursor: pointer; border: 1px solid #333; transition: opacity 0.2s; }';
     $html .= '.hsp-segment:hover { opacity: 0.8; }';
     $html .= '.hsp-gap { height: 4px; background: #e0e0e0; display: inline-block; margin-top: 6px; }';
@@ -883,6 +902,9 @@ function generateHspVisualizationWithLines($results) {
     
     $html .= '</div>';
     $html .= '</div>';
+    
+    // Add query scale bar with intelligent tick spacing
+    $html .= generateQueryScale($results['query_length'], $results['query_name']);
     
     foreach ($results['hits'] as $hit_idx => $hit) {
         $hit_num = $hit_idx + 1;
@@ -1175,22 +1197,43 @@ function formatBlastAlignment($length, $query_seq, $query_seq_from, $query_seq_t
 
 /**
  * Generate query scale ruler with intelligent tick spacing
- * Ported from locBLAST unit() function
+ * Ported from locBLAST unit() function - displays as positioned overlay
+ * Includes horizontal query bar representation aligned with HSP boxes
  * 
  * @param int $query_length Total query length
- * @return string HTML for scale labels
+ * @param string $query_name Optional query name/ID
+ * @return string HTML for scale labels, ticks, and query bar
  */
-function generateQueryScale($query_length) {
+function generateQueryScale($query_length, $query_name = '') {
     $pxls = 500 / $query_length;
-    $output = '<div style="display: flex; margin-left: 100px; margin-bottom: 15px;">';
+    $output = '<div style="margin-left: 0; margin-bottom: 20px;">';
+    
+    // Query bar - 500px width like locBLAST
+    $output .= '<div style="display: flex; align-items: center; margin-bottom: 5px;">';
+    $output .= '<div style="min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; text-align: right;">';
+    $output .= 'Query:';
+    if (!empty($query_name)) {
+        $output .= '<br><small style="font-weight: normal; color: #666;">' . htmlspecialchars(substr($query_name, 0, 20)) . '</small>';
+    }
+    $output .= '</div>';
+    $output .= '<div style="width: 500px; height: 20px; position: relative; background: #f0f0f0; border: 1px solid #999; border-radius: 3px; margin-right: 10px;">';
+    $output .= '<div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: linear-gradient(to right, #4CAF50 0%, #45a049 100%); border-radius: 2px;"></div>';
+    $output .= '<div style="position: absolute; left: 5px; top: 2px; color: white; font-size: 11px; font-weight: bold;">1 - ' . $query_length . ' bp</div>';
+    $output .= '</div>';
+    $output .= '</div>';
+    
+    // Scale ruler with ticks and numbers
+    $output .= '<div style="display: flex; align-items: flex-start;">';
+    $output .= '<div style="min-width: 100px; padding-right: 15px;"></div>';
+    
+    // Calculate which numbers to display
+    $numbers = [];
     
     if ($query_length <= 50) {
         $nq = (int)($query_length / 5);
         $x = $nq;
         while ($x <= $query_length) {
-            $w = strlen($x);
-            $margin = (int)(($pxls * $nq) - (9 * $w));
-            $output .= '<div style="margin-left: ' . $margin . 'px; width: ' . ($w * 9) . 'px;">' . $x . '</div>';
+            $numbers[] = $x;
             $x += $nq;
         }
     } elseif ($query_length > 50 && $query_length <= 500) {
@@ -1202,18 +1245,14 @@ function generateQueryScale($query_length) {
             $new = $nqnqx * 10;
             $newx = $new;
             while ($newx <= $query_length) {
-                $w = strlen($newx);
-                $margin = (int)(($pxls * $new) - (9 * $w));
-                $output .= '<div style="margin-left: ' . $margin . 'px; width: ' . ($w * 9) . 'px;">' . $newx . '</div>';
+                $numbers[] = $newx;
                 $newx += $new;
             }
         } else {
             $new = $nqnq;
             $newx = $new;
             while ($newx <= $query_length) {
-                $w = strlen($newx);
-                $margin = (int)(($pxls * $new) - (9 * $w));
-                $output .= '<div style="margin-left: ' . $margin . 'px; width: ' . ($w * 9) . 'px;">' . $newx . '</div>';
+                $numbers[] = $newx;
                 $newx += $new;
             }
         }
@@ -1226,18 +1265,14 @@ function generateQueryScale($query_length) {
             $new = $nqnqx * 50;
             $newx = $new;
             while ($newx <= $query_length) {
-                $w = strlen($newx);
-                $margin = (int)(($pxls * $new) - (9 * $w));
-                $output .= '<div style="margin-left: ' . $margin . 'px; width: ' . ($w * 9) . 'px;">' . $newx . '</div>';
+                $numbers[] = $newx;
                 $newx += $new;
             }
         } else {
             $new = $nqnq;
             $newx = $new;
             while ($newx <= $query_length) {
-                $w = strlen($newx);
-                $margin = (int)(($pxls * $new) - (9 * $w));
-                $output .= '<div style="margin-left: ' . $margin . 'px; width: ' . ($w * 9) . 'px;">' . $newx . '</div>';
+                $numbers[] = $newx;
                 $newx += $new;
             }
         }
@@ -1245,14 +1280,30 @@ function generateQueryScale($query_length) {
         $nq = (int)($query_length / 5);
         $x = $nq;
         while ($x <= $query_length) {
-            $w = strlen($x);
-            $margin = (int)(($pxls * $nq) - (9 * $w));
-            $output .= '<div style="margin-left: ' . $margin . 'px; width: ' . ($w * 9) . 'px;">' . $x . '</div>';
+            $numbers[] = $x;
             $x += $nq;
         }
     }
     
+    // Container for ruler - 500px width like locBLAST .masterLen
+    $output .= '<div style="position: relative; height: 35px; width: 500px; margin-right: 10px;">';
+    
+    // Draw starting "0" position
+    $output .= '<div style="position: absolute; left: -15px; top: 10px; width: 30px; text-align: center; font-size: 11px; font-weight: bold;">0</div>';
+    
+    // Draw tick marks and labels
+    foreach ($numbers as $num) {
+        $pos = (int)($pxls * $num);
+        // Tick mark
+        $output .= '<div style="position: absolute; left: ' . $pos . 'px; top: 0; width: 1px; height: 8px; background: #333;"></div>';
+        // Number label below tick
+        $output .= '<div style="position: absolute; left: ' . ($pos - 15) . 'px; top: 10px; width: 30px; text-align: center; font-size: 11px; font-weight: bold;">' . $num . '</div>';
+    }
+    
     $output .= '</div>';
+    $output .= '</div>';
+    $output .= '</div>';
+    
     return $output;
 }
 ?>
