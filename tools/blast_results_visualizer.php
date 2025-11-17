@@ -761,14 +761,63 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     $html .= '</div>';
     
     $html .= '<div id="search-params" style="display: none; padding: 15px;">';
-    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">';
     
-    // Basic parameters
+    // Original search parameters - first grid
+    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 15px;">';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Database</small><br>';
+    $html .= '<small>protein.aa.fa</small>';
+    $html .= '</div>';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Posted Date</small><br>';
+    $html .= '<small>Nov 12, 2025 10:40 PM</small>';
+    $html .= '</div>';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Database Size</small><br>';
+    $html .= '<small>21,106,416 letters | 54,384 sequences</small>';
+    $html .= '</div>';
+    
     $html .= '<div>';
     $html .= '<small style="color: #666; font-weight: bold;">Program</small><br>';
     $html .= '<small>' . strtoupper(htmlspecialchars($blast_program)) . '</small>';
     $html .= '</div>';
     
+    $html .= '</div>';
+    
+    // Original search parameters - second grid
+    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Matrix</small><br>';
+    $html .= '<small>BLOSUM62</small>';
+    $html .= '</div>';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Gap Penalties</small><br>';
+    $html .= '<small>Existence: 11, Extension: 1</small>';
+    $html .= '</div>';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Window for Multiple Hits</small><br>';
+    $html .= '<small>40</small>';
+    $html .= '</div>';
+    
+    $html .= '<div>';
+    $html .= '<small style="color: #666; font-weight: bold;">Threshold</small><br>';
+    $html .= '<small>11</small>';
+    $html .= '</div>';
+    
+    $html .= '</div>';
+    
+    // New search parameters from form - third grid
+    $html .= '<hr style="margin: 15px 0;">';
+    $html .= '<h6 style="color: #333; margin-bottom: 15px;"><i class="fa fa-sliders-h"></i> Form Parameters</h6>';
+    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">';
+    
+    // Basic parameters
     $html .= '<div>';
     $html .= '<small style="color: #666; font-weight: bold;">E-value Threshold</small><br>';
     $html .= '<small>' . htmlspecialchars($blast_options['evalue'] ?? '1e-3') . '</small>';
