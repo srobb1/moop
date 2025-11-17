@@ -873,7 +873,47 @@ function generateHspVisualizationWithLines($results) {
     $html .= '.color-green { background-color: #77de75; }';
     $html .= '.color-purple { background-color: #e967f5; }';
     $html .= '.color-red { background-color: #e83a2d; }';
+    $html .= '.hit-highlight { background-color: #ffffcc !important; transition: background-color 0.3s ease-out; }';
+    $html .= '@keyframes highlightFade { 0% { background-color: #ffff99; } 100% { background-color: transparent; } }';
+    $html .= '.hit-highlighted { animation: highlightFade 2s ease-out; }';
+    $html .= '.hsp-row:hover { background-color: rgba(100, 150, 255, 0.1); }';
     $html .= '</style>';
+    
+    // Add JavaScript for hit navigation and highlighting
+    $html .= '<script>';
+    $html .= 'function jumpToHit(hitIndex) {';
+    $html .= '  const hitId = "hit-" + (hitIndex + 1);';
+    $html .= '  const element = document.getElementById(hitId);';
+    $html .= '  if (element) {';
+    $html .= '    element.scrollIntoView({ behavior: "smooth", block: "start" });';
+    $html .= '  }';
+    $html .= '}';
+    $html .= 'function highlightHit(hitIndex) {';
+    $html .= '  const hitId = "hit-" + (hitIndex + 1);';
+    $html .= '  const hitHeader = document.getElementById(hitId);';
+    $html .= '  if (!hitHeader) return;';
+    $html .= '  ';
+    $html .= '  const elementsToHighlight = [hitHeader];';
+    $html .= '  let nextElement = hitHeader.nextElementSibling;';
+    $html .= '  ';
+    $html .= '  while (nextElement && !nextElement.id) {';
+    $html .= '    elementsToHighlight.push(nextElement);';
+    $html .= '    nextElement = nextElement.nextElementSibling;';
+    $html .= '  }';
+    $html .= '  ';
+    $html .= '  elementsToHighlight.forEach(el => {';
+    $html .= '    el.classList.remove("hit-highlighted");';
+    $html .= '    void el.offsetWidth;';
+    $html .= '    el.classList.add("hit-highlighted");';
+    $html .= '  });';
+    $html .= '  ';
+    $html .= '  setTimeout(() => {';
+    $html .= '    elementsToHighlight.forEach(el => {';
+    $html .= '      el.classList.remove("hit-highlighted");';
+    $html .= '    });';
+    $html .= '  }, 2000);';
+    $html .= '}';
+    $html .= '</script>';
     
     $html .= '<div style="margin-top: 15px; margin: 0 auto; width: 1000px; text-align: center;">';
     
@@ -919,7 +959,7 @@ function generateHspVisualizationWithLines($results) {
         });
         
         // Build HTML row
-        $html .= '<div class="hsp-row">';
+        $html .= '<div class="hsp-row" style="cursor: pointer;" onclick="jumpToHit(' . $hit_idx . '); highlightHit(' . $hit_idx . ');">';
         $html .= '<div class="hsp-label"></div>';
         $html .= '<div class="hsp-segments">';
         
