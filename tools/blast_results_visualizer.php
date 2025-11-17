@@ -861,6 +861,29 @@ function generateHspVisualizationWithLines($results) {
     // Pixel unit calculation based on query length
     $px_unit = 500 / $results['query_length'];
     
+    // Score legend
+    $html .= '<div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #ddd;">';
+    $html .= '<strong style="display: block; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-info-circle"></i> Bit Score Legend:</strong>';
+    $html .= '<div style="display: flex; gap: 15px; flex-wrap: wrap;">';
+    
+    $colors = [
+        ['class' => 'color-black', 'label' => '≤ 40', 'desc' => 'Weak'],
+        ['class' => 'color-blue', 'label' => '40-50', 'desc' => 'Moderate'],
+        ['class' => 'color-green', 'label' => '50-80', 'desc' => 'Good'],
+        ['class' => 'color-purple', 'label' => '80-200', 'desc' => 'Very Good'],
+        ['class' => 'color-red', 'label' => '> 200', 'desc' => 'Excellent']
+    ];
+    
+    foreach ($colors as $color) {
+        $html .= '<div style="display: flex; align-items: center;">';
+        $html .= '<div style="width: 20px; height: 20px; border: 1px solid #333; margin-right: 6px; ' . getColorStyle($color['class']) . '"></div>';
+        $html .= '<div><strong>' . $color['label'] . '</strong> - ' . $color['desc'] . '</div>';
+        $html .= '</div>';
+    }
+    
+    $html .= '</div>';
+    $html .= '</div>';
+    
     foreach ($results['hits'] as $hit_idx => $hit) {
         $hit_num = $hit_idx + 1;
         
@@ -953,29 +976,6 @@ function generateHspVisualizationWithLines($results) {
         $html .= '</div>';
     }
     
-    $html .= '</div>';
-    
-    // Color legend
-    $html .= '<div style="margin-top: 20px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 15px;">';
-    $html .= '<strong style="display: block; margin-bottom: 10px;"><i class="fa fa-info-circle"></i> Bit Score Color Legend:</strong>';
-    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">';
-    
-    $colors = [
-        ['class' => 'color-black', 'label' => '≤ 40', 'desc' => 'Weak'],
-        ['class' => 'color-blue', 'label' => '40-50', 'desc' => 'Moderate'],
-        ['class' => 'color-green', 'label' => '50-80', 'desc' => 'Good'],
-        ['class' => 'color-purple', 'label' => '80-200', 'desc' => 'Very Good'],
-        ['class' => 'color-red', 'label' => '> 200', 'desc' => 'Excellent']
-    ];
-    
-    foreach ($colors as $color) {
-        $html .= '<div style="display: flex; align-items: center;">';
-        $html .= '<div style="width: 24px; height: 24px; border: 1px solid #333; margin-right: 8px; ' . getColorStyle($color['class']) . '"></div>';
-        $html .= '<div><strong>' . $color['label'] . '</strong> - ' . $color['desc'] . '</div>';
-        $html .= '</div>';
-    }
-    
-    $html .= '</div>';
     $html .= '</div>';
     $html .= '</div>';
     
