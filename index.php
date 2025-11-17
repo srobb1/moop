@@ -169,8 +169,8 @@ include_once __DIR__ . '/includes/header.php';
 
         <!-- Tools Card -->
         <?php 
-        $context = ['display_name' => 'Multi-Organism Search', 'page' => 'index', 'use_onclick_handler' => true];
-        include_once __DIR__ . '/tools/display/tool_section.php';
+        $context = createIndexToolContext();
+        include_once TOOL_SECTION_PATH;
         ?>
       </div>
     </div>

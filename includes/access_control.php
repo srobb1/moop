@@ -11,6 +11,9 @@ if (!isset($_SESSION)) {
 include_once __DIR__ . '/../site_config.php';
 include_once __DIR__ . '/../tools/tool_config.php';
 
+// Tool section component path constant
+define('TOOL_SECTION_PATH', __DIR__ . '/../tools/display/tool_section.php');
+
 // Get visitor IP address (use empty string if not set, which won't match any IP range)
 $visitor_ip = $_SERVER['REMOTE_ADDR'] ?? '';
 

@@ -130,8 +130,8 @@ $parent_uniquename = $_GET['parent'] ?? '';
     <!-- Tools Column -->
     <div class="col-lg-4">
       <?php 
-      $context = ['organism' => $organism_name, 'assembly' => $assembly_accession, 'display_name' => $assembly_info['genome_name'], 'page' => 'assembly'];
-      include_once __DIR__ . '/tool_section.php';
+      $context = createAssemblyToolContext($organism_name, $assembly_accession, $assembly_info['genome_name']);
+      include_once TOOL_SECTION_PATH;
       ?>
     </div>
   </div>

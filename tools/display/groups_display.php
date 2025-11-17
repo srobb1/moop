@@ -99,8 +99,8 @@ if (!is_public_group($group_name)) {
     <!-- Tools Column -->
     <div class="col-lg-4">
       <?php 
-      $context = ['group' => $group_name, 'display_name' => $group_name, 'page' => 'group'];
-      include_once __DIR__ . '/tool_section.php';
+      $context = createGroupToolContext($group_name);
+      include_once TOOL_SECTION_PATH;
       ?>
     </div>
   </div>
