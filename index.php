@@ -169,33 +169,9 @@ include_once __DIR__ . '/includes/header.php';
 
         <!-- Tools Card -->
         <?php 
-        $context = ['display_name' => 'Multi-Organism Search', 'page' => 'index'];
-        include_once __DIR__ . '/tools/tool_config.php';
-        include_once __DIR__ . '/tools/moop_functions.php';
-        $tools = getAvailableTools($context);
-        
-        if (!empty($tools)):
+        $context = ['display_name' => 'Multi-Organism Search', 'page' => 'index', 'use_onclick_handler' => true];
+        include_once __DIR__ . '/tools/display/tool_section.php';
         ?>
-        <div class="card shadow-sm">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fa fa-toolbox"></i> Tools</h5>
-            </div>
-            <div class="card-body p-2">
-                <div class="d-flex flex-wrap gap-2">
-                    <?php foreach ($tools as $tool_id => $tool): ?>
-                        <button 
-                           class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
-                           title="<?= htmlspecialchars($tool['description']) ?>"
-                           id="tool-btn-<?= htmlspecialchars($tool_id) ?>"
-                           onclick="handleToolClick('<?= htmlspecialchars($tool_id) ?>')">
-                          <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
-                          <span><?= htmlspecialchars($tool['name']) ?></span>
-                        </button>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
       </div>
     </div>
   </div>
