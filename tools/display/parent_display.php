@@ -15,15 +15,9 @@ if (empty($organism_name) || empty($uniquename)) {
     die("Error: Missing required parameters. Please provide both 'organism' and 'uniquename' parameters.");
 }
 
-// Determine database path
-$db = null;
-$organism_info = null;
-
-// Load organism info
+// Load organism info using helper
 $organism_json_path = "$organism_data/$organism_name/organism.json";
-if (file_exists($organism_json_path)) {
-    $organism_info = json_decode(file_get_contents($organism_json_path), true);
-}
+$organism_info = loadJsonFile($organism_json_path);
 
 // Use standardized database naming
 $db_path = "$organism_data/$organism_name/organism.sqlite";
@@ -39,44 +33,36 @@ if (!file_exists($db_path)) {
 $db = $db_path;
 
 // Check access control
-if (!empty($organism_name)) {
-    $is_public = is_public_organism($organism_name);
-    $has_organism_access = has_access('Collaborator', $organism_name);
-    
-    if (!$has_organism_access && !$is_public) {
-        header("Location: /$site/access_denied.php");
-        exit;
-    }
+$is_public = is_public_organism($organism_name);
+if (!$is_public) {
+    requireAccess('Collaborator', $organism_name);
 }
 
-// Load annotation configuration
-// Configuration files are centralized in the metadata directory
+// Load annotation configuration using helper
 $annotation_config_file = "$metadata_path/annotation_config.json";
+$annotation_config = loadJsonFileRequired($annotation_config_file, "Missing annotation_config.json");
+
 $analysis_order = [];
 $analysis_desc = [];
 $annotation_colors = [];
 
-if (file_exists($annotation_config_file)) {
-    $annotation_config = json_decode(file_get_contents($annotation_config_file), true);
+// Require new format with annotation_types
+if (isset($annotation_config['annotation_types'])) {
+    $types = $annotation_config['annotation_types'];
+    // Sort by order
+    uasort($types, function($a, $b) {
+        return ($a['order'] ?? 999) - ($b['order'] ?? 999);
+    });
     
-    // Require new format with annotation_types
-    if (isset($annotation_config['annotation_types'])) {
-        $types = $annotation_config['annotation_types'];
-        // Sort by order
-        uasort($types, function($a, $b) {
-            return ($a['order'] ?? 999) - ($b['order'] ?? 999);
-        });
-        
-        foreach ($types as $key => $config) {
-            if ($config['enabled'] ?? true) {
-                $analysis_order[] = $key;
-                $analysis_desc[$key] = $config['description'] ?? '';
-                $annotation_colors[$key] = $config['color'] ?? 'secondary';
-            }
+    foreach ($types as $key => $config) {
+        if ($config['enabled'] ?? true) {
+            $analysis_order[] = $key;
+            $analysis_desc[$key] = $config['description'] ?? '';
+            $annotation_colors[$key] = $config['color'] ?? 'secondary';
         }
-    } else {
-        die("Error: annotation_config.json must use the new 'annotation_types' format. Legacy format is no longer supported.");
     }
+} else {
+    die("Error: annotation_config.json must use the new 'annotation_types' format. Legacy format is no longer supported.");
 }
 
 // Define parent types (typically genes are parent features)

@@ -1684,7 +1684,194 @@ function createMultiOrganismToolContext($organisms, $display_name = 'Multi-Organ
     ];
 }
 
+/**
+ * Get cards to display on index page based on user access level
+ * 
+ * @param array $group_data Array of group data from getGroupData()
+ * @return array Cards to display with title, text, and link
+ */
+function getIndexDisplayCards($group_data) {
+    $cards_to_display = [];
+    $all_cards = getAllGroupCards($group_data);
+    
+    if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {
+        $cards_to_display = $all_cards;
+    } elseif (is_logged_in()) {
+        // Logged-in users see: public groups + their permitted organisms
+        $cards_to_display = getPublicGroupCards($group_data);
+        
+        foreach (get_user_access() as $organism => $assemblies) {
+            if (!isset($cards_to_display[$organism])) {
+                $formatted_name = formatIndexOrganismName($organism);
+                $cards_to_display[$organism] = [
+                    'title' => $formatted_name,
+                    'text'  => "Explore " . strip_tags($formatted_name) . " Data",
+                    'link'  => 'tools/display/organism_display.php?organism=' . urlencode($organism)
+                ];
+            }
+        }
+    } else {
+        // Visitors see only groups with public assemblies
+        $cards_to_display = getPublicGroupCards($group_data);
+    }
+    
+    return $cards_to_display;
+}
+
+/**
+ * Format organism name for index page display with italics
+ * 
+ * @param string $organism Organism name with underscores
+ * @return string Formatted name with proper capitalization and italics
+ */
+function formatIndexOrganismName($organism) {
+    $parts = explode('_', $organism);
+    $formatted_name = ucfirst(strtolower($parts[0]));
+    for ($i = 1; $i < count($parts); $i++) {
+        $formatted_name .= ' ' . strtolower($parts[$i]);
+    }
+    return '<i>' . $formatted_name . '</i>';
+}
+
+/**
+ * Get phylogenetic tree user access based on access level
+ * 
+ * @param array $group_data Array of group data from getGroupData()
+ * @return array User access mapping for phylogenetic tree
+ */
+function getPhyloTreeUserAccess($group_data) {
+    $phylo_user_access = [];
+    
+    if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {
+        // Admin gets access to all organisms
+        foreach ($group_data as $data) {
+            $organism = $data['organism'];
+            if (!isset($phylo_user_access[$organism])) {
+                $phylo_user_access[$organism] = true;
+            }
+        }
+    } elseif (is_logged_in()) {
+        // Logged-in users get their specific access
+        $phylo_user_access = get_user_access();
+    } else {
+        // Public users: get organisms in Public group
+        foreach ($group_data as $data) {
+            if (in_array('Public', $data['groups'])) {
+                $organism = $data['organism'];
+                if (!isset($phylo_user_access[$organism])) {
+                    $phylo_user_access[$organism] = true;
+                }
+            }
+        }
+    }
+    
+    return $phylo_user_access;
+}
+
+/**
+ * Load JSON file safely with error handling
+ * 
+ * @param string $path Path to JSON file
+ * @param mixed $default Default value if file doesn't exist (default: [])
+ * @return mixed Decoded JSON data or default value
+ */
+function loadJsonFile($path, $default = []) {
+    if (!file_exists($path)) {
+        return $default;
+    }
+    
+    $json_content = file_get_contents($path);
+    if ($json_content === false) {
+        return $default;
+    }
+    
+    $data = json_decode($json_content, true);
+    return $data !== null ? $data : $default;
+}
+
+/**
+ * Load JSON file and require it to exist
+ * 
+ * @param string $path Path to JSON file
+ * @param string $errorMsg Error message to log if file missing
+ * @param bool $exitOnError Whether to exit if file not found (default: true)
+ * @return mixed Decoded JSON data or empty array if error
+ */
+function loadJsonFileRequired($path, $errorMsg = '', $exitOnError = false) {
+    if (!file_exists($path)) {
+        if ($errorMsg) {
+            error_log($errorMsg);
+        }
+        if ($exitOnError) {
+            header("HTTP/1.1 500 Internal Server Error");
+            exit("Required data file not found");
+        }
+        return [];
+    }
+    
+    $json_content = file_get_contents($path);
+    if ($json_content === false) {
+        $msg = $errorMsg ?: "Failed to read file: $path";
+        error_log($msg);
+        if ($exitOnError) {
+            header("HTTP/1.1 500 Internal Server Error");
+            exit("Failed to read required data");
+        }
+        return [];
+    }
+    
+    $data = json_decode($json_content, true);
+    if ($data === null) {
+        $msg = $errorMsg ?: "Invalid JSON in file: $path";
+        error_log($msg);
+        if ($exitOnError) {
+            header("HTTP/1.1 500 Internal Server Error");
+            exit("Invalid data format");
+        }
+        return [];
+    }
+    
+    return $data;
+}
+
+/**
+ * Require user to have specific access level or redirect to access denied
+ * 
+ * @param string $level Required access level (e.g., 'Collaborator', 'Admin')
+ * @param string $resource Resource name (e.g., group name or organism name)
+ * @param array $options Options: ['redirect_on_deny' => true, 'deny_page' => '/moop/access_denied.php']
+ * @return bool True if user has access, false otherwise
+ */
+function requireAccess($level, $resource, $options = []) {
+    global $site;
+    
+    $redirect_on_deny = $options['redirect_on_deny'] ?? true;
+    $deny_page = $options['deny_page'] ?? "/$site/access_denied.php";
+    
+    $has_access = has_access($level, $resource);
+    
+    if (!$has_access && $redirect_on_deny) {
+        header("Location: $deny_page");
+        exit;
+    }
+    
+    return $has_access;
+}
+
+/**
+ * Check if user has access to a resource (without redirect)
+ * Convenience wrapper for has_access() with better naming
+ * 
+ * @param string $level Required access level
+ * @param string $resource Resource name
+ * @return bool True if user has access
+ */
+function userHasAccess($level, $resource) {
+    return has_access($level, $resource);
+}
+
 ?>
+
 
 
 

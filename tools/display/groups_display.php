@@ -11,12 +11,9 @@ if (empty($group_name)) {
     exit;
 }
 
-// Load group descriptions
+// Load group descriptions using helper
 $group_descriptions_file = "$metadata_path/group_descriptions.json";
-$group_descriptions = [];
-if (file_exists($group_descriptions_file)) {
-    $group_descriptions = json_decode(file_get_contents($group_descriptions_file), true);
-}
+$group_descriptions = loadJsonFile($group_descriptions_file, []);
 
 // Load organism assembly groups
 $group_data = getGroupData();
@@ -33,13 +30,9 @@ foreach ($group_descriptions as $desc) {
 // Get organisms in this group that user has access to
 $group_organisms = getAccessibleOrganismsInGroup($group_name, $group_data);
 
-// Access control: Check if user has access to this group
-// Groups with public assemblies are accessible to everyone, others require proper access
+// Access control: Check if user has access to this group (with automatic redirect)
 if (!is_public_group($group_name)) {
-    if (!has_access('Collaborator', $group_name)) {
-        header("Location: /$site/access_denied.php");
-        exit;
-    }
+    requireAccess('Collaborator', $group_name);
 }
 ?>
 

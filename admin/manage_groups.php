@@ -6,20 +6,15 @@ include_once __DIR__ . '/../includes/navigation.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
 
 $groups_file = $metadata_path . '/organism_assembly_groups.json';
-$groups_data = [];
 $file_write_error = null;
 $desc_file_write_error = null;
 
-if (file_exists($groups_file)) {
-    $groups_data = json_decode(file_get_contents($groups_file), true);
-}
+// Load group data using helper
+$groups_data = loadJsonFile($groups_file, []);
 
-// Load group descriptions
+// Load group descriptions using helper
 $descriptions_file = $metadata_path . '/group_descriptions.json';
-$descriptions_data = [];
-if (file_exists($descriptions_file)) {
-    $descriptions_data = json_decode(file_get_contents($descriptions_file), true);
-}
+$descriptions_data = loadJsonFile($descriptions_file, []);
 
 // Check if groups file is writable
 $file_write_error = getFileWriteError($groups_file);

@@ -261,11 +261,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Load current tree config
-$current_tree = null;
-if (file_exists($tree_config_file)) {
-    $current_tree = json_decode(file_get_contents($tree_config_file), true);
-}
+// Load current tree config using helper
+$current_tree = loadJsonFile($tree_config_file, null);
 
 // Get available organisms
 $organisms = get_organisms_metadata($organism_data_dir);

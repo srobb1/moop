@@ -13,21 +13,16 @@ if (empty($organism_name)) {
     exit;
 }
 
-// Load organism JSON file
+// Load organism JSON file using helper
 $organism_json_path = "$organism_data/$organism_name/organism.json";
-$organism_info = null;
+$organism_info = loadJsonFile($organism_json_path);
 
-if (file_exists($organism_json_path)) {
-    $json_content = file_get_contents($organism_json_path);
-    $organism_info = json_decode($json_content, true);
-    
-    // Handle improperly wrapped JSON (extra outer braces)
-    if ($organism_info && !isset($organism_info['genus']) && !isset($organism_info['common_name'])) {
-        // Check if data is wrapped in an unnamed object
-        $keys = array_keys($organism_info);
-        if (count($keys) > 0 && is_array($organism_info[$keys[0]]) && isset($organism_info[$keys[0]]['genus'])) {
-            $organism_info = $organism_info[$keys[0]];
-        }
+// Handle improperly wrapped JSON (extra outer braces)
+if ($organism_info && !isset($organism_info['genus']) && !isset($organism_info['common_name'])) {
+    // Check if data is wrapped in an unnamed object
+    $keys = array_keys($organism_info);
+    if (count($keys) > 0 && is_array($organism_info[$keys[0]]) && isset($organism_info[$keys[0]]['genus'])) {
+        $organism_info = $organism_info[$keys[0]];
     }
 }
 
@@ -37,13 +32,10 @@ if (!$organism_info || !isset($organism_info['common_name'])) {
 }
 
 // Access control: Check if user has access to this organism
-// Allow access if: user has ALL/Admin access, OR organism is public, OR user has specific access
+// Allow access if: organism is public OR user has specific access
 $is_public = is_public_organism($organism_name);
-$has_organism_access = has_access('Collaborator', $organism_name);
-
-if (!$has_organism_access && !$is_public) {
-    header("Location: /$site/access_denied.php");
-    exit;
+if (!$is_public) {
+    requireAccess('Collaborator', $organism_name);
 }
 ?>
 

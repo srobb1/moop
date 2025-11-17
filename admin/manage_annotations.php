@@ -9,12 +9,9 @@ include_once '../includes/navbar.php';
 
 
 $config_file = "$metadata_path/annotation_config.json";
-$config = [];
-$file_write_error = null;
 
-if (file_exists($config_file)) {
-    $config = json_decode(file_get_contents($config_file), true);
-}
+// Load config using helper
+$config = loadJsonFile($config_file, []);
 
 // Check if file is writable
 $file_write_error = getFileWriteError($config_file);

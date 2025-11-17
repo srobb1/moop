@@ -14,19 +14,15 @@ if (empty($organism_name) || empty($assembly_accession)) {
     exit;
 }
 
-// Load organism info
+// Load organism info using helper
 $organism_json_path = "$organism_data/$organism_name/organism.json";
-$organism_info = null;
+$organism_info = loadJsonFile($organism_json_path);
 
-if (file_exists($organism_json_path)) {
-    $organism_info = json_decode(file_get_contents($organism_json_path), true);
-    
-    // Handle improperly wrapped JSON
-    if ($organism_info && !isset($organism_info['genus']) && !isset($organism_info['common_name'])) {
-        $keys = array_keys($organism_info);
-        if (count($keys) > 0 && is_array($organism_info[$keys[0]]) && isset($organism_info[$keys[0]]['genus'])) {
-            $organism_info = $organism_info[$keys[0]];
-        }
+// Handle improperly wrapped JSON
+if ($organism_info && !isset($organism_info['genus']) && !isset($organism_info['common_name'])) {
+    $keys = array_keys($organism_info);
+    if (count($keys) > 0 && is_array($organism_info[$keys[0]]) && isset($organism_info[$keys[0]]['genus'])) {
+        $organism_info = $organism_info[$keys[0]];
     }
 }
 
@@ -37,11 +33,8 @@ if (!$organism_info) {
 
 // Access control
 $is_public = is_public_organism($organism_name);
-$has_organism_access = has_access('Collaborator', $organism_name);
-
-if (!$has_organism_access && !$is_public) {
-    header("Location: /$site/access_denied.php");
-    exit;
+if (!$is_public) {
+    requireAccess('Collaborator', $organism_name);
 }
 
 // Get database path

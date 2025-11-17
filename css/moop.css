@@ -234,10 +234,16 @@ footer .footer-meta {
 
 .view-container {
   display: block;
+  animation: fadeIn 0.3s ease-in;
 }
 
 .view-container.hidden {
   display: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .sticky-card {
@@ -245,27 +251,83 @@ footer .footer-meta {
   top: 20px;
 }
 
+/* Phylogenetic Tree Styling */
+.phylo-tree-scroll {
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
 /* Phylogenetic node styling */
 .phylo-node {
   padding: 8px 12px;
   margin: 2px 0;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
-  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  background: #f8f9fa;
+  border: 2px solid transparent;
+  user-select: none;
 }
 
 .phylo-node:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background: #e9ecef;
+  transform: translateX(4px);
 }
 
 .phylo-node.selected {
-  background-color: rgba(102, 126, 234, 0.2);
-  font-weight: 500;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+  font-weight: 600;
+}
+
+.phylo-node.partial {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+  border-color: #667eea;
+  border-style: dashed;
 }
 
 .phylo-node.locked {
   opacity: 0.5;
   cursor: default;
+}
+
+.phylo-icon {
+  margin-right: 8px;
+  font-size: 16px;
+  min-width: 20px;
+}
+
+.phylo-name {
+  flex: 1;
+}
+
+.phylo-leaf {
+  font-style: italic;
+  background: #fff;
+  border: 1px solid #dee2e6;
+}
+
+.phylo-leaf:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.phylo-leaf.selected {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border-color: #28a745;
+}
+
+.phylo-branch {
+  font-weight: 500;
+}
+
+#selected-organisms-list .badge {
+  font-size: 0.85rem;
+  padding: 0.4em 0.6em;
 }
 
 /* ========== HEADER STYLES ========== */
