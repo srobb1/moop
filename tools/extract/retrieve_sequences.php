@@ -51,17 +51,25 @@ $display_name = trim($_GET['display_name'] ?? $_POST['display_name'] ?? '');
 
 // Get organisms for filtering - support both array and comma-separated string formats
 // Array format: organisms[] from multi-search context (via tool_config.php)
+// Single organism: organism parameter from single organism context page
 // String format: comma-separated organisms from form resubmission
 $organisms_param = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
 $filter_organisms = [];
 $filter_organisms_string = '';
 
+// First check for organisms array (highest priority - from multi-search)
 if (is_array($organisms_param)) {
     // Array format (from multi-search via tool links)
     $filter_organisms = array_filter($organisms_param);
     $filter_organisms_string = implode(',', $filter_organisms);
-} else {
-    // String format (comma-separated or from form resubmission)
+} 
+// Then check for single organism context (from organism_display page)
+elseif (!empty($context_organism)) {
+    $filter_organisms = [$context_organism];
+    $filter_organisms_string = $context_organism;
+}
+// Finally try comma-separated string format
+else {
     $filter_organisms_string = trim($organisms_param);
     if (!empty($filter_organisms_string)) {
         $filter_organisms = array_map('trim', explode(',', $filter_organisms_string));
@@ -283,7 +291,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
                     // Define a color palette for groups only
                     $group_colors = ['primary', 'success', 'info', 'warning', 'danger', 'secondary', 'dark'];
                     $group_color_map = []; // Map group names to colors
-                    $first_source = true; // Track first source for auto-checking
+                    $first_visible_source = true; // Track first visible source for auto-checking
                     
                     foreach ($sources_by_group as $group_name => $organisms): 
                         // Assign color to this group
@@ -309,7 +317,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
                                         value="<?= htmlspecialchars($source['organism'] . '|' . $source['assembly']) ?>"
                                         data-organism="<?= htmlspecialchars($source['organism']) ?>"
                                         data-assembly="<?= htmlspecialchars($source['assembly']) ?>"
-                                        <?php if ($first_source): ?>checked<?php $first_source = false; endif; ?>
+                                        <?php if ($first_visible_source): ?>checked<?php $first_visible_source = false; endif; ?>
                                         >
                                     
                                     <!-- Group badge - colorful -->
