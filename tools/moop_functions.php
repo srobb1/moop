@@ -1870,7 +1870,148 @@ function userHasAccess($level, $resource) {
     return has_access($level, $resource);
 }
 
+/**
+ * Validate and extract organism parameter from GET/POST
+ * Redirects to home if missing/empty
+ * 
+ * @param string $organism_name Organism name to validate
+ * @param string $redirect_on_empty URL to redirect to if empty (default: /moop/index.php)
+ * @return string Validated organism name
+ */
+function validateOrganismParam($organism_name, $redirect_on_empty = '/moop/index.php') {
+    if (empty($organism_name)) {
+        header("Location: $redirect_on_empty");
+        exit;
+    }
+    return $organism_name;
+}
+
+/**
+ * Validate and extract assembly parameter from GET/POST
+ * Redirects to home if missing/empty
+ * 
+ * @param string $assembly Assembly accession to validate
+ * @param string $redirect_on_empty URL to redirect to if empty
+ * @return string Validated assembly name
+ */
+function validateAssemblyParam($assembly, $redirect_on_empty = '/moop/index.php') {
+    if (empty($assembly)) {
+        header("Location: $redirect_on_empty");
+        exit;
+    }
+    return $assembly;
+}
+
+/**
+ * Validate and extract multiple required parameters at once
+ * Redirects if any are missing
+ * 
+ * @param array $params Parameter map: ['name' => value, ...]
+ * @param array $required Array of required parameter names
+ * @param string $redirect_on_missing URL to redirect to if missing
+ * @return array Validated parameters (only required ones)
+ */
+function validateRequiredParams($params, $required = [], $redirect_on_missing = '/moop/index.php') {
+    foreach ($required as $key) {
+        if (empty($params[$key] ?? null)) {
+            header("Location: $redirect_on_missing");
+            exit;
+        }
+    }
+    return array_filter($params, function($k) use ($required) {
+        return in_array($k, $required);
+    }, ARRAY_FILTER_USE_KEY);
+}
+
+/**
+ * Load and validate organism info from JSON file
+ * Handles improperly wrapped JSON automatically
+ * 
+ * @param string $organism_name Organism name
+ * @param string $organism_data_dir Path to organism data directory (e.g., $organism_data)
+ * @return array|null Organism info array or null if not found/invalid
+ */
+function loadOrganismInfo($organism_name, $organism_data_dir) {
+    $organism_json_path = "$organism_data_dir/$organism_name/organism.json";
+    $organism_info = loadJsonFile($organism_json_path);
+    
+    if (!$organism_info) {
+        return null;
+    }
+    
+    // Handle improperly wrapped JSON (extra outer braces)
+    if (!isset($organism_info['genus']) && !isset($organism_info['common_name'])) {
+        $keys = array_keys($organism_info);
+        if (count($keys) > 0 && is_array($organism_info[$keys[0]]) && isset($organism_info[$keys[0]]['genus'])) {
+            $organism_info = $organism_info[$keys[0]];
+        }
+    }
+    
+    // Validate required fields
+    if (!isset($organism_info['common_name']) && !isset($organism_info['genus'])) {
+        return null;
+    }
+    
+    return $organism_info;
+}
+
+/**
+ * Verify organism database file exists
+ * 
+ * @param string $organism_name Organism name
+ * @param string $organism_data_dir Path to organism data directory
+ * @return string Database path if exists, exits with error if not
+ */
+function verifyOrganismDatabase($organism_name, $organism_data_dir) {
+    $db_path = "$organism_data_dir/$organism_name/organism.sqlite";
+    
+    if (!file_exists($db_path)) {
+        header("HTTP/1.1 500 Internal Server Error");
+        die("Error: Database not found for organism '$organism_name'. Please ensure the organism is properly configured.");
+    }
+    
+    return $db_path;
+}
+
+/**
+ * Complete setup for organism display pages
+ * Validates parameter, loads organism info, checks access, returns context
+ * Use this to replace boilerplate in organism_display, assembly_display, parent_display
+ * 
+ * @param string $organism_name Organism from GET/POST
+ * @param string $organism_data_dir Path to organism data directory
+ * @param bool $check_access Whether to check access control (default: true)
+ * @param string $redirect_home Home URL for redirects (default: /moop/index.php)
+ * @return array Array with 'name' and 'info' keys, or exits on error
+ */
+function setupOrganismDisplayContext($organism_name, $organism_data_dir, $check_access = true, $redirect_home = '/moop/index.php') {
+    // Validate organism parameter
+    $organism_name = validateOrganismParam($organism_name, $redirect_home);
+    
+    // Load and validate organism info
+    $organism_info = loadOrganismInfo($organism_name, $organism_data_dir);
+    
+    if (!$organism_info) {
+        header("Location: $redirect_home");
+        exit;
+    }
+    
+    // Check access (unless it's public)
+    if ($check_access) {
+        $is_public = is_public_organism($organism_name);
+        if (!$is_public) {
+            require_access('Collaborator', $organism_name);
+        }
+    }
+    
+    return [
+        'name' => $organism_name,
+        'info' => $organism_info
+    ];
+}
+
 ?>
+
 
 
 

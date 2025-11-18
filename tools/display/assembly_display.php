@@ -5,44 +5,16 @@ include_once __DIR__ . '/../../includes/navbar.php';
 include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 
-// Get organism and assembly from query parameters
-$organism_name = $_GET['organism'] ?? '';
-$assembly_accession = $_GET['assembly'] ?? '';
+// Validate parameters
+$organism_name = validateOrganismParam($_GET['organism'] ?? '');
+$assembly_accession = validateAssemblyParam($_GET['assembly'] ?? '');
 
-if (empty($organism_name) || empty($assembly_accession)) {
-    header("Location: /$site/index.php");
-    exit;
-}
+// Setup organism context (loads info, checks access)
+$organism_context = setupOrganismDisplayContext($organism_name, $organism_data, true);
+$organism_info = $organism_context['info'];
 
-// Load organism info using helper
-$organism_json_path = "$organism_data/$organism_name/organism.json";
-$organism_info = loadJsonFile($organism_json_path);
-
-// Handle improperly wrapped JSON
-if ($organism_info && !isset($organism_info['genus']) && !isset($organism_info['common_name'])) {
-    $keys = array_keys($organism_info);
-    if (count($keys) > 0 && is_array($organism_info[$keys[0]]) && isset($organism_info[$keys[0]]['genus'])) {
-        $organism_info = $organism_info[$keys[0]];
-    }
-}
-
-if (!$organism_info) {
-    header("Location: /$site/index.php");
-    exit;
-}
-
-// Access control
-$is_public = is_public_organism($organism_name);
-if (!$is_public) {
-    requireAccess('Collaborator', $organism_name);
-}
-
-// Get database path
-$db_path = "$organism_data/$organism_name/organism.sqlite";
-
-if (!file_exists($db_path)) {
-    die("Error: Database not found for organism '$organism_name'.");
-}
+// Verify database exists
+$db_path = verifyOrganismDatabase($organism_name, $organism_data);
 
 // Query to get assembly info and feature counts
 $query = "SELECT 

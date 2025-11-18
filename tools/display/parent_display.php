@@ -6,37 +6,19 @@ include_once realpath(__DIR__ . '/../../site_config.php');
 include_once realpath(__DIR__ . '/../moop_functions.php');
 include_once __DIR__ . '/parent_functions.php';
 
-// Get parameters - require new format
-// Format: ?organism=Organism_name&uniquename=GENE123
-$organism_name = $_GET['organism'] ?? '';
-$uniquename = $_GET['uniquename'] ?? '';
-
-if (empty($organism_name) || empty($uniquename)) {
+// Validate required parameters
+$organism_name = validateOrganismParam($_GET['organism'] ?? '', null);
+$uniquename = validateAssemblyParam($_GET['uniquename'] ?? '', null);
+if ($organism_name === null || $uniquename === null) {
     die("Error: Missing required parameters. Please provide both 'organism' and 'uniquename' parameters.");
 }
 
-// Load organism info using helper
-$organism_json_path = "$organism_data/$organism_name/organism.json";
-$organism_info = loadJsonFile($organism_json_path);
+// Setup organism context (loads info, checks access)
+$organism_context = setupOrganismDisplayContext($organism_name, $organism_data, true);
+$organism_info = $organism_context['info'];
 
-// Use standardized database naming
-$db_path = "$organism_data/$organism_name/organism.sqlite";
-
-// TO DO: we are building a reports page to list all organisms that do not have a sqlite file. add that info to the message.
-// TO DO: also add this error to MOOP system logging. 
-// TO DO: we should find all Errors and warning messages and write them to the error log also. We need and error function that prints to the screen
-// and logs the message in the log
-if (!file_exists($db_path)) {
-    die("Error: Database not found for organism '$organism_name'. Please ensure the organism is properly configured.");
-}
-
-$db = $db_path;
-
-// Check access control
-$is_public = is_public_organism($organism_name);
-if (!$is_public) {
-    requireAccess('Collaborator', $organism_name);
-}
+// Verify and get database path
+$db = verifyOrganismDatabase($organism_name, $organism_data);
 
 // Load annotation configuration using helper
 $annotation_config_file = "$metadata_path/annotation_config.json";

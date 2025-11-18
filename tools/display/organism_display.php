@@ -3,40 +3,14 @@ include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 
-// Get organism name from query parameter
-$organism_name = $_GET['organism'] ?? '';
+// Get context parameters
 $parent_uniquename = $_GET['parent'] ?? '';
 $group_name = $_GET['group'] ?? '';
 
-if (empty($organism_name)) {
-    header("Location: /$site/index.php");
-    exit;
-}
-
-// Load organism JSON file using helper
-$organism_json_path = "$organism_data/$organism_name/organism.json";
-$organism_info = loadJsonFile($organism_json_path);
-
-// Handle improperly wrapped JSON (extra outer braces)
-if ($organism_info && !isset($organism_info['genus']) && !isset($organism_info['common_name'])) {
-    // Check if data is wrapped in an unnamed object
-    $keys = array_keys($organism_info);
-    if (count($keys) > 0 && is_array($organism_info[$keys[0]]) && isset($organism_info[$keys[0]]['genus'])) {
-        $organism_info = $organism_info[$keys[0]];
-    }
-}
-
-if (!$organism_info || !isset($organism_info['common_name'])) {
-    header("Location: /$site/index.php");
-    exit;
-}
-
-// Access control: Check if user has access to this organism
-// Allow access if: organism is public OR user has specific access
-$is_public = is_public_organism($organism_name);
-if (!$is_public) {
-    requireAccess('Collaborator', $organism_name);
-}
+// Setup organism context (validates param, loads info, checks access)
+$organism_context = setupOrganismDisplayContext($_GET['organism'] ?? '', $organism_data);
+$organism_name = $organism_context['name'];
+$organism_info = $organism_context['info'];
 ?>
 
 <!DOCTYPE html>
