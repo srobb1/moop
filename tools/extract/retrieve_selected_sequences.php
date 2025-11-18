@@ -35,9 +35,20 @@ $organism_name = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
 $assembly_name = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
 $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
 
+// Assembly MUST be specified - it's a security requirement
+if (empty($assembly_name)) {
+    header("Location: /$site/access_denied.php?error=assembly_required");
+    exit;
+}
+
 // Check access to the requested assembly (allows public assemblies, logged-in users with access, or admins)
 if (!has_assembly_access($organism_name, $assembly_name)) {
-    header("Location: /$site/login.php");
+    // Redirect to login if not logged in, or access_denied if logged in but no access
+    if (!is_logged_in()) {
+        header("Location: /$site/login.php");
+    } else {
+        header("Location: /$site/access_denied.php");
+    }
     exit;
 }
 
@@ -52,7 +63,7 @@ $images_path = $config->getString('images_path');
 $context = parseContextParameters();
 
 // Check if user is logged in
-$is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
+$is_logged_in = is_logged_in();
 
 // Initialize displayed content
 $displayed_content = [];
@@ -64,32 +75,6 @@ if (!empty($sequence_ids_provided)) {
     // Validate inputs
     if (empty($organism_name) || empty($uniquenames_string)) {
         $extraction_errors[] = 'Missing organism or feature IDs';
-    }
-    
-    // If assembly not specified, try to find first one for organism
-    if (empty($assembly_name)) {
-        $groups_file = $metadata_path . '/organism_assembly_groups.json';
-        if (file_exists($groups_file)) {
-            $groups_data = json_decode(file_get_contents($groups_file), true) ?: [];
-            foreach ($groups_data as $entry) {
-                if ($entry['organism'] === $organism_name) {
-                    $assembly_name = $entry['assembly'];
-                    break;
-                }
-            }
-        }
-    }
-    
-    // Check access
-    if (empty($extraction_errors)) {
-        if (!has_assembly_access($organism_name, $assembly_name)) {
-            if (!$is_logged_in) {
-                header("Location: /$site/login.php");
-            } else {
-                header("Location: /$site/access_denied.php");
-            }
-            exit;
-        }
     }
     
     // Parse feature IDs
@@ -139,16 +124,6 @@ $uniquenames = array_filter(array_map('trim', explode(',', $uniquenames_string))
 
 if (empty($organism_name)) {
     die('Error: Organism not specified.');
-}
-
-// Check access for form display
-if (!has_assembly_access($organism_name, $assembly_name)) {
-    if (!$is_logged_in) {
-        header("Location: /$site/login.php");
-    } else {
-        header("Location: /$site/access_denied.php");
-    }
-    exit;
 }
 
 if (empty($uniquenames)) {

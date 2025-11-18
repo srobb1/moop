@@ -26,6 +26,21 @@ $organism_info = $organism_context['info'];
 // Verify and get database path
 $db = verifyOrganismDatabase($organism_name, $organism_data);
 
+// Get accessible assemblies and convert to genome IDs for permission-based filtering
+$group_data = getGroupData();
+$accessible_assemblies = [];
+foreach ($group_data as $data) {
+    if ($data['organism'] === $organism_name && has_assembly_access($organism_name, $data['assembly'])) {
+        $accessible_assemblies[] = $data['assembly'];
+    }
+}
+$accessible_genome_ids = getAccessibleGenomeIds($organism_name, $accessible_assemblies, $db);
+
+// Security: Verify user has access to at least one assembly
+if (empty($accessible_genome_ids)) {
+    die("Error: No accessible assemblies found for this organism.");
+}
+
 // Load annotation configuration using helper
 $annotation_config_file = "$metadata_path/annotation_config.json";
 $annotation_config = loadJsonFileRequired($annotation_config_file, "Missing annotation_config.json");
@@ -58,7 +73,7 @@ if (isset($annotation_config['annotation_types'])) {
 $parents = ['gene', 'pseudogene'];
 
 // Get ancestors for the feature
-$ancestors = getAncestors($uniquename, $db);
+$ancestors = getAncestors($uniquename, $db, $accessible_genome_ids);
 
 // Save the highest ancestor with type in $parents in these variables
 [$ancestor_feature_id, $ancestor_feature_uniquename, $ancestor_feature_type] = ['', '', ''];
@@ -109,7 +124,7 @@ $family_feature_ids = [$feature_id];
 $retrieve_these_seqs = [$feature_uniquename];
 
 // Get children
-$children = getChildren($feature_id, $db);
+$children = getChildren($feature_id, $db, $accessible_genome_ids);
 
 // Optimize: Get ALL annotations for parent and all children in ONE query
 $all_feature_ids = [$feature_id];

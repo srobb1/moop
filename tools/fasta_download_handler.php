@@ -44,8 +44,7 @@ if (!isset($sequence_types[$type])) {
 
 // Check access
 if (!has_assembly_access($organism, $assembly)) {
-    $is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
-    if (!$is_logged_in) {
+    if (!is_logged_in()) {
         header("Location: /$site/login.php");
     } else {
         header("Location: /$site/access_denied.php");

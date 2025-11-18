@@ -89,7 +89,9 @@ const DataTableExportConfig = {
         let assembly = '';
         if (checkedRows.length > 0) {
             const firstSelectedRow = $(checkedRows[0]).closest('tr');
-            assembly = firstSelectedRow.attr('data-genome-accession') || '';
+            // The data-genome-accession is URL-encoded when stored, so decode it
+            const encodedAssembly = firstSelectedRow.attr('data-genome-accession') || '';
+            assembly = encodedAssembly ? decodeURIComponent(encodedAssembly) : '';
         }
         
         if (!assembly) {
