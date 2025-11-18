@@ -79,24 +79,13 @@ if (count($ancestors) == 1) {
 }
 
 // Performing SQL query to get info associated with found Parent ID
-$query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description, f.feature_type, f.parent_feature_id, 
-          o.genus, o.species, o.subtype, o.common_name, o.taxon_id, g.genome_accession, g.genome_name
-  FROM genome g, organism o, feature f
-  WHERE f.organism_id = o.organism_id  
-    AND f.genome_id = g.genome_id
-    AND f.feature_id = ?";
-
-$params = [$ancestor_feature_id];
-$results = fetchData($query, $params, $db);
+$row = getFeatureById($ancestor_feature_id, $db, $accessible_genome_ids);
 
 // Get all info about Highest Parent
-if (count($results) == 0) { 
+if (empty($row)) { 
     die("The gene $uniquename was not found in the database. Please, check the spelling carefully or try to find it in the search tool.");
-} elseif (count($results) != 1) {
-    die("Multiple results found for $uniquename. Please contact the administrator.");
 }
 
-$row = array_shift($results);
 $feature_id = $row['feature_id'];
 $feature_uniquename = $row['feature_uniquename'];
 $parent_id = $row['parent_feature_id'];
