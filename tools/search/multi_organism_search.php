@@ -127,9 +127,9 @@ foreach ($organisms as $organism) {
                           <img src="<?= $image_src ?>" 
                                alt="<?= htmlspecialchars($organism) ?>"
                                class="organism-card-image"
-                               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         <?php endif; ?>
-                        <div class="organism-card-icon" style="<?= $show_image ? 'display: none;' : '' ?>">
+                        <div class="organism-card-icon <?= $show_image ? 'display-none' : '' ?>" style="display: <?= $show_image ? 'none' : 'flex' ?>;">
                           <i class="fa fa-dna fa-4x text-primary"></i>
                         </div>
                       </div>
@@ -259,7 +259,7 @@ function displayOrganismResults(data) {
     const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php', imageUrl);
     const safeOrganism = organism.replace(/[^a-zA-Z0-9]/g, '_');
     const organismUrl = sitePath + '/tools/display/organism_display.php?organism=' + encodeURIComponent(organism);
-    const readMoreBtn = `<a href="${organismUrl}" class="btn btn-sm btn-outline-primary ms-2" style="font-size: 0.8rem;">
+    const readMoreBtn = `<a href="${organismUrl}" class="btn btn-sm btn-outline-primary ms-2 font-size-small">
                     <i class="fa fa-info-circle"></i> Read More
                 </a>`;
     

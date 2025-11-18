@@ -172,11 +172,11 @@ if (!empty($sequence_errors)) {
                     
                     if (!empty($sequences)) {
                         echo '<div class="card annotation-card border-info mb-3">';
-                        echo '  <div class="card-header" style="background-color: rgba(23, 162, 184, 0.1);">';
+                        echo '  <div class="card-header card-header-light-info">';
                         echo '    <div class="collapse-section" data-toggle="collapse" data-target="#seq_' . $seq_type . '" aria-expanded="true">';
                         echo '      <i class="fas fa-minus toggle-icon text-info"></i>';
                         echo '      <strong class="ms-2 text-dark">';
-                        echo '        <span class="text-white px-2 py-1 rounded" style="background-color: #17a2b8;">' . htmlspecialchars($config['label']) . '</span>';
+                        echo '        <span class="text-white px-2 py-1 rounded bg-feature-mrna">' . htmlspecialchars($config['label']) . '</span>';
                         echo '        (' . count($sequences) . ' sequence' . (count($sequences) > 1 ? 's' : '') . ')';
                         echo '      </strong>';
                         echo '    </div>';
@@ -189,15 +189,15 @@ if (!empty($sequence_errors)) {
                         
                         echo '      <div class="card bg-light">';
                         echo '        <div class="card-body copyable" ';
-                        echo '             style="font-family: monospace; font-size: 0.85rem; cursor: pointer; white-space: pre-wrap; word-break: break-all;">';
+                        echo '             class="font-monospace-small cursor-pointer preserve-whitespace">';
                         echo htmlspecialchars($concatenated_sequences);
                         echo '        </div>';
                         echo '      </div>';
                         
                         // Add download button if enabled
                         if ($enable_downloads && !empty($assembly_name) && !empty($organism_name) && !empty($gene_name)) {
-                            echo '      <div style="margin-top: 10px;">';
-                            echo '        <form method="POST" style="display: inline;">';
+                            echo '      <div class="margin-top">';
+                            echo '        <form method="POST" class="display-inline">';
                             echo '          <input type="hidden" name="organism" value="' . htmlspecialchars($organism_name) . '">';
                             echo '          <input type="hidden" name="assembly" value="' . htmlspecialchars($assembly_name) . '">';
                             echo '          <input type="hidden" name="sequence_type" value="' . htmlspecialchars($seq_type) . '">';

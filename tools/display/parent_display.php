@@ -177,10 +177,9 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
                         </span>
                         <?php if (!empty($children) && count($children) > 0):
                             $first_child_type = $children[0]['feature_type'] ?? 'mRNA';
-                            $child_color_map = ['mRNA' => '#17a2b8', 'gene' => '#764ba2'];
-                            $child_bg_color = $child_color_map[strtoupper($first_child_type)] ?? '#17a2b8';
+                            $child_class = strtoupper($first_child_type) === 'MRNA' ? 'bg-feature-mrna' : 'bg-feature-gene';
                         ?>
-                            <span class="badge text-white ms-2 badge-lg" style="background-color: <?= $child_bg_color ?>;">
+                            <span class="badge text-white ms-2 badge-lg <?= $child_class ?>">
                                 <?= count($children) ?> <?= htmlspecialchars($first_child_type) ?> child<?= count($children) > 1 ? 'ren' : '' ?>
                             </span>
                         <?php endif; ?>

@@ -165,7 +165,7 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
     
     if ($desc) {
         $html .= '<div class="collapse mb-3" id="' . htmlspecialchars($desc_id) . '">';
-        $html .= '<div class="alert alert-info mb-0" style="font-size: 0.95rem;">';
+        $html .= '<div class="alert alert-info mb-0 font-size-xsmall">';
         $html .= $desc;
         $html .= '</div>';
         $html .= '</div>';
