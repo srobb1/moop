@@ -95,12 +95,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_metadata' && isset($_P
     $organism_dir = $all_organisms[$organism]['path'];
     $organism_json_path = $organism_dir . '/organism.json';
     
-    // Parse JSON fields
-    $images = json_decode($images_json, true);
-    $html_p = json_decode($html_p_json, true);
-    
-    if (!is_array($images)) $images = [];
-    if (!is_array($html_p)) $html_p = [];
+    // Parse JSON fields safely
+    $images = decodeJsonString($images_json);
+    $html_p = decodeJsonString($html_p_json);
     
     // Build the metadata array
     $metadata = [
@@ -120,21 +117,8 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_metadata' && isset($_P
         $metadata['html_p'] = $html_p;
     }
     
-    // If file already exists, merge with existing data to preserve other fields
-    if (file_exists($organism_json_path) && is_readable($organism_json_path)) {
-        $existing = json_decode(file_get_contents($organism_json_path), true);
-        if (is_array($existing)) {
-            // Handle wrapped JSON
-            if (!isset($existing['genus']) && !isset($existing['common_name'])) {
-                $keys = array_keys($existing);
-                if (count($keys) > 0 && is_array($existing[$keys[0]])) {
-                    $existing = $existing[$keys[0]];
-                }
-            }
-            // Merge, keeping other fields but updating required ones and images/html_p
-            $metadata = array_merge($existing, $metadata);
-        }
-    }
+    // Merge with existing data to preserve other fields
+    $metadata = loadAndMergeJson($organism_json_path, $metadata);
     
     // Write the file
     $json_string = json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
@@ -179,21 +163,8 @@ function get_all_organisms_info() {
         
         // Get organism.json info if exists
         $organism_json = "$organism_data/$organism/organism.json";
-        $info = [];
         $json_validation = validateOrganismJson($organism_json);
-        if (file_exists($organism_json)) {
-            $json_data = json_decode(file_get_contents($organism_json), true);
-            if ($json_data) {
-                // Handle wrapped JSON
-                if (!isset($json_data['genus']) && !isset($json_data['common_name'])) {
-                    $keys = array_keys($json_data);
-                    if (count($keys) > 0 && is_array($json_data[$keys[0]])) {
-                        $json_data = $json_data[$keys[0]];
-                    }
-                }
-                $info = $json_data;
-            }
-        }
+        $info = loadOrganismInfo($organism, $organism_data) ?? [];
         
         // Get assemblies
         $assemblies = [];

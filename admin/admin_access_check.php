@@ -1,11 +1,10 @@
 <?php
 include_once __DIR__ . '/../includes/access_control.php';
+include_once __DIR__ . '/../tools/moop_functions.php';
 
+// Load users file using helper
 $usersFile = $users_file;
-$users = [];
-if (file_exists($usersFile)) {
-    $users = json_decode(file_get_contents($usersFile), true);
-}
+$users = loadJsonFile($usersFile, []);
 
 $is_admin = false;
 if (is_logged_in() && isset($users[get_username()]) && isset($users[get_username()]['role']) && $users[get_username()]['role'] === 'admin') {
