@@ -188,8 +188,7 @@ if (!empty($sequence_errors)) {
                         $concatenated_sequences = implode("\n\n", $sequences);
                         
                         echo '      <div class="card bg-light">';
-                        echo '        <div class="card-body copyable" ';
-                        echo '             class="font-monospace-small cursor-pointer preserve-whitespace">';
+                        echo '        <div class="card-body copyable font-monospace-small cursor-pointer preserve-whitespace">';
                         echo htmlspecialchars($concatenated_sequences);
                         echo '        </div>';
                         echo '      </div>';
