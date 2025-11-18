@@ -5,6 +5,9 @@
  * Used across display, extract, and search modules
  */
 
+// Include database query builder functions
+require_once __DIR__ . '/database_queries.php';
+
 /**
  * Sanitize user input - remove dangerous characters
  * 
