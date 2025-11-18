@@ -50,10 +50,10 @@ if (!is_public_group($group_name)) {
 
 <div class="container mt-5">
   <?php
-  $nav_context = [
-      'page' => 'group',
+  // Build navigation context using smart builder
+  $nav_context = buildNavContext('group', [
       'group' => $group_name
-  ];
+  ]);
   echo render_navigation_buttons($nav_context);
   ?>
 

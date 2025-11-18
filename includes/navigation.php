@@ -3,12 +3,25 @@
  * Navigation Utility Functions
  * Provides centralized back button and navigation rendering across all pages
  * 
- * Usage:
- *   $nav_context = [
- *       'page' => 'organism',
+ * RECOMMENDED USAGE:
+ * 
+ * Method 1 - Smart Auto-Detection (for pages that can infer context from GET params):
+ *   $nav_context = autoDetectPageContext();
+ *   echo render_navigation_buttons($nav_context);
+ * 
+ * Method 2 - Standardized Builder (explicit, type-safe):
+ *   $nav_context = buildNavContext('organism', [
  *       'organism' => $organism_name,
  *       'group' => $group_name,
  *       'parent' => $parent_uniquename
+ *   ]);
+ *   echo render_navigation_buttons($nav_context);
+ * 
+ * Method 3 - Legacy Direct Array (still supported):
+ *   $nav_context = [
+ *       'page' => 'organism',
+ *       'organism' => $organism_name,
+ *       'group' => $group_name
  *   ];
  *   echo render_navigation_buttons($nav_context);
  */
@@ -18,6 +31,90 @@
  */
 function formatOrganismName($organism_name) {
     return str_replace('_', ' ', htmlspecialchars($organism_name));
+}
+
+/**
+ * Automatically detect page context from GET parameters
+ * Examines current request parameters and infers the page type and context
+ * 
+ * @return array - Navigation context array with detected values
+ */
+function autoDetectPageContext() {
+    $context = [];
+    
+    // Extract common parameters
+    $organism = $_GET['organism'] ?? null;
+    $assembly = $_GET['assembly'] ?? null;
+    $group = $_GET['group'] ?? null;
+    $parent = $_GET['parent'] ?? null;
+    $uniquename = $_GET['uniquename'] ?? null;
+    
+    // Determine page type based on parameters
+    if ($uniquename) {
+        $context['page'] = 'parent';
+        $context['organism'] = $organism;
+    } elseif ($assembly) {
+        $context['page'] = 'assembly';
+        $context['organism'] = $organism;
+        $context['assembly'] = $assembly;
+    } elseif ($organism && $group) {
+        $context['page'] = 'organism';
+        $context['organism'] = $organism;
+        $context['group'] = $group;
+    } elseif ($organism) {
+        $context['page'] = 'organism';
+        $context['organism'] = $organism;
+    } elseif ($group) {
+        $context['page'] = 'group';
+        $context['group'] = $group;
+    } else {
+        // Default page type
+        $context['page'] = 'unknown';
+    }
+    
+    // Add optional parent context (cross-page navigation)
+    if ($parent) {
+        $context['parent'] = $parent;
+    }
+    
+    return $context;
+}
+
+/**
+ * Build standardized navigation context
+ * Factory function for creating properly structured nav contexts
+ * 
+ * @param string $page_type - Page type: 'organism', 'group', 'assembly', 'parent', 'tool', 'admin_tool', 'multi_search', 'access_denied'
+ * @param array $params - Named parameters for the context
+ *        Common params: organism, assembly, group, parent, genus, species, display_name, tool, organisms
+ * @return array - Standardized navigation context
+ */
+function buildNavContext($page_type, $params = []) {
+    $context = [
+        'page' => $page_type
+    ];
+    
+    // Map allowed parameters by page type
+    $allowed_params = [
+        'organism' => ['organism', 'group', 'assembly', 'parent', 'multi_search'],
+        'group' => ['group'],
+        'assembly' => ['organism', 'assembly', 'parent'],
+        'parent' => ['organism', 'genus', 'species'],
+        'tool' => ['organism', 'assembly', 'group', 'parent', 'display_name'],
+        'admin_tool' => ['tool'],
+        'multi_search' => ['organisms'],
+        'access_denied' => []
+    ];
+    
+    // Add allowed parameters for this page type
+    $allowed = $allowed_params[$page_type] ?? [];
+    foreach ($allowed as $param) {
+        if (isset($params[$param])) {
+            $context[$param] = $params[$param];
+        }
+    }
+    
+    return $context;
 }
 
 /**
@@ -60,6 +157,9 @@ function render_navigation_buttons($page_context = [], $options = []) {
         case 'admin_tool':
             $html .= renderAdminToolNav($page_context, $btn_class);
             break;
+        case 'multi_search':
+            $html .= renderMultiSearchNav($page_context, $btn_class);
+            break;
         case 'access_denied':
             $html .= renderAccessDeniedNav($page_context, $btn_class);
             break;
@@ -86,6 +186,27 @@ function render_navigation_buttons($page_context = [], $options = []) {
 function renderOrganismNav($context, $btn_class) {
     global $site;
     $html = '';
+    
+    // Back to multi-organism search (if came from multi-search)
+    if (!empty($context['multi_search'])) {
+        $organisms = $context['multi_search'];
+        // Build URL with organisms array
+        $url = '/' . htmlspecialchars($site) . '/tools/search/multi_organism_search.php';
+        if (is_array($organisms) && !empty($organisms)) {
+            $query_params = [];
+            foreach ($organisms as $org) {
+                $query_params[] = 'organisms[]=' . urlencode($org);
+            }
+            if (!empty($query_params)) {
+                $url .= '?' . implode('&', $query_params);
+            }
+        }
+        $html .= sprintf(
+            '<a href="%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to Multi-Organism Search</a>',
+            $url,
+            htmlspecialchars($btn_class)
+        );
+    }
     
     // Back to group (if came from group)
     if (!empty($context['group'])) {
@@ -245,6 +366,22 @@ function renderAdminToolNav($context, $btn_class) {
         htmlspecialchars($site),
         htmlspecialchars($btn_class)
     );
+    return $html;
+}
+
+/**
+ * Render back buttons for multi-organism search page
+ */
+function renderMultiSearchNav($context, $btn_class) {
+    global $site;
+    $html = '';
+    
+    // Back to phylogenetic tree (home page phylo selector)
+    $html .= sprintf(
+        '<button onclick="location.reload();" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to Selection</button>',
+        htmlspecialchars($btn_class)
+    );
+    
     return $html;
 }
 

@@ -1,5 +1,6 @@
 <?php
 include_once __DIR__ . '/../../includes/access_control.php';
+include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 
 // Get organisms from query parameters
@@ -37,12 +38,13 @@ foreach ($organisms as $organism) {
 <?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
 
 <div class="container mt-5">
-  <div class="mb-3">
-    <a href="/<?= $site ?>/index.php" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> Back to Home</a>
-    <button id="backToPhyloBtn" class="btn btn-secondary ms-2 hidden" onclick="location.reload();">
-      <i class="fa fa-arrow-left"></i> Back to Selection
-    </button>
-  </div>
+  <?php
+  // Build navigation context for multi-organism search
+  $nav_context = buildNavContext('multi_search', [
+      'organisms' => $organisms
+  ]);
+  echo render_navigation_buttons($nav_context);
+  ?>
 
   <!-- Header and Tools Row -->
   <div class="row mb-4">
@@ -118,7 +120,7 @@ foreach ($organisms as $organism) {
                 $common_name = $organism_info['common_name'] ?? '';
             ?>
               <div class="col-md-6 col-lg-4">
-                <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism) ?>" 
+                <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism) ?><?php foreach($organism_list as $org): ?>&multi_search[]=<?= urlencode($org) ?><?php endforeach; ?>" 
                    class="text-decoration-none">
                   <div class="card h-100 shadow-sm organism-card">
                     <div class="card-body text-center">
@@ -258,7 +260,11 @@ function displayOrganismResults(data) {
     
     const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php', imageUrl);
     const safeOrganism = organism.replace(/[^a-zA-Z0-9]/g, '_');
-    const organismUrl = sitePath + '/tools/display/organism_display.php?organism=' + encodeURIComponent(organism);
+    // Build organism URL with all selected organisms
+    let organismUrl = sitePath + '/tools/display/organism_display.php?organism=' + encodeURIComponent(organism);
+    selectedOrganisms.forEach(org => {
+        organismUrl += '&multi_search[]=' + encodeURIComponent(org);
+    });
     const readMoreBtn = `<a href="${organismUrl}" class="btn btn-sm btn-outline-primary ms-2 font-size-small">
                     <i class="fa fa-info-circle"></i> Read More
                 </a>`;

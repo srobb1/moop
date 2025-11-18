@@ -132,12 +132,12 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 <div class="margin-20">
     <div class="mb-3">
         <?php
-        $nav_context = [
-            'page' => 'parent',
+        // Build navigation context using smart builder
+        $nav_context = buildNavContext('parent', [
             'organism' => $organism_name,
             'genus' => $genus ?? '',
             'species' => $species ?? ''
-        ];
+        ]);
         echo render_navigation_buttons($nav_context);
         ?>
     </div>

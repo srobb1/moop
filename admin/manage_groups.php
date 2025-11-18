@@ -379,7 +379,7 @@ foreach ($all_organisms as $organism => $assemblies) {
   </div>
   
   <?php
-  $nav_context = ['page' => 'admin_tool', 'tool' => 'manage_groups'];
+  $nav_context = buildNavContext('admin_tool', ['tool' => 'manage_groups']);
   echo render_navigation_buttons($nav_context);
   ?>
 

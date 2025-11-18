@@ -3,10 +3,6 @@ include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 
-// Get context parameters
-$parent_uniquename = $_GET['parent'] ?? '';
-$group_name = $_GET['group'] ?? '';
-
 // Setup organism context (validates param, loads info, checks access)
 $organism_context = setupOrganismDisplayContext($_GET['organism'] ?? '', $organism_data);
 $organism_name = $organism_context['name'];
@@ -27,12 +23,13 @@ $organism_info = $organism_context['info'];
 
 <div class="container mt-5">
   <?php
-  $nav_context = [
-      'page' => 'organism',
+  // Build navigation context using smart builder
+  $nav_context = buildNavContext('organism', [
       'organism' => $organism_name,
-      'group' => $group_name,
-      'parent' => $parent_uniquename
-  ];
+      'group' => $_GET['group'] ?? '',
+      'parent' => $_GET['parent'] ?? '',
+      'multi_search' => $_GET['multi_search'] ?? []
+  ]);
   echo render_navigation_buttons($nav_context);
   ?>
 

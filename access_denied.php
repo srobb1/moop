@@ -61,7 +61,7 @@ include_once 'includes/head.php';
     
     <div class="d-grid gap-2">
       <?php
-      $nav_context = ['page' => 'access_denied'];
+      $nav_context = buildNavContext('access_denied');
       $nav_html = render_navigation_buttons($nav_context, ['include_home' => false]);
       echo str_replace('btn-secondary', 'btn-outline-secondary btn-lg', $nav_html);
       ?>

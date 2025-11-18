@@ -282,7 +282,7 @@ $organisms = get_organisms_metadata($organism_data_dir);
             <p class="text-muted">Generate and customize the phylogenetic tree displayed on the homepage.</p>
             
             <?php
-            $nav_context = ['page' => 'admin_tool', 'tool' => 'manage_phylo_tree'];
+            $nav_context = buildNavContext('admin_tool', ['tool' => 'manage_phylo_tree']);
             echo render_navigation_buttons($nav_context);
             ?>
             

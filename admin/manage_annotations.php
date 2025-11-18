@@ -132,7 +132,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
 
 <div class="container mt-5">
   <?php
-  $nav_context = ['page' => 'admin_tool', 'tool' => 'manage_annotations'];
+  $nav_context = buildNavContext('admin_tool', ['tool' => 'manage_annotations']);
   echo render_navigation_buttons($nav_context);
   ?>
   

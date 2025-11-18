@@ -168,7 +168,7 @@ $organisms = getOrganisms();
 
 <div class="container mt-5">
   <?php
-  $nav_context = ['page' => 'admin_tool', 'tool' => 'createUser'];
+  $nav_context = buildNavContext('admin_tool', ['tool' => 'createUser']);
   echo render_navigation_buttons($nav_context);
   ?>
   

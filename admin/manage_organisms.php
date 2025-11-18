@@ -242,7 +242,7 @@ $organisms = get_all_organisms_info();
 
 <div class="container mt-5">
   <?php
-  $nav_context = ['page' => 'admin_tool', 'tool' => 'manage_organisms'];
+  $nav_context = buildNavContext('admin_tool', ['tool' => 'manage_organisms']);
   echo render_navigation_buttons($nav_context);
   ?>
   

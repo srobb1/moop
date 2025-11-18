@@ -22,9 +22,6 @@ $assembly_info = getAssemblyStats($assembly_accession, $db_path);
 if (empty($assembly_info)) {
     die("Error: Assembly not found.");
 }
-
-// Get parent page info from referer
-$parent_uniquename = $_GET['parent'] ?? '';
 ?>
 
 <!DOCTYPE html>
@@ -40,12 +37,12 @@ $parent_uniquename = $_GET['parent'] ?? '';
 
 <div class="container mt-5">
   <?php
-  $nav_context = [
-      'page' => 'assembly',
+  // Build navigation context using smart builder
+  $nav_context = buildNavContext('assembly', [
       'organism' => $organism_name,
       'assembly' => $assembly_accession,
-      'parent' => $parent_uniquename
-  ];
+      'parent' => $_GET['parent'] ?? ''
+  ]);
   echo render_navigation_buttons($nav_context);
   ?>
 
