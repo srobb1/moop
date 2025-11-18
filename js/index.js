@@ -6,15 +6,46 @@ function handleToolClick(toolId) {
     return;
   }
   
+  // Get tool button and its configuration
+  const toolBtn = document.getElementById(`tool-btn-${toolId}`);
+  if (!toolBtn) {
+    console.error(`Tool button not found: tool-btn-${toolId}`);
+    return;
+  }
+  
+  const toolPath = toolBtn.getAttribute('data-tool-path');
+  const contextParamsJson = toolBtn.getAttribute('data-context-params');
+  
+  if (!toolPath || !contextParamsJson) {
+    console.error('Tool configuration missing from button');
+    return;
+  }
+  
+  const contextParams = JSON.parse(contextParamsJson);
   const organisms = Array.from(phyloTree.selectedOrganisms);
   
-  if (toolId === 'phylo_search') {
-    const params = organisms.map(org => `organisms[]=${encodeURIComponent(org)}`).join('&');
-    window.location.href = `tools/search/multi_organism_search.php?${params}`;
-  } else if (toolId === 'download_fasta') {
-    const params = organisms.map(org => encodeURIComponent(org)).join(',');
-    window.location.href = `tools/extract/retrieve_sequences.php?organisms=${params}`;
+  // Get site name from global scope (set in index.php via PHP variable)
+  // Fallback to 'moop' if not available
+  const siteName = typeof sitePath !== 'undefined' ? sitePath.replace(/^\//,'').split('/')[0] : 'moop';
+  
+  // Build query parameters based on tool's context_params
+  const params = new URLSearchParams();
+  
+  // Always add organisms if the tool supports them
+  if (contextParams.includes('organisms')) {
+    organisms.forEach(org => {
+      params.append('organisms[]', org);
+    });
   }
+  
+  // Add display_name
+  if (contextParams.includes('display_name')) {
+    params.append('display_name', 'Multi-Organism Search');
+  }
+  
+  // Build URL: /{site}{toolPath}?params
+  const url = `/${siteName}${toolPath}${params.toString() ? '?' + params.toString() : ''}`;
+  window.location.href = url;
 }
 
 function switchView(view) {

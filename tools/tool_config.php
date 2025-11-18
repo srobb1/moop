@@ -23,7 +23,7 @@ $available_tools = [
         'description' => 'Search sequences against databases',
         'btn_class' => 'btn-warning',
         'url_path' => '/tools/blast/blast.php',
-        'context_params' => ['organism', 'assembly', 'group', 'display_name'],
+        'context_params' => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
         'pages' => 'all',  // Show on all pages
     ],
     'phylo_search' => [
@@ -33,7 +33,7 @@ $available_tools = [
         'description' => 'Search selected organisms',
         'btn_class' => 'btn-info',
         'url_path' => '/tools/search/multi_organism_search.php',
-        'context_params' => ['display_name'],
+        'context_params' => ['organisms', 'display_name'],
         'pages' => ['index'],  // Show only on index page
     ],
     // Future tools can be added here

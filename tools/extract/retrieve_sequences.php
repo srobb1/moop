@@ -49,14 +49,24 @@ $context_assembly = trim($_GET['assembly'] ?? $_POST['assembly'] ?? '');
 $context_group = trim($_GET['group'] ?? $_POST['group'] ?? '');
 $display_name = trim($_GET['display_name'] ?? $_POST['display_name'] ?? '');
 
-// Get comma-separated organisms for filtering (from URL or POST)
-$filter_organisms_string = trim($_GET['organisms'] ?? $_POST['organisms'] ?? '');
-
-// Parse filter organisms if provided
+// Get organisms for filtering - support both array and comma-separated string formats
+// Array format: organisms[] from multi-search context (via tool_config.php)
+// String format: comma-separated organisms from form resubmission
+$organisms_param = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
 $filter_organisms = [];
-if (!empty($filter_organisms_string)) {
-    $filter_organisms = array_map('trim', explode(',', $filter_organisms_string));
-    $filter_organisms = array_filter($filter_organisms);
+$filter_organisms_string = '';
+
+if (is_array($organisms_param)) {
+    // Array format (from multi-search via tool links)
+    $filter_organisms = array_filter($organisms_param);
+    $filter_organisms_string = implode(',', $filter_organisms);
+} else {
+    // String format (comma-separated or from form resubmission)
+    $filter_organisms_string = trim($organisms_param);
+    if (!empty($filter_organisms_string)) {
+        $filter_organisms = array_map('trim', explode(',', $filter_organisms_string));
+        $filter_organisms = array_filter($filter_organisms);
+    }
 }
 
 // Get uniquenames (may be empty on initial page load)
@@ -202,7 +212,8 @@ include_once __DIR__ . '/../../includes/navbar.php';
             'organism' => $context_organism,
             'assembly' => $context_assembly,
             'group' => $context_group,
-            'display_name' => $display_name
+            'display_name' => $display_name,
+            'multi_search' => $filter_organisms
         ]);
         echo render_navigation_buttons($nav_context);
         ?>

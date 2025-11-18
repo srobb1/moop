@@ -85,6 +85,9 @@ $use_onclick_handler = $context['page'] === 'index' && !empty($context['use_oncl
                        class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
                        title="<?= htmlspecialchars($tool['description']) ?>"
                        id="tool-btn-<?= htmlspecialchars($tool_id) ?>"
+                       data-tool-id="<?= htmlspecialchars($tool_id) ?>"
+                       data-tool-path="<?= htmlspecialchars($tool['url_path']) ?>"
+                       data-context-params="<?= htmlspecialchars(json_encode($tool['context_params'])) ?>"
                        onclick="handleToolClick('<?= htmlspecialchars($tool_id) ?>')">
                       <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
                       <span><?= htmlspecialchars($tool['name']) ?></span>

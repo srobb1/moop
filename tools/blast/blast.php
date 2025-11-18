@@ -31,14 +31,24 @@ $context_assembly = trim($_POST['context_assembly'] ?? $_GET['assembly'] ?? '');
 $context_group = trim($_POST['context_group'] ?? $_GET['group'] ?? '');
 $display_name = trim($_GET['display_name'] ?? '');
 
-// Get comma-separated organisms for filtering (GET or POST)
-$filter_organisms_string = trim($_POST['organisms'] ?? $_GET['organisms'] ?? '');
-
-// Parse filter organisms if provided
+// Get organisms for filtering - support both array and comma-separated string formats
+// Array format: organisms[] from multi-search context (via tool_config.php)
+// String format: comma-separated organisms from form resubmission
+$organisms_param = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
 $filter_organisms = [];
-if (!empty($filter_organisms_string)) {
-    $filter_organisms = array_map('trim', explode(',', $filter_organisms_string));
-    $filter_organisms = array_filter($filter_organisms);
+$filter_organisms_string = '';
+
+if (is_array($organisms_param)) {
+    // Array format (from multi-search via tool links)
+    $filter_organisms = array_filter($organisms_param);
+    $filter_organisms_string = implode(',', $filter_organisms);
+} else {
+    // String format (comma-separated or from form resubmission)
+    $filter_organisms_string = trim($organisms_param);
+    if (!empty($filter_organisms_string)) {
+        $filter_organisms = array_map('trim', explode(',', $filter_organisms_string));
+        $filter_organisms = array_filter($filter_organisms);
+    }
 }
 
 // Get form data
@@ -185,7 +195,8 @@ include_once __DIR__ . '/../../includes/navbar.php';
             'organism' => $context_organism,
             'assembly' => $context_assembly,
             'group' => $context_group,
-            'display_name' => $display_name
+            'display_name' => $display_name,
+            'multi_search' => $filter_organisms
         ]);
         echo render_navigation_buttons($nav_context);
         ?>
@@ -306,6 +317,11 @@ include_once __DIR__ . '/../../includes/navbar.php';
                         $group_color = $group_color_map[$group_name];
                         
                         foreach ($organisms as $organism => $assemblies): 
+                            // Skip if organism filter is set and this organism is not in the filter list
+                            if (!empty($filter_organisms) && !in_array($organism, $filter_organisms)) {
+                                continue;
+                            }
+                            
                             foreach ($assemblies as $source): 
                                 $search_text = strtolower("$group_name $organism $source[assembly]");
                                 

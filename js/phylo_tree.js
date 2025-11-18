@@ -72,7 +72,7 @@ class PhyloTree {
         if (this.selectedOrganisms.size === 0) {
             listEl.innerHTML = '<div class="text-muted fst-italic">No organisms selected</div>';
             countEl.textContent = '0';
-            searchBtn.disabled = true;
+            if (searchBtn) searchBtn.disabled = true;
         } else {
             const items = Array.from(this.selectedOrganisms).map(org => {
                 const parts = org.split('_');
@@ -81,17 +81,17 @@ class PhyloTree {
             }).join('');
             listEl.innerHTML = items;
             countEl.textContent = this.selectedOrganisms.size;
-            searchBtn.disabled = false;
+            if (searchBtn) searchBtn.disabled = false;
         }
     }
 
     navigateToSearch() {
         const organisms = Array.from(this.selectedOrganisms);
         if (organisms.length === 1) {
-            window.location.href = `tools/display/organism_display.php?organism=${encodeURIComponent(organisms[0])}`;
+            window.location.href = `tools/display/organism_display.php?organism=${encodeURIComponent(organisms[0])}&multi_search[]=${encodeURIComponent(organisms[0])}`;
         } else {
             const params = organisms.map(org => `organisms[]=${encodeURIComponent(org)}`).join('&');
-            window.location.href = `tools/display/multi_organism_display.php?${params}`;
+            window.location.href = `tools/search/multi_organism_search.php?${params}`;
         }
     }
 
