@@ -14,7 +14,6 @@ ob_start();
 
 // Get parameters for processing
 $sequence_ids_provided = !empty($_POST['uniquenames']);
-$selected_assembly = trim($_POST['selected_assembly'] ?? '');
 $download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
 $sequence_type = trim($_POST['sequence_type'] ?? '');
 
@@ -23,6 +22,7 @@ include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 include_once __DIR__ . '/../blast_functions.php';
+include_once __DIR__ . '/../extract_search_helpers.php';
 
 // Discard any output from includes
 ob_end_clean();
@@ -30,129 +30,59 @@ ob_end_clean();
 // Check if user is logged in OR if trying to access public assembly
 // Visitors can access public assemblies without login
 $is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
-$trying_public_access = !empty($_POST['selected_assembly']) && !empty($_POST['organism']);
+$trying_public_access = !empty($_POST['assembly']) && !empty($_POST['organism']);
 
 // If trying to download from an assembly, check if it's public
 if ($trying_public_access) {
-    if (!is_public_assembly($_POST['organism'], $_POST['selected_assembly']) && !$is_logged_in) {
+    if (!is_public_assembly($_POST['organism'], $_POST['assembly']) && !$is_logged_in) {
         header("Location: /$site/login.php");
         exit;
     }
-} elseif (!$is_logged_in) {
-    // For viewing the form itself, visitors can see public assemblies
-    // Only redirect if no accessible assemblies will be shown
 }
 
-// Get context parameters for back button
-$context_organism = trim($_GET['organism'] ?? $_POST['organism'] ?? '');
-$context_assembly = trim($_GET['assembly'] ?? $_POST['assembly'] ?? '');
-$context_group = trim($_GET['group'] ?? $_POST['group'] ?? '');
-$display_name = trim($_GET['display_name'] ?? $_POST['display_name'] ?? '');
-
-// Get organisms for filtering - support both array and comma-separated string formats
-// Array format: organisms[] from multi-search context (via tool_config.php)
-// Single organism: organism parameter from single organism context page
-// String format: comma-separated organisms from form resubmission
+// Parse context parameters and organism filters
+$context = parseContextParameters();
 $organisms_param = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
-$filter_organisms = [];
-$filter_organisms_string = '';
-
-// First check for organisms array (highest priority - from multi-search)
-if (is_array($organisms_param)) {
-    // Array format (from multi-search via tool links)
-    $filter_organisms = array_filter($organisms_param);
-    $filter_organisms_string = implode(',', $filter_organisms);
-} 
-// Then check for single organism context (from organism_display page)
-elseif (!empty($context_organism)) {
-    $filter_organisms = [$context_organism];
-    $filter_organisms_string = $context_organism;
-}
-// Finally try comma-separated string format
-else {
-    $filter_organisms_string = trim($organisms_param);
-    if (!empty($filter_organisms_string)) {
-        $filter_organisms = array_map('trim', explode(',', $filter_organisms_string));
-        $filter_organisms = array_filter($filter_organisms);
-    }
-}
+$organism_result = parseOrganismParameter($organisms_param, $context['organism']);
+$filter_organisms = $organism_result['organisms'];
 
 // Get uniquenames (may be empty on initial page load)
 $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
 
 // Get ALL accessible assemblies organized by group and organism
 $sources_by_group = getAccessibleAssemblies();
-
-// Flatten for sequential processing
-$accessible_sources = [];
-foreach ($sources_by_group as $group => $organisms) {
-    foreach ($organisms as $org => $assemblies) {
-        $accessible_sources = array_merge($accessible_sources, $assemblies);
-    }
-}
+$accessible_sources = flattenSourcesList($sources_by_group);
 
 // Initialize selected organism/assembly variables
 $selected_organism = trim($_POST['organism'] ?? '');
 $selected_assembly = trim($_POST['assembly'] ?? '');
-$displayed_content = [];  // Store all sequence types
+$displayed_content = [];
 
 // If sequence IDs are provided, extract ALL sequence types
 if (!empty($sequence_ids_provided)) {
     $extraction_errors = [];
     
-    // Validate inputs
-    if (empty($uniquenames_string)) {
-        $extraction_errors[] = "No feature IDs provided.";
-    }
+    // Validate inputs using helper
+    $validation = validateExtractInputs($selected_organism, $selected_assembly, $uniquenames_string, $accessible_sources);
+    $extraction_errors = $validation['errors'];
+    $fasta_source = $validation['fasta_source'];
     
-    if (empty($selected_organism) || empty($selected_assembly)) {
-        $extraction_errors[] = "No assembly selected.";
-    }
-    
-    // Find the selected assembly in accessible sources
-    $fasta_source = null;
+    // Parse and validate feature IDs
     if (empty($extraction_errors)) {
-        foreach ($accessible_sources as $source) {
-            if ($source['assembly'] === $selected_assembly && $source['organism'] === $selected_organism) {
-                $fasta_source = $source;
-                break;
-            }
-        }
-        
-        if (!$fasta_source) {
-            $extraction_errors[] = "You do not have access to the selected assembly.";
-        }
-    }
-    
-    // Parse feature IDs
-    $uniquenames = [];
-    if (empty($extraction_errors)) {
-        $uniquenames = array_filter(array_map('trim', explode(',', $uniquenames_string)));
-        if (empty($uniquenames)) {
-            $extraction_errors[] = "No valid feature IDs provided.";
+        $id_parse = parseFeatureIds($uniquenames_string);
+        if (!$id_parse['valid']) {
+            $extraction_errors[] = $id_parse['error'];
+        } else {
+            $uniquenames = $id_parse['uniquenames'];
         }
     }
     
     // Extract sequences for ALL available types
-    if (empty($extraction_errors)) {
-        $assembly_dir = $fasta_source['path'];
-        
-        foreach ($sequence_types as $seq_type => $config) {
-            $files = glob("$assembly_dir/*{$config['pattern']}");
-            
-            if (!empty($files)) {
-                $fasta_file = $files[0];
-                $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames);
-                
-                if ($extract_result['success']) {
-                    // Remove blank lines
-                    $lines = explode("\n", $extract_result['content']);
-                    $lines = array_filter($lines, function($line) {
-                        return trim($line) !== '';
-                    });
-                    $displayed_content[$seq_type] = implode("\n", $lines);
-                }
-            }
+    if (empty($extraction_errors) && !empty($uniquenames)) {
+        $extract_result = extractSequencesForAllTypes($fasta_source['path'], $uniquenames, $sequence_types);
+        $displayed_content = $extract_result['content'];
+        if (!empty($extract_result['errors'])) {
+            $extraction_errors = array_merge($extraction_errors, $extract_result['errors']);
         }
     }
     
@@ -166,30 +96,12 @@ if (!empty($sequence_ids_provided)) {
     // If download flag is set and we have content, send the specific sequence type
     if ($download_file_flag && !empty($sequence_type) && isset($displayed_content[$sequence_type])) {
         $file_format = $_POST['file_format'] ?? 'fasta';
-        $ext = ($file_format === 'txt') ? 'txt' : 'fasta';
-        $filename = "sequences_{$sequence_type}_" . date("Y-m-d_His") . ".{$ext}";
-        
-        header('Content-Type: application/octet-stream');
-        header("Content-Disposition: attachment; filename={$filename}");
-        header('Content-Length: ' . strlen($displayed_content[$sequence_type]));
-        echo $displayed_content[$sequence_type];
-        exit;
+        sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);
     }
 }
-
-// Organize sources by group -> organism for tree view
-// (Already done by getAccessibleAssemblies function)
 
 // Display form - get available sequence types from all accessible sources
-$available_types = [];
-foreach ($accessible_sources as $source) {
-    foreach ($sequence_types as $seq_type => $config) {
-        $files = glob($source['path'] . "/*{$config['pattern']}");
-        if (!empty($files)) {
-            $available_types[$seq_type] = $config['label'];
-        }
-    }
-}
+$available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_types);
 
 // Now include the HTML headers
 include_once __DIR__ . '/../../includes/head.php';
@@ -217,10 +129,10 @@ include_once __DIR__ . '/../../includes/navbar.php';
     <div class="mb-3">
         <?php
         $nav_context = buildNavContext('tool', [
-            'organism' => $context_organism,
-            'assembly' => $context_assembly,
-            'group' => $context_group,
-            'display_name' => $display_name,
+            'organism' => $context['organism'],
+            'assembly' => $context['assembly'],
+            'group' => $context['group'],
+            'display_name' => $context['display_name'],
             'multi_search' => $filter_organisms
         ]);
         echo render_navigation_buttons($nav_context);
@@ -257,10 +169,10 @@ include_once __DIR__ . '/../../includes/navbar.php';
             <input type="hidden" name="organism" value="">
             <input type="hidden" name="assembly" value="">
             <!-- Hidden context fields for back button -->
-            <input type="hidden" name="context_organism" value="<?= htmlspecialchars($context_organism) ?>">
-            <input type="hidden" name="context_assembly" value="<?= htmlspecialchars($context_assembly) ?>">
-            <input type="hidden" name="context_group" value="<?= htmlspecialchars($context_group) ?>">
-            <input type="hidden" name="display_name" value="<?= htmlspecialchars($display_name) ?>">
+            <input type="hidden" name="context_organism" value="<?= htmlspecialchars($context['organism']) ?>">
+            <input type="hidden" name="context_assembly" value="<?= htmlspecialchars($context['assembly']) ?>">
+            <input type="hidden" name="context_group" value="<?= htmlspecialchars($context['group']) ?>">
+            <input type="hidden" name="display_name" value="<?= htmlspecialchars($context['display_name']) ?>">
 
             <!-- Source Selection with Compact Badges -->
             <div class="fasta-source-selector">
@@ -274,11 +186,11 @@ include_once __DIR__ . '/../../includes/navbar.php';
                             class="form-control" 
                             id="sourceFilter" 
                             placeholder="Filter by group, organism, or assembly..."
-                            value="<?= htmlspecialchars($context_organism ?: $context_group) ?>"
+                            value="<?= htmlspecialchars($context['organism'] ?: $context['group']) ?>"
                             >
-                        <button class="btn btn-success" type="button" id="clearFilterBtn">
+                        <a href="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']) ?>" class="btn btn-success">
                             <i class="fa fa-times"></i> Clear Filters
-                        </button>
+                        </a>
                     </div>
                 </div>
                 <?php if (!empty($filter_organisms)): ?>
@@ -288,16 +200,10 @@ include_once __DIR__ . '/../../includes/navbar.php';
                 <!-- Scrollable list of sources -->
                 <div class="fasta-source-list">
                     <?php 
-                    // Define a color palette for groups only
-                    $group_colors = ['primary', 'success', 'info', 'warning', 'danger', 'secondary', 'dark'];
-                    $group_color_map = []; // Map group names to colors
-                    $first_visible_source = true; // Track first visible source for auto-checking
+                    $group_color_map = assignGroupColors($sources_by_group);
+                    $first_visible_source = true;
                     
                     foreach ($sources_by_group as $group_name => $organisms): 
-                        // Assign color to this group
-                        if (!isset($group_color_map[$group_name])) {
-                            $group_color_map[$group_name] = $group_colors[count($group_color_map) % count($group_colors)];
-                        }
                         $group_color = $group_color_map[$group_name];
                         
                         foreach ($organisms as $organism => $assemblies): 
@@ -375,14 +281,8 @@ include_once __DIR__ . '/../../includes/navbar.php';
         $assembly_name = $selected_assembly;
         $enable_downloads = true;
         
-        // Create mock available_sequences array that sequences_display.php expects
-        $available_sequences = [];
-        foreach ($displayed_content as $seq_type => $content) {
-            $available_sequences[$seq_type] = [
-                'label' => $sequence_types[$seq_type]['label'] ?? ucfirst($seq_type),
-                'sequences' => [$content]  // Wrap in array since sequences_display expects array
-            ];
-        }
+        // Format results for sequences_display.php component
+        $available_sequences = formatSequenceResults($displayed_content, $sequence_types);
         
         // Include the reusable sequences display component
         include_once __DIR__ . '/../display/sequences_display.php';
@@ -393,7 +293,6 @@ include_once __DIR__ . '/../../includes/navbar.php';
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const filterInput = document.getElementById('sourceFilter');
-        const clearFilterBtn = document.getElementById('clearFilterBtn');
         const sourceLines = document.querySelectorAll('.fasta-source-line');
         const radios = document.querySelectorAll('input[name="selected_source"]');
         const form = document.getElementById('downloadForm');
@@ -426,16 +325,6 @@ include_once __DIR__ . '/../../includes/navbar.php';
         // Handle filter input
         if (filterInput) {
             filterInput.addEventListener('keyup', applyFilter);
-        }
-        
-        // Handle clear filter button
-        if (clearFilterBtn) {
-            clearFilterBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                filterInput.value = '';
-                applyFilter();
-                filterInput.focus();
-            });
         }
         
         // Handle radio button selection

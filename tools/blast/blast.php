@@ -284,14 +284,14 @@ include_once __DIR__ . '/../../includes/navbar.php';
                             placeholder="Filter by group, organism, or assembly..."
                             value="<?= htmlspecialchars($context_organism ?: $context_group) ?>"
                             >
-                        <button class="btn btn-success" type="button" id="clearFilterBtn">
+                        <a href="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']) ?>" class="btn btn-success">
                             <i class="fa fa-times"></i> Clear Filters
-                        </button>
+                        </a>
                     </div>
                 </div>
                 <?php if (!empty($context_organism) || !empty($context_group) || !empty($context_assembly)): ?>
                     <small class="form-text text-muted d-block mt-2"><i class="fa fa-filter"></i> 
-                        Filtered to: 
+                        Showing only: 
                         <?php if (!empty($context_assembly)): ?>
                             <?= htmlspecialchars($context_organism . ' / ' . $context_assembly) ?>
                         <?php elseif (!empty($context_organism)): ?>
@@ -317,11 +317,6 @@ include_once __DIR__ . '/../../includes/navbar.php';
                         $group_color = $group_color_map[$group_name];
                         
                         foreach ($organisms as $organism => $assemblies): 
-                            // Skip if organism filter is set and this organism is not in the filter list
-                            if (!empty($filter_organisms) && !in_array($organism, $filter_organisms)) {
-                                continue;
-                            }
-                            
                             foreach ($assemblies as $source): 
                                 $search_text = strtolower("$group_name $organism $source[assembly]");
                                 
@@ -687,24 +682,10 @@ function applyFilter() {
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     const filterInput = document.getElementById('sourceFilter');
-    const clearFilterBtn = document.getElementById('clearFilterBtn');
     
     // Handle filter input
     if (filterInput) {
         filterInput.addEventListener('keyup', applyFilter);
-    }
-    
-    // Handle clear filter button - shows all accessible assemblies
-    if (clearFilterBtn) {
-        clearFilterBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            filterInput.value = '';
-            // Show all items (remove context-based hiding)
-            document.querySelectorAll('.fasta-source-line').forEach(line => {
-                line.classList.remove('hidden');
-            });
-            filterInput.focus();
-        });
     }
     
     // Restore previously selected source (if form was resubmitted)

@@ -21,6 +21,7 @@ include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 include_once __DIR__ . '/../blast_functions.php';
+include_once __DIR__ . '/../extract_search_helpers.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
@@ -33,11 +34,8 @@ $organism_name = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
 $assembly_name = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
 $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
 
-// Get context parameters for back button
-$context_organism = trim($_POST['context_organism'] ?? $_GET['context_organism'] ?? $_GET['organism'] ?? '');
-$context_assembly = trim($_POST['context_assembly'] ?? $_GET['context_assembly'] ?? $_GET['assembly'] ?? '');
-$context_group = trim($_POST['context_group'] ?? $_GET['context_group'] ?? '');
-$display_name = trim($_POST['display_name'] ?? $_GET['display_name'] ?? '');
+// Parse context parameters
+$context = parseContextParameters();
 
 // Check if user is logged in
 $is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
@@ -81,11 +79,12 @@ if (!empty($sequence_ids_provided)) {
     }
     
     // Parse feature IDs
-    $uniquenames = [];
     if (empty($extraction_errors)) {
-        $uniquenames = array_filter(array_map('trim', explode(',', $uniquenames_string)));
-        if (empty($uniquenames)) {
-            $extraction_errors[] = 'No valid feature IDs provided.';
+        $id_parse = parseFeatureIds($uniquenames_string);
+        if (!$id_parse['valid']) {
+            $extraction_errors[] = $id_parse['error'];
+        } else {
+            $uniquenames = $id_parse['uniquenames'];
         }
     }
     
@@ -105,18 +104,11 @@ if (!empty($sequence_ids_provided)) {
             }
         }
         
-        if ($assembly_dir) {
-            foreach ($sequence_types as $seq_type => $config) {
-                $files = glob("$assembly_dir/*{$config['pattern']}");
-                
-                if (!empty($files)) {
-                    $fasta_file = $files[0];
-                    $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames);
-                    
-                    if ($extract_result['success']) {
-                        $displayed_content[$seq_type] = $extract_result['content'];
-                    }
-                }
+        if ($assembly_dir && !empty($uniquenames)) {
+            $extract_result = extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types);
+            $displayed_content = $extract_result['content'];
+            if (!empty($extract_result['errors'])) {
+                $extraction_errors = array_merge($extraction_errors, $extract_result['errors']);
             }
         }
     }
@@ -124,14 +116,7 @@ if (!empty($sequence_ids_provided)) {
     // If download flag is set and we have content, send the specific sequence type
     if ($download_file_flag && !empty($sequence_type) && isset($displayed_content[$sequence_type])) {
         $file_format = $_POST['file_format'] ?? 'fasta';
-        $ext = ($file_format === 'txt') ? 'txt' : 'fasta';
-        $filename = "sequences_{$sequence_type}_" . date("Y-m-d_His") . ".{$ext}";
-        
-        header('Content-Type: application/octet-stream');
-        header("Content-Disposition: attachment; filename={$filename}");
-        header('Content-Length: ' . strlen($displayed_content[$sequence_type]));
-        echo $displayed_content[$sequence_type];
-        exit;
+        sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);
     }
 }
 
@@ -184,10 +169,10 @@ include_once __DIR__ . '/../../includes/navbar.php';
     <div class="mb-4">
         <?php
         $nav_context = buildNavContext('tool', [
-            'organism' => $context_organism,
-            'assembly' => $context_assembly,
-            'group' => $context_group,
-            'display_name' => $display_name
+            'organism' => $context['organism'],
+            'assembly' => $context['assembly'],
+            'group' => $context['group'],
+            'display_name' => $context['display_name']
         ]);
         echo render_navigation_buttons($nav_context);
         ?>
@@ -233,14 +218,8 @@ include_once __DIR__ . '/../../includes/navbar.php';
         $gene_name = $uniquenames_string;
         $enable_downloads = true;
         
-        // Create mock available_sequences array that sequences_display.php expects
-        $available_sequences = [];
-        foreach ($displayed_content as $seq_type => $content) {
-            $available_sequences[$seq_type] = [
-                'label' => $sequence_types[$seq_type]['label'] ?? ucfirst($seq_type),
-                'sequences' => [$content]  // Wrap in array since sequences_display expects array
-            ];
-        }
+        // Format results for sequences_display.php component
+        $available_sequences = formatSequenceResults($displayed_content, $sequence_types);
         
         // Include the reusable sequences display component
         include_once __DIR__ . '/../display/sequences_display.php';
