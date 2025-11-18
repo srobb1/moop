@@ -76,60 +76,12 @@ $organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $ab
 $organism_image_path = $organism_data_result['image_path'];
 
 // Check if searching by feature uniquename first
-$columns = ["f.feature_uniquename"];
-list($like, $terms) = buildLikeConditions($columns, $search_input, false);
-
-$query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id
-FROM feature f, organism o
-WHERE f.organism_id = o.organism_id
-  AND $like
-ORDER BY f.feature_uniquename
-LIMIT 100";
-
-$results = fetchData($query, $terms, $db);
-
+$results = searchFeaturesByUniquenameForSearch($search_input, $db);
 $uniquename_search = !empty($results);
 
 // If no results by uniquename, search annotations
 if (!$uniquename_search) {
-    $columns = ["a.annotation_description", "f.feature_name", "f.feature_description", "a.annotation_accession"];
-    
-    if ($quoted_search) {
-        list($like, $terms) = buildLikeConditions($columns, $search_input, true);
-    } else {
-        list($like, $terms) = buildLikeConditions($columns, $search_input, false);
-    }
-    
-    // Extract primary search term for relevance scoring in CASE statement
-    // For quoted searches: use the exact phrase
-    // For non-quoted: use first word
-    $primary_term = $quoted_search ? $search_input : explode(' ', trim($search_input))[0];
-    $case_pattern = "%" . $primary_term . "%";
-    
-    $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, a.annotation_accession, a.annotation_description, 
-              fa.score, fa.date, ans.annotation_source_name, o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id
-    FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o 
-    WHERE ans.annotation_source_id = a.annotation_source_id 
-      AND f.feature_id = fa.feature_id 
-      AND fa.annotation_id = a.annotation_id 
-      AND f.organism_id = o.organism_id
-      AND $like 
-    ORDER BY 
-      CASE 
-        WHEN f.feature_name LIKE ? THEN 1
-        WHEN f.feature_description LIKE ? THEN 2
-        WHEN a.annotation_description LIKE ? THEN 3
-        ELSE 4
-      END,
-      f.feature_uniquename
-    LIMIT 100";
-    
-    // Add CASE parameters to the terms array
-    $terms[] = $case_pattern;
-    $terms[] = $case_pattern;
-    $terms[] = $case_pattern;
-    
-    $results = fetchData($query, $terms, $db);
+    $results = searchFeaturesAndAnnotations($search_input, $quoted_search, $db);
 }
 
 // Format results for JSON
