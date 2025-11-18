@@ -16,22 +16,12 @@
  * @return array - Array of features: [self, parent, grandparent, ...]
  */
 function getAncestors($feature_uniquename, $dbFile, $genome_ids = []) {
-    if (!empty($genome_ids)) {
-        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
-        $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
-                  FROM feature 
-                  WHERE feature_uniquename = ? AND genome_id IN ($placeholders)";
-        $params = array_merge([$feature_uniquename], $genome_ids);
-        $results = fetchData($query, $params, $dbFile);
-    } else {
-        $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
-                  FROM feature WHERE feature_uniquename = ?";
-        $results = fetchData($query, [$feature_uniquename], $dbFile);
+    $feature = getFeatureByUniquename($feature_uniquename, $dbFile, $genome_ids);
+    
+    if (empty($feature)) {
+        return [];
     }
     
-    if (empty($results)) return [];
-    
-    $feature = $results[0];
     $ancestors = [$feature];
     
     if ($feature['parent_feature_id']) {
@@ -53,22 +43,12 @@ function getAncestors($feature_uniquename, $dbFile, $genome_ids = []) {
  * @return array - Array of ancestor features
  */
 function getAncestorsByFeatureId($feature_id, $dbFile, $genome_ids = []) {
-    if (!empty($genome_ids)) {
-        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
-        $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
-                  FROM feature 
-                  WHERE feature_id = ? AND genome_id IN ($placeholders)";
-        $params = array_merge([$feature_id], $genome_ids);
-        $results = fetchData($query, $params, $dbFile);
-    } else {
-        $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
-                  FROM feature WHERE feature_id = ?";
-        $results = fetchData($query, [$feature_id], $dbFile);
+    $feature = getParentFeature($feature_id, $dbFile, $genome_ids);
+    
+    if (empty($feature)) {
+        return [];
     }
     
-    if (empty($results)) return [];
-    
-    $feature = $results[0];
     $ancestors = [$feature];
     
     if ($feature['parent_feature_id']) {
@@ -92,19 +72,8 @@ function getAncestorsByFeatureId($feature_id, $dbFile, $genome_ids = []) {
 function getChildren($feature_id, $dbFile, $genome_ids = []) {
     $children = [];
     
-    if (!empty($genome_ids)) {
-        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
-        $query = "SELECT feature_id, feature_uniquename, feature_name, feature_description, feature_type, parent_feature_id 
-                  FROM feature 
-                  WHERE parent_feature_id = ? AND genome_id IN ($placeholders)";
-        $params = array_merge([$feature_id], $genome_ids);
-        $results = fetchData($query, $params, $dbFile);
-    } else {
-        $query = "SELECT feature_id, feature_uniquename, feature_name, feature_description, feature_type, parent_feature_id 
-                  FROM feature WHERE parent_feature_id = ?";
-        $results = fetchData($query, [$feature_id], $dbFile);
-    }
-
+    $results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);
+    
     foreach ($results as $row) {
         $children[] = $row;
         $child_descendants = getChildren($row['feature_id'], $dbFile, $genome_ids);
@@ -285,18 +254,7 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile, $genome_ids = []) {
  * @return string - HTML string with nested ul/li tree structure
  */
 function generateTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true, $genome_ids = []) {
-    if (!empty($genome_ids)) {
-        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
-        $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
-                  FROM feature 
-                  WHERE parent_feature_id = ? AND genome_id IN ($placeholders)";
-        $params = array_merge([$feature_id], $genome_ids);
-        $results = fetchData($query, $params, $dbFile);
-    } else {
-        $query = "SELECT feature_id, feature_uniquename, feature_type, parent_feature_id 
-                  FROM feature WHERE parent_feature_id = ?";
-        $results = fetchData($query, [$feature_id], $dbFile);
-    }
+    $results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);
 
     if (empty($results)) {
         return '';
