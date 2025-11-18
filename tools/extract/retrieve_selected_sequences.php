@@ -164,6 +164,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
 <html lang="en">
 <head>
     <title>FASTA Download - <?= htmlspecialchars($siteTitle) ?></title>
+    <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
     <style>
         body { padding: 20px; background-color: #f8f9fa; }
         .container { max-width: 1200px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin: 0 auto; }

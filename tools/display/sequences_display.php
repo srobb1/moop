@@ -33,7 +33,10 @@ $download_script_url = $download_script_url ?? '';
 $sequence_errors = [];
 $organism_dir = null;
 $assembly_dir = null;
-$available_sequences = [];
+// Only initialize available_sequences if not already provided
+if (!isset($available_sequences)) {
+    $available_sequences = [];
+}
 
 // Validate required parameters
 if (empty($organism_name)) {
@@ -176,7 +179,15 @@ if (!empty($sequence_errors)) {
                         echo '    <div class="collapse-section" data-toggle="collapse" data-target="#seq_' . $seq_type . '" aria-expanded="true">';
                         echo '      <i class="fas fa-minus toggle-icon text-info"></i>';
                         echo '      <strong class="ms-2 text-dark">';
-                        echo '        <span class="text-white px-2 py-1 rounded bg-feature-mrna">' . htmlspecialchars($config['label']) . '</span>';
+                        // Map sequence types to badge colors
+                        $badge_class = match($seq_type) {
+                            'transcript' => 'bg-feature-mrna',
+                            'protein' => 'bg-info',
+                            'cds' => 'bg-success',
+                            'genome' => 'bg-warning text-dark',
+                            default => 'bg-secondary'
+                        };
+                        echo '        <span class="text-white px-2 py-1 rounded ' . $badge_class . '">' . htmlspecialchars($config['label']) . '</span>';
                         echo '        (' . count($sequences) . ' sequence' . (count($sequences) > 1 ? 's' : '') . ')';
                         echo '      </strong>';
                         echo '    </div>';
