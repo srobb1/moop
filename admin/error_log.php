@@ -1,7 +1,7 @@
 <?php
 // Error Log Viewer - Admin Only
 session_start();
-include_once __DIR__ . '/../site_config.php';
+include_once __DIR__ . '/../includes/config_init.php'';
 include_once __DIR__ . '/admin_access_check.php';
 include_once __DIR__ . '/../includes/access_control.php';
 include_once __DIR__ . '/../includes/navigation.php';

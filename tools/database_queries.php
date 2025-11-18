@@ -282,30 +282,43 @@ function getAssemblyStats($genome_accession, $dbFile) {
 function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) {
     // Build the WHERE clause for annotations
     if ($is_quoted_search) {
-        // Exact phrase match
+        // Exact phrase match - use CASE for relevance scoring
         $like_pattern = "%$search_term%";
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
                          a.annotation_accession, a.annotation_description, 
                          fa.score, fa.date, ans.annotation_source_name, 
-                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id
-                  FROM annotation a
-                  JOIN feature_annotation fa ON a.annotation_id = fa.annotation_id
-                  JOIN feature f ON fa.feature_id = f.feature_id
-                  JOIN annotation_source ans ON a.annotation_source_id = ans.annotation_source_id
-                  JOIN organism o ON f.organism_id = o.organism_id
-                  WHERE (a.annotation_description LIKE ? 
-                     OR f.feature_name LIKE ? 
-                     OR f.feature_description LIKE ?
-                     OR a.annotation_accession LIKE ?)
-                  ORDER BY f.feature_uniquename
+                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                         g.genome_accession
+                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, genome g
+                  WHERE ans.annotation_source_id = a.annotation_source_id 
+                    AND f.feature_id = fa.feature_id 
+                    AND fa.annotation_id = a.annotation_id 
+                    AND f.organism_id = o.organism_id
+                    AND f.genome_id = g.genome_id
+                    AND (a.annotation_description LIKE ? 
+                       OR f.feature_name LIKE ? 
+                       OR f.feature_description LIKE ?
+                       OR a.annotation_accession LIKE ?)
+                  ORDER BY 
+                    CASE 
+                      WHEN f.feature_name LIKE ? THEN 1
+                      WHEN f.feature_description LIKE ? THEN 2
+                      WHEN a.annotation_description LIKE ? THEN 3
+                      ELSE 4
+                    END,
+                    f.feature_uniquename
                   LIMIT 100";
-        $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern];
+        $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern, $like_pattern, $like_pattern, $like_pattern];
     } else {
         // Multi-term keyword search (all terms must appear somewhere)
         $terms = array_filter(array_map('trim', preg_split('/\s+/', $search_term)));
         if (empty($terms)) {
             return [];
         }
+        
+        // Extract primary term for relevance scoring (first word of search)
+        $primary_term = $terms[0];
+        $primary_pattern = "%$primary_term%";
         
         // Build conditions: (col1 LIKE term1 OR col2 LIKE term1 OR ...) AND (col1 LIKE term2 OR ...)
         $conditions = [];
@@ -325,15 +338,29 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) 
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
                          a.annotation_accession, a.annotation_description, 
                          fa.score, fa.date, ans.annotation_source_name, 
-                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id
-                  FROM annotation a
-                  JOIN feature_annotation fa ON a.annotation_id = fa.annotation_id
-                  JOIN feature f ON fa.feature_id = f.feature_id
-                  JOIN annotation_source ans ON a.annotation_source_id = ans.annotation_source_id
-                  JOIN organism o ON f.organism_id = o.organism_id
-                  WHERE $where_clause
-                  ORDER BY f.feature_uniquename
+                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                         g.genome_accession
+                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, genome g
+                  WHERE ans.annotation_source_id = a.annotation_source_id 
+                    AND f.feature_id = fa.feature_id 
+                    AND fa.annotation_id = a.annotation_id 
+                    AND f.organism_id = o.organism_id
+                    AND f.genome_id = g.genome_id
+                    AND $where_clause
+                  ORDER BY 
+                    CASE 
+                      WHEN f.feature_name LIKE ? THEN 1
+                      WHEN f.feature_description LIKE ? THEN 2
+                      WHEN a.annotation_description LIKE ? THEN 3
+                      ELSE 4
+                    END,
+                    f.feature_uniquename
                   LIMIT 100";
+        
+        // Add primary term patterns for CASE statement to params
+        $params[] = $primary_pattern;
+        $params[] = $primary_pattern;
+        $params[] = $primary_pattern;
     }
     
     return fetchData($query, $params, $dbFile);
@@ -352,19 +379,24 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) 
 function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_name = '') {
     if ($organism_name) {
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
-                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id
-                  FROM feature f
-                  JOIN organism o ON f.organism_id = o.organism_id
-                  WHERE f.feature_uniquename LIKE ? AND (o.genus || ' ' || o.species = ?)
+                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                         g.genome_accession
+                  FROM feature f, organism o, genome g
+                  WHERE f.organism_id = o.organism_id
+                    AND f.genome_id = g.genome_id
+                    AND f.feature_uniquename LIKE ? 
+                    AND (o.genus || ' ' || o.species = ?)
                   ORDER BY f.feature_uniquename
                   LIMIT 100";
         $params = ["%$search_term%", $organism_name];
     } else {
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
-                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id
-                  FROM feature f
-                  JOIN organism o ON f.organism_id = o.organism_id
-                  WHERE f.feature_uniquename LIKE ?
+                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                         g.genome_accession
+                  FROM feature f, organism o, genome g
+                  WHERE f.organism_id = o.organism_id
+                    AND f.genome_id = g.genome_id
+                    AND f.feature_uniquename LIKE ?
                   ORDER BY f.feature_uniquename
                   LIMIT 100";
         $params = ["%$search_term%"];

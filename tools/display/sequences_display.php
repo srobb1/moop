@@ -16,9 +16,17 @@
  * - $download_script_url: URL to download script (default: for parent_display context)
  */
 
-// Ensure site_config is included (should be from parent_display.php, but double-check)
+// Ensure config is initialized (should be from parent_display.php, but double-check)
+if (!class_exists('ConfigManager')) {
+    include_once __DIR__ . '/../../includes/config_init.php';
+}
+
+// Get config if not already set by parent
 if (!isset($sequence_types)) {
-    include_once __DIR__ . '/../../site_config.php';
+    $config = ConfigManager::getInstance();
+    $organism_data = $config->getPath('organism_data');
+    $sequence_types = $config->getSequenceTypes();
+    $admin_email = $config->getString('admin_email');
 }
 
 // Include error logging (logError function)

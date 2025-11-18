@@ -89,7 +89,7 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
     
     results.forEach(result => {
         html += `
-            <tr>
+            <tr data-genome-accession="${encodeURIComponent(result.genome_accession || '')}">
                 <td><input type="checkbox" class="row-select"></td>
                 <td><em>${result.genus} ${result.species}</em><br><small class="text-muted">${result.common_name}</small></td>
                 <td>${result.feature_type}</td>

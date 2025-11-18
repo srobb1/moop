@@ -1,7 +1,12 @@
 <nav class="navbar navbar-expand-md bg-dark navbar-dark sticky-top">
 
 <?php
-    include_once __DIR__ . '/../site_config.php';
+    if (!class_exists('ConfigManager')) {
+        include_once __DIR__ . '/config_init.php';
+    }
+    $config = ConfigManager::getInstance();
+    $site = $config->getString('site');
+    $favicon_path = $config->getUrl('favicon_path');
     
     echo "<a class=\"navbar-brand\" href=\"/$site/index.php\"><img id=\"site_logo\" src=\"$favicon_path\" alt=\"DB_Logo\"></a>";
 ?>

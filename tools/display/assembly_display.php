@@ -1,9 +1,14 @@
 <?php
 include_once __DIR__ . '/../../includes/access_control.php';
-include_once __DIR__ . '/../../includes/head.php';
-include_once __DIR__ . '/../../includes/navbar.php';
+#include_once __DIR__ . '/../../includes/head.php';
+#include_once __DIR__ . '/../../includes/navbar.php';
 include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
+
+// Get config
+$config = ConfigManager::getInstance();
+$header_img = $config->getString('header_img');
+$organism_data = $config->getPath('organism_data');
 
 // Validate parameters
 $organism_name = validateOrganismParam($_GET['organism'] ?? '');

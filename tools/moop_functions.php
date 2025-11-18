@@ -943,7 +943,9 @@ function clearErrorLog() {
  *              Each source contains: ['organism', 'assembly', 'path', 'groups']
  */
 function getAccessibleAssemblies($specific_organism = null, $specific_assembly = null) {
-    global $organism_data, $metadata_path;
+    $config = ConfigManager::getInstance();
+    $organism_data = $config->getPath('organism_data');
+    $metadata_path = $config->getPath('metadata_path');
     
     // Load groups data
     $groups_data = [];
@@ -1118,7 +1120,8 @@ function getAccessibleGenomeIds($organism_name, $accessible_assemblies, $db_path
  * @return array Array of organism/assembly/groups data
  */
 function getGroupData() {
-    global $metadata_path;
+    $config = ConfigManager::getInstance();
+    $metadata_path = $config->getPath('metadata_path');
     $groups_file = "$metadata_path/organism_assembly_groups.json";
     $groups_data = [];
     if (file_exists($groups_file)) {
@@ -1236,7 +1239,9 @@ function getAccessibleOrganismsInGroup($group_name, $group_data) {
  * @return array Associative array of type => ['path' => relative_path, 'label' => label]
  */
 function getAssemblyFastaFiles($organism_name, $assembly_name) {
-    global $organism_data, $sequence_types;
+    $config = ConfigManager::getInstance();
+    $organism_data = $config->getPath('organism_data');
+    $sequence_types = $config->getSequenceTypes();
     $fasta_files = [];
     $assembly_dir = "$organism_data/$organism_name/$assembly_name";
     
@@ -1272,7 +1277,8 @@ function getAssemblyFastaFiles($organism_name, $assembly_name) {
  * @return array ['organism_info' => array, 'image_path' => string]
  */
 function loadOrganismAndGetImagePath($organism_name, $images_path = 'moop/images', $absolute_images_path = '') {
-    global $organism_data;
+    $config = ConfigManager::getInstance();
+    $organism_data = $config->getPath('organism_data');
     
     $result = [
         'organism_info' => [],

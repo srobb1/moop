@@ -2,13 +2,14 @@
 include_once __DIR__ . '/includes/access_control.php';
 include_once __DIR__ . '/tools/moop_functions.php';
 
-$usersFile = $users_file;
+$config = ConfigManager::getInstance();
+$usersFile = $config->getPath('users_file');
 $users = [];
 if (file_exists($usersFile)) {
     $users = json_decode(file_get_contents($usersFile), true);
 }
 
-// Get visitor IP for display purposes only
+// Get visitor IP (set in access_control.php)
 $ip = $visitor_ip;
 
 $group_data = getGroupData();
@@ -17,6 +18,7 @@ $group_data = getGroupData();
 $cards_to_display = getIndexDisplayCards($group_data);
 
 // Load phylogenetic tree data
+$metadata_path = $config->getPath('metadata_path');
 $phylo_tree_data = json_decode(file_get_contents("$metadata_path/phylo_tree_config.json"), true);
 
 // Get user access for phylo tree

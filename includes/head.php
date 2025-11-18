@@ -14,10 +14,13 @@
  * Note: All CSS and JS loads happen here centrally
  */
 
-// Ensure site_config is loaded
-if (!isset($site)) {
-    include_once __DIR__ . '/../site_config.php';
+// Ensure config is loaded
+if (!class_exists('ConfigManager')) {
+    include_once __DIR__ . '/config_init.php';
 }
+$config = ConfigManager::getInstance();
+$images_path = $config->getString('images_path');
+$site = $config->getString('site');
 ?>
 
     <meta charset="utf-8">

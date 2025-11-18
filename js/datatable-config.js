@@ -84,9 +84,22 @@ const DataTableExportConfig = {
             return;
         }
         
+        // Get assembly from first selected row
+        const checkedRows = $('input.row-select:checked');
+        let assembly = '';
+        if (checkedRows.length > 0) {
+            const firstSelectedRow = $(checkedRows[0]).closest('tr');
+            assembly = firstSelectedRow.attr('data-genome-accession') || '';
+        }
+        
+        if (!assembly) {
+            alert('Assembly information not available for selected rows.');
+            return;
+        }
+        
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = sitePath + '/tools/extract/retrieve_selected_sequences.php?organism=' + encodeURIComponent(organism);
+        form.action = sitePath + '/tools/extract/retrieve_selected_sequences.php?organism=' + encodeURIComponent(organism) + '&assembly=' + encodeURIComponent(assembly);
         form.target = '_blank';
         
         const idInput = document.createElement('input');

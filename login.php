@@ -1,9 +1,10 @@
 <?php
 session_start();
 
-include_once __DIR__ . '/site_config.php';
+include_once __DIR__ . '/includes/config_init.php';
 
-$usersFile = $users_file;
+$config = ConfigManager::getInstance();
+$usersFile = $config->getPath('users_file');
 $users = json_decode(file_get_contents($usersFile), true);
 
 $error = "";

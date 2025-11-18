@@ -15,12 +15,21 @@
 
 session_start();
 
-include_once __DIR__ . '/../../site_config.php';
+include_once __DIR__ . '/../../includes/config_init.php';
 include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 include_once __DIR__ . '/../blast_functions.php';
 include_once __DIR__ . '/../blast_results_visualizer.php';
+
+// Get config
+$config = ConfigManager::getInstance();
+$organism_data = $config->getPath('organism_data');
+$site = $config->getString('site');
+$admin_email = $config->getString('admin_email');
+$header_img = $config->getString('header_img');
+$images_path = $config->getString('images_path');
+$sequence_types = $config->getSequenceTypes();
 
 // Check if user is logged in (public users can also access if assemblies are public)
 $is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];

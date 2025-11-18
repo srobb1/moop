@@ -2,9 +2,15 @@
 // Include access control and configuration
 include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../../includes/navigation.php';
-include_once realpath(__DIR__ . '/../../site_config.php');
 include_once realpath(__DIR__ . '/../moop_functions.php');
 include_once __DIR__ . '/parent_functions.php';
+
+// Get config
+$config = ConfigManager::getInstance();
+$header_img = $config->getString('header_img');
+$organism_data = $config->getPath('organism_data');
+$metadata_path = $config->getPath('metadata_path');
+$sequence_types = $config->getSequenceTypes();
 
 // Validate required parameters
 $organism_name = validateOrganismParam($_GET['organism'] ?? '', null);
@@ -343,6 +349,11 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
     $retrieve_these_seqs = array_unique($retrieve_these_seqs);
     sort($retrieve_these_seqs);
     $gene_name = implode(",", $retrieve_these_seqs);
+    
+    // Set up variables for sequences_display.php with download support
+    $enable_downloads = true;
+    $assembly_name = $genome_accession;
+    // organism_name is already set above
     
     // Include sequences display component
     $sequences_file = __DIR__ . '/sequences_display.php';

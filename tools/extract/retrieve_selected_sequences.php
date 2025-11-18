@@ -5,34 +5,48 @@
  * Uses blastdbcmd to extract from FASTA BLAST databases
  */
 
+// Start output buffering to catch any stray output from includes
 ob_start();
 
-ob_end_clean();
-ob_implicit_flush(true);
 session_start();
 
-// Get parameters before including site_config to avoid output before headers
+// Get parameters before including config to avoid output before headers
 $download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
 $sequence_type = trim($_POST['sequence_type'] ?? '');
-$sequence_ids_provided = !empty($_POST['uniquenames']);
+// Check if sequence IDs provided (from form submission OR from GET link)
+$sequence_ids_provided = !empty($_POST['uniquenames']) || !empty($_GET['uniquenames']);
 
-include_once __DIR__ . '/../../site_config.php';
+include_once __DIR__ . '/../../includes/config_init.php';
 include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 include_once __DIR__ . '/../blast_functions.php';
 include_once __DIR__ . '/../extract_search_helpers.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+// Clean output buffer - discard any stray output from includes before headers
+ob_end_clean();
+
+// Get config
+$config = ConfigManager::getInstance();
+$site = $config->getString('site');
+
+// Get all parameters first for access check
+$organism_name = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
+$assembly_name = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
+$uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
+
+// Check access to the requested assembly (allows public assemblies, logged-in users with access, or admins)
+if (!has_assembly_access($organism_name, $assembly_name)) {
     header("Location: /$site/login.php");
     exit;
 }
 
-// Get all parameters
-$organism_name = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
-$assembly_name = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
-$uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
+// Get remaining config values
+$organism_data = $config->getPath('organism_data');
+$sequence_types = $config->getSequenceTypes();
+$siteTitle = $config->getString('siteTitle');
+$header_img = $config->getString('header_img');
+$images_path = $config->getString('images_path');
 
 // Parse context parameters
 $context = parseContextParameters();
@@ -215,6 +229,8 @@ include_once __DIR__ . '/../../includes/navbar.php';
         <hr class="my-4">
         <?php
         // Set up variables for sequences_display.php
+        // Keep the values already set from extraction (which used GET/POST from line 45)
+        // organism_name and assembly_name were populated during extraction
         $gene_name = $uniquenames_string;
         $enable_downloads = true;
         

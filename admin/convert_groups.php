@@ -1,5 +1,5 @@
 <?php
-include_once __DIR__ . '/../site_config.php';
+include_once __DIR__ . '/../includes/config_init.php'';
 
 $json_file = "$metadata_path/organism_assembly_groups.json";
 $backup_file = '/var/www/html/moop/organisms/groups.txt.bak';

@@ -1,7 +1,7 @@
 <?php
 session_start();
 include_once 'admin_access_check.php';
-include_once __DIR__ . '/../site_config.php';
+include_once __DIR__ . '/../includes/config_init.php'';
 include_once __DIR__ . '/../includes/navigation.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
 

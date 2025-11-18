@@ -8,8 +8,7 @@ if (!isset($_SESSION)) {
     session_start();
 }
 
-include_once __DIR__ . '/../site_config.php';
-include_once __DIR__ . '/../tools/tool_config.php';
+include_once __DIR__ . '/config_init.php';
 
 // Tool section component path constant
 define('TOOL_SECTION_PATH', __DIR__ . '/../tools/display/tool_section.php');
@@ -60,7 +59,8 @@ function get_username() {
  */
 if (!function_exists('is_public_organism')) {
 function is_public_organism($organism_name) {
-    global $metadata_path;
+    $config = ConfigManager::getInstance();
+    $metadata_path = $config->getPath('metadata_path');
     
     $groups_file = "$metadata_path/organism_assembly_groups.json";
     if (!file_exists($groups_file)) {
@@ -93,7 +93,8 @@ function is_public_organism($organism_name) {
  */
 if (!function_exists('is_public_assembly')) {
 function is_public_assembly($organism_name, $assembly_name) {
-    global $metadata_path;
+    $config = ConfigManager::getInstance();
+    $metadata_path = $config->getPath('metadata_path');
     
     $groups_file = "$metadata_path/organism_assembly_groups.json";
     if (!file_exists($groups_file)) {
@@ -125,7 +126,8 @@ function is_public_assembly($organism_name, $assembly_name) {
  */
 if (!function_exists('is_public_group')) {
 function is_public_group($group_name) {
-    global $metadata_path;
+    $config = ConfigManager::getInstance();
+    $metadata_path = $config->getPath('metadata_path');
     
     $groups_file = "$metadata_path/organism_assembly_groups.json";
     if (!file_exists($groups_file)) {
@@ -193,8 +195,9 @@ function has_access($required_level = 'Public', $resource_name = null) {
  */
 if (!function_exists('require_access')) {
 function require_access($required_level = 'Collaborator', $resource_name = null) {
-    global $site;
     if (!has_access($required_level, $resource_name)) {
+        $config = ConfigManager::getInstance();
+        $site = $config->getString('site');
         header("Location: /$site/access_denied.php");
         exit;
     }

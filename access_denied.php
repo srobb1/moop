@@ -1,14 +1,16 @@
 <?php
-include_once __DIR__ . '/site_config.php';
-include_once __DIR__ . '/includes/navigation.php';
 session_start();
+include_once __DIR__ . '/includes/config_init.php';
+include_once __DIR__ . '/includes/navigation.php';
 include_once 'includes/head.php';
+
+$config = ConfigManager::getInstance();
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Access Denied - <?= htmlspecialchars($siteTitle) ?></title>
+  <title>Access Denied - <?= htmlspecialchars($config->getString('siteTitle')) ?></title>
   <style>
     body {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -53,8 +55,8 @@ include_once 'includes/head.php';
     <div class="mb-4">
       <p class="mb-1"><strong>Administrator Contact:</strong></p>
       <p>
-        <a href="mailto:<?= htmlspecialchars($admin_email) ?>" class="text-decoration-none">
-          <i class="fas fa-envelope"></i> <?= htmlspecialchars($admin_email) ?>
+        <a href="mailto:<?= htmlspecialchars($config->getString('admin_email')) ?>" class="text-decoration-none">
+          <i class="fas fa-envelope"></i> <?= htmlspecialchars($config->getString('admin_email')) ?>
         </a>
       </p>
     </div>
@@ -65,7 +67,7 @@ include_once 'includes/head.php';
       $nav_html = render_navigation_buttons($nav_context, ['include_home' => false]);
       echo str_replace('btn-secondary', 'btn-outline-secondary btn-lg', $nav_html);
       ?>
-      <a href="/<?= htmlspecialchars($site) ?>/index.php" class="btn btn-primary btn-lg">
+      <a href="/<?= htmlspecialchars($config->getString('site')) ?>/index.php" class="btn btn-primary btn-lg">
         <i class="fas fa-home"></i> Return to Home
       </a>
     </div>

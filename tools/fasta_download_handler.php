@@ -7,6 +7,9 @@
  * Downloaded filename: Org_name.GCA_xxx.cds.nt.fa
  */
 
+// Start output buffering FIRST to catch any stray output from includes
+ob_start();
+
 session_start();
 
 // Get parameters
@@ -14,9 +17,18 @@ $organism = trim($_GET['organism'] ?? '');
 $assembly = trim($_GET['assembly'] ?? '');
 $type = trim($_GET['type'] ?? '');
 
-include_once __DIR__ . '/../site_config.php';
+include_once __DIR__ . '/../includes/config_init.php';
 include_once __DIR__ . '/../includes/access_control.php';
 include_once __DIR__ . '/moop_functions.php';
+
+// Get config
+$config = ConfigManager::getInstance();
+$organism_data = $config->getPath('organism_data');
+$sequence_types = $config->getSequenceTypes();
+$site = $config->getString('site');
+
+// Clean output buffer - discard any stray output from includes
+ob_end_clean();
 
 // Validate parameters
 if (empty($organism) || empty($assembly) || empty($type)) {

@@ -17,24 +17,30 @@ $sequence_ids_provided = !empty($_POST['uniquenames']);
 $download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
 $sequence_type = trim($_POST['sequence_type'] ?? '');
 
-include_once __DIR__ . '/../../site_config.php';
+include_once __DIR__ . '/../../includes/config_init.php';
 include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 include_once __DIR__ . '/../blast_functions.php';
 include_once __DIR__ . '/../extract_search_helpers.php';
 
+// Get config
+$config = ConfigManager::getInstance();
+$organism_data = $config->getPath('organism_data');
+$sequence_types = $config->getSequenceTypes();
+$admin_email = $config->getString('admin_email');
+$site = $config->getString('site');
+$siteTitle = $config->getString('siteTitle');
+$header_img = $config->getString('header_img');
+$images_path = $config->getString('images_path');
+
 // Discard any output from includes
 ob_end_clean();
 
-// Check if user is logged in OR if trying to access public assembly
-// Visitors can access public assemblies without login
-$is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
+// Check access to assembly if specified (visitors can access public assemblies without login)
 $trying_public_access = !empty($_POST['assembly']) && !empty($_POST['organism']);
-
-// If trying to download from an assembly, check if it's public
 if ($trying_public_access) {
-    if (!is_public_assembly($_POST['organism'], $_POST['assembly']) && !$is_logged_in) {
+    if (!has_assembly_access($_POST['organism'], $_POST['assembly'])) {
         header("Location: /$site/login.php");
         exit;
     }

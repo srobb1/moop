@@ -3,6 +3,15 @@ include_once __DIR__ . '/../../includes/access_control.php';
 include_once __DIR__ . '/../../includes/navigation.php';
 include_once __DIR__ . '/../moop_functions.php';
 
+// Get config
+$config = ConfigManager::getInstance();
+$header_img = $config->getString('header_img');
+$organism_data = $config->getPath('organism_data');
+$images_path = $config->getString('images_path');
+$absolute_images_path = $config->getPath('absolute_images_path');
+$siteTitle = $config->getString('siteTitle');
+$site = $config->getString('site');
+
 // Setup organism context (validates param, loads info, checks access)
 $organism_context = setupOrganismDisplayContext($_GET['organism'] ?? '', $organism_data);
 $organism_name = $organism_context['name'];

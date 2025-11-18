@@ -2,28 +2,27 @@
 <html lang="en">
 <?php
 session_start();
-include_once __DIR__ . '/../site_config.php';
+include_once __DIR__ . '/config_init.php';
 include_once __DIR__ . '/access_control.php';
-
-#include_once realpath("site_config.php");
 
 ?>
 
   <head>
-    <title><?php echo $siteTitle; ?></title>
+    <title><?php $config = ConfigManager::getInstance(); echo $config->getString('siteTitle'); ?></title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href=<?php echo "/$images_path/favicon.ico";?>>
+    <link rel="icon" href=<?php echo "/" . $config->getString('images_path') . "/favicon.ico";?>
 
     <!-- Bootstrap 5.3.2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- MOOP Base Styles (consolidated layout styles) -->
-    <link rel="stylesheet" href="/<?= $site ?>/css/moop.css">
-    <!-- <link rel="stylesheet" href="/<?= $site ?>/css/tree.css"> DISABLED: Conflicts with new bash-style tree -->
+    <link rel="stylesheet" href="/<?= $config->getString('site') ?>/css/moop.css">
+    <!-- <link rel="stylesheet" href="/<?= $config->getString('site') ?>/css/tree.css"> DISABLED: Conflicts with new bash-style tree -->
 
 
     <?php
-      if ($custom_css_path && file_exists("$custom_css_path")) {
+      $custom_css_path = $config->getPath('custom_css_path');
+      if ($custom_css_path && file_exists($custom_css_path)) {
         echo "<link rel=\"stylesheet\" href=\"$custom_css_path\">";
       }
     ?>
@@ -78,7 +77,9 @@ include_once __DIR__ . '/access_control.php';
   <body>
 
   <?php
-
+  $header_img = $config->getString('header_img');
+  $images_path = $config->getString('images_path');
+  
   if (!empty($header_img)) {
     echo "<div class=\"container-fluid easygdb-top\">";
       echo "<div style=\"background: url(/$images_path/$header_img) center center no-repeat; background-size:cover;\">";
