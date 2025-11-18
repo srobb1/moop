@@ -17,24 +17,11 @@ $organism_info = $organism_context['info'];
 $db_path = verifyOrganismDatabase($organism_name, $organism_data);
 
 // Query to get assembly info and feature counts
-$query = "SELECT 
-            g.genome_accession, 
-            g.genome_name,
-            COUNT(DISTINCT CASE WHEN f.feature_type = 'gene' THEN f.feature_id END) as gene_count,
-            COUNT(DISTINCT CASE WHEN f.feature_type = 'mRNA' THEN f.feature_id END) as mrna_count
-          FROM genome g
-          LEFT JOIN feature f ON g.genome_id = f.genome_id
-          WHERE g.genome_accession = ?
-          GROUP BY g.genome_id";
+$assembly_info = getAssemblyStats($assembly_accession, $db_path);
 
-$params = [$assembly_accession];
-$results = fetchData($query, $params, $db_path);
-
-if (empty($results)) {
+if (empty($assembly_info)) {
     die("Error: Assembly not found.");
 }
-
-$assembly_info = $results[0];
 
 // Get parent page info from referer
 $parent_uniquename = $_GET['parent'] ?? '';
