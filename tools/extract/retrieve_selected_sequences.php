@@ -5,6 +5,8 @@
  * Uses blastdbcmd to extract from FASTA BLAST databases
  */
 
+ob_start();
+
 ob_end_clean();
 ob_implicit_flush(true);
 session_start();
