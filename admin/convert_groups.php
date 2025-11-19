@@ -1,6 +1,12 @@
 <?php
-include_once __DIR__ . '/../includes/config_init.php'';
+include_once __DIR__ . '/../includes/access_control.php';
+include_once __DIR__ . '/../tools/moop_functions.php';
 
+// Load config variables
+$config = ConfigManager::getInstance();
+$metadata_path = $config->getPath('metadata_path');
+
+$groups_file = '/var/www/html/moop/organisms/groups.txt';
 $json_file = "$metadata_path/organism_assembly_groups.json";
 $backup_file = '/var/www/html/moop/organisms/groups.txt.bak';
 

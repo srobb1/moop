@@ -1,12 +1,16 @@
 <?php
 session_start();
 include_once 'admin_access_check.php';
-include_once __DIR__ . '/../includes/config_init.php'';
+
+// Get config BEFORE including head
+$config = ConfigManager::getInstance();
+$header_img = $config->getString('header_img');
+$images_path = $config->getString('images_path');
+$site = $config->getString('site');
+$metadata_path = $config->getPath('metadata_path');
+
 include_once __DIR__ . '/../includes/navigation.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
-include_once '../includes/head.php';
-include_once '../includes/navbar.php';
-
 
 $config_file = "$metadata_path/annotation_config.json";
 
@@ -126,9 +130,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
 <html lang="en">
 <head>
   <title>Manage Annotation Sections</title>
+  <?php include_once __DIR__ . '/../includes/head.php'; ?>
   <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
 </head>
 <body class="bg-light">
+
+<?php include_once __DIR__ . '/../includes/navbar.php'; ?>
 
 <div class="container mt-5">
   <?php

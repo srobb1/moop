@@ -2,8 +2,9 @@
 include_once __DIR__ . '/../includes/access_control.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
 
-// Load users file using helper
-$usersFile = $users_file;
+// Load users file from ConfigManager
+$config = ConfigManager::getInstance();
+$usersFile = $config->getPath('users_file');
 $users = loadJsonFile($usersFile, []);
 
 $is_admin = false;

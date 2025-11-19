@@ -1,18 +1,20 @@
 <?php
 // Error Log Viewer - Admin Only
 session_start();
-include_once __DIR__ . '/../includes/config_init.php'';
+include_once __DIR__ . '/../includes/config_init.php';
 include_once __DIR__ . '/admin_access_check.php';
-include_once __DIR__ . '/../includes/access_control.php';
+
+// Get config BEFORE including head and navbar
+$config = ConfigManager::getInstance();
+$header_img = $config->getString('header_img');
+$images_path = $config->getString('images_path');
+$site = $config->getString('site');
+$siteTitle = $config->getString('siteTitle');
+
 include_once __DIR__ . '/../includes/navigation.php';
 include_once __DIR__ . '/../tools/moop_functions.php';
 include_once __DIR__ . '/../includes/head.php';
 include_once __DIR__ . '/../includes/navbar.php';
-
-// Check if user is admin
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    die('Access Denied. Admin access required.');
-}
 
 // Handle clear log action
 $cleared = false;

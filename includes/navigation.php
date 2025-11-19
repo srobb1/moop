@@ -384,7 +384,7 @@ function renderToolNav($context, $btn_class) {
 function renderAdminToolNav($context, $btn_class) {
     global $site;
     $html = sprintf(
-        '<a href="/%s/admin/index.php" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to Admin</a>',
+        '<a href="/%s/admin/admin.php" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to Admin</a>',
         htmlspecialchars($site),
         htmlspecialchars($btn_class)
     );

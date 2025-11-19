@@ -27,7 +27,7 @@
 echo '<li class="nav-item"><a class="nav-link" href="/Public/help/00_help.php">Help</a></li>';
 
 if (is_logged_in() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/admin/index.php"><i class="fa fa-tools"></i> Admin Tools</a></li>';
+    echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/admin/admin.php"><i class="fa fa-tools"></i> Admin Tools</a></li>';
 }
 
 ?>
