@@ -1,6 +1,6 @@
 <?php
 include_once __DIR__ . '/../includes/access_control.php';
-include_once __DIR__ . '/../tools/moop_functions.php';
+include_once __DIR__ . '/../lib/moop_functions.php';
 
 // Load config variables
 $config = ConfigManager::getInstance();

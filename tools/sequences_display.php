@@ -18,7 +18,7 @@
 
 // Ensure config is initialized (should be from parent_display.php, but double-check)
 if (!class_exists('ConfigManager')) {
-    include_once __DIR__ . '/../../includes/config_init.php';
+    include_once __DIR__ . '/../includes/config_init.php';
 }
 
 // Get config if not already set by parent
@@ -30,7 +30,7 @@ if (!isset($sequence_types)) {
 }
 
 // Include error logging (logError function)
-include_once __DIR__ . '/../moop_functions.php';
+include_once __DIR__ . '/../lib/moop_functions.php';
 
 // Initialize download settings
 $enable_downloads = $enable_downloads ?? false;

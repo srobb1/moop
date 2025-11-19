@@ -10,8 +10,8 @@
  * ✓ getDbConnection() → moop_functions.php (core utility)
  * ✓ fetchData() → moop_functions.php (core utility)
  * ✓ buildLikeConditions() → moop_functions.php (core utility)
- * ✓ getAncestors() → tools/display/parent_display.php (display-specific)
- * ✓ getChildren() → tools/display/parent_display.php (display-specific)
+ * ✓ getAncestors() → tools/parent_display.php (display-specific)
+ * ✓ getChildren() → tools/parent_display.php (display-specific)
  * 
  * REMOVED (Unused/Dead Code):
  * - test_input2() - unused in active code

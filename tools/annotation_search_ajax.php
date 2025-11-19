@@ -7,8 +7,8 @@
 // Start output buffering to catch any errors
 ob_start();
 
-include_once __DIR__ . '/../tool_init.php';
-include_once __DIR__ . '/search_functions.php';
+include_once __DIR__ . '/tool_init.php';
+include_once __DIR__ . '/../lib/search_functions.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
@@ -51,7 +51,7 @@ $search_input = sanitize_search_input($search_keywords, $quoted_search);
 // Build database path
 $db = "$organism_data/$organism/organism.sqlite";
 if (!file_exists($db)) {
-    include_once __DIR__ . '/../moop_functions.php';
+    include_once __DIR__ . '/../lib/moop_functions.php';
     logError('Database not found for organism', $organism, [
         'search_term' => $search_keywords,
         'searched_path' => $db
@@ -63,7 +63,6 @@ if (!file_exists($db)) {
 // Validate database is readable and accessible
 $db_validation = validateDatabaseFile($db);
 if (!$db_validation['valid']) {
-    include_once __DIR__ . '/../../error_logger.php';
     logError('Database file not accessible', $organism, [
         'search_term' => $search_keywords,
         'database_path' => $db,
@@ -126,7 +125,6 @@ foreach ($results as $row) {
 
 // Log incomplete records for admin review
 if (!empty($incomplete_records)) {
-    include_once __DIR__ . '/../../error_logger.php';
     logError('Incomplete annotation records found', $organism, [
         'search_term' => $search_keywords,
         'count' => count($incomplete_records),

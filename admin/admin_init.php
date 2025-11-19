@@ -43,7 +43,7 @@ $site = $config->getString('site');
 
 // Load common includes
 include_once __DIR__ . '/../includes/navigation.php';
-include_once __DIR__ . '/../tools/moop_functions.php';
+include_once __DIR__ . '/../lib/moop_functions.php';
 include_once __DIR__ . '/../includes/head.php';
 include_once __DIR__ . '/../includes/navbar.php';
 

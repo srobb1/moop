@@ -27,7 +27,7 @@ if (session_status() === PHP_SESSION_NONE) {
 // Load access control and configuration
 include_once __DIR__ . '/../includes/access_control.php';
 include_once __DIR__ . '/../includes/navigation.php';
-include_once __DIR__ . '/../tools/moop_functions.php';
+include_once __DIR__ . '/../lib/moop_functions.php';
 
 // Get config instance - available for use in tool pages
 $config = ConfigManager::getInstance();

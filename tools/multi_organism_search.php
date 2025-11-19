@@ -1,5 +1,5 @@
 <?php
-include_once __DIR__ . '/../tool_init.php';
+include_once __DIR__ . '/tool_init.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
@@ -32,12 +32,12 @@ foreach ($organisms as $organism) {
 <html lang="en">
 <head>
   <title>Multi-Organism Search - <?= $siteTitle ?></title>
-  <?php include_once __DIR__ . '/../../includes/head.php'; ?>
+  <?php include_once __DIR__ . '/../includes/head.php'; ?>
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
 </head>
 <body class="bg-light">
 
-<?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
+<?php include_once __DIR__ . '/../includes/navbar.php'; ?>
 
 <div class="container mt-5">
   <?php
@@ -122,7 +122,7 @@ foreach ($organisms as $organism) {
                 $common_name = $organism_info['common_name'] ?? '';
             ?>
               <div class="col-md-6 col-lg-4">
-                <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism) ?><?php foreach($organism_list as $org): ?>&multi_search[]=<?= urlencode($org) ?><?php endforeach; ?>" 
+                <a href="/<?= $site ?>/tools/organism_display.php?organism=<?= urlencode($organism) ?><?php foreach($organism_list as $org): ?>&multi_search[]=<?= urlencode($org) ?><?php endforeach; ?>" 
                    class="text-decoration-none">
                   <div class="card h-100 shadow-sm organism-card">
                     <div class="card-body text-center">
@@ -167,7 +167,7 @@ foreach ($organisms as $organism) {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
 <script src="/<?= $site ?>/js/datatable-config.js"></script>
-<script src="/<?= $site ?>/tools/display/shared_results_table.js"></script>
+<script src="/<?= $site ?>/tools/shared_results_table.js"></script>
 <script>
 const selectedOrganisms = <?= json_encode(is_array($organisms) ? $organisms : [$organisms]) ?>;
 const totalOrganisms = selectedOrganisms.length;
@@ -226,7 +226,7 @@ function searchNextOrganism(keywords, quotedSearch, index) {
     $('#progressText').html(`Searching ${organism}... (${index + 1}/${totalOrganisms})`);
     
     $.ajax({
-        url: sitePath + '/tools/search/annotation_search_ajax.php',
+        url: sitePath + '/tools/annotation_search_ajax.php',
         method: 'GET',
         data: {
             search_keywords: keywords,
@@ -260,10 +260,10 @@ function displayOrganismResults(data) {
     const results = data.results;
     const imageUrl = data.organism_image_path || '';
     
-    const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php', imageUrl);
+    const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/parent_display.php', imageUrl);
     const safeOrganism = organism.replace(/[^a-zA-Z0-9]/g, '_');
     // Build organism URL with all selected organisms
-    let organismUrl = sitePath + '/tools/display/organism_display.php?organism=' + encodeURIComponent(organism);
+    let organismUrl = sitePath + '/tools/organism_display.php?organism=' + encodeURIComponent(organism);
     selectedOrganisms.forEach(org => {
         organismUrl += '&multi_search[]=' + encodeURIComponent(org);
     });
@@ -322,5 +322,5 @@ function finishSearch() {
 </html>
 
 <?php
-include_once __DIR__ . '/../../includes/footer.php';
+include_once __DIR__ . '/../includes/footer.php';
 ?>

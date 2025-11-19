@@ -13,7 +13,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-require_once __DIR__ . '/../tools/moop_functions.php';
+require_once __DIR__ . '/../lib/moop_functions.php';
 
 class OrganismJsonValidationTest {
     private $test_dir = '/tmp/organism_json_tests';

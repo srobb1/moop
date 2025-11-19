@@ -14,9 +14,9 @@ $sequence_type = trim($_POST['sequence_type'] ?? '');
 // Check if sequence IDs provided (from form submission OR from GET link)
 $sequence_ids_provided = !empty($_POST['uniquenames']) || !empty($_GET['uniquenames']);
 
-include_once __DIR__ . '/../tool_init.php';
-include_once __DIR__ . '/../blast_functions.php';
-include_once __DIR__ . '/../extract_search_helpers.php';
+include_once __DIR__ . '/tool_init.php';
+include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/extract_search_helpers.php';
 
 // Clean output buffer - discard any stray output from includes before headers
 ob_end_clean();
@@ -126,8 +126,8 @@ if (empty($uniquenames)) {
 }
 
 // Now include the HTML headers
-include_once __DIR__ . '/../../includes/head.php';
-include_once __DIR__ . '/../../includes/navbar.php';
+include_once __DIR__ . '/../includes/head.php';
+include_once __DIR__ . '/../includes/navbar.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -208,7 +208,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
         $available_sequences = formatSequenceResults($displayed_content, $sequence_types);
         
         // Include the reusable sequences display component
-        include_once __DIR__ . '/../display/sequences_display.php';
+        include_once __DIR__ . '/sequences_display.php';
         ?>
     <?php endif; ?>
 </div>

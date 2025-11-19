@@ -1273,7 +1273,7 @@ $organisms = get_all_organisms_info();
         <h6 class="fw-bold mt-4">Additional Notes:</h6>
         <ul>
           <li><strong>Images:</strong> Place organism images in <code>/moop/images/</code></li>
-          <li><strong>Viewing:</strong> Organisms are accessible via <code>/tools/display/organism_display.php?organism=Name</code></li>
+          <li><strong>Viewing:</strong> Organisms are accessible via <code>/tools/organism_display.php?organism=Name</code></li>
           <li><strong>Documentation:</strong> See <code><?= htmlspecialchars($organism_data) ?>/ORGANISM_DISPLAY_README.md</code> for detailed specifications</li>
         </ul>
         

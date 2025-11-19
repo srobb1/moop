@@ -1,5 +1,5 @@
 <?php
-include_once __DIR__ . '/../tool_init.php';
+include_once __DIR__ . '/tool_init.php';
 
 // Load page-specific config
 $metadata_path = $config->getPath('metadata_path');
@@ -44,13 +44,13 @@ if (!is_public_group($group_name)) {
 <html lang="en">
 <head>
   <title><?= htmlspecialchars($group_name) ?> - <?= $siteTitle ?></title>
-  <?php include_once __DIR__ . '/../../includes/head.php'; ?>
+  <?php include_once __DIR__ . '/../includes/head.php'; ?>
   <!-- Display page styles (consolidated from display_styles.css and shared_results_table.css) -->
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
 </head>
 <body class="bg-light">
 
-<?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
+<?php include_once __DIR__ . '/../includes/navbar.php'; ?>
 
 <div class="container mt-5">
   <?php
@@ -188,7 +188,7 @@ if (!is_public_group($group_name)) {
                   $show_image = !empty($image_src);
                 ?>
                 <div class="col-md-6 col-lg-4">
-                  <a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
+                  <a href="/<?= $site ?>/tools/organism_display.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
                      class="text-decoration-none">
                     <div class="card h-100 shadow-sm organism-card">
                       <div class="card-body text-center">
@@ -243,7 +243,7 @@ if (!is_public_group($group_name)) {
 <!-- Column reordering functionality -->
 <script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
 <script src="/<?= $site ?>/js/datatable-config.js"></script>
-<script src="shared_results_table.js"></script>
+<script src="/<?= $site ?>/tools/shared_results_table.js"></script>
 <script>
 const groupOrganisms = <?= json_encode(array_keys($group_organisms)) ?>;
 const groupName = <?= json_encode($group_name) ?>;
@@ -307,7 +307,7 @@ function searchNextOrganism(keywords, quotedSearch, index) {
     $('#progressText').html(`Searching ${organism}... (${index + 1}/${totalOrganisms})`);
     
     $.ajax({
-        url: sitePath + '/tools/search/annotation_search_ajax.php',
+        url: sitePath + '/tools/annotation_search_ajax.php',
         method: 'GET',
         data: {
             search_keywords: keywords,
@@ -344,11 +344,11 @@ function displayOrganismResults(data) {
     const imageUrl = data.organism_image_path || '';
     
     // Add "Read More" button after organism name by wrapping the shared function
-    const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php', imageUrl);
+    const tableHtml = createOrganismResultsTable(organism, results, sitePath, 'tools/parent_display.php', imageUrl);
     
     // Insert the "Read More" button into the generated HTML
     const safeOrganism = organism.replace(/[^a-zA-Z0-9]/g, '_');
-    const organismUrl = sitePath + '/tools/display/organism_display.php?organism=' + encodeURIComponent(organism);
+    const organismUrl = sitePath + '/tools/organism_display.php?organism=' + encodeURIComponent(organism);
     const readMoreBtn = `<a href="${organismUrl}" class="btn btn-sm btn-outline-primary ms-2 font-size-small">
                     <i class="fa fa-info-circle"></i> Read More
                 </a>`;
@@ -405,5 +405,5 @@ function finishSearch() {
 </html>
 
 <?php
-include_once __DIR__ . '/../../includes/footer.php';
+include_once __DIR__ . '/../includes/footer.php';
 ?>

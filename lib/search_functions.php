@@ -19,7 +19,7 @@
  */
 
 // Include moop_functions for backwards compatibility during transition
-include_once realpath(__DIR__ . '/../moop_functions.php');
+include_once realpath(__DIR__ . '/moop_functions.php');
 
 ?>
 

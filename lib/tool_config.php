@@ -12,7 +12,7 @@ $available_tools = [
         'icon' => 'fa-dna',
         'description' => 'Search and download sequences',
         'btn_class' => 'btn-success',
-        'url_path' => '/tools/extract/retrieve_sequences.php',
+        'url_path' => '/tools/retrieve_sequences.php',
         'context_params' => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
         'pages' => 'all',  // Show on all pages
     ],
@@ -22,7 +22,7 @@ $available_tools = [
         'icon' => 'fa-dna',
         'description' => 'Search sequences against databases',
         'btn_class' => 'btn-warning',
-        'url_path' => '/tools/blast/blast.php',
+        'url_path' => '/tools/blast.php',
         'context_params' => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
         'pages' => 'all',  // Show on all pages
     ],
@@ -32,7 +32,7 @@ $available_tools = [
         'icon' => 'fa-search',
         'description' => 'Search selected organisms',
         'btn_class' => 'btn-info',
-        'url_path' => '/tools/search/multi_organism_search.php',
+        'url_path' => '/tools/multi_organism_search.php',
         'context_params' => ['organisms', 'display_name'],
         'pages' => ['index'],  // Show only on index page
     ],

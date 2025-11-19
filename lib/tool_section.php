@@ -55,7 +55,7 @@
 
 // Ensure dependencies are loaded
 if (!function_exists('getAvailableTools')) {
-    include_once __DIR__ . '/../moop_functions.php';
+    include_once __DIR__ . '/moop_functions.php';
 }
 
 // Get available tools for this context

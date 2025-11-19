@@ -191,7 +191,7 @@ function renderOrganismNav($context, $btn_class) {
     if (!empty($context['multi_search'])) {
         $organisms = $context['multi_search'];
         // Build URL with organisms array
-        $url = '/' . htmlspecialchars($site) . '/tools/search/multi_organism_search.php';
+        $url = '/' . htmlspecialchars($site) . '/tools/multi_organism_search.php';
         if (is_array($organisms) && !empty($organisms)) {
             $query_params = [];
             foreach ($organisms as $org) {
@@ -211,7 +211,7 @@ function renderOrganismNav($context, $btn_class) {
     // Back to group (if came from group)
     if (!empty($context['group'])) {
         $html .= sprintf(
-            '<a href="/%s/tools/display/groups_display.php?group=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
+            '<a href="/%s/tools/groups_display.php?group=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
             htmlspecialchars($site),
             urlencode($context['group']),
             htmlspecialchars($btn_class),
@@ -222,7 +222,7 @@ function renderOrganismNav($context, $btn_class) {
     // Back to parent (if viewing from parent context)
     if (!empty($context['parent'])) {
         $html .= sprintf(
-            '<a href="/%s/tools/display/parent_display.php?organism=%s&uniquename=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
+            '<a href="/%s/tools/parent_display.php?organism=%s&uniquename=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
             htmlspecialchars($site),
             urlencode($context['organism']),
             urlencode($context['parent']),
@@ -252,7 +252,7 @@ function renderAssemblyNav($context, $btn_class) {
     // Back to parent (if came from parent)
     if (!empty($context['parent'])) {
         $html .= sprintf(
-            '<a href="/%s/tools/display/parent_display.php?organism=%s&uniquename=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
+            '<a href="/%s/tools/parent_display.php?organism=%s&uniquename=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
             htmlspecialchars($site),
             urlencode($context['organism']),
             urlencode($context['parent']),
@@ -265,7 +265,7 @@ function renderAssemblyNav($context, $btn_class) {
     if (!empty($context['organism'])) {
         $organism_display = formatOrganismName($context['organism']);
         $html .= sprintf(
-            '<a href="/%s/tools/display/organism_display.php?organism=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
+            '<a href="/%s/tools/organism_display.php?organism=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
             htmlspecialchars($site),
             urlencode($context['organism']),
             htmlspecialchars($btn_class),
@@ -293,7 +293,7 @@ function renderParentNav($context, $btn_class) {
     
     if (!empty($context['organism'])) {
         $html .= sprintf(
-            '<a href="/%s/tools/display/organism_display.php?organism=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
+            '<a href="/%s/tools/organism_display.php?organism=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
             htmlspecialchars($site),
             urlencode($context['organism']),
             htmlspecialchars($btn_class),
@@ -316,7 +316,7 @@ function renderToolNav($context, $btn_class) {
     if (!empty($context['multi_search'])) {
         $organisms = $context['multi_search'];
         // Build URL with organisms array
-        $url = '/' . htmlspecialchars($site) . '/tools/search/multi_organism_search.php';
+        $url = '/' . htmlspecialchars($site) . '/tools/multi_organism_search.php';
         if (is_array($organisms) && !empty($organisms)) {
             $query_params = [];
             foreach ($organisms as $org) {
@@ -338,7 +338,7 @@ function renderToolNav($context, $btn_class) {
     if (!empty($context['assembly']) && !empty($context['organism'])) {
         $display_label = $context['display_name'] ?: formatOrganismName($context['assembly']);
         $html .= sprintf(
-            '<a href="/%s/tools/display/assembly_display.php?organism=%s&assembly=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
+            '<a href="/%s/tools/assembly_display.php?organism=%s&assembly=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
             htmlspecialchars($site),
             urlencode($context['organism']),
             urlencode($context['assembly']),
@@ -352,7 +352,7 @@ function renderToolNav($context, $btn_class) {
     if (!empty($context['organism'])) {
         $display_label = $context['display_name'] ?: formatOrganismName($context['organism']);
         $html .= sprintf(
-            '<a href="/%s/tools/display/organism_display.php?organism=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
+            '<a href="/%s/tools/organism_display.php?organism=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
             htmlspecialchars($site),
             urlencode($context['organism']),
             htmlspecialchars($btn_class),
@@ -365,7 +365,7 @@ function renderToolNav($context, $btn_class) {
     if (!empty($context['group'])) {
         $display_label = $context['display_name'] ?: htmlspecialchars($context['group']);
         $html .= sprintf(
-            '<a href="/%s/tools/display/groups_display.php?group=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
+            '<a href="/%s/tools/groups_display.php?group=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
             htmlspecialchars($site),
             urlencode($context['group']),
             htmlspecialchars($btn_class),

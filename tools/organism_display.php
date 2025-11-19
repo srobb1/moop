@@ -1,5 +1,5 @@
 <?php
-include_once __DIR__ . '/../tool_init.php';
+include_once __DIR__ . '/tool_init.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
@@ -16,13 +16,13 @@ $organism_info = $organism_context['info'];
 <html lang="en">
 <head>
   <title><?= htmlspecialchars($organism_info['common_name'] ?? str_replace('_', ' ', $organism_name)) ?> - <?= $siteTitle ?></title>
-  <?php include_once __DIR__ . '/../../includes/head.php'; ?>
+  <?php include_once __DIR__ . '/../includes/head.php'; ?>
   <!-- Display page styles (consolidated from display_styles.css and shared_results_table.css) -->
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
 </head>
 <body class="bg-light">
 
-<?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
+<?php include_once __DIR__ . '/../includes/navbar.php'; ?>
 
 <div class="container mt-5">
   <?php
@@ -218,7 +218,7 @@ $organism_info = $organism_context['info'];
               <div class="col-md-6 col-lg-4">
                 <div class="card h-100 shadow-sm organism-card">
                   <div class="card-body text-center">
-                    <a href="/<?= $site ?>/tools/display/assembly_display.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>" 
+                    <a href="/<?= $site ?>/tools/assembly_display.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>" 
                        class="text-decoration-none">
                       <h5 class="card-title mb-3">
                         <?= htmlspecialchars($assembly) ?> <i class="fa fa-external-link-alt"></i>
@@ -270,7 +270,7 @@ $organism_info = $organism_context['info'];
 <!-- Column reordering functionality -->
 <script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
 <script src="/<?= $site ?>/js/datatable-config.js"></script>
-<script src="shared_results_table.js"></script>
+<script src="/<?= $site ?>/tools/shared_results_table.js"></script>
 
 <script>
 const sitePath = '/<?= $site ?>';
@@ -334,7 +334,7 @@ function searchOrganism(organism, keywords, quotedSearch) {
     $('#progressText').html(`Searching ${organism}...`);
     
     $.ajax({
-        url: sitePath + '/tools/search/annotation_search_ajax.php',
+        url: sitePath + '/tools/annotation_search_ajax.php',
         method: 'GET',
         data: {
             search_keywords: keywords,
@@ -401,7 +401,7 @@ function displayResults() {
         Object.keys(resultsByOrganism).forEach(organism => {
             const results = resultsByOrganism[organism];
             const imageUrl = organismImagePaths[organism] || '';
-            $('#resultsContainer').append(createOrganismResultsTable(organism, results, sitePath, 'tools/display/parent_display.php', imageUrl));
+            $('#resultsContainer').append(createOrganismResultsTable(organism, results, sitePath, 'tools/parent_display.php', imageUrl));
         });
     }
 }
@@ -411,5 +411,5 @@ function displayResults() {
 </html>
 
 <?php
-include_once __DIR__ . '/../../includes/footer.php';
+include_once __DIR__ . '/../includes/footer.php';
 ?>

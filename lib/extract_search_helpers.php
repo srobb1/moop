@@ -3,8 +3,8 @@
  * Extract/Search Common Helper Functions
  * 
  * Consolidates repeated logic from:
- * - tools/extract/*.php (retrieve_sequences.php, retrieve_selected_sequences.php)
- * - tools/search/*.php (multi_organism_search.php, annotation_search_ajax.php)
+ * - tools/*.php (retrieve_sequences.php, retrieve_selected_sequences.php)
+ * - tools/*.php (multi_organism_search.php, annotation_search_ajax.php)
  * 
  * Provides unified handling for:
  * - Multi-organism parameter parsing (multiple input formats)

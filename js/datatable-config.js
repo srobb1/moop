@@ -101,7 +101,7 @@ const DataTableExportConfig = {
         
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = sitePath + '/tools/extract/retrieve_selected_sequences.php?organism=' + encodeURIComponent(organism) + '&assembly=' + encodeURIComponent(assembly);
+        form.action = sitePath + '/tools/retrieve_selected_sequences.php?organism=' + encodeURIComponent(organism) + '&assembly=' + encodeURIComponent(assembly);
         form.target = '_blank';
         
         const idInput = document.createElement('input');

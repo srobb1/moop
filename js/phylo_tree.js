@@ -88,10 +88,10 @@ class PhyloTree {
     navigateToSearch() {
         const organisms = Array.from(this.selectedOrganisms);
         if (organisms.length === 1) {
-            window.location.href = `tools/display/organism_display.php?organism=${encodeURIComponent(organisms[0])}&multi_search[]=${encodeURIComponent(organisms[0])}`;
+            window.location.href = `tools/organism_display.php?organism=${encodeURIComponent(organisms[0])}&multi_search[]=${encodeURIComponent(organisms[0])}`;
         } else {
             const params = organisms.map(org => `organisms[]=${encodeURIComponent(org)}`).join('&');
-            window.location.href = `tools/search/multi_organism_search.php?${params}`;
+            window.location.href = `tools/multi_organism_search.php?${params}`;
         }
     }
 

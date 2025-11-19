@@ -15,9 +15,9 @@ $sequence_ids_provided = !empty($_POST['uniquenames']);
 $download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
 $sequence_type = trim($_POST['sequence_type'] ?? '');
 
-include_once __DIR__ . '/../tool_init.php';
-include_once __DIR__ . '/../blast_functions.php';
-include_once __DIR__ . '/../extract_search_helpers.php';
+include_once __DIR__ . '/tool_init.php';
+include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/extract_search_helpers.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
@@ -101,14 +101,14 @@ if (!empty($sequence_ids_provided)) {
 $available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_types);
 
 // Now include the HTML headers
-include_once __DIR__ . '/../../includes/head.php';
-include_once __DIR__ . '/../../includes/navbar.php';
+include_once __DIR__ . '/../includes/head.php';
+include_once __DIR__ . '/../includes/navbar.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <title>Sequence Search - <?= htmlspecialchars($siteTitle) ?></title>
-    <?php include_once __DIR__ . '/../../includes/head.php'; ?>
+    <?php include_once __DIR__ . '/../includes/head.php'; ?>
     <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
     <style>
         .tooltip { z-index: 9999 !important; }
@@ -119,7 +119,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
 </head>
 <body class="bg-light">
 
-<?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
+<?php include_once __DIR__ . '/../includes/navbar.php'; ?>
 
 <div class="container mt-5">
     <!-- Navigation Buttons -->
@@ -282,7 +282,7 @@ include_once __DIR__ . '/../../includes/navbar.php';
         $available_sequences = formatSequenceResults($displayed_content, $sequence_types);
         
         // Include the reusable sequences display component
-        include_once __DIR__ . '/../display/sequences_display.php';
+        include_once __DIR__ . '/sequences_display.php';
         ?>
     <?php endif; ?>
 </div>
@@ -417,6 +417,6 @@ include_once __DIR__ . '/../../includes/navbar.php';
     }, 500);
 </script>
 
-<?php include_once __DIR__ . '/../../includes/footer.php'; ?>
+<?php include_once __DIR__ . '/../includes/footer.php'; ?>
 </body>
 </html>

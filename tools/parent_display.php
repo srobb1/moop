@@ -1,6 +1,6 @@
 <?php
-include_once __DIR__ . '/../tool_init.php';
-include_once __DIR__ . '/parent_functions.php';
+include_once __DIR__ . '/tool_init.php';
+include_once __DIR__ . '/../lib/parent_functions.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
@@ -133,14 +133,14 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 <html lang="en">
 <head>
 <title><?= htmlspecialchars($feature_uniquename) ?> - <?= $siteTitle ?></title>
-<?php include_once __DIR__ . '/../../includes/head.php'; ?>
+<?php include_once __DIR__ . '/../includes/head.php'; ?>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
 <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
 <link rel="stylesheet" href="/<?= $site ?>/css/parent.css">
 </head>
 <body>
 
-<?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
+<?php include_once __DIR__ . '/../includes/navbar.php'; ?>
 
 <div class="page_container">
 
@@ -194,10 +194,10 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
             
             <div>
                 <div class="feature-info-item">
-                    <strong>Organism:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/display/organism_display.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em></a><?php if ($common_name): ?> ( <?= htmlspecialchars($common_name) ?> )<?php endif; ?></span>
+                    <strong>Organism:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/organism_display.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em></a><?php if ($common_name): ?> ( <?= htmlspecialchars($common_name) ?> )<?php endif; ?></span>
                 </div>
                 <div class="feature-info-item">
-                    <strong>Assembly:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/display/assembly_display.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars($genome_name) ?> (<?= htmlspecialchars($genome_accession) ?>)</a></span>
+                    <strong>Assembly:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/assembly_display.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars($genome_name) ?> (<?= htmlspecialchars($genome_accession) ?>)</a></span>
                 </div>
             </div>
         </div>
@@ -380,7 +380,7 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 <script src="/<?= $site ?>/js/datatable-config.js"></script>
 <script src="/<?= $site ?>/js/parent.js"></script>
 
-<?php include_once __DIR__ . '/../../includes/footer.php'; ?>
+<?php include_once __DIR__ . '/../includes/footer.php'; ?>
 
 </body>
 </html>

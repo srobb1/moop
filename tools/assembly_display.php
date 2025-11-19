@@ -1,5 +1,5 @@
 <?php
-include_once __DIR__ . '/../tool_init.php';
+include_once __DIR__ . '/tool_init.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
@@ -27,12 +27,12 @@ if (empty($assembly_info)) {
 <html lang="en">
 <head>
   <title><?= htmlspecialchars($assembly_info['genome_name']) ?> - <?= $siteTitle ?></title>
-  <?php include_once __DIR__ . '/../../includes/head.php'; ?>
+  <?php include_once __DIR__ . '/../includes/head.php'; ?>
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
 </head>
 <body class="bg-light">
 
-<?php include_once __DIR__ . '/../../includes/navbar.php'; ?>
+<?php include_once __DIR__ . '/../includes/navbar.php'; ?>
 
 <div class="container mt-5">
   <?php
@@ -136,7 +136,7 @@ if (empty($assembly_info)) {
 
 </div>
 
-<?php include_once __DIR__ . '/../../includes/footer.php'; ?>
+<?php include_once __DIR__ . '/../includes/footer.php'; ?>
 
 </body>
 </html>
