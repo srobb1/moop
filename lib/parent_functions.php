@@ -222,7 +222,7 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile, $genome_ids = []) {
           AND $where_clause
         ORDER BY f.feature_id, ans.annotation_type";
     
-    $results = fetchData($query, $params, $dbFile);
+    $results = fetchData($query, $dbFile, $params);
     
     // Organize by feature_id and annotation_type
     $organized = [];

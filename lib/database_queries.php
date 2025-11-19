@@ -49,7 +49,7 @@ function getFeatureById($feature_id, $dbFile, $genome_ids = []) {
         $params = [$feature_id];
     }
     
-    $results = fetchData($query, $params, $dbFile);
+    $results = fetchData($query, $dbFile, $params);
     return !empty($results) ? $results[0] : [];
 }
 
@@ -86,7 +86,7 @@ function getFeatureByUniquename($feature_uniquename, $dbFile, $genome_ids = []) 
         $params = [$feature_uniquename];
     }
     
-    $results = fetchData($query, $params, $dbFile);
+    $results = fetchData($query, $dbFile, $params);
     return !empty($results) ? $results[0] : [];
 }
 
@@ -115,7 +115,7 @@ function getChildrenByFeatureId($parent_feature_id, $dbFile, $genome_ids = []) {
         $params = [$parent_feature_id];
     }
     
-    return fetchData($query, $params, $dbFile);
+    return fetchData($query, $dbFile, $params);
 }
 
 /**
@@ -141,7 +141,7 @@ function getParentFeature($feature_id, $dbFile, $genome_ids = []) {
         $params = [$feature_id];
     }
     
-    $results = fetchData($query, $params, $dbFile);
+    $results = fetchData($query, $dbFile, $params);
     return !empty($results) ? $results[0] : [];
 }
 
@@ -172,7 +172,7 @@ function getFeaturesByType($feature_type, $dbFile, $genome_ids = []) {
         $params = [$feature_type];
     }
     
-    return fetchData($query, $params, $dbFile);
+    return fetchData($query, $dbFile, $params);
 }
 
 /**
@@ -205,7 +205,7 @@ function searchFeaturesByUniquename($search_term, $dbFile, $organism_name = '') 
         $params = ["%$search_term%"];
     }
     
-    return fetchData($query, $params, $dbFile);
+    return fetchData($query, $dbFile, $params);
 }
 
 /**
@@ -226,7 +226,7 @@ function getAnnotationsByFeature($feature_id, $dbFile) {
               WHERE fa.feature_id = ?
               ORDER BY fa.date DESC";
     
-    return fetchData($query, [$feature_id], $dbFile);
+    return fetchData($query, $dbFile, [$feature_id]);
 }
 
 /**
@@ -265,7 +265,7 @@ function getAssemblyStats($genome_accession, $dbFile) {
               WHERE g.genome_accession = ?
               GROUP BY g.genome_id";
     
-    $results = fetchData($query, [$genome_accession], $dbFile);
+    $results = fetchData($query, $dbFile, [$genome_accession]);
     return !empty($results) ? $results[0] : [];
 }
 
@@ -363,7 +363,7 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) 
         $params[] = $primary_pattern;
     }
     
-    return fetchData($query, $params, $dbFile);
+    return fetchData($query, $dbFile, $params);
 }
 
 /**
@@ -402,5 +402,5 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
         $params = ["%$search_term%"];
     }
     
-    return fetchData($query, $params, $dbFile);
+    return fetchData($query, $dbFile, $params);
 }
