@@ -16,6 +16,7 @@
 include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/blast_results_visualizer.php';
+include_once __DIR__ . '/../lib/extract_search_helpers.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
@@ -26,11 +27,12 @@ $sequence_types = $config->getSequenceTypes();
 // Check if user is logged in (public users can also access if assemblies are public)
 $is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
 
-// Get context parameters from referring page (GET first, then POST for form resubmission)
-$context_organism = trim($_POST['context_organism'] ?? $_GET['organism'] ?? '');
-$context_assembly = trim($_POST['context_assembly'] ?? $_GET['assembly'] ?? '');
-$context_group = trim($_POST['context_group'] ?? $_GET['group'] ?? '');
-$display_name = trim($_GET['display_name'] ?? '');
+// Get context parameters from referring page using standard parser
+$context = parseContextParameters();
+$context_organism = $context['organism'];
+$context_assembly = $context['assembly'];
+$context_group = $context['group'];
+$display_name = $context['display_name'];
 
 // Get organisms for filtering - support both array and comma-separated string formats
 // Array format: organisms[] from multi-search context (via tool_config.php)

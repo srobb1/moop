@@ -163,13 +163,14 @@ include_once __DIR__ . '/../includes/navbar.php';
 
         <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
             <form method="POST" id="downloadForm">
+            <!-- Hidden fields for selected source (populated by JavaScript on submit) -->
             <input type="hidden" name="organism" value="">
             <input type="hidden" name="assembly" value="">
-            <!-- Hidden context fields for back button -->
+            <!-- Hidden context fields for back button and navigation (preserve original context) -->
             <input type="hidden" name="context_organism" value="<?= htmlspecialchars($context['organism']) ?>">
             <input type="hidden" name="context_assembly" value="<?= htmlspecialchars($context['assembly']) ?>">
             <input type="hidden" name="context_group" value="<?= htmlspecialchars($context['group']) ?>">
-            <input type="hidden" name="display_name" value="<?= htmlspecialchars($context['display_name']) ?>">
+            <input type="hidden" name="display_name" value="<?= htmlspecialchars($context['display_name']) ?>">>
 
             <!-- Source Selection with Compact Badges -->
             <div class="fasta-source-selector">

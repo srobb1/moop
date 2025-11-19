@@ -280,6 +280,15 @@ let searchedOrganisms = 0;
 const totalOrganisms = 1; // Single organism search
 let organismImagePaths = {}; // Store image paths by organism
 
+// Context for navigation and data flow
+const pageContext = {
+    context_organism: '<?= htmlspecialchars($organism_name) ?>',
+    context_assembly: '',
+    context_group: '',
+    organisms: '',
+    display_name: ''
+};
+
 $('#organismSearchForm').on('submit', function(e) {
     e.preventDefault();
     

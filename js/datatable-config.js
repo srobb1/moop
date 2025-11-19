@@ -101,7 +101,30 @@ const DataTableExportConfig = {
         
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = sitePath + '/tools/retrieve_selected_sequences.php?organism=' + encodeURIComponent(organism) + '&assembly=' + encodeURIComponent(assembly);
+        
+        // Build URL with selected source and context parameters
+        let formUrl = sitePath + '/tools/retrieve_selected_sequences.php?organism=' + encodeURIComponent(organism) + '&assembly=' + encodeURIComponent(assembly);
+        
+        // Add context parameters if available (from pageContext global variable)
+        if (typeof pageContext !== 'undefined') {
+            if (pageContext.context_organism) {
+                formUrl += '&context_organism=' + encodeURIComponent(pageContext.context_organism);
+            }
+            if (pageContext.context_assembly) {
+                formUrl += '&context_assembly=' + encodeURIComponent(pageContext.context_assembly);
+            }
+            if (pageContext.context_group) {
+                formUrl += '&context_group=' + encodeURIComponent(pageContext.context_group);
+            }
+            if (pageContext.organisms) {
+                formUrl += '&organisms=' + encodeURIComponent(pageContext.organisms);
+            }
+            if (pageContext.display_name) {
+                formUrl += '&display_name=' + encodeURIComponent(pageContext.display_name);
+            }
+        }
+        
+        form.action = formUrl;
         form.target = '_blank';
         
         const idInput = document.createElement('input');

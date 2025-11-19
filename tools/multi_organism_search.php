@@ -173,6 +173,15 @@ const selectedOrganisms = <?= json_encode(is_array($organisms) ? $organisms : [$
 const totalOrganisms = selectedOrganisms.length;
 const sitePath = '/<?= $site ?>';
 
+// Context for navigation and data flow
+const pageContext = {
+    context_organism: '',
+    context_assembly: '',
+    context_group: '',
+    organisms: <?= json_encode(is_array($organisms) ? implode(',', $organisms) : $organisms) ?>,
+    display_name: ''
+};
+
 let allResults = [];
 let searchedOrganisms = 0;
 

@@ -249,6 +249,15 @@ const groupOrganisms = <?= json_encode(array_keys($group_organisms)) ?>;
 const groupName = <?= json_encode($group_name) ?>;
 const sitePath = '/<?= $site ?>';
 
+// Context for navigation and data flow
+const pageContext = {
+    context_organism: '',
+    context_assembly: '',
+    context_group: '<?= htmlspecialchars($group_name) ?>',
+    organisms: '',
+    display_name: ''
+};
+
 let allResults = [];
 let searchedOrganisms = 0;
 let totalOrganisms = groupOrganisms.length;
