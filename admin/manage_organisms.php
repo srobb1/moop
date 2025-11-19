@@ -1,17 +1,9 @@
 <?php
-session_start();
-include_once 'admin_access_check.php';
+include_once __DIR__ . '/admin_init.php';
 
-// Get config BEFORE including head and navbar
-$config = ConfigManager::getInstance();
-$header_img = $config->getString('header_img');
-$images_path = $config->getString('images_path');
-$site = $config->getString('site');
+// Load page-specific config
 $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
-
-include_once __DIR__ . '/../includes/navigation.php';
-include_once __DIR__ . '/../tools/moop_functions.php';
 
 // Handle AJAX fix permissions request
 if (isset($_POST['action']) && $_POST['action'] === 'fix_permissions' && isset($_POST['organism'])) {

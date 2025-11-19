@@ -1,15 +1,5 @@
 <?php
-session_start();
-include_once 'admin_access_check.php';
-
-// Get config BEFORE including head and navbar
-$config = ConfigManager::getInstance();
-$header_img = $config->getString('header_img');
-$images_path = $config->getString('images_path');
-$site = $config->getString('site');
-
-include_once '../includes/head.php';
-include_once '../includes/navbar.php';
+include_once __DIR__ . '/admin_init.php';
 ?>
 
 <!DOCTYPE html>

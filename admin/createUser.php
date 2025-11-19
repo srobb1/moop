@@ -1,18 +1,8 @@
 <?php
-session_start();
-include_once 'admin_access_check.php';
+include_once __DIR__ . '/admin_init.php';
 
-// Get config BEFORE including head and navbar
-$config = ConfigManager::getInstance();
-$header_img = $config->getString('header_img');
-$images_path = $config->getString('images_path');
-$site = $config->getString('site');
+// Load page-specific config
 $usersFile = $config->getPath('users_file');
-
-include_once '../includes/head.php';
-include_once '../includes/navbar.php';
-include_once '../includes/navigation.php';
-include_once '../tools/moop_functions.php';
 
 $users = [];
 $file_write_error = null;

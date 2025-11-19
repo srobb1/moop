@@ -1,20 +1,10 @@
 <?php
-session_start();
-include_once 'admin_access_check.php';
+include_once __DIR__ . '/admin_init.php';
 
-// Get config BEFORE including head and navbar
-$config = ConfigManager::getInstance();
-$header_img = $config->getString('header_img');
-$images_path = $config->getString('images_path');
-$site = $config->getString('site');
+// Load page-specific config
 $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
 $absolute_images_path = $config->getPath('absolute_images_path');
-
-include_once '../includes/head.php';
-include_once '../includes/navbar.php';
-include_once '../includes/navigation.php';
-include_once '../tools/moop_functions.php';
 
 $tree_config_file = "$metadata_path/phylo_tree_config.json";
 $organism_data_dir = $organism_data;

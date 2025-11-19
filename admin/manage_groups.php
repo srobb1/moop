@@ -1,16 +1,8 @@
 <?php
-session_start();
-include_once 'admin_access_check.php';
+include_once __DIR__ . '/admin_init.php';
 
-// Get config BEFORE including head and navbar
-$config = ConfigManager::getInstance();
-$header_img = $config->getString('header_img');
-$images_path = $config->getString('images_path');
-$site = $config->getString('site');
+// Load page-specific config
 $metadata_path = $config->getPath('metadata_path');
-
-include_once __DIR__ . '/../includes/navigation.php';
-include_once __DIR__ . '/../tools/moop_functions.php';
 
 $groups_file = $metadata_path . '/organism_assembly_groups.json';
 $file_write_error = null;

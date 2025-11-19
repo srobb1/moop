@@ -1,17 +1,8 @@
 <?php
-session_start();
-include_once 'admin_access_check.php';
+include_once __DIR__ . '/admin_init.php';
 
-// Get config BEFORE including head
-$config = ConfigManager::getInstance();
-$header_img = $config->getString('header_img');
-$images_path = $config->getString('images_path');
-$site = $config->getString('site');
+// Load page-specific config
 $metadata_path = $config->getPath('metadata_path');
-
-include_once __DIR__ . '/../includes/navigation.php';
-include_once __DIR__ . '/../tools/moop_functions.php';
-
 $config_file = "$metadata_path/annotation_config.json";
 
 // Load config using helper
