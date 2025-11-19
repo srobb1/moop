@@ -287,13 +287,13 @@ include_once __DIR__ . '/../includes/navbar.php';
                             placeholder="Filter by group, organism, or assembly..."
                             value="<?= htmlspecialchars($context_organism ?: $context_group) ?>"
                             >
-                        <a href="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']) ?>" class="btn btn-success">
+                        <button type="button" class="btn btn-success" onclick="clearSourceFilters();">
                             <i class="fa fa-times"></i> Clear Filters
-                        </a>
+                        </button>
                     </div>
                 </div>
                 <?php if (!empty($context_organism) || !empty($context_group) || !empty($context_assembly)): ?>
-                    <small class="form-text text-muted d-block mt-2"><i class="fa fa-filter"></i> 
+                    <small class="form-text text-muted d-block mt-2" id="filterMessage"><i class="fa fa-filter"></i> 
                         Showing only: 
                         <?php if (!empty($context_assembly)): ?>
                             <?= htmlspecialchars($context_organism . ' / ' . $context_assembly) ?>
@@ -680,6 +680,32 @@ function applyFilter() {
             }
         }
     });
+}
+
+// Clear source filters - shows all assemblies in the sources list without page reload
+function clearSourceFilters() {
+    const filterInput = document.getElementById('sourceFilter');
+    const sourceLines = document.querySelectorAll('.fasta-source-line');
+    const filterMessage = document.getElementById('filterMessage');
+    
+    if (filterInput) {
+        filterInput.value = '';
+    }
+    
+    // Show all source lines (remove hidden class)
+    sourceLines.forEach(line => {
+        line.classList.remove('hidden');
+    });
+    
+    // Hide the filter message
+    if (filterMessage) {
+        filterMessage.style.display = 'none';
+    }
+    
+    // Focus back on filter input
+    if (filterInput) {
+        filterInput.focus();
+    }
 }
 
 // Initialize on page load
