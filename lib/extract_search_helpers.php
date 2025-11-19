@@ -58,16 +58,17 @@ function parseOrganismParameter($organisms_param, $context_organism = '') {
 /**
  * Extract context parameters needed for navigation (back button, etc.)
  * 
- * Checks GET first (initial load from display page), then POST context_ fields (form resubmission)
+ * Checks explicit context_* fields first (highest priority), then regular fields as fallback
  * 
- * @return array - ['organism' => '', 'assembly' => '', 'group' => '', 'display_name' => '']
+ * @return array - ['organism' => '', 'assembly' => '', 'group' => '', 'display_name' => '', 'context_page' => '']
  */
 function parseContextParameters() {
     return [
-        'organism' => trim($_GET['organism'] ?? $_POST['context_organism'] ?? ''),
-        'assembly' => trim($_GET['assembly'] ?? $_POST['context_assembly'] ?? ''),
-        'group' => trim($_GET['group'] ?? $_POST['context_group'] ?? ''),
-        'display_name' => trim($_GET['display_name'] ?? $_POST['display_name'] ?? '')
+        'organism' => trim($_GET['context_organism'] ?? $_POST['context_organism'] ?? $_GET['organism'] ?? $_POST['organism'] ?? ''),
+        'assembly' => trim($_GET['context_assembly'] ?? $_POST['context_assembly'] ?? $_GET['assembly'] ?? $_POST['assembly'] ?? ''),
+        'group' => trim($_GET['context_group'] ?? $_POST['context_group'] ?? $_GET['group'] ?? $_POST['group'] ?? ''),
+        'display_name' => trim($_GET['display_name'] ?? $_POST['display_name'] ?? ''),
+        'context_page' => trim($_GET['context_page'] ?? $_POST['context_page'] ?? '')
     ];
 }
 

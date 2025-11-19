@@ -178,6 +178,7 @@ const pageContext = {
     context_organism: '',
     context_assembly: '',
     context_group: '',
+    context_page: 'multi_organism_search',
     organisms: <?= json_encode(is_array($organisms) ? implode(',', $organisms) : $organisms) ?>,
     display_name: ''
 };

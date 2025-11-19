@@ -116,6 +116,9 @@ const DataTableExportConfig = {
             if (pageContext.context_group) {
                 formUrl += '&context_group=' + encodeURIComponent(pageContext.context_group);
             }
+            if (pageContext.context_page) {
+                formUrl += '&context_page=' + encodeURIComponent(pageContext.context_page);
+            }
             if (pageContext.organisms) {
                 formUrl += '&organisms=' + encodeURIComponent(pageContext.organisms);
             }

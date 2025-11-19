@@ -334,7 +334,20 @@ function renderToolNav($context, $btn_class) {
         return $html;
     }
     
-    // Priority 1: Back to assembly
+    // Priority 1: Back to group (check explicit context first)
+    if (!empty($context['group'])) {
+        $display_label = $context['display_name'] ?: htmlspecialchars($context['group']);
+        $html .= sprintf(
+            '<a href="/%s/tools/groups_display.php?group=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
+            htmlspecialchars($site),
+            urlencode($context['group']),
+            htmlspecialchars($btn_class),
+            $display_label
+        );
+        return $html;
+    }
+    
+    // Priority 2: Back to assembly (check explicit context)
     if (!empty($context['assembly']) && !empty($context['organism'])) {
         $display_label = $context['display_name'] ?: formatOrganismName($context['assembly']);
         $html .= sprintf(
@@ -345,29 +358,16 @@ function renderToolNav($context, $btn_class) {
             htmlspecialchars($btn_class),
             $display_label
         );
-        return $html;  // Don't show other options if assembly is available
+        return $html;
     }
     
-    // Priority 2: Back to organism
+    // Priority 3: Back to organism (check explicit context)
     if (!empty($context['organism'])) {
         $display_label = $context['display_name'] ?: formatOrganismName($context['organism']);
         $html .= sprintf(
             '<a href="/%s/tools/organism_display.php?organism=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
             htmlspecialchars($site),
             urlencode($context['organism']),
-            htmlspecialchars($btn_class),
-            $display_label
-        );
-        return $html;
-    }
-    
-    // Priority 3: Back to group
-    if (!empty($context['group'])) {
-        $display_label = $context['display_name'] ?: htmlspecialchars($context['group']);
-        $html .= sprintf(
-            '<a href="/%s/tools/groups_display.php?group=%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to %s</a>',
-            htmlspecialchars($site),
-            urlencode($context['group']),
             htmlspecialchars($btn_class),
             $display_label
         );

@@ -254,6 +254,7 @@ const pageContext = {
     context_organism: '',
     context_assembly: '',
     context_group: '<?= htmlspecialchars($group_name) ?>',
+    context_page: 'groups_display',
     organisms: '',
     display_name: ''
 };
