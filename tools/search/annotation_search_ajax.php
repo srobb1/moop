@@ -7,15 +7,11 @@
 // Start output buffering to catch any errors
 ob_start();
 
-session_start();
-include_once __DIR__ . '/../../includes/access_control.php';
+include_once __DIR__ . '/../tool_init.php';
 include_once __DIR__ . '/search_functions.php';
-include_once __DIR__ . '/../moop_functions.php';
 
-// Get config
-$config = ConfigManager::getInstance();
+// Load page-specific config
 $organism_data = $config->getPath('organism_data');
-$images_path = $config->getString('images_path');
 $absolute_images_path = $config->getPath('absolute_images_path');
 
 // Clear any output that might have occurred

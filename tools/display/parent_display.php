@@ -1,13 +1,8 @@
 <?php
-// Include access control and configuration
-include_once __DIR__ . '/../../includes/access_control.php';
-include_once __DIR__ . '/../../includes/navigation.php';
-include_once realpath(__DIR__ . '/../moop_functions.php');
+include_once __DIR__ . '/../tool_init.php';
 include_once __DIR__ . '/parent_functions.php';
 
-// Get config
-$config = ConfigManager::getInstance();
-$header_img = $config->getString('header_img');
+// Load page-specific config
 $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
 $sequence_types = $config->getSequenceTypes();

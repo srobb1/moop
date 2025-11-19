@@ -1,17 +1,11 @@
 <?php
-include_once __DIR__ . '/../../includes/access_control.php';
-include_once __DIR__ . '/../../includes/navigation.php';
-include_once __DIR__ . '/../moop_functions.php';
+include_once __DIR__ . '/../tool_init.php';
 
-// Get config
-$config = ConfigManager::getInstance();
+// Load page-specific config
 $metadata_path = $config->getPath('metadata_path');
 $organism_data = $config->getPath('organism_data');
-$images_path = $config->getString('images_path');
 $absolute_images_path = $config->getPath('absolute_images_path');
-$site = $config->getString('site');
 $siteTitle = $config->getString('siteTitle');
-$header_img = $config->getString('header_img');
 
 // Get the group name from query parameter
 $group_name = $_GET['group'] ?? '';

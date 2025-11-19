@@ -13,21 +13,13 @@
  * - See: blast_functions.php executeBlastSearch() function for result file handling
  */
 
-session_start();
-
-include_once __DIR__ . '/../../includes/config_init.php';
-include_once __DIR__ . '/../../includes/access_control.php';
-include_once __DIR__ . '/../../includes/navigation.php';
-include_once __DIR__ . '/../moop_functions.php';
+include_once __DIR__ . '/../tool_init.php';
 include_once __DIR__ . '/../blast_functions.php';
 include_once __DIR__ . '/../blast_results_visualizer.php';
 
-// Get config
-$config = ConfigManager::getInstance();
+// Load page-specific config
 $organism_data = $config->getPath('organism_data');
-$site = $config->getString('site');
 $admin_email = $config->getString('admin_email');
-$header_img = $config->getString('header_img');
 $images_path = $config->getString('images_path');
 $sequence_types = $config->getSequenceTypes();
 

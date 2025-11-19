@@ -6,8 +6,6 @@
  * Uses blastdbcmd to extract from FASTA BLAST databases
  */
 
-session_start();
-
 // Start output buffering to prevent any stray whitespace from includes
 // affecting file downloads or headers
 ob_start();
@@ -17,22 +15,15 @@ $sequence_ids_provided = !empty($_POST['uniquenames']);
 $download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
 $sequence_type = trim($_POST['sequence_type'] ?? '');
 
-include_once __DIR__ . '/../../includes/config_init.php';
-include_once __DIR__ . '/../../includes/access_control.php';
-include_once __DIR__ . '/../../includes/navigation.php';
-include_once __DIR__ . '/../moop_functions.php';
+include_once __DIR__ . '/../tool_init.php';
 include_once __DIR__ . '/../blast_functions.php';
 include_once __DIR__ . '/../extract_search_helpers.php';
 
-// Get config
-$config = ConfigManager::getInstance();
+// Load page-specific config
 $organism_data = $config->getPath('organism_data');
 $sequence_types = $config->getSequenceTypes();
 $admin_email = $config->getString('admin_email');
-$site = $config->getString('site');
 $siteTitle = $config->getString('siteTitle');
-$header_img = $config->getString('header_img');
-$images_path = $config->getString('images_path');
 
 // Discard any output from includes
 ob_end_clean();

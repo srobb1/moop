@@ -1,15 +1,9 @@
 <?php
-include_once __DIR__ . '/../../includes/access_control.php';
-include_once __DIR__ . '/../../includes/navigation.php';
-include_once __DIR__ . '/../moop_functions.php';
+include_once __DIR__ . '/../tool_init.php';
 
-// Get config
-$config = ConfigManager::getInstance();
+// Load page-specific config
 $organism_data = $config->getPath('organism_data');
-$images_path = $config->getString('images_path');
 $absolute_images_path = $config->getPath('absolute_images_path');
-$site = $config->getString('site');
-$header_img = $config->getString('header_img');
 
 // Get organisms from query parameters
 $organisms = $_GET['organisms'] ?? [];
