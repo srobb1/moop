@@ -90,6 +90,12 @@ if (!empty($sequence_ids_provided)) {
         }
     }
     
+    // Set download error message if extraction had errors
+    $download_error_msg = '';
+    if (!empty($extraction_errors)) {
+        $download_error_msg = implode(' ', $extraction_errors);
+    }
+    
     // If download flag is set and we have content, send the specific sequence type
     if ($download_file_flag && !empty($sequence_type) && isset($displayed_content[$sequence_type])) {
         $file_format = $_POST['file_format'] ?? 'fasta';

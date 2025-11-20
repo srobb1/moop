@@ -175,6 +175,11 @@ function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_type
             } else {
                 $errors[] = "Failed to extract $seq_type sequences";
             }
+            
+            // Capture "no sequences found" error even when success is true
+            if (!empty($extract_result['error']) && empty($extract_result['content'])) {
+                $errors[] = $extract_result['error'];
+            }
         }
     }
     
