@@ -150,17 +150,7 @@ include_once __DIR__ . '/../includes/navbar.php';
 </head>
 <body>
 <div class="container">
-    <div class="mb-4">
-        <?php
-        $nav_context = buildNavContext('tool', [
-            'organism' => $context['organism'],
-            'assembly' => $context['assembly'],
-            'group' => $context['group'],
-            'display_name' => $context['display_name']
-        ]);
-        echo render_navigation_buttons($nav_context);
-        ?>
-    </div>
+    <div class="mb-4"></div>
 
     <h2 class="mb-4"><i class="fa fa-dna"></i> Download Selected Sequences</h2>
 

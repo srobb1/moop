@@ -60,7 +60,7 @@ include_once __DIR__ . '/includes/header.php';
     <div class="row g-4 justify-content-center">
       <?php foreach ($cards_to_display as $card): ?>
         <div class="col-md-6 col-lg-4">
-          <a href="<?= htmlspecialchars($card['link']) ?>" class="text-decoration-none">
+          <a href="<?= htmlspecialchars($card['link']) ?>" target="_blank" class="text-decoration-none">
             <div class="card h-100 shadow-sm border-0 rounded-3 organism-card">
               <div class="card-body text-center d-flex flex-column">
                 <div class="mb-3">

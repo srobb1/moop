@@ -146,17 +146,6 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 
 <!-- Navigation -->
 <div class="margin-20">
-    <div class="mb-3">
-        <?php
-        // Build navigation context using smart builder
-        $nav_context = buildNavContext('parent', [
-            'organism' => $organism_name,
-            'genus' => $genus ?? '',
-            'species' => $species ?? ''
-        ]);
-        echo render_navigation_buttons($nav_context);
-        ?>
-    </div>
 </div>
 
     <!-- Feature Header and Tools Row -->

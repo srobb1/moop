@@ -1,7 +1,7 @@
 <?php
 /**
  * AUTO-GENERATED FUNCTION REGISTRY
- * Generated: 2025-11-20 16:16:17
+ * Generated: 2025-11-20 21:54:18
  * To regenerate, run: php tools/generate_registry.php
  */
 
@@ -2650,7 +2650,7 @@ JS;
       'name' => 'parseContextParameters',
       'line' => 65,
       'comment' => '/**
-* Extract context parameters needed for navigation (back button, etc.)
+* Extract context parameters from request
 *
 * Checks explicit context_* fields first (highest priority), then regular fields as fallback
 *

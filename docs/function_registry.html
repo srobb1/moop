@@ -46,7 +46,7 @@
     <header>
         <div class="container">
             <h1>🔍 MOOP Function Registry</h1>
-            <p>Auto-generated function documentation • Generated: 2025-11-20 16:16:17</p>
+            <p>Auto-generated function documentation • Generated: 2025-11-20 21:54:18</p>
         </div>
     </header>
     <div class="container">
@@ -95,7 +95,7 @@
                                 <small>* @param array $databases Array of databases from getBlastDatabases()</small></li>
                             <li><code>/data/moop/tools/blast.php:122</code><br>
                                 <small>$all_dbs = getBlastDatabases($selected_source_obj[&#039;path&#039;]);</small></li>
-                            <li><code>/data/moop/tools/blast.php:611</code><br>
+                            <li><code>/data/moop/tools/blast.php:599</code><br>
                                 <small>$dbs = getBlastDatabases($source[&#039;path&#039;]);</small></li>
                         </ul>
                     </div>
@@ -1438,7 +1438,7 @@
                                 <small>function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr</small></li>
                             <li><code>/data/moop/lib/function_registry.php:1166</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function generateCompleteBlastVisualization($blast_result, $query_seq</small></li>
-                            <li><code>/data/moop/tools/blast.php:570</code><br>
+                            <li><code>/data/moop/tools/blast.php:558</code><br>
                                 <small>&lt;?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_prog</small></li>
                         </ul>
                     </div>
@@ -2561,7 +2561,7 @@
                                 <small>function getToggleQuerySectionScript() {</small></li>
                             <li><code>/data/moop/lib/function_registry.php:2127</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function getToggleQuerySectionScript() {</small></li>
-                            <li><code>/data/moop/tools/blast.php:567</code><br>
+                            <li><code>/data/moop/tools/blast.php:555</code><br>
                                 <small>&lt;?= getToggleQuerySectionScript() ?&gt;</small></li>
                         </ul>
                     </div>
@@ -3352,7 +3352,7 @@ JS;
                     </div>
                     <div class="function-comment">
                         <pre>/**
-* Extract context parameters needed for navigation (back button, etc.)
+* Extract context parameters from request
 *
 * Checks explicit context_* fields first (highest priority), then regular fields as fallback
 *
@@ -3598,9 +3598,9 @@ JS;
                                 <small>function formatSequenceResults($displayed_content, $sequence_types) {</small></li>
                             <li><code>/data/moop/lib/function_registry.php:2807</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function formatSequenceResults($displayed_content, $sequence_types) {</small></li>
-                            <li><code>/data/moop/tools/retrieve_selected_sequences.php:208</code><br>
+                            <li><code>/data/moop/tools/retrieve_selected_sequences.php:198</code><br>
                                 <small>$available_sequences = formatSequenceResults($displayed_content, $sequence_types</small></li>
-                            <li><code>/data/moop/tools/retrieve_sequences.php:283</code><br>
+                            <li><code>/data/moop/tools/retrieve_sequences.php:272</code><br>
                                 <small>$available_sequences = formatSequenceResults($displayed_content, $sequence_types</small></li>
                         </ul>
                     </div>
@@ -3785,7 +3785,7 @@ JS;
                                 <small>function assignGroupColors($sources_by_group) {</small></li>
                             <li><code>/data/moop/lib/function_registry.php:2916</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function assignGroupColors($sources_by_group) {</small></li>
-                            <li><code>/data/moop/tools/retrieve_sequences.php:201</code><br>
+                            <li><code>/data/moop/tools/retrieve_sequences.php:190</code><br>
                                 <small>$group_color_map = assignGroupColors($sources_by_group);</small></li>
                         </ul>
                     </div>
@@ -4148,11 +4148,11 @@ JS;
                                 <small>&#039;code&#039; =&gt; &#039;function getGroupData() {</small></li>
                             <li><code>/data/moop/lib/function_registry.php:3333</code><br>
                                 <small>* @param array $group_data Array of group data from getGroupData()</small></li>
-                            <li><code>/data/moop/tools/groups_display.php:23</code><br>
-                                <small>$group_data = getGroupData();</small></li>
-                            <li><code>/data/moop/tools/organism_display.php:197</code><br>
+                            <li><code>/data/moop/tools/organism_display.php:188</code><br>
                                 <small>$group_data = getGroupData();</small></li>
                             <li><code>/data/moop/tools/parent_display.php:25</code><br>
+                                <small>$group_data = getGroupData();</small></li>
+                            <li><code>/data/moop/tools/groups_display.php:23</code><br>
                                 <small>$group_data = getGroupData();</small></li>
                         </ul>
                     </div>
@@ -4371,9 +4371,9 @@ JS;
                                 <small>function getAssemblyFastaFiles($organism_name, $assembly_name) {</small></li>
                             <li><code>/data/moop/lib/function_registry.php:3299</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function getAssemblyFastaFiles($organism_name, $assembly_name) {</small></li>
-                            <li><code>/data/moop/tools/assembly_display.php:113</code><br>
+                            <li><code>/data/moop/tools/assembly_display.php:104</code><br>
                                 <small>$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);</small></li>
-                            <li><code>/data/moop/tools/organism_display.php:217</code><br>
+                            <li><code>/data/moop/tools/organism_display.php:208</code><br>
                                 <small>&lt;?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?&gt;</small></li>
                         </ul>
                     </div>
@@ -5125,7 +5125,7 @@ JS;
                                 <small>&#039;code&#039; =&gt; &#039;function loadOrganismAndGetImagePath($organism_name, $images_path = \</small></li>
                             <li><code>/data/moop/tools/annotation_search_ajax.php:76</code><br>
                                 <small>$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $ab</small></li>
-                            <li><code>/data/moop/tools/multi_organism_search.php:116</code><br>
+                            <li><code>/data/moop/tools/multi_organism_search.php:109</code><br>
                                 <small>$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $ab</small></li>
                         </ul>
                     </div>
@@ -5190,9 +5190,9 @@ JS;
                                 <small>$result[\&#039;image_path\&#039;] = getOrganismImagePath($organism_info, $images_path, $ab</small></li>
                             <li><code>/data/moop/lib/function_registry.php:3804</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function getOrganismImagePath($organism_info, $images_path = \&#039;moop/i</small></li>
-                            <li><code>/data/moop/tools/groups_display.php:187</code><br>
+                            <li><code>/data/moop/tools/organism_display.php:88</code><br>
                                 <small>$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images</small></li>
-                            <li><code>/data/moop/tools/organism_display.php:97</code><br>
+                            <li><code>/data/moop/tools/groups_display.php:180</code><br>
                                 <small>$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images</small></li>
                         </ul>
                     </div>
@@ -5263,7 +5263,7 @@ JS;
                                 <small>function getOrganismImageCaption($organism_info, $absolute_images_path = &#039;&#039;) {</small></li>
                             <li><code>/data/moop/lib/function_registry.php:3856</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function getOrganismImageCaption($organism_info, $absolute_images_pat</small></li>
-                            <li><code>/data/moop/tools/organism_display.php:98</code><br>
+                            <li><code>/data/moop/tools/organism_display.php:89</code><br>
                                 <small>$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);</small></li>
                         </ul>
                     </div>
@@ -6741,7 +6741,7 @@ JS;
                                 <small>function createOrganismToolContext($organism_name, $display_name = null) {</small></li>
                             <li><code>/data/moop/lib/function_registry.php:4897</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function createOrganismToolContext($organism_name, $display_name = nu</small></li>
-                            <li><code>/data/moop/tools/organism_display.php:74</code><br>
+                            <li><code>/data/moop/tools/organism_display.php:64</code><br>
                                 <small>$context = createOrganismToolContext($organism_name, $organism_info[&#039;common_name</small></li>
                         </ul>
                     </div>
@@ -6780,7 +6780,7 @@ JS;
                                 <small>function createAssemblyToolContext($organism_name, $assembly_accession, $display</small></li>
                             <li><code>/data/moop/lib/function_registry.php:4917</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function createAssemblyToolContext($organism_name, $assembly_accessio</small></li>
-                            <li><code>/data/moop/tools/assembly_display.php:81</code><br>
+                            <li><code>/data/moop/tools/assembly_display.php:72</code><br>
                                 <small>$context = createAssemblyToolContext($organism_name, $assembly_accession, $assem</small></li>
                         </ul>
                     </div>
@@ -6818,7 +6818,7 @@ JS;
                                 <small>function createGroupToolContext($group_name) {</small></li>
                             <li><code>/data/moop/lib/function_registry.php:4936</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function createGroupToolContext($group_name) {</small></li>
-                            <li><code>/data/moop/tools/groups_display.php:99</code><br>
+                            <li><code>/data/moop/tools/groups_display.php:92</code><br>
                                 <small>$context = createGroupToolContext($group_name);</small></li>
                         </ul>
                     </div>
@@ -6857,7 +6857,7 @@ JS;
                                 <small>function createFeatureToolContext($organism_name, $assembly_accession, $feature_</small></li>
                             <li><code>/data/moop/lib/function_registry.php:4956</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function createFeatureToolContext($organism_name, $assembly_accession</small></li>
-                            <li><code>/data/moop/tools/parent_display.php:209</code><br>
+                            <li><code>/data/moop/tools/parent_display.php:198</code><br>
                                 <small>$context = createFeatureToolContext($organism_name, $genome_accession, $feature_</small></li>
                         </ul>
                     </div>
@@ -6896,7 +6896,7 @@ JS;
                                 <small>function createMultiOrganismToolContext($organisms, $display_name = &#039;Multi-Organ</small></li>
                             <li><code>/data/moop/lib/function_registry.php:4976</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function createMultiOrganismToolContext($organisms, $display_name = \</small></li>
-                            <li><code>/data/moop/tools/multi_organism_search.php:86</code><br>
+                            <li><code>/data/moop/tools/multi_organism_search.php:79</code><br>
                                 <small>$context = createMultiOrganismToolContext($organisms);</small></li>
                         </ul>
                     </div>
@@ -7389,9 +7389,9 @@ JS;
                                 <small>function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno</small></li>
                             <li><code>/data/moop/lib/function_registry.php:5245</code><br>
                                 <small>&#039;code&#039; =&gt; &#039;function generateAnnotationTableHTML($results, $uniquename, $type, $c</small></li>
-                            <li><code>/data/moop/tools/parent_display.php:268</code><br>
+                            <li><code>/data/moop/tools/parent_display.php:257</code><br>
                                 <small>echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $co</small></li>
-                            <li><code>/data/moop/tools/parent_display.php:332</code><br>
+                            <li><code>/data/moop/tools/parent_display.php:321</code><br>
                                 <small>echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type,</small></li>
                         </ul>
                     </div>
@@ -7602,7 +7602,7 @@ JS;
                                 <small>&#039;code&#039; =&gt; &#039;function generateTreeHTML($feature_id, $dbFile, $prefix = \&#039;\&#039;, $is_l</small></li>
                             <li><code>/data/moop/lib/function_registry.php:5453</code><br>
                                 <small>$html .= generateTreeHTML($row[\&#039;feature_id\&#039;], $dbFile, $prefix, $is_last_child</small></li>
-                            <li><code>/data/moop/tools/parent_display.php:232</code><br>
+                            <li><code>/data/moop/tools/parent_display.php:221</code><br>
                                 <small>&lt;?= generateTreeHTML($feature_id, $db) ?&gt;</small></li>
                         </ul>
                     </div>

@@ -40,13 +40,6 @@ foreach ($organisms as $organism) {
 <?php include_once __DIR__ . '/../includes/navbar.php'; ?>
 
 <div class="container mt-5">
-  <?php
-  // Build navigation context for multi-organism search
-  $nav_context = buildNavContext('multi_search', [
-      'organisms' => $organisms
-  ]);
-  echo render_navigation_buttons($nav_context);
-  ?>
 
   <!-- Header and Tools Row -->
   <div class="row mb-4">
@@ -178,9 +171,10 @@ const pageContext = {
     context_organism: '',
     context_assembly: '',
     context_group: '',
-    context_page: 'multi_organism_search',
+    referrer_page: 'multi_organism_search',
     organisms: <?= json_encode(is_array($organisms) ? implode(',', $organisms) : $organisms) ?>,
-    display_name: ''
+    display_name: '',
+    multi_search: <?= json_encode(is_array($organisms) ? $organisms : [$organisms]) ?>
 };
 
 let allResults = [];

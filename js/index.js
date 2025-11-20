@@ -45,7 +45,7 @@ function handleToolClick(toolId) {
   
   // Build URL: /{site}{toolPath}?params
   const url = `/${siteName}${toolPath}${params.toString() ? '?' + params.toString() : ''}`;
-  window.location.href = url;
+  window.open(url, '_blank');
 }
 
 function switchView(view) {

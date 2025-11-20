@@ -117,10 +117,13 @@ const DataTableExportConfig = {
                 formUrl += '&context_group=' + encodeURIComponent(pageContext.context_group);
             }
             if (pageContext.context_page) {
-                formUrl += '&context_page=' + encodeURIComponent(pageContext.context_page);
+                            formUrl += '&context_page=' + encodeURIComponent(pageContext.context_page);
             }
-            if (pageContext.organisms) {
-                formUrl += '&organisms=' + encodeURIComponent(pageContext.organisms);
+            // Pass multi_search as array of organisms
+            if (pageContext.multi_search && Array.isArray(pageContext.multi_search)) {
+                pageContext.multi_search.forEach(org => {
+                    formUrl += '&multi_search[]=' + encodeURIComponent(org);
+                });
             }
             if (pageContext.display_name) {
                 formUrl += '&display_name=' + encodeURIComponent(pageContext.display_name);

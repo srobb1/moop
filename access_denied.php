@@ -1,7 +1,6 @@
 <?php
 session_start();
 include_once __DIR__ . '/includes/config_init.php';
-include_once __DIR__ . '/includes/navigation.php';
 include_once 'includes/head.php';
 
 $config = ConfigManager::getInstance();
@@ -62,11 +61,6 @@ $config = ConfigManager::getInstance();
     </div>
     
     <div class="d-grid gap-2">
-      <?php
-      $nav_context = buildNavContext('access_denied');
-      $nav_html = render_navigation_buttons($nav_context, ['include_home' => false]);
-      echo str_replace('btn-secondary', 'btn-outline-secondary btn-lg', $nav_html);
-      ?>
       <a href="/<?= htmlspecialchars($config->getString('site')) ?>/index.php" class="btn btn-primary btn-lg">
         <i class="fas fa-home"></i> Return to Home
       </a>

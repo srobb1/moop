@@ -35,15 +35,6 @@ if (empty($assembly_info)) {
 <?php include_once __DIR__ . '/../includes/navbar.php'; ?>
 
 <div class="container mt-5">
-  <?php
-  // Build navigation context using smart builder
-  $nav_context = buildNavContext('assembly', [
-      'organism' => $organism_name,
-      'assembly' => $assembly_accession,
-      'parent' => $_GET['parent'] ?? ''
-  ]);
-  echo render_navigation_buttons($nav_context);
-  ?>
 
   <!-- Assembly Header Section -->
 

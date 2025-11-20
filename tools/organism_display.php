@@ -25,16 +25,6 @@ $organism_info = $organism_context['info'];
 <?php include_once __DIR__ . '/../includes/navbar.php'; ?>
 
 <div class="container mt-5">
-  <?php
-  // Build navigation context using smart builder
-  $nav_context = buildNavContext('organism', [
-      'organism' => $organism_name,
-      'group' => $_GET['group'] ?? '',
-      'parent' => $_GET['parent'] ?? '',
-      'multi_search' => $_GET['multi_search'] ?? []
-  ]);
-  echo render_navigation_buttons($nav_context);
-  ?>
 
   <!-- Search Section -->
   <div class="row mb-4">
@@ -70,8 +60,9 @@ $organism_info = $organism_context['info'];
 
     <!-- Tools Column -->
     <div class="col-lg-4">
-      <?php 
+      <?php
       $context = createOrganismToolContext($organism_name, $organism_info['common_name'] ?? $organism_name);
+      $context['referrer_page'] = $_GET['referrer_page'] ?? '';
       include_once TOOL_SECTION_PATH;
       ?>
     </div>
@@ -219,6 +210,7 @@ $organism_info = $organism_context['info'];
                 <div class="card h-100 shadow-sm organism-card">
                   <div class="card-body text-center">
                     <a href="/<?= $site ?>/tools/assembly_display.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>" 
+                       target="_blank"
                        class="text-decoration-none">
                       <h5 class="card-title mb-3">
                         <?= htmlspecialchars($assembly) ?> <i class="fa fa-external-link-alt"></i>
@@ -285,9 +277,11 @@ const pageContext = {
     context_organism: '<?= htmlspecialchars($organism_name) ?>',
     context_assembly: '',
     context_group: '',
-    context_page: 'organism_display',
+    referrer_page: '<?= htmlspecialchars($_GET['referrer_page'] ?? '') ?>',
+    current_page: 'organism_display',
     organisms: '',
-    display_name: ''
+    display_name: '',
+    multi_search: <?= !empty($_GET['multi_search']) ? json_encode($_GET['multi_search']) : 'null' ?>
 };
 
 $('#organismSearchForm').on('submit', function(e) {

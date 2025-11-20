@@ -8,7 +8,7 @@
  * 
  * Provides unified handling for:
  * - Multi-organism parameter parsing (multiple input formats)
- * - Context extraction for navigation
+ * - Context parameter extraction
  * - Sequence extraction and formatting
  * - File download orchestration
  * - Source list organization
@@ -56,7 +56,7 @@ function parseOrganismParameter($organisms_param, $context_organism = '') {
 }
 
 /**
- * Extract context parameters needed for navigation (back button, etc.)
+ * Extract context parameters from request
  * 
  * Checks explicit context_* fields first (highest priority), then regular fields as fallback
  * 

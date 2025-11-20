@@ -123,18 +123,7 @@ include_once __DIR__ . '/../includes/navbar.php';
 
 <div class="container mt-5">
     <!-- Navigation Buttons -->
-    <div class="mb-3">
-        <?php
-        $nav_context = buildNavContext('tool', [
-            'organism' => $context['organism'],
-            'assembly' => $context['assembly'],
-            'group' => $context['group'],
-            'display_name' => $context['display_name'],
-            'multi_search' => $filter_organisms
-        ]);
-        echo render_navigation_buttons($nav_context);
-        ?>
-    </div>
+    <div class="mb-3"></div>
 
     <h2 class="mb-4"><i class="fa fa-dna"></i> Sequence Retrieval & Download</h2>
 

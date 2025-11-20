@@ -165,8 +165,6 @@ $organisms = getOrganisms();
 
 <div class="container mt-5">
   <?php
-  $nav_context = buildNavContext('admin_tool', ['tool' => 'createUser']);
-  echo render_navigation_buttons($nav_context);
   ?>
   
   <h2><i class="fa fa-users"></i> Manage Users</h2>

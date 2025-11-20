@@ -94,6 +94,7 @@ $use_onclick_handler = $context['page'] === 'index' && !empty($context['use_oncl
                     </button>
                 <?php else: ?>
                     <a href="<?= htmlspecialchars($tool['url']) ?>" 
+                       target="_blank"
                        class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
                        title="<?= htmlspecialchars($tool['description']) ?>">
                         <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>

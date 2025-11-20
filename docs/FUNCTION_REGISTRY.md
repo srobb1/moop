@@ -2,7 +2,7 @@
 
 **Auto-generated documentation**
 
-Generated: 2025-11-20 16:16:17
+Generated: 2025-11-20 21:54:18
 
 ## Summary
 
@@ -62,7 +62,7 @@ Located in: `lib/blast_functions.php` at line 20
 - `/data/moop/lib/function_registry.php` line 27: `\'code\' => \'function getBlastDatabases($assembly_path) {`
 - `/data/moop/lib/function_registry.php` line 76: `* @param array $databases Array of databases from getBlastDatabases()`
 - `/data/moop/tools/blast.php` line 122: `$all_dbs = getBlastDatabases($selected_source_obj[\'path\']);`
-- `/data/moop/tools/blast.php` line 611: `$dbs = getBlastDatabases($source[\'path\']);`
+- `/data/moop/tools/blast.php` line 599: `$dbs = getBlastDatabases($source[\'path\']);`
 
 ### `filterDatabasesByProgram()` (Line 69)
 
@@ -294,7 +294,7 @@ Located in: `lib/blast_results_visualizer.php` at line 730
 **Used in 3 file(s):**
 - `/data/moop/lib/blast_results_visualizer.php` line 730: `function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_program, $blast_options = []) {`
 - `/data/moop/lib/function_registry.php` line 1166: `\'code\' => \'function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_program, $blast_options = []) {`
-- `/data/moop/tools/blast.php` line 570: `<?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? []) ?>`
+- `/data/moop/tools/blast.php` line 558: `<?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? []) ?>`
 
 ### `generateHspVisualizationWithLines()` (Line 985)
 
@@ -480,7 +480,7 @@ Located in: `lib/blast_results_visualizer.php` at line 1659
 **Used in 3 file(s):**
 - `/data/moop/lib/blast_results_visualizer.php` line 1659: `function getToggleQuerySectionScript() {`
 - `/data/moop/lib/function_registry.php` line 2127: `\'code\' => \'function getToggleQuerySectionScript() {`
-- `/data/moop/tools/blast.php` line 567: `<?= getToggleQuerySectionScript() ?>`
+- `/data/moop/tools/blast.php` line 555: `<?= getToggleQuerySectionScript() ?>`
 
 ### `toggleQuerySection()` (Line 962)
 
@@ -792,7 +792,7 @@ Located in: `lib/extract_search_helpers.php` at line 65
 
 ```
 /**
-* Extract context parameters needed for navigation (back button, etc.)
+* Extract context parameters from request
 *
 * Checks explicit context_* fields first (highest priority), then regular fields as fallback
 *
@@ -901,8 +901,8 @@ Located in: `lib/extract_search_helpers.php` at line 197
 **Used in 4 file(s):**
 - `/data/moop/lib/extract_search_helpers.php` line 197: `function formatSequenceResults($displayed_content, $sequence_types) {`
 - `/data/moop/lib/function_registry.php` line 2807: `\'code\' => \'function formatSequenceResults($displayed_content, $sequence_types) {`
-- `/data/moop/tools/retrieve_selected_sequences.php` line 208: `$available_sequences = formatSequenceResults($displayed_content, $sequence_types);`
-- `/data/moop/tools/retrieve_sequences.php` line 283: `$available_sequences = formatSequenceResults($displayed_content, $sequence_types);`
+- `/data/moop/tools/retrieve_selected_sequences.php` line 198: `$available_sequences = formatSequenceResults($displayed_content, $sequence_types);`
+- `/data/moop/tools/retrieve_sequences.php` line 272: `$available_sequences = formatSequenceResults($displayed_content, $sequence_types);`
 
 ### `sendFileDownload()` (Line 220)
 
@@ -995,7 +995,7 @@ Located in: `lib/extract_search_helpers.php` at line 290
 **Used in 3 file(s):**
 - `/data/moop/lib/extract_search_helpers.php` line 290: `function assignGroupColors($sources_by_group) {`
 - `/data/moop/lib/function_registry.php` line 2916: `\'code\' => \'function assignGroupColors($sources_by_group) {`
-- `/data/moop/tools/retrieve_sequences.php` line 201: `$group_color_map = assignGroupColors($sources_by_group);`
+- `/data/moop/tools/retrieve_sequences.php` line 190: `$group_color_map = assignGroupColors($sources_by_group);`
 
 ### `getAvailableSequenceTypesForDisplay()` (Line 313)
 
@@ -1125,9 +1125,9 @@ Located in: `lib/functions_data.php` at line 12
 - `/data/moop/lib/functions_data.php` line 161: `* @param array $group_data Array of group data from getGroupData()`
 - `/data/moop/lib/function_registry.php` line 3164: `\'code\' => \'function getGroupData() {`
 - `/data/moop/lib/function_registry.php` line 3333: `* @param array $group_data Array of group data from getGroupData()`
-- `/data/moop/tools/groups_display.php` line 23: `$group_data = getGroupData();`
-- `/data/moop/tools/organism_display.php` line 197: `$group_data = getGroupData();`
+- `/data/moop/tools/organism_display.php` line 188: `$group_data = getGroupData();`
 - `/data/moop/tools/parent_display.php` line 25: `$group_data = getGroupData();`
+- `/data/moop/tools/groups_display.php` line 23: `$group_data = getGroupData();`
 
 ### `getAllGroupCards()` (Line 30)
 
@@ -1219,8 +1219,8 @@ Located in: `lib/functions_data.php` at line 131
 **Used in 4 file(s):**
 - `/data/moop/lib/functions_data.php` line 131: `function getAssemblyFastaFiles($organism_name, $assembly_name) {`
 - `/data/moop/lib/function_registry.php` line 3299: `\'code\' => \'function getAssemblyFastaFiles($organism_name, $assembly_name) {`
-- `/data/moop/tools/assembly_display.php` line 113: `$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);`
-- `/data/moop/tools/organism_display.php` line 217: `<?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?>`
+- `/data/moop/tools/assembly_display.php` line 104: `$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);`
+- `/data/moop/tools/organism_display.php` line 208: `<?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?>`
 
 ### `getIndexDisplayCards()` (Line 164)
 
@@ -1524,7 +1524,7 @@ Located in: `lib/functions_display.php` at line 18
 - `/data/moop/lib/functions_display.php` line 18: `function loadOrganismAndGetImagePath($organism_name, $images_path = \'moop/images\', $absolute_images_path = \'\') {`
 - `/data/moop/lib/function_registry.php` line 3766: `\'code\' => \'function loadOrganismAndGetImagePath($organism_name, $images_path = \\\'moop/images\\\', $absolute_images_path = \\\'\\\') {`
 - `/data/moop/tools/annotation_search_ajax.php` line 76: `$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);`
-- `/data/moop/tools/multi_organism_search.php` line 116: `$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);`
+- `/data/moop/tools/multi_organism_search.php` line 109: `$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);`
 
 ### `getOrganismImagePath()` (Line 10)
 
@@ -1555,8 +1555,8 @@ Located in: `lib/functions_display.php` at line 10
 - `/data/moop/lib/function_registry.php` line 3758: `* Loads organism.json file and returns the image path using getOrganismImagePath()`
 - `/data/moop/lib/function_registry.php` line 3780: `$result[\\\'image_path\\\'] = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
 - `/data/moop/lib/function_registry.php` line 3804: `\'code\' => \'function getOrganismImagePath($organism_info, $images_path = \\\'moop/images\\\', $absolute_images_path = \\\'\\\') {`
-- `/data/moop/tools/groups_display.php` line 187: `$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
-- `/data/moop/tools/organism_display.php` line 97: `$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
+- `/data/moop/tools/organism_display.php` line 88: `$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
+- `/data/moop/tools/groups_display.php` line 180: `$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
 
 ### `getOrganismImageCaption()` (Line 100)
 
@@ -1581,7 +1581,7 @@ Located in: `lib/functions_display.php` at line 100
 **Used in 3 file(s):**
 - `/data/moop/lib/functions_display.php` line 100: `function getOrganismImageCaption($organism_info, $absolute_images_path = \'\') {`
 - `/data/moop/lib/function_registry.php` line 3856: `\'code\' => \'function getOrganismImageCaption($organism_info, $absolute_images_path = \\\'\\\') {`
-- `/data/moop/tools/organism_display.php` line 98: `$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);`
+- `/data/moop/tools/organism_display.php` line 89: `$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);`
 
 ### `validateOrganismJson()` (Line 153)
 
@@ -2106,7 +2106,7 @@ Located in: `lib/functions_tools.php` at line 65
 **Used in 3 file(s):**
 - `/data/moop/lib/functions_tools.php` line 65: `function createOrganismToolContext($organism_name, $display_name = null) {`
 - `/data/moop/lib/function_registry.php` line 4897: `\'code\' => \'function createOrganismToolContext($organism_name, $display_name = null) {`
-- `/data/moop/tools/organism_display.php` line 74: `$context = createOrganismToolContext($organism_name, $organism_info[\'common_name\'] ?? $organism_name);`
+- `/data/moop/tools/organism_display.php` line 64: `$context = createOrganismToolContext($organism_name, $organism_info[\'common_name\'] ?? $organism_name);`
 
 ### `createAssemblyToolContext()` (Line 81)
 
@@ -2128,7 +2128,7 @@ Located in: `lib/functions_tools.php` at line 81
 **Used in 3 file(s):**
 - `/data/moop/lib/functions_tools.php` line 81: `function createAssemblyToolContext($organism_name, $assembly_accession, $display_name = null) {`
 - `/data/moop/lib/function_registry.php` line 4917: `\'code\' => \'function createAssemblyToolContext($organism_name, $assembly_accession, $display_name = null) {`
-- `/data/moop/tools/assembly_display.php` line 81: `$context = createAssemblyToolContext($organism_name, $assembly_accession, $assembly_info[\'genome_name\']);`
+- `/data/moop/tools/assembly_display.php` line 72: `$context = createAssemblyToolContext($organism_name, $assembly_accession, $assembly_info[\'genome_name\']);`
 
 ### `createGroupToolContext()` (Line 96)
 
@@ -2148,7 +2148,7 @@ Located in: `lib/functions_tools.php` at line 96
 **Used in 3 file(s):**
 - `/data/moop/lib/functions_tools.php` line 96: `function createGroupToolContext($group_name) {`
 - `/data/moop/lib/function_registry.php` line 4936: `\'code\' => \'function createGroupToolContext($group_name) {`
-- `/data/moop/tools/groups_display.php` line 99: `$context = createGroupToolContext($group_name);`
+- `/data/moop/tools/groups_display.php` line 92: `$context = createGroupToolContext($group_name);`
 
 ### `createFeatureToolContext()` (Line 112)
 
@@ -2170,7 +2170,7 @@ Located in: `lib/functions_tools.php` at line 112
 **Used in 3 file(s):**
 - `/data/moop/lib/functions_tools.php` line 112: `function createFeatureToolContext($organism_name, $assembly_accession, $feature_name) {`
 - `/data/moop/lib/function_registry.php` line 4956: `\'code\' => \'function createFeatureToolContext($organism_name, $assembly_accession, $feature_name) {`
-- `/data/moop/tools/parent_display.php` line 209: `$context = createFeatureToolContext($organism_name, $genome_accession, $feature_uniquename);`
+- `/data/moop/tools/parent_display.php` line 198: `$context = createFeatureToolContext($organism_name, $genome_accession, $feature_uniquename);`
 
 ### `createMultiOrganismToolContext()` (Line 128)
 
@@ -2191,7 +2191,7 @@ Located in: `lib/functions_tools.php` at line 128
 **Used in 3 file(s):**
 - `/data/moop/lib/functions_tools.php` line 128: `function createMultiOrganismToolContext($organisms, $display_name = \'Multi-Organism Search\') {`
 - `/data/moop/lib/function_registry.php` line 4976: `\'code\' => \'function createMultiOrganismToolContext($organisms, $display_name = \\\'Multi-Organism Search\\\') {`
-- `/data/moop/tools/multi_organism_search.php` line 86: `$context = createMultiOrganismToolContext($organisms);`
+- `/data/moop/tools/multi_organism_search.php` line 79: `$context = createMultiOrganismToolContext($organisms);`
 
 ---
 
@@ -2460,8 +2460,8 @@ Located in: `lib/parent_functions.php` at line 99
 - `/data/moop/lib/display_functions.php` line 9: `* ✓ generateAnnotationTableHTML() → parent_functions.php`
 - `/data/moop/lib/parent_functions.php` line 99: `function generateAnnotationTableHTML($results, $uniquename, $type, $count, $annotation_type, $desc, $color = \'warning\', $organism = \'\') {`
 - `/data/moop/lib/function_registry.php` line 5245: `\'code\' => \'function generateAnnotationTableHTML($results, $uniquename, $type, $count, $annotation_type, $desc, $color = \\\'warning\\\', $organism = \\\'\\\') {`
-- `/data/moop/tools/parent_display.php` line 268: `echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
-- `/data/moop/tools/parent_display.php` line 332: `echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
+- `/data/moop/tools/parent_display.php` line 257: `echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
+- `/data/moop/tools/parent_display.php` line 321: `echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
 
 ### `getAllAnnotationsForFeatures()` (Line 195)
 
@@ -2513,7 +2513,7 @@ Located in: `lib/parent_functions.php` at line 256
 - `/data/moop/lib/parent_functions.php` line 299: `$html .= generateTreeHTML($row[\'feature_id\'], $dbFile, $prefix, $is_last_child, $genome_ids);`
 - `/data/moop/lib/function_registry.php` line 5410: `\'code\' => \'function generateTreeHTML($feature_id, $dbFile, $prefix = \\\'\\\', $is_last = true, $genome_ids = []) {`
 - `/data/moop/lib/function_registry.php` line 5453: `$html .= generateTreeHTML($row[\\\'feature_id\\\'], $dbFile, $prefix, $is_last_child, $genome_ids);`
-- `/data/moop/tools/parent_display.php` line 232: `<?= generateTreeHTML($feature_id, $db) ?>`
+- `/data/moop/tools/parent_display.php` line 221: `<?= generateTreeHTML($feature_id, $db) ?>`
 
 ---
 

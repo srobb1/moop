@@ -6,7 +6,7 @@
  * - Session management
  * - Access control and role verification
  * - Configuration loading
- * - Common includes (head, navbar, navigation, functions)
+ * - Common includes (head, navbar, functions)
  * - Header image setup
  * 
  * USAGE - At the very top of any admin page, add ONE line:
@@ -42,7 +42,6 @@ $images_path = $config->getString('images_path');
 $site = $config->getString('site');
 
 // Load common includes
-include_once __DIR__ . '/../includes/navigation.php';
 include_once __DIR__ . '/../lib/moop_functions.php';
 include_once __DIR__ . '/../includes/head.php';
 include_once __DIR__ . '/../includes/navbar.php';

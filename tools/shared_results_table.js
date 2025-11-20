@@ -88,12 +88,21 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
                     <tbody>`;
     
     results.forEach(result => {
+        let featureUrl = `${sitePath}/${linkBasePath}?organism=${encodeURIComponent(organism)}&uniquename=${encodeURIComponent(result.feature_uniquename)}`;
+        
+        // Add multi_search context if available (from pageContext global variable)
+        if (typeof pageContext !== 'undefined' && pageContext.multi_search && Array.isArray(pageContext.multi_search)) {
+            pageContext.multi_search.forEach(org => {
+                featureUrl += '&multi_search[]=' + encodeURIComponent(org);
+            });
+        }
+        
         html += `
             <tr data-genome-accession="${encodeURIComponent(result.genome_accession || '')}">
                 <td><input type="checkbox" class="row-select"></td>
                 <td><em>${result.genus} ${result.species}</em><br><small class="text-muted">${result.common_name}</small></td>
                 <td>${result.feature_type}</td>
-                <td><a href="${sitePath}/${linkBasePath}?organism=${encodeURIComponent(organism)}&uniquename=${encodeURIComponent(result.feature_uniquename)}" target="_blank">${result.feature_uniquename}</a></td>
+                <td><a href="${featureUrl}" target="_blank">${result.feature_uniquename}</a></td>
                 <td>${result.feature_name}</td>
                 <td>${result.feature_description}</td>`;
         

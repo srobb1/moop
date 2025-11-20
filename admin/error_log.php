@@ -84,8 +84,6 @@ sort($organisms);
             <p class="text-muted">Last 100 logged errors</p>
             
             <?php
-            $nav_context = buildNavContext('admin_tool', ['tool' => 'error_log']);
-            echo render_navigation_buttons($nav_context);
             ?>
         </div>
     </div>

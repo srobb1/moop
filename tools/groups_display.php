@@ -53,13 +53,6 @@ if (!is_public_group($group_name)) {
 <?php include_once __DIR__ . '/../includes/navbar.php'; ?>
 
 <div class="container mt-5">
-  <?php
-  // Build navigation context using smart builder
-  $nav_context = buildNavContext('group', [
-      'group' => $group_name
-  ]);
-  echo render_navigation_buttons($nav_context);
-  ?>
 
   <!-- Header and Tools Row -->
   <div class="row mb-4">
@@ -254,7 +247,8 @@ const pageContext = {
     context_organism: '',
     context_assembly: '',
     context_group: '<?= htmlspecialchars($group_name) ?>',
-    context_page: 'groups_display',
+    referrer_page: '<?= htmlspecialchars($_GET['referrer_page'] ?? '') ?>',
+    current_page: 'groups_display',
     organisms: '',
     display_name: ''
 };
@@ -358,7 +352,7 @@ function displayOrganismResults(data) {
     
     // Insert the "Read More" button into the generated HTML
     const safeOrganism = organism.replace(/[^a-zA-Z0-9]/g, '_');
-    const organismUrl = sitePath + '/tools/organism_display.php?organism=' + encodeURIComponent(organism);
+    const organismUrl = sitePath + '/tools/organism_display.php?organism=' + encodeURIComponent(organism) + '';
     const readMoreBtn = `<a href="${organismUrl}" class="btn btn-sm btn-outline-primary ms-2 font-size-small">
                     <i class="fa fa-info-circle"></i> Read More
                 </a>`;

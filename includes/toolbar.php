@@ -19,6 +19,7 @@
   <div class="collapse navbar-collapse" id="collapsibleNavbar">
     <ul class="navbar-nav">
       <?php
+      echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/index.php"><i class="fa fa-home"></i> Home</a></li>';
 
           echo '<li class="nav-item"><a class="nav-link" href="/about.php">About</a></li>';
 

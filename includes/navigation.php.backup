@@ -99,7 +99,7 @@ function buildNavContext($page_type, $params = []) {
         'organism' => ['organism', 'group', 'assembly', 'parent', 'multi_search'],
         'group' => ['group'],
         'assembly' => ['organism', 'assembly', 'parent'],
-        'parent' => ['organism', 'genus', 'species'],
+        'parent' => ['organism', 'genus', 'species', 'multi_search'],
         'tool' => ['organism', 'assembly', 'group', 'parent', 'display_name', 'multi_search'],
         'admin_tool' => ['tool'],
         'multi_search' => ['organisms'],
@@ -282,6 +282,27 @@ function renderAssemblyNav($context, $btn_class) {
 function renderParentNav($context, $btn_class) {
     global $site;
     $html = '';
+    
+    // Priority 0: Back to multi-organism search (if came from multi-search)
+    if (!empty($context['multi_search'])) {
+        $organisms = $context['multi_search'];
+        $url = '/' . htmlspecialchars($site) . '/tools/multi_organism_search.php';
+        if (is_array($organisms) && !empty($organisms)) {
+            $query_params = [];
+            foreach ($organisms as $org) {
+                $query_params[] = 'organisms[]=' . urlencode($org);
+            }
+            if (!empty($query_params)) {
+                $url .= '?' . implode('&', $query_params);
+            }
+        }
+        $html .= sprintf(
+            '<a href="%s" class="btn %s btn-navigation"><i class="fa fa-arrow-left"></i> Back to Multi-Organism Search</a>',
+            $url,
+            htmlspecialchars($btn_class)
+        );
+        return $html;
+    }
     
     // Build organism display link text
     $organism_text = '';
