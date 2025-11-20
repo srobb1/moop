@@ -250,7 +250,6 @@ function initializeSourceListManager(options = {}) {
         });
     });
     
-    // Apply initial filter and auto-select first visible
+    // Apply initial filter only (don't auto-select - let caller decide)
     applySourceFilter(filterId, sourceListClass);
-    autoSelectFirstVisibleSource(radioName, sourceListClass, '.fasta-source-list');
 }

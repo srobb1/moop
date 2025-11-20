@@ -317,6 +317,12 @@ include_once __DIR__ . '/../includes/navbar.php';
             }
         });
         
+        // If no radio is checked (PHP didn't set one), select first visible
+        const anyChecked = document.querySelector('input[name="selected_source"]:checked');
+        if (!anyChecked) {
+            autoSelectFirstVisibleSource('selected_source', 'fasta-source-line');
+        }
+        
         // Dismiss error alert on form submission
         if (form) {
             form.addEventListener('submit', function() {
