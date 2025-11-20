@@ -219,7 +219,11 @@ include_once __DIR__ . '/../includes/navbar.php';
                                         value="<?= htmlspecialchars($source['organism'] . '|' . $source['assembly']) ?>"
                                         data-organism="<?= htmlspecialchars($source['organism']) ?>"
                                         data-assembly="<?= htmlspecialchars($source['assembly']) ?>"
-                                        <?php if ($first_visible_source): ?>checked<?php $first_visible_source = false; endif; ?>
+                                        <?php 
+                                            $radio_value = $source['organism'] . '|' . $source['assembly'];
+                                            $is_selected = ($selected_organism && $selected_assembly && $radio_value === "$selected_organism|$selected_assembly") || $first_visible_source;
+                                            if ($is_selected): ?>checked<?php $first_visible_source = false; endif; 
+                                        ?>
                                         >
                                     
                                     <!-- Group badge - colorful -->
