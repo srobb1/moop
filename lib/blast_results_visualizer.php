@@ -303,7 +303,7 @@ function generateHitsSummaryTable($results, $query_num = 1) {
     
     foreach ($results['hits'] as $idx => $hit) {
         $hit_num = $idx + 1;
-        $evalue_display = $hit['best_evalue'] < 1e-100 ? '0' : sprintf('%.2e', $hit['best_evalue']);
+        $evalue_display = sprintf('%.2e', $hit['best_evalue']);
         $query_coverage = $hit['query_coverage_percent'];
         $coverage_bar_width = min(100, $query_coverage);
         
@@ -483,7 +483,7 @@ function generateBlastGraphicalView($results) {
             $html .= '</g>';
             
             // E-value on the right
-            $evalue_display = $hsp['evalue'] < 1e-100 ? '0' : sprintf('%.2e', $hsp['evalue']);
+            $evalue_display = sprintf('%.2e', $hsp['evalue']);
             $html .= '<text x="' . ($left_margin + $img_width + 15) . '" y="' . ($current_y + 12) . '" font-size="10" fill="#333">' . $evalue_display . '</text>';
             
             $current_y += $canvas_height_per_row;
@@ -550,7 +550,7 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
     
     foreach ($results['hits'] as $hit_idx => $hit) {
         $hit_num = $hit_idx + 1;
-        $evalue_display = $hit['best_evalue'] < 1e-100 ? '0' : sprintf('%.2e', $hit['best_evalue']);
+        $evalue_display = sprintf('%.2e', $hit['best_evalue']);
         
         // Hit header card
         $html .= '<div id="query-' . $query_num . '-hit-' . $hit_num . '" style="padding: 15px;  scroll-margin-top: 20px; background: #f0f7ff; margin-bottom: 15px;">';
@@ -681,7 +681,7 @@ function generateBlastStatisticsSummary($results, $query_seq, $blast_program) {
     $best_hsp = $best_hit['hsps'][0];
     $html .= '<div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 6px; border-left: 4px solid #ffa726;">';
     $html .= '<div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">Best E-value</div>';
-    $evalue_display = $best_hit['best_evalue'] < 1e-100 ? '0' : sprintf('%.2e', $best_hit['best_evalue']);
+    $evalue_display = sprintf('%.2e', $best_hit['best_evalue']);
     $html .= '<div style="font-size: 24px; font-weight: bold;">' . $evalue_display . '</div>';
     $html .= '<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Top hit</div>';
     $html .= '</div>';
@@ -934,7 +934,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
         $query_num = $query_idx + 1;
         $query_name = !empty($query['query_desc']) ? htmlspecialchars($query['query_desc']) : 'Query ' . $query_num;
         $best_evalue = $query['total_hits'] > 0 ? $query['hits'][0]['best_evalue'] : PHP_FLOAT_MAX;
-        $best_evalue_display = $best_evalue < 1e-100 ? '0' : sprintf('%.2e', $best_evalue);
+        $best_evalue_display = $best_evalue < PHP_FLOAT_MAX ? sprintf('%.2e', $best_evalue) : 'N/A';
         
         $html .= '<tr style="cursor: pointer;" onclick="document.getElementById(\'query-' . $query_num . '\').scrollIntoView({behavior: \'smooth\', block: \'start\'});">';
         $html .= '<td><strong>' . $query_num . '</strong></td>';
