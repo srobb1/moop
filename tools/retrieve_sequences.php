@@ -266,7 +266,7 @@ include_once __DIR__ . '/../includes/navbar.php';
 
     <!-- Sequences Display Section -->
     <?php if (!empty($displayed_content)): ?>
-        <hr class="my-5">
+        <hr class="my-5" id="sequences-section">
         <?php
         // Set up variables for sequences_display.php
         $gene_name = $uniquenames_string;
@@ -320,6 +320,14 @@ include_once __DIR__ . '/../includes/navbar.php';
                     form.querySelector('input[name="organism"]').value = checked.dataset.organism;
                     form.querySelector('input[name="assembly"]').value = checked.dataset.assembly;
                 }
+                
+                // Scroll to sequences section after form submission
+                setTimeout(() => {
+                    const sequencesSection = document.getElementById('sequences-section');
+                    if (sequencesSection) {
+                        sequencesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 500);
             });
         }
 
