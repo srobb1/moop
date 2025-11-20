@@ -96,6 +96,9 @@ if (!empty($sequence_ids_provided)) {
         $download_error_msg = implode(' ', $extraction_errors);
     }
     
+    // Flag to scroll to results section if sequences were displayed
+    $should_scroll_to_results = !empty($displayed_content);
+    
     // If download flag is set and we have content, send the specific sequence type
     if ($download_file_flag && !empty($sequence_type) && isset($displayed_content[$sequence_type])) {
         $file_format = $_POST['file_format'] ?? 'fasta';
@@ -288,6 +291,14 @@ include_once __DIR__ . '/../includes/navbar.php';
         const form = document.getElementById('downloadForm');
         const errorAlert = document.querySelector('.alert-danger');
         
+        // Scroll to sequences section if results were found
+        <?php if ($should_scroll_to_results): ?>
+            const sequencesSection = document.getElementById('sequences-section');
+            if (sequencesSection) {
+                sequencesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        <?php endif; ?>
+        
         // Initialize source list manager with form-specific callback
         initializeSourceListManager({
             filterId: 'sourceFilter',
@@ -320,14 +331,6 @@ include_once __DIR__ . '/../includes/navbar.php';
                     form.querySelector('input[name="organism"]').value = checked.dataset.organism;
                     form.querySelector('input[name="assembly"]').value = checked.dataset.assembly;
                 }
-                
-                // Scroll to sequences section after form submission
-                setTimeout(() => {
-                    const sequencesSection = document.getElementById('sequences-section');
-                    if (sequencesSection) {
-                        sequencesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                }, 500);
             });
         }
 
