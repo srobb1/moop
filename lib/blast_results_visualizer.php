@@ -318,7 +318,7 @@ function generateHitsSummaryTable($results, $query_num = 1) {
             $coverage_color = '#dc3545'; // Red - low coverage
         }
         
-        $html .= '<tr style="cursor: pointer;" onclick="document.getElementById(\'query-' . $query_num . '-hit-' . $hit_num . '\').scrollIntoView({behavior: \'smooth\', block: \'start\'});">';
+        $html .= '<tr style="cursor: pointer;" onclick="const elem = document.getElementById(\'query-' . $query_num . '-hit-' . $hit_num . '\'); elem.scrollIntoView({behavior: \'smooth\', block: \'start\'}); highlightHitElement(elem);">';
         $html .= '<td><strong>' . $hit_num . '</strong></td>';
         $html .= '<td><small>' . htmlspecialchars(substr($hit['subject'], 0, 60)) . '</small></td>';
         $html .= '<td>';
@@ -1037,7 +1037,7 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn', 
     $html .= '.color-green { background-color: #77de75; }';
     $html .= '.color-purple { background-color: #e967f5; }';
     $html .= '.color-red { background-color: #e83a2d; }';
-    $html .= '.hit-highlight { background-color: #ffffcc !important; transition: background-color 0.3s ease-out; }';
+    $html .= '.hit-highlighted { background-color: #ffffcc !important; transition: background-color 0.3s ease-out; }';
     $html .= '.hsp-row:hover { background-color: rgba(100, 150, 255, 0.1); }';
     $html .= '</style>';
     

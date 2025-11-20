@@ -186,13 +186,13 @@ include_once __DIR__ . '/../includes/navbar.php';
                             placeholder="Filter by group, organism, or assembly..."
                             value="<?= htmlspecialchars($context['organism'] ?: $context['group']) ?>"
                             >
-                        <a href="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']) ?>" class="btn btn-success">
+                        <button type="button" class="btn btn-success" onclick="clearSourceFilters('sourceFilter', 'selected_source', 'fasta-source-line', 'filterMessage');">
                             <i class="fa fa-times"></i> Clear Filters
-                        </a>
+                        </button>
                     </div>
                 </div>
                 <?php if (!empty($filter_organisms)): ?>
-                    <small class="form-text text-muted d-block mt-2"><i class="fa fa-filter"></i> Showing only: <?= htmlspecialchars(implode(', ', $filter_organisms)) ?></small>
+                    <small class="form-text text-muted d-block mt-2" id="filterMessage"><i class="fa fa-filter"></i> Showing only: <?= htmlspecialchars(implode(', ', $filter_organisms)) ?></small>
                 <?php endif; ?>
                 
                 <!-- Scrollable list of sources -->
@@ -290,25 +290,22 @@ include_once __DIR__ . '/../includes/navbar.php';
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const filterInput = document.getElementById('sourceFilter');
-        const sourceLines = document.querySelectorAll('.fasta-source-line');
-        const radios = document.querySelectorAll('input[name="selected_source"]');
         const form = document.getElementById('downloadForm');
         const errorAlert = document.querySelector('.alert-danger');
         
-        // Function to apply filter
-        function applyFilter() {
-            const filterText = (filterInput.value || '').toLowerCase();
-            
-            sourceLines.forEach(line => {
-                const searchText = line.dataset.search || '';
-                if (filterText === '' || searchText.includes(filterText)) {
-                    line.classList.remove('hidden');
-                } else {
-                    line.classList.add('hidden');
+        // Initialize source list manager with form-specific callback
+        initializeSourceListManager({
+            filterId: 'sourceFilter',
+            radioName: 'selected_source',
+            sourceListClass: 'fasta-source-line',
+            onSelectionChange: function(radio) {
+                // Update hidden form fields when selection changes
+                if (form) {
+                    form.querySelector('input[name="organism"]').value = radio.dataset.organism;
+                    form.querySelector('input[name="assembly"]').value = radio.dataset.assembly;
                 }
-            });
-        }
+            }
+        });
         
         // Dismiss error alert on form submission
         if (form) {
@@ -320,25 +317,6 @@ include_once __DIR__ . '/../includes/navbar.php';
             });
         }
         
-        // Handle filter input
-        if (filterInput) {
-            filterInput.addEventListener('keyup', applyFilter);
-        }
-        
-        // Handle radio button selection
-        radios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                // Update hidden form fields
-                if (form) {
-                    form.querySelector('input[name="organism"]').value = this.dataset.organism;
-                    form.querySelector('input[name="assembly"]').value = this.dataset.assembly;
-                }
-            });
-        });
-        
-        // Auto-select first sequence type (but NOT the first assembly)
-        // (No longer needed - we show all sequence types)
-        
         // Update hidden fields on form submit
         if (form) {
             form.addEventListener('submit', function(e) {
@@ -349,9 +327,6 @@ include_once __DIR__ . '/../includes/navbar.php';
                 }
             });
         }
-        
-        // Apply initial filter on page load if context_organism was set
-        applyFilter();
 
         // Handle copy to clipboard for sequences
         const copyables = document.querySelectorAll(".copyable");
@@ -417,6 +392,8 @@ include_once __DIR__ . '/../includes/navbar.php';
         });
     }, 500);
 </script>
+
+<script src="/<?= $site ?>/js/source_list_manager.js"></script>
 
 <?php include_once __DIR__ . '/../includes/footer.php'; ?>
 </body>

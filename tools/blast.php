@@ -664,58 +664,17 @@ function clearResults() {
     document.getElementById('query').focus();
 }
 
-// Apply filter function
-function applyFilter() {
-    const filterText = (document.getElementById('sourceFilter').value || '').toLowerCase();
-    const sourceLines = document.querySelectorAll('input[name="selected_source"]').forEach(radio => {
-        const line = radio.closest('.fasta-source-line');
-        if (line) {
-            const searchText = line.dataset.search || '';
-            // Show if: filter is empty OR search text matches OR matches context
-            const matchesText = filterText === '' || searchText.includes(filterText);
-            if (matchesText) {
-                line.classList.remove('hidden');
-            } else {
-                line.classList.add('hidden');
-            }
-        }
-    });
-}
-
-// Clear source filters - shows all assemblies in the sources list without page reload
-function clearSourceFilters() {
-    const filterInput = document.getElementById('sourceFilter');
-    const sourceLines = document.querySelectorAll('.fasta-source-line');
-    const filterMessage = document.getElementById('filterMessage');
-    
-    if (filterInput) {
-        filterInput.value = '';
-    }
-    
-    // Show all source lines (remove hidden class)
-    sourceLines.forEach(line => {
-        line.classList.remove('hidden');
-    });
-    
-    // Hide the filter message
-    if (filterMessage) {
-        filterMessage.style.display = 'none';
-    }
-    
-    // Focus back on filter input
-    if (filterInput) {
-        filterInput.focus();
-    }
-}
-
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    const filterInput = document.getElementById('sourceFilter');
-    
-    // Handle filter input
-    if (filterInput) {
-        filterInput.addEventListener('keyup', applyFilter);
-    }
+    // Initialize source list manager with callback for updating database list
+    initializeSourceListManager({
+        filterId: 'sourceFilter',
+        radioName: 'selected_source',
+        sourceListClass: 'fasta-source-line',
+        onSelectionChange: function(radio) {
+            updateDatabaseList();
+        }
+    });
     
     // Restore previously selected source (if form was resubmitted)
     if (previouslySelectedSource) {
@@ -796,8 +755,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Apply initial filter (context-based)
-    applyFilter();
     
     // Add sequence type detection on textarea change
     const queryTextarea = document.getElementById('query');
@@ -854,6 +811,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script src="/<?= $site ?>/js/tools_utilities.js"></script>
+<script src="/<?= $site ?>/js/source_list_manager.js"></script>
 
 <?php include_once __DIR__ . '/../includes/footer.php'; ?>
 
