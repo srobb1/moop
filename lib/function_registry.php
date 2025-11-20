@@ -1,7 +1,7 @@
 <?php
 /**
  * AUTO-GENERATED FUNCTION REGISTRY
- * Generated: 2025-11-20 16:11:29
+ * Generated: 2025-11-20 16:16:17
  * To regenerate, run: php tools/generate_registry.php
  */
 

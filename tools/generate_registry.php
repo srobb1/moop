@@ -459,6 +459,24 @@ function generateMarkdownDocs($registry) {
         foreach ($functions as $func) {
             $md .= "### `" . $func['name'] . "()` (Line " . $func['line'] . ")\n\n";
             $md .= "Located in: `" . $file . "` at line " . $func['line'] . "\n\n";
+            
+            // Show usage comment if exists
+            if (!empty($func['comment'])) {
+                $md .= "**Description:**\n\n";
+                $md .= "```\n" . $func['comment'] . "\n```\n\n";
+            }
+            
+            // Get usages for this function
+            $usages = findFunctionUsages($func['name'], [__DIR__ . '/../lib', __DIR__ . '/../tools'], $file);
+            if (!empty($usages)) {
+                $md .= "**Used in " . count($usages) . " file(s):**\n";
+                foreach ($usages as $usage) {
+                    $md .= "- `" . $usage['file'] . "` line " . $usage['line'] . ": `" . addslashes($usage['context']) . "`\n";
+                }
+            } else {
+                $md .= "**Used in: 0 files** (possibly unused)\n";
+            }
+            $md .= "\n";
         }
         
         $md .= "---\n\n";
