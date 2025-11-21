@@ -313,18 +313,9 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
         return $result;
     }
     
-    // Build list of IDs to search, including variants for parent/child relationships
-    $search_ids = [];
-    foreach ($sequence_ids as $id) {
-        $search_ids[] = $id;
-        // Also try with .1 suffix if not already present (for parent->child relationships)
-        if (substr($id, -2) !== '.1') {
-            $search_ids[] = $id . '.1';
-        }
-    }
-    
-    // Use blastdbcmd to extract sequences - it accepts comma-separated IDs
-    $ids_string = implode(',', $search_ids);
+    // Use blastdbcmd to extract sequences
+    // IDs have already been expanded via database lookup to include children
+    $ids_string = implode(',', $sequence_ids);
     $cmd = "blastdbcmd -db " . escapeshellarg($blast_db) . " -entry " . escapeshellarg($ids_string) . " 2>/dev/null";
     $output = [];
     $return_var = 0;

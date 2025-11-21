@@ -61,6 +61,8 @@ $accessible_sources = flattenSourcesList($sources_by_group);
 $selected_organism = trim($_POST['organism'] ?? '');
 $selected_assembly = trim($_POST['assembly'] ?? '');
 $displayed_content = [];
+$should_scroll_to_results = false;
+$uniquenames = [];
 
 // If sequence IDs are provided, extract ALL sequence types
 if (!empty($sequence_ids_provided)) {
@@ -208,6 +210,8 @@ include_once __DIR__ . '/../includes/navbar.php';
             <input type="hidden" name="context_assembly" value="<?= htmlspecialchars($context['assembly']) ?>">
             <input type="hidden" name="context_group" value="<?= htmlspecialchars($context['group']) ?>">
             <input type="hidden" name="display_name" value="<?= htmlspecialchars($context['display_name']) ?>">
+            <!-- Hidden field with expanded uniquenames for display purposes -->
+            <input type="hidden" id="expandedUniqueames" value="<?= htmlspecialchars(json_encode($uniquenames ?? [])) ?>">
 
             <!-- Source Selection with Compact Badges -->
             <div class="fasta-source-selector">
@@ -305,7 +309,18 @@ include_once __DIR__ . '/../includes/navbar.php';
             <div class="mb-4 p-3 bg-light border rounded">
                 <strong>IDs to Search:</strong>
                 <div id="searchIdsDisplay" style="margin-top: 8px; font-size: 14px; max-height: 150px; overflow-y: auto;">
-                    <span style="color: #999;">Enter IDs above to see expanded list (including children)</span>
+                    <?php if (!empty($uniquenames) && !empty($sequence_ids_provided)): ?>
+                        <?php foreach ($uniquenames as $id): ?>
+                            <?php $is_child = strpos($id, '.t') !== false || strpos($id, '.1') !== false; ?>
+                            <div style="padding: 4px 0;">
+                                <span style="background: <?= $is_child ? '#d4edda' : '#e8f4f8' ?>; padding: 2px 6px; border-radius: 3px;">
+                                    <?= htmlspecialchars($id) ?>
+                                </span>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <span style="color: #999;">Enter IDs above to see expanded list (including children)</span>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -315,6 +330,14 @@ include_once __DIR__ . '/../includes/navbar.php';
                     <i class="fa fa-eye"></i> Display All Sequences
                 </button>
             </div>
+            
+            <!-- Debug: Show the blastdbcmd command if one was generated -->
+            <?php if (!empty($debug_cmd)): ?>
+                <div class="mt-4 p-3 bg-info bg-opacity-10 border border-info rounded">
+                    <strong>Debug Command:</strong>
+                    <div style="margin-top: 8px; font-family: monospace; word-break: break-all; font-size: 12px;">
+                        <?= htmlspecialchars($debug_cmd) ?>
+                    </div>
         </form>
         </div>
     <?php endif; ?>
@@ -324,7 +347,7 @@ include_once __DIR__ . '/../includes/navbar.php';
         <hr class="my-5" id="sequences-section">
         <?php
         // Set up variables for sequences_display.php
-        $gene_name = $uniquenames_string;
+        $gene_name = implode(', ', $uniquenames);  // Use expanded uniquenames
         $organism_name = $selected_organism;
         $assembly_name = $selected_assembly;
         $enable_downloads = true;
