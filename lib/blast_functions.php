@@ -313,60 +313,15 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
         return $result;
     }
     
-    // Build list of IDs to search, including children if database lookup is available
+    // Build list of IDs to search, including variants for parent/child relationships
     $search_ids = [];
-    
-    if (!empty($organism) && !empty($assembly)) {
-        // Try database lookup for children
-        $config = ConfigManager::getInstance();
-        $organism_data = $config->getPath('organism_data');
-        $db_file = "$organism_data/$organism/$assembly/data.db";
-        
-        if (file_exists($db_file)) {
-            // Use database to find children for parent features
-            foreach ($sequence_ids as $id) {
-                $search_ids[] = $id;
-                
-                try {
-                    // First, lookup the feature by uniquename to get feature_id
-                    $feature_result = getFeatureByUniquename($id, $db_file);
-                    if (!empty($feature_result)) {
-                        $feature_id = $feature_result['feature_id'];
-                        // Now get children using feature_id
-                        $children = getChildren($feature_id, $db_file);
-                        if (!empty($children) && is_array($children)) {
-                            foreach ($children as $child) {
-                                if (is_array($child) && !empty($child['feature_uniquename'])) {
-                                    $search_ids[] = $child['feature_uniquename'];
-                                }
-                            }
-                        }
-                    }
-                } catch (Exception $e) {
-                    // If lookup fails, continue with original ID
-                }
-            }
-        } else {
-            // No database, fallback to simple .1 suffix approach
-            foreach ($sequence_ids as $id) {
-                $search_ids[] = $id;
-                if (substr($id, -2) !== '.1') {
-                    $search_ids[] = $id . '.1';
-                }
-            }
-        }
-    } else {
-        // No organism/assembly provided, use simple .1 suffix approach
-        foreach ($sequence_ids as $id) {
-            $search_ids[] = $id;
-            if (substr($id, -2) !== '.1') {
-                $search_ids[] = $id . '.1';
-            }
+    foreach ($sequence_ids as $id) {
+        $search_ids[] = $id;
+        // Also try with .1 suffix if not already present (for parent->child relationships)
+        if (substr($id, -2) !== '.1') {
+            $search_ids[] = $id . '.1';
         }
     }
-    
-    // Remove duplicates
-    $search_ids = array_unique($search_ids);
     
     // Use blastdbcmd to extract sequences - it accepts comma-separated IDs
     $ids_string = implode(',', $search_ids);

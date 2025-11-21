@@ -78,6 +78,32 @@ if (!empty($sequence_ids_provided)) {
             $extraction_errors[] = $id_parse['error'];
         } else {
             $uniquenames = $id_parse['uniquenames'];
+            
+            // Get children for each parent ID (like parent_display.php does)
+            try {
+                $config = ConfigManager::getInstance();
+                $organism_data = $config->getPath('organism_data');
+                $db = verifyOrganismDatabase($selected_organism, $organism_data);
+                
+                $expanded_uniquenames = [];
+                foreach ($uniquenames as $uniquename) {
+                    $expanded_uniquenames[] = $uniquename;
+                    
+                    // Lookup feature to get feature_id
+                    $feature_result = getFeatureByUniquename($uniquename, $db);
+                    if (!empty($feature_result)) {
+                        $feature_id = $feature_result['feature_id'];
+                        // Get all children
+                        $children = getChildren($feature_id, $db);
+                        foreach ($children as $child) {
+                            $expanded_uniquenames[] = $child['feature_uniquename'];
+                        }
+                    }
+                }
+                $uniquenames = array_unique($expanded_uniquenames);
+            } catch (Exception $e) {
+                // If database lookup fails, just use original IDs
+            }
         }
     }
     
