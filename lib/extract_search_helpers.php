@@ -175,10 +175,20 @@ function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_type
             } else {
                 $errors[] = "Failed to extract $seq_type sequences";
             }
-            
-            // Capture "no sequences found" error even when success is true
-            if (!empty($extract_result['error']) && empty($extract_result['content'])) {
-                $errors[] = $extract_result['error'];
+        }
+    }
+    
+    // Only report "no sequences found" errors if we got no content at all
+    if (empty($displayed_content)) {
+        foreach ($sequence_types as $seq_type => $config) {
+            $files = glob("$assembly_dir/*{$config['pattern']}");
+            if (!empty($files)) {
+                $fasta_file = $files[0];
+                $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames);
+                if (!empty($extract_result['error'])) {
+                    $errors[] = $extract_result['error'];
+                    break;
+                }
             }
         }
     }

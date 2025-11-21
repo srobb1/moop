@@ -6,6 +6,19 @@
  */
 
 /**
+ * Check if an element is visible (not hidden by display: none or hidden class)
+ * 
+ * @param {HTMLElement} element - Element to check
+ * @returns {boolean} True if element is visible
+ */
+function isSourceVisible(element) {
+    if (!element) return false;
+    if (element.classList.contains('hidden')) return false;
+    if (element.style.display === 'none') return false;
+    return true;
+}
+
+/**
  * Apply filter to source list based on search input
  * Shows/hides source items based on matching search text
  * 
@@ -40,14 +53,15 @@ function applySourceFilter(filterId = 'sourceFilter', sourceListClass = 'fasta-s
  * @param {string} radioName - Name attribute of radio buttons (default: 'selected_source')
  * @param {string} sourceListClass - CSS class of source line items (default: 'fasta-source-line')
  * @param {string} scrollContainerSelector - Selector for scrollable container (optional, e.g., '.fasta-source-list')
+ * @param {boolean} saveToSession - Whether to save to session storage (default: true)
  */
-function autoSelectFirstVisibleSource(radioName = 'selected_source', sourceListClass = 'fasta-source-line', scrollContainerSelector = null) {
+function autoSelectFirstVisibleSource(radioName = 'selected_source', sourceListClass = 'fasta-source-line', scrollContainerSelector = null, saveToSession = true) {
     const allRadios = document.querySelectorAll(`input[name="${radioName}"]`);
     let firstVisibleRadio = null;
     
     allRadios.forEach(radio => {
         const line = radio.closest('.' + sourceListClass);
-        if (line && !line.classList.contains('hidden')) {
+        if (line && isSourceVisible(line)) {
             if (!firstVisibleRadio) {
                 firstVisibleRadio = radio;
             }
@@ -61,6 +75,10 @@ function autoSelectFirstVisibleSource(radioName = 'selected_source', sourceListC
         firstVisibleRadio.checked = true;
         // Trigger change event to allow dependent updates
         firstVisibleRadio.dispatchEvent(new Event('change', { bubbles: true }));
+        // Save to session if requested
+        if (saveToSession) {
+            saveSourceSelection(radioName, sourceListClass);
+        }
         // Scroll into view if container is specified
         if (scrollContainerSelector) {
             scrollSourceIntoView(firstVisibleRadio, sourceListClass, scrollContainerSelector);
@@ -89,8 +107,7 @@ function scrollSourceIntoView(radio, sourceListClass = 'fasta-source-line', scro
 
 /**
  * Save the currently selected source to browser storage
- * Allows maintaining selection across filter operations
- * Saves the index position to handle duplicate organism|assembly pairs in different groups
+ * Saves organism, assembly, and the group badge to handle duplicates in different groups
  * 
  * @param {string} radioName - Name attribute of radio buttons (default: 'selected_source')
  * @param {string} sourceListClass - CSS class of source line items (default: 'fasta-source-line')
@@ -100,96 +117,104 @@ function saveSourceSelection(radioName = 'selected_source', sourceListClass = 'f
     if (checkedRadio) {
         const line = checkedRadio.closest('.' + sourceListClass);
         if (line) {
-            // Save both the value and the index to handle duplicate values in different groups
-            const allLines = document.querySelectorAll('.' + sourceListClass);
-            const index = Array.from(allLines).indexOf(line);
-            sessionStorage.setItem('lastSelectedSource', checkedRadio.value);
-            sessionStorage.setItem('lastSelectedSourceIndex', index.toString());
+            // Extract the group name from the first badge (group badge is first)
+            const groupBadge = line.querySelector('.badge');
+            const groupName = groupBadge ? groupBadge.textContent.trim() : '';
+            
+            // Save the selection details
+            sessionStorage.setItem('lastSelectedOrganism', checkedRadio.dataset.organism);
+            sessionStorage.setItem('lastSelectedAssembly', checkedRadio.dataset.assembly);
+            sessionStorage.setItem('lastSelectedGroup', groupName);
         }
     }
 }
 
 /**
  * Try to restore previously selected source if it's visible
- * Uses saved index to handle duplicate organism|assembly pairs in different groups
- * Falls back to first visible if saved selection is hidden
+ * Restores by organism, assembly, and group - will NOT jump to same assembly in different group
  * 
  * @param {string} radioName - Name attribute of radio buttons (default: 'selected_source')
  * @param {string} sourceListClass - CSS class of source line items (default: 'fasta-source-line')
- * @returns {HTMLElement|null} The restored radio button, or null if not found
+ * @returns {HTMLElement|null} The restored radio button, or null if not found/visible
  */
 function restoreSourceSelection(radioName = 'selected_source', sourceListClass = 'fasta-source-line') {
-    const savedSource = sessionStorage.getItem('lastSelectedSource');
-    const savedIndex = parseInt(sessionStorage.getItem('lastSelectedSourceIndex'), 10);
+    const savedOrganism = sessionStorage.getItem('lastSelectedOrganism');
+    const savedAssembly = sessionStorage.getItem('lastSelectedAssembly');
+    const savedGroup = sessionStorage.getItem('lastSelectedGroup');
     
-    if (!savedSource) {
+    // If no saved selection, return null (nothing to restore)
+    if (!savedOrganism || !savedAssembly) {
         return null;
     }
     
-    const allLines = document.querySelectorAll('.' + sourceListClass);
     const allRadios = document.querySelectorAll(`input[name="${radioName}"]`);
     let restoredRadio = null;
+    let fallbackRadio = null;
     
-    // Try to restore using the saved index first (most accurate)
-    if (!isNaN(savedIndex) && savedIndex < allLines.length) {
-        const savedLine = allLines[savedIndex];
-        const radio = savedLine.querySelector(`input[name="${radioName}"]`);
-        if (radio && radio.value === savedSource && !savedLine.classList.contains('hidden')) {
-            restoredRadio = radio;
-        }
-    }
-    
-    // If index restore failed, try to find by value (in case order changed)
-    if (!restoredRadio) {
-        allRadios.forEach(radio => {
-            if (radio.value === savedSource && !restoredRadio) {
-                const line = radio.closest('.' + sourceListClass);
-                if (line && !line.classList.contains('hidden')) {
+    // Find the EXACT radio with matching organism, assembly, AND group that is visible
+    allRadios.forEach(radio => {
+        if (radio.dataset.organism === savedOrganism && radio.dataset.assembly === savedAssembly) {
+            const line = radio.closest('.' + sourceListClass);
+            if (isSourceVisible(line)) {
+                // Check if this matches the saved group
+                const groupBadge = line.querySelector('.badge');
+                const groupName = groupBadge ? groupBadge.textContent.trim() : '';
+                
+                if (groupName === savedGroup) {
+                    // Exact match - preferred
                     restoredRadio = radio;
+                } else if (!fallbackRadio) {
+                    // Same organism-assembly but different group - fallback only
+                    fallbackRadio = radio;
                 }
             }
-        });
-    }
+        }
+    });
     
-    if (restoredRadio) {
-        // Uncheck all first
+    // Use exact match if found, otherwise use fallback
+    const targetRadio = restoredRadio || fallbackRadio;
+    
+    if (targetRadio) {
+        // Uncheck any currently checked radios
         allRadios.forEach(radio => radio.checked = false);
-        // Restore the saved one
-        restoredRadio.checked = true;
-        restoredRadio.dispatchEvent(new Event('change', { bubbles: true }));
+        // Check the target radio
+        targetRadio.checked = true;
+        // Trigger change event
+        targetRadio.dispatchEvent(new Event('change', { bubbles: true }));
         // Scroll into view
-        scrollSourceIntoView(restoredRadio, sourceListClass);
-        return restoredRadio;
+        scrollSourceIntoView(targetRadio, sourceListClass);
+        return targetRadio;
     }
     
-    // Saved selection is hidden, fall back to first visible
-    return autoSelectFirstVisibleSource(radioName, sourceListClass, '.fasta-source-list');
+    // Saved selection not found or not visible
+    return null;
 }
 
 /**
  * Clear all source filters and show all items
  * Maintains the previously selected source if it becomes visible
+ * Updates form hidden fields to reflect the selected assembly
  * 
  * @param {string} filterId - ID of the filter input element (default: 'sourceFilter')
  * @param {string} radioName - Name attribute of radio buttons (default: 'selected_source')
  * @param {string} sourceListClass - CSS class of source line items (default: 'fasta-source-line')
  * @param {string} filterMessageId - ID of the filter message element to hide (optional)
+ * @param {string} formId - ID of the form to update (default: 'downloadForm')
  */
-function clearSourceFilters(filterId = 'sourceFilter', radioName = 'selected_source', sourceListClass = 'fasta-source-line', filterMessageId = null) {
+function clearSourceFilters(filterId = 'sourceFilter', radioName = 'selected_source', sourceListClass = 'fasta-source-line', filterMessageId = null, formId = 'downloadForm') {
     const filterInput = document.getElementById(filterId);
     const sourceLines = document.querySelectorAll('.' + sourceListClass);
     const filterMessage = filterMessageId ? document.getElementById(filterMessageId) : null;
-    
-    // Save current selection before clearing
-    saveSourceSelection(radioName, sourceListClass);
+    const form = document.getElementById(formId);
     
     // Clear filter input
     if (filterInput) {
         filterInput.value = '';
     }
     
-    // Show all source lines (remove hidden class)
+    // Show all source lines (remove inline display: none)
     sourceLines.forEach(line => {
+        line.style.display = '';
         line.classList.remove('hidden');
     });
     
@@ -199,7 +224,18 @@ function clearSourceFilters(filterId = 'sourceFilter', radioName = 'selected_sou
     }
     
     // Try to restore previously selected source, or select first visible
-    const selectedRadio = restoreSourceSelection(radioName, sourceListClass);
+    let selectedRadio = restoreSourceSelection(radioName, sourceListClass);
+    
+    // If restore failed (saved selection not visible), select first visible
+    if (!selectedRadio) {
+        selectedRadio = autoSelectFirstVisibleSource(radioName, sourceListClass, '.fasta-source-list', false);
+    }
+    
+    // Update form hidden fields if we have a selected radio
+    if (selectedRadio && form) {
+        form.querySelector('input[name="organism"]').value = selectedRadio.dataset.organism;
+        form.querySelector('input[name="assembly"]').value = selectedRadio.dataset.assembly;
+    }
     
     // Focus back on filter input
     if (filterInput) {

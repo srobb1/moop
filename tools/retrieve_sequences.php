@@ -39,6 +39,13 @@ if ($trying_public_access) {
 
 // Parse context parameters and organism filters
 $context = parseContextParameters();
+
+// Check if clear_filter was clicked - if so, clear the context organism
+if (!empty($_POST['clear_filter'])) {
+    $context['organism'] = '';
+    $context['group'] = '';
+}
+
 $organisms_param = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
 $organism_result = parseOrganismParameter($organisms_param, $context['organism']);
 $filter_organisms = $organism_result['organisms'];
@@ -90,9 +97,9 @@ if (!empty($sequence_ids_provided)) {
         }
     }
     
-    // Set download error message if extraction had errors
+    // Set download error message only if no content was retrieved
     $download_error_msg = '';
-    if (!empty($extraction_errors)) {
+    if (empty($displayed_content) && !empty($extraction_errors)) {
         $download_error_msg = implode(' ', $extraction_errors);
     }
     
@@ -159,6 +166,12 @@ include_once __DIR__ . '/../includes/navbar.php';
             </div>
         <?php endif; ?>
 
+        <!-- Hidden Clear Filter Form (outside main form to prevent nesting) -->
+        <form method="POST" id="clearFilterForm" style="display: none;">
+            <input type="hidden" name="uniquenames" value="">
+            <input type="hidden" name="clear_filter" value="1">
+        </form>
+
         <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
             <form method="POST" id="downloadForm">
             <!-- Hidden fields for selected source (populated by JavaScript on submit) -->
@@ -184,7 +197,7 @@ include_once __DIR__ . '/../includes/navbar.php';
                             placeholder="Filter by group, organism, or assembly..."
                             value="<?= htmlspecialchars($context['organism'] ?: $context['group']) ?>"
                             >
-                        <button type="button" class="btn btn-success" onclick="clearSourceFilters('sourceFilter', 'selected_source', 'fasta-source-line', 'filterMessage');">
+                        <button type="button" class="btn btn-success" onclick="document.getElementById('clearFilterForm').submit();">
                             <i class="fa fa-times"></i> Clear Filters
                         </button>
                     </div>
@@ -197,7 +210,6 @@ include_once __DIR__ . '/../includes/navbar.php';
                 <div class="fasta-source-list">
                     <?php 
                     $group_color_map = assignGroupColors($sources_by_group);
-                    $first_visible_source = true;
                     
                     foreach ($sources_by_group as $group_name => $organisms): 
                         $group_color = $group_color_map[$group_name];
@@ -206,12 +218,11 @@ include_once __DIR__ . '/../includes/navbar.php';
                             foreach ($assemblies as $source): 
                                 $search_text = strtolower("$group_name $organism $source[assembly]");
                                 
-                                // Skip if organism filter is set and this organism is not in the filter list
-                                if (!empty($filter_organisms) && !in_array($organism, $filter_organisms)) {
-                                    continue;
-                                }
+                                // Determine if this source should be hidden due to organism filter on initial load
+                                $is_filtered_out = !empty($filter_organisms) && !in_array($organism, $filter_organisms);
+                                $display_style = $is_filtered_out ? ' style="display: none;"' : '';
                                 ?>
-                                <div class="fasta-source-line" data-search="<?= htmlspecialchars($search_text) ?>">
+                                <div class="fasta-source-line" data-search="<?= htmlspecialchars($search_text) ?>"<?= $display_style ?>>
                                     <!-- Radio selector at far left -->
                                     <input 
                                         type="radio" 
@@ -219,11 +230,6 @@ include_once __DIR__ . '/../includes/navbar.php';
                                         value="<?= htmlspecialchars($source['organism'] . '|' . $source['assembly']) ?>"
                                         data-organism="<?= htmlspecialchars($source['organism']) ?>"
                                         data-assembly="<?= htmlspecialchars($source['assembly']) ?>"
-                                        <?php 
-                                            $radio_value = $source['organism'] . '|' . $source['assembly'];
-                                            $is_selected = ($selected_organism && $selected_assembly && $radio_value === "$selected_organism|$selected_assembly") || $first_visible_source;
-                                            if ($is_selected): ?>checked<?php $first_visible_source = false; endif; 
-                                        ?>
                                         >
                                     
                                     <!-- Group badge - colorful -->
@@ -246,6 +252,14 @@ include_once __DIR__ . '/../includes/navbar.php';
                     endforeach; ?>
                 </div>
                 <small class="form-text text-muted d-block mt-2">Select an assembly from the list above.</small>
+            </div>
+
+            <!-- Current Selection Display -->
+            <div class="mb-4 p-3 bg-light border rounded">
+                <strong>Currently Selected:</strong>
+                <div id="currentSelection" style="margin-top: 8px; font-size: 14px;">
+                    <span style="color: #999;">None selected</span>
+                </div>
             </div>
 
             <!-- Feature ID Input -->
@@ -295,6 +309,29 @@ include_once __DIR__ . '/../includes/navbar.php';
         const form = document.getElementById('downloadForm');
         const errorAlert = document.querySelector('.alert-danger');
         
+        // Function to update the "Currently Selected" display text
+        function updateCurrentSelectionDisplay() {
+            const checked = document.querySelector('input[name="selected_source"]:checked');
+            const selectionDiv = document.getElementById('currentSelection');
+            
+            if (checked) {
+                const line = checked.closest('.fasta-source-line');
+                const groupBadge = line.querySelector('.badge');
+                const group = groupBadge ? groupBadge.textContent.trim() : 'Unknown';
+                const organism = checked.dataset.organism || 'Unknown';
+                const assembly = checked.dataset.assembly || 'Unknown';
+                const isHidden = line.style.display === 'none' ? ' ⚠️ (HIDDEN - FILTERED OUT)' : '';
+                
+                selectionDiv.innerHTML = `
+                    <div style="color: #28a745; font-weight: bold;">
+                        ${group} > ${organism} > ${assembly}${isHidden}
+                    </div>
+                `;
+            } else {
+                selectionDiv.innerHTML = '<span style="color: #999;">None selected</span>';
+            }
+        }
+        
         // Scroll to sequences section if results were found
         <?php if ($should_scroll_to_results): ?>
             const sequencesSection = document.getElementById('sequences-section');
@@ -314,14 +351,54 @@ include_once __DIR__ . '/../includes/navbar.php';
                     form.querySelector('input[name="organism"]').value = radio.dataset.organism;
                     form.querySelector('input[name="assembly"]').value = radio.dataset.assembly;
                 }
+                // Update display text
+                updateCurrentSelectionDisplay();
             }
         });
         
-        // If no radio is checked (PHP didn't set one), select first visible
+        // On page load, try to restore previous selection (if it's still visible)
         const anyChecked = document.querySelector('input[name="selected_source"]:checked');
         if (!anyChecked) {
-            autoSelectFirstVisibleSource('selected_source', 'fasta-source-line');
+            const selected = restoreSourceSelection('selected_source', 'fasta-source-line');
+            
+            // Update form fields if we restored a selection
+            if (selected && form) {
+                form.querySelector('input[name="organism"]').value = selected.dataset.organism;
+                form.querySelector('input[name="assembly"]').value = selected.dataset.assembly;
+            }
         }
+        
+        // Auto-uncheck any selected radio that is not visible (user filtered it out)
+        document.querySelectorAll('input[name="selected_source"]').forEach(radio => {
+            const line = radio.closest('.fasta-source-line');
+            if (line && !isSourceVisible(line)) {
+                // Hidden radios should never be checked
+                radio.checked = false;
+                radio.disabled = true;
+            } else {
+                // Visible radios can be used
+                radio.disabled = false;
+            }
+        });
+        
+        // Update display after disabling hidden radios
+        updateCurrentSelectionDisplay();
+        
+        // Also uncheck if checked radio becomes hidden
+        document.querySelectorAll('input[name="selected_source"]').forEach(radio => {
+            const line = radio.closest('.fasta-source-line');
+            if (radio.checked && line && !isSourceVisible(line)) {
+                radio.checked = false;
+                // Clear form fields
+                if (form) {
+                    form.querySelector('input[name="organism"]').value = '';
+                    form.querySelector('input[name="assembly"]').value = '';
+                }
+            }
+        });
+        
+        // Update display after unchecking hidden selections
+        updateCurrentSelectionDisplay();
         
         // Dismiss error alert on form submission
         if (form) {
@@ -333,14 +410,45 @@ include_once __DIR__ . '/../includes/navbar.php';
             });
         }
         
-        // Update hidden fields on form submit
+        // Update hidden fields on form submit and validate
         if (form) {
             form.addEventListener('submit', function(e) {
                 const checked = document.querySelector('input[name="selected_source"]:checked');
                 if (checked) {
                     form.querySelector('input[name="organism"]').value = checked.dataset.organism;
                     form.querySelector('input[name="assembly"]').value = checked.dataset.assembly;
+                } else {
+                    // No assembly selected - prevent submit and alert user
+                    e.preventDefault();
+                    alert('Please select an assembly before searching.');
+                    return false;
                 }
+            });
+        }
+        
+        // Add event listener for filter input changes
+        const filterInput = document.getElementById('sourceFilter');
+        if (filterInput) {
+            filterInput.addEventListener('keyup', function() {
+                // After filter is applied, check visibility and update display
+                setTimeout(function() {
+                    document.querySelectorAll('input[name="selected_source"]').forEach(radio => {
+                        const line = radio.closest('.fasta-source-line');
+                        if (line && !isSourceVisible(line)) {
+                            if (radio.checked) {
+                                radio.checked = false;
+                                if (form) {
+                                    form.querySelector('input[name="organism"]').value = '';
+                                    form.querySelector('input[name="assembly"]').value = '';
+                                }
+                            }
+                            radio.disabled = true;
+                        } else {
+                            radio.disabled = false;
+                        }
+                    });
+                    updateCurrentSelectionDisplay();
+                }, 10);
             });
         }
 
