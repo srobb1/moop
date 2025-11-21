@@ -313,6 +313,18 @@ include_once __DIR__ . '/../includes/navbar.php';
 </div>
 
 <script>
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+    
     document.addEventListener("DOMContentLoaded", function() {
         const form = document.getElementById('downloadForm');
         const errorAlert = document.querySelector('.alert-danger');
@@ -431,30 +443,37 @@ include_once __DIR__ . '/../includes/navbar.php';
         
         // Update search IDs display when textarea changes
         const featureIdsTextarea = document.getElementById('featureIds');
+        function updateSearchIdsDisplay() {
+            if (!featureIdsTextarea) return;
+            
+            const rawIds = featureIdsTextarea.value.trim();
+            if (!rawIds) {
+                document.getElementById('searchIdsDisplay').innerHTML = 
+                    '<span style="color: #999;">Enter IDs above to see expanded list (including children)</span>';
+                return;
+            }
+            
+            // Parse IDs from textarea (comma or newline separated)
+            const ids = rawIds
+                .split(/[\n,]+/)
+                .map(id => id.trim())
+                .filter(id => id.length > 0);
+            
+            // Display the input IDs
+            // (Server will expand them to include children when form is submitted)
+            const displayHtml = ids
+                .map((id, idx) => `<div style="padding: 4px 0;"><span style="background: #e8f4f8; padding: 2px 6px; border-radius: 3px;">${escapeHtml(id)}</span></div>`)
+                .join('');
+            
+            document.getElementById('searchIdsDisplay').innerHTML = displayHtml || 
+                '<span style="color: #999;">No valid IDs entered</span>';
+        }
+        
         if (featureIdsTextarea) {
-            featureIdsTextarea.addEventListener('input', function() {
-                const rawIds = this.value.trim();
-                if (!rawIds) {
-                    document.getElementById('searchIdsDisplay').innerHTML = 
-                        '<span style="color: #999;">Enter IDs above to see expanded list (including children)</span>';
-                    return;
-                }
-                
-                // Parse IDs from textarea (comma or newline separated)
-                const ids = rawIds
-                    .split(/[\n,]+/)
-                    .map(id => id.trim())
-                    .filter(id => id.length > 0);
-                
-                // For now, just display the input IDs
-                // (Server will expand them to include children when form is submitted)
-                const displayHtml = ids
-                    .map((id, idx) => `<div style="padding: 4px 0;"><span style="background: #e8f4f8; padding: 2px 6px; border-radius: 3px;">${escapeHtml(id)}</span></div>`)
-                    .join('');
-                
-                document.getElementById('searchIdsDisplay').innerHTML = displayHtml || 
-                    '<span style="color: #999;">No valid IDs entered</span>';
-            });
+            // Update on user input
+            featureIdsTextarea.addEventListener('input', updateSearchIdsDisplay);
+            // Also update on page load to show any pre-filled IDs
+            updateSearchIdsDisplay();
         }
 
         // Handle copy to clipboard for sequences

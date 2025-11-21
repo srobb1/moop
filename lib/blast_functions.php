@@ -328,11 +328,17 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
                 $search_ids[] = $id;
                 
                 try {
-                    $children = getChildren($id, $db_file);
-                    if (!empty($children) && is_array($children)) {
-                        foreach ($children as $child) {
-                            if (is_array($child) && !empty($child['feature_uniquename'])) {
-                                $search_ids[] = $child['feature_uniquename'];
+                    // First, lookup the feature by uniquename to get feature_id
+                    $feature_result = getFeatureByUniquename($id, $db_file);
+                    if (!empty($feature_result)) {
+                        $feature_id = $feature_result['feature_id'];
+                        // Now get children using feature_id
+                        $children = getChildren($feature_id, $db_file);
+                        if (!empty($children) && is_array($children)) {
+                            foreach ($children as $child) {
+                                if (is_array($child) && !empty($child['feature_uniquename'])) {
+                                    $search_ids[] = $child['feature_uniquename'];
+                                }
                             }
                         }
                     }
