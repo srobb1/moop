@@ -5,6 +5,9 @@
  * Used by BLAST interface, FASTA extract, and other tools
  */
 
+// Include parent_functions for parent->child lookups
+require_once __DIR__ . '/parent_functions.php';
+
 /**
  * Get list of available BLAST databases for an assembly
  * Looks for FASTA files matching configured sequence type patterns
@@ -285,12 +288,15 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
 /**
  * Extract sequences from BLAST database using blastdbcmd
  * Used by fasta extract and download tools
+ * Supports parent->child lookup from database
  * 
  * @param string $blast_db Path to BLAST database (without extension)
  * @param array $sequence_ids Array of sequence IDs to extract
+ * @param string $organism Optional organism name for parent/child lookup
+ * @param string $assembly Optional assembly name for parent/child lookup
  * @return array Result array with 'success', 'content', and 'error' keys
  */
-function extractSequencesFromBlastDb($blast_db, $sequence_ids) {
+function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $assembly = '') {
     $result = [
         'success' => false,
         'content' => '',
@@ -307,15 +313,54 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids) {
         return $result;
     }
     
-    // Build list of IDs to search, including variants for parent/child relationships
+    // Build list of IDs to search, including children if database lookup is available
     $search_ids = [];
-    foreach ($sequence_ids as $id) {
-        $search_ids[] = $id;
-        // Also try with .1 suffix if not already present (for parent->child relationships)
-        if (substr($id, -2) !== '.1') {
-            $search_ids[] = $id . '.1';
+    
+    if (!empty($organism) && !empty($assembly)) {
+        // Try database lookup for children
+        $config = ConfigManager::getInstance();
+        $organism_data = $config->getPath('organism_data');
+        $db_file = "$organism_data/$organism/$assembly/data.db";
+        
+        if (file_exists($db_file)) {
+            // Use database to find children for parent features
+            foreach ($sequence_ids as $id) {
+                $search_ids[] = $id;
+                
+                try {
+                    $children = getChildren($id, $db_file);
+                    if (!empty($children) && is_array($children)) {
+                        foreach ($children as $child) {
+                            if (is_array($child) && !empty($child['feature_uniquename'])) {
+                                $search_ids[] = $child['feature_uniquename'];
+                            }
+                        }
+                    }
+                } catch (Exception $e) {
+                    // If lookup fails, continue with original ID
+                }
+            }
+        } else {
+            // No database, fallback to simple .1 suffix approach
+            foreach ($sequence_ids as $id) {
+                $search_ids[] = $id;
+                if (substr($id, -2) !== '.1') {
+                    $search_ids[] = $id . '.1';
+                }
+            }
+        }
+    } else {
+        // No organism/assembly provided, use simple .1 suffix approach
+        foreach ($sequence_ids as $id) {
+            $search_ids[] = $id;
+            if (substr($id, -2) !== '.1') {
+                $search_ids[] = $id . '.1';
+            }
         }
     }
+    
+    // Remove duplicates
+    $search_ids = array_unique($search_ids);
     
     // Use blastdbcmd to extract sequences - it accepts comma-separated IDs
     $ids_string = implode(',', $search_ids);

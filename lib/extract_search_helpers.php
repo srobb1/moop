@@ -152,9 +152,11 @@ function parseFeatureIds($uniquenames_string) {
  * @param string $assembly_dir - Path to assembly directory
  * @param array $uniquenames - Feature IDs to extract
  * @param array $sequence_types - Available sequence type configurations (from site_config)
+ * @param string $organism - Organism name (for parent/child database lookup)
+ * @param string $assembly - Assembly name (for parent/child database lookup)
  * @return array - ['success' => bool, 'content' => [...], 'errors' => []]
  */
-function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types) {
+function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types, $organism = '', $assembly = '') {
     $displayed_content = [];
     $errors = [];
     
@@ -163,7 +165,7 @@ function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_type
         
         if (!empty($files)) {
             $fasta_file = $files[0];
-            $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames);
+            $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);
             
             if ($extract_result['success']) {
                 // Remove blank lines
@@ -184,7 +186,7 @@ function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_type
             $files = glob("$assembly_dir/*{$config['pattern']}");
             if (!empty($files)) {
                 $fasta_file = $files[0];
-                $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames);
+                $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);
                 if (!empty($extract_result['error'])) {
                     $errors[] = $extract_result['error'];
                     break;

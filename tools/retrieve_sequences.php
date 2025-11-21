@@ -83,7 +83,7 @@ if (!empty($sequence_ids_provided)) {
     
     // Extract sequences for ALL available types
     if (empty($extraction_errors) && !empty($uniquenames)) {
-        $extract_result = extractSequencesForAllTypes($fasta_source['path'], $uniquenames, $sequence_types);
+        $extract_result = extractSequencesForAllTypes($fasta_source['path'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly);
         $displayed_content = $extract_result['content'];
         if (!empty($extract_result['errors'])) {
             $extraction_errors = array_merge($extraction_errors, $extract_result['errors']);
@@ -275,6 +275,14 @@ include_once __DIR__ . '/../includes/navbar.php';
                 <small class="form-text text-muted">Enter one ID per line, or use commas to separate multiple IDs on one line.</small>
             </div>
 
+            <!-- Search IDs Display (shows expanded IDs with children) -->
+            <div class="mb-4 p-3 bg-light border rounded">
+                <strong>IDs to Search:</strong>
+                <div id="searchIdsDisplay" style="margin-top: 8px; font-size: 14px; max-height: 150px; overflow-y: auto;">
+                    <span style="color: #999;">Enter IDs above to see expanded list (including children)</span>
+                </div>
+            </div>
+
             <!-- Submit button to display all sequences -->
             <div class="d-grid gap-2 d-md-flex gap-md-2">
                 <button type="submit" class="btn btn-primary btn-lg">
@@ -418,6 +426,34 @@ include_once __DIR__ . '/../includes/navbar.php';
                     });
                     updateCurrentSelectionDisplay();
                 }, 10);
+            });
+        }
+        
+        // Update search IDs display when textarea changes
+        const featureIdsTextarea = document.getElementById('featureIds');
+        if (featureIdsTextarea) {
+            featureIdsTextarea.addEventListener('input', function() {
+                const rawIds = this.value.trim();
+                if (!rawIds) {
+                    document.getElementById('searchIdsDisplay').innerHTML = 
+                        '<span style="color: #999;">Enter IDs above to see expanded list (including children)</span>';
+                    return;
+                }
+                
+                // Parse IDs from textarea (comma or newline separated)
+                const ids = rawIds
+                    .split(/[\n,]+/)
+                    .map(id => id.trim())
+                    .filter(id => id.length > 0);
+                
+                // For now, just display the input IDs
+                // (Server will expand them to include children when form is submitted)
+                const displayHtml = ids
+                    .map((id, idx) => `<div style="padding: 4px 0;"><span style="background: #e8f4f8; padding: 2px 6px; border-radius: 3px;">${escapeHtml(id)}</span></div>`)
+                    .join('');
+                
+                document.getElementById('searchIdsDisplay').innerHTML = displayHtml || 
+                    '<span style="color: #999;">No valid IDs entered</span>';
             });
         }
 
