@@ -137,8 +137,8 @@ function findFunctionUsages($funcName, $scanDirs, $definitionFile) {
             
             $filePath = $file->getRealPath();
             
-            // Don't match the definition file
-            if ($filePath === $definitionFile) continue;
+            // Don't match the definition file or registry file
+            if ($filePath === $definitionFile || strpos($filePath, 'function_registry.php') !== false) continue;
             
             $content = file_get_contents($filePath);
             
@@ -149,6 +149,11 @@ function findFunctionUsages($funcName, $scanDirs, $definitionFile) {
                     // Get context (the line containing the function call)
                     $lines = explode("\n", $content);
                     $contextLine = isset($lines[$lineNum - 1]) ? trim($lines[$lineNum - 1]) : '';
+                    
+                    // Skip if the line is a comment
+                    if (preg_match('/^\s*(\/\/|#|\*)/', $contextLine) || preg_match('/\/\*.*\*\//', $contextLine)) {
+                        continue;
+                    }
                     
                     $usages[] = [
                         'file' => str_replace(__DIR__ . '/../', '', $filePath),
@@ -374,12 +379,25 @@ function generateHtmlDocs($registry) {
             // Show usages
             $usages = findFunctionUsages($func['name'], [__DIR__ . '/../lib', __DIR__ . '/../tools'], $file);
             if (!empty($usages)) {
-                $html .= "                    <div class=\"function-usages\">\n";
-                $html .= "                        <strong>📍 Used in " . count($usages) . " file(s):</strong>\n";
-                $html .= "                        <ul>\n";
+                // Group usages by file and count them
+                $usagesByFile = [];
                 foreach ($usages as $usage) {
-                    $html .= "                            <li><code>" . htmlspecialchars($usage['file']) . ":" . $usage['line'] . "</code><br>\n";
-                    $html .= "                                <small>" . htmlspecialchars(substr($usage['context'], 0, 80)) . "</small></li>\n";
+                    if (!isset($usagesByFile[$usage['file']])) {
+                        $usagesByFile[$usage['file']] = [];
+                    }
+                    $usagesByFile[$usage['file']][] = $usage;
+                }
+                
+                $html .= "                    <div class=\"function-usages\">\n";
+                $html .= "                        <strong>📍 Used in " . count($usagesByFile) . " unique file(s) (" . count($usages) . " total times):</strong>\n";
+                $html .= "                        <ul>\n";
+                foreach ($usagesByFile as $fileKey => $fileUsages) {
+                    $html .= "                            <li><strong>" . htmlspecialchars($fileKey) . "</strong> (" . count($fileUsages) . "x)\n";
+                    $html .= "                                <ul style=\"margin-top: 5px;\">\n";
+                    foreach ($fileUsages as $usage) {
+                        $html .= "                                    <li><code>line " . $usage['line'] . "</code>: <small>" . htmlspecialchars(substr($usage['context'], 0, 80)) . "</small></li>\n";
+                    }
+                    $html .= "                                </ul></li>\n";
                 }
                 $html .= "                        </ul>\n";
                 $html .= "                    </div>\n";
@@ -413,9 +431,23 @@ function generateHtmlDocs($registry) {
     $html .= "            function filterFunctions() {\n";
     $html .= "                const search = document.getElementById('searchInput').value.toLowerCase();\n";
     $html .= "                const items = document.querySelectorAll('.function-item');\n";
+    $html .= "                const sections = document.querySelectorAll('.file-section');\n";
+    $html .= "                \n";
     $html .= "                items.forEach(item => {\n";
     $html .= "                    const name = item.dataset.func.toLowerCase();\n";
-    $html .= "                    item.classList.toggle('hidden', !name.includes(search));\n";
+    $html .= "                    const matches = !search || name.includes(search);\n";
+    $html .= "                    item.classList.toggle('hidden', !matches);\n";
+    $html .= "                });\n";
+    $html .= "                \n";
+    $html .= "                sections.forEach(section => {\n";
+    $html .= "                    const visibleItems = section.querySelectorAll('.function-item:not(.hidden)');\n";
+    $html .= "                    if (search && visibleItems.length > 0) {\n";
+    $html .= "                        section.querySelector('.functions-list').classList.add('open');\n";
+    $html .= "                    } else if (!search) {\n";
+    $html .= "                        section.querySelector('.functions-list').classList.remove('open');\n";
+    $html .= "                    } else {\n";
+    $html .= "                        section.querySelector('.functions-list').classList.remove('open');\n";
+    $html .= "                    }\n";
     $html .= "                });\n";
     $html .= "            }\n";
     $html .= "        </script>\n";
@@ -469,9 +501,21 @@ function generateMarkdownDocs($registry) {
             // Get usages for this function
             $usages = findFunctionUsages($func['name'], [__DIR__ . '/../lib', __DIR__ . '/../tools'], $file);
             if (!empty($usages)) {
-                $md .= "**Used in " . count($usages) . " file(s):**\n";
+                // Group usages by file and count them
+                $usagesByFile = [];
                 foreach ($usages as $usage) {
-                    $md .= "- `" . $usage['file'] . "` line " . $usage['line'] . ": `" . addslashes($usage['context']) . "`\n";
+                    if (!isset($usagesByFile[$usage['file']])) {
+                        $usagesByFile[$usage['file']] = [];
+                    }
+                    $usagesByFile[$usage['file']][] = $usage;
+                }
+                
+                $md .= "**Used in " . count($usagesByFile) . " unique file(s) (" . count($usages) . " total times):**\n";
+                foreach ($usagesByFile as $fileKey => $fileUsages) {
+                    $md .= "- `" . $fileKey . "` (" . count($fileUsages) . "x):\n";
+                    foreach ($fileUsages as $usage) {
+                        $md .= "  - Line " . $usage['line'] . ": `" . addslashes($usage['context']) . "`\n";
+                    }
                 }
             } else {
                 $md .= "**Used in: 0 files** (possibly unused)\n";

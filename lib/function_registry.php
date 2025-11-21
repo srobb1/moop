@@ -1,7 +1,7 @@
 <?php
 /**
  * AUTO-GENERATED FUNCTION REGISTRY
- * Generated: 2025-11-20 21:54:18
+ * Generated: 2025-11-21 22:49:01
  * To regenerate, run: php tools/generate_registry.php
  */
 
@@ -11,7 +11,7 @@ $FUNCTION_REGISTRY = array (
     0 => 
     array (
       'name' => 'getBlastDatabases',
-      'line' => 20,
+      'line' => 23,
       'comment' => '/**
 * Get list of available BLAST databases for an assembly
 * Looks for FASTA files matching configured sequence type patterns
@@ -68,7 +68,7 @@ $FUNCTION_REGISTRY = array (
     1 => 
     array (
       'name' => 'filterDatabasesByProgram',
-      'line' => 69,
+      'line' => 72,
       'comment' => '/**
 * Filter BLAST databases by program type
 * Returns only databases compatible with the selected BLAST program
@@ -108,7 +108,7 @@ $FUNCTION_REGISTRY = array (
     2 => 
     array (
       'name' => 'executeBlastSearch',
-      'line' => 107,
+      'line' => 110,
       'comment' => '/**
 * Execute BLAST search
 * Runs BLAST command with outfmt 11 (ASN.1), then converts using blast_formatter
@@ -300,16 +300,19 @@ $FUNCTION_REGISTRY = array (
     3 => 
     array (
       'name' => 'extractSequencesFromBlastDb',
-      'line' => 293,
+      'line' => 299,
       'comment' => '/**
 * Extract sequences from BLAST database using blastdbcmd
 * Used by fasta extract and download tools
+* Supports parent->child lookup from database
 *
 * @param string $blast_db Path to BLAST database (without extension)
 * @param array $sequence_ids Array of sequence IDs to extract
+* @param string $organism Optional organism name for parent/child lookup
+* @param string $assembly Optional assembly name for parent/child lookup
 * @return array Result array with \'success\', \'content\', and \'error\' keys
 */',
-      'code' => 'function extractSequencesFromBlastDb($blast_db, $sequence_ids) {
+      'code' => 'function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = \'\', $assembly = \'\') {
     $result = [
         \'success\' => false,
         \'content\' => \'\',
@@ -326,18 +329,9 @@ $FUNCTION_REGISTRY = array (
         return $result;
     }
     
-    // Build list of IDs to search, including variants for parent/child relationships
-    $search_ids = [];
-    foreach ($sequence_ids as $id) {
-        $search_ids[] = $id;
-        // Also try with .1 suffix if not already present (for parent->child relationships)
-        if (substr($id, -2) !== \'.1\') {
-            $search_ids[] = $id . \'.1\';
-        }
-    }
-    
-    // Use blastdbcmd to extract sequences - it accepts comma-separated IDs
-    $ids_string = implode(\',\', $search_ids);
+    // Use blastdbcmd to extract sequences
+    // IDs have already been expanded via database lookup to include children
+    $ids_string = implode(\',\', $sequence_ids);
     $cmd = "blastdbcmd -db " . escapeshellarg($blast_db) . " -entry " . escapeshellarg($ids_string) . " 2>/dev/null";
     $output = [];
     $return_var = 0;
@@ -365,7 +359,7 @@ $FUNCTION_REGISTRY = array (
     4 => 
     array (
       'name' => 'validateBlastSequence',
-      'line' => 353,
+      'line' => 350,
       'comment' => '/**
 * Validate BLAST sequence input
 * Checks if input is valid FASTA format
@@ -2749,7 +2743,7 @@ JS;
     4 => 
     array (
       'name' => 'extractSequencesForAllTypes',
-      'line' => 157,
+      'line' => 159,
       'comment' => '/**
 * Extract sequences for all available types from BLAST database
 *
@@ -2758,9 +2752,11 @@ JS;
 * @param string $assembly_dir - Path to assembly directory
 * @param array $uniquenames - Feature IDs to extract
 * @param array $sequence_types - Available sequence type configurations (from site_config)
+* @param string $organism - Organism name (for parent/child database lookup)
+* @param string $assembly - Assembly name (for parent/child database lookup)
 * @return array - [\'success\' => bool, \'content\' => [...], \'errors\' => []]
 */',
-      'code' => 'function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types) {
+      'code' => 'function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types, $organism = \'\', $assembly = \'\') {
     $displayed_content = [];
     $errors = [];
     
@@ -2769,7 +2765,7 @@ JS;
         
         if (!empty($files)) {
             $fasta_file = $files[0];
-            $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames);
+            $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);
             
             if ($extract_result[\'success\']) {
                 // Remove blank lines
@@ -2784,6 +2780,21 @@ JS;
         }
     }
     
+    // Only report "no sequences found" errors if we got no content at all
+    if (empty($displayed_content)) {
+        foreach ($sequence_types as $seq_type => $config) {
+            $files = glob("$assembly_dir/*{$config[\'pattern\']}");
+            if (!empty($files)) {
+                $fasta_file = $files[0];
+                $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);
+                if (!empty($extract_result[\'error\'])) {
+                    $errors[] = $extract_result[\'error\'];
+                    break;
+                }
+            }
+        }
+    }
+    
     return [
         \'success\' => !empty($displayed_content),
         \'content\' => $displayed_content,
@@ -2794,7 +2805,7 @@ JS;
     5 => 
     array (
       'name' => 'formatSequenceResults',
-      'line' => 197,
+      'line' => 214,
       'comment' => '/**
 * Format extracted sequences for display component
 *
@@ -2820,7 +2831,7 @@ JS;
     6 => 
     array (
       'name' => 'sendFileDownload',
-      'line' => 220,
+      'line' => 237,
       'comment' => '/**
 * Send file download response and exit
 *
@@ -2845,7 +2856,7 @@ JS;
     7 => 
     array (
       'name' => 'buildFilteredSourcesList',
-      'line' => 240,
+      'line' => 257,
       'comment' => '/**
 * Build organism-filtered list of accessible assembly sources
 *
@@ -2878,7 +2889,7 @@ JS;
     8 => 
     array (
       'name' => 'flattenSourcesList',
-      'line' => 269,
+      'line' => 286,
       'comment' => '/**
 * Flatten nested sources array for sequential processing
 *
@@ -2903,7 +2914,7 @@ JS;
     9 => 
     array (
       'name' => 'assignGroupColors',
-      'line' => 290,
+      'line' => 307,
       'comment' => '/**
 * Assign Bootstrap colors to groups for consistent UI display
 *
@@ -2929,7 +2940,7 @@ JS;
     10 => 
     array (
       'name' => 'getAvailableSequenceTypesForDisplay',
-      'line' => 313,
+      'line' => 330,
       'comment' => '/**
 * Get available sequence types from all accessible sources
 *
