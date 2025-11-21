@@ -362,6 +362,14 @@ include_once __DIR__ . '/../includes/navbar.php';
                 <small class="form-text text-muted d-block mt-2">Select an assembly from the list above.</small>
             </div>
 
+            <!-- Current Selection Display -->
+            <div class="mb-4 p-3 bg-light border rounded">
+                <strong>Currently Selected:</strong>
+                <div id="currentSelection" style="margin-top: 8px; font-size: 14px;">
+                    <span style="color: #999;">None selected</span>
+                </div>
+            </div>
+
             <!-- Database Selection (as badges) -->
             <div class="mt-4" id="databaseSelector">
                 <label class="form-label"><strong>Select Database</strong></label>
@@ -654,6 +662,28 @@ function clearResults() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
+    // Function to update the "Currently Selected" display text
+    function updateCurrentSelectionDisplay() {
+        const checked = document.querySelector('input[name="selected_source"]:checked');
+        const selectionDiv = document.getElementById('currentSelection');
+        
+        if (checked) {
+            const line = checked.closest('.fasta-source-line');
+            const groupBadge = line.querySelector('.badge');
+            const group = groupBadge ? groupBadge.textContent.trim() : 'Unknown';
+            const organism = checked.dataset.organism || 'Unknown';
+            const assembly = checked.dataset.assembly || 'Unknown';
+            
+            selectionDiv.innerHTML = `
+                <div style="color: #28a745; font-weight: bold;">
+                    ${group} > ${organism} > ${assembly}
+                </div>
+            `;
+        } else {
+            selectionDiv.innerHTML = '<span style="color: #999;">None selected</span>';
+        }
+    }
+    
     // Initialize source list manager with callback for updating database list
     initializeSourceListManager({
         filterId: 'sourceFilter',
@@ -661,6 +691,7 @@ document.addEventListener('DOMContentLoaded', function() {
         sourceListClass: 'fasta-source-line',
         onSelectionChange: function(radio) {
             updateDatabaseList();
+            updateCurrentSelectionDisplay();
         }
     });
     
@@ -704,6 +735,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
+    
+    // Update display on page load
+    updateCurrentSelectionDisplay();
     
     // Update database list based on selected source
     updateDatabaseList();
