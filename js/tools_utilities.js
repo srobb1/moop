@@ -158,9 +158,6 @@ function updateDatabaseList() {
         return;
     }
     
-    // Update "Currently Selected" display
-    updateCurrentSelectionDisplay();
-    
     if (!selectedRadio) {
         dbBadges.innerHTML = '<div style="padding: 15px; text-align: center; color: #666; width: 100%;"><small>Select an assembly first</small></div>';
         return;
@@ -214,46 +211,6 @@ function updateDatabaseList() {
     if (form && selectedRadio) {
         form.querySelector('input[name="organism"]').value = selectedRadio.dataset.organism;
         form.querySelector('input[name="assembly"]').value = selectedRadio.dataset.assembly;
-    }
-}
-
-/**
- * Update the "Currently Selected" display box with the selected source
- */
-function updateCurrentSelectionDisplay() {
-    const checked = document.querySelector('input[name="selected_source"]:checked');
-    const selectionDiv = document.getElementById('currentSelection');
-    
-    if (!selectionDiv) {
-        return;
-    }
-    
-    if (checked) {
-        const line = checked.closest('.fasta-source-line');
-        const badges = line ? line.querySelectorAll('.badge') : [];
-        
-        if (badges.length >= 2) {
-            const group = badges[0].textContent.trim();
-            const organism = badges[1].textContent.trim();
-            const assembly = badges[2] ? badges[2].textContent.trim() : 'Unknown';
-            
-            selectionDiv.innerHTML = `
-                <div style="color: #28a745; font-weight: bold;">
-                    ${group} > ${organism} > ${assembly}
-                </div>
-            `;
-        } else {
-            const organism = checked.dataset.organism || 'Unknown';
-            const assembly = checked.dataset.assembly || 'Unknown';
-            
-            selectionDiv.innerHTML = `
-                <div style="color: #28a745; font-weight: bold;">
-                    ${organism} > ${assembly}
-                </div>
-            `;
-        }
-    } else {
-        selectionDiv.innerHTML = '<span style="color: #999;">None selected</span>';
     }
 }
 

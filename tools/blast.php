@@ -362,14 +362,6 @@ include_once __DIR__ . '/../includes/navbar.php';
                 <small class="form-text text-muted d-block mt-2">Select an assembly from the list above.</small>
             </div>
 
-            <!-- Current Selection Display -->
-            <div class="mb-4 p-3 bg-light border rounded">
-                <strong>Currently Selected:</strong>
-                <div id="currentSelection" style="margin-top: 8px; font-size: 14px;">
-                    <span style="color: #999;">None selected</span>
-                </div>
-            </div>
-
             <!-- Database Selection (as badges) -->
             <div class="mt-4" id="databaseSelector">
                 <label class="form-label"><strong>Select Database</strong></label>
