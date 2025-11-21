@@ -356,48 +356,17 @@ include_once __DIR__ . '/../includes/navbar.php';
             }
         });
         
-        // On page load, try to restore previous selection (if it's still visible)
-        const anyChecked = document.querySelector('input[name="selected_source"]:checked');
-        if (!anyChecked) {
-            const selected = restoreSourceSelection('selected_source', 'fasta-source-line');
-            
-            // Update form fields if we restored a selection
-            if (selected && form) {
-                form.querySelector('input[name="organism"]').value = selected.dataset.organism;
-                form.querySelector('input[name="assembly"]').value = selected.dataset.assembly;
-            }
-        }
-        
-        // Auto-uncheck any selected radio that is not visible (user filtered it out)
+        // Disable hidden radios on page load
         document.querySelectorAll('input[name="selected_source"]').forEach(radio => {
             const line = radio.closest('.fasta-source-line');
             if (line && !isSourceVisible(line)) {
-                // Hidden radios should never be checked
-                radio.checked = false;
                 radio.disabled = true;
             } else {
-                // Visible radios can be used
                 radio.disabled = false;
             }
         });
         
-        // Update display after disabling hidden radios
-        updateCurrentSelectionDisplay();
-        
-        // Also uncheck if checked radio becomes hidden
-        document.querySelectorAll('input[name="selected_source"]').forEach(radio => {
-            const line = radio.closest('.fasta-source-line');
-            if (radio.checked && line && !isSourceVisible(line)) {
-                radio.checked = false;
-                // Clear form fields
-                if (form) {
-                    form.querySelector('input[name="organism"]').value = '';
-                    form.querySelector('input[name="assembly"]').value = '';
-                }
-            }
-        });
-        
-        // Update display after unchecking hidden selections
+        // Update display on page load
         updateCurrentSelectionDisplay();
         
         // Dismiss error alert on form submission
