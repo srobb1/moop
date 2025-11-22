@@ -102,7 +102,7 @@ function displayOrganismResults(data) {
     selectedOrganisms.forEach(org => {
         organismUrl += '&multi_search[]=' + encodeURIComponent(org);
     });
-    const readMoreBtn = `<a href="${organismUrl}" class="btn btn-sm btn-outline-primary ms-2 font-size-small">
+    const readMoreBtn = `<a href="${organismUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary ms-2 font-size-small">
                     <i class="fa fa-info-circle"></i> Read More
                 </a>`;
     

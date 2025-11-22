@@ -107,7 +107,7 @@ function displayOrganismResults(data) {
     // Insert the "Read More" button into the generated HTML
     const safeOrganism = organism.replace(/[^a-zA-Z0-9]/g, '_');
     const organismUrl = sitePath + '/tools/organism_display.php?organism=' + encodeURIComponent(organism) + '';
-    const readMoreBtn = `<a href="${organismUrl}" class="btn btn-sm btn-outline-primary ms-2 font-size-small">
+    const readMoreBtn = `<a href="${organismUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary ms-2 font-size-small">
                     <i class="fa fa-info-circle"></i> Read More
                 </a>`;
     
