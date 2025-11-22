@@ -261,7 +261,7 @@ $organism_info = $organism_context['info'];
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <!-- Column reordering functionality -->
 <script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
-<script src="/<?= $site ?>/js/datatable-config.js"></script>
+<script src="/<?= $site ?>/js/features/datatable-config.js"></script>
 <script src="/<?= $site ?>/tools/shared_results_table.js"></script>
 
 <script>

@@ -159,7 +159,7 @@ foreach ($organisms as $organism) {
 <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
-<script src="/<?= $site ?>/js/datatable-config.js"></script>
+<script src="/<?= $site ?>/js/features/datatable-config.js"></script>
 <script src="/<?= $site ?>/tools/shared_results_table.js"></script>
 <script>
 const selectedOrganisms = <?= json_encode(is_array($organisms) ? $organisms : [$organisms]) ?>;

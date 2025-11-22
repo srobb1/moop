@@ -40,12 +40,6 @@ if ($trying_public_access) {
 // Parse context parameters and organism filters
 $context = parseContextParameters();
 
-// Check if clear_filter was clicked - if so, clear the context organism
-if (!empty($_POST['clear_filter'])) {
-    $context['organism'] = '';
-    $context['group'] = '';
-}
-
 $organisms_param = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
 $organism_result = parseOrganismParameter($organisms_param, $context['organism']);
 $filter_organisms = $organism_result['organisms'];
@@ -116,6 +110,19 @@ if (!empty($sequence_ids_provided)) {
         if (!empty($extract_result['errors'])) {
             $extraction_errors = array_merge($extraction_errors, $extract_result['errors']);
         }
+        
+        // Parse returned sequences to find which IDs were actually found
+        $found_ids = [];
+        foreach ($displayed_content as $seq_type => $fasta_content) {
+            // Extract all header lines (start with >) from FASTA
+            preg_match_all('/^>([^\s]+)/m', $fasta_content, $matches);
+            if (!empty($matches[1])) {
+                $found_ids = array_merge($found_ids, $matches[1]);
+            }
+        }
+        $found_ids = array_unique($found_ids);
+    } else {
+        $found_ids = [];
     }
     
     // Log any errors
@@ -194,12 +201,6 @@ include_once __DIR__ . '/../includes/navbar.php';
             </div>
         <?php endif; ?>
 
-        <!-- Hidden Clear Filter Form (outside main form to prevent nesting) -->
-        <form method="POST" id="clearFilterForm" style="display: none;">
-            <input type="hidden" name="uniquenames" value="">
-            <input type="hidden" name="clear_filter" value="1">
-        </form>
-
         <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
             <form method="POST" id="downloadForm">
             <!-- Hidden fields for selected source (populated by JavaScript on submit) -->
@@ -212,6 +213,8 @@ include_once __DIR__ . '/../includes/navbar.php';
             <input type="hidden" name="display_name" value="<?= htmlspecialchars($context['display_name']) ?>">
             <!-- Hidden field with expanded uniquenames for display purposes -->
             <input type="hidden" id="expandedUniqueames" value="<?= htmlspecialchars(json_encode($uniquenames ?? [])) ?>">
+            <!-- Hidden field with found IDs (IDs that were actually returned by blastdbcmd) -->
+            <input type="hidden" id="foundIds" value="<?= htmlspecialchars(json_encode($found_ids ?? [])) ?>">
 
             <!-- Source Selection with Compact Badges -->
             <div class="fasta-source-selector">
@@ -227,7 +230,7 @@ include_once __DIR__ . '/../includes/navbar.php';
                             placeholder="Filter by group, organism, or assembly..."
                             value="<?= htmlspecialchars($context['organism'] ?: $context['group']) ?>"
                             >
-                        <button type="button" class="btn btn-success" onclick="document.getElementById('clearFilterForm').submit();">
+                        <button type="button" class="btn btn-success" onclick="clearSourceFilter();">
                             <i class="fa fa-times"></i> Clear Filters
                         </button>
                     </div>
@@ -323,13 +326,34 @@ include_once __DIR__ . '/../includes/navbar.php';
                     <?php endif; ?>
                 </div>
             </div>
+            
+            <!-- Collapsed info about Parent and Child IDs -->
+            <div class="mt-3">
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#idInfoCollapse" aria-expanded="false" aria-controls="idInfoCollapse">
+                    <i class="fa fa-info-circle"></i> About Parent and Child IDs
+                </button>
+                <div class="collapse mt-2" id="idInfoCollapse">
+                    <div class="p-3 bg-light border rounded">
+                        <p class="mb-0">
+                            When you enter a parent gene ID (e.g., <code>g24397</code>), the system looks it up in the organism's database 
+                            and automatically retrieves all associated child transcript IDs (e.g., <code>g24397.t1</code>, <code>g24397.t2</code>). 
+                            All IDs (parents and children) are then used to search the FASTA sequence database using <code>blastdbcmd</code>. 
+                            The "IDs to Search" box shows which ones were found 
+                            (<span style="background: #d4edda; padding: 2px 4px; border-radius: 2px;">green</span>) 
+                            and which were not found 
+                            (<span style="background: #f8d7da; padding: 2px 4px; border-radius: 2px;">red</span>).
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             <!-- Submit button to display all sequences -->
-            <div class="d-grid gap-2 d-md-flex gap-md-2">
+            <div class="d-grid gap-2 d-md-flex gap-md-2 mt-4">
                 <button type="submit" class="btn btn-primary btn-lg">
                     <i class="fa fa-eye"></i> Display All Sequences
                 </button>
             </div>
+            </form>
             
             <!-- Debug: Show the blastdbcmd command if one was generated -->
             <?php if (!empty($debug_cmd)): ?>
@@ -338,9 +362,9 @@ include_once __DIR__ . '/../includes/navbar.php';
                     <div style="margin-top: 8px; font-family: monospace; word-break: break-all; font-size: 12px;">
                         <?= htmlspecialchars($debug_cmd) ?>
                     </div>
-        </form>
+                </div>
+            <?php endif; ?>
         </div>
-    <?php endif; ?>
 
     <!-- Sequences Display Section -->
     <?php if (!empty($displayed_content)): ?>
@@ -372,6 +396,13 @@ include_once __DIR__ . '/../includes/navbar.php';
             "'": '&#039;'
         };
         return text.replace(/[&<>"']/g, m => map[m]);
+    }
+    
+    // Helper function to clear source filter
+    function clearSourceFilter() {
+        document.getElementById('sourceFilter').value = '';
+        const filterInput = document.getElementById('sourceFilter');
+        filterInput.dispatchEvent(new Event('keyup'));
     }
     
     document.addEventListener("DOMContentLoaded", function() {
@@ -492,26 +523,59 @@ include_once __DIR__ . '/../includes/navbar.php';
         
         // Update search IDs display when textarea changes
         const featureIdsTextarea = document.getElementById('featureIds');
+        const expandedUniqueamesField = document.getElementById('expandedUniqueames');
+        const foundIdsField = document.getElementById('foundIds');
+        
         function updateSearchIdsDisplay() {
             if (!featureIdsTextarea) return;
             
+            // Get user input IDs
             const rawIds = featureIdsTextarea.value.trim();
-            if (!rawIds) {
-                document.getElementById('searchIdsDisplay').innerHTML = 
-                    '<span style="color: #999;">Enter IDs above to see expanded list (including children)</span>';
-                return;
-            }
-            
-            // Parse IDs from textarea (comma or newline separated)
-            const ids = rawIds
+            const userInputIds = rawIds
                 .split(/[\n,]+/)
                 .map(id => id.trim())
                 .filter(id => id.length > 0);
             
-            // Display the input IDs
-            // (Server will expand them to include children when form is submitted)
-            const displayHtml = ids
-                .map((id, idx) => `<div style="padding: 4px 0;"><span style="background: #e8f4f8; padding: 2px 6px; border-radius: 3px;">${escapeHtml(id)}</span></div>`)
+            // Get found IDs from server (IDs that were actually returned by blastdbcmd)
+            let foundIds = [];
+            if (foundIdsField && foundIdsField.value) {
+                try {
+                    foundIds = JSON.parse(foundIdsField.value);
+                } catch (e) {
+                    // JSON parse failed
+                }
+            }
+            
+            // First check if server sent expanded uniquenames (after form submission)
+            let idsToDisplay = [];
+            if (expandedUniqueamesField && expandedUniqueamesField.value) {
+                try {
+                    const expanded = JSON.parse(expandedUniqueamesField.value);
+                    if (Array.isArray(expanded) && expanded.length > 0) {
+                        idsToDisplay = expanded;
+                    }
+                } catch (e) {
+                    // JSON parse failed, fall back to user input
+                }
+            }
+            
+            // If no expanded IDs, use user input
+            if (idsToDisplay.length === 0) {
+                if (!rawIds) {
+                    document.getElementById('searchIdsDisplay').innerHTML = 
+                        '<span style="color: #999;">Enter IDs above to see expanded list (including children)</span>';
+                    return;
+                }
+                idsToDisplay = userInputIds;
+            }
+            
+            // Display the IDs - color based on whether they were found by blastdbcmd
+            const displayHtml = idsToDisplay
+                .map((id) => {
+                    // Always use found/not found coloring (foundIds will be empty before search, but that's OK)
+                    const bgColor = foundIds.includes(id) ? '#d4edda' : '#f8d7da';  // Green=found, Red=not found
+                    return `<div style="padding: 4px 0;"><span style="background: ${bgColor}; padding: 2px 6px; border-radius: 3px;">${escapeHtml(id)}</span></div>`;
+                })
                 .join('');
             
             document.getElementById('searchIdsDisplay').innerHTML = displayHtml || 
@@ -521,7 +585,7 @@ include_once __DIR__ . '/../includes/navbar.php';
         if (featureIdsTextarea) {
             // Update on user input
             featureIdsTextarea.addEventListener('input', updateSearchIdsDisplay);
-            // Also update on page load to show any pre-filled IDs
+            // Also update on page load to show any pre-filled IDs or expanded ones from server
             updateSearchIdsDisplay();
         }
 
@@ -590,7 +654,9 @@ include_once __DIR__ . '/../includes/navbar.php';
     }, 500);
 </script>
 
-<script src="/<?= $site ?>/js/source_list_manager.js"></script>
+<?php endif; ?>
+
+<script src="/<?= $site ?>/js/features/source-list-manager.js"></script>
 
 <?php include_once __DIR__ . '/../includes/footer.php'; ?>
 </body>

@@ -1238,7 +1238,7 @@ $organisms = get_all_organisms_info();
 
 
 <- Backwards compatible with existing Organism Management Scripts -->
-<script src="../js/manage_organisms.js"></script>
+<script src="../js/features/organism-management.js"></script>
 
 
 <!-- Help Modal -->

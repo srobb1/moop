@@ -832,8 +832,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<script src="/<?= $site ?>/js/tools_utilities.js"></script>
-<script src="/<?= $site ?>/js/source_list_manager.js"></script>
+<script src="/<?= $site ?>/js/core/utilities.js"></script>
+<script src="/<?= $site ?>/js/features/source-list-manager.js"></script>
 
 <?php include_once __DIR__ . '/../includes/footer.php'; ?>
 
