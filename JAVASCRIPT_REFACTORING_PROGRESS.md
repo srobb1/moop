@@ -18,32 +18,24 @@ This document tracks the 4-phase JavaScript reorganization plan for MOOP. The ap
 ## Current Status
 
 ### ✅ PHASE 1: COMPLETED (30 mins) 
-**Goal**: Organize third-party libraries
+**Goal**: Organize third-party libraries  
+**Status**: COMPLETED 2025-11-21
 
-**What was done:**
-1. ✅ Created `/js/unused/` directory for deprecated/unused libraries
-2. ✅ Moved 7 unused local library files there:
-   - `apexcharts.min.js` - Not referenced anywhere
-   - `bootstrap.min.js` - Loading from CDN instead
-   - `jquery.min.js` - Loading from CDN instead
-   - `jszip.min.js` - Loading from CDN instead
-   - `kinetic-v5.1.0.min.js` - Not referenced anywhere
-   - `openGPlink.js` - Not referenced anywhere
-   - `popper.min.js` - Loading from CDN instead
+### ✅ PHASE 2: COMPLETED (30 mins)
+**Goal**: Organize existing feature code  
+**Status**: COMPLETED 2025-11-21
 
-**Finding**: All dependencies are now loaded from CDN. Local copies were orphaned (960KB of dead code).
+### ✅ PHASE 3A: COMPLETED (2.5 hours)
+**Goal**: Extract 3 heavy PHP display pages  
+**Status**: COMPLETED 2025-11-22
 
-**Verification done**:
-- ✅ Searched entire codebase for references - none found
-- ✅ `/includes/head.php` uses only CDN links
-- ✅ No 404 errors on any page
-- ✅ All features still working
+### 🔄 PHASE 3B: IN PROGRESS (Plan Complete)
+**Goal**: Consolidate 80% duplicate search logic  
+**Status**: PLANNED (2-3 hours)  
+**Documentation**: See `PHASE_3_JS_CONSOLIDATION_PLAN.md`
 
-**Commit**: `21f1e1c` - "Phase 1: Move unused library files to js/unused directory - all deps now CDN-based"
-
----
-
-## Next Steps (TODO)
+### 📋 PHASES 3C-4: PLANNED
+**Status**: PENDING (after Phase 3B)
 
 ### 📋 PHASE 2: Organize Existing Feature Code (Est. 30 mins)
 **Goal**: Move existing extracted JS to organized `/js/features/` folder  
@@ -85,69 +77,104 @@ js/tools_utilities.js → js/core/utilities.js (reusable helpers)
 
 ---
 
-### 🔧 PHASE 3A: Extract Heavy PHP Pages (Est. 2-3 hours)
+### ✅ PHASE 3A: Extract Heavy PHP Pages (COMPLETED - 2.5 hours)
 **Goal**: Extract 500+ lines of embedded JavaScript from 3 heavy PHP files  
-**Status**: NOT STARTED
+**Status**: COMPLETED 2025-11-22
 
-**Priority 1 - Heavy pages (must extract):**
+**Completed extractions:**
 
-#### 1. `tools/groups_display.php` → `js/pages/groups-display.js`
-**Current embedded JS**: ~13 script tags, 500+ lines  
-**What to extract**:
-- Form submit handler: `$('#groupSearchForm').on('submit', ...)`
-- Search functions: `searchNextOrganism()`, `displayOrganismResults()`, `finishSearch()`
-- Progress bar management
-- Result rendering and navigation
+#### 1. ✅ `tools/groups_display.php` → `js/pages/groups-display.js`
+- Extracted 159 lines of search logic
+- Handles multi-organism search within a group
+- Commit: `cb89bed`
 
-**What to keep in PHP**:
-```php
-<script>
-const groupName = <?= json_encode($group_name) ?>;
-const groupOrganisms = <?= json_encode(array_keys($group_organisms)) ?>;
-const sitePath = '/<?= $site ?>';
-</script>
-<script src="/<?= $site ?>/js/pages/groups-display.js"></script>
-```
+#### 2. ✅ `tools/multi_organism_search.php` → `js/pages/multi-organism-search.js`
+- Extracted 153 lines of search logic
+- Handles multi-organism search across selected organisms
+- Commit: `c5ba327`
 
-#### 2. `tools/multi_organism_search.php` → `js/pages/multi-organism-search.js`
-**Current embedded JS**: ~13 script tags, 500+ lines  
-**Same extraction pattern as groups_display**
+#### 3. ✅ `tools/organism_display.php` → `js/pages/organism-display.js`
+- Extracted 128 lines of search logic
+- Handles single-organism search
+- Commit: `934627a`
 
-#### 3. `tools/organism_display.php` → `js/pages/organism-display.js`
-**Current embedded JS**: ~14 script tags, 600+ lines  
-**Largest extraction - same pattern**
+**Additional improvements:**
+- ✅ Removed back-navigation system code (no longer needed)
+- ✅ Added `target="_blank"` to organism display links (opens in new tabs)
+- ✅ Fixed quoted search bug in `sanitize_search_input()` function
+- Commits: `d236144`, `29bf8a5`, `fc3127b`
 
-**Execution plan**:
-- Extract one page at a time
-- Test thoroughly in browser after each
-- Verify AJAX calls work
-- Verify form submissions work
-- Check navigation/back buttons work
+**Verification**:
+- ✅ All 3 pages tested and working
+- ✅ Search functionality works correctly
+- ✅ Progress bars display properly
+- ✅ No console errors
+- ✅ Back button removal successful
 
 ---
 
-### 📄 PHASE 3B: Extract Lighter PHP Pages (Est. 1 hour)
-**Goal**: Extract remaining page-specific JavaScript  
-**Status**: NOT STARTED
+### 🔧 PHASE 3B: Consolidate Shared Search Logic (Est. 2-3 hours)
+**Goal**: Extract 80% duplicate code into reusable module  
+**Status**: PLANNED
 
-**Priority 2 - Lighter pages:**
+**Problem identified:**
+- 3 display pages share ~80% identical logic (~320 lines of 440 total)
+- Only differences: form IDs, loop vs single organism, URL building, AJAX params
+
+**Solution:**
+Create `js/core/annotation-search.js` with reusable `AnnotationSearch` class that handles:
+- Input validation
+- Results reset
+- Progress bar rendering
+- AJAX search calls
+- Results display
+- Success/error handling
+
+**Benefits:**
+- Reduce 440 lines → ~150 lines (65% code reduction)
+- Single source of truth for search logic
+- Easy to fix bugs (fix once, applies everywhere)
+- Easy to add new search pages
+
+**See**: `PHASE_3_JS_CONSOLIDATION_PLAN.md` for detailed strategy
+
+**Implementation steps:**
+1. [ ] Create `js/core/annotation-search.js` with AnnotationSearch class
+2. [ ] Test with groups-display.js
+3. [ ] Update multi-organism-search.js to use module
+4. [ ] Update organism-display.js to use module
+5. [ ] Full test suite on all 3 pages
+**Implementation steps:**
+1. [ ] Create `js/core/annotation-search.js` with AnnotationSearch class
+2. [ ] Test with groups-display.js
+3. [ ] Update multi-organism-search.js to use module
+4. [ ] Update organism-display.js to use module
+5. [ ] Full test suite on all 3 pages
+6. [ ] Commit: "Phase 3B: Create reusable AnnotationSearch module"
+
+---
+
+### 📄 PHASE 3C: Extract Lighter PHP Pages (Est. 1.5 hours)
+**Goal**: Extract remaining page-specific JavaScript  
+**Status**: PLANNED
+
+**Priority pages:**
 - `tools/parent_display.php` → `js/pages/parent-display.js`
-- `tools/retrieve_selected_sequences.php` → `js/pages/retrieve-sequences.js`
-- `tools/retrieve_sequences.php` → `js/pages/retrieve-sequences-old.js`
+- `tools/retrieve_sequences.php` → `js/pages/retrieve-sequences.js`
 - `tools/blast.php` → `js/pages/blast.js`
 - `tools/sequences_display.php` → `js/pages/sequences-display.js`
 
-**Each has < 100 lines of JS** - easier to extract
+**Each has < 150 lines of JS** - easier to extract
 
 ---
 
-### 📚 PHASE 3C: Move Utility Files (Est. 15 mins)
+### 📚 PHASE 3D: Move Utility Files (Est. 15 mins)
 **Goal**: Move utility files from `/tools/` to organized location  
-**Status**: NOT STARTED
+**Status**: PLANNED
 
 Move:
-- `/tools/shared_results_table.js` → `/js/utils/results-table.js`
-- `/tools/blast_canvas_graph.js` → `/js/utils/blast-canvas.js`
+- `/tools/shared_results_table.js` → `/js/core/results-table.js`
+- `/tools/blast_canvas_graph.js` → `/js/core/blast-canvas.js`
 
 Update PHP references (~10 files)
 
@@ -155,7 +182,7 @@ Update PHP references (~10 files)
 
 ### 📖 PHASE 4: Create JavaScript Registry & Documentation (Est. 1-2 hours)
 **Goal**: Auto-generate searchable documentation of all JS functions  
-**Status**: NOT STARTED
+**Status**: PLANNED
 
 **Note**: This phase can be skipped initially. Complete Phases 1-3 first, then evaluate if registry is needed.
 
@@ -276,24 +303,77 @@ git show <commit-sha>:<file-path>
 
 ---
 
+## Summary of Progress
+
+| Phase | Status | Duration | Deliverables |
+|-------|--------|----------|--------------|
+| Phase 1 | ✅ DONE | 30 min | Organized libraries, 960KB dead code removed |
+| Phase 2 | ✅ DONE | 30 min | Reorganized 7 JS files into `/js/features/` and `/js/core/` |
+| Phase 3A | ✅ DONE | 2.5 hrs | Extracted 3 heavy pages (440 lines → modular JS) |
+| Phase 3B | 📋 PLANNED | 2-3 hrs | Create reusable AnnotationSearch module (see plan doc) |
+| Phase 3C | 📋 PLANNED | 1.5 hrs | Extract 4 lighter pages |
+| Phase 3D | 📋 PLANNED | 15 min | Move utility files |
+| Phase 4 | 📋 PLANNED | 1-2 hrs | Optional: JS registry & documentation |
+
+**Total completed**: 3.5 hours  
+**Total remaining**: 5-7 hours  
+**Overall progress**: ~33% complete
+
+---
+
+## Key Accomplishments
+
+✅ **Phase 3A Achievements:**
+- Extracted 3 complex display pages to separate JS modules
+- Fixed quoted search bug in sanitize_search_input()
+- Removed all back-navigation system code
+- Added new tab opening for organism_display links
+- Identified 80% code duplication opportunity
+- Created detailed Phase 3B consolidation plan
+
+---
+
+## Next Steps
+
+1. **IMMEDIATE** (Next session):
+   - Execute Phase 3B: Create AnnotationSearch module
+   - Refactor all 3 display pages to use new module
+   - Expected savings: 290 lines of duplicate code
+
+2. **THEN**:
+   - Phase 3C: Extract 4 lighter pages
+   - Phase 3D: Move utility files
+   - Phase 4: Optional documentation registry
+
+---
+
 ## Notes for Next Developer
 
-- ✅ Phase 1 is COMPLETE - don't redo it
-- Phase 2 should be done NEXT - it's quick and low-risk
+- ✅ Phases 1-3A are COMPLETE - don't redo them
+- Phase 3B has a detailed plan in `PHASE_3_JS_CONSOLIDATION_PLAN.md` - follow it closely
 - All libraries now from CDN - orphaned local files moved to `/js/unused/`
 - Git history preserved - can always recover files
 - Test in browser after EACH step - don't batch multiple changes
-- Use `git mv` for file moves to keep clean history
+- Commit frequently with clear messages
 
 ---
 
 ## Commits Made
 
-| Commit | Message |
-|--------|---------|
-| `21f1e1c` | Phase 1: Move unused library files to js/unused directory - all deps now CDN-based |
+| Commit | Date | Message | Status |
+|--------|------|---------|--------|
+| `21f1e1c` | 2025-11-21 | Phase 1: Move unused library files to js/unused directory | ✅ |
+| Multiple | 2025-11-21 | Phase 2: Reorganize JS files into /js/features and /js/core | ✅ |
+| `62980b0` | 2025-11-22 | Add found/not found ID coloring and collapsible parent/child ID documentation | ✅ |
+| `fc3127b` | 2025-11-22 | Fix quoted search: handle $quoted_search parameter in sanitize_search_input | ✅ |
+| `cb89bed` | 2025-11-22 | Phase 3A: Extract JS from groups_display.php to js/pages/groups-display.js | ✅ |
+| `c5ba327` | 2025-11-22 | Phase 3A: Extract JS from multi_organism_search.php to js/pages/multi-organism-search.js | ✅ |
+| `934627a` | 2025-11-22 | Phase 3A: Extract JS from organism_display.php to js/pages/organism-display.js | ✅ |
+| `d236144` | 2025-11-22 | Remove all back navigation system code from display pages and JS files | ✅ |
+| `29bf8a5` | 2025-11-22 | Open organism_display pages in new tabs from groups and multi-search | ✅ |
 
 ---
 
-**Last Updated**: 2025-11-21 23:34 UTC  
-**Next Action**: Begin Phase 2 when ready - estimate 30 mins
+**Last Updated**: 2025-11-22 00:58 UTC  
+**Status**: Phase 3A Complete - Phase 3B Plan Ready  
+**Next Action**: Execute Phase 3B (Create AnnotationSearch module)
