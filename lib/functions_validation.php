@@ -37,12 +37,17 @@ function test_input($data) {
  * @param string $input - Raw search input from user
  * @return string - Sanitized search string safe for database queries
  */
-function sanitize_search_input($input) {
+function sanitize_search_input($input, $quoted_search = false) {
     // Remove null bytes and control characters
     $input = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $input);
     
     // Trim whitespace
     $input = trim($input);
+    
+    // Remove quotes if this is a quoted search - they will be removed before passing to database
+    if ($quoted_search) {
+        $input = trim($input, '"');
+    }
     
     // Remove excessive whitespace (multiple spaces become single space)
     $input = preg_replace('/\s+/', ' ', $input);
