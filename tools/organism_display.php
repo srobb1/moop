@@ -268,18 +268,6 @@ $organism_info = $organism_context['info'];
 // Data variables - PHP provides these for use by the external JS file
 const sitePath = '/<?= $site ?>';
 const organismName = '<?= $organism_name ?>';
-
-// Context for navigation and data flow
-const pageContext = {
-    context_organism: '<?= htmlspecialchars($organism_name) ?>',
-    context_assembly: '',
-    context_group: '',
-    referrer_page: '<?= htmlspecialchars($_GET['referrer_page'] ?? '') ?>',
-    current_page: 'organism_display',
-    organisms: '',
-    display_name: '',
-    multi_search: <?= !empty($_GET['multi_search']) ? json_encode($_GET['multi_search']) : 'null' ?>
-};
 </script>
 
 <!-- Page-specific logic -->

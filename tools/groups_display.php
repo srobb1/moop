@@ -242,17 +242,6 @@ if (!is_public_group($group_name)) {
 const groupOrganisms = <?= json_encode(array_keys($group_organisms)) ?>;
 const groupName = <?= json_encode($group_name) ?>;
 const sitePath = '/<?= $site ?>';
-
-// Context for navigation and data flow
-const pageContext = {
-    context_organism: '',
-    context_assembly: '',
-    context_group: '<?= htmlspecialchars($group_name) ?>',
-    referrer_page: '<?= htmlspecialchars($_GET['referrer_page'] ?? '') ?>',
-    current_page: 'groups_display',
-    organisms: '',
-    display_name: ''
-};
 </script>
 
 <!-- Page-specific logic -->

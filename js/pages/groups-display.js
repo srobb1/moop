@@ -6,7 +6,6 @@
  * - groupOrganisms: array of organism names in this group
  * - groupName: the group name
  * - sitePath: the site path prefix
- * - pageContext: object with context information
  */
 
 let allResults = [];
@@ -31,7 +30,6 @@ $('#groupSearchForm').on('submit', function(e) {
     if ($('#searchResults').is(':hidden')) {
         $('#groupDescription').slideUp();
         $('#organismsSection').slideUp();
-        $('#backToGroupBtn').fadeIn();
     }
     
     // Reset and show results section

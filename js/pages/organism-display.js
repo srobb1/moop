@@ -5,7 +5,6 @@
  * Expects these variables to be defined in the HTML page (from PHP):
  * - sitePath: the site path prefix
  * - organismName: the organism name
- * - pageContext: object with context information
  */
 
 let allResults = [];
@@ -31,7 +30,6 @@ $('#organismSearchForm').on('submit', function(e) {
     if ($('#searchResults').is(':hidden')) {
         $('#organismHeader').slideUp();
         $('#organismContent').slideUp();
-        $('#backToOrganismBtn').show();
     }
     
     // Reset and show results section
@@ -51,16 +49,6 @@ $('#organismSearchForm').on('submit', function(e) {
     
     // Search the single organism
     searchOrganism(organismName, keywords, quotedSearch);
-});
-
-// Back to organism button handler
-$('#backToOrganismBtn').on('click', function(e) {
-    e.preventDefault();
-    $('#searchResults').slideUp();
-    $('#organismHeader').slideDown();
-    $('#organismContent').slideDown();
-    $('#backToOrganismBtn').hide();
-    $('#searchKeywords').val('');
 });
 
 function searchOrganism(organism, keywords, quotedSearch) {

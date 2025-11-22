@@ -6,7 +6,6 @@
  * - selectedOrganisms: array of organism names to search
  * - totalOrganisms: number of organisms to search
  * - sitePath: the site path prefix
- * - pageContext: object with context information
  */
 
 let allResults = [];

@@ -166,17 +166,6 @@ foreach ($organisms as $organism) {
 const selectedOrganisms = <?= json_encode(is_array($organisms) ? $organisms : [$organisms]) ?>;
 const totalOrganisms = selectedOrganisms.length;
 const sitePath = '/<?= $site ?>';
-
-// Context for navigation and data flow
-const pageContext = {
-    context_organism: '',
-    context_assembly: '',
-    context_group: '',
-    referrer_page: 'multi_organism_search',
-    organisms: <?= json_encode(is_array($organisms) ? implode(',', $organisms) : $organisms) ?>,
-    display_name: '',
-    multi_search: <?= json_encode(is_array($organisms) ? $organisms : [$organisms]) ?>
-};
 </script>
 
 <!-- Page-specific logic -->
