@@ -79,17 +79,43 @@
     border-color: #0a58ca;
 }
 
-.btn-advanced-filter .badge {
+.btn-advanced-filter {
     position: relative;
-    font-size: 0.65rem;
-    padding: 0.25rem 0.4rem;
-    margin-left: 0.25rem;
+}
+
+.btn-advanced-filter .badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.5rem;
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    background-color: #007bff;
+    border: 2px solid white;
+    border-radius: 50%;
 }
 
 .badge-filter {
-    font-size: 0.65rem;
-    padding: 0.25rem 0.4rem;
-    margin-left: 0.25rem;
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.5rem;
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    background-color: #007bff;
+    color: white;
+    border: 2px solid white;
+    border-radius: 50%;
 }
 
 /* Clear filters button */

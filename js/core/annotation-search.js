@@ -102,7 +102,7 @@ class AnnotationSearch {
         if (this.selectedSources && this.selectedSources.length > 0) {
             // Filters applied
             filterBtn.removeClass('btn-outline-secondary').addClass('btn-primary');
-            filterBtn.html('<i class="fa fa-sliders-h"></i> <span class="badge badge-sm bg-white text-primary">' + this.selectedSources.length + '</span>');
+            filterBtn.html('<i class="fa fa-sliders-h"></i><span class="badge badge-filter">' + this.selectedSources.length + '</span>');
             clearBtn.show();
             submitBtn.addClass('btn-success');
         } else {
