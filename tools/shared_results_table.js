@@ -16,7 +16,7 @@
  * @param {string} imageUrl - Optional URL to organism image thumbnail
  * @returns {string} HTML string for the table
  */
-function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 'tools/parent_display.php', imageUrl = '') {
+function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 'tools/parent_display.php', imageUrl = '', searchKeywords = '') {
     const tableId = '#resultsTable_' + organism.replace(/[^a-zA-Z0-9]/g, '_');
     const selectId = organism.replace(/[^a-zA-Z0-9]/g, '_');
     const genus = results[0]?.genus || '';
@@ -27,6 +27,23 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
     const commonNameDisplay = commonName ? ` (${commonName})` : '';
     
     const fallbackId = 'icon-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    // Helper function to highlight search terms in text
+    const highlightSearchTerms = (text, keywords) => {
+        if (!keywords || !text) return text;
+        
+        // Split keywords into individual terms (min 3 chars)
+        const terms = keywords.trim().split(/\s+/).filter(t => t.length >= 3);
+        if (terms.length === 0) return text;
+        
+        // Create regex to match any term (case insensitive, whole word)
+        let highlighted = text;
+        terms.forEach(term => {
+            const regex = new RegExp(`\\b${term}\\b`, 'gi');
+            highlighted = highlighted.replace(regex, `<strong style="background-color: #fff3cd; font-weight: bold;">$&</strong>`);
+        });
+        return highlighted;
+    };
     
     let imageHtml = '';
     if (imageUrl) {
@@ -103,14 +120,14 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
                 <td><em>${result.genus} ${result.species}</em><br><small class="text-muted">${result.common_name}</small></td>
                 <td>${result.feature_type}</td>
                 <td><a href="${featureUrl}" target="_blank">${result.feature_uniquename}</a></td>
-                <td>${result.feature_name}</td>
-                <td>${result.feature_description}</td>`;
+                <td>${highlightSearchTerms(result.feature_name, searchKeywords)}</td>
+                <td>${highlightSearchTerms(result.feature_description, searchKeywords)}</td>`;
         
         if (!isUniquenameSearch) {
             html += `
                 <td>${result.annotation_source_name}</td>
                 <td>${result.annotation_accession}</td>
-                <td>${result.annotation_description}</td>`;
+                <td>${highlightSearchTerms(result.annotation_description, searchKeywords)}</td>`;
         }
         
         html += `

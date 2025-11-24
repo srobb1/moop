@@ -30,6 +30,7 @@ class AnnotationSearch {
         
         this.allResults = [];
         this.searchedOrganisms = 0;
+        this.currentKeywords = '';  // Store keywords for highlighting results
     }
     
     init() {
@@ -85,6 +86,7 @@ class AnnotationSearch {
     
     handleSearch() {
         const keywords = $('#searchKeywords').val().trim();
+        this.currentKeywords = keywords;  // Store for highlighting results
         
         // Validate input
         if (keywords.length < 3) {
@@ -94,6 +96,20 @@ class AnnotationSearch {
         
         // Check for quoted search
         const quotedSearch = /^".+"$/.test(keywords);
+        
+        // Calculate actual search terms (for multi-term searches, filter out < 3 char terms)
+        let searchExplanation = '';
+        if (!quotedSearch) {
+            const terms = keywords.trim().split(/\s+/).filter(t => t.length >= 3);
+            const shortTerms = keywords.trim().split(/\s+/).filter(t => t.length < 3);
+            
+            if (shortTerms.length > 0) {
+                searchExplanation = `<br><small class="text-muted">Searching for: <strong>${terms.join(', ')}</strong> (terms with fewer than 3 characters like "${shortTerms.join('", "')}" are ignored)</small>`;
+            }
+            if (quotedSearch === false && terms.length > 1) {
+                searchExplanation += `<br><small class="text-muted">Tip: Use quotes like <code>"exact phrase"</code> to search for exact phrase instead of individual terms.</small>`;
+            }
+        }
         
         // Hide specified sections on first search
         if ($('#searchResults').is(':hidden')) {
@@ -109,7 +125,13 @@ class AnnotationSearch {
         // NOTE: Do NOT reset this.selectedSources - it should persist across searches
         $('#searchResults').show();
         $('#resultsContainer').html('');
-        $('#searchInfo').html(`Searching for: <strong>${keywords}</strong> across ${this.config.totalVar} organisms`);
+        
+        // Build search info with filters
+        let searchInfo = `Searching for: <strong>${keywords}</strong> across ${this.config.totalVar} organisms${searchExplanation}`;
+        if (this.selectedSources && this.selectedSources.length > 0) {
+            searchInfo += `<br><small class="text-muted">Limited to: ${this.selectedSources.join(', ')}</small>`;
+        }
+        $('#searchInfo').html(searchInfo);
         
         // Show progress bar
         $('#searchProgress').html(`
@@ -195,7 +217,7 @@ class AnnotationSearch {
         const imageUrl = data.organism_image_path || '';
         
         // Create results table using shared function
-        let tableHtml = createOrganismResultsTable(organism, results, this.config.sitePath, 'tools/parent_display.php', imageUrl);
+        let tableHtml = createOrganismResultsTable(organism, results, this.config.sitePath, 'tools/parent_display.php', imageUrl, this.currentKeywords);
         
         // Add "Read More" button if configured
         if (!this.config.noReadMoreButton) {
@@ -250,17 +272,29 @@ class AnnotationSearch {
             });
             jumpToHtml += '</div>';
             
+            // Generate unique ID for collapse
+            const collapseId = 'searchHintsCollapse-' + Date.now();
+            
             $('#searchProgress').html(`
                 ${warningsHtml}
-                <div class="alert alert-success">
-                    <i class="fa fa-check-circle"></i> <strong>Search complete!</strong> Found ${this.allResults.length} total result${this.allResults.length !== 1 ? 's' : ''} across ${this.searchedOrganisms} organisms.
-                    <hr class="my-2">
-                    <small>
-                        <strong>Filter:</strong> Use the input boxes above each column header to filter results.<br>
-                        <strong>Sort:</strong> Click column headers to sort ascending/descending.<br>
-                        <strong>Export:</strong> Select rows with checkboxes, then click export buttons (Copy, CSV, Excel, PDF, Print) to download selected data.<br>
-                        <strong>Columns:</strong> Use "Column Visibility" button to show/hide columns.
-                    </small>
+                <div class="alert alert-success mb-3">
+                    <button class="btn btn-link text-start p-0 w-100 text-decoration-none collapsed" 
+                            type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}"
+                            style="text-align: left; color: inherit;">
+                        <i class="fa fa-check-circle"></i> <strong>Search complete!</strong> Found ${this.allResults.length} total result${this.allResults.length !== 1 ? 's' : ''} across ${this.searchedOrganisms} organisms.
+                        <span style="float: right; margin-top: 2px;">
+                            <i class="fa fa-chevron-down"></i>
+                        </span>
+                    </button>
+                    <div class="collapse mt-3" id="${collapseId}">
+                        <small>
+                            <strong>How to use results:</strong><br>
+                            • <strong>Filter:</strong> Use the input boxes above each column header to filter results.<br>
+                            • <strong>Sort:</strong> Click column headers to sort ascending/descending.<br>
+                            • <strong>Export:</strong> Select rows with checkboxes, then click export buttons (Copy, CSV, Excel, PDF, Print).<br>
+                            • <strong>Columns:</strong> Use "Column Visibility" button to show/hide columns.
+                        </small>
+                    </div>
                 </div>
                 ${jumpToHtml}
             `);
