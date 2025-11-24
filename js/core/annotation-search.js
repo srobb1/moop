@@ -101,16 +101,16 @@ class AnnotationSearch {
         
         if (this.selectedSources && this.selectedSources.length > 0) {
             // Filters applied
-            filterBtn.addClass('filtered');
-            filterBtn.html('<i class="fa fa-sliders-h"></i> <span class="badge badge-sm bg-primary text-white">' + this.selectedSources.length + '</span>');
+            filterBtn.removeClass('btn-outline-secondary').addClass('btn-primary');
+            filterBtn.html('<i class="fa fa-sliders-h"></i> <span class="badge badge-sm bg-white text-primary">' + this.selectedSources.length + '</span>');
             clearBtn.show();
-            submitBtn.addClass('btn-search-active');
+            submitBtn.addClass('btn-success');
         } else {
             // No filters
-            filterBtn.removeClass('filtered');
+            filterBtn.removeClass('btn-primary').addClass('btn-outline-secondary');
             filterBtn.html('<i class="fa fa-sliders-h"></i>');
             clearBtn.hide();
-            submitBtn.removeClass('btn-search-active');
+            submitBtn.removeClass('btn-success');
         }
     }
     
@@ -198,7 +198,7 @@ class AnnotationSearch {
         `);
         
         // Disable search button
-        $('#searchBtn').prop('disabled', true).html('<span class="loading-spinner"></span> Searching...');
+        $('#searchBtn').prop('disabled', true).html('<span class="loading-spinner"></span>');
         
         // Search each organism sequentially
         this.searchNextOrganism(keywords, quotedSearch, 0);
@@ -293,7 +293,7 @@ class AnnotationSearch {
     }
     
     finishSearch() {
-        $('#searchBtn').prop('disabled', false).html('<i class="fa fa-search"></i> Search');
+        $('#searchBtn').prop('disabled', false).html('<i class="fa fa-search"></i>');
         
         // Build warnings section if any warnings exist
         let warningsHtml = '';
