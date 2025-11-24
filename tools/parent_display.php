@@ -365,7 +365,6 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 </div><!-- End page_container -->
 
 <!-- DataTables JS -->
-<script src="/<?= $site ?>/js/features/datatable.js"></script>
 <script src="/<?= $site ?>/js/features/datatable-config.js"></script>
 <script src="/<?= $site ?>/js/features/parent-tools.js"></script>
 
