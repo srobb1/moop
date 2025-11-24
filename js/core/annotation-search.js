@@ -106,7 +106,7 @@ class AnnotationSearch {
         this.allResults = [];
         this.searchedOrganisms = 0;
         this.warnings = [];  // Collect warnings from each organism
-        this.selectedSources = null;  // Selected annotation sources filter
+        // NOTE: Do NOT reset this.selectedSources - it should persist across searches
         $('#searchResults').show();
         $('#resultsContainer').html('');
         $('#searchInfo').html(`Searching for: <strong>${keywords}</strong> across ${this.config.totalVar} organisms`);
@@ -147,7 +147,12 @@ class AnnotationSearch {
         // Add source filter if selected
         if (this.selectedSources && this.selectedSources.length > 0) {
             ajaxData.source_names = this.selectedSources.join(',');
+            console.log('Applying source filter:', ajaxData.source_names);
+        } else {
+            console.log('No source filter applied');
         }
+        
+        console.log('AJAX data:', ajaxData);
         
         $.ajax({
             url: this.config.sitePath + '/tools/annotation_search_ajax.php',

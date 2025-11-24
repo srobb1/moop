@@ -30,6 +30,9 @@ $source_names = $_GET['source_names'] ?? '';  // Comma-separated source names
 $source_filter = [];
 if (!empty($source_names)) {
     $source_filter = array_map('trim', explode(',', $source_names));
+    error_log('DEBUG: Source filter applied: ' . implode(', ', $source_filter));
+} else {
+    error_log('DEBUG: No source filter provided');
 }
 
 // Validate inputs
