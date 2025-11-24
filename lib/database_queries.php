@@ -280,12 +280,22 @@ function getAssemblyStats($genome_accession, $dbFile) {
  * @return array - Array of matching features with annotations
  */
 function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) {
+    // Parse source filter from search term
+    // Syntax: "kinase" source:GO  or  kinase source:GO
+    $source_filter = null;
+    $search_term_clean = $search_term;
+    
+    if (preg_match('/\s+source:\s*(\S+)$/i', $search_term, $matches)) {
+        $source_filter = $matches[1];
+        $search_term_clean = trim(preg_replace('/\s+source:\s*\S+$/i', '', $search_term));
+    }
+    
     // Build the WHERE clause for annotations with REGEXP ranking
     if ($is_quoted_search) {
         // Exact phrase match
-        $like_pattern = "%$search_term%";
-        $regex_exact = '\b' . preg_quote($search_term, '/') . '\b';
-        $regex_start = '\b' . preg_quote($search_term, '/');
+        $like_pattern = "%$search_term_clean%";
+        $regex_exact = '\b' . preg_quote($search_term_clean, '/') . '\b';
+        $regex_start = '\b' . preg_quote($search_term_clean, '/');
         
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
                          a.annotation_accession, a.annotation_description, 
@@ -301,23 +311,36 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) 
                     AND (a.annotation_description LIKE ? 
                        OR f.feature_name LIKE ? 
                        OR f.feature_description LIKE ?
-                       OR a.annotation_accession LIKE ?)
-                  ORDER BY 
-                    CASE 
-                      WHEN f.feature_name REGEXP ? THEN 1
-                      WHEN f.feature_name REGEXP ? THEN 2
-                      WHEN f.feature_description REGEXP ? THEN 3
-                      WHEN a.annotation_description REGEXP ? THEN 4
-                      ELSE 5
-                    END,
-                    f.feature_uniquename";
-        $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern, 
-                   $regex_exact, $regex_start, $regex_start, $regex_exact];
+                       OR a.annotation_accession LIKE ?)";
+        
+        $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern];
+        
+        // Add source filter if specified
+        if ($source_filter) {
+            $query .= " AND ans.annotation_source_name LIKE ?";
+            $params[] = "%$source_filter%";
+        }
+        
+        $query .= " ORDER BY 
+                     CASE 
+                       WHEN f.feature_name REGEXP ? THEN 1
+                       WHEN f.feature_name REGEXP ? THEN 2
+                       WHEN f.feature_description REGEXP ? THEN 3
+                       WHEN a.annotation_description REGEXP ? THEN 4
+                       ELSE 5
+                     END,
+                     f.feature_uniquename";
+        
+        $params[] = $regex_exact;
+        $params[] = $regex_start;
+        $params[] = $regex_start;
+        $params[] = $regex_exact;
+        
     } else {
         // Multi-term keyword search (all terms must appear somewhere)
-        $terms = array_filter(array_map('trim', preg_split('/\s+/', $search_term)));
+        $terms = array_filter(array_map('trim', preg_split('/\s+/', $search_term_clean)));
         if (empty($terms)) {
-            return [];
+            return ['results' => [], 'capped' => false, 'warning' => null];
         }
         
         // Extract primary term for relevance scoring (first word of search)
@@ -352,8 +375,15 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) 
                     AND fa.annotation_id = a.annotation_id 
                     AND f.organism_id = o.organism_id
                     AND f.genome_id = g.genome_id
-                    AND $where_clause
-                  ORDER BY 
+                    AND $where_clause";
+        
+        // Add source filter if specified
+        if ($source_filter) {
+            $query .= " AND ans.annotation_source_name LIKE ?";
+            $params[] = "%$source_filter%";
+        }
+        
+        $query .= " ORDER BY 
                     CASE 
                       WHEN f.feature_name REGEXP ? THEN 1
                       WHEN f.feature_name REGEXP ? THEN 2
@@ -370,12 +400,55 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) 
         $params[] = $regex_exact;
     }
     
-    return fetchData($query, $dbFile, $params);
+    // Use LIMIT+check approach: query for 2501 results to detect if there are more
+    $max_display = 2500;
+    $query .= " LIMIT " . ($max_display + 1);
+    
+    try {
+        $dbh = new PDO("sqlite:" . $dbFile);
+        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        // Register REGEXP function
+        $dbh->sqliteCreateFunction('REGEXP', function($pattern, $text) {
+            return preg_match('/' . $pattern . '/i', $text) ? 1 : 0;
+        }, 2);
+        
+        $stmt = $dbh->prepare($query);
+        $stmt->execute($params);
+        $all_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $dbh = null;
+        
+        // Check if results were capped
+        $capped = count($all_results) > $max_display;
+        $warning = null;
+        
+        if ($capped) {
+            // We got 2501+ results, so we know it's "2500+"
+            $results = array_slice($all_results, 0, $max_display);
+            $warning = "Your search returned 2,500+ results. " .
+                      "Displaying first 2,500. Please refine by adding more terms or using 'source:' filter. " .
+                      "Example: kinase source:GO";
+        } else {
+            // We got fewer than 2501, so all results are displayed
+            $results = $all_results;
+        }
+        
+        return [
+            'results' => $results,
+            'capped' => $capped,
+            'warning' => $warning
+        ];
+        
+    } catch (PDOException $e) {
+        return [
+            'results' => [],
+            'capped' => false,
+            'warning' => 'Search error: ' . $e->getMessage()
+        ];
+    }
 }
 
-/**
- * Fallback search using LIKE queries (for DBs without FTS5)
- */
 function searchFeaturesAndAnnotationsLike($search_term, $is_quoted_search, $dbFile) {
     if ($is_quoted_search) {
         $like_pattern = "%$search_term%";
@@ -474,3 +547,81 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
     
     return fetchData($query, $dbFile, $params);
 }
+
+/**
+ * Search features and annotations using FTS5 full-text search
+ * Much faster than LIKE for large datasets
+ * 
+ * @param string $search_term - Search term or phrase
+ * @param bool $is_quoted_search - Whether this is a quoted phrase search
+ * @param string $dbFile - Path to SQLite database
+ * @return array - Array of matching features with annotations
+ */
+function searchFeaturesAndAnnotationsFTS5($search_term, $is_quoted_search, $dbFile) {
+    try {
+        $dbh = new PDO("sqlite:" . $dbFile);
+        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        // Prepare FTS5 query
+        if ($is_quoted_search) {
+            // Exact phrase match in FTS5
+            $fts_query = '"' . str_replace('"', '""', $search_term) . '"';
+        } else {
+            // Multi-term OR search in FTS5
+            $terms = array_filter(array_map('trim', preg_split('/\s+/', $search_term)));
+            $fts_query = implode(' OR ', $terms);
+        }
+        
+        // Query FTS5 for annotation matches (most relevant)
+        $sql = "SELECT DISTINCT f.feature_uniquename, f.feature_name, f.feature_description, 
+                        a.annotation_accession, a.annotation_description, 
+                        ans.annotation_source_name,
+                        o.genus, o.species, o.common_name, o.subtype, f.feature_type,
+                        f.organism_id, g.genome_accession
+                FROM annotation_fts af
+                JOIN annotation a ON af.rowid = a.annotation_id
+                JOIN feature_annotation fa ON a.annotation_id = fa.annotation_id
+                JOIN feature f ON fa.feature_id = f.feature_id
+                JOIN annotation_source ans ON a.annotation_source_id = ans.annotation_source_id
+                JOIN organism o ON f.organism_id = o.organism_id
+                JOIN genome g ON f.genome_id = g.genome_id
+                WHERE af.annotation_fts MATCH ?
+                ORDER BY rank
+                LIMIT 100";
+        
+        $stmt = $dbh->prepare($sql);
+        $stmt->execute([$fts_query]);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $dbh = null;
+        return $results;
+        
+    } catch (PDOException $e) {
+        // Fallback to LIKE search if FTS5 fails
+        return searchFeaturesAndAnnotationsLike($search_term, $is_quoted_search, $dbFile);
+    }
+}
+
+/**
+ * Get all annotation sources for an organism with counts
+ * Used to populate search help/tutorial
+ * 
+ * @param string $dbFile - Path to SQLite database
+ * @return array - Array of sources with name and count
+ */
+function getAnnotationSources($dbFile) {
+    try {
+        $query = "SELECT DISTINCT 
+                         ans.annotation_source_name as name,
+                         COUNT(a.annotation_id) as count
+                  FROM annotation_source ans
+                  LEFT JOIN annotation a ON ans.annotation_source_id = a.annotation_source_id
+                  GROUP BY ans.annotation_source_id
+                  ORDER BY count DESC";
+        
+        return fetchData($query, $dbFile, []);
+    } catch (Exception $e) {
+        return [];
+    }
+}
+?>

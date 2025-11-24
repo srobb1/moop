@@ -79,10 +79,13 @@ $organism_image_path = $organism_data_result['image_path'];
 // Check if searching by feature uniquename first
 $results = searchFeaturesByUniquenameForSearch($search_input, $db);
 $uniquename_search = !empty($results);
+$warning_message = null;
 
 // If no results by uniquename, search annotations
 if (!$uniquename_search) {
-    $results = searchFeaturesAndAnnotations($search_input, $quoted_search, $db);
+    $search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db);
+    $results = $search_result['results'];
+    $warning_message = $search_result['warning'];
 }
 
 // Format results for JSON
@@ -138,5 +141,6 @@ echo json_encode([
     'organism_image_path' => $organism_image_path,
     'results' => $formatted_results,
     'count' => count($formatted_results),
-    'search_type' => $uniquename_search ? 'Gene/Transcript ID' : ($quoted_search ? 'Quoted' : 'Keyword')
+    'search_type' => $uniquename_search ? 'Gene/Transcript ID' : ($quoted_search ? 'Quoted' : 'Keyword'),
+    'warning' => $warning_message
 ]);
