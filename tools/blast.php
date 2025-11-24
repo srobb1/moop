@@ -275,7 +275,7 @@ include_once __DIR__ . '/../includes/navbar.php';
                             placeholder="Filter by group, organism, or assembly..."
                             value="<?= htmlspecialchars($context_organism ?: $context_group) ?>"
                             >
-                        <button type="button" class="btn btn-success" onclick="clearSourceFilters();">
+                        <button type="button" class="btn btn-success" onclick="clearBlastSourceFilters();">
                             <i class="fa fa-times"></i> Clear Filters
                         </button>
                     </div>

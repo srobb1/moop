@@ -388,18 +388,19 @@ js/
 
 ### Identified Duplications in js/features/:
 
-- [ ] **Extract `updateCurrentSelectionDisplay()`** ✅ COMPLETED
+- [x] **Extract `updateCurrentSelectionDisplay()`** ✅ COMPLETED
   - Function is IDENTICAL in `blast-manager.js` and `sequence-retrieval.js`
   - **Action**: Moved to `source-list-manager.js` with shared API
   - **Files Updated**: Both managers now call the shared function
 
-- [ ] **Extract common source filtering logic**
-  - Both managers have similar filter/select patterns
-  - **Status**: TBD - Review for overlaps after updateCurrentSelectionDisplay extraction
+- [x] **Extract common source filtering logic** ✅ COMPLETED
+  - Both managers now share `clearSourceFilters()` in `source-list-manager.js`
+  - **Status**: Both blast and sequence retrieval use shared clear filters function
+  - **Files Updated**: `blast-manager.js`, `sequence-retrieval.js` call shared function
 
 - [ ] **Extract form validation patterns**
   - Both managers validate input before operations
-  - **Status**: TBD - Consider shared validation utility
+  - **Status**: Review for shared patterns
 
 - [ ] **Review datatable initialization patterns**
   - `parent-tools.js` initializes DataTables in different ways
@@ -412,4 +413,5 @@ js/
 ### Consolidation Progress:
 - ✅ Removed `datatable.js` (replaced by `datatable-config.js`)
 - ✅ Extracted `updateCurrentSelectionDisplay()` to `source-list-manager.js`
+- ✅ Extracted `clearSourceFilters()` to `source-list-manager.js`
 - ⏳ Pending: Complete remaining consolidations
