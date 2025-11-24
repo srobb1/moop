@@ -506,3 +506,48 @@ git show <commit-sha>:<file-path>
 - **Phase 3D**: Optional (lower priority)
 - **Phase 4**: Optional (nice to have)
 - **Overall**: ~80-85% of refactoring complete
+
+---
+
+## Phase 3D Session Summary (2025-11-24 Night)
+
+### Completed Consolidation Work:
+
+1. ✅ **Extracted updateCurrentSelectionDisplay()** 
+   - Moved identical function from blast-manager.js and sequence-retrieval.js
+   - Now centralized in source-list-manager.js
+   - Both tools now share same implementation
+
+2. ✅ **Extracted clearSourceFilters()** 
+   - Moved identical function to source-list-manager.js
+   - Both BLAST and Sequence Retrieval tools now use shared implementation
+   - Fixed radio button re-enabling after filter clear
+
+3. ✅ **Fixed Source Selection Defaults**
+   - Added previouslySelectedSource variable to retrieve_sequences.php
+   - Both BLAST and Sequence Retrieval now have consistent default source selection
+   - Both share same checkbox behavior
+
+4. ✅ **Fixed Disabled Radio Buttons**
+   - Fixed issue where radios remained disabled after clearing filters on retrieve sequences page
+   - Used shared clearSourceFilters() function properly re-enables radios
+
+5. ✅ **Consolidated escapeHtml() Function**
+   - Moved duplicate function to utilities.js 
+   - Removed 2 duplicate definitions from organism-management.js
+   - organism-management.js now uses shared window.escapeHtml
+   - Commit: `d418b49`
+
+### Consolidation Checklist Progress:
+- ✅ `updateCurrentSelectionDisplay()` - consolidated
+- ✅ `clearSourceFilters()` - consolidated
+- ✅ `escapeHtml()` - consolidated
+- ✅ Source selection defaults - unified
+- 📋 Review remaining tool JS for patterns
+
+### Current Status:
+- **Consolidation**: 5 duplicate functions removed
+- **Code reuse**: Tools now sharing utility functions via window scope
+- **Tests**: All functionality verified working
+- **Commits**: 5 consolidation commits made
+- **Overall Phase 3D progress**: ~40% complete (consolidation phase)
