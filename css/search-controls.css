@@ -20,8 +20,9 @@
     transition: all 0.2s ease;
     font-size: 1.3rem;
     flex-shrink: 0;
-    overflow: hidden;
+    overflow: visible;
     line-height: 1;
+    position: relative;
 }
 
 .btn-icon i {
