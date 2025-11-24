@@ -55,10 +55,10 @@ class AnnotationSearch {
             const buttonGroup = `
                 <div class="search-controls d-flex gap-2 align-items-center ms-2">
                     <!-- Filter button with icon only -->
-                    <button type="button" class="btn btn-outline-secondary btn-advanced-filter" 
+                    <button type="button" class="btn btn-icon btn-advanced-filter" 
                             title="Advanced Filtering" 
                             data-bs-toggle="tooltip" data-bs-placement="bottom">
-                        <i class="fa fa-filter"></i>
+                        <i class="fa fa-sliders-h"></i>
                     </button>
                     
                     <!-- Clear filters button (hidden initially) -->
@@ -101,16 +101,16 @@ class AnnotationSearch {
         
         if (this.selectedSources && this.selectedSources.length > 0) {
             // Filters applied
-            filterBtn.removeClass('btn-outline-secondary').addClass('btn-primary');
-            filterBtn.html('<i class="fa fa-filter"></i> <span class="badge badge-sm bg-white text-primary">' + this.selectedSources.length + '</span>');
+            filterBtn.addClass('filtered');
+            filterBtn.html('<i class="fa fa-sliders-h"></i> <span class="badge badge-sm bg-primary text-white">' + this.selectedSources.length + '</span>');
             clearBtn.show();
-            submitBtn.addClass('btn-success');
+            submitBtn.addClass('btn-search-active');
         } else {
             // No filters
-            filterBtn.removeClass('btn-primary').addClass('btn-outline-secondary');
-            filterBtn.html('<i class="fa fa-filter"></i>');
+            filterBtn.removeClass('filtered');
+            filterBtn.html('<i class="fa fa-sliders-h"></i>');
             clearBtn.hide();
-            submitBtn.removeClass('btn-success');
+            submitBtn.removeClass('btn-search-active');
         }
     }
     

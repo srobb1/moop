@@ -50,8 +50,8 @@ $organism_info = $organism_context['info'];
                 </small>
               </div>
               <div class="col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-primary flex-grow-1" id="searchBtn">
-                  <i class="fa fa-search"></i> Search
+                <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                  <i class="fa fa-search"></i>
                 </button>
               </div>
             </div>
