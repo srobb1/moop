@@ -10,7 +10,7 @@
  *     hideSections: ['#groupDescription'],
  *     scrollToResults: false,
  *     extraAjaxParams: {group: groupName},
- *     urlBuilder: (organism) => {...}
+ *     noReadMoreButton: false
  *   });
  *   search.init();
  */
@@ -24,7 +24,6 @@ class AnnotationSearch {
             hideSections: config.hideSections || [],
             scrollToResults: config.scrollToResults || false,
             extraAjaxParams: config.extraAjaxParams || {},
-            urlBuilder: config.urlBuilder || null,
             noReadMoreButton: config.noReadMoreButton || false,
             sitePath: config.sitePath || window.sitePath || '/moop'
         };
@@ -135,14 +134,7 @@ class AnnotationSearch {
         let tableHtml = createOrganismResultsTable(organism, results, this.config.sitePath, 'tools/parent_display.php', imageUrl);
         
         // Add "Read More" button if configured
-        if (!this.config.noReadMoreButton && this.config.urlBuilder) {
-            const readMoreUrl = this.config.urlBuilder(organism);
-            const readMoreBtn = `<a href="${readMoreUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary ms-2 font-size-small">
-                            <i class="fa fa-info-circle"></i> Read More
-                        </a>`;
-            tableHtml = tableHtml.replace(/(<span class="badge bg-primary">.*?<\/span>)/, `$1\n                ${readMoreBtn}`);
-        } else if (!this.config.noReadMoreButton) {
-            // Default URL builder: simple organism_display link
+        if (!this.config.noReadMoreButton) {
             const readMoreUrl = this.config.sitePath + '/tools/organism_display.php?organism=' + encodeURIComponent(organism);
             const readMoreBtn = `<a href="${readMoreUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary ms-2 font-size-small">
                             <i class="fa fa-info-circle"></i> Read More

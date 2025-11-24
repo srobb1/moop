@@ -161,6 +161,7 @@ foreach ($organisms as $organism) {
 <script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
 <script src="/<?= $site ?>/js/features/datatable-config.js"></script>
 <script src="/<?= $site ?>/tools/shared_results_table.js"></script>
+<script src="/<?= $site ?>/js/core/annotation-search.js"></script>
 <script>
 // Data variables - PHP provides these for use by the external JS file
 const selectedOrganisms = <?= json_encode(is_array($organisms) ? $organisms : [$organisms]) ?>;

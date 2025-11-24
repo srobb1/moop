@@ -264,6 +264,8 @@ $organism_info = $organism_context['info'];
 <script src="/<?= $site ?>/js/features/datatable-config.js"></script>
 <script src="/<?= $site ?>/tools/shared_results_table.js"></script>
 
+<script src="/<?= $site ?>/js/core/annotation-search.js"></script>
+
 <script>
 // Data variables - PHP provides these for use by the external JS file
 const sitePath = '/<?= $site ?>';
