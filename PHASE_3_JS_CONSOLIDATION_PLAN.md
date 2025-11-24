@@ -381,3 +381,35 @@ js/
 - Performance optimized with FTS5
 - User experience significantly improved
 - Codebase is cleaner and more maintainable
+
+---
+
+## Phase 3D Consolidation Checklist - Tools JS Duplication
+
+### Identified Duplications in js/features/:
+
+- [ ] **Extract `updateCurrentSelectionDisplay()`** ✅ COMPLETED
+  - Function is IDENTICAL in `blast-manager.js` and `sequence-retrieval.js`
+  - **Action**: Moved to `source-list-manager.js` with shared API
+  - **Files Updated**: Both managers now call the shared function
+
+- [ ] **Extract common source filtering logic**
+  - Both managers have similar filter/select patterns
+  - **Status**: TBD - Review for overlaps after updateCurrentSelectionDisplay extraction
+
+- [ ] **Extract form validation patterns**
+  - Both managers validate input before operations
+  - **Status**: TBD - Consider shared validation utility
+
+- [ ] **Review datatable initialization patterns**
+  - `parent-tools.js` initializes DataTables in different ways
+  - **Status**: TBD - Verify if consolidation is needed
+
+- [ ] **Extract common event handlers**
+  - Click handlers, change handlers across tool files
+  - **Status**: TBD - Identify patterns for reuse
+
+### Consolidation Progress:
+- ✅ Removed `datatable.js` (replaced by `datatable-config.js`)
+- ✅ Extracted `updateCurrentSelectionDisplay()` to `source-list-manager.js`
+- ⏳ Pending: Complete remaining consolidations
