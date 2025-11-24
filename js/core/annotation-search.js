@@ -31,6 +31,7 @@ class AnnotationSearch {
         this.allResults = [];
         this.searchedOrganisms = 0;
         this.currentKeywords = '';  // Store keywords for highlighting results
+        this.cappedOrganisms = [];  // Track organisms with capped results
     }
     
     init() {
@@ -250,6 +251,11 @@ class AnnotationSearch {
                     });
                 }
                 
+                // Track if results were capped for this organism
+                if (data.capped) {
+                    this.cappedOrganisms.push(data.organism);
+                }
+                
                 this.searchedOrganisms++;
                 const progress = Math.round((this.searchedOrganisms / this.config.totalVar) * 100);
                 $('#progressFill').css('width', progress + '%').text(progress + '%');
@@ -294,19 +300,30 @@ class AnnotationSearch {
     finishSearch() {
         $('#searchBtn').prop('disabled', false).html('<i class="fa fa-search"></i>');
         
-        // Build warnings section if any warnings exist
+        // Build compact cap message if any organisms were capped
+        let capMessageHtml = '';
+        if (this.cappedOrganisms.length > 0) {
+            const cappedList = this.cappedOrganisms.join(', ');
+            capMessageHtml = `<div class="alert alert-warning mb-3">
+                <strong>Search results are capped at 2,500.</strong> Use Advanced Filter or add more search terms to refine. 
+                The following organism searches were capped: <em>${cappedList}</em>
+            </div>`;
+        }
+        
+        // Build warnings section if any other warnings exist (excluding cap warnings)
         let warningsHtml = '';
-        if (this.warnings.length > 0) {
+        const otherWarnings = this.warnings.filter(w => !w.warning.includes('capped'));
+        if (otherWarnings.length > 0) {
             warningsHtml = '<div class="alert alert-warning mb-3">';
-            this.warnings.forEach((item, idx) => {
+            otherWarnings.forEach((item, idx) => {
                 warningsHtml += '<strong>' + item.organism + ':</strong> ' + item.warning;
-                if (idx < this.warnings.length - 1) warningsHtml += '<br>';
+                if (idx < otherWarnings.length - 1) warningsHtml += '<br>';
             });
             warningsHtml += '</div>';
         }
         
         if (this.allResults.length === 0) {
-            $('#searchProgress').html(warningsHtml + '<div class="alert alert-warning">No results found. Try different search terms.</div>');
+            $('#searchProgress').html(capMessageHtml + warningsHtml + '<div class="alert alert-warning">No results found. Try different search terms.</div>');
         } else {
             // Build jump-to navigation
             let jumpToHtml = '<div class="alert alert-info mb-3"><strong>Jump to results for:</strong> ';
@@ -331,6 +348,7 @@ class AnnotationSearch {
             const collapseId = 'searchHintsCollapse-' + Date.now();
             
             $('#searchProgress').html(`
+                ${capMessageHtml}
                 ${warningsHtml}
                 <div class="alert alert-success mb-3">
                     <button class="btn btn-link text-start p-0 w-100 text-decoration-none collapsed" 

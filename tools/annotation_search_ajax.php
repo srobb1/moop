@@ -146,11 +146,16 @@ if (!empty($incomplete_records)) {
     ]);
 }
 
+// Check if results are capped at 2500
+$result_count = count($formatted_results);
+$is_capped = $result_count >= 2500 || !empty($warning_message);
+
 echo json_encode([
     'organism' => $organism,
     'organism_image_path' => $organism_image_path,
     'results' => $formatted_results,
-    'count' => count($formatted_results),
+    'count' => $result_count,
     'search_type' => $uniquename_search ? 'Gene/Transcript ID' : ($quoted_search ? 'Quoted' : 'Keyword'),
-    'warning' => $warning_message
+    'warning' => $warning_message,
+    'capped' => $is_capped
 ]);
