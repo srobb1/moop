@@ -32,6 +32,41 @@ function initializeSequenceRetrieval(options = {}) {
         }
     }
     
+    // Restore previously selected source or auto-select first visible
+    if (typeof previouslySelectedSource !== 'undefined' && previouslySelectedSource) {
+        const allSourceRadios = document.querySelectorAll(`input[name="selected_source"][value="${previouslySelectedSource}"]`);
+        let prevSourceRadio = null;
+        
+        for (let radio of allSourceRadios) {
+            const line = radio.closest('.fasta-source-line');
+            if (line && !line.classList.contains('hidden')) {
+                prevSourceRadio = radio;
+                break;
+            }
+        }
+        
+        if (prevSourceRadio) {
+            prevSourceRadio.checked = true;
+        } else {
+            // Fall back to first visible if restoration failed
+            const firstRadio = document.querySelector('input[name="selected_source"]');
+            const firstLine = firstRadio ? firstRadio.closest('.fasta-source-line') : null;
+            if (firstLine && !firstLine.classList.contains('hidden')) {
+                firstRadio.checked = true;
+            }
+        }
+    } else {
+        // Auto-select first visible source if nothing was previously selected
+        const allRadios = document.querySelectorAll('input[name="selected_source"]');
+        for (let radio of allRadios) {
+            const line = radio.closest('.fasta-source-line');
+            if (line && !line.classList.contains('hidden') && !radio.checked) {
+                radio.click();
+                break;
+            }
+        }
+    }
+    
     function updateCurrentSelectionDisplay() {
         window.updateCurrentSelectionDisplay('currentSelection', 'fasta-source-line', true);
         const selectionDiv = document.getElementById('currentSelection');

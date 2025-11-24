@@ -390,6 +390,9 @@ include_once __DIR__ . '/../includes/navbar.php';
 <script>
 // Pass scroll preference from PHP to JavaScript
 const scrollToResults = <?= $should_scroll_to_results ? 'true' : 'false' ?>;
+
+// Store the previously selected source (for form restoration)
+const previouslySelectedSource = '<?= addslashes($selected_source) ?>';
 </script>
 
 <script src="/<?= $site ?>/js/features/source-list-manager.js"></script>
