@@ -61,6 +61,7 @@ class AnnotationSearch {
         // Reset and show results section
         this.allResults = [];
         this.searchedOrganisms = 0;
+        this.warnings = [];  // Collect warnings from each organism
         $('#searchResults').show();
         $('#resultsContainer').html('');
         $('#searchInfo').html(`Searching for: <strong>${keywords}</strong> across ${this.config.totalVar} organisms`);
@@ -109,6 +110,14 @@ class AnnotationSearch {
                     this.displayOrganismResults(data);
                 }
                 
+                // Collect warning if present
+                if (data.warning) {
+                    this.warnings.push({
+                        organism: data.organism,
+                        warning: data.warning
+                    });
+                }
+                
                 this.searchedOrganisms++;
                 const progress = Math.round((this.searchedOrganisms / this.config.totalVar) * 100);
                 $('#progressFill').css('width', progress + '%').text(progress + '%');
@@ -153,8 +162,19 @@ class AnnotationSearch {
     finishSearch() {
         $('#searchBtn').prop('disabled', false).html('<i class="fa fa-search"></i> Search');
         
+        // Build warnings section if any warnings exist
+        let warningsHtml = '';
+        if (this.warnings.length > 0) {
+            warningsHtml = '<div class="alert alert-warning mb-3">';
+            this.warnings.forEach((item, idx) => {
+                warningsHtml += '<strong>' + item.organism + ':</strong> ' + item.warning;
+                if (idx < this.warnings.length - 1) warningsHtml += '<br>';
+            });
+            warningsHtml += '</div>';
+        }
+        
         if (this.allResults.length === 0) {
-            $('#searchProgress').html('<div class="alert alert-warning">No results found. Try different search terms.</div>');
+            $('#searchProgress').html(warningsHtml + '<div class="alert alert-warning">No results found. Try different search terms.</div>');
         } else {
             // Build jump-to navigation
             let jumpToHtml = '<div class="alert alert-info mb-3"><strong>Jump to results for:</strong> ';
@@ -176,6 +196,7 @@ class AnnotationSearch {
             jumpToHtml += '</div>';
             
             $('#searchProgress').html(`
+                ${warningsHtml}
                 <div class="alert alert-success">
                     <i class="fa fa-check-circle"></i> <strong>Search complete!</strong> Found ${this.allResults.length} total result${this.allResults.length !== 1 ? 's' : ''} across ${this.searchedOrganisms} organisms.
                     <hr class="my-2">
