@@ -1,5 +1,9 @@
 # Documentation/Reference files (not part of core codebase)
 
+*bak
+*BAK
+*.bak.*
+
 *sqlite
 organisms/*
 
