@@ -182,6 +182,12 @@ function getDbConnection($dbFile) {
     try {
         $dbh = new PDO("sqlite:" . $dbFile);
         $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        // Register custom REGEXP function for word boundary matching
+        $dbh->sqliteCreateFunction('REGEXP', function($pattern, $text) {
+            return preg_match('/' . $pattern . '/i', $text) ? 1 : 0;
+        }, 2);
+        
         return $dbh;
     } catch (PDOException $e) {
         die("Database connection failed: " . $e->getMessage());
