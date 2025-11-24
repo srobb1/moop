@@ -20,6 +20,7 @@ $organism_info = $organism_context['info'];
   <!-- Display page styles (consolidated from display_styles.css and shared_results_table.css) -->
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
   <link rel="stylesheet" href="/<?= $site ?>/css/advanced-search-filter.css">
+  <link rel="stylesheet" href="/<?= $site ?>/css/search-controls.css">
 </head>
 <body class="bg-light">
 
@@ -48,8 +49,8 @@ $organism_info = $organism_context['info'];
                   Use quotes for exact phrases (e.g., "ABC transporter"). Searches this organism only.
                 </small>
               </div>
-              <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100" id="searchBtn">
+              <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1" id="searchBtn">
                   <i class="fa fa-search"></i> Search
                 </button>
               </div>

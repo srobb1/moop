@@ -49,6 +49,8 @@ if (!is_public_group($group_name)) {
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
   <!-- Advanced search filter modal styles -->
   <link rel="stylesheet" href="/<?= $site ?>/css/advanced-search-filter.css">
+  <!-- Search and filter control styles -->
+  <link rel="stylesheet" href="/<?= $site ?>/css/search-controls.css">
 </head>
 <body class="bg-light">
 
@@ -77,8 +79,8 @@ if (!is_public_group($group_name)) {
                   Use quotes for exact phrases (e.g., "ABC transporter"). Searches across all organisms in this group.
                 </small>
               </div>
-              <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100" id="searchBtn">
+              <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1" id="searchBtn">
                   <i class="fa fa-search"></i> Search
                 </button>
               </div>

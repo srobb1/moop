@@ -44,19 +44,73 @@ class AnnotationSearch {
     }
     
     /**
-     * Add advanced search filter button to form
+     * Add advanced search filter button and clear button to form
      */
     addFilterButton() {
         const form = $(this.config.formSelector);
-        if (form.find('.btn-advanced-filter').length === 0) {
-            const filterBtn = `
-                <button type="button" class="btn btn-sm btn-outline-secondary btn-advanced-filter ms-2">
-                    <i class="fa fa-sliders"></i> Advanced Filters
-                </button>
-            `;
-            form.find('button[type="submit"]').after(filterBtn);
+        if (form.find('.search-controls').length === 0) {
+            const submitBtn = form.find('button[type="submit"]');
             
-            $('.btn-advanced-filter').on('click', () => this.showFilterModal());
+            // Create a new button group container
+            const buttonGroup = `
+                <div class="search-controls d-flex gap-2 align-items-center ms-2">
+                    <!-- Filter button with icon only -->
+                    <button type="button" class="btn btn-outline-secondary btn-advanced-filter" 
+                            title="Advanced Filtering" 
+                            data-bs-toggle="tooltip" data-bs-placement="bottom">
+                        <i class="fa fa-filter"></i>
+                    </button>
+                    
+                    <!-- Clear filters button (hidden initially) -->
+                    <button type="button" class="btn btn-sm btn-link text-danger btn-clear-filters" 
+                            style="display: none;">
+                        <i class="fa fa-times-circle"></i> Clear Filters
+                    </button>
+                </div>
+            `;
+            
+            submitBtn.after(buttonGroup);
+            
+            // Attach event handlers
+            form.find('.btn-advanced-filter').on('click', () => this.showFilterModal());
+            form.find('.btn-clear-filters').on('click', () => this.clearFilters());
+            
+            // Initialize tooltips
+            const tooltipTriggerList = [].slice.call(form.find('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+        }
+    }
+    
+    /**
+     * Clear all applied filters
+     */
+    clearFilters() {
+        this.selectedSources = null;
+        this.updateFilterButtonState();
+        alert('Filters cleared');
+    }
+    
+    /**
+     * Update filter button visual state based on applied filters
+     */
+    updateFilterButtonState() {
+        const form = $(this.config.formSelector);
+        const filterBtn = form.find('.btn-advanced-filter');
+        const clearBtn = form.find('.btn-clear-filters');
+        const submitBtn = form.find('button[type="submit"]');
+        
+        if (this.selectedSources && this.selectedSources.length > 0) {
+            // Filters applied
+            filterBtn.removeClass('btn-outline-secondary').addClass('btn-primary');
+            filterBtn.html('<i class="fa fa-filter"></i> <span class="badge badge-sm bg-white text-primary">' + this.selectedSources.length + '</span>');
+            clearBtn.show();
+            submitBtn.addClass('btn-success');
+        } else {
+            // No filters
+            filterBtn.removeClass('btn-primary').addClass('btn-outline-secondary');
+            filterBtn.html('<i class="fa fa-filter"></i>');
+            clearBtn.hide();
+            submitBtn.removeClass('btn-success');
         }
     }
     
@@ -72,6 +126,8 @@ class AnnotationSearch {
             sitePath: this.config.sitePath,
             onApply: (selectedSources) => {
                 this.selectedSources = selectedSources;
+                // Update button states
+                this.updateFilterButtonState();
                 // Show confirmation toast/message
                 const message = selectedSources.length === 0 
                     ? 'No sources selected' 
