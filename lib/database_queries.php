@@ -630,39 +630,35 @@ function getAnnotationSources($dbFile) {
  */
 function getAnnotationSourcesByType($dbFile) {
     try {
-        // Get all sources
-        $sources = getAnnotationSources($dbFile);
+        // Get all sources with their annotation types from the database
+        $query = "SELECT 
+                    ans.annotation_source_name as name,
+                    ans.annotation_type as type,
+                    COUNT(a.annotation_id) as count
+                  FROM annotation_source ans
+                  LEFT JOIN annotation a ON ans.annotation_source_id = a.annotation_source_id
+                  GROUP BY ans.annotation_source_id, ans.annotation_type
+                  ORDER BY ans.annotation_type, COUNT(a.annotation_id) DESC";
         
-        // Group by type
+        $sources_with_types = fetchData($query, $dbFile, []);
+        
+        // Group by annotation_type
         $grouped = [];
-        
-        foreach ($sources as $source) {
-            $name = $source['name'];
-            $type = 'Other';
-            
-            // Categorize by prefix/name pattern
-            if (strpos($name, 'ENS_') === 0) {
-                $type = 'Ensembl Orthologs';
-            } elseif (strpos($name, 'InterProScan') === 0) {
-                $type = 'InterProScan';
-            } elseif (strpos($name, 'EggNOG') === 0) {
-                $type = 'EggNOG';
-            } elseif (strpos($name, 'OMA') === 0) {
-                $type = 'OMA Orthologs';
-            }
+        foreach ($sources_with_types as $source) {
+            $type = $source['type'];
             
             if (!isset($grouped[$type])) {
                 $grouped[$type] = [];
             }
             
             $grouped[$type][] = [
-                'name' => $name,
+                'name' => $source['name'],
                 'count' => $source['count']
             ];
         }
         
         // Sort types in display order
-        $order = ['EggNOG', 'InterProScan', 'OMA Orthologs', 'Ensembl Orthologs', 'Other'];
+        $order = ['Gene Ontology', 'Gene Families', 'Domains', 'Orthologs', 'Homologs', 'AI Annotations'];
         $sorted = [];
         foreach ($order as $type) {
             if (isset($grouped[$type])) {

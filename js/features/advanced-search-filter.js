@@ -110,7 +110,7 @@ class AdvancedSearchFilter {
                            data-type="${type}"
                            checked>
                     <label class="form-check-label small" for="source-${this.sanitizeId(source.name)}">
-                        ${source.name} <span class="badge bg-secondary">${source.count}</span>
+                        ${source.name} <span class="badge bg-secondary">${source.count.toLocaleString()}</span>
                     </label>
                 </div>
             `).join('');
@@ -148,7 +148,8 @@ class AdvancedSearchFilter {
                         <div class="modal-body">
                             <p class="text-muted small mb-3">
                                 Select annotation sources to include in your search. 
-                                All sources are selected by default.
+                                All sources are selected by default. The numbers shown are total 
+                                annotations per source in this organism's database.
                             </p>
                             
                             <div class="mb-3">
