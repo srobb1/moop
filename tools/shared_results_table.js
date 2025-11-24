@@ -108,7 +108,7 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
         
         if (!isUniquenameSearch) {
             html += `
-                <td>${result.annotation_source}</td>
+                <td>${result.annotation_source_name}</td>
                 <td>${result.annotation_accession}</td>
                 <td>${result.annotation_description}</td>`;
         }
@@ -189,11 +189,18 @@ function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
                 const columnIndex = $(this).data('column-index');
                 if (columnIndex !== undefined) {
                     $('input.column-search', this).on('keyup change', function() {
-                        if (table.column(columnIndex).search() !== this.value) {
-                            table.column(columnIndex).search(this.value).draw();
+                        const dt = $(tableId).DataTable();
+                        if (dt.column(columnIndex).search() !== this.value) {
+                            dt.column(columnIndex).search(this.value).draw();
                         }
                     });
                 }
+            });
+            
+            // Re-apply wrap-text class on redraw to ensure text wrapping persists
+            const dt = $(tableId).DataTable();
+            dt.on('draw.dt', function() {
+                $(tableId + ' tbody td:nth-child(6), ' + tableId + ' tbody td:nth-child(7), ' + tableId + ' tbody td:nth-child(8), ' + tableId + ' tbody td:nth-child(9)').addClass('wrap-text');
             });
         }
     });

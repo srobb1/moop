@@ -280,10 +280,13 @@ function getAssemblyStats($genome_accession, $dbFile) {
  * @return array - Array of matching features with annotations
  */
 function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) {
-    // Build the WHERE clause for annotations
+    // Build the WHERE clause for annotations with REGEXP ranking
     if ($is_quoted_search) {
-        // Exact phrase match - use CASE for relevance scoring
+        // Exact phrase match
         $like_pattern = "%$search_term%";
+        $regex_exact = '\b' . preg_quote($search_term, '/') . '\b';
+        $regex_start = '\b' . preg_quote($search_term, '/');
+        
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
                          a.annotation_accession, a.annotation_description, 
                          fa.score, fa.date, ans.annotation_source_name, 
@@ -301,14 +304,15 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) 
                        OR a.annotation_accession LIKE ?)
                   ORDER BY 
                     CASE 
-                      WHEN f.feature_name LIKE ? THEN 1
-                      WHEN f.feature_description LIKE ? THEN 2
-                      WHEN a.annotation_description LIKE ? THEN 3
-                      ELSE 4
+                      WHEN f.feature_name REGEXP ? THEN 1
+                      WHEN f.feature_name REGEXP ? THEN 2
+                      WHEN f.feature_description REGEXP ? THEN 3
+                      WHEN a.annotation_description REGEXP ? THEN 4
+                      ELSE 5
                     END,
-                    f.feature_uniquename
-                  LIMIT 100";
-        $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern, $like_pattern, $like_pattern, $like_pattern];
+                    f.feature_uniquename";
+        $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern, 
+                   $regex_exact, $regex_start, $regex_start, $regex_exact];
     } else {
         // Multi-term keyword search (all terms must appear somewhere)
         $terms = array_filter(array_map('trim', preg_split('/\s+/', $search_term)));
@@ -319,6 +323,8 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) 
         // Extract primary term for relevance scoring (first word of search)
         $primary_term = $terms[0];
         $primary_pattern = "%$primary_term%";
+        $regex_exact = '\b' . preg_quote($primary_term, '/') . '\b';
+        $regex_start = '\b' . preg_quote($primary_term, '/');
         
         // Build conditions: (col1 LIKE term1 OR col2 LIKE term1 OR ...) AND (col1 LIKE term2 OR ...)
         $conditions = [];
@@ -349,18 +355,82 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) 
                     AND $where_clause
                   ORDER BY 
                     CASE 
-                      WHEN f.feature_name LIKE ? THEN 1
-                      WHEN f.feature_description LIKE ? THEN 2
-                      WHEN a.annotation_description LIKE ? THEN 3
-                      ELSE 4
+                      WHEN f.feature_name REGEXP ? THEN 1
+                      WHEN f.feature_name REGEXP ? THEN 2
+                      WHEN f.feature_description REGEXP ? THEN 3
+                      WHEN a.annotation_description REGEXP ? THEN 4
+                      ELSE 5
                     END,
-                    f.feature_uniquename
-                  LIMIT 100";
+                    f.feature_uniquename";
         
         // Add primary term patterns for CASE statement to params
-        $params[] = $primary_pattern;
-        $params[] = $primary_pattern;
-        $params[] = $primary_pattern;
+        $params[] = $regex_exact;
+        $params[] = $regex_start;
+        $params[] = $regex_start;
+        $params[] = $regex_exact;
+    }
+    
+    return fetchData($query, $dbFile, $params);
+}
+
+/**
+ * Fallback search using LIKE queries (for DBs without FTS5)
+ */
+function searchFeaturesAndAnnotationsLike($search_term, $is_quoted_search, $dbFile) {
+    if ($is_quoted_search) {
+        $like_pattern = "%$search_term%";
+        $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern];
+    } else {
+        $terms = array_filter(array_map('trim', preg_split('/\s+/', $search_term)));
+        if (empty($terms)) {
+            return [];
+        }
+        
+        $conditions = [];
+        $params = [];
+        $columns = ['a.annotation_description', 'f.feature_name', 'f.feature_description', 'a.annotation_accession'];
+        
+        foreach ($terms as $term) {
+            $term_conditions = implode(' OR ', array_map(function($col) { return "$col LIKE ?"; }, $columns));
+            $conditions[] = "($term_conditions)";
+            for ($i = 0; $i < count($columns); $i++) {
+                $params[] = "%$term%";
+            }
+        }
+        $where_clause = implode(' AND ', $conditions);
+    }
+    
+    if ($is_quoted_search) {
+        $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
+                         a.annotation_accession, a.annotation_description, 
+                         fa.score, fa.date, ans.annotation_source_name, 
+                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                         g.genome_accession
+                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, genome g
+                  WHERE ans.annotation_source_id = a.annotation_source_id 
+                    AND f.feature_id = fa.feature_id 
+                    AND fa.annotation_id = a.annotation_id 
+                    AND f.organism_id = o.organism_id
+                    AND f.genome_id = g.genome_id
+                    AND (a.annotation_description LIKE ? 
+                       OR f.feature_name LIKE ? 
+                       OR f.feature_description LIKE ?
+                       OR a.annotation_accession LIKE ?)
+                  ORDER BY f.feature_uniquename";
+    } else {
+        $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
+                         a.annotation_accession, a.annotation_description, 
+                         fa.score, fa.date, ans.annotation_source_name, 
+                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                         g.genome_accession
+                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, genome g
+                  WHERE ans.annotation_source_id = a.annotation_source_id 
+                    AND f.feature_id = fa.feature_id 
+                    AND fa.annotation_id = a.annotation_id 
+                    AND f.organism_id = o.organism_id
+                    AND f.genome_id = g.genome_id
+                    AND $where_clause
+                  ORDER BY f.feature_uniquename";
     }
     
     return fetchData($query, $dbFile, $params);
@@ -387,7 +457,7 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
                     AND f.feature_uniquename LIKE ? 
                     AND (o.genus || ' ' || o.species = ?)
                   ORDER BY f.feature_uniquename
-                  LIMIT 100";
+                  ";
         $params = ["%$search_term%", $organism_name];
     } else {
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
@@ -398,7 +468,7 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
                     AND f.genome_id = g.genome_id
                     AND f.feature_uniquename LIKE ?
                   ORDER BY f.feature_uniquename
-                  LIMIT 100";
+                  ";
         $params = ["%$search_term%"];
     }
     
