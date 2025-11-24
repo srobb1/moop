@@ -4,6 +4,23 @@
  */
 
 /**
+ * Escape HTML special characters to prevent XSS
+ * 
+ * @param {string} text - Text to escape
+ * @returns {string} Escaped HTML-safe text
+ */
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+/**
  * Detect if a sequence is protein or nucleotide
  * 
  * @param {string} sequence - The input sequence (FASTA or raw)

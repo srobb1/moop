@@ -172,16 +172,7 @@ function saveMetadata(event, organism) {
     });
 }
 
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
-}
+// Uses window.escapeHtml from utilities.js
 
 function addMetadataImage(organism) {
     const container = document.getElementById('images-container-' + organism);
@@ -399,13 +390,4 @@ function deleteAssemblyDirectory(event, organism, safeAsmId) {
     });
 }
 
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
-}
+// Uses window.escapeHtml from utilities.js
