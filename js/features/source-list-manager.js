@@ -158,6 +158,41 @@ function clearSourceFilters(filterId = 'sourceFilter', radioName = 'selected_sou
 }
 
 /**
+ * Update the display of currently selected source (organism > assembly)
+ * Shows which source is selected and highlights if it's hidden due to filtering
+ * 
+ * @param {string} selectionDivId - ID of the div to display selection (default: 'currentSelection')
+ * @param {string} sourceListClass - CSS class of source line items (default: 'fasta-source-line')
+ * @param {boolean} showHiddenWarning - Show warning if selected item is filtered out (default: true)
+ */
+function updateCurrentSelectionDisplay(selectionDivId = 'currentSelection', sourceListClass = 'fasta-source-line', showHiddenWarning = true) {
+    const checked = document.querySelector('input[name="selected_source"]:checked');
+    const selectionDiv = document.getElementById(selectionDivId);
+    
+    if (!selectionDiv) {
+        console.warn('Selection display div not found:', selectionDivId);
+        return;
+    }
+    
+    if (checked) {
+        const line = checked.closest('.' + sourceListClass);
+        const groupBadge = line ? line.querySelector('.badge') : null;
+        const group = groupBadge ? groupBadge.textContent.trim() : 'Unknown';
+        const organism = checked.dataset.organism || 'Unknown';
+        const assembly = checked.dataset.assembly || 'Unknown';
+        const isHidden = (showHiddenWarning && line && line.style.display === 'none') ? ' ⚠️ (HIDDEN - FILTERED OUT)' : '';
+        
+        selectionDiv.innerHTML = `
+            <div style="color: #28a745; font-weight: bold;">
+                ${group} > ${organism} > ${assembly}${isHidden}
+            </div>
+        `;
+    } else {
+        selectionDiv.innerHTML = '';
+    }
+}
+
+/**
  * Initialize source list filtering on page load
  * Sets up filter input listeners and applies initial filtering
  * 

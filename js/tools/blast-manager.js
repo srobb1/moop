@@ -52,22 +52,10 @@ function clearResults() {
 
 function initializeBlastManager() {
     function updateCurrentSelectionDisplay() {
-        const checked = document.querySelector('input[name="selected_source"]:checked');
+        window.updateCurrentSelectionDisplay();
         const selectionDiv = document.getElementById('currentSelection');
-        
-        if (checked) {
-            const line = checked.closest('.fasta-source-line');
-            const groupBadge = line.querySelector('.badge');
-            const group = groupBadge ? groupBadge.textContent.trim() : 'Unknown';
-            const organism = checked.dataset.organism || 'Unknown';
-            const assembly = checked.dataset.assembly || 'Unknown';
-            
-            selectionDiv.innerHTML = `
-                <div style="color: #28a745; font-weight: bold;">
-                    ${group} > ${organism} > ${assembly}
-                </div>
-            `;
-        } else {
+        const checked = document.querySelector('input[name="selected_source"]:checked');
+        if (!checked) {
             selectionDiv.innerHTML = '<span style="color: #999;">None selected</span>';
         }
     }
