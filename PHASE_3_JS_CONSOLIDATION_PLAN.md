@@ -398,20 +398,45 @@ js/
   - **Status**: Both blast and sequence retrieval use shared clear filters function
   - **Files Updated**: `blast-manager.js`, `sequence-retrieval.js` call shared function
 
-- [ ] **Extract form validation patterns**
-  - Both managers validate input before operations
-  - **Status**: Review for shared patterns
+- [x] **Extract form validation patterns** ✅ REVIEWED
+  - Both managers have tool-specific validation logic
+  - **Status**: No significant duplication found - each tool has unique validation needs
+  - **Conclusion**: No consolidation needed
 
-- [ ] **Review datatable initialization patterns**
-  - `parent-tools.js` initializes DataTables in different ways
-  - **Status**: TBD - Verify if consolidation is needed
+- [x] **Review datatable initialization patterns** ✅ COMPLETED
+  - `parent-tools.js` uses centralized `DataTableExportConfig.reinitialize()`
+  - **Status**: Already consolidated via `datatable-config.js`
+  - **Conclusion**: No additional consolidation needed
 
-- [ ] **Extract common event handlers**
-  - Click handlers, change handlers across tool files
-  - **Status**: TBD - Identify patterns for reuse
+- [x] **Extract common event handlers** ✅ REVIEWED
+  - Analyzed event handlers across blast-manager and sequence-retrieval
+  - **Status**: Handlers are tool-specific (form submit, input validation, filtering)
+  - **Conclusion**: No consolidation opportunity - each tool has unique behavior
 
 ### Consolidation Progress:
 - ✅ Removed `datatable.js` (replaced by `datatable-config.js`)
 - ✅ Extracted `updateCurrentSelectionDisplay()` to `source-list-manager.js`
 - ✅ Extracted `clearSourceFilters()` to `source-list-manager.js`
-- ⏳ Pending: Complete remaining consolidations
+- ✅ Fixed disabled radio button re-enabling after clear filters
+- ✅ Added default source selection to retrieve_sequences page
+- ✅ Reviewed form validation patterns - no duplication
+- ✅ Verified datatable initialization already centralized
+- ✅ Reviewed event handlers - all tool-specific
+
+## Phase 3D Final Summary
+
+### Completed Consolidations:
+1. ✅ Removed unused `datatable.js` 
+2. ✅ Extracted `updateCurrentSelectionDisplay()` shared function
+3. ✅ Extracted `clearSourceFilters()` shared function
+4. ✅ Fixed source filter state management
+
+### Tools JS Code Quality:
+- **blast-manager.js**: Well-modularized, uses shared utilities
+- **sequence-retrieval.js**: Well-modularized, uses shared utilities  
+- **source-list-manager.js**: Centralized source filtering logic
+- **parent-tools.js**: Clean, uses DataTableExportConfig
+- **datatable-config.js**: Centralized table configuration
+
+### Result:
+**Phase 3D Complete** - All identified consolidation opportunities have been addressed. The tools JS code is now well-organized with no duplication.
