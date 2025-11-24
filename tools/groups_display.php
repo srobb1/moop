@@ -73,7 +73,7 @@ if (!is_public_group($group_name)) {
           <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> <?= htmlspecialchars($group_name) ?>: Search Gene IDs and Annotations</h4>
           <form id="groupSearchForm">
             <div class="row align-items-center">
-              <div class="col-md-10">
+              <div class="col">
                 <div class="d-flex gap-2 align-items-center">
                   <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
                   <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
@@ -83,7 +83,7 @@ if (!is_public_group($group_name)) {
               </div>
             </div>
             <div class="row mt-2">
-              <div class="col-md-10">
+              <div class="col">
                 <small class="form-text text-muted-gray">
                   Use quotes for exact phrases (e.g., "ABC transporter"). Searches across all organisms in this group.
                 </small>
