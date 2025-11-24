@@ -128,12 +128,11 @@ class AnnotationSearch {
                 this.selectedSources = selectedSources;
                 // Update button states
                 this.updateFilterButtonState();
-                // Show confirmation toast/message
+                // Log confirmation (removed alert as it was annoying)
                 const message = selectedSources.length === 0 
                     ? 'No sources selected' 
                     : `Filtering to ${selectedSources.length} source(s)`;
                 console.log('Filter applied:', message);
-                alert(message);
             }
         });
         
