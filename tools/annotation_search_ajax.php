@@ -24,6 +24,13 @@ $search_keywords = $_GET['search_keywords'] ?? '';
 $organism = $_GET['organism'] ?? '';
 $group = $_GET['group'] ?? '';
 $quoted_search = isset($_GET['quoted']) && $_GET['quoted'] === '1';
+$source_names = $_GET['source_names'] ?? '';  // Comma-separated source names
+
+// Parse source names if provided
+$source_filter = [];
+if (!empty($source_names)) {
+    $source_filter = array_map('trim', explode(',', $source_names));
+}
 
 // Validate inputs
 if (empty($search_keywords) || empty($organism)) {
@@ -83,7 +90,7 @@ $warning_message = null;
 
 // If no results by uniquename, search annotations
 if (!$uniquename_search) {
-    $search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db);
+    $search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db, $source_filter);
     $results = $search_result['results'];
     $warning_message = $search_result['warning'];
 }

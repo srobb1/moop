@@ -279,16 +279,10 @@ function getAssemblyStats($genome_accession, $dbFile) {
  * @param string $dbFile - Path to SQLite database
  * @return array - Array of matching features with annotations
  */
-function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) {
-    // Parse source filter from search term
-    // Syntax: "kinase" source:GO  or  kinase source:GO
-    $source_filter = null;
+function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, $source_names = []) {
+    // Use provided source names filter, or empty array if not provided
+    $source_filter = !empty($source_names) ? $source_names : [];
     $search_term_clean = $search_term;
-    
-    if (preg_match('/\s+source:\s*(\S+)$/i', $search_term, $matches)) {
-        $source_filter = $matches[1];
-        $search_term_clean = trim(preg_replace('/\s+source:\s*\S+$/i', '', $search_term));
-    }
     
     // Build the WHERE clause for annotations with REGEXP ranking
     if ($is_quoted_search) {
@@ -315,10 +309,11 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) 
         
         $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern];
         
-        // Add source filter if specified
-        if ($source_filter) {
-            $query .= " AND ans.annotation_source_name LIKE ?";
-            $params[] = "%$source_filter%";
+        // Add source filter if specified (exact match with IN)
+        if (!empty($source_filter)) {
+            $placeholders = implode(',', array_fill(0, count($source_filter), '?'));
+            $query .= " AND ans.annotation_source_name IN ($placeholders)";
+            $params = array_merge($params, $source_filter);
         }
         
         $query .= " ORDER BY 
@@ -377,10 +372,11 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) 
                     AND f.genome_id = g.genome_id
                     AND $where_clause";
         
-        // Add source filter if specified
-        if ($source_filter) {
-            $query .= " AND ans.annotation_source_name LIKE ?";
-            $params[] = "%$source_filter%";
+        // Add source filter if specified (exact match with IN)
+        if (!empty($source_filter)) {
+            $placeholders = implode(',', array_fill(0, count($source_filter), '?'));
+            $query .= " AND ans.annotation_source_name IN ($placeholders)";
+            $params = array_merge($params, $source_filter);
         }
         
         $query .= " ORDER BY 
@@ -620,6 +616,62 @@ function getAnnotationSources($dbFile) {
                   ORDER BY count DESC";
         
         return fetchData($query, $dbFile, []);
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+/**
+ * Get annotation sources grouped by type
+ * Used to populate advanced search filter modal
+ * 
+ * @param string $dbFile - Path to SQLite database
+ * @return array - Grouped sources: {type: [{name, count}, ...], ...}
+ */
+function getAnnotationSourcesByType($dbFile) {
+    try {
+        // Get all sources
+        $sources = getAnnotationSources($dbFile);
+        
+        // Group by type
+        $grouped = [];
+        
+        foreach ($sources as $source) {
+            $name = $source['name'];
+            $type = 'Other';
+            
+            // Categorize by prefix/name pattern
+            if (strpos($name, 'ENS_') === 0) {
+                $type = 'Ensembl Orthologs';
+            } elseif (strpos($name, 'InterProScan') === 0) {
+                $type = 'InterProScan';
+            } elseif (strpos($name, 'EggNOG') === 0) {
+                $type = 'EggNOG';
+            } elseif (strpos($name, 'OMA') === 0) {
+                $type = 'OMA Orthologs';
+            }
+            
+            if (!isset($grouped[$type])) {
+                $grouped[$type] = [];
+            }
+            
+            $grouped[$type][] = [
+                'name' => $name,
+                'count' => $source['count']
+            ];
+        }
+        
+        // Sort types in display order
+        $order = ['EggNOG', 'InterProScan', 'OMA Orthologs', 'Ensembl Orthologs', 'Other'];
+        $sorted = [];
+        foreach ($order as $type) {
+            if (isset($grouped[$type])) {
+                $sorted[$type] = $grouped[$type];
+            }
+        }
+        
+        return $sorted;
+        
     } catch (Exception $e) {
         return [];
     }

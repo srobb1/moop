@@ -37,6 +37,50 @@ class AnnotationSearch {
             e.preventDefault();
             this.handleSearch();
         });
+        
+        // Add advanced filter button if not already present
+        this.addFilterButton();
+    }
+    
+    /**
+     * Add advanced search filter button to form
+     */
+    addFilterButton() {
+        const form = $(this.config.formSelector);
+        if (form.find('.btn-advanced-filter').length === 0) {
+            const filterBtn = `
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-advanced-filter ms-2">
+                    <i class="fa fa-sliders"></i> Advanced Filters
+                </button>
+            `;
+            form.find('button[type="submit"]').after(filterBtn);
+            
+            $('.btn-advanced-filter').on('click', () => this.showFilterModal());
+        }
+    }
+    
+    /**
+     * Show advanced search filter modal
+     */
+    showFilterModal() {
+        // Get first organism for filter modal (they're all the same database)
+        const organism = this.config.organismsVar[0];
+        
+        const filter = new AdvancedSearchFilter({
+            organism: organism,
+            sitePath: this.config.sitePath,
+            onApply: (selectedSources) => {
+                this.selectedSources = selectedSources;
+                // Show confirmation toast/message
+                const message = selectedSources.length === 0 
+                    ? 'No sources selected' 
+                    : `Filtering to ${selectedSources.length} source(s)`;
+                console.log('Filter applied:', message);
+                alert(message);
+            }
+        });
+        
+        filter.show();
     }
     
     handleSearch() {
@@ -62,6 +106,7 @@ class AnnotationSearch {
         this.allResults = [];
         this.searchedOrganisms = 0;
         this.warnings = [];  // Collect warnings from each organism
+        this.selectedSources = null;  // Selected annotation sources filter
         $('#searchResults').show();
         $('#resultsContainer').html('');
         $('#searchInfo').html(`Searching for: <strong>${keywords}</strong> across ${this.config.totalVar} organisms`);
@@ -98,6 +143,11 @@ class AnnotationSearch {
             quoted: quotedSearch ? '1' : '0',
             ...this.config.extraAjaxParams
         };
+        
+        // Add source filter if selected
+        if (this.selectedSources && this.selectedSources.length > 0) {
+            ajaxData.source_names = this.selectedSources.join(',');
+        }
         
         $.ajax({
             url: this.config.sitePath + '/tools/annotation_search_ajax.php',
