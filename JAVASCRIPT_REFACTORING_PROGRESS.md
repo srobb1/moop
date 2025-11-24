@@ -29,9 +29,9 @@ This document tracks the 4-phase JavaScript reorganization plan for MOOP. The ap
 **Goal**: Extract 3 heavy PHP display pages  
 **Status**: COMPLETED 2025-11-22
 
-### 🔄 PHASE 3B: IN PROGRESS (Plan Complete)
-**Goal**: Consolidate 80% duplicate search logic  
-**Status**: PLANNED (2-3 hours)  
+### ✅ PHASE 3B: COMPLETED (4 hours)
+**Goal**: Consolidate 80% duplicate search logic + Add advanced filtering UI  
+**Status**: COMPLETED 2025-11-24
 **Documentation**: See `PHASE_3_JS_CONSOLIDATION_PLAN.md`
 
 ### 📋 PHASES 3C-4: PLANNED
@@ -113,44 +113,71 @@ js/tools_utilities.js → js/core/utilities.js (reusable helpers)
 
 ---
 
-### 🔧 PHASE 3B: Consolidate Shared Search Logic (Est. 2-3 hours)
-**Goal**: Extract 80% duplicate code into reusable module  
-**Status**: PLANNED
+### 🔧 PHASE 3B: Consolidate Shared Search Logic + Advanced Filtering (COMPLETED - 4 hours)
+**Goal**: Extract 80% duplicate code into reusable module + Add advanced search filtering  
+**Status**: COMPLETED 2025-11-24
 
-**Problem identified:**
-- 3 display pages share ~80% identical logic (~320 lines of 440 total)
-- Only differences: form IDs, loop vs single organism, URL building, AJAX params
+**Completed Deliverables:**
 
-**Solution:**
-Create `js/core/annotation-search.js` with reusable `AnnotationSearch` class that handles:
-- Input validation
-- Results reset
-- Progress bar rendering
-- AJAX search calls
-- Results display
-- Success/error handling
+1. ✅ **Created `js/core/annotation-search.js`** - Reusable AnnotationSearch class
+   - Handles input validation, progress tracking, AJAX search, results display
+   - Configurable for single/multiple organism searches
+   - Supports custom URL builders and extra AJAX parameters
 
-**Benefits:**
-- Reduce 440 lines → ~150 lines (65% code reduction)
-- Single source of truth for search logic
-- Easy to fix bugs (fix once, applies everywhere)
-- Easy to add new search pages
+2. ✅ **Migrated all 3 display pages to use AnnotationSearch module**
+   - `js/pages/groups-display.js` - refactored
+   - `js/pages/multi-organism-search.js` - refactored
+   - `js/pages/organism-display.js` - refactored
+   - Result: ~320 lines of duplicate code removed (65% reduction)
 
-**See**: `PHASE_3_JS_CONSOLIDATION_PLAN.md` for detailed strategy
+3. ✅ **Advanced Search Filter Modal** - Full implementation
+   - Dynamic source type grouping with source names
+   - Checkbox selection with Select All / Deselect All per type
+   - Filter state persistence when reopening modal
+   - Proper source filtering applied to search results
+   - Visual feedback: filter count badge on icon
+   - Source-based result filtering working correctly
 
-**Implementation steps:**
-1. [ ] Create `js/core/annotation-search.js` with AnnotationSearch class
-2. [ ] Test with groups-display.js
-3. [ ] Update multi-organism-search.js to use module
-4. [ ] Update organism-display.js to use module
-5. [ ] Full test suite on all 3 pages
-**Implementation steps:**
-1. [ ] Create `js/core/annotation-search.js` with AnnotationSearch class
-2. [ ] Test with groups-display.js
-3. [ ] Update multi-organism-search.js to use module
-4. [ ] Update organism-display.js to use module
-5. [ ] Full test suite on all 3 pages
-6. [ ] Commit: "Phase 3B: Create reusable AnnotationSearch module"
+4. ✅ **Search UX Improvements**
+   - Collapsible search info box (shows what terms are actually searched)
+   - Compact result cap warning with organism list
+   - Bold search terms in results for clarity
+   - Applied filters displayed in search summary
+   - Icon-only search and filter buttons
+   - Flashing animation during search (instead of color change)
+   - Consistent button behavior across all search pages
+
+5. ✅ **Database Integration**
+   - FTS5 search implementation for performance
+   - REGEXP function support for pattern matching
+   - Proper source filtering with database queries
+   - Result cap at 2,500 per organism
+
+**Commits made (Phase 3B):**
+- `9798575` - Add search syntax & dynamic source filtering (Backend Phase 1)
+- `ef836a4` - Advanced Search Filter Modal (Part 1 - Core Implementation)
+- `fc1662b` - Advanced Search Filter Modal (Part 2 - Styling & Integration)
+- `de27202` - Fix: Use correct annotation types from database
+- `349bbe9` - Fix: Advanced Search Filter Modal - Unresponsive Input
+- `6b07369` - Fix: Source filter not being applied
+- `910d91b` - Redesign search and filter button layout
+- `f176b64` - Improve search results page UX
+- `69b1cad` - Simplify search buttons to icon-only
+- `6c21de9` - Fix button alignment
+- `06754da` - Expand search input field
+- `46d7a22` - Fix filter badge positioning
+- `4c5a9ac` - Restore original filter badge design
+- `d7afd96` - Remove filter confirmation alert
+- `4c359e3` - Fix filter badge visibility
+- `c8c6b26` - Add compact result cap warning message
+- `6c41406` - Advanced Search Filter UI Polish
+
+**Key Achievements:**
+- ✅ Search logic now DRY - single source of truth (AnnotationSearch module)
+- ✅ User can easily filter results by annotation source
+- ✅ Improved UX with clearer feedback and persistent filter state
+- ✅ Performance enhanced with FTS5 database integration
+- ✅ Consistent search behavior across all 3 display pages (groups, multi, organism)
 
 ---
 
@@ -310,14 +337,14 @@ git show <commit-sha>:<file-path>
 | Phase 1 | ✅ DONE | 30 min | Organized libraries, 960KB dead code removed |
 | Phase 2 | ✅ DONE | 30 min | Reorganized 7 JS files into `/js/features/` and `/js/core/` |
 | Phase 3A | ✅ DONE | 2.5 hrs | Extracted 3 heavy pages (440 lines → modular JS) |
-| Phase 3B | 📋 PLANNED | 2-3 hrs | Create reusable AnnotationSearch module (see plan doc) |
+| Phase 3B | ✅ DONE | 4 hrs | Consolidated search logic + Advanced filtering UI |
 | Phase 3C | 📋 PLANNED | 1.5 hrs | Extract 4 lighter pages |
 | Phase 3D | 📋 PLANNED | 15 min | Move utility files |
 | Phase 4 | 📋 PLANNED | 1-2 hrs | Optional: JS registry & documentation |
 
-**Total completed**: 3.5 hours  
-**Total remaining**: 5-7 hours  
-**Overall progress**: ~33% complete
+**Total completed**: 7.5 hours  
+**Total remaining**: 2-3 hours  
+**Overall progress**: ~75% complete
 
 ---
 
@@ -329,32 +356,43 @@ git show <commit-sha>:<file-path>
 - Removed all back-navigation system code
 - Added new tab opening for organism_display links
 - Identified 80% code duplication opportunity
-- Created detailed Phase 3B consolidation plan
+
+✅ **Phase 3B Achievements:**
+- Created reusable AnnotationSearch module (js/core/annotation-search.js)
+- Consolidated 320+ lines of duplicate search code across 3 pages
+- Implemented advanced search filtering with source type grouping
+- Built dynamic filter modal with state persistence
+- Enhanced search UX (collapsible hints, applied filters, term highlighting)
+- Added FTS5 database integration for performance
+- Implemented icon-only button design (search, filter, clear)
+- All 3 display pages now use single unified search module
 
 ---
 
 ## Next Steps
 
 1. **IMMEDIATE** (Next session):
-   - Execute Phase 3B: Create AnnotationSearch module
-   - Refactor all 3 display pages to use new module
-   - Expected savings: 290 lines of duplicate code
+   - Execute Phase 3C: Extract 4 lighter pages
+     - `tools/parent_display.php` → `js/pages/parent-display.js`
+     - `tools/retrieve_sequences.php` → `js/pages/retrieve-sequences.js`
+     - `tools/blast.php` → `js/pages/blast.js`
+     - `tools/sequences_display.php` → `js/pages/sequences-display.js`
 
 2. **THEN**:
-   - Phase 3C: Extract 4 lighter pages
-   - Phase 3D: Move utility files
+   - Phase 3D: Move utility files to organized locations
    - Phase 4: Optional documentation registry
 
 ---
 
 ## Notes for Next Developer
 
-- ✅ Phases 1-3A are COMPLETE - don't redo them
-- Phase 3B has a detailed plan in `PHASE_3_JS_CONSOLIDATION_PLAN.md` - follow it closely
-- All libraries now from CDN - orphaned local files moved to `/js/unused/`
+- ✅ Phases 1-3A-3B are COMPLETE - don't redo them
+- Phase 3C extractions ready when needed (4 lighter pages identified)
+- AnnotationSearch module at `js/core/annotation-search.js` is the foundation for search pages
+- Advanced filter modal at `js/core/advanced-search-filter.js` handles source filtering
+- All 3 display pages now use unified search pattern (see groups-display.js as example)
+- Database indices optimized for FTS5 searches
 - Git history preserved - can always recover files
-- Test in browser after EACH step - don't batch multiple changes
-- Commit frequently with clear messages
 
 ---
 
@@ -374,6 +412,6 @@ git show <commit-sha>:<file-path>
 
 ---
 
-**Last Updated**: 2025-11-22 00:58 UTC  
-**Status**: Phase 3A Complete - Phase 3B Plan Ready  
-**Next Action**: Execute Phase 3B (Create AnnotationSearch module)
+**Last Updated**: 2025-11-24 19:30 UTC  
+**Status**: Phase 3B Complete - 75% Overall Progress  
+**Next Action**: Execute Phase 3C (Extract 4 lighter pages)
