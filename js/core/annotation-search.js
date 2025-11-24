@@ -63,9 +63,11 @@ class AnnotationSearch {
                     </button>
                     
                     <!-- Clear filters button (hidden initially) -->
-                    <button type="button" class="btn btn-sm btn-link text-danger btn-clear-filters" 
+                    <button type="button" class="btn btn-icon btn-clear-filters btn-outline-secondary" 
+                            title="Clear Filters"
+                            data-bs-toggle="tooltip" data-bs-placement="bottom"
                             style="display: none;">
-                        <i class="fa fa-times-circle"></i> Clear Filters
+                        <i class="fa fa-times"></i>
                     </button>
                 </div>
             `;
@@ -88,7 +90,6 @@ class AnnotationSearch {
     clearFilters() {
         this.selectedSources = null;
         this.updateFilterButtonState();
-        alert('Filters cleared');
     }
     
     /**
@@ -122,18 +123,26 @@ class AnnotationSearch {
         // Get first organism for filter modal (they're all the same database)
         const organism = this.config.organismsVar[0];
         
+        // Convert selectedSources array to object for modal
+        const selectedSourcesObj = {};
+        if (this.selectedSources && this.selectedSources.length > 0) {
+            this.selectedSources.forEach(source => {
+                selectedSourcesObj[source] = true;
+            });
+        }
+        
         const filter = new AdvancedSearchFilter({
             organism: organism,
             sitePath: this.config.sitePath,
+            selectedSources: selectedSourcesObj,  // Pass current selections as object
             onApply: (selectedSources) => {
-                this.selectedSources = selectedSources;
+                this.selectedSources = selectedSources;  // This is an array from getSelectedSources()
                 // Update button states
                 this.updateFilterButtonState();
                 // Log confirmation (removed alert as it was annoying)
                 const message = selectedSources.length === 0 
                     ? 'No sources selected' 
                     : `Filtering to ${selectedSources.length} source(s)`;
-                console.log('Filter applied:', message);
             }
         });
         
@@ -197,8 +206,8 @@ class AnnotationSearch {
             <small class="text-muted mt-2 d-block" id="progressText">Starting search...</small>
         `);
         
-        // Disable search button
-        $('#searchBtn').prop('disabled', true).html('<span class="loading-spinner"></span>');
+        // Disable search button and add flashing animation
+        $('#searchBtn').prop('disabled', true).addClass('btn-searching').html('<i class="fa fa-search"></i>');
         
         // Search each organism sequentially
         this.searchNextOrganism(keywords, quotedSearch, 0);
@@ -225,12 +234,7 @@ class AnnotationSearch {
         // Add source filter if selected
         if (this.selectedSources && this.selectedSources.length > 0) {
             ajaxData.source_names = this.selectedSources.join(',');
-            console.log('Applying source filter:', ajaxData.source_names);
-        } else {
-            console.log('No source filter applied');
         }
-        
-        console.log('AJAX data:', ajaxData);
         
         $.ajax({
             url: this.config.sitePath + '/tools/annotation_search_ajax.php',
@@ -264,8 +268,6 @@ class AnnotationSearch {
                 this.searchNextOrganism(keywords, quotedSearch, index + 1);
             },
             error: (xhr, status, error) => {
-                console.error('Search error for ' + organism + ':', error);
-                console.error('Response text:', xhr.responseText.substring(0, 500));
                 this.searchedOrganisms++;
                 this.searchNextOrganism(keywords, quotedSearch, index + 1);
             }
@@ -298,7 +300,7 @@ class AnnotationSearch {
     }
     
     finishSearch() {
-        $('#searchBtn').prop('disabled', false).html('<i class="fa fa-search"></i>');
+        $('#searchBtn').prop('disabled', false).removeClass('btn-searching').html('<i class="fa fa-search"></i>');
         
         // Build compact cap message if any organisms were capped
         let capMessageHtml = '';
@@ -312,7 +314,7 @@ class AnnotationSearch {
         
         // Build warnings section if any other warnings exist (excluding cap warnings)
         let warningsHtml = '';
-        const otherWarnings = this.warnings.filter(w => !w.warning.includes('capped'));
+        const otherWarnings = this.warnings.filter(w => !w.warning.includes('2,500') && !w.warning.includes('capped'));
         if (otherWarnings.length > 0) {
             warningsHtml = '<div class="alert alert-warning mb-3">';
             otherWarnings.forEach((item, idx) => {

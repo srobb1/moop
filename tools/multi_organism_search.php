@@ -61,7 +61,7 @@ foreach ($organisms as $organism) {
               <div class="col">
                 <div class="d-flex gap-2 align-items-center">
                   <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
-                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn">
                     <i class="fa fa-search"></i>
                   </button>
                 </div>

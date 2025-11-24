@@ -17,7 +17,8 @@ class AdvancedSearchFilter {
         this.sitePath = config.sitePath || '/moop';
         this.onApply = config.onApply || (() => {});
         this.sourceTypes = {};
-        this.selectedSources = {};
+        // Initialize selectedSources from config or empty
+        this.selectedSources = config.selectedSources ? {...config.selectedSources} : {};
     }
     
     /**
@@ -43,16 +44,21 @@ class AdvancedSearchFilter {
             },
             error: (err) => {
                 alert('Error loading annotation sources. Please try again.');
-                console.error('Error:', err);
             }
         });
     }
     
     /**
-     * Initialize all sources as selected (default)
+     * Initialize selected sources - if passed in config, use those; otherwise select all
      */
     initializeSelectedSources() {
-        this.selectedSources = {};
+        // If selectedSources already has values (from config), keep them as-is
+        if (Object.keys(this.selectedSources).length > 0) {
+            // Already initialized from config, don't change
+            return;
+        }
+        
+        // Otherwise, select all sources by default
         for (const type in this.sourceTypes) {
             for (const source of this.sourceTypes[type]) {
                 this.selectedSources[source.name] = true;
@@ -76,20 +82,13 @@ class AdvancedSearchFilter {
         this.attachEventHandlers();
         
         // Show modal with Bootstrap
-        try {
-            const modalElement = document.getElementById('advancedSearchFilterModal');
-            if (modalElement) {
-                const modal = new bootstrap.Modal(modalElement, {
-                    backdrop: 'static',
-                    keyboard: true
-                });
-                modal.show();
-                console.log('Modal shown successfully');
-            } else {
-                console.error('Modal element not found');
-            }
-        } catch (error) {
-            console.error('Error showing modal:', error);
+        const modalElement = document.getElementById('advancedSearchFilterModal');
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement, {
+                backdrop: 'static',
+                keyboard: true
+            });
+            modal.show();
         }
     }
     
@@ -102,18 +101,21 @@ class AdvancedSearchFilter {
         for (const type in this.sourceTypes) {
             const sources = this.sourceTypes[type];
             const typeId = this.sanitizeId(type);
-            const sourcesHtml = sources.map(source => `
+            const sourcesHtml = sources.map(source => {
+                const isChecked = this.selectedSources[source.name] ? 'checked' : '';
+                return `
                 <div class="form-check ms-3">
                     <input class="form-check-input source-checkbox" type="checkbox" 
                            id="source-${this.sanitizeId(source.name)}"
                            data-source="${source.name}"
                            data-type="${type}"
-                           checked>
+                           ${isChecked}>
                     <label class="form-check-label small" for="source-${this.sanitizeId(source.name)}">
                         ${source.name} <span class="badge bg-secondary">${source.count.toLocaleString()}</span>
                     </label>
                 </div>
-            `).join('');
+            `;
+            }).join('');
             
             sourceTypesHtml += `
                 <div class="mb-4">
