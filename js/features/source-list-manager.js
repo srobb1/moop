@@ -145,6 +145,12 @@ function clearSourceFilters(filterId = 'sourceFilter', radioName = 'selected_sou
         line.classList.remove('hidden');
     });
     
+    // Re-enable all radio buttons that are now visible
+    const allRadios = document.querySelectorAll(`input[name="${radioName}"]`);
+    allRadios.forEach(radio => {
+        radio.disabled = false;
+    });
+    
     // Hide the filter message if it exists
     if (filterMessage) {
         filterMessage.style.display = 'none';
