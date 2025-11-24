@@ -385,6 +385,8 @@ include_once __DIR__ . '/../includes/navbar.php';
     <?php endif; ?>
 </div>
 
+<?php endif; ?>
+
 <script>
 // Pass scroll preference from PHP to JavaScript
 const scrollToResults = <?= $should_scroll_to_results ? 'true' : 'false' ?>;

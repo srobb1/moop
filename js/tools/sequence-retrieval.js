@@ -16,9 +16,7 @@ function escapeHtml(text) {
 }
 
 function clearSourceFilter() {
-    document.getElementById('sourceFilter').value = '';
-    const filterInput = document.getElementById('sourceFilter');
-    filterInput.dispatchEvent(new Event('keyup'));
+    clearSourceFilters('sourceFilter', 'selected_source', 'fasta-source-line', null, 'downloadForm');
 }
 
 function initializeSequenceRetrieval(options = {}) {

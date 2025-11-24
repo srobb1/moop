@@ -50,6 +50,10 @@ function clearResults() {
     document.getElementById('query').focus();
 }
 
+function clearSourceFilters() {
+    window.clearSourceFilters('sourceFilter', 'selected_source', 'fasta-source-line', null, 'blastForm');
+}
+
 function initializeBlastManager() {
     function updateCurrentSelectionDisplay() {
         window.updateCurrentSelectionDisplay();

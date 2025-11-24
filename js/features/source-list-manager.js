@@ -103,6 +103,21 @@ function scrollSourceIntoView(radio, sourceListClass = 'fasta-source-line', scro
 
 
 /**
+ * Restore previously selected source from a checked radio button
+ * 
+ * @param {string} radioName - Name attribute of radio buttons (default: 'selected_source')
+ * @param {string} sourceListClass - CSS class of source line items (default: 'fasta-source-line')
+ * @returns {HTMLElement|null} The checked radio button, or null if none found
+ */
+function restoreSourceSelection(radioName = 'selected_source', sourceListClass = 'fasta-source-line') {
+    const checked = document.querySelector(`input[name="${radioName}"]:checked`);
+    if (checked && isSourceVisible(checked.closest('.' + sourceListClass))) {
+        return checked;
+    }
+    return null;
+}
+
+/**
  * Clear all source filters and show all items
  * Maintains the previously selected source if it becomes visible
  * Updates form hidden fields to reflect the selected assembly
@@ -140,7 +155,7 @@ function clearSourceFilters(filterId = 'sourceFilter', radioName = 'selected_sou
     
     // If restore failed (saved selection not visible), select first visible
     if (!selectedRadio) {
-        selectedRadio = autoSelectFirstVisibleSource(radioName, sourceListClass, '.fasta-source-list', false);
+        selectedRadio = autoSelectFirstVisibleSource(radioName, sourceListClass, '.fasta-source-list');
     }
     
     // Update form hidden fields if we have a selected radio
