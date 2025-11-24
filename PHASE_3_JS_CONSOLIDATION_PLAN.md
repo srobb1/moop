@@ -294,6 +294,30 @@ The tool pages are already well-organized with external JS files. No consolidati
 
 ---
 
+---
+
+## Phase 3D (Embedded Script Extraction)
+
+**Goal**: Extract embedded JavaScript from tool PHP pages into external modules
+
+### Files with Embedded Scripts:
+1. **blast.php** - Database filtering, source selection logic
+2. **retrieve_sequences.php** - Source filter clearing, HTML escape helpers
+3. **retrieve_selected_sequences.php** - Potential embedded scripts
+4. **generate_registry.php** - Potential embedded scripts
+5. **sequences_display.php** - Potential embedded scripts
+
+### Tasks:
+- [ ] Extract `blast.php` embedded scripts → `js/tools/blast-manager.js`
+- [ ] Extract `retrieve_sequences.php` embedded scripts → `js/tools/sequence-retrieval.js`
+- [ ] Extract `retrieve_selected_sequences.php` embedded scripts → new module if needed
+- [ ] Extract `generate_registry.php` embedded scripts → new module if needed
+- [ ] Extract `sequences_display.php` embedded scripts → new module if needed
+- [ ] Test all tool pages after extraction
+- [ ] Commit: "Phase 3D: Extract embedded scripts from tool pages"
+
+---
+
 ## Notes
 - All 3 main display pages refactored ✅
 - Error logging minimal across all files ✅
@@ -303,3 +327,4 @@ The tool pages are already well-organized with external JS files. No consolidati
 - Advanced filtering modal completed and working ✅
 - Search UX significantly improved with icons, badges, tooltips ✅
 - Tool pages use modular approach (parent-tools.js, source-list-manager.js) ✅
+- Phase 3D planned for embedded script extraction
