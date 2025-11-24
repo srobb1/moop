@@ -1,0 +1,4 @@
+     - Testing the entire refactored codebase end-to-end
+     - Performance benchmarking (FTS5 search speed improvements)
+     - User testing on advanced filter modal
+     - Documentation updates in the main README

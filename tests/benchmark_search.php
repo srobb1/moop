@@ -1,10 +1,8 @@
 <?php
 /**
- * Benchmark: LIKE vs FTS5 Search Performance
+ * Benchmark: Search Performance Test
  * 
- * Tests search performance on annotation data using:
- * 1. Current LIKE + REGEXP approach
- * 2. FTS5 virtual table approach
+ * Tests search performance on annotation data using LIKE + REGEXP approach
  * 
  * Run: php tests/benchmark_search.php <database_path> <search_term>
  * Example: php tests/benchmark_search.php /var/www/html/moop/organisms/Anoura_caudifer/organism.sqlite kinase 5
@@ -30,7 +28,7 @@ require_once __DIR__ . '/../lib/functions_database.php';
 require_once __DIR__ . '/../lib/database_queries.php';
 
 echo "════════════════════════════════════════════════════════════════════════════════\n";
-echo "BENCHMARK: LIKE vs FTS5 Search Performance\n";
+echo "BENCHMARK: Search Performance (LIKE + REGEXP)\n";
 echo "════════════════════════════════════════════════════════════════════════════════\n\n";
 
 echo "Database: " . basename(dirname($dbFile)) . "\n";
@@ -38,9 +36,9 @@ echo "Search term: \"$searchTerm\"\n";
 echo "Runs per test: $numRuns\n\n";
 
 // ============================================================================
-// Test 1: Current LIKE + REGEXP approach
+// Test: Current LIKE + REGEXP approach
 // ============================================================================
-echo "TEST 1: Current Approach (LIKE + REGEXP Ranking)\n";
+echo "TEST: Current Approach (LIKE + REGEXP Ranking)\n";
 echo "───────────────────────────────────────────────────────────────────────────────\n";
 
 $likeRuntimes = [];
@@ -53,7 +51,7 @@ for ($i = 0; $i < $numRuns; $i++) {
     $elapsed = (microtime(true) - $start) * 1000; // Convert to ms
     $likeRuntimes[] = $elapsed;
     
-    printf("  Run %d: %.2f ms (%d results)\n", $i + 1, $elapsed, count($results));
+    printf("  Run %d: %.2f ms (%d results)\n", $i + 1, $elapsed, count($results['results'] ?? []));
 }
 
 $avgLike = array_sum($likeRuntimes) / count($likeRuntimes);
@@ -65,55 +63,7 @@ printf("  Average: %.2f ms\n", $avgLike);
 printf("  Min:     %.2f ms\n", $minLike);
 printf("  Max:     %.2f ms\n", $maxLike);
 
-// ============================================================================
-// Test 2: FTS5 approach
-// ============================================================================
-echo "\n\nTEST 2: New Approach (FTS5 Full-Text Search)\n";
-echo "───────────────────────────────────────────────────────────────────────────────\n";
-
-$fts5Runtimes = [];
-for ($i = 0; $i < $numRuns; $i++) {
-    $start = microtime(true);
-    
-    // Use FTS5 search function
-    $results = searchFeaturesAndAnnotationsFTS5($searchTerm, false, $dbFile);
-    
-    $elapsed = (microtime(true) - $start) * 1000; // Convert to ms
-    $fts5Runtimes[] = $elapsed;
-    
-    printf("  Run %d: %.2f ms (%d results)\n", $i + 1, $elapsed, count($results));
-}
-
-$avgFts5 = array_sum($fts5Runtimes) / count($fts5Runtimes);
-$minFts5 = min($fts5Runtimes);
-$maxFts5 = max($fts5Runtimes);
-
-echo "\nRESULTS:\n";
-printf("  Average: %.2f ms\n", $avgFts5);
-printf("  Min:     %.2f ms\n", $minFts5);
-printf("  Max:     %.2f ms\n", $maxFts5);
-
-// ============================================================================
-// Comparison
-// ============================================================================
-echo "\n\nCOMPARISON\n";
-echo "════════════════════════════════════════════════════════════════════════════════\n";
-
-$improvement = ((($avgLike - $avgFts5) / $avgLike) * 100);
-$speedup = $avgLike / $avgFts5;
-
-printf("LIKE + REGEXP Average:  %.2f ms\n", $avgLike);
-printf("FTS5 Average:           %.2f ms\n", $avgFts5);
-printf("\n");
-printf("Speed improvement:      %s%.1f%% faster\n", ($improvement > 0 ? '+' : ''), $improvement);
-printf("Speedup ratio:          %.1fx\n", $speedup);
-
-if ($improvement > 0) {
-    echo "\n✅ FTS5 is FASTER\n";
-} else {
-    echo "\n⚠️  LIKE + REGEXP is faster (may have small result set)\n";
-}
-
 echo "\n════════════════════════════════════════════════════════════════════════════════\n";
+
 
 ?>

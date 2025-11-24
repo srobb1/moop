@@ -542,59 +542,6 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
     return fetchData($query, $dbFile, $params);
 }
 
-/**
- * Search features and annotations using FTS5 full-text search
- * Much faster than LIKE for large datasets
- * 
- * @param string $search_term - Search term or phrase
- * @param bool $is_quoted_search - Whether this is a quoted phrase search
- * @param string $dbFile - Path to SQLite database
- * @return array - Array of matching features with annotations
- */
-function searchFeaturesAndAnnotationsFTS5($search_term, $is_quoted_search, $dbFile) {
-    try {
-        $dbh = new PDO("sqlite:" . $dbFile);
-        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
-        // Prepare FTS5 query
-        if ($is_quoted_search) {
-            // Exact phrase match in FTS5
-            $fts_query = '"' . str_replace('"', '""', $search_term) . '"';
-        } else {
-            // Multi-term OR search in FTS5
-            $terms = array_filter(array_map('trim', preg_split('/\s+/', $search_term)));
-            $fts_query = implode(' OR ', $terms);
-        }
-        
-        // Query FTS5 for annotation matches (most relevant)
-        $sql = "SELECT DISTINCT f.feature_uniquename, f.feature_name, f.feature_description, 
-                        a.annotation_accession, a.annotation_description, 
-                        ans.annotation_source_name,
-                        o.genus, o.species, o.common_name, o.subtype, f.feature_type,
-                        f.organism_id, g.genome_accession
-                FROM annotation_fts af
-                JOIN annotation a ON af.rowid = a.annotation_id
-                JOIN feature_annotation fa ON a.annotation_id = fa.annotation_id
-                JOIN feature f ON fa.feature_id = f.feature_id
-                JOIN annotation_source ans ON a.annotation_source_id = ans.annotation_source_id
-                JOIN organism o ON f.organism_id = o.organism_id
-                JOIN genome g ON f.genome_id = g.genome_id
-                WHERE af.annotation_fts MATCH ?
-                ORDER BY rank
-                LIMIT 100";
-        
-        $stmt = $dbh->prepare($sql);
-        $stmt->execute([$fts_query]);
-        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        $dbh = null;
-        return $results;
-        
-    } catch (PDOException $e) {
-        // Fallback to LIKE search if FTS5 fails
-        return searchFeaturesAndAnnotationsLike($search_term, $is_quoted_search, $dbFile);
-    }
-}
 
 /**
  * Get all annotation sources for an organism with counts
