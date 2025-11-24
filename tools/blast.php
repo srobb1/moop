@@ -605,6 +605,13 @@ foreach ($sources_by_group as $group => $organisms) {
 <script src="/<?= $site ?>/js/features/source-list-manager.js"></script>
 <script src="/<?= $site ?>/js/tools/blast-manager.js"></script>
 
+<script>
+<?php if (isset($blast_result) && $blast_result['success']): ?>
+    // Auto-scroll to results if BLAST was successful
+    autoScrollToResults();
+<?php endif; ?>
+</script>
+
 <?php include_once __DIR__ . '/../includes/footer.php'; ?>
 
 </body>
