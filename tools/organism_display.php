@@ -19,6 +19,7 @@ $organism_info = $organism_context['info'];
   <?php include_once __DIR__ . '/../includes/head.php'; ?>
   <!-- Display page styles (consolidated from display_styles.css and shared_results_table.css) -->
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
+  <link rel="stylesheet" href="/<?= $site ?>/css/advanced-search-filter.css">
 </head>
 <body class="bg-light">
 
@@ -265,6 +266,7 @@ $organism_info = $organism_context['info'];
 <script src="/<?= $site ?>/tools/shared_results_table.js"></script>
 
 <script src="/<?= $site ?>/js/core/annotation-search.js"></script>
+<script src="/<?= $site ?>/js/features/advanced-search-filter.js"></script>
 
 <script>
 // Data variables - PHP provides these for use by the external JS file

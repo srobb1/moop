@@ -34,6 +34,7 @@ foreach ($organisms as $organism) {
   <title>Multi-Organism Search - <?= $siteTitle ?></title>
   <?php include_once __DIR__ . '/../includes/head.php'; ?>
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
+  <link rel="stylesheet" href="/<?= $site ?>/css/advanced-search-filter.css">
 </head>
 <body class="bg-light">
 
@@ -162,6 +163,7 @@ foreach ($organisms as $organism) {
 <script src="/<?= $site ?>/js/features/datatable-config.js"></script>
 <script src="/<?= $site ?>/tools/shared_results_table.js"></script>
 <script src="/<?= $site ?>/js/core/annotation-search.js"></script>
+<script src="/<?= $site ?>/js/features/advanced-search-filter.js"></script>
 <script>
 // Data variables - PHP provides these for use by the external JS file
 const selectedOrganisms = <?= json_encode(is_array($organisms) ? $organisms : [$organisms]) ?>;
