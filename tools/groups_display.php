@@ -72,17 +72,21 @@ if (!is_public_group($group_name)) {
         <div class="card-body bg-search-light">
           <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> <?= htmlspecialchars($group_name) ?>: Search Gene IDs and Annotations</h4>
           <form id="groupSearchForm">
-            <div class="row">
+            <div class="row align-items-center">
               <div class="col-md-10">
-                <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
+                <div class="d-flex gap-2 align-items-center">
+                  <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
+                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                    <i class="fa fa-search"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-10">
                 <small class="form-text text-muted-gray">
                   Use quotes for exact phrases (e.g., "ABC transporter"). Searches across all organisms in this group.
                 </small>
-              </div>
-              <div class="col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
-                  <i class="fa fa-search"></i>
-                </button>
               </div>
             </div>
           </form>
