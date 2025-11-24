@@ -75,9 +75,22 @@ class AdvancedSearchFilter {
         // Attach event handlers
         this.attachEventHandlers();
         
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('advancedSearchFilterModal'));
-        modal.show();
+        // Show modal with Bootstrap
+        try {
+            const modalElement = document.getElementById('advancedSearchFilterModal');
+            if (modalElement) {
+                const modal = new bootstrap.Modal(modalElement, {
+                    backdrop: 'static',
+                    keyboard: true
+                });
+                modal.show();
+                console.log('Modal shown successfully');
+            } else {
+                console.error('Modal element not found');
+            }
+        } catch (error) {
+            console.error('Error showing modal:', error);
+        }
     }
     
     /**
@@ -171,22 +184,24 @@ class AdvancedSearchFilter {
      * Attach event handlers to modal elements
      */
     attachEventHandlers() {
+        // Use document for event delegation to handle dynamically added elements
+        
         // Global select/deselect
-        $('.select-all-global').on('click', () => this.selectAllGlobal());
-        $('.deselect-all-global').on('click', () => this.deselectAllGlobal());
+        $(document).off('click', '.select-all-global').on('click', '.select-all-global', () => this.selectAllGlobal());
+        $(document).off('click', '.deselect-all-global').on('click', '.deselect-all-global', () => this.deselectAllGlobal());
         
         // Type-level select/deselect
-        $('.select-type').on('click', (e) => this.selectType($(e.target).data('type')));
-        $('.deselect-type').on('click', (e) => this.deselectType($(e.target).data('type')));
+        $(document).off('click', '.select-type').on('click', '.select-type', (e) => this.selectType($(e.target).data('type')));
+        $(document).off('click', '.deselect-type').on('click', '.deselect-type', (e) => this.deselectType($(e.target).data('type')));
         
         // Individual source checkbox
-        $('.source-checkbox').on('change', (e) => {
+        $(document).off('change', '.source-checkbox').on('change', '.source-checkbox', (e) => {
             const source = $(e.target).data('source');
             this.selectedSources[source] = e.target.checked;
         });
         
         // Apply filter button
-        $('.apply-filter').on('click', () => this.apply());
+        $(document).off('click', '.apply-filter').on('click', '.apply-filter', () => this.apply());
     }
     
     /**
@@ -240,8 +255,14 @@ class AdvancedSearchFilter {
     apply() {
         const selected = this.getSelectedSources();
         
-        // Close modal
-        bootstrap.Modal.getInstance(document.getElementById('advancedSearchFilterModal')).hide();
+        // Close modal using Bootstrap
+        const modalElement = document.getElementById('advancedSearchFilterModal');
+        if (modalElement) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+        }
         
         // Call callback
         this.onApply(selected);

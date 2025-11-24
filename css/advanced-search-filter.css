@@ -6,8 +6,28 @@
     white-space: nowrap;
 }
 
+/* Modal visibility and z-index */
+.modal.show {
+    display: flex !important;
+    pointer-events: auto !important;
+}
+
+.modal-backdrop.show {
+    opacity: 0.5;
+    z-index: 1049;
+}
+
 #advancedSearchFilterModal {
     z-index: 1050;
+}
+
+#advancedSearchFilterModal .modal-dialog {
+    z-index: 1051;
+    pointer-events: auto !important;
+}
+
+#advancedSearchFilterModal .modal-content {
+    pointer-events: auto !important;
 }
 
 .sources-container {
@@ -26,6 +46,7 @@
     margin-bottom: 8px;
     display: flex;
     align-items: center;
+    pointer-events: auto !important;
 }
 
 .source-list .form-check:last-child {
@@ -34,6 +55,14 @@
 
 .source-list .form-check-input {
     margin-top: 2px;
+    cursor: pointer;
+    pointer-events: auto !important;
+}
+
+.source-list label {
+    margin-bottom: 0;
+    cursor: pointer;
+    pointer-events: auto !important;
 }
 
 .source-list .badge {
@@ -53,6 +82,11 @@
 
 #advancedSearchFilterModal .modal-body {
     padding: 1.5rem;
+}
+
+#advancedSearchFilterModal button {
+    cursor: pointer;
+    pointer-events: auto !important;
 }
 
 #advancedSearchFilterModal .btn-outline-secondary {
