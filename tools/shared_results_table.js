@@ -36,10 +36,10 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
         const terms = keywords.trim().split(/\s+/).filter(t => t.length >= 3);
         if (terms.length === 0) return text;
         
-        // Create regex to match any term (case insensitive, whole word)
+        // Create regex to match any term (case insensitive, including partial matches like HDAC in HDAC6)
         let highlighted = text;
         terms.forEach(term => {
-            const regex = new RegExp(`\\b${term}\\b`, 'gi');
+            const regex = new RegExp(`${term}`, 'gi');
             highlighted = highlighted.replace(regex, `<strong style="background-color: #fff3cd; font-weight: bold;">$&</strong>`);
         });
         return highlighted;
