@@ -47,7 +47,7 @@
 }
 
 .results-table {
-  font-size: 0.9rem;
+  /* Use Bootstrap default font size (1rem) to match parent display tables */
 }
 
 .results-table thead th {

@@ -65,7 +65,7 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
                 <span class="badge bg-primary">${results.length} result${results.length !== 1 ? 's' : ''}</span>
             </h5>
             <div class="table-responsive" style="overflow-x: auto; width: 100%;">
-                <table id="${tableId.substring(1)}" class="table table-sm table-striped table-hover results-table" style="font-size: 14px;">
+                <table id="${tableId.substring(1)}" class="table table-sm table-striped table-hover results-table">
                     <thead>
                         <tr>
                             <th style="width: 120px;">
