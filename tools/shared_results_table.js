@@ -187,15 +187,15 @@ function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
         autoWidth: false,
         fixedHeader: false,
         columnDefs: isUniquenameSearch ? [
-            { targets: 0, orderable: false },  // Select - not sortable
-            { targets: 1, visible: false }, // Species - hidden but included in exports
+            { targets: 0, orderable: false, className: "export-exclude" },  // Select - not sortable, exclude from export
+            { targets: 1, visible: false, className: "export-only" }, // Species - hidden but included in exports
             { targets: 2 },  // Type
             { targets: 3 }, // Feature ID
             { targets: 4 }, // Name
             { targets: 5, className: "wrap-text" }  // Description (with wrapping)
         ] : [
-            { targets: 0, orderable: false },  // Select - not sortable
-            { targets: 1, visible: false }, // Species - hidden but included in exports
+            { targets: 0, orderable: false, className: "export-exclude" },  // Select - not sortable, exclude from export
+            { targets: 1, visible: false, className: "export-only" }, // Species - hidden but included in exports
             { targets: 2 },  // Type
             { targets: 3 }, // Feature ID
             { targets: 4 }, // Name

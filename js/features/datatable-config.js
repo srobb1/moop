@@ -157,7 +157,10 @@ const DataTableExportConfig = {
     // Create button with export options
     createButton: function(buttonType, selectedRowsOnly = false) {
         const exportOptions = {
-            columns: ':visible, .export-only'
+            columns: function(idx, node) {
+                // Exclude column 0 (Select), include all others that are visible or marked for export
+                return idx !== 0;
+            }
         };
         
         if (selectedRowsOnly) {
