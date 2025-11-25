@@ -201,7 +201,7 @@ function updateCurrentSelectionDisplay(selectionDivId = 'currentSelection', sour
         const group = groupBadge ? groupBadge.textContent.trim() : 'Unknown';
         const organism = checked.dataset.organism || 'Unknown';
         const assembly = checked.dataset.assembly || 'Unknown';
-        const isHidden = (showHiddenWarning && line && line.style.display === 'none') ? ' ⚠️ (HIDDEN - FILTERED OUT)' : '';
+        const isHidden = (showHiddenWarning && line && !isSourceVisible(line)) ? ' ⚠️ (HIDDEN - FILTERED OUT)' : '';
         
         selectionDiv.innerHTML = `
             <div style="color: #28a745; font-weight: bold;">

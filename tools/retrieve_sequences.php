@@ -52,11 +52,19 @@ $sources_by_group = getAccessibleAssemblies();
 $accessible_sources = flattenSourcesList($sources_by_group);
 
 // Initialize selected organism/assembly variables
-$selected_organism = trim($_POST['organism'] ?? '');
-$selected_assembly = trim($_POST['assembly'] ?? '');
+// Check both GET (from URL parameters like ?organism=X&assembly=Y) and POST (from form submission)
+$selected_organism = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
+$selected_assembly = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
 $displayed_content = [];
 $should_scroll_to_results = false;
 $uniquenames = [];
+
+// Initialize selected_source based on organism and assembly
+// This ensures the correct radio button is pre-selected when the page loads with URL parameters
+$selected_source = '';
+if (!empty($selected_organism) && !empty($selected_assembly)) {
+    $selected_source = $selected_organism . '|' . $selected_assembly;
+}
 
 // If sequence IDs are provided, extract ALL sequence types
 if (!empty($sequence_ids_provided)) {
