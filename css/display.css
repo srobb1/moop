@@ -149,17 +149,22 @@
 .results-table thead tr:nth-child(2) th.sorting::before,
 .results-table thead tr:nth-child(2) th.sorting_asc::before,
 .results-table thead tr:nth-child(2) th.sorting_desc::before {
-  right: 1em !important;
-  content: "↑" !important;
+  right: 1.1em !important;
+  content: "▲" !important;
   opacity: 0.3;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .results-table thead tr:nth-child(2) th.sorting::after,
 .results-table thead tr:nth-child(2) th.sorting_asc::after,
 .results-table thead tr:nth-child(2) th.sorting_desc::after {
-  right: 0.5em !important;
-  content: "↓" !important;
+  right: 1.1em !important;
+  content: "▼" !important;
   opacity: 0.3;
+  font-size: 10px;
+  line-height: 1;
+  bottom: 0.5em !important;
 }
 
 .results-table thead tr:nth-child(2) th.sorting_asc::before {
