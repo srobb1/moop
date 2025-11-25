@@ -68,35 +68,45 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
                 <table id="${tableId.substring(1)}" class="table table-sm table-striped table-hover results-table" style="font-size: 14px;">
                     <thead>
                         <tr>
-                            <th style="width: 120px;"></th>
-                            <th style="width: 200px;" data-column-index="1"></th>
-                            <th style="width: 120px;" data-column-index="2"></th>
-                            <th style="width: 280px;" data-column-index="3"></th>
-                            <th style="width: 180px;" data-column-index="4"></th>
-                            <th style="width: 300px;" data-column-index="5"></th>`;
+                            <th style="width: 120px;">
+                                <div class="column-filter-container" data-column-index="0"></div>
+                                <div>Select</div>
+                            </th>
+                            <th style="width: 200px;">
+                                <div class="column-filter-container" data-column-index="1"></div>
+                                <div>Species</div>
+                            </th>
+                            <th style="width: 120px;">
+                                <div class="column-filter-container" data-column-index="2"></div>
+                                <div>Type</div>
+                            </th>
+                            <th style="width: 280px;">
+                                <div class="column-filter-container" data-column-index="3"></div>
+                                <div>Feature ID</div>
+                            </th>
+                            <th style="width: 180px;">
+                                <div class="column-filter-container" data-column-index="4"></div>
+                                <div>Name</div>
+                            </th>
+                            <th style="width: 300px;">
+                                <div class="column-filter-container" data-column-index="5"></div>
+                                <div>Description</div>
+                            </th>`;
     
     if (!isUniquenameSearch) {
         html += `
-                            <th style="width: 300px;" data-column-index="6"></th>
-                            <th style="width: 220px;" data-column-index="7"></th>
-                            <th style="width: 500px;" data-column-index="8"></th>`;
-    }
-    
-    html += `
-                        </tr>
-                        <tr>
-                            <th style="width: 120px;">Select</th>
-                            <th style="width: 200px;">Species</th>
-                            <th style="width: 120px;">Type</th>
-                            <th style="width: 280px;">Feature ID</th>
-                            <th style="width: 180px;">Name</th>
-                            <th style="width: 300px;">Description</th>`;
-    
-    if (!isUniquenameSearch) {
-        html += `
-                            <th style="width: 300px;">Annotation Source</th>
-                            <th style="width: 220px;">Annotation ID</th>
-                            <th style="width: 500px;">Annotation Description</th>`;
+                            <th style="width: 300px;">
+                                <div class="column-filter-container" data-column-index="6"></div>
+                                <div>Annotation Source</div>
+                            </th>
+                            <th style="width: 220px;">
+                                <div class="column-filter-container" data-column-index="7"></div>
+                                <div>Annotation ID</div>
+                            </th>
+                            <th style="width: 500px;">
+                                <div class="column-filter-container" data-column-index="8"></div>
+                                <div>Annotation Description</div>
+                            </th>`;
     }
     
     html += `
@@ -154,14 +164,14 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
  * @param {boolean} isUniquenameSearch - Whether this is a uniquename-only search (no annotation columns)
  */
 function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
-    // Populate the first row (filter row) with Select All button and filter inputs
-    $(tableId + ' thead tr:eq(0) th').each(function(i) {
+    // Populate filter containers with filter inputs and Select All button
+    $(tableId + ' .column-filter-container').each(function(i) {
         const columnIndex = $(this).data('column-index');
-        if (i === 0) {
+        if (columnIndex === 0) {
             // Select All button for first column
             $(this).html('<button style="width:110px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0;" class="btn btn_select_all" id="toggle-select-btn' + selectId + '"><span>Select All</span></button>');
-        } else if (columnIndex !== undefined) {
-            $(this).html('<input style="text-align:center; border: solid 1px #808080; border-radius: 4px; width: 100%; max-width: 200px;" type="text" placeholder="Filter..." class="column-search">');
+        } else {
+            $(this).html('<input style="text-align:left; border: solid 1px #808080; border-radius: 4px; width: 100%;" type="text" placeholder="Filter..." class="column-search">');
         }
     });
     
@@ -198,13 +208,13 @@ function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
         retrieve: true,
         initComplete: function() {
             // Force remove sorting classes from Select column
-            const selectHeader = $(tableId + ' thead tr:nth-child(2) th:first-child');
+            const selectHeader = $(tableId + ' thead th:first-child');
             selectHeader.removeClass('sorting sorting_asc sorting_desc');
             
             // Set up column filtering
-            $(tableId + ' thead tr:eq(0) th').each(function(i) {
+            $(tableId + ' .column-filter-container').each(function() {
                 const columnIndex = $(this).data('column-index');
-                if (columnIndex !== undefined) {
+                if (columnIndex !== undefined && columnIndex !== 0) {
                     $('input.column-search', this).on('keyup change', function() {
                         const dt = $(tableId).DataTable();
                         if (dt.column(columnIndex).search() !== this.value) {

@@ -116,39 +116,30 @@
 }
 
 /* Fix sorting arrows - remove DataTables default sorting icons from search row */
-.results-table thead tr:first-child th.sorting::before,
-.results-table thead tr:first-child th.sorting::after,
-.results-table thead tr:first-child th.sorting_asc::before,
-.results-table thead tr:first-child th.sorting_asc::after,
-.results-table thead tr:first-child th.sorting_desc::before,
-.results-table thead tr:first-child th.sorting_desc::after {
-  display: none !important;
-}
-
-/* Remove sorting arrows from Select column (first column in second row) */
-.results-table thead tr:nth-child(2) th:first-child::before,
-.results-table thead tr:nth-child(2) th:first-child::after {
-  display: none !important;
-}
-
-.results-table thead tr:nth-child(2) th:first-child {
-  cursor: default !important;
-}
-
-/* Keep sorting arrows only on label row (second row) */
-.results-table thead tr:nth-child(2) th.sorting::before,
-.results-table thead tr:nth-child(2) th.sorting::after,
-.results-table thead tr:nth-child(2) th.sorting_asc::before,
-.results-table thead tr:nth-child(2) th.sorting_asc::after,
-.results-table thead tr:nth-child(2) th.sorting_desc::before,
-.results-table thead tr:nth-child(2) th.sorting_desc::after {
+/* Sorting arrows styling for single combined header row */
+.results-table thead th.sorting::before,
+.results-table thead th.sorting::after,
+.results-table thead th.sorting_asc::before,
+.results-table thead th.sorting_asc::after,
+.results-table thead th.sorting_desc::before,
+.results-table thead th.sorting_desc::after {
   display: inline-block !important;
 }
 
-/* Fix spacing for DataTables sorting arrows - only in label row */
-.results-table thead tr:nth-child(2) th.sorting::before,
-.results-table thead tr:nth-child(2) th.sorting_asc::before,
-.results-table thead tr:nth-child(2) th.sorting_desc::before {
+/* Remove sorting arrows from Select column (first column) */
+.results-table thead th:first-child::before,
+.results-table thead th:first-child::after {
+  display: none !important;
+}
+
+.results-table thead th:first-child {
+  cursor: default !important;
+}
+
+/* Triangle solid sorting arrows */
+.results-table thead th.sorting::before,
+.results-table thead th.sorting_asc::before,
+.results-table thead th.sorting_desc::before {
   right: 1.1em !important;
   content: "▲" !important;
   opacity: 0.3;
@@ -156,9 +147,9 @@
   line-height: 1;
 }
 
-.results-table thead tr:nth-child(2) th.sorting::after,
-.results-table thead tr:nth-child(2) th.sorting_asc::after,
-.results-table thead tr:nth-child(2) th.sorting_desc::after {
+.results-table thead th.sorting::after,
+.results-table thead th.sorting_asc::after,
+.results-table thead th.sorting_desc::after {
   right: 1.1em !important;
   content: "▼" !important;
   opacity: 0.3;
@@ -167,11 +158,11 @@
   bottom: 0.5em !important;
 }
 
-.results-table thead tr:nth-child(2) th.sorting_asc::before {
+.results-table thead th.sorting_asc::before {
   opacity: 1 !important;
 }
 
-.results-table thead tr:nth-child(2) th.sorting_desc::after {
+.results-table thead th.sorting_desc::after {
   opacity: 1 !important;
 }
 
@@ -252,6 +243,10 @@ table.dataTable thead th {
 .results-table {
   width: 100% !important;
   table-layout: fixed;
+}
+
+.column-filter-container {
+  margin-bottom: 4px;
 }
 
 .results-table thead th {
