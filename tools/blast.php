@@ -60,6 +60,12 @@ $blast_program = trim($_POST['blast_program'] ?? 'blastx');
 $selected_source = trim($_POST['selected_source'] ?? '');
 $blast_db = trim($_POST['blast_db'] ?? '');
 
+// Initialize selected_source from context if not set from form
+// When arriving with context_organism and context_assembly, pre-select that source
+if (empty($selected_source) && !empty($context_organism) && !empty($context_assembly)) {
+    $selected_source = $context_organism . '|' . $context_assembly;
+}
+
 // Handle evalue with custom option
 $evalue = trim($_POST['evalue'] ?? '1e-3');
 if ($evalue === 'custom' && !empty($_POST['evalue_custom'])) {
