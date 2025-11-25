@@ -164,13 +164,22 @@ class AnnotationSearch {
         
         // Calculate actual search terms (for multi-term searches, filter out < 3 char terms)
         let searchExplanation = '';
+        let displayKeywords = keywords;
+        
         if (!quotedSearch) {
             const terms = keywords.trim().split(/\s+/).filter(t => t.length >= 3);
             const shortTerms = keywords.trim().split(/\s+/).filter(t => t.length < 3);
             
+            // Format terms with bold for display
+            const boldTerms = terms.map(t => `<strong>${t}</strong>`).join(', ');
+            
             if (shortTerms.length > 0) {
-                searchExplanation = `<br><small class="text-muted">Searching for: <strong>${terms.join(', ')}</strong> (terms with fewer than 3 characters like "${shortTerms.join('", "')}" are ignored)</small>`;
+                searchExplanation = `<br><small class="text-muted">Searching with: ${boldTerms} (terms with fewer than 3 characters like "${shortTerms.join('", "')}" are ignored)</small>`;
+            } else if (terms.length > 1) {
+                // Multi-word search without short terms - show the formatted terms
+                searchExplanation = `<br><small class="text-muted">Searching with: ${boldTerms}</small>`;
             }
+            
             if (quotedSearch === false && terms.length > 1) {
                 searchExplanation += `<br><small class="text-muted">Tip: Use quotes like <code>"exact phrase"</code> to search for exact phrase instead of individual terms.</small>`;
             }
@@ -192,7 +201,7 @@ class AnnotationSearch {
         $('#resultsContainer').html('');
         
         // Build search info with filters
-        let searchInfo = `Searching for: <strong>${keywords}</strong> across ${this.config.totalVar} organisms${searchExplanation}`;
+        let searchInfo = `Search: <strong>${keywords}</strong> across ${this.config.totalVar} organisms${searchExplanation}`;
         if (this.selectedSources && this.selectedSources.length > 0) {
             searchInfo += `<br><small class="text-muted">Limited to: ${this.selectedSources.join(', ')}</small>`;
         }
