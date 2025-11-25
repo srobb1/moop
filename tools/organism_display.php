@@ -267,11 +267,11 @@ $organism_info = $organism_context['info'];
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <!-- Column reordering functionality -->
 <script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
-<script src="/<?= $site ?>/js/features/datatable-config.js"></script>
-<script src="/<?= $site ?>/tools/shared_results_table.js"></script>
+<script src="/<?= $site ?>/js/modules/datatable-config.js"></script>
+<script src="/<?= $site ?>/js/modules/shared-results-table.js"></script>
 
-<script src="/<?= $site ?>/js/core/annotation-search.js"></script>
-<script src="/<?= $site ?>/js/features/advanced-search-filter.js"></script>
+<script src="/<?= $site ?>/js/modules/annotation-search.js"></script>
+<script src="/<?= $site ?>/js/modules/advanced-search-filter.js"></script>
 
 <script>
 // Data variables - PHP provides these for use by the external JS file
@@ -280,7 +280,7 @@ const organismName = '<?= $organism_name ?>';
 </script>
 
 <!-- Page-specific logic -->
-<script src="/<?= $site ?>/js/pages/organism-display.js"></script>
+<script src="/<?= $site ?>/js/organism-display.js"></script>
 
 </body>
 </html>

@@ -395,8 +395,8 @@ const scrollToResults = <?= $should_scroll_to_results ? 'true' : 'false' ?>;
 const previouslySelectedSource = '<?= addslashes($selected_source) ?>';
 </script>
 
-<script src="/<?= $site ?>/js/features/source-list-manager.js"></script>
-<script src="/<?= $site ?>/js/tools/sequence-retrieval.js"></script>
+<script src="/<?= $site ?>/js/modules/source-list-manager.js"></script>
+<script src="/<?= $site ?>/js/sequence-retrieval.js"></script>
 
 <?php include_once __DIR__ . '/../includes/footer.php'; ?>
 </body>

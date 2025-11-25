@@ -204,6 +204,6 @@ include_once __DIR__ . '/../includes/navbar.php';
 </div>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script src="/<?= $site ?>/js/core/copy-to-clipboard.js"></script>
+<script src="/<?= $site ?>/js/modules/copy-to-clipboard.js"></script>
 </body>
 </html>

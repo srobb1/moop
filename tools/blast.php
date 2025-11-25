@@ -601,9 +601,9 @@ foreach ($sources_by_group as $group => $organisms) {
 ?>
 </script>
 
-<script src="/<?= $site ?>/js/core/utilities.js"></script>
-<script src="/<?= $site ?>/js/features/source-list-manager.js"></script>
-<script src="/<?= $site ?>/js/tools/blast-manager.js"></script>
+<script src="/<?= $site ?>/js/modules/utilities.js"></script>
+<script src="/<?= $site ?>/js/modules/source-list-manager.js"></script>
+<script src="/<?= $site ?>/js/blast-manager.js"></script>
 
 <script>
 <?php if (isset($blast_result) && $blast_result['success']): ?>

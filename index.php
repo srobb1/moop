@@ -128,7 +128,7 @@ include_once __DIR__ . '/includes/header.php';
   </div>
 </div>
 
-<script src="js/features/phylo-tree.js"></script>
+<script src="js/modules/phylo-tree.js"></script>
 <script src="js/index.js"></script>
 <script>
 const userAccess = <?= $user_access_json ?>;
