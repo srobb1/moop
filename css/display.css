@@ -136,26 +136,29 @@
   cursor: default !important;
 }
 
-/* Triangle solid sorting arrows */
+/* Triangle solid sorting arrows - positioned at bottom of header text */
 .results-table thead th.sorting::before,
 .results-table thead th.sorting_asc::before,
 .results-table thead th.sorting_desc::before {
-  right: 1.1em !important;
-  content: "▲" !important;
+  right: 8px !important;
+  bottom: 8px !important;
+  content: "▼" !important;
   opacity: 0.3;
   font-size: 10px;
   line-height: 1;
+  position: absolute;
 }
 
 .results-table thead th.sorting::after,
 .results-table thead th.sorting_asc::after,
 .results-table thead th.sorting_desc::after {
-  right: 1.1em !important;
-  content: "▼" !important;
+  right: 8px !important;
+  bottom: 3px !important;
+  content: "▲" !important;
   opacity: 0.3;
   font-size: 10px;
   line-height: 1;
-  bottom: 0.5em !important;
+  position: absolute;
 }
 
 .results-table thead th.sorting_asc::before {
@@ -249,9 +252,17 @@ table.dataTable thead th {
   margin-bottom: 4px;
 }
 
+.results-table thead th > div:last-child {
+  text-align: left;
+}
+
 .results-table thead th {
   width: auto;
   text-align: left;
+  vertical-align: top !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  position: relative;
 }
 
 .results-table tbody td {
