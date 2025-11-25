@@ -64,8 +64,8 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
             <h5>${imageHtml}${organismDisplay}${commonNameDisplay}
                 <span class="badge bg-primary">${results.length} result${results.length !== 1 ? 's' : ''}</span>
             </h5>
-            <div class="table-responsive" style="overflow-x: auto; width: 100%; min-width: 100%;">
-                <table id="${tableId.substring(1)}" class="table table-sm table-striped table-hover results-table" style="width: auto; min-width: 100%; font-size: 14px;">
+            <div class="table-responsive" style="overflow-x: auto; width: 100%;">
+                <table id="${tableId.substring(1)}" class="table table-sm table-striped table-hover results-table" style="font-size: 14px;">
                     <thead>
                         <tr>
                             <th style="width: 120px;"></th>
@@ -172,27 +172,27 @@ function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
         stateSave: false,
         orderCellsTop: false,
         buttons: DataTableExportConfig.getSearchResultsButtons(),
-        scrollX: true,
+        scrollX: false,
         scrollCollapse: false,
         autoWidth: false,
         fixedHeader: false,
         columnDefs: isUniquenameSearch ? [
-            { width: "120px", targets: 0, orderable: false },  // Select - not sortable
-            { width: "200px", targets: 1, visible: false }, // Species - hidden but included in exports
-            { width: "120px", targets: 2 },  // Type
-            { width: "280px", targets: 3 }, // Feature ID
-            { width: "180px", targets: 4 }, // Name
-            { width: "300px", targets: 5, className: "wrap-text" }  // Description (with wrapping)
+            { targets: 0, orderable: false },  // Select - not sortable
+            { targets: 1, visible: false }, // Species - hidden but included in exports
+            { targets: 2 },  // Type
+            { targets: 3 }, // Feature ID
+            { targets: 4 }, // Name
+            { targets: 5, className: "wrap-text" }  // Description (with wrapping)
         ] : [
-            { width: "120px", targets: 0, orderable: false },  // Select - not sortable
-            { width: "200px", targets: 1, visible: false }, // Species - hidden but included in exports
-            { width: "120px", targets: 2 },  // Type
-            { width: "280px", targets: 3 }, // Feature ID
-            { width: "180px", targets: 4 }, // Name
-            { width: "300px", targets: 5, className: "wrap-text" }, // Description (with wrapping)
-            { width: "300px", targets: 6 }, // Annotation Source
-            { width: "220px", targets: 7 }, // Annotation ID
-            { width: "500px", targets: 8, className: "wrap-text" }  // Annotation Description (with wrapping)
+            { targets: 0, orderable: false },  // Select - not sortable
+            { targets: 1, visible: false }, // Species - hidden but included in exports
+            { targets: 2 },  // Type
+            { targets: 3 }, // Feature ID
+            { targets: 4 }, // Name
+            { targets: 5, className: "wrap-text" }, // Description (with wrapping)
+            { targets: 6 }, // Annotation Source
+            { targets: 7 }, // Annotation ID
+            { targets: 8, className: "wrap-text" }  // Annotation Description (with wrapping)
         ],
         colReorder: true,
         retrieve: true,

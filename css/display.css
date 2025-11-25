@@ -245,8 +245,16 @@ table.dataTable thead th {
 }
 
 .results-table {
-  width: auto !important;
-  min-width: 100%;
+  width: 100% !important;
+  table-layout: fixed;
+}
+
+.results-table thead th {
+  width: auto;
+}
+
+.results-table tbody td {
+  width: auto;
 }
 
 .dataTables_scroll {
