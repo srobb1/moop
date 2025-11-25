@@ -141,8 +141,8 @@
 .results-table thead th.sorting_asc::before,
 .results-table thead th.sorting_desc::before {
   right: 8px !important;
-  bottom: 8px !important;
-  content: "▼" !important;
+  top: 41px !important;
+  content: "▲" !important;
   opacity: 0.3;
   font-size: 10px;
   line-height: 1;
@@ -153,8 +153,8 @@
 .results-table thead th.sorting_asc::after,
 .results-table thead th.sorting_desc::after {
   right: 8px !important;
-  bottom: 3px !important;
-  content: "▲" !important;
+  top: 50px !important;
+  content: "▼" !important;
   opacity: 0.3;
   font-size: 10px;
   line-height: 1;
