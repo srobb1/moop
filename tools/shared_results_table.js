@@ -64,39 +64,39 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
             <h5>${imageHtml}${organismDisplay}${commonNameDisplay}
                 <span class="badge bg-primary">${results.length} result${results.length !== 1 ? 's' : ''}</span>
             </h5>
-            <div class="table-responsive" style="overflow-x: auto; width: 100%;">
-                <table id="${tableId.substring(1)}" class="table table-sm table-striped table-hover results-table" style="width:100%; font-size: 14px;">
+            <div class="table-responsive" style="overflow-x: auto; width: 100%; min-width: 100%;">
+                <table id="${tableId.substring(1)}" class="table table-sm table-striped table-hover results-table" style="width: auto; min-width: 100%; font-size: 14px;">
                     <thead>
                         <tr>
-                            <th></th>
-                            <th data-column-index="1"></th>
-                            <th data-column-index="2"></th>
-                            <th data-column-index="3"></th>
-                            <th data-column-index="4"></th>
-                            <th data-column-index="5"></th>`;
+                            <th style="width: 120px;"></th>
+                            <th style="width: 200px;" data-column-index="1"></th>
+                            <th style="width: 120px;" data-column-index="2"></th>
+                            <th style="width: 280px;" data-column-index="3"></th>
+                            <th style="width: 180px;" data-column-index="4"></th>
+                            <th style="width: 300px;" data-column-index="5"></th>`;
     
     if (!isUniquenameSearch) {
         html += `
-                            <th data-column-index="6"></th>
-                            <th data-column-index="7"></th>
-                            <th data-column-index="8"></th>`;
+                            <th style="width: 300px;" data-column-index="6"></th>
+                            <th style="width: 220px;" data-column-index="7"></th>
+                            <th style="width: 500px;" data-column-index="8"></th>`;
     }
     
     html += `
                         </tr>
                         <tr>
-                            <th style="width: 80px;">Select</th>
-                            <th style="width: 150px;">Species</th>
-                            <th style="width: 80px;">Type</th>
-                            <th style="width: 180px;">Feature ID</th>
-                            <th style="width: 100px;">Name</th>
-                            <th style="width: 200px;">Description</th>`;
+                            <th style="width: 120px;">Select</th>
+                            <th style="width: 200px;">Species</th>
+                            <th style="width: 120px;">Type</th>
+                            <th style="width: 280px;">Feature ID</th>
+                            <th style="width: 180px;">Name</th>
+                            <th style="width: 300px;">Description</th>`;
     
     if (!isUniquenameSearch) {
         html += `
-                            <th style="width: 200px;">Annotation Source</th>
-                            <th style="width: 150px;">Annotation ID</th>
-                            <th style="width: 400px;">Annotation Description</th>`;
+                            <th style="width: 300px;">Annotation Source</th>
+                            <th style="width: 220px;">Annotation ID</th>
+                            <th style="width: 500px;">Annotation Description</th>`;
     }
     
     html += `
@@ -172,27 +172,27 @@ function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
         stateSave: false,
         orderCellsTop: false,
         buttons: DataTableExportConfig.getSearchResultsButtons(),
-        scrollX: false,
+        scrollX: true,
         scrollCollapse: false,
         autoWidth: false,
         fixedHeader: false,
         columnDefs: isUniquenameSearch ? [
-            { width: "80px", targets: 0, orderable: false },  // Select - not sortable
-            { width: "150px", targets: 1, visible: false }, // Species - hidden but included in exports
-            { width: "80px", targets: 2 },  // Type
-            { width: "180px", targets: 3 }, // Feature ID
-            { width: "100px", targets: 4 }, // Name
-            { width: "200px", targets: 5 }  // Description
+            { width: "120px", targets: 0, orderable: false },  // Select - not sortable
+            { width: "200px", targets: 1, visible: false }, // Species - hidden but included in exports
+            { width: "120px", targets: 2 },  // Type
+            { width: "280px", targets: 3 }, // Feature ID
+            { width: "180px", targets: 4 }, // Name
+            { width: "300px", targets: 5, className: "wrap-text" }  // Description (with wrapping)
         ] : [
-            { width: "80px", targets: 0, orderable: false },  // Select - not sortable
-            { width: "150px", targets: 1, visible: false }, // Species - hidden but included in exports
-            { width: "80px", targets: 2 },  // Type
-            { width: "180px", targets: 3 }, // Feature ID
-            { width: "100px", targets: 4 }, // Name
-            { width: "200px", targets: 5 }, // Description
-            { width: "200px", targets: 6 }, // Annotation Source
-            { width: "150px", targets: 7 }, // Annotation ID
-            { width: "400px", targets: 8, className: "wrap-text" }  // Annotation Description (with wrapping)
+            { width: "120px", targets: 0, orderable: false },  // Select - not sortable
+            { width: "200px", targets: 1, visible: false }, // Species - hidden but included in exports
+            { width: "120px", targets: 2 },  // Type
+            { width: "280px", targets: 3 }, // Feature ID
+            { width: "180px", targets: 4 }, // Name
+            { width: "300px", targets: 5, className: "wrap-text" }, // Description (with wrapping)
+            { width: "300px", targets: 6 }, // Annotation Source
+            { width: "220px", targets: 7 }, // Annotation ID
+            { width: "500px", targets: 8, className: "wrap-text" }  // Annotation Description (with wrapping)
         ],
         colReorder: true,
         retrieve: true,
@@ -212,12 +212,6 @@ function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
                         }
                     });
                 }
-            });
-            
-            // Re-apply wrap-text class on redraw to ensure text wrapping persists
-            const dt = $(tableId).DataTable();
-            dt.on('draw.dt', function() {
-                $(tableId + ' tbody td:nth-child(6), ' + tableId + ' tbody td:nth-child(7), ' + tableId + ' tbody td:nth-child(8), ' + tableId + ' tbody td:nth-child(9)').addClass('wrap-text');
             });
         }
     });
