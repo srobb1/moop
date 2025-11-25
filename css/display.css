@@ -251,6 +251,7 @@ table.dataTable thead th {
 
 .results-table thead th {
   width: auto;
+  text-align: center;
 }
 
 .results-table tbody td {
@@ -296,6 +297,7 @@ table.dataTable thead th {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
 }
 
 /* Allow wrapping in Description columns with width limits */
