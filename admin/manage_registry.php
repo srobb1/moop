@@ -122,22 +122,18 @@ $js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);
         <p class="mb-3">
           Auto-generated searchable index of all PHP functions with documentation, usage tracking, and duplicate detection.
         </p>
-        <div class="row mb-3">
-          <div class="col-md-6">
-            <button class="btn btn-primary btn-sm" onclick="location.href='../docs/function_registry.html'" target="_blank">
-              <i class="fa fa-external-link"></i> View HTML Registry
-            </button>
-          </div>
-          <div class="col-md-6 text-end">
-            <button class="btn btn-info btn-sm" onclick="location.href='../docs/FUNCTION_REGISTRY.md'" target="_blank">
-              <i class="fa fa-file-text"></i> View Markdown
-            </button>
-          </div>
+        <div class="mb-3">
+          <button class="btn btn-primary btn-sm w-100 mb-2" onclick="location.href='../docs/function_registry.html'" target="_blank">
+            <i class="fa fa-external-link"></i> View HTML
+          </button>
+          <button class="btn btn-info btn-sm w-100 mb-2" onclick="location.href='../docs/FUNCTION_REGISTRY.md'" target="_blank">
+            <i class="fa fa-file-text"></i> View Markdown
+          </button>
+          <button class="btn btn-warning btn-sm w-100" onclick="updateRegistry('php')">
+            <i class="fa fa-refresh"></i> Update Now
+          </button>
         </div>
-        <button class="btn btn-warning btn-sm" onclick="updateRegistry('php')">
-          <i class="fa fa-refresh"></i> Update Registry Now
-        </button>
-        <div class="mt-3 text-muted small">
+        <div class="text-muted small">
           <i class="fa fa-clock-o"></i> Last updated: <strong><?php echo $php_last_update; ?></strong>
         </div>
         <div id="phpResult" class="mt-3 d-none"></div>
@@ -153,22 +149,18 @@ $js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);
         <p class="mb-3">
           Auto-generated searchable index of all JavaScript functions with documentation and usage tracking.
         </p>
-        <div class="row mb-3">
-          <div class="col-md-6">
-            <button class="btn btn-info btn-sm" onclick="location.href='../docs/js_function_registry.html'" target="_blank">
-              <i class="fa fa-external-link"></i> View HTML Registry
-            </button>
-          </div>
-          <div class="col-md-6 text-end">
-            <button class="btn btn-info btn-sm" onclick="location.href='../docs/JS_FUNCTION_REGISTRY.md'" target="_blank">
-              <i class="fa fa-file-text"></i> View Markdown
-            </button>
-          </div>
+        <div class="mb-3">
+          <button class="btn btn-info btn-sm w-100 mb-2" onclick="location.href='../docs/js_function_registry.html'" target="_blank">
+            <i class="fa fa-external-link"></i> View HTML
+          </button>
+          <button class="btn btn-info btn-sm w-100 mb-2" onclick="location.href='../docs/JS_FUNCTION_REGISTRY.md'" target="_blank">
+            <i class="fa fa-file-text"></i> View Markdown
+          </button>
+          <button class="btn btn-warning btn-sm w-100" onclick="updateRegistry('js')">
+            <i class="fa fa-refresh"></i> Update Now
+          </button>
         </div>
-         <button class="btn btn-warning btn-sm" onclick="updateRegistry('js')">
-          <i class="fa fa-refresh"></i> Update Registry Now
-        </button>
-        <div class="mt-3 text-muted small">
+        <div class="text-muted small">
           <i class="fa fa-clock-o"></i> Last updated: <strong><?php echo $js_last_update; ?></strong>
         </div>
         <div id="jsResult" class="mt-3 d-none"></div>
