@@ -617,4 +617,44 @@ function getAnnotationSourcesByType($dbFile) {
         return [];
     }
 }
+
+/**
+ * Get all annotation types from database with their counts and feature counts
+ * Queries annotation_source and feature_annotation tables for:
+ *   - Distinct annotation_type values
+ *   - Count of annotations per type
+ *   - Count of distinct features per type
+ * 
+ * @param string $dbFile - Path to SQLite database
+ * @return array - [annotation_type => ['annotation_count' => N, 'feature_count' => M]]
+ *                  ordered by feature_count DESC
+ */
+function getAnnotationTypesFromDB($dbFile) {
+    try {
+        $query = "SELECT DISTINCT ans.annotation_type,
+                         COUNT(DISTINCT a.annotation_id) as annotation_count,
+                         COUNT(DISTINCT fa.feature_id) as feature_count
+                  FROM annotation_source ans
+                  LEFT JOIN annotation a ON ans.annotation_source_id = a.annotation_source_id
+                  LEFT JOIN feature_annotation fa ON a.annotation_id = fa.annotation_id
+                  WHERE ans.annotation_type IS NOT NULL AND ans.annotation_type != ''
+                  GROUP BY ans.annotation_type
+                  ORDER BY feature_count DESC, ans.annotation_type ASC";
+        
+        $results = fetchData($query, $dbFile, []);
+        
+        $types = [];
+        foreach ($results as $row) {
+            $types[$row['annotation_type']] = [
+                'annotation_count' => (int)$row['annotation_count'],
+                'feature_count' => (int)$row['feature_count']
+            ];
+        }
+        
+        return $types;
+    } catch (Exception $e) {
+        error_log("Error getting annotation types from DB: " . $e->getMessage());
+        return [];
+    }
+}
 ?>

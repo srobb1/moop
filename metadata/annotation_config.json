@@ -1,82 +1,203 @@
 {
-  "annotation_types": {
-    "Orthology": {
-      "display_name": "Orthology",
-      "color": "primary",
-      "order": 1,
-      "description": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs</strong>. Genes separated by gene duplication events are called paralogs.",
-      "enabled": true
+    "annotation_types": {
+        "Orthologs": {
+            "display_name": "Orthologs",
+            "color": "primary",
+            "order": 1,
+            "description": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs<\/strong>. Genes separated by gene duplication events are called paralogs.",
+            "enabled": true,
+            "in_database": true,
+            "annotation_count": 289559,
+            "feature_count": 75056,
+            "synonyms": [
+                "Orthology"
+            ],
+            "display_label": "Orthologs"
+        },
+        "Homologs": {
+            "display_name": "Homologs",
+            "color": "info",
+            "order": 2,
+            "description": "<strong>Homologous<\/strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
+            "enabled": true,
+            "in_database": true,
+            "annotation_count": 565948,
+            "feature_count": 71047
+        },
+        "Homology": {
+            "display_name": "Homology",
+            "color": "info",
+            "order": 4,
+            "description": "<strong>Homologous<\/strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
+            "enabled": true,
+            "in_database": false,
+            "annotation_count": 0,
+            "feature_count": 0
+        },
+        "AI Annotations": {
+            "display_name": "AI Annotations",
+            "color": "purple",
+            "order": 7,
+            "description": "AI-based protein function prediction uses computational techniques, such as machine learning and protein sequence language models to infer the biological roles of proteins from their sequences",
+            "enabled": true,
+            "in_database": true,
+            "annotation_count": 34640,
+            "feature_count": 66455
+        },
+        "Domains": {
+            "display_name": "Domains",
+            "color": "success",
+            "order": 3,
+            "description": "Protein domains are conserved structural and functional units that can evolve, function, and exist independently. Domain annotations identify these conserved regions using databases like InterPro, Pfam, and SMART.",
+            "enabled": true,
+            "in_database": true,
+            "annotation_count": 47824,
+            "feature_count": 87095
+        },
+        "Gene Ontology": {
+            "display_name": "Gene Ontology",
+            "color": "warning",
+            "order": 5,
+            "description": "Gene Ontology (GO) provides a controlled vocabulary to describe gene products in terms of their biological processes, cellular components, and molecular functions in a species-independent manner.",
+            "enabled": true,
+            "in_database": true,
+            "annotation_count": 97088,
+            "feature_count": 64838
+        },
+        "Gene Families": {
+            "display_name": "Gene Families",
+            "color": "danger",
+            "order": 6,
+            "description": "Gene families are groups of genes that share similar sequences and often similar functions, typically arising from gene duplication events. Examples include PANTHER, TreeFam, and other classification systems.",
+            "enabled": true,
+            "in_database": true,
+            "annotation_count": 55758,
+            "feature_count": 73937
+        },
+        "Mapping": {
+            "display_name": "Mapping",
+            "color": "secondary",
+            "order": 8,
+            "description": "Genomic mapping information including chromosomal locations, genetic markers, and physical positions of genes.",
+            "enabled": true,
+            "in_database": false,
+            "annotation_count": 0,
+            "feature_count": 0
+        },
+        "Aliases": {
+            "display_name": "Aliases",
+            "color": "secondary",
+            "order": 9,
+            "description": "Alternative names and identifiers for genes and gene products from various databases and nomenclature systems.",
+            "enabled": true,
+            "in_database": false,
+            "annotation_count": 0,
+            "feature_count": 0
+        },
+        "Publications": {
+            "display_name": "Publications",
+            "color": "dark",
+            "order": 10,
+            "description": "Scientific literature and publications associated with genes, including references from PubMed and other sources.",
+            "enabled": true,
+            "in_database": false,
+            "annotation_count": 0,
+            "feature_count": 0
+        }
     },
-    "Orthologs": {
-      "display_name": "Orthologs",
-      "color": "primary",
-      "order": 2,
-      "description": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs</strong>. Genes separated by gene duplication events are called paralogs.",
-      "enabled": true
+    "organisms": [],
+    "analysis_order": [
+        "Orthology",
+        "Orthologs",
+        "Homology",
+        "Homologs",
+        "AI Annotations",
+        "Domains",
+        "Gene Ontology",
+        "Gene Families",
+        "Mapping",
+        "Aliases",
+        "Publications"
+    ],
+    "analysis_descriptions": {
+        "Orthology": {
+            "display_name": "Orthology",
+            "description": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs<\/strong>. Genes separated by gene duplication events are called paralogs.",
+            "color": "primary",
+            "enabled": true
+        },
+        "Orthologs": {
+            "display_name": "Orthologs",
+            "description": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs<\/strong>. Genes separated by gene duplication events are called paralogs.",
+            "color": "primary",
+            "enabled": true
+        },
+        "Homology": {
+            "display_name": "Homology",
+            "description": "<strong>Homologous<\/strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
+            "color": "info",
+            "enabled": true
+        },
+        "Homologs": {
+            "display_name": "Homologs",
+            "description": "<strong>Homologous<\/strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
+            "color": "info",
+            "enabled": true
+        },
+        "AI Annotations": {
+            "display_name": "AI Annotations",
+            "description": "AI-based protein function prediction uses computational techniques, such as machine learning and protein sequence language models to infer the biological roles of proteins from their sequences",
+            "color": "purple",
+            "enabled": true
+        },
+        "Domains": {
+            "display_name": "Domains",
+            "description": "Protein domains are conserved structural and functional units that can evolve, function, and exist independently. Domain annotations identify these conserved regions using databases like InterPro, Pfam, and SMART.",
+            "color": "success",
+            "enabled": true
+        },
+        "Gene Ontology": {
+            "display_name": "Gene Ontology",
+            "description": "Gene Ontology (GO) provides a controlled vocabulary to describe gene products in terms of their biological processes, cellular components, and molecular functions in a species-independent manner.",
+            "color": "warning",
+            "enabled": true
+        },
+        "Gene Families": {
+            "display_name": "Gene Families",
+            "description": "Gene families are groups of genes that share similar sequences and often similar functions, typically arising from gene duplication events. Examples include PANTHER, TreeFam, and other classification systems.",
+            "color": "danger",
+            "enabled": true
+        },
+        "Mapping": {
+            "display_name": "Mapping",
+            "description": "Genomic mapping information including chromosomal locations, genetic markers, and physical positions of genes.",
+            "color": "secondary",
+            "enabled": true
+        },
+        "Aliases": {
+            "display_name": "Aliases",
+            "description": "Alternative names and identifiers for genes and gene products from various databases and nomenclature systems.",
+            "color": "secondary",
+            "enabled": true
+        },
+        "Publications": {
+            "display_name": "Publications",
+            "description": "Scientific literature and publications associated with genes, including references from PubMed and other sources.",
+            "color": "dark",
+            "enabled": true
+        }
     },
-    "Homology": {
-      "display_name": "Homology",
-      "color": "info",
-      "order": 3,
-      "description": "<strong>Homologous</strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
-      "enabled": true
-    },
-    "Homologs": {
-      "display_name": "Homologs",
-      "color": "info",
-      "order": 4,
-      "description": "<strong>Homologous</strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
-      "enabled": true
-    },
-    "AI Annotations": {
-      "display_name": "AI Annotations",
-      "color": "purple",
-      "order": 5,
-      "description": "AI-based protein function prediction uses computational techniques, such as machine learning and protein sequence language models to infer the biological roles of proteins from their sequences",
-      "enabled": true
-    },
-    "Domains": {
-      "display_name": "Domains",
-      "color": "success",
-      "order": 6,
-      "description": "Protein domains are conserved structural and functional units that can evolve, function, and exist independently. Domain annotations identify these conserved regions using databases like InterPro, Pfam, and SMART.",
-      "enabled": true
-    },
-    "Gene Ontology": {
-      "display_name": "Gene Ontology",
-      "color": "warning",
-      "order": 7,
-      "description": "Gene Ontology (GO) provides a controlled vocabulary to describe gene products in terms of their biological processes, cellular components, and molecular functions in a species-independent manner.",
-      "enabled": true
-    },
-    "Gene Families": {
-      "display_name": "Gene Families",
-      "color": "danger",
-      "order": 8,
-      "description": "Gene families are groups of genes that share similar sequences and often similar functions, typically arising from gene duplication events. Examples include PANTHER, TreeFam, and other classification systems.",
-      "enabled": true
-    },
-    "Mapping": {
-      "display_name": "Mapping",
-      "color": "secondary",
-      "order": 9,
-      "description": "Genomic mapping information including chromosomal locations, genetic markers, and physical positions of genes.",
-      "enabled": true
-    },
-    "Aliases": {
-      "display_name": "Aliases",
-      "color": "secondary",
-      "order": 10,
-      "description": "Alternative names and identifiers for genes and gene products from various databases and nomenclature systems.",
-      "enabled": true
-    },
-    "Publications": {
-      "display_name": "Publications",
-      "color": "dark",
-      "order": 11,
-      "description": "Scientific literature and publications associated with genes, including references from PubMed and other sources.",
-      "enabled": true
-    }
-  },
-  "organisms": {}
+    "annotation_type_order": [
+        "Orthologs",
+        "Homologs",
+        "Domains",
+        "Homology",
+        "Gene Ontology",
+        "Gene Families",
+        "AI Annotations",
+        "Mapping",
+        "Aliases",
+        "Publications"
+    ],
+    "sqlite_mod_time": 1763859743
 }

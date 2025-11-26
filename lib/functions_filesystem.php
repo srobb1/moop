@@ -475,3 +475,59 @@ function getRegistryLastUpdate($htmlFile, $mdFile) {
     
     return $lastUpdate;
 }
+
+/**
+ * Get the newest SQLite database modification timestamp
+ * 
+ * Scans all SQLite files in organism subdirectories and returns the most recent modification time
+ * Each organism has a structure: organisms/OrganismName/organism.sqlite
+ * 
+ * @param string $organisms_path - Path to organisms directory
+ * @return array - Array with 'timestamp' (Y-m-d H:i:s), 'unix_time' (timestamp), and 'iso8601'
+ *                 Returns null if no SQLite files found
+ */
+function getNewestSqliteModTime($organisms_path) {
+    if (!is_dir($organisms_path)) {
+        return null;
+    }
+    
+    $newest_time = 0;
+    $found = false;
+    
+    try {
+        // Scan organism directories one level deep
+        $organisms = scandir($organisms_path);
+        foreach ($organisms as $organism) {
+            if ($organism === '.' || $organism === '..') {
+                continue;
+            }
+            
+            $organism_dir = $organisms_path . '/' . $organism;
+            if (!is_dir($organism_dir)) {
+                continue;
+            }
+            
+            $sqlite_file = $organism_dir . '/organism.sqlite';
+            if (file_exists($sqlite_file)) {
+                $mtime = filemtime($sqlite_file);
+                if ($mtime > $newest_time) {
+                    $newest_time = $mtime;
+                    $found = true;
+                }
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Error scanning SQLite files: " . $e->getMessage());
+        return null;
+    }
+    
+    if (!$found) {
+        return null;
+    }
+    
+    return [
+        'unix_time' => $newest_time,
+        'timestamp' => date('Y-m-d H:i:s', $newest_time),
+        'iso8601' => date('c', $newest_time)
+    ];
+}
