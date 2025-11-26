@@ -2,12 +2,12 @@
 
 **Auto-generated documentation**
 
-Generated: 2025-11-26 15:33:56
+Generated: 2025-11-26 16:45:05
 
 ## Summary
 
-- **Total Functions**: 119
-- **Files Scanned**: 18
+- **Total Functions**: 120
+- **Files Scanned**: 19
 
 ## ⚠️ Unused Functions (17)
 
@@ -35,6 +35,7 @@ These functions are defined but never called:
 
 ## Quick Navigation
 
+- [admin/manage_registry.php](#admin-manage_registryphp) - 1 functions
 - [lib/blast_functions.php](#lib-blast_functionsphp) - 5 functions
 - [lib/blast_results_visualizer.php](#lib-blast_results_visualizerphp) - 15 functions
 - [lib/database_queries.php](#lib-database_queriesphp) - 14 functions
@@ -53,6 +54,23 @@ These functions are defined but never called:
 - [lib/tool_config.php](#lib-tool_configphp) - 4 functions
 - [tools/generate_js_registry.php](#tools-generate_js_registryphp) - 1 functions
 - [tools/sequences_display.php](#tools-sequences_displayphp) - 1 functions
+
+---
+
+## admin/manage_registry.php
+
+**1 function(s)**
+
+### `getRegistryLastUpdate()` (Line 53)
+
+Located in: `admin/manage_registry.php` at line 53
+
+**Used in 1 unique file(s) (4 total times):**
+- `/data/moop/admin/manage_registry.php` (4x):
+  - Line 76: `$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);`
+  - Line 77: `$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);`
+  - Line 76: `$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);`
+  - Line 77: `$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);`
 
 ---
 
@@ -1948,7 +1966,16 @@ Located in: `lib/functions_display.php` at line 359
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
+**Used in 2 unique file(s) (10 total times):**
+- `/data/moop/admin/manage_registry.php` (8x):
+  - Line 98: `<?php echo generatePermissionAlert(`
+  - Line 105: `<?php echo generatePermissionAlert(`
+  - Line 112: `<?php echo generatePermissionAlert(`
+  - Line 119: `<?php echo generatePermissionAlert(`
+  - Line 98: `<?php echo generatePermissionAlert(`
+  - Line 105: `<?php echo generatePermissionAlert(`
+  - Line 112: `<?php echo generatePermissionAlert(`
+  - Line 119: `<?php echo generatePermissionAlert(`
 - `/data/moop/admin/manage_organisms.php` (2x):
   - Line 789: `<?php echo generatePermissionAlert(`
   - Line 789: `<?php echo generatePermissionAlert(`
@@ -2560,7 +2587,7 @@ Located in: `lib/functions_system.php` at line 192
 */
 ```
 
-**Used in 4 unique file(s) (8 total times):**
+**Used in 5 unique file(s) (10 total times):**
 - `/data/moop/admin/createUser.php` (2x):
   - Line 10: `echo json_encode(handleFixFilePermissionsAjax());`
   - Line 10: `echo json_encode(handleFixFilePermissionsAjax());`
@@ -2570,6 +2597,9 @@ Located in: `lib/functions_system.php` at line 192
 - `/data/moop/admin/manage_phylo_tree.php` (2x):
   - Line 12: `echo json_encode(handleFixFilePermissionsAjax());`
   - Line 12: `echo json_encode(handleFixFilePermissionsAjax());`
+- `/data/moop/admin/manage_registry.php` (2x):
+  - Line 11: `echo json_encode(handleFixFilePermissionsAjax());`
+  - Line 11: `echo json_encode(handleFixFilePermissionsAjax());`
 - `/data/moop/admin/manage_organisms.php` (2x):
   - Line 12: `echo json_encode(handleFixFilePermissionsAjax());`
   - Line 12: `echo json_encode(handleFixFilePermissionsAjax());`
@@ -3059,18 +3089,18 @@ Located in: `lib/tool_config.php` at line 105
 
 **1 function(s)**
 
-### `findJsFunctionUsages()` (Line 101)
+### `findJsFunctionUsages()` (Line 106)
 
-Located in: `tools/generate_js_registry.php` at line 101
+Located in: `tools/generate_js_registry.php` at line 106
 
 **Used in 1 unique file(s) (6 total times):**
 - `/data/moop/tools/generate_js_registry.php` (6x):
-  - Line 249: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 306: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 464: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 249: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 306: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 464: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 254: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 311: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 469: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 254: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 311: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 469: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
 
 ---
 

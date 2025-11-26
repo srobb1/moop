@@ -7,7 +7,7 @@
  */
 
 // Load configuration
-require_once __DIR__ . '/../includes/ConfigManager.php';
+require_once __DIR__ . '/../includes/config_init.php';
 $config = ConfigManager::getInstance();
 $docs_path = $config->getPath('docs_path');
 
@@ -219,102 +219,51 @@ foreach ($scanDirs as $dir) {
     }
 }
 
-// Generate PHP registry file
-$registryContent = "<?php\n";
-$registryContent .= "/**\n";
-$registryContent .= " * AUTO-GENERATED FUNCTION REGISTRY\n";
-$registryContent .= " * Generated: " . date('Y-m-d H:i:s') . "\n";
-$registryContent .= " * To regenerate, run: php tools/generate_registry.php\n";
-$registryContent .= " */\n\n";
-$registryContent .= "\$FUNCTION_REGISTRY = " . var_export($registry, true) . ";\n\n";
+// Count totals and check for duplicates
+$totalFuncs = array_sum(array_map('count', $registry));
+$funcMap = [];
+$duplicates = [];
 
-// Add helper function: findFunction
-$registryContent .= "function findFunction(\$funcName) {\n";
-$registryContent .= "    global \$FUNCTION_REGISTRY;\n";
-$registryContent .= "    foreach (\$FUNCTION_REGISTRY as \$file => \$functions) {\n";
-$registryContent .= "        foreach (\$functions as \$func) {\n";
-$registryContent .= "            if (\$func['name'] === \$funcName) {\n";
-$registryContent .= "                return ['file' => \$file, 'line' => \$func['line']];\n";
-$registryContent .= "            }\n";
-$registryContent .= "        }\n";
-$registryContent .= "    }\n";
-$registryContent .= "    return null;\n";
-$registryContent .= "}\n\n";
-
-// Add helper function: getAllFunctions
-$registryContent .= "function getAllFunctions() {\n";
-$registryContent .= "    global \$FUNCTION_REGISTRY;\n";
-$registryContent .= "    \$all = [];\n";
-$registryContent .= "    foreach (\$FUNCTION_REGISTRY as \$file => \$functions) {\n";
-$registryContent .= "        foreach (\$functions as \$func) {\n";
-$registryContent .= "            \$all[\$func['name']] = ['file' => \$file, 'line' => \$func['line']];\n";
-$registryContent .= "        }\n";
-$registryContent .= "    }\n";
-$registryContent .= "    return \$all;\n";
-$registryContent .= "}\n\n";
-
-// Add helper function: checkDuplicates
-$registryContent .= "function checkDuplicates() {\n";
-$registryContent .= "    global \$FUNCTION_REGISTRY;\n";
-$registryContent .= "    \$funcMap = [];\n";
-$registryContent .= "    \$duplicates = [];\n";
-$registryContent .= "    foreach (\$FUNCTION_REGISTRY as \$file => \$functions) {\n";
-$registryContent .= "        foreach (\$functions as \$func) {\n";
-$registryContent .= "            \$name = \$func['name'];\n";
-$registryContent .= "            if (isset(\$funcMap[\$name])) {\n";
-$registryContent .= "                if (!isset(\$duplicates[\$name])) {\n";
-$registryContent .= "                    \$duplicates[\$name] = [\$funcMap[\$name]];\n";
-$registryContent .= "                }\n";
-$registryContent .= "                \$duplicates[\$name][] = ['file' => \$file, 'line' => \$func['line']];\n";
-$registryContent .= "            } else {\n";
-$registryContent .= "                \$funcMap[\$name] = ['file' => \$file, 'line' => \$func['line']];\n";
-$registryContent .= "            }\n";
-$registryContent .= "        }\n";
-$registryContent .= "    }\n";
-$registryContent .= "    return \$duplicates;\n";
-$registryContent .= "}\n";
-$registryContent .= "?" . ">\n";
-
-// Write registry file
-$registryFile = __DIR__ . '/../lib/function_registry.php';
-if (file_put_contents($registryFile, $registryContent)) {
-    echo "✅ Registry generated successfully!\n";
-    echo "   File: lib/function_registry.php\n";
-    
-    $totalFuncs = array_sum(array_map('count', $registry));
-    echo "   Functions found: " . $totalFuncs . "\n";
-    echo "   Files scanned: " . count($registry) . "\n";
-    
-    // Check for duplicates
-    require $registryFile;
-    $dups = checkDuplicates();
-    if (!empty($dups)) {
-        echo "\n⚠️  WARNING: Found " . count($dups) . " duplicate function definitions:\n";
-        foreach ($dups as $name => $locations) {
-            echo "   - $name\n";
-            foreach ($locations as $loc) {
-                echo "     • {$loc['file']}:{$loc['line']}\n";
+foreach ($registry as $file => $functions) {
+    foreach ($functions as $func) {
+        $name = $func['name'];
+        if (isset($funcMap[$name])) {
+            if (!isset($duplicates[$name])) {
+                $duplicates[$name] = [$funcMap[$name]];
             }
+            $duplicates[$name][] = ['file' => $file, 'line' => $func['line']];
+        } else {
+            $funcMap[$name] = ['file' => $file, 'line' => $func['line']];
         }
-    } else {
-        echo "\n✅ No duplicate functions detected.\n";
     }
-    
-    // Generate HTML documentation
-    generateHtmlDocs($registry);
-    
-    // Generate Markdown documentation
-    generateMarkdownDocs($registry);
-    
-} else {
-    echo "❌ Failed to write registry file.\n";
-    exit(1);
 }
+
+echo "✅ Registry scanned successfully!\n";
+echo "   Functions found: " . $totalFuncs . "\n";
+echo "   Files scanned: " . count($registry) . "\n";
+
+if (!empty($duplicates)) {
+    echo "\n⚠️  WARNING: Found " . count($duplicates) . " duplicate function definitions:\n";
+    foreach ($duplicates as $name => $locations) {
+        echo "   - $name\n";
+        foreach ($locations as $loc) {
+            echo "     • {$loc['file']}:{$loc['line']}\n";
+        }
+    }
+} else {
+    echo "\n✅ No duplicate functions detected.\n";
+}
+
+// Generate HTML documentation
+generateHtmlDocs($registry, $docs_path);
+
+// Generate Markdown documentation
+generateMarkdownDocs($registry, $docs_path);
 
 /**
  * Generate HTML documentation
  */
-function generateHtmlDocs($registry) {
+function generateHtmlDocs($registry, $docs_path) {
     $html = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n";
     $html .= "    <meta charset=\"UTF-8\">\n";
     $html .= "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
@@ -566,7 +515,7 @@ function generateHtmlDocs($registry) {
 /**
  * Generate Markdown documentation
  */
-function generateMarkdownDocs($registry) {
+function generateMarkdownDocs($registry, $docs_path) {
     $md = "# Function Registry\n\n";
     $md .= "**Auto-generated documentation**\n\n";
     $md .= "Generated: " . date('Y-m-d H:i:s') . "\n\n";

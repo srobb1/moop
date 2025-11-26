@@ -6,7 +6,7 @@
  */
 
 // Load configuration
-require_once __DIR__ . '/../includes/ConfigManager.php';
+require_once __DIR__ . '/../includes/config_init.php';
 $config = ConfigManager::getInstance();
 $docs_path = $config->getPath('docs_path');
 

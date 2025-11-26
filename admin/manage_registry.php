@@ -1,36 +1,46 @@
 <?php
+ob_start();
 include_once __DIR__ . '/admin_init.php';
 
-// Load page-specific config
-$metadata_path = $config->getPath('metadata_path');
-
-// Handle AJAX fix permissions request (unified system)
-if (isset($_POST['action']) && $_POST['action'] === 'fix_file_permissions') {
-    header('Content-Type: application/json');
-    echo json_encode(handleFixFilePermissionsAjax());
-    exit;
-}
-
-// Handle AJAX update registry requests
-if (isset($_POST['action']) && $_POST['action'] === 'update_registry') {
+// Handle AJAX requests after admin access verification
+if (isset($_POST['action'])) {
+    ob_end_clean(); // Clear any buffered output
     header('Content-Type: application/json');
     
-    $type = $_POST['type'] ?? 'php';
-    $script = $type === 'js' ? 'generate_js_registry.php' : 'generate_registry.php';
-    $script_path = __DIR__ . '/../tools/' . $script;
-    
-    if (!file_exists($script_path)) {
-        echo json_encode(['success' => false, 'message' => 'Registry generator script not found']);
+    if ($_POST['action'] === 'fix_file_permissions') {
+        echo json_encode(handleFixFilePermissionsAjax());
         exit;
     }
     
-    ob_start();
-    include $script_path;
-    $output = ob_get_clean();
-    
-    echo json_encode(['success' => true, 'message' => 'Registry updated successfully', 'output' => $output]);
-    exit;
+    if ($_POST['action'] === 'update_registry') {
+        $type = $_POST['type'] ?? 'php';
+        $script = $type === 'js' ? 'generate_js_registry.php' : 'generate_registry.php';
+        $script_path = __DIR__ . '/../tools/' . $script;
+        
+        if (!file_exists($script_path)) {
+            echo json_encode(['success' => false, 'message' => 'Registry generator script not found']);
+            exit;
+        }
+        
+        // Run PHP script via command line
+        $cmd = 'php ' . escapeshellarg($script_path) . ' 2>&1';
+        exec($cmd, $output, $exitCode);
+        $output_text = implode("\n", $output);
+        
+        // Check if command succeeded
+        if ($exitCode === 0) {
+            echo json_encode(['success' => true, 'message' => 'Registry updated successfully']);
+        } else {
+            echo json_encode(['success' => false, 'message' => trim($output_text)]);
+        }
+        exit;
+    }
 }
+
+ob_end_flush(); // Output buffered HTML
+
+// Load page-specific config
+$metadata_path = $config->getPath('metadata_path');
 
 // Check file permissions for registry files using ConfigManager paths
 $docs_path = $config->getPath('docs_path');

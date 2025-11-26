@@ -1,6 +1,6 @@
 # JavaScript Function Registry
 
-Generated: 2025-11-26 15:34:07
+Generated: 2025-11-26 16:45:01
 
 ## Summary
 - **Total Functions**: 51
@@ -409,6 +409,7 @@ Generated: 2025-11-26 15:34:07
 - `admin/manage_groups.php`
 - `admin/manage_organisms.php`
 - `admin/manage_phylo_tree.php`
+- `admin/manage_registry.php`
 
 ### `fixFilePermissions()` (Line 15)
 

@@ -50,7 +50,7 @@
     <header>
         <div class="container">
             <h1>🔍 MOOP Function Registry</h1>
-            <p>Auto-generated function documentation • Generated: 2025-11-26 15:33:53</p>
+            <p>Auto-generated function documentation • Generated: 2025-11-26 16:45:03</p>
         </div>
     </header>
     <div class="container">
@@ -58,8 +58,8 @@
             <input type="text" id="searchInput" placeholder="🔍 Search functions, files, or usage..." onkeyup="filterFunctions()">
         </div>
         <div class="stats">
-            <div class="stat-box"><strong>119</strong><span>Total Functions</span></div>
-            <div class="stat-box"><strong>18</strong><span>Files</span></div>
+            <div class="stat-box"><strong>120</strong><span>Total Functions</span></div>
+            <div class="stat-box"><strong>19</strong><span>Files</span></div>
         </div>
         <div style="background: #ffe6e6; border: 2px solid #cc0000; border-radius: 4px; overflow: hidden; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <div style="background: #cc0000; color: white; padding: 15px 20px; font-weight: bold; cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center;" onclick="toggleUnused(this)">
@@ -91,6 +91,58 @@
         </div>
         <div style="display: flex; gap: 10px; margin: 20px 0;">
             <button id="toggleBtn" onclick="toggleAll()" style="flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">📂 Expand All</button>
+        </div>
+        <div class="file-section">
+            <div class="file-header" onclick="toggleFile(this)">📄 admin/manage_registry.php (1)</div>
+            <div class="functions-list">
+                <div class="function-item searchable" data-func="getRegistryLastUpdate">
+                    <div class="function-header" onclick="toggleCode(this)">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="function-name">getRegistryLastUpdate()</div>
+                            <span class="function-counter">4</span>
+                            <div class="function-line">Line 53</div>
+                        </div>
+                        <span style="font-size: 20px; margin-left: 10px;">▶</span>
+                    </div>
+                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">admin/manage_registry.php: getRegistryLastUpdate()</div>
+                    <div class="function-usages">
+                        <strong>📍 Used in 1 unique file(s) (4 total times):</strong>
+                        <ul>
+                            <li><strong>/data/moop/admin/manage_registry.php</strong> (4x)
+                                <ul style="margin-top: 5px;">
+                                    <li><code>line 76</code>: <small>$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);</small></li>
+                                    <li><code>line 77</code>: <small>$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);</small></li>
+                                    <li><code>line 76</code>: <small>$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);</small></li>
+                                    <li><code>line 77</code>: <small>$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);</small></li>
+                                </ul></li>
+                        </ul>
+                    </div>
+                    <div class="function-code">
+                        <code>function getRegistryLastUpdate($htmlFile, $mdFile) {
+    $lastUpdate = &#039;Never&#039;;
+    
+    // Try to get from HTML file first (has &quot;Generated:&quot; timestamp)
+    if (file_exists($htmlFile) &amp;&amp; is_readable($htmlFile)) {
+        $content = file_get_contents($htmlFile);
+        // Look for &quot;Generated: YYYY-MM-DD HH:MM:SS&quot; in the HTML
+        if (preg_match(&#039;/Generated:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/&#039;, $content, $matches)) {
+            $lastUpdate = $matches[1];
+            return $lastUpdate;
+        }
+    }
+    
+    // Fallback to file modification time
+    if (file_exists($htmlFile)) {
+        $lastUpdate = date(&#039;Y-m-d H:i:s&#039;, filemtime($htmlFile));
+    } elseif (file_exists($mdFile)) {
+        $lastUpdate = date(&#039;Y-m-d H:i:s&#039;, filemtime($mdFile));
+    }
+    
+    return $lastUpdate;
+}</code>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="file-section">
             <div class="file-header" onclick="toggleFile(this)">📄 lib/blast_functions.php (5)</div>
@@ -6456,7 +6508,7 @@ JS;
                     <div class="function-header" onclick="toggleCode(this)">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div class="function-name">generatePermissionAlert()</div>
-                            <span class="function-counter">2</span>
+                            <span class="function-counter">10</span>
                             <div class="function-line">Line 359</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
@@ -6479,8 +6531,19 @@ JS;
 */</pre>
                     </div>
                     <div class="function-usages">
-                        <strong>📍 Used in 1 unique file(s) (2 total times):</strong>
+                        <strong>📍 Used in 2 unique file(s) (10 total times):</strong>
                         <ul>
+                            <li><strong>/data/moop/admin/manage_registry.php</strong> (8x)
+                                <ul style="margin-top: 5px;">
+                                    <li><code>line 98</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 105</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 112</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 119</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 98</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 105</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 112</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 119</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                </ul></li>
                             <li><strong>/data/moop/admin/manage_organisms.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
                                     <li><code>line 789</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
@@ -8052,7 +8115,7 @@ JS;
                     <div class="function-header" onclick="toggleCode(this)">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div class="function-name">handleFixFilePermissionsAjax()</div>
-                            <span class="function-counter">8</span>
+                            <span class="function-counter">10</span>
                             <div class="function-line">Line 192</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
@@ -8073,7 +8136,7 @@ JS;
 */</pre>
                     </div>
                     <div class="function-usages">
-                        <strong>📍 Used in 4 unique file(s) (8 total times):</strong>
+                        <strong>📍 Used in 5 unique file(s) (10 total times):</strong>
                         <ul>
                             <li><strong>/data/moop/admin/createUser.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
@@ -8089,6 +8152,11 @@ JS;
                                 <ul style="margin-top: 5px;">
                                     <li><code>line 12</code>: <small>echo json_encode(handleFixFilePermissionsAjax());</small></li>
                                     <li><code>line 12</code>: <small>echo json_encode(handleFixFilePermissionsAjax());</small></li>
+                                </ul></li>
+                            <li><strong>/data/moop/admin/manage_registry.php</strong> (2x)
+                                <ul style="margin-top: 5px;">
+                                    <li><code>line 11</code>: <small>echo json_encode(handleFixFilePermissionsAjax());</small></li>
+                                    <li><code>line 11</code>: <small>echo json_encode(handleFixFilePermissionsAjax());</small></li>
                                 </ul></li>
                             <li><strong>/data/moop/admin/manage_organisms.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
@@ -9194,7 +9262,7 @@ JS;
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div class="function-name">findJsFunctionUsages()</div>
                             <span class="function-counter">6</span>
-                            <div class="function-line">Line 101</div>
+                            <div class="function-line">Line 106</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
                     </div>
@@ -9204,12 +9272,12 @@ JS;
                         <ul>
                             <li><strong>/data/moop/tools/generate_js_registry.php</strong> (6x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 249</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
-                                    <li><code>line 306</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
-                                    <li><code>line 464</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
-                                    <li><code>line 249</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
-                                    <li><code>line 306</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
-                                    <li><code>line 464</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
+                                    <li><code>line 254</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
+                                    <li><code>line 311</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
+                                    <li><code>line 469</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
+                                    <li><code>line 254</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
+                                    <li><code>line 311</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
+                                    <li><code>line 469</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
                                 </ul></li>
                         </ul>
                     </div>
