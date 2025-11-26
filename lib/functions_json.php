@@ -125,3 +125,15 @@ function decodeJsonString($json_string, $as_array = true) {
     
     return $decoded;
 }
+
+/**
+ * Save data to JSON file with pretty printing
+ * Writes JSON data with readable formatting
+ * 
+ * @param string $path Path to JSON file to save
+ * @param array $data Data to encode and save
+ * @return int|false Number of bytes written, or false on failure
+ */
+function saveJsonFile($path, $data) {
+    return file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT));
+}
