@@ -206,14 +206,9 @@ function validateOrganismJson($json_path) {
     }
     
     // Get web server user/group
-    $current_user = get_current_user();
-    if ($current_user) {
-        $validation['web_user'] = $current_user;
-        $group_info = @posix_getgrgid(@posix_getegid());
-        if ($group_info !== false) {
-            $validation['web_group'] = $group_info['name'] ?? 'www-data';
-        }
-    }
+    $webserver = getWebServerUser();
+    $validation['web_user'] = $webserver['user'];
+    $validation['web_group'] = $webserver['group'];
     
     if (!is_readable($json_path)) {
         $validation['errors'][] = 'organism.json file is not readable';
@@ -377,9 +372,9 @@ function generatePermissionAlert($file_path, $title = '', $problem = '', $file_t
     $owner = @posix_getpwuid(fileowner($file_path));
     $owner_name = $owner !== false ? $owner['name'] : 'unknown';
     $perms = substr(sprintf('%o', fileperms($file_path)), -3);
-    $web_user = get_current_user() ?: 'www-data';
-    $web_group_info = @posix_getgrgid(@posix_getegid());
-    $web_group = $web_group_info !== false ? $web_group_info['name'] : 'www-data';
+    $webserver = getWebServerUser();
+    $web_user = $webserver['user'];
+    $web_group = $webserver['group'];
     
     // Determine if web server can fix permissions
     $can_fix = is_writable(dirname($file_path)) || is_writable($file_path);
@@ -433,10 +428,10 @@ function generatePermissionAlert($file_path, $title = '', $problem = '', $file_t
         $html .= '  <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">' . "\n";
         $html .= '    <code style="word-break: break-all; display: block; font-size: 0.9em;">' . "\n";
         if ($is_dir) {
-            $html .= '      sudo chown -R ' . htmlspecialchars($web_user) . ':' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
+            $html .= '      sudo chgrp -R ' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
             $html .= '      sudo chmod -R 775 ' . $safe_path . "\n";
         } else {
-            $html .= '      sudo chown ' . htmlspecialchars($web_user) . ':' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
+            $html .= '      sudo chgrp ' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
             $html .= '      sudo chmod 664 ' . $safe_path . "\n";
         }
         $html .= '    </code>' . "\n";
@@ -447,10 +442,10 @@ function generatePermissionAlert($file_path, $title = '', $problem = '', $file_t
         $html .= '  <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">' . "\n";
         $html .= '    <code style="word-break: break-all; display: block; font-size: 0.9em;">' . "\n";
         if ($is_dir) {
-            $html .= '      sudo chown -R ' . htmlspecialchars($web_user) . ':' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
+            $html .= '      sudo chgrp -R ' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
             $html .= '      sudo chmod -R 775 ' . $safe_path . "\n";
         } else {
-            $html .= '      sudo chown ' . htmlspecialchars($web_user) . ':' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
+            $html .= '      sudo chgrp ' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
             $html .= '      sudo chmod 664 ' . $safe_path . "\n";
         }
         $html .= '    </code>' . "\n";
@@ -461,17 +456,4 @@ function generatePermissionAlert($file_path, $title = '', $problem = '', $file_t
     $html .= '</div>' . "\n";
     
     return $html;
-}
-
-/**
- * Get web server user information
- * 
- * @return array Array with 'user' and 'group' keys
- */
-function getWebServerUserInfo() {
-    $user = get_current_user() ?: 'www-data';
-    $group_info = @posix_getgrgid(@posix_getegid());
-    $group = $group_info !== false ? $group_info['name'] : 'www-data';
-    
-    return ['user' => $user, 'group' => $group];
 }

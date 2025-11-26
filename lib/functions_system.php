@@ -130,9 +130,9 @@ function fixFilePermissions($file_path, $file_type = 'file') {
     $is_dir = is_dir($file_path);
     
     // Get web server user info
-    $web_user = get_current_user() ?: 'www-data';
-    $web_group_info = @posix_getgrgid(@posix_getegid());
-    $web_group = $web_group_info !== false ? $web_group_info['name'] : 'www-data';
+    $webserver = getWebServerUser();
+    $web_user = $webserver['user'];
+    $web_group = $webserver['group'];
     
     try {
         if ($is_dir) {
