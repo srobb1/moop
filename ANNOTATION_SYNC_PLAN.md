@@ -55,7 +55,8 @@ New structure with synonym support:
       "enabled": true,
       "synonyms": ["Orthologs"],
       "in_database": true,
-      "db_count": 42,
+      "annotation_count": 42,
+      "feature_count": 38,
       "new": false
     },
     "Homology": {
@@ -67,7 +68,8 @@ New structure with synonym support:
       "enabled": false,
       "synonyms": [],
       "in_database": false,
-      "db_count": 0,
+      "annotation_count": 0,
+      "feature_count": 0,
       "new": false
     }
   }
@@ -78,7 +80,8 @@ New structure with synonym support:
 - `display_label`: Which synonym to actually display in the UI (picked by admin)
 - `synonyms`: Array of alias names that map to this canonical entry
 - `in_database`: Auto-populated flag indicating if this type exists in DB
-- `db_count`: Auto-populated count of annotations from the database
+- `annotation_count`: Auto-populated count of annotations from the database
+- `feature_count`: Auto-populated count of distinct features with this annotation type
 - `new`: Auto-populated flag for types discovered in DB but not in config
 
 ### 2. Helper Functions
@@ -90,15 +93,32 @@ Functions to add to `admin/manage_annotations.php`:
 #### getAnnotationTypesFromDB($dbFile)
 ```php
 /**
- * Get all annotation types from database with their counts
- * Queries annotation_source table for distinct annotation_type values
+ * Get all annotation types from database with their counts and feature counts
+ * Queries annotation_source and feature_annotation tables for:
+ *   - Distinct annotation_type values
+ *   - Count of annotations per type
+ *   - Count of distinct features per type
  * 
  * @param string $dbFile - Path to SQLite database
- * @return array - [annotation_type => count] ordered by count DESC
+ * @return array - [annotation_type => ['annotation_count' => N, 'feature_count' => M]]
+ *                  ordered by feature_count DESC
+ * 
+ * Example return:
+ *   [
+ *     'Orthology' => ['annotation_count' => 42, 'feature_count' => 38],
+ *     'Homology' => ['annotation_count' => 15, 'feature_count' => 12],
+ *     ...
+ *   ]
  */
 function getAnnotationTypesFromDB($dbFile) {
-    // Query: SELECT DISTINCT annotation_type, COUNT(*) FROM annotation_source
-    // Returns: ['Orthology' => 42, 'Homology' => 15, ...]
+    // Query: SELECT DISTINCT annotation_type,
+    //               COUNT(DISTINCT a.annotation_id) as annotation_count,
+    //               COUNT(DISTINCT fa.feature_id) as feature_count
+    //        FROM annotation_source ans
+    //        LEFT JOIN annotation a ON ...
+    //        LEFT JOIN feature_annotation fa ON ...
+    //        GROUP BY annotation_type
+    // Returns: ['Orthology' => ['annotation_count' => 42, 'feature_count' => 38], ...]
 }
 ```
 
@@ -128,17 +148,23 @@ function getAnnotationTypeMapping($annotation_config) {
 /**
  * Synchronize annotation types between config and database
  * Creates entries for unmapped DB types, marks unused entries
+ * Populates annotation_count and feature_count for each type
  * 
  * @param array $annotation_config - Current annotation_config.json
- * @param array $db_types - [annotation_type => count] from database
+ * @param array $db_types - [annotation_type => ['annotation_count' => N, 'feature_count' => M]]
  * @return array - Updated config with sync metadata
  * 
  * Process:
  *   1. Mark all existing entries as in_database = false initially
  *   2. For each DB type:
- *      - If mapped via synonym: mark canonical as in_database = true, add count
+ *      - If mapped via synonym: mark canonical as in_database = true
+ *      - Add annotation_count and feature_count to canonical
  *      - If not mapped: create new entry with "new" flag
  *   3. Return updated config
+ *   
+ * Example:
+ *   Input DB types: ['Orthology' => ['annotation_count' => 42, 'feature_count' => 38], ...]
+ *   Output: config with in_database=true, annotation_count=42, feature_count=38
  */
 function syncAnnotationTypes($annotation_config, $db_types) {
     // Implementation details...
@@ -207,19 +233,22 @@ Show two sections:
 │ Database has 8 distinct types | Config has 11 entries           │
 │                                                                 │
 │ ✅ In Database & Configured:                                    │
-│   • Orthology (synonyms: Orthologs) - 42 annotations            │
-│   • Homology (synonyms: Homologs) - 15 annotations              │
-│   • Domains - 128 annotations                                   │
+│   • Orthology (synonyms: Orthologs)                             │
+│     ├─ Annotations: 42 | Features: 38                           │
+│   • Homology (synonyms: Homologs)                               │
+│     ├─ Annotations: 15 | Features: 12                           │
+│   • Domains                                                      │
+│     ├─ Annotations: 128 | Features: 95                          │
 │   ...                                                            │
 │                                                                 │
 │ ⚠️  NOT USED (in config but not in database):                   │
-│   • Mapping - 0 annotations [REMOVE]                            │
-│   • Aliases - 0 annotations [REMOVE]                            │
-│   • Publications - 0 annotations [REMOVE]                       │
+│   • Mapping - 0 annotations, 0 features [REMOVE]                │
+│   • Aliases - 0 annotations, 0 features [REMOVE]                │
+│   • Publications - 0 annotations, 0 features [REMOVE]           │
 │                                                                 │
 │ 🆕 NEW (in database but not in config):                         │
-│   • CustomType - 5 annotations [ADD]                            │
-│   • NewAnnotations - 3 annotations [ADD]                        │
+│   • CustomType - 5 annotations, 4 features [ADD]                │
+│   • NewAnnotations - 3 annotations, 2 features [ADD]            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -350,15 +379,17 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile, $genome_ids = [], $
 
 ## Testing Checklist
 
-- [ ] `getAnnotationTypesFromDB()` returns correct counts from sample databases
+- [ ] `getAnnotationTypesFromDB()` returns correct annotation_count from sample databases
+- [ ] `getAnnotationTypesFromDB()` returns correct feature_count (distinct features per type)
+- [ ] Feature counts correctly show which types are actually used
 - [ ] `getAnnotationTypeMapping()` correctly maps synonyms
 - [ ] `syncAnnotationTypes()` identifies unmapped DB types
-- [ ] Consolidating "Orthologs" into "Orthology" works
+- [ ] Consolidating "Orthologs" into "Orthology" combines feature_counts correctly
 - [ ] parent_display shows "Orthology" for both DB types after consolidation
-- [ ] Unused annotation types marked as "Not used" in config
+- [ ] Unused annotation types (feature_count = 0) marked as "Not used" in config
 - [ ] New DB types can be added to config via manage_annotations UI
-- [ ] Annotation counts match between DB query and displayed annotations
-- [ ] All synonyms group correctly in parent_display
+- [ ] Feature counts in UI match database queries
+- [ ] All synonyms group correctly in parent_display with combined feature counts
 - [ ] Backward compatible with existing annotation_config.json format
 
 ## Migration Strategy
@@ -407,14 +438,23 @@ UI shows them as separate types ❌
       "display_label": "Orthology",
       "synonyms": ["Orthologs"],
       "in_database": true,
-      "db_count": 57,
+      "annotation_count": 57,
+      "feature_count": 52,
       ...
     }
   }
 }
 ```
 
-Database query for "Orthologs" → maps to "Orthology" → displays as "Orthology" ✅
+Database query results:
+- "Orthology" type: 30 annotations on 28 features
+- "Orthologs" type: 27 annotations on 24 features
+- After consolidation: Combined to 57 annotations on 52 distinct features
+
+UI shows:
+- Single "Orthology" entry
+- Annotations: 57 | Features: 52
+- Both "Orthology" and "Orthologs" DB types map to this canonical entry ✅
 
 ## Future Enhancements
 
