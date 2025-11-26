@@ -35,6 +35,9 @@ return [
     // ======== REQUIRED: Metadata ========
     'metadata_path' => "$site_path/metadata",
     
+    // ======== REQUIRED: Documentation ========
+    'docs_path' => "$site_path/docs",
+    
     // ======== OPTIONAL: Appearance ========
     'siteTitle' => 'SIMRbase',
     'header_img' => 'header_img.png',

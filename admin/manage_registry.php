@@ -32,20 +32,12 @@ if (isset($_POST['action']) && $_POST['action'] === 'update_registry') {
     exit;
 }
 
-// Check file permissions for tools directory where registries are generated
-$tools_dir = __DIR__ . '/../tools';
-$docs_dir = __DIR__ . '/../docs';
-$lib_dir = __DIR__ . '/../lib';
-
-// Check if www-data can write to necessary directories
-$tools_writable = is_writable($tools_dir);
-$docs_writable = is_writable($docs_dir);
-$lib_writable = is_writable($lib_dir);
-
-// Get web server user info
-$web_user = get_current_user() ?: 'www-data';
-$web_group_info = @posix_getgrgid(@posix_getegid());
-$web_group = $web_group_info !== false ? $web_group_info['name'] : 'www-data';
+// Check file permissions for registry files using ConfigManager paths
+$docs_path = $config->getPath('docs_path');
+$php_registry_html = $docs_path . '/function_registry.html';
+$php_registry_md = $docs_path . '/FUNCTION_REGISTRY.md';
+$js_registry_html = $docs_path . '/js_function_registry.html';
+$js_registry_md = $docs_path . '/JS_FUNCTION_REGISTRY.md';
 ?>
 
 <!DOCTYPE html>
@@ -65,26 +57,33 @@ $web_group = $web_group_info !== false ? $web_group_info['name'] : 'www-data';
       </div>
     </div>
 
-    <!-- Permission Alerts for Registry Directories -->
+    <!-- Permission Alerts for Registry Files -->
     <?php echo generatePermissionAlert(
-        $lib_dir,
-        'Library Directory Permission Issue',
-        'Web server cannot write to the lib/ directory where function_registry.php is generated.',
-        'directory'
+        $php_registry_html,
+        'PHP Registry HTML File',
+        'Web server cannot write to function_registry.html.',
+        'file'
     ); ?>
     
     <?php echo generatePermissionAlert(
-        $docs_dir,
-        'Documentation Directory Permission Issue',
-        'Web server cannot write to the docs/ directory where registry documentation is generated.',
-        'directory'
+        $php_registry_md,
+        'PHP Registry Markdown File',
+        'Web server cannot write to FUNCTION_REGISTRY.md.',
+        'file'
     ); ?>
     
     <?php echo generatePermissionAlert(
-        $tools_dir,
-        'Tools Directory Permission Issue',
-        'Web server cannot write to the tools/ directory where registry generators run.',
-        'directory'
+        $js_registry_html,
+        'JavaScript Registry HTML File',
+        'Web server cannot write to js_function_registry.html.',
+        'file'
+    ); ?>
+    
+    <?php echo generatePermissionAlert(
+        $js_registry_md,
+        'JavaScript Registry Markdown File',
+        'Web server cannot write to JS_FUNCTION_REGISTRY.md.',
+        'file'
     ); ?>
 
     <!-- PHP Registry Card -->
