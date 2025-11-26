@@ -31,7 +31,8 @@ header p { opacity: 0.9; }
 .function-header { background: #f0f0f0; padding: 12px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
 .function-header:hover { background: #e0e0e0; }
 .function-name { font-family: 'Courier New', monospace; color: #2980b9; font-weight: 500; }
-.function-counter { display: inline-block; background: #3498db; color: white; border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 24px; font-size: 12px; font-weight: bold; margin-left: 8px; }
+.function-counter { display: inline-flex; align-items: center; justify-content: center; background: #3498db; color: white; border-radius: 50%; width: 28px; height: 28px; font-size: 12px; font-weight: bold; margin-left: 8px; flex-shrink: 0; }
+.expand-arrow { display: inline-flex; align-items: center; justify-content: center; font-size: 16px; margin-left: 10px; flex-shrink: 0; }
 .function-line { font-size: 11px; color: #7f8c8d; }
 .function-details { padding: 15px 20px; background: white; display: none; }
 .function-details.shown { display: block; }
@@ -57,7 +58,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <header>
 <div class="container">
 <h1>🔍 MOOP JavaScript Function Registry</h1>
-<p>Auto-generated function documentation • Generated: 2025-11-26 16:45:01</p>
+<p>Auto-generated function documentation • Generated: 2025-11-26 16:56:56</p>
 </div>
 </header>
 <div class="container">
@@ -97,9 +98,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">downloadResultsHTML()</span><span class="function-counter">0</span> <span class="function-line">Line 9</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/blast-manager.js: downloadResultsHTML()</div>
 <div class="function-details">
@@ -123,9 +124,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">downloadResultsText()</span><span class="function-counter">1</span> <span class="function-line">Line 25</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/blast-manager.js: downloadResultsText()</div>
 <div class="function-details">
@@ -156,9 +157,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">clearResults()</span><span class="function-counter">1</span> <span class="function-line">Line 44</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/blast-manager.js: clearResults()</div>
 <div class="function-details">
@@ -183,9 +184,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">clearBlastSourceFilters()</span><span class="function-counter">1</span> <span class="function-line">Line 52</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/blast-manager.js: clearBlastSourceFilters()</div>
 <div class="function-details">
@@ -206,9 +207,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">initializeBlastManager()</span><span class="function-counter">2</span> <span class="function-line">Line 56</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/blast-manager.js: initializeBlastManager()</div>
 <div class="function-details">
@@ -240,9 +241,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">updateCurrentSelectionDisplay()</span><span class="function-counter">7</span> <span class="function-line">Line 58</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/blast-manager.js: updateCurrentSelectionDisplay()</div>
 <div class="function-details">
@@ -277,9 +278,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">autoScrollToResults()</span><span class="function-counter">3</span> <span class="function-line">Line 208</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/blast-manager.js: autoScrollToResults()</div>
 <div class="function-details">
@@ -321,9 +322,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">handleToolClick()</span><span class="function-counter">0</span> <span class="function-line">Line 2</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/index.js: handleToolClick()</div>
 <div class="function-details">
@@ -350,9 +351,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">switchView()</span><span class="function-counter">2</span> <span class="function-line">Line 50</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/index.js: switchView()</div>
 <div class="function-details">
@@ -390,9 +391,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <div class="file-header">📄 js/modules/blast-canvas-graph.js (4)</div>
 <div class="functions-list hidden">
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">draw_blast_graph()</span><span class="function-counter">0</span> <span class="function-line">Line 2</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/blast-canvas-graph.js: draw_blast_graph()</div>
 <div class="function-details">
@@ -424,9 +425,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">printRectangles()</span><span class="function-counter">1</span> <span class="function-line">Line 205</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/blast-canvas-graph.js: printRectangles()</div>
 <div class="function-details">
@@ -465,9 +466,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">move_bg_rect()</span><span class="function-counter">0</span> <span class="function-line">Line 437</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/blast-canvas-graph.js: move_bg_rect()</div>
 <div class="function-details">
@@ -483,9 +484,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">draw_popup()</span><span class="function-counter">1</span> <span class="function-line">Line 445</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/blast-canvas-graph.js: draw_popup()</div>
 <div class="function-details">
@@ -537,9 +538,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">initializeCopyToClipboard()</span><span class="function-counter">1</span> <span class="function-line">Line 6</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/copy-to-clipboard.js: initializeCopyToClipboard()</div>
 <div class="function-details">
@@ -568,9 +569,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">initializeCopyTooltips()</span><span class="function-counter">1</span> <span class="function-line">Line 29</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/copy-to-clipboard.js: initializeCopyTooltips()</div>
 <div class="function-details">
@@ -605,9 +606,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <div class="file-header">📄 js/modules/download-handler.js (3)</div>
 <div class="functions-list hidden">
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">download()</span><span class="function-counter">1</span> <span class="function-line">Line 10</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/download-handler.js: download()</div>
 <div class="function-details">
@@ -645,9 +646,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">d2b()</span><span class="function-counter">1</span> <span class="function-line">Line 63</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/download-handler.js: d2b()</div>
 <div class="function-details">
@@ -678,9 +679,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">saver()</span><span class="function-counter">5</span> <span class="function-line">Line 77</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/download-handler.js: saver()</div>
 <div class="function-details">
@@ -733,9 +734,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">fixDatabasePermissions()</span><span class="function-counter">2</span> <span class="function-line">Line 5</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/organism-management.js: fixDatabasePermissions()</div>
 <div class="function-details">
@@ -770,9 +771,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">saveMetadata()</span><span class="function-counter">1</span> <span class="function-line">Line 60</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/organism-management.js: saveMetadata()</div>
 <div class="function-details">
@@ -806,9 +807,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">addMetadataImage()</span><span class="function-counter">1</span> <span class="function-line">Line 176</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/organism-management.js: addMetadataImage()</div>
 <div class="function-details">
@@ -834,9 +835,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">removeMetadataImage()</span><span class="function-counter">2</span> <span class="function-line">Line 198</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/organism-management.js: removeMetadataImage()</div>
 <div class="function-details">
@@ -867,9 +868,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">addMetadataParagraph()</span><span class="function-counter">1</span> <span class="function-line">Line 208</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/organism-management.js: addMetadataParagraph()</div>
 <div class="function-details">
@@ -894,9 +895,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">removeMetadataParagraph()</span><span class="function-counter">2</span> <span class="function-line">Line 239</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/organism-management.js: removeMetadataParagraph()</div>
 <div class="function-details">
@@ -927,9 +928,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">renameAssemblyDirectory()</span><span class="function-counter">2</span> <span class="function-line">Line 249</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/organism-management.js: renameAssemblyDirectory()</div>
 <div class="function-details">
@@ -960,9 +961,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">deleteAssemblyDirectory()</span><span class="function-counter">2</span> <span class="function-line">Line 324</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/organism-management.js: deleteAssemblyDirectory()</div>
 <div class="function-details">
@@ -1006,9 +1007,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">initPhyloTree()</span><span class="function-counter">1</span> <span class="function-line">Line 168</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/phylo-tree.js: initPhyloTree()</div>
 <div class="function-details">
@@ -1042,9 +1043,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">createOrganismResultsTable()</span><span class="function-counter">1</span> <span class="function-line">Line 18</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/shared-results-table.js: createOrganismResultsTable()</div>
 <div class="function-details">
@@ -1073,9 +1074,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">initializeResultsTable()</span><span class="function-counter">2</span> <span class="function-line">Line 165</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/shared-results-table.js: initializeResultsTable()</div>
 <div class="function-details">
@@ -1116,9 +1117,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">isSourceVisible()</span><span class="function-counter">5</span> <span class="function-line">Line 13</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/source-list-manager.js: isSourceVisible()</div>
 <div class="function-details">
@@ -1149,9 +1150,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">applySourceFilter()</span><span class="function-counter">2</span> <span class="function-line">Line 27</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/source-list-manager.js: applySourceFilter()</div>
 <div class="function-details">
@@ -1185,9 +1186,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">autoSelectFirstVisibleSource()</span><span class="function-counter">1</span> <span class="function-line">Line 56</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/source-list-manager.js: autoSelectFirstVisibleSource()</div>
 <div class="function-details">
@@ -1221,9 +1222,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">scrollSourceIntoView()</span><span class="function-counter">1</span> <span class="function-line">Line 93</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/source-list-manager.js: scrollSourceIntoView()</div>
 <div class="function-details">
@@ -1249,9 +1250,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">restoreSourceSelection()</span><span class="function-counter">1</span> <span class="function-line">Line 111</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/source-list-manager.js: restoreSourceSelection()</div>
 <div class="function-details">
@@ -1276,9 +1277,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">clearSourceFilters()</span><span class="function-counter">2</span> <span class="function-line">Line 130</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/source-list-manager.js: clearSourceFilters()</div>
 <div class="function-details">
@@ -1314,9 +1315,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">updateCurrentSelectionDisplay()</span><span class="function-counter">7</span> <span class="function-line">Line 188</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/source-list-manager.js: updateCurrentSelectionDisplay()</div>
 <div class="function-details">
@@ -1356,9 +1357,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">initializeSourceListManager()</span><span class="function-counter">2</span> <span class="function-line">Line 226</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/source-list-manager.js: initializeSourceListManager()</div>
 <div class="function-details">
@@ -1392,9 +1393,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">escapeHtml()</span><span class="function-counter">11</span> <span class="function-line">Line 11</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/utilities.js: escapeHtml()</div>
 <div class="function-details">
@@ -1438,9 +1439,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">detectSequenceType()</span><span class="function-counter">2</span> <span class="function-line">Line 29</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/utilities.js: detectSequenceType()</div>
 <div class="function-details">
@@ -1476,9 +1477,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">filterBlastPrograms()</span><span class="function-counter">2</span> <span class="function-line">Line 93</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/utilities.js: filterBlastPrograms()</div>
 <div class="function-details">
@@ -1511,9 +1512,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">updateSequenceTypeInfo()</span><span class="function-counter">2</span> <span class="function-line">Line 139</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/utilities.js: updateSequenceTypeInfo()</div>
 <div class="function-details">
@@ -1547,9 +1548,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">updateDatabaseList()</span><span class="function-counter">5</span> <span class="function-line">Line 161</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/utilities.js: updateDatabaseList()</div>
 <div class="function-details">
@@ -1602,9 +1603,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">fixFilePermissions()</span><span class="function-counter">0</span> <span class="function-line">Line 15</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/permission-manager.js: fixFilePermissions()</div>
 <div class="function-details">
@@ -1632,9 +1633,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">md5()</span><span class="function-counter">1</span> <span class="function-line">Line 79</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/permission-manager.js: md5()</div>
 <div class="function-details">
@@ -1665,9 +1666,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">escapeHtml()</span><span class="function-counter">11</span> <span class="function-line">Line 96</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/permission-manager.js: escapeHtml()</div>
 <div class="function-details">
@@ -1717,9 +1718,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">escapeHtml()</span><span class="function-counter">11</span> <span class="function-line">Line 6</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/sequence-retrieval.js: escapeHtml()</div>
 <div class="function-details">
@@ -1763,9 +1764,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">clearSourceFilter()</span><span class="function-counter">1</span> <span class="function-line">Line 17</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/sequence-retrieval.js: clearSourceFilter()</div>
 <div class="function-details">
@@ -1786,9 +1787,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">initializeSequenceRetrieval()</span><span class="function-counter">2</span> <span class="function-line">Line 21</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/sequence-retrieval.js: initializeSequenceRetrieval()</div>
 <div class="function-details">
@@ -1808,9 +1809,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">updateCurrentSelectionDisplay()</span><span class="function-counter">7</span> <span class="function-line">Line 70</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/sequence-retrieval.js: updateCurrentSelectionDisplay()</div>
 <div class="function-details">
@@ -1845,9 +1846,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">updateSearchIdsDisplay()</span><span class="function-counter">1</span> <span class="function-line">Line 165</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/sequence-retrieval.js: updateSearchIdsDisplay()</div>
 <div class="function-details">
@@ -1880,9 +1881,9 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="function-item">
-<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
 <div><span class="function-name">initializeCopyTooltips()</span><span class="function-counter">1</span> <span class="function-line">Line 245</span></div>
-<span>▶</span>
+<span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/sequence-retrieval.js: initializeCopyTooltips()</div>
 <div class="function-details">
@@ -1920,6 +1921,13 @@ document.addEventListener('DOMContentLoaded', function() {
     this.closest('.file-section').querySelector('.functions-list').classList.toggle('hidden');
   }));
 });
+
+function toggleFunctionDetails(header) {
+  const details = header.parentElement.querySelector('.function-details');
+  const arrow = header.querySelector('.expand-arrow');
+  details.classList.toggle('shown');
+  arrow.textContent = details.classList.contains('shown') ? '▼' : '▶';
+}
 
 function toggleUnused(header) {
   const content = header.nextElementSibling;

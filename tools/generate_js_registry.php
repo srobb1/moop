@@ -210,7 +210,8 @@ $html .= ".function-item:last-child { border-bottom: none; }\n";
 $html .= ".function-header { background: #f0f0f0; padding: 12px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }\n";
 $html .= ".function-header:hover { background: #e0e0e0; }\n";
 $html .= ".function-name { font-family: 'Courier New', monospace; color: #2980b9; font-weight: 500; }\n";
-$html .= ".function-counter { display: inline-block; background: #3498db; color: white; border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 24px; font-size: 12px; font-weight: bold; margin-left: 8px; }\n";
+$html .= ".function-counter { display: inline-flex; align-items: center; justify-content: center; background: #3498db; color: white; border-radius: 50%; width: 28px; height: 28px; font-size: 12px; font-weight: bold; margin-left: 8px; flex-shrink: 0; }\n";
+$html .= ".expand-arrow { display: inline-flex; align-items: center; justify-content: center; font-size: 16px; margin-left: 10px; flex-shrink: 0; }\n";
 $html .= ".function-line { font-size: 11px; color: #7f8c8d; }\n";
 $html .= ".function-details { padding: 15px 20px; background: white; display: none; }\n";
 $html .= ".function-details.shown { display: block; }\n";
@@ -311,9 +312,9 @@ foreach ($registry as $jsFile => $functions) {
         $usages = findJsFunctionUsages($func['name'], $jsDir, $jsFile, $func['line']);
         
         $html .= "<div class=\"function-item\">\n";
-        $html .= "<div class=\"function-header\" onclick=\"event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')\">\n";
+        $html .= "<div class=\"function-header\" onclick=\"toggleFunctionDetails(this)\">\n";
         $html .= "<div><span class=\"function-name\">" . htmlspecialchars($func['name']) . "()</span><span class=\"function-counter\">" . count($usages) . "</span> <span class=\"function-line\">Line " . $func['line'] . "</span></div>\n";
-        $html .= "<span>▶</span>\n";
+        $html .= "<span class=\"expand-arrow\">▶</span>\n";
         $html .= "</div>\n";
         $html .= "<div style=\"font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;\" title=\"Click to select\">" . htmlspecialchars($jsFile) . ": " . htmlspecialchars($func['name']) . "()</div>\n";
         
@@ -366,6 +367,13 @@ $html .= "  document.querySelectorAll('.file-header').forEach(h => h.addEventLis
 $html .= "    this.closest('.file-section').querySelector('.functions-list').classList.toggle('hidden');\n";
 $html .= "  }));\n";
 $html .= "});\n";
+$html .= "\n";
+$html .= "function toggleFunctionDetails(header) {\n";
+$html .= "  const details = header.parentElement.querySelector('.function-details');\n";
+$html .= "  const arrow = header.querySelector('.expand-arrow');\n";
+$html .= "  details.classList.toggle('shown');\n";
+$html .= "  arrow.textContent = details.classList.contains('shown') ? '▼' : '▶';\n";
+$html .= "}\n";
 $html .= "\n";
 $html .= "function toggleUnused(header) {\n";
 $html .= "  const content = header.nextElementSibling;\n";

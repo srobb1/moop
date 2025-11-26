@@ -294,7 +294,8 @@ function generateHtmlDocs($registry, $docs_path) {
     $html .= "        .function-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding-bottom: 10px; }\n";
     $html .= "        .function-header:hover { color: #3498db; }\n";
     $html .= "        .function-name { font-family: 'Courier New', monospace; color: #2980b9; font-weight: 500; }\n";
-    $html .= "        .function-counter { display: inline-block; background: #3498db; color: white; border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 24px; font-size: 12px; font-weight: bold; margin-left: 8px; }\n";
+    $html .= "        .function-counter { display: inline-flex; align-items: center; justify-content: center; background: #3498db; color: white; border-radius: 50%; width: 28px; height: 28px; font-size: 12px; font-weight: bold; margin-left: 8px; flex-shrink: 0; }\n";
+    $html .= "        .expand-arrow { display: inline-flex; align-items: center; justify-content: center; font-size: 16px; margin-left: 10px; flex-shrink: 0; }\n";
     $html .= "        .function-line { font-size: 12px; color: #7f8c8d; }\n";
     $html .= "        .function-code { display: none; background: #f8f8f8; padding: 15px; margin-top: 10px; border-radius: 4px; border-left: 3px solid #3498db; overflow-x: auto; }\n";
     $html .= "        .function-code.open { display: block; }\n";
@@ -385,7 +386,7 @@ function generateHtmlDocs($registry, $docs_path) {
             $html .= "                            <span class=\"function-counter\">" . count($usages) . "</span>\n";
             $html .= "                            <div class=\"function-line\">Line " . $func['line'] . "</div>\n";
             $html .= "                        </div>\n";
-            $html .= "                        <span style=\"font-size: 20px; margin-left: 10px;\">▶</span>\n";
+            $html .= "                        <span class=\"expand-arrow\">▶</span>\n";
             $html .= "                    </div>\n";
             $html .= "                    <div style=\"font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;\" title=\"Click to select\">" . htmlspecialchars($file) . ": " . htmlspecialchars($func['name']) . "()</div>\n";
             
@@ -455,7 +456,7 @@ function generateHtmlDocs($registry, $docs_path) {
     $html .= "                const codeBlock = header.parentElement.querySelector('.function-code');\n";
     $html .= "                if (codeBlock) {\n";
     $html .= "                    codeBlock.classList.toggle('open');\n";
-    $html .= "                    const arrow = header.querySelector('span');\n";
+    $html .= "                    const arrow = header.querySelector('.expand-arrow');\n";
     $html .= "                    arrow.textContent = codeBlock.classList.contains('open') ? '▼' : '▶';\n";
     $html .= "                }\n";
     $html .= "            }\n";
