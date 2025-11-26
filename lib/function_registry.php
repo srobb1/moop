@@ -1,7 +1,7 @@
 <?php
 /**
  * AUTO-GENERATED FUNCTION REGISTRY
- * Generated: 2025-11-26 01:52:08
+ * Generated: 2025-11-26 02:05:14
  * To regenerate, run: php tools/generate_registry.php
  */
 
@@ -4050,8 +4050,8 @@ JS;
       'comment' => '/**
 * Load organism info and get image path
 *
-* Loads organism.json file and returns the image path using getOrganismImagePath()
-* Encapsulates all the loading logic in one place.
+* Combines organism.json loading with image path resolution.
+* Uses loadOrganismInfo() for JSON loading and getOrganismImagePath() for image logic.
 *
 * @param string $organism_name The organism name
 * @param string $images_path URL path to images directory (e.g., \'moop/images\')
@@ -4067,13 +4067,11 @@ JS;
         \'image_path\' => \'\'
     ];
     
-    $organism_json_path = "$organism_data/$organism_name/organism.json";
-    if (file_exists($organism_json_path)) {
-        $organism_info = json_decode(file_get_contents($organism_json_path), true);
-        if ($organism_info) {
-            $result[\'organism_info\'] = $organism_info;
-            $result[\'image_path\'] = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);
-        }
+    // Use consolidated loadOrganismInfo() instead of manual JSON loading
+    $organism_info = loadOrganismInfo($organism_name, $organism_data);
+    if ($organism_info) {
+        $result[\'organism_info\'] = $organism_info;
+        $result[\'image_path\'] = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);
     }
     
     return $result;
@@ -4082,7 +4080,7 @@ JS;
     1 => 
     array (
       'name' => 'getOrganismImagePath',
-      'line' => 10,
+      'line' => 11,
       'comment' => '/**
 * Get organism image file path
 *
@@ -4136,7 +4134,7 @@ JS;
     2 => 
     array (
       'name' => 'getOrganismImageCaption',
-      'line' => 100,
+      'line' => 98,
       'comment' => '/**
 * Get organism image caption with optional link
 *
@@ -4191,8 +4189,34 @@ JS;
     ),
     3 => 
     array (
+      'name' => 'getOrganismImageWithCaption',
+      'line' => 150,
+      'comment' => '/**
+* Get organism image with path and caption
+*
+* Convenience function combining getOrganismImagePath() and getOrganismImageCaption()
+* Used when both image URL and caption are needed (common display pattern).
+*
+* @param array $organism_info Array from organism.json with keys: images, taxon_id
+* @param string $images_path URL path to images directory (e.g., \'moop/images\')
+* @param string $absolute_images_path Absolute file system path to images directory
+* @return array [\'image_path\' => string, \'caption\' => string, \'link\' => string or empty]
+*/',
+      'code' => 'function getOrganismImageWithCaption($organism_info, $images_path = \'moop/images\', $absolute_images_path = \'\') {
+    $image_path = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);
+    $image_info = getOrganismImageCaption($organism_info, $absolute_images_path);
+    
+    return [
+        \'image_path\' => $image_path,
+        \'caption\' => $image_info[\'caption\'],
+        \'link\' => $image_info[\'link\']
+    ];
+}',
+    ),
+    4 => 
+    array (
       'name' => 'validateOrganismJson',
-      'line' => 153,
+      'line' => 173,
       'comment' => '/**
 * Validate organism.json file
 *
@@ -4266,10 +4290,10 @@ JS;
     return $validation;
 }',
     ),
-    4 => 
+    5 => 
     array (
       'name' => 'setupOrganismDisplayContext',
-      'line' => 225,
+      'line' => 245,
       'comment' => '/**
 * Complete setup for organism display pages
 * Validates parameter, loads organism info, checks access, returns context
@@ -6179,7 +6203,7 @@ JS;
     0 => 
     array (
       'name' => 'get_all_organisms_info',
-      'line' => 13,
+      'line' => 14,
       'comment' => '',
       'code' => 'function get_all_organisms_info() {
     global $organism_data, $sequence_types;

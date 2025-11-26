@@ -7,8 +7,8 @@
 /**
  * Load organism info and get image path
  * 
- * Loads organism.json file and returns the image path using getOrganismImagePath()
- * Encapsulates all the loading logic in one place.
+ * Combines organism.json loading with image path resolution.
+ * Uses loadOrganismInfo() for JSON loading and getOrganismImagePath() for image logic.
  * 
  * @param string $organism_name The organism name
  * @param string $images_path URL path to images directory (e.g., 'moop/images')
@@ -24,13 +24,11 @@ function loadOrganismAndGetImagePath($organism_name, $images_path = 'moop/images
         'image_path' => ''
     ];
     
-    $organism_json_path = "$organism_data/$organism_name/organism.json";
-    if (file_exists($organism_json_path)) {
-        $organism_info = json_decode(file_get_contents($organism_json_path), true);
-        if ($organism_info) {
-            $result['organism_info'] = $organism_info;
-            $result['image_path'] = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);
-        }
+    // Use consolidated loadOrganismInfo() instead of manual JSON loading
+    $organism_info = loadOrganismInfo($organism_name, $organism_data);
+    if ($organism_info) {
+        $result['organism_info'] = $organism_info;
+        $result['image_path'] = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);
     }
     
     return $result;
@@ -136,6 +134,28 @@ function getOrganismImageCaption($organism_info, $absolute_images_path = '') {
     }
     
     return $result;
+}
+
+/**
+ * Get organism image with path and caption
+ * 
+ * Convenience function combining getOrganismImagePath() and getOrganismImageCaption()
+ * Used when both image URL and caption are needed (common display pattern).
+ * 
+ * @param array $organism_info Array from organism.json with keys: images, taxon_id
+ * @param string $images_path URL path to images directory (e.g., 'moop/images')
+ * @param string $absolute_images_path Absolute file system path to images directory
+ * @return array ['image_path' => string, 'caption' => string, 'link' => string or empty]
+ */
+function getOrganismImageWithCaption($organism_info, $images_path = 'moop/images', $absolute_images_path = '') {
+    $image_path = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);
+    $image_info = getOrganismImageCaption($organism_info, $absolute_images_path);
+    
+    return [
+        'image_path' => $image_path,
+        'caption' => $image_info['caption'],
+        'link' => $image_info['link']
+    ];
 }
 
 /**
