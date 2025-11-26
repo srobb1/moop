@@ -179,7 +179,11 @@ function validateOrganismJson($json_path) {
         'has_required_fields' => false,
         'required_fields' => ['genus', 'species', 'common_name', 'taxon_id'],
         'missing_fields' => [],
-        'errors' => []
+        'errors' => [],
+        'owner' => null,
+        'perms' => null,
+        'web_user' => null,
+        'web_group' => null
     ];
     
     if (!file_exists($json_path)) {
@@ -188,6 +192,28 @@ function validateOrganismJson($json_path) {
     }
     
     $validation['exists'] = true;
+    
+    // Get file ownership and permissions
+    if (@is_readable($json_path) || @file_exists($json_path)) {
+        $perms = @fileperms($json_path);
+        if ($perms !== false) {
+            $validation['perms'] = substr(sprintf('%o', $perms), -3);
+        }
+        $owner = @posix_getpwuid(@fileowner($json_path));
+        if ($owner !== false) {
+            $validation['owner'] = $owner['name'] ?? 'unknown';
+        }
+    }
+    
+    // Get web server user/group
+    $current_user = get_current_user();
+    if ($current_user) {
+        $validation['web_user'] = $current_user;
+        $group_info = @posix_getgrgid(@posix_getegid());
+        if ($group_info !== false) {
+            $validation['web_group'] = $group_info['name'] ?? 'www-data';
+        }
+    }
     
     if (!is_readable($json_path)) {
         $validation['errors'][] = 'organism.json file is not readable';
