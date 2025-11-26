@@ -2,16 +2,12 @@
 ob_start();
 include_once __DIR__ . '/admin_init.php';
 
+// Handle AJAX requests after admin access verification
+handleAdminAjax();
+
 // Load page-specific config
 $metadata_path = $config->getPath('metadata_path');
 $organism_data_path = $config->getPath('organism_data');
-
-// Handle AJAX fix permissions request (unified system)
-if (isset($_POST['action']) && $_POST['action'] === 'fix_file_permissions') {
-    header('Content-Type: application/json');
-    echo json_encode(handleFixFilePermissionsAjax());
-    exit;
-}
 
 $groups_file = $metadata_path . '/organism_assembly_groups.json';
 $file_write_error = null;

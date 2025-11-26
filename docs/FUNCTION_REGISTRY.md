@@ -2,12 +2,12 @@
 
 **Auto-generated documentation**
 
-Generated: 2025-11-26 16:54:44
+Generated: 2025-11-26 17:11:24
 
 ## Summary
 
 - **Total Functions**: 120
-- **Files Scanned**: 19
+- **Files Scanned**: 18
 
 ## ⚠️ Unused Functions (17)
 
@@ -35,7 +35,6 @@ These functions are defined but never called:
 
 ## Quick Navigation
 
-- [admin/manage_registry.php](#admin-manage_registryphp) - 1 functions
 - [lib/blast_functions.php](#lib-blast_functionsphp) - 5 functions
 - [lib/blast_results_visualizer.php](#lib-blast_results_visualizerphp) - 15 functions
 - [lib/database_queries.php](#lib-database_queriesphp) - 14 functions
@@ -45,7 +44,7 @@ These functions are defined but never called:
 - [lib/functions_database.php](#lib-functions_databasephp) - 8 functions
 - [lib/functions_display.php](#lib-functions_displayphp) - 9 functions
 - [lib/functions_errorlog.php](#lib-functions_errorlogphp) - 3 functions
-- [lib/functions_filesystem.php](#lib-functions_filesystemphp) - 9 functions
+- [lib/functions_filesystem.php](#lib-functions_filesystemphp) - 10 functions
 - [lib/functions_json.php](#lib-functions_jsonphp) - 4 functions
 - [lib/functions_system.php](#lib-functions_systemphp) - 4 functions
 - [lib/functions_tools.php](#lib-functions_toolsphp) - 2 functions
@@ -54,23 +53,6 @@ These functions are defined but never called:
 - [lib/tool_config.php](#lib-tool_configphp) - 4 functions
 - [tools/generate_js_registry.php](#tools-generate_js_registryphp) - 1 functions
 - [tools/sequences_display.php](#tools-sequences_displayphp) - 1 functions
-
----
-
-## admin/manage_registry.php
-
-**1 function(s)**
-
-### `getRegistryLastUpdate()` (Line 53)
-
-Located in: `admin/manage_registry.php` at line 53
-
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/admin/manage_registry.php` (4x):
-  - Line 76: `$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);`
-  - Line 77: `$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);`
-  - Line 76: `$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);`
-  - Line 77: `$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);`
 
 ---
 
@@ -1968,14 +1950,14 @@ Located in: `lib/functions_display.php` at line 359
 
 **Used in 2 unique file(s) (10 total times):**
 - `/data/moop/admin/manage_registry.php` (8x):
-  - Line 98: `<?php echo generatePermissionAlert(`
-  - Line 105: `<?php echo generatePermissionAlert(`
-  - Line 112: `<?php echo generatePermissionAlert(`
-  - Line 119: `<?php echo generatePermissionAlert(`
-  - Line 98: `<?php echo generatePermissionAlert(`
-  - Line 105: `<?php echo generatePermissionAlert(`
-  - Line 112: `<?php echo generatePermissionAlert(`
-  - Line 119: `<?php echo generatePermissionAlert(`
+  - Line 75: `<?php echo generatePermissionAlert(`
+  - Line 82: `<?php echo generatePermissionAlert(`
+  - Line 89: `<?php echo generatePermissionAlert(`
+  - Line 96: `<?php echo generatePermissionAlert(`
+  - Line 75: `<?php echo generatePermissionAlert(`
+  - Line 82: `<?php echo generatePermissionAlert(`
+  - Line 89: `<?php echo generatePermissionAlert(`
+  - Line 96: `<?php echo generatePermissionAlert(`
 - `/data/moop/admin/manage_organisms.php` (2x):
   - Line 789: `<?php echo generatePermissionAlert(`
   - Line 789: `<?php echo generatePermissionAlert(`
@@ -2089,7 +2071,7 @@ Located in: `lib/functions_errorlog.php` at line 75
 
 ## lib/functions_filesystem.php
 
-**9 function(s)**
+**10 function(s)**
 
 ### `validateDirectoryName()` (Line 15)
 
@@ -2363,6 +2345,32 @@ Located in: `lib/functions_filesystem.php` at line 361
   - Line 21: `$dir_error = getDirectoryError($absolute_images_path . \'/ncbi_taxonomy\');`
   - Line 21: `$dir_error = getDirectoryError($absolute_images_path . \'/ncbi_taxonomy\');`
 
+### `getRegistryLastUpdate()` (Line 456)
+
+Located in: `lib/functions_filesystem.php` at line 456
+
+**Description:**
+
+```
+/**
+* Get the last update time from registry files
+*
+* Attempts to extract "Generated:" timestamp from HTML file first,
+* then falls back to file modification time
+*
+* @param string $htmlFile - Path to HTML registry file
+* @param string $mdFile - Path to Markdown registry file (fallback)
+* @return string - Last update timestamp in format 'Y-m-d H:i:s' or 'Never'
+*/
+```
+
+**Used in 1 unique file(s) (4 total times):**
+- `/data/moop/admin/manage_registry.php` (4x):
+  - Line 53: `$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);`
+  - Line 54: `$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);`
+  - Line 53: `$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);`
+  - Line 54: `$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);`
+
 ---
 
 ## lib/functions_json.php
@@ -2598,8 +2606,8 @@ Located in: `lib/functions_system.php` at line 192
   - Line 12: `echo json_encode(handleFixFilePermissionsAjax());`
   - Line 12: `echo json_encode(handleFixFilePermissionsAjax());`
 - `/data/moop/admin/manage_registry.php` (2x):
-  - Line 11: `echo json_encode(handleFixFilePermissionsAjax());`
-  - Line 11: `echo json_encode(handleFixFilePermissionsAjax());`
+  - Line 12: `echo json_encode(handleFixFilePermissionsAjax());`
+  - Line 12: `echo json_encode(handleFixFilePermissionsAjax());`
 - `/data/moop/admin/manage_organisms.php` (2x):
   - Line 12: `echo json_encode(handleFixFilePermissionsAjax());`
   - Line 12: `echo json_encode(handleFixFilePermissionsAjax());`
@@ -3095,12 +3103,12 @@ Located in: `tools/generate_js_registry.php` at line 106
 
 **Used in 1 unique file(s) (6 total times):**
 - `/data/moop/tools/generate_js_registry.php` (6x):
-  - Line 254: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 311: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 469: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 254: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 311: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 469: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 255: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 312: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 477: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 255: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 312: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 477: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
 
 ---
 

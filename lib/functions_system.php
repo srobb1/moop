@@ -212,3 +212,39 @@ function handleFixFilePermissionsAjax() {
     
     return fixFilePermissions($file_path, $file_type);
 }
+
+/**
+ * Handle AJAX requests at page start
+ * 
+ * Consolidates common AJAX request handling for admin pages.
+ * Handles JSON response headers and early exit for AJAX requests.
+ * 
+ * Supported actions:
+ * - 'fix_file_permissions': Calls handleFixFilePermissionsAjax()
+ * - Custom actions: Pass callback function to handle additional actions
+ * 
+ * @param callable|null $customHandler - Optional callback for custom actions
+ *                                       Receives $_POST['action'] and should return true if handled
+ * @return void - Exits after sending response
+ */
+function handleAdminAjax($customHandler = null) {
+    if (!isset($_POST['action'])) {
+        return; // Not an AJAX request
+    }
+    
+    header('Content-Type: application/json');
+    
+    // Handle standard fix_file_permissions action
+    if ($_POST['action'] === 'fix_file_permissions') {
+        echo json_encode(handleFixFilePermissionsAjax());
+        exit;
+    }
+    
+    // Pass to custom handler if provided
+    if ($customHandler && is_callable($customHandler)) {
+        $handled = call_user_func($customHandler, $_POST['action']);
+        if ($handled) {
+            exit;
+        }
+    }
+}

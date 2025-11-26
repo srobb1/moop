@@ -95,51 +95,7 @@ include_once __DIR__ . '/admin_init.php';
   </div>
 </div>
 
-<script>
-// Check if user is admin and show update buttons
-function checkAdminStatus() {
-  // If this page is loaded, user is already authenticated as admin
-  // Show update buttons
-  document.getElementById('updatePhpRegistry').style.display = 'inline-block';
-  document.getElementById('updateJsRegistry').style.display = 'inline-block';
-}
 
-function updateRegistry(type) {
-  const btn = document.getElementById('update' + (type === 'php' ? 'Php' : 'Js') + 'Registry');
-  const originalText = btn.textContent;
-  btn.textContent = 'Updating...';
-  btn.disabled = true;
-  
-  const script = type === 'php' ? 'generate_registry.php' : 'generate_js_registry.php';
-  
-  fetch('../tools/' + script)
-    .then(response => {
-      if (response.ok) {
-        btn.textContent = 'Updated! Reloading...';
-        setTimeout(() => {
-          location.reload();
-        }, 1000);
-      } else {
-        btn.textContent = 'Error updating';
-        setTimeout(() => {
-          btn.textContent = originalText;
-          btn.disabled = false;
-        }, 2000);
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      btn.textContent = 'Error updating';
-      setTimeout(() => {
-        btn.textContent = originalText;
-        btn.disabled = false;
-      }, 2000);
-    });
-}
-
-// Show admin buttons on page load
-window.addEventListener('DOMContentLoaded', checkAdminStatus);
-</script>
 
 </body>
 </html>

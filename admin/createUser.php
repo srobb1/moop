@@ -4,12 +4,8 @@ include_once __DIR__ . '/admin_init.php';
 // Load page-specific config
 $usersFile = $config->getPath('users_file');
 
-// Handle AJAX fix permissions request (unified system)
-if (isset($_POST['action']) && $_POST['action'] === 'fix_file_permissions') {
-    header('Content-Type: application/json');
-    echo json_encode(handleFixFilePermissionsAjax());
-    exit;
-}
+// Handle standard AJAX fix permissions request
+handleAdminAjax();
 
 $users = [];
 $file_write_error = null;

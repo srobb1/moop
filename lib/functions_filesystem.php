@@ -442,3 +442,36 @@ function getDirectoryError($dirpath) {
         ]
     ];
 }
+
+/**
+ * Get the last update time from registry files
+ * 
+ * Attempts to extract "Generated:" timestamp from HTML file first,
+ * then falls back to file modification time
+ * 
+ * @param string $htmlFile - Path to HTML registry file
+ * @param string $mdFile - Path to Markdown registry file (fallback)
+ * @return string - Last update timestamp in format 'Y-m-d H:i:s' or 'Never'
+ */
+function getRegistryLastUpdate($htmlFile, $mdFile) {
+    $lastUpdate = 'Never';
+    
+    // Try to get from HTML file first (has "Generated:" timestamp)
+    if (file_exists($htmlFile) && is_readable($htmlFile)) {
+        $content = file_get_contents($htmlFile);
+        // Look for "Generated: YYYY-MM-DD HH:MM:SS" in the HTML
+        if (preg_match('/Generated:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/', $content, $matches)) {
+            $lastUpdate = $matches[1];
+            return $lastUpdate;
+        }
+    }
+    
+    // Fallback to file modification time
+    if (file_exists($htmlFile)) {
+        $lastUpdate = date('Y-m-d H:i:s', filemtime($htmlFile));
+    } elseif (file_exists($mdFile)) {
+        $lastUpdate = date('Y-m-d H:i:s', filemtime($mdFile));
+    }
+    
+    return $lastUpdate;
+}

@@ -6,12 +6,8 @@ $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
 $absolute_images_path = $config->getPath('absolute_images_path');
 
-// Handle AJAX fix permissions request (unified system)
-if (isset($_POST['action']) && $_POST['action'] === 'fix_file_permissions') {
-    header('Content-Type: application/json');
-    echo json_encode(handleFixFilePermissionsAjax());
-    exit;
-}
+// Handle standard AJAX fix permissions request
+handleAdminAjax();
 
 $tree_config_file = "$metadata_path/phylo_tree_config.json";
 $organism_data_dir = $organism_data;

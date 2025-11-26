@@ -51,7 +51,7 @@
     <header>
         <div class="container">
             <h1>🔍 MOOP Function Registry</h1>
-            <p>Auto-generated function documentation • Generated: 2025-11-26 16:54:42</p>
+            <p>Auto-generated function documentation • Generated: 2025-11-26 17:11:22</p>
         </div>
     </header>
     <div class="container">
@@ -60,7 +60,7 @@
         </div>
         <div class="stats">
             <div class="stat-box"><strong>120</strong><span>Total Functions</span></div>
-            <div class="stat-box"><strong>19</strong><span>Files</span></div>
+            <div class="stat-box"><strong>18</strong><span>Files</span></div>
         </div>
         <div style="background: #ffe6e6; border: 2px solid #cc0000; border-radius: 4px; overflow: hidden; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <div style="background: #cc0000; color: white; padding: 15px 20px; font-weight: bold; cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center;" onclick="toggleUnused(this)">
@@ -92,58 +92,6 @@
         </div>
         <div style="display: flex; gap: 10px; margin: 20px 0;">
             <button id="toggleBtn" onclick="toggleAll()" style="flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">📂 Expand All</button>
-        </div>
-        <div class="file-section">
-            <div class="file-header" onclick="toggleFile(this)">📄 admin/manage_registry.php (1)</div>
-            <div class="functions-list">
-                <div class="function-item searchable" data-func="getRegistryLastUpdate">
-                    <div class="function-header" onclick="toggleCode(this)">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div class="function-name">getRegistryLastUpdate()</div>
-                            <span class="function-counter">4</span>
-                            <div class="function-line">Line 53</div>
-                        </div>
-                        <span class="expand-arrow">▶</span>
-                    </div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">admin/manage_registry.php: getRegistryLastUpdate()</div>
-                    <div class="function-usages">
-                        <strong>📍 Used in 1 unique file(s) (4 total times):</strong>
-                        <ul>
-                            <li><strong>/data/moop/admin/manage_registry.php</strong> (4x)
-                                <ul style="margin-top: 5px;">
-                                    <li><code>line 76</code>: <small>$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);</small></li>
-                                    <li><code>line 77</code>: <small>$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);</small></li>
-                                    <li><code>line 76</code>: <small>$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);</small></li>
-                                    <li><code>line 77</code>: <small>$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);</small></li>
-                                </ul></li>
-                        </ul>
-                    </div>
-                    <div class="function-code">
-                        <code>function getRegistryLastUpdate($htmlFile, $mdFile) {
-    $lastUpdate = &#039;Never&#039;;
-    
-    // Try to get from HTML file first (has &quot;Generated:&quot; timestamp)
-    if (file_exists($htmlFile) &amp;&amp; is_readable($htmlFile)) {
-        $content = file_get_contents($htmlFile);
-        // Look for &quot;Generated: YYYY-MM-DD HH:MM:SS&quot; in the HTML
-        if (preg_match(&#039;/Generated:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/&#039;, $content, $matches)) {
-            $lastUpdate = $matches[1];
-            return $lastUpdate;
-        }
-    }
-    
-    // Fallback to file modification time
-    if (file_exists($htmlFile)) {
-        $lastUpdate = date(&#039;Y-m-d H:i:s&#039;, filemtime($htmlFile));
-    } elseif (file_exists($mdFile)) {
-        $lastUpdate = date(&#039;Y-m-d H:i:s&#039;, filemtime($mdFile));
-    }
-    
-    return $lastUpdate;
-}</code>
-                    </div>
-                </div>
-            </div>
         </div>
         <div class="file-section">
             <div class="file-header" onclick="toggleFile(this)">📄 lib/blast_functions.php (5)</div>
@@ -6536,14 +6484,14 @@ JS;
                         <ul>
                             <li><strong>/data/moop/admin/manage_registry.php</strong> (8x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 98</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
-                                    <li><code>line 105</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
-                                    <li><code>line 112</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
-                                    <li><code>line 119</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
-                                    <li><code>line 98</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
-                                    <li><code>line 105</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
-                                    <li><code>line 112</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
-                                    <li><code>line 119</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 75</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 82</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 89</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 96</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 75</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 82</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 89</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
+                                    <li><code>line 96</code>: <small>&lt;?php echo generatePermissionAlert(</small></li>
                                 </ul></li>
                             <li><strong>/data/moop/admin/manage_organisms.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
@@ -6862,7 +6810,7 @@ JS;
             </div>
         </div>
         <div class="file-section">
-            <div class="file-header" onclick="toggleFile(this)">📄 lib/functions_filesystem.php (9)</div>
+            <div class="file-header" onclick="toggleFile(this)">📄 lib/functions_filesystem.php (10)</div>
             <div class="functions-list">
                 <div class="function-item searchable" data-func="validateDirectoryName">
                     <div class="function-header" onclick="toggleCode(this)">
@@ -7578,6 +7526,65 @@ JS;
 }</code>
                     </div>
                 </div>
+                <div class="function-item searchable" data-func="getRegistryLastUpdate">
+                    <div class="function-header" onclick="toggleCode(this)">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="function-name">getRegistryLastUpdate()</div>
+                            <span class="function-counter">4</span>
+                            <div class="function-line">Line 456</div>
+                        </div>
+                        <span class="expand-arrow">▶</span>
+                    </div>
+                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">lib/functions_filesystem.php: getRegistryLastUpdate()</div>
+                    <div class="function-comment">
+                        <pre>/**
+* Get the last update time from registry files
+*
+* Attempts to extract &quot;Generated:&quot; timestamp from HTML file first,
+* then falls back to file modification time
+*
+* @param string $htmlFile - Path to HTML registry file
+* @param string $mdFile - Path to Markdown registry file (fallback)
+* @return string - Last update timestamp in format &#039;Y-m-d H:i:s&#039; or &#039;Never&#039;
+*/</pre>
+                    </div>
+                    <div class="function-usages">
+                        <strong>📍 Used in 1 unique file(s) (4 total times):</strong>
+                        <ul>
+                            <li><strong>/data/moop/admin/manage_registry.php</strong> (4x)
+                                <ul style="margin-top: 5px;">
+                                    <li><code>line 53</code>: <small>$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);</small></li>
+                                    <li><code>line 54</code>: <small>$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);</small></li>
+                                    <li><code>line 53</code>: <small>$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);</small></li>
+                                    <li><code>line 54</code>: <small>$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);</small></li>
+                                </ul></li>
+                        </ul>
+                    </div>
+                    <div class="function-code">
+                        <code>function getRegistryLastUpdate($htmlFile, $mdFile) {
+    $lastUpdate = &#039;Never&#039;;
+    
+    // Try to get from HTML file first (has &quot;Generated:&quot; timestamp)
+    if (file_exists($htmlFile) &amp;&amp; is_readable($htmlFile)) {
+        $content = file_get_contents($htmlFile);
+        // Look for &quot;Generated: YYYY-MM-DD HH:MM:SS&quot; in the HTML
+        if (preg_match(&#039;/Generated:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/&#039;, $content, $matches)) {
+            $lastUpdate = $matches[1];
+            return $lastUpdate;
+        }
+    }
+    
+    // Fallback to file modification time
+    if (file_exists($htmlFile)) {
+        $lastUpdate = date(&#039;Y-m-d H:i:s&#039;, filemtime($htmlFile));
+    } elseif (file_exists($mdFile)) {
+        $lastUpdate = date(&#039;Y-m-d H:i:s&#039;, filemtime($mdFile));
+    }
+    
+    return $lastUpdate;
+}</code>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="file-section">
@@ -8156,8 +8163,8 @@ JS;
                                 </ul></li>
                             <li><strong>/data/moop/admin/manage_registry.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 11</code>: <small>echo json_encode(handleFixFilePermissionsAjax());</small></li>
-                                    <li><code>line 11</code>: <small>echo json_encode(handleFixFilePermissionsAjax());</small></li>
+                                    <li><code>line 12</code>: <small>echo json_encode(handleFixFilePermissionsAjax());</small></li>
+                                    <li><code>line 12</code>: <small>echo json_encode(handleFixFilePermissionsAjax());</small></li>
                                 </ul></li>
                             <li><strong>/data/moop/admin/manage_organisms.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
@@ -9273,12 +9280,12 @@ JS;
                         <ul>
                             <li><strong>/data/moop/tools/generate_js_registry.php</strong> (6x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 254</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
-                                    <li><code>line 311</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
-                                    <li><code>line 469</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
-                                    <li><code>line 254</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
-                                    <li><code>line 311</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
-                                    <li><code>line 469</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
+                                    <li><code>line 255</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
+                                    <li><code>line 312</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
+                                    <li><code>line 477</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
+                                    <li><code>line 255</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
+                                    <li><code>line 312</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
+                                    <li><code>line 477</code>: <small>$usages = findJsFunctionUsages($func[&#039;name&#039;], $jsDir, $jsFile, $func[&#039;line&#039;]);</small></li>
                                 </ul></li>
                         </ul>
                     </div>

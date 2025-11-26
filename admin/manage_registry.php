@@ -1,25 +1,18 @@
 <?php
 ob_start();
 include_once __DIR__ . '/admin_init.php';
+require_once __DIR__ . '/../lib/functions_filesystem.php';
 
-// Handle AJAX requests after admin access verification
-if (isset($_POST['action'])) {
-    ob_end_clean(); // Clear any buffered output
-    header('Content-Type: application/json');
-    
-    if ($_POST['action'] === 'fix_file_permissions') {
-        echo json_encode(handleFixFilePermissionsAjax());
-        exit;
-    }
-    
-    if ($_POST['action'] === 'update_registry') {
+// Custom handler for registry-specific AJAX actions
+function handleRegistryAjax($action) {
+    if ($action === 'update_registry') {
         $type = $_POST['type'] ?? 'php';
         $script = $type === 'js' ? 'generate_js_registry.php' : 'generate_registry.php';
         $script_path = __DIR__ . '/../tools/' . $script;
         
         if (!file_exists($script_path)) {
             echo json_encode(['success' => false, 'message' => 'Registry generator script not found']);
-            exit;
+            return true;
         }
         
         // Run PHP script via command line
@@ -33,9 +26,16 @@ if (isset($_POST['action'])) {
         } else {
             echo json_encode(['success' => false, 'message' => trim($output_text)]);
         }
-        exit;
+        return true;
     }
+    return false;
 }
+
+// Handle AJAX requests after admin access verification
+ob_start(); // Begin buffering
+handleAdminAjax('handleRegistryAjax'); // Handle standard + custom AJAX
+ob_end_clean(); // Clear buffered AJAX responses
+ob_start(); // Start buffering HTML output
 
 ob_end_flush(); // Output buffered HTML
 
@@ -48,30 +48,6 @@ $php_registry_html = $docs_path . '/function_registry.html';
 $php_registry_md = $docs_path . '/FUNCTION_REGISTRY.md';
 $js_registry_html = $docs_path . '/js_function_registry.html';
 $js_registry_md = $docs_path . '/JS_FUNCTION_REGISTRY.md';
-
-// Extract last update time from registry files
-function getRegistryLastUpdate($htmlFile, $mdFile) {
-    $lastUpdate = 'Never';
-    
-    // Try to get from HTML file first (has "Generated:" timestamp)
-    if (file_exists($htmlFile) && is_readable($htmlFile)) {
-        $content = file_get_contents($htmlFile);
-        // Look for "Generated: YYYY-MM-DD HH:MM:SS" in the HTML
-        if (preg_match('/Generated:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/', $content, $matches)) {
-            $lastUpdate = $matches[1];
-            return $lastUpdate;
-        }
-    }
-    
-    // Fallback to file modification time
-    if (file_exists($htmlFile)) {
-        $lastUpdate = date('Y-m-d H:i:s', filemtime($htmlFile));
-    } elseif (file_exists($mdFile)) {
-        $lastUpdate = date('Y-m-d H:i:s', filemtime($mdFile));
-    }
-    
-    return $lastUpdate;
-}
 
 $php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);
 $js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);
