@@ -4,6 +4,7 @@ include_once __DIR__ . '/admin_init.php';
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
+$sequence_types = $config->getSequenceTypes();
 
 // Handle AJAX fix permissions request
 if (isset($_POST['action']) && $_POST['action'] === 'fix_permissions' && isset($_POST['organism'])) {
