@@ -365,7 +365,7 @@ function generateHtmlDocs($registry) {
     
     // Search box
     $html .= "        <div class=\"search-box\">\n";
-    $html .= "            <input type=\"text\" id=\"searchInput\" placeholder=\"🔍 Search functions...\" onkeyup=\"filterFunctions()\">\n";
+    $html .= "            <input type=\"text\" id=\"searchInput\" placeholder=\"🔍 Search functions, files, or usage...\" onkeyup=\"filterFunctions()\">\n";
     $html .= "        </div>\n";
     
      // Statistics

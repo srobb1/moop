@@ -82,8 +82,76 @@ include_once __DIR__ . '/admin_init.php';
         </div>
       </div>
     </div>
+    
+    <div class="col-md-6 mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fa fa-file-code"></i> PHP Function Registry</h5>
+          <p class="card-text">View all PHP functions, their usage, and identify unused functions.</p>
+          <a href="../docs/function_registry.html" class="btn btn-primary" target="_blank">View Registry</a>
+          <button id="updatePhpRegistry" class="btn btn-warning" style="display:none; margin-left: 5px;" onclick="updateRegistry('php')">Update Registry</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6 mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fa fa-file-code"></i> JavaScript Function Registry</h5>
+          <p class="card-text">View all JavaScript functions, their usage, and identify unused functions.</p>
+          <a href="../docs/js_function_registry.html" class="btn btn-primary" target="_blank">View Registry</a>
+          <button id="updateJsRegistry" class="btn btn-warning" style="display:none; margin-left: 5px;" onclick="updateRegistry('js')">Update Registry</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+
+<script>
+// Check if user is admin and show update buttons
+function checkAdminStatus() {
+  // If this page is loaded, user is already authenticated as admin
+  // Show update buttons
+  document.getElementById('updatePhpRegistry').style.display = 'inline-block';
+  document.getElementById('updateJsRegistry').style.display = 'inline-block';
+}
+
+function updateRegistry(type) {
+  const btn = document.getElementById('update' + (type === 'php' ? 'Php' : 'Js') + 'Registry');
+  const originalText = btn.textContent;
+  btn.textContent = 'Updating...';
+  btn.disabled = true;
+  
+  const script = type === 'php' ? 'generate_registry.php' : 'generate_js_registry.php';
+  
+  fetch('../tools/' + script)
+    .then(response => {
+      if (response.ok) {
+        btn.textContent = 'Updated! Reloading...';
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
+      } else {
+        btn.textContent = 'Error updating';
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.disabled = false;
+        }, 2000);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      btn.textContent = 'Error updating';
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }, 2000);
+    });
+}
+
+// Show admin buttons on page load
+window.addEventListener('DOMContentLoaded', checkAdminStatus);
+</script>
 
 </body>
 </html>
