@@ -6,6 +6,13 @@ $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
 $absolute_images_path = $config->getPath('absolute_images_path');
 
+// Handle AJAX fix permissions request (unified system)
+if (isset($_POST['action']) && $_POST['action'] === 'fix_file_permissions') {
+    header('Content-Type: application/json');
+    echo json_encode(handleFixFilePermissionsAjax());
+    exit;
+}
+
 $tree_config_file = "$metadata_path/phylo_tree_config.json";
 $organism_data_dir = $organism_data;
 $message = '';
@@ -312,5 +319,6 @@ document.getElementById('tree-preview').innerHTML = renderTreeNode(treeData.tree
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/moop/js/permission-manager.js"></script>
 </body>
 </html>

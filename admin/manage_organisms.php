@@ -6,7 +6,14 @@ $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
 $sequence_types = $config->getSequenceTypes();
 
-// Handle AJAX fix permissions request
+// Handle AJAX fix permissions request (unified system)
+if (isset($_POST['action']) && $_POST['action'] === 'fix_file_permissions') {
+    header('Content-Type: application/json');
+    echo json_encode(handleFixFilePermissionsAjax());
+    exit;
+}
+
+// Handle fix permissions request
 if (isset($_POST['action']) && $_POST['action'] === 'fix_permissions' && isset($_POST['organism'])) {
     header('Content-Type: application/json');
     
@@ -778,42 +785,14 @@ $organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);
             </div>
           </div>
 
-          <!-- Permission Fix Alert (only show if not writable) -->
-          <?php if ($json_val['exists'] && $json_val['readable'] && !$json_val['writable']): ?>
-            <div class="alert alert-warning alert-dismissible fade show mb-3">
-              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-              <h6><i class="fa fa-exclamation-circle"></i> Metadata File Not Writable</h6>
-              <p class="mb-2"><strong>Problem:</strong> The organism.json file is not writable by the web server. You can view the metadata but cannot edit it.</p>
-              
-              <p class="mb-3"><strong>Current Status:</strong></p>
-              <ul class="mb-3 small">
-                <li>File: <code><?= htmlspecialchars($data['path'] . '/organism.json') ?></code></li>
-                <?php if ($json_val['owner']): ?>
-                  <li>File owner: <code><?= htmlspecialchars($json_val['owner']) ?></code></li>
-                <?php endif; ?>
-                <?php if ($json_val['perms']): ?>
-                  <li>File permissions: <code><?= $json_val['perms'] ?></code></li>
-                <?php endif; ?>
-                <?php if ($json_val['web_user']): ?>
-                  <li>Web server user: <code><?= htmlspecialchars($json_val['web_user']) ?></code></li>
-                <?php endif; ?>
-              </ul>
-              
-              <p class="mb-2"><strong>To Fix:</strong> Run this command on the server:</p>
-              <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-                <code style="word-break: break-all; display: block; font-size: 0.9em;">
-                  <?php if ($json_val['web_user']): ?>
-                    chown <?= htmlspecialchars($json_val['web_user']) ?>:<?= htmlspecialchars($json_val['web_group'] ?? 'www-data') ?> <?= htmlspecialchars($data['path'] . '/organism.json') ?><br>
-                    chmod 664 <?= htmlspecialchars($data['path'] . '/organism.json') ?>
-                  <?php else: ?>
-                    chmod 666 <?= htmlspecialchars($data['path'] . '/organism.json') ?>
-                  <?php endif; ?>
-                </code>
-              </div>
-              
-              <p class="small text-muted mb-0">After running the command, refresh this page.</p>
-            </div>
-          <?php endif; ?>
+          <!-- Permission Fix Alert (using new unified system) -->
+          <?php echo generatePermissionAlert(
+              $data['path'] . '/organism.json',
+              'Metadata File Permission Issue',
+              'The organism.json file has permission issues.',
+              'file',
+              $organism
+          ); ?>
 
           <!-- Required Fields -->
           <h6 class="fw-bold mb-2"><i class="fa fa-check-square"></i> Required Fields</h6>
@@ -1262,6 +1241,7 @@ $organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+<script src="/moop/js/permission-manager.js"></script>
 <script>
 $(document).ready(function() {
     $('#organismsTable').DataTable({

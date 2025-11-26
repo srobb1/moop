@@ -6,6 +6,13 @@ include_once __DIR__ . '/admin_init.php';
 $metadata_path = $config->getPath('metadata_path');
 $organism_data_path = $config->getPath('organism_data');
 
+// Handle AJAX fix permissions request (unified system)
+if (isset($_POST['action']) && $_POST['action'] === 'fix_file_permissions') {
+    header('Content-Type: application/json');
+    echo json_encode(handleFixFilePermissionsAjax());
+    exit;
+}
+
 $groups_file = $metadata_path . '/organism_assembly_groups.json';
 $file_write_error = null;
 $desc_file_write_error = null;
@@ -1261,5 +1268,6 @@ foreach ($all_organisms as $organism => $assemblies) {
 </div>
 
 </body>
+<script src="/moop/js/permission-manager.js"></script>
 </html>
 <?php ob_end_flush(); ?>
