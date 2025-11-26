@@ -433,6 +433,7 @@ function generateHtmlDocs($registry) {
             $html .= "                        </div>\n";
             $html .= "                        <span style=\"font-size: 20px; margin-left: 10px;\">▶</span>\n";
             $html .= "                    </div>\n";
+            $html .= "                    <div style=\"font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;\" title=\"Click to select\">" . htmlspecialchars($file) . ": " . htmlspecialchars($func['name']) . "()</div>\n";
             
             // Show comment if exists
             if (!empty($func['comment'])) {

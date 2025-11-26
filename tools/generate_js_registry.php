@@ -310,6 +310,7 @@ foreach ($registry as $jsFile => $functions) {
         $html .= "<div><span class=\"function-name\">" . htmlspecialchars($func['name']) . "()</span><span class=\"function-counter\">" . count($usages) . "</span> <span class=\"function-line\">Line " . $func['line'] . "</span></div>\n";
         $html .= "<span>▶</span>\n";
         $html .= "</div>\n";
+        $html .= "<div style=\"font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;\" title=\"Click to select\">" . htmlspecialchars($jsFile) . ": " . htmlspecialchars($func['name']) . "()</div>\n";
         
         $html .= "<div class=\"function-details\">\n";
         if (!empty($usages)) {

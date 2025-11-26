@@ -2,7 +2,7 @@
 
 **Auto-generated documentation**
 
-Generated: 2025-11-26 01:15:54
+Generated: 2025-11-26 01:34:56
 
 ## Summary
 
@@ -2860,10 +2860,10 @@ Located in: `tools/generate_js_registry.php` at line 101
 - `/data/moop/tools/generate_js_registry.php` (6x):
   - Line 249: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
   - Line 306: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 463: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 464: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
   - Line 249: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
   - Line 306: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 463: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 464: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
 
 ---
 
