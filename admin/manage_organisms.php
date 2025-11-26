@@ -258,6 +258,11 @@ $organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);
     <div class="card-header bg-light" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#legendContent" role="button">
       <h6 class="mb-0">
         <i class="fa fa-book"></i> <strong>Legend & Status Guide</strong>
+        <span class="ms-2">
+          <span class="badge bg-warning" style="width: 12px; height: 12px; display: inline-block; padding: 0;"></span>
+          <span class="badge bg-danger" style="width: 12px; height: 12px; display: inline-block; padding: 0;"></span>
+          <span class="badge bg-info" style="width: 12px; height: 12px; display: inline-block; padding: 0;"></span>
+        </span>
         <i class="fa fa-chevron-down float-end" id="legendChevron"></i>
       </h6>
     </div>
