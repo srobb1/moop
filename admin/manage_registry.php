@@ -38,6 +38,33 @@ $php_registry_html = $docs_path . '/function_registry.html';
 $php_registry_md = $docs_path . '/FUNCTION_REGISTRY.md';
 $js_registry_html = $docs_path . '/js_function_registry.html';
 $js_registry_md = $docs_path . '/JS_FUNCTION_REGISTRY.md';
+
+// Extract last update time from registry files
+function getRegistryLastUpdate($htmlFile, $mdFile) {
+    $lastUpdate = 'Never';
+    
+    // Try to get from HTML file first (has "Generated:" timestamp)
+    if (file_exists($htmlFile) && is_readable($htmlFile)) {
+        $content = file_get_contents($htmlFile);
+        // Look for "Generated: YYYY-MM-DD HH:MM:SS" in the HTML
+        if (preg_match('/Generated:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/', $content, $matches)) {
+            $lastUpdate = $matches[1];
+            return $lastUpdate;
+        }
+    }
+    
+    // Fallback to file modification time
+    if (file_exists($htmlFile)) {
+        $lastUpdate = date('Y-m-d H:i:s', filemtime($htmlFile));
+    } elseif (file_exists($mdFile)) {
+        $lastUpdate = date('Y-m-d H:i:s', filemtime($mdFile));
+    }
+    
+    return $lastUpdate;
+}
+
+$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);
+$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);
 ?>
 
 <!DOCTYPE html>
@@ -110,6 +137,9 @@ $js_registry_md = $docs_path . '/JS_FUNCTION_REGISTRY.md';
         <button class="btn btn-warning btn-sm" onclick="updateRegistry('php')">
           <i class="fa fa-refresh"></i> Update Registry Now
         </button>
+        <div class="mt-3 text-muted small">
+          <i class="fa fa-clock-o"></i> Last updated: <strong><?php echo $php_last_update; ?></strong>
+        </div>
         <div id="phpResult" class="mt-3 d-none"></div>
       </div>
     </div>
@@ -135,9 +165,12 @@ $js_registry_md = $docs_path . '/JS_FUNCTION_REGISTRY.md';
             </button>
           </div>
         </div>
-        <button class="btn btn-warning btn-sm" onclick="updateRegistry('js')">
+         <button class="btn btn-warning btn-sm" onclick="updateRegistry('js')">
           <i class="fa fa-refresh"></i> Update Registry Now
         </button>
+        <div class="mt-3 text-muted small">
+          <i class="fa fa-clock-o"></i> Last updated: <strong><?php echo $js_last_update; ?></strong>
+        </div>
         <div id="jsResult" class="mt-3 d-none"></div>
       </div>
     </div>
@@ -194,6 +227,20 @@ $js_registry_md = $docs_path . '/JS_FUNCTION_REGISTRY.md';
         resultDiv.classList.remove('d-none');
         
         btn.innerHTML = '<i class="fa fa-check"></i> Updated!';
+        
+        // Update the last updated timestamp
+        const now = new Date();
+        const timestamp = now.getFullYear() + '-' + 
+          String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+          String(now.getDate()).padStart(2, '0') + ' ' +
+          String(now.getHours()).padStart(2, '0') + ':' +
+          String(now.getMinutes()).padStart(2, '0') + ':' +
+          String(now.getSeconds()).padStart(2, '0');
+        
+        const timestampEl = document.querySelector('#' + type + 'Result').previousElementSibling;
+        if (timestampEl && timestampEl.textContent.includes('Last updated')) {
+          timestampEl.innerHTML = '<i class="fa fa-clock-o"></i> Last updated: <strong>' + timestamp + '</strong>';
+        }
         
         setTimeout(() => {
           btn.disabled = false;
