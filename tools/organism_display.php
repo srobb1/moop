@@ -91,8 +91,9 @@ $organism_info = $organism_context['info'];
   <!-- Organism Header Section -->
   <div class="row mb-4" id="organismHeader">
     <?php 
-    $image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);
-    $image_info = getOrganismImageCaption($organism_info, $absolute_images_path);
+    $image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path);
+    $image_src = $image_data['image_path'];
+    $image_info = ['caption' => $image_data['caption'], 'link' => $image_data['link']];
     $show_image = !empty($image_src);
     $image_alt = htmlspecialchars($organism_info['common_name'] ?? $organism_name);
     ?>
