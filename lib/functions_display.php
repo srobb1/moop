@@ -341,3 +341,122 @@ function fetch_organism_image($taxon_id, $organism_name = null, $absolute_images
     
     return null;
 }
+
+/**
+ * Generate a permission alert HTML for a file or directory
+ * 
+ * Shows current status (readable, writable) and provides either:
+ * 1. A "Fix Permissions" button if web server can fix it automatically
+ * 2. Manual fix instructions with commands if web server lacks permissions
+ * 
+ * @param string $file_path Path to file or directory
+ * @param string $title Alert title (e.g., "Metadata File Permission Issue")
+ * @param string $problem Description of the problem
+ * @param string $file_type Type for AJAX call: 'file' or 'directory'
+ * @param string $organism Optional organism name for targeting
+ * @return string HTML for the permission alert, empty if no issues
+ */
+function generatePermissionAlert($file_path, $title = '', $problem = '', $file_type = 'file', $organism = '') {
+    // Check current permissions
+    $readable = is_readable($file_path);
+    $writable = is_writable($file_path);
+    
+    // If everything is fine, return empty
+    if ($readable && $writable) {
+        return '';
+    }
+    
+    // Get file/directory info
+    $exists = file_exists($file_path);
+    if (!$exists) {
+        return '';
+    }
+    
+    $is_dir = is_dir($file_path);
+    $file_size = $is_dir ? 'directory' : filesize($file_path) . ' bytes';
+    $owner = @posix_getpwuid(fileowner($file_path));
+    $owner_name = $owner !== false ? $owner['name'] : 'unknown';
+    $perms = substr(sprintf('%o', fileperms($file_path)), -3);
+    $web_user = get_current_user() ?: 'www-data';
+    $web_group_info = @posix_getgrgid(@posix_getegid());
+    $web_group = $web_group_info !== false ? $web_group_info['name'] : 'www-data';
+    
+    // Determine if web server can fix permissions
+    $can_fix = is_writable(dirname($file_path)) || is_writable($file_path);
+    
+    // Determine what's wrong
+    $issue = '';
+    if (!$readable && !$writable) {
+        $issue = 'Cannot read or write';
+    } elseif (!$readable) {
+        $issue = 'Cannot read (permission denied)';
+    } else {
+        $issue = 'Cannot write (read-only)';
+    }
+    
+    $safe_path = htmlspecialchars($file_path);
+    $safe_title = htmlspecialchars($title ?: $issue);
+    $safe_problem = htmlspecialchars($problem);
+    $safe_organism = htmlspecialchars($organism);
+    
+    // Start building alert HTML
+    $html = '<div class="alert alert-warning alert-dismissible fade show mb-3">' . "\n";
+    $html .= '  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>' . "\n";
+    $html .= '  <h6><i class="fa fa-exclamation-circle"></i> ' . $safe_title . '</h6>' . "\n";
+    
+    if ($safe_problem) {
+        $html .= '  <p class="mb-2"><strong>Problem:</strong> ' . $safe_problem . '</p>' . "\n";
+    }
+    
+    $html .= '  <p class="mb-3"><strong>Current Status:</strong></p>' . "\n";
+    $html .= '  <ul class="mb-3 small">' . "\n";
+    $html .= '    <li>Path: <code>' . $safe_path . '</code></li>' . "\n";
+    $html .= '    <li>Type: ' . ($is_dir ? 'Directory' : 'File') . '</li>' . "\n";
+    $html .= '    <li>Owner: <code>' . htmlspecialchars($owner_name) . '</code></li>' . "\n";
+    $html .= '    <li>Permissions: <code>' . $perms . '</code></li>' . "\n";
+    $html .= '    <li>Readable: <span class="badge ' . ($readable ? 'bg-success' : 'bg-danger') . '">' . ($readable ? '✓ Yes' : '✗ No') . '</span></li>' . "\n";
+    $html .= '    <li>Writable: <span class="badge ' . ($writable ? 'bg-success' : 'bg-danger') . '">' . ($writable ? '✓ Yes' : '✗ No') . '</span></li>' . "\n";
+    $html .= '    <li>Web server user: <code>' . htmlspecialchars($web_user) . '</code></li>' . "\n";
+    $html .= '  </ul>' . "\n";
+    
+    if ($can_fix) {
+        // Web server can fix it - offer button
+        $html .= '  <p class="mb-2"><strong>Quick Fix:</strong> Click the button below to attempt automatic fix:</p>' . "\n";
+        $html .= '  <button class="btn btn-warning btn-sm" onclick="fixFilePermissions(event, ' . json_encode($file_path) . ', ' . json_encode($file_type) . ', ' . json_encode($organism) . ')">' . "\n";
+        $html .= '    <i class="fa fa-wrench"></i> Fix Permissions' . "\n";
+        $html .= '  </button>' . "\n";
+        $html .= '  <div id="fixResult-' . md5($file_path) . '" class="mt-3"></div>' . "\n";
+    } else {
+        // Web server cannot fix - show manual instructions
+        $html .= '  <p class="mb-2"><strong>To Fix:</strong> Run this command on the server:</p>' . "\n";
+        $html .= '  <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">' . "\n";
+        $html .= '    <code style="word-break: break-all; display: block; font-size: 0.9em;">' . "\n";
+        if ($is_dir) {
+            $html .= '      sudo chown -R ' . htmlspecialchars($web_user) . ':' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
+            $html .= '      sudo chmod -R 775 ' . $safe_path . "\n";
+        } else {
+            $html .= '      sudo chown ' . htmlspecialchars($web_user) . ':' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
+            $html .= '      sudo chmod 664 ' . $safe_path . "\n";
+        }
+        $html .= '    </code>' . "\n";
+        $html .= '  </div>' . "\n";
+    }
+    
+    $html .= '  <p class="small text-muted mb-0">After fixing permissions, refresh this page.</p>' . "\n";
+    $html .= '</div>' . "\n";
+    
+    return $html;
+}
+
+/**
+ * Get web server user information
+ * 
+ * @return array Array with 'user' and 'group' keys
+ */
+function getWebServerUserInfo() {
+    $user = get_current_user() ?: 'www-data';
+    $group_info = @posix_getgrgid(@posix_getegid());
+    $group = $group_info !== false ? $group_info['name'] : 'www-data';
+    
+    return ['user' => $user, 'group' => $group];
+}

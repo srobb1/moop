@@ -103,3 +103,112 @@ function fixDatabasePermissions($dbFile) {
     
     return $result;
 }
+
+/**
+ * Fix file or directory permissions (AJAX handler)
+ * 
+ * Called via AJAX when user clicks "Fix Permissions" button.
+ * Only works if web server has sufficient permissions to chmod/chown.
+ * 
+ * @param string $file_path Path to file or directory
+ * @param string $file_type 'file' or 'directory'
+ * @return array Result array with 'success', 'message' keys
+ */
+function fixFilePermissions($file_path, $file_type = 'file') {
+    $result = [
+        'success' => false,
+        'message' => '',
+        'command' => ''
+    ];
+    
+    // Validate input
+    if (empty($file_path) || !file_exists($file_path)) {
+        $result['message'] = 'File or directory not found';
+        return $result;
+    }
+    
+    $is_dir = is_dir($file_path);
+    
+    // Get web server user info
+    $web_user = get_current_user() ?: 'www-data';
+    $web_group_info = @posix_getgrgid(@posix_getegid());
+    $web_group = $web_group_info !== false ? $web_group_info['name'] : 'www-data';
+    
+    try {
+        if ($is_dir) {
+            // For directories: chmod 755 (rwxr-xr-x)
+            $chmod_result = @chmod($file_path, 0755);
+            
+            if (!$chmod_result) {
+                $result['message'] = 'Web server lacks permission to change directory permissions.';
+                return $result;
+            }
+            
+            // Try to change ownership (may fail if not root)
+            @chown($file_path, $web_user);
+            @chgrp($file_path, $web_group);
+            
+            // Verify it worked
+            if (is_readable($file_path) && is_writable($file_path)) {
+                $result['success'] = true;
+                $result['message'] = 'Directory permissions fixed successfully!';
+            } else {
+                $result['message'] = 'Permissions were modified but directory still has issues.';
+            }
+        } else {
+            // For files: chmod 644 (rw-r--r--)
+            $chmod_result = @chmod($file_path, 0644);
+            
+            if (!$chmod_result) {
+                $result['message'] = 'Web server lacks permission to change file permissions.';
+                return $result;
+            }
+            
+            // Try to change ownership (may fail if not root)
+            @chown($file_path, $web_user);
+            @chgrp($file_path, $web_group);
+            
+            // Verify it worked
+            if (is_readable($file_path)) {
+                $result['success'] = true;
+                $result['message'] = 'File permissions fixed successfully!';
+            } else {
+                $result['message'] = 'Permissions were modified but file still not readable.';
+            }
+        }
+    } catch (Exception $e) {
+        $result['message'] = 'Error: ' . $e->getMessage();
+    }
+    
+    return $result;
+}
+
+/**
+ * Handle file permission fix AJAX request
+ * 
+ * Call this in your admin script's POST handler:
+ * if (isset($_POST['action']) && $_POST['action'] === 'fix_file_permissions') {
+ *     header('Content-Type: application/json');
+ *     echo json_encode(handleFixFilePermissionsAjax());
+ *     exit;
+ * }
+ * 
+ * @return array JSON-serializable result array
+ */
+function handleFixFilePermissionsAjax() {
+    if (empty($_POST['file_path'])) {
+        return ['success' => false, 'message' => 'File path not provided'];
+    }
+    
+    $file_path = $_POST['file_path'];
+    $file_type = $_POST['file_type'] ?? 'file';
+    
+    // Basic security: prevent directory traversal
+    $file_path = realpath($file_path);
+    
+    if (!$file_path || !file_exists($file_path)) {
+        return ['success' => false, 'message' => 'File or directory not found'];
+    }
+    
+    return fixFilePermissions($file_path, $file_type);
+}
