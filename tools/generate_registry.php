@@ -11,7 +11,9 @@ $registry = [];
 // Directories to scan
 $scanDirs = [
     __DIR__ . '/../lib',
-    __DIR__ . '/../tools'
+    __DIR__ . '/../tools',
+    __DIR__ . '/../admin',
+    __DIR__ . '/..'  // Root directory for index.php, login.php, etc.
 ];
 
 // File patterns to exclude
@@ -118,11 +120,12 @@ function extractFunctions($filePath) {
 }
 
 /**
- * Find all files that use a specific function
+ * Find all files that use a specific function (excluding the definition line)
  */
 function findFunctionUsages($funcName, $scanDirs, $definitionFile) {
     $usages = [];
     $searchPattern = '/\b' . preg_quote($funcName, '/') . '\s*\(/';
+    $excludeDirs = ['docs', 'logs', 'notes', 'not_used', '.git'];
     
     foreach ($scanDirs as $dir) {
         if (!is_dir($dir)) continue;
@@ -137,8 +140,19 @@ function findFunctionUsages($funcName, $scanDirs, $definitionFile) {
             
             $filePath = $file->getRealPath();
             
-            // Don't match the definition file or registry file
-            if ($filePath === $definitionFile || strpos($filePath, 'function_registry.php') !== false) continue;
+            // Skip excluded directories
+            $skip = false;
+            foreach ($excludeDirs as $excludeDir) {
+                if (strpos($filePath, DIRECTORY_SEPARATOR . $excludeDir . DIRECTORY_SEPARATOR) !== false || 
+                    strpos($filePath, DIRECTORY_SEPARATOR . $excludeDir) === strlen($filePath) - strlen(DIRECTORY_SEPARATOR . $excludeDir)) {
+                    $skip = true;
+                    break;
+                }
+            }
+            if ($skip) continue;
+            
+            // Don't match registry file
+            if (strpos($filePath, 'function_registry.php') !== false) continue;
             
             $content = file_get_contents($filePath);
             
@@ -152,6 +166,11 @@ function findFunctionUsages($funcName, $scanDirs, $definitionFile) {
                     
                     // Skip if the line is a comment
                     if (preg_match('/^\s*(\/\/|#|\*)/', $contextLine) || preg_match('/\/\*.*\*\//', $contextLine)) {
+                        continue;
+                    }
+                    
+                    // Skip the function definition line itself
+                    if (preg_match('/^\s*(?:public\s+)?(?:static\s+)?function\s+' . preg_quote($funcName, '/') . '\s*\(/', $contextLine)) {
                         continue;
                     }
                     
@@ -304,11 +323,14 @@ function generateHtmlDocs($registry) {
     $html .= "        header p { opacity: 0.9; }\n";
     $html .= "        .search-box { margin: 20px 0; }\n";
     $html .= "        input[type=\"text\"] { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ddd; border-radius: 4px; }\n";
+    $html .= "        .unused-content { padding: 20px; }\n";
+    $html .= "        .unused-content.hidden { display: none; }\n";
     $html .= "        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }\n";
     $html .= "        .stat-box { background: white; padding: 20px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }\n";
     $html .= "        .stat-box strong { display: block; font-size: 24px; color: #3498db; }\n";
     $html .= "        .stat-box span { font-size: 12px; color: #666; }\n";
     $html .= "        .file-section { background: white; margin: 20px 0; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }\n";
+    $html .= "        .hidden { display: none !important; }\n";
     $html .= "        .file-header { background: #34495e; color: white; padding: 15px 20px; font-weight: bold; cursor: pointer; }\n";
     $html .= "        .file-header:hover { background: #2c3e50; }\n";
     $html .= "        .functions-list { padding: 0; display: none; }\n";
@@ -318,6 +340,7 @@ function generateHtmlDocs($registry) {
     $html .= "        .function-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding-bottom: 10px; }\n";
     $html .= "        .function-header:hover { color: #3498db; }\n";
     $html .= "        .function-name { font-family: 'Courier New', monospace; color: #2980b9; font-weight: 500; }\n";
+    $html .= "        .function-counter { display: inline-block; background: #3498db; color: white; border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 24px; font-size: 12px; font-weight: bold; margin-left: 8px; }\n";
     $html .= "        .function-line { font-size: 12px; color: #7f8c8d; }\n";
     $html .= "        .function-code { display: none; background: #f8f8f8; padding: 15px; margin-top: 10px; border-radius: 4px; border-left: 3px solid #3498db; overflow-x: auto; }\n";
     $html .= "        .function-code.open { display: block; }\n";
@@ -345,14 +368,52 @@ function generateHtmlDocs($registry) {
     $html .= "            <input type=\"text\" id=\"searchInput\" placeholder=\"🔍 Search functions...\" onkeyup=\"filterFunctions()\">\n";
     $html .= "        </div>\n";
     
-    // Statistics
-    $totalFuncs = array_sum(array_map('count', $registry));
-    $html .= "        <div class=\"stats\">\n";
-    $html .= "            <div class=\"stat-box\"><strong>" . $totalFuncs . "</strong><span>Total Functions</span></div>\n";
-    $html .= "            <div class=\"stat-box\"><strong>" . count($registry) . "</strong><span>Files</span></div>\n";
-    $html .= "        </div>\n";
-    
-    // Functions by file
+     // Statistics
+     $totalFuncs = array_sum(array_map('count', $registry));
+     $html .= "        <div class=\"stats\">\n";
+     $html .= "            <div class=\"stat-box\"><strong>" . $totalFuncs . "</strong><span>Total Functions</span></div>\n";
+     $html .= "            <div class=\"stat-box\"><strong>" . count($registry) . "</strong><span>Files</span></div>\n";
+     $html .= "        </div>\n";
+     
+     // Find unused functions
+     $unusedFunctions = [];
+     foreach ($registry as $file => $functions) {
+         foreach ($functions as $func) {
+             $usages = findFunctionUsages($func['name'], [__DIR__ . '/../lib', __DIR__ . '/../tools', __DIR__ . '/../admin', __DIR__ . '/..'], $file);
+             if (empty($usages)) {
+                 $unusedFunctions[] = [
+                     'name' => $func['name'],
+                     'file' => $file,
+                     'line' => $func['line']
+                 ];
+             }
+         }
+     }
+     
+     // Show unused functions alert
+     if (!empty($unusedFunctions)) {
+         $html .= "        <div style=\"background: #ffe6e6; border: 2px solid #cc0000; border-radius: 4px; overflow: hidden; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);\">\n";
+         $html .= "            <div style=\"background: #cc0000; color: white; padding: 15px 20px; font-weight: bold; cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center;\" onclick=\"toggleUnused(this)\">\n";
+         $html .= "                <span>⚠️ " . count($unusedFunctions) . " Unused Function(s) Found</span>\n";
+         $html .= "                <span class=\"unusedArrow\">▶</span>\n";
+         $html .= "            </div>\n";
+         $html .= "            <div class=\"unused-content hidden\">\n";
+         $html .= "                <p style=\"margin: 10px 0; color: #555;\">These functions are defined but never called:</p>\n";
+         $html .= "                <ul style=\"margin: 10px 0; padding-left: 20px;\">\n";
+         foreach ($unusedFunctions as $func) {
+             $html .= "                    <li><strong style=\"color: #cc0000;\">" . htmlspecialchars($func['name']) . "()</strong> in <code>" . htmlspecialchars($func['file']) . "</code> (line " . $func['line'] . ")</li>\n";
+         }
+         $html .= "                </ul>\n";
+         $html .= "            </div>\n";
+         $html .= "        </div>\n";
+     }
+     
+     // Expand/Collapse button
+     $html .= "        <div style=\"display: flex; gap: 10px; margin: 20px 0;\">\n";
+     $html .= "            <button id=\"toggleBtn\" onclick=\"toggleAll()\" style=\"flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;\">📂 Expand All</button>\n";
+     $html .= "        </div>\n";
+     
+     // Functions by file
     ksort($registry);
     foreach ($registry as $file => $functions) {
         $html .= "        <div class=\"file-section\">\n";
@@ -360,10 +421,14 @@ function generateHtmlDocs($registry) {
         $html .= "            <div class=\"functions-list\">\n";
         
         foreach ($functions as $func) {
+            // Calculate usage count for this function
+            $usages = findFunctionUsages($func['name'], [__DIR__ . '/../lib', __DIR__ . '/../tools', __DIR__ . '/../admin', __DIR__ . '/..'], $file);
+            
             $html .= "                <div class=\"function-item searchable\" data-func=\"" . htmlspecialchars($func['name']) . "\">\n";
             $html .= "                    <div class=\"function-header\" onclick=\"toggleCode(this)\">\n";
-            $html .= "                        <div>\n";
+            $html .= "                        <div style=\"display: flex; align-items: center; gap: 10px;\">\n";
             $html .= "                            <div class=\"function-name\">" . htmlspecialchars($func['name']) . "()</div>\n";
+            $html .= "                            <span class=\"function-counter\">" . count($usages) . "</span>\n";
             $html .= "                            <div class=\"function-line\">Line " . $func['line'] . "</div>\n";
             $html .= "                        </div>\n";
             $html .= "                        <span style=\"font-size: 20px; margin-left: 10px;\">▶</span>\n";
@@ -376,8 +441,7 @@ function generateHtmlDocs($registry) {
                 $html .= "                    </div>\n";
             }
             
-            // Show usages
-            $usages = findFunctionUsages($func['name'], [__DIR__ . '/../lib', __DIR__ . '/../tools'], $file);
+             // Show usages
             if (!empty($usages)) {
                 // Group usages by file and count them
                 $usagesByFile = [];
@@ -420,6 +484,18 @@ function generateHtmlDocs($registry) {
     $html .= "            function toggleFile(header) {\n";
     $html .= "                header.nextElementSibling.classList.toggle('open');\n";
     $html .= "            }\n";
+    $html .= "            function toggleAll() {\n";
+    $html .= "                const lists = document.querySelectorAll('.functions-list');\n";
+    $html .= "                const hiddenCount = document.querySelectorAll('.functions-list:not(.open)').length;\n";
+    $html .= "                const btn = document.getElementById('toggleBtn');\n";
+    $html .= "                if (hiddenCount > 0) {\n";
+    $html .= "                    lists.forEach(list => list.classList.add('open'));\n";
+    $html .= "                    btn.textContent = '📁 Collapse All';\n";
+    $html .= "                } else {\n";
+    $html .= "                    lists.forEach(list => list.classList.remove('open'));\n";
+    $html .= "                    btn.textContent = '📂 Expand All';\n";
+    $html .= "                }\n";
+    $html .= "            }\n";
     $html .= "            function toggleCode(header) {\n";
     $html .= "                const codeBlock = header.parentElement.querySelector('.function-code');\n";
     $html .= "                if (codeBlock) {\n";
@@ -428,25 +504,43 @@ function generateHtmlDocs($registry) {
     $html .= "                    arrow.textContent = codeBlock.classList.contains('open') ? '▼' : '▶';\n";
     $html .= "                }\n";
     $html .= "            }\n";
+    $html .= "            function toggleUnused(header) {\n";
+    $html .= "                const content = header.nextElementSibling;\n";
+    $html .= "                const arrow = header.querySelector('.unusedArrow');\n";
+    $html .= "                content.classList.toggle('hidden');\n";
+    $html .= "                arrow.textContent = content.classList.contains('hidden') ? '▶' : '▼';\n";
+    $html .= "            }\n";
     $html .= "            function filterFunctions() {\n";
-    $html .= "                const search = document.getElementById('searchInput').value.toLowerCase();\n";
-    $html .= "                const items = document.querySelectorAll('.function-item');\n";
-    $html .= "                const sections = document.querySelectorAll('.file-section');\n";
+    $html .= "                const searchTerm = document.getElementById('searchInput').value.toLowerCase();\n";
+    $html .= "                const fileSections = document.querySelectorAll('.file-section');\n";
     $html .= "                \n";
-    $html .= "                items.forEach(item => {\n";
-    $html .= "                    const name = item.dataset.func.toLowerCase();\n";
-    $html .= "                    const matches = !search || name.includes(search);\n";
-    $html .= "                    item.classList.toggle('hidden', !matches);\n";
-    $html .= "                });\n";
-    $html .= "                \n";
-    $html .= "                sections.forEach(section => {\n";
-    $html .= "                    const visibleItems = section.querySelectorAll('.function-item:not(.hidden)');\n";
-    $html .= "                    if (search && visibleItems.length > 0) {\n";
-    $html .= "                        section.querySelector('.functions-list').classList.add('open');\n";
-    $html .= "                    } else if (!search) {\n";
-    $html .= "                        section.querySelector('.functions-list').classList.remove('open');\n";
+    $html .= "                fileSections.forEach(section => {\n";
+    $html .= "                    const fileName = section.querySelector('.file-header').textContent.toLowerCase();\n";
+    $html .= "                    const functionItems = section.querySelectorAll('.function-item');\n";
+    $html .= "                    let hasVisibleFunction = false;\n";
+    $html .= "                    \n";
+    $html .= "                    functionItems.forEach(item => {\n";
+    $html .= "                        const funcName = item.querySelector('.function-name').textContent.toLowerCase();\n";
+    $html .= "                        const funcDetails = item.querySelector('.function-code') ? item.querySelector('.function-code').textContent.toLowerCase() : '';\n";
+    $html .= "                        const match = funcName.includes(searchTerm) || funcDetails.includes(searchTerm) || fileName.includes(searchTerm);\n";
+    $html .= "                        \n";
+    $html .= "                        if (searchTerm === '' || match) {\n";
+    $html .= "                            item.classList.remove('hidden');\n";
+    $html .= "                            hasVisibleFunction = true;\n";
+    $html .= "                        } else {\n";
+    $html .= "                            item.classList.add('hidden');\n";
+    $html .= "                        }\n";
+    $html .= "                    });\n";
+    $html .= "                    \n";
+    $html .= "                    if (searchTerm === '' || hasVisibleFunction || fileName.includes(searchTerm)) {\n";
+    $html .= "                        section.classList.remove('hidden');\n";
+    $html .= "                        if (searchTerm !== '') {\n";
+    $html .= "                            section.querySelector('.functions-list').classList.add('open');\n";
+    $html .= "                        } else {\n";
+    $html .= "                            section.querySelector('.functions-list').classList.remove('open');\n";
+    $html .= "                        }\n";
     $html .= "                    } else {\n";
-    $html .= "                        section.querySelector('.functions-list').classList.remove('open');\n";
+    $html .= "                        section.classList.add('hidden');\n";
     $html .= "                    }\n";
     $html .= "                });\n";
     $html .= "            }\n";
@@ -476,6 +570,31 @@ function generateMarkdownDocs($registry) {
     $md .= "- **Total Functions**: " . $totalFuncs . "\n";
     $md .= "- **Files Scanned**: " . count($registry) . "\n\n";
     
+    // Find unused functions for markdown
+    $unusedFunctions = [];
+    foreach ($registry as $file => $functions) {
+        foreach ($functions as $func) {
+            $usages = findFunctionUsages($func['name'], [__DIR__ . '/../lib', __DIR__ . '/../tools', __DIR__ . '/../admin', __DIR__ . '/..'], $file);
+            if (empty($usages)) {
+                $unusedFunctions[] = [
+                    'name' => $func['name'],
+                    'file' => $file,
+                    'line' => $func['line']
+                ];
+            }
+        }
+    }
+    
+    // Add unused functions to markdown
+    if (!empty($unusedFunctions)) {
+        $md .= "## ⚠️ Unused Functions (" . count($unusedFunctions) . ")\n\n";
+        $md .= "These functions are defined but never called:\n\n";
+        foreach ($unusedFunctions as $func) {
+            $md .= "- `" . $func['name'] . "()` in `" . $func['file'] . "` (line " . $func['line'] . ")\n";
+        }
+        $md .= "\n---\n\n";
+    }
+    
     $md .= "## Quick Navigation\n\n";
     ksort($registry);
     foreach ($registry as $file => $functions) {
@@ -498,8 +617,8 @@ function generateMarkdownDocs($registry) {
                 $md .= "```\n" . $func['comment'] . "\n```\n\n";
             }
             
-            // Get usages for this function
-            $usages = findFunctionUsages($func['name'], [__DIR__ . '/../lib', __DIR__ . '/../tools'], $file);
+             // Get usages for this function
+             $usages = findFunctionUsages($func['name'], [__DIR__ . '/../lib', __DIR__ . '/../tools', __DIR__ . '/../admin', __DIR__ . '/..'], $file);
             if (!empty($usages)) {
                 // Group usages by file and count them
                 $usagesByFile = [];

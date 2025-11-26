@@ -1,0 +1,1819 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JS Function Registry - MOOP</title>
+<style>
+* { margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+header { background: #2c3e50; color: white; padding: 30px 0; margin: -20px -20px 30px -20px; }
+header h1 { margin-bottom: 10px; }
+header p { opacity: 0.9; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
+.stat-box { background: white; padding: 20px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+.stat-box strong { display: block; font-size: 24px; color: #3498db; }
+.stat-box span { font-size: 12px; color: #666; }
+.file-section { background: white; margin: 20px 0; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.file-header { background: #34495e; color: white; padding: 15px 20px; font-weight: bold; cursor: pointer; user-select: none; }
+.file-header:hover { background: #2c3e50; }
+.file-header.collapsed:before { content: '▶ '; }
+.file-header:not(.collapsed):before { content: '▼ '; }
+.file-info { background: #e8f4f8; padding: 15px 20px; border-bottom: 1px solid #bdc3c7; font-size: 12px; color: #555; }
+.file-info strong { color: #2c3e50; }
+.php-pages { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.php-page { background: white; padding: 4px 10px; border-radius: 3px; border: 1px solid #3498db; color: #3498db; font-family: monospace; font-size: 11px; }
+.functions-list { display: block; }
+.functions-list.hidden { display: none; }
+.function-item { padding: 0; border-bottom: 1px solid #ecf0f1; }
+.function-item:last-child { border-bottom: none; }
+.function-header { background: #f0f0f0; padding: 12px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.function-header:hover { background: #e0e0e0; }
+.function-name { font-family: 'Courier New', monospace; color: #2980b9; font-weight: 500; }
+.function-counter { display: inline-block; background: #3498db; color: white; border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 24px; font-size: 12px; font-weight: bold; margin-left: 8px; }
+.function-line { font-size: 11px; color: #7f8c8d; }
+.function-details { padding: 15px 20px; background: white; display: none; }
+.function-details.shown { display: block; }
+.function-usages { background: #e8f4f8; padding: 12px 15px; margin: 10px 0; border-left: 3px solid #3498db; border-radius: 3px; }
+.function-usages strong { display: block; margin-bottom: 8px; color: #2c3e50; }
+.function-usages ul { margin: 0; padding-left: 20px; }
+.function-usages li { margin: 6px 0; font-size: 12px; color: #555; }
+.function-usages code { display: inline; background: white; padding: 2px 6px; border-radius: 3px; border: 1px solid #bbb; }
+.function-code { background: #f8f8f8; padding: 15px; margin: 15px 0; border-radius: 4px; border-left: 3px solid #3498db; overflow-x: auto; }
+.function-code code { display: block; font-family: 'Courier New', monospace; font-size: 12px; color: #2c3e50; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
+.search-box { margin: 20px 0; }
+input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ddd; border-radius: 4px; }
+.file-section.hidden-search { display: none; }
+.function-item.hidden-search { display: none; }
+.unused-section { background: #ffe6e6; border: 2px solid #cc0000; border-radius: 4px; overflow: hidden; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.unused-header { background: #cc0000; color: white; padding: 15px 20px; font-weight: bold; cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; }
+.unused-header:hover { background: #bb0000; }
+.unused-content { padding: 20px; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+<div class="container">
+<h1>🔍 MOOP JavaScript Function Registry</h1>
+<p>Auto-generated function documentation • Generated: 2025-11-26 00:32:33</p>
+</div>
+</header>
+<div class="container">
+<div class="search-box">
+<input type="text" id="searchInput" placeholder="🔍 Search functions, files, or usage..." onkeyup="filterSearch()">
+</div>
+<div class="stats">
+<div class="stat-box"><strong>48</strong><span>Total Functions</span></div>
+<div class="stat-box"><strong>11</strong><span>Files</span></div>
+</div>
+<div class="unused-section">
+<div class="unused-header" onclick="toggleUnused(this)">
+<span>⚠️ 4 Unused Function(s) Found</span>
+<span class="unusedArrow">▶</span>
+</div>
+<div class="unused-content hidden">
+<p style="margin: 10px 0; color: #555;">These functions are defined but never called:</p>
+<ul style="margin: 10px 0; padding-left: 20px;">
+<li><strong style="color: #cc0000;">downloadResultsHTML()</strong> in <code>js/blast-manager.js</code> (line 9)</li>
+<li><strong style="color: #cc0000;">handleToolClick()</strong> in <code>js/index.js</code> (line 2)</li>
+<li><strong style="color: #cc0000;">draw_blast_graph()</strong> in <code>js/modules/blast-canvas-graph.js</code> (line 2)</li>
+<li><strong style="color: #cc0000;">move_bg_rect()</strong> in <code>js/modules/blast-canvas-graph.js</code> (line 437)</li>
+</ul>
+</div>
+</div>
+<div style="display: flex; gap: 10px; margin: 20px 0;">
+<button id="toggleBtn" onclick="toggleAll()" style="flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">📂 Expand All</button>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/blast-manager.js (7)</div>
+<div class="functions-list hidden">
+<div class="file-info">
+<strong>📋 Included in:</strong>
+<div class="php-pages">
+<span class="php-page">tools/blast.php</span>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">downloadResultsHTML()</span><span class="function-counter">0</span> <span class="function-line">Line 9</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<p><em>Not called anywhere</em></p>
+<div class="function-code">
+<code>{
+    const resultsCard = document.querySelector(&#039;.card&#039;);
+    if (!resultsCard) return;
+    
+    const content = resultsCard.innerHTML;
+    const blob = new Blob([content], { type: &#039;text/html&#039; });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement(&#039;a&#039;);
+    link.href = url;
+    link.download = &#039;blast_results_&#039; + new Date().toISOString().slice(0, 10) + &#039;.html&#039;;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revo</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">downloadResultsText()</span><span class="function-counter">1</span> <span class="function-line">Line 25</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>tools/blast.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 563</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-outline-secondary&quot; onclick=&quot;downloadResultsText();&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const pairwiseDiv = document.getElementById(&#039;pairwiseOutput&#039;);
+    if (!pairwiseDiv) {
+        alert(&#039;No BLAST results to download&#039;);
+        return;
+    }
+    
+    const textContent = pairwiseDiv.textContent || pairwiseDiv.innerText;
+    const blob = new Blob([textContent], { type: &#039;text/plain&#039; });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement(&#039;a&#039;);
+    link.href = url;
+    link.download = &#039;blast_results_&#039; + new Date().toISOString().slice(0, 10) + &#039;.tx</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">clearResults()</span><span class="function-counter">1</span> <span class="function-line">Line 44</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>tools/blast.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 556</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-light&quot; onclick=&quot;clearResults();&quot; title=&quot;Clear results an</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const resultsCard = document.querySelector(&#039;.mt-4.card&#039;);
+    if (resultsCard) {
+        resultsCard.remove();
+    }
+    document.getElementById(&#039;query&#039;).focus();
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">clearBlastSourceFilters()</span><span class="function-counter">1</span> <span class="function-line">Line 52</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>tools/blast.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 284</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-success&quot; onclick=&quot;clearBlastSourceFilters();&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    window.clearSourceFilters(&#039;sourceFilter&#039;, &#039;selected_source&#039;, &#039;fasta-source-line&#039;, null, &#039;blastForm&#039;);
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">initializeBlastManager()</span><span class="function-counter">2</span> <span class="function-line">Line 56</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/blast-manager.js</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 221</code>: <small>initializeBlastManager();</small></li>
+<li><code>line 226</code>: <small>initializeBlastManager();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    function updateCurrentSelectionDisplay() {
+        window.updateCurrentSelectionDisplay();
+        const selectionDiv = document.getElementById(&#039;currentSelection&#039;);
+        const checked = document.querySelector(&#039;input[name=&quot;selected_source&quot;]:checked&#039;);
+        if (!checked) {
+            selectionDiv.innerHTML = &#039;&lt;span style=&quot;color: #999;&quot;&gt;None selected&lt;/span&gt;&#039;;
+        }
+    }
+    
+    // Initialize source list manager with callback
+    initializeSourceListManager({
+        filterId: &#039;so</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">updateCurrentSelectionDisplay()</span><span class="function-counter">7</span> <span class="function-line">Line 58</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (7 times):</strong>
+<ul>
+<li><strong>js/blast-manager.js</strong> (3x)
+<ul style="margin-top: 5px;">
+<li><code>line 59</code>: <small>window.updateCurrentSelectionDisplay();</small></li>
+<li><code>line 74</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 116</code>: <small>updateCurrentSelectionDisplay();</small></li>
+</ul></li>
+<li><strong>js/sequence-retrieval.js</strong> (4x)
+<ul style="margin-top: 5px;">
+<li><code>line 71</code>: <small>window.updateCurrentSelectionDisplay(&#039;currentSelection&#039;, &#039;fasta-source-line&#039;, true);</small></li>
+<li><code>line 91</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 106</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 155</code>: <small>updateCurrentSelectionDisplay();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+        window.updateCurrentSelectionDisplay();
+        const selectionDiv = document.getElementById(&#039;currentSelection&#039;);
+        const checked = document.querySelector(&#039;input[name=&quot;selected_source&quot;]:checked&#039;);
+        if (!checked) {
+            selectionDiv.innerHTML = &#039;&lt;span style=&quot;color: #999;&quot;&gt;None selected&lt;/span&gt;&#039;;
+        }
+    }</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">autoScrollToResults()</span><span class="function-counter">3</span> <span class="function-line">Line 208</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (3 times):</strong>
+<ul>
+<li><strong>js/blast-manager.js</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 222</code>: <small>autoScrollToResults();</small></li>
+<li><code>line 227</code>: <small>autoScrollToResults();</small></li>
+</ul></li>
+<li><strong>tools/blast.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 617</code>: <small>autoScrollToResults();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    document.addEventListener(&#039;DOMContentLoaded&#039;, function() {
+        const resultsSection = document.getElementById(&#039;blast-results-section&#039;);
+        if (resultsSection) {
+            resultsSection.scrollIntoView({ behavior: &#039;smooth&#039;, block: &#039;start&#039; });
+        }
+    });
+}</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/index.js (2)</div>
+<div class="functions-list hidden">
+<div class="file-info">
+<strong>📋 Included in:</strong>
+<div class="php-pages">
+<span class="php-page">index.php</span>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">handleToolClick()</span><span class="function-counter">0</span> <span class="function-line">Line 2</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<p><em>Not called anywhere</em></p>
+<div class="function-code">
+<code>{
+  if (!phyloTree || phyloTree.selectedOrganisms.size === 0) {
+    alert(&#039;Please select at least one organism&#039;);
+    return;
+  }
+  
+  // Get tool button and its configuration
+  const toolBtn = document.getElementById(`tool-btn-${toolId}`);
+  if (!toolBtn) {
+    console.error(`Tool button not found: tool-btn-${toolId}`);
+    return;
+  }
+  
+  const toolPath = toolBtn.getAttribute(&#039;data-tool-path&#039;);
+  const contextParamsJson = toolBtn.getAttribute(&#039;data-context-params&#039;);
+  
+  if (!toolPath || !con</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">switchView()</span><span class="function-counter">2</span> <span class="function-line">Line 50</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (2 times):</strong>
+<ul>
+<li><strong>index.php</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 49</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-outline-primary active&quot; id=&quot;card-view-btn&quot; onclick=&quot;switchView(</small></li>
+<li><code>line 52</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-outline-primary&quot; id=&quot;tree-view-btn&quot; onclick=&quot;switchView(&#039;tree&#039;)</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+  const cardView = document.getElementById(&#039;card-view&#039;);
+  const treeView = document.getElementById(&#039;tree-view&#039;);
+  const cardBtn = document.getElementById(&#039;card-view-btn&#039;);
+  const treeBtn = document.getElementById(&#039;tree-view-btn&#039;);
+  
+  if (view === &#039;card&#039;) {
+    cardView.style.display = &#039;block&#039;;
+    treeView.style.display = &#039;none&#039;;
+    cardBtn.classList.add(&#039;active&#039;);
+    treeBtn.classList.remove(&#039;active&#039;);
+  } else {
+    cardView.style.display = &#039;none&#039;;
+    treeView.style.display = &#039;block&#039;</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/modules/blast-canvas-graph.js (4)</div>
+<div class="functions-list hidden">
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">draw_blast_graph()</span><span class="function-counter">0</span> <span class="function-line">Line 2</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<p><em>Not called anywhere</em></p>
+<div class="function-code">
+<code>{
+
+    var img_height = 2000;
+    var img_width = 920;
+    var canvas_width = 1000;
+
+    var xscale = +(img_width/seq_length); // to transform sequence length to pixels
+
+    //Create canvas stage
+    var kjs_canvas = new Kinetic.Stage({
+      container: &quot;myCanvas&quot;,
+      width: canvas_width,
+      height: 700
+    });
+
+    var ksj_layer = new Kinetic.Layer();
+
+    var query_length_text = new Kinetic.Text({
+      x: 0,
+      y: 35,
+      text: &quot;Query length (&quot;+seq_length+&quot;)&quot;,
+      fill: &quot;#333&quot;,</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">printRectangles()</span><span class="function-counter">1</span> <span class="function-line">Line 205</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/modules/blast-canvas-graph.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 198</code>: <small>off_set = printRectangles(kjs_canvas,sgn_graph_array,seq_length,img_width);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+
+    var xscale = +(img_width/seq_length); // to transform sequence length to pixels
+    var off_set = 80; //just under the horizontal line
+    var coord_y = 0;
+    var sqr_height = 16;
+    var before_block = 20;
+
+    var description;
+    var canvas_width = kjs_canvas.width();
+    var prev_subject = &quot;grjhg&quot;;
+
+    var rectangle_layer = new Kinetic.Layer();
+    kjs_canvas.add(rectangle_layer);
+
+    var popup_layer = new Kinetic.Layer();
+    kjs_canvas.add(popup_layer);
+
+    var row = 1;
+
+    //</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">move_bg_rect()</span><span class="function-counter">0</span> <span class="function-line">Line 437</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<p><em>Not called anywhere</em></p>
+<div class="function-code">
+<code>{
+
+    pos += 1;
+
+    return pos;
+  }</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">draw_popup()</span><span class="function-counter">1</span> <span class="function-line">Line 445</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/modules/blast-canvas-graph.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 381</code>: <small>draw_popup(canvas_width,blastHit,popup_layer,s_description);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+
+    blastHit.on(&#039;mouseover&#039;, function() {
+
+
+       var desc_group = new Kinetic.Group();
+
+      document.body.style.cursor = &#039;pointer&#039;;
+      var hit_x = this.getAbsolutePosition().x + this.width()/2;
+      var hit_y = this.getAbsolutePosition().y-26;
+
+      //print subject descriptions
+      var subject_desc = new Kinetic.Text({
+        x: hit_x,
+        y: hit_y-5,
+        text: desc,
+        fill: &quot;black&quot;,
+        fontSize: 16,
+        fontFamily: &#039;Helvetica&#039;
+      });
+
+       subject_desc</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/modules/copy-to-clipboard.js (2)</div>
+<div class="functions-list hidden">
+<div class="file-info">
+<strong>📋 Included in:</strong>
+<div class="php-pages">
+<span class="php-page">tools/retrieve_selected_sequences.php</span>
+<span class="php-page">tools/sequences_display.php</span>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">initializeCopyToClipboard()</span><span class="function-counter">1</span> <span class="function-line">Line 6</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/modules/copy-to-clipboard.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 81</code>: <small>initializeCopyToClipboard();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    // Handle copy to clipboard for sequences
+    const copyables = document.querySelectorAll(&quot;.copyable&quot;);
+    copyables.forEach(el =&gt; {
+        let resetColorTimeout;
+        el.addEventListener(&quot;click&quot;, function () {
+            const text = el.innerText.trim();
+            navigator.clipboard.writeText(text).then(() =&gt; {
+                el.classList.add(&quot;bg-success&quot;, &quot;text-white&quot;);
+                if (resetColorTimeout) clearTimeout(resetColorTimeout);
+                resetColorTimeout = s</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">initializeCopyTooltips()</span><span class="function-counter">1</span> <span class="function-line">Line 29</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/modules/copy-to-clipboard.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 26</code>: <small>initializeCopyTooltips();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const copyables = document.querySelectorAll(&quot;.copyable&quot;);
+    copyables.forEach(el =&gt; {
+        // Custom simple tooltip that follows cursor
+        el.addEventListener(&quot;mouseenter&quot;, function() {
+            // Remove any existing tooltip
+            const existing = document.getElementById(&quot;custom-copy-tooltip&quot;);
+            if (existing) existing.remove();
+            
+            // Create simple tooltip
+            const tooltip = document.createElement(&quot;div&quot;);
+            tooltip.id =</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/modules/download-handler.js (3)</div>
+<div class="functions-list hidden">
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">download()</span><span class="function-counter">1</span> <span class="function-line">Line 10</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/modules/download-handler.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 131</code>: <small>} /* end download() */</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+	
+	var self = window, // this script is only for browsers anyway...
+		u = &quot;application/octet-stream&quot;, // this default mime also triggers iframe downloads
+		m = strMimeType || u, 
+		x = data,
+		D = document,
+		a = D.createElement(&quot;a&quot;),
+		z = function(a){return String(a);},
+		
+		
+		B = self.Blob || self.MozBlob || self.WebKitBlob || z,
+		BB = self.MSBlobBuilder || self.WebKitBlobBuilder || self.BlobBuilder,
+		fn = strFileName || &quot;download&quot;,
+		blob, 
+		b,
+		ua,
+		fr;
+
+	//if(typ</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">d2b()</span><span class="function-counter">1</span> <span class="function-line">Line 63</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/modules/download-handler.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 43</code>: <small>navigator.msSaveBlob(d2b(x), fn) :</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+		var p= u.split(/[:;,]/),
+		t= p[1],
+		dec= p[2] == &quot;base64&quot; ? atob : decodeURIComponent,
+		bin= dec(p.pop()),
+		mx= bin.length,
+		i= 0,
+		uia= new Uint8Array(mx);
+
+		for(i;i&lt;mx;++i) uia[i]= bin.charCodeAt(i);
+
+		return new B([uia], {type: t});
+	 }</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">saver()</span><span class="function-counter">5</span> <span class="function-line">Line 77</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (5 times):</strong>
+<ul>
+<li><strong>js/modules/download-handler.js</strong> (5x)
+<ul style="margin-top: 5px;">
+<li><code>line 44</code>: <small>saver(x) ; // everyone else can save dataURLs un-processed</small></li>
+<li><code>line 112</code>: <small>saver(self.URL.createObjectURL(blob), true);</small></li>
+<li><code>line 117</code>: <small>return saver( &quot;data:&quot; +  m   + &quot;;base64,&quot;  +  self.btoa(blob)  );</small></li>
+<li><code>line 119</code>: <small>return saver( &quot;data:&quot; +  m   + &quot;,&quot; + encodeURIComponent(blob)  );</small></li>
+<li><code>line 126</code>: <small>saver(this.result);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+		
+		
+		if (&#039;download&#039; in a) { //html5 A[download] 			
+			a.href = url;
+			a.setAttribute(&quot;download&quot;, fn);
+			a.innerHTML = &quot;downloading...&quot;;
+			D.body.appendChild(a);
+			setTimeout(function() {
+				a.click();
+				D.body.removeChild(a);
+				if(winMode===true){setTimeout(function(){ self.URL.revokeObjectURL(a.href);}, 250 );}
+			}, 66);
+			return true;
+		}
+		
+		//do iframe dataURL download (old ch+FF):
+		var f = D.createElement(&quot;iframe&quot;);
+		D.body.appendChild(f);
+		if(!winMod</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/modules/organism-management.js (8)</div>
+<div class="functions-list hidden">
+<div class="file-info">
+<strong>📋 Included in:</strong>
+<div class="php-pages">
+<span class="php-page">admin/manage_organisms.php</span>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">fixDatabasePermissions()</span><span class="function-counter">2</span> <span class="function-line">Line 5</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (2 times):</strong>
+<ul>
+<li><strong>admin/manage_organisms.php</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 21</code>: <small>$result = fixDatabasePermissions($db_file);</small></li>
+<li><code>line 762</code>: <small>&lt;button class=&quot;btn btn-warning btn-sm&quot; onclick=&quot;fixDatabasePermissions(event, &#039;&lt;?= $org_safe ?&gt;&#039;)&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    event.preventDefault();
+    
+    const resultDiv = document.getElementById(&#039;fixResult&#039; + organism);
+    const button = event.target.closest(&#039;button&#039;);
+    
+    button.disabled = true;
+    button.innerHTML = &#039;&lt;i class=&quot;fa fa-spinner fa-spin&quot;&gt;&lt;/i&gt; Fixing...&#039;;
+    resultDiv.classList.add(&#039;d-none&#039;);
+    
+    fetch(&#039;manage_organisms.php&#039;, {
+        method: &#039;POST&#039;,
+        headers: {
+            &#039;Content-Type&#039;: &#039;application/x-www-form-urlencoded&#039;
+        },
+        body: &#039;action=fix_permissions&amp;</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">saveMetadata()</span><span class="function-counter">1</span> <span class="function-line">Line 60</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>admin/manage_organisms.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 978</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-success&quot; onclick=&quot;saveMetadata(event, &#039;&lt;?= $org_safe ?&gt;&#039;)&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    event.preventDefault();
+    
+    const form = document.getElementById(&#039;metadataForm&#039; + organism);
+    const resultDiv = document.getElementById(&#039;saveResult&#039; + organism);
+    const button = event.target;
+    
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // Collect images data
+    const imagesContainer = document.getElementById(&#039;images-container-&#039; + organism);
+    const images = [];
+    imagesContainer.querySelectorAll(&#039;.image-item&#039;).forEach(</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">addMetadataImage()</span><span class="function-counter">1</span> <span class="function-line">Line 176</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>admin/manage_organisms.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 938</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-primary mb-4&quot; onclick=&quot;addMetadataImage(&#039;&lt;?= $org_safe ?</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const container = document.getElementById(&#039;images-container-&#039; + organism);
+    const newIndex = container.children.length;
+    
+    const html = `
+      &lt;div class=&quot;image-item&quot; data-index=&quot;${newIndex}&quot; style=&quot;border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;&quot;&gt;
+        &lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataImage(&#039;${organism}&#039;, ${newIndex})&quot; style=&quot;float: right;&quot;&gt;Remove&lt;/button&gt;
+        &lt;div</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">removeMetadataImage()</span><span class="function-counter">2</span> <span class="function-line">Line 198</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/modules/organism-management.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 183</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataImage(&#039;${organ</small></li>
+</ul></li>
+<li><strong>admin/manage_organisms.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 925</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataImage(&#039;&lt;?= $or</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const container = document.getElementById(&#039;images-container-&#039; + organism);
+    const items = container.querySelectorAll(&#039;.image-item&#039;);
+    if (items.length &gt; 1) {
+        items[index].remove();
+    } else {
+        alert(&#039;At least one image entry must remain (it can be empty).&#039;);
+    }
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">addMetadataParagraph()</span><span class="function-counter">1</span> <span class="function-line">Line 208</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>admin/manage_organisms.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 972</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-primary mb-4&quot; onclick=&quot;addMetadataParagraph(&#039;&lt;?= $org_sa</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const container = document.getElementById(&#039;paragraphs-container-&#039; + organism);
+    const newIndex = container.children.length;
+    
+    const html = `
+      &lt;div class=&quot;paragraph-item&quot; data-index=&quot;${newIndex}&quot; style=&quot;border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;&quot;&gt;
+        &lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataParagraph(&#039;${organism}&#039;, ${newIndex})&quot; style=&quot;float: right;&quot;&gt;Remove&lt;/button&gt;</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">removeMetadataParagraph()</span><span class="function-counter">2</span> <span class="function-line">Line 239</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/modules/organism-management.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 215</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataParagraph(&#039;${o</small></li>
+</ul></li>
+<li><strong>admin/manage_organisms.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 950</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataParagraph(&#039;&lt;?=</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const container = document.getElementById(&#039;paragraphs-container-&#039; + organism);
+    const items = container.querySelectorAll(&#039;.paragraph-item&#039;);
+    if (items.length &gt; 1) {
+        items[index].remove();
+    } else {
+        alert(&#039;At least one paragraph entry must remain (it can be empty).&#039;);
+    }
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">renameAssemblyDirectory()</span><span class="function-counter">2</span> <span class="function-line">Line 249</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (2 times):</strong>
+<ul>
+<li><strong>admin/manage_organisms.php</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 43</code>: <small>$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);</small></li>
+<li><code>line 1139</code>: <small>&lt;button class=&quot;btn btn-info btn-sm w-100&quot; onclick=&quot;renameAssemblyDirectory(event, &#039;&lt;?= htmlspecialch</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    event.preventDefault();
+    
+    const elementId = safeAsmId || organism;
+    
+    const oldDir = document.getElementById(&#039;oldDirName&#039; + elementId).value;
+    const newDir = document.getElementById(&#039;newDirName&#039; + elementId).value;
+    const resultDiv = document.getElementById(&#039;renameResult&#039; + elementId);
+    const button = event.target;
+    
+    if (!oldDir || !newDir) {
+        resultDiv.innerHTML = &#039;&lt;div class=&quot;alert alert-warning&quot;&gt;Please select both current and new directory names&lt;/div&gt;</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">deleteAssemblyDirectory()</span><span class="function-counter">2</span> <span class="function-line">Line 324</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (2 times):</strong>
+<ul>
+<li><strong>admin/manage_organisms.php</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 64</code>: <small>$result = deleteAssemblyDirectory($organism_dir, $dir_name);</small></li>
+<li><code>line 1172</code>: <small>&lt;button class=&quot;btn btn-danger btn-sm w-100&quot; onclick=&quot;deleteAssemblyDirectory(event, &#039;&lt;?= htmlspecial</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    event.preventDefault();
+    
+    const dirToDelete = document.getElementById(&#039;dirToDelete&#039; + safeAsmId).value;
+    const resultDiv = document.getElementById(&#039;deleteResult&#039; + safeAsmId);
+    const button = event.target;
+    
+    if (!dirToDelete) {
+        resultDiv.innerHTML = &#039;&lt;div class=&quot;alert alert-warning&quot;&gt;Please select a directory to delete&lt;/div&gt;&#039;;
+        resultDiv.classList.remove(&#039;d-none&#039;);
+        return;
+    }
+    
+    if (!confirm(&#039;⚠️  CAUTION: You are about to permanently d</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/modules/phylo-tree.js (1)</div>
+<div class="functions-list hidden">
+<div class="file-info">
+<strong>📋 Included in:</strong>
+<div class="php-pages">
+<span class="php-page">index.php</span>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">initPhyloTree()</span><span class="function-counter">1</span> <span class="function-line">Line 168</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/index.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 70</code>: <small>initPhyloTree(treeData, userAccess);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    phyloTree = new PhyloTree(&#039;phylo-tree-container&#039;, treeData, userAccess);
+}</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/modules/shared-results-table.js (2)</div>
+<div class="functions-list hidden">
+<div class="file-info">
+<strong>📋 Included in:</strong>
+<div class="php-pages">
+<span class="php-page">tools/groups_display.php</span>
+<span class="php-page">tools/multi_organism_search.php</span>
+<span class="php-page">tools/organism_display.php</span>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">createOrganismResultsTable()</span><span class="function-counter">1</span> <span class="function-line">Line 18</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/modules/annotation-search.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 292</code>: <small>let tableHtml = createOrganismResultsTable(organism, results, this.config.sitePath, &#039;tools/parent_di</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const tableId = &#039;#resultsTable_&#039; + organism.replace(/[^a-zA-Z0-9]/g, &#039;_&#039;);
+    const selectId = organism.replace(/[^a-zA-Z0-9]/g, &#039;_&#039;);
+    const genus = results[0]?.genus || &#039;&#039;;
+    const species = results[0]?.species || &#039;&#039;;
+    const commonName = results[0]?.common_name || &#039;&#039;;
+    
+    const organismDisplay = `&lt;em&gt;${genus} ${species}&lt;/em&gt;`;
+    const commonNameDisplay = commonName ? ` (${commonName})` : &#039;&#039;;
+    
+    const fallbackId = &#039;icon-&#039; + organism.replace(/[^a-zA-Z0-9]/g, &#039;_&#039;);</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">initializeResultsTable()</span><span class="function-counter">2</span> <span class="function-line">Line 165</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/modules/annotation-search.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 308</code>: <small>initializeResultsTable(tableId, selectId, true);</small></li>
+</ul></li>
+<li><strong>js/modules/shared-results-table.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 154</code>: <small>setTimeout(() =&gt; initializeResultsTable(tableId, selectId, isUniquenameSearch), 100);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    // Populate filter containers with filter inputs and Select All button
+    $(tableId + &#039; .column-filter-container&#039;).each(function(i) {
+        const columnIndex = $(this).data(&#039;column-index&#039;);
+        if (columnIndex === 0) {
+            // Select All button for first column
+            $(this).html(&#039;&lt;button style=&quot;width:110px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0;&quot; class=&quot;btn btn_select_all&quot; id=&quot;toggle-select-btn&#039; + selectId + &#039;&quot;&gt;&lt;span&gt;Select All&lt;</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/modules/source-list-manager.js (8)</div>
+<div class="functions-list hidden">
+<div class="file-info">
+<strong>📋 Included in:</strong>
+<div class="php-pages">
+<span class="php-page">tools/blast.php</span>
+<span class="php-page">tools/retrieve_sequences.php</span>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">isSourceVisible()</span><span class="function-counter">5</span> <span class="function-line">Line 13</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (5 times):</strong>
+<ul>
+<li><strong>js/sequence-retrieval.js</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 98</code>: <small>if (line &amp;&amp; !isSourceVisible(line)) {</small></li>
+<li><code>line 142</code>: <small>if (line &amp;&amp; !isSourceVisible(line)) {</small></li>
+</ul></li>
+<li><strong>js/modules/source-list-manager.js</strong> (3x)
+<ul style="margin-top: 5px;">
+<li><code>line 63</code>: <small>if (line &amp;&amp; isSourceVisible(line)) {</small></li>
+<li><code>line 114</code>: <small>if (checked &amp;&amp; isSourceVisible(checked.closest(&#039;.&#039; + sourceListClass))) {</small></li>
+<li><code>line 204</code>: <small>const isHidden = (showHiddenWarning &amp;&amp; line &amp;&amp; !isSourceVisible(line)) ? &#039; ⚠️ (HIDDEN - FILTERED</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    if (!element) return false;
+    if (element.classList.contains(&#039;hidden&#039;)) return false;
+    if (element.style.display === &#039;none&#039;) return false;
+    return true;
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">applySourceFilter()</span><span class="function-counter">2</span> <span class="function-line">Line 27</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/modules/source-list-manager.js</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 243</code>: <small>applySourceFilter(filterId, sourceListClass);</small></li>
+<li><code>line 257</code>: <small>applySourceFilter(filterId, sourceListClass);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const filterInput = document.getElementById(filterId);
+    const sourceLines = document.querySelectorAll(&#039;.&#039; + sourceListClass);
+    
+    if (!filterInput) {
+        console.warn(&#039;Filter input not found:&#039;, filterId);
+        return;
+    }
+    
+    const filterText = (filterInput.value || &#039;&#039;).toLowerCase();
+    
+    sourceLines.forEach(line =&gt; {
+        const searchText = line.dataset.search || &#039;&#039;;
+        if (filterText === &#039;&#039; || searchText.includes(filterText)) {
+            line.classLis</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">autoSelectFirstVisibleSource()</span><span class="function-counter">1</span> <span class="function-line">Line 56</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/modules/source-list-manager.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 164</code>: <small>selectedRadio = autoSelectFirstVisibleSource(radioName, sourceListClass, &#039;.fasta-source-list&#039;);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const allRadios = document.querySelectorAll(`input[name=&quot;${radioName}&quot;]`);
+    let firstVisibleRadio = null;
+    
+    allRadios.forEach(radio =&gt; {
+        const line = radio.closest(&#039;.&#039; + sourceListClass);
+        if (line &amp;&amp; isSourceVisible(line)) {
+            if (!firstVisibleRadio) {
+                firstVisibleRadio = radio;
+            }
+        }
+    });
+    
+    if (firstVisibleRadio) {
+        // Uncheck any currently checked radios
+        allRadios.forEach(radio =&gt; radio.checked</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">scrollSourceIntoView()</span><span class="function-counter">1</span> <span class="function-line">Line 93</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/modules/source-list-manager.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 79</code>: <small>scrollSourceIntoView(firstVisibleRadio, sourceListClass, scrollContainerSelector);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const line = radio.closest(&#039;.&#039; + sourceListClass);
+    const container = document.querySelector(scrollContainerSelector);
+    
+    if (line &amp;&amp; container) {
+        line.scrollIntoView({ behavior: &#039;smooth&#039;, block: &#039;nearest&#039; });
+    }
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">restoreSourceSelection()</span><span class="function-counter">1</span> <span class="function-line">Line 111</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/modules/source-list-manager.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 160</code>: <small>let selectedRadio = restoreSourceSelection(radioName, sourceListClass);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const checked = document.querySelector(`input[name=&quot;${radioName}&quot;]:checked`);
+    if (checked &amp;&amp; isSourceVisible(checked.closest(&#039;.&#039; + sourceListClass))) {
+        return checked;
+    }
+    return null;
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">clearSourceFilters()</span><span class="function-counter">2</span> <span class="function-line">Line 130</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/blast-manager.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 54</code>: <small>window.clearSourceFilters(&#039;sourceFilter&#039;, &#039;selected_source&#039;, &#039;fasta-source-line&#039;, null, &#039;blastForm&#039;)</small></li>
+</ul></li>
+<li><strong>js/sequence-retrieval.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 19</code>: <small>clearSourceFilters(&#039;sourceFilter&#039;, &#039;selected_source&#039;, &#039;fasta-source-line&#039;, null, &#039;downloadForm&#039;);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const filterInput = document.getElementById(filterId);
+    const sourceLines = document.querySelectorAll(&#039;.&#039; + sourceListClass);
+    const filterMessage = filterMessageId ? document.getElementById(filterMessageId) : null;
+    const form = document.getElementById(formId);
+    
+    // Clear filter input
+    if (filterInput) {
+        filterInput.value = &#039;&#039;;
+    }
+    
+    // Show all source lines (remove inline display: none)
+    sourceLines.forEach(line =&gt; {
+        line.style.display = &#039;&#039;;</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">updateCurrentSelectionDisplay()</span><span class="function-counter">7</span> <span class="function-line">Line 188</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (7 times):</strong>
+<ul>
+<li><strong>js/blast-manager.js</strong> (3x)
+<ul style="margin-top: 5px;">
+<li><code>line 59</code>: <small>window.updateCurrentSelectionDisplay();</small></li>
+<li><code>line 74</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 116</code>: <small>updateCurrentSelectionDisplay();</small></li>
+</ul></li>
+<li><strong>js/sequence-retrieval.js</strong> (4x)
+<ul style="margin-top: 5px;">
+<li><code>line 71</code>: <small>window.updateCurrentSelectionDisplay(&#039;currentSelection&#039;, &#039;fasta-source-line&#039;, true);</small></li>
+<li><code>line 91</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 106</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 155</code>: <small>updateCurrentSelectionDisplay();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const checked = document.querySelector(&#039;input[name=&quot;selected_source&quot;]:checked&#039;);
+    const selectionDiv = document.getElementById(selectionDivId);
+    
+    if (!selectionDiv) {
+        console.warn(&#039;Selection display div not found:&#039;, selectionDivId);
+        return;
+    }
+    
+    if (checked) {
+        const line = checked.closest(&#039;.&#039; + sourceListClass);
+        const groupBadge = line ? line.querySelector(&#039;.badge&#039;) : null;
+        const group = groupBadge ? groupBadge.textContent.trim()</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">initializeSourceListManager()</span><span class="function-counter">2</span> <span class="function-line">Line 226</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/blast-manager.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 68</code>: <small>initializeSourceListManager({</small></li>
+</ul></li>
+<li><strong>js/sequence-retrieval.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 80</code>: <small>initializeSourceListManager({</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{}</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/modules/utilities.js (5)</div>
+<div class="functions-list hidden">
+<div class="file-info">
+<strong>📋 Included in:</strong>
+<div class="php-pages">
+<span class="php-page">tools/blast.php</span>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">escapeHtml()</span><span class="function-counter">8</span> <span class="function-line">Line 11</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (8 times):</strong>
+<ul>
+<li><strong>js/sequence-retrieval.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 213</code>: <small>return `&lt;div style=&quot;padding: 4px 0;&quot;&gt;&lt;span style=&quot;background: ${bgColor}; padding: 2px 6px; border-r</small></li>
+</ul></li>
+<li><strong>js/modules/organism-management.js</strong> (7x)
+<ul style="margin-top: 5px;">
+<li><code>line 35</code>: <small>html += &#039;&lt;code class=&quot;text-break&quot;&gt;&#039; + escapeHtml(data.command) + &#039;&lt;/code&gt;&lt;br&gt;&#039;;</small></li>
+<li><code>line 138</code>: <small>html += &#039;&lt;li&gt;File owner: &lt;code&gt;&#039; + escapeHtml(response.error.owner) + &#039;&lt;/code&gt;&lt;/li&gt;&#039;;</small></li>
+<li><code>line 140</code>: <small>html += &#039;&lt;li&gt;Web server user: &lt;code&gt;&#039; + escapeHtml(response.error.web_user) + &#039;&lt;/code&gt;&lt;/li&gt;&#039;;</small></li>
+<li><code>line 142</code>: <small>html += &#039;&lt;li&gt;Web server group: &lt;code&gt;&#039; + escapeHtml(response.error.web_group) + &#039;&lt;/code&gt;&lt;/li&gt;&#039;;</small></li>
+<li><code>line 148</code>: <small>html += &#039;&lt;code class=&quot;text-break&quot;&gt;&#039; + escapeHtml(response.error.command) + &#039;&lt;/code&gt;&#039;;</small></li>
+<li><code>line 297</code>: <small>html += &#039;&lt;code class=&quot;text-break&quot;&gt;&#039; + escapeHtml(data.command) + &#039;&lt;/code&gt;&lt;br&gt;&#039;;</small></li>
+<li><code>line 366</code>: <small>html += &#039;&lt;code class=&quot;text-break&quot;&gt;&#039; + escapeHtml(data.command) + &#039;&lt;/code&gt;&lt;br&gt;&#039;;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const map = {
+        &#039;&amp;&#039;: &#039;&amp;amp;&#039;,
+        &#039;&lt;&#039;: &#039;&amp;lt;&#039;,
+        &#039;&gt;&#039;: &#039;&amp;gt;&#039;,
+        &#039;&quot;&#039;: &#039;&amp;quot;&#039;,
+        &quot;&#039;&quot;: &#039;&amp;#039;&#039;
+    };
+    return text.replace(/[&amp;&lt;&gt;&quot;&#039;]/g, m =&gt; map[m]);
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">detectSequenceType()</span><span class="function-counter">2</span> <span class="function-line">Line 29</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/blast-manager.js</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 159</code>: <small>const result = detectSequenceType(this.value);</small></li>
+<li><code>line 173</code>: <small>const result = detectSequenceType(queryTextarea.value);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    sequence = sequence.trim();
+    
+    if (!sequence) {
+        return { type: &#039;unknown&#039;, message: &#039;&#039; };
+    }
+    
+    // Remove all header lines (lines starting with &gt;)
+    const lines = sequence.split(&#039;\n&#039;);
+    let seq = lines.filter(line =&gt; !line.trim().startsWith(&#039;&gt;&#039;)).join(&#039;&#039;).toUpperCase();
+    
+    // Remove whitespace
+    seq = seq.replace(/\s/g, &#039;&#039;);
+    
+    // Determine sequence type
+    // Count characters to determine type
+    const proteinChars = (seq.match(/[EFIPQZ]/g) || []</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">filterBlastPrograms()</span><span class="function-counter">2</span> <span class="function-line">Line 93</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/blast-manager.js</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 166</code>: <small>filterBlastPrograms(result.type, &#039;blast_program&#039;);</small></li>
+<li><code>line 176</code>: <small>filterBlastPrograms(result.type, &#039;blast_program&#039;);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const programSelect = document.getElementById(programSelectId);
+    if (!programSelect) {
+        return;
+    }
+    
+    // BLAST program requirements:
+    // blastn (DNA→DNA): needs nucleotide query
+    // blastp (Protein→Protein): needs protein query
+    // blastx (DNA→Protein): needs nucleotide query
+    // tblastn (Protein→DNA): needs protein query
+    // tblastx (DNA→DNA): needs nucleotide query
+    
+    const proteinPrograms = [&#039;blastp&#039;, &#039;tblastn&#039;];        // Protein input</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">updateSequenceTypeInfo()</span><span class="function-counter">2</span> <span class="function-line">Line 139</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/blast-manager.js</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 162</code>: <small>updateSequenceTypeInfo(result.message, &#039;sequenceTypeInfo&#039;, &#039;sequenceTypeMessage&#039;);</small></li>
+<li><code>line 174</code>: <small>updateSequenceTypeInfo(result.message, &#039;sequenceTypeInfo&#039;, &#039;sequenceTypeMessage&#039;);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const container = document.getElementById(containerElementId);
+    const messageEl = document.getElementById(messageElementId);
+    
+    if (!container || !messageEl) {
+        return;
+    }
+    
+    if (message) {
+        messageEl.textContent = message;
+        container.style.display = &#039;block&#039;;
+    } else {
+        container.style.display = &#039;none&#039;;
+    }
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">updateDatabaseList()</span><span class="function-counter">5</span> <span class="function-line">Line 161</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (5 times):</strong>
+<ul>
+<li><strong>js/blast-manager.js</strong> (3x)
+<ul style="margin-top: 5px;">
+<li><code>line 73</code>: <small>updateDatabaseList();</small></li>
+<li><code>line 119</code>: <small>updateDatabaseList();</small></li>
+<li><code>line 167</code>: <small>updateDatabaseList();</small></li>
+</ul></li>
+<li><strong>tools/blast.php</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 259</code>: <small>&lt;select id=&quot;blast_program&quot; name=&quot;blast_program&quot; class=&quot;form-control&quot; onchange=&quot;updateDatabaseList();</small></li>
+<li><code>line 344</code>: <small>onchange=&quot;updateDatabaseList();&quot;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    // Safety check - databasesByAssembly needs to be defined
+    if (typeof databasesByAssembly === &#039;undefined&#039;) {
+        console.error(&#039;databasesByAssembly not loaded yet&#039;);
+        return;
+    }
+    
+    const selectedRadio = document.querySelector(&#039;input[name=&quot;selected_source&quot;]:checked&#039;);
+    const program = document.getElementById(&#039;blast_program&#039;).value;
+    const dbBadges = document.getElementById(&#039;databaseBadges&#039;);
+    
+    if (!dbBadges) {
+        console.error(&#039;databaseBadges element</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/sequence-retrieval.js (6)</div>
+<div class="functions-list hidden">
+<div class="file-info">
+<strong>📋 Included in:</strong>
+<div class="php-pages">
+<span class="php-page">tools/retrieve_sequences.php</span>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">escapeHtml()</span><span class="function-counter">8</span> <span class="function-line">Line 6</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (8 times):</strong>
+<ul>
+<li><strong>js/sequence-retrieval.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 213</code>: <small>return `&lt;div style=&quot;padding: 4px 0;&quot;&gt;&lt;span style=&quot;background: ${bgColor}; padding: 2px 6px; border-r</small></li>
+</ul></li>
+<li><strong>js/modules/organism-management.js</strong> (7x)
+<ul style="margin-top: 5px;">
+<li><code>line 35</code>: <small>html += &#039;&lt;code class=&quot;text-break&quot;&gt;&#039; + escapeHtml(data.command) + &#039;&lt;/code&gt;&lt;br&gt;&#039;;</small></li>
+<li><code>line 138</code>: <small>html += &#039;&lt;li&gt;File owner: &lt;code&gt;&#039; + escapeHtml(response.error.owner) + &#039;&lt;/code&gt;&lt;/li&gt;&#039;;</small></li>
+<li><code>line 140</code>: <small>html += &#039;&lt;li&gt;Web server user: &lt;code&gt;&#039; + escapeHtml(response.error.web_user) + &#039;&lt;/code&gt;&lt;/li&gt;&#039;;</small></li>
+<li><code>line 142</code>: <small>html += &#039;&lt;li&gt;Web server group: &lt;code&gt;&#039; + escapeHtml(response.error.web_group) + &#039;&lt;/code&gt;&lt;/li&gt;&#039;;</small></li>
+<li><code>line 148</code>: <small>html += &#039;&lt;code class=&quot;text-break&quot;&gt;&#039; + escapeHtml(response.error.command) + &#039;&lt;/code&gt;&#039;;</small></li>
+<li><code>line 297</code>: <small>html += &#039;&lt;code class=&quot;text-break&quot;&gt;&#039; + escapeHtml(data.command) + &#039;&lt;/code&gt;&lt;br&gt;&#039;;</small></li>
+<li><code>line 366</code>: <small>html += &#039;&lt;code class=&quot;text-break&quot;&gt;&#039; + escapeHtml(data.command) + &#039;&lt;/code&gt;&lt;br&gt;&#039;;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const map = {
+        &#039;&amp;&#039;: &#039;&amp;amp;&#039;,
+        &#039;&lt;&#039;: &#039;&amp;lt;&#039;,
+        &#039;&gt;&#039;: &#039;&amp;gt;&#039;,
+        &#039;&quot;&#039;: &#039;&amp;quot;&#039;,
+        &quot;&#039;&quot;: &#039;&amp;#039;&#039;
+    };
+    return text.replace(/[&amp;&lt;&gt;&quot;&#039;]/g, m =&gt; map[m]);
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">clearSourceFilter()</span><span class="function-counter">1</span> <span class="function-line">Line 17</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>tools/retrieve_sequences.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 241</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-success&quot; onclick=&quot;clearSourceFilter();&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    clearSourceFilters(&#039;sourceFilter&#039;, &#039;selected_source&#039;, &#039;fasta-source-line&#039;, null, &#039;downloadForm&#039;);
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">initializeSequenceRetrieval()</span><span class="function-counter">2</span> <span class="function-line">Line 21</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/sequence-retrieval.js</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 297</code>: <small>initializeSequenceRetrieval({ shouldScroll: shouldScroll });</small></li>
+<li><code>line 304</code>: <small>initializeSequenceRetrieval({ shouldScroll: shouldScroll });</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">updateCurrentSelectionDisplay()</span><span class="function-counter">7</span> <span class="function-line">Line 70</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (7 times):</strong>
+<ul>
+<li><strong>js/blast-manager.js</strong> (3x)
+<ul style="margin-top: 5px;">
+<li><code>line 59</code>: <small>window.updateCurrentSelectionDisplay();</small></li>
+<li><code>line 74</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 116</code>: <small>updateCurrentSelectionDisplay();</small></li>
+</ul></li>
+<li><strong>js/sequence-retrieval.js</strong> (4x)
+<ul style="margin-top: 5px;">
+<li><code>line 71</code>: <small>window.updateCurrentSelectionDisplay(&#039;currentSelection&#039;, &#039;fasta-source-line&#039;, true);</small></li>
+<li><code>line 91</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 106</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 155</code>: <small>updateCurrentSelectionDisplay();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+        window.updateCurrentSelectionDisplay(&#039;currentSelection&#039;, &#039;fasta-source-line&#039;, true);
+        const selectionDiv = document.getElementById(&#039;currentSelection&#039;);
+        const checked = document.querySelector(&#039;input[name=&quot;selected_source&quot;]:checked&#039;);
+        if (!checked) {
+            selectionDiv.innerHTML = &#039;&lt;span style=&quot;color: #999;&quot;&gt;None selected&lt;/span&gt;&#039;;
+        }
+    }</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">updateSearchIdsDisplay()</span><span class="function-counter">1</span> <span class="function-line">Line 165</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/sequence-retrieval.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 225</code>: <small>updateSearchIdsDisplay();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+        if (!featureIdsTextarea) return;
+        
+        // Get user input IDs
+        const rawIds = featureIdsTextarea.value.trim();
+        const userInputIds = rawIds
+            .split(/[\n,]+/)
+            .map(id =&gt; id.trim())
+            .filter(id =&gt; id.length &gt; 0);
+        
+        // Get found IDs from server (IDs that were actually returned by blastdbcmd)
+        let foundIds = [];
+        if (foundIdsField &amp;&amp; foundIdsField.value) {
+            try {
+                foundIds = JSO</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">initializeCopyTooltips()</span><span class="function-counter">1</span> <span class="function-line">Line 245</span></div>
+<span>▶</span>
+</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/modules/copy-to-clipboard.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 26</code>: <small>initializeCopyTooltips();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const copyables = document.querySelectorAll(&quot;.copyable&quot;);
+    copyables.forEach(el =&gt; {
+        // Custom simple tooltip that follows cursor
+        el.addEventListener(&quot;mouseenter&quot;, function() {
+            // Remove any existing tooltip
+            const existing = document.getElementById(&quot;custom-copy-tooltip&quot;);
+            if (existing) existing.remove();
+            
+            // Create simple tooltip
+            const tooltip = document.createElement(&quot;div&quot;);
+            tooltip.id =</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.file-header').forEach(h => h.addEventListener('click', function() {
+    this.closest('.file-section').querySelector('.functions-list').classList.toggle('hidden');
+  }));
+});
+
+function toggleUnused(header) {
+  const content = header.nextElementSibling;
+  const arrow = header.querySelector('.unusedArrow');
+  content.classList.toggle('hidden');
+  arrow.textContent = content.classList.contains('hidden') ? '▶' : '▼';
+}
+
+function expandAll() {
+  document.querySelectorAll('.functions-list').forEach(list => list.classList.remove('hidden'));
+}
+
+function collapseAll() {
+  document.querySelectorAll('.functions-list').forEach(list => list.classList.add('hidden'));
+}
+
+function toggleAll() {
+  const lists = document.querySelectorAll('.functions-list');
+  const hiddenCount = document.querySelectorAll('.functions-list.hidden').length;
+  const btn = document.getElementById('toggleBtn');
+  if (hiddenCount > 0) {
+    expandAll();
+    btn.textContent = '📁 Collapse All';
+  } else {
+    collapseAll();
+    btn.textContent = '📂 Expand All';
+  }
+}
+
+function updateToggleButton() {
+  const btn = document.getElementById('toggleBtn');
+  const hiddenCount = document.querySelectorAll('.functions-list.hidden').length;
+  if (hiddenCount === 0) {
+    btn.textContent = '📁 Collapse All';
+  } else {
+    btn.textContent = '📂 Expand All';
+  }
+}
+
+function filterSearch() {
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+  const fileSections = document.querySelectorAll('.file-section');
+  
+  fileSections.forEach(section => {
+    const fileName = section.querySelector('.file-header').textContent.toLowerCase();
+    const functionItems = section.querySelectorAll('.function-item');
+    let hasVisibleFunction = false;
+    
+    functionItems.forEach(item => {
+      const funcName = item.querySelector('.function-name').textContent.toLowerCase();
+      const funcDetails = item.querySelector('.function-details').textContent.toLowerCase();
+      const match = funcName.includes(searchTerm) || funcDetails.includes(searchTerm) || fileName.includes(searchTerm);
+      
+      if (searchTerm === '' || match) {
+        item.classList.remove('hidden-search');
+        hasVisibleFunction = true;
+      } else {
+        item.classList.add('hidden-search');
+      }
+    });
+    
+    if (searchTerm === '' || hasVisibleFunction || fileName.includes(searchTerm)) {
+      section.classList.remove('hidden-search');
+      if (searchTerm !== '') {
+        section.querySelector('.functions-list').classList.remove('hidden');
+      } else {
+        section.querySelector('.functions-list').classList.add('hidden');
+      }
+    } else {
+      section.classList.add('hidden-search');
+    }
+  });
+  updateToggleButton();
+}
+</script>
+</body>
+</html>

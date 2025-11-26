@@ -1,7 +1,7 @@
 <?php
 /**
  * AUTO-GENERATED FUNCTION REGISTRY
- * Generated: 2025-11-21 22:49:01
+ * Generated: 2025-11-26 00:32:29
  * To regenerate, run: php tools/generate_registry.php
  */
 
@@ -2461,11 +2461,18 @@ JS;
 * @param string $dbFile - Path to SQLite database
 * @return array - Array of matching features with annotations
 */',
-      'code' => 'function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile) {
-    // Build the WHERE clause for annotations
+      'code' => 'function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, $source_names = []) {
+    // Use provided source names filter, or empty array if not provided
+    $source_filter = !empty($source_names) ? $source_names : [];
+    $search_term_clean = $search_term;
+    
+    // Build the WHERE clause for annotations with REGEXP ranking
     if ($is_quoted_search) {
-        // Exact phrase match - use CASE for relevance scoring
-        $like_pattern = "%$search_term%";
+        // Exact phrase match
+        $like_pattern = "%$search_term_clean%";
+        $regex_exact = \'\\b\' . preg_quote($search_term_clean, \'/\') . \'\\b\';
+        $regex_start = \'\\b\' . preg_quote($search_term_clean, \'/\');
+        
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
                          a.annotation_accession, a.annotation_description, 
                          fa.score, fa.date, ans.annotation_source_name, 
@@ -2480,27 +2487,44 @@ JS;
                     AND (a.annotation_description LIKE ? 
                        OR f.feature_name LIKE ? 
                        OR f.feature_description LIKE ?
-                       OR a.annotation_accession LIKE ?)
-                  ORDER BY 
-                    CASE 
-                      WHEN f.feature_name LIKE ? THEN 1
-                      WHEN f.feature_description LIKE ? THEN 2
-                      WHEN a.annotation_description LIKE ? THEN 3
-                      ELSE 4
-                    END,
-                    f.feature_uniquename
-                  LIMIT 100";
-        $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern, $like_pattern, $like_pattern, $like_pattern];
+                       OR a.annotation_accession LIKE ?)";
+        
+        $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern];
+        
+        // Add source filter if specified (exact match with IN)
+        if (!empty($source_filter)) {
+            $placeholders = implode(\',\', array_fill(0, count($source_filter), \'?\'));
+            $query .= " AND ans.annotation_source_name IN ($placeholders)";
+            $params = array_merge($params, $source_filter);
+        }
+        
+        $query .= " ORDER BY 
+                     CASE 
+                       WHEN f.feature_name REGEXP ? THEN 1
+                       WHEN f.feature_name REGEXP ? THEN 2
+                       WHEN f.feature_description REGEXP ? THEN 3
+                       WHEN a.annotation_description REGEXP ? THEN 4
+                       ELSE 5
+                     END,
+                     f.feature_uniquename";
+        
+        $params[] = $regex_exact;
+        $params[] = $regex_start;
+        $params[] = $regex_start;
+        $params[] = $regex_exact;
+        
     } else {
         // Multi-term keyword search (all terms must appear somewhere)
-        $terms = array_filter(array_map(\'trim\', preg_split(\'/\\s+/\', $search_term)));
+        $terms = array_filter(array_map(\'trim\', preg_split(\'/\\s+/\', $search_term_clean)));
         if (empty($terms)) {
-            return [];
+            return [\'results\' => [], \'capped\' => false, \'warning\' => null];
         }
         
         // Extract primary term for relevance scoring (first word of search)
         $primary_term = $terms[0];
         $primary_pattern = "%$primary_term%";
+        $regex_exact = \'\\b\' . preg_quote($primary_term, \'/\') . \'\\b\';
+        $regex_start = \'\\b\' . preg_quote($primary_term, \'/\');
         
         // Build conditions: (col1 LIKE term1 OR col2 LIKE term1 OR ...) AND (col1 LIKE term2 OR ...)
         $conditions = [];
@@ -2528,30 +2552,148 @@ JS;
                     AND fa.annotation_id = a.annotation_id 
                     AND f.organism_id = o.organism_id
                     AND f.genome_id = g.genome_id
-                    AND $where_clause
-                  ORDER BY 
+                    AND $where_clause";
+        
+        // Add source filter if specified (exact match with IN)
+        if (!empty($source_filter)) {
+            $placeholders = implode(\',\', array_fill(0, count($source_filter), \'?\'));
+            $query .= " AND ans.annotation_source_name IN ($placeholders)";
+            $params = array_merge($params, $source_filter);
+        }
+        
+        $query .= " ORDER BY 
                     CASE 
-                      WHEN f.feature_name LIKE ? THEN 1
-                      WHEN f.feature_description LIKE ? THEN 2
-                      WHEN a.annotation_description LIKE ? THEN 3
-                      ELSE 4
+                      WHEN f.feature_name REGEXP ? THEN 1
+                      WHEN f.feature_name REGEXP ? THEN 2
+                      WHEN f.feature_description REGEXP ? THEN 3
+                      WHEN a.annotation_description REGEXP ? THEN 4
+                      ELSE 5
                     END,
-                    f.feature_uniquename
-                  LIMIT 100";
+                    f.feature_uniquename";
         
         // Add primary term patterns for CASE statement to params
-        $params[] = $primary_pattern;
-        $params[] = $primary_pattern;
-        $params[] = $primary_pattern;
+        $params[] = $regex_exact;
+        $params[] = $regex_start;
+        $params[] = $regex_start;
+        $params[] = $regex_exact;
+    }
+    
+    // Use LIMIT+check approach: query for 2501 results to detect if there are more
+    $max_display = 2500;
+    $query .= " LIMIT " . ($max_display + 1);
+    
+    try {
+        $dbh = new PDO("sqlite:" . $dbFile);
+        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        // Register REGEXP function
+        $dbh->sqliteCreateFunction(\'REGEXP\', function($pattern, $text) {
+            return preg_match(\'/\' . $pattern . \'/i\', $text) ? 1 : 0;
+        }, 2);
+        
+        $stmt = $dbh->prepare($query);
+        $stmt->execute($params);
+        $all_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $dbh = null;
+        
+        // Check if results were capped
+        $capped = count($all_results) > $max_display;
+        $warning = null;
+        
+        if ($capped) {
+            // We got 2501+ results, so we know it\'s "2500+"
+            $results = array_slice($all_results, 0, $max_display);
+            $warning = "2,500+ results found. Use Advanced Filter or add more search terms to refine.";
+        } else {
+            // We got fewer than 2501, so all results are displayed
+            $results = $all_results;
+        }
+        
+        return [
+            \'results\' => $results,
+            \'capped\' => $capped,
+            \'warning\' => $warning
+        ];
+        
+    } catch (PDOException $e) {
+        return [
+            \'results\' => [],
+            \'capped\' => false,
+            \'warning\' => \'Search error: \' . $e->getMessage()
+        ];
+    }
+}',
+    ),
+    10 => 
+    array (
+      'name' => 'searchFeaturesAndAnnotationsLike',
+      'line' => 446,
+      'comment' => '',
+      'code' => 'function searchFeaturesAndAnnotationsLike($search_term, $is_quoted_search, $dbFile) {
+    if ($is_quoted_search) {
+        $like_pattern = "%$search_term%";
+        $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern];
+    } else {
+        $terms = array_filter(array_map(\'trim\', preg_split(\'/\\s+/\', $search_term)));
+        if (empty($terms)) {
+            return [];
+        }
+        
+        $conditions = [];
+        $params = [];
+        $columns = [\'a.annotation_description\', \'f.feature_name\', \'f.feature_description\', \'a.annotation_accession\'];
+        
+        foreach ($terms as $term) {
+            $term_conditions = implode(\' OR \', array_map(function($col) { return "$col LIKE ?"; }, $columns));
+            $conditions[] = "($term_conditions)";
+            for ($i = 0; $i < count($columns); $i++) {
+                $params[] = "%$term%";
+            }
+        }
+        $where_clause = implode(\' AND \', $conditions);
+    }
+    
+    if ($is_quoted_search) {
+        $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
+                         a.annotation_accession, a.annotation_description, 
+                         fa.score, fa.date, ans.annotation_source_name, 
+                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                         g.genome_accession
+                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, genome g
+                  WHERE ans.annotation_source_id = a.annotation_source_id 
+                    AND f.feature_id = fa.feature_id 
+                    AND fa.annotation_id = a.annotation_id 
+                    AND f.organism_id = o.organism_id
+                    AND f.genome_id = g.genome_id
+                    AND (a.annotation_description LIKE ? 
+                       OR f.feature_name LIKE ? 
+                       OR f.feature_description LIKE ?
+                       OR a.annotation_accession LIKE ?)
+                  ORDER BY f.feature_uniquename";
+    } else {
+        $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
+                         a.annotation_accession, a.annotation_description, 
+                         fa.score, fa.date, ans.annotation_source_name, 
+                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                         g.genome_accession
+                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, genome g
+                  WHERE ans.annotation_source_id = a.annotation_source_id 
+                    AND f.feature_id = fa.feature_id 
+                    AND fa.annotation_id = a.annotation_id 
+                    AND f.organism_id = o.organism_id
+                    AND f.genome_id = g.genome_id
+                    AND $where_clause
+                  ORDER BY f.feature_uniquename";
     }
     
     return fetchData($query, $dbFile, $params);
 }',
     ),
-    10 => 
+    11 => 
     array (
       'name' => 'searchFeaturesByUniquenameForSearch',
-      'line' => 379,
+      'line' => 516,
       'comment' => '/**
 * Search features by uniquename (primary search)
 * Returns only features, not annotations
@@ -2573,7 +2715,7 @@ JS;
                     AND f.feature_uniquename LIKE ? 
                     AND (o.genus || \' \' || o.species = ?)
                   ORDER BY f.feature_uniquename
-                  LIMIT 100";
+                  ";
         $params = ["%$search_term%", $organism_name];
     } else {
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
@@ -2584,11 +2726,94 @@ JS;
                     AND f.genome_id = g.genome_id
                     AND f.feature_uniquename LIKE ?
                   ORDER BY f.feature_uniquename
-                  LIMIT 100";
+                  ";
         $params = ["%$search_term%"];
     }
     
     return fetchData($query, $dbFile, $params);
+}',
+    ),
+    12 => 
+    array (
+      'name' => 'getAnnotationSources',
+      'line' => 553,
+      'comment' => '/**
+* Get all annotation sources for an organism with counts
+* Used to populate search help/tutorial
+*
+* @param string $dbFile - Path to SQLite database
+* @return array - Array of sources with name and count
+*/',
+      'code' => 'function getAnnotationSources($dbFile) {
+    try {
+        $query = "SELECT DISTINCT 
+                         ans.annotation_source_name as name,
+                         COUNT(a.annotation_id) as count
+                  FROM annotation_source ans
+                  LEFT JOIN annotation a ON ans.annotation_source_id = a.annotation_source_id
+                  GROUP BY ans.annotation_source_id
+                  ORDER BY count DESC";
+        
+        return fetchData($query, $dbFile, []);
+    } catch (Exception $e) {
+        return [];
+    }
+}',
+    ),
+    13 => 
+    array (
+      'name' => 'getAnnotationSourcesByType',
+      'line' => 576,
+      'comment' => '/**
+* Get annotation sources grouped by type
+* Used to populate advanced search filter modal
+*
+* @param string $dbFile - Path to SQLite database
+* @return array - Grouped sources: {type: [{name, count}, ...], ...}
+*/',
+      'code' => 'function getAnnotationSourcesByType($dbFile) {
+    try {
+        // Get all sources with their annotation types from the database
+        $query = "SELECT 
+                    ans.annotation_source_name as name,
+                    ans.annotation_type as type,
+                    COUNT(a.annotation_id) as count
+                  FROM annotation_source ans
+                  LEFT JOIN annotation a ON ans.annotation_source_id = a.annotation_source_id
+                  GROUP BY ans.annotation_source_id, ans.annotation_type
+                  ORDER BY ans.annotation_type, COUNT(a.annotation_id) DESC";
+        
+        $sources_with_types = fetchData($query, $dbFile, []);
+        
+        // Group by annotation_type
+        $grouped = [];
+        foreach ($sources_with_types as $source) {
+            $type = $source[\'type\'];
+            
+            if (!isset($grouped[$type])) {
+                $grouped[$type] = [];
+            }
+            
+            $grouped[$type][] = [
+                \'name\' => $source[\'name\'],
+                \'count\' => $source[\'count\']
+            ];
+        }
+        
+        // Sort types in display order
+        $order = [\'Gene Ontology\', \'Gene Families\', \'Domains\', \'Orthologs\', \'Homologs\', \'AI Annotations\'];
+        $sorted = [];
+        foreach ($order as $type) {
+            if (isset($grouped[$type])) {
+                $sorted[$type] = $grouped[$type];
+            }
+        }
+        
+        return $sorted;
+        
+    } catch (Exception $e) {
+        return [];
+    }
 }',
     ),
   ),
@@ -3584,6 +3809,12 @@ JS;
     try {
         $dbh = new PDO("sqlite:" . $dbFile);
         $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        // Register custom REGEXP function for word boundary matching
+        $dbh->sqliteCreateFunction(\'REGEXP\', function($pattern, $text) {
+            return preg_match(\'/\' . $pattern . \'/i\', $text) ? 1 : 0;
+        }, 2);
+        
         return $dbh;
     } catch (PDOException $e) {
         die("Database connection failed: " . $e->getMessage());
@@ -3593,7 +3824,7 @@ JS;
     3 => 
     array (
       'name' => 'fetchData',
-      'line' => 200,
+      'line' => 206,
       'comment' => '/**
 * Execute SQL query with prepared statement
 *
@@ -3619,7 +3850,7 @@ JS;
     4 => 
     array (
       'name' => 'buildLikeConditions',
-      'line' => 235,
+      'line' => 241,
       'comment' => '/**
 * Build SQL LIKE conditions for multi-column search
 * Supports both quoted (phrase) and unquoted (word-by-word) searches
@@ -3673,7 +3904,7 @@ JS;
     5 => 
     array (
       'name' => 'getAccessibleGenomeIds',
-      'line' => 271,
+      'line' => 277,
       'comment' => '/**
 * Get accessible genome IDs from database for organism
 *
@@ -3702,7 +3933,7 @@ JS;
     6 => 
     array (
       'name' => 'loadOrganismInfo',
-      'line' => 295,
+      'line' => 301,
       'comment' => '/**
 * Load organism info from organism.json file
 *
@@ -3737,7 +3968,7 @@ JS;
     7 => 
     array (
       'name' => 'verifyOrganismDatabase',
-      'line' => 326,
+      'line' => 332,
       'comment' => '/**
 * Verify organism database file exists
 *
@@ -5036,12 +5267,17 @@ JS;
 * @param string $input - Raw search input from user
 * @return string - Sanitized search string safe for database queries
 */',
-      'code' => 'function sanitize_search_input($input) {
+      'code' => 'function sanitize_search_input($input, $quoted_search = false) {
     // Remove null bytes and control characters
     $input = preg_replace(\'/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/\', \'\', $input);
     
     // Trim whitespace
     $input = trim($input);
+    
+    // Remove quotes if this is a quoted search - they will be removed before passing to database
+    if ($quoted_search) {
+        $input = trim($input, \'"\');
+    }
     
     // Remove excessive whitespace (multiple spaces become single space)
     $input = preg_replace(\'/\\s+/\', \' \', $input);
@@ -5052,7 +5288,7 @@ JS;
     2 => 
     array (
       'name' => 'validate_search_term',
-      'line' => 63,
+      'line' => 68,
       'comment' => '/**
 * Validate a search term for safety and usability
 *
@@ -5089,7 +5325,7 @@ JS;
     3 => 
     array (
       'name' => 'is_quoted_search',
-      'line' => 92,
+      'line' => 97,
       'comment' => '/**
 * Check if a search term is quoted (surrounded by quotes)
 *
@@ -5106,7 +5342,7 @@ JS;
     4 => 
     array (
       'name' => 'validateOrganismParam',
-      'line' => 107,
+      'line' => 112,
       'comment' => '/**
 * Validate and extract organism parameter from GET/POST
 * Redirects to home if missing/empty
@@ -5126,7 +5362,7 @@ JS;
     5 => 
     array (
       'name' => 'validateAssemblyParam',
-      'line' => 123,
+      'line' => 128,
       'comment' => '/**
 * Validate and extract assembly parameter from GET/POST
 * Redirects to home if missing/empty
@@ -5566,6 +5802,90 @@ JS;
 }',
     ),
   ),
+  'tools/generate_js_registry.php' => 
+  array (
+    0 => 
+    array (
+      'name' => 'findJsFunctionUsages',
+      'line' => 101,
+      'comment' => '',
+      'code' => 'function findJsFunctionUsages($funcName, $jsDir, $definitionFile = null, $definitionLine = null) {
+    $usages = [];
+    $searchPattern = \'/\\b\' . preg_quote($funcName, \'/\') . \'\\s*\\(/\';
+    
+    // Search in JS files
+    $files = array_merge(glob($jsDir . \'/*.js\') ?: [], glob($jsDir . \'/modules/*.js\') ?: []);
+    foreach ($files as $file) {
+        if (strpos($file, \'.min.js\') !== false || strpos($file, \'unused\') !== false) continue;
+        
+        $content = file_get_contents($file);
+        if (preg_match_all($searchPattern, $content, $matches, PREG_OFFSET_CAPTURE)) {
+            foreach ($matches[0] as $match) {
+                $lineNum = substr_count($content, "\\n", 0, $match[1]) + 1;
+                $lines = explode("\\n", $content);
+                $contextLine = isset($lines[$lineNum - 1]) ? trim($lines[$lineNum - 1]) : \'\';
+                
+                // Skip comments
+                if (preg_match(\'/^\\s*(\\/\\/|\\/\\*)/\', $contextLine)) continue;
+                
+                // Skip the function definition line itself
+                if (preg_match(\'/(?:^|\\s)(?:function|const|let|var)\\s+\' . preg_quote($funcName) . \'\\s*[=:\\(]/\', $contextLine)) continue;
+                
+                $relativeFile = str_replace(__DIR__ . \'/../\', \'\', $file);
+                
+                // Skip if this is the definition file and line
+                if ($definitionFile && $definitionLine && $relativeFile === $definitionFile && $lineNum === $definitionLine) {
+                    continue;
+                }
+                
+                $usages[] = [
+                    \'file\' => $relativeFile,
+                    \'line\' => $lineNum,
+                    \'context\' => $contextLine
+                ];
+            }
+        }
+    }
+    
+    // Also search in PHP files for inline JS calls (onclick, etc.)
+    $phpFiles = array_merge(
+        glob(__DIR__ . \'/../*.php\') ?: [],
+        glob(__DIR__ . \'/../admin/*.php\') ?: [],
+        glob(__DIR__ . \'/../admin/**/*.php\') ?: [],
+        glob(__DIR__ . \'/../tools/*.php\') ?: [],
+        glob(__DIR__ . \'/../tools/**/*.php\') ?: []
+    );
+    
+    foreach (array_unique($phpFiles) as $phpFile) {
+        if (!file_exists($phpFile)) continue;
+        
+        $content = file_get_contents($phpFile);
+        if (preg_match_all($searchPattern, $content, $matches, PREG_OFFSET_CAPTURE)) {
+            foreach ($matches[0] as $match) {
+                $lineNum = substr_count($content, "\\n", 0, $match[1]) + 1;
+                $lines = explode("\\n", $content);
+                $contextLine = isset($lines[$lineNum - 1]) ? trim($lines[$lineNum - 1]) : \'\';
+                
+                // Skip PHP comments and function definitions
+                if (preg_match(\'/^\\s*(\\/\\/|\\/\\*|#)/\', $contextLine)) continue;
+                if (preg_match(\'/function\\s+\' . preg_quote($funcName) . \'\\s*\\(/\', $contextLine)) continue;
+                
+                // Must be in an HTML onclick, inline script, or similar
+                if (strpos($contextLine, $funcName) === false) continue;
+                
+                $usages[] = [
+                    \'file\' => str_replace(__DIR__ . \'/../\', \'\', $phpFile),
+                    \'line\' => $lineNum,
+                    \'context\' => $contextLine
+                ];
+            }
+        }
+    }
+    
+    return $usages;
+}',
+    ),
+  ),
   'tools/sequences_display.php' => 
   array (
     0 => 
@@ -5656,6 +5976,429 @@ JS;
     }
     
     return $sequences;
+}',
+    ),
+  ),
+  'admin/createUser.php' => 
+  array (
+    0 => 
+    array (
+      'name' => 'getOrganisms',
+      'line' => 130,
+      'comment' => '',
+      'code' => 'function getOrganisms() {
+    $orgs = [];
+    $path = \'../organisms\';
+    if (!is_dir($path)) {
+        return $orgs;
+    }
+    $organisms = scandir($path);
+    foreach ($organisms as $organism) {
+        if ($organism[0] === \'.\' || !is_dir("$path/$organism")) {
+            continue;
+        }
+        $assemblies = [];
+        $assemblyPath = "$path/$organism";
+        $files = scandir($assemblyPath);
+        foreach ($files as $file) {
+            if ($file[0] === \'.\' || !is_dir("$assemblyPath/$file")) {
+                continue;
+            }
+            $assemblies[] = $file;
+        }
+        $orgs[$organism] = $assemblies;
+    }
+    return $orgs;
+}',
+    ),
+  ),
+  'admin/manage_groups.php' => 
+  array (
+    0 => 
+    array (
+      'name' => 'get_all_organisms',
+      'line' => 24,
+      'comment' => '',
+      'code' => 'function get_all_organisms() {
+    global $organism_data;
+    $orgs = [];
+    $path = $organism_data;
+    if (!is_dir($path)) {
+        return $orgs;
+    }
+    $organisms = scandir($path);
+    foreach ($organisms as $organism) {
+        if ($organism[0] === \'.\' || !is_dir("$path/$organism")) {
+            continue;
+        }
+        $assemblies = [];
+        $assemblyPath = "$path/$organism";
+        $files = scandir($assemblyPath);
+        foreach ($files as $file) {
+            if ($file[0] === \'.\' || !is_dir("$assemblyPath/$file")) {
+                continue;
+            }
+            $assemblies[] = $file;
+        }
+        $orgs[$organism] = $assemblies;
+    }
+    return $orgs;
+}',
+    ),
+    1 => 
+    array (
+      'name' => 'get_all_existing_groups',
+      'line' => 50,
+      'comment' => '',
+      'code' => 'function get_all_existing_groups($groups_data) {
+    $all_groups = [];
+    foreach ($groups_data as $data) {
+        if (!empty($data[\'groups\'])) {
+            foreach ($data[\'groups\'] as $group) {
+                $all_groups[$group] = true;
+            }
+        }
+    }
+    $group_list = array_keys($all_groups);
+    sort($group_list);
+    return $group_list;
+}',
+    ),
+    2 => 
+    array (
+      'name' => 'sync_group_descriptions',
+      'line' => 67,
+      'comment' => '',
+      'code' => 'function sync_group_descriptions($existing_groups, $descriptions_data) {
+    $desc_map = [];
+    foreach ($descriptions_data as $desc) {
+        $desc_map[$desc[\'group_name\']] = $desc;
+    }
+    
+    $updated_descriptions = [];
+    
+    // Update existing groups to in_use = true
+    foreach ($existing_groups as $group) {
+        if (isset($desc_map[$group])) {
+            $desc_map[$group][\'in_use\'] = true;
+            $updated_descriptions[] = $desc_map[$group];
+        } else {
+            // New group - add with default structure
+            $updated_descriptions[] = [
+                \'group_name\' => $group,
+                \'images\' => [
+                    [
+                        \'file\' => \'\',
+                        \'caption\' => \'\'
+                    ]
+                ],
+                \'html_p\' => [
+                    [
+                        \'text\' => \'\',
+                        \'style\' => \'\',
+                        \'class\' => \'\'
+                    ]
+                ],
+                \'in_use\' => true
+            ];
+        }
+        unset($desc_map[$group]);
+    }
+    
+    // Add remaining groups that are not in use anymore
+    foreach ($desc_map as $group_name => $desc) {
+        $desc[\'in_use\'] = false;
+        $updated_descriptions[] = $desc;
+    }
+    
+    return $updated_descriptions;
+}',
+    ),
+  ),
+  'admin/manage_organisms.php' => 
+  array (
+    0 => 
+    array (
+      'name' => 'get_all_organisms_info',
+      'line' => 13,
+      'comment' => '',
+      'code' => 'function get_all_organisms_info() {
+    global $organism_data, $sequence_types;
+    $organisms_info = [];
+    
+    if (!is_dir($organism_data)) {
+        return $organisms_info;
+    }
+    
+    $organisms = scandir($organism_data);
+    foreach ($organisms as $organism) {
+        if ($organism[0] === \'.\' || !is_dir("$organism_data/$organism")) {
+            continue;
+        }
+        
+        // Get organism.json info if exists
+        $organism_json = "$organism_data/$organism/organism.json";
+        $json_validation = validateOrganismJson($organism_json);
+        $info = loadOrganismInfo($organism, $organism_data) ?? [];
+        
+        // Get assemblies
+        $assemblies = [];
+        $assembly_path = "$organism_data/$organism";
+        $files = scandir($assembly_path);
+        foreach ($files as $file) {
+            if ($file[0] === \'.\' || !is_dir("$assembly_path/$file")) {
+                continue;
+            }
+            $assemblies[] = $file;
+        }
+        
+        // Check for database file
+        $db_file = null;
+        if (file_exists("$organism_data/$organism/organism.sqlite")) {
+            $db_file = "$organism_data/$organism/organism.sqlite";
+        }
+        
+        $has_db = !is_null($db_file);
+        
+        // Validate database integrity if database exists
+        $db_validation = null;
+        $assembly_validation = null;
+        $fasta_validation = null;
+        if ($has_db) {
+            $db_validation = validateDatabaseIntegrity($db_file);
+            // Also validate assembly directories
+            $assembly_validation = validateAssemblyDirectories($db_file, "$organism_data/$organism");
+        }
+        // Validate FASTA files in assembly directories
+        $fasta_validation = validateAssemblyFastaFiles("$organism_data/$organism", $sequence_types);
+        
+        $organisms_info[$organism] = [
+            \'info\' => $info,
+            \'assemblies\' => $assemblies,
+            \'has_db\' => $has_db,
+            \'db_file\' => $db_file,
+            \'db_validation\' => $db_validation,
+            \'assembly_validation\' => $assembly_validation,
+            \'fasta_validation\' => $fasta_validation,
+            \'json_validation\' => $json_validation,
+            \'path\' => "$organism_data/$organism"
+        ];
+    }
+    
+    return $organisms_info;
+}',
+    ),
+  ),
+  'admin/manage_phylo_tree.php' => 
+  array (
+    0 => 
+    array (
+      'name' => 'get_organisms_metadata',
+      'line' => 17,
+      'comment' => '',
+      'code' => 'function get_organisms_metadata($organism_data_dir) {
+    $organisms = [];
+    $symlinks = glob($organism_data_dir . \'/*\', GLOB_ONLYDIR);
+    
+    foreach ($symlinks as $org_path) {
+        $organism_json = $org_path . \'/organism.json\';
+        if (file_exists($organism_json)) {
+            $data = json_decode(file_get_contents($organism_json), true);
+            $organism_name = basename($org_path);
+            
+            $organisms[$organism_name] = [
+                \'genus\' => $data[\'genus\'] ?? \'\',
+                \'species\' => $data[\'species\'] ?? \'\',
+                \'taxon_id\' => $data[\'taxon_id\'] ?? \'\',
+                \'common_name\' => $data[\'common_name\'] ?? \'\'
+            ];
+        }
+    }
+    
+    return $organisms;
+}',
+    ),
+    1 => 
+    array (
+      'name' => 'fetch_organism_image',
+      'line' => 40,
+      'comment' => '',
+      'code' => 'function fetch_organism_image($taxon_id, $organism_name = null) {
+    global $absolute_images_path;
+    
+    $ncbi_dir = $absolute_images_path . \'/ncbi_taxonomy\';
+    $image_path = $ncbi_dir . \'/\' . $taxon_id . \'.jpg\';
+    
+    // Check if image already cached
+    if (file_exists($image_path)) {
+        return \'images/ncbi_taxonomy/\' . $taxon_id . \'.jpg\';
+    }
+    
+    // Ensure directory exists
+    if (!is_dir($ncbi_dir)) {
+        @mkdir($ncbi_dir, 0755, true);
+    }
+    
+    // Download from NCBI
+    $image_url = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon/{$taxon_id}/image";
+    
+    $context = stream_context_create([\'http\' => [\'timeout\' => 10, \'user_agent\' => \'MOOP\']]);
+    $image_data = @file_get_contents($image_url, false, $context);
+    
+    if ($image_data === false || strlen($image_data) < 100) {
+        return null;
+    }
+    
+    // Save image
+    if (file_put_contents($image_path, $image_data) !== false) {
+        return \'images/ncbi_taxonomy/\' . $taxon_id . \'.jpg\';
+    }
+    
+    return null;
+}',
+    ),
+    2 => 
+    array (
+      'name' => 'fetch_taxonomy_lineage',
+      'line' => 76,
+      'comment' => '',
+      'code' => 'function fetch_taxonomy_lineage($taxon_id) {
+    $url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id={$taxon_id}&retmode=xml";
+    
+    $context = stream_context_create([
+        \'http\' => [
+            \'timeout\' => 10,
+            \'user_agent\' => \'MOOP Phylo Tree Generator\'
+        ]
+    ]);
+    $response = @file_get_contents($url, false, $context);
+    
+    if ($response === false) {
+        return null;
+    }
+    
+    // Parse XML using regex since SimpleXML isn\'t always available
+    $lineage = [];
+    
+    // Extract Lineage text (semicolon-separated)
+    if (preg_match(\'/<Lineage>(.+?)<\\/Lineage>/s\', $response, $matches)) {
+        $lineage_text = trim($matches[1]);
+        $lineage_parts = array_filter(array_map(\'trim\', explode(\';\', $lineage_text)));
+        
+        // Extract ranks from LineageEx
+        $rank_map = [];
+        if (preg_match_all(\'/<Taxon>.*?<ScientificName>(.+?)<\\/ScientificName>.*?<Rank>(.+?)<\\/Rank>.*?<\\/Taxon>/s\', $response, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $sci_name = trim($match[1]);
+                $rank = trim($match[2]);
+                $rank_map[$sci_name] = $rank;
+            }
+        }
+        
+        // Build lineage array with matched ranks
+        $valid_ranks = [\'superkingdom\', \'kingdom\', \'phylum\', \'class\', \'order\', \'family\', \'genus\'];
+        foreach ($lineage_parts as $name) {
+            $rank = $rank_map[$name] ?? null;
+            
+            // Map domain to superkingdom
+            if ($rank === \'domain\') {
+                $rank = \'superkingdom\';
+            }
+            
+            // Only include standard taxonomic ranks (skip intermediate ranks like \'clade\')
+            // $rank exists AND $rank is one of the major taxonomic levels
+            if ($rank && in_array($rank, $valid_ranks)) {
+                $lineage[] = [
+                    \'rank\' => $rank,
+                    \'name\' => $name
+                ];
+            }
+        }
+    }
+    
+    // Add the species itself
+    if (preg_match(\'/<ScientificName>(.+?)<\\/ScientificName>/\', $response, $matches)) {
+        $sci_name = trim($matches[1]);
+        // Only add if it\'s not already in lineage
+        if (empty($lineage) || $lineage[count($lineage)-1][\'name\'] !== $sci_name) {
+            $lineage[] = [
+                \'rank\' => \'species\',
+                \'name\' => $sci_name
+            ];
+        }
+    }
+    
+    return !empty($lineage) ? $lineage : null;
+}',
+    ),
+    3 => 
+    array (
+      'name' => 'build_tree_from_organisms',
+      'line' => 146,
+      'comment' => '',
+      'code' => 'function build_tree_from_organisms($organisms) {
+    $all_lineages = [];
+    
+    foreach ($organisms as $organism_name => $data) {
+        if (empty($data[\'taxon_id\'])) {
+            continue;
+        }
+        
+        $lineage = fetch_taxonomy_lineage($data[\'taxon_id\']);
+        $image = fetch_organism_image($data[\'taxon_id\'], $organism_name);
+        if ($lineage) {
+            $all_lineages[$organism_name] = [
+                \'lineage\' => $lineage,
+                \'common_name\' => $data[\'common_name\'],
+                \'image\' => $image
+            ];
+        }
+        
+        // Be nice to NCBI - rate limit
+        usleep(350000); // 350ms = ~3 requests per second
+    }
+    
+    // Build tree structure
+    $tree = [\'name\' => \'Life\', \'children\' => []];
+    
+    foreach ($all_lineages as $organism_name => $info) {
+        $current = &$tree;
+        
+        foreach ($info[\'lineage\'] as $level) {
+            $name = $level[\'name\'];
+            $rank = $level[\'rank\'];
+            
+            // Find or create child node
+            $found = false;
+            foreach ($current[\'children\'] as &$child) {
+                if ($child[\'name\'] === $name) {
+                    $current = &$child;
+                    $found = true;
+                    break;
+                }
+            }
+            
+            if (!$found) {
+                $new_node = [\'name\' => $name];
+                
+                // If this is the species level, add organism info
+                if ($rank === \'species\') {
+                    $new_node[\'organism\'] = $organism_name;
+                    $new_node[\'common_name\'] = $info[\'common_name\'];
+                    if ($info[\'image\']) {
+                        $new_node[\'image\'] = $info[\'image\'];
+                    }
+                } else {
+                    $new_node[\'children\'] = [];
+                }
+                
+                $current[\'children\'][] = $new_node;
+                $current = &$current[\'children\'][count($current[\'children\']) - 1];
+            }
+        }
+    }
+    
+    return [\'tree\' => $tree];
 }',
     ),
   ),
