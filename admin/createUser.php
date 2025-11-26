@@ -127,7 +127,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 
-function getOrganisms() {
+/**
+ * Get all organisms and their assemblies from filesystem
+ * Reads directory structure directly - for user permission management
+ * Note: Database may have different/cached info - use this for filesystem truth
+ * 
+ * @return array Associative array of organism_name => array of assembly names
+ */
+function getOrganismsWithAssembliesFromFilesystem() {
     $orgs = [];
     $path = '../organisms';
     if (!is_dir($path)) {
@@ -152,7 +159,7 @@ function getOrganisms() {
     return $orgs;
 }
 
-$organisms = getOrganisms();
+$organisms = getOrganismsWithAssembliesFromFilesystem();
 ?>
 
 <!DOCTYPE html>

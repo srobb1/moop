@@ -1,7 +1,7 @@
 <?php
 /**
  * AUTO-GENERATED FUNCTION REGISTRY
- * Generated: 2025-11-26 01:34:54
+ * Generated: 2025-11-26 01:52:08
  * To regenerate, run: php tools/generate_registry.php
  */
 
@@ -3616,6 +3616,59 @@ JS;
     return \'<i>\' . $formatted_name . \'</i>\';
 }',
     ),
+    7 => 
+    array (
+      'name' => 'loadAllOrganismsMetadata',
+      'line' => 214,
+      'comment' => '/**
+* Load all organisms\' JSON metadata from organism_data directory
+* Central function used by manage_organisms.php and manage_phylo_tree.php
+*
+* @param string $organism_data_dir Path to organism data directory
+* @return array Associative array of organism_name => metadata
+*/',
+      'code' => 'function loadAllOrganismsMetadata($organism_data_dir) {
+    $organisms = [];
+    
+    if (!is_dir($organism_data_dir)) {
+        return $organisms;
+    }
+    
+    $entries = scandir($organism_data_dir);
+    foreach ($entries as $organism) {
+        // Skip hidden directories and non-directories
+        if ($organism[0] === \'.\' || !is_dir("$organism_data_dir/$organism")) {
+            continue;
+        }
+        
+        // Load organism.json using loadJsonFile (from functions_json.php)
+        $organism_json_path = "$organism_data_dir/$organism/organism.json";
+        $organism_info = loadJsonFile($organism_json_path);
+        
+        if (!$organism_info) {
+            continue;
+        }
+        
+        // Handle improperly wrapped JSON (extra outer braces)
+        if (!isset($organism_info[\'genus\']) && !isset($organism_info[\'common_name\'])) {
+            $keys = array_keys($organism_info);
+            if (count($keys) > 0 && is_array($organism_info[$keys[0]]) && isset($organism_info[$keys[0]][\'genus\'])) {
+                $organism_info = $organism_info[$keys[0]];
+            }
+        }
+        
+        // Store organism metadata keyed by organism name
+        $organisms[$organism] = [
+            \'genus\' => $organism_info[\'genus\'] ?? \'\',
+            \'species\' => $organism_info[\'species\'] ?? \'\',
+            \'common_name\' => $organism_info[\'common_name\'] ?? \'\',
+            \'taxon_id\' => $organism_info[\'taxon_id\'] ?? \'\'
+        ];
+    }
+    
+    return $organisms;
+}',
+    ),
   ),
   'lib/functions_database.php' => 
   array (
@@ -5983,10 +6036,16 @@ JS;
   array (
     0 => 
     array (
-      'name' => 'getOrganisms',
-      'line' => 130,
-      'comment' => '',
-      'code' => 'function getOrganisms() {
+      'name' => 'getOrganismsWithAssembliesFromFilesystem',
+      'line' => 137,
+      'comment' => '/**
+* Get all organisms and their assemblies from filesystem
+* Reads directory structure directly - for user permission management
+* Note: Database may have different/cached info - use this for filesystem truth
+*
+* @return array Associative array of organism_name => array of assembly names
+*/',
+      'code' => 'function getOrganismsWithAssembliesFromFilesystem() {
     $orgs = [];
     $path = \'../organisms\';
     if (!is_dir($path)) {
@@ -6130,16 +6189,19 @@ JS;
         return $organisms_info;
     }
     
+    // Load all organisms\' JSON metadata using consolidated function
+    $organisms_metadata = loadAllOrganismsMetadata($organism_data);
+    
     $organisms = scandir($organism_data);
     foreach ($organisms as $organism) {
         if ($organism[0] === \'.\' || !is_dir("$organism_data/$organism")) {
             continue;
         }
         
-        // Get organism.json info if exists
+        // Get organism.json info (already loaded from consolidated function)
         $organism_json = "$organism_data/$organism/organism.json";
         $json_validation = validateOrganismJson($organism_json);
-        $info = loadOrganismInfo($organism, $organism_data) ?? [];
+        $info = $organisms_metadata[$organism] ?? [];
         
         // Get assemblies
         $assemblies = [];
@@ -6197,31 +6259,15 @@ JS;
       'line' => 17,
       'comment' => '',
       'code' => 'function get_organisms_metadata($organism_data_dir) {
-    $organisms = [];
-    $symlinks = glob($organism_data_dir . \'/*\', GLOB_ONLYDIR);
-    
-    foreach ($symlinks as $org_path) {
-        $organism_json = $org_path . \'/organism.json\';
-        if (file_exists($organism_json)) {
-            $data = json_decode(file_get_contents($organism_json), true);
-            $organism_name = basename($org_path);
-            
-            $organisms[$organism_name] = [
-                \'genus\' => $data[\'genus\'] ?? \'\',
-                \'species\' => $data[\'species\'] ?? \'\',
-                \'taxon_id\' => $data[\'taxon_id\'] ?? \'\',
-                \'common_name\' => $data[\'common_name\'] ?? \'\'
-            ];
-        }
-    }
-    
-    return $organisms;
+    // This function is now deprecated - use loadAllOrganismsMetadata() from functions_data.php instead
+    // Kept for backwards compatibility
+    return loadAllOrganismsMetadata($organism_data_dir);
 }',
     ),
     1 => 
     array (
       'name' => 'fetch_organism_image',
-      'line' => 40,
+      'line' => 24,
       'comment' => '',
       'code' => 'function fetch_organism_image($taxon_id, $organism_name = null) {
     global $absolute_images_path;
@@ -6260,7 +6306,7 @@ JS;
     2 => 
     array (
       'name' => 'fetch_taxonomy_lineage',
-      'line' => 76,
+      'line' => 60,
       'comment' => '',
       'code' => 'function fetch_taxonomy_lineage($taxon_id) {
     $url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id={$taxon_id}&retmode=xml";
@@ -6334,7 +6380,7 @@ JS;
     3 => 
     array (
       'name' => 'build_tree_from_organisms',
-      'line' => 146,
+      'line' => 130,
       'comment' => '',
       'code' => 'function build_tree_from_organisms($organisms) {
     $all_lineages = [];

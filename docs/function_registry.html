@@ -50,7 +50,7 @@
     <header>
         <div class="container">
             <h1>🔍 MOOP Function Registry</h1>
-            <p>Auto-generated function documentation • Generated: 2025-11-26 01:34:54</p>
+            <p>Auto-generated function documentation • Generated: 2025-11-26 01:52:08</p>
         </div>
     </header>
     <div class="container">
@@ -58,7 +58,7 @@
             <input type="text" id="searchInput" placeholder="🔍 Search functions, files, or usage..." onkeyup="filterFunctions()">
         </div>
         <div class="stats">
-            <div class="stat-box"><strong>118</strong><span>Total Functions</span></div>
+            <div class="stat-box"><strong>119</strong><span>Total Functions</span></div>
             <div class="stat-box"><strong>22</strong><span>Files</span></div>
         </div>
         <div style="background: #ffe6e6; border: 2px solid #cc0000; border-radius: 4px; overflow: hidden; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
@@ -94,28 +94,37 @@
         <div class="file-section">
             <div class="file-header" onclick="toggleFile(this)">📄 admin/createUser.php (1)</div>
             <div class="functions-list">
-                <div class="function-item searchable" data-func="getOrganisms">
+                <div class="function-item searchable" data-func="getOrganismsWithAssembliesFromFilesystem">
                     <div class="function-header" onclick="toggleCode(this)">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <div class="function-name">getOrganisms()</div>
+                            <div class="function-name">getOrganismsWithAssembliesFromFilesystem()</div>
                             <span class="function-counter">2</span>
-                            <div class="function-line">Line 130</div>
+                            <div class="function-line">Line 137</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
                     </div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">admin/createUser.php: getOrganisms()</div>
+                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">admin/createUser.php: getOrganismsWithAssembliesFromFilesystem()</div>
+                    <div class="function-comment">
+                        <pre>/**
+* Get all organisms and their assemblies from filesystem
+* Reads directory structure directly - for user permission management
+* Note: Database may have different/cached info - use this for filesystem truth
+*
+* @return array Associative array of organism_name =&gt; array of assembly names
+*/</pre>
+                    </div>
                     <div class="function-usages">
                         <strong>📍 Used in 1 unique file(s) (2 total times):</strong>
                         <ul>
                             <li><strong>/data/moop/admin/createUser.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 155</code>: <small>$organisms = getOrganisms();</small></li>
-                                    <li><code>line 155</code>: <small>$organisms = getOrganisms();</small></li>
+                                    <li><code>line 162</code>: <small>$organisms = getOrganismsWithAssembliesFromFilesystem();</small></li>
+                                    <li><code>line 162</code>: <small>$organisms = getOrganismsWithAssembliesFromFilesystem();</small></li>
                                 </ul></li>
                         </ul>
                     </div>
                     <div class="function-code">
-                        <code>function getOrganisms() {
+                        <code>function getOrganismsWithAssembliesFromFilesystem() {
     $orgs = [];
     $path = &#039;../organisms&#039;;
     if (!is_dir($path)) {
@@ -323,12 +332,12 @@
                                     <li><code>line 35</code>: <small>$all_organisms = get_all_organisms_info();</small></li>
                                     <li><code>line 56</code>: <small>$all_organisms = get_all_organisms_info();</small></li>
                                     <li><code>line 88</code>: <small>$all_organisms = get_all_organisms_info();</small></li>
-                                    <li><code>line 216</code>: <small>$organisms = get_all_organisms_info();</small></li>
+                                    <li><code>line 219</code>: <small>$organisms = get_all_organisms_info();</small></li>
                                     <li><code>line 13</code>: <small>$all_organisms = get_all_organisms_info();</small></li>
                                     <li><code>line 35</code>: <small>$all_organisms = get_all_organisms_info();</small></li>
                                     <li><code>line 56</code>: <small>$all_organisms = get_all_organisms_info();</small></li>
                                     <li><code>line 88</code>: <small>$all_organisms = get_all_organisms_info();</small></li>
-                                    <li><code>line 216</code>: <small>$organisms = get_all_organisms_info();</small></li>
+                                    <li><code>line 219</code>: <small>$organisms = get_all_organisms_info();</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -341,16 +350,19 @@
         return $organisms_info;
     }
     
+    // Load all organisms&#039; JSON metadata using consolidated function
+    $organisms_metadata = loadAllOrganismsMetadata($organism_data);
+    
     $organisms = scandir($organism_data);
     foreach ($organisms as $organism) {
         if ($organism[0] === &#039;.&#039; || !is_dir(&quot;$organism_data/$organism&quot;)) {
             continue;
         }
         
-        // Get organism.json info if exists
+        // Get organism.json info (already loaded from consolidated function)
         $organism_json = &quot;$organism_data/$organism/organism.json&quot;;
         $json_validation = validateOrganismJson($organism_json);
-        $info = loadOrganismInfo($organism, $organism_data) ?? [];
+        $info = $organisms_metadata[$organism] ?? [];
         
         // Get assemblies
         $assemblies = [];
@@ -420,34 +432,18 @@
                         <ul>
                             <li><strong>/data/moop/admin/manage_phylo_tree.php</strong> (4x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 218</code>: <small>$organisms = get_organisms_metadata($organism_data_dir);</small></li>
-                                    <li><code>line 269</code>: <small>$organisms = get_organisms_metadata($organism_data_dir);</small></li>
-                                    <li><code>line 218</code>: <small>$organisms = get_organisms_metadata($organism_data_dir);</small></li>
-                                    <li><code>line 269</code>: <small>$organisms = get_organisms_metadata($organism_data_dir);</small></li>
+                                    <li><code>line 202</code>: <small>$organisms = get_organisms_metadata($organism_data_dir);</small></li>
+                                    <li><code>line 253</code>: <small>$organisms = get_organisms_metadata($organism_data_dir);</small></li>
+                                    <li><code>line 202</code>: <small>$organisms = get_organisms_metadata($organism_data_dir);</small></li>
+                                    <li><code>line 253</code>: <small>$organisms = get_organisms_metadata($organism_data_dir);</small></li>
                                 </ul></li>
                         </ul>
                     </div>
                     <div class="function-code">
                         <code>function get_organisms_metadata($organism_data_dir) {
-    $organisms = [];
-    $symlinks = glob($organism_data_dir . &#039;/*&#039;, GLOB_ONLYDIR);
-    
-    foreach ($symlinks as $org_path) {
-        $organism_json = $org_path . &#039;/organism.json&#039;;
-        if (file_exists($organism_json)) {
-            $data = json_decode(file_get_contents($organism_json), true);
-            $organism_name = basename($org_path);
-            
-            $organisms[$organism_name] = [
-                &#039;genus&#039; =&gt; $data[&#039;genus&#039;] ?? &#039;&#039;,
-                &#039;species&#039; =&gt; $data[&#039;species&#039;] ?? &#039;&#039;,
-                &#039;taxon_id&#039; =&gt; $data[&#039;taxon_id&#039;] ?? &#039;&#039;,
-                &#039;common_name&#039; =&gt; $data[&#039;common_name&#039;] ?? &#039;&#039;
-            ];
-        }
-    }
-    
-    return $organisms;
+    // This function is now deprecated - use loadAllOrganismsMetadata() from functions_data.php instead
+    // Kept for backwards compatibility
+    return loadAllOrganismsMetadata($organism_data_dir);
 }</code>
                     </div>
                 </div>
@@ -456,7 +452,7 @@
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div class="function-name">fetch_organism_image()</div>
                             <span class="function-counter">2</span>
-                            <div class="function-line">Line 40</div>
+                            <div class="function-line">Line 24</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
                     </div>
@@ -466,8 +462,8 @@
                         <ul>
                             <li><strong>/data/moop/admin/manage_phylo_tree.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 155</code>: <small>$image = fetch_organism_image($data[&#039;taxon_id&#039;], $organism_name);</small></li>
-                                    <li><code>line 155</code>: <small>$image = fetch_organism_image($data[&#039;taxon_id&#039;], $organism_name);</small></li>
+                                    <li><code>line 139</code>: <small>$image = fetch_organism_image($data[&#039;taxon_id&#039;], $organism_name);</small></li>
+                                    <li><code>line 139</code>: <small>$image = fetch_organism_image($data[&#039;taxon_id&#039;], $organism_name);</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -512,7 +508,7 @@
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div class="function-name">fetch_taxonomy_lineage()</div>
                             <span class="function-counter">2</span>
-                            <div class="function-line">Line 76</div>
+                            <div class="function-line">Line 60</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
                     </div>
@@ -522,8 +518,8 @@
                         <ul>
                             <li><strong>/data/moop/admin/manage_phylo_tree.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 154</code>: <small>$lineage = fetch_taxonomy_lineage($data[&#039;taxon_id&#039;]);</small></li>
-                                    <li><code>line 154</code>: <small>$lineage = fetch_taxonomy_lineage($data[&#039;taxon_id&#039;]);</small></li>
+                                    <li><code>line 138</code>: <small>$lineage = fetch_taxonomy_lineage($data[&#039;taxon_id&#039;]);</small></li>
+                                    <li><code>line 138</code>: <small>$lineage = fetch_taxonomy_lineage($data[&#039;taxon_id&#039;]);</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -603,7 +599,7 @@
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div class="function-name">build_tree_from_organisms()</div>
                             <span class="function-counter">2</span>
-                            <div class="function-line">Line 146</div>
+                            <div class="function-line">Line 130</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
                     </div>
@@ -613,8 +609,8 @@
                         <ul>
                             <li><strong>/data/moop/admin/manage_phylo_tree.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 223</code>: <small>$tree_data = build_tree_from_organisms($organisms);</small></li>
-                                    <li><code>line 223</code>: <small>$tree_data = build_tree_from_organisms($organisms);</small></li>
+                                    <li><code>line 207</code>: <small>$tree_data = build_tree_from_organisms($organisms);</small></li>
+                                    <li><code>line 207</code>: <small>$tree_data = build_tree_from_organisms($organisms);</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -4973,7 +4969,7 @@ JS;
             </div>
         </div>
         <div class="file-section">
-            <div class="file-header" onclick="toggleFile(this)">📄 lib/functions_data.php (7)</div>
+            <div class="file-header" onclick="toggleFile(this)">📄 lib/functions_data.php (8)</div>
             <div class="functions-list">
                 <div class="function-item searchable" data-func="getGroupData">
                     <div class="function-header" onclick="toggleCode(this)">
@@ -5363,6 +5359,84 @@ JS;
 }</code>
                     </div>
                 </div>
+                <div class="function-item searchable" data-func="loadAllOrganismsMetadata">
+                    <div class="function-header" onclick="toggleCode(this)">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="function-name">loadAllOrganismsMetadata()</div>
+                            <span class="function-counter">4</span>
+                            <div class="function-line">Line 214</div>
+                        </div>
+                        <span style="font-size: 20px; margin-left: 10px;">▶</span>
+                    </div>
+                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">lib/functions_data.php: loadAllOrganismsMetadata()</div>
+                    <div class="function-comment">
+                        <pre>/**
+* Load all organisms&#039; JSON metadata from organism_data directory
+* Central function used by manage_organisms.php and manage_phylo_tree.php
+*
+* @param string $organism_data_dir Path to organism data directory
+* @return array Associative array of organism_name =&gt; metadata
+*/</pre>
+                    </div>
+                    <div class="function-usages">
+                        <strong>📍 Used in 2 unique file(s) (4 total times):</strong>
+                        <ul>
+                            <li><strong>/data/moop/admin/manage_phylo_tree.php</strong> (2x)
+                                <ul style="margin-top: 5px;">
+                                    <li><code>line 20</code>: <small>return loadAllOrganismsMetadata($organism_data_dir);</small></li>
+                                    <li><code>line 20</code>: <small>return loadAllOrganismsMetadata($organism_data_dir);</small></li>
+                                </ul></li>
+                            <li><strong>/data/moop/admin/manage_organisms.php</strong> (2x)
+                                <ul style="margin-top: 5px;">
+                                    <li><code>line 159</code>: <small>$organisms_metadata = loadAllOrganismsMetadata($organism_data);</small></li>
+                                    <li><code>line 159</code>: <small>$organisms_metadata = loadAllOrganismsMetadata($organism_data);</small></li>
+                                </ul></li>
+                        </ul>
+                    </div>
+                    <div class="function-code">
+                        <code>function loadAllOrganismsMetadata($organism_data_dir) {
+    $organisms = [];
+    
+    if (!is_dir($organism_data_dir)) {
+        return $organisms;
+    }
+    
+    $entries = scandir($organism_data_dir);
+    foreach ($entries as $organism) {
+        // Skip hidden directories and non-directories
+        if ($organism[0] === &#039;.&#039; || !is_dir(&quot;$organism_data_dir/$organism&quot;)) {
+            continue;
+        }
+        
+        // Load organism.json using loadJsonFile (from functions_json.php)
+        $organism_json_path = &quot;$organism_data_dir/$organism/organism.json&quot;;
+        $organism_info = loadJsonFile($organism_json_path);
+        
+        if (!$organism_info) {
+            continue;
+        }
+        
+        // Handle improperly wrapped JSON (extra outer braces)
+        if (!isset($organism_info[&#039;genus&#039;]) &amp;&amp; !isset($organism_info[&#039;common_name&#039;])) {
+            $keys = array_keys($organism_info);
+            if (count($keys) &gt; 0 &amp;&amp; is_array($organism_info[$keys[0]]) &amp;&amp; isset($organism_info[$keys[0]][&#039;genus&#039;])) {
+                $organism_info = $organism_info[$keys[0]];
+            }
+        }
+        
+        // Store organism metadata keyed by organism name
+        $organisms[$organism] = [
+            &#039;genus&#039; =&gt; $organism_info[&#039;genus&#039;] ?? &#039;&#039;,
+            &#039;species&#039; =&gt; $organism_info[&#039;species&#039;] ?? &#039;&#039;,
+            &#039;common_name&#039; =&gt; $organism_info[&#039;common_name&#039;] ?? &#039;&#039;,
+            &#039;taxon_id&#039; =&gt; $organism_info[&#039;taxon_id&#039;] ?? &#039;&#039;
+        ];
+    }
+    
+    return $organisms;
+}</code>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="file-section">
@@ -5446,8 +5520,8 @@ JS;
                         <ul>
                             <li><strong>/data/moop/admin/manage_organisms.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 193</code>: <small>$db_validation = validateDatabaseIntegrity($db_file);</small></li>
-                                    <li><code>line 193</code>: <small>$db_validation = validateDatabaseIntegrity($db_file);</small></li>
+                                    <li><code>line 196</code>: <small>$db_validation = validateDatabaseIntegrity($db_file);</small></li>
+                                    <li><code>line 196</code>: <small>$db_validation = validateDatabaseIntegrity($db_file);</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -5827,7 +5901,7 @@ JS;
                     <div class="function-header" onclick="toggleCode(this)">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div class="function-name">loadOrganismInfo()</div>
-                            <span class="function-counter">4</span>
+                            <span class="function-counter">2</span>
                             <div class="function-line">Line 301</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
@@ -5843,17 +5917,12 @@ JS;
 */</pre>
                     </div>
                     <div class="function-usages">
-                        <strong>📍 Used in 2 unique file(s) (4 total times):</strong>
+                        <strong>📍 Used in 1 unique file(s) (2 total times):</strong>
                         <ul>
                             <li><strong>/data/moop/lib/functions_display.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
                                     <li><code>line 230</code>: <small>$organism_info = loadOrganismInfo($organism_name, $organism_data_dir);</small></li>
                                     <li><code>line 230</code>: <small>$organism_info = loadOrganismInfo($organism_name, $organism_data_dir);</small></li>
-                                </ul></li>
-                            <li><strong>/data/moop/admin/manage_organisms.php</strong> (2x)
-                                <ul style="margin-top: 5px;">
-                                    <li><code>line 167</code>: <small>$info = loadOrganismInfo($organism, $organism_data) ?? [];</small></li>
-                                    <li><code>line 167</code>: <small>$info = loadOrganismInfo($organism, $organism_data) ?? [];</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -6190,8 +6259,8 @@ JS;
                         <ul>
                             <li><strong>/data/moop/admin/manage_organisms.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 166</code>: <small>$json_validation = validateOrganismJson($organism_json);</small></li>
-                                    <li><code>line 166</code>: <small>$json_validation = validateOrganismJson($organism_json);</small></li>
+                                    <li><code>line 169</code>: <small>$json_validation = validateOrganismJson($organism_json);</small></li>
+                                    <li><code>line 169</code>: <small>$json_validation = validateOrganismJson($organism_json);</small></li>
                                 </ul></li>
                             <li><strong>/data/moop/tests/test_organism_json_validation.php</strong> (6x)
                                 <ul style="margin-top: 5px;">
@@ -6554,8 +6623,8 @@ JS;
                         <ul>
                             <li><strong>/data/moop/admin/manage_organisms.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 195</code>: <small>$assembly_validation = validateAssemblyDirectories($db_file, &quot;$organism_data/$or</small></li>
-                                    <li><code>line 195</code>: <small>$assembly_validation = validateAssemblyDirectories($db_file, &quot;$organism_data/$or</small></li>
+                                    <li><code>line 198</code>: <small>$assembly_validation = validateAssemblyDirectories($db_file, &quot;$organism_data/$or</small></li>
+                                    <li><code>line 198</code>: <small>$assembly_validation = validateAssemblyDirectories($db_file, &quot;$organism_data/$or</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -6677,8 +6746,8 @@ JS;
                         <ul>
                             <li><strong>/data/moop/admin/manage_organisms.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 198</code>: <small>$fasta_validation = validateAssemblyFastaFiles(&quot;$organism_data/$organism&quot;, $sequ</small></li>
-                                    <li><code>line 198</code>: <small>$fasta_validation = validateAssemblyFastaFiles(&quot;$organism_data/$organism&quot;, $sequ</small></li>
+                                    <li><code>line 201</code>: <small>$fasta_validation = validateAssemblyFastaFiles(&quot;$organism_data/$organism&quot;, $sequ</small></li>
+                                    <li><code>line 201</code>: <small>$fasta_validation = validateAssemblyFastaFiles(&quot;$organism_data/$organism&quot;, $sequ</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -6769,9 +6838,9 @@ JS;
                             <li><strong>/data/moop/admin/manage_organisms.php</strong> (4x)
                                 <ul style="margin-top: 5px;">
                                     <li><code>line 43</code>: <small>$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);</small></li>
-                                    <li><code>line 1139</code>: <small>&lt;button class=&quot;btn btn-info btn-sm w-100&quot; onclick=&quot;renameAssemblyDirectory(event</small></li>
+                                    <li><code>line 1142</code>: <small>&lt;button class=&quot;btn btn-info btn-sm w-100&quot; onclick=&quot;renameAssemblyDirectory(event</small></li>
                                     <li><code>line 43</code>: <small>$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);</small></li>
-                                    <li><code>line 1139</code>: <small>&lt;button class=&quot;btn btn-info btn-sm w-100&quot; onclick=&quot;renameAssemblyDirectory(event</small></li>
+                                    <li><code>line 1142</code>: <small>&lt;button class=&quot;btn btn-info btn-sm w-100&quot; onclick=&quot;renameAssemblyDirectory(event</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -6854,9 +6923,9 @@ JS;
                             <li><strong>/data/moop/admin/manage_organisms.php</strong> (4x)
                                 <ul style="margin-top: 5px;">
                                     <li><code>line 64</code>: <small>$result = deleteAssemblyDirectory($organism_dir, $dir_name);</small></li>
-                                    <li><code>line 1172</code>: <small>&lt;button class=&quot;btn btn-danger btn-sm w-100&quot; onclick=&quot;deleteAssemblyDirectory(eve</small></li>
+                                    <li><code>line 1175</code>: <small>&lt;button class=&quot;btn btn-danger btn-sm w-100&quot; onclick=&quot;deleteAssemblyDirectory(eve</small></li>
                                     <li><code>line 64</code>: <small>$result = deleteAssemblyDirectory($organism_dir, $dir_name);</small></li>
-                                    <li><code>line 1172</code>: <small>&lt;button class=&quot;btn btn-danger btn-sm w-100&quot; onclick=&quot;deleteAssemblyDirectory(eve</small></li>
+                                    <li><code>line 1175</code>: <small>&lt;button class=&quot;btn btn-danger btn-sm w-100&quot; onclick=&quot;deleteAssemblyDirectory(eve</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -7164,7 +7233,7 @@ JS;
                     <div class="function-header" onclick="toggleCode(this)">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div class="function-name">loadJsonFile()</div>
-                            <span class="function-counter">16</span>
+                            <span class="function-counter">18</span>
                             <div class="function-line">Line 14</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
@@ -7180,12 +7249,17 @@ JS;
 */</pre>
                     </div>
                     <div class="function-usages">
-                        <strong>📍 Used in 7 unique file(s) (16 total times):</strong>
+                        <strong>📍 Used in 8 unique file(s) (18 total times):</strong>
                         <ul>
                             <li><strong>/data/moop/lib/functions_database.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
                                     <li><code>line 303</code>: <small>$organism_info = loadJsonFile($organism_json_path);</small></li>
                                     <li><code>line 303</code>: <small>$organism_info = loadJsonFile($organism_json_path);</small></li>
+                                </ul></li>
+                            <li><strong>/data/moop/lib/functions_data.php</strong> (2x)
+                                <ul style="margin-top: 5px;">
+                                    <li><code>line 230</code>: <small>$organism_info = loadJsonFile($organism_json_path);</small></li>
+                                    <li><code>line 230</code>: <small>$organism_info = loadJsonFile($organism_json_path);</small></li>
                                 </ul></li>
                             <li><strong>/data/moop/lib/functions_json.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
@@ -7211,8 +7285,8 @@ JS;
                                 </ul></li>
                             <li><strong>/data/moop/admin/manage_phylo_tree.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 266</code>: <small>$current_tree = loadJsonFile($tree_config_file, null);</small></li>
-                                    <li><code>line 266</code>: <small>$current_tree = loadJsonFile($tree_config_file, null);</small></li>
+                                    <li><code>line 250</code>: <small>$current_tree = loadJsonFile($tree_config_file, null);</small></li>
+                                    <li><code>line 250</code>: <small>$current_tree = loadJsonFile($tree_config_file, null);</small></li>
                                 </ul></li>
                             <li><strong>/data/moop/admin/manage_annotations.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
@@ -7507,9 +7581,9 @@ JS;
                             <li><strong>/data/moop/admin/manage_organisms.php</strong> (4x)
                                 <ul style="margin-top: 5px;">
                                     <li><code>line 21</code>: <small>$result = fixDatabasePermissions($db_file);</small></li>
-                                    <li><code>line 762</code>: <small>&lt;button class=&quot;btn btn-warning btn-sm&quot; onclick=&quot;fixDatabasePermissions(event, &#039;&lt;</small></li>
+                                    <li><code>line 765</code>: <small>&lt;button class=&quot;btn btn-warning btn-sm&quot; onclick=&quot;fixDatabasePermissions(event, &#039;&lt;</small></li>
                                     <li><code>line 21</code>: <small>$result = fixDatabasePermissions($db_file);</small></li>
-                                    <li><code>line 762</code>: <small>&lt;button class=&quot;btn btn-warning btn-sm&quot; onclick=&quot;fixDatabasePermissions(event, &#039;&lt;</small></li>
+                                    <li><code>line 765</code>: <small>&lt;button class=&quot;btn btn-warning btn-sm&quot; onclick=&quot;fixDatabasePermissions(event, &#039;&lt;</small></li>
                                 </ul></li>
                         </ul>
                     </div>

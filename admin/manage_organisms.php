@@ -155,16 +155,19 @@ function get_all_organisms_info() {
         return $organisms_info;
     }
     
+    // Load all organisms' JSON metadata using consolidated function
+    $organisms_metadata = loadAllOrganismsMetadata($organism_data);
+    
     $organisms = scandir($organism_data);
     foreach ($organisms as $organism) {
         if ($organism[0] === '.' || !is_dir("$organism_data/$organism")) {
             continue;
         }
         
-        // Get organism.json info if exists
+        // Get organism.json info (already loaded from consolidated function)
         $organism_json = "$organism_data/$organism/organism.json";
         $json_validation = validateOrganismJson($organism_json);
-        $info = loadOrganismInfo($organism, $organism_data) ?? [];
+        $info = $organisms_metadata[$organism] ?? [];
         
         // Get assemblies
         $assemblies = [];

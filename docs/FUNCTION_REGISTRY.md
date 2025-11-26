@@ -2,11 +2,11 @@
 
 **Auto-generated documentation**
 
-Generated: 2025-11-26 01:34:56
+Generated: 2025-11-26 01:52:10
 
 ## Summary
 
-- **Total Functions**: 118
+- **Total Functions**: 119
 - **Files Scanned**: 22
 
 ## ⚠️ Unused Functions (16)
@@ -43,7 +43,7 @@ These functions are defined but never called:
 - [lib/database_queries.php](#lib-database_queriesphp) - 14 functions
 - [lib/extract_search_helpers.php](#lib-extract_search_helpersphp) - 11 functions
 - [lib/functions_access.php](#lib-functions_accessphp) - 3 functions
-- [lib/functions_data.php](#lib-functions_dataphp) - 7 functions
+- [lib/functions_data.php](#lib-functions_dataphp) - 8 functions
 - [lib/functions_database.php](#lib-functions_databasephp) - 8 functions
 - [lib/functions_display.php](#lib-functions_displayphp) - 5 functions
 - [lib/functions_errorlog.php](#lib-functions_errorlogphp) - 3 functions
@@ -63,14 +63,26 @@ These functions are defined but never called:
 
 **1 function(s)**
 
-### `getOrganisms()` (Line 130)
+### `getOrganismsWithAssembliesFromFilesystem()` (Line 137)
 
-Located in: `admin/createUser.php` at line 130
+Located in: `admin/createUser.php` at line 137
+
+**Description:**
+
+```
+/**
+* Get all organisms and their assemblies from filesystem
+* Reads directory structure directly - for user permission management
+* Note: Database may have different/cached info - use this for filesystem truth
+*
+* @return array Associative array of organism_name => array of assembly names
+*/
+```
 
 **Used in 1 unique file(s) (2 total times):**
 - `/data/moop/admin/createUser.php` (2x):
-  - Line 155: `$organisms = getOrganisms();`
-  - Line 155: `$organisms = getOrganisms();`
+  - Line 162: `$organisms = getOrganismsWithAssembliesFromFilesystem();`
+  - Line 162: `$organisms = getOrganismsWithAssembliesFromFilesystem();`
 
 ---
 
@@ -123,12 +135,12 @@ Located in: `admin/manage_organisms.php` at line 13
   - Line 35: `$all_organisms = get_all_organisms_info();`
   - Line 56: `$all_organisms = get_all_organisms_info();`
   - Line 88: `$all_organisms = get_all_organisms_info();`
-  - Line 216: `$organisms = get_all_organisms_info();`
+  - Line 219: `$organisms = get_all_organisms_info();`
   - Line 13: `$all_organisms = get_all_organisms_info();`
   - Line 35: `$all_organisms = get_all_organisms_info();`
   - Line 56: `$all_organisms = get_all_organisms_info();`
   - Line 88: `$all_organisms = get_all_organisms_info();`
-  - Line 216: `$organisms = get_all_organisms_info();`
+  - Line 219: `$organisms = get_all_organisms_info();`
 
 ---
 
@@ -142,37 +154,37 @@ Located in: `admin/manage_phylo_tree.php` at line 17
 
 **Used in 1 unique file(s) (4 total times):**
 - `/data/moop/admin/manage_phylo_tree.php` (4x):
-  - Line 218: `$organisms = get_organisms_metadata($organism_data_dir);`
-  - Line 269: `$organisms = get_organisms_metadata($organism_data_dir);`
-  - Line 218: `$organisms = get_organisms_metadata($organism_data_dir);`
-  - Line 269: `$organisms = get_organisms_metadata($organism_data_dir);`
+  - Line 202: `$organisms = get_organisms_metadata($organism_data_dir);`
+  - Line 253: `$organisms = get_organisms_metadata($organism_data_dir);`
+  - Line 202: `$organisms = get_organisms_metadata($organism_data_dir);`
+  - Line 253: `$organisms = get_organisms_metadata($organism_data_dir);`
 
-### `fetch_organism_image()` (Line 40)
+### `fetch_organism_image()` (Line 24)
 
-Located in: `admin/manage_phylo_tree.php` at line 40
-
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/manage_phylo_tree.php` (2x):
-  - Line 155: `$image = fetch_organism_image($data[\'taxon_id\'], $organism_name);`
-  - Line 155: `$image = fetch_organism_image($data[\'taxon_id\'], $organism_name);`
-
-### `fetch_taxonomy_lineage()` (Line 76)
-
-Located in: `admin/manage_phylo_tree.php` at line 76
+Located in: `admin/manage_phylo_tree.php` at line 24
 
 **Used in 1 unique file(s) (2 total times):**
 - `/data/moop/admin/manage_phylo_tree.php` (2x):
-  - Line 154: `$lineage = fetch_taxonomy_lineage($data[\'taxon_id\']);`
-  - Line 154: `$lineage = fetch_taxonomy_lineage($data[\'taxon_id\']);`
+  - Line 139: `$image = fetch_organism_image($data[\'taxon_id\'], $organism_name);`
+  - Line 139: `$image = fetch_organism_image($data[\'taxon_id\'], $organism_name);`
 
-### `build_tree_from_organisms()` (Line 146)
+### `fetch_taxonomy_lineage()` (Line 60)
 
-Located in: `admin/manage_phylo_tree.php` at line 146
+Located in: `admin/manage_phylo_tree.php` at line 60
 
 **Used in 1 unique file(s) (2 total times):**
 - `/data/moop/admin/manage_phylo_tree.php` (2x):
-  - Line 223: `$tree_data = build_tree_from_organisms($organisms);`
-  - Line 223: `$tree_data = build_tree_from_organisms($organisms);`
+  - Line 138: `$lineage = fetch_taxonomy_lineage($data[\'taxon_id\']);`
+  - Line 138: `$lineage = fetch_taxonomy_lineage($data[\'taxon_id\']);`
+
+### `build_tree_from_organisms()` (Line 130)
+
+Located in: `admin/manage_phylo_tree.php` at line 130
+
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/admin/manage_phylo_tree.php` (2x):
+  - Line 207: `$tree_data = build_tree_from_organisms($organisms);`
+  - Line 207: `$tree_data = build_tree_from_organisms($organisms);`
 
 ---
 
@@ -1277,7 +1289,7 @@ Located in: `lib/functions_access.php` at line 170
 
 ## lib/functions_data.php
 
-**7 function(s)**
+**8 function(s)**
 
 ### `getGroupData()` (Line 12)
 
@@ -1438,6 +1450,30 @@ Located in: `lib/functions_data.php` at line 176
   - Line 176: `$formatted_name = formatIndexOrganismName($organism);`
   - Line 176: `$formatted_name = formatIndexOrganismName($organism);`
 
+### `loadAllOrganismsMetadata()` (Line 214)
+
+Located in: `lib/functions_data.php` at line 214
+
+**Description:**
+
+```
+/**
+* Load all organisms' JSON metadata from organism_data directory
+* Central function used by manage_organisms.php and manage_phylo_tree.php
+*
+* @param string $organism_data_dir Path to organism data directory
+* @return array Associative array of organism_name => metadata
+*/
+```
+
+**Used in 2 unique file(s) (4 total times):**
+- `/data/moop/admin/manage_phylo_tree.php` (2x):
+  - Line 20: `return loadAllOrganismsMetadata($organism_data_dir);`
+  - Line 20: `return loadAllOrganismsMetadata($organism_data_dir);`
+- `/data/moop/admin/manage_organisms.php` (2x):
+  - Line 159: `$organisms_metadata = loadAllOrganismsMetadata($organism_data);`
+  - Line 159: `$organisms_metadata = loadAllOrganismsMetadata($organism_data);`
+
 ---
 
 ## lib/functions_database.php
@@ -1488,8 +1524,8 @@ Located in: `lib/functions_database.php` at line 44
 
 **Used in 1 unique file(s) (2 total times):**
 - `/data/moop/admin/manage_organisms.php` (2x):
-  - Line 193: `$db_validation = validateDatabaseIntegrity($db_file);`
-  - Line 193: `$db_validation = validateDatabaseIntegrity($db_file);`
+  - Line 196: `$db_validation = validateDatabaseIntegrity($db_file);`
+  - Line 196: `$db_validation = validateDatabaseIntegrity($db_file);`
 
 ### `getDbConnection()` (Line 181)
 
@@ -1636,13 +1672,10 @@ Located in: `lib/functions_database.php` at line 301
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
+**Used in 1 unique file(s) (2 total times):**
 - `/data/moop/lib/functions_display.php` (2x):
   - Line 230: `$organism_info = loadOrganismInfo($organism_name, $organism_data_dir);`
   - Line 230: `$organism_info = loadOrganismInfo($organism_name, $organism_data_dir);`
-- `/data/moop/admin/manage_organisms.php` (2x):
-  - Line 167: `$info = loadOrganismInfo($organism, $organism_data) ?? [];`
-  - Line 167: `$info = loadOrganismInfo($organism, $organism_data) ?? [];`
 
 ### `verifyOrganismDatabase()` (Line 332)
 
@@ -1786,8 +1819,8 @@ Located in: `lib/functions_display.php` at line 153
 
 **Used in 2 unique file(s) (8 total times):**
 - `/data/moop/admin/manage_organisms.php` (2x):
-  - Line 166: `$json_validation = validateOrganismJson($organism_json);`
-  - Line 166: `$json_validation = validateOrganismJson($organism_json);`
+  - Line 169: `$json_validation = validateOrganismJson($organism_json);`
+  - Line 169: `$json_validation = validateOrganismJson($organism_json);`
 - `/data/moop/tests/test_organism_json_validation.php` (6x):
   - Line 71: `$result = validateOrganismJson($path);`
   - Line 88: `$result = validateOrganismJson($path);`
@@ -1941,8 +1974,8 @@ Located in: `lib/functions_filesystem.php` at line 17
 
 **Used in 1 unique file(s) (2 total times):**
 - `/data/moop/admin/manage_organisms.php` (2x):
-  - Line 195: `$assembly_validation = validateAssemblyDirectories($db_file, \"$organism_data/$organism\");`
-  - Line 195: `$assembly_validation = validateAssemblyDirectories($db_file, \"$organism_data/$organism\");`
+  - Line 198: `$assembly_validation = validateAssemblyDirectories($db_file, \"$organism_data/$organism\");`
+  - Line 198: `$assembly_validation = validateAssemblyDirectories($db_file, \"$organism_data/$organism\");`
 
 ### `validateAssemblyFastaFiles()` (Line 116)
 
@@ -1965,8 +1998,8 @@ Located in: `lib/functions_filesystem.php` at line 116
 
 **Used in 1 unique file(s) (2 total times):**
 - `/data/moop/admin/manage_organisms.php` (2x):
-  - Line 198: `$fasta_validation = validateAssemblyFastaFiles(\"$organism_data/$organism\", $sequence_types);`
-  - Line 198: `$fasta_validation = validateAssemblyFastaFiles(\"$organism_data/$organism\", $sequence_types);`
+  - Line 201: `$fasta_validation = validateAssemblyFastaFiles(\"$organism_data/$organism\", $sequence_types);`
+  - Line 201: `$fasta_validation = validateAssemblyFastaFiles(\"$organism_data/$organism\", $sequence_types);`
 
 ### `renameAssemblyDirectory()` (Line 183)
 
@@ -1992,9 +2025,9 @@ Located in: `lib/functions_filesystem.php` at line 183
 **Used in 1 unique file(s) (4 total times):**
 - `/data/moop/admin/manage_organisms.php` (4x):
   - Line 43: `$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);`
-  - Line 1139: `<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
+  - Line 1142: `<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
   - Line 43: `$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);`
-  - Line 1139: `<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
+  - Line 1142: `<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
 
 ### `deleteAssemblyDirectory()` (Line 242)
 
@@ -2019,9 +2052,9 @@ Located in: `lib/functions_filesystem.php` at line 242
 **Used in 1 unique file(s) (4 total times):**
 - `/data/moop/admin/manage_organisms.php` (4x):
   - Line 64: `$result = deleteAssemblyDirectory($organism_dir, $dir_name);`
-  - Line 1172: `<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
+  - Line 1175: `<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
   - Line 64: `$result = deleteAssemblyDirectory($organism_dir, $dir_name);`
-  - Line 1172: `<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
+  - Line 1175: `<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
 
 ### `rrmdir()` (Line 273)
 
@@ -2139,10 +2172,13 @@ Located in: `lib/functions_json.php` at line 14
 */
 ```
 
-**Used in 7 unique file(s) (16 total times):**
+**Used in 8 unique file(s) (18 total times):**
 - `/data/moop/lib/functions_database.php` (2x):
   - Line 303: `$organism_info = loadJsonFile($organism_json_path);`
   - Line 303: `$organism_info = loadJsonFile($organism_json_path);`
+- `/data/moop/lib/functions_data.php` (2x):
+  - Line 230: `$organism_info = loadJsonFile($organism_json_path);`
+  - Line 230: `$organism_info = loadJsonFile($organism_json_path);`
 - `/data/moop/lib/functions_json.php` (2x):
   - Line 88: `$existing = loadJsonFile($file_path);`
   - Line 88: `$existing = loadJsonFile($file_path);`
@@ -2158,8 +2194,8 @@ Located in: `lib/functions_json.php` at line 14
   - Line 12: `$groups_data = loadJsonFile($groups_file, []);`
   - Line 16: `$descriptions_data = loadJsonFile($descriptions_file, []);`
 - `/data/moop/admin/manage_phylo_tree.php` (2x):
-  - Line 266: `$current_tree = loadJsonFile($tree_config_file, null);`
-  - Line 266: `$current_tree = loadJsonFile($tree_config_file, null);`
+  - Line 250: `$current_tree = loadJsonFile($tree_config_file, null);`
+  - Line 250: `$current_tree = loadJsonFile($tree_config_file, null);`
 - `/data/moop/admin/manage_annotations.php` (2x):
   - Line 9: `$config = loadJsonFile($config_file, []);`
   - Line 9: `$config = loadJsonFile($config_file, []);`
@@ -2284,9 +2320,9 @@ Located in: `lib/functions_system.php` at line 48
 **Used in 1 unique file(s) (4 total times):**
 - `/data/moop/admin/manage_organisms.php` (4x):
   - Line 21: `$result = fixDatabasePermissions($db_file);`
-  - Line 762: `<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, \'<?= $org_safe ?>\')\">`
+  - Line 765: `<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, \'<?= $org_safe ?>\')\">`
   - Line 21: `$result = fixDatabasePermissions($db_file);`
-  - Line 762: `<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, \'<?= $org_safe ?>\')\">`
+  - Line 765: `<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, \'<?= $org_safe ?>\')\">`
 
 ---
 

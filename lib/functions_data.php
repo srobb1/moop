@@ -203,3 +203,52 @@ function formatIndexOrganismName($organism) {
     }
     return '<i>' . $formatted_name . '</i>';
 }
+
+/**
+ * Load all organisms' JSON metadata from organism_data directory
+ * Central function used by manage_organisms.php and manage_phylo_tree.php
+ * 
+ * @param string $organism_data_dir Path to organism data directory
+ * @return array Associative array of organism_name => metadata
+ */
+function loadAllOrganismsMetadata($organism_data_dir) {
+    $organisms = [];
+    
+    if (!is_dir($organism_data_dir)) {
+        return $organisms;
+    }
+    
+    $entries = scandir($organism_data_dir);
+    foreach ($entries as $organism) {
+        // Skip hidden directories and non-directories
+        if ($organism[0] === '.' || !is_dir("$organism_data_dir/$organism")) {
+            continue;
+        }
+        
+        // Load organism.json using loadJsonFile (from functions_json.php)
+        $organism_json_path = "$organism_data_dir/$organism/organism.json";
+        $organism_info = loadJsonFile($organism_json_path);
+        
+        if (!$organism_info) {
+            continue;
+        }
+        
+        // Handle improperly wrapped JSON (extra outer braces)
+        if (!isset($organism_info['genus']) && !isset($organism_info['common_name'])) {
+            $keys = array_keys($organism_info);
+            if (count($keys) > 0 && is_array($organism_info[$keys[0]]) && isset($organism_info[$keys[0]]['genus'])) {
+                $organism_info = $organism_info[$keys[0]];
+            }
+        }
+        
+        // Store organism metadata keyed by organism name
+        $organisms[$organism] = [
+            'genus' => $organism_info['genus'] ?? '',
+            'species' => $organism_info['species'] ?? '',
+            'common_name' => $organism_info['common_name'] ?? '',
+            'taxon_id' => $organism_info['taxon_id'] ?? ''
+        ];
+    }
+    
+    return $organisms;
+}

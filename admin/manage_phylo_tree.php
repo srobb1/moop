@@ -15,25 +15,9 @@ $dir_error = getDirectoryError($absolute_images_path . '/ncbi_taxonomy');
 
 // Function to get organism metadata
 function get_organisms_metadata($organism_data_dir) {
-    $organisms = [];
-    $symlinks = glob($organism_data_dir . '/*', GLOB_ONLYDIR);
-    
-    foreach ($symlinks as $org_path) {
-        $organism_json = $org_path . '/organism.json';
-        if (file_exists($organism_json)) {
-            $data = json_decode(file_get_contents($organism_json), true);
-            $organism_name = basename($org_path);
-            
-            $organisms[$organism_name] = [
-                'genus' => $data['genus'] ?? '',
-                'species' => $data['species'] ?? '',
-                'taxon_id' => $data['taxon_id'] ?? '',
-                'common_name' => $data['common_name'] ?? ''
-            ];
-        }
-    }
-    
-    return $organisms;
+    // This function is now deprecated - use loadAllOrganismsMetadata() from functions_data.php instead
+    // Kept for backwards compatibility
+    return loadAllOrganismsMetadata($organism_data_dir);
 }
 
 // Function to fetch and cache organism image from NCBI to ncbi_taxonomy directory
