@@ -427,6 +427,20 @@ function generatePermissionAlert($file_path, $title = '', $problem = '', $file_t
         $html .= '    <i class="fa fa-wrench"></i> Fix Permissions' . "\n";
         $html .= '  </button>' . "\n";
         $html .= '  <div id="' . $resultId . '" class="mt-3"></div>' . "\n";
+        
+        // Show manual instructions as alternative
+        $html .= '  <p class="mb-2 mt-4"><strong>Or manually on the server:</strong></p>' . "\n";
+        $html .= '  <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">' . "\n";
+        $html .= '    <code style="word-break: break-all; display: block; font-size: 0.9em;">' . "\n";
+        if ($is_dir) {
+            $html .= '      sudo chown -R ' . htmlspecialchars($web_user) . ':' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
+            $html .= '      sudo chmod -R 775 ' . $safe_path . "\n";
+        } else {
+            $html .= '      sudo chown ' . htmlspecialchars($web_user) . ':' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
+            $html .= '      sudo chmod 664 ' . $safe_path . "\n";
+        }
+        $html .= '    </code>' . "\n";
+        $html .= '  </div>' . "\n";
     } else {
         // Web server cannot fix - show manual instructions
         $html .= '  <p class="mb-2"><strong>To Fix:</strong> Run this command on the server:</p>' . "\n";
