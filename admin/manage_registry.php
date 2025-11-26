@@ -32,10 +32,20 @@ if (isset($_POST['action']) && $_POST['action'] === 'update_registry') {
     exit;
 }
 
-// Check file permissions for registry files
-$php_registry = __DIR__ . '/../lib/function_registry.php';
-$html_registry = __DIR__ . '/../docs/function_registry.html';
-$md_registry = __DIR__ . '/../docs/FUNCTION_REGISTRY.md';
+// Check file permissions for tools directory where registries are generated
+$tools_dir = __DIR__ . '/../tools';
+$docs_dir = __DIR__ . '/../docs';
+$lib_dir = __DIR__ . '/../lib';
+
+// Check if www-data can write to necessary directories
+$tools_writable = is_writable($tools_dir);
+$docs_writable = is_writable($docs_dir);
+$lib_writable = is_writable($lib_dir);
+
+// Get web server user info
+$web_user = get_current_user() ?: 'www-data';
+$web_group_info = @posix_getgrgid(@posix_getegid());
+$web_group = $web_group_info !== false ? $web_group_info['name'] : 'www-data';
 ?>
 
 <!DOCTYPE html>
@@ -54,160 +64,65 @@ $md_registry = __DIR__ . '/../docs/FUNCTION_REGISTRY.md';
         <p class="text-muted">View and update the auto-generated registries of all PHP and JavaScript functions.</p>
       </div>
       <div class="col-md-4 text-end">
-        <button class="btn btn-primary" onclick="location.href='../docs/function_registry.html'" target="_blank">
-          <i class="fa fa-book"></i> View PHP Registry
-        </button>
-        <button class="btn btn-info" onclick="location.href='../docs/js_function_registry.html'" target="_blank">
-          <i class="fa fa-book"></i> View JS Registry
+        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#permissionsModal">
+          <i class="fa fa-shield"></i> Permissions Help
         </button>
       </div>
     </div>
 
-    <!-- Permission Alerts -->
-    <?php echo generatePermissionAlert(
-        $php_registry,
-        'PHP Registry File Permission Issue',
-        'Cannot update the PHP function registry.',
-        'file'
-    ); ?>
-    
-    <?php echo generatePermissionAlert(
-        $html_registry,
-        'HTML Documentation Permission Issue',
-        'Cannot update the HTML documentation.',
-        'file'
-    ); ?>
-
-    <!-- PHP Registry Section -->
+    <!-- PHP Registry Card -->
     <div class="card mb-4">
       <div class="card-header bg-primary text-white">
         <h5 class="mb-0"><i class="fa fa-code"></i> PHP Function Registry</h5>
       </div>
       <div class="card-body">
+        <p class="mb-3">
+          Auto-generated searchable index of all PHP functions with documentation, usage tracking, and duplicate detection.
+        </p>
         <div class="row mb-3">
-          <div class="col-md-8">
-            <p class="mb-2"><strong>Auto-generated registry of all PHP functions</strong></p>
-            <p class="text-muted small mb-0">
-              Scans <code>lib/</code>, <code>tools/</code>, and <code>admin/</code> directories for all PHP functions.
-              Creates searchable function index with documentation, usage tracking, and duplicate detection.
-            </p>
+          <div class="col-md-6">
+            <button class="btn btn-primary btn-sm" onclick="location.href='../docs/function_registry.html'" target="_blank">
+              <i class="fa fa-external-link"></i> View HTML Registry
+            </button>
           </div>
-          <div class="col-md-4 text-end">
-            <button class="btn btn-warning btn-sm" onclick="updateRegistry('php')">
-              <i class="fa fa-refresh"></i> Update Registry
+          <div class="col-md-6 text-end">
+            <button class="btn btn-info btn-sm" onclick="location.href='../docs/FUNCTION_REGISTRY.md'" target="_blank">
+              <i class="fa fa-file-text"></i> View Markdown
             </button>
           </div>
         </div>
-
-        <div class="row g-3">
-          <div class="col-md-4">
-            <div class="card border-light">
-              <div class="card-body text-center">
-                <h6 class="text-muted">Total Functions</h6>
-                <h3 class="text-primary" id="phpFunctionCount">-</h3>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="card border-light">
-              <div class="card-body text-center">
-                <h6 class="text-muted">Files Scanned</h6>
-                <h3 class="text-success" id="phpFileCount">-</h3>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="card border-light">
-              <div class="card-body text-center">
-                <h6 class="text-muted">Last Updated</h6>
-                <p class="small mb-0" id="phpLastUpdate">Loading...</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-3">
-          <div id="phpResult" class="d-none"></div>
-        </div>
-
-        <hr>
-
-        <div class="row text-center text-muted small">
-          <div class="col-md-4">
-            <i class="fa fa-file"></i> <code>lib/function_registry.php</code>
-          </div>
-          <div class="col-md-4">
-            <i class="fa fa-html5"></i> <code>docs/function_registry.html</code>
-          </div>
-          <div class="col-md-4">
-            <i class="fa fa-markdown"></i> <code>docs/FUNCTION_REGISTRY.md</code>
-          </div>
-        </div>
+        <button class="btn btn-warning btn-sm" onclick="updateRegistry('php')">
+          <i class="fa fa-refresh"></i> Update Registry Now
+        </button>
+        <div id="phpResult" class="mt-3 d-none"></div>
       </div>
     </div>
 
-    <!-- JavaScript Registry Section -->
+    <!-- JavaScript Registry Card -->
     <div class="card mb-4">
       <div class="card-header bg-info text-white">
         <h5 class="mb-0"><i class="fa fa-code"></i> JavaScript Function Registry</h5>
       </div>
       <div class="card-body">
+        <p class="mb-3">
+          Auto-generated searchable index of all JavaScript functions with documentation and usage tracking.
+        </p>
         <div class="row mb-3">
-          <div class="col-md-8">
-            <p class="mb-2"><strong>Auto-generated registry of all JavaScript functions</strong></p>
-            <p class="text-muted small mb-0">
-              Scans <code>js/</code> directory for all JavaScript functions.
-              Creates searchable function index with documentation and usage tracking.
-            </p>
+          <div class="col-md-6">
+            <button class="btn btn-info btn-sm" onclick="location.href='../docs/js_function_registry.html'" target="_blank">
+              <i class="fa fa-external-link"></i> View HTML Registry
+            </button>
           </div>
-          <div class="col-md-4 text-end">
-            <button class="btn btn-warning btn-sm" onclick="updateRegistry('js')">
-              <i class="fa fa-refresh"></i> Update Registry
+          <div class="col-md-6 text-end">
+            <button class="btn btn-info btn-sm" onclick="location.href='../docs/JS_FUNCTION_REGISTRY.md'" target="_blank">
+              <i class="fa fa-file-text"></i> View Markdown
             </button>
           </div>
         </div>
-
-        <div class="row g-3">
-          <div class="col-md-4">
-            <div class="card border-light">
-              <div class="card-body text-center">
-                <h6 class="text-muted">Total Functions</h6>
-                <h3 class="text-info" id="jsFunctionCount">-</h3>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="card border-light">
-              <div class="card-body text-center">
-                <h6 class="text-muted">Files Scanned</h6>
-                <h3 class="text-success" id="jsFileCount">-</h3>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="card border-light">
-              <div class="card-body text-center">
-                <h6 class="text-muted">Last Updated</h6>
-                <p class="small mb-0" id="jsLastUpdate">Loading...</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-3">
-          <div id="jsResult" class="d-none"></div>
-        </div>
-
-        <hr>
-
-        <div class="row text-center text-muted small">
-          <div class="col-md-6">
-            <i class="fa fa-html5"></i> <code>docs/js_function_registry.html</code>
-          </div>
-          <div class="col-md-6">
-            <i class="fa fa-markdown"></i> <code>docs/JS_FUNCTION_REGISTRY.md</code>
-          </div>
-        </div>
+        <button class="btn btn-warning btn-sm" onclick="updateRegistry('js')">
+          <i class="fa fa-refresh"></i> Update Registry Now
+        </button>
+        <div id="jsResult" class="mt-3 d-none"></div>
       </div>
     </div>
 
@@ -215,18 +130,80 @@ $md_registry = __DIR__ . '/../docs/FUNCTION_REGISTRY.md';
     <div class="alert alert-info">
       <h6 class="alert-heading"><i class="fa fa-lightbulb"></i> How to Use</h6>
       <p class="mb-2">
-        The registry generators automatically scan your code files and create:
+        The registry generators automatically scan your code files and create searchable indexes with:
       </p>
       <ul class="mb-2">
-        <li><strong>PHP Registry:</strong> Indexed list of all PHP functions with documentation, usage tracking, and duplicate detection</li>
-        <li><strong>JavaScript Registry:</strong> Indexed list of all JavaScript functions with documentation and usage info</li>
+        <li><strong>PHP Registry:</strong> All functions from <code>lib/</code>, <code>tools/</code>, and <code>admin/</code> directories</li>
+        <li><strong>JavaScript Registry:</strong> All functions from <code>js/</code> directory</li>
       </ul>
       <p class="mb-2">
-        <strong>When to update:</strong> After adding new functions, modifying existing functions, or moving functions between files.
+        <strong>Update When:</strong> After adding new functions, modifying existing functions, or moving functions between files.
       </p>
       <p class="mb-0">
-        <strong>Outputs:</strong> PHP and HTML files for searchability, plus Markdown for documentation.
+        <strong>Permissions:</strong> If you get permission errors when updating, click the <strong>Permissions Help</strong> button for instructions.
       </p>
+    </div>
+  </div>
+
+  <!-- Permissions Help Modal -->
+  <div class="modal fade" id="permissionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa fa-shield"></i> Registry Update Permissions</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <h6 class="mb-3"><i class="fa fa-exclamation-triangle"></i> Permission Issues</h6>
+          <p>
+            If you see permission errors when trying to update the registries, it means the web server user (usually <code>www-data</code>) 
+            doesn't have write access to the necessary directories. Follow the steps below to fix this.
+          </p>
+
+          <h6 class="mt-4 mb-3"><i class="fa fa-wrench"></i> Required Directories</h6>
+          <p>The web server needs write access to these directories:</p>
+          <ul class="small">
+            <li><code>/lib/</code> - Where <code>function_registry.php</code> is written</li>
+            <li><code>/docs/</code> - Where HTML and Markdown documentation are written</li>
+            <li><code>/tools/</code> - Where registry generation scripts run</li>
+          </ul>
+
+          <h6 class="mt-4 mb-3"><i class="fa fa-terminal"></i> How to Fix</h6>
+          <p class="mb-2"><strong>Step 1:</strong> SSH into your server as root or with sudo access.</p>
+          
+          <p class="mb-2"><strong>Step 2:</strong> Set ownership of directories to www-data:</p>
+          <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; border-left: 3px solid #3498db; margin-bottom: 15px;">
+            <code style="word-break: break-all; display: block; font-size: 0.9em; color: #2c3e50;">
+              sudo chown -R www-data:www-data /var/www/moop/lib<br>
+              sudo chown -R www-data:www-data /var/www/moop/docs<br>
+              sudo chown -R www-data:www-data /var/www/moop/tools
+            </code>
+          </div>
+
+          <p class="mb-2"><strong>Step 3:</strong> Set proper permissions (775 for directories):</p>
+          <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; border-left: 3px solid #3498db; margin-bottom: 15px;">
+            <code style="word-break: break-all; display: block; font-size: 0.9em; color: #2c3e50;">
+              sudo chmod -R 775 /var/www/moop/lib<br>
+              sudo chmod -R 775 /var/www/moop/docs<br>
+              sudo chmod -R 775 /var/www/moop/tools
+            </code>
+          </div>
+
+          <p class="mb-2"><strong>Step 4:</strong> Verify permissions:</p>
+          <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; border-left: 3px solid #3498db; margin-bottom: 15px;">
+            <code style="word-break: break-all; display: block; font-size: 0.9em; color: #2c3e50;">
+              ls -ld /var/www/moop/lib /var/www/moop/docs /var/www/moop/tools
+            </code>
+          </div>
+
+          <p class="mb-0 small text-muted">
+            After running these commands, return to this page and try updating the registry again.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -264,33 +241,14 @@ $md_registry = __DIR__ . '/../docs/FUNCTION_REGISTRY.md';
         
         btn.innerHTML = '<i class="fa fa-check"></i> Updated!';
         
-        // Parse output to extract stats if present
-        if (json.output && json.output.includes('✅')) {
-          const output = json.output;
-          
-          // Extract function count
-          const funcMatch = output.match(/Functions found: (\d+)/);
-          if (funcMatch) {
-            document.getElementById(type + 'FunctionCount').textContent = funcMatch[1];
-          }
-          
-          // Extract file count
-          const fileMatch = output.match(/Files scanned: (\d+)/);
-          if (fileMatch) {
-            document.getElementById(type + 'FileCount').textContent = fileMatch[1];
-          }
-        }
-        
-        // Update timestamp
-        document.getElementById(type + 'LastUpdate').textContent = new Date().toLocaleString();
-        
         setTimeout(() => {
           btn.disabled = false;
           btn.textContent = originalText;
         }, 2000);
       } else {
         resultDiv.innerHTML = '<div class="alert alert-danger">' +
-          '<i class="fa fa-exclamation-triangle"></i> Error: ' + (json.message || 'Unknown error') +
+          '<i class="fa fa-exclamation-triangle"></i> Error: ' + (json.message || 'Unknown error') + 
+          '<br><small>Click "Permissions Help" above if this is a permission error.</small>' +
           '</div>';
         resultDiv.classList.remove('d-none');
         
@@ -308,18 +266,6 @@ $md_registry = __DIR__ . '/../docs/FUNCTION_REGISTRY.md';
       btn.textContent = originalText;
     });
   }
-
-  /**
-   * Load registry stats on page load
-   */
-  document.addEventListener('DOMContentLoaded', function() {
-    // Try to get file modification times
-    const now = new Date();
-    
-    // Set last update times to now (in production, read from file modification time)
-    document.getElementById('phpLastUpdate').textContent = now.toLocaleString();
-    document.getElementById('jsLastUpdate').textContent = now.toLocaleString();
-  });
   </script>
 
 </body>
