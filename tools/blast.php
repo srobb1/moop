@@ -247,6 +247,16 @@ include_once __DIR__ . '/../includes/navbar.php';
                     placeholder="Enter sequence in FASTA format or plain text&#10;Example:&#10;>seq1&#10;ATGCTAGCTAGC..."
                 ><?= htmlspecialchars($search_query) ?></textarea>
                 <small class="form-text text-muted">You can paste FASTA format (with >) or just the raw sequence.</small>
+                
+                <!-- Sample Sequence Buttons -->
+                <div class="mt-2 d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="loadSampleSequence('protein')" title="Load sample protein sequence for testing">
+                        <i class="fa fa-flask"></i> Sample Protein
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="loadSampleSequence('nucleotide')" title="Load sample nucleotide sequence for testing">
+                        <i class="fa fa-flask"></i> Sample Nucleotide
+                    </button>
+                </div>
             </div>
 
             <!-- BLAST Program Selection -->
@@ -612,6 +622,57 @@ foreach ($sources_by_group as $group => $organisms) {
 <script src="/<?= $site ?>/js/blast-manager.js"></script>
 
 <script>
+// Load sample sequences for testing
+function loadSampleSequence(type) {
+    console.log('loadSampleSequence called with type:', type);
+    
+    const sampleSequences = <?= json_encode($config->getArray('blast_sample_sequences', [])) ?>;
+    console.log('Available samples:', Object.keys(sampleSequences));
+    
+    const queryField = document.getElementById('query');
+    const programField = document.getElementById('blast_program');
+    
+    if (!queryField) {
+        console.error('query field not found');
+        return;
+    }
+    
+    if (type === 'protein' && sampleSequences['protein']) {
+        console.log('Loading protein sample');
+        queryField.value = sampleSequences['protein'];
+        if (programField) {
+            programField.value = 'blastx';
+        }
+    } else if (type === 'nucleotide' && sampleSequences['nucleotide']) {
+        console.log('Loading nucleotide sample');
+        queryField.value = sampleSequences['nucleotide'];
+        if (programField) {
+            programField.value = 'blastn';
+        }
+    } else {
+        console.error('Sample not found for type:', type);
+        return;
+    }
+    
+    // Detect sequence type and update UI
+    const result = detectSequenceType(queryField.value);
+    console.log('Detected sequence type:', result.type);
+    
+    // Update sequence type message
+    updateSequenceTypeInfo(result.message, 'sequenceTypeInfo', 'sequenceTypeMessage');
+    
+    // Filter BLAST programs based on detected type
+    if (result.type !== 'unknown') {
+        filterBlastPrograms(result.type, 'blast_program');
+    }
+    
+    // Update database list
+    updateDatabaseList();
+    
+    // Scroll to top so user can see the loaded sequence
+    queryField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 <?php if (isset($blast_result) && $blast_result['success']): ?>
     // Auto-scroll to results if BLAST was successful
     autoScrollToResults();
