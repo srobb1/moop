@@ -23,6 +23,7 @@ header('Content-Type: application/json');
 $search_keywords = $_GET['search_keywords'] ?? '';
 $organism = $_GET['organism'] ?? '';
 $group = $_GET['group'] ?? '';
+$assembly = $_GET['assembly'] ?? '';
 $quoted_search = isset($_GET['quoted']) && $_GET['quoted'] === '1';
 $source_names = $_GET['source_names'] ?? '';  // Comma-separated source names
 
@@ -87,13 +88,13 @@ $organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $ab
 $organism_image_path = $organism_data_result['image_path'];
 
 // Check if searching by feature uniquename first
-$results = searchFeaturesByUniquenameForSearch($search_input, $db);
+$results = searchFeaturesByUniquenameForSearch($search_input, $db, '', $assembly);
 $uniquename_search = !empty($results);
 $warning_message = null;
 
 // If no results by uniquename, search annotations
 if (!$uniquename_search) {
-    $search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db, $source_filter);
+    $search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db, $source_filter, $assembly);
     $results = $search_result['results'];
     $warning_message = $search_result['warning'];
 }

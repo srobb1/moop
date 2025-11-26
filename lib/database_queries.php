@@ -279,7 +279,7 @@ function getAssemblyStats($genome_accession, $dbFile) {
  * @param string $dbFile - Path to SQLite database
  * @return array - Array of matching features with annotations
  */
-function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, $source_names = []) {
+function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, $source_names = [], $assembly_accession = '') {
     // Use provided source names filter, or empty array if not provided
     $source_filter = !empty($source_names) ? $source_names : [];
     $search_term_clean = $search_term;
@@ -308,6 +308,12 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
                        OR a.annotation_accession LIKE ?)";
         
         $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern];
+        
+        // Add assembly filter if specified
+        if (!empty($assembly_accession)) {
+            $query .= " AND g.genome_accession = ?";
+            $params[] = $assembly_accession;
+        }
         
         // Add source filter if specified (exact match with IN)
         if (!empty($source_filter)) {
@@ -371,6 +377,12 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
                     AND f.organism_id = o.organism_id
                     AND f.genome_id = g.genome_id
                     AND $where_clause";
+        
+        // Add assembly filter if specified
+        if (!empty($assembly_accession)) {
+            $query .= " AND g.genome_accession = ?";
+            $params[] = $assembly_accession;
+        }
         
         // Add source filter if specified (exact match with IN)
         if (!empty($source_filter)) {
@@ -513,7 +525,7 @@ function searchFeaturesAndAnnotationsLike($search_term, $is_quoted_search, $dbFi
  * @param string $organism_name - Optional: Filter by organism
  * @return array - Array of matching features
  */
-function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_name = '') {
+function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_name = '', $assembly_accession = '') {
     if ($organism_name) {
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
@@ -522,10 +534,16 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
                   WHERE f.organism_id = o.organism_id
                     AND f.genome_id = g.genome_id
                     AND f.feature_uniquename LIKE ? 
-                    AND (o.genus || ' ' || o.species = ?)
-                  ORDER BY f.feature_uniquename
-                  ";
+                    AND (o.genus || ' ' || o.species = ?)";
         $params = ["%$search_term%", $organism_name];
+        
+        // Add assembly filter if specified
+        if (!empty($assembly_accession)) {
+            $query .= " AND g.genome_accession = ?";
+            $params[] = $assembly_accession;
+        }
+        
+        $query .= " ORDER BY f.feature_uniquename";
     } else {
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
@@ -533,10 +551,16 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
                   FROM feature f, organism o, genome g
                   WHERE f.organism_id = o.organism_id
                     AND f.genome_id = g.genome_id
-                    AND f.feature_uniquename LIKE ?
-                  ORDER BY f.feature_uniquename
-                  ";
+                    AND f.feature_uniquename LIKE ?";
         $params = ["%$search_term%"];
+        
+        // Add assembly filter if specified
+        if (!empty($assembly_accession)) {
+            $query .= " AND g.genome_accession = ?";
+            $params[] = $assembly_accession;
+        }
+        
+        $query .= " ORDER BY f.feature_uniquename";
     }
     
     return fetchData($query, $dbFile, $params);

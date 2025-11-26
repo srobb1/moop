@@ -32,12 +32,6 @@ if (empty($assembly_info)) {
   <link rel="stylesheet" href="/<?= $site ?>/css/parent.css">
   <link rel="stylesheet" href="/<?= $site ?>/css/advanced-search-filter.css">
   <link rel="stylesheet" href="/<?= $site ?>/css/search-controls.css">
-  <style>
-    /* Override feature-header h1 color for assembly display */
-    .assembly-header-custom h1 {
-      background-color: #d97706 !important;
-    }
-  </style>
 </head>
 <body class="bg-light">
 
@@ -142,7 +136,7 @@ if (empty($assembly_info)) {
     <?php endif; ?>
 
     <div class="<?= $show_image ? 'col-md-8' : 'col-12' ?>">
-      <div class="feature-header assembly-header-custom shadow">
+      <div class="feature-header shadow">
         <h1 class="mb-0">
           <?= htmlspecialchars($assembly_info['genome_name']) ?>
           <span class="badge bg-light text-dark ms-2">Assembly</span>
@@ -152,29 +146,25 @@ if (empty($assembly_info)) {
           <strong>Accession:</strong> <span class="feature-value text-monospace"><?= htmlspecialchars($assembly_info['genome_accession']) ?></span>
         </div>
         <div class="feature-info-item">
-          <strong>Organism:</strong> <span class="feature-value"><em><a href="/<?= $site ?>/tools/organism_display.php?organism=<?= urlencode($organism_name) ?>" class="link-light-bordered"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></a></em></span>
+          <strong>Organism:</strong> <span class="feature-value"><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Gene and mRNA Counts Section -->
-  <div class="row g-4 mb-5" id="assemblyStats">
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-body">
+  <!-- Gene and mRNA Counts Section (like Feature Hierarchy) -->
+  <div class="card shadow-sm mb-4" id="assemblyStats">
+    <div class="card-body">
+      <div class="row g-4">
+        <div class="col-md-6">
           <div class="text-center">
-            <h2 class="fw-bold feature-color-gene mb-3">Genes</h2>
+            <h2 class="fw-bold feature-color-gene">Genes</h2>
             <h2 class="fw-bold feature-color-gene"><?= number_format($assembly_info['gene_count'] ?? 0) ?></h2>
           </div>
         </div>
-      </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-body">
+        <div class="col-md-6">
           <div class="text-center">
-            <h2 class="fw-bold feature-color-mrna mb-3">Transcripts</h2>
+            <h2 class="fw-bold feature-color-mrna">Transcripts</h2>
             <h2 class="fw-bold feature-color-mrna"><?= number_format($assembly_info['mrna_count'] ?? 0) ?></h2>
           </div>
         </div>
@@ -193,16 +183,13 @@ if (empty($assembly_info)) {
       <div class="card shadow-sm">
         <div class="card-body">
           <h3 class="card-title mb-4"><i class="fa fa-download"></i> Download Sequence Files</h3>
-          <div class="row g-3">
+          <div class="d-flex flex-wrap gap-2">
             <?php foreach ($fasta_files as $type => $file_info): ?>
-              <div class="col-6 col-md-3">
-                <a href="/<?= $site ?>/tools/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&type=<?= urlencode($type) ?>" 
-                   class="btn btn-primary w-100 py-4 fw-bold"
-                   style="border-radius: 0.75rem; font-size: 1rem;"
-                   download>
-                  <i class="fa fa-download me-2"></i><?= htmlspecialchars($file_info['label']) ?>
-                </a>
-              </div>
+              <a href="/<?= $site ?>/tools/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&type=<?= urlencode($type) ?>" 
+                 class="btn btn-primary"
+                 download>
+                <i class="fa fa-download"></i> <?= htmlspecialchars($file_info['label']) ?>
+              </a>
             <?php endforeach; ?>
           </div>
         </div>
