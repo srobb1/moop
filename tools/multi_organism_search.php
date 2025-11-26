@@ -82,7 +82,7 @@ foreach ($organisms as $organism) {
     <!-- Tools Column -->
     <div class="col-lg-4">
       <?php 
-      $context = createMultiOrganismToolContext($organisms);
+      $context = createToolContext('multi_organism_search', ['organisms' => $organisms]);
       include_once TOOL_SECTION_PATH;
       ?>
     </div>

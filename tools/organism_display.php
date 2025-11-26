@@ -67,7 +67,10 @@ $organism_info = $organism_context['info'];
     <!-- Tools Column -->
     <div class="col-lg-4">
       <?php
-      $context = createOrganismToolContext($organism_name, $organism_info['common_name'] ?? $organism_name);
+      $context = createToolContext('organism', [
+          'organism' => $organism_name,
+          'display_name' => $organism_info['common_name'] ?? $organism_name
+      ]);
       $context['referrer_page'] = $_GET['referrer_page'] ?? '';
       include_once TOOL_SECTION_PATH;
       ?>

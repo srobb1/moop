@@ -1,7 +1,7 @@
 <?php
 /**
  * AUTO-GENERATED FUNCTION REGISTRY
- * Generated: 2025-11-26 02:05:14
+ * Generated: 2025-11-26 02:18:01
  * To regenerate, run: php tools/generate_registry.php
  */
 
@@ -5186,118 +5186,51 @@ JS;
     ),
     1 => 
     array (
-      'name' => 'createIndexToolContext',
-      'line' => 50,
+      'name' => 'createToolContext',
+      'line' => 55,
       'comment' => '/**
-* Create a tool context for index/home page
+* Create a tool context for tool_section.php
 *
-* @param bool $use_onclick_handler Whether to use onclick handler for tools
-* @return array Context array for tool_section.php
-*/',
-      'code' => 'function createIndexToolContext($use_onclick_handler = true) {
-    return [
-        \'display_name\' => \'Multi-Organism Search\',
-        \'page\' => \'index\',
-        \'use_onclick_handler\' => $use_onclick_handler
-    ];
-}',
-    ),
-    2 => 
-    array (
-      'name' => 'createOrganismToolContext',
-      'line' => 65,
-      'comment' => '/**
-* Create a tool context for an organism display page
+* Builds a context array with page type and available entity parameters.
+* Filters out null/empty values to keep context clean.
 *
-* @param string $organism_name The organism name
-* @param string $display_name Optional display name (defaults to organism_name)
+* @param string $page Page identifier: \'index\', \'organism\', \'assembly\', \'group\', \'parent\', \'multi_organism_search\'
+* @param array $params Optional entity parameters: organism, assembly, group, organisms, display_name, use_onclick_handler
 * @return array Context array for tool_section.php
-*/',
-      'code' => 'function createOrganismToolContext($organism_name, $display_name = null) {
-    return [
-        \'organism\' => $organism_name,
-        \'display_name\' => $display_name ?? $organism_name,
-        \'page\' => \'organism\'
-    ];
-}',
-    ),
-    3 => 
-    array (
-      'name' => 'createAssemblyToolContext',
-      'line' => 81,
-      'comment' => '/**
-* Create a tool context for an assembly display page
 *
-* @param string $organism_name The organism name
-* @param string $assembly_accession The assembly/genome accession
-* @param string $display_name Optional display name (defaults to assembly_accession)
-* @return array Context array for tool_section.php
+* Examples:
+*   createToolContext(\'index\', [\'use_onclick_handler\' => true])
+*   createToolContext(\'organism\', [\'organism\' => $name, \'display_name\' => $common_name])
+*   createToolContext(\'assembly\', [\'organism\' => $org, \'assembly\' => $acc, \'display_name\' => $name])
+*   createToolContext(\'group\', [\'group\' => $name])
+*   createToolContext(\'parent\', [\'organism\' => $org, \'assembly\' => $acc, \'display_name\' => $feature])
+*   createToolContext(\'multi_organism_search\', [\'organisms\' => $orgs, \'display_name\' => $name])
 */',
-      'code' => 'function createAssemblyToolContext($organism_name, $assembly_accession, $display_name = null) {
-    return [
-        \'organism\' => $organism_name,
-        \'assembly\' => $assembly_accession,
-        \'display_name\' => $display_name ?? $assembly_accession,
-        \'page\' => \'assembly\'
-    ];
-}',
-    ),
-    4 => 
-    array (
-      'name' => 'createGroupToolContext',
-      'line' => 96,
-      'comment' => '/**
-* Create a tool context for a group display page
-*
-* @param string $group_name The group name
-* @return array Context array for tool_section.php
-*/',
-      'code' => 'function createGroupToolContext($group_name) {
-    return [
-        \'group\' => $group_name,
-        \'display_name\' => $group_name,
-        \'page\' => \'group\'
-    ];
-}',
-    ),
-    5 => 
-    array (
-      'name' => 'createFeatureToolContext',
-      'line' => 112,
-      'comment' => '/**
-* Create a tool context for a feature/parent display page
-*
-* @param string $organism_name The organism name
-* @param string $assembly_accession The assembly/genome accession
-* @param string $feature_name The feature name
-* @return array Context array for tool_section.php
-*/',
-      'code' => 'function createFeatureToolContext($organism_name, $assembly_accession, $feature_name) {
-    return [
-        \'organism\' => $organism_name,
-        \'assembly\' => $assembly_accession,
-        \'display_name\' => $feature_name,
-        \'page\' => \'parent\'
-    ];
-}',
-    ),
-    6 => 
-    array (
-      'name' => 'createMultiOrganismToolContext',
-      'line' => 128,
-      'comment' => '/**
-* Create a tool context for multi-organism search page
-*
-* @param array $organisms Array of organism names
-* @param string $display_name Optional display name
-* @return array Context array for tool_section.php
-*/',
-      'code' => 'function createMultiOrganismToolContext($organisms, $display_name = \'Multi-Organism Search\') {
-    return [
-        \'organisms\' => $organisms,
-        \'display_name\' => $display_name,
-        \'page\' => \'multi_organism_search\'
-    ];
+      'code' => 'function createToolContext($page, $params = []) {
+    $context = [\'page\' => $page];
+    
+    // Add optional parameters if provided and not null/empty
+    $optional_keys = [\'organism\', \'assembly\', \'group\', \'organisms\', \'display_name\', \'use_onclick_handler\'];
+    foreach ($optional_keys as $key) {
+        if (!empty($params[$key])) {
+            $context[$key] = $params[$key];
+        }
+    }
+    
+    // Set sensible defaults for display_name if not provided
+    if (empty($context[\'display_name\'])) {
+        if (!empty($context[\'organism\'])) {
+            $context[\'display_name\'] = $context[\'organism\'];
+        } elseif (!empty($context[\'group\'])) {
+            $context[\'display_name\'] = $context[\'group\'];
+        } elseif ($page === \'index\') {
+            $context[\'display_name\'] = \'Multi-Organism Search\';
+        } elseif ($page === \'multi_organism_search\') {
+            $context[\'display_name\'] = \'Multi-Organism Search\';
+        }
+    }
+    
+    return $context;
 }',
     ),
   ),

@@ -97,7 +97,7 @@ if (!is_public_group($group_name)) {
     <!-- Tools Column -->
     <div class="col-lg-4">
       <?php 
-      $context = createGroupToolContext($group_name);
+      $context = createToolContext('group', ['group' => $group_name]);
       include_once TOOL_SECTION_PATH;
       ?>
     </div>

@@ -2,14 +2,14 @@
 
 **Auto-generated documentation**
 
-Generated: 2025-11-26 02:05:16
+Generated: 2025-11-26 02:18:03
 
 ## Summary
 
-- **Total Functions**: 120
+- **Total Functions**: 115
 - **Files Scanned**: 22
 
-## ⚠️ Unused Functions (17)
+## ⚠️ Unused Functions (16)
 
 These functions are defined but never called:
 
@@ -25,7 +25,6 @@ These functions are defined but never called:
 - `searchFeaturesAndAnnotationsLike()` in `lib/database_queries.php` (line 446)
 - `buildFilteredSourcesList()` in `lib/extract_search_helpers.php` (line 257)
 - `buildLikeConditions()` in `lib/functions_database.php` (line 241)
-- `getOrganismImageWithCaption()` in `lib/functions_display.php` (line 150)
 - `test_input()` in `lib/functions_validation.php` (line 23)
 - `validate_search_term()` in `lib/functions_validation.php` (line 68)
 - `is_quoted_search()` in `lib/functions_validation.php` (line 97)
@@ -51,7 +50,7 @@ These functions are defined but never called:
 - [lib/functions_filesystem.php](#lib-functions_filesystemphp) - 7 functions
 - [lib/functions_json.php](#lib-functions_jsonphp) - 4 functions
 - [lib/functions_system.php](#lib-functions_systemphp) - 2 functions
-- [lib/functions_tools.php](#lib-functions_toolsphp) - 7 functions
+- [lib/functions_tools.php](#lib-functions_toolsphp) - 2 functions
 - [lib/functions_validation.php](#lib-functions_validationphp) - 6 functions
 - [lib/parent_functions.php](#lib-parent_functionsphp) - 6 functions
 - [lib/tool_config.php](#lib-tool_configphp) - 4 functions
@@ -1311,8 +1310,8 @@ Located in: `lib/functions_data.php` at line 12
   - Line 23: `$group_data = getGroupData();`
   - Line 23: `$group_data = getGroupData();`
 - `/data/moop/tools/organism_display.php` (2x):
-  - Line 194: `$group_data = getGroupData();`
-  - Line 194: `$group_data = getGroupData();`
+  - Line 198: `$group_data = getGroupData();`
+  - Line 198: `$group_data = getGroupData();`
 - `/data/moop/tools/parent_display.php` (2x):
   - Line 25: `$group_data = getGroupData();`
   - Line 25: `$group_data = getGroupData();`
@@ -1406,11 +1405,11 @@ Located in: `lib/functions_data.php` at line 131
 
 **Used in 2 unique file(s) (4 total times):**
 - `/data/moop/tools/assembly_display.php` (2x):
-  - Line 104: `$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);`
-  - Line 104: `$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);`
+  - Line 108: `$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);`
+  - Line 108: `$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);`
 - `/data/moop/tools/organism_display.php` (2x):
-  - Line 214: `<?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?>`
-  - Line 214: `<?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?>`
+  - Line 218: `<?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?>`
+  - Line 218: `<?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?>`
 
 ### `getIndexDisplayCards()` (Line 164)
 
@@ -1763,7 +1762,7 @@ Located in: `lib/functions_display.php` at line 11
 */
 ```
 
-**Used in 3 unique file(s) (8 total times):**
+**Used in 2 unique file(s) (6 total times):**
 - `/data/moop/lib/functions_display.php` (4x):
   - Line 31: `$result[\'image_path\'] = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
   - Line 151: `$image_path = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
@@ -1772,9 +1771,6 @@ Located in: `lib/functions_display.php` at line 11
 - `/data/moop/tools/groups_display.php` (2x):
   - Line 188: `$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
   - Line 188: `$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
-- `/data/moop/tools/organism_display.php` (2x):
-  - Line 94: `$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
-  - Line 94: `$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
 
 ### `getOrganismImageCaption()` (Line 98)
 
@@ -1796,13 +1792,10 @@ Located in: `lib/functions_display.php` at line 98
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
+**Used in 1 unique file(s) (2 total times):**
 - `/data/moop/lib/functions_display.php` (2x):
   - Line 152: `$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);`
   - Line 152: `$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);`
-- `/data/moop/tools/organism_display.php` (2x):
-  - Line 95: `$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);`
-  - Line 95: `$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);`
 
 ### `getOrganismImageWithCaption()` (Line 150)
 
@@ -1824,7 +1817,10 @@ Located in: `lib/functions_display.php` at line 150
 */
 ```
 
-**Used in: 0 files** (possibly unused)
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/tools/organism_display.php` (2x):
+  - Line 97: `$image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path);`
+  - Line 97: `$image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path);`
 
 ### `validateOrganismJson()` (Line 173)
 
@@ -2358,7 +2354,7 @@ Located in: `lib/functions_system.php` at line 48
 
 ## lib/functions_tools.php
 
-**7 function(s)**
+**2 function(s)**
 
 ### `getAvailableTools()` (Line 14)
 
@@ -2381,130 +2377,51 @@ Located in: `lib/functions_tools.php` at line 14
   - Line 62: `$tools = getAvailableTools($context ?? []);`
   - Line 62: `$tools = getAvailableTools($context ?? []);`
 
-### `createIndexToolContext()` (Line 50)
+### `createToolContext()` (Line 55)
 
-Located in: `lib/functions_tools.php` at line 50
-
-**Description:**
-
-```
-/**
-* Create a tool context for index/home page
-*
-* @param bool $use_onclick_handler Whether to use onclick handler for tools
-* @return array Context array for tool_section.php
-*/
-```
-
-**Used in 1 unique file(s) (1 total times):**
-- `/data/moop/index.php` (1x):
-  - Line 123: `$context = createIndexToolContext();`
-
-### `createOrganismToolContext()` (Line 65)
-
-Located in: `lib/functions_tools.php` at line 65
+Located in: `lib/functions_tools.php` at line 55
 
 **Description:**
 
 ```
 /**
-* Create a tool context for an organism display page
+* Create a tool context for tool_section.php
 *
-* @param string $organism_name The organism name
-* @param string $display_name Optional display name (defaults to organism_name)
+* Builds a context array with page type and available entity parameters.
+* Filters out null/empty values to keep context clean.
+*
+* @param string $page Page identifier: 'index', 'organism', 'assembly', 'group', 'parent', 'multi_organism_search'
+* @param array $params Optional entity parameters: organism, assembly, group, organisms, display_name, use_onclick_handler
 * @return array Context array for tool_section.php
+*
+* Examples:
+*   createToolContext('index', ['use_onclick_handler' => true])
+*   createToolContext('organism', ['organism' => $name, 'display_name' => $common_name])
+*   createToolContext('assembly', ['organism' => $org, 'assembly' => $acc, 'display_name' => $name])
+*   createToolContext('group', ['group' => $name])
+*   createToolContext('parent', ['organism' => $org, 'assembly' => $acc, 'display_name' => $feature])
+*   createToolContext('multi_organism_search', ['organisms' => $orgs, 'display_name' => $name])
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/organism_display.php` (2x):
-  - Line 70: `$context = createOrganismToolContext($organism_name, $organism_info[\'common_name\'] ?? $organism_name);`
-  - Line 70: `$context = createOrganismToolContext($organism_name, $organism_info[\'common_name\'] ?? $organism_name);`
-
-### `createAssemblyToolContext()` (Line 81)
-
-Located in: `lib/functions_tools.php` at line 81
-
-**Description:**
-
-```
-/**
-* Create a tool context for an assembly display page
-*
-* @param string $organism_name The organism name
-* @param string $assembly_accession The assembly/genome accession
-* @param string $display_name Optional display name (defaults to assembly_accession)
-* @return array Context array for tool_section.php
-*/
-```
-
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/assembly_display.php` (2x):
-  - Line 72: `$context = createAssemblyToolContext($organism_name, $assembly_accession, $assembly_info[\'genome_name\']);`
-  - Line 72: `$context = createAssemblyToolContext($organism_name, $assembly_accession, $assembly_info[\'genome_name\']);`
-
-### `createGroupToolContext()` (Line 96)
-
-Located in: `lib/functions_tools.php` at line 96
-
-**Description:**
-
-```
-/**
-* Create a tool context for a group display page
-*
-* @param string $group_name The group name
-* @return array Context array for tool_section.php
-*/
-```
-
-**Used in 1 unique file(s) (2 total times):**
+**Used in 6 unique file(s) (11 total times):**
 - `/data/moop/tools/groups_display.php` (2x):
-  - Line 100: `$context = createGroupToolContext($group_name);`
-  - Line 100: `$context = createGroupToolContext($group_name);`
-
-### `createFeatureToolContext()` (Line 112)
-
-Located in: `lib/functions_tools.php` at line 112
-
-**Description:**
-
-```
-/**
-* Create a tool context for a feature/parent display page
-*
-* @param string $organism_name The organism name
-* @param string $assembly_accession The assembly/genome accession
-* @param string $feature_name The feature name
-* @return array Context array for tool_section.php
-*/
-```
-
-**Used in 1 unique file(s) (2 total times):**
+  - Line 100: `$context = createToolContext(\'group\', [\'group\' => $group_name]);`
+  - Line 100: `$context = createToolContext(\'group\', [\'group\' => $group_name]);`
+- `/data/moop/tools/assembly_display.php` (2x):
+  - Line 72: `$context = createToolContext(\'assembly\', [`
+  - Line 72: `$context = createToolContext(\'assembly\', [`
+- `/data/moop/tools/organism_display.php` (2x):
+  - Line 70: `$context = createToolContext(\'organism\', [`
+  - Line 70: `$context = createToolContext(\'organism\', [`
 - `/data/moop/tools/parent_display.php` (2x):
-  - Line 198: `$context = createFeatureToolContext($organism_name, $genome_accession, $feature_uniquename);`
-  - Line 198: `$context = createFeatureToolContext($organism_name, $genome_accession, $feature_uniquename);`
-
-### `createMultiOrganismToolContext()` (Line 128)
-
-Located in: `lib/functions_tools.php` at line 128
-
-**Description:**
-
-```
-/**
-* Create a tool context for multi-organism search page
-*
-* @param array $organisms Array of organism names
-* @param string $display_name Optional display name
-* @return array Context array for tool_section.php
-*/
-```
-
-**Used in 1 unique file(s) (2 total times):**
+  - Line 198: `$context = createToolContext(\'parent\', [`
+  - Line 198: `$context = createToolContext(\'parent\', [`
 - `/data/moop/tools/multi_organism_search.php` (2x):
-  - Line 85: `$context = createMultiOrganismToolContext($organisms);`
-  - Line 85: `$context = createMultiOrganismToolContext($organisms);`
+  - Line 85: `$context = createToolContext(\'multi_organism_search\', [\'organisms\' => $organisms]);`
+  - Line 85: `$context = createToolContext(\'multi_organism_search\', [\'organisms\' => $organisms]);`
+- `/data/moop/index.php` (1x):
+  - Line 123: `$context = createToolContext(\'index\', [\'use_onclick_handler\' => true]);`
 
 ---
 
@@ -2768,10 +2685,10 @@ Located in: `lib/parent_functions.php` at line 99
 
 **Used in 1 unique file(s) (4 total times):**
 - `/data/moop/tools/parent_display.php` (4x):
-  - Line 257: `echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
-  - Line 321: `echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
-  - Line 257: `echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
-  - Line 321: `echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
+  - Line 261: `echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
+  - Line 325: `echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
+  - Line 261: `echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
+  - Line 325: `echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
 
 ### `getAllAnnotationsForFeatures()` (Line 195)
 
@@ -2821,8 +2738,8 @@ Located in: `lib/parent_functions.php` at line 256
   - Line 299: `$html .= generateTreeHTML($row[\'feature_id\'], $dbFile, $prefix, $is_last_child, $genome_ids);`
   - Line 299: `$html .= generateTreeHTML($row[\'feature_id\'], $dbFile, $prefix, $is_last_child, $genome_ids);`
 - `/data/moop/tools/parent_display.php` (2x):
-  - Line 221: `<?= generateTreeHTML($feature_id, $db) ?>`
-  - Line 221: `<?= generateTreeHTML($feature_id, $db) ?>`
+  - Line 225: `<?= generateTreeHTML($feature_id, $db) ?>`
+  - Line 225: `<?= generateTreeHTML($feature_id, $db) ?>`
 
 ---
 

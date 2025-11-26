@@ -50,7 +50,7 @@
     <header>
         <div class="container">
             <h1>🔍 MOOP Function Registry</h1>
-            <p>Auto-generated function documentation • Generated: 2025-11-26 02:05:14</p>
+            <p>Auto-generated function documentation • Generated: 2025-11-26 02:18:01</p>
         </div>
     </header>
     <div class="container">
@@ -58,12 +58,12 @@
             <input type="text" id="searchInput" placeholder="🔍 Search functions, files, or usage..." onkeyup="filterFunctions()">
         </div>
         <div class="stats">
-            <div class="stat-box"><strong>120</strong><span>Total Functions</span></div>
+            <div class="stat-box"><strong>115</strong><span>Total Functions</span></div>
             <div class="stat-box"><strong>22</strong><span>Files</span></div>
         </div>
         <div style="background: #ffe6e6; border: 2px solid #cc0000; border-radius: 4px; overflow: hidden; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <div style="background: #cc0000; color: white; padding: 15px 20px; font-weight: bold; cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center;" onclick="toggleUnused(this)">
-                <span>⚠️ 17 Unused Function(s) Found</span>
+                <span>⚠️ 16 Unused Function(s) Found</span>
                 <span class="unusedArrow">▶</span>
             </div>
             <div class="unused-content hidden">
@@ -81,7 +81,6 @@
                     <li><strong style="color: #cc0000;">searchFeaturesAndAnnotationsLike()</strong> in <code>lib/database_queries.php</code> (line 446)</li>
                     <li><strong style="color: #cc0000;">buildFilteredSourcesList()</strong> in <code>lib/extract_search_helpers.php</code> (line 257)</li>
                     <li><strong style="color: #cc0000;">buildLikeConditions()</strong> in <code>lib/functions_database.php</code> (line 241)</li>
-                    <li><strong style="color: #cc0000;">getOrganismImageWithCaption()</strong> in <code>lib/functions_display.php</code> (line 150)</li>
                     <li><strong style="color: #cc0000;">test_input()</strong> in <code>lib/functions_validation.php</code> (line 23)</li>
                     <li><strong style="color: #cc0000;">validate_search_term()</strong> in <code>lib/functions_validation.php</code> (line 68)</li>
                     <li><strong style="color: #cc0000;">is_quoted_search()</strong> in <code>lib/functions_validation.php</code> (line 97)</li>
@@ -4999,8 +4998,8 @@ JS;
                                 </ul></li>
                             <li><strong>/data/moop/tools/organism_display.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 194</code>: <small>$group_data = getGroupData();</small></li>
-                                    <li><code>line 194</code>: <small>$group_data = getGroupData();</small></li>
+                                    <li><code>line 198</code>: <small>$group_data = getGroupData();</small></li>
+                                    <li><code>line 198</code>: <small>$group_data = getGroupData();</small></li>
                                 </ul></li>
                             <li><strong>/data/moop/tools/parent_display.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
@@ -5225,13 +5224,13 @@ JS;
                         <ul>
                             <li><strong>/data/moop/tools/assembly_display.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 104</code>: <small>$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);</small></li>
-                                    <li><code>line 104</code>: <small>$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);</small></li>
+                                    <li><code>line 108</code>: <small>$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);</small></li>
+                                    <li><code>line 108</code>: <small>$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);</small></li>
                                 </ul></li>
                             <li><strong>/data/moop/tools/organism_display.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 214</code>: <small>&lt;?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?&gt;</small></li>
-                                    <li><code>line 214</code>: <small>&lt;?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?&gt;</small></li>
+                                    <li><code>line 218</code>: <small>&lt;?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?&gt;</small></li>
+                                    <li><code>line 218</code>: <small>&lt;?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?&gt;</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -6075,7 +6074,7 @@ JS;
                     <div class="function-header" onclick="toggleCode(this)">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div class="function-name">getOrganismImagePath()</div>
-                            <span class="function-counter">8</span>
+                            <span class="function-counter">6</span>
                             <div class="function-line">Line 11</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
@@ -6097,7 +6096,7 @@ JS;
 */</pre>
                     </div>
                     <div class="function-usages">
-                        <strong>📍 Used in 3 unique file(s) (8 total times):</strong>
+                        <strong>📍 Used in 2 unique file(s) (6 total times):</strong>
                         <ul>
                             <li><strong>/data/moop/lib/functions_display.php</strong> (4x)
                                 <ul style="margin-top: 5px;">
@@ -6110,11 +6109,6 @@ JS;
                                 <ul style="margin-top: 5px;">
                                     <li><code>line 188</code>: <small>$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images</small></li>
                                     <li><code>line 188</code>: <small>$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images</small></li>
-                                </ul></li>
-                            <li><strong>/data/moop/tools/organism_display.php</strong> (2x)
-                                <ul style="margin-top: 5px;">
-                                    <li><code>line 94</code>: <small>$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images</small></li>
-                                    <li><code>line 94</code>: <small>$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -6161,7 +6155,7 @@ JS;
                     <div class="function-header" onclick="toggleCode(this)">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div class="function-name">getOrganismImageCaption()</div>
-                            <span class="function-counter">4</span>
+                            <span class="function-counter">2</span>
                             <div class="function-line">Line 98</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
@@ -6181,17 +6175,12 @@ JS;
 */</pre>
                     </div>
                     <div class="function-usages">
-                        <strong>📍 Used in 2 unique file(s) (4 total times):</strong>
+                        <strong>📍 Used in 1 unique file(s) (2 total times):</strong>
                         <ul>
                             <li><strong>/data/moop/lib/functions_display.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
                                     <li><code>line 152</code>: <small>$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);</small></li>
                                     <li><code>line 152</code>: <small>$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);</small></li>
-                                </ul></li>
-                            <li><strong>/data/moop/tools/organism_display.php</strong> (2x)
-                                <ul style="margin-top: 5px;">
-                                    <li><code>line 95</code>: <small>$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);</small></li>
-                                    <li><code>line 95</code>: <small>$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -6242,7 +6231,7 @@ JS;
                     <div class="function-header" onclick="toggleCode(this)">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div class="function-name">getOrganismImageWithCaption()</div>
-                            <span class="function-counter">0</span>
+                            <span class="function-counter">2</span>
                             <div class="function-line">Line 150</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
@@ -6260,6 +6249,16 @@ JS;
 * @param string $absolute_images_path Absolute file system path to images directory
 * @return array [&#039;image_path&#039; =&gt; string, &#039;caption&#039; =&gt; string, &#039;link&#039; =&gt; string or empty]
 */</pre>
+                    </div>
+                    <div class="function-usages">
+                        <strong>📍 Used in 1 unique file(s) (2 total times):</strong>
+                        <ul>
+                            <li><strong>/data/moop/tools/organism_display.php</strong> (2x)
+                                <ul style="margin-top: 5px;">
+                                    <li><code>line 97</code>: <small>$image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolut</small></li>
+                                    <li><code>line 97</code>: <small>$image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolut</small></li>
+                                </ul></li>
+                        </ul>
                     </div>
                     <div class="function-code">
                         <code>function getOrganismImageWithCaption($organism_info, $images_path = &#039;moop/images&#039;, $absolute_images_path = &#039;&#039;) {
@@ -7695,7 +7694,7 @@ JS;
             </div>
         </div>
         <div class="file-section">
-            <div class="file-header" onclick="toggleFile(this)">📄 lib/functions_tools.php (7)</div>
+            <div class="file-header" onclick="toggleFile(this)">📄 lib/functions_tools.php (2)</div>
             <div class="functions-list">
                 <div class="function-item searchable" data-func="getAvailableTools">
                     <div class="function-header" onclick="toggleCode(this)">
@@ -7758,238 +7757,96 @@ JS;
 }</code>
                     </div>
                 </div>
-                <div class="function-item searchable" data-func="createIndexToolContext">
+                <div class="function-item searchable" data-func="createToolContext">
                     <div class="function-header" onclick="toggleCode(this)">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <div class="function-name">createIndexToolContext()</div>
-                            <span class="function-counter">1</span>
-                            <div class="function-line">Line 50</div>
+                            <div class="function-name">createToolContext()</div>
+                            <span class="function-counter">11</span>
+                            <div class="function-line">Line 55</div>
                         </div>
                         <span style="font-size: 20px; margin-left: 10px;">▶</span>
                     </div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">lib/functions_tools.php: createIndexToolContext()</div>
+                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">lib/functions_tools.php: createToolContext()</div>
                     <div class="function-comment">
                         <pre>/**
-* Create a tool context for index/home page
+* Create a tool context for tool_section.php
 *
-* @param bool $use_onclick_handler Whether to use onclick handler for tools
+* Builds a context array with page type and available entity parameters.
+* Filters out null/empty values to keep context clean.
+*
+* @param string $page Page identifier: &#039;index&#039;, &#039;organism&#039;, &#039;assembly&#039;, &#039;group&#039;, &#039;parent&#039;, &#039;multi_organism_search&#039;
+* @param array $params Optional entity parameters: organism, assembly, group, organisms, display_name, use_onclick_handler
 * @return array Context array for tool_section.php
+*
+* Examples:
+*   createToolContext(&#039;index&#039;, [&#039;use_onclick_handler&#039; =&gt; true])
+*   createToolContext(&#039;organism&#039;, [&#039;organism&#039; =&gt; $name, &#039;display_name&#039; =&gt; $common_name])
+*   createToolContext(&#039;assembly&#039;, [&#039;organism&#039; =&gt; $org, &#039;assembly&#039; =&gt; $acc, &#039;display_name&#039; =&gt; $name])
+*   createToolContext(&#039;group&#039;, [&#039;group&#039; =&gt; $name])
+*   createToolContext(&#039;parent&#039;, [&#039;organism&#039; =&gt; $org, &#039;assembly&#039; =&gt; $acc, &#039;display_name&#039; =&gt; $feature])
+*   createToolContext(&#039;multi_organism_search&#039;, [&#039;organisms&#039; =&gt; $orgs, &#039;display_name&#039; =&gt; $name])
 */</pre>
                     </div>
                     <div class="function-usages">
-                        <strong>📍 Used in 1 unique file(s) (1 total times):</strong>
-                        <ul>
-                            <li><strong>/data/moop/index.php</strong> (1x)
-                                <ul style="margin-top: 5px;">
-                                    <li><code>line 123</code>: <small>$context = createIndexToolContext();</small></li>
-                                </ul></li>
-                        </ul>
-                    </div>
-                    <div class="function-code">
-                        <code>function createIndexToolContext($use_onclick_handler = true) {
-    return [
-        &#039;display_name&#039; =&gt; &#039;Multi-Organism Search&#039;,
-        &#039;page&#039; =&gt; &#039;index&#039;,
-        &#039;use_onclick_handler&#039; =&gt; $use_onclick_handler
-    ];
-}</code>
-                    </div>
-                </div>
-                <div class="function-item searchable" data-func="createOrganismToolContext">
-                    <div class="function-header" onclick="toggleCode(this)">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div class="function-name">createOrganismToolContext()</div>
-                            <span class="function-counter">2</span>
-                            <div class="function-line">Line 65</div>
-                        </div>
-                        <span style="font-size: 20px; margin-left: 10px;">▶</span>
-                    </div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">lib/functions_tools.php: createOrganismToolContext()</div>
-                    <div class="function-comment">
-                        <pre>/**
-* Create a tool context for an organism display page
-*
-* @param string $organism_name The organism name
-* @param string $display_name Optional display name (defaults to organism_name)
-* @return array Context array for tool_section.php
-*/</pre>
-                    </div>
-                    <div class="function-usages">
-                        <strong>📍 Used in 1 unique file(s) (2 total times):</strong>
-                        <ul>
-                            <li><strong>/data/moop/tools/organism_display.php</strong> (2x)
-                                <ul style="margin-top: 5px;">
-                                    <li><code>line 70</code>: <small>$context = createOrganismToolContext($organism_name, $organism_info[&#039;common_name</small></li>
-                                    <li><code>line 70</code>: <small>$context = createOrganismToolContext($organism_name, $organism_info[&#039;common_name</small></li>
-                                </ul></li>
-                        </ul>
-                    </div>
-                    <div class="function-code">
-                        <code>function createOrganismToolContext($organism_name, $display_name = null) {
-    return [
-        &#039;organism&#039; =&gt; $organism_name,
-        &#039;display_name&#039; =&gt; $display_name ?? $organism_name,
-        &#039;page&#039; =&gt; &#039;organism&#039;
-    ];
-}</code>
-                    </div>
-                </div>
-                <div class="function-item searchable" data-func="createAssemblyToolContext">
-                    <div class="function-header" onclick="toggleCode(this)">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div class="function-name">createAssemblyToolContext()</div>
-                            <span class="function-counter">2</span>
-                            <div class="function-line">Line 81</div>
-                        </div>
-                        <span style="font-size: 20px; margin-left: 10px;">▶</span>
-                    </div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">lib/functions_tools.php: createAssemblyToolContext()</div>
-                    <div class="function-comment">
-                        <pre>/**
-* Create a tool context for an assembly display page
-*
-* @param string $organism_name The organism name
-* @param string $assembly_accession The assembly/genome accession
-* @param string $display_name Optional display name (defaults to assembly_accession)
-* @return array Context array for tool_section.php
-*/</pre>
-                    </div>
-                    <div class="function-usages">
-                        <strong>📍 Used in 1 unique file(s) (2 total times):</strong>
-                        <ul>
-                            <li><strong>/data/moop/tools/assembly_display.php</strong> (2x)
-                                <ul style="margin-top: 5px;">
-                                    <li><code>line 72</code>: <small>$context = createAssemblyToolContext($organism_name, $assembly_accession, $assem</small></li>
-                                    <li><code>line 72</code>: <small>$context = createAssemblyToolContext($organism_name, $assembly_accession, $assem</small></li>
-                                </ul></li>
-                        </ul>
-                    </div>
-                    <div class="function-code">
-                        <code>function createAssemblyToolContext($organism_name, $assembly_accession, $display_name = null) {
-    return [
-        &#039;organism&#039; =&gt; $organism_name,
-        &#039;assembly&#039; =&gt; $assembly_accession,
-        &#039;display_name&#039; =&gt; $display_name ?? $assembly_accession,
-        &#039;page&#039; =&gt; &#039;assembly&#039;
-    ];
-}</code>
-                    </div>
-                </div>
-                <div class="function-item searchable" data-func="createGroupToolContext">
-                    <div class="function-header" onclick="toggleCode(this)">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div class="function-name">createGroupToolContext()</div>
-                            <span class="function-counter">2</span>
-                            <div class="function-line">Line 96</div>
-                        </div>
-                        <span style="font-size: 20px; margin-left: 10px;">▶</span>
-                    </div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">lib/functions_tools.php: createGroupToolContext()</div>
-                    <div class="function-comment">
-                        <pre>/**
-* Create a tool context for a group display page
-*
-* @param string $group_name The group name
-* @return array Context array for tool_section.php
-*/</pre>
-                    </div>
-                    <div class="function-usages">
-                        <strong>📍 Used in 1 unique file(s) (2 total times):</strong>
+                        <strong>📍 Used in 6 unique file(s) (11 total times):</strong>
                         <ul>
                             <li><strong>/data/moop/tools/groups_display.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 100</code>: <small>$context = createGroupToolContext($group_name);</small></li>
-                                    <li><code>line 100</code>: <small>$context = createGroupToolContext($group_name);</small></li>
+                                    <li><code>line 100</code>: <small>$context = createToolContext(&#039;group&#039;, [&#039;group&#039; =&gt; $group_name]);</small></li>
+                                    <li><code>line 100</code>: <small>$context = createToolContext(&#039;group&#039;, [&#039;group&#039; =&gt; $group_name]);</small></li>
                                 </ul></li>
-                        </ul>
-                    </div>
-                    <div class="function-code">
-                        <code>function createGroupToolContext($group_name) {
-    return [
-        &#039;group&#039; =&gt; $group_name,
-        &#039;display_name&#039; =&gt; $group_name,
-        &#039;page&#039; =&gt; &#039;group&#039;
-    ];
-}</code>
-                    </div>
-                </div>
-                <div class="function-item searchable" data-func="createFeatureToolContext">
-                    <div class="function-header" onclick="toggleCode(this)">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div class="function-name">createFeatureToolContext()</div>
-                            <span class="function-counter">2</span>
-                            <div class="function-line">Line 112</div>
-                        </div>
-                        <span style="font-size: 20px; margin-left: 10px;">▶</span>
-                    </div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">lib/functions_tools.php: createFeatureToolContext()</div>
-                    <div class="function-comment">
-                        <pre>/**
-* Create a tool context for a feature/parent display page
-*
-* @param string $organism_name The organism name
-* @param string $assembly_accession The assembly/genome accession
-* @param string $feature_name The feature name
-* @return array Context array for tool_section.php
-*/</pre>
-                    </div>
-                    <div class="function-usages">
-                        <strong>📍 Used in 1 unique file(s) (2 total times):</strong>
-                        <ul>
+                            <li><strong>/data/moop/tools/assembly_display.php</strong> (2x)
+                                <ul style="margin-top: 5px;">
+                                    <li><code>line 72</code>: <small>$context = createToolContext(&#039;assembly&#039;, [</small></li>
+                                    <li><code>line 72</code>: <small>$context = createToolContext(&#039;assembly&#039;, [</small></li>
+                                </ul></li>
+                            <li><strong>/data/moop/tools/organism_display.php</strong> (2x)
+                                <ul style="margin-top: 5px;">
+                                    <li><code>line 70</code>: <small>$context = createToolContext(&#039;organism&#039;, [</small></li>
+                                    <li><code>line 70</code>: <small>$context = createToolContext(&#039;organism&#039;, [</small></li>
+                                </ul></li>
                             <li><strong>/data/moop/tools/parent_display.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 198</code>: <small>$context = createFeatureToolContext($organism_name, $genome_accession, $feature_</small></li>
-                                    <li><code>line 198</code>: <small>$context = createFeatureToolContext($organism_name, $genome_accession, $feature_</small></li>
+                                    <li><code>line 198</code>: <small>$context = createToolContext(&#039;parent&#039;, [</small></li>
+                                    <li><code>line 198</code>: <small>$context = createToolContext(&#039;parent&#039;, [</small></li>
                                 </ul></li>
-                        </ul>
-                    </div>
-                    <div class="function-code">
-                        <code>function createFeatureToolContext($organism_name, $assembly_accession, $feature_name) {
-    return [
-        &#039;organism&#039; =&gt; $organism_name,
-        &#039;assembly&#039; =&gt; $assembly_accession,
-        &#039;display_name&#039; =&gt; $feature_name,
-        &#039;page&#039; =&gt; &#039;parent&#039;
-    ];
-}</code>
-                    </div>
-                </div>
-                <div class="function-item searchable" data-func="createMultiOrganismToolContext">
-                    <div class="function-header" onclick="toggleCode(this)">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div class="function-name">createMultiOrganismToolContext()</div>
-                            <span class="function-counter">2</span>
-                            <div class="function-line">Line 128</div>
-                        </div>
-                        <span style="font-size: 20px; margin-left: 10px;">▶</span>
-                    </div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">lib/functions_tools.php: createMultiOrganismToolContext()</div>
-                    <div class="function-comment">
-                        <pre>/**
-* Create a tool context for multi-organism search page
-*
-* @param array $organisms Array of organism names
-* @param string $display_name Optional display name
-* @return array Context array for tool_section.php
-*/</pre>
-                    </div>
-                    <div class="function-usages">
-                        <strong>📍 Used in 1 unique file(s) (2 total times):</strong>
-                        <ul>
                             <li><strong>/data/moop/tools/multi_organism_search.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 85</code>: <small>$context = createMultiOrganismToolContext($organisms);</small></li>
-                                    <li><code>line 85</code>: <small>$context = createMultiOrganismToolContext($organisms);</small></li>
+                                    <li><code>line 85</code>: <small>$context = createToolContext(&#039;multi_organism_search&#039;, [&#039;organisms&#039; =&gt; $organisms</small></li>
+                                    <li><code>line 85</code>: <small>$context = createToolContext(&#039;multi_organism_search&#039;, [&#039;organisms&#039; =&gt; $organisms</small></li>
+                                </ul></li>
+                            <li><strong>/data/moop/index.php</strong> (1x)
+                                <ul style="margin-top: 5px;">
+                                    <li><code>line 123</code>: <small>$context = createToolContext(&#039;index&#039;, [&#039;use_onclick_handler&#039; =&gt; true]);</small></li>
                                 </ul></li>
                         </ul>
                     </div>
                     <div class="function-code">
-                        <code>function createMultiOrganismToolContext($organisms, $display_name = &#039;Multi-Organism Search&#039;) {
-    return [
-        &#039;organisms&#039; =&gt; $organisms,
-        &#039;display_name&#039; =&gt; $display_name,
-        &#039;page&#039; =&gt; &#039;multi_organism_search&#039;
-    ];
+                        <code>function createToolContext($page, $params = []) {
+    $context = [&#039;page&#039; =&gt; $page];
+    
+    // Add optional parameters if provided and not null/empty
+    $optional_keys = [&#039;organism&#039;, &#039;assembly&#039;, &#039;group&#039;, &#039;organisms&#039;, &#039;display_name&#039;, &#039;use_onclick_handler&#039;];
+    foreach ($optional_keys as $key) {
+        if (!empty($params[$key])) {
+            $context[$key] = $params[$key];
+        }
+    }
+    
+    // Set sensible defaults for display_name if not provided
+    if (empty($context[&#039;display_name&#039;])) {
+        if (!empty($context[&#039;organism&#039;])) {
+            $context[&#039;display_name&#039;] = $context[&#039;organism&#039;];
+        } elseif (!empty($context[&#039;group&#039;])) {
+            $context[&#039;display_name&#039;] = $context[&#039;group&#039;];
+        } elseif ($page === &#039;index&#039;) {
+            $context[&#039;display_name&#039;] = &#039;Multi-Organism Search&#039;;
+        } elseif ($page === &#039;multi_organism_search&#039;) {
+            $context[&#039;display_name&#039;] = &#039;Multi-Organism Search&#039;;
+        }
+    }
+    
+    return $context;
 }</code>
                     </div>
                 </div>
@@ -8458,10 +8315,10 @@ JS;
                         <ul>
                             <li><strong>/data/moop/tools/parent_display.php</strong> (4x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 257</code>: <small>echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $co</small></li>
-                                    <li><code>line 321</code>: <small>echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type,</small></li>
-                                    <li><code>line 257</code>: <small>echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $co</small></li>
-                                    <li><code>line 321</code>: <small>echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type,</small></li>
+                                    <li><code>line 261</code>: <small>echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $co</small></li>
+                                    <li><code>line 325</code>: <small>echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type,</small></li>
+                                    <li><code>line 261</code>: <small>echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $co</small></li>
+                                    <li><code>line 325</code>: <small>echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type,</small></li>
                                 </ul></li>
                         </ul>
                     </div>
@@ -8670,8 +8527,8 @@ JS;
                                 </ul></li>
                             <li><strong>/data/moop/tools/parent_display.php</strong> (2x)
                                 <ul style="margin-top: 5px;">
-                                    <li><code>line 221</code>: <small>&lt;?= generateTreeHTML($feature_id, $db) ?&gt;</small></li>
-                                    <li><code>line 221</code>: <small>&lt;?= generateTreeHTML($feature_id, $db) ?&gt;</small></li>
+                                    <li><code>line 225</code>: <small>&lt;?= generateTreeHTML($feature_id, $db) ?&gt;</small></li>
+                                    <li><code>line 225</code>: <small>&lt;?= generateTreeHTML($feature_id, $db) ?&gt;</small></li>
                                 </ul></li>
                         </ul>
                     </div>

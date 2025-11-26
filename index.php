@@ -120,7 +120,7 @@ include_once __DIR__ . '/includes/header.php';
 
         <!-- Tools Card -->
         <?php 
-        $context = createIndexToolContext();
+        $context = createToolContext('index', ['use_onclick_handler' => true]);
         include_once TOOL_SECTION_PATH;
         ?>
       </div>

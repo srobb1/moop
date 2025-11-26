@@ -195,7 +195,11 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
       <!-- Tools Column -->
       <div class="col-lg-4">
         <?php 
-        $context = createFeatureToolContext($organism_name, $genome_accession, $feature_uniquename);
+        $context = createToolContext('parent', [
+            'organism' => $organism_name,
+            'assembly' => $genome_accession,
+            'display_name' => $feature_uniquename
+        ]);
         include_once TOOL_SECTION_PATH;
         ?>
       </div>
