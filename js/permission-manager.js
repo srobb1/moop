@@ -12,11 +12,11 @@
  * @param {string} filePath - Path to file or directory
  * @param {string} fileType - 'file' or 'directory'
  * @param {string} organism - Optional organism name (for organism-specific fixes)
+ * @param {string} resultId - ID of result div to show status
  */
-function fixFilePermissions(event, filePath, fileType, organism) {
+function fixFilePermissions(event, filePath, fileType, organism, resultId) {
   event.preventDefault();
   
-  const resultId = 'fixResult-' + md5(filePath);
   const resultDiv = document.getElementById(resultId);
   const button = event.target.closest('button');
   

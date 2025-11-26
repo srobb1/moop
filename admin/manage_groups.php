@@ -266,32 +266,14 @@ foreach ($all_organisms as $organism => $assemblies) {
 
 <div class="container mt-5" id="top">
   
-  <?php if ($file_write_error): ?>
-    <div class="alert alert-warning alert-dismissible fade show">
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      <h4><i class="fa fa-exclamation-circle"></i> File Permission Issue Detected</h4>
-      <p><strong>Problem:</strong> The file <code>metadata/organism_assembly_groups.json</code> is not writable by the web server.</p>
-      
-      <p><strong>Current Status:</strong></p>
-      <ul class="mb-3">
-        <li>File owner: <code><?= htmlspecialchars($file_write_error['owner']) ?></code></li>
-        <li>Current permissions: <code><?= $file_write_error['perms'] ?></code></li>
-        <li>Web server user: <code><?= htmlspecialchars($file_write_error['web_user']) ?></code></li>
-        <?php if ($file_write_error['web_group']): ?>
-        <li>Web server group: <code><?= htmlspecialchars($file_write_error['web_group']) ?></code></li>
-        <?php endif; ?>
-      </ul>
-      
-      <p><strong>To Fix:</strong> Run this command on the server:</p>
-      <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-        <code style="word-break: break-all; display: block; font-size: 0.9em;">
-          <?= htmlspecialchars($file_write_error['command']) ?>
-        </code>
-      </div>
-      
-      <p><small class="text-muted">After running the command, refresh this page.</small></p>
-    </div>
-  <?php endif; ?>
+  <?php 
+    echo generatePermissionAlert(
+        $groups_file,
+        'Group Configuration Not Writable',
+        'Cannot modify group configurations. File permissions must be fixed.',
+        'file'
+    );
+  ?>
 
   <?php if ($change_log_error): ?>
     <div class="alert alert-warning alert-dismissible fade show">
@@ -487,32 +469,14 @@ foreach ($all_organisms as $organism => $assemblies) {
   <!-- Manage Group Descriptions Section -->
   <h3 class="mt-5 mb-4"><i class="fa fa-file-text"></i> Group Descriptions</h3>
   
-  <?php if ($desc_file_write_error): ?>
-    <div class="alert alert-warning alert-dismissible fade show">
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      <h4><i class="fa fa-exclamation-circle"></i> File Permission Issue Detected</h4>
-      <p><strong>Problem:</strong> The file <code>metadata/group_descriptions.json</code> is not writable by the web server.</p>
-      
-      <p><strong>Current Status:</strong></p>
-      <ul class="mb-3">
-        <li>File owner: <code><?= htmlspecialchars($desc_file_write_error['owner']) ?></code></li>
-        <li>Current permissions: <code><?= $desc_file_write_error['perms'] ?></code></li>
-        <li>Web server user: <code><?= htmlspecialchars($desc_file_write_error['web_user']) ?></code></li>
-        <?php if ($desc_file_write_error['web_group']): ?>
-        <li>Web server group: <code><?= htmlspecialchars($desc_file_write_error['web_group']) ?></code></li>
-        <?php endif; ?>
-      </ul>
-      
-      <p><strong>To Fix:</strong> Run this command on the server:</p>
-      <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-        <code style="word-break: break-all; display: block; font-size: 0.9em;">
-          <?= htmlspecialchars($desc_file_write_error['command']) ?>
-        </code>
-      </div>
-      
-      <p><small class="text-muted">After running the command, refresh this page.</small></p>
-    </div>
-  <?php endif; ?>
+  <?php 
+    echo generatePermissionAlert(
+        $descriptions_file,
+        'Group Descriptions Not Writable',
+        'Cannot modify group descriptions. File permissions must be fixed.',
+        'file'
+    );
+  ?>
 
   <?php if (isset($_SESSION['success_message'])): ?>
     <div class="alert alert-success alert-dismissible fade show">

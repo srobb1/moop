@@ -421,11 +421,12 @@ function generatePermissionAlert($file_path, $title = '', $problem = '', $file_t
     
     if ($can_fix) {
         // Web server can fix it - offer button
+        $resultId = 'fixResult-' . uniqid();
         $html .= '  <p class="mb-2"><strong>Quick Fix:</strong> Click the button below to attempt automatic fix:</p>' . "\n";
-        $html .= '  <button class="btn btn-warning btn-sm" onclick="fixFilePermissions(event, ' . json_encode($file_path) . ', ' . json_encode($file_type) . ', ' . json_encode($organism) . ')">' . "\n";
+        $html .= '  <button class="btn btn-warning btn-sm" onclick=\'fixFilePermissions(event, ' . json_encode($file_path) . ', ' . json_encode($file_type) . ', ' . json_encode($organism) . ', ' . json_encode($resultId) . ');\'>' . "\n";
         $html .= '    <i class="fa fa-wrench"></i> Fix Permissions' . "\n";
         $html .= '  </button>' . "\n";
-        $html .= '  <div id="fixResult-' . md5($file_path) . '" class="mt-3"></div>' . "\n";
+        $html .= '  <div id="' . $resultId . '" class="mt-3"></div>' . "\n";
     } else {
         // Web server cannot fix - show manual instructions
         $html .= '  <p class="mb-2"><strong>To Fix:</strong> Run this command on the server:</p>' . "\n";

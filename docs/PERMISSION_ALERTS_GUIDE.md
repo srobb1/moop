@@ -144,20 +144,33 @@ foreach ($files_to_check as $file_info) {
 
 ### When Web Server CAN Fix Permissions
 
-If the web server has write access to the parent directory:
+If the web server user (e.g., `www-data`) can write to the parent directory:
 1. Shows "Fix Permissions" button
 2. User clicks button
-3. AJAX sends request to fix permissions
+3. AJAX sends request to fix permissions via `chmod()`
 4. Shows success/failure message
 5. Auto-refreshes page on success
 
+**Requirements for button to work**:
+- Web server has write access to parent directory
+- Web server can execute `chmod()` on the file (typically requires owning the file or being in the same group with parent dir SGID enabled)
+- See [Directory Permissions Setup Guide](DIRECTORY_PERMISSIONS_SETUP.md) for proper configuration
+
+**Recommended Setup**:
+- Set SGID bit on key directories (metadata, logs, organisms)
+- Set file permissions to `664` (group writable)
+- Set directory permissions to `775` (group writable)
+- This allows web server to fix permissions even if it doesn't own files
+
 ### When Web Server CANNOT Fix Permissions
 
-If web server lacks permissions:
-1. Shows manual instructions
+If web server lacks write access to the parent directory:
+1. Shows manual instructions instead of button
 2. Displays exact `chown` and `chmod` commands
-3. User runs commands on server
-4. User refreshes page to verify
+3. Administrator runs commands on server with appropriate privileges
+4. Page is refreshed to verify permissions are fixed
+
+**Typical reason**: Parent directory not writable by web server group, or SGID not enabled
 
 ## HTML Output
 
@@ -214,7 +227,7 @@ For each admin page:
 
 - [ ] Include `lib/functions_display.php`
 - [ ] Include `lib/functions_system.php`
-- [ ] Add AJAX handler in POST section:
+- [ ] Add AJAX handler in POST section (or use `handleAdminAjax()` from Phase 3 consolidation):
   ```php
   if (isset($_POST['action']) && $_POST['action'] === 'fix_file_permissions') {
       header('Content-Type: application/json');
@@ -222,9 +235,14 @@ For each admin page:
       exit;
   }
   ```
+  Or with the consolidated handler:
+  ```php
+  handleAdminAjax();
+  ```
 - [ ] Include JS in page footer: `<script src="/moop/js/permission-manager.js"></script>`
 - [ ] Call `generatePermissionAlert()` for each file/directory to check
 - [ ] Display alerts in appropriate location
+- [ ] Ensure directories are properly configured with SGID bit and group permissions (see [Directory Permissions Setup Guide](DIRECTORY_PERMISSIONS_SETUP.md))
 
 ## Files
 

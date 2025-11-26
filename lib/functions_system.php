@@ -144,10 +144,6 @@ function fixFilePermissions($file_path, $file_type = 'file') {
                 return $result;
             }
             
-            // Try to change ownership (may fail if not root)
-            @chown($file_path, $web_user);
-            @chgrp($file_path, $web_group);
-            
             // Verify it worked
             if (is_readable($file_path) && is_writable($file_path)) {
                 $result['success'] = true;
@@ -156,24 +152,49 @@ function fixFilePermissions($file_path, $file_type = 'file') {
                 $result['message'] = 'Permissions were modified but directory still has issues.';
             }
         } else {
-            // For files: chmod 644 (rw-r--r--)
-            $chmod_result = @chmod($file_path, 0644);
+            // For files: chmod 664 (rw-rw-r--)
+            $chmod_result = @chmod($file_path, 0664);
             
-            if (!$chmod_result) {
-                $result['message'] = 'Web server lacks permission to change file permissions.';
-                return $result;
-            }
-            
-            // Try to change ownership (may fail if not root)
-            @chown($file_path, $web_user);
-            @chgrp($file_path, $web_group);
-            
-            // Verify it worked
-            if (is_readable($file_path)) {
-                $result['success'] = true;
-                $result['message'] = 'File permissions fixed successfully!';
+            if ($chmod_result) {
+                // chmod worked
+                if (is_readable($file_path) && is_writable($file_path)) {
+                    $result['success'] = true;
+                    $result['message'] = 'File permissions fixed successfully!';
+                } else {
+                    $result['message'] = 'Permissions were modified but file still has issues.';
+                }
             } else {
-                $result['message'] = 'Permissions were modified but file still not readable.';
+                // chmod failed - try to recreate the file if parent is writable
+                $parent_dir = dirname($file_path);
+                if (is_writable($parent_dir)) {
+                    // Read current content
+                    $content = @file_get_contents($file_path);
+                    if ($content === false) {
+                        $result['message'] = 'Cannot read file content for recreation.';
+                        return $result;
+                    }
+                    
+                    // Delete and recreate with new permissions
+                    @unlink($file_path);
+                    $write_result = @file_put_contents($file_path, $content);
+                    
+                    if ($write_result === false) {
+                        $result['message'] = 'Failed to recreate file with new permissions.';
+                        return $result;
+                    }
+                    
+                    // chmod the newly created file
+                    @chmod($file_path, 0664);
+                    
+                    if (is_readable($file_path) && is_writable($file_path)) {
+                        $result['success'] = true;
+                        $result['message'] = 'File permissions fixed successfully!';
+                    } else {
+                        $result['message'] = 'File recreated but permissions still have issues.';
+                    }
+                } else {
+                    $result['message'] = 'Web server lacks permission to change file permissions.';
+                }
             }
         }
     } catch (Exception $e) {
@@ -230,6 +251,11 @@ function handleFixFilePermissionsAjax() {
 function handleAdminAjax($customHandler = null) {
     if (!isset($_POST['action'])) {
         return; // Not an AJAX request
+    }
+    
+    // Clear any buffered output before sending JSON
+    while (ob_get_level()) {
+        ob_end_clean();
     }
     
     header('Content-Type: application/json');
