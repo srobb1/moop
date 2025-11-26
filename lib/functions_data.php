@@ -518,3 +518,81 @@ function build_tree_from_organisms($organisms) {
     
     return ['tree' => $tree];
 }
+
+/**
+ * Get detailed information about all organisms
+ * 
+ * Aggregates organism metadata, assemblies, database info, and validation results
+ * for all organisms in the system. Used for admin management and reporting.
+ * 
+ * @param string $organism_data_path Path to organism data directory
+ * @param array $sequence_types List of valid sequence types (e.g., ['cds', 'protein', 'genome'])
+ * @return array Associative array of organism_name => array with metadata, assemblies, validations
+ */
+function getDetailedOrganismsInfo($organism_data_path, $sequence_types = []) {
+    $organisms_info = [];
+    
+    if (!is_dir($organism_data_path)) {
+        return $organisms_info;
+    }
+    
+    // Load all organisms' JSON metadata using consolidated function
+    $organisms_metadata = loadAllOrganismsMetadata($organism_data_path);
+    
+    $organisms = scandir($organism_data_path);
+    foreach ($organisms as $organism) {
+        if ($organism[0] === '.' || !is_dir("$organism_data_path/$organism")) {
+            continue;
+        }
+        
+        // Get organism.json info (already loaded from consolidated function)
+        $organism_json = "$organism_data_path/$organism/organism.json";
+        $json_validation = validateOrganismJson($organism_json);
+        $info = $organisms_metadata[$organism] ?? [];
+        
+        // Get assemblies
+        $assemblies = [];
+        $assembly_path = "$organism_data_path/$organism";
+        $files = scandir($assembly_path);
+        foreach ($files as $file) {
+            if ($file[0] === '.' || !is_dir("$assembly_path/$file")) {
+                continue;
+            }
+            $assemblies[] = $file;
+        }
+        
+        // Check for database file
+        $db_file = null;
+        if (file_exists("$organism_data_path/$organism/organism.sqlite")) {
+            $db_file = "$organism_data_path/$organism/organism.sqlite";
+        }
+        
+        $has_db = !is_null($db_file);
+        
+        // Validate database integrity if database exists
+        $db_validation = null;
+        $assembly_validation = null;
+        $fasta_validation = null;
+        if ($has_db) {
+            $db_validation = validateDatabaseIntegrity($db_file);
+            // Also validate assembly directories
+            $assembly_validation = validateAssemblyDirectories($db_file, "$organism_data_path/$organism");
+        }
+        // Validate FASTA files in assembly directories
+        $fasta_validation = validateAssemblyFastaFiles("$organism_data_path/$organism", $sequence_types);
+        
+        $organisms_info[$organism] = [
+            'info' => $info,
+            'assemblies' => $assemblies,
+            'has_db' => $has_db,
+            'db_file' => $db_file,
+            'db_validation' => $db_validation,
+            'assembly_validation' => $assembly_validation,
+            'fasta_validation' => $fasta_validation,
+            'json_validation' => $json_validation,
+            'path' => "$organism_data_path/$organism"
+        ];
+    }
+    
+    return $organisms_info;
+}

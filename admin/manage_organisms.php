@@ -147,77 +147,8 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_metadata' && isset($_P
     exit;
 }
 
-// Get all organisms
-function get_all_organisms_info() {
-    global $organism_data, $sequence_types;
-    $organisms_info = [];
-    
-    if (!is_dir($organism_data)) {
-        return $organisms_info;
-    }
-    
-    // Load all organisms' JSON metadata using consolidated function
-    $organisms_metadata = loadAllOrganismsMetadata($organism_data);
-    
-    $organisms = scandir($organism_data);
-    foreach ($organisms as $organism) {
-        if ($organism[0] === '.' || !is_dir("$organism_data/$organism")) {
-            continue;
-        }
-        
-        // Get organism.json info (already loaded from consolidated function)
-        $organism_json = "$organism_data/$organism/organism.json";
-        $json_validation = validateOrganismJson($organism_json);
-        $info = $organisms_metadata[$organism] ?? [];
-        
-        // Get assemblies
-        $assemblies = [];
-        $assembly_path = "$organism_data/$organism";
-        $files = scandir($assembly_path);
-        foreach ($files as $file) {
-            if ($file[0] === '.' || !is_dir("$assembly_path/$file")) {
-                continue;
-            }
-            $assemblies[] = $file;
-        }
-        
-        // Check for database file
-        $db_file = null;
-        if (file_exists("$organism_data/$organism/organism.sqlite")) {
-            $db_file = "$organism_data/$organism/organism.sqlite";
-        }
-        
-        $has_db = !is_null($db_file);
-        
-        // Validate database integrity if database exists
-        $db_validation = null;
-        $assembly_validation = null;
-        $fasta_validation = null;
-        if ($has_db) {
-            $db_validation = validateDatabaseIntegrity($db_file);
-            // Also validate assembly directories
-            $assembly_validation = validateAssemblyDirectories($db_file, "$organism_data/$organism");
-        }
-        // Validate FASTA files in assembly directories
-        $fasta_validation = validateAssemblyFastaFiles("$organism_data/$organism", $sequence_types);
-        
-        $organisms_info[$organism] = [
-            'info' => $info,
-            'assemblies' => $assemblies,
-            'has_db' => $has_db,
-            'db_file' => $db_file,
-            'db_validation' => $db_validation,
-            'assembly_validation' => $assembly_validation,
-            'fasta_validation' => $fasta_validation,
-            'json_validation' => $json_validation,
-            'path' => "$organism_data/$organism"
-        ];
-    }
-    
-    return $organisms_info;
-}
-
-$organisms = get_all_organisms_info();
+// Get all organisms info using library function (dependency injection - no globals)
+$organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);
 ?>
 
 <!DOCTYPE html>
