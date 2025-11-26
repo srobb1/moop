@@ -5,6 +5,11 @@
  * Usage: php tools/generate_js_registry.php
  */
 
+// Load configuration
+require_once __DIR__ . '/../includes/ConfigManager.php';
+$config = ConfigManager::getInstance();
+$docs_path = $config->getPath('docs_path');
+
 $jsDir = __DIR__ . '/../js';
 $registry = [];
 
@@ -438,7 +443,7 @@ $html .= "}\n";
 $html .= "</script>\n";
 $html .= "</body>\n</html>\n";
 
-$htmlFile = __DIR__ . '/../docs/js_function_registry.html';
+$htmlFile = $docs_path . '/js_function_registry.html';
 file_put_contents($htmlFile, $html);
 
 // Generate Markdown
@@ -488,7 +493,7 @@ foreach ($registry as $jsFile => $functions) {
     $md .= "---\n\n";
 }
 
-$mdFile = __DIR__ . '/../docs/JS_FUNCTION_REGISTRY.md';
+$mdFile = $docs_path . '/JS_FUNCTION_REGISTRY.md';
 file_put_contents($mdFile, $md);
 
 echo "✅ JavaScript Function Registry generated!\n";

@@ -6,6 +6,11 @@
  * Usage: php tools/generate_registry.php
  */
 
+// Load configuration
+require_once __DIR__ . '/../includes/ConfigManager.php';
+$config = ConfigManager::getInstance();
+$docs_path = $config->getPath('docs_path');
+
 $registry = [];
 
 // Directories to scan
@@ -549,10 +554,10 @@ function generateHtmlDocs($registry) {
     $html .= "    </div>\n";
     $html .= "</body>\n</html>\n";
     
-    $htmlFile = __DIR__ . '/../docs/function_registry.html';
+    $htmlFile = $docs_path . '/function_registry.html';
     @mkdir(dirname($htmlFile), 0755, true);
     if (file_put_contents($htmlFile, $html)) {
-        echo "\n✅ HTML documentation: docs/function_registry.html\n";
+        echo "\n✅ HTML documentation: " . str_replace(dirname(__DIR__) . '/', '', $htmlFile) . "\n";
     } else {
         echo "\n⚠️  Could not write HTML file\n";
     }
@@ -646,10 +651,10 @@ function generateMarkdownDocs($registry) {
         $md .= "---\n\n";
     }
     
-    $mdFile = __DIR__ . '/../docs/FUNCTION_REGISTRY.md';
+    $mdFile = $docs_path . '/FUNCTION_REGISTRY.md';
     @mkdir(dirname($mdFile), 0755, true);
     if (file_put_contents($mdFile, $md)) {
-        echo "✅ Markdown documentation: docs/FUNCTION_REGISTRY.md\n";
+        echo "✅ Markdown documentation: " . str_replace(dirname(__DIR__) . '/', '', $mdFile) . "\n";
     } else {
         echo "⚠️  Could not write Markdown file\n";
     }
