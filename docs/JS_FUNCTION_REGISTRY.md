@@ -1,10 +1,10 @@
 # JavaScript Function Registry
 
-Generated: 2025-11-26 02:05:18
+Generated: 2025-11-26 15:34:07
 
 ## Summary
-- **Total Functions**: 48
-- **Files Scanned**: 11
+- **Total Functions**: 51
+- **Files Scanned**: 12
 
 ## js/blast-manager.js
 
@@ -173,20 +173,20 @@ Generated: 2025-11-26 02:05:18
 
 **Called in 1 file(s) (2 times):**
 - `admin/manage_organisms.php` (2x):
-  - Line 22: `$result = fixDatabasePermissions($db_file);`
-  - Line 766: `<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, \'<?= $org_safe ?>\')\">`
+  - Line 29: `$result = fixDatabasePermissions($db_file);`
+  - Line 704: `<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, \'<?= $org_safe ?>\')\">`
 
 ### `saveMetadata()` (Line 60)
 
 **Called in 1 file(s) (1 times):**
 - `admin/manage_organisms.php` (1x):
-  - Line 982: `<button type=\"button\" class=\"btn btn-success\" onclick=\"saveMetadata(event, \'<?= $org_safe ?>\')\">`
+  - Line 929: `<button type=\"button\" class=\"btn btn-success\" onclick=\"saveMetadata(event, \'<?= $org_safe ?>\')\">`
 
 ### `addMetadataImage()` (Line 176)
 
 **Called in 1 file(s) (1 times):**
 - `admin/manage_organisms.php` (1x):
-  - Line 942: `<button type=\"button\" class=\"btn btn-sm btn-primary mb-4\" onclick=\"addMetadataImage(\'<?= $org_safe ?>\')\">`
+  - Line 889: `<button type=\"button\" class=\"btn btn-sm btn-primary mb-4\" onclick=\"addMetadataImage(\'<?= $org_safe ?>\')\">`
 
 ### `removeMetadataImage()` (Line 198)
 
@@ -194,13 +194,13 @@ Generated: 2025-11-26 02:05:18
 - `js/modules/organism-management.js` (1x):
   - Line 183: `<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataImage(\'${organism}\', ${newIndex})\" style=\"float: right;\">Remove</button>`
 - `admin/manage_organisms.php` (1x):
-  - Line 929: `<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataImage(\'<?= $org_safe ?>\', <?= $idx ?>)\" style=\"float: right;\">Remove</button>`
+  - Line 876: `<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataImage(\'<?= $org_safe ?>\', <?= $idx ?>)\" style=\"float: right;\">Remove</button>`
 
 ### `addMetadataParagraph()` (Line 208)
 
 **Called in 1 file(s) (1 times):**
 - `admin/manage_organisms.php` (1x):
-  - Line 976: `<button type=\"button\" class=\"btn btn-sm btn-primary mb-4\" onclick=\"addMetadataParagraph(\'<?= $org_safe ?>\')\">`
+  - Line 923: `<button type=\"button\" class=\"btn btn-sm btn-primary mb-4\" onclick=\"addMetadataParagraph(\'<?= $org_safe ?>\')\">`
 
 ### `removeMetadataParagraph()` (Line 239)
 
@@ -208,21 +208,21 @@ Generated: 2025-11-26 02:05:18
 - `js/modules/organism-management.js` (1x):
   - Line 215: `<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataParagraph(\'${organism}\', ${newIndex})\" style=\"float: right;\">Remove</button>`
 - `admin/manage_organisms.php` (1x):
-  - Line 954: `<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataParagraph(\'<?= $org_safe ?>\', <?= $idx ?>)\" style=\"float: right;\">Remove</button>`
+  - Line 901: `<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataParagraph(\'<?= $org_safe ?>\', <?= $idx ?>)\" style=\"float: right;\">Remove</button>`
 
 ### `renameAssemblyDirectory()` (Line 249)
 
 **Called in 1 file(s) (2 times):**
 - `admin/manage_organisms.php` (2x):
-  - Line 44: `$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);`
-  - Line 1143: `<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
+  - Line 51: `$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);`
+  - Line 1090: `<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
 
 ### `deleteAssemblyDirectory()` (Line 324)
 
 **Called in 1 file(s) (2 times):**
 - `admin/manage_organisms.php` (2x):
-  - Line 65: `$result = deleteAssemblyDirectory($organism_dir, $dir_name);`
-  - Line 1176: `<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
+  - Line 72: `$result = deleteAssemblyDirectory($organism_dir, $dir_name);`
+  - Line 1123: `<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
 
 ---
 
@@ -350,7 +350,11 @@ Generated: 2025-11-26 02:05:18
 
 ### `escapeHtml()` (Line 11)
 
-**Called in 2 file(s) (8 times):**
+**Called in 3 file(s) (11 times):**
+- `js/permission-manager.js` (3x):
+  - Line 52: `\'<i class=\"fa fa-check-circle\"></i> \' + escapeHtml(json.message) + \' \' +`
+  - Line 61: `\'<i class=\"fa fa-times-circle\"></i> <strong>Failed:</strong> \' + escapeHtml(json.message) + \'</div>\';`
+  - Line 69: `\'<i class=\"fa fa-exclamation-triangle\"></i> <strong>Error:</strong> \' + escapeHtml(error.message) + \'</div>\';`
 - `js/sequence-retrieval.js` (1x):
   - Line 213: `return `<div style=\"padding: 4px 0;\"><span style=\"background: ${bgColor}; padding: 2px 6px; border-radius: 3px;\">${escapeHtml(id)}</span></div>`;`
 - `js/modules/organism-management.js` (7x):
@@ -396,6 +400,46 @@ Generated: 2025-11-26 02:05:18
 
 ---
 
+## js/permission-manager.js
+
+**3 function(s)**
+
+**Included in:**
+- `admin/createUser.php`
+- `admin/manage_groups.php`
+- `admin/manage_organisms.php`
+- `admin/manage_phylo_tree.php`
+
+### `fixFilePermissions()` (Line 15)
+
+**Not called anywhere**
+
+### `md5()` (Line 79)
+
+**Called in 1 file(s) (1 times):**
+- `js/permission-manager.js` (1x):
+  - Line 19: `const resultId = \'fixResult-\' + md5(filePath);`
+
+### `escapeHtml()` (Line 96)
+
+**Called in 3 file(s) (11 times):**
+- `js/permission-manager.js` (3x):
+  - Line 52: `\'<i class=\"fa fa-check-circle\"></i> \' + escapeHtml(json.message) + \' \' +`
+  - Line 61: `\'<i class=\"fa fa-times-circle\"></i> <strong>Failed:</strong> \' + escapeHtml(json.message) + \'</div>\';`
+  - Line 69: `\'<i class=\"fa fa-exclamation-triangle\"></i> <strong>Error:</strong> \' + escapeHtml(error.message) + \'</div>\';`
+- `js/sequence-retrieval.js` (1x):
+  - Line 213: `return `<div style=\"padding: 4px 0;\"><span style=\"background: ${bgColor}; padding: 2px 6px; border-radius: 3px;\">${escapeHtml(id)}</span></div>`;`
+- `js/modules/organism-management.js` (7x):
+  - Line 35: `html += \'<code class=\"text-break\">\' + escapeHtml(data.command) + \'</code><br>\';`
+  - Line 138: `html += \'<li>File owner: <code>\' + escapeHtml(response.error.owner) + \'</code></li>\';`
+  - Line 140: `html += \'<li>Web server user: <code>\' + escapeHtml(response.error.web_user) + \'</code></li>\';`
+  - Line 142: `html += \'<li>Web server group: <code>\' + escapeHtml(response.error.web_group) + \'</code></li>\';`
+  - Line 148: `html += \'<code class=\"text-break\">\' + escapeHtml(response.error.command) + \'</code>\';`
+  - Line 297: `html += \'<code class=\"text-break\">\' + escapeHtml(data.command) + \'</code><br>\';`
+  - Line 366: `html += \'<code class=\"text-break\">\' + escapeHtml(data.command) + \'</code><br>\';`
+
+---
+
 ## js/sequence-retrieval.js
 
 **6 function(s)**
@@ -405,7 +449,11 @@ Generated: 2025-11-26 02:05:18
 
 ### `escapeHtml()` (Line 6)
 
-**Called in 2 file(s) (8 times):**
+**Called in 3 file(s) (11 times):**
+- `js/permission-manager.js` (3x):
+  - Line 52: `\'<i class=\"fa fa-check-circle\"></i> \' + escapeHtml(json.message) + \' \' +`
+  - Line 61: `\'<i class=\"fa fa-times-circle\"></i> <strong>Failed:</strong> \' + escapeHtml(json.message) + \'</div>\';`
+  - Line 69: `\'<i class=\"fa fa-exclamation-triangle\"></i> <strong>Error:</strong> \' + escapeHtml(error.message) + \'</div>\';`
 - `js/sequence-retrieval.js` (1x):
   - Line 213: `return `<div style=\"padding: 4px 0;\"><span style=\"background: ${bgColor}; padding: 2px 6px; border-radius: 3px;\">${escapeHtml(id)}</span></div>`;`
 - `js/modules/organism-management.js` (7x):

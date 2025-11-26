@@ -57,7 +57,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <header>
 <div class="container">
 <h1>🔍 MOOP JavaScript Function Registry</h1>
-<p>Auto-generated function documentation • Generated: 2025-11-26 02:05:18</p>
+<p>Auto-generated function documentation • Generated: 2025-11-26 15:34:07</p>
 </div>
 </header>
 <div class="container">
@@ -65,12 +65,12 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <input type="text" id="searchInput" placeholder="🔍 Search functions, files, or usage..." onkeyup="filterSearch()">
 </div>
 <div class="stats">
-<div class="stat-box"><strong>48</strong><span>Total Functions</span></div>
-<div class="stat-box"><strong>11</strong><span>Files</span></div>
+<div class="stat-box"><strong>51</strong><span>Total Functions</span></div>
+<div class="stat-box"><strong>12</strong><span>Files</span></div>
 </div>
 <div class="unused-section">
 <div class="unused-header" onclick="toggleUnused(this)">
-<span>⚠️ 4 Unused Function(s) Found</span>
+<span>⚠️ 5 Unused Function(s) Found</span>
 <span class="unusedArrow">▶</span>
 </div>
 <div class="unused-content hidden">
@@ -78,6 +78,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul style="margin: 10px 0; padding-left: 20px;">
 <li><strong style="color: #cc0000;">downloadResultsHTML()</strong> in <code>js/blast-manager.js</code> (line 9)</li>
 <li><strong style="color: #cc0000;">handleToolClick()</strong> in <code>js/index.js</code> (line 2)</li>
+<li><strong style="color: #cc0000;">fixFilePermissions()</strong> in <code>js/permission-manager.js</code> (line 15)</li>
 <li><strong style="color: #cc0000;">draw_blast_graph()</strong> in <code>js/modules/blast-canvas-graph.js</code> (line 2)</li>
 <li><strong style="color: #cc0000;">move_bg_rect()</strong> in <code>js/modules/blast-canvas-graph.js</code> (line 437)</li>
 </ul>
@@ -743,8 +744,8 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>admin/manage_organisms.php</strong> (2x)
 <ul style="margin-top: 5px;">
-<li><code>line 22</code>: <small>$result = fixDatabasePermissions($db_file);</small></li>
-<li><code>line 766</code>: <small>&lt;button class=&quot;btn btn-warning btn-sm&quot; onclick=&quot;fixDatabasePermissions(event, &#039;&lt;?= $org_safe ?&gt;&#039;)&quot;&gt;</small></li>
+<li><code>line 29</code>: <small>$result = fixDatabasePermissions($db_file);</small></li>
+<li><code>line 704</code>: <small>&lt;button class=&quot;btn btn-warning btn-sm&quot; onclick=&quot;fixDatabasePermissions(event, &#039;&lt;?= $org_safe ?&gt;&#039;)&quot;&gt;</small></li>
 </ul></li>
 </ul>
 </div>
@@ -780,7 +781,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>admin/manage_organisms.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 982</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-success&quot; onclick=&quot;saveMetadata(event, &#039;&lt;?= $org_safe ?&gt;&#039;)&quot;&gt;</small></li>
+<li><code>line 929</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-success&quot; onclick=&quot;saveMetadata(event, &#039;&lt;?= $org_safe ?&gt;&#039;)&quot;&gt;</small></li>
 </ul></li>
 </ul>
 </div>
@@ -816,7 +817,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>admin/manage_organisms.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 942</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-primary mb-4&quot; onclick=&quot;addMetadataImage(&#039;&lt;?= $org_safe ?</small></li>
+<li><code>line 889</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-primary mb-4&quot; onclick=&quot;addMetadataImage(&#039;&lt;?= $org_safe ?</small></li>
 </ul></li>
 </ul>
 </div>
@@ -848,7 +849,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </ul></li>
 <li><strong>admin/manage_organisms.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 929</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataImage(&#039;&lt;?= $or</small></li>
+<li><code>line 876</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataImage(&#039;&lt;?= $or</small></li>
 </ul></li>
 </ul>
 </div>
@@ -877,7 +878,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>admin/manage_organisms.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 976</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-primary mb-4&quot; onclick=&quot;addMetadataParagraph(&#039;&lt;?= $org_sa</small></li>
+<li><code>line 923</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-primary mb-4&quot; onclick=&quot;addMetadataParagraph(&#039;&lt;?= $org_sa</small></li>
 </ul></li>
 </ul>
 </div>
@@ -908,7 +909,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </ul></li>
 <li><strong>admin/manage_organisms.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 954</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataParagraph(&#039;&lt;?=</small></li>
+<li><code>line 901</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataParagraph(&#039;&lt;?=</small></li>
 </ul></li>
 </ul>
 </div>
@@ -937,8 +938,8 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>admin/manage_organisms.php</strong> (2x)
 <ul style="margin-top: 5px;">
-<li><code>line 44</code>: <small>$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);</small></li>
-<li><code>line 1143</code>: <small>&lt;button class=&quot;btn btn-info btn-sm w-100&quot; onclick=&quot;renameAssemblyDirectory(event, &#039;&lt;?= htmlspecialch</small></li>
+<li><code>line 51</code>: <small>$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);</small></li>
+<li><code>line 1090</code>: <small>&lt;button class=&quot;btn btn-info btn-sm w-100&quot; onclick=&quot;renameAssemblyDirectory(event, &#039;&lt;?= htmlspecialch</small></li>
 </ul></li>
 </ul>
 </div>
@@ -970,8 +971,8 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>admin/manage_organisms.php</strong> (2x)
 <ul style="margin-top: 5px;">
-<li><code>line 65</code>: <small>$result = deleteAssemblyDirectory($organism_dir, $dir_name);</small></li>
-<li><code>line 1176</code>: <small>&lt;button class=&quot;btn btn-danger btn-sm w-100&quot; onclick=&quot;deleteAssemblyDirectory(event, &#039;&lt;?= htmlspecial</small></li>
+<li><code>line 72</code>: <small>$result = deleteAssemblyDirectory($organism_dir, $dir_name);</small></li>
+<li><code>line 1123</code>: <small>&lt;button class=&quot;btn btn-danger btn-sm w-100&quot; onclick=&quot;deleteAssemblyDirectory(event, &#039;&lt;?= htmlspecial</small></li>
 </ul></li>
 </ul>
 </div>
@@ -1392,14 +1393,20 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="function-item">
 <div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
-<div><span class="function-name">escapeHtml()</span><span class="function-counter">8</span> <span class="function-line">Line 11</span></div>
+<div><span class="function-name">escapeHtml()</span><span class="function-counter">11</span> <span class="function-line">Line 11</span></div>
 <span>▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/utilities.js: escapeHtml()</div>
 <div class="function-details">
 <div class="function-usages">
-<strong>📍 Called in 2 file(s) (8 times):</strong>
+<strong>📍 Called in 3 file(s) (11 times):</strong>
 <ul>
+<li><strong>js/permission-manager.js</strong> (3x)
+<ul style="margin-top: 5px;">
+<li><code>line 52</code>: <small>&#039;&lt;i class=&quot;fa fa-check-circle&quot;&gt;&lt;/i&gt; &#039; + escapeHtml(json.message) + &#039; &#039; +</small></li>
+<li><code>line 61</code>: <small>&#039;&lt;i class=&quot;fa fa-times-circle&quot;&gt;&lt;/i&gt; &lt;strong&gt;Failed:&lt;/strong&gt; &#039; + escapeHtml(json.message) + &#039;&lt;/div&gt;&#039;</small></li>
+<li><code>line 69</code>: <small>&#039;&lt;i class=&quot;fa fa-exclamation-triangle&quot;&gt;&lt;/i&gt; &lt;strong&gt;Error:&lt;/strong&gt; &#039; + escapeHtml(error.message) + </small></li>
+</ul></li>
 <li><strong>js/sequence-retrieval.js</strong> (1x)
 <ul style="margin-top: 5px;">
 <li><code>line 213</code>: <small>return `&lt;div style=&quot;padding: 4px 0;&quot;&gt;&lt;span style=&quot;background: ${bgColor}; padding: 2px 6px; border-r</small></li>
@@ -1582,6 +1589,124 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="file-section">
+<div class="file-header">📄 js/permission-manager.js (3)</div>
+<div class="functions-list hidden">
+<div class="file-info">
+<strong>📋 Included in:</strong>
+<div class="php-pages">
+<span class="php-page">admin/createUser.php</span>
+<span class="php-page">admin/manage_groups.php</span>
+<span class="php-page">admin/manage_organisms.php</span>
+<span class="php-page">admin/manage_phylo_tree.php</span>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">fixFilePermissions()</span><span class="function-counter">0</span> <span class="function-line">Line 15</span></div>
+<span>▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/permission-manager.js: fixFilePermissions()</div>
+<div class="function-details">
+<p><em>Not called anywhere</em></p>
+<div class="function-code">
+<code>{
+  event.preventDefault();
+  
+  const resultId = &#039;fixResult-&#039; + md5(filePath);
+  const resultDiv = document.getElementById(resultId);
+  const button = event.target.closest(&#039;button&#039;);
+  
+  if (!resultDiv) {
+    console.error(&#039;Result div not found: &#039; + resultId);
+    return;
+  }
+  
+  // Disable button and show loading
+  const originalHtml = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = &#039;&lt;i class=&quot;fa fa-spinner fa-spin&quot;&gt;&lt;/i&gt; Fixing...&#039;;
+  
+  resultDiv.innerHTML = &#039;&lt;div class=&quot;al</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">md5()</span><span class="function-counter">1</span> <span class="function-line">Line 79</span></div>
+<span>▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/permission-manager.js: md5()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/permission-manager.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 19</code>: <small>const resultId = &#039;fixResult-&#039; + md5(filePath);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+  // Simple hash function - not cryptographically secure but good for IDs
+  let hash = 0;
+  if (str.length === 0) return hash.toString();
+  
+  for (let i = 0; i &lt; str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash &lt;&lt; 5) - hash) + char;
+    hash = hash &amp; hash; // Convert to 32bit integer
+  }
+  
+  return Math.abs(hash).toString(16);
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
+<div><span class="function-name">escapeHtml()</span><span class="function-counter">11</span> <span class="function-line">Line 96</span></div>
+<span>▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/permission-manager.js: escapeHtml()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 3 file(s) (11 times):</strong>
+<ul>
+<li><strong>js/permission-manager.js</strong> (3x)
+<ul style="margin-top: 5px;">
+<li><code>line 52</code>: <small>&#039;&lt;i class=&quot;fa fa-check-circle&quot;&gt;&lt;/i&gt; &#039; + escapeHtml(json.message) + &#039; &#039; +</small></li>
+<li><code>line 61</code>: <small>&#039;&lt;i class=&quot;fa fa-times-circle&quot;&gt;&lt;/i&gt; &lt;strong&gt;Failed:&lt;/strong&gt; &#039; + escapeHtml(json.message) + &#039;&lt;/div&gt;&#039;</small></li>
+<li><code>line 69</code>: <small>&#039;&lt;i class=&quot;fa fa-exclamation-triangle&quot;&gt;&lt;/i&gt; &lt;strong&gt;Error:&lt;/strong&gt; &#039; + escapeHtml(error.message) + </small></li>
+</ul></li>
+<li><strong>js/sequence-retrieval.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 213</code>: <small>return `&lt;div style=&quot;padding: 4px 0;&quot;&gt;&lt;span style=&quot;background: ${bgColor}; padding: 2px 6px; border-r</small></li>
+</ul></li>
+<li><strong>js/modules/organism-management.js</strong> (7x)
+<ul style="margin-top: 5px;">
+<li><code>line 35</code>: <small>html += &#039;&lt;code class=&quot;text-break&quot;&gt;&#039; + escapeHtml(data.command) + &#039;&lt;/code&gt;&lt;br&gt;&#039;;</small></li>
+<li><code>line 138</code>: <small>html += &#039;&lt;li&gt;File owner: &lt;code&gt;&#039; + escapeHtml(response.error.owner) + &#039;&lt;/code&gt;&lt;/li&gt;&#039;;</small></li>
+<li><code>line 140</code>: <small>html += &#039;&lt;li&gt;Web server user: &lt;code&gt;&#039; + escapeHtml(response.error.web_user) + &#039;&lt;/code&gt;&lt;/li&gt;&#039;;</small></li>
+<li><code>line 142</code>: <small>html += &#039;&lt;li&gt;Web server group: &lt;code&gt;&#039; + escapeHtml(response.error.web_group) + &#039;&lt;/code&gt;&lt;/li&gt;&#039;;</small></li>
+<li><code>line 148</code>: <small>html += &#039;&lt;code class=&quot;text-break&quot;&gt;&#039; + escapeHtml(response.error.command) + &#039;&lt;/code&gt;&#039;;</small></li>
+<li><code>line 297</code>: <small>html += &#039;&lt;code class=&quot;text-break&quot;&gt;&#039; + escapeHtml(data.command) + &#039;&lt;/code&gt;&lt;br&gt;&#039;;</small></li>
+<li><code>line 366</code>: <small>html += &#039;&lt;code class=&quot;text-break&quot;&gt;&#039; + escapeHtml(data.command) + &#039;&lt;/code&gt;&lt;br&gt;&#039;;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+  const div = document.createElement(&#039;div&#039;);
+  div.textContent = text;
+  return div.innerHTML;
+}</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
 <div class="file-header">📄 js/sequence-retrieval.js (6)</div>
 <div class="functions-list hidden">
 <div class="file-info">
@@ -1592,14 +1717,20 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="function-item">
 <div class="function-header" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('shown')">
-<div><span class="function-name">escapeHtml()</span><span class="function-counter">8</span> <span class="function-line">Line 6</span></div>
+<div><span class="function-name">escapeHtml()</span><span class="function-counter">11</span> <span class="function-line">Line 6</span></div>
 <span>▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/sequence-retrieval.js: escapeHtml()</div>
 <div class="function-details">
 <div class="function-usages">
-<strong>📍 Called in 2 file(s) (8 times):</strong>
+<strong>📍 Called in 3 file(s) (11 times):</strong>
 <ul>
+<li><strong>js/permission-manager.js</strong> (3x)
+<ul style="margin-top: 5px;">
+<li><code>line 52</code>: <small>&#039;&lt;i class=&quot;fa fa-check-circle&quot;&gt;&lt;/i&gt; &#039; + escapeHtml(json.message) + &#039; &#039; +</small></li>
+<li><code>line 61</code>: <small>&#039;&lt;i class=&quot;fa fa-times-circle&quot;&gt;&lt;/i&gt; &lt;strong&gt;Failed:&lt;/strong&gt; &#039; + escapeHtml(json.message) + &#039;&lt;/div&gt;&#039;</small></li>
+<li><code>line 69</code>: <small>&#039;&lt;i class=&quot;fa fa-exclamation-triangle&quot;&gt;&lt;/i&gt; &lt;strong&gt;Error:&lt;/strong&gt; &#039; + escapeHtml(error.message) + </small></li>
+</ul></li>
 <li><strong>js/sequence-retrieval.js</strong> (1x)
 <ul style="margin-top: 5px;">
 <li><code>line 213</code>: <small>return `&lt;div style=&quot;padding: 4px 0;&quot;&gt;&lt;span style=&quot;background: ${bgColor}; padding: 2px 6px; border-r</small></li>

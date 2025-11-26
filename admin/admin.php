@@ -86,21 +86,9 @@ include_once __DIR__ . '/admin_init.php';
     <div class="col-md-6 mb-3">
       <div class="card h-100">
         <div class="card-body">
-          <h5 class="card-title"><i class="fa fa-file-code"></i> PHP Function Registry</h5>
-          <p class="card-text">View all PHP functions, their usage, and identify unused functions.</p>
-          <a href="../docs/function_registry.html" class="btn btn-primary" target="_blank">View Registry</a>
-          <button id="updatePhpRegistry" class="btn btn-warning" style="display:none; margin-left: 5px;" onclick="updateRegistry('php')">Update Registry</button>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-6 mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5 class="card-title"><i class="fa fa-file-code"></i> JavaScript Function Registry</h5>
-          <p class="card-text">View all JavaScript functions, their usage, and identify unused functions.</p>
-          <a href="../docs/js_function_registry.html" class="btn btn-primary" target="_blank">View Registry</a>
-          <button id="updateJsRegistry" class="btn btn-warning" style="display:none; margin-left: 5px;" onclick="updateRegistry('js')">Update Registry</button>
+          <h5 class="card-title"><i class="fa fa-file-code"></i> Function Registry Management</h5>
+          <p class="card-text">Manage PHP and JavaScript function registries. Update, view, and search all functions.</p>
+          <a href="manage_registry.php" class="btn btn-primary">Manage Registry</a>
         </div>
       </div>
     </div>

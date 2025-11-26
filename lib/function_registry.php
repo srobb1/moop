@@ -1,7 +1,7 @@
 <?php
 /**
  * AUTO-GENERATED FUNCTION REGISTRY
- * Generated: 2025-11-26 14:07:25
+ * Generated: 2025-11-26 15:33:53
  * To regenerate, run: php tools/generate_registry.php
  */
 
@@ -3710,6 +3710,333 @@ JS;
     return $orgs;
 }',
     ),
+    9 => 
+    array (
+      'name' => 'getAllExistingGroups',
+      'line' => 302,
+      'comment' => '/**
+* Get all existing groups from group data
+*
+* Extracts unique group names from organism_assembly_groups.json data
+* and returns a sorted list
+*
+* @param array $groups_data Array of organism/assembly/groups data
+* @return array Sorted list of unique group names
+*/',
+      'code' => 'function getAllExistingGroups($groups_data) {
+    $all_groups = [];
+    foreach ($groups_data as $data) {
+        if (!empty($data[\'groups\'])) {
+            foreach ($data[\'groups\'] as $group) {
+                $all_groups[$group] = true;
+            }
+        }
+    }
+    $group_list = array_keys($all_groups);
+    sort($group_list);
+    return $group_list;
+}',
+    ),
+    10 => 
+    array (
+      'name' => 'syncGroupDescriptions',
+      'line' => 326,
+      'comment' => '/**
+* Sync group descriptions with existing groups
+*
+* Marks groups as in_use=true, marks unused groups as in_use=false,
+* and creates default structure for new groups
+*
+* @param array $existing_groups List of group names that exist
+* @param array $descriptions_data Current group descriptions
+* @return array Updated descriptions with synced in_use status
+*/',
+      'code' => 'function syncGroupDescriptions($existing_groups, $descriptions_data) {
+    $desc_map = [];
+    foreach ($descriptions_data as $desc) {
+        $desc_map[$desc[\'group_name\']] = $desc;
+    }
+    
+    $updated_descriptions = [];
+    
+    // Update existing groups to in_use = true
+    foreach ($existing_groups as $group) {
+        if (isset($desc_map[$group])) {
+            $desc_map[$group][\'in_use\'] = true;
+            $updated_descriptions[] = $desc_map[$group];
+        } else {
+            // New group - add with default structure
+            $updated_descriptions[] = [
+                \'group_name\' => $group,
+                \'images\' => [
+                    [
+                        \'file\' => \'\',
+                        \'caption\' => \'\'
+                    ]
+                ],
+                \'html_p\' => [
+                    [
+                        \'text\' => \'\',
+                        \'style\' => \'\',
+                        \'class\' => \'\'
+                    ]
+                ],
+                \'in_use\' => true
+            ];
+        }
+        unset($desc_map[$group]);
+    }
+    
+    // Mark any remaining groups (not in existing groups) as in_use = false
+    foreach ($desc_map as $group_name => $desc) {
+        $desc[\'in_use\'] = false;
+        $updated_descriptions[] = $desc;
+    }
+    
+    return $updated_descriptions;
+}',
+    ),
+    11 => 
+    array (
+      'name' => 'fetch_taxonomy_lineage',
+      'line' => 380,
+      'comment' => '/**
+* Fetch taxonomic lineage from NCBI using XML parsing
+*
+* Retrieves the full taxonomic classification for an organism using NCBI\'s API
+* and returns it as an array of rank => name pairs
+*
+* @param int $taxon_id NCBI Taxonomy ID
+* @return array|null Array of [\'rank\' => x, \'name\' => y] entries, or null if failed
+*/',
+      'code' => 'function fetch_taxonomy_lineage($taxon_id) {
+    $url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id={$taxon_id}&retmode=xml";
+    
+    $context = stream_context_create([
+        \'http\' => [
+            \'timeout\' => 10,
+            \'user_agent\' => \'MOOP Phylo Tree Generator\'
+        ]
+    ]);
+    $response = @file_get_contents($url, false, $context);
+    
+    if ($response === false) {
+        return null;
+    }
+    
+    // Parse XML using regex since SimpleXML isn\'t always available
+    $lineage = [];
+    
+    // Extract Lineage text (semicolon-separated)
+    if (preg_match(\'/<Lineage>(.+?)<\\/Lineage>/s\', $response, $matches)) {
+        $lineage_text = trim($matches[1]);
+        $lineage_parts = array_filter(array_map(\'trim\', explode(\';\', $lineage_text)));
+        
+        // Extract ranks from LineageEx
+        $rank_map = [];
+        if (preg_match_all(\'/<Taxon>.*?<ScientificName>(.+?)<\\/ScientificName>.*?<Rank>(.+?)<\\/Rank>.*?<\\/Taxon>/s\', $response, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $sci_name = trim($match[1]);
+                $rank = trim($match[2]);
+                $rank_map[$sci_name] = $rank;
+            }
+        }
+        
+        // Build lineage array with matched ranks
+        $valid_ranks = [\'superkingdom\', \'kingdom\', \'phylum\', \'class\', \'order\', \'family\', \'genus\'];
+        foreach ($lineage_parts as $name) {
+            $rank = $rank_map[$name] ?? null;
+            
+            // Map domain to superkingdom
+            if ($rank === \'domain\') {
+                $rank = \'superkingdom\';
+            }
+            
+            // Only include standard taxonomic ranks (skip intermediate ranks like \'clade\')
+            if ($rank && in_array($rank, $valid_ranks)) {
+                $lineage[] = [
+                    \'rank\' => $rank,
+                    \'name\' => $name
+                ];
+            }
+        }
+    }
+    
+    // Add the species itself
+    if (preg_match(\'/<ScientificName>(.+?)<\\/ScientificName>/\', $response, $matches)) {
+        $sci_name = trim($matches[1]);
+        // Only add if it\'s not already in lineage
+        if (empty($lineage) || $lineage[count($lineage)-1][\'name\'] !== $sci_name) {
+            $lineage[] = [
+                \'rank\' => \'species\',
+                \'name\' => $sci_name
+            ];
+        }
+    }
+    
+    return !empty($lineage) ? $lineage : null;
+}',
+    ),
+    12 => 
+    array (
+      'name' => 'build_tree_from_organisms',
+      'line' => 457,
+      'comment' => '/**
+* Build phylogenetic tree from organisms
+*
+* Creates a hierarchical tree structure from a list of organisms by fetching
+* their taxonomic lineage from NCBI and organizing by taxonomic ranks
+*
+* @param array $organisms Array of organism_name => [\'taxon_id\' => x, \'common_name\' => y, ...]
+* @return array Tree structure: [\'tree\' => [...]]
+*/',
+      'code' => 'function build_tree_from_organisms($organisms) {
+    $all_lineages = [];
+    
+    foreach ($organisms as $organism_name => $data) {
+        if (empty($data[\'taxon_id\'])) {
+            continue;
+        }
+        
+        $lineage = fetch_taxonomy_lineage($data[\'taxon_id\']);
+        $image = fetch_organism_image($data[\'taxon_id\'], $organism_name);
+        if ($lineage) {
+            $all_lineages[$organism_name] = [
+                \'lineage\' => $lineage,
+                \'common_name\' => $data[\'common_name\'],
+                \'image\' => $image
+            ];
+        }
+        
+        // Be nice to NCBI - rate limit
+        usleep(350000); // 350ms = ~3 requests per second
+    }
+    
+    // Build tree structure
+    $tree = [\'name\' => \'Life\', \'children\' => []];
+    
+    foreach ($all_lineages as $organism_name => $info) {
+        $current = &$tree;
+        
+        foreach ($info[\'lineage\'] as $level) {
+            $name = $level[\'name\'];
+            $rank = $level[\'rank\'];
+            
+            // Find or create child node
+            $found = false;
+            foreach ($current[\'children\'] as &$child) {
+                if ($child[\'name\'] === $name) {
+                    $current = &$child;
+                    $found = true;
+                    break;
+                }
+            }
+            
+            if (!$found) {
+                $new_node = [\'name\' => $name];
+                
+                // If this is the species level, add organism info
+                if ($rank === \'species\') {
+                    $new_node[\'organism\'] = $organism_name;
+                    $new_node[\'common_name\'] = $info[\'common_name\'];
+                    if ($info[\'image\']) {
+                        $new_node[\'image\'] = $info[\'image\'];
+                    }
+                } else {
+                    $new_node[\'children\'] = [];
+                }
+                
+                $current[\'children\'][] = $new_node;
+                $current = &$current[\'children\'][count($current[\'children\']) - 1];
+            }
+        }
+    }
+    
+    return [\'tree\' => $tree];
+}',
+    ),
+    13 => 
+    array (
+      'name' => 'getDetailedOrganismsInfo',
+      'line' => 532,
+      'comment' => '/**
+* Get detailed information about all organisms
+*
+* Aggregates organism metadata, assemblies, database info, and validation results
+* for all organisms in the system. Used for admin management and reporting.
+*
+* @param string $organism_data_path Path to organism data directory
+* @param array $sequence_types List of valid sequence types (e.g., [\'cds\', \'protein\', \'genome\'])
+* @return array Associative array of organism_name => array with metadata, assemblies, validations
+*/',
+      'code' => 'function getDetailedOrganismsInfo($organism_data_path, $sequence_types = []) {
+    $organisms_info = [];
+    
+    if (!is_dir($organism_data_path)) {
+        return $organisms_info;
+    }
+    
+    // Load all organisms\' JSON metadata using consolidated function
+    $organisms_metadata = loadAllOrganismsMetadata($organism_data_path);
+    
+    $organisms = scandir($organism_data_path);
+    foreach ($organisms as $organism) {
+        if ($organism[0] === \'.\' || !is_dir("$organism_data_path/$organism")) {
+            continue;
+        }
+        
+        // Get organism.json info (already loaded from consolidated function)
+        $organism_json = "$organism_data_path/$organism/organism.json";
+        $json_validation = validateOrganismJson($organism_json);
+        $info = $organisms_metadata[$organism] ?? [];
+        
+        // Get assemblies
+        $assemblies = [];
+        $assembly_path = "$organism_data_path/$organism";
+        $files = scandir($assembly_path);
+        foreach ($files as $file) {
+            if ($file[0] === \'.\' || !is_dir("$assembly_path/$file")) {
+                continue;
+            }
+            $assemblies[] = $file;
+        }
+        
+        // Check for database file
+        $db_file = null;
+        if (file_exists("$organism_data_path/$organism/organism.sqlite")) {
+            $db_file = "$organism_data_path/$organism/organism.sqlite";
+        }
+        
+        $has_db = !is_null($db_file);
+        
+        // Validate database integrity if database exists
+        $db_validation = null;
+        $assembly_validation = null;
+        $fasta_validation = null;
+        if ($has_db) {
+            $db_validation = validateDatabaseIntegrity($db_file);
+            // Also validate assembly directories
+            $assembly_validation = validateAssemblyDirectories($db_file, "$organism_data_path/$organism");
+        }
+        // Validate FASTA files in assembly directories
+        $fasta_validation = validateAssemblyFastaFiles("$organism_data_path/$organism", $sequence_types);
+        
+        $organisms_info[$organism] = [
+            \'info\' => $info,
+            \'assemblies\' => $assemblies,
+            \'has_db\' => $has_db,
+            \'db_file\' => $db_file,
+            \'db_validation\' => $db_validation,
+            \'assembly_validation\' => $assembly_validation,
+            \'fasta_validation\' => $fasta_validation,
+            \'json_validation\' => $json_validation,
+            \'path\' => "$organism_data_path/$organism"
+        ];
+    }
+    
+    return $organisms_info;
+}',
+    ),
   ),
   'lib/functions_database.php' => 
   array (
@@ -4279,7 +4606,11 @@ JS;
         \'has_required_fields\' => false,
         \'required_fields\' => [\'genus\', \'species\', \'common_name\', \'taxon_id\'],
         \'missing_fields\' => [],
-        \'errors\' => []
+        \'errors\' => [],
+        \'owner\' => null,
+        \'perms\' => null,
+        \'web_user\' => null,
+        \'web_group\' => null
     ];
     
     if (!file_exists($json_path)) {
@@ -4288,6 +4619,28 @@ JS;
     }
     
     $validation[\'exists\'] = true;
+    
+    // Get file ownership and permissions
+    if (@is_readable($json_path) || @file_exists($json_path)) {
+        $perms = @fileperms($json_path);
+        if ($perms !== false) {
+            $validation[\'perms\'] = substr(sprintf(\'%o\', $perms), -3);
+        }
+        $owner = @posix_getpwuid(@fileowner($json_path));
+        if ($owner !== false) {
+            $validation[\'owner\'] = $owner[\'name\'] ?? \'unknown\';
+        }
+    }
+    
+    // Get web server user/group
+    $current_user = get_current_user();
+    if ($current_user) {
+        $validation[\'web_user\'] = $current_user;
+        $group_info = @posix_getgrgid(@posix_getegid());
+        if ($group_info !== false) {
+            $validation[\'web_group\'] = $group_info[\'name\'] ?? \'www-data\';
+        }
+    }
     
     if (!is_readable($json_path)) {
         $validation[\'errors\'][] = \'organism.json file is not readable\';
@@ -4334,7 +4687,7 @@ JS;
     5 => 
     array (
       'name' => 'setupOrganismDisplayContext',
-      'line' => 245,
+      'line' => 271,
       'comment' => '/**
 * Complete setup for organism display pages
 * Validates parameter, loads organism info, checks access, returns context
@@ -4370,6 +4723,185 @@ JS;
         \'name\' => $organism_name,
         \'info\' => $organism_info
     ];
+}',
+    ),
+    6 => 
+    array (
+      'name' => 'fetch_organism_image',
+      'line' => 308,
+      'comment' => '/**
+* Fetch and cache organism image from NCBI to ncbi_taxonomy directory
+*
+* Downloads organism images from NCBI taxonomy API and caches them locally.
+* Returns the web-accessible image path or null if download fails.
+*
+* @param int $taxon_id NCBI Taxonomy ID
+* @param string|null $organism_name Optional organism name (for reference)
+* @param string $absolute_images_path Absolute filesystem path to images directory
+* @return string|null Web path to image (e.g., \'images/ncbi_taxonomy/12345.jpg\'), or null if failed
+*/',
+      'code' => 'function fetch_organism_image($taxon_id, $organism_name = null, $absolute_images_path = null) {
+    if ($absolute_images_path === null) {
+        $config = ConfigManager::getInstance();
+        $absolute_images_path = $config->getPath(\'absolute_images_path\');
+    }
+    
+    $ncbi_dir = $absolute_images_path . \'/ncbi_taxonomy\';
+    $image_path = $ncbi_dir . \'/\' . $taxon_id . \'.jpg\';
+    
+    // Check if image already cached
+    if (file_exists($image_path)) {
+        return \'images/ncbi_taxonomy/\' . $taxon_id . \'.jpg\';
+    }
+    
+    // Ensure directory exists
+    if (!is_dir($ncbi_dir)) {
+        @mkdir($ncbi_dir, 0755, true);
+    }
+    
+    // Download from NCBI
+    $image_url = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon/{$taxon_id}/image";
+    
+    $context = stream_context_create([\'http\' => [\'timeout\' => 10, \'user_agent\' => \'MOOP\']]);
+    $image_data = @file_get_contents($image_url, false, $context);
+    
+    if ($image_data === false || strlen($image_data) < 100) {
+        return null;
+    }
+    
+    // Save image
+    if (file_put_contents($image_path, $image_data) !== false) {
+        return \'images/ncbi_taxonomy/\' . $taxon_id . \'.jpg\';
+    }
+    
+    return null;
+}',
+    ),
+    7 => 
+    array (
+      'name' => 'generatePermissionAlert',
+      'line' => 359,
+      'comment' => '/**
+* Generate a permission alert HTML for a file or directory
+*
+* Shows current status (readable, writable) and provides either:
+* 1. A "Fix Permissions" button if web server can fix it automatically
+* 2. Manual fix instructions with commands if web server lacks permissions
+*
+* @param string $file_path Path to file or directory
+* @param string $title Alert title (e.g., "Metadata File Permission Issue")
+* @param string $problem Description of the problem
+* @param string $file_type Type for AJAX call: \'file\' or \'directory\'
+* @param string $organism Optional organism name for targeting
+* @return string HTML for the permission alert, empty if no issues
+*/',
+      'code' => 'function generatePermissionAlert($file_path, $title = \'\', $problem = \'\', $file_type = \'file\', $organism = \'\') {
+    // Check current permissions
+    $readable = is_readable($file_path);
+    $writable = is_writable($file_path);
+    
+    // If everything is fine, return empty
+    if ($readable && $writable) {
+        return \'\';
+    }
+    
+    // Get file/directory info
+    $exists = file_exists($file_path);
+    if (!$exists) {
+        return \'\';
+    }
+    
+    $is_dir = is_dir($file_path);
+    $file_size = $is_dir ? \'directory\' : filesize($file_path) . \' bytes\';
+    $owner = @posix_getpwuid(fileowner($file_path));
+    $owner_name = $owner !== false ? $owner[\'name\'] : \'unknown\';
+    $perms = substr(sprintf(\'%o\', fileperms($file_path)), -3);
+    $web_user = get_current_user() ?: \'www-data\';
+    $web_group_info = @posix_getgrgid(@posix_getegid());
+    $web_group = $web_group_info !== false ? $web_group_info[\'name\'] : \'www-data\';
+    
+    // Determine if web server can fix permissions
+    $can_fix = is_writable(dirname($file_path)) || is_writable($file_path);
+    
+    // Determine what\'s wrong
+    $issue = \'\';
+    if (!$readable && !$writable) {
+        $issue = \'Cannot read or write\';
+    } elseif (!$readable) {
+        $issue = \'Cannot read (permission denied)\';
+    } else {
+        $issue = \'Cannot write (read-only)\';
+    }
+    
+    $safe_path = htmlspecialchars($file_path);
+    $safe_title = htmlspecialchars($title ?: $issue);
+    $safe_problem = htmlspecialchars($problem);
+    $safe_organism = htmlspecialchars($organism);
+    
+    // Start building alert HTML
+    $html = \'<div class="alert alert-warning alert-dismissible fade show mb-3">\' . "\\n";
+    $html .= \'  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>\' . "\\n";
+    $html .= \'  <h6><i class="fa fa-exclamation-circle"></i> \' . $safe_title . \'</h6>\' . "\\n";
+    
+    if ($safe_problem) {
+        $html .= \'  <p class="mb-2"><strong>Problem:</strong> \' . $safe_problem . \'</p>\' . "\\n";
+    }
+    
+    $html .= \'  <p class="mb-3"><strong>Current Status:</strong></p>\' . "\\n";
+    $html .= \'  <ul class="mb-3 small">\' . "\\n";
+    $html .= \'    <li>Path: <code>\' . $safe_path . \'</code></li>\' . "\\n";
+    $html .= \'    <li>Type: \' . ($is_dir ? \'Directory\' : \'File\') . \'</li>\' . "\\n";
+    $html .= \'    <li>Owner: <code>\' . htmlspecialchars($owner_name) . \'</code></li>\' . "\\n";
+    $html .= \'    <li>Permissions: <code>\' . $perms . \'</code></li>\' . "\\n";
+    $html .= \'    <li>Readable: <span class="badge \' . ($readable ? \'bg-success\' : \'bg-danger\') . \'">\' . ($readable ? \'✓ Yes\' : \'✗ No\') . \'</span></li>\' . "\\n";
+    $html .= \'    <li>Writable: <span class="badge \' . ($writable ? \'bg-success\' : \'bg-danger\') . \'">\' . ($writable ? \'✓ Yes\' : \'✗ No\') . \'</span></li>\' . "\\n";
+    $html .= \'    <li>Web server user: <code>\' . htmlspecialchars($web_user) . \'</code></li>\' . "\\n";
+    $html .= \'  </ul>\' . "\\n";
+    
+    if ($can_fix) {
+        // Web server can fix it - offer button
+        $html .= \'  <p class="mb-2"><strong>Quick Fix:</strong> Click the button below to attempt automatic fix:</p>\' . "\\n";
+        $html .= \'  <button class="btn btn-warning btn-sm" onclick="fixFilePermissions(event, \' . json_encode($file_path) . \', \' . json_encode($file_type) . \', \' . json_encode($organism) . \')">\' . "\\n";
+        $html .= \'    <i class="fa fa-wrench"></i> Fix Permissions\' . "\\n";
+        $html .= \'  </button>\' . "\\n";
+        $html .= \'  <div id="fixResult-\' . md5($file_path) . \'" class="mt-3"></div>\' . "\\n";
+    } else {
+        // Web server cannot fix - show manual instructions
+        $html .= \'  <p class="mb-2"><strong>To Fix:</strong> Run this command on the server:</p>\' . "\\n";
+        $html .= \'  <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">\' . "\\n";
+        $html .= \'    <code style="word-break: break-all; display: block; font-size: 0.9em;">\' . "\\n";
+        if ($is_dir) {
+            $html .= \'      sudo chown -R \' . htmlspecialchars($web_user) . \':\' . htmlspecialchars($web_group) . \' \' . $safe_path . \'<br>\' . "\\n";
+            $html .= \'      sudo chmod -R 775 \' . $safe_path . "\\n";
+        } else {
+            $html .= \'      sudo chown \' . htmlspecialchars($web_user) . \':\' . htmlspecialchars($web_group) . \' \' . $safe_path . \'<br>\' . "\\n";
+            $html .= \'      sudo chmod 664 \' . $safe_path . "\\n";
+        }
+        $html .= \'    </code>\' . "\\n";
+        $html .= \'  </div>\' . "\\n";
+    }
+    
+    $html .= \'  <p class="small text-muted mb-0">After fixing permissions, refresh this page.</p>\' . "\\n";
+    $html .= \'</div>\' . "\\n";
+    
+    return $html;
+}',
+    ),
+    8 => 
+    array (
+      'name' => 'getWebServerUserInfo',
+      'line' => 456,
+      'comment' => '/**
+* Get web server user information
+*
+* @return array Array with \'user\' and \'group\' keys
+*/',
+      'code' => 'function getWebServerUserInfo() {
+    $user = get_current_user() ?: \'www-data\';
+    $group_info = @posix_getgrgid(@posix_getegid());
+    $group = $group_info !== false ? $group_info[\'name\'] : \'www-data\';
+    
+    return [\'user\' => $user, \'group\' => $group];
 }',
     ),
   ),
@@ -5194,6 +5726,123 @@ JS;
     }
     
     return $result;
+}',
+    ),
+    2 => 
+    array (
+      'name' => 'fixFilePermissions',
+      'line' => 117,
+      'comment' => '/**
+* Fix file or directory permissions (AJAX handler)
+*
+* Called via AJAX when user clicks "Fix Permissions" button.
+* Only works if web server has sufficient permissions to chmod/chown.
+*
+* @param string $file_path Path to file or directory
+* @param string $file_type \'file\' or \'directory\'
+* @return array Result array with \'success\', \'message\' keys
+*/',
+      'code' => 'function fixFilePermissions($file_path, $file_type = \'file\') {
+    $result = [
+        \'success\' => false,
+        \'message\' => \'\',
+        \'command\' => \'\'
+    ];
+    
+    // Validate input
+    if (empty($file_path) || !file_exists($file_path)) {
+        $result[\'message\'] = \'File or directory not found\';
+        return $result;
+    }
+    
+    $is_dir = is_dir($file_path);
+    
+    // Get web server user info
+    $web_user = get_current_user() ?: \'www-data\';
+    $web_group_info = @posix_getgrgid(@posix_getegid());
+    $web_group = $web_group_info !== false ? $web_group_info[\'name\'] : \'www-data\';
+    
+    try {
+        if ($is_dir) {
+            // For directories: chmod 755 (rwxr-xr-x)
+            $chmod_result = @chmod($file_path, 0755);
+            
+            if (!$chmod_result) {
+                $result[\'message\'] = \'Web server lacks permission to change directory permissions.\';
+                return $result;
+            }
+            
+            // Try to change ownership (may fail if not root)
+            @chown($file_path, $web_user);
+            @chgrp($file_path, $web_group);
+            
+            // Verify it worked
+            if (is_readable($file_path) && is_writable($file_path)) {
+                $result[\'success\'] = true;
+                $result[\'message\'] = \'Directory permissions fixed successfully!\';
+            } else {
+                $result[\'message\'] = \'Permissions were modified but directory still has issues.\';
+            }
+        } else {
+            // For files: chmod 644 (rw-r--r--)
+            $chmod_result = @chmod($file_path, 0644);
+            
+            if (!$chmod_result) {
+                $result[\'message\'] = \'Web server lacks permission to change file permissions.\';
+                return $result;
+            }
+            
+            // Try to change ownership (may fail if not root)
+            @chown($file_path, $web_user);
+            @chgrp($file_path, $web_group);
+            
+            // Verify it worked
+            if (is_readable($file_path)) {
+                $result[\'success\'] = true;
+                $result[\'message\'] = \'File permissions fixed successfully!\';
+            } else {
+                $result[\'message\'] = \'Permissions were modified but file still not readable.\';
+            }
+        }
+    } catch (Exception $e) {
+        $result[\'message\'] = \'Error: \' . $e->getMessage();
+    }
+    
+    return $result;
+}',
+    ),
+    3 => 
+    array (
+      'name' => 'handleFixFilePermissionsAjax',
+      'line' => 192,
+      'comment' => '/**
+* Handle file permission fix AJAX request
+*
+* Call this in your admin script\'s POST handler:
+* if (isset($_POST[\'action\']) && $_POST[\'action\'] === \'fix_file_permissions\') {
+*     header(\'Content-Type: application/json\');
+*     echo json_encode(handleFixFilePermissionsAjax());
+*     exit;
+* }
+*
+* @return array JSON-serializable result array
+*/',
+      'code' => 'function handleFixFilePermissionsAjax() {
+    if (empty($_POST[\'file_path\'])) {
+        return [\'success\' => false, \'message\' => \'File path not provided\'];
+    }
+    
+    $file_path = $_POST[\'file_path\'];
+    $file_type = $_POST[\'file_type\'] ?? \'file\';
+    
+    // Basic security: prevent directory traversal
+    $file_path = realpath($file_path);
+    
+    if (!$file_path || !file_exists($file_path)) {
+        return [\'success\' => false, \'message\' => \'File or directory not found\'];
+    }
+    
+    return fixFilePermissions($file_path, $file_type);
 }',
     ),
   ),
@@ -6042,352 +6691,6 @@ JS;
     }
     
     return $sequences;
-}',
-    ),
-  ),
-  'admin/manage_groups.php' => 
-  array (
-    0 => 
-    array (
-      'name' => 'get_all_existing_groups',
-      'line' => 25,
-      'comment' => '',
-      'code' => 'function get_all_existing_groups($groups_data) {
-    $all_groups = [];
-    foreach ($groups_data as $data) {
-        if (!empty($data[\'groups\'])) {
-            foreach ($data[\'groups\'] as $group) {
-                $all_groups[$group] = true;
-            }
-        }
-    }
-    $group_list = array_keys($all_groups);
-    sort($group_list);
-    return $group_list;
-}',
-    ),
-    1 => 
-    array (
-      'name' => 'sync_group_descriptions',
-      'line' => 42,
-      'comment' => '',
-      'code' => 'function sync_group_descriptions($existing_groups, $descriptions_data) {
-    $desc_map = [];
-    foreach ($descriptions_data as $desc) {
-        $desc_map[$desc[\'group_name\']] = $desc;
-    }
-    
-    $updated_descriptions = [];
-    
-    // Update existing groups to in_use = true
-    foreach ($existing_groups as $group) {
-        if (isset($desc_map[$group])) {
-            $desc_map[$group][\'in_use\'] = true;
-            $updated_descriptions[] = $desc_map[$group];
-        } else {
-            // New group - add with default structure
-            $updated_descriptions[] = [
-                \'group_name\' => $group,
-                \'images\' => [
-                    [
-                        \'file\' => \'\',
-                        \'caption\' => \'\'
-                    ]
-                ],
-                \'html_p\' => [
-                    [
-                        \'text\' => \'\',
-                        \'style\' => \'\',
-                        \'class\' => \'\'
-                    ]
-                ],
-                \'in_use\' => true
-            ];
-        }
-        unset($desc_map[$group]);
-    }
-    
-    // Add remaining groups that are not in use anymore
-    foreach ($desc_map as $group_name => $desc) {
-        $desc[\'in_use\'] = false;
-        $updated_descriptions[] = $desc;
-    }
-    
-    return $updated_descriptions;
-}',
-    ),
-  ),
-  'admin/manage_organisms.php' => 
-  array (
-    0 => 
-    array (
-      'name' => 'get_all_organisms_info',
-      'line' => 14,
-      'comment' => '',
-      'code' => 'function get_all_organisms_info() {
-    global $organism_data, $sequence_types;
-    $organisms_info = [];
-    
-    if (!is_dir($organism_data)) {
-        return $organisms_info;
-    }
-    
-    // Load all organisms\' JSON metadata using consolidated function
-    $organisms_metadata = loadAllOrganismsMetadata($organism_data);
-    
-    $organisms = scandir($organism_data);
-    foreach ($organisms as $organism) {
-        if ($organism[0] === \'.\' || !is_dir("$organism_data/$organism")) {
-            continue;
-        }
-        
-        // Get organism.json info (already loaded from consolidated function)
-        $organism_json = "$organism_data/$organism/organism.json";
-        $json_validation = validateOrganismJson($organism_json);
-        $info = $organisms_metadata[$organism] ?? [];
-        
-        // Get assemblies
-        $assemblies = [];
-        $assembly_path = "$organism_data/$organism";
-        $files = scandir($assembly_path);
-        foreach ($files as $file) {
-            if ($file[0] === \'.\' || !is_dir("$assembly_path/$file")) {
-                continue;
-            }
-            $assemblies[] = $file;
-        }
-        
-        // Check for database file
-        $db_file = null;
-        if (file_exists("$organism_data/$organism/organism.sqlite")) {
-            $db_file = "$organism_data/$organism/organism.sqlite";
-        }
-        
-        $has_db = !is_null($db_file);
-        
-        // Validate database integrity if database exists
-        $db_validation = null;
-        $assembly_validation = null;
-        $fasta_validation = null;
-        if ($has_db) {
-            $db_validation = validateDatabaseIntegrity($db_file);
-            // Also validate assembly directories
-            $assembly_validation = validateAssemblyDirectories($db_file, "$organism_data/$organism");
-        }
-        // Validate FASTA files in assembly directories
-        $fasta_validation = validateAssemblyFastaFiles("$organism_data/$organism", $sequence_types);
-        
-        $organisms_info[$organism] = [
-            \'info\' => $info,
-            \'assemblies\' => $assemblies,
-            \'has_db\' => $has_db,
-            \'db_file\' => $db_file,
-            \'db_validation\' => $db_validation,
-            \'assembly_validation\' => $assembly_validation,
-            \'fasta_validation\' => $fasta_validation,
-            \'json_validation\' => $json_validation,
-            \'path\' => "$organism_data/$organism"
-        ];
-    }
-    
-    return $organisms_info;
-}',
-    ),
-  ),
-  'admin/manage_phylo_tree.php' => 
-  array (
-    0 => 
-    array (
-      'name' => 'get_organisms_metadata',
-      'line' => 17,
-      'comment' => '',
-      'code' => 'function get_organisms_metadata($organism_data_dir) {
-    // This function is now deprecated - use loadAllOrganismsMetadata() from functions_data.php instead
-    // Kept for backwards compatibility
-    return loadAllOrganismsMetadata($organism_data_dir);
-}',
-    ),
-    1 => 
-    array (
-      'name' => 'fetch_organism_image',
-      'line' => 24,
-      'comment' => '',
-      'code' => 'function fetch_organism_image($taxon_id, $organism_name = null) {
-    global $absolute_images_path;
-    
-    $ncbi_dir = $absolute_images_path . \'/ncbi_taxonomy\';
-    $image_path = $ncbi_dir . \'/\' . $taxon_id . \'.jpg\';
-    
-    // Check if image already cached
-    if (file_exists($image_path)) {
-        return \'images/ncbi_taxonomy/\' . $taxon_id . \'.jpg\';
-    }
-    
-    // Ensure directory exists
-    if (!is_dir($ncbi_dir)) {
-        @mkdir($ncbi_dir, 0755, true);
-    }
-    
-    // Download from NCBI
-    $image_url = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon/{$taxon_id}/image";
-    
-    $context = stream_context_create([\'http\' => [\'timeout\' => 10, \'user_agent\' => \'MOOP\']]);
-    $image_data = @file_get_contents($image_url, false, $context);
-    
-    if ($image_data === false || strlen($image_data) < 100) {
-        return null;
-    }
-    
-    // Save image
-    if (file_put_contents($image_path, $image_data) !== false) {
-        return \'images/ncbi_taxonomy/\' . $taxon_id . \'.jpg\';
-    }
-    
-    return null;
-}',
-    ),
-    2 => 
-    array (
-      'name' => 'fetch_taxonomy_lineage',
-      'line' => 60,
-      'comment' => '',
-      'code' => 'function fetch_taxonomy_lineage($taxon_id) {
-    $url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id={$taxon_id}&retmode=xml";
-    
-    $context = stream_context_create([
-        \'http\' => [
-            \'timeout\' => 10,
-            \'user_agent\' => \'MOOP Phylo Tree Generator\'
-        ]
-    ]);
-    $response = @file_get_contents($url, false, $context);
-    
-    if ($response === false) {
-        return null;
-    }
-    
-    // Parse XML using regex since SimpleXML isn\'t always available
-    $lineage = [];
-    
-    // Extract Lineage text (semicolon-separated)
-    if (preg_match(\'/<Lineage>(.+?)<\\/Lineage>/s\', $response, $matches)) {
-        $lineage_text = trim($matches[1]);
-        $lineage_parts = array_filter(array_map(\'trim\', explode(\';\', $lineage_text)));
-        
-        // Extract ranks from LineageEx
-        $rank_map = [];
-        if (preg_match_all(\'/<Taxon>.*?<ScientificName>(.+?)<\\/ScientificName>.*?<Rank>(.+?)<\\/Rank>.*?<\\/Taxon>/s\', $response, $matches, PREG_SET_ORDER)) {
-            foreach ($matches as $match) {
-                $sci_name = trim($match[1]);
-                $rank = trim($match[2]);
-                $rank_map[$sci_name] = $rank;
-            }
-        }
-        
-        // Build lineage array with matched ranks
-        $valid_ranks = [\'superkingdom\', \'kingdom\', \'phylum\', \'class\', \'order\', \'family\', \'genus\'];
-        foreach ($lineage_parts as $name) {
-            $rank = $rank_map[$name] ?? null;
-            
-            // Map domain to superkingdom
-            if ($rank === \'domain\') {
-                $rank = \'superkingdom\';
-            }
-            
-            // Only include standard taxonomic ranks (skip intermediate ranks like \'clade\')
-            // $rank exists AND $rank is one of the major taxonomic levels
-            if ($rank && in_array($rank, $valid_ranks)) {
-                $lineage[] = [
-                    \'rank\' => $rank,
-                    \'name\' => $name
-                ];
-            }
-        }
-    }
-    
-    // Add the species itself
-    if (preg_match(\'/<ScientificName>(.+?)<\\/ScientificName>/\', $response, $matches)) {
-        $sci_name = trim($matches[1]);
-        // Only add if it\'s not already in lineage
-        if (empty($lineage) || $lineage[count($lineage)-1][\'name\'] !== $sci_name) {
-            $lineage[] = [
-                \'rank\' => \'species\',
-                \'name\' => $sci_name
-            ];
-        }
-    }
-    
-    return !empty($lineage) ? $lineage : null;
-}',
-    ),
-    3 => 
-    array (
-      'name' => 'build_tree_from_organisms',
-      'line' => 130,
-      'comment' => '',
-      'code' => 'function build_tree_from_organisms($organisms) {
-    $all_lineages = [];
-    
-    foreach ($organisms as $organism_name => $data) {
-        if (empty($data[\'taxon_id\'])) {
-            continue;
-        }
-        
-        $lineage = fetch_taxonomy_lineage($data[\'taxon_id\']);
-        $image = fetch_organism_image($data[\'taxon_id\'], $organism_name);
-        if ($lineage) {
-            $all_lineages[$organism_name] = [
-                \'lineage\' => $lineage,
-                \'common_name\' => $data[\'common_name\'],
-                \'image\' => $image
-            ];
-        }
-        
-        // Be nice to NCBI - rate limit
-        usleep(350000); // 350ms = ~3 requests per second
-    }
-    
-    // Build tree structure
-    $tree = [\'name\' => \'Life\', \'children\' => []];
-    
-    foreach ($all_lineages as $organism_name => $info) {
-        $current = &$tree;
-        
-        foreach ($info[\'lineage\'] as $level) {
-            $name = $level[\'name\'];
-            $rank = $level[\'rank\'];
-            
-            // Find or create child node
-            $found = false;
-            foreach ($current[\'children\'] as &$child) {
-                if ($child[\'name\'] === $name) {
-                    $current = &$child;
-                    $found = true;
-                    break;
-                }
-            }
-            
-            if (!$found) {
-                $new_node = [\'name\' => $name];
-                
-                // If this is the species level, add organism info
-                if ($rank === \'species\') {
-                    $new_node[\'organism\'] = $organism_name;
-                    $new_node[\'common_name\'] = $info[\'common_name\'];
-                    if ($info[\'image\']) {
-                        $new_node[\'image\'] = $info[\'image\'];
-                    }
-                } else {
-                    $new_node[\'children\'] = [];
-                }
-                
-                $current[\'children\'][] = $new_node;
-                $current = &$current[\'children\'][count($current[\'children\']) - 1];
-            }
-        }
-    }
-    
-    return [\'tree\' => $tree];
 }',
     ),
   ),
