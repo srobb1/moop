@@ -43,6 +43,7 @@ $annotation_config = loadJsonFileRequired($annotation_config_file, "Missing anno
 $analysis_order = [];
 $analysis_desc = [];
 $annotation_colors = [];
+$annotation_labels = [];
 
 // Require new format with annotation_types
 if (isset($annotation_config['annotation_types'])) {
@@ -57,6 +58,7 @@ if (isset($annotation_config['annotation_types'])) {
             $analysis_order[] = $key;
             $analysis_desc[$key] = $config['description'] ?? '';
             $annotation_colors[$key] = $config['color'] ?? 'secondary';
+            $annotation_labels[$key] = $config['display_label'] ?? $key;
         }
     }
 } else {
@@ -258,7 +260,8 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
                         $has_annotations = true;
 			// color is defined and configurable in the annotation_config.json. example "gene ontology" : "#ffc107" 
                         $color = $annotation_colors[$annotation_type] ?? 'warning';
-                        echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);
+                        $display_label = $annotation_labels[$annotation_type] ?? $annotation_type;
+                        echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);
                     }
                 }
                 
@@ -303,8 +306,9 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
                             foreach ($child_annotation_types as $type_name => $type_count) {
                                 $badge_color = $annotation_colors[$type_name] ?? 'warning';
                                 $text_color = in_array($badge_color, ['warning', 'info', 'secondary']) ? 'text-dark' : 'text-white';
+                                $display_label = $annotation_labels[$type_name] ?? $type_name;
                                 $section_id = "annot_section_" . preg_replace('/[^a-zA-Z0-9_]/', '_', $child_uniquename . '_' . $type_name);
-                                echo " <a href=\"#$section_id\" class=\"badge bg-$badge_color $text_color ms-1 text-decoration-none badge-s\" style=\"cursor: pointer;\">$type_name</a>";
+                                echo " <a href=\"#$section_id\" class=\"badge bg-$badge_color $text_color ms-1 text-decoration-none badge-s\" style=\"cursor: pointer;\">$display_label</a>";
                             }
                         } else {
                             echo " <span class=\"badge bg-secondary ms-2\">No annotations</span>";
@@ -322,7 +326,8 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
                                 $child_has_annotations = true;
                                 $has_annotations = true;
                                 $color = $annotation_colors[$annotation_type] ?? 'warning';
-                                echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);
+                                $display_label = $annotation_labels[$annotation_type] ?? $annotation_type;
+                                echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);
                             }
                         }
                         
