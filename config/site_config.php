@@ -50,6 +50,18 @@ return [
     // ======== OPTIONAL: Files ========
     'users_file' => "$root_path/users.json",
     
+    // ======== OPTIONAL: IP-Based Auto-Login ========
+    // IP ranges for automatic login with full access (development/local testing)
+    // Format: Array of ranges with 'start' and 'end' IP addresses
+    // Leave empty array to disable IP-based auto-login
+    // Example: ['127.0.0.0', '127.0.0.255'] for localhost range
+    'auto_login_ip_ranges' => [
+        [
+            'start' => '127.0.0.11',
+            'end' => '127.0.0.11',
+        ],
+    ],
+    
     // ======== DATA CONFIGURATION ========
     // Maps sequence file patterns to display names
     // Admin: Add new sequence types here and they're automatically available

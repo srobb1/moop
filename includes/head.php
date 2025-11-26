@@ -35,8 +35,14 @@ $site = $config->getString('site');
     
     <!-- Optional custom CSS if defined in config -->
     <?php
-      if (isset($custom_css_path) && $custom_css_path && file_exists("$custom_css_path")) {
-        echo "<link rel=\"stylesheet\" href=\"$custom_css_path\">";
+      $custom_css_path = $config->getPath('custom_css_path', '');
+      if (!empty($custom_css_path)) {
+          if (file_exists($custom_css_path)) {
+              echo "<link rel=\"stylesheet\" href=\"$custom_css_path\">";
+          } else {
+              // Log warning if custom CSS path is configured but file doesn't exist
+              error_log("Warning: custom_css_path configured in site_config.php but file not found: $custom_css_path");
+          }
       }
     ?>
 

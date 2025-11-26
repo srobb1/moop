@@ -15,19 +15,30 @@ define('TOOL_SECTION_PATH', __DIR__ . '/../lib/tool_section.php');
 
 // Get visitor IP address (use empty string if not set, which won't match any IP range)
 $visitor_ip = $_SERVER['REMOTE_ADDR'] ?? '';
-
-// Define allowed IP range for ALL access
-$all_access_start_ip = ip2long("127.0.0.11");
-$all_access_end_ip   = ip2long("127.0.0.11");
 $visitor_ip_long = ip2long($visitor_ip);
 
 // Auto-login IP-based users with ALL access (but only if not already logged in as another user type)
-if ($visitor_ip_long >= $all_access_start_ip && $visitor_ip_long <= $all_access_end_ip) {
-    if (!isset($_SESSION["logged_in"]) || $_SESSION["access_level"] !== 'ALL') {
-        $_SESSION["logged_in"] = true;
-        $_SESSION["username"] = "IP_USER_" . $visitor_ip;
-        $_SESSION["access_level"] = 'ALL';
-        $_SESSION["access"] = [];
+// IP ranges are configured in site_config.php under 'auto_login_ip_ranges'
+$config = ConfigManager::getInstance();
+$ip_ranges = $config->getArray('auto_login_ip_ranges', []);
+
+foreach ($ip_ranges as $range) {
+    $range_start = $range['start'] ?? null;
+    $range_end = $range['end'] ?? null;
+    
+    if ($range_start && $range_end) {
+        $start_long = ip2long($range_start);
+        $end_long = ip2long($range_end);
+        
+        if ($visitor_ip_long !== false && $visitor_ip_long >= $start_long && $visitor_ip_long <= $end_long) {
+            if (!isset($_SESSION["logged_in"]) || $_SESSION["access_level"] !== 'ALL') {
+                $_SESSION["logged_in"] = true;
+                $_SESSION["username"] = "IP_USER_" . $visitor_ip;
+                $_SESSION["access_level"] = 'ALL';
+                $_SESSION["access"] = [];
+            }
+            break;
+        }
     }
 }
 

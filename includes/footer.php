@@ -18,7 +18,17 @@
             <div class="footer-text">
                 <p>Questions, issues, requests, or missing/incorrect data?</p>
                 <p>
-                    <a href="mailto:<?= htmlspecialchars($admin_email ?? 'admin@example.com') ?>">
+                    <?php
+                    // Get admin email from ConfigManager if not already set
+                    if (!isset($admin_email) || empty($admin_email)) {
+                        if (!class_exists('ConfigManager')) {
+                            include_once __DIR__ . '/config_init.php';
+                        }
+                        $config = ConfigManager::getInstance();
+                        $admin_email = $config->getString('admin_email', 'admin@example.com');
+                    }
+                    ?>
+                    <a href="mailto:<?= htmlspecialchars($admin_email) ?>">
                         <i class="fas fa-envelope"></i> Contact Administrator
                     </a>
                 </p>
