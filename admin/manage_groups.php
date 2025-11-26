@@ -1,8 +1,10 @@
 <?php
+ob_start();
 include_once __DIR__ . '/admin_init.php';
 
 // Load page-specific config
 $metadata_path = $config->getPath('metadata_path');
+$organism_data_path = $config->getPath('organism_data');
 
 $groups_file = $metadata_path . '/organism_assembly_groups.json';
 $file_write_error = null;
@@ -21,96 +23,23 @@ $file_write_error = getFileWriteError($groups_file);
 // Check if descriptions file is writable
 $desc_file_write_error = getFileWriteError($descriptions_file);
 
-function get_all_organisms() {
-    global $organism_data;
-    $orgs = [];
-    $path = $organism_data;
-    if (!is_dir($path)) {
-        return $orgs;
+// Check if change_log directory is writable (do this check early but safely)
+$change_log_dir = $metadata_path . '/change_log';
+$change_log_error = null;
+if (!is_dir($change_log_dir)) {
+    // Try to create it
+    if (!@mkdir($change_log_dir, 0775, true)) {
+        $change_log_error = @getDirectoryError($change_log_dir);
     }
-    $organisms = scandir($path);
-    foreach ($organisms as $organism) {
-        if ($organism[0] === '.' || !is_dir("$path/$organism")) {
-            continue;
-        }
-        $assemblies = [];
-        $assemblyPath = "$path/$organism";
-        $files = scandir($assemblyPath);
-        foreach ($files as $file) {
-            if ($file[0] === '.' || !is_dir("$assemblyPath/$file")) {
-                continue;
-            }
-            $assemblies[] = $file;
-        }
-        $orgs[$organism] = $assemblies;
-    }
-    return $orgs;
+} else {
+    $change_log_error = @getDirectoryError($change_log_dir);
 }
 
-function get_all_existing_groups($groups_data) {
-    $all_groups = [];
-    foreach ($groups_data as $data) {
-        if (!empty($data['groups'])) {
-            foreach ($data['groups'] as $group) {
-                $all_groups[$group] = true;
-            }
-        }
-    }
-    $group_list = array_keys($all_groups);
-    sort($group_list);
-    return $group_list;
-}
+$all_organisms = getOrganismsWithAssemblies($organism_data_path);
 
-$all_organisms = get_all_organisms();
-
-// Function to sync group descriptions with current groups
-function sync_group_descriptions($existing_groups, $descriptions_data) {
-    $desc_map = [];
-    foreach ($descriptions_data as $desc) {
-        $desc_map[$desc['group_name']] = $desc;
-    }
-    
-    $updated_descriptions = [];
-    
-    // Update existing groups to in_use = true
-    foreach ($existing_groups as $group) {
-        if (isset($desc_map[$group])) {
-            $desc_map[$group]['in_use'] = true;
-            $updated_descriptions[] = $desc_map[$group];
-        } else {
-            // New group - add with default structure
-            $updated_descriptions[] = [
-                'group_name' => $group,
-                'images' => [
-                    [
-                        'file' => '',
-                        'caption' => ''
-                    ]
-                ],
-                'html_p' => [
-                    [
-                        'text' => '',
-                        'style' => '',
-                        'class' => ''
-                    ]
-                ],
-                'in_use' => true
-            ];
-        }
-        unset($desc_map[$group]);
-    }
-    
-    // Add remaining groups that are not in use anymore
-    foreach ($desc_map as $group_name => $desc) {
-        $desc['in_use'] = false;
-        $updated_descriptions[] = $desc;
-    }
-    
-    return $updated_descriptions;
-}
-
-$existing_groups = get_all_existing_groups($groups_data);
-$descriptions_data = sync_group_descriptions($existing_groups, $descriptions_data);
+$all_existing_groups = getAllExistingGroups($groups_data);
+$descriptions_data = loadJsonFile($descriptions_file, []);
+$updated_descriptions = syncGroupDescriptions($all_existing_groups, $descriptions_data);
 
 // Save synced descriptions data
 if (file_exists($descriptions_file) && is_writable($descriptions_file)) {
@@ -131,9 +60,15 @@ foreach ($groups_data as $data) {
 
 // Handle POST requests for updates, additions, and deletions
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $log_file = $organism_data . '/organism_assembly_groups_changes.log';
+    $log_file = $metadata_path . '/change_log/manage_groups.log';
     $timestamp = date('Y-m-d H:i:s');
     $username = $_SESSION['username'] ?? 'unknown';
+    
+    // Ensure log directory exists
+    $log_dir = $metadata_path . '/change_log';
+    if (!is_dir($log_dir)) {
+        @mkdir($log_dir, 0775, true);
+    }
     
     // Handle group description updates
     if (isset($_POST['save_description']) && !$desc_file_write_error) {
@@ -158,14 +93,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION['error_message'] = "Error: Could not write to group_descriptions.json. Check file permissions.";
         } else {
             // Log the change
-            $desc_log_file = $organism_data . '/group_descriptions_changes.log';
             $desc_log_entry = sprintf(
                 "[%s] UPDATE by %s | Group: %s\n",
                 $timestamp,
                 $username,
                 $group_name
             );
-            file_put_contents($desc_log_file, $desc_log_entry, FILE_APPEND);
+            file_put_contents($log_file, $desc_log_entry, FILE_APPEND);
             $_SESSION['success_message'] = "Group description updated successfully!";
         }
     }
@@ -271,7 +205,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $assembly,
             implode(', ', $old_groups)
         );
-        file_put_contents($log_file, $log_entry, FILE_APPEND);
+        $log_write = @file_put_contents($log_file, $log_entry, FILE_APPEND);
+        if ($log_write === false) {
+            logError('manage_groups.php', "Failed to write to change_log/manage_groups.log", [
+                'file' => $log_file,
+                'action' => 'delete_entry'
+            ]);
+        }
     }
 
     if (file_put_contents($groups_file, json_encode(array_values($groups_data), JSON_PRETTY_PRINT)) === false) {
@@ -285,13 +225,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // The page-level check will detect the permission issue and show alert
     } else {
         // Success - redirect to refresh
+        ob_end_clean();
         header("Location: manage_groups.php");
         exit;
     }
 }
 
 // Get all existing group tags
-$existing_groups = get_all_existing_groups($groups_data);
+$existing_groups = getAllExistingGroups($groups_data);
 
 // Identify unrepresented organisms/assemblies
 $represented_organisms = [];
@@ -346,6 +287,36 @@ foreach ($all_organisms as $organism => $assemblies) {
       </div>
       
       <p><small class="text-muted">After running the command, refresh this page.</small></p>
+    </div>
+  <?php endif; ?>
+
+  <?php if ($change_log_error): ?>
+    <div class="alert alert-warning alert-dismissible fade show">
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      <h4><i class="fa fa-exclamation-circle"></i> Change Log Directory Permission Issue</h4>
+      <p><strong>Problem:</strong> The directory <code>metadata/change_log</code> is not writable by the web server.</p>
+      
+      <?php if ($change_log_error['type'] === 'missing'): ?>
+        <p><strong>Issue:</strong> Directory does not exist and could not be created automatically.</p>
+      <?php else: ?>
+        <p><strong>Current Status:</strong></p>
+        <ul class="mb-3">
+          <li>Owner: <code><?= htmlspecialchars($change_log_error['owner']) ?></code></li>
+          <li>Permissions: <code><?= $change_log_error['perms'] ?></code></li>
+          <li>Web server user: <code><?= htmlspecialchars($change_log_error['web_user']) ?></code></li>
+        </ul>
+      <?php endif; ?>
+      
+      <p><strong>To Fix:</strong> Run <?php echo count($change_log_error['commands']) > 1 ? 'these commands' : 'this command'; ?> on the server:</p>
+      <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+        <?php foreach ($change_log_error['commands'] as $cmd): ?>
+          <code style="word-break: break-all; display: block; font-size: 0.9em; margin-bottom: 5px;">
+            <?= htmlspecialchars($cmd) ?>
+          </code>
+        <?php endforeach; ?>
+      </div>
+      
+      <p><small class="text-muted">After running the commands, refresh this page.</small></p>
     </div>
   <?php endif; ?>
   
@@ -1291,3 +1262,4 @@ foreach ($all_organisms as $organism => $assemblies) {
 
 </body>
 </html>
+<?php ob_end_flush(); ?>

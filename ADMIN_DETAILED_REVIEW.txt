@@ -1,0 +1,230 @@
+================================================================================
+DETAILED ADMIN SCRIPTS CONSOLIDATION REVIEW
+================================================================================
+
+FILE: /data/moop/admin/manage_groups.php
+────────────────────────────────────────────────────────────────────────────────
+
+Function 1: get_all_existing_groups($groups_data)
+  Location: Line 25
+  Size: ~13 lines
+  Priority: HIGH - Move to lib immediately
+  
+  Purpose: Extract all unique group names from organism/assembly/groups data
+  
+  Current code:
+    function get_all_existing_groups($groups_data) {
+        $all_groups = [];
+        foreach ($groups_data as $data) {
+            if (!empty($data['groups'])) {
+                foreach ($data['groups'] as $group) {
+                    $all_groups[$group] = true;
+                }
+            }
+        }
+        $group_list = array_keys($all_groups);
+        sort($group_list);
+        return $group_list;
+    }
+  
+  Destination: functions_data.php
+  New name: getAllExistingGroups($groups_data)
+  Reason: Generic data transformation function used only here
+  Cost: LOW - No dependencies
+
+
+Function 2: sync_group_descriptions($existing_groups, $descriptions_data)
+  Location: Line 42
+  Size: ~40 lines
+  Priority: HIGH - Move to lib immediately
+  
+  Purpose: Sync group descriptions with current groups, mark unused as in_use=false
+  
+  Destination: functions_data.php
+  New name: syncGroupDescriptions($existing_groups, $descriptions_data)
+  Reason: Generic data transformation function used only here
+  Cost: LOW - No dependencies
+
+
+================================================================================
+FILE: /data/moop/admin/manage_phylo_tree.php
+────────────────────────────────────────────────────────────────────────────────
+
+Function 1: get_organisms_metadata($organism_data_dir)
+  Location: Line 17
+  Size: 4 lines
+  Priority: REMOVE - Already deprecated
+  
+  Current code:
+    function get_organisms_metadata($organism_data_dir) {
+        // This function is now deprecated - use loadAllOrganismsMetadata() from functions_data.php instead
+        // Kept for backwards compatibility
+        return loadAllOrganismsMetadata($organism_data_dir);
+    }
+  
+  Action: DELETE - Just a wrapper for loadAllOrganismsMetadata()
+  No code changes needed in manage_phylo_tree.php
+  Cost: ZERO - Already using lib version
+
+
+Function 2: fetch_organism_image($taxon_id, $organism_name = null)
+  Location: Line 24
+  Size: ~33 lines
+  Priority: MEDIUM - Move to lib
+  
+  Purpose: Fetch and cache organism image from NCBI taxonomy API
+  Uses: global $absolute_images_path
+  
+  Dependencies: NCBI API call, file system operations
+  Destination: functions_display.php
+  New name: Keep as is - fetch_organism_image()
+  Reason: Display-related, could be reused in other pages
+  Cost: MEDIUM - Requires passing $absolute_images_path as parameter
+  
+  Change required:
+    FROM: global $absolute_images_path;
+    TO:   $absolute_images_path = $config->getPath('absolute_images_path');
+
+
+Function 3: fetch_taxonomy_lineage($taxon_id)
+  Location: Line 60
+  Size: ~70 lines
+  Priority: MEDIUM - Move to lib
+  
+  Purpose: Fetch taxonomic lineage from NCBI XML API
+  Uses: No globals
+  
+  Destination: functions_data.php
+  New name: Keep as is - fetch_taxonomy_lineage()
+  Reason: Data retrieval function, could be reused elsewhere
+  Cost: LOW - No dependencies on globals
+
+
+Function 4: build_tree_from_organisms($organisms)
+  Location: Line 130
+  Size: ~320 lines
+  Priority: HIGH - Move to lib
+  
+  Purpose: Build hierarchical tree structure from organisms array
+  Uses: No globals, pure data transformation
+  
+  Destination: functions_data.php
+  New name: Keep as is - build_tree_from_organisms()
+  Reason: Large data transformation function, reusable
+  Cost: LOW - No dependencies
+
+
+Function 5: renderTreeNode(node, level = 0)
+  Location: Line 452
+  Type: JAVASCRIPT - Skip consolidation
+  Action: Keep in manage_phylo_tree.php (frontend code)
+
+
+================================================================================
+FILE: /data/moop/admin/manage_organisms.php
+────────────────────────────────────────────────────────────────────────────────
+
+Function 1: get_all_organisms_info()
+  Location: Line 151
+  Size: ~80 lines
+  Priority: HIGH - Move to lib + Refactor
+  
+  Purpose: Get detailed info for all organisms (metadata, assemblies, db status)
+  Uses: global $organism_data, global $sequence_types
+  
+  Dependencies: 
+    - loadAllOrganismsMetadata()
+    - validateOrganismJson()
+    - validateDatabaseIntegrity()
+    - validateAssemblyDirectories()
+    - validateAssemblyFastaFiles()
+  
+  Current usage of globals:
+    Line 152: global $organism_data, $sequence_types;
+    Line 155: if (!is_dir($organism_data))
+    Line 160: $organisms_metadata = loadAllOrganismsMetadata($organism_data);
+    Line 162: $organisms = scandir($organism_data);
+    Line 164: if ($organism[0] === '.' || !is_dir("$organism_data/$organism"))
+    Line 169: $organism_json = "$organism_data/$organism/organism.json";
+    Line 175: $assembly_path = "$organism_data/$organism";
+    Line 186: if (file_exists("$organism_data/$organism/organism.sqlite"))
+    Line 187: $db_file = "$organism_data/$organism/organism.sqlite";
+  
+  Destination: functions_data.php
+  New name: getDetailedOrganismsInfo($organism_data_path)
+  
+  Refactoring:
+    1. Replace global $organism_data with parameter $organism_data_path
+    2. Keep $sequence_types as global or pass via ConfigManager
+    3. Add to functions_data.php
+  
+  Cost: MEDIUM - Moderate refactoring needed
+  Impact: manage_organisms.php must pass path as parameter
+
+
+================================================================================
+FILE: /data/moop/admin/admin.php
+────────────────────────────────────────────────────────────────────────────────
+
+Function 1: checkAdminStatus()
+  Location: Line 112
+  Type: JAVASCRIPT - Skip consolidation
+  Action: Keep in admin.php
+
+
+Function 2: updateRegistry(type)
+  Location: Line 119
+  Type: JAVASCRIPT - Skip consolidation
+  Action: Keep in admin.php
+
+
+================================================================================
+FILE: /data/moop/admin/createUser.php
+────────────────────────────────────────────────────────────────────────────────
+
+Function 1: getColorForOrganism(organism)
+  Location: Line 473
+  Type: JAVASCRIPT - Skip consolidation
+  Action: Keep in createUser.php
+
+
+================================================================================
+CONSOLIDATION STRATEGY
+================================================================================
+
+PHASE 1 - QUICK WINS (No risk)
+  ✓ REMOVE: get_organisms_metadata() from manage_phylo_tree.php
+    Already deprecated, just calls library function
+    Time: 2 minutes
+
+PHASE 2 - MOVE TO LIB (Low risk)
+  ✓ MOVE: get_all_existing_groups() → functions_data.php
+    No dependencies, pure data transformation
+    Time: 10 minutes
+
+  ✓ MOVE: sync_group_descriptions() → functions_data.php
+    No dependencies, pure data transformation
+    Time: 10 minutes
+
+  ✓ MOVE: fetch_organism_image() → functions_display.php
+    Add $absolute_images_path parameter
+    Time: 15 minutes
+
+  ✓ MOVE: fetch_taxonomy_lineage() → functions_data.php
+    No dependencies, pure data retrieval
+    Time: 5 minutes
+
+  ✓ MOVE: build_tree_from_organisms() → functions_data.php
+    No dependencies, pure data transformation
+    Time: 10 minutes
+
+PHASE 3 - REFACTOR (Medium risk)
+  ✓ REFACTOR: get_all_organisms_info() → functions_data.php
+    Replace globals with parameters
+    Time: 20 minutes
+
+TOTAL TIME: ~70 minutes of implementation
+RISK LEVEL: LOW-MEDIUM (mostly moving existing code)
+CODE REDUCTION: ~250 lines from admin scripts
+
+================================================================================

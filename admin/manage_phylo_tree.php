@@ -13,184 +13,8 @@ $error = '';
 $file_write_error = getFileWriteError($tree_config_file);
 $dir_error = getDirectoryError($absolute_images_path . '/ncbi_taxonomy');
 
-// Function to get organism metadata
-function get_organisms_metadata($organism_data_dir) {
-    // This function is now deprecated - use loadAllOrganismsMetadata() from functions_data.php instead
-    // Kept for backwards compatibility
-    return loadAllOrganismsMetadata($organism_data_dir);
-}
-
-// Function to fetch and cache organism image from NCBI to ncbi_taxonomy directory
-function fetch_organism_image($taxon_id, $organism_name = null) {
-    global $absolute_images_path;
-    
-    $ncbi_dir = $absolute_images_path . '/ncbi_taxonomy';
-    $image_path = $ncbi_dir . '/' . $taxon_id . '.jpg';
-    
-    // Check if image already cached
-    if (file_exists($image_path)) {
-        return 'images/ncbi_taxonomy/' . $taxon_id . '.jpg';
-    }
-    
-    // Ensure directory exists
-    if (!is_dir($ncbi_dir)) {
-        @mkdir($ncbi_dir, 0755, true);
-    }
-    
-    // Download from NCBI
-    $image_url = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon/{$taxon_id}/image";
-    
-    $context = stream_context_create(['http' => ['timeout' => 10, 'user_agent' => 'MOOP']]);
-    $image_data = @file_get_contents($image_url, false, $context);
-    
-    if ($image_data === false || strlen($image_data) < 100) {
-        return null;
-    }
-    
-    // Save image
-    if (file_put_contents($image_path, $image_data) !== false) {
-        return 'images/ncbi_taxonomy/' . $taxon_id . '.jpg';
-    }
-    
-    return null;
-}
-
-// Function to fetch taxonomic lineage from NCBI using XML parsing
-// Uses file_get_contents for maximum compatibility
-function fetch_taxonomy_lineage($taxon_id) {
-    $url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id={$taxon_id}&retmode=xml";
-    
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 10,
-            'user_agent' => 'MOOP Phylo Tree Generator'
-        ]
-    ]);
-    $response = @file_get_contents($url, false, $context);
-    
-    if ($response === false) {
-        return null;
-    }
-    
-    // Parse XML using regex since SimpleXML isn't always available
-    $lineage = [];
-    
-    // Extract Lineage text (semicolon-separated)
-    if (preg_match('/<Lineage>(.+?)<\/Lineage>/s', $response, $matches)) {
-        $lineage_text = trim($matches[1]);
-        $lineage_parts = array_filter(array_map('trim', explode(';', $lineage_text)));
-        
-        // Extract ranks from LineageEx
-        $rank_map = [];
-        if (preg_match_all('/<Taxon>.*?<ScientificName>(.+?)<\/ScientificName>.*?<Rank>(.+?)<\/Rank>.*?<\/Taxon>/s', $response, $matches, PREG_SET_ORDER)) {
-            foreach ($matches as $match) {
-                $sci_name = trim($match[1]);
-                $rank = trim($match[2]);
-                $rank_map[$sci_name] = $rank;
-            }
-        }
-        
-        // Build lineage array with matched ranks
-        $valid_ranks = ['superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
-        foreach ($lineage_parts as $name) {
-            $rank = $rank_map[$name] ?? null;
-            
-            // Map domain to superkingdom
-            if ($rank === 'domain') {
-                $rank = 'superkingdom';
-            }
-            
-            // Only include standard taxonomic ranks (skip intermediate ranks like 'clade')
-            // $rank exists AND $rank is one of the major taxonomic levels
-            if ($rank && in_array($rank, $valid_ranks)) {
-                $lineage[] = [
-                    'rank' => $rank,
-                    'name' => $name
-                ];
-            }
-        }
-    }
-    
-    // Add the species itself
-    if (preg_match('/<ScientificName>(.+?)<\/ScientificName>/', $response, $matches)) {
-        $sci_name = trim($matches[1]);
-        // Only add if it's not already in lineage
-        if (empty($lineage) || $lineage[count($lineage)-1]['name'] !== $sci_name) {
-            $lineage[] = [
-                'rank' => 'species',
-                'name' => $sci_name
-            ];
-        }
-    }
-    
-    return !empty($lineage) ? $lineage : null;
-}
-
-// Function to build tree from organisms
-function build_tree_from_organisms($organisms) {
-    $all_lineages = [];
-    
-    foreach ($organisms as $organism_name => $data) {
-        if (empty($data['taxon_id'])) {
-            continue;
-        }
-        
-        $lineage = fetch_taxonomy_lineage($data['taxon_id']);
-        $image = fetch_organism_image($data['taxon_id'], $organism_name);
-        if ($lineage) {
-            $all_lineages[$organism_name] = [
-                'lineage' => $lineage,
-                'common_name' => $data['common_name'],
-                'image' => $image
-            ];
-        }
-        
-        // Be nice to NCBI - rate limit
-        usleep(350000); // 350ms = ~3 requests per second
-    }
-    
-    // Build tree structure
-    $tree = ['name' => 'Life', 'children' => []];
-    
-    foreach ($all_lineages as $organism_name => $info) {
-        $current = &$tree;
-        
-        foreach ($info['lineage'] as $level) {
-            $name = $level['name'];
-            $rank = $level['rank'];
-            
-            // Find or create child node
-            $found = false;
-            foreach ($current['children'] as &$child) {
-                if ($child['name'] === $name) {
-                    $current = &$child;
-                    $found = true;
-                    break;
-                }
-            }
-            
-            if (!$found) {
-                $new_node = ['name' => $name];
-                
-                // If this is the species level, add organism info
-                if ($rank === 'species') {
-                    $new_node['organism'] = $organism_name;
-                    $new_node['common_name'] = $info['common_name'];
-                    if ($info['image']) {
-                        $new_node['image'] = $info['image'];
-                    }
-                } else {
-                    $new_node['children'] = [];
-                }
-                
-                $current['children'][] = $new_node;
-                $current = &$current['children'][count($current['children']) - 1];
-            }
-        }
-    }
-    
-    return ['tree' => $tree];
-}
+// Load organisms metadata
+$organisms = loadAllOrganismsMetadata($organism_data_dir);
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -199,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "File is not writable. Please fix permissions first.";
         } elseif ($_POST['action'] === 'generate') {
             try {
-                $organisms = get_organisms_metadata($organism_data_dir);
+                // $organisms was already loaded at the top of the file
                 
                 if (empty($organisms)) {
                     $error = "No organisms found in {$organism_data_dir}";
@@ -249,8 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Load current tree config using helper
 $current_tree = loadJsonFile($tree_config_file, null);
 
-// Get available organisms
-$organisms = get_organisms_metadata($organism_data_dir);
+// Get available organisms (already loaded above)
+// $organisms was already loaded from loadAllOrganismsMetadata()
 ?>
 
 <!DOCTYPE html>

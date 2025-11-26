@@ -131,35 +131,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
  * Get all organisms and their assemblies from filesystem
  * Reads directory structure directly - for user permission management
  * Note: Database may have different/cached info - use this for filesystem truth
- * 
+ *
+ * Now uses shared library function getOrganismsWithAssemblies() from functions_data.php
+ *
  * @return array Associative array of organism_name => array of assembly names
  */
-function getOrganismsWithAssembliesFromFilesystem() {
-    $orgs = [];
-    $path = '../organisms';
-    if (!is_dir($path)) {
-        return $orgs;
-    }
-    $organisms = scandir($path);
-    foreach ($organisms as $organism) {
-        if ($organism[0] === '.' || !is_dir("$path/$organism")) {
-            continue;
-        }
-        $assemblies = [];
-        $assemblyPath = "$path/$organism";
-        $files = scandir($assemblyPath);
-        foreach ($files as $file) {
-            if ($file[0] === '.' || !is_dir("$assemblyPath/$file")) {
-                continue;
-            }
-            $assemblies[] = $file;
-        }
-        $orgs[$organism] = $assemblies;
-    }
-    return $orgs;
-}
-
-$organisms = getOrganismsWithAssembliesFromFilesystem();
+$organisms = getOrganismsWithAssemblies($config->getPath('organism_data'));
 ?>
 
 <!DOCTYPE html>

@@ -267,3 +267,51 @@ function setupOrganismDisplayContext($organism_name, $organism_data_dir, $check_
         'info' => $organism_info
     ];
 }
+
+/**
+ * Fetch and cache organism image from NCBI to ncbi_taxonomy directory
+ * 
+ * Downloads organism images from NCBI taxonomy API and caches them locally.
+ * Returns the web-accessible image path or null if download fails.
+ * 
+ * @param int $taxon_id NCBI Taxonomy ID
+ * @param string|null $organism_name Optional organism name (for reference)
+ * @param string $absolute_images_path Absolute filesystem path to images directory
+ * @return string|null Web path to image (e.g., 'images/ncbi_taxonomy/12345.jpg'), or null if failed
+ */
+function fetch_organism_image($taxon_id, $organism_name = null, $absolute_images_path = null) {
+    if ($absolute_images_path === null) {
+        $config = ConfigManager::getInstance();
+        $absolute_images_path = $config->getPath('absolute_images_path');
+    }
+    
+    $ncbi_dir = $absolute_images_path . '/ncbi_taxonomy';
+    $image_path = $ncbi_dir . '/' . $taxon_id . '.jpg';
+    
+    // Check if image already cached
+    if (file_exists($image_path)) {
+        return 'images/ncbi_taxonomy/' . $taxon_id . '.jpg';
+    }
+    
+    // Ensure directory exists
+    if (!is_dir($ncbi_dir)) {
+        @mkdir($ncbi_dir, 0755, true);
+    }
+    
+    // Download from NCBI
+    $image_url = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon/{$taxon_id}/image";
+    
+    $context = stream_context_create(['http' => ['timeout' => 10, 'user_agent' => 'MOOP']]);
+    $image_data = @file_get_contents($image_url, false, $context);
+    
+    if ($image_data === false || strlen($image_data) < 100) {
+        return null;
+    }
+    
+    // Save image
+    if (file_put_contents($image_path, $image_data) !== false) {
+        return 'images/ncbi_taxonomy/' . $taxon_id . '.jpg';
+    }
+    
+    return null;
+}

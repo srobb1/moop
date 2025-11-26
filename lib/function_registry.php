@@ -1,7 +1,7 @@
 <?php
 /**
  * AUTO-GENERATED FUNCTION REGISTRY
- * Generated: 2025-11-26 02:18:01
+ * Generated: 2025-11-26 14:07:25
  * To regenerate, run: php tools/generate_registry.php
  */
 
@@ -3669,6 +3669,47 @@ JS;
     return $organisms;
 }',
     ),
+    8 => 
+    array (
+      'name' => 'getOrganismsWithAssemblies',
+      'line' => 266,
+      'comment' => '/**
+* Get all organisms with their assemblies from filesystem
+*
+* Scans the organism data directory and returns a map of organisms to their assemblies.
+* Used for user permission management and group configuration.
+* Note: Database may have different/cached info - use this for filesystem truth.
+*
+* @param string $organism_data_path Path to organism data directory
+* @return array Associative array of organism_name => array of assembly names
+*/',
+      'code' => 'function getOrganismsWithAssemblies($organism_data_path) {
+    $orgs = [];
+    
+    if (!is_dir($organism_data_path)) {
+        return $orgs;
+    }
+    
+    $organisms = scandir($organism_data_path);
+    foreach ($organisms as $organism) {
+        if ($organism[0] === \'.\' || !is_dir("$organism_data_path/$organism")) {
+            continue;
+        }
+        
+        $assemblies = [];
+        $assemblyPath = "$organism_data_path/$organism";
+        $files = scandir($assemblyPath);
+        foreach ($files as $file) {
+            if ($file[0] === \'.\' || !is_dir("$assemblyPath/$file")) {
+                continue;
+            }
+            $assemblies[] = $file;
+        }
+        $orgs[$organism] = $assemblies;
+    }
+    return $orgs;
+}',
+    ),
   ),
   'lib/functions_database.php' => 
   array (
@@ -4430,8 +4471,50 @@ JS;
   array (
     0 => 
     array (
+      'name' => 'validateDirectoryName',
+      'line' => 15,
+      'comment' => '/**
+* Validate directory name for security
+*
+* Prevents path traversal attacks by checking for invalid characters
+*
+* @param string $name - Directory name to validate
+* @return bool - True if valid, false if contains path separators or traversal attempts
+*/',
+      'code' => 'function validateDirectoryName($name) {
+    return strpos($name, \'/\') === false && 
+           strpos($name, \'..\') === false &&
+           $name !== \'.\' && 
+           $name !== \'..\' &&
+           $name !== \'organism.json\';
+}',
+    ),
+    1 => 
+    array (
+      'name' => 'buildDirectoryResult',
+      'line' => 33,
+      'comment' => '/**
+* Build standardized directory operation result
+*
+* Factory function for consistent result array structure across directory operations
+*
+* @param bool $success - Operation success status
+* @param string $message - Result message
+* @param string $command - Optional manual command if operation failed (for admin execution)
+* @return array - Result array with success, message, and command
+*/',
+      'code' => 'function buildDirectoryResult($success, $message, $command = \'\') {
+    return [
+        \'success\' => $success,
+        \'message\' => $message,
+        \'command\' => $command
+    ];
+}',
+    ),
+    2 => 
+    array (
       'name' => 'validateAssemblyDirectories',
-      'line' => 17,
+      'line' => 51,
       'comment' => '/**
 * Validate assembly directories match database records
 *
@@ -4531,10 +4614,10 @@ JS;
     return $result;
 }',
     ),
-    1 => 
+    3 => 
     array (
       'name' => 'validateAssemblyFastaFiles',
-      'line' => 116,
+      'line' => 150,
       'comment' => '/**
 * Validate assembly FASTA files exist
 *
@@ -4600,10 +4683,10 @@ JS;
     return $result;
 }',
     ),
-    2 => 
+    4 => 
     array (
       'name' => 'renameAssemblyDirectory',
-      'line' => 183,
+      'line' => 217,
       'comment' => '/**
 * Rename an assembly directory
 *
@@ -4617,15 +4700,13 @@ JS;
 * @return array - [\'success\' => bool, \'message\' => string, \'command\' => string (if manual fix needed)]
 */',
       'code' => 'function renameAssemblyDirectory($organism_dir, $old_name, $new_name) {
-    $result = [
-        \'success\' => false,
-        \'message\' => \'\',
-        \'command\' => \'\'
-    ];
-    
     if (!is_dir($organism_dir)) {
-        $result[\'message\'] = \'Organism directory not found\';
-        return $result;
+        return buildDirectoryResult(false, \'Organism directory not found\');
+    }
+    
+    // Validate both names for security
+    if (!validateDirectoryName($old_name) || !validateDirectoryName($new_name)) {
+        return buildDirectoryResult(false, \'Invalid directory name (contains path separators)\');
     }
     
     $old_path = "$organism_dir/$old_name";
@@ -4633,41 +4714,29 @@ JS;
     
     // Validate old directory exists
     if (!is_dir($old_path)) {
-        $result[\'message\'] = "Directory \'$old_name\' not found";
-        return $result;
+        return buildDirectoryResult(false, "Directory \'$old_name\' not found");
     }
     
     // Check new name doesn\'t already exist
     if (is_dir($new_path) || file_exists($new_path)) {
-        $result[\'message\'] = "Directory \'$new_name\' already exists";
-        return $result;
-    }
-    
-    // Sanitize names to prevent path traversal
-    if (strpos($old_name, \'/\') !== false || strpos($new_name, \'/\') !== false ||
-        strpos($old_name, \'..\') !== false || strpos($new_name, \'..\') !== false) {
-        $result[\'message\'] = \'Invalid directory name (contains path separators)\';
-        return $result;
+        return buildDirectoryResult(false, "Directory \'$new_name\' already exists");
     }
     
     // Build command for admin to run if automatic rename fails
-    $result[\'command\'] = "cd " . escapeshellarg($organism_dir) . " && mv " . escapeshellarg($old_name) . " " . escapeshellarg($new_name);
+    $command = "cd " . escapeshellarg($organism_dir) . " && mv " . escapeshellarg($old_name) . " " . escapeshellarg($new_name);
     
     // Try to rename
     if (@rename($old_path, $new_path)) {
-        $result[\'success\'] = true;
-        $result[\'message\'] = "Successfully renamed \'$old_name\' to \'$new_name\'";
+        return buildDirectoryResult(true, "Successfully renamed \'$old_name\' to \'$new_name\'", $command);
     } else {
-        $result[\'message\'] = \'Web server lacks permission to rename directory.\';
+        return buildDirectoryResult(false, \'Web server lacks permission to rename directory.\', $command);
     }
-    
-    return $result;
 }',
     ),
-    3 => 
+    5 => 
     array (
       'name' => 'deleteAssemblyDirectory',
-      'line' => 242,
+      'line' => 262,
       'comment' => '/**
 * Delete an assembly directory
 *
@@ -4680,50 +4749,37 @@ JS;
 * @return array - [\'success\' => bool, \'message\' => string, \'command\' => string (if manual fix needed)]
 */',
       'code' => 'function deleteAssemblyDirectory($organism_dir, $dir_name) {
-    $result = [
-        \'success\' => false,
-        \'message\' => \'\',
-        \'command\' => \'\'
-    ];
-    
     if (!is_dir($organism_dir)) {
-        $result[\'message\'] = \'Organism directory not found\';
-        return $result;
+        return buildDirectoryResult(false, \'Organism directory not found\');
+    }
+    
+    // Validate directory name for security
+    if (!validateDirectoryName($dir_name)) {
+        return buildDirectoryResult(false, \'Invalid directory name (security check failed)\');
     }
     
     $dir_path = "$organism_dir/$dir_name";
     
     // Validate directory exists
     if (!is_dir($dir_path)) {
-        $result[\'message\'] = "Directory \'$dir_name\' not found";
-        return $result;
-    }
-    
-    // Prevent deletion of non-assembly directories
-    if ($dir_name === \'.\' || $dir_name === \'..\' || strpos($dir_name, \'/\') !== false || 
-        strpos($dir_name, \'..\') !== false || $dir_name === \'organism.json\') {
-        $result[\'message\'] = \'Invalid directory name (security check failed)\';
-        return $result;
+        return buildDirectoryResult(false, "Directory \'$dir_name\' not found");
     }
     
     // Build command for admin to run if automatic delete fails
-    $result[\'command\'] = "rm -rf " . escapeshellarg($dir_path);
+    $command = "rm -rf " . escapeshellarg($dir_path);
     
     // Try to delete recursively
     if (rrmdir($dir_path)) {
-        $result[\'success\'] = true;
-        $result[\'message\'] = "Successfully deleted directory \'$dir_name\'";
+        return buildDirectoryResult(true, "Successfully deleted directory \'$dir_name\'", $command);
     } else {
-        $result[\'message\'] = \'Web server lacks permission to delete directory.\';
+        return buildDirectoryResult(false, \'Web server lacks permission to delete directory.\', $command);
     }
-    
-    return $result;
 }',
     ),
-    4 => 
+    6 => 
     array (
       'name' => 'rrmdir',
-      'line' => 273,
+      'line' => 283,
       'comment' => '/**
 * Recursively remove directory
 *
@@ -4757,10 +4813,10 @@ JS;
     return @rmdir($dir);
 }',
     ),
-    5 => 
+    7 => 
     array (
       'name' => 'getFileWriteError',
-      'line' => 323,
+      'line' => 330,
       'comment' => '/**
 * Check file writeability and return error info if file is not writable
 * Uses web server group and keeps original owner
@@ -4793,10 +4849,10 @@ JS;
     ];
 }',
     ),
-    6 => 
+    8 => 
     array (
       'name' => 'getDirectoryError',
-      'line' => 354,
+      'line' => 361,
       'comment' => '/**
 * Check directory existence and writeability, return error info if issues found
 * Uses owner of /moop directory and web server group
@@ -5989,82 +6045,12 @@ JS;
 }',
     ),
   ),
-  'admin/createUser.php' => 
-  array (
-    0 => 
-    array (
-      'name' => 'getOrganismsWithAssembliesFromFilesystem',
-      'line' => 137,
-      'comment' => '/**
-* Get all organisms and their assemblies from filesystem
-* Reads directory structure directly - for user permission management
-* Note: Database may have different/cached info - use this for filesystem truth
-*
-* @return array Associative array of organism_name => array of assembly names
-*/',
-      'code' => 'function getOrganismsWithAssembliesFromFilesystem() {
-    $orgs = [];
-    $path = \'../organisms\';
-    if (!is_dir($path)) {
-        return $orgs;
-    }
-    $organisms = scandir($path);
-    foreach ($organisms as $organism) {
-        if ($organism[0] === \'.\' || !is_dir("$path/$organism")) {
-            continue;
-        }
-        $assemblies = [];
-        $assemblyPath = "$path/$organism";
-        $files = scandir($assemblyPath);
-        foreach ($files as $file) {
-            if ($file[0] === \'.\' || !is_dir("$assemblyPath/$file")) {
-                continue;
-            }
-            $assemblies[] = $file;
-        }
-        $orgs[$organism] = $assemblies;
-    }
-    return $orgs;
-}',
-    ),
-  ),
   'admin/manage_groups.php' => 
   array (
     0 => 
     array (
-      'name' => 'get_all_organisms',
-      'line' => 24,
-      'comment' => '',
-      'code' => 'function get_all_organisms() {
-    global $organism_data;
-    $orgs = [];
-    $path = $organism_data;
-    if (!is_dir($path)) {
-        return $orgs;
-    }
-    $organisms = scandir($path);
-    foreach ($organisms as $organism) {
-        if ($organism[0] === \'.\' || !is_dir("$path/$organism")) {
-            continue;
-        }
-        $assemblies = [];
-        $assemblyPath = "$path/$organism";
-        $files = scandir($assemblyPath);
-        foreach ($files as $file) {
-            if ($file[0] === \'.\' || !is_dir("$assemblyPath/$file")) {
-                continue;
-            }
-            $assemblies[] = $file;
-        }
-        $orgs[$organism] = $assemblies;
-    }
-    return $orgs;
-}',
-    ),
-    1 => 
-    array (
       'name' => 'get_all_existing_groups',
-      'line' => 50,
+      'line' => 25,
       'comment' => '',
       'code' => 'function get_all_existing_groups($groups_data) {
     $all_groups = [];
@@ -6080,10 +6066,10 @@ JS;
     return $group_list;
 }',
     ),
-    2 => 
+    1 => 
     array (
       'name' => 'sync_group_descriptions',
-      'line' => 67,
+      'line' => 42,
       'comment' => '',
       'code' => 'function sync_group_descriptions($existing_groups, $descriptions_data) {
     $desc_map = [];

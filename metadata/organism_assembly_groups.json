@@ -10,14 +10,6 @@
     },
     {
         "organism": "Lasiurus_cinereus",
-        "assembly": "GCA_011751065.1",
-        "groups": [
-            "Bats",
-            "Cute"
-        ]
-    },
-    {
-        "organism": "Lasiurus_cinereus",
         "assembly": "GCA_011751095.1",
         "groups": [
             "Bats",
@@ -37,6 +29,13 @@
         "assembly": "assembly_v1",
         "groups": [
             "Bats",
+            "No Data"
+        ]
+    },
+    {
+        "organism": "Anoura_caudifer",
+        "assembly": "test_ass3",
+        "groups": [
             "No Data"
         ]
     }

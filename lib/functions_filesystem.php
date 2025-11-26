@@ -5,6 +5,40 @@
  */
 
 /**
+ * Validate directory name for security
+ * 
+ * Prevents path traversal attacks by checking for invalid characters
+ * 
+ * @param string $name - Directory name to validate
+ * @return bool - True if valid, false if contains path separators or traversal attempts
+ */
+function validateDirectoryName($name) {
+    return strpos($name, '/') === false && 
+           strpos($name, '..') === false &&
+           $name !== '.' && 
+           $name !== '..' &&
+           $name !== 'organism.json';
+}
+
+/**
+ * Build standardized directory operation result
+ * 
+ * Factory function for consistent result array structure across directory operations
+ * 
+ * @param bool $success - Operation success status
+ * @param string $message - Result message
+ * @param string $command - Optional manual command if operation failed (for admin execution)
+ * @return array - Result array with success, message, and command
+ */
+function buildDirectoryResult($success, $message, $command = '') {
+    return [
+        'success' => $success,
+        'message' => $message,
+        'command' => $command
+    ];
+}
+
+/**
  * Validate assembly directories match database records
  * 
  * Checks that for each genome in the database, there is a corresponding directory
@@ -181,15 +215,13 @@ function validateAssemblyFastaFiles($organism_dir, $sequence_types) {
  * @return array - ['success' => bool, 'message' => string, 'command' => string (if manual fix needed)]
  */
 function renameAssemblyDirectory($organism_dir, $old_name, $new_name) {
-    $result = [
-        'success' => false,
-        'message' => '',
-        'command' => ''
-    ];
-    
     if (!is_dir($organism_dir)) {
-        $result['message'] = 'Organism directory not found';
-        return $result;
+        return buildDirectoryResult(false, 'Organism directory not found');
+    }
+    
+    // Validate both names for security
+    if (!validateDirectoryName($old_name) || !validateDirectoryName($new_name)) {
+        return buildDirectoryResult(false, 'Invalid directory name (contains path separators)');
     }
     
     $old_path = "$organism_dir/$old_name";
@@ -197,35 +229,23 @@ function renameAssemblyDirectory($organism_dir, $old_name, $new_name) {
     
     // Validate old directory exists
     if (!is_dir($old_path)) {
-        $result['message'] = "Directory '$old_name' not found";
-        return $result;
+        return buildDirectoryResult(false, "Directory '$old_name' not found");
     }
     
     // Check new name doesn't already exist
     if (is_dir($new_path) || file_exists($new_path)) {
-        $result['message'] = "Directory '$new_name' already exists";
-        return $result;
-    }
-    
-    // Sanitize names to prevent path traversal
-    if (strpos($old_name, '/') !== false || strpos($new_name, '/') !== false ||
-        strpos($old_name, '..') !== false || strpos($new_name, '..') !== false) {
-        $result['message'] = 'Invalid directory name (contains path separators)';
-        return $result;
+        return buildDirectoryResult(false, "Directory '$new_name' already exists");
     }
     
     // Build command for admin to run if automatic rename fails
-    $result['command'] = "cd " . escapeshellarg($organism_dir) . " && mv " . escapeshellarg($old_name) . " " . escapeshellarg($new_name);
+    $command = "cd " . escapeshellarg($organism_dir) . " && mv " . escapeshellarg($old_name) . " " . escapeshellarg($new_name);
     
     // Try to rename
     if (@rename($old_path, $new_path)) {
-        $result['success'] = true;
-        $result['message'] = "Successfully renamed '$old_name' to '$new_name'";
+        return buildDirectoryResult(true, "Successfully renamed '$old_name' to '$new_name'", $command);
     } else {
-        $result['message'] = 'Web server lacks permission to rename directory.';
+        return buildDirectoryResult(false, 'Web server lacks permission to rename directory.', $command);
     }
-    
-    return $result;
 }
 
 /**
@@ -240,44 +260,31 @@ function renameAssemblyDirectory($organism_dir, $old_name, $new_name) {
  * @return array - ['success' => bool, 'message' => string, 'command' => string (if manual fix needed)]
  */
 function deleteAssemblyDirectory($organism_dir, $dir_name) {
-    $result = [
-        'success' => false,
-        'message' => '',
-        'command' => ''
-    ];
-    
     if (!is_dir($organism_dir)) {
-        $result['message'] = 'Organism directory not found';
-        return $result;
+        return buildDirectoryResult(false, 'Organism directory not found');
+    }
+    
+    // Validate directory name for security
+    if (!validateDirectoryName($dir_name)) {
+        return buildDirectoryResult(false, 'Invalid directory name (security check failed)');
     }
     
     $dir_path = "$organism_dir/$dir_name";
     
     // Validate directory exists
     if (!is_dir($dir_path)) {
-        $result['message'] = "Directory '$dir_name' not found";
-        return $result;
-    }
-    
-    // Prevent deletion of non-assembly directories
-    if ($dir_name === '.' || $dir_name === '..' || strpos($dir_name, '/') !== false || 
-        strpos($dir_name, '..') !== false || $dir_name === 'organism.json') {
-        $result['message'] = 'Invalid directory name (security check failed)';
-        return $result;
+        return buildDirectoryResult(false, "Directory '$dir_name' not found");
     }
     
     // Build command for admin to run if automatic delete fails
-    $result['command'] = "rm -rf " . escapeshellarg($dir_path);
+    $command = "rm -rf " . escapeshellarg($dir_path);
     
     // Try to delete recursively
     if (rrmdir($dir_path)) {
-        $result['success'] = true;
-        $result['message'] = "Successfully deleted directory '$dir_name'";
+        return buildDirectoryResult(true, "Successfully deleted directory '$dir_name'", $command);
     } else {
-        $result['message'] = 'Web server lacks permission to delete directory.';
+        return buildDirectoryResult(false, 'Web server lacks permission to delete directory.', $command);
     }
-    
-    return $result;
 }
 
 /**

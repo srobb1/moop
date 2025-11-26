@@ -2,12 +2,12 @@
 
 **Auto-generated documentation**
 
-Generated: 2025-11-26 02:18:03
+Generated: 2025-11-26 14:07:28
 
 ## Summary
 
-- **Total Functions**: 115
-- **Files Scanned**: 22
+- **Total Functions**: 116
+- **Files Scanned**: 21
 
 ## ⚠️ Unused Functions (16)
 
@@ -34,8 +34,7 @@ These functions are defined but never called:
 
 ## Quick Navigation
 
-- [admin/createUser.php](#admin-createUserphp) - 1 functions
-- [admin/manage_groups.php](#admin-manage_groupsphp) - 3 functions
+- [admin/manage_groups.php](#admin-manage_groupsphp) - 2 functions
 - [admin/manage_organisms.php](#admin-manage_organismsphp) - 1 functions
 - [admin/manage_phylo_tree.php](#admin-manage_phylo_treephp) - 4 functions
 - [lib/blast_functions.php](#lib-blast_functionsphp) - 5 functions
@@ -43,11 +42,11 @@ These functions are defined but never called:
 - [lib/database_queries.php](#lib-database_queriesphp) - 14 functions
 - [lib/extract_search_helpers.php](#lib-extract_search_helpersphp) - 11 functions
 - [lib/functions_access.php](#lib-functions_accessphp) - 3 functions
-- [lib/functions_data.php](#lib-functions_dataphp) - 8 functions
+- [lib/functions_data.php](#lib-functions_dataphp) - 9 functions
 - [lib/functions_database.php](#lib-functions_databasephp) - 8 functions
 - [lib/functions_display.php](#lib-functions_displayphp) - 6 functions
 - [lib/functions_errorlog.php](#lib-functions_errorlogphp) - 3 functions
-- [lib/functions_filesystem.php](#lib-functions_filesystemphp) - 7 functions
+- [lib/functions_filesystem.php](#lib-functions_filesystemphp) - 9 functions
 - [lib/functions_json.php](#lib-functions_jsonphp) - 4 functions
 - [lib/functions_system.php](#lib-functions_systemphp) - 2 functions
 - [lib/functions_tools.php](#lib-functions_toolsphp) - 2 functions
@@ -59,65 +58,29 @@ These functions are defined but never called:
 
 ---
 
-## admin/createUser.php
-
-**1 function(s)**
-
-### `getOrganismsWithAssembliesFromFilesystem()` (Line 137)
-
-Located in: `admin/createUser.php` at line 137
-
-**Description:**
-
-```
-/**
-* Get all organisms and their assemblies from filesystem
-* Reads directory structure directly - for user permission management
-* Note: Database may have different/cached info - use this for filesystem truth
-*
-* @return array Associative array of organism_name => array of assembly names
-*/
-```
-
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/createUser.php` (2x):
-  - Line 162: `$organisms = getOrganismsWithAssembliesFromFilesystem();`
-  - Line 162: `$organisms = getOrganismsWithAssembliesFromFilesystem();`
-
----
-
 ## admin/manage_groups.php
 
-**3 function(s)**
+**2 function(s)**
 
-### `get_all_organisms()` (Line 24)
+### `get_all_existing_groups()` (Line 25)
 
-Located in: `admin/manage_groups.php` at line 24
-
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/manage_groups.php` (2x):
-  - Line 64: `$all_organisms = get_all_organisms();`
-  - Line 64: `$all_organisms = get_all_organisms();`
-
-### `get_all_existing_groups()` (Line 50)
-
-Located in: `admin/manage_groups.php` at line 50
+Located in: `admin/manage_groups.php` at line 25
 
 **Used in 1 unique file(s) (4 total times):**
 - `/data/moop/admin/manage_groups.php` (4x):
-  - Line 112: `$existing_groups = get_all_existing_groups($groups_data);`
-  - Line 294: `$existing_groups = get_all_existing_groups($groups_data);`
-  - Line 112: `$existing_groups = get_all_existing_groups($groups_data);`
-  - Line 294: `$existing_groups = get_all_existing_groups($groups_data);`
+  - Line 87: `$existing_groups = get_all_existing_groups($groups_data);`
+  - Line 269: `$existing_groups = get_all_existing_groups($groups_data);`
+  - Line 87: `$existing_groups = get_all_existing_groups($groups_data);`
+  - Line 269: `$existing_groups = get_all_existing_groups($groups_data);`
 
-### `sync_group_descriptions()` (Line 67)
+### `sync_group_descriptions()` (Line 42)
 
-Located in: `admin/manage_groups.php` at line 67
+Located in: `admin/manage_groups.php` at line 42
 
 **Used in 1 unique file(s) (2 total times):**
 - `/data/moop/admin/manage_groups.php` (2x):
-  - Line 113: `$descriptions_data = sync_group_descriptions($existing_groups, $descriptions_data);`
-  - Line 113: `$descriptions_data = sync_group_descriptions($existing_groups, $descriptions_data);`
+  - Line 88: `$descriptions_data = sync_group_descriptions($existing_groups, $descriptions_data);`
+  - Line 88: `$descriptions_data = sync_group_descriptions($existing_groups, $descriptions_data);`
 
 ---
 
@@ -1289,7 +1252,7 @@ Located in: `lib/functions_access.php` at line 170
 
 ## lib/functions_data.php
 
-**8 function(s)**
+**9 function(s)**
 
 ### `getGroupData()` (Line 12)
 
@@ -1473,6 +1436,33 @@ Located in: `lib/functions_data.php` at line 214
 - `/data/moop/admin/manage_organisms.php` (2x):
   - Line 160: `$organisms_metadata = loadAllOrganismsMetadata($organism_data);`
   - Line 160: `$organisms_metadata = loadAllOrganismsMetadata($organism_data);`
+
+### `getOrganismsWithAssemblies()` (Line 266)
+
+Located in: `lib/functions_data.php` at line 266
+
+**Description:**
+
+```
+/**
+* Get all organisms with their assemblies from filesystem
+*
+* Scans the organism data directory and returns a map of organisms to their assemblies.
+* Used for user permission management and group configuration.
+* Note: Database may have different/cached info - use this for filesystem truth.
+*
+* @param string $organism_data_path Path to organism data directory
+* @return array Associative array of organism_name => array of assembly names
+*/
+```
+
+**Used in 2 unique file(s) (4 total times):**
+- `/data/moop/admin/createUser.php` (2x):
+  - Line 139: `$organisms = getOrganismsWithAssemblies($config->getPath(\'organism_data\'));`
+  - Line 139: `$organisms = getOrganismsWithAssemblies($config->getPath(\'organism_data\'));`
+- `/data/moop/admin/manage_groups.php` (2x):
+  - Line 39: `$all_organisms = getOrganismsWithAssemblies($organism_data_path);`
+  - Line 39: `$all_organisms = getOrganismsWithAssemblies($organism_data_path);`
 
 ---
 
@@ -1931,8 +1921,8 @@ Located in: `lib/functions_errorlog.php` at line 15
   - Line 76: `logError(\'Database file not accessible\', $organism, [`
   - Line 142: `logError(\'Incomplete annotation records found\', $organism, [`
 - `/data/moop/admin/manage_groups.php` (2x):
-  - Line 279: `logError(\'manage_groups.php\', \"Failed to write to organism_assembly_groups.json\", [`
-  - Line 279: `logError(\'manage_groups.php\', \"Failed to write to organism_assembly_groups.json\", [`
+  - Line 254: `logError(\'manage_groups.php\', \"Failed to write to organism_assembly_groups.json\", [`
+  - Line 254: `logError(\'manage_groups.php\', \"Failed to write to organism_assembly_groups.json\", [`
 
 ### `getErrorLog()` (Line 42)
 
@@ -1977,11 +1967,81 @@ Located in: `lib/functions_errorlog.php` at line 75
 
 ## lib/functions_filesystem.php
 
-**7 function(s)**
+**9 function(s)**
 
-### `validateAssemblyDirectories()` (Line 17)
+### `validateDirectoryName()` (Line 15)
 
-Located in: `lib/functions_filesystem.php` at line 17
+Located in: `lib/functions_filesystem.php` at line 15
+
+**Description:**
+
+```
+/**
+* Validate directory name for security
+*
+* Prevents path traversal attacks by checking for invalid characters
+*
+* @param string $name - Directory name to validate
+* @return bool - True if valid, false if contains path separators or traversal attempts
+*/
+```
+
+**Used in 1 unique file(s) (6 total times):**
+- `/data/moop/lib/functions_filesystem.php` (6x):
+  - Line 223: `if (!validateDirectoryName($old_name) || !validateDirectoryName($new_name)) {`
+  - Line 223: `if (!validateDirectoryName($old_name) || !validateDirectoryName($new_name)) {`
+  - Line 268: `if (!validateDirectoryName($dir_name)) {`
+  - Line 223: `if (!validateDirectoryName($old_name) || !validateDirectoryName($new_name)) {`
+  - Line 223: `if (!validateDirectoryName($old_name) || !validateDirectoryName($new_name)) {`
+  - Line 268: `if (!validateDirectoryName($dir_name)) {`
+
+### `buildDirectoryResult()` (Line 33)
+
+Located in: `lib/functions_filesystem.php` at line 33
+
+**Description:**
+
+```
+/**
+* Build standardized directory operation result
+*
+* Factory function for consistent result array structure across directory operations
+*
+* @param bool $success - Operation success status
+* @param string $message - Result message
+* @param string $command - Optional manual command if operation failed (for admin execution)
+* @return array - Result array with success, message, and command
+*/
+```
+
+**Used in 1 unique file(s) (22 total times):**
+- `/data/moop/lib/functions_filesystem.php` (22x):
+  - Line 219: `return buildDirectoryResult(false, \'Organism directory not found\');`
+  - Line 224: `return buildDirectoryResult(false, \'Invalid directory name (contains path separators)\');`
+  - Line 232: `return buildDirectoryResult(false, \"Directory \'$old_name\' not found\");`
+  - Line 237: `return buildDirectoryResult(false, \"Directory \'$new_name\' already exists\");`
+  - Line 245: `return buildDirectoryResult(true, \"Successfully renamed \'$old_name\' to \'$new_name\'\", $command);`
+  - Line 247: `return buildDirectoryResult(false, \'Web server lacks permission to rename directory.\', $command);`
+  - Line 264: `return buildDirectoryResult(false, \'Organism directory not found\');`
+  - Line 269: `return buildDirectoryResult(false, \'Invalid directory name (security check failed)\');`
+  - Line 276: `return buildDirectoryResult(false, \"Directory \'$dir_name\' not found\");`
+  - Line 284: `return buildDirectoryResult(true, \"Successfully deleted directory \'$dir_name\'\", $command);`
+  - Line 286: `return buildDirectoryResult(false, \'Web server lacks permission to delete directory.\', $command);`
+  - Line 219: `return buildDirectoryResult(false, \'Organism directory not found\');`
+  - Line 224: `return buildDirectoryResult(false, \'Invalid directory name (contains path separators)\');`
+  - Line 232: `return buildDirectoryResult(false, \"Directory \'$old_name\' not found\");`
+  - Line 237: `return buildDirectoryResult(false, \"Directory \'$new_name\' already exists\");`
+  - Line 245: `return buildDirectoryResult(true, \"Successfully renamed \'$old_name\' to \'$new_name\'\", $command);`
+  - Line 247: `return buildDirectoryResult(false, \'Web server lacks permission to rename directory.\', $command);`
+  - Line 264: `return buildDirectoryResult(false, \'Organism directory not found\');`
+  - Line 269: `return buildDirectoryResult(false, \'Invalid directory name (security check failed)\');`
+  - Line 276: `return buildDirectoryResult(false, \"Directory \'$dir_name\' not found\");`
+  - Line 284: `return buildDirectoryResult(true, \"Successfully deleted directory \'$dir_name\'\", $command);`
+  - Line 286: `return buildDirectoryResult(false, \'Web server lacks permission to delete directory.\', $command);`
+
+### `validateAssemblyDirectories()` (Line 51)
+
+Located in: `lib/functions_filesystem.php` at line 51
 
 **Description:**
 
@@ -2003,9 +2063,9 @@ Located in: `lib/functions_filesystem.php` at line 17
   - Line 199: `$assembly_validation = validateAssemblyDirectories($db_file, \"$organism_data/$organism\");`
   - Line 199: `$assembly_validation = validateAssemblyDirectories($db_file, \"$organism_data/$organism\");`
 
-### `validateAssemblyFastaFiles()` (Line 116)
+### `validateAssemblyFastaFiles()` (Line 150)
 
-Located in: `lib/functions_filesystem.php` at line 116
+Located in: `lib/functions_filesystem.php` at line 150
 
 **Description:**
 
@@ -2027,9 +2087,9 @@ Located in: `lib/functions_filesystem.php` at line 116
   - Line 202: `$fasta_validation = validateAssemblyFastaFiles(\"$organism_data/$organism\", $sequence_types);`
   - Line 202: `$fasta_validation = validateAssemblyFastaFiles(\"$organism_data/$organism\", $sequence_types);`
 
-### `renameAssemblyDirectory()` (Line 183)
+### `renameAssemblyDirectory()` (Line 217)
 
-Located in: `lib/functions_filesystem.php` at line 183
+Located in: `lib/functions_filesystem.php` at line 217
 
 **Description:**
 
@@ -2055,9 +2115,9 @@ Located in: `lib/functions_filesystem.php` at line 183
   - Line 44: `$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);`
   - Line 1143: `<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
 
-### `deleteAssemblyDirectory()` (Line 242)
+### `deleteAssemblyDirectory()` (Line 262)
 
-Located in: `lib/functions_filesystem.php` at line 242
+Located in: `lib/functions_filesystem.php` at line 262
 
 **Description:**
 
@@ -2082,9 +2142,9 @@ Located in: `lib/functions_filesystem.php` at line 242
   - Line 65: `$result = deleteAssemblyDirectory($organism_dir, $dir_name);`
   - Line 1176: `<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
 
-### `rrmdir()` (Line 273)
+### `rrmdir()` (Line 283)
 
-Located in: `lib/functions_filesystem.php` at line 273
+Located in: `lib/functions_filesystem.php` at line 283
 
 **Description:**
 
@@ -2101,14 +2161,14 @@ Located in: `lib/functions_filesystem.php` at line 273
 
 **Used in 1 unique file(s) (4 total times):**
 - `/data/moop/lib/functions_filesystem.php` (4x):
-  - Line 273: `if (rrmdir($dir_path)) {`
-  - Line 303: `if (!rrmdir($path)) {`
-  - Line 273: `if (rrmdir($dir_path)) {`
-  - Line 303: `if (!rrmdir($path)) {`
+  - Line 283: `if (rrmdir($dir_path)) {`
+  - Line 310: `if (!rrmdir($path)) {`
+  - Line 283: `if (rrmdir($dir_path)) {`
+  - Line 310: `if (!rrmdir($path)) {`
 
-### `getFileWriteError()` (Line 323)
+### `getFileWriteError()` (Line 330)
 
-Located in: `lib/functions_filesystem.php` at line 323
+Located in: `lib/functions_filesystem.php` at line 330
 
 **Description:**
 
@@ -2127,10 +2187,10 @@ Located in: `lib/functions_filesystem.php` at line 323
   - Line 18: `$file_write_error = getFileWriteError($usersFile);`
   - Line 18: `$file_write_error = getFileWriteError($usersFile);`
 - `/data/moop/admin/manage_groups.php` (4x):
-  - Line 19: `$file_write_error = getFileWriteError($groups_file);`
-  - Line 22: `$desc_file_write_error = getFileWriteError($descriptions_file);`
-  - Line 19: `$file_write_error = getFileWriteError($groups_file);`
-  - Line 22: `$desc_file_write_error = getFileWriteError($descriptions_file);`
+  - Line 20: `$file_write_error = getFileWriteError($groups_file);`
+  - Line 23: `$desc_file_write_error = getFileWriteError($descriptions_file);`
+  - Line 20: `$file_write_error = getFileWriteError($groups_file);`
+  - Line 23: `$desc_file_write_error = getFileWriteError($descriptions_file);`
 - `/data/moop/admin/manage_phylo_tree.php` (2x):
   - Line 13: `$file_write_error = getFileWriteError($tree_config_file);`
   - Line 13: `$file_write_error = getFileWriteError($tree_config_file);`
@@ -2141,9 +2201,9 @@ Located in: `lib/functions_filesystem.php` at line 323
   - Line 133: `$write_error = getFileWriteError($organism_json_path);`
   - Line 133: `$write_error = getFileWriteError($organism_json_path);`
 
-### `getDirectoryError()` (Line 354)
+### `getDirectoryError()` (Line 361)
 
-Located in: `lib/functions_filesystem.php` at line 354
+Located in: `lib/functions_filesystem.php` at line 361
 
 **Description:**
 
@@ -2215,10 +2275,10 @@ Located in: `lib/functions_json.php` at line 14
   - Line 8: `$users = loadJsonFile($usersFile, []);`
   - Line 8: `$users = loadJsonFile($usersFile, []);`
 - `/data/moop/admin/manage_groups.php` (4x):
-  - Line 12: `$groups_data = loadJsonFile($groups_file, []);`
-  - Line 16: `$descriptions_data = loadJsonFile($descriptions_file, []);`
-  - Line 12: `$groups_data = loadJsonFile($groups_file, []);`
-  - Line 16: `$descriptions_data = loadJsonFile($descriptions_file, []);`
+  - Line 13: `$groups_data = loadJsonFile($groups_file, []);`
+  - Line 17: `$descriptions_data = loadJsonFile($descriptions_file, []);`
+  - Line 13: `$groups_data = loadJsonFile($groups_file, []);`
+  - Line 17: `$descriptions_data = loadJsonFile($descriptions_file, []);`
 - `/data/moop/admin/manage_phylo_tree.php` (2x):
   - Line 250: `$current_tree = loadJsonFile($tree_config_file, null);`
   - Line 250: `$current_tree = loadJsonFile($tree_config_file, null);`
@@ -2317,10 +2377,10 @@ Located in: `lib/functions_system.php` at line 14
 
 **Used in 2 unique file(s) (6 total times):**
 - `/data/moop/lib/functions_filesystem.php` (4x):
-  - Line 328: `$webserver = getWebServerUser();`
-  - Line 374: `$webserver = getWebServerUser();`
-  - Line 328: `$webserver = getWebServerUser();`
-  - Line 374: `$webserver = getWebServerUser();`
+  - Line 335: `$webserver = getWebServerUser();`
+  - Line 381: `$webserver = getWebServerUser();`
+  - Line 335: `$webserver = getWebServerUser();`
+  - Line 381: `$webserver = getWebServerUser();`
 - `/data/moop/lib/functions_system.php` (2x):
   - Line 66: `$webserver = getWebServerUser();`
   - Line 66: `$webserver = getWebServerUser();`

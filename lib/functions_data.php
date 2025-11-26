@@ -252,3 +252,269 @@ function loadAllOrganismsMetadata($organism_data_dir) {
     
     return $organisms;
 }
+
+/**
+ * Get all organisms with their assemblies from filesystem
+ * 
+ * Scans the organism data directory and returns a map of organisms to their assemblies.
+ * Used for user permission management and group configuration.
+ * Note: Database may have different/cached info - use this for filesystem truth.
+ * 
+ * @param string $organism_data_path Path to organism data directory
+ * @return array Associative array of organism_name => array of assembly names
+ */
+function getOrganismsWithAssemblies($organism_data_path) {
+    $orgs = [];
+    
+    if (!is_dir($organism_data_path)) {
+        return $orgs;
+    }
+    
+    $organisms = scandir($organism_data_path);
+    foreach ($organisms as $organism) {
+        if ($organism[0] === '.' || !is_dir("$organism_data_path/$organism")) {
+            continue;
+        }
+        
+        $assemblies = [];
+        $assemblyPath = "$organism_data_path/$organism";
+        $files = scandir($assemblyPath);
+        foreach ($files as $file) {
+            if ($file[0] === '.' || !is_dir("$assemblyPath/$file")) {
+                continue;
+            }
+            $assemblies[] = $file;
+        }
+        $orgs[$organism] = $assemblies;
+    }
+    return $orgs;
+}
+
+/**
+ * Get all existing groups from group data
+ * 
+ * Extracts unique group names from organism_assembly_groups.json data
+ * and returns a sorted list
+ * 
+ * @param array $groups_data Array of organism/assembly/groups data
+ * @return array Sorted list of unique group names
+ */
+function getAllExistingGroups($groups_data) {
+    $all_groups = [];
+    foreach ($groups_data as $data) {
+        if (!empty($data['groups'])) {
+            foreach ($data['groups'] as $group) {
+                $all_groups[$group] = true;
+            }
+        }
+    }
+    $group_list = array_keys($all_groups);
+    sort($group_list);
+    return $group_list;
+}
+
+/**
+ * Sync group descriptions with existing groups
+ * 
+ * Marks groups as in_use=true, marks unused groups as in_use=false,
+ * and creates default structure for new groups
+ * 
+ * @param array $existing_groups List of group names that exist
+ * @param array $descriptions_data Current group descriptions
+ * @return array Updated descriptions with synced in_use status
+ */
+function syncGroupDescriptions($existing_groups, $descriptions_data) {
+    $desc_map = [];
+    foreach ($descriptions_data as $desc) {
+        $desc_map[$desc['group_name']] = $desc;
+    }
+    
+    $updated_descriptions = [];
+    
+    // Update existing groups to in_use = true
+    foreach ($existing_groups as $group) {
+        if (isset($desc_map[$group])) {
+            $desc_map[$group]['in_use'] = true;
+            $updated_descriptions[] = $desc_map[$group];
+        } else {
+            // New group - add with default structure
+            $updated_descriptions[] = [
+                'group_name' => $group,
+                'images' => [
+                    [
+                        'file' => '',
+                        'caption' => ''
+                    ]
+                ],
+                'html_p' => [
+                    [
+                        'text' => '',
+                        'style' => '',
+                        'class' => ''
+                    ]
+                ],
+                'in_use' => true
+            ];
+        }
+        unset($desc_map[$group]);
+    }
+    
+    // Mark any remaining groups (not in existing groups) as in_use = false
+    foreach ($desc_map as $group_name => $desc) {
+        $desc['in_use'] = false;
+        $updated_descriptions[] = $desc;
+    }
+    
+    return $updated_descriptions;
+}
+
+/**
+ * Fetch taxonomic lineage from NCBI using XML parsing
+ * 
+ * Retrieves the full taxonomic classification for an organism using NCBI's API
+ * and returns it as an array of rank => name pairs
+ * 
+ * @param int $taxon_id NCBI Taxonomy ID
+ * @return array|null Array of ['rank' => x, 'name' => y] entries, or null if failed
+ */
+function fetch_taxonomy_lineage($taxon_id) {
+    $url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id={$taxon_id}&retmode=xml";
+    
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 10,
+            'user_agent' => 'MOOP Phylo Tree Generator'
+        ]
+    ]);
+    $response = @file_get_contents($url, false, $context);
+    
+    if ($response === false) {
+        return null;
+    }
+    
+    // Parse XML using regex since SimpleXML isn't always available
+    $lineage = [];
+    
+    // Extract Lineage text (semicolon-separated)
+    if (preg_match('/<Lineage>(.+?)<\/Lineage>/s', $response, $matches)) {
+        $lineage_text = trim($matches[1]);
+        $lineage_parts = array_filter(array_map('trim', explode(';', $lineage_text)));
+        
+        // Extract ranks from LineageEx
+        $rank_map = [];
+        if (preg_match_all('/<Taxon>.*?<ScientificName>(.+?)<\/ScientificName>.*?<Rank>(.+?)<\/Rank>.*?<\/Taxon>/s', $response, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $sci_name = trim($match[1]);
+                $rank = trim($match[2]);
+                $rank_map[$sci_name] = $rank;
+            }
+        }
+        
+        // Build lineage array with matched ranks
+        $valid_ranks = ['superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
+        foreach ($lineage_parts as $name) {
+            $rank = $rank_map[$name] ?? null;
+            
+            // Map domain to superkingdom
+            if ($rank === 'domain') {
+                $rank = 'superkingdom';
+            }
+            
+            // Only include standard taxonomic ranks (skip intermediate ranks like 'clade')
+            if ($rank && in_array($rank, $valid_ranks)) {
+                $lineage[] = [
+                    'rank' => $rank,
+                    'name' => $name
+                ];
+            }
+        }
+    }
+    
+    // Add the species itself
+    if (preg_match('/<ScientificName>(.+?)<\/ScientificName>/', $response, $matches)) {
+        $sci_name = trim($matches[1]);
+        // Only add if it's not already in lineage
+        if (empty($lineage) || $lineage[count($lineage)-1]['name'] !== $sci_name) {
+            $lineage[] = [
+                'rank' => 'species',
+                'name' => $sci_name
+            ];
+        }
+    }
+    
+    return !empty($lineage) ? $lineage : null;
+}
+
+/**
+ * Build phylogenetic tree from organisms
+ * 
+ * Creates a hierarchical tree structure from a list of organisms by fetching
+ * their taxonomic lineage from NCBI and organizing by taxonomic ranks
+ * 
+ * @param array $organisms Array of organism_name => ['taxon_id' => x, 'common_name' => y, ...]
+ * @return array Tree structure: ['tree' => [...]]
+ */
+function build_tree_from_organisms($organisms) {
+    $all_lineages = [];
+    
+    foreach ($organisms as $organism_name => $data) {
+        if (empty($data['taxon_id'])) {
+            continue;
+        }
+        
+        $lineage = fetch_taxonomy_lineage($data['taxon_id']);
+        $image = fetch_organism_image($data['taxon_id'], $organism_name);
+        if ($lineage) {
+            $all_lineages[$organism_name] = [
+                'lineage' => $lineage,
+                'common_name' => $data['common_name'],
+                'image' => $image
+            ];
+        }
+        
+        // Be nice to NCBI - rate limit
+        usleep(350000); // 350ms = ~3 requests per second
+    }
+    
+    // Build tree structure
+    $tree = ['name' => 'Life', 'children' => []];
+    
+    foreach ($all_lineages as $organism_name => $info) {
+        $current = &$tree;
+        
+        foreach ($info['lineage'] as $level) {
+            $name = $level['name'];
+            $rank = $level['rank'];
+            
+            // Find or create child node
+            $found = false;
+            foreach ($current['children'] as &$child) {
+                if ($child['name'] === $name) {
+                    $current = &$child;
+                    $found = true;
+                    break;
+                }
+            }
+            
+            if (!$found) {
+                $new_node = ['name' => $name];
+                
+                // If this is the species level, add organism info
+                if ($rank === 'species') {
+                    $new_node['organism'] = $organism_name;
+                    $new_node['common_name'] = $info['common_name'];
+                    if ($info['image']) {
+                        $new_node['image'] = $info['image'];
+                    }
+                } else {
+                    $new_node['children'] = [];
+                }
+                
+                $current['children'][] = $new_node;
+                $current = &$current['children'][count($current['children']) - 1];
+            }
+        }
+    }
+    
+    return ['tree' => $tree];
+}
