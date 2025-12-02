@@ -476,7 +476,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
               </div>
               <div class="btn-group" role="group">
                 <button class="btn btn-sm btn-outline-primary edit-type-desc-btn" data-type="<?= htmlspecialchars($type_name) ?>" title="Edit description" <?= $file_write_error ? 'disabled' : '' ?>>
-                  <i class="fa fa-edit"></i>
+                  <i class="fa fa-edit"></i> Edit description
                 </button>
                 <button class="btn btn-sm btn-outline-info expand-type-btn" data-type="<?= htmlspecialchars($type_name) ?>" title="Expand details">
                   <i class="fa fa-chevron-down"></i>
