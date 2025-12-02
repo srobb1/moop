@@ -1,8 +1,26 @@
 {
-  "siteTitle": "SIMRbase",
-  "admin_email": "admin@example.com",
-  "_metadata": {
-    "last_updated": "2024-12-02T21:32:33Z",
-    "last_updated_by": "system"
-  }
+    "siteTitle": "SIMRbase",
+    "admin_email": "smr@stowers.org",
+    "sequence_types": {
+        "protein": {
+            "pattern": "protein.aa.fa",
+            "label": "Protein"
+        },
+        "transcript": {
+            "pattern": "transcript.nt.fa",
+            "label": "mRNA"
+        },
+        "cds": {
+            "pattern": "cds.nt.fa",
+            "label": "CDS"
+        },
+        "genome": {
+            "pattern": "genome.fa",
+            "label": "GENOME"
+        }
+    },
+    "_metadata": {
+        "last_updated": "2025-12-02T21:40:17+00:00",
+        "last_updated_by": "admin"
+    }
 }

@@ -109,7 +109,7 @@ class ConfigManager
             $editable_config = json_decode(file_get_contents($editable_config_path), true);
             if (is_array($editable_config)) {
                 // Only merge allowed keys to prevent overriding structural config
-                $allowed_editable_keys = ['siteTitle', 'admin_email'];
+                $allowed_editable_keys = ['siteTitle', 'admin_email', 'sequence_types'];
                 foreach ($allowed_editable_keys as $key) {
                     if (isset($editable_config[$key])) {
                         $this->config[$key] = $editable_config[$key];
@@ -478,7 +478,7 @@ class ConfigManager
     public function saveEditableConfig($data, $config_dir)
     {
         // Whitelist of allowed editable keys
-        $allowed_keys = ['siteTitle', 'admin_email'];
+        $allowed_keys = ['siteTitle', 'admin_email', 'sequence_types'];
         
         // Filter to only allowed keys
         $editable_data = [];
@@ -493,7 +493,31 @@ class ConfigManager
                         ];
                     }
                 }
-                $editable_data[$key] = trim($data[$key]);
+                
+                // Validate sequence_types
+                if ($key === 'sequence_types') {
+                    if (!is_array($data[$key])) {
+                        return [
+                            'success' => false,
+                            'message' => 'Sequence types must be an array'
+                        ];
+                    }
+                    // Validate each sequence type has required fields
+                    foreach ($data[$key] as $seq_type => $seq_config) {
+                        if (!is_array($seq_config) || !isset($seq_config['label']) || !isset($seq_config['pattern'])) {
+                            return [
+                                'success' => false,
+                                'message' => "Sequence type '$seq_type' is missing required fields (label, pattern)"
+                            ];
+                        }
+                    }
+                }
+                
+                if ($key === 'sequence_types') {
+                    $editable_data[$key] = $data[$key];
+                } else {
+                    $editable_data[$key] = trim($data[$key]);
+                }
             }
         }
         
@@ -555,6 +579,13 @@ class ConfigManager
                 'type' => 'email',
                 'current_value' => $this->getString('admin_email', ''),
                 'max_length' => 255,
+            ],
+            'sequence_types' => [
+                'label' => 'Sequence File Types',
+                'description' => 'Available sequence file types for searches. Reorder or change labels as needed.',
+                'type' => 'sequence_types',
+                'current_value' => $this->getSequenceTypes(),
+                'note' => 'File patterns are read-only and match files in organism directories',
             ],
         ];
     }

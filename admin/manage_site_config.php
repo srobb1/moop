@@ -14,11 +14,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'admin_email' => $_POST['admin_email'] ?? '',
         ];
         
+        // Parse sequence types from form
+        if (isset($_POST['sequence_types']) && is_array($_POST['sequence_types'])) {
+            $sequence_types = [];
+            foreach ($_POST['sequence_types'] as $seq_type => $seq_data) {
+                if (!empty($seq_data['enabled'])) {
+                    $sequence_types[$seq_type] = [
+                        'pattern' => $seq_data['pattern'] ?? '',
+                        'label' => $seq_data['label'] ?? $seq_type,
+                    ];
+                }
+            }
+            $data['sequence_types'] = $sequence_types;
+        }
+        
         // Save
         $result = $config->saveEditableConfig($data, $config_dir);
         
         if ($result['success']) {
             $message = $result['message'];
+            // Reload config to show updated values
+            $editable_config = $config->getEditableConfigMetadata();
         } else {
             $error = $result['message'];
         }
@@ -155,6 +171,61 @@ if (!$file_writable && file_exists($config_file)) {
                                 required>
                             <small class="form-text text-muted">
                                 <?= htmlspecialchars($editable_config['admin_email']['description']) ?>
+                            </small>
+                        </div>
+
+                        <!-- Sequence Types -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <strong><?= htmlspecialchars($editable_config['sequence_types']['label']) ?></strong>
+                            </label>
+                            <p class="text-muted small mb-3">
+                                <?= htmlspecialchars($editable_config['sequence_types']['description']) ?>
+                            </p>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 60px;">Enabled</th>
+                                            <th style="width: 40%;">Type</th>
+                                            <th style="width: 40%;">Display Label</th>
+                                            <th style="width: 20%;">File Pattern</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($editable_config['sequence_types']['current_value'] as $seq_type => $seq_config): ?>
+                                        <tr>
+                                            <td class="text-center">
+                                                <input type="checkbox" 
+                                                       name="sequence_types[<?= htmlspecialchars($seq_type) ?>][enabled]" 
+                                                       value="1" 
+                                                       class="form-check-input" 
+                                                       checked>
+                                            </td>
+                                            <td>
+                                                <code><?= htmlspecialchars($seq_type) ?></code>
+                                            </td>
+                                            <td>
+                                                <input type="text" 
+                                                       name="sequence_types[<?= htmlspecialchars($seq_type) ?>][label]" 
+                                                       value="<?= htmlspecialchars($seq_config['label'] ?? $seq_type) ?>"
+                                                       class="form-control form-control-sm"
+                                                       placeholder="Display name">
+                                            </td>
+                                            <td>
+                                                <code class="small"><?= htmlspecialchars($seq_config['pattern'] ?? '') ?></code>
+                                                <input type="hidden" 
+                                                       name="sequence_types[<?= htmlspecialchars($seq_type) ?>][pattern]" 
+                                                       value="<?= htmlspecialchars($seq_config['pattern'] ?? '') ?>">
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <small class="form-text text-muted">
+                                <i class="fa fa-info-circle"></i> <?= htmlspecialchars($editable_config['sequence_types']['note']) ?>
                             </small>
                         </div>
 
