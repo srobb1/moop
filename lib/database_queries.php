@@ -255,17 +255,17 @@ function getOrganismInfo($organism_name, $dbFile) {
  * @param string $dbFile - Path to SQLite database
  * @return array - Genome record with feature counts, or empty array
  */
-function getAssemblyStats($genome_accession, $dbFile) {
+function getAssemblyStats($genome_id_param, $dbFile) {
     $query = "SELECT g.genome_id, g.genome_accession, g.genome_name,
                      COUNT(DISTINCT CASE WHEN f.feature_type = 'gene' THEN f.feature_id END) as gene_count,
                      COUNT(DISTINCT CASE WHEN f.feature_type = 'mRNA' THEN f.feature_id END) as mrna_count,
                      COUNT(DISTINCT f.feature_id) as total_features
               FROM genome g
               LEFT JOIN feature f ON g.genome_id = f.genome_id
-              WHERE g.genome_accession = ?
+              WHERE g.genome_accession = ? OR g.genome_name = ?
               GROUP BY g.genome_id";
     
-    $results = fetchData($query, $dbFile, [$genome_accession]);
+    $results = fetchData($query, $dbFile, [$genome_id_param, $genome_id_param]);
     return !empty($results) ? $results[0] : [];
 }
 

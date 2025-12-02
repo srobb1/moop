@@ -34,6 +34,15 @@ $context_assembly = $context['assembly'];
 $context_group = $context['group'];
 $display_name = $context['display_name'];
 
+// Get ALL accessible assemblies early (needed for pre-selection logic below)
+$sources_by_group = getAccessibleAssemblies();
+$accessible_sources = [];
+foreach ($sources_by_group as $group => $organisms) {
+    foreach ($organisms as $org => $assemblies) {
+        $accessible_sources = array_merge($accessible_sources, $assemblies);
+    }
+}
+
 // Get organisms for filtering - support both array and comma-separated string formats
 // Array format: organisms[] from multi-search context (via tool_config.php)
 // String format: comma-separated organisms from form resubmission
@@ -64,6 +73,36 @@ $blast_db = trim($_POST['blast_db'] ?? '');
 // When arriving with context_organism and context_assembly, pre-select that source
 if (empty($selected_source) && !empty($context_organism) && !empty($context_assembly)) {
     $selected_source = $context_organism . '|' . $context_assembly;
+    
+    // Try to find matching source - assembly param might be accession or genome_name
+    $source_found = false;
+    foreach ($accessible_sources as $source) {
+        if ($source['organism'] === $context_organism && $source['assembly'] === $context_assembly) {
+            // Direct match found
+            $source_found = true;
+            break;
+        }
+    }
+    
+    // If not found by direct match, try via genome_id lookup to find actual directory name
+    if (!$source_found) {
+        try {
+            $db_path = "$organism_data/$context_organism/organism.sqlite";
+            [$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($context_assembly, $db_path);
+            
+            // Now find source matching this genome_id
+            if (!empty($genome_id_param)) {
+                foreach ($accessible_sources as $source) {
+                    if ($source['organism'] === $context_organism && $source['genome_id'] == $genome_id_param) {
+                        $selected_source = $context_organism . '|' . $source['assembly'];
+                        break;
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            // If lookup fails, keep original selected_source
+        }
+    }
 }
 
 // Handle evalue with custom option
@@ -89,16 +128,8 @@ $soft_masking = isset($_POST['soft_masking']);
 $ungapped = isset($_POST['ungapped']);
 $strand = trim($_POST['strand'] ?? 'plus');
 
-// Get accessible assemblies organized by group -> organism
-$sources_by_group = getAccessibleAssemblies();
-
 // Flatten for sequential processing
-$accessible_sources = [];
-foreach ($sources_by_group as $group => $organisms) {
-    foreach ($organisms as $org => $assemblies) {
-        $accessible_sources = array_merge($accessible_sources, $assemblies);
-    }
-}
+// (Already done earlier for pre-selection logic, reuse the same $accessible_sources)
 
 // If search is submitted
 if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
@@ -624,10 +655,7 @@ foreach ($sources_by_group as $group => $organisms) {
 <script>
 // Load sample sequences for testing
 function loadSampleSequence(type) {
-    console.log('loadSampleSequence called with type:', type);
-    
     const sampleSequences = <?= json_encode($config->getArray('blast_sample_sequences', [])) ?>;
-    console.log('Available samples:', Object.keys(sampleSequences));
     
     const queryField = document.getElementById('query');
     const programField = document.getElementById('blast_program');
@@ -638,13 +666,11 @@ function loadSampleSequence(type) {
     }
     
     if (type === 'protein' && sampleSequences['protein']) {
-        console.log('Loading protein sample');
         queryField.value = sampleSequences['protein'];
         if (programField) {
             programField.value = 'blastx';
         }
     } else if (type === 'nucleotide' && sampleSequences['nucleotide']) {
-        console.log('Loading nucleotide sample');
         queryField.value = sampleSequences['nucleotide'];
         if (programField) {
             programField.value = 'blastn';
@@ -656,7 +682,6 @@ function loadSampleSequence(type) {
     
     // Detect sequence type and update UI
     const result = detectSequenceType(queryField.value);
-    console.log('Detected sequence type:', result.type);
     
     // Update sequence type message
     updateSequenceTypeInfo(result.message, 'sequenceTypeInfo', 'sequenceTypeMessage');

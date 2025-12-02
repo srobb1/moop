@@ -1,4 +1,7 @@
 <?php
+// Enable output buffering BEFORE any includes
+ob_start();
+
 include_once __DIR__ . '/admin_init.php';
 
 // Load page-specific config
@@ -6,19 +9,22 @@ $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
 $sequence_types = $config->getSequenceTypes();
 
+// Get all organisms info once (used by both AJAX handler and page display)
+$organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);
+
 // Handle standard AJAX fix permissions request
-handleAdminAjax(function($action) {
+handleAdminAjax(function($action) use ($organisms) {
     // Handle organism-specific actions
     if ($action === 'fix_permissions' && isset($_POST['organism'])) {
         $organism = $_POST['organism'];
-        $all_organisms = get_all_organisms_info();
         
-        if (!isset($all_organisms[$organism]) || !$all_organisms[$organism]['db_file']) {
+        
+        if (!isset($organisms[$organism]) || !$organisms[$organism]['db_file']) {
             echo json_encode(['success' => false, 'message' => 'Organism or database not found']);
             return true;
         }
         
-        $db_file = $all_organisms[$organism]['db_file'];
+        $db_file = $organisms[$organism]['db_file'];
         $result = fixDatabasePermissions($db_file);
         
         echo json_encode($result);
@@ -31,14 +37,14 @@ handleAdminAjax(function($action) {
         $old_name = $_POST['old_name'];
         $new_name = $_POST['new_name'];
         
-        $all_organisms = get_all_organisms_info();
         
-        if (!isset($all_organisms[$organism])) {
+        
+        if (!isset($organisms[$organism])) {
             echo json_encode(['success' => false, 'message' => 'Organism not found']);
             return true;
         }
         
-        $organism_dir = $all_organisms[$organism]['path'];
+        $organism_dir = $organisms[$organism]['path'];
         $result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);
         
         echo json_encode($result);
@@ -50,14 +56,14 @@ handleAdminAjax(function($action) {
         $organism = $_POST['organism'];
         $dir_name = $_POST['dir_name'];
         
-        $all_organisms = get_all_organisms_info();
         
-        if (!isset($all_organisms[$organism])) {
+        
+        if (!isset($organisms[$organism])) {
             echo json_encode(['success' => false, 'message' => 'Organism not found']);
             return true;
         }
         
-        $organism_dir = $all_organisms[$organism]['path'];
+        $organism_dir = $organisms[$organism]['path'];
         $result = deleteAssemblyDirectory($organism_dir, $dir_name);
         
         echo json_encode($result);
@@ -80,14 +86,14 @@ handleAdminAjax(function($action) {
             return true;
         }
         
-        $all_organisms = get_all_organisms_info();
         
-        if (!isset($all_organisms[$organism])) {
+        
+        if (!isset($organisms[$organism])) {
             echo json_encode(['success' => false, 'message' => 'Organism not found']);
             return true;
         }
         
-        $organism_dir = $all_organisms[$organism]['path'];
+        $organism_dir = $organisms[$organism]['path'];
         $organism_json_path = $organism_dir . '/organism.json';
         
         // Parse JSON fields safely
@@ -144,8 +150,8 @@ handleAdminAjax(function($action) {
     return false;
 });
 
-// Get all organisms info using library function (dependency injection - no globals)
-$organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);
+// Use same organisms data for page display
+$organisms = $organisms;
 ?>
 
 <!DOCTYPE html>

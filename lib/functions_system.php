@@ -250,25 +250,33 @@ function handleFixFilePermissionsAjax() {
  */
 function handleAdminAjax($customHandler = null) {
     if (!isset($_POST['action'])) {
-        return; // Not an AJAX request
+        return; // Not a POST request with action
     }
     
-    // Clear any buffered output before sending JSON
+    $action = $_POST['action'];
+    $isStandardAction = ($action === 'fix_file_permissions');
+    $hasCustomHandler = ($customHandler && is_callable($customHandler));
+    
+    // Only process AJAX requests if we have a handler for them
+    if (!$isStandardAction && !$hasCustomHandler) {
+        return; // No handler for this action, let page process normally
+    }
+    
+    // Only clear buffer for AJAX handlers
     while (ob_get_level()) {
         ob_end_clean();
     }
-    
     header('Content-Type: application/json');
     
     // Handle standard fix_file_permissions action
-    if ($_POST['action'] === 'fix_file_permissions') {
+    if ($isStandardAction) {
         echo json_encode(handleFixFilePermissionsAjax());
         exit;
     }
     
     // Pass to custom handler if provided
-    if ($customHandler && is_callable($customHandler)) {
-        $handled = call_user_func($customHandler, $_POST['action']);
+    if ($hasCustomHandler) {
+        $handled = call_user_func($customHandler, $action);
         if ($handled) {
             exit;
         }

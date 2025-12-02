@@ -75,6 +75,29 @@ function initializeBlastManager() {
         }
     });
     
+    // Add filter listener to uncheck hidden sources (like retrieve_sequences does)
+    const filterInput = document.getElementById('sourceFilter');
+    if (filterInput) {
+        filterInput.addEventListener('keyup', function() {
+            // After filter is applied, check visibility and uncheck hidden items
+            setTimeout(function() {
+                document.querySelectorAll('input[name="selected_source"]').forEach(radio => {
+                    const line = radio.closest('.fasta-source-line');
+                    if (line && !window.isSourceVisible(line)) {
+                        if (radio.checked) {
+                            radio.checked = false;
+                        }
+                        radio.disabled = true;
+                    } else {
+                        radio.disabled = false;
+                    }
+                });
+                updateCurrentSelectionDisplay();
+                updateDatabaseList();
+            }, 10);
+        });
+    }
+    
     // Restore previously selected source (if form was resubmitted)
     if (previouslySelectedSource) {
         const allSourceRadios = document.querySelectorAll(`input[name="selected_source"][value="${previouslySelectedSource}"]`);

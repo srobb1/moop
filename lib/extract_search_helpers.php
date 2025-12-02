@@ -73,51 +73,6 @@ function parseContextParameters() {
 }
 
 /**
- * Validate extract/search inputs (organism, assembly, feature IDs)
- * 
- * Comprehensive validation for extract operations
- * 
- * @param string $organism - Organism name
- * @param string $assembly - Assembly name
- * @param string $uniquenames_string - Comma-separated feature IDs
- * @param array $accessible_sources - Available assemblies from getAccessibleAssemblies()
- * @return array - ['valid' => bool, 'errors' => [], 'fasta_source' => null]
- */
-function validateExtractInputs($organism, $assembly, $uniquenames_string, $accessible_sources) {
-    $errors = [];
-    $fasta_source = null;
-    
-    // Check required fields
-    if (empty($uniquenames_string)) {
-        $errors[] = "No feature IDs provided.";
-    }
-    
-    if (empty($organism) || empty($assembly)) {
-        $errors[] = "No assembly selected.";
-    }
-    
-    // Find the assembly in accessible sources
-    if (empty($errors)) {
-        foreach ($accessible_sources as $source) {
-            if ($source['assembly'] === $assembly && $source['organism'] === $organism) {
-                $fasta_source = $source;
-                break;
-            }
-        }
-        
-        if (!$fasta_source) {
-            $errors[] = "You do not have access to the selected assembly.";
-        }
-    }
-    
-    return [
-        'valid' => empty($errors),
-        'errors' => $errors,
-        'fasta_source' => $fasta_source
-    ];
-}
-
-/**
  * Parse and validate feature IDs from user input
  * 
  * Handles both comma and newline separated formats

@@ -6,7 +6,7 @@ $organism_data = $config->getPath('organism_data');
 
 // Validate parameters
 $organism_name = validateOrganismParam($_GET['organism'] ?? '');
-$assembly_accession = validateAssemblyParam($_GET['assembly'] ?? '');
+$assembly_param = validateAssemblyParam($_GET['assembly'] ?? '');
 
 // Setup organism context (loads info, checks access)
 $organism_context = setupOrganismDisplayContext($organism_name, $organism_data, true);
@@ -15,8 +15,25 @@ $organism_info = $organism_context['info'];
 // Verify database exists
 $db_path = verifyOrganismDatabase($organism_name, $organism_data);
 
-// Query to get assembly info and feature counts
-$assembly_info = getAssemblyStats($assembly_accession, $db_path);
+// The assembly parameter could be either a genome_name or genome_accession
+// Try to get assembly stats using the parameter as-is first (might be accession)
+$assembly_info = getAssemblyStats($assembly_param, $db_path);
+
+// If not found, try to look it up by name in the database
+if (empty($assembly_info)) {
+    // Query by genome_name instead of accession
+    $query = "SELECT g.genome_id, g.genome_accession, g.genome_name,
+                     COUNT(DISTINCT CASE WHEN f.feature_type = 'gene' THEN f.feature_id END) as gene_count,
+                     COUNT(DISTINCT CASE WHEN f.feature_type = 'mRNA' THEN f.feature_id END) as mrna_count,
+                     COUNT(DISTINCT f.feature_id) as total_features
+              FROM genome g
+              LEFT JOIN feature f ON g.genome_id = f.genome_id
+              WHERE g.genome_name = ?
+              GROUP BY g.genome_id";
+    
+    $results = fetchData($query, $db_path, [$assembly_param]);
+    $assembly_info = !empty($results) ? $results[0] : [];
+}
 
 if (empty($assembly_info)) {
     die("Error: Assembly not found.");

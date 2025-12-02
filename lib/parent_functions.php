@@ -83,6 +83,27 @@ function getChildren($feature_id, $dbFile, $genome_ids = []) {
 }
 
 /**
+ * Get children with hierarchical structure (preserves parent-child relationships)
+ * Unlike getChildren() which returns flat array, this preserves nesting
+ * Each child has a 'grandchildren' key containing its own children
+ * Enables proper display of parent -> child -> grandchild hierarchies
+ *
+ * @param int $feature_id - The parent feature ID
+ * @param string $dbFile - Path to SQLite database
+ * @param array $genome_ids - Optional: Array of genome IDs to filter results
+ * @return array - Array of children, each with 'grandchildren' key
+ */
+function getChildrenHierarchical($feature_id, $dbFile, $genome_ids = []) {
+    $results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);
+    
+    foreach ($results as &$child) {
+        $child['grandchildren'] = getChildrenHierarchical($child['feature_id'], $dbFile, $genome_ids);
+    }
+    
+    return $results;
+}
+
+/**
  * Generate annotation table with export buttons
  * Creates a responsive HTML table displaying annotations with sorting/filtering
  *
@@ -285,6 +306,9 @@ function generateTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true, $
         } elseif ($feature_type == 'gene') {
             $badge_class = 'bg-feature-gene';
             $text_color = 'text-white';
+        } elseif ($feature_type == 'protein' || $feature_type == 'polypeptide') {
+            $badge_class = 'bg-feature-protein';
+            $text_color = 'text-white';
         }
         
         // Tree character - └── for last child, ├── for others
@@ -304,4 +328,103 @@ function generateTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true, $
     return $html;
 }
 
+/**
+ * Generate nested child annotation cards (recursive)
+ * Renders child and grandchild features with their annotations in nested card structure
+ * Each level has its own collapsible card with unique color based on feature type
+ *
+ * @param array $child - Child feature array from hierarchical structure
+ * @param array $all_annotations - Cached annotations organized by feature_id
+ * @param array $analysis_order - Annotation types in order
+ * @param array $annotation_colors - Color mapping for annotation types
+ * @param array $annotation_labels - Display labels for annotation types
+ * @param array $analysis_desc - Descriptions for annotation types
+ * @param string $organism_name - Organism name for export
+ * @param int &$count - Counter for unique table IDs (passed by reference)
+ * @param bool $is_grandchild - Internal flag for styling grandchild level
+ * @return string - HTML for child/grandchild annotation cards
+ */
+function generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, &$count, $is_grandchild = false) {
+    $child_feature_id = $child['feature_id'];
+    $child_uniquename = $child['feature_uniquename'];
+    $child_type = $child['feature_type'];
+    
+    // Count annotations for this child
+    $child_annotation_count = 0;
+    $child_annotation_types = [];
+    foreach ($analysis_order as $annotation_type) {
+        $annot_results = $all_annotations[$child_feature_id][$annotation_type] ?? [];
+        if (!empty($annot_results)) {
+            $child_annotation_count += count($annot_results);
+            $child_annotation_types[$annotation_type] = count($annot_results);
+        }
+    }
+    
+    // Determine header styling based on feature type and nesting level
+    $header_class = 'child-feature-header';
+    $badge_class = 'bg-feature-mrna';
+    
+    if ($is_grandchild) {
+        $header_class = 'child-feature-header grandchild-feature-header';
+        if ($child_type == 'protein' || $child_type == 'polypeptide') {
+            $badge_class = 'bg-feature-protein';
+        } else {
+            $badge_class = 'bg-secondary';
+        }
+    }
+    
+    $html = '<div class="card annotation-card border-info">';
+    $html .= "  <div class=\"card-header d-flex align-items-center $header_class\">";
+    $html .= "    <span class=\"collapse-section\" data-bs-toggle=\"collapse\" data-bs-target=\"#child_$child_feature_id\" aria-expanded=\"true\">";
+    $html .= "      <i class=\"fas fa-minus toggle-icon text-info\"></i>";
+    $html .= "    </span>";
+    $html .= "    <strong class=\"ms-2 text-dark\"><span class=\"text-white px-2 py-1 rounded child-feature-badge $badge_class badge-xlg\">$child_uniquename ($child_type)</span></strong>";
+    
+    // Show colored annotation type badges
+    if ($child_annotation_count > 0) {
+        foreach ($child_annotation_types as $type_name => $type_count) {
+            $badge_color = $annotation_colors[$type_name] ?? 'warning';
+            $text_color = in_array($badge_color, ['warning', 'info', 'secondary']) ? 'text-dark' : 'text-white';
+            $display_label = $annotation_labels[$type_name] ?? $type_name;
+            $section_id = "annot_section_" . preg_replace('/[^a-zA-Z0-9_]/', '_', $child_uniquename . '_' . $type_name);
+            $html .= " <a href=\"#$section_id\" class=\"badge bg-$badge_color $text_color ms-1 text-decoration-none badge-s\" style=\"cursor: pointer;\">$display_label</a>";
+        }
+    } else {
+        $html .= " <span class=\"badge bg-secondary ms-2\">No annotations</span>";
+    }
+    
+    $html .= '  </div>';
+    $html .= "  <div id=\"child_$child_feature_id\" class=\"collapse show\">";
+    $html .= '    <div class="card-body">';
+    
+    $child_has_annotations = false;
+    foreach ($analysis_order as $annotation_type) {
+        $count++;
+        $annot_results = $all_annotations[$child_feature_id][$annotation_type] ?? [];
+        if (!empty($annot_results)) {
+            $child_has_annotations = true;
+            $color = $annotation_colors[$annotation_type] ?? 'warning';
+            $display_label = $annotation_labels[$annotation_type] ?? $annotation_type;
+            $html .= generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);
+        }
+    }
+    
+    if (!$child_has_annotations) {
+        $type_label = ($child_type === 'mRNA') ? 'transcript' : strtolower($child_type);
+        $html .= "<p class=\"text-muted\"><i class=\"fas fa-info-circle\"></i> No annotations loaded for this $type_label.</p>";
+    }
+    
+    // Render grandchildren (recursively)
+    if (!empty($child['grandchildren'])) {
+        foreach ($child['grandchildren'] as $grandchild) {
+            $html .= generateChildAnnotationCards($grandchild, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, true);
+        }
+    }
+    
+    $html .= '    </div>';
+    $html .= '  </div>';
+    $html .= '</div>';
+    
+    return $html;
+}
 ?>

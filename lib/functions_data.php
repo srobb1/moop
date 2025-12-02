@@ -246,7 +246,9 @@ function loadAllOrganismsMetadata($organism_data_dir) {
             'genus' => $organism_info['genus'] ?? '',
             'species' => $organism_info['species'] ?? '',
             'common_name' => $organism_info['common_name'] ?? '',
-            'taxon_id' => $organism_info['taxon_id'] ?? ''
+            'taxon_id' => $organism_info['taxon_id'] ?? '',
+            'images' => $organism_info['images'] ?? [],
+            'html_p' => $organism_info['html_p'] ?? []
         ];
     }
     

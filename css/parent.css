@@ -153,6 +153,14 @@
     background-color: #764ba2 !important;
 }
 
+.grandchild-feature-header {
+    background-color: rgba(85, 179, 23, 0.1);
+}
+
+.grandchild-feature-badge {
+    background-color: #55B317 !important;
+}
+
 .tree-container .tree li::before,
 .tree-container .tree li::after {
     display: none !important;

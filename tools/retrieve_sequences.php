@@ -41,7 +41,7 @@ if ($trying_public_access) {
 $context = parseContextParameters();
 
 $organisms_param = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
-$organism_result = parseOrganismParameter($organisms_param, $context['organism']);
+$organism_result = parseOrganismParameter($organisms_param, '');
 $filter_organisms = $organism_result['organisms'];
 
 // Get uniquenames (may be empty on initial page load)
@@ -62,18 +62,72 @@ $uniquenames = [];
 // Initialize selected_source based on organism and assembly
 // This ensures the correct radio button is pre-selected when the page loads with URL parameters
 $selected_source = '';
+
+// First, try using context parameters (explicit intent to pre-select)
+if (!empty($context['organism']) && !empty($context['assembly'])) {
+    $selected_organism = $context['organism'];
+    $selected_assembly = $context['assembly'];
+}
+
 if (!empty($selected_organism) && !empty($selected_assembly)) {
+    // First try direct match (assembly as-is)
     $selected_source = $selected_organism . '|' . $selected_assembly;
+    
+    // If no direct match found by checking accessible_sources, try matching by genome_id
+    $source_found = false;
+    foreach ($accessible_sources as $source) {
+        if ($source['organism'] === $selected_organism && $source['assembly'] === $selected_assembly) {
+            $source_found = true;
+            break;
+        }
+    }
+    
+    // If not found by direct accession match, try via genome_id lookup
+    if (!$source_found) {
+        try {
+            $organism_data = $config->getPath('organism_data');
+            $db_path = "$organism_data/$selected_organism/organism.sqlite";
+            [$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($selected_assembly, $db_path);
+            
+            // Now find source matching this genome_id
+            foreach ($accessible_sources as $source) {
+                if ($source['organism'] === $selected_organism && $source['genome_id'] == $genome_id_param) {
+                    $selected_source = $selected_organism . '|' . $source['assembly'];
+                    break;
+                }
+            }
+        } catch (Exception $e) {
+            // If lookup fails, stick with original assembly value
+        }
+    }
+} elseif (!empty($selected_organism)) {
+    // If only organism specified (no assembly), select first assembly for that organism
+    foreach ($accessible_sources as $source) {
+        if ($source['organism'] === $selected_organism) {
+            $selected_source = $selected_organism . '|' . $source['assembly'];
+            break;
+        }
+    }
 }
 
 // If sequence IDs are provided, extract ALL sequence types
 if (!empty($sequence_ids_provided)) {
     $extraction_errors = [];
     
-    // Validate inputs using helper
-    $validation = validateExtractInputs($selected_organism, $selected_assembly, $uniquenames_string, $accessible_sources);
-    $extraction_errors = $validation['errors'];
-    $fasta_source = $validation['fasta_source'];
+    // Find matching source for $selected_assembly
+    // Works whether $selected_assembly is accession or genome_name
+    $fasta_source = null;
+    foreach ($accessible_sources as $source) {
+        if ($source['organism'] === $selected_organism && 
+            ($source['assembly'] === $selected_assembly || $source['genome_name'] === $selected_assembly)) {
+            $fasta_source = $source;
+            break;
+        }
+    }
+    
+    if (!$fasta_source) {
+        $extraction_errors[] = "Assembly not found or not accessible.";
+    }
     
     // Parse and validate feature IDs
     if (empty($extraction_errors)) {
@@ -85,8 +139,6 @@ if (!empty($sequence_ids_provided)) {
             
             // Get children for each parent ID (like parent_display.php does)
             try {
-                $config = ConfigManager::getInstance();
-                $organism_data = $config->getPath('organism_data');
                 $db = verifyOrganismDatabase($selected_organism, $organism_data);
                 
                 $expanded_uniquenames = [];

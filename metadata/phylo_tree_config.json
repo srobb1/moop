@@ -47,6 +47,22 @@
                                                                 ]
                                                             }
                                                         ]
+                                                    },
+                                                    {
+                                                        "name": "Pteropodidae",
+                                                        "children": [
+                                                            {
+                                                                "name": "Pteropus",
+                                                                "children": [
+                                                                    {
+                                                                        "name": "Pteropus vampyrus",
+                                                                        "organism": "Pteropus_vampyrus",
+                                                                        "common_name": "Large flying fox",
+                                                                        "image": "images/ncbi_taxonomy/132908.jpg"
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
                                                     }
                                                 ]
                                             }

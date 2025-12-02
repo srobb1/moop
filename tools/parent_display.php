@@ -120,7 +120,10 @@ $genome_name = $row['genome_name'];
 $family_feature_ids = [$feature_id];
 $retrieve_these_seqs = [$feature_uniquename];
 
-// Get children
+// Get children with hierarchical structure (for proper nesting)
+$children_hierarchical = getChildrenHierarchical($feature_id, $db, $accessible_genome_ids);
+
+// Get all children flat for sequence retrieval (keeping getChildren for backwards compatibility)
 $children = getChildren($feature_id, $db, $accessible_genome_ids);
 
 // Optimize: Get ALL annotations for parent and all children in ONE query
@@ -265,82 +268,23 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
                     }
                 }
                 
-                // Children annotations
-                if (!empty($children)) {
+                // Children annotations (with hierarchical support for grandchildren)
+                if (!empty($children_hierarchical)) {
                     // Add summary if multiple children
-		    // TO DO: have the 'alternative transcripts/isoforms (mRNA)' statment only be generated for gene-mRNA parent-child relations, and have something more general for other relationships
-		    // TO DO: also find every hardcoded 'gene' and 'mRNA' (transcript,isoform) and replace with code generated from the types we pull from the db
-                    if (count($children) > 1) {
+                    // TO DO: have the 'alternative transcripts/isoforms (mRNA)' statment only be generated for gene-mRNA parent-child relations, and have something more general for other relationships
+                    // TO DO: also find every hardcoded 'gene' and 'mRNA' (transcript,isoform) and replace with code generated from the types we pull from the db
+                    if (count($children_hierarchical) > 1) {
                         echo '<div class="alert alert-info mt-3">';
                         echo '  <i class="fas fa-info-circle"></i> ';
-                        echo '  <strong>Multiple Children:</strong> This gene has ' . count($children) . ' alternative transcripts/isoforms (mRNA). ';
+                        echo '  <strong>Multiple Children:</strong> This gene has ' . count($children_hierarchical) . ' alternative transcripts/isoforms (mRNA). ';
                         echo '  Each may have different annotations.';
                         echo '</div>';
                     }
                     
-                    foreach ($children as $child_index => $child) {
-                        $child_feature_id = $child['feature_id'];
-                        $child_uniquename = $child['feature_uniquename'];
-                        $child_type = $child['feature_type'];
-                        
-                        // Count annotations for this child - using cached results
-                        $child_annotation_count = 0;
-                        $child_annotation_types = [];
-                        foreach ($analysis_order as $annotation_type) {
-                            $annot_results = $all_annotations[$child_feature_id][$annotation_type] ?? [];
-                            if (!empty($annot_results)) {
-                                $child_annotation_count += count($annot_results);
-                                $child_annotation_types[$annotation_type] = count($annot_results);
-                            }
-                        }
-                        
-                        echo '<div class="card annotation-card border-info">';
-                        echo '  <div class="card-header d-flex align-items-center child-feature-header">';
-                        echo "    <span class=\"collapse-section\" data-bs-toggle=\"collapse\" data-bs-target=\"#child_$child_feature_id\" aria-expanded=\"true\">";
-                        echo "      <i class=\"fas fa-minus toggle-icon text-info\"></i>";
-                        echo "    </span>";
-                        echo "    <strong class=\"ms-2 text-dark\"><span class=\"text-white px-2 py-1 rounded child-feature-badge badge-xlg\">$child_uniquename ($child_type)</span></strong>";
-                        
-                        // Show colored annotation type badges as clickable links
-                        if ($child_annotation_count > 0) {
-                            foreach ($child_annotation_types as $type_name => $type_count) {
-                                $badge_color = $annotation_colors[$type_name] ?? 'warning';
-                                $text_color = in_array($badge_color, ['warning', 'info', 'secondary']) ? 'text-dark' : 'text-white';
-                                $display_label = $annotation_labels[$type_name] ?? $type_name;
-                                $section_id = "annot_section_" . preg_replace('/[^a-zA-Z0-9_]/', '_', $child_uniquename . '_' . $type_name);
-                                echo " <a href=\"#$section_id\" class=\"badge bg-$badge_color $text_color ms-1 text-decoration-none badge-s\" style=\"cursor: pointer;\">$display_label</a>";
-                            }
-                        } else {
-                            echo " <span class=\"badge bg-secondary ms-2\">No annotations</span>";
-                        }
-                        
-                        echo '  </div>';
-                        echo "  <div id=\"child_$child_feature_id\" class=\"collapse show\">";
-                        echo '    <div class="card-body">';
-                        
-                        $child_has_annotations = false;
-                        foreach ($analysis_order as $annotation_type) {
-                            $count++;
-                            $annot_results = $all_annotations[$child_feature_id][$annotation_type] ?? [];
-                            if (!empty($annot_results)) {
-                                $child_has_annotations = true;
-                                $has_annotations = true;
-                                $color = $annotation_colors[$annotation_type] ?? 'warning';
-                                $display_label = $annotation_labels[$annotation_type] ?? $annotation_type;
-                                echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);
-                            }
-                        }
-                        
-                        if (!$child_has_annotations) {
-		            // TO DO: transcript is fine for mRNA but not fine if the child is something else. But the customization is nice, it is better than going generic for everything
-                            echo "<p class=\"text-muted\"><i class=\"fas fa-info-circle\"></i> No annotations loaded for this transcript.</p>";
-                        }
-                        
-                        echo '    </div>';
-                        echo '  </div>';
-                        echo '</div>';
-                        
-                        $retrieve_these_seqs[] = $child_uniquename;
+                    // Render children with hierarchical nesting support
+                    foreach ($children_hierarchical as $child) {
+                        $has_annotations = true;
+                        echo generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count);
                     }
                 }
                 
@@ -354,6 +298,11 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 
     <!-- Sequences Section -->
     <?php
+    // Add all descendants to sequence retrieval (getChildren returns all descendants recursively)
+    foreach ($children as $child) {
+        $retrieve_these_seqs[] = $child['feature_uniquename'];
+    }
+    
     $retrieve_these_seqs = array_unique($retrieve_these_seqs);
     sort($retrieve_these_seqs);
     $gene_name = implode(",", $retrieve_these_seqs);

@@ -601,6 +601,22 @@ code {
   background-color: #17a2b8 !important;
 }
 
+.feature-color-polypeptide {
+  color: #55B317 !important;
+}
+
+.bg-feature-polypeptide {
+  background-color: #55B317 !important;
+}
+
+.feature-color-protein {
+  color: #55B317 !important;
+}
+
+.bg-feature-protein {
+  background-color: #55B317 !important;
+}
+
 /* ========== ASSEMBLY DISPLAY STYLES ========== */
 /* Reuses .feature-header structure from parent.css, with assembly-specific colors */
 

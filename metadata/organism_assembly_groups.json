@@ -38,5 +38,13 @@
         "groups": [
             "No Data"
         ]
+    },
+    {
+        "organism": "Pteropus_vampyrus",
+        "assembly": "Pvam_2.0",
+        "groups": [
+            "Bats",
+            "New"
+        ]
     }
 ]
