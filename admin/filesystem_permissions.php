@@ -329,7 +329,7 @@ function performPermissionCheck($path, $item) {
             $warning = $total - $ok;
             ?>
             <div class="row mb-3">
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card border-success">
                         <div class="card-body text-center">
                             <h3 class="text-success"><?= $ok ?>/<?= $total ?></h3>
@@ -337,19 +337,11 @@ function performPermissionCheck($path, $item) {
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card border-warning">
                         <div class="card-body text-center">
                             <h3 class="text-warning"><?= $warning ?></h3>
                             <p class="mb-0 small">Issues Found</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card border-info">
-                        <div class="card-body text-center">
-                            <h3 class="text-info"><?= count(array_unique(array_map(fn($c) => $c['name'], $checks))) ?></h3>
-                            <p class="mb-0 small">Permission Groups</p>
                         </div>
                     </div>
                 </div>
