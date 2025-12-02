@@ -41,6 +41,7 @@ return [
     // ======== OPTIONAL: Appearance ========
     'siteTitle' => 'SIMRbase',
     'header_img' => 'header_img.png',
+    'banners_path' => "$site_path/images/banners",
     'favicon_path' => "/$site/$images_dir/favicon.ico",
     'custom_css_path' => "$site_path/css/custom.css",
     

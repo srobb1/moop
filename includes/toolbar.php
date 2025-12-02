@@ -6,6 +6,7 @@
     }
     $config = ConfigManager::getInstance();
     $site = $config->getString('site');
+    $title = $config->getString('siteTitle');
     $favicon_path = $config->getUrl('favicon_path');
     
     echo "<a class=\"navbar-brand\" href=\"/$site/index.php\"><img id=\"site_logo\" src=\"$favicon_path\" alt=\"DB_Logo\"></a>";
@@ -19,7 +20,7 @@
   <div class="collapse navbar-collapse" id="collapsibleNavbar">
     <ul class="navbar-nav">
       <?php
-      echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/index.php"><i class="fa fa-home"></i> Home</a></li>';
+      echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/index.php"><i class="fa fa-home"></i>'. $title.'</a></li>';
 
           echo '<li class="nav-item"><a class="nav-link" href="/about.php">About</a></li>';
 

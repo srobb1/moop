@@ -76,25 +76,12 @@ include_once __DIR__ . '/access_control.php';
 
   <body>
 
-  <?php
-  $header_img = $config->getString('header_img');
-  $images_path = $config->getString('images_path');
-  
-  if (!empty($header_img)) {
-    echo "<div class=\"container-fluid easygdb-top\">";
-      echo "<div style=\"background: url(/$images_path/$header_img) center center no-repeat; background-size:cover;\">";
-      echo "<img class=\"cover-img\" src=/$images_path/$header_img style=\"visibility: hidden;\"/>";
-      echo "</div>";
-    echo "</div>";
-  }
-  ?>
+  <?php include_once __DIR__ . '/banner.php'; ?>
 
 
 <?php
 include_once __DIR__ . '/toolbar.php';
 ?>
-
-<div class="page_container">
 
 <div id="jb_cookies_Modal" class="modal fade" role="dialog">
   <div class="modal-dialog">
@@ -139,51 +126,5 @@ include_once __DIR__ . '/toolbar.php';
 </script>
 
 <style>
-
-  .cover-img {
-    height: 277px;
-    width:20px;
-    overflow: hidden;
-  }
-/*
-  .cover-img {
-    width: 100%;
-    height: auto;
-    visibility: hidden;
-  }
-*/
-
-  .cover-title {
-    position: absolute;
-    padding:10px;
-    margin-top:200px;
-    font-size: 24px;
-    color:#fff;
-    width: 50%;
-    background: black; /* For browsers that do not support gradients */
-    background-color: rgba(0, 0, 0, 0.5);
-    background: -webkit-linear-gradient(left, rgba(0, 0, 0, 0.8) , rgba(0, 0, 0, 0)); /* For Safari 5.1 to 6.0 */
-    background: -o-linear-gradient(right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0)); /* For Opera 11.1 to 12.0 */
-    background: -moz-linear-gradient(right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0)); /* For Firefox 3.6 to 15 */
-    background: linear-gradient(to right, rgba(0, 0, 0, 0.8) , rgba(0, 0, 0, 0)); /* Standard syntax */
-  }
-
-  .easygdb-top {
-    background-color: #a7d0e5;
-    width: 100%;
-    height: 277px;
-    padding:0px
-  }
-
-  .institution_logo3 {
-    right:0px;
-    position:absolute;
-    top:75px;
-  }
-
-  .img-rounded-5 {
-    border-radius: 5px;
-    margin:10px;
-  }
 
 </style>
