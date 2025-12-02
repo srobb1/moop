@@ -644,3 +644,96 @@ function isAssemblyInPhyloTree($organism, $assembly, $tree_file) {
     return strpos($tree_content, '"organism": "' . $organism . '"') !== false;
 }
 
+
+/**
+ * Get comprehensive status of an organism across all checks
+ * @param string $organism Organism name
+ * @param array $data Organism data from getDetailedOrganismsInfo
+ * @param array $groups_data Groups data
+ * @param string $phylo_tree_file Path to phylo_tree_config.json
+ * @param array $sequence_types Configured sequence types
+ * @return array Status with checks and overall status
+ */
+function getOrganismOverallStatus($organism, $data, $groups_data, $phylo_tree_file, $sequence_types) {
+    $checks = [
+        'has_assemblies' => false,
+        'has_fasta' => false,
+        'has_blast_indexes' => false,
+        'has_database' => false,
+        'database_readable' => false,
+        'assemblies_in_groups' => false,
+        'in_phylo_tree' => false
+    ];
+    
+    // 1. Does it have at least one assembly?
+    $checks['has_assemblies'] = !empty($data['assemblies']);
+    
+    // 2. Is there at least one FASTA file in an assembly?
+    if ($checks['has_assemblies'] && !empty($data['fasta_validation']['assemblies'])) {
+        foreach ($data['fasta_validation']['assemblies'] as $asm_fasta) {
+            if (!empty($asm_fasta['fasta_files'])) {
+                foreach ($asm_fasta['fasta_files'] as $file_info) {
+                    if ($file_info['found']) {
+                        $checks['has_fasta'] = true;
+                        break 2;
+                    }
+                }
+            }
+        }
+    }
+    
+    // 3. Is there a BLAST index file for existing FASTA files?
+    if ($checks['has_fasta']) {
+        foreach ($data['assemblies'] as $assembly) {
+            $assembly_path = $data['path'] . '/' . $assembly;
+            $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
+            if (!empty($blast_validation['databases'])) {
+                foreach ($blast_validation['databases'] as $db) {
+                    if ($db['has_indexes']) {
+                        $checks['has_blast_indexes'] = true;
+                        break 2;
+                    }
+                }
+            }
+        }
+    }
+    
+    // 4. Is there a database file?
+    $checks['has_database'] = $data['has_db'];
+    
+    // 5. Is the database readable?
+    if ($checks['has_database'] && !empty($data['db_validation'])) {
+        $checks['database_readable'] = $data['db_validation']['readable'];
+    }
+    
+    // 6. Is each assembly a member of at least one group?
+    if ($checks['has_assemblies']) {
+        $all_in_groups = true;
+        foreach ($data['assemblies'] as $assembly) {
+            $assembly_groups = getAssemblyGroups($organism, $assembly, $groups_data);
+            if (empty($assembly_groups)) {
+                $all_in_groups = false;
+                break;
+            }
+        }
+        $checks['assemblies_in_groups'] = $all_in_groups;
+    }
+    
+    // 7. Is the organism found in the tree?
+    $checks['in_phylo_tree'] = isAssemblyInPhyloTree($organism, '', $phylo_tree_file);
+    
+    // Calculate overall status
+    $all_pass = array_reduce($checks, function($carry, $item) {
+        return $carry && $item;
+    }, true);
+    
+    $pass_count = count(array_filter($checks));
+    $total_count = count($checks);
+    
+    return [
+        'checks' => $checks,
+        'all_pass' => $all_pass,
+        'pass_count' => $pass_count,
+        'total_count' => $total_count
+    ];
+}

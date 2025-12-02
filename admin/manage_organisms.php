@@ -500,12 +500,20 @@ $organisms = $organisms;
                    <?php endif; ?>
                </td>
                <td>
-                 <?php if ($data['has_db'] && !empty($data['assemblies'])): ?>
-                   <span class="badge bg-success status-badge"><i class="fa fa-check-circle"></i> Complete</span>
-                 <?php elseif (!empty($data['assemblies'])): ?>
-                   <span class="badge bg-warning status-badge"><i class="fa fa-exclamation-triangle"></i> No Database</span>
+                 <?php 
+                   // Get comprehensive status
+                   $status = getOrganismOverallStatus($organism, $data, $groups_data, $phylo_tree_file, $sequence_types);
+                   $pass_count = $status['pass_count'];
+                   $total_count = $status['total_count'];
+                 ?>
+                 <?php if ($status['all_pass']): ?>
+                   <span class="badge bg-success status-badge" title="All checks passed: <?= $pass_count ?>/<?= $total_count ?>">
+                     <i class="fa fa-check-circle"></i> Complete
+                   </span>
                  <?php else: ?>
-                   <span class="badge bg-danger status-badge"><i class="fa fa-times-circle"></i> No Assemblies</span>
+                   <span class="badge bg-warning status-badge" title="Checks passed: <?= $pass_count ?>/<?= $total_count ?>">
+                     <i class="fa fa-exclamation-triangle"></i> <?= $pass_count ?>/<?= $total_count ?>
+                   </span>
                  <?php endif; ?>
                </td>
              </tr>
