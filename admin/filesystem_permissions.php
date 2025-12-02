@@ -546,13 +546,15 @@ function performPermissionCheck($path, $item) {
                 <div class="mt-2">
                     <p class="mb-2"><strong>To fix, run:</strong></p>
                     <div class="fix-command">
-                        sudo chmod <?= $check['required_perms'] ?> <?= escapeshellarg($check['path']) ?> && \<br>
-                        sudo chown -R <?= htmlspecialchars($moop_owner) ?>:<?= htmlspecialchars($check['required_group']) ?> <?= escapeshellarg($check['path']) ?>
-                        <?php if (strpos($check['path'], 'banners') !== false): ?>
-                        <br><br>
-                        <!-- Fix existing files in banners directory -->
-                        sudo chmod -R 664 <?= escapeshellarg($check['path']) ?> && \<br>
+                        <?php if ($check['type'] === 'directory'): ?>
+                        <!-- For directories, use -R to fix all existing files, then reapply directory SGID -->
+                        sudo chown -R <?= htmlspecialchars($moop_owner) ?>:<?= htmlspecialchars($check['required_group']) ?> <?= escapeshellarg($check['path']) ?> && \<br>
+                        sudo chmod -R 775 <?= escapeshellarg($check['path']) ?> && \<br>
                         sudo chmod <?= $check['required_perms'] ?> <?= escapeshellarg($check['path']) ?>
+                        <?php else: ?>
+                        <!-- For files, single commands -->
+                        sudo chmod <?= $check['required_perms'] ?> <?= escapeshellarg($check['path']) ?> && \<br>
+                        sudo chown <?= htmlspecialchars($moop_owner) ?>:<?= htmlspecialchars($check['required_group']) ?> <?= escapeshellarg($check['path']) ?>
                         <?php endif; ?>
                     </div>
                 </div>
