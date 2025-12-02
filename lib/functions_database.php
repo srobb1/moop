@@ -49,6 +49,7 @@ function validateDatabaseIntegrity($dbFile) {
         'tables_present' => [],
         'tables_missing' => [],
         'row_counts' => [],
+        'feature_counts' => [],
         'data_issues' => [],
         'errors' => []
     ];
@@ -111,6 +112,20 @@ function validateDatabaseIntegrity($dbFile) {
             $stmt = $dbh->query("SELECT COUNT(*) FROM $table");
             $count = $stmt->fetchColumn();
             $result['row_counts'][$table] = $count;
+        }
+        
+        // Get counts by feature type
+        if (in_array('feature', $result['tables_present'])) {
+            $stmt = $dbh->query("
+                SELECT feature_type, COUNT(*) as count
+                FROM feature
+                GROUP BY feature_type
+                ORDER BY feature_type
+            ");
+            $features = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($features as $feature) {
+                $result['feature_counts'][$feature['feature_type']] = $feature['count'];
+            }
         }
         
         // Check for data quality issues

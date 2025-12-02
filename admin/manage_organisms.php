@@ -82,6 +82,8 @@ handleAdminAjax(function($action) use ($organisms) {
         $taxon_id = $_POST['taxon_id'] ?? '';
         $images_json = $_POST['images_json'] ?? '[]';
         $html_p_json = $_POST['html_p_json'] ?? '[]';
+        $parents_json = $_POST['parents_json'] ?? '["gene"]';
+        $children_json = $_POST['children_json'] ?? '["mRNA", "transcript"]';
         
         // Validate inputs
         if (empty($genus) || empty($species) || empty($common_name) || empty($taxon_id)) {
@@ -102,6 +104,8 @@ handleAdminAjax(function($action) use ($organisms) {
         // Parse JSON fields safely
         $images = decodeJsonString($images_json);
         $html_p = decodeJsonString($html_p_json);
+        $parents = decodeJsonString($parents_json);
+        $children = decodeJsonString($children_json);
         
         // Build the metadata array
         $metadata = [
@@ -119,6 +123,14 @@ handleAdminAjax(function($action) use ($organisms) {
         // Add html paragraphs if provided
         if (!empty($html_p)) {
             $metadata['html_p'] = $html_p;
+        }
+        
+        // Add feature types if provided
+        if (!empty($parents) || !empty($children)) {
+            $metadata['feature_types'] = [
+                'parents' => $parents ?: ['gene'],
+                'children' => $children ?: ['mRNA', 'transcript']
+            ];
         }
         
         // Merge with existing data to preserve other fields
@@ -721,6 +733,28 @@ $organisms = $organisms;
             </div>
           </div>
 
+          <!-- Feature Types and Counts -->
+          <h6 class="fw-bold mb-2"><i class="fa fa-sitemap"></i> Feature Types and Counts</h6>
+          <div class="alert alert-info small mb-3">
+            <strong>Summary:</strong> Shows the count of each feature type in the database.
+          </div>
+          <div class="card mb-3">
+            <div class="card-body small">
+              <?php if (!empty($validation['feature_counts'])): ?>
+                <p class="mb-2"><strong>Features (<?= count($validation['feature_counts']) ?>):</strong></p>
+                <ul class="mb-0">
+                  <?php foreach ($validation['feature_counts'] as $feature_type => $count): ?>
+                    <li><?= htmlspecialchars($feature_type) ?> 
+                      <span class="badge bg-info"><?= number_format($count) ?> features</span>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php else: ?>
+                <p class="mb-0 text-muted"><i class="fa fa-info-circle"></i> No feature data available</p>
+              <?php endif; ?>
+            </div>
+          </div>
+
           <!-- Data Quality -->
           <h6 class="fw-bold mb-2"><i class="fa fa-exclamation-triangle"></i> Data Quality</h6>
           <div class="alert alert-info small mb-3">
@@ -950,6 +984,54 @@ $organisms = $organisms;
               <input type="text" class="form-control" id="taxon_id<?= htmlspecialchars($organism) ?>" name="taxon_id" 
                      value="<?= htmlspecialchars($data['info']['taxon_id'] ?? '') ?>" required>
               <small class="text-muted">NCBI taxonomy ID, e.g., 27642</small>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Feature Types Section -->
+            <h5 class="mb-3"><i class="fa fa-sitemap"></i> Feature Types</h5>
+            <div class="alert alert-info small mb-3">
+              <strong>Note:</strong> Define which feature types are parents (typically genes) and which are children (transcripts, proteins, etc.)
+            </div>
+            
+            <input type="hidden" name="parents_json" id="parents-json-<?= htmlspecialchars($organism) ?>">
+            <input type="hidden" name="children_json" id="children-json-<?= htmlspecialchars($organism) ?>">
+            
+            <div class="row">
+              <div class="col-md-6">
+                <label class="form-label">Parent Features</label>
+                <div id="parents-<?= htmlspecialchars($organism) ?>" class="feature-tag-container" style="border: 1px solid #dee2e6; padding: 10px; border-radius: 5px; min-height: 50px; background: #f8f9fa;">
+                  <?php 
+                    $parents = $data['info']['feature_types']['parents'] ?? ['gene'];
+                    foreach ($parents as $feature): 
+                  ?>
+                    <span class="badge bg-primary me-2 mb-2 feature-tag" data-feature="<?= htmlspecialchars($feature) ?>">
+                      <?= htmlspecialchars($feature) ?> <i class="fa fa-times" style="cursor: pointer;" onclick="removeFeatureTag(this, '<?= $org_safe ?>')"></i>
+                    </span>
+                  <?php endforeach; ?>
+                </div>
+                <input type="text" class="form-control mt-2" id="parent-feature-input-<?= htmlspecialchars($organism) ?>" placeholder="e.g., gene, pseudogene">
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addFeatureTag('<?= $org_safe ?>', 'parent')">
+                  <i class="fa fa-plus"></i> Add Parent Feature
+                </button>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Child Features</label>
+                <div id="children-<?= htmlspecialchars($organism) ?>" class="feature-tag-container" style="border: 1px solid #dee2e6; padding: 10px; border-radius: 5px; min-height: 50px; background: #f8f9fa;">
+                  <?php 
+                    $children = $data['info']['feature_types']['children'] ?? ['mRNA', 'transcript'];
+                    foreach ($children as $feature): 
+                  ?>
+                    <span class="badge bg-info me-2 mb-2 feature-tag" data-feature="<?= htmlspecialchars($feature) ?>">
+                      <?= htmlspecialchars($feature) ?> <i class="fa fa-times" style="cursor: pointer;" onclick="removeFeatureTag(this, '<?= $org_safe ?>')"></i>
+                    </span>
+                  <?php endforeach; ?>
+                </div>
+                <input type="text" class="form-control mt-2" id="child-feature-input-<?= htmlspecialchars($organism) ?>" placeholder="e.g., mRNA, transcript, protein">
+                <button type="button" class="btn btn-sm btn-outline-info mt-2" onclick="addFeatureTag('<?= $org_safe ?>', 'child')">
+                  <i class="fa fa-plus"></i> Add Child Feature
+                </button>
+              </div>
             </div>
 
             <hr class="my-4">

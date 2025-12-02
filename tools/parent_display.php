@@ -65,9 +65,11 @@ if (isset($annotation_config['annotation_types'])) {
     die("Error: annotation_config.json must use the new 'annotation_types' format. Legacy format is no longer supported.");
 }
 
-// Define parent types (typically genes are parent features)
-// TO DO: not all organisms in the future will have gene as a parent, this should go in a config somewhere
+// Define parent types from organism.json feature_types, fallback to defaults
 $parents = ['gene', 'pseudogene'];
+if (!empty($organism_info['feature_types']['parents'])) {
+    $parents = $organism_info['feature_types']['parents'];
+}
 
 // Get ancestors for the feature
 $ancestors = getAncestors($uniquename, $db, $accessible_genome_ids);

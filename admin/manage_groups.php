@@ -350,7 +350,7 @@ foreach ($all_organisms as $organism => $assemblies) {
           <li>Groups organize organisms by taxonomy, research group, project, access level, or any dimension you choose</li>
         </ul>
         
-        <p><strong>How It Works:</strong> Each organism assembly gets one or more group tags. Users see organisms based on:</p>
+        <p><strong>How It Works:</strong> Each organism assembly gets one or more group tags. Organism assembly names are pulled from their directory names. Users see organisms based on:</p>
         <ul>
           <li><strong>Logged in:</strong> Their assigned groups + the Public group</li>
           <li><strong>Not logged in:</strong> Only the Public group organisms</li>

@@ -100,6 +100,16 @@ function saveMetadata(event, organism) {
         }
     });
     
+    // Collect feature types data
+    const parentFeatures = [];
+    const childFeatures = [];
+    document.querySelectorAll('#parents-' + organism + ' .feature-tag').forEach(tag => {
+        parentFeatures.push(tag.getAttribute('data-feature'));
+    });
+    document.querySelectorAll('#children-' + organism + ' .feature-tag').forEach(tag => {
+        childFeatures.push(tag.getAttribute('data-feature'));
+    });
+    
     // Prepare form data
     const formData = new FormData(form);
     const data = new URLSearchParams();
@@ -111,6 +121,8 @@ function saveMetadata(event, organism) {
     data.append('taxon_id', formData.get('taxon_id'));
     data.append('images_json', JSON.stringify(images));
     data.append('html_p_json', JSON.stringify(paragraphs));
+    data.append('parents_json', JSON.stringify(parentFeatures));
+    data.append('children_json', JSON.stringify(childFeatures));
     
     button.disabled = true;
     button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Saving...';
@@ -388,6 +400,39 @@ function deleteAssemblyDirectory(event, organism, safeAsmId) {
         resultDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error + '</div>';
         resultDiv.classList.remove('d-none');
     });
+}
+
+function addFeatureTag(organism, type) {
+    const inputId = type + '-feature-input-' + organism;
+    const containerId = type + '-features-' + organism;
+    const input = document.getElementById(inputId);
+    const container = document.getElementById(containerId);
+    
+    const feature = input.value.trim();
+    if (!feature) {
+        alert('Please enter a feature type');
+        return;
+    }
+    
+    // Check if already exists
+    const existing = Array.from(container.querySelectorAll('.feature-tag')).map(t => t.getAttribute('data-feature'));
+    if (existing.includes(feature)) {
+        alert('This feature type is already added');
+        return;
+    }
+    
+    const badge = document.createElement('span');
+    badge.className = 'badge me-2 mb-2 feature-tag';
+    badge.className += type === 'parent' ? ' bg-primary' : ' bg-info';
+    badge.setAttribute('data-feature', feature);
+    badge.innerHTML = `${feature} <i class="fa fa-times" style="cursor: pointer;" onclick="removeFeatureTag(this, '${organism}')"></i>`;
+    
+    container.appendChild(badge);
+    input.value = '';
+}
+
+function removeFeatureTag(element, organism) {
+    element.closest('.feature-tag').remove();
 }
 
 // Uses window.escapeHtml from utilities.js

@@ -7,8 +7,8 @@
             "description": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs<\/strong>. Genes separated by gene duplication events are called paralogs.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 289559,
-            "feature_count": 75056,
+            "annotation_count": 310777,
+            "feature_count": 118325,
             "synonyms": [
                 "Orthology"
             ],
@@ -21,18 +21,8 @@
             "description": "<strong>Homologous<\/strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 565948,
-            "feature_count": 71047
-        },
-        "Homology": {
-            "display_name": "Homology",
-            "color": "info",
-            "order": 4,
-            "description": "<strong>Homologous<\/strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
-            "enabled": true,
-            "in_database": false,
-            "annotation_count": 0,
-            "feature_count": 0
+            "annotation_count": 795603,
+            "feature_count": 114351
         },
         "AI Annotations": {
             "display_name": "AI Annotations",
@@ -41,8 +31,8 @@
             "description": "AI-based protein function prediction uses computational techniques, such as machine learning and protein sequence language models to infer the biological roles of proteins from their sequences",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 34640,
-            "feature_count": 66455
+            "annotation_count": 49921,
+            "feature_count": 108548
         },
         "Domains": {
             "display_name": "Domains",
@@ -51,8 +41,8 @@
             "description": "Protein domains are conserved structural and functional units that can evolve, function, and exist independently. Domain annotations identify these conserved regions using databases like InterPro, Pfam, and SMART.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 47824,
-            "feature_count": 87095
+            "annotation_count": 65699,
+            "feature_count": 130601
         },
         "Gene Ontology": {
             "display_name": "Gene Ontology",
@@ -61,8 +51,8 @@
             "description": "Gene Ontology (GO) provides a controlled vocabulary to describe gene products in terms of their biological processes, cellular components, and molecular functions in a species-independent manner.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 97088,
-            "feature_count": 64838
+            "annotation_count": 120390,
+            "feature_count": 106445
         },
         "Gene Families": {
             "display_name": "Gene Families",
@@ -71,8 +61,8 @@
             "description": "Gene families are groups of genes that share similar sequences and often similar functions, typically arising from gene duplication events. Examples include PANTHER, TreeFam, and other classification systems.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 55758,
-            "feature_count": 73937
+            "annotation_count": 78017,
+            "feature_count": 116739
         },
         "Mapping": {
             "display_name": "Mapping",
@@ -199,5 +189,5 @@
         "Aliases",
         "Publications"
     ],
-    "sqlite_mod_time": 1763859743
+    "sqlite_mod_time": 1764616003
 }
