@@ -39,7 +39,7 @@ $permission_items = [
         'why_write' => 'Admin interface needs to modify these files when you change settings',
     ],
     
-    // Metadata Directory - Sticky Bit for Write Safety
+    // Metadata Directory - SGID for Group Assignment
     [
         'name' => 'Metadata Directory',
         'description' => 'Parent directory for all configuration files',
@@ -48,9 +48,9 @@ $permission_items = [
         'required_perms' => '2775',
         'required_owner' => 'ubuntu',
         'required_group' => 'www-data',
-        'reason' => 'Sticky bit (2775) ensures only the file owner can delete their own files',
-        'why_write' => 'Web server needs to create/write files here. Sticky bit prevents accidental deletion by others',
-        'sticky_bit' => true,
+        'reason' => 'SGID (Set-Group-ID) bit (shown as \'s\' in permissions) ensures new files automatically get www-data as group',
+        'why_write' => 'Web server needs to create/write files here. SGID ensures group is always www-data without manual fixes',
+        'sgid_bit' => true,
     ],
     
     // Organism Directories
@@ -64,9 +64,9 @@ $permission_items = [
         'required_perms' => '2775',
         'required_owner' => 'ubuntu',
         'required_group' => 'www-data',
-        'reason' => 'Sticky bit protects files from accidental modification or deletion',
+        'reason' => 'SGID (Set-Group-ID) bit ensures new files automatically get www-data as group',
         'why_write' => 'Web server needs to read databases and organism.json files',
-        'sticky_bit' => true,
+        'sgid_bit' => true,
     ],
     
     // Organism.json Files - Require Write
@@ -104,9 +104,9 @@ $permission_items = [
         'required_perms' => '2775',
         'required_owner' => 'ubuntu',
         'required_group' => 'www-data',
-        'reason' => 'Sticky bit ensures only file owners can delete their logs',
+        'reason' => 'SGID (Set-Group-ID) bit ensures new log files automatically get www-data as group',
         'why_write' => 'Web server writes error and debug logs here',
-        'sticky_bit' => true,
+        'sgid_bit' => true,
     ],
     
     // Images Directory - Write for Uploads
@@ -118,9 +118,23 @@ $permission_items = [
         'required_perms' => '2775',
         'required_owner' => 'ubuntu',
         'required_group' => 'www-data',
-        'reason' => 'Sticky bit protects image files from accidental deletion',
+        'reason' => 'SGID (Set-Group-ID) bit ensures new image files automatically get www-data as group',
         'why_write' => 'Admin may upload new organism images via web interface',
-        'sticky_bit' => true,
+        'sgid_bit' => true,
+    ],
+    
+    // NCBI Taxonomy Images Cache - Write for Downloaded Images
+    [
+        'name' => 'NCBI Taxonomy Images Cache',
+        'description' => 'Cached images downloaded from NCBI taxonomy database',
+        'type' => 'directory',
+        'paths' => [$absolute_images_path . '/ncbi_taxonomy'],
+        'required_perms' => '2775',
+        'required_owner' => 'ubuntu',
+        'required_group' => 'www-data',
+        'reason' => 'SGID (Set-Group-ID) bit ensures downloaded taxonomy images automatically get www-data as group',
+        'why_write' => 'Web server downloads and caches organism images from NCBI when generating taxonomy tree',
+        'sgid_bit' => true,
     ],
     
     // Documentation Directory
@@ -132,9 +146,9 @@ $permission_items = [
         'required_perms' => '2775',
         'required_owner' => 'ubuntu',
         'required_group' => 'www-data',
-        'reason' => 'Sticky bit for consistency across system',
+        'reason' => 'SGID (Set-Group-ID) bit ensures new documentation files automatically get www-data as group',
         'why_write' => 'Docs may be updated through admin interface',
-        'sticky_bit' => true,
+        'sgid_bit' => true,
     ],
     
     // Backups Directory
@@ -146,9 +160,9 @@ $permission_items = [
         'required_perms' => '2775',
         'required_owner' => 'ubuntu',
         'required_group' => 'www-data',
-        'reason' => 'Sticky bit protects backup files from deletion',
+        'reason' => 'SGID (Set-Group-ID) bit ensures backup files automatically get www-data as group',
         'why_write' => 'Web server creates backup files when configs are updated',
-        'sticky_bit' => true,
+        'sgid_bit' => true,
     ],
     
     // Change Log Directory
@@ -160,9 +174,9 @@ $permission_items = [
         'required_perms' => '2775',
         'required_owner' => 'ubuntu',
         'required_group' => 'www-data',
-        'reason' => 'Sticky bit ensures audit trail integrity',
+        'reason' => 'SGID (Set-Group-ID) bit ensures change log files automatically get www-data as group',
         'why_write' => 'Web server logs all admin actions for auditing',
-        'sticky_bit' => true,
+        'sgid_bit' => true,
     ],
 ];
 
@@ -303,16 +317,17 @@ function performPermissionCheck($path, $item) {
         <div class="card-header bg-info bg-opacity-10">
             <h5 class="mb-0"><i class="fa fa-info-circle"></i> Why Permissions Matter</h5>
         </div>
-        <div class="card-body">
+         <div class="card-body">
             <p><strong>The web server (<?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?>) needs different permission levels for different files:</strong></p>
             <ul>
                 <li><strong>Read (644):</strong> Database files that are pre-built and read-only</li>
                 <li><strong>Read + Write (664):</strong> Configuration files that admins edit</li>
-                <li><strong>Directory with Sticky Bit (2775):</strong> Directories where files are created - sticky bit prevents accidental deletion by others</li>
+                <li><strong>Directory with SGID (2775):</strong> Directories where files are created - SGID ensures new files automatically inherit the group</li>
             </ul>
             <div class="mt-3 p-3 bg-light rounded">
-                <strong><i class="fa fa-sticky-note"></i> What is the Sticky Bit?</strong>
-                <p class="mb-0 mt-2">The sticky bit (represented by the first digit in 4-digit permissions) ensures that only the file owner can delete their own files, even if others have write permission to the directory. This protects important files from accidental deletion.</p>
+                <strong><i class="fa fa-sticky-note"></i> What is SGID (Set-Group-ID)?</strong>
+                <p class="mb-0 mt-2">SGID is the first digit in 4-digit permissions (the "2" in 2775). When set on a directory, it ensures all new files created within that directory automatically inherit the directory's group (www-data in our case). This displays as a lowercase <code>s</code> in the group execute position: <code>drwxrwsr-x</code>.</p>
+                <p class="mb-0 mt-2"><strong>Note:</strong> This is different from the sticky bit (which would show as <code>t</code> and uses "1" as the first digit, like 1775). SGID is what we use here for automatic group assignment.</p>
             </div>
         </div>
     </div>
@@ -355,11 +370,11 @@ function performPermissionCheck($path, $item) {
         <div class="card-header bg-success bg-opacity-10">
             <h5 class="mb-0"><i class="fa fa-star"></i> Best Practices</h5>
         </div>
-        <div class="card-body">
+         <div class="card-body">
             <ul>
                 <li><strong>Owner should always be:</strong> ubuntu (or the admin user)</li>
                 <li><strong>Group should always be:</strong> www-data (the web server user)</li>
-                <li><strong>Always use sticky bit (2775) on directories</strong> to prevent accidental file deletion</li>
+                <li><strong>Always use SGID (2775) on directories</strong> to auto-assign group to new files</li>
                 <li><strong>Use 664 for files that need write:</strong> Configuration JSONs, metadata files</li>
                 <li><strong>Use 644 for read-only files:</strong> Database files that don't change</li>
                 <li><strong>Never use 777 or 666:</strong> This allows anyone to access/modify files (security risk)</li>
@@ -400,7 +415,7 @@ function performPermissionCheck($path, $item) {
                         <td><code>2775</code></td>
                         <td>drwxrwsr-x</td>
                         <td>Shared directories</td>
-                        <td>Sticky bit + owner/group write. Prevents cross-user deletion</td>
+                        <td>SGID (2) + owner/group write. The <code>s</code> (SGID) ensures new files inherit the directory's group</td>
                     </tr>
                     <tr>
                         <td><code>775</code></td>
@@ -502,11 +517,11 @@ function performPermissionCheck($path, $item) {
                     <p class="mb-0 mt-2"><strong>Write Access:</strong> <?= htmlspecialchars($check['why_write']) ?></p>
                 </div>
                 
-                <!-- Sticky Bit Info -->
-                <?php if ($check['sticky_bit']): ?>
+                <!-- SGID Info -->
+                <?php if ($check['sgid_bit']): ?>
                 <div class="sticky-bit">
-                    <strong><i class="fa fa-sticky-note"></i> Sticky Bit (2775)</strong>
-                    <p class="mb-0 small mt-2">This directory uses the sticky bit to protect files. Only the file owner (ubuntu) can delete their files, even though the group (<?= htmlspecialchars($check['required_group']) ?>) can write.</p>
+                    <strong><i class="fa fa-sticky-note"></i> SGID (Set-Group-ID) - 2775</strong>
+                    <p class="mb-0 small mt-2">This directory uses SGID to auto-assign the group. Any new files created here automatically get <code><?= htmlspecialchars($check['required_group']) ?></code> as their group, displayed as lowercase <code>s</code> in the permissions: <code>drwxrwsr-x</code>.</p>
                 </div>
                 <?php endif; ?>
             </div>

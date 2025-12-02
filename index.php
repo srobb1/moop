@@ -27,12 +27,19 @@ $taxonomy_user_access = getTaxonomyTreeUserAccess($group_data);
 // Convert user_access to JSON for JavaScript
 $user_access_json = json_encode($taxonomy_user_access);
 
+$siteTitle = $config->getString('siteTitle');
+
 include_once __DIR__ . '/includes/header.php';
 ?>
 
 <body class="bg-light">
 <div class="container py-5">
   <!-- Page Header -->
+  <div class="text-center mb-5">
+    <h1 class="fw-bold mb-3"><?=$siteTitle?></h1>
+    <hr class="mx-auto page-header-divider">
+  </div>
+
 
   <!-- Site Info Card -->
   <div class="row g-4 justify-content-center mb-5">
@@ -40,7 +47,7 @@ include_once __DIR__ . '/includes/header.php';
       <div class="card h-100 shadow-sm border-0 rounded-3 bg-info bg-opacity-10">
         <div class="card-body">
           <h3 class="card-title fw-bold text-dark mb-3">
-            <i class="fa fa-info-circle"></i> About <?=$siteTitle?> Site
+            <i class="fa fa-info-circle"></i> About This Site
           </h3>
           <p class="card-text text-muted mb-0">
             <strong>MOOP</strong> — to keep company, associate closely. Explore and discover how diverse organisms associate closely together on one platform.
@@ -50,19 +57,16 @@ include_once __DIR__ . '/includes/header.php';
     </div>
   </div>
   
-  <!-- Page Divider Line -->
-  <div class="text-center mb-5">
-    <h1 class="fw-bold mb-3"><?=$siteTitle?></h1>
-    <hr class="mx-auto page-header-divider">
-  </div>
 
   <!-- Available Organisms Header -->
   <div class="text-center mb-4">
-    <h2 class="fw-bold mb-3">Available Organisms</h2>
+    <h3 class="fw-bold mb-3"></h3>
+    <!--- hide ip and access for now
     <p class="text-muted">
       <i class="fa fa-network-wired"></i> IP: <span class="fw-semibold"><?= htmlspecialchars($ip) ?></span>  
       &nbsp;|&nbsp; <i class="fa fa-user-shield"></i> Access: <span class="fw-semibold"><?= htmlspecialchars(get_access_level()) ?></span>
     </p>
+    -->
   </div>
 
   <!-- View Toggle -->
@@ -72,7 +76,7 @@ include_once __DIR__ . '/includes/header.php';
         <i class="fa fa-th"></i> Card View
       </button>
       <button type="button" class="btn btn-outline-primary" id="tree-view-btn" onclick="switchView('tree')">
-        <i class="fa fa-project-diagram"></i> Taxonomy Tree
+        <i class="fa fa-project-diagram"></i> Tree View
       </button>
     </div>
   </div>
@@ -124,7 +128,7 @@ include_once __DIR__ . '/includes/header.php';
             <div class="mt-3">
               <small class="text-muted">
                 <i class="fa fa-info-circle"></i> Click any node to select/deselect organisms. 
-                Selecting a higher branch selects all organisms below it.
+                Selecting a higher branch selects all organisms below it. Then select a tool to proceed.
               </small>
             </div>
           </div>
