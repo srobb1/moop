@@ -175,7 +175,7 @@ $permission_items = [
         'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'SGID (Set-Group-ID) bit ensures new banner files automatically get www-data as group',
-        'why_write' => 'Web server uploads new banners and deletes old ones through admin interface',
+        'why_write' => 'Web server uploads new banners and deletes old ones through admin interface. Existing files also need 664 permissions.',
         'sgid_bit' => true,
     ],
     
@@ -547,7 +547,13 @@ function performPermissionCheck($path, $item) {
                     <p class="mb-2"><strong>To fix, run:</strong></p>
                     <div class="fix-command">
                         sudo chmod <?= $check['required_perms'] ?> <?= escapeshellarg($check['path']) ?> && \<br>
-                        sudo chown <?= htmlspecialchars($moop_owner) ?>:<?= htmlspecialchars($check['required_group']) ?> <?= escapeshellarg($check['path']) ?>
+                        sudo chown -R <?= htmlspecialchars($moop_owner) ?>:<?= htmlspecialchars($check['required_group']) ?> <?= escapeshellarg($check['path']) ?>
+                        <?php if (strpos($check['path'], 'banners') !== false): ?>
+                        <br><br>
+                        <!-- Fix existing files in banners directory -->
+                        sudo chmod -R 664 <?= escapeshellarg($check['path']) ?> && \<br>
+                        sudo chmod <?= $check['required_perms'] ?> <?= escapeshellarg($check['path']) ?>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <?php endif; ?>
