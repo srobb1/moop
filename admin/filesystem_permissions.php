@@ -15,9 +15,22 @@ $site_path = $config->getPath('site_path');
 $root_path = $config->getPath('root_path');
 $docs_path = $config->getPath('docs_path');
 
-// Get web server user/group info
-$web_user = getenv('APACHE_RUN_USER') ?: getenv('NGINX_USER') ?: 'www-data';
-$web_group = getenv('APACHE_RUN_GROUP') ?: getenv('NGINX_GROUP') ?: 'www-data';
+// Get web server user/group info from system
+$webserver = getWebServerUser();
+$web_user = $webserver['user'];
+$web_group = $webserver['group'];
+
+// Get moop owner from /moop directory (where the actual files are owned)
+$moop_owner = 'ubuntu';  // Default fallback
+if (function_exists('posix_getpwuid')) {
+    $moop_info = @stat(__DIR__ . '/..');  // Get stat of /moop parent directory
+    if ($moop_info) {
+        $moop_pwd = posix_getpwuid($moop_info['uid']);
+        if ($moop_pwd) {
+            $moop_owner = $moop_pwd['name'];
+        }
+    }
+}
 
 // Define all required permissions
 $permission_items = [
@@ -33,7 +46,7 @@ $permission_items = [
             $metadata_path . '/organism_assembly_groups.json',
         ],
         'required_perms' => '664',
-        'required_owner' => 'ubuntu',
+        'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'Configuration files are edited by admins and read by the web server',
         'why_write' => 'Admin interface needs to modify these files when you change settings',
@@ -46,7 +59,7 @@ $permission_items = [
         'type' => 'directory',
         'paths' => [$metadata_path],
         'required_perms' => '2775',
-        'required_owner' => 'ubuntu',
+        'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'SGID (Set-Group-ID) bit (shown as \'s\' in permissions) ensures new files automatically get www-data as group',
         'why_write' => 'Web server needs to create/write files here. SGID ensures group is always www-data without manual fixes',
@@ -62,7 +75,7 @@ $permission_items = [
             $organism_data,
         ],
         'required_perms' => '2775',
-        'required_owner' => 'ubuntu',
+        'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'SGID (Set-Group-ID) bit ensures new files automatically get www-data as group',
         'why_write' => 'Web server needs to read databases and organism.json files',
@@ -76,7 +89,7 @@ $permission_items = [
         'type' => 'file_pattern',
         'pattern' => 'organisms/*/organism.json',
         'required_perms' => '664',
-        'required_owner' => 'ubuntu',
+        'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'Edited by admin interface, read by web server',
         'why_write' => 'Admin can update organism metadata (descriptions, images, feature types)',
@@ -89,7 +102,7 @@ $permission_items = [
         'type' => 'file_pattern',
         'pattern' => 'organisms/*/organism.sqlite',
         'required_perms' => '644',
-        'required_owner' => 'ubuntu',
+        'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'Web server reads data; files are pre-built and not modified',
         'why_write' => 'Database files must be readable by web server but typically not written to',
@@ -102,7 +115,7 @@ $permission_items = [
         'type' => 'directory',
         'paths' => [$site_path . '/logs'],
         'required_perms' => '2775',
-        'required_owner' => 'ubuntu',
+        'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'SGID (Set-Group-ID) bit ensures new log files automatically get www-data as group',
         'why_write' => 'Web server writes error and debug logs here',
@@ -116,7 +129,7 @@ $permission_items = [
         'type' => 'directory',
         'paths' => [$absolute_images_path],
         'required_perms' => '2775',
-        'required_owner' => 'ubuntu',
+        'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'SGID (Set-Group-ID) bit ensures new image files automatically get www-data as group',
         'why_write' => 'Admin may upload new organism images via web interface',
@@ -130,7 +143,7 @@ $permission_items = [
         'type' => 'directory',
         'paths' => [$absolute_images_path . '/ncbi_taxonomy'],
         'required_perms' => '2775',
-        'required_owner' => 'ubuntu',
+        'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'SGID (Set-Group-ID) bit ensures downloaded taxonomy images automatically get www-data as group',
         'why_write' => 'Web server downloads and caches organism images from NCBI when generating taxonomy tree',
@@ -144,7 +157,7 @@ $permission_items = [
         'type' => 'directory',
         'paths' => [$docs_path],
         'required_perms' => '2775',
-        'required_owner' => 'ubuntu',
+        'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'SGID (Set-Group-ID) bit ensures new documentation files automatically get www-data as group',
         'why_write' => 'Docs may be updated through admin interface',
@@ -158,7 +171,7 @@ $permission_items = [
         'type' => 'directory',
         'paths' => [$metadata_path . '/backups'],
         'required_perms' => '2775',
-        'required_owner' => 'ubuntu',
+        'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'SGID (Set-Group-ID) bit ensures backup files automatically get www-data as group',
         'why_write' => 'Web server creates backup files when configs are updated',
@@ -172,7 +185,7 @@ $permission_items = [
         'type' => 'directory',
         'paths' => [$metadata_path . '/change_log'],
         'required_perms' => '2775',
-        'required_owner' => 'ubuntu',
+        'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'SGID (Set-Group-ID) bit ensures change log files automatically get www-data as group',
         'why_write' => 'Web server logs all admin actions for auditing',
@@ -372,8 +385,8 @@ function performPermissionCheck($path, $item) {
         </div>
          <div class="card-body">
             <ul>
-                <li><strong>Owner should always be:</strong> ubuntu (or the admin user)</li>
-                <li><strong>Group should always be:</strong> www-data (the web server user)</li>
+                <li><strong>Owner should always be:</strong> <code><?= htmlspecialchars($moop_owner) ?></code> (detected from system)</li>
+                <li><strong>Group should always be:</strong> <code><?= htmlspecialchars($web_group) ?></code> (detected from system)</li>
                 <li><strong>Always use SGID (2775) on directories</strong> to auto-assign group to new files</li>
                 <li><strong>Use 664 for files that need write:</strong> Configuration JSONs, metadata files</li>
                 <li><strong>Use 644 for read-only files:</strong> Database files that don't change</li>
@@ -505,7 +518,7 @@ function performPermissionCheck($path, $item) {
                     <p class="mb-2"><strong>To fix, run:</strong></p>
                     <div class="fix-command">
                         sudo chmod <?= $check['required_perms'] ?> <?= escapeshellarg($check['path']) ?> && \<br>
-                        sudo chown ubuntu:<?= htmlspecialchars($check['required_group']) ?> <?= escapeshellarg($check['path']) ?>
+                        sudo chown <?= htmlspecialchars($moop_owner) ?>:<?= htmlspecialchars($check['required_group']) ?> <?= escapeshellarg($check['path']) ?>
                     </div>
                 </div>
                 <?php endif; ?>
