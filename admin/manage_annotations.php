@@ -579,7 +579,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
 
 <!-- Edit Type Description Modal -->
 <div class="modal fade" id="editTypeDescModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Edit Description: <span id="editTypeDescName"></span></h5>
