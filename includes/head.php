@@ -33,6 +33,9 @@ $site = $config->getString('site');
     <!-- MOOP Base Styles (global styles + loader animation) -->
     <link rel="stylesheet" href="/<?= $site ?>/css/moop.css">
     
+    <!-- Display Styles (feature colors, badges, etc.) -->
+    <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
+    
     <!-- Optional custom CSS if defined in config -->
     <?php
       $custom_css_path = $config->getPath('custom_css_path', '');
