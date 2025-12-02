@@ -2,8 +2,28 @@
 include_once __DIR__ . '/admin_init.php';
 
 $config_dir = $config->getPath('root_path') . '/' . $config->getString('site') . '/config';
+$banners_path = $config->getPath('absolute_images_path') . '/banners';
 $message = '';
 $error = '';
+
+// Handle banner deletion via AJAX
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_banner') {
+    $filename = $_POST['filename'] ?? '';
+    if (!empty($filename) && preg_match('/^[a-zA-Z0-9._-]+$/', $filename)) {
+        $file_path = $banners_path . '/' . basename($filename);
+        if (file_exists($file_path) && is_file($file_path)) {
+            if (unlink($file_path)) {
+                echo json_encode(['success' => true, 'message' => 'Banner deleted']);
+                exit;
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to delete file']);
+                exit;
+            }
+        }
+    }
+    echo json_encode(['success' => false, 'message' => 'Invalid file']);
+    exit;
+}
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -110,6 +130,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Get editable config metadata
 $editable_config = $config->getEditableConfigMetadata();
+
+// Get list of banner images in banners directory
+$banner_images = [];
+if (is_dir($banners_path)) {
+    $files = scandir($banners_path);
+    $allowed_ext = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    foreach ($files as $file) {
+        if ($file[0] === '.') continue;
+        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+        if (in_array($ext, $allowed_ext)) {
+            $banner_images[] = $file;
+        }
+    }
+    sort($banner_images);
+}
 
 // Check file permissions
 $config_file = $config_dir . '/config_editable.json';
@@ -311,18 +346,67 @@ if (!$file_writable && file_exists($config_file)) {
                                 <strong>Max size:</strong> <?= $editable_config['header_img']['upload_info']['max_size_mb'] ?> MB
                             </div>
                             
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Current Image:</label>
-                                    <code><?= htmlspecialchars($editable_config['header_img']['current_value']) ?></code>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="header_upload" class="form-label">Upload New Image:</label>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="header_upload" class="form-label"><strong>Upload New Banner Image:</strong></label>
                                     <input type="file" class="form-control" id="header_upload" name="header_upload" accept="image/*">
                                     <small class="form-text text-muted">Leave empty to keep current image</small>
                                 </div>
                             </div>
-                            <input type="hidden" name="header_img" value="<?= htmlspecialchars($editable_config['header_img']['current_value']) ?>">
+                            
+                            <!-- Banner Images Gallery -->
+                            <?php if (!empty($banner_images)): ?>
+                            <div class="mb-4">
+                                <label><strong>Banner Images in Directory:</strong></label>
+                                <p class="text-muted small mb-3">Select fallback image to use if banner directory is empty.</p>
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 60px;">Use as<br>Fallback</th>
+                                                <th style="width: 150px;">Preview</th>
+                                                <th>Filename</th>
+                                                <th style="width: 80px;">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($banner_images as $banner_file): ?>
+                                            <tr>
+                                                <td class="text-center">
+                                                    <input type="radio" 
+                                                           name="header_img" 
+                                                           value="<?= htmlspecialchars($banner_file) ?>"
+                                                           <?= ($editable_config['header_img']['current_value'] === $banner_file) ? 'checked' : '' ?>>
+                                                </td>
+                                                <td>
+                                                    <img src="<?= htmlspecialchars($config->getPath('images_path')) ?>/banners/<?= htmlspecialchars($banner_file) ?>" 
+                                                         class="img-fluid" 
+                                                         style="max-height: 100px; max-width: 150px; object-fit: cover;"
+                                                         alt="<?= htmlspecialchars($banner_file) ?>">
+                                                </td>
+                                                <td>
+                                                    <code><?= htmlspecialchars($banner_file) ?></code>
+                                                    <?php if ($editable_config['header_img']['current_value'] === $banner_file): ?>
+                                                    <br><span class="badge bg-primary">Current Fallback</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="text-center">
+                                                    <button type="button" class="btn btn-sm btn-danger delete-banner" data-filename="<?= htmlspecialchars($banner_file) ?>">
+                                                        <i class="fa fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <?php else: ?>
+                            <div class="alert alert-warning">
+                                <i class="fa fa-info-circle"></i> No banner images found in <code><?= htmlspecialchars($banners_path) ?></code>
+                            </div>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Favicon Path -->
@@ -538,6 +622,40 @@ document.querySelectorAll('.remove-ip-range').forEach(btn => {
             emptyRow.innerHTML = '<td colspan="3" class="text-center text-muted"><em>No IP ranges configured</em></td>';
             tbody.appendChild(emptyRow);
         }
+    });
+});
+
+// Banner image deletion
+document.querySelectorAll('.delete-banner').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const filename = this.getAttribute('data-filename');
+        
+        if (!confirm('Delete banner image: ' + filename + '?')) {
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('action', 'delete_banner');
+        formData.append('filename', filename);
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload page to refresh banner list
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete banner');
+        });
     });
 });
 </script>
