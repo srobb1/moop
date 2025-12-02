@@ -12,6 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = [
             'siteTitle' => $_POST['siteTitle'] ?? '',
             'admin_email' => $_POST['admin_email'] ?? '',
+            'header_img' => $_POST['header_img'] ?? '',
+            'favicon_path' => $_POST['favicon_path'] ?? '',
         ];
         
         // Parse sequence types from form
@@ -28,15 +30,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['sequence_types'] = $sequence_types;
         }
         
-        // Save
-        $result = $config->saveEditableConfig($data, $config_dir);
-        
-        if ($result['success']) {
-            $message = $result['message'];
-            // Reload config to show updated values
-            $editable_config = $config->getEditableConfigMetadata();
+        // Parse IP ranges from form
+        if (isset($_POST['auto_login_ip_ranges']) && is_array($_POST['auto_login_ip_ranges'])) {
+            $ip_ranges = [];
+            foreach ($_POST['auto_login_ip_ranges'] as $range) {
+                if (!empty($range['start']) && !empty($range['end'])) {
+                    $ip_ranges[] = [
+                        'start' => trim($range['start']),
+                        'end' => trim($range['end']),
+                    ];
+                }
+            }
+            $data['auto_login_ip_ranges'] = $ip_ranges;
         } else {
-            $error = $result['message'];
+            $data['auto_login_ip_ranges'] = [];
+        }
+        
+        // Handle file upload for header image
+        if (isset($_FILES['header_upload']) && $_FILES['header_upload']['error'] == UPLOAD_ERR_OK) {
+            $banners_path = $config->getPath('absolute_images_path') . '/banners';
+            
+            // Create banners directory if it doesn't exist
+            if (!is_dir($banners_path)) {
+                @mkdir($banners_path, 0775, true);
+            }
+            
+            $file = $_FILES['header_upload'];
+            $allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            $max_size = 5 * 1024 * 1024; // 5MB
+            
+            $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            
+            // Validate file
+            if (!in_array($file_ext, $allowed_types)) {
+                $error = "Invalid file type. Allowed: " . implode(', ', $allowed_types);
+            } elseif ($file['size'] > $max_size) {
+                $error = "File too large. Maximum: 5MB";
+            } else {
+                // Get image dimensions
+                $img_info = @getimagesize($file['tmp_name']);
+                if ($img_info === false) {
+                    $error = "Invalid image file";
+                } else {
+                    $width = $img_info[0];
+                    $height = $img_info[1];
+                    
+                    if ($width < 1200 || $width > 4000 || $height < 200 || $height > 500) {
+                        $error = "Image dimensions must be 1200-4000px wide and 200-500px tall. Your image: {$width}x{$height}";
+                    } else {
+                        // Upload successful
+                        $filename = 'header_img.' . $file_ext;
+                        $destination = $banners_path . '/' . $filename;
+                        
+                        if (move_uploaded_file($file['tmp_name'], $destination)) {
+                            $data['header_img'] = $filename;
+                        } else {
+                            $error = "Failed to save uploaded file. Check directory permissions.";
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Save if no upload error
+        if (empty($error)) {
+            $result = $config->saveEditableConfig($data, $config_dir);
+            
+            if ($result['success']) {
+                $message = $result['message'];
+                // Reload config to show updated values
+                $editable_config = $config->getEditableConfigMetadata();
+            } else {
+                $error = $result['message'];
+            }
         }
     }
 }
@@ -135,7 +201,7 @@ if (!$file_writable && file_exists($config_file)) {
                     <h5 class="mb-0"><i class="fa fa-edit"></i> Edit Configuration</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" id="configForm">
+                    <form method="post" id="configForm" enctype="multipart/form-data">
                         <input type="hidden" name="action" value="save_config">
                         
                         <!-- Site Title -->
@@ -229,6 +295,116 @@ if (!$file_writable && file_exists($config_file)) {
                             </small>
                         </div>
 
+                        <!-- Header Image Upload -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <strong><?= htmlspecialchars($editable_config['header_img']['label']) ?></strong>
+                            </label>
+                            <p class="text-muted small mb-3">
+                                <?= htmlspecialchars($editable_config['header_img']['description']) ?>
+                            </p>
+                            
+                            <div class="alert alert-info mb-3">
+                                <strong>Recommended:</strong> <?= $editable_config['header_img']['upload_info']['recommended_dimensions'] ?> <br>
+                                <strong>Accepted:</strong> <?= implode(', ', array_map('strtoupper', $editable_config['header_img']['upload_info']['allowed_types'])) ?> <br>
+                                <strong>Max size:</strong> <?= $editable_config['header_img']['upload_info']['max_size_mb'] ?> MB
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Current Image:</label>
+                                    <code><?= htmlspecialchars($editable_config['header_img']['current_value']) ?></code>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="header_upload" class="form-label">Upload New Image:</label>
+                                    <input type="file" class="form-control" id="header_upload" name="header_upload" accept="image/*">
+                                    <small class="form-text text-muted">Leave empty to keep current image</small>
+                                </div>
+                            </div>
+                            <input type="hidden" name="header_img" value="<?= htmlspecialchars($editable_config['header_img']['current_value']) ?>">
+                        </div>
+
+                        <!-- Favicon Path -->
+                        <div class="mb-4">
+                            <label for="favicon_path" class="form-label">
+                                <strong><?= htmlspecialchars($editable_config['favicon_path']['label']) ?></strong>
+                            </label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="favicon_path" 
+                                name="favicon_path" 
+                                value="<?= htmlspecialchars($editable_config['favicon_path']['current_value']) ?>"
+                                maxlength="<?= $editable_config['favicon_path']['max_length'] ?>"
+                                placeholder="/moop/images/favicon.ico">
+                            <small class="form-text text-muted">
+                                <?= htmlspecialchars($editable_config['favicon_path']['description']) ?> <br>
+                                <?= htmlspecialchars($editable_config['favicon_path']['note']) ?>
+                            </small>
+                        </div>
+
+                        <!-- Auto-Login IP Ranges -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <strong><?= htmlspecialchars($editable_config['auto_login_ip_ranges']['label']) ?></strong>
+                            </label>
+                            <div class="alert alert-warning mb-3">
+                                <i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($editable_config['auto_login_ip_ranges']['note']) ?>
+                            </div>
+                            <p class="text-muted small mb-3">
+                                <?= htmlspecialchars($editable_config['auto_login_ip_ranges']['description']) ?>
+                            </p>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>IP Range Start</th>
+                                            <th>IP Range End</th>
+                                            <th style="width: 60px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ip_ranges_tbody">
+                                        <?php if (empty($editable_config['auto_login_ip_ranges']['current_value'])): ?>
+                                        <tr class="no-ranges-row">
+                                            <td colspan="3" class="text-center text-muted"><em>No IP ranges configured</em></td>
+                                        </tr>
+                                        <?php else: ?>
+                                            <?php foreach ($editable_config['auto_login_ip_ranges']['current_value'] as $idx => $range): ?>
+                                        <tr class="ip-range-row">
+                                            <td>
+                                                <input type="text" 
+                                                       name="auto_login_ip_ranges[<?= $idx ?>][start]" 
+                                                       value="<?= htmlspecialchars($range['start']) ?>"
+                                                       class="form-control form-control-sm"
+                                                       placeholder="192.168.1.0">
+                                            </td>
+                                            <td>
+                                                <input type="text" 
+                                                       name="auto_login_ip_ranges[<?= $idx ?>][end]" 
+                                                       value="<?= htmlspecialchars($range['end']) ?>"
+                                                       class="form-control form-control-sm"
+                                                       placeholder="192.168.1.255">
+                                            </td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-danger remove-ip-range">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-secondary" id="add_ip_range">
+                                <i class="fa fa-plus"></i> Add IP Range
+                            </button>
+                            <small class="form-text text-muted d-block mt-2">
+                                Example: 127.0.0.0 to 127.0.0.255 for localhost
+                            </small>
+                        </div>
+
                         <!-- Submit -->
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary" id="saveBtn" <?= !$file_writable ? 'disabled' : '' ?>>
@@ -296,6 +472,74 @@ if (!$file_writable && file_exists($config_file)) {
 </div>
 
 <?php include_once __DIR__ . '/../includes/footer.php'; ?>
+
+<script>
+// IP Ranges management
+let ipRangeCounter = 0;
+
+document.getElementById('add_ip_range')?.addEventListener('click', function() {
+    const tbody = document.getElementById('ip_ranges_tbody');
+    
+    // Remove "no ranges" message if present
+    const noRangesRow = tbody.querySelector('.no-ranges-row');
+    if (noRangesRow) {
+        noRangesRow.remove();
+    }
+    
+    const row = document.createElement('tr');
+    row.className = 'ip-range-row';
+    row.innerHTML = `
+        <td>
+            <input type="text" 
+                   name="auto_login_ip_ranges[${ipRangeCounter}][start]" 
+                   class="form-control form-control-sm"
+                   placeholder="192.168.1.0">
+        </td>
+        <td>
+            <input type="text" 
+                   name="auto_login_ip_ranges[${ipRangeCounter}][end]" 
+                   class="form-control form-control-sm"
+                   placeholder="192.168.1.255">
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-danger remove-ip-range">
+                <i class="fa fa-trash"></i>
+            </button>
+        </td>
+    `;
+    
+    tbody.appendChild(row);
+    ipRangeCounter++;
+    
+    // Attach delete handler
+    row.querySelector('.remove-ip-range').addEventListener('click', function() {
+        row.remove();
+        
+        // If no rows left, show "no ranges" message
+        if (tbody.querySelectorAll('.ip-range-row').length === 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.className = 'no-ranges-row';
+            emptyRow.innerHTML = '<td colspan="3" class="text-center text-muted"><em>No IP ranges configured</em></td>';
+            tbody.appendChild(emptyRow);
+        }
+    });
+});
+
+// Attach delete handlers to existing rows
+document.querySelectorAll('.remove-ip-range').forEach(btn => {
+    btn.addEventListener('click', function() {
+        this.closest('.ip-range-row').remove();
+        
+        const tbody = document.getElementById('ip_ranges_tbody');
+        if (tbody.querySelectorAll('.ip-range-row').length === 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.className = 'no-ranges-row';
+            emptyRow.innerHTML = '<td colspan="3" class="text-center text-muted"><em>No IP ranges configured</em></td>';
+            tbody.appendChild(emptyRow);
+        }
+    });
+});
+</script>
 
 </body>
 </html>

@@ -19,11 +19,11 @@
             "label": "Genome"
         }
     },
-    "header_img": "header_img.png",
-    "favicon_path": "/moop/images/favicon.ico",
+    "header_img": "",
+    "favicon_path": "",
     "auto_login_ip_ranges": [],
     "_metadata": {
-        "last_updated": "2025-12-02T21:46:38+00:00",
+        "last_updated": "2025-12-02T22:02:09+00:00",
         "last_updated_by": "admin"
     }
 }
