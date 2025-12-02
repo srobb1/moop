@@ -445,11 +445,11 @@ $organisms = $organisms;
                    $in_taxonomy_tree = isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
                  ?>
                  <?php if ($in_taxonomy_tree): ?>
-                   <a href="manage_taxonomy_tree.php" class="btn btn-sm btn-outline-success" title="Click to manage taxonomy tree">
+                   <a href="manage_taxonomy_tree.php" target="_blank" class="btn btn-sm btn-outline-success" title="Click to manage taxonomy tree">
                      <i class="fa fa-check-circle"></i> Complete
                    </a>
                  <?php else: ?>
-                   <a href="manage_taxonomy_tree.php" class="btn btn-sm btn-outline-warning" title="Click to add to taxonomy tree">
+                   <a href="manage_taxonomy_tree.php" target="_blank" class="btn btn-sm btn-outline-warning" title="Click to add to taxonomy tree">
                      <i class="fa fa-times-circle"></i> Missing
                    </a>
                  <?php endif; ?>
