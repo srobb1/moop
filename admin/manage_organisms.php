@@ -10,11 +10,7 @@ $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
 $sequence_types = $config->getSequenceTypes();
 $groups_data = getGroupData();
-$phylo_tree_path = $config->getPath('phylo_tree_path');
-$phylo_tree_data = [];
-if (file_exists($phylo_tree_path . '/tree.json')) {
-    $phylo_tree_data = json_decode(file_get_contents($phylo_tree_path . '/tree.json'), true) ?? [];
-}
+$phylo_tree_file = $config->getPath('metadata_path') . '/phylo_tree_config.json';
 
 // Get all organisms info once (used by both AJAX handler and page display)
 $organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);
@@ -358,6 +354,7 @@ $organisms = $organisms;
            <tr>
              <th>Organism</th>
              <th>Common Name</th>
+             <th>Tree Status</th>
              <th>Assemblies</th>
              <th>DB Status</th>
              <th>Metadata Status</th>
@@ -381,6 +378,20 @@ $organisms = $organisms;
                        echo '<span class="text-muted">-</span>';
                    }
                  ?>
+               </td>
+               <td>
+                 <?php 
+                   $in_phylo_tree = isAssemblyInPhyloTree($organism, '', $phylo_tree_file);
+                 ?>
+                 <?php if ($in_phylo_tree): ?>
+                   <a href="manage_phylo_tree.php" class="btn btn-sm btn-outline-success" title="Click to manage phylo tree">
+                     <i class="fa fa-check-circle"></i> Complete
+                   </a>
+                 <?php else: ?>
+                   <a href="manage_phylo_tree.php" class="btn btn-sm btn-outline-warning" title="Click to add to phylo tree">
+                     <i class="fa fa-times-circle"></i> Missing
+                   </a>
+                 <?php endif; ?>
                </td>
                <td>
                  <span class="badge bg-secondary"><?= count($data['assemblies']) ?> assemblies</span>
@@ -973,9 +984,6 @@ $organisms = $organisms;
         // Get group membership
         $assembly_groups = getAssemblyGroups($organism, $assembly, $groups_data);
         
-        // Check phylo tree membership
-        $in_phylo_tree = isAssemblyInPhyloTree($organism, $assembly, $phylo_tree_data);
-        
         // Find if this assembly has database validation info
         $has_db_mismatch = false;
         $db_mismatch_messages = [];
@@ -1234,22 +1242,6 @@ $organisms = $organisms;
                 </div>
               </div>
 
-              <!-- Phylogenetic Tree Status -->
-              <h6 class="fw-bold mb-2"><i class="fa fa-tree"></i> Phylogenetic Tree</h6>
-              <div class="card mb-3 <?= $in_phylo_tree ? 'border-success' : 'border-warning' ?>">
-                <div class="card-body small">
-                  <?php if ($in_phylo_tree): ?>
-                    <p class="mb-2"><span class="badge bg-success"><i class="fa fa-check"></i> In Tree</span></p>
-                    <p class="text-muted mb-3">This assembly is included in the phylogenetic tree.</p>
-                  <?php else: ?>
-                    <p class="mb-2"><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Not in Tree</span></p>
-                    <p class="text-muted mb-3">This assembly is not currently included in the phylogenetic tree.</p>
-                  <?php endif; ?>
-                  <a href="manage_phylo_tree.php" class="btn btn-sm btn-outline-primary">
-                    <i class="fa fa-edit"></i> Manage Phylo Tree
-                  </a>
-                </div>
-              </div>
 
               <!-- Status Summary -->
               <div class="alert <?= ($is_missing || $has_db_mismatch) ? 'alert-danger' : 'alert-success' ?>">

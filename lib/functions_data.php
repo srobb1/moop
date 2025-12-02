@@ -624,23 +624,23 @@ function getAssemblyGroups($organism, $assembly, $groups_data) {
 }
 
 /**
- * Check if an assembly is in the phylogenetic tree
+ * Check if an organism is in the phylogenetic tree
  * @param string $organism Organism name
- * @param string $assembly Assembly name
- * @param array $tree_data Phylo tree data
- * @return bool True if assembly is in tree, false otherwise
+ * @param string $assembly Assembly name (optional, can be empty)
+ * @param string $tree_file Path to phylo_tree_config.json file
+ * @return bool True if organism is in tree, false otherwise
  */
-function isAssemblyInPhyloTree($organism, $assembly, $tree_data) {
-    if (empty($tree_data['taxa']) || !is_array($tree_data['taxa'])) {
+function isAssemblyInPhyloTree($organism, $assembly, $tree_file) {
+    if (!file_exists($tree_file)) {
         return false;
     }
     
-    foreach ($tree_data['taxa'] as $taxon) {
-        if ($taxon['organism'] === $organism && $taxon['assembly'] === $assembly) {
-            return true;
-        }
+    $tree_content = file_get_contents($tree_file);
+    if (!$tree_content) {
+        return false;
     }
     
-    return false;
+    // Simply search for the organism name in the tree file
+    return strpos($tree_content, '"organism": "' . $organism . '"') !== false;
 }
 
