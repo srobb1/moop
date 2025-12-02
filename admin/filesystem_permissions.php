@@ -34,7 +34,22 @@ if (function_exists('posix_getpwuid')) {
 
 // Define all required permissions
 $permission_items = [
-    // Configuration Files - Require Write
+    // Site Configuration Files - Require Write
+    [
+        'name' => 'Site Configuration Files',
+        'description' => 'Site configuration files edited through admin interface',
+        'type' => 'file',
+        'paths' => [
+            $config->getPath('root_path') . '/' . $config->getString('site') . '/config/config_editable.json',
+        ],
+        'required_perms' => '664',
+        'required_owner' => $moop_owner,
+        'required_group' => 'www-data',
+        'reason' => 'Site configuration is edited by admins through the web interface',
+        'why_write' => 'Admin interface needs to save changed site settings (title, email, etc.)',
+    ],
+    
+    // Metadata Configuration Files - Require Write
     [
         'name' => 'Metadata Configuration Files',
         'description' => 'JSON configuration files for annotations, taxonomy, and groups',

@@ -103,6 +103,21 @@ class ConfigManager
             return false;
         }
 
+        // Load editable configuration (overrides defaults from site_config.php)
+        $editable_config_path = dirname($site_config_path) . '/config_editable.json';
+        if (file_exists($editable_config_path)) {
+            $editable_config = json_decode(file_get_contents($editable_config_path), true);
+            if (is_array($editable_config)) {
+                // Only merge allowed keys to prevent overriding structural config
+                $allowed_editable_keys = ['siteTitle', 'admin_email'];
+                foreach ($allowed_editable_keys as $key) {
+                    if (isset($editable_config[$key])) {
+                        $this->config[$key] = $editable_config[$key];
+                    }
+                }
+            }
+        }
+
         // Load tool configuration
         if (!file_exists($tools_config_path)) {
             $this->errors[] = "Tools config not found: $tools_config_path";
@@ -450,6 +465,98 @@ class ConfigManager
     public function isLoaded()
     {
         return $this->loaded;
+    }
+
+    /**
+     * Save editable configuration to config_editable.json
+     * Only allows specific keys to be edited (whitelist approach)
+     * 
+     * @param array $data Key-value pairs to save
+     * @param string $config_dir Directory containing config_editable.json
+     * @return array ['success' => bool, 'message' => string]
+     */
+    public function saveEditableConfig($data, $config_dir)
+    {
+        // Whitelist of allowed editable keys
+        $allowed_keys = ['siteTitle', 'admin_email'];
+        
+        // Filter to only allowed keys
+        $editable_data = [];
+        foreach ($allowed_keys as $key) {
+            if (isset($data[$key])) {
+                // Validate email
+                if ($key === 'admin_email' && !empty($data[$key])) {
+                    if (!filter_var($data[$key], FILTER_VALIDATE_EMAIL)) {
+                        return [
+                            'success' => false,
+                            'message' => 'Invalid email address'
+                        ];
+                    }
+                }
+                $editable_data[$key] = trim($data[$key]);
+            }
+        }
+        
+        $config_file = $config_dir . '/config_editable.json';
+        
+        // Add metadata
+        $editable_data['_metadata'] = [
+            'last_updated' => date('c'),
+            'last_updated_by' => get_username() ?? 'unknown'
+        ];
+        
+        $json = json_encode($editable_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        
+        if ($json === false) {
+            return [
+                'success' => false,
+                'message' => 'Failed to encode config: ' . json_last_error_msg()
+            ];
+        }
+        
+        if (file_put_contents($config_file, $json) === false) {
+            return [
+                'success' => false,
+                'message' => "Failed to write config file. Check file permissions on: $config_file"
+            ];
+        }
+        
+        // Update in-memory config
+        foreach ($editable_data as $key => $value) {
+            if ($key !== '_metadata') {
+                $this->config[$key] = $value;
+            }
+        }
+        
+        return [
+            'success' => true,
+            'message' => 'Configuration saved successfully'
+        ];
+    }
+
+    /**
+     * Get editable configuration keys and their current values
+     * 
+     * @return array Array of editable config items with metadata
+     */
+    public function getEditableConfigMetadata()
+    {
+        return [
+            'siteTitle' => [
+                'label' => 'Site Title',
+                'description' => 'The name displayed on the website (header, browser tab, etc.)',
+                'type' => 'text',
+                'current_value' => $this->getString('siteTitle', ''),
+                'max_length' => 100,
+            ],
+            'admin_email' => [
+                'label' => 'Administrator Email',
+                'description' => 'Contact email for site administrators',
+                'type' => 'email',
+                'current_value' => $this->getString('admin_email', ''),
+                'max_length' => 255,
+            ],
+        ];
     }
 }
 
