@@ -1,14 +1,16 @@
 <?php
-include_once __DIR__ . '/admin_init.php';
-
-$config_dir = $config->getPath('root_path') . '/' . $config->getString('site') . '/config';
-$banners_path = $config->getPath('absolute_images_path') . '/banners';
-$message = '';
-$error = '';
-
-// Handle banner deletion via AJAX
+// Handle banner deletion via AJAX BEFORE including admin_init (which includes navbar/HTML)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_banner') {
+    // Minimal init just for config
+    include_once __DIR__ . '/../includes/ConfigManager.php';
+    $config = ConfigManager::getInstance();
+    $config->initialize(__DIR__ . '/../config/site_config.php', __DIR__ . '/../config/tools_config.php');
+    
+    $banners_path = $config->getPath('absolute_images_path') . '/banners';
     $filename = $_POST['filename'] ?? '';
+    
+    header('Content-Type: application/json');
+    
     if (!empty($filename) && preg_match('/^[a-zA-Z0-9._-]+$/', $filename)) {
         $file_path = $banners_path . '/' . basename($filename);
         if (file_exists($file_path) && is_file($file_path)) {
@@ -24,6 +26,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     echo json_encode(['success' => false, 'message' => 'Invalid file']);
     exit;
 }
+
+// Now include admin_init for regular page loads
+include_once __DIR__ . '/admin_init.php';
+
+$config_dir = $config->getPath('root_path') . '/' . $config->getString('site') . '/config';
+$banners_path = $config->getPath('absolute_images_path') . '/banners';
+$message = '';
+$error = '';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
