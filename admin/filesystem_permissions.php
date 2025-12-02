@@ -165,6 +165,20 @@ $permission_items = [
         'sgid_bit' => true,
     ],
     
+    // Banner Images Directory - Write for Upload/Delete
+    [
+        'name' => 'Banner Images Directory',
+        'description' => 'Banner images managed through site configuration interface',
+        'type' => 'directory',
+        'paths' => [$absolute_images_path . '/banners'],
+        'required_perms' => '2775',
+        'required_owner' => $moop_owner,
+        'required_group' => 'www-data',
+        'reason' => 'SGID (Set-Group-ID) bit ensures new banner files automatically get www-data as group',
+        'why_write' => 'Web server uploads new banners and deletes old ones through admin interface',
+        'sgid_bit' => true,
+    ],
+    
     // Documentation Directory
     [
         'name' => 'Documentation Directory',
