@@ -357,7 +357,71 @@ function performPermissionCheck($path, $item) {
         </div>
     </div>
     
-    <!-- Detailed Permission Groups -->
+
+        <!-- Summary & Best Practices -->
+    <div class="card mb-4 border-success">
+        <div class="card-header bg-success bg-opacity-10">
+            <h5 class="mb-0"><i class="fa fa-star"></i> Best Practices</h5>
+        </div>
+        <div class="card-body">
+            <ul>
+                <li><strong>Owner should always be:</strong> ubuntu (or the admin user)</li>
+                <li><strong>Group should always be:</strong> www-data (the web server user)</li>
+                <li><strong>Always use sticky bit (2775) on directories</strong> to prevent accidental file deletion</li>
+                <li><strong>Use 664 for files that need write:</strong> Configuration JSONs, metadata files</li>
+                <li><strong>Use 644 for read-only files:</strong> Database files that don't change</li>
+                <li><strong>Never use 777 or 666:</strong> This allows anyone to access/modify files (security risk)</li>
+                <li><strong>Check permissions regularly:</strong> Use this page to verify all permissions are correct</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Quick Reference -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fa fa-book"></i> Permission Modes Reference</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Mode</th>
+                        <th>Name</th>
+                        <th>Usage</th>
+                        <th>Explanation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>644</code></td>
+                        <td>rw-r--r--</td>
+                        <td>Config/JSON files</td>
+                        <td>Owner reads/writes, group & others read only</td>
+                    </tr>
+                    <tr>
+                        <td><code>664</code></td>
+                        <td>rw-rw-r--</td>
+                        <td>Shared config files</td>
+                        <td>Owner & group read/write, others read only</td>
+                    </tr>
+                    <tr>
+                        <td><code>2775</code></td>
+                        <td>drwxrwsr-x</td>
+                        <td>Shared directories</td>
+                        <td>Sticky bit + owner/group write. Prevents cross-user deletion</td>
+                    </tr>
+                    <tr>
+                        <td><code>775</code></td>
+                        <td>drwxrwxr-x</td>
+                        <td>General directories</td>
+                        <td>Owner & group can read/write/execute, others read/execute only</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+        <!-- Detailed Permission Groups -->
     <?php
     $grouped = [];
     foreach ($checks as $check) {
@@ -462,68 +526,7 @@ function performPermissionCheck($path, $item) {
     </div>
     <?php endforeach; ?>
     
-    <!-- Summary & Best Practices -->
-    <div class="card mb-4 border-success">
-        <div class="card-header bg-success bg-opacity-10">
-            <h5 class="mb-0"><i class="fa fa-star"></i> Best Practices</h5>
-        </div>
-        <div class="card-body">
-            <ul>
-                <li><strong>Owner should always be:</strong> ubuntu (or the admin user)</li>
-                <li><strong>Group should always be:</strong> www-data (the web server user)</li>
-                <li><strong>Always use sticky bit (2775) on directories</strong> to prevent accidental file deletion</li>
-                <li><strong>Use 664 for files that need write:</strong> Configuration JSONs, metadata files</li>
-                <li><strong>Use 644 for read-only files:</strong> Database files that don't change</li>
-                <li><strong>Never use 777 or 666:</strong> This allows anyone to access/modify files (security risk)</li>
-                <li><strong>Check permissions regularly:</strong> Use this page to verify all permissions are correct</li>
-            </ul>
-        </div>
-    </div>
-    
-    <!-- Quick Reference -->
-    <div class="card mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="fa fa-book"></i> Permission Modes Reference</h5>
-        </div>
-        <div class="card-body">
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>Mode</th>
-                        <th>Name</th>
-                        <th>Usage</th>
-                        <th>Explanation</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><code>644</code></td>
-                        <td>rw-r--r--</td>
-                        <td>Config/JSON files</td>
-                        <td>Owner reads/writes, group & others read only</td>
-                    </tr>
-                    <tr>
-                        <td><code>664</code></td>
-                        <td>rw-rw-r--</td>
-                        <td>Shared config files</td>
-                        <td>Owner & group read/write, others read only</td>
-                    </tr>
-                    <tr>
-                        <td><code>2775</code></td>
-                        <td>drwxrwsr-x</td>
-                        <td>Shared directories</td>
-                        <td>Sticky bit + owner/group write. Prevents cross-user deletion</td>
-                    </tr>
-                    <tr>
-                        <td><code>775</code></td>
-                        <td>drwxrwxr-x</td>
-                        <td>General directories</td>
-                        <td>Owner & group can read/write/execute, others read/execute only</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+
 
 </div>
 
