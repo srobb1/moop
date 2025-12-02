@@ -479,7 +479,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
                   <i class="fa fa-edit"></i> Edit description
                 </button>
                 <button class="btn btn-sm btn-outline-info expand-type-btn" data-type="<?= htmlspecialchars($type_name) ?>" title="Expand details">
-                  <i class="fa fa-chevron-down"></i>
+                  <i class="fa fa-chevron-down"></i> Customize annotation
                 </button>
               </div>
             </div>
