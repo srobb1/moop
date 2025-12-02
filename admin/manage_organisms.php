@@ -212,7 +212,7 @@ $organisms = $organisms;
           <li>FASTA files organized in assembly directories</li>
           <li>Metadata describing the organism (genus, species, common name, taxonomy ID)</li>
           <li>Assignment to groups for user access control</li>
-          <li>Inclusion in the phylogenetic tree for homepage discovery</li>
+          <li>Inclusion in the taxonomy tree for homepage discovery</li>
         </ul>
         
         <p><strong>Status Checklist (8 Requirements):</strong> The system tracks 8 dimensions of organism readiness:</p>
@@ -223,7 +223,7 @@ $organisms = $organisms;
           <li>Has database file - SQLite database exists</li>
           <li>Database is readable - Web server can access it</li>
           <li>In organism groups - Assembly is assigned to user groups</li>
-          <li>In phylogenetic tree - Visible on homepage organism selector</li>
+          <li>In taxonomy tree - Visible on homepage organism selector</li>
           <li>Metadata complete - All organism information is filled in</li>
         </ul>
         
@@ -442,14 +442,14 @@ $organisms = $organisms;
                </td>
                <td>
                  <?php 
-                   $in_phylo_tree = isAssemblyInPhyloTree($organism, '', $taxonomy_tree_file);
+                   $in_taxonomy_tree = isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
                  ?>
-                 <?php if ($in_phylo_tree): ?>
+                 <?php if ($in_taxonomy_tree): ?>
                    <a href="manage_taxonomy_tree.php" class="btn btn-sm btn-outline-success" title="Click to manage taxonomy tree">
                      <i class="fa fa-check-circle"></i> Complete
                    </a>
                  <?php else: ?>
-                   <a href="manage_taxonomy_tree.php" class="btn btn-sm btn-outline-warning" title="Click to add to phylo tree">
+                   <a href="manage_taxonomy_tree.php" class="btn btn-sm btn-outline-warning" title="Click to add to taxonomy tree">
                      <i class="fa fa-times-circle"></i> Missing
                    </a>
                  <?php endif; ?>
@@ -1501,14 +1501,14 @@ $(document).ready(function() {
                   </div>
                 </div>
                 
-                <div class="list-group-item <?= $checks['in_phylo_tree'] ? '' : 'bg-light' ?>">
+                <div class="list-group-item <?= $checks['in_taxonomy_tree'] ? '' : 'bg-light' ?>">
                   <div class="d-flex align-items-center">
-                    <?php if ($checks['in_phylo_tree']): ?>
+                    <?php if ($checks['in_taxonomy_tree']): ?>
                       <i class="fa fa-check-circle text-success me-2" style="font-size: 18px;"></i>
                     <?php else: ?>
                       <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
                     <?php endif; ?>
-                    <span><strong>In phylogenetic tree</strong></span>
+                    <span><strong>In taxonomy tree</strong></span>
                   </div>
                 </div>
                 
