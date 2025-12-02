@@ -66,9 +66,9 @@ include_once __DIR__ . '/admin_init.php';
     <div class="col-md-6 mb-3">
       <div class="card h-100">
         <div class="card-body">
-          <h5 class="card-title"><i class="fa fa-project-diagram"></i> Manage Phylogenetic Tree</h5>
-          <p class="card-text">Generate and customize the phylogenetic tree from organism taxonomy data.</p>
-          <a href="manage_phylo_tree.php" class="btn btn-primary">Go to Phylo Tree</a>
+          <h5 class="card-title"><i class="fa fa-project-diagram"></i> Manage Taxonomy Tree</h5>
+          <p class="card-text">Generate and customize the taxonomy tree from organism taxonomy data.</p>
+          <a href="manage_taxonomy_tree.php" class="btn btn-primary">Go to Taxonomy Tree</a>
         </div>
       </div>
     </div>

@@ -178,39 +178,39 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
 }
 
 /**
- * Get phylogenetic tree user access for display
- * Returns organisms accessible to current user for phylo tree display
+ * Get taxonomy tree user access for display
+ * Returns organisms accessible to current user for taxonomy tree display
  * 
  * @param array $group_data Array of organism/assembly/groups data
  * @return array Array of accessible organisms with true value
  */
-function getPhyloTreeUserAccess($group_data) {
-    $phylo_user_access = [];
+function getTaxonomyTreeUserAccess($group_data) {
+    $taxonomy_user_access = [];
     
     if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {
         // Admin gets access to all organisms
         foreach ($group_data as $data) {
             $organism = $data['organism'];
-            if (!isset($phylo_user_access[$organism])) {
-                $phylo_user_access[$organism] = true;
+            if (!isset($taxonomy_user_access[$organism])) {
+                $taxonomy_user_access[$organism] = true;
             }
         }
     } elseif (is_logged_in()) {
         // Logged-in users get their specific access
-        $phylo_user_access = get_user_access();
+        $taxonomy_user_access = get_user_access();
     } else {
         // Public users: get organisms in Public group
         foreach ($group_data as $data) {
             if (in_array('Public', $data['groups'])) {
                 $organism = $data['organism'];
-                if (!isset($phylo_user_access[$organism])) {
-                    $phylo_user_access[$organism] = true;
+                if (!isset($taxonomy_user_access[$organism])) {
+                    $taxonomy_user_access[$organism] = true;
                 }
             }
         }
     }
     
-    return $phylo_user_access;
+    return $taxonomy_user_access;
 }
 
 /**

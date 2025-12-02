@@ -26,8 +26,8 @@ $available_tools = [
         'context_params' => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
         'pages' => 'all',  // Show on all pages
     ],
-    'phylo_search' => [
-        'id' => 'phylo_search',
+    'taxonomy_search' => [
+        'id' => 'taxonomy_search',
         'name' => 'Search Organisms',
         'icon' => 'fa-search',
         'description' => 'Search selected organisms',

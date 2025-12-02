@@ -9,7 +9,7 @@ $absolute_images_path = $config->getPath('absolute_images_path');
 // Handle standard AJAX fix permissions request
 handleAdminAjax();
 
-$tree_config_file = "$metadata_path/phylo_tree_config.json";
+$tree_config_file = "$metadata_path/taxonomy_tree_config.json";
 $organism_data_dir = $organism_data;
 $message = '';
 $error = '';
@@ -83,22 +83,22 @@ $current_tree = loadJsonFile($tree_config_file, null);
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Manage Phylogenetic Tree - Admin</title>
+    <title>Manage Taxonomy Tree - Admin</title>
 </head>
 <body class="bg-light">
 
 <div class="container py-4">
     <div class="row">
         <div class="col-12">
-            <h2><i class="fa fa-project-diagram"></i> Manage Phylogenetic Tree</h2>
+            <h2><i class="fa fa-project-diagram"></i> Manage Taxonomy Tree</h2>
             
             <!-- About Section -->
             <div class="card mb-4 border-info">
                 <div class="card-header bg-info bg-opacity-10">
-                    <h5 class="mb-0"><i class="fa fa-info-circle"></i> About the Phylogenetic Tree</h5>
+                    <h5 class="mb-0"><i class="fa fa-info-circle"></i> About the Taxonomy Tree</h5>
                 </div>
                 <div class="card-body">
-                    <p>The phylogenetic tree is displayed on the homepage to allow visitors to create a custom assortment of organisms for searching.</p>
+                    <p>The taxonomy tree is displayed on the homepage to allow visitors to create a custom assortment of organisms for searching.</p>
                     
                     <p><strong>How it works:</strong></p>
                     <ul>
@@ -138,7 +138,7 @@ $current_tree = loadJsonFile($tree_config_file, null);
                 <div class="alert alert-warning alert-dismissible fade show">
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     <h4><i class="fa fa-exclamation-circle"></i> File Permission Issue Detected</h4>
-                    <p><strong>Problem:</strong> The file <code>metadata/phylo_tree_config.json</code> is not writable by the web server.</p>
+                    <p><strong>Problem:</strong> The file <code>metadata/taxonomy_tree_config.json</code> is not writable by the web server.</p>
                     
                     <p><strong>Current Status:</strong></p>
                     <ul class="mb-3">
@@ -203,7 +203,7 @@ $current_tree = loadJsonFile($tree_config_file, null);
                     <h5 class="mb-0"><i class="fa fa-magic"></i> Auto-Generate Tree</h5>
                 </div>
                 <div class="card-body">
-                    <p>Automatically generate the phylogenetic tree from organism taxonomy IDs using NCBI Taxonomy database.</p>
+                    <p>Automatically generate the taxonomy tree from organism taxonomy IDs using NCBI Taxonomy database.</p>
                     
                     <div class="alert alert-info">
                         <strong><i class="fa fa-info-circle"></i> How it works:</strong>

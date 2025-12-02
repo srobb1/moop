@@ -67,7 +67,7 @@ class PhyloTree {
     updateSelectedList() {
         const listEl = document.getElementById('selected-organisms-list');
         const countEl = document.getElementById('selected-count');
-        const searchBtn = document.getElementById('phylo-search-btn');
+        const searchBtn = document.getElementById('taxonomy-search-btn');
         
         if (this.selectedOrganisms.size === 0) {
             listEl.innerHTML = '<div class="text-muted fst-italic">No organisms selected</div>';
@@ -167,5 +167,5 @@ class PhyloTree {
 let phyloTree = null;
 
 function initPhyloTree(treeData, userAccess) {
-    phyloTree = new PhyloTree('phylo-tree-container', treeData, userAccess);
+    phyloTree = new PhyloTree('taxonomy-tree-container', treeData, userAccess);
 }

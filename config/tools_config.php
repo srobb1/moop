@@ -41,8 +41,8 @@ return [
         'pages'           => 'all',
     ],
     
-    'phylo_search' => [
-        'id'              => 'phylo_search',
+    'taxonomy_search' => [
+        'id'              => 'taxonomy_search',
         'name'            => 'Search Organisms',
         'icon'            => 'fa-search',
         'description'     => 'Search selected organisms',

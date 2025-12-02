@@ -17,15 +17,15 @@ $group_data = getGroupData();
 // Get cards to display based on access level
 $cards_to_display = getIndexDisplayCards($group_data);
 
-// Load phylogenetic tree data
+// Load taxonomy tree data
 $metadata_path = $config->getPath('metadata_path');
-$phylo_tree_data = json_decode(file_get_contents("$metadata_path/phylo_tree_config.json"), true);
+$taxonomy_tree_data = json_decode(file_get_contents("$metadata_path/taxonomy_tree_config.json"), true);
 
 // Get user access for phylo tree
-$phylo_user_access = getPhyloTreeUserAccess($group_data);
+$taxonomy_user_access = getTaxonomyTreeUserAccess($group_data);
 
 // Convert user_access to JSON for JavaScript
-$user_access_json = json_encode($phylo_user_access);
+$user_access_json = json_encode($taxonomy_user_access);
 
 include_once __DIR__ . '/includes/header.php';
 ?>
@@ -91,8 +91,8 @@ include_once __DIR__ . '/includes/header.php';
           <div class="card-header bg-primary text-white">
             <h5 class="mb-0"><i class="fa fa-project-diagram"></i> Phylogenetic Tree</h5>
           </div>
-          <div class="card-body phylo-tree-scroll">
-            <div id="phylo-tree-container"></div>
+          <div class="card-body taxonomy-tree-scroll">
+            <div id="taxonomy-tree-container"></div>
           </div>
         </div>
       </div>
@@ -128,10 +128,10 @@ include_once __DIR__ . '/includes/header.php';
   </div>
 </div>
 
-<script src="js/modules/phylo-tree.js"></script>
+<script src="js/modules/taxonomy-tree.js"></script>
 <script src="js/index.js"></script>
 <script>
 const userAccess = <?= $user_access_json ?>;
-const treeData = <?= json_encode($phylo_tree_data) ?>;
+const treeData = <?= json_encode($taxonomy_tree_data) ?>;
 </script>
 

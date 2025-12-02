@@ -206,7 +206,7 @@ function formatIndexOrganismName($organism) {
 
 /**
  * Load all organisms' JSON metadata from organism_data directory
- * Central function used by manage_organisms.php and manage_phylo_tree.php
+ * Central function used by manage_organisms.php and manage_taxonomy_tree.php
  * 
  * @param string $organism_data_dir Path to organism data directory
  * @return array Associative array of organism_name => metadata
@@ -385,7 +385,7 @@ function fetch_taxonomy_lineage($taxon_id) {
     $context = stream_context_create([
         'http' => [
             'timeout' => 10,
-            'user_agent' => 'MOOP Phylo Tree Generator'
+            'user_agent' => 'MOOP Taxonomy Tree Generator'
         ]
     ]);
     $response = @file_get_contents($url, false, $context);
@@ -448,7 +448,7 @@ function fetch_taxonomy_lineage($taxon_id) {
 }
 
 /**
- * Build phylogenetic tree from organisms
+ * Build taxonomy tree from organisms
  * 
  * Creates a hierarchical tree structure from a list of organisms by fetching
  * their taxonomic lineage from NCBI and organizing by taxonomic ranks
@@ -624,13 +624,13 @@ function getAssemblyGroups($organism, $assembly, $groups_data) {
 }
 
 /**
- * Check if an organism is in the phylogenetic tree
+ * Check if an organism is in the taxonomy tree
  * @param string $organism Organism name
  * @param string $assembly Assembly name (optional, can be empty)
- * @param string $tree_file Path to phylo_tree_config.json file
+ * @param string $tree_file Path to taxonomy_tree_config.json file
  * @return bool True if organism is in tree, false otherwise
  */
-function isAssemblyInPhyloTree($organism, $assembly, $tree_file) {
+function isAssemblyInTaxonomyTree($organism, $assembly, $tree_file) {
     if (!file_exists($tree_file)) {
         return false;
     }
@@ -650,11 +650,11 @@ function isAssemblyInPhyloTree($organism, $assembly, $tree_file) {
  * @param string $organism Organism name
  * @param array $data Organism data from getDetailedOrganismsInfo
  * @param array $groups_data Groups data
- * @param string $phylo_tree_file Path to phylo_tree_config.json
+ * @param string $taxonomy_tree_file Path to taxonomy_tree_config.json
  * @param array $sequence_types Configured sequence types
  * @return array Status with checks and overall status
  */
-function getOrganismOverallStatus($organism, $data, $groups_data, $phylo_tree_file, $sequence_types) {
+function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree_file, $sequence_types) {
     $checks = [
         'has_assemblies' => false,
         'has_fasta' => false,
@@ -662,7 +662,7 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $phylo_tree_fi
         'has_database' => false,
         'database_readable' => false,
         'assemblies_in_groups' => false,
-        'in_phylo_tree' => false
+        'in_taxonomy_tree' => false
     ];
     
     // 1. Does it have at least one assembly?
@@ -720,7 +720,7 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $phylo_tree_fi
     }
     
     // 7. Is the organism found in the tree?
-    $checks['in_phylo_tree'] = isAssemblyInPhyloTree($organism, '', $phylo_tree_file);
+    $checks['in_taxonomy_tree'] = isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
     
     // 8. Is metadata complete?
     if (!empty($data['json_validation'])) {
