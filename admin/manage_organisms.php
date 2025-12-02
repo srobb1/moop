@@ -598,7 +598,7 @@ $organisms = $organisms;
       <div class="row">
         <div class="col-md-4">
           <div class="d-grid">
-            <a href="manage_groups.php" class="btn btn-primary">
+            <a href="manage_groups.php" target="_blank" class="btn btn-primary">
               <i class="fa fa-layer-group"></i> Assign to Groups
             </a>
             <small class="text-muted mt-2">Add organisms to organism groups</small>
@@ -606,7 +606,7 @@ $organisms = $organisms;
         </div>
         <div class="col-md-4">
           <div class="d-grid">
-            <a href="manage_groups.php" class="btn btn-primary">
+            <a href="manage_groups.php" target="_blank" class="btn btn-primary">
               <i class="fa fa-layer-group"></i> Manage Groups & Descriptions
             </a>
             <small class="text-muted mt-2">Manage group metadata</small>
@@ -1307,7 +1307,7 @@ $organisms = $organisms;
                   <?php else: ?>
                     <p class="text-muted mb-3"><i class="fa fa-info-circle"></i> This assembly is not currently assigned to any groups.</p>
                   <?php endif; ?>
-                  <a href="manage_groups.php" class="btn btn-sm btn-outline-primary">
+                  <a href="manage_groups.php" target="_blank" class="btn btn-sm btn-outline-primary">
                     <i class="fa fa-edit"></i> Manage Groups
                   </a>
                 </div>
