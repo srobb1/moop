@@ -91,7 +91,31 @@ $current_tree = loadJsonFile($tree_config_file, null);
     <div class="row">
         <div class="col-12">
             <h2><i class="fa fa-project-diagram"></i> Manage Phylogenetic Tree</h2>
-            <p class="text-muted">Generate and customize the phylogenetic tree displayed on the homepage.</p>
+            
+            <!-- About Section -->
+            <div class="card mb-4 border-info">
+                <div class="card-header bg-info bg-opacity-10">
+                    <h5 class="mb-0"><i class="fa fa-info-circle"></i> About the Phylogenetic Tree</h5>
+                </div>
+                <div class="card-body">
+                    <p>The phylogenetic tree is displayed on the homepage to allow visitors to create a custom assortment of organisms for searching.</p>
+                    
+                    <p><strong>How it works:</strong></p>
+                    <ul>
+                        <li>Organism names are pulled from the organisms directory</li>
+                        <li>Taxon IDs are read from each organism's <code>organism.json</code> file</li>
+                        <li>These are combined to generate a taxonomical tree structure</li>
+                        <li>The tree is used on the homepage for interactive organism selection</li>
+                    </ul>
+                    
+                    <p class="mb-0"><strong>You can:</strong></p>
+                    <ul class="mb-0">
+                        <li>Auto-generate the tree from NCBI taxonomy data</li>
+                        <li>Manually edit the tree structure using JSON</li>
+                        <li>Customize the taxonomy hierarchy as needed</li>
+                    </ul>
+                </div>
+            </div>
             
             <?php
             ?>
