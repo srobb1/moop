@@ -691,31 +691,38 @@ document.querySelectorAll('.delete-banner').forEach(btn => {
 });
 
 // Sequence type color preview update
-document.querySelectorAll('.color-input').forEach(input => {
-    input.addEventListener('input', function() {
-        const seqType = this.dataset.seqType;
-        const badge = document.getElementById(`badge_${seqType}`);
-        const labelInput = this.closest('tr').querySelector('input[name*="[label]"]');
+function updateBadgePreview(input) {
+    const seqType = input.dataset.seqType;
+    const badge = document.getElementById(`badge_${seqType}`);
+    
+    if (badge) {
+        // Remove all Bootstrap bg- and text- classes but keep core classes
+        const coreClasses = ['badge', 'px-2', 'py-1'];
+        badge.className = coreClasses.join(' ');
         
-        if (badge) {
-            // Remove all Bootstrap bg- classes
-            badge.className = badge.className.replace(/\bbg-\S+/g, '');
-            badge.className = badge.className.replace(/\btext-\S+/g, '');
-            
-            // Add the new color class(es)
-            const classes = this.value.trim().split(/\s+/);
-            classes.forEach(cls => {
-                if (cls.length > 0) {
-                    badge.classList.add(cls);
-                }
-            });
-            
-            // Keep text-white if not overridden
-            if (!this.value.includes('text-')) {
-                badge.classList.add('text-white');
+        // Add the new color class(es)
+        const classes = input.value.trim().split(/\s+/);
+        classes.forEach(cls => {
+            if (cls.length > 0) {
+                badge.classList.add(cls);
             }
+        });
+        
+        // Keep text-white if not overridden
+        if (!input.value.includes('text-')) {
+            badge.classList.add('text-white');
         }
+    }
+}
+
+document.querySelectorAll('.color-input').forEach(input => {
+    // Update preview on input
+    input.addEventListener('input', function() {
+        updateBadgePreview(this);
     });
+    
+    // Initialize preview on page load
+    updateBadgePreview(input);
 });
 </script>
 
