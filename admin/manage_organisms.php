@@ -438,10 +438,13 @@ $organisms = $organisms;
            <?php foreach ($organisms as $organism => $data): ?>
              <tr>
                <td>
-               <strong title="Path: <?= htmlspecialchars($data['path']) ?>" style="cursor: help; border-bottom: 1px dotted #999;"><?= htmlspecialchars($organism) ?></strong>
+               <strong><?= htmlspecialchars($organism) ?></strong>
                  <?php if (isset($data['info']['genus']) && isset($data['info']['species'])): ?>
                    <br><small class="text-muted"><em><?= htmlspecialchars($data['info']['genus']) ?> <?= htmlspecialchars($data['info']['species']) ?></em></small>
                  <?php endif; ?>
+                 <br><button class="btn btn-sm btn-outline-secondary" type="button" onclick="togglePath(this, '<?= htmlspecialchars($organism_data) ?>', '<?= htmlspecialchars($organism) ?>')">
+                   <i class="fa fa-folder"></i> View Path
+                 </button>
                </td>
                <td>
                  <?php 
@@ -1479,6 +1482,30 @@ $organisms = $organisms;
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
 <script src="/moop/js/permission-manager.js"></script>
 <script>
+function togglePath(button, organism_data, organism) {
+    const pathId = 'path-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
+    let pathDiv = document.getElementById(pathId);
+    
+    if (pathDiv) {
+        // Already exists, toggle visibility
+        if (pathDiv.style.display === 'none') {
+            pathDiv.style.display = 'block';
+            button.innerHTML = '<i class="fa fa-folder-open"></i> Hide Path';
+        } else {
+            pathDiv.style.display = 'none';
+            button.innerHTML = '<i class="fa fa-folder"></i> View Path';
+        }
+    } else {
+        // Create the path display
+        pathDiv = document.createElement('div');
+        pathDiv.id = pathId;
+        pathDiv.className = 'mt-2';
+        pathDiv.innerHTML = '<small class="font-monospace text-muted" style="user-select: all; cursor: text;">' + organism_data + '/' + organism + '</small>';
+        button.parentNode.insertBefore(pathDiv, button.nextSibling);
+        button.innerHTML = '<i class="fa fa-folder-open"></i> Hide Path';
+    }
+}
+
 $(document).ready(function() {
     $('#organismsTable').DataTable({
         pageLength: 25,
