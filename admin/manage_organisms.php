@@ -419,17 +419,14 @@ $organisms = $organisms;
                          
                          // Determine badge style (danger/red for name mismatch priority, warning/orange for missing files)
                          $badge_class = 'bg-success';
-                         $badge_text = 'Complete';
                          if ($has_name_mismatch) {
                              $badge_class = 'bg-warning';
-                             $badge_text = 'Name Mismatch';
                          } elseif ($is_missing) {
                              $badge_class = 'bg-info';
-                             $badge_text = 'Missing Files';
                          }
                        ?>
                        <button class="btn btn-sm d-block w-100 text-start mb-1 <?= $badge_class ?> text-white" data-bs-toggle="modal" data-bs-target="#asmModal<?= htmlspecialchars($safe_asm_id) ?>">
-                         <i class="fa fa-folder"></i> <?= htmlspecialchars($assembly) ?> <span class="float-end"><?= $badge_text ?></span>
+                         <i class="fa fa-folder"></i> <?= htmlspecialchars($assembly) ?>
                        </button>
                      <?php endforeach; ?>
                    </div>
