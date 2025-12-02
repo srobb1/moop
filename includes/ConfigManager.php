@@ -237,10 +237,10 @@ class ConfigManager
     public function getSequenceTypes()
     {
         return $this->getArray('sequence_types', [
-            'protein' => ['pattern' => 'protein.aa.fa', 'label' => 'Protein'],
-            'transcript' => ['pattern' => 'transcript.nt.fa', 'label' => 'mRNA'],
-            'cds' => ['pattern' => 'cds.nt.fa', 'label' => 'CDS'],
-            'genome' => ['pattern' => 'genome.fa', 'label' => 'GENOME'],
+            'protein' => ['pattern' => 'protein.aa.fa', 'label' => 'Protein', 'color' => 'bg-info'],
+            'transcript' => ['pattern' => 'transcript.nt.fa', 'label' => 'mRNA', 'color' => 'bg-feature-mrna'],
+            'cds' => ['pattern' => 'cds.nt.fa', 'label' => 'CDS', 'color' => 'bg-success'],
+            'genome' => ['pattern' => 'genome.fa', 'label' => 'GENOME', 'color' => 'bg-warning text-dark'],
         ]);
     }
 
