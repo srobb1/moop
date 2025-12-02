@@ -380,7 +380,7 @@ if (!$file_writable && file_exists($config_file)) {
                                                            <?= ($editable_config['header_img']['current_value'] === $banner_file) ? 'checked' : '' ?>>
                                                 </td>
                                                 <td>
-                                                    <img src="<?= htmlspecialchars($config->getPath('images_path')) ?>/banners/<?= htmlspecialchars($banner_file) ?>" 
+                                                    <img src="/<?= htmlspecialchars($config->getPath('images_path')) ?>/banners/<?= htmlspecialchars($banner_file) ?>" 
                                                          class="img-fluid" 
                                                          style="max-height: 100px; max-width: 150px; object-fit: cover;"
                                                          alt="<?= htmlspecialchars($banner_file) ?>">
