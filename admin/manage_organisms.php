@@ -197,6 +197,50 @@ $organisms = $organisms;
   
   <h2><i class="fa fa-dna"></i> Manage Organisms</h2>
 
+  <!-- About Section -->
+  <div class="card mb-4 border-info">
+    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutOrganismManagement">
+      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Organism Management <i class="fa fa-chevron-down float-end"></i></h5>
+    </div>
+    <div class="collapse" id="aboutOrganismManagement">
+      <div class="card-body">
+        <p><strong>Purpose:</strong> View and manage all organism data on your system. Each organism has assemblies (genome versions), FASTA sequence files, databases, and metadata.</p>
+        
+        <p><strong>Why This Matters:</strong> Organisms are the core of the system. Every organism needs:</p>
+        <ul>
+          <li>A database file (organism.sqlite) with gene/protein data</li>
+          <li>FASTA files organized in assembly directories</li>
+          <li>Metadata describing the organism (genus, species, common name, taxonomy ID)</li>
+          <li>Assignment to groups for user access control</li>
+          <li>Inclusion in the phylogenetic tree for homepage discovery</li>
+        </ul>
+        
+        <p><strong>Status Checklist (8 Requirements):</strong> The system tracks 8 dimensions of organism readiness:</p>
+        <ul>
+          <li>Has assemblies - At least one genome version exists</li>
+          <li>Has FASTA files - Required sequence files are present</li>
+          <li>Has BLAST indexes - Files are searchable via BLAST</li>
+          <li>Has database file - SQLite database exists</li>
+          <li>Database is readable - Web server can access it</li>
+          <li>In organism groups - Assembly is assigned to user groups</li>
+          <li>In phylogenetic tree - Visible on homepage organism selector</li>
+          <li>Metadata complete - All organism information is filled in</li>
+        </ul>
+        
+        <p class="mb-0"><strong>What You Can Do:</strong></p>
+        <ul class="mb-0">
+          <li>View all organisms and their status at a glance</li>
+          <li>Check database validity and readability</li>
+          <li>Manage metadata (images, descriptions)</li>
+          <li>Handle assembly directories and FASTA files</li>
+          <li>Verify BLAST indexes are present</li>
+          <li>See which groups each organism belongs to</li>
+          <li>Track overall setup completion with the 8-point checklist</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <!-- Information Panel -->
   <div class="card mb-4">
     <div class="card-header bg-info text-white">

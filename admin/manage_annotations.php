@@ -356,6 +356,44 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
   
   <h2><i class="fa fa-tags"></i> Manage Annotation Sections</h2>
 
+  <!-- About Section -->
+  <div class="card mb-4 border-info">
+    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutAnnotationTypes">
+      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Annotation Types <i class="fa fa-chevron-down float-end"></i></h5>
+    </div>
+    <div class="collapse" id="aboutAnnotationTypes">
+      <div class="card-body">
+        <p><strong>Purpose:</strong> Manage annotation types - the different categories of analysis results stored in your organism databases (e.g., Orthologs, Homologs, Domains, Gene Ontology, Pathways).</p>
+        
+        <p><strong>Why This Matters:</strong> Annotation types are how results are organized and displayed to users. When users view a gene, they see different annotation categories. This page lets you:</p>
+        <ul>
+          <li>Control which annotation types appear and in what order</li>
+          <li>Create alternate names (synonyms) for database annotation types</li>
+          <li>Add descriptions to help users understand each annotation type</li>
+          <li>Customize display labels (show "Homologous Proteins" instead of "homolog_search_result")</li>
+        </ul>
+        
+        <p><strong>How It Works:</strong></p>
+        <ul>
+          <li>The system automatically scans your organism databases for annotation types</li>
+          <li>It tracks modification timestamps so counts update automatically</li>
+          <li>You can customize how each type appears to users</li>
+          <li>Reordering here changes how annotations display on gene pages</li>
+        </ul>
+        
+        <p class="mb-0"><strong>What You Can Do:</strong></p>
+        <ul class="mb-0">
+          <li>Add synonyms for annotation types (alternate search names)</li>
+          <li>Customize the display label shown to users</li>
+          <li>Edit descriptions for each annotation type</li>
+          <li>Drag and drop to reorder how annotations appear</li>
+          <li>Delete annotation types that have no data</li>
+          <li>Enable/disable annotation types per organism</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <?php if ($message): ?>
     <div class="alert alert-<?= htmlspecialchars($messageType) ?> alert-dismissible fade show" role="alert">
       <?= htmlspecialchars($message) ?>

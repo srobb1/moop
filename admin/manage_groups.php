@@ -333,6 +333,41 @@ foreach ($all_organisms as $organism => $assemblies) {
     <h2><i class="fa fa-layer-group"></i> Manage Organism Assembly Groups & Descriptions</h2>
   </div>
   
+  <!-- About Section -->
+  <div class="card mb-4 border-info">
+    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutOrganismGroups">
+      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Organism Groups <i class="fa fa-chevron-down float-end"></i></h5>
+    </div>
+    <div class="collapse" id="aboutOrganismGroups">
+      <div class="card-body">
+        <p><strong>Purpose:</strong> Organize how organisms are categorized and viewed using flexible multi-group tagging.</p>
+        
+        <p><strong>Why It Matters:</strong></p>
+        <ul>
+          <li>Organisms can belong to multiple groups (e.g., "Flatworms", "Invertebrates", "Sanchez Lab" simultaneously)</li>
+          <li>The special "Public" group makes organism assemblies visible to ALL visitors (including anonymous users)</li>
+          <li>Non-public assemblies are only visible to logged-in users with appropriate access</li>
+          <li>Groups organize organisms by taxonomy, research group, project, access level, or any dimension you choose</li>
+        </ul>
+        
+        <p><strong>How It Works:</strong> Each organism assembly gets one or more group tags. Users see organisms based on:</p>
+        <ul>
+          <li><strong>Logged in:</strong> Their assigned groups + the Public group</li>
+          <li><strong>Not logged in:</strong> Only the Public group organisms</li>
+        </ul>
+        
+        <p class="mb-0"><strong>What You Can Do:</strong></p>
+        <ul class="mb-0">
+          <li>Assign organisms to multiple groups at once</li>
+          <li>Create new group names dynamically</li>
+          <li>Add images and HTML descriptions for each group</li>
+          <li>Track stale entries (deleted from filesystem)</li>
+          <li>Visually edit group assignments with a tag interface</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  
   <?php
   ?>
 

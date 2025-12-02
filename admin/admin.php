@@ -12,6 +12,39 @@ include_once __DIR__ . '/admin_init.php';
 <div class="container mt-5">
   <h2><i class="fa fa-tools"></i> Admin Tools</h2>
   
+  <!-- About Section -->
+  <div class="card mb-4 border-info">
+    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutAdminTools">
+      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Admin Tools <i class="fa fa-chevron-down float-end"></i></h5>
+    </div>
+    <div class="collapse" id="aboutAdminTools">
+      <div class="card-body">
+        <p><strong>Purpose:</strong> Central navigation hub for all administrative functions.</p>
+        
+        <p><strong>Why This Matters:</strong> This is the entry point for managing your MOOP system. Use these tools to:</p>
+        <ul>
+          <li>Control who has access to what organisms</li>
+          <li>Manage your organism data and metadata</li>
+          <li>Organize annotations for display</li>
+          <li>Build the taxonomy tree for discovery</li>
+          <li>Maintain user accounts and permissions</li>
+          <li>Monitor system health and errors</li>
+        </ul>
+        
+        <p class="mb-0"><strong>Available Tools:</strong></p>
+        <ul class="mb-0">
+          <li><strong>Manage Users</strong> - Create collaborator accounts and control access</li>
+          <li><strong>Manage Organisms</strong> - View and manage all organism data</li>
+          <li><strong>Manage Groups</strong> - Tag organisms with flexible categories</li>
+          <li><strong>Manage Annotations</strong> - Customize annotation display</li>
+          <li><strong>Manage Taxonomy Tree</strong> - Build the organism selector</li>
+          <li><strong>Error Logs</strong> - Monitor system health</li>
+          <li><strong>Function Registry</strong> - Maintain code documentation</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  
   <div class="row mt-4">
     <div class="col-md-6 mb-3">
       <div class="card h-100">
@@ -39,16 +72,6 @@ include_once __DIR__ . '/admin_init.php';
           <h5 class="card-title"><i class="fa fa-layer-group"></i> Manage Groups</h5>
           <p class="card-text">Configure organism assembly groups and group descriptions.</p>
           <a href="manage_groups.php" class="btn btn-primary">Go to Manage Groups</a>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-6 mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5 class="card-title"><i class="fa fa-layer-group"></i> Manage Groups & Descriptions</h5>
-          <p class="card-text">Manage organism assembly groups and their descriptions.</p>
-          <a href="manage_groups.php" class="btn btn-primary">Go to Groups</a>
         </div>
       </div>
     </div>

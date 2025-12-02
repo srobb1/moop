@@ -156,6 +156,42 @@ $organisms = getOrganismsWithAssemblies($config->getPath('organism_data'));
   
   <h2><i class="fa fa-users"></i> Manage Users</h2>
 
+  <!-- About Section -->
+  <div class="card mb-4 border-info">
+    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutUserAccessControl">
+      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About User Access Control <i class="fa fa-chevron-down float-end"></i></h5>
+    </div>
+    <div class="collapse" id="aboutUserAccessControl">
+      <div class="card-body">
+        <p><strong>Purpose:</strong> Create and manage user accounts, controlling access to organism data.</p>
+        
+        <p><strong>Why It Matters:</strong> The system has two access models:</p>
+        <ol>
+          <li><strong>Internal Network Users (IP-based):</strong> All users from your institution's IP range automatically have FULL access to ALL organisms - no login needed</li>
+          <li><strong>Collaborators (Account-based):</strong> External users you invite with access to Public group + custom organism assemblies you assign</li>
+        </ol>
+        
+        <p><strong>How It Works:</strong></p>
+        <ul>
+          <li>Internal users are recognized by IP address (configured in site settings)</li>
+          <li>Collaborators create accounts and log in</li>
+          <li>Each Collaborator gets access to Public organisms + any groups you assign them</li>
+          <li>Update Collaborator access</li>
+          <li>To configure Public organisms and assemblies use the manage groups page</li>
+        </ul>
+        
+        <p class="mb-0"><strong>What You Can Do:</strong></p>
+        <ul class="mb-0">
+          <li>Add new user accounts for external collaborators</li>
+          <li>Manage login credentials and permissions</li>
+          <li>Edit existing accounts and update access levels</li>
+          <li>Remove users when collaboration ends</li>
+          <li>Create Admin users</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <?php if ($message): ?>
     <div class="alert alert-<?= htmlspecialchars($messageType) ?> alert-dismissible fade show" role="alert">
       <?= htmlspecialchars($message) ?>
