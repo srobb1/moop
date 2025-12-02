@@ -296,15 +296,14 @@ if (!$file_writable && file_exists($config_file)) {
                                 <?= htmlspecialchars($editable_config['sequence_types']['description']) ?>
                             </p>
                             
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered">
+                                 <table class="table table-sm table-bordered">
                                     <thead class="table-light">
                                         <tr>
                                             <th style="width: 60px;">Enabled</th>
-                                            <th style="width: 35%;">Type</th>
+                                            <th style="width: 30%;">Type</th>
                                             <th style="width: 30%;">Display Label</th>
-                                            <th style="width: 25%;">Badge Color</th>
-                                            <th style="width: 15%;">File Pattern</th>
+                                            <th style="width: 30%;">Badge Color</th>
+                                            <th style="width: 10%;">Pattern</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -328,12 +327,22 @@ if (!$file_writable && file_exists($config_file)) {
                                                        placeholder="Display name">
                                             </td>
                                             <td>
-                                                <input type="text" 
-                                                       name="sequence_types[<?= htmlspecialchars($seq_type) ?>][color]" 
-                                                       value="<?= htmlspecialchars($seq_config['color'] ?? 'bg-secondary') ?>"
-                                                       class="form-control form-control-sm"
-                                                       placeholder="e.g., bg-info">
-                                                <small class="text-muted d-block mt-1">Bootstrap class (e.g., bg-info, bg-success, bg-warning)</small>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text" 
+                                                           name="sequence_types[<?= htmlspecialchars($seq_type) ?>][color]" 
+                                                           value="<?= htmlspecialchars($seq_config['color'] ?? 'bg-secondary') ?>"
+                                                           class="form-control color-input"
+                                                           data-seq-type="<?= htmlspecialchars($seq_type) ?>"
+                                                           placeholder="e.g., bg-info">
+                                                    <span class="input-group-text p-0 ps-2">
+                                                        <span class="badge text-white px-2 py-1" 
+                                                              id="badge_<?= htmlspecialchars($seq_type) ?>"
+                                                              data-seq-type="<?= htmlspecialchars($seq_type) ?>"
+                                                              class="<?= htmlspecialchars($seq_config['color'] ?? 'bg-secondary') ?>">
+                                                            <?= htmlspecialchars($seq_config['label'] ?? $seq_type) ?>
+                                                        </span>
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td>
                                                 <code class="small"><?= htmlspecialchars($seq_config['pattern'] ?? '') ?></code>
@@ -346,8 +355,10 @@ if (!$file_writable && file_exists($config_file)) {
                                     </tbody>
                                 </table>
                             </div>
-                            <small class="form-text text-muted">
-                                <i class="fa fa-info-circle"></i> <?= htmlspecialchars($editable_config['sequence_types']['note']) ?>
+                            <small class="form-text text-muted d-block mt-2">
+                                <i class="fa fa-info-circle"></i> 
+                                <strong>File patterns:</strong> Read-only and match files in organism directories<br>
+                                <strong>Badge colors:</strong> Use Bootstrap CSS classes (e.g., bg-info, bg-success, bg-warning, bg-danger). Preview updates as you type.
                             </small>
                         </div>
 
@@ -676,6 +687,34 @@ document.querySelectorAll('.delete-banner').forEach(btn => {
             console.error('Error:', error);
             alert('Failed to delete banner');
         });
+    });
+});
+
+// Sequence type color preview update
+document.querySelectorAll('.color-input').forEach(input => {
+    input.addEventListener('input', function() {
+        const seqType = this.dataset.seqType;
+        const badge = document.getElementById(`badge_${seqType}`);
+        const labelInput = this.closest('tr').querySelector('input[name*="[label]"]');
+        
+        if (badge) {
+            // Remove all Bootstrap bg- classes
+            badge.className = badge.className.replace(/\bbg-\S+/g, '');
+            badge.className = badge.className.replace(/\btext-\S+/g, '');
+            
+            // Add the new color class(es)
+            const classes = this.value.trim().split(/\s+/);
+            classes.forEach(cls => {
+                if (cls.length > 0) {
+                    badge.classList.add(cls);
+                }
+            });
+            
+            // Keep text-white if not overridden
+            if (!this.value.includes('text-')) {
+                badge.classList.add('text-white');
+            }
+        }
     });
 });
 </script>
