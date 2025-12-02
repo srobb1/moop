@@ -318,12 +318,12 @@ $organisms = $organisms;
         <div class="mb-0">
           <h6 class="fw-bold mb-2"><i class="fa fa-star"></i> Overall Status</h6>
           <p class="mb-2">
-            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">7</span></button> - All 7 checks passed
+            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">8</span></button> - All 8 checks passed
             <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-success">X</span></button> - Some checks passed (see modal for details)
             <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Critical <span class="badge bg-danger">0</span></button> - No checks passed (no database or no assemblies)
           </p>
-          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the status button to see the detailed checklist of all 7 setup requirements.</p>
-          <p class="small text-muted"><strong>Checklist includes:</strong> Assemblies • FASTA files • BLAST indexes • Database file • Database readable • Assemblies in groups • Organism in tree</p>
+          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the status button to see the detailed checklist of all 8 setup requirements.</p>
+          <p class="small text-muted"><strong>Checklist includes:</strong> Assemblies • FASTA files • BLAST indexes • Database file • Database readable • Assemblies in groups • Organism in tree • Metadata complete</p>
         </div>
       </div>
     </div>
@@ -511,7 +511,7 @@ $organisms = $organisms;
                  ?>
                  <?php if ($status['all_pass']): ?>
                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#statusModal<?= $safe_org_id ?>">
-                     <i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">7</span>
+                     <i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">8</span>
                    </button>
                  <?php elseif ($pass_count > 0): ?>
                    <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#statusModal<?= $safe_org_id ?>">
@@ -1372,7 +1372,7 @@ $(document).ready(function() {
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="mb-0"><i class="fa fa-list-check"></i> <strong>Setup Checklist</strong></h6>
-                <span class="badge bg-success fs-6"><?= $pass_count ?>/7 Complete</span>
+                <span class="badge bg-success fs-6"><?= $pass_count ?>/8 Complete</span>
               </div>
               
               <div class="list-group">
@@ -1450,6 +1450,17 @@ $(document).ready(function() {
                       <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
                     <?php endif; ?>
                     <span><strong>In phylogenetic tree</strong></span>
+                  </div>
+                </div>
+                
+                <div class="list-group-item <?= $checks['metadata_complete'] ? '' : 'bg-light' ?>">
+                  <div class="d-flex align-items-center">
+                    <?php if ($checks['metadata_complete']): ?>
+                      <i class="fa fa-check-circle text-success me-2" style="font-size: 18px;"></i>
+                    <?php else: ?>
+                      <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
+                    <?php endif; ?>
+                    <span><strong>Metadata complete</strong></span>
                   </div>
                 </div>
               </div>

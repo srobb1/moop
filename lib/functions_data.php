@@ -722,6 +722,12 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $phylo_tree_fi
     // 7. Is the organism found in the tree?
     $checks['in_phylo_tree'] = isAssemblyInPhyloTree($organism, '', $phylo_tree_file);
     
+    // 8. Is metadata complete?
+    if (!empty($data['json_validation'])) {
+        $json_val = $data['json_validation'];
+        $checks['metadata_complete'] = ($json_val['exists'] && $json_val['readable'] && $json_val['valid_json'] && $json_val['has_required_fields'] && $json_val['writable']);
+    }
+    
     // Calculate overall status
     $all_pass = array_reduce($checks, function($carry, $item) {
         return $carry && $item;
