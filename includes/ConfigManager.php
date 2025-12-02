@@ -648,10 +648,10 @@ class ConfigManager
             ],
             'sequence_types' => [
                 'label' => 'Sequence File Types',
-                'description' => 'Available sequence file types for searches. Reorder or change labels as needed.',
+                'description' => 'Available sequence file types for searches. Customize labels and badge colors as needed.',
                 'type' => 'sequence_types',
                 'current_value' => $this->getSequenceTypes(),
-                'note' => 'File patterns are read-only and match files in organism directories',
+                'note' => 'File patterns are read-only and match files in organism directories. Badge colors use Bootstrap CSS classes (e.g., bg-info, bg-success, bg-warning)',
             ],
             'header_img' => [
                 'label' => 'Header Banner Image',

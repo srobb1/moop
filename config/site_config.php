@@ -83,29 +83,29 @@ return [
     // EDITABLE in Admin Dashboard: Use "Manage Site Configuration" to:
     //   - Enable/disable sequence types for users
     //   - Customize display labels (e.g., "Transcript" instead of "mRNA")
-    //   - Customize badge colors
+    //   - Customize badge colors (Bootstrap CSS classes like bg-info, bg-success, etc.)
     // File patterns are read-only (tied to actual filenames in organism directories)
     // Current values come from config_editable.json if customized, otherwise defaults below
     'sequence_types' => [
         'protein' => [
             'pattern' => 'protein.aa.fa',
             'label' => 'Protein',
-            'color' => 'bg-info',
+            'color' => 'bg-info',  // Bootstrap class for badge color
         ],
         'transcript' => [
             'pattern' => 'transcript.nt.fa',
             'label' => 'mRNA',
-            'color' => 'bg-feature-mrna',
+            'color' => 'bg-feature-mrna',  // Bootstrap class for badge color
         ],
         'cds' => [
             'pattern' => 'cds.nt.fa',
             'label' => 'CDS',
-            'color' => 'bg-success',
+            'color' => 'bg-success',  // Bootstrap class for badge color
         ],
         'genome' => [
             'pattern' => 'genome.fa',
             'label' => 'GENOME',
-            'color' => 'bg-warning text-dark',
+            'color' => 'bg-warning text-dark',  // Bootstrap class for badge color (can include text-dark for contrast)
         ]
     ],
     

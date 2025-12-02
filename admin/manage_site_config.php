@@ -54,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $sequence_types[$seq_type] = [
                         'pattern' => $seq_data['pattern'] ?? '',
                         'label' => $seq_data['label'] ?? $seq_type,
+                        'color' => $seq_data['color'] ?? 'bg-secondary',
                     ];
                 }
             }
@@ -300,9 +301,10 @@ if (!$file_writable && file_exists($config_file)) {
                                     <thead class="table-light">
                                         <tr>
                                             <th style="width: 60px;">Enabled</th>
-                                            <th style="width: 40%;">Type</th>
-                                            <th style="width: 40%;">Display Label</th>
-                                            <th style="width: 20%;">File Pattern</th>
+                                            <th style="width: 35%;">Type</th>
+                                            <th style="width: 30%;">Display Label</th>
+                                            <th style="width: 25%;">Badge Color</th>
+                                            <th style="width: 15%;">File Pattern</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -324,6 +326,14 @@ if (!$file_writable && file_exists($config_file)) {
                                                        value="<?= htmlspecialchars($seq_config['label'] ?? $seq_type) ?>"
                                                        class="form-control form-control-sm"
                                                        placeholder="Display name">
+                                            </td>
+                                            <td>
+                                                <input type="text" 
+                                                       name="sequence_types[<?= htmlspecialchars($seq_type) ?>][color]" 
+                                                       value="<?= htmlspecialchars($seq_config['color'] ?? 'bg-secondary') ?>"
+                                                       class="form-control form-control-sm"
+                                                       placeholder="e.g., bg-info">
+                                                <small class="text-muted d-block mt-1">Bootstrap class (e.g., bg-info, bg-success, bg-warning)</small>
                                             </td>
                                             <td>
                                                 <code class="small"><?= htmlspecialchars($seq_config['pattern'] ?? '') ?></code>
