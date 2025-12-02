@@ -51,7 +51,7 @@ include_once __DIR__ . '/admin_init.php';
         <div class="card-body">
           <h5 class="card-title"><i class="fa fa-users"></i> Manage Users</h5>
           <p class="card-text">Add new users to the system and manage user accounts.</p>
-          <a href="createUser.php" class="btn btn-primary">Go to Manage Users</a>
+          <a href="manage_users.php" class="btn btn-primary">Go to Manage Users</a>
         </div>
       </div>
     </div>
