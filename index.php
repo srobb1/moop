@@ -21,7 +21,7 @@ $cards_to_display = getIndexDisplayCards($group_data);
 $metadata_path = $config->getPath('metadata_path');
 $taxonomy_tree_data = json_decode(file_get_contents("$metadata_path/taxonomy_tree_config.json"), true);
 
-// Get user access for phylo tree
+// Get user access for taxonomy tree
 $taxonomy_user_access = getTaxonomyTreeUserAccess($group_data);
 
 // Convert user_access to JSON for JavaScript
@@ -50,7 +50,7 @@ include_once __DIR__ . '/includes/header.php';
         <i class="fa fa-th"></i> Card View
       </button>
       <button type="button" class="btn btn-outline-primary" id="tree-view-btn" onclick="switchView('tree')">
-        <i class="fa fa-project-diagram"></i> Phylogenetic Tree
+        <i class="fa fa-project-diagram"></i> Taxonomy Tree
       </button>
     </div>
   </div>
@@ -83,13 +83,13 @@ include_once __DIR__ . '/includes/header.php';
     </div>
   </div>
 
-  <!-- Phylogenetic Tree View -->
+  <!-- Taxonomy Tree View -->
   <div id="tree-view" class="view-container hidden">
     <div class="row">
       <div class="col-lg-8">
         <div class="card shadow-sm">
           <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="fa fa-project-diagram"></i> Phylogenetic Tree</h5>
+            <h5 class="mb-0"><i class="fa fa-project-diagram"></i> Taxonomy Tree</h5>
           </div>
           <div class="card-body taxonomy-tree-scroll">
             <div id="taxonomy-tree-container"></div>
