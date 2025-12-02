@@ -109,7 +109,7 @@ class ConfigManager
             $editable_config = json_decode(file_get_contents($editable_config_path), true);
             if (is_array($editable_config)) {
                 // Only merge allowed keys to prevent overriding structural config
-                $allowed_editable_keys = ['siteTitle', 'admin_email', 'sequence_types'];
+                $allowed_editable_keys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_path', 'auto_login_ip_ranges'];
                 foreach ($allowed_editable_keys as $key) {
                     if (isset($editable_config[$key])) {
                         $this->config[$key] = $editable_config[$key];
@@ -478,7 +478,7 @@ class ConfigManager
     public function saveEditableConfig($data, $config_dir)
     {
         // Whitelist of allowed editable keys
-        $allowed_keys = ['siteTitle', 'admin_email', 'sequence_types'];
+        $allowed_keys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_path', 'auto_login_ip_ranges'];
         
         // Filter to only allowed keys
         $editable_data = [];
@@ -513,7 +513,32 @@ class ConfigManager
                     }
                 }
                 
-                if ($key === 'sequence_types') {
+                // Validate IP ranges
+                if ($key === 'auto_login_ip_ranges') {
+                    if (!is_array($data[$key])) {
+                        return [
+                            'success' => false,
+                            'message' => 'IP ranges must be an array'
+                        ];
+                    }
+                    foreach ($data[$key] as $range) {
+                        if (!isset($range['start']) || !isset($range['end'])) {
+                            return [
+                                'success' => false,
+                                'message' => 'Each IP range must have start and end addresses'
+                            ];
+                        }
+                        // Validate IP format
+                        if (!filter_var($range['start'], FILTER_VALIDATE_IP) || !filter_var($range['end'], FILTER_VALIDATE_IP)) {
+                            return [
+                                'success' => false,
+                                'message' => 'Invalid IP address format'
+                            ];
+                        }
+                    }
+                }
+                
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);
@@ -627,6 +652,37 @@ class ConfigManager
                 'type' => 'sequence_types',
                 'current_value' => $this->getSequenceTypes(),
                 'note' => 'File patterns are read-only and match files in organism directories',
+            ],
+            'header_img' => [
+                'label' => 'Header Banner Image',
+                'description' => 'Main banner image displayed at top of pages',
+                'type' => 'file_upload',
+                'current_value' => $this->getString('header_img', ''),
+                'upload_info' => [
+                    'destination' => 'images/banners/',
+                    'recommended_dimensions' => '1920 x 300 px',
+                    'min_width' => 1200,
+                    'max_width' => 4000,
+                    'min_height' => 200,
+                    'max_height' => 500,
+                    'allowed_types' => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+                    'max_size_mb' => 5,
+                ],
+            ],
+            'favicon_path' => [
+                'label' => 'Favicon Path',
+                'description' => 'Browser tab icon (relative path in images directory)',
+                'type' => 'text',
+                'current_value' => $this->getString('favicon_path', ''),
+                'max_length' => 255,
+                'note' => 'Example: /moop/images/favicon.ico (32x32 px recommended)',
+            ],
+            'auto_login_ip_ranges' => [
+                'label' => 'Auto-Login IP Ranges',
+                'description' => 'IP ranges for automatic admin login (development/testing only)',
+                'type' => 'ip_ranges',
+                'current_value' => $this->getArray('auto_login_ip_ranges', []),
+                'note' => 'WARNING: Only use for development. Provides full access without login.',
             ],
         ];
     }
