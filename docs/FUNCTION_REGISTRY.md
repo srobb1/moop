@@ -2,11 +2,11 @@
 
 **Auto-generated documentation**
 
-Generated: 2025-11-26 22:31:33
+Generated: 2025-12-02 15:20:37
 
 ## Summary
 
-- **Total Functions**: 129
+- **Total Functions**: 131
 - **Files Scanned**: 19
 
 ## ⚠️ Unused Functions (19)
@@ -22,8 +22,8 @@ These functions are defined but never called:
 - `searchFeaturesByUniquename()` in `lib/database_queries.php` (line 187)
 - `getAnnotationsByFeature()` in `lib/database_queries.php` (line 219)
 - `getOrganismInfo()` in `lib/database_queries.php` (line 240)
-- `searchFeaturesAndAnnotationsLike()` in `lib/database_queries.php` (line 446)
-- `buildFilteredSourcesList()` in `lib/extract_search_helpers.php` (line 257)
+- `searchFeaturesAndAnnotationsLike()` in `lib/database_queries.php` (line 458)
+- `buildFilteredSourcesList()` in `lib/extract_search_helpers.php` (line 212)
 - `buildLikeConditions()` in `lib/functions_database.php` (line 241)
 - `consolidateSynonym()` in `lib/functions_json.php` (line 248)
 - `getAnnotationDisplayLabel()` in `lib/functions_json.php` (line 299)
@@ -41,8 +41,8 @@ These functions are defined but never called:
 - [lib/blast_functions.php](#lib-blast_functionsphp) - 5 functions
 - [lib/blast_results_visualizer.php](#lib-blast_results_visualizerphp) - 15 functions
 - [lib/database_queries.php](#lib-database_queriesphp) - 15 functions
-- [lib/extract_search_helpers.php](#lib-extract_search_helpersphp) - 11 functions
-- [lib/functions_access.php](#lib-functions_accessphp) - 3 functions
+- [lib/extract_search_helpers.php](#lib-extract_search_helpersphp) - 10 functions
+- [lib/functions_access.php](#lib-functions_accessphp) - 4 functions
 - [lib/functions_data.php](#lib-functions_dataphp) - 14 functions
 - [lib/functions_database.php](#lib-functions_databasephp) - 8 functions
 - [lib/functions_display.php](#lib-functions_displayphp) - 8 functions
@@ -52,7 +52,7 @@ These functions are defined but never called:
 - [lib/functions_system.php](#lib-functions_systemphp) - 5 functions
 - [lib/functions_tools.php](#lib-functions_toolsphp) - 2 functions
 - [lib/functions_validation.php](#lib-functions_validationphp) - 6 functions
-- [lib/parent_functions.php](#lib-parent_functionsphp) - 6 functions
+- [lib/parent_functions.php](#lib-parent_functionsphp) - 8 functions
 - [lib/tool_config.php](#lib-tool_configphp) - 4 functions
 - [tools/generate_js_registry.php](#tools-generate_js_registryphp) - 1 functions
 - [tools/sequences_display.php](#tools-sequences_displayphp) - 1 functions
@@ -96,12 +96,10 @@ Located in: `lib/blast_functions.php` at line 23
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/tools/blast.php` (4x):
-  - Line 128: `$all_dbs = getBlastDatabases($selected_source_obj[\'path\']);`
-  - Line 602: `$dbs = getBlastDatabases($source[\'path\']);`
-  - Line 128: `$all_dbs = getBlastDatabases($selected_source_obj[\'path\']);`
-  - Line 602: `$dbs = getBlastDatabases($source[\'path\']);`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/tools/blast.php` (2x):
+  - Line 159: `$all_dbs = getBlastDatabases($selected_source_obj[\'path\']);`
+  - Line 643: `$dbs = getBlastDatabases($source[\'path\']);`
 
 ### `filterDatabasesByProgram()` (Line 72)
 
@@ -141,10 +139,9 @@ Located in: `lib/blast_functions.php` at line 110
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/blast.php` (2x):
-  - Line 172: `$blast_result = executeBlastSearch($query_with_header, $blast_db, $blast_program, $blast_options);`
-  - Line 172: `$blast_result = executeBlastSearch($query_with_header, $blast_db, $blast_program, $blast_options);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/blast.php` (1x):
+  - Line 203: `$blast_result = executeBlastSearch($query_with_header, $blast_db, $blast_program, $blast_options);`
 
 ### `extractSequencesFromBlastDb()` (Line 299)
 
@@ -166,12 +163,10 @@ Located in: `lib/blast_functions.php` at line 299
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/lib/extract_search_helpers.php` (4x):
-  - Line 168: `$extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);`
-  - Line 189: `$extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);`
-  - Line 168: `$extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);`
-  - Line 189: `$extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/lib/extract_search_helpers.php` (2x):
+  - Line 123: `$extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);`
+  - Line 144: `$extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);`
 
 ### `validateBlastSequence()` (Line 350)
 
@@ -189,10 +184,9 @@ Located in: `lib/blast_functions.php` at line 350
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/blast.php` (2x):
-  - Line 143: `$validation = validateBlastSequence($search_query);`
-  - Line 143: `$validation = validateBlastSequence($search_query);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/blast.php` (1x):
+  - Line 174: `$validation = validateBlastSequence($search_query);`
 
 ---
 
@@ -216,9 +210,8 @@ Located in: `lib/blast_results_visualizer.php` at line 19
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/blast_results_visualizer.php` (2x):
-  - Line 735: `$parse_result = parseBlastResults($blast_result[\'output\']);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/blast_results_visualizer.php` (1x):
   - Line 735: `$parse_result = parseBlastResults($blast_result[\'output\']);`
 
 ### `generateHitsSummaryTable()` (Line 288)
@@ -237,9 +230,8 @@ Located in: `lib/blast_results_visualizer.php` at line 288
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/blast_results_visualizer.php` (2x):
-  - Line 988: `$html .= generateHitsSummaryTable($query, $query_num);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/blast_results_visualizer.php` (1x):
   - Line 988: `$html .= generateHitsSummaryTable($query, $query_num);`
 
 ### `generateBlastGraphicalView()` (Line 352)
@@ -277,9 +269,8 @@ Located in: `lib/blast_results_visualizer.php` at line 533
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/blast_results_visualizer.php` (2x):
-  - Line 991: `$html .= generateAlignmentViewer($query, $blast_program, $query_num);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/blast_results_visualizer.php` (1x):
   - Line 991: `$html .= generateAlignmentViewer($query, $blast_program, $query_num);`
 
 ### `generateBlastStatisticsSummary()` (Line 650)
@@ -320,10 +311,9 @@ Located in: `lib/blast_results_visualizer.php` at line 730
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/blast.php` (2x):
-  - Line 572: `<?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? []) ?>`
-  - Line 572: `<?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? []) ?>`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/blast.php` (1x):
+  - Line 613: `<?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? []) ?>`
 
 ### `generateHspVisualizationWithLines()` (Line 985)
 
@@ -343,9 +333,8 @@ Located in: `lib/blast_results_visualizer.php` at line 985
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/blast_results_visualizer.php` (2x):
-  - Line 985: `$html .= generateHspVisualizationWithLines($query, $blast_program, $query_num);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/blast_results_visualizer.php` (1x):
   - Line 985: `$html .= generateHspVisualizationWithLines($query, $blast_program, $query_num);`
 
 ### `getHspColorClass()` (Line 1144)
@@ -364,10 +353,8 @@ Located in: `lib/blast_results_visualizer.php` at line 1144
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/lib/blast_results_visualizer.php` (4x):
-  - Line 1144: `$color = getHspColorClass($hsp_scores[$first_idx]);`
-  - Line 1191: `$color = getHspColorClass($hsp_scores[$current_idx]);`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/lib/blast_results_visualizer.php` (2x):
   - Line 1144: `$color = getHspColorClass($hsp_scores[$first_idx]);`
   - Line 1191: `$color = getHspColorClass($hsp_scores[$current_idx]);`
 
@@ -414,9 +401,8 @@ Located in: `lib/blast_results_visualizer.php` at line 603
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/blast_results_visualizer.php` (2x):
-  - Line 603: `$alignment_text = formatBlastAlignment(`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/blast_results_visualizer.php` (1x):
   - Line 603: `$alignment_text = formatBlastAlignment(`
 
 ### `generateQueryScoreLegend()` (Line 1073)
@@ -436,9 +422,8 @@ Located in: `lib/blast_results_visualizer.php` at line 1073
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/blast_results_visualizer.php` (2x):
-  - Line 1073: `$html .= generateQueryScoreLegend($results[\'query_length\'], $results[\'query_name\']);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/blast_results_visualizer.php` (1x):
   - Line 1073: `$html .= generateQueryScoreLegend($results[\'query_length\'], $results[\'query_name\']);`
 
 ### `generateQueryScaleTicks()` (Line 1099)
@@ -458,9 +443,8 @@ Located in: `lib/blast_results_visualizer.php` at line 1099
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/blast_results_visualizer.php` (2x):
-  - Line 1099: `$html .= generateQueryScaleTicks($results[\'query_length\']);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/blast_results_visualizer.php` (1x):
   - Line 1099: `$html .= generateQueryScaleTicks($results[\'query_length\']);`
 
 ### `generateQueryScale()` (Line 1099)
@@ -497,18 +481,16 @@ Located in: `lib/blast_results_visualizer.php` at line 1659
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/blast.php` (2x):
-  - Line 569: `<?= getToggleQuerySectionScript() ?>`
-  - Line 569: `<?= getToggleQuerySectionScript() ?>`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/blast.php` (1x):
+  - Line 610: `<?= getToggleQuerySectionScript() ?>`
 
 ### `toggleQuerySection()` (Line 962)
 
 Located in: `lib/blast_results_visualizer.php` at line 962
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/blast_results_visualizer.php` (2x):
-  - Line 962: `$html .= \'<div id=\"query-\' . $query_num . \'-header\" style=\"padding: 15px; cursor: pointer; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;\" onclick=\"toggleQuerySection(\\\'query-\' . $query_num . \'-content\\\', this);\">\';`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/blast_results_visualizer.php` (1x):
   - Line 962: `$html .= \'<div id=\"query-\' . $query_num . \'-header\" style=\"padding: 15px; cursor: pointer; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;\" onclick=\"toggleQuerySection(\\\'query-\' . $query_num . \'-content\\\', this);\">\';`
 
 ---
@@ -535,10 +517,9 @@ Located in: `lib/database_queries.php` at line 28
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/parent_display.php` (2x):
-  - Line 98: `$row = getFeatureById($ancestor_feature_id, $db, $accessible_genome_ids);`
-  - Line 98: `$row = getFeatureById($ancestor_feature_id, $db, $accessible_genome_ids);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/parent_display.php` (1x):
+  - Line 100: `$row = getFeatureById($ancestor_feature_id, $db, $accessible_genome_ids);`
 
 ### `getFeatureByUniquename()` (Line 65)
 
@@ -558,13 +539,11 @@ Located in: `lib/database_queries.php` at line 65
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/lib/parent_functions.php` (2x):
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/lib/parent_functions.php` (1x):
   - Line 19: `$feature = getFeatureByUniquename($feature_uniquename, $dbFile, $genome_ids);`
-  - Line 19: `$feature = getFeatureByUniquename($feature_uniquename, $dbFile, $genome_ids);`
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 97: `$feature_result = getFeatureByUniquename($uniquename, $db);`
-  - Line 97: `$feature_result = getFeatureByUniquename($uniquename, $db);`
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 149: `$feature_result = getFeatureByUniquename($uniquename, $db);`
 
 ### `getChildrenByFeatureId()` (Line 102)
 
@@ -584,12 +563,11 @@ Located in: `lib/database_queries.php` at line 102
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/lib/parent_functions.php` (4x):
+**Used in 1 unique file(s) (3 total times):**
+- `/data/moop/lib/parent_functions.php` (3x):
   - Line 75: `$results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);`
-  - Line 257: `$results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);`
-  - Line 75: `$results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);`
-  - Line 257: `$results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);`
+  - Line 97: `$results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);`
+  - Line 278: `$results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);`
 
 ### `getParentFeature()` (Line 130)
 
@@ -609,9 +587,8 @@ Located in: `lib/database_queries.php` at line 130
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/parent_functions.php` (2x):
-  - Line 46: `$feature = getParentFeature($feature_id, $dbFile, $genome_ids);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/parent_functions.php` (1x):
   - Line 46: `$feature = getParentFeature($feature_id, $dbFile, $genome_ids);`
 
 ### `getFeaturesByType()` (Line 157)
@@ -709,9 +686,10 @@ Located in: `lib/database_queries.php` at line 258
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/assembly_display.php` (2x):
-  - Line 19: `$assembly_info = getAssemblyStats($assembly_accession, $db_path);`
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/tools/assembly_display.php` (1x):
+  - Line 20: `$assembly_info = getAssemblyStats($assembly_param, $db_path);`
+- `/data/moop/tools/assembly_display1.php` (1x):
   - Line 19: `$assembly_info = getAssemblyStats($assembly_accession, $db_path);`
 
 ### `searchFeaturesAndAnnotations()` (Line 282)
@@ -733,22 +711,21 @@ Located in: `lib/database_queries.php` at line 282
 */
 ```
 
-**Used in 2 unique file(s) (3 total times):**
-- `/data/moop/tools/annotation_search_ajax.php` (2x):
-  - Line 96: `$search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db, $source_filter);`
-  - Line 96: `$search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db, $source_filter);`
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/tools/annotation_search_ajax.php` (1x):
+  - Line 97: `$search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db, $source_filter, $assembly);`
 - `/data/moop/tests/benchmark_search.php` (1x):
   - Line 49: `$results = searchFeaturesAndAnnotations($searchTerm, false, $dbFile);`
 
-### `searchFeaturesAndAnnotationsLike()` (Line 446)
+### `searchFeaturesAndAnnotationsLike()` (Line 458)
 
-Located in: `lib/database_queries.php` at line 446
+Located in: `lib/database_queries.php` at line 458
 
 **Used in: 0 files** (possibly unused)
 
-### `searchFeaturesByUniquenameForSearch()` (Line 516)
+### `searchFeaturesByUniquenameForSearch()` (Line 528)
 
-Located in: `lib/database_queries.php` at line 516
+Located in: `lib/database_queries.php` at line 528
 
 **Description:**
 
@@ -765,14 +742,13 @@ Located in: `lib/database_queries.php` at line 516
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/annotation_search_ajax.php` (2x):
-  - Line 90: `$results = searchFeaturesByUniquenameForSearch($search_input, $db);`
-  - Line 90: `$results = searchFeaturesByUniquenameForSearch($search_input, $db);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/annotation_search_ajax.php` (1x):
+  - Line 91: `$results = searchFeaturesByUniquenameForSearch($search_input, $db, \'\', $assembly);`
 
-### `getAnnotationSources()` (Line 553)
+### `getAnnotationSources()` (Line 577)
 
-Located in: `lib/database_queries.php` at line 553
+Located in: `lib/database_queries.php` at line 577
 
 **Description:**
 
@@ -786,14 +762,13 @@ Located in: `lib/database_queries.php` at line 553
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/get_annotation_sources.php` (2x):
-  - Line 39: `$sources = getAnnotationSources($db);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/get_annotation_sources.php` (1x):
   - Line 39: `$sources = getAnnotationSources($db);`
 
-### `getAnnotationSourcesByType()` (Line 576)
+### `getAnnotationSourcesByType()` (Line 600)
 
-Located in: `lib/database_queries.php` at line 576
+Located in: `lib/database_queries.php` at line 600
 
 **Description:**
 
@@ -807,14 +782,13 @@ Located in: `lib/database_queries.php` at line 576
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/get_annotation_sources_grouped.php` (2x):
-  - Line 35: `$source_types = getAnnotationSourcesByType($db);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/get_annotation_sources_grouped.php` (1x):
   - Line 35: `$source_types = getAnnotationSourcesByType($db);`
 
-### `getAnnotationTypesFromDB()` (Line 632)
+### `getAnnotationTypesFromDB()` (Line 656)
 
-Located in: `lib/database_queries.php` at line 632
+Located in: `lib/database_queries.php` at line 656
 
 **Description:**
 
@@ -832,16 +806,15 @@ Located in: `lib/database_queries.php` at line 632
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/manage_annotations.php` (2x):
-  - Line 90: `$db_types = getAnnotationTypesFromDB($db_file);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/admin/manage_annotations.php` (1x):
   - Line 90: `$db_types = getAnnotationTypesFromDB($db_file);`
 
 ---
 
 ## lib/extract_search_helpers.php
 
-**11 function(s)**
+**10 function(s)**
 
 ### `parseOrganismParameter()` (Line 29)
 
@@ -864,10 +837,9 @@ Located in: `lib/extract_search_helpers.php` at line 29
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 44: `$organism_result = parseOrganismParameter($organisms_param, $context[\'organism\']);`
-  - Line 44: `$organism_result = parseOrganismParameter($organisms_param, $context[\'organism\']);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 44: `$organism_result = parseOrganismParameter($organisms_param, \'\');`
 
 ### `parseContextParameters()` (Line 65)
 
@@ -885,45 +857,17 @@ Located in: `lib/extract_search_helpers.php` at line 65
 */
 ```
 
-**Used in 3 unique file(s) (6 total times):**
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 41: `$context = parseContextParameters();`
-  - Line 41: `$context = parseContextParameters();`
-- `/data/moop/tools/retrieve_selected_sequences.php` (2x):
+**Used in 3 unique file(s) (3 total times):**
+- `/data/moop/tools/retrieve_selected_sequences.php` (1x):
   - Line 58: `$context = parseContextParameters();`
-  - Line 58: `$context = parseContextParameters();`
-- `/data/moop/tools/blast.php` (2x):
+- `/data/moop/tools/blast.php` (1x):
   - Line 31: `$context = parseContextParameters();`
-  - Line 31: `$context = parseContextParameters();`
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 41: `$context = parseContextParameters();`
 
-### `validateExtractInputs()` (Line 86)
+### `parseFeatureIds()` (Line 83)
 
-Located in: `lib/extract_search_helpers.php` at line 86
-
-**Description:**
-
-```
-/**
-* Validate extract/search inputs (organism, assembly, feature IDs)
-*
-* Comprehensive validation for extract operations
-*
-* @param string $organism - Organism name
-* @param string $assembly - Assembly name
-* @param string $uniquenames_string - Comma-separated feature IDs
-* @param array $accessible_sources - Available assemblies from getAccessibleAssemblies()
-* @return array - ['valid' => bool, 'errors' => [], 'fasta_source' => null]
-*/
-```
-
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 74: `$validation = validateExtractInputs($selected_organism, $selected_assembly, $uniquenames_string, $accessible_sources);`
-  - Line 74: `$validation = validateExtractInputs($selected_organism, $selected_assembly, $uniquenames_string, $accessible_sources);`
-
-### `parseFeatureIds()` (Line 128)
-
-Located in: `lib/extract_search_helpers.php` at line 128
+Located in: `lib/extract_search_helpers.php` at line 83
 
 **Description:**
 
@@ -938,17 +882,15 @@ Located in: `lib/extract_search_helpers.php` at line 128
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 80: `$id_parse = parseFeatureIds($uniquenames_string);`
-  - Line 80: `$id_parse = parseFeatureIds($uniquenames_string);`
-- `/data/moop/tools/retrieve_selected_sequences.php` (2x):
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/tools/retrieve_selected_sequences.php` (1x):
   - Line 77: `$id_parse = parseFeatureIds($uniquenames_string);`
-  - Line 77: `$id_parse = parseFeatureIds($uniquenames_string);`
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 134: `$id_parse = parseFeatureIds($uniquenames_string);`
 
-### `extractSequencesForAllTypes()` (Line 159)
+### `extractSequencesForAllTypes()` (Line 114)
 
-Located in: `lib/extract_search_helpers.php` at line 159
+Located in: `lib/extract_search_helpers.php` at line 114
 
 **Description:**
 
@@ -967,17 +909,15 @@ Located in: `lib/extract_search_helpers.php` at line 159
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 116: `$extract_result = extractSequencesForAllTypes($fasta_source[\'path\'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly);`
-  - Line 116: `$extract_result = extractSequencesForAllTypes($fasta_source[\'path\'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly);`
-- `/data/moop/tools/retrieve_selected_sequences.php` (2x):
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/tools/retrieve_selected_sequences.php` (1x):
   - Line 102: `$extract_result = extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types);`
-  - Line 102: `$extract_result = extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types);`
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 168: `$extract_result = extractSequencesForAllTypes($fasta_source[\'path\'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly);`
 
-### `formatSequenceResults()` (Line 214)
+### `formatSequenceResults()` (Line 169)
 
-Located in: `lib/extract_search_helpers.php` at line 214
+Located in: `lib/extract_search_helpers.php` at line 169
 
 **Description:**
 
@@ -993,17 +933,15 @@ Located in: `lib/extract_search_helpers.php` at line 214
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 388: `$available_sequences = formatSequenceResults($displayed_content, $sequence_types);`
-  - Line 388: `$available_sequences = formatSequenceResults($displayed_content, $sequence_types);`
-- `/data/moop/tools/retrieve_selected_sequences.php` (2x):
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/tools/retrieve_selected_sequences.php` (1x):
   - Line 198: `$available_sequences = formatSequenceResults($displayed_content, $sequence_types);`
-  - Line 198: `$available_sequences = formatSequenceResults($displayed_content, $sequence_types);`
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 440: `$available_sequences = formatSequenceResults($displayed_content, $sequence_types);`
 
-### `sendFileDownload()` (Line 237)
+### `sendFileDownload()` (Line 192)
 
-Located in: `lib/extract_search_helpers.php` at line 237
+Located in: `lib/extract_search_helpers.php` at line 192
 
 **Description:**
 
@@ -1020,17 +958,15 @@ Located in: `lib/extract_search_helpers.php` at line 237
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 155: `sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);`
-  - Line 155: `sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);`
-- `/data/moop/tools/retrieve_selected_sequences.php` (2x):
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/tools/retrieve_selected_sequences.php` (1x):
   - Line 113: `sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);`
-  - Line 113: `sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);`
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 207: `sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);`
 
-### `buildFilteredSourcesList()` (Line 257)
+### `buildFilteredSourcesList()` (Line 212)
 
-Located in: `lib/extract_search_helpers.php` at line 257
+Located in: `lib/extract_search_helpers.php` at line 212
 
 **Description:**
 
@@ -1048,9 +984,9 @@ Located in: `lib/extract_search_helpers.php` at line 257
 
 **Used in: 0 files** (possibly unused)
 
-### `flattenSourcesList()` (Line 286)
+### `flattenSourcesList()` (Line 241)
 
-Located in: `lib/extract_search_helpers.php` at line 286
+Located in: `lib/extract_search_helpers.php` at line 241
 
 **Description:**
 
@@ -1066,14 +1002,13 @@ Located in: `lib/extract_search_helpers.php` at line 286
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 52: `$accessible_sources = flattenSourcesList($sources_by_group);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/retrieve_sequences.php` (1x):
   - Line 52: `$accessible_sources = flattenSourcesList($sources_by_group);`
 
-### `assignGroupColors()` (Line 307)
+### `assignGroupColors()` (Line 262)
 
-Located in: `lib/extract_search_helpers.php` at line 307
+Located in: `lib/extract_search_helpers.php` at line 262
 
 **Description:**
 
@@ -1089,14 +1024,13 @@ Located in: `lib/extract_search_helpers.php` at line 307
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 253: `$group_color_map = assignGroupColors($sources_by_group);`
-  - Line 253: `$group_color_map = assignGroupColors($sources_by_group);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 305: `$group_color_map = assignGroupColors($sources_by_group);`
 
-### `getAvailableSequenceTypesForDisplay()` (Line 330)
+### `getAvailableSequenceTypesForDisplay()` (Line 285)
 
-Located in: `lib/extract_search_helpers.php` at line 330
+Located in: `lib/extract_search_helpers.php` at line 285
 
 **Description:**
 
@@ -1113,20 +1047,42 @@ Located in: `lib/extract_search_helpers.php` at line 330
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 160: `$available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_types);`
-  - Line 160: `$available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_types);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 212: `$available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_types);`
 
 ---
 
 ## lib/functions_access.php
 
-**3 function(s)**
+**4 function(s)**
 
-### `getAccessibleAssemblies()` (Line 15)
+### `getAssemblyInfo()` (Line 15)
 
 Located in: `lib/functions_access.php` at line 15
+
+**Description:**
+
+```
+/**
+* Get assembly information from database
+* Queries the organism.sqlite database to get genome_id and genome_name for an assembly
+*
+* @param string $assembly - Assembly accession
+* @param string $db_path - Path to organism.sqlite database
+* @return array - [genome_id, genome_name, genome_accession] or [null, null, $assembly] on error
+*/
+```
+
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/tools/blast.php` (1x):
+  - Line 91: `[$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($context_assembly, $db_path);`
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 90: `[$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($selected_assembly, $db_path);`
+
+### `getAccessibleAssemblies()` (Line 47)
+
+Located in: `lib/functions_access.php` at line 47
 
 **Description:**
 
@@ -1141,17 +1097,15 @@ Located in: `lib/functions_access.php` at line 15
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/tools/retrieve_sequences.php` (2x):
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/tools/blast.php` (1x):
+  - Line 38: `$sources_by_group = getAccessibleAssemblies();`
+- `/data/moop/tools/retrieve_sequences.php` (1x):
   - Line 51: `$sources_by_group = getAccessibleAssemblies();`
-  - Line 51: `$sources_by_group = getAccessibleAssemblies();`
-- `/data/moop/tools/blast.php` (2x):
-  - Line 93: `$sources_by_group = getAccessibleAssemblies();`
-  - Line 93: `$sources_by_group = getAccessibleAssemblies();`
 
-### `getPhyloTreeUserAccess()` (Line 131)
+### `getPhyloTreeUserAccess()` (Line 187)
 
-Located in: `lib/functions_access.php` at line 131
+Located in: `lib/functions_access.php` at line 187
 
 **Description:**
 
@@ -1169,9 +1123,9 @@ Located in: `lib/functions_access.php` at line 131
 - `/data/moop/index.php` (1x):
   - Line 25: `$phylo_user_access = getPhyloTreeUserAccess($group_data);`
 
-### `requireAccess()` (Line 170)
+### `requireAccess()` (Line 226)
 
-Located in: `lib/functions_access.php` at line 170
+Located in: `lib/functions_access.php` at line 226
 
 **Description:**
 
@@ -1188,9 +1142,8 @@ Located in: `lib/functions_access.php` at line 170
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/groups_display.php` (2x):
-  - Line 39: `requireAccess(\'Collaborator\', $group_name);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/groups_display.php` (1x):
   - Line 39: `requireAccess(\'Collaborator\', $group_name);`
 
 ---
@@ -1213,15 +1166,12 @@ Located in: `lib/functions_data.php` at line 12
 */
 ```
 
-**Used in 4 unique file(s) (7 total times):**
-- `/data/moop/tools/groups_display.php` (2x):
+**Used in 4 unique file(s) (4 total times):**
+- `/data/moop/tools/groups_display.php` (1x):
   - Line 23: `$group_data = getGroupData();`
-  - Line 23: `$group_data = getGroupData();`
-- `/data/moop/tools/organism_display.php` (2x):
+- `/data/moop/tools/organism_display.php` (1x):
   - Line 198: `$group_data = getGroupData();`
-  - Line 198: `$group_data = getGroupData();`
-- `/data/moop/tools/parent_display.php` (2x):
-  - Line 25: `$group_data = getGroupData();`
+- `/data/moop/tools/parent_display.php` (1x):
   - Line 25: `$group_data = getGroupData();`
 - `/data/moop/index.php` (1x):
   - Line 15: `$group_data = getGroupData();`
@@ -1242,9 +1192,8 @@ Located in: `lib/functions_data.php` at line 30
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/functions_data.php` (2x):
-  - Line 166: `$all_cards = getAllGroupCards($group_data);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/functions_data.php` (1x):
   - Line 166: `$all_cards = getAllGroupCards($group_data);`
 
 ### `getPublicGroupCards()` (Line 53)
@@ -1263,10 +1212,8 @@ Located in: `lib/functions_data.php` at line 53
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/lib/functions_data.php` (4x):
-  - Line 172: `$cards_to_display = getPublicGroupCards($group_data);`
-  - Line 186: `$cards_to_display = getPublicGroupCards($group_data);`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/lib/functions_data.php` (2x):
   - Line 172: `$cards_to_display = getPublicGroupCards($group_data);`
   - Line 186: `$cards_to_display = getPublicGroupCards($group_data);`
 
@@ -1287,9 +1234,8 @@ Located in: `lib/functions_data.php` at line 81
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/groups_display.php` (2x):
-  - Line 35: `$group_organisms = getAccessibleOrganismsInGroup($group_name, $group_data);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/groups_display.php` (1x):
   - Line 35: `$group_organisms = getAccessibleOrganismsInGroup($group_name, $group_data);`
 
 ### `getAssemblyFastaFiles()` (Line 131)
@@ -1311,13 +1257,13 @@ Located in: `lib/functions_data.php` at line 131
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/tools/assembly_display.php` (2x):
-  - Line 108: `$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);`
-  - Line 108: `$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);`
-- `/data/moop/tools/organism_display.php` (2x):
+**Used in 3 unique file(s) (3 total times):**
+- `/data/moop/tools/assembly_display.php` (1x):
+  - Line 204: `$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);`
+- `/data/moop/tools/organism_display.php` (1x):
   - Line 218: `<?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?>`
-  - Line 218: `<?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?>`
+- `/data/moop/tools/assembly_display1.php` (1x):
+  - Line 108: `$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);`
 
 ### `getIndexDisplayCards()` (Line 164)
 
@@ -1353,9 +1299,8 @@ Located in: `lib/functions_data.php` at line 176
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/functions_data.php` (2x):
-  - Line 176: `$formatted_name = formatIndexOrganismName($organism);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/functions_data.php` (1x):
   - Line 176: `$formatted_name = formatIndexOrganismName($organism);`
 
 ### `loadAllOrganismsMetadata()` (Line 214)
@@ -1374,17 +1319,15 @@ Located in: `lib/functions_data.php` at line 214
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/lib/functions_data.php` (2x):
-  - Line 540: `$organisms_metadata = loadAllOrganismsMetadata($organism_data_path);`
-  - Line 540: `$organisms_metadata = loadAllOrganismsMetadata($organism_data_path);`
-- `/data/moop/admin/manage_phylo_tree.php` (2x):
-  - Line 20: `$organisms = loadAllOrganismsMetadata($organism_data_dir);`
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/lib/functions_data.php` (1x):
+  - Line 542: `$organisms_metadata = loadAllOrganismsMetadata($organism_data_path);`
+- `/data/moop/admin/manage_phylo_tree.php` (1x):
   - Line 20: `$organisms = loadAllOrganismsMetadata($organism_data_dir);`
 
-### `getOrganismsWithAssemblies()` (Line 266)
+### `getOrganismsWithAssemblies()` (Line 268)
 
-Located in: `lib/functions_data.php` at line 266
+Located in: `lib/functions_data.php` at line 268
 
 **Description:**
 
@@ -1401,20 +1344,17 @@ Located in: `lib/functions_data.php` at line 266
 */
 ```
 
-**Used in 3 unique file(s) (6 total times):**
-- `/data/moop/admin/createUser.php` (2x):
+**Used in 3 unique file(s) (3 total times):**
+- `/data/moop/admin/createUser.php` (1x):
   - Line 142: `$organisms = getOrganismsWithAssemblies($config->getPath(\'organism_data\'));`
-  - Line 142: `$organisms = getOrganismsWithAssemblies($config->getPath(\'organism_data\'));`
-- `/data/moop/admin/manage_groups.php` (2x):
+- `/data/moop/admin/manage_groups.php` (1x):
   - Line 41: `$all_organisms = getOrganismsWithAssemblies($organism_data_path);`
-  - Line 41: `$all_organisms = getOrganismsWithAssemblies($organism_data_path);`
-- `/data/moop/admin/manage_annotations.php` (2x):
-  - Line 83: `$organisms = getOrganismsWithAssemblies($organisms_path);`
+- `/data/moop/admin/manage_annotations.php` (1x):
   - Line 83: `$organisms = getOrganismsWithAssemblies($organisms_path);`
 
-### `getAllExistingGroups()` (Line 302)
+### `getAllExistingGroups()` (Line 304)
 
-Located in: `lib/functions_data.php` at line 302
+Located in: `lib/functions_data.php` at line 304
 
 **Description:**
 
@@ -1430,16 +1370,14 @@ Located in: `lib/functions_data.php` at line 302
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/admin/manage_groups.php` (4x):
-  - Line 43: `$all_existing_groups = getAllExistingGroups($groups_data);`
-  - Line 238: `$existing_groups = getAllExistingGroups($groups_data);`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/admin/manage_groups.php` (2x):
   - Line 43: `$all_existing_groups = getAllExistingGroups($groups_data);`
   - Line 238: `$existing_groups = getAllExistingGroups($groups_data);`
 
-### `syncGroupDescriptions()` (Line 326)
+### `syncGroupDescriptions()` (Line 328)
 
-Located in: `lib/functions_data.php` at line 326
+Located in: `lib/functions_data.php` at line 328
 
 **Description:**
 
@@ -1456,14 +1394,13 @@ Located in: `lib/functions_data.php` at line 326
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/manage_groups.php` (2x):
-  - Line 45: `$updated_descriptions = syncGroupDescriptions($all_existing_groups, $descriptions_data);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/admin/manage_groups.php` (1x):
   - Line 45: `$updated_descriptions = syncGroupDescriptions($all_existing_groups, $descriptions_data);`
 
-### `fetch_taxonomy_lineage()` (Line 380)
+### `fetch_taxonomy_lineage()` (Line 382)
 
-Located in: `lib/functions_data.php` at line 380
+Located in: `lib/functions_data.php` at line 382
 
 **Description:**
 
@@ -1479,14 +1416,13 @@ Located in: `lib/functions_data.php` at line 380
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/functions_data.php` (2x):
-  - Line 465: `$lineage = fetch_taxonomy_lineage($data[\'taxon_id\']);`
-  - Line 465: `$lineage = fetch_taxonomy_lineage($data[\'taxon_id\']);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/functions_data.php` (1x):
+  - Line 467: `$lineage = fetch_taxonomy_lineage($data[\'taxon_id\']);`
 
-### `build_tree_from_organisms()` (Line 457)
+### `build_tree_from_organisms()` (Line 459)
 
-Located in: `lib/functions_data.php` at line 457
+Located in: `lib/functions_data.php` at line 459
 
 **Description:**
 
@@ -1502,14 +1438,13 @@ Located in: `lib/functions_data.php` at line 457
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/manage_phylo_tree.php` (2x):
-  - Line 34: `$tree_data = build_tree_from_organisms($organisms);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/admin/manage_phylo_tree.php` (1x):
   - Line 34: `$tree_data = build_tree_from_organisms($organisms);`
 
-### `getDetailedOrganismsInfo()` (Line 532)
+### `getDetailedOrganismsInfo()` (Line 534)
 
-Located in: `lib/functions_data.php` at line 532
+Located in: `lib/functions_data.php` at line 534
 
 **Description:**
 
@@ -1526,10 +1461,9 @@ Located in: `lib/functions_data.php` at line 532
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/manage_organisms.php` (2x):
-  - Line 148: `$organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);`
-  - Line 148: `$organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/admin/manage_organisms.php` (1x):
+  - Line 13: `$organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);`
 
 ---
 
@@ -1552,10 +1486,9 @@ Located in: `lib/functions_database.php` at line 13
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/annotation_search_ajax.php` (2x):
-  - Line 74: `$db_validation = validateDatabaseFile($db);`
-  - Line 74: `$db_validation = validateDatabaseFile($db);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/annotation_search_ajax.php` (1x):
+  - Line 75: `$db_validation = validateDatabaseFile($db);`
 
 ### `validateDatabaseIntegrity()` (Line 44)
 
@@ -1579,10 +1512,9 @@ Located in: `lib/functions_database.php` at line 44
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/functions_data.php` (2x):
-  - Line 577: `$db_validation = validateDatabaseIntegrity($db_file);`
-  - Line 577: `$db_validation = validateDatabaseIntegrity($db_file);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/functions_data.php` (1x):
+  - Line 579: `$db_validation = validateDatabaseIntegrity($db_file);`
 
 ### `getDbConnection()` (Line 181)
 
@@ -1600,9 +1532,8 @@ Located in: `lib/functions_database.php` at line 181
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/functions_database.php` (2x):
-  - Line 208: `$dbh = getDbConnection($dbFile);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/functions_database.php` (1x):
   - Line 208: `$dbh = getDbConnection($dbFile);`
 
 ### `fetchData()` (Line 206)
@@ -1623,11 +1554,10 @@ Located in: `lib/functions_database.php` at line 206
 */
 ```
 
-**Used in 3 unique file(s) (32 total times):**
-- `/data/moop/lib/parent_functions.php` (2x):
-  - Line 225: `$results = fetchData($query, $dbFile, $params);`
-  - Line 225: `$results = fetchData($query, $dbFile, $params);`
-- `/data/moop/lib/database_queries.php` (28x):
+**Used in 5 unique file(s) (18 total times):**
+- `/data/moop/lib/parent_functions.php` (1x):
+  - Line 246: `$results = fetchData($query, $dbFile, $params);`
+- `/data/moop/lib/database_queries.php` (14x):
   - Line 52: `$results = fetchData($query, $dbFile, $params);`
   - Line 89: `$results = fetchData($query, $dbFile, $params);`
   - Line 118: `return fetchData($query, $dbFile, $params);`
@@ -1636,29 +1566,18 @@ Located in: `lib/functions_database.php` at line 206
   - Line 208: `return fetchData($query, $dbFile, $params);`
   - Line 229: `return fetchData($query, $dbFile, [$feature_id]);`
   - Line 246: `$results = fetchData($query, [$organism_name, $organism_name], $dbFile);`
-  - Line 268: `$results = fetchData($query, $dbFile, [$genome_accession]);`
-  - Line 503: `return fetchData($query, $dbFile, $params);`
-  - Line 542: `return fetchData($query, $dbFile, $params);`
-  - Line 563: `return fetchData($query, $dbFile, []);`
-  - Line 588: `$sources_with_types = fetchData($query, $dbFile, []);`
-  - Line 644: `$results = fetchData($query, $dbFile, []);`
-  - Line 52: `$results = fetchData($query, $dbFile, $params);`
-  - Line 89: `$results = fetchData($query, $dbFile, $params);`
-  - Line 118: `return fetchData($query, $dbFile, $params);`
-  - Line 144: `$results = fetchData($query, $dbFile, $params);`
-  - Line 175: `return fetchData($query, $dbFile, $params);`
-  - Line 208: `return fetchData($query, $dbFile, $params);`
-  - Line 229: `return fetchData($query, $dbFile, [$feature_id]);`
-  - Line 246: `$results = fetchData($query, [$organism_name, $organism_name], $dbFile);`
-  - Line 268: `$results = fetchData($query, $dbFile, [$genome_accession]);`
-  - Line 503: `return fetchData($query, $dbFile, $params);`
-  - Line 542: `return fetchData($query, $dbFile, $params);`
-  - Line 563: `return fetchData($query, $dbFile, []);`
-  - Line 588: `$sources_with_types = fetchData($query, $dbFile, []);`
-  - Line 644: `$results = fetchData($query, $dbFile, []);`
-- `/data/moop/lib/functions_database.php` (2x):
+  - Line 268: `$results = fetchData($query, $dbFile, [$genome_id_param, $genome_id_param]);`
+  - Line 515: `return fetchData($query, $dbFile, $params);`
+  - Line 566: `return fetchData($query, $dbFile, $params);`
+  - Line 587: `return fetchData($query, $dbFile, []);`
+  - Line 612: `$sources_with_types = fetchData($query, $dbFile, []);`
+  - Line 668: `$results = fetchData($query, $dbFile, []);`
+- `/data/moop/lib/functions_database.php` (1x):
   - Line 289: `$results = fetchData($query, $db_path, $params);`
-  - Line 289: `$results = fetchData($query, $db_path, $params);`
+- `/data/moop/lib/functions_access.php` (1x):
+  - Line 26: `$results = fetchData($query, $db_path, [$assembly, $assembly]);`
+- `/data/moop/tools/assembly_display.php` (1x):
+  - Line 34: `$results = fetchData($query, $db_path, [$assembly_param]);`
 
 ### `buildLikeConditions()` (Line 241)
 
@@ -1710,9 +1629,8 @@ Located in: `lib/functions_database.php` at line 277
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/parent_display.php` (2x):
-  - Line 32: `$accessible_genome_ids = getAccessibleGenomeIds($organism_name, $accessible_assemblies, $db);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/parent_display.php` (1x):
   - Line 32: `$accessible_genome_ids = getAccessibleGenomeIds($organism_name, $accessible_assemblies, $db);`
 
 ### `loadOrganismInfo()` (Line 301)
@@ -1731,10 +1649,8 @@ Located in: `lib/functions_database.php` at line 301
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/lib/functions_display.php` (4x):
-  - Line 28: `$organism_info = loadOrganismInfo($organism_name, $organism_data);`
-  - Line 271: `$organism_info = loadOrganismInfo($organism_name, $organism_data_dir);`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/lib/functions_display.php` (2x):
   - Line 28: `$organism_info = loadOrganismInfo($organism_name, $organism_data);`
   - Line 271: `$organism_info = loadOrganismInfo($organism_name, $organism_data_dir);`
 
@@ -1754,16 +1670,15 @@ Located in: `lib/functions_database.php` at line 332
 */
 ```
 
-**Used in 3 unique file(s) (6 total times):**
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 90: `$db = verifyOrganismDatabase($selected_organism, $organism_data);`
-  - Line 90: `$db = verifyOrganismDatabase($selected_organism, $organism_data);`
-- `/data/moop/tools/assembly_display.php` (2x):
+**Used in 4 unique file(s) (4 total times):**
+- `/data/moop/tools/assembly_display.php` (1x):
   - Line 16: `$db_path = verifyOrganismDatabase($organism_name, $organism_data);`
+- `/data/moop/tools/parent_display.php` (1x):
+  - Line 22: `$db = verifyOrganismDatabase($organism_name, $organism_data);`
+- `/data/moop/tools/assembly_display1.php` (1x):
   - Line 16: `$db_path = verifyOrganismDatabase($organism_name, $organism_data);`
-- `/data/moop/tools/parent_display.php` (2x):
-  - Line 22: `$db = verifyOrganismDatabase($organism_name, $organism_data);`
-  - Line 22: `$db = verifyOrganismDatabase($organism_name, $organism_data);`
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 142: `$db = verifyOrganismDatabase($selected_organism, $organism_data);`
 
 ---
 
@@ -1791,12 +1706,10 @@ Located in: `lib/functions_display.php` at line 18
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/tools/annotation_search_ajax.php` (2x):
-  - Line 86: `$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);`
-  - Line 86: `$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);`
-- `/data/moop/tools/multi_organism_search.php` (2x):
-  - Line 115: `$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);`
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/tools/annotation_search_ajax.php` (1x):
+  - Line 87: `$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);`
+- `/data/moop/tools/multi_organism_search.php` (1x):
   - Line 115: `$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);`
 
 ### `getOrganismImagePath()` (Line 11)
@@ -1821,14 +1734,11 @@ Located in: `lib/functions_display.php` at line 11
 */
 ```
 
-**Used in 2 unique file(s) (6 total times):**
-- `/data/moop/lib/functions_display.php` (4x):
+**Used in 2 unique file(s) (3 total times):**
+- `/data/moop/lib/functions_display.php` (2x):
   - Line 31: `$result[\'image_path\'] = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
   - Line 151: `$image_path = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
-  - Line 31: `$result[\'image_path\'] = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
-  - Line 151: `$image_path = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
-- `/data/moop/tools/groups_display.php` (2x):
-  - Line 188: `$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
+- `/data/moop/tools/groups_display.php` (1x):
   - Line 188: `$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);`
 
 ### `getOrganismImageCaption()` (Line 98)
@@ -1851,9 +1761,8 @@ Located in: `lib/functions_display.php` at line 98
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/functions_display.php` (2x):
-  - Line 152: `$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/functions_display.php` (1x):
   - Line 152: `$image_info = getOrganismImageCaption($organism_info, $absolute_images_path);`
 
 ### `getOrganismImageWithCaption()` (Line 150)
@@ -1876,9 +1785,10 @@ Located in: `lib/functions_display.php` at line 150
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/organism_display.php` (2x):
-  - Line 97: `$image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path);`
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/tools/assembly_display.php` (1x):
+  - Line 131: `$image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path);`
+- `/data/moop/tools/organism_display.php` (1x):
   - Line 97: `$image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path);`
 
 ### `validateOrganismJson()` (Line 173)
@@ -1902,10 +1812,9 @@ Located in: `lib/functions_display.php` at line 173
 */
 ```
 
-**Used in 2 unique file(s) (8 total times):**
-- `/data/moop/lib/functions_data.php` (2x):
-  - Line 550: `$json_validation = validateOrganismJson($organism_json);`
-  - Line 550: `$json_validation = validateOrganismJson($organism_json);`
+**Used in 2 unique file(s) (7 total times):**
+- `/data/moop/lib/functions_data.php` (1x):
+  - Line 552: `$json_validation = validateOrganismJson($organism_json);`
 - `/data/moop/tests/test_organism_json_validation.php` (6x):
   - Line 71: `$result = validateOrganismJson($path);`
   - Line 88: `$result = validateOrganismJson($path);`
@@ -1934,16 +1843,15 @@ Located in: `lib/functions_display.php` at line 266
 */
 ```
 
-**Used in 3 unique file(s) (6 total times):**
-- `/data/moop/tools/assembly_display.php` (2x):
+**Used in 4 unique file(s) (4 total times):**
+- `/data/moop/tools/assembly_display.php` (1x):
   - Line 12: `$organism_context = setupOrganismDisplayContext($organism_name, $organism_data, true);`
+- `/data/moop/tools/organism_display.php` (1x):
+  - Line 10: `$organism_context = setupOrganismDisplayContext($_GET[\'organism\'] ?? \'\', $organism_data);`
+- `/data/moop/tools/parent_display.php` (1x):
+  - Line 18: `$organism_context = setupOrganismDisplayContext($organism_name, $organism_data, true);`
+- `/data/moop/tools/assembly_display1.php` (1x):
   - Line 12: `$organism_context = setupOrganismDisplayContext($organism_name, $organism_data, true);`
-- `/data/moop/tools/organism_display.php` (2x):
-  - Line 10: `$organism_context = setupOrganismDisplayContext($_GET[\'organism\'] ?? \'\', $organism_data);`
-  - Line 10: `$organism_context = setupOrganismDisplayContext($_GET[\'organism\'] ?? \'\', $organism_data);`
-- `/data/moop/tools/parent_display.php` (2x):
-  - Line 18: `$organism_context = setupOrganismDisplayContext($organism_name, $organism_data, true);`
-  - Line 18: `$organism_context = setupOrganismDisplayContext($organism_name, $organism_data, true);`
 
 ### `fetch_organism_image()` (Line 303)
 
@@ -1965,10 +1873,9 @@ Located in: `lib/functions_display.php` at line 303
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/functions_data.php` (2x):
-  - Line 466: `$image = fetch_organism_image($data[\'taxon_id\'], $organism_name);`
-  - Line 466: `$image = fetch_organism_image($data[\'taxon_id\'], $organism_name);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/functions_data.php` (1x):
+  - Line 468: `$image = fetch_organism_image($data[\'taxon_id\'], $organism_name);`
 
 ### `generatePermissionAlert()` (Line 354)
 
@@ -1993,24 +1900,17 @@ Located in: `lib/functions_display.php` at line 354
 */
 ```
 
-**Used in 3 unique file(s) (14 total times):**
-- `/data/moop/admin/manage_groups.php` (4x):
+**Used in 3 unique file(s) (7 total times):**
+- `/data/moop/admin/manage_groups.php` (2x):
   - Line 270: `echo generatePermissionAlert(`
   - Line 473: `echo generatePermissionAlert(`
-  - Line 270: `echo generatePermissionAlert(`
-  - Line 473: `echo generatePermissionAlert(`
-- `/data/moop/admin/manage_registry.php` (8x):
+- `/data/moop/admin/manage_registry.php` (4x):
   - Line 74: `<?php echo generatePermissionAlert(`
   - Line 81: `<?php echo generatePermissionAlert(`
   - Line 88: `<?php echo generatePermissionAlert(`
   - Line 95: `<?php echo generatePermissionAlert(`
-  - Line 74: `<?php echo generatePermissionAlert(`
-  - Line 81: `<?php echo generatePermissionAlert(`
-  - Line 88: `<?php echo generatePermissionAlert(`
-  - Line 95: `<?php echo generatePermissionAlert(`
-- `/data/moop/admin/manage_organisms.php` (2x):
-  - Line 779: `<?php echo generatePermissionAlert(`
-  - Line 779: `<?php echo generatePermissionAlert(`
+- `/data/moop/admin/manage_organisms.php` (1x):
+  - Line 790: `<?php echo generatePermissionAlert(`
 
 ---
 
@@ -2035,30 +1935,20 @@ Located in: `lib/functions_errorlog.php` at line 15
 */
 ```
 
-**Used in 5 unique file(s) (20 total times):**
-- `/data/moop/lib/functions_display.php` (6x):
+**Used in 5 unique file(s) (10 total times):**
+- `/data/moop/lib/functions_display.php` (3x):
   - Line 53: `logError(\'getOrganismImagePath received invalid organism_info\', \'organism_image\', [`
   - Line 77: `logError(\'NCBI taxonomy image not found\', \'organism_image\', [`
   - Line 106: `logError(\'getOrganismImageCaption received invalid organism_info\', \'organism_image\', [`
-  - Line 53: `logError(\'getOrganismImagePath received invalid organism_info\', \'organism_image\', [`
-  - Line 77: `logError(\'NCBI taxonomy image not found\', \'organism_image\', [`
-  - Line 106: `logError(\'getOrganismImageCaption received invalid organism_info\', \'organism_image\', [`
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 139: `logError($err, \"download_fasta\", [\'user\' => $_SESSION[\'username\'] ?? \'unknown\']);`
-  - Line 139: `logError($err, \"download_fasta\", [\'user\' => $_SESSION[\'username\'] ?? \'unknown\']);`
-- `/data/moop/tools/sequences_display.php` (2x):
+- `/data/moop/tools/sequences_display.php` (1x):
   - Line 126: `logError(`
-  - Line 126: `logError(`
-- `/data/moop/tools/annotation_search_ajax.php` (6x):
-  - Line 65: `logError(\'Database not found for organism\', $organism, [`
-  - Line 76: `logError(\'Database file not accessible\', $organism, [`
-  - Line 142: `logError(\'Incomplete annotation records found\', $organism, [`
-  - Line 65: `logError(\'Database not found for organism\', $organism, [`
-  - Line 76: `logError(\'Database file not accessible\', $organism, [`
-  - Line 142: `logError(\'Incomplete annotation records found\', $organism, [`
-- `/data/moop/admin/manage_groups.php` (4x):
-  - Line 213: `logError(\'manage_groups.php\', \"Failed to write to change_log/manage_groups.log\", [`
-  - Line 222: `logError(\'manage_groups.php\', \"Failed to write to organism_assembly_groups.json\", [`
+- `/data/moop/tools/annotation_search_ajax.php` (3x):
+  - Line 66: `logError(\'Database not found for organism\', $organism, [`
+  - Line 77: `logError(\'Database file not accessible\', $organism, [`
+  - Line 143: `logError(\'Incomplete annotation records found\', $organism, [`
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 191: `logError($err, \"download_fasta\", [\'user\' => $_SESSION[\'username\'] ?? \'unknown\']);`
+- `/data/moop/admin/manage_groups.php` (2x):
   - Line 213: `logError(\'manage_groups.php\', \"Failed to write to change_log/manage_groups.log\", [`
   - Line 222: `logError(\'manage_groups.php\', \"Failed to write to organism_assembly_groups.json\", [`
 
@@ -2077,9 +1967,8 @@ Located in: `lib/functions_errorlog.php` at line 42
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/error_log.php` (2x):
-  - Line 17: `$all_errors = getErrorLog(500); // Get more for filtering`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/admin/error_log.php` (1x):
   - Line 17: `$all_errors = getErrorLog(500); // Get more for filtering`
 
 ### `clearErrorLog()` (Line 75)
@@ -2096,9 +1985,8 @@ Located in: `lib/functions_errorlog.php` at line 75
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/error_log.php` (2x):
-  - Line 11: `if (clearErrorLog()) {`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/admin/error_log.php` (1x):
   - Line 11: `if (clearErrorLog()) {`
 
 ---
@@ -2124,12 +2012,8 @@ Located in: `lib/functions_filesystem.php` at line 15
 */
 ```
 
-**Used in 1 unique file(s) (6 total times):**
-- `/data/moop/lib/functions_filesystem.php` (6x):
-  - Line 223: `if (!validateDirectoryName($old_name) || !validateDirectoryName($new_name)) {`
-  - Line 223: `if (!validateDirectoryName($old_name) || !validateDirectoryName($new_name)) {`
-  - Line 268: `if (!validateDirectoryName($dir_name)) {`
-  - Line 223: `if (!validateDirectoryName($old_name) || !validateDirectoryName($new_name)) {`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/lib/functions_filesystem.php` (2x):
   - Line 223: `if (!validateDirectoryName($old_name) || !validateDirectoryName($new_name)) {`
   - Line 268: `if (!validateDirectoryName($dir_name)) {`
 
@@ -2152,19 +2036,8 @@ Located in: `lib/functions_filesystem.php` at line 33
 */
 ```
 
-**Used in 1 unique file(s) (22 total times):**
-- `/data/moop/lib/functions_filesystem.php` (22x):
-  - Line 219: `return buildDirectoryResult(false, \'Organism directory not found\');`
-  - Line 224: `return buildDirectoryResult(false, \'Invalid directory name (contains path separators)\');`
-  - Line 232: `return buildDirectoryResult(false, \"Directory \'$old_name\' not found\");`
-  - Line 237: `return buildDirectoryResult(false, \"Directory \'$new_name\' already exists\");`
-  - Line 245: `return buildDirectoryResult(true, \"Successfully renamed \'$old_name\' to \'$new_name\'\", $command);`
-  - Line 247: `return buildDirectoryResult(false, \'Web server lacks permission to rename directory.\', $command);`
-  - Line 264: `return buildDirectoryResult(false, \'Organism directory not found\');`
-  - Line 269: `return buildDirectoryResult(false, \'Invalid directory name (security check failed)\');`
-  - Line 276: `return buildDirectoryResult(false, \"Directory \'$dir_name\' not found\");`
-  - Line 284: `return buildDirectoryResult(true, \"Successfully deleted directory \'$dir_name\'\", $command);`
-  - Line 286: `return buildDirectoryResult(false, \'Web server lacks permission to delete directory.\', $command);`
+**Used in 1 unique file(s) (11 total times):**
+- `/data/moop/lib/functions_filesystem.php` (11x):
   - Line 219: `return buildDirectoryResult(false, \'Organism directory not found\');`
   - Line 224: `return buildDirectoryResult(false, \'Invalid directory name (contains path separators)\');`
   - Line 232: `return buildDirectoryResult(false, \"Directory \'$old_name\' not found\");`
@@ -2196,10 +2069,11 @@ Located in: `lib/functions_filesystem.php` at line 51
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/functions_data.php` (2x):
-  - Line 579: `$assembly_validation = validateAssemblyDirectories($db_file, \"$organism_data_path/$organism\");`
-  - Line 579: `$assembly_validation = validateAssemblyDirectories($db_file, \"$organism_data_path/$organism\");`
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/lib/functions_data.php` (1x):
+  - Line 581: `$assembly_validation = validateAssemblyDirectories($db_file, \"$organism_data_path/$organism\");`
+- `/data/moop/lib/functions_access.php` (1x):
+  - Line 118: `$assembly_validation = validateAssemblyDirectories($db_path, \"$organism_data/$org\");`
 
 ### `validateAssemblyFastaFiles()` (Line 150)
 
@@ -2220,10 +2094,9 @@ Located in: `lib/functions_filesystem.php` at line 150
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/functions_data.php` (2x):
-  - Line 582: `$fasta_validation = validateAssemblyFastaFiles(\"$organism_data_path/$organism\", $sequence_types);`
-  - Line 582: `$fasta_validation = validateAssemblyFastaFiles(\"$organism_data_path/$organism\", $sequence_types);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/functions_data.php` (1x):
+  - Line 584: `$fasta_validation = validateAssemblyFastaFiles(\"$organism_data_path/$organism\", $sequence_types);`
 
 ### `renameAssemblyDirectory()` (Line 217)
 
@@ -2246,12 +2119,10 @@ Located in: `lib/functions_filesystem.php` at line 217
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/admin/manage_organisms.php` (4x):
-  - Line 42: `$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);`
-  - Line 1080: `<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
-  - Line 42: `$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);`
-  - Line 1080: `<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/admin/manage_organisms.php` (2x):
+  - Line 48: `$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);`
+  - Line 1091: `<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
 
 ### `deleteAssemblyDirectory()` (Line 262)
 
@@ -2273,12 +2144,10 @@ Located in: `lib/functions_filesystem.php` at line 262
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/admin/manage_organisms.php` (4x):
-  - Line 61: `$result = deleteAssemblyDirectory($organism_dir, $dir_name);`
-  - Line 1113: `<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
-  - Line 61: `$result = deleteAssemblyDirectory($organism_dir, $dir_name);`
-  - Line 1113: `<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/admin/manage_organisms.php` (2x):
+  - Line 67: `$result = deleteAssemblyDirectory($organism_dir, $dir_name);`
+  - Line 1124: `<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
 
 ### `rrmdir()` (Line 283)
 
@@ -2297,10 +2166,8 @@ Located in: `lib/functions_filesystem.php` at line 283
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/lib/functions_filesystem.php` (4x):
-  - Line 283: `if (rrmdir($dir_path)) {`
-  - Line 310: `if (!rrmdir($path)) {`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/lib/functions_filesystem.php` (2x):
   - Line 283: `if (rrmdir($dir_path)) {`
   - Line 310: `if (!rrmdir($path)) {`
 
@@ -2320,24 +2187,18 @@ Located in: `lib/functions_filesystem.php` at line 330
 */
 ```
 
-**Used in 5 unique file(s) (12 total times):**
-- `/data/moop/admin/createUser.php` (2x):
+**Used in 5 unique file(s) (6 total times):**
+- `/data/moop/admin/createUser.php` (1x):
   - Line 21: `$file_write_error = getFileWriteError($usersFile);`
-  - Line 21: `$file_write_error = getFileWriteError($usersFile);`
-- `/data/moop/admin/manage_groups.php` (4x):
+- `/data/moop/admin/manage_groups.php` (2x):
   - Line 24: `$file_write_error = getFileWriteError($groups_file);`
   - Line 27: `$desc_file_write_error = getFileWriteError($descriptions_file);`
-  - Line 24: `$file_write_error = getFileWriteError($groups_file);`
-  - Line 27: `$desc_file_write_error = getFileWriteError($descriptions_file);`
-- `/data/moop/admin/manage_annotations.php` (2x):
+- `/data/moop/admin/manage_annotations.php` (1x):
   - Line 12: `$file_write_error = getFileWriteError($config_file);`
-  - Line 12: `$file_write_error = getFileWriteError($config_file);`
-- `/data/moop/admin/manage_phylo_tree.php` (2x):
+- `/data/moop/admin/manage_phylo_tree.php` (1x):
   - Line 16: `$file_write_error = getFileWriteError($tree_config_file);`
-  - Line 16: `$file_write_error = getFileWriteError($tree_config_file);`
-- `/data/moop/admin/manage_organisms.php` (2x):
-  - Line 127: `$write_error = getFileWriteError($organism_json_path);`
-  - Line 127: `$write_error = getFileWriteError($organism_json_path);`
+- `/data/moop/admin/manage_organisms.php` (1x):
+  - Line 133: `$write_error = getFileWriteError($organism_json_path);`
 
 ### `getDirectoryError()` (Line 361)
 
@@ -2369,14 +2230,11 @@ Located in: `lib/functions_filesystem.php` at line 361
 */
 ```
 
-**Used in 2 unique file(s) (6 total times):**
-- `/data/moop/admin/manage_groups.php` (4x):
+**Used in 2 unique file(s) (3 total times):**
+- `/data/moop/admin/manage_groups.php` (2x):
   - Line 35: `$change_log_error = @getDirectoryError($change_log_dir);`
   - Line 38: `$change_log_error = @getDirectoryError($change_log_dir);`
-  - Line 35: `$change_log_error = @getDirectoryError($change_log_dir);`
-  - Line 38: `$change_log_error = @getDirectoryError($change_log_dir);`
-- `/data/moop/admin/manage_phylo_tree.php` (2x):
-  - Line 17: `$dir_error = getDirectoryError($absolute_images_path . \'/ncbi_taxonomy\');`
+- `/data/moop/admin/manage_phylo_tree.php` (1x):
   - Line 17: `$dir_error = getDirectoryError($absolute_images_path . \'/ncbi_taxonomy\');`
 
 ### `getRegistryLastUpdate()` (Line 456)
@@ -2398,10 +2256,8 @@ Located in: `lib/functions_filesystem.php` at line 456
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/admin/manage_registry.php` (4x):
-  - Line 52: `$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);`
-  - Line 53: `$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/admin/manage_registry.php` (2x):
   - Line 52: `$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);`
   - Line 53: `$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);`
 
@@ -2424,9 +2280,8 @@ Located in: `lib/functions_filesystem.php` at line 489
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/manage_annotations.php` (2x):
-  - Line 76: `$newest_mod_info = getNewestSqliteModTime($organisms_path);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/admin/manage_annotations.php` (1x):
   - Line 76: `$newest_mod_info = getNewestSqliteModTime($organisms_path);`
 
 ---
@@ -2451,34 +2306,24 @@ Located in: `lib/functions_json.php` at line 14
 */
 ```
 
-**Used in 8 unique file(s) (20 total times):**
-- `/data/moop/lib/functions_database.php` (2x):
+**Used in 8 unique file(s) (10 total times):**
+- `/data/moop/lib/functions_database.php` (1x):
   - Line 303: `$organism_info = loadJsonFile($organism_json_path);`
-  - Line 303: `$organism_info = loadJsonFile($organism_json_path);`
-- `/data/moop/lib/functions_data.php` (2x):
+- `/data/moop/lib/functions_data.php` (1x):
   - Line 230: `$organism_info = loadJsonFile($organism_json_path);`
-  - Line 230: `$organism_info = loadJsonFile($organism_json_path);`
-- `/data/moop/lib/functions_json.php` (2x):
+- `/data/moop/lib/functions_json.php` (1x):
   - Line 88: `$existing = loadJsonFile($file_path);`
-  - Line 88: `$existing = loadJsonFile($file_path);`
-- `/data/moop/tools/groups_display.php` (2x):
+- `/data/moop/tools/groups_display.php` (1x):
   - Line 20: `$group_descriptions = loadJsonFile($group_descriptions_file, []);`
-  - Line 20: `$group_descriptions = loadJsonFile($group_descriptions_file, []);`
-- `/data/moop/admin/admin_access_check.php` (2x):
+- `/data/moop/admin/admin_access_check.php` (1x):
   - Line 8: `$users = loadJsonFile($usersFile, []);`
-  - Line 8: `$users = loadJsonFile($usersFile, []);`
-- `/data/moop/admin/manage_groups.php` (6x):
+- `/data/moop/admin/manage_groups.php` (3x):
   - Line 17: `$groups_data = loadJsonFile($groups_file, []);`
   - Line 21: `$descriptions_data = loadJsonFile($descriptions_file, []);`
   - Line 44: `$descriptions_data = loadJsonFile($descriptions_file, []);`
-  - Line 17: `$groups_data = loadJsonFile($groups_file, []);`
-  - Line 21: `$descriptions_data = loadJsonFile($descriptions_file, []);`
-  - Line 44: `$descriptions_data = loadJsonFile($descriptions_file, []);`
-- `/data/moop/admin/manage_annotations.php` (2x):
+- `/data/moop/admin/manage_annotations.php` (1x):
   - Line 9: `$annotation_config = loadJsonFile($config_file, []);`
-  - Line 9: `$annotation_config = loadJsonFile($config_file, []);`
-- `/data/moop/admin/manage_phylo_tree.php` (2x):
-  - Line 77: `$current_tree = loadJsonFile($tree_config_file, null);`
+- `/data/moop/admin/manage_phylo_tree.php` (1x):
   - Line 77: `$current_tree = loadJsonFile($tree_config_file, null);`
 
 ### `loadJsonFileRequired()` (Line 36)
@@ -2498,9 +2343,8 @@ Located in: `lib/functions_json.php` at line 36
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/parent_display.php` (2x):
-  - Line 41: `$annotation_config = loadJsonFileRequired($annotation_config_file, \"Missing annotation_config.json\");`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/parent_display.php` (1x):
   - Line 41: `$annotation_config = loadJsonFileRequired($annotation_config_file, \"Missing annotation_config.json\");`
 
 ### `loadAndMergeJson()` (Line 81)
@@ -2520,10 +2364,9 @@ Located in: `lib/functions_json.php` at line 81
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/manage_organisms.php` (2x):
-  - Line 116: `$metadata = loadAndMergeJson($organism_json_path, $metadata);`
-  - Line 116: `$metadata = loadAndMergeJson($organism_json_path, $metadata);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/admin/manage_organisms.php` (1x):
+  - Line 122: `$metadata = loadAndMergeJson($organism_json_path, $metadata);`
 
 ### `decodeJsonString()` (Line 113)
 
@@ -2541,12 +2384,10 @@ Located in: `lib/functions_json.php` at line 113
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/admin/manage_organisms.php` (4x):
-  - Line 94: `$images = decodeJsonString($images_json);`
-  - Line 95: `$html_p = decodeJsonString($html_p_json);`
-  - Line 94: `$images = decodeJsonString($images_json);`
-  - Line 95: `$html_p = decodeJsonString($html_p_json);`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/admin/manage_organisms.php` (2x):
+  - Line 100: `$images = decodeJsonString($images_json);`
+  - Line 101: `$html_p = decodeJsonString($html_p_json);`
 
 ### `saveJsonFile()` (Line 137)
 
@@ -2565,34 +2406,21 @@ Located in: `lib/functions_json.php` at line 137
 */
 ```
 
-**Used in 1 unique file(s) (26 total times):**
-- `/data/moop/admin/manage_annotations.php` (26x):
+**Used in 1 unique file(s) (13 total times):**
+- `/data/moop/admin/manage_annotations.php` (13x):
   - Line 112: `saveJsonFile($config_file, $annotation_config);`
   - Line 145: `saveJsonFile($config_file, $annotation_config);`
-  - Line 171: `saveJsonFile($config_file, $annotation_config);`
-  - Line 185: `saveJsonFile($config_file, $annotation_config);`
-  - Line 197: `saveJsonFile($config_file, $annotation_config);`
-  - Line 217: `saveJsonFile($config_file, $annotation_config);`
-  - Line 237: `saveJsonFile($config_file, $annotation_config);`
-  - Line 260: `saveJsonFile($config_file, $annotation_config);`
-  - Line 269: `saveJsonFile($config_file, $annotation_config);`
-  - Line 289: `saveJsonFile($config_file, $annotation_config);`
-  - Line 303: `saveJsonFile($config_file, $annotation_config);`
-  - Line 315: `saveJsonFile($config_file, $annotation_config);`
-  - Line 330: `saveJsonFile($config_file, $annotation_config);`
-  - Line 112: `saveJsonFile($config_file, $annotation_config);`
-  - Line 145: `saveJsonFile($config_file, $annotation_config);`
-  - Line 171: `saveJsonFile($config_file, $annotation_config);`
-  - Line 185: `saveJsonFile($config_file, $annotation_config);`
-  - Line 197: `saveJsonFile($config_file, $annotation_config);`
-  - Line 217: `saveJsonFile($config_file, $annotation_config);`
-  - Line 237: `saveJsonFile($config_file, $annotation_config);`
-  - Line 260: `saveJsonFile($config_file, $annotation_config);`
-  - Line 269: `saveJsonFile($config_file, $annotation_config);`
-  - Line 289: `saveJsonFile($config_file, $annotation_config);`
-  - Line 303: `saveJsonFile($config_file, $annotation_config);`
-  - Line 315: `saveJsonFile($config_file, $annotation_config);`
-  - Line 330: `saveJsonFile($config_file, $annotation_config);`
+  - Line 170: `saveJsonFile($config_file, $annotation_config);`
+  - Line 184: `saveJsonFile($config_file, $annotation_config);`
+  - Line 196: `saveJsonFile($config_file, $annotation_config);`
+  - Line 216: `saveJsonFile($config_file, $annotation_config);`
+  - Line 236: `saveJsonFile($config_file, $annotation_config);`
+  - Line 259: `saveJsonFile($config_file, $annotation_config);`
+  - Line 268: `saveJsonFile($config_file, $annotation_config);`
+  - Line 288: `saveJsonFile($config_file, $annotation_config);`
+  - Line 302: `saveJsonFile($config_file, $annotation_config);`
+  - Line 314: `saveJsonFile($config_file, $annotation_config);`
+  - Line 329: `saveJsonFile($config_file, $annotation_config);`
 
 ### `getAnnotationTypeMapping()` (Line 148)
 
@@ -2610,10 +2438,8 @@ Located in: `lib/functions_json.php` at line 148
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/lib/functions_json.php` (4x):
-  - Line 185: `$mapping = getAnnotationTypeMapping($annotation_config);`
-  - Line 305: `$mapping = getAnnotationTypeMapping($annotation_config);`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/lib/functions_json.php` (2x):
   - Line 185: `$mapping = getAnnotationTypeMapping($annotation_config);`
   - Line 305: `$mapping = getAnnotationTypeMapping($annotation_config);`
 
@@ -2635,9 +2461,8 @@ Located in: `lib/functions_json.php` at line 179
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/manage_annotations.php` (2x):
-  - Line 104: `$annotation_config = syncAnnotationTypes($annotation_config, $all_db_annotation_types);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/admin/manage_annotations.php` (1x):
   - Line 104: `$annotation_config = syncAnnotationTypes($annotation_config, $all_db_annotation_types);`
 
 ### `consolidateSynonym()` (Line 248)
@@ -2698,9 +2523,8 @@ Located in: `lib/functions_json.php` at line 337
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/admin/manage_annotations.php` (2x):
-  - Line 79: `$need_update = shouldUpdateAnnotationCounts($annotation_config, $newest_mod_info);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/admin/manage_annotations.php` (1x):
   - Line 79: `$need_update = shouldUpdateAnnotationCounts($annotation_config, $newest_mod_info);`
 
 ---
@@ -2725,20 +2549,14 @@ Located in: `lib/functions_system.php` at line 14
 */
 ```
 
-**Used in 3 unique file(s) (12 total times):**
-- `/data/moop/lib/functions_filesystem.php` (4x):
+**Used in 3 unique file(s) (6 total times):**
+- `/data/moop/lib/functions_filesystem.php` (2x):
   - Line 335: `$webserver = getWebServerUser();`
   - Line 381: `$webserver = getWebServerUser();`
-  - Line 335: `$webserver = getWebServerUser();`
-  - Line 381: `$webserver = getWebServerUser();`
-- `/data/moop/lib/functions_system.php` (4x):
+- `/data/moop/lib/functions_system.php` (2x):
   - Line 66: `$webserver = getWebServerUser();`
   - Line 133: `$webserver = getWebServerUser();`
-  - Line 66: `$webserver = getWebServerUser();`
-  - Line 133: `$webserver = getWebServerUser();`
-- `/data/moop/lib/functions_display.php` (4x):
-  - Line 209: `$webserver = getWebServerUser();`
-  - Line 375: `$webserver = getWebServerUser();`
+- `/data/moop/lib/functions_display.php` (2x):
   - Line 209: `$webserver = getWebServerUser();`
   - Line 375: `$webserver = getWebServerUser();`
 
@@ -2760,12 +2578,10 @@ Located in: `lib/functions_system.php` at line 48
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/admin/manage_organisms.php` (4x):
-  - Line 22: `$result = fixDatabasePermissions($db_file);`
-  - Line 694: `<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, \'<?= $org_safe ?>\')\">`
-  - Line 22: `$result = fixDatabasePermissions($db_file);`
-  - Line 694: `<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, \'<?= $org_safe ?>\')\">`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/admin/manage_organisms.php` (2x):
+  - Line 28: `$result = fixDatabasePermissions($db_file);`
+  - Line 705: `<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, \'<?= $org_safe ?>\')\">`
 
 ### `fixFilePermissions()` (Line 117)
 
@@ -2786,12 +2602,10 @@ Located in: `lib/functions_system.php` at line 117
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/lib/functions_system.php` (2x):
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/lib/functions_system.php` (1x):
   - Line 234: `return fixFilePermissions($file_path, $file_type);`
-  - Line 234: `return fixFilePermissions($file_path, $file_type);`
-- `/data/moop/lib/functions_display.php` (2x):
-  - Line 421: `$html .= \'  <button class=\"btn btn-warning btn-sm\" onclick=\\\'fixFilePermissions(event, \' . json_encode($file_path) . \', \' . json_encode($file_type) . \', \' . json_encode($organism) . \', \' . json_encode($resultId) . \');\\\'>\' . \"\\n\";`
+- `/data/moop/lib/functions_display.php` (1x):
   - Line 421: `$html .= \'  <button class=\"btn btn-warning btn-sm\" onclick=\\\'fixFilePermissions(event, \' . json_encode($file_path) . \', \' . json_encode($file_type) . \', \' . json_encode($organism) . \', \' . json_encode($resultId) . \');\\\'>\' . \"\\n\";`
 
 ### `handleFixFilePermissionsAjax()` (Line 213)
@@ -2815,10 +2629,9 @@ Located in: `lib/functions_system.php` at line 213
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/functions_system.php` (2x):
-  - Line 265: `echo json_encode(handleFixFilePermissionsAjax());`
-  - Line 265: `echo json_encode(handleFixFilePermissionsAjax());`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/functions_system.php` (1x):
+  - Line 273: `echo json_encode(handleFixFilePermissionsAjax());`
 
 ### `handleAdminAjax()` (Line 251)
 
@@ -2843,22 +2656,17 @@ Located in: `lib/functions_system.php` at line 251
 */
 ```
 
-**Used in 5 unique file(s) (10 total times):**
-- `/data/moop/admin/createUser.php` (2x):
+**Used in 5 unique file(s) (5 total times):**
+- `/data/moop/admin/createUser.php` (1x):
   - Line 8: `handleAdminAjax();`
-  - Line 8: `handleAdminAjax();`
-- `/data/moop/admin/manage_groups.php` (2x):
+- `/data/moop/admin/manage_groups.php` (1x):
   - Line 6: `handleAdminAjax();`
-  - Line 6: `handleAdminAjax();`
-- `/data/moop/admin/manage_phylo_tree.php` (2x):
-  - Line 10: `handleAdminAjax();`
-  - Line 10: `handleAdminAjax();`
-- `/data/moop/admin/manage_registry.php` (2x):
+- `/data/moop/admin/manage_registry.php` (1x):
   - Line 36: `handleAdminAjax(\'handleRegistryAjax\'); // Handle standard + custom AJAX`
-  - Line 36: `handleAdminAjax(\'handleRegistryAjax\'); // Handle standard + custom AJAX`
-- `/data/moop/admin/manage_organisms.php` (2x):
-  - Line 10: `handleAdminAjax(function($action) {`
-  - Line 10: `handleAdminAjax(function($action) {`
+- `/data/moop/admin/manage_phylo_tree.php` (1x):
+  - Line 10: `handleAdminAjax();`
+- `/data/moop/admin/manage_organisms.php` (1x):
+  - Line 16: `handleAdminAjax(function($action) use ($organisms) {`
 
 ---
 
@@ -2882,9 +2690,8 @@ Located in: `lib/functions_tools.php` at line 14
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/tool_section.php` (2x):
-  - Line 62: `$tools = getAvailableTools($context ?? []);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/tool_section.php` (1x):
   - Line 62: `$tools = getAvailableTools($context ?? []);`
 
 ### `createToolContext()` (Line 55)
@@ -2914,22 +2721,19 @@ Located in: `lib/functions_tools.php` at line 55
 */
 ```
 
-**Used in 6 unique file(s) (11 total times):**
-- `/data/moop/tools/groups_display.php` (2x):
+**Used in 7 unique file(s) (7 total times):**
+- `/data/moop/tools/groups_display.php` (1x):
   - Line 100: `$context = createToolContext(\'group\', [\'group\' => $group_name]);`
-  - Line 100: `$context = createToolContext(\'group\', [\'group\' => $group_name]);`
-- `/data/moop/tools/assembly_display.php` (2x):
-  - Line 72: `$context = createToolContext(\'assembly\', [`
-  - Line 72: `$context = createToolContext(\'assembly\', [`
-- `/data/moop/tools/organism_display.php` (2x):
+- `/data/moop/tools/assembly_display.php` (1x):
+  - Line 104: `$context = createToolContext(\'assembly\', [`
+- `/data/moop/tools/organism_display.php` (1x):
   - Line 70: `$context = createToolContext(\'organism\', [`
-  - Line 70: `$context = createToolContext(\'organism\', [`
-- `/data/moop/tools/parent_display.php` (2x):
-  - Line 198: `$context = createToolContext(\'parent\', [`
-  - Line 198: `$context = createToolContext(\'parent\', [`
-- `/data/moop/tools/multi_organism_search.php` (2x):
+- `/data/moop/tools/parent_display.php` (1x):
+  - Line 203: `$context = createToolContext(\'parent\', [`
+- `/data/moop/tools/multi_organism_search.php` (1x):
   - Line 85: `$context = createToolContext(\'multi_organism_search\', [\'organisms\' => $organisms]);`
-  - Line 85: `$context = createToolContext(\'multi_organism_search\', [\'organisms\' => $organisms]);`
+- `/data/moop/tools/assembly_display1.php` (1x):
+  - Line 72: `$context = createToolContext(\'assembly\', [`
 - `/data/moop/index.php` (1x):
   - Line 123: `$context = createToolContext(\'index\', [\'use_onclick_handler\' => true]);`
 
@@ -2985,13 +2789,11 @@ Located in: `lib/functions_validation.php` at line 40
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/lib/functions_validation.php` (2x):
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/lib/functions_validation.php` (1x):
   - Line 69: `$term = sanitize_search_input($term);`
-  - Line 69: `$term = sanitize_search_input($term);`
-- `/data/moop/tools/annotation_search_ajax.php` (2x):
-  - Line 59: `$search_input = sanitize_search_input($search_keywords, $quoted_search);`
-  - Line 59: `$search_input = sanitize_search_input($search_keywords, $quoted_search);`
+- `/data/moop/tools/annotation_search_ajax.php` (1x):
+  - Line 60: `$search_input = sanitize_search_input($search_keywords, $quoted_search);`
 
 ### `validate_search_term()` (Line 68)
 
@@ -3048,16 +2850,15 @@ Located in: `lib/functions_validation.php` at line 112
 */
 ```
 
-**Used in 3 unique file(s) (6 total times):**
-- `/data/moop/lib/functions_display.php` (2x):
+**Used in 4 unique file(s) (4 total times):**
+- `/data/moop/lib/functions_display.php` (1x):
   - Line 268: `$organism_name = validateOrganismParam($organism_name, $redirect_home);`
-  - Line 268: `$organism_name = validateOrganismParam($organism_name, $redirect_home);`
-- `/data/moop/tools/assembly_display.php` (2x):
+- `/data/moop/tools/assembly_display.php` (1x):
   - Line 8: `$organism_name = validateOrganismParam($_GET[\'organism\'] ?? \'\');`
+- `/data/moop/tools/parent_display.php` (1x):
+  - Line 11: `$organism_name = validateOrganismParam($_GET[\'organism\'] ?? \'\', null);`
+- `/data/moop/tools/assembly_display1.php` (1x):
   - Line 8: `$organism_name = validateOrganismParam($_GET[\'organism\'] ?? \'\');`
-- `/data/moop/tools/parent_display.php` (2x):
-  - Line 11: `$organism_name = validateOrganismParam($_GET[\'organism\'] ?? \'\', null);`
-  - Line 11: `$organism_name = validateOrganismParam($_GET[\'organism\'] ?? \'\', null);`
 
 ### `validateAssemblyParam()` (Line 128)
 
@@ -3076,19 +2877,19 @@ Located in: `lib/functions_validation.php` at line 128
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/tools/assembly_display.php` (2x):
-  - Line 9: `$assembly_accession = validateAssemblyParam($_GET[\'assembly\'] ?? \'\');`
-  - Line 9: `$assembly_accession = validateAssemblyParam($_GET[\'assembly\'] ?? \'\');`
-- `/data/moop/tools/parent_display.php` (2x):
+**Used in 3 unique file(s) (3 total times):**
+- `/data/moop/tools/assembly_display.php` (1x):
+  - Line 9: `$assembly_param = validateAssemblyParam($_GET[\'assembly\'] ?? \'\');`
+- `/data/moop/tools/parent_display.php` (1x):
   - Line 12: `$uniquename = validateAssemblyParam($_GET[\'uniquename\'] ?? \'\', null);`
-  - Line 12: `$uniquename = validateAssemblyParam($_GET[\'uniquename\'] ?? \'\', null);`
+- `/data/moop/tools/assembly_display1.php` (1x):
+  - Line 9: `$assembly_accession = validateAssemblyParam($_GET[\'assembly\'] ?? \'\');`
 
 ---
 
 ## lib/parent_functions.php
 
-**6 function(s)**
+**8 function(s)**
 
 ### `getAncestors()` (Line 18)
 
@@ -3109,10 +2910,9 @@ Located in: `lib/parent_functions.php` at line 18
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/parent_display.php` (2x):
-  - Line 71: `$ancestors = getAncestors($uniquename, $db, $accessible_genome_ids);`
-  - Line 71: `$ancestors = getAncestors($uniquename, $db, $accessible_genome_ids);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/parent_display.php` (1x):
+  - Line 73: `$ancestors = getAncestors($uniquename, $db, $accessible_genome_ids);`
 
 ### `getAncestorsByFeatureId()` (Line 28)
 
@@ -3133,10 +2933,8 @@ Located in: `lib/parent_functions.php` at line 28
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/lib/parent_functions.php` (4x):
-  - Line 28: `$parent_ancestors = getAncestorsByFeatureId($feature[\'parent_feature_id\'], $dbFile, $genome_ids);`
-  - Line 55: `$parent_ancestors = getAncestorsByFeatureId($feature[\'parent_feature_id\'], $dbFile, $genome_ids);`
+**Used in 1 unique file(s) (2 total times):**
+- `/data/moop/lib/parent_functions.php` (2x):
   - Line 28: `$parent_ancestors = getAncestorsByFeatureId($feature[\'parent_feature_id\'], $dbFile, $genome_ids);`
   - Line 55: `$parent_ancestors = getAncestorsByFeatureId($feature[\'parent_feature_id\'], $dbFile, $genome_ids);`
 
@@ -3159,20 +2957,43 @@ Located in: `lib/parent_functions.php` at line 72
 */
 ```
 
-**Used in 3 unique file(s) (6 total times):**
-- `/data/moop/lib/parent_functions.php` (2x):
+**Used in 3 unique file(s) (3 total times):**
+- `/data/moop/lib/parent_functions.php` (1x):
   - Line 79: `$child_descendants = getChildren($row[\'feature_id\'], $dbFile, $genome_ids);`
-  - Line 79: `$child_descendants = getChildren($row[\'feature_id\'], $dbFile, $genome_ids);`
-- `/data/moop/tools/retrieve_sequences.php` (2x):
-  - Line 101: `$children = getChildren($feature_id, $db);`
-  - Line 101: `$children = getChildren($feature_id, $db);`
-- `/data/moop/tools/parent_display.php` (2x):
-  - Line 122: `$children = getChildren($feature_id, $db, $accessible_genome_ids);`
-  - Line 122: `$children = getChildren($feature_id, $db, $accessible_genome_ids);`
+- `/data/moop/tools/parent_display.php` (1x):
+  - Line 127: `$children = getChildren($feature_id, $db, $accessible_genome_ids);`
+- `/data/moop/tools/retrieve_sequences.php` (1x):
+  - Line 153: `$children = getChildren($feature_id, $db);`
 
-### `generateAnnotationTableHTML()` (Line 99)
+### `getChildrenHierarchical()` (Line 96)
 
-Located in: `lib/parent_functions.php` at line 99
+Located in: `lib/parent_functions.php` at line 96
+
+**Description:**
+
+```
+/**
+* Get children with hierarchical structure (preserves parent-child relationships)
+* Unlike getChildren() which returns flat array, this preserves nesting
+* Each child has a 'grandchildren' key containing its own children
+* Enables proper display of parent -> child -> grandchild hierarchies
+*
+* @param int $feature_id - The parent feature ID
+* @param string $dbFile - Path to SQLite database
+* @param array $genome_ids - Optional: Array of genome IDs to filter results
+* @return array - Array of children, each with 'grandchildren' key
+*/
+```
+
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/lib/parent_functions.php` (1x):
+  - Line 100: `$child[\'grandchildren\'] = getChildrenHierarchical($child[\'feature_id\'], $dbFile, $genome_ids);`
+- `/data/moop/tools/parent_display.php` (1x):
+  - Line 124: `$children_hierarchical = getChildrenHierarchical($feature_id, $db, $accessible_genome_ids);`
+
+### `generateAnnotationTableHTML()` (Line 120)
+
+Located in: `lib/parent_functions.php` at line 120
 
 **Description:**
 
@@ -3193,16 +3014,15 @@ Located in: `lib/parent_functions.php` at line 99
 */
 ```
 
-**Used in 1 unique file(s) (4 total times):**
-- `/data/moop/tools/parent_display.php` (4x):
-  - Line 261: `echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
-  - Line 325: `echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
-  - Line 261: `echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
-  - Line 325: `echo generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $annotation_type, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/lib/parent_functions.php` (1x):
+  - Line 408: `$html .= generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $display_label, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
+- `/data/moop/tools/parent_display.php` (1x):
+  - Line 267: `echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $display_label, $analysis_desc[$annotation_type] ?? \'\', $color, $organism_name);`
 
-### `getAllAnnotationsForFeatures()` (Line 195)
+### `getAllAnnotationsForFeatures()` (Line 216)
 
-Located in: `lib/parent_functions.php` at line 195
+Located in: `lib/parent_functions.php` at line 216
 
 **Description:**
 
@@ -3219,14 +3039,13 @@ Located in: `lib/parent_functions.php` at line 195
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/parent_display.php` (2x):
-  - Line 129: `$all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);`
-  - Line 129: `$all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/parent_display.php` (1x):
+  - Line 134: `$all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);`
 
-### `generateTreeHTML()` (Line 256)
+### `generateTreeHTML()` (Line 277)
 
-Located in: `lib/parent_functions.php` at line 256
+Located in: `lib/parent_functions.php` at line 277
 
 **Description:**
 
@@ -3243,13 +3062,42 @@ Located in: `lib/parent_functions.php` at line 256
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/lib/parent_functions.php` (2x):
-  - Line 299: `$html .= generateTreeHTML($row[\'feature_id\'], $dbFile, $prefix, $is_last_child, $genome_ids);`
-  - Line 299: `$html .= generateTreeHTML($row[\'feature_id\'], $dbFile, $prefix, $is_last_child, $genome_ids);`
-- `/data/moop/tools/parent_display.php` (2x):
-  - Line 225: `<?= generateTreeHTML($feature_id, $db) ?>`
-  - Line 225: `<?= generateTreeHTML($feature_id, $db) ?>`
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/lib/parent_functions.php` (1x):
+  - Line 323: `$html .= generateTreeHTML($row[\'feature_id\'], $dbFile, $prefix, $is_last_child, $genome_ids);`
+- `/data/moop/tools/parent_display.php` (1x):
+  - Line 230: `<?= generateTreeHTML($feature_id, $db) ?>`
+
+### `generateChildAnnotationCards()` (Line 347)
+
+Located in: `lib/parent_functions.php` at line 347
+
+**Description:**
+
+```
+/**
+* Generate nested child annotation cards (recursive)
+* Renders child and grandchild features with their annotations in nested card structure
+* Each level has its own collapsible card with unique color based on feature type
+*
+* @param array $child - Child feature array from hierarchical structure
+* @param array $all_annotations - Cached annotations organized by feature_id
+* @param array $analysis_order - Annotation types in order
+* @param array $annotation_colors - Color mapping for annotation types
+* @param array $annotation_labels - Display labels for annotation types
+* @param array $analysis_desc - Descriptions for annotation types
+* @param string $organism_name - Organism name for export
+* @param int &$count - Counter for unique table IDs (passed by reference)
+* @param bool $is_grandchild - Internal flag for styling grandchild level
+* @return string - HTML for child/grandchild annotation cards
+*/
+```
+
+**Used in 2 unique file(s) (2 total times):**
+- `/data/moop/lib/parent_functions.php` (1x):
+  - Line 420: `$html .= generateChildAnnotationCards($grandchild, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, true);`
+- `/data/moop/tools/parent_display.php` (1x):
+  - Line 287: `echo generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count);`
 
 ---
 
@@ -3272,9 +3120,8 @@ Located in: `lib/tool_config.php` at line 52
 */
 ```
 
-**Used in 2 unique file(s) (4 total times):**
-- `/data/moop/lib/tool_config.php` (2x):
-  - Line 76: `$tool = getTool($tool_id);`
+**Used in 2 unique file(s) (3 total times):**
+- `/data/moop/lib/tool_config.php` (1x):
   - Line 76: `$tool = getTool($tool_id);`
 - `/data/moop/includes/ConfigManager.php` (2x):
   - Line 270: `$tool = $this->getTool($tool_id);`
@@ -3313,9 +3160,8 @@ Located in: `lib/tool_config.php` at line 75
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/functions_tools.php` (2x):
-  - Line 35: `$url = buildToolUrl($tool_id, $context, $site);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/functions_tools.php` (1x):
   - Line 35: `$url = buildToolUrl($tool_id, $context, $site);`
 
 ### `isToolVisibleOnPage()` (Line 105)
@@ -3334,9 +3180,8 @@ Located in: `lib/tool_config.php` at line 105
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/lib/functions_tools.php` (2x):
-  - Line 31: `if ($current_page && !isToolVisibleOnPage($tool, $current_page)) {`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/lib/functions_tools.php` (1x):
   - Line 31: `if ($current_page && !isToolVisibleOnPage($tool, $current_page)) {`
 
 ---
@@ -3349,14 +3194,11 @@ Located in: `lib/tool_config.php` at line 105
 
 Located in: `tools/generate_js_registry.php` at line 106
 
-**Used in 1 unique file(s) (6 total times):**
-- `/data/moop/tools/generate_js_registry.php` (6x):
-  - Line 255: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 312: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 477: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 255: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 312: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
-  - Line 477: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+**Used in 1 unique file(s) (3 total times):**
+- `/data/moop/tools/generate_js_registry.php` (3x):
+  - Line 275: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 332: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
+  - Line 510: `$usages = findJsFunctionUsages($func[\'name\'], $jsDir, $jsFile, $func[\'line\']);`
 
 ---
 
@@ -3380,9 +3222,8 @@ Located in: `tools/sequences_display.php` at line 113
 */
 ```
 
-**Used in 1 unique file(s) (2 total times):**
-- `/data/moop/tools/sequences_display.php` (2x):
-  - Line 113: `$sequences = extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, $extraction_errors);`
+**Used in 1 unique file(s) (1 total times):**
+- `/data/moop/tools/sequences_display.php` (1x):
   - Line 113: `$sequences = extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, $extraction_errors);`
 
 ---

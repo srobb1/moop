@@ -129,6 +129,7 @@ function extractFunctions($filePath) {
  */
 function findFunctionUsages($funcName, $scanDirs, $definitionFile) {
     $usages = [];
+    $seen = []; // Track file + line combinations to prevent duplicates
     $searchPattern = '/\b' . preg_quote($funcName, '/') . '\s*\(/';
     $excludeDirs = ['docs', 'logs', 'notes', 'not_used', '.git'];
     
@@ -179,8 +180,17 @@ function findFunctionUsages($funcName, $scanDirs, $definitionFile) {
                         continue;
                     }
                     
+                    $relativeFilePath = str_replace(__DIR__ . '/../', '', $filePath);
+                    $usageKey = $relativeFilePath . ':' . $lineNum;
+                    
+                    // Skip duplicate file + line combinations
+                    if (isset($seen[$usageKey])) {
+                        continue;
+                    }
+                    $seen[$usageKey] = true;
+                    
                     $usages[] = [
-                        'file' => str_replace(__DIR__ . '/../', '', $filePath),
+                        'file' => $relativeFilePath,
                         'line' => $lineNum,
                         'context' => $contextLine
                     ];
@@ -318,9 +328,29 @@ function generateHtmlDocs($registry, $docs_path) {
     $html .= "    </header>\n";
     $html .= "    <div class=\"container\">\n";
     
-    // Search box
+    // Search box with toggle
     $html .= "        <div class=\"search-box\">\n";
-    $html .= "            <input type=\"text\" id=\"searchInput\" placeholder=\"🔍 Search functions, files, or usage...\" onkeyup=\"filterFunctions()\">\n";
+    $html .= "            <div style=\"margin-bottom: 15px;\">\n";
+    $html .= "                <input type=\"text\" id=\"searchInput\" placeholder=\"🔍 Search...\" onkeyup=\"filterFunctions()\">\n";
+    $html .= "            </div>\n";
+    $html .= "            <div style=\"display: flex; gap: 20px; flex-wrap: wrap; padding: 10px; background: #f9f9f9; border-radius: 4px;\">\n";
+    $html .= "                <label style=\"display: flex; align-items: center; gap: 8px; cursor: pointer;\">\n";
+    $html .= "                    <input type=\"radio\" name=\"searchMode\" value=\"all\" checked onchange=\"filterFunctions()\" style=\"cursor: pointer;\">\n";
+    $html .= "                    <span>Search All</span>\n";
+    $html .= "                </label>\n";
+    $html .= "                <label style=\"display: flex; align-items: center; gap: 8px; cursor: pointer;\">\n";
+    $html .= "                    <input type=\"radio\" name=\"searchMode\" value=\"name\" onchange=\"filterFunctions()\" style=\"cursor: pointer;\">\n";
+    $html .= "                    <span>Function Names Only</span>\n";
+    $html .= "                </label>\n";
+    $html .= "                <label style=\"display: flex; align-items: center; gap: 8px; cursor: pointer;\">\n";
+    $html .= "                    <input type=\"radio\" name=\"searchMode\" value=\"code\" onchange=\"filterFunctions()\" style=\"cursor: pointer;\">\n";
+    $html .= "                    <span>Code Only</span>\n";
+    $html .= "                </label>\n";
+    $html .= "                <label style=\"display: flex; align-items: center; gap: 8px; cursor: pointer;\">\n";
+    $html .= "                    <input type=\"radio\" name=\"searchMode\" value=\"comment\" onchange=\"filterFunctions()\" style=\"cursor: pointer;\">\n";
+    $html .= "                    <span>Comments Only</span>\n";
+    $html .= "                </label>\n";
+    $html .= "            </div>\n";
     $html .= "        </div>\n";
     
      // Statistics
@@ -468,6 +498,7 @@ function generateHtmlDocs($registry, $docs_path) {
     $html .= "            }\n";
     $html .= "            function filterFunctions() {\n";
     $html .= "                const searchTerm = document.getElementById('searchInput').value.toLowerCase();\n";
+    $html .= "                const searchMode = document.querySelector('input[name=\"searchMode\"]:checked').value;\n";
     $html .= "                const fileSections = document.querySelectorAll('.file-section');\n";
     $html .= "                \n";
     $html .= "                fileSections.forEach(section => {\n";
@@ -477,8 +508,20 @@ function generateHtmlDocs($registry, $docs_path) {
     $html .= "                    \n";
     $html .= "                    functionItems.forEach(item => {\n";
     $html .= "                        const funcName = item.querySelector('.function-name').textContent.toLowerCase();\n";
-    $html .= "                        const funcDetails = item.querySelector('.function-code') ? item.querySelector('.function-code').textContent.toLowerCase() : '';\n";
-    $html .= "                        const match = funcName.includes(searchTerm) || funcDetails.includes(searchTerm) || fileName.includes(searchTerm);\n";
+    $html .= "                        const funcCode = item.querySelector('.function-code') ? item.querySelector('.function-code').textContent.toLowerCase() : '';\n";
+    $html .= "                        const funcComment = item.querySelector('.function-comment') ? item.querySelector('.function-comment').textContent.toLowerCase() : '';\n";
+    $html .= "                        \n";
+    $html .= "                        let match = false;\n";
+    $html .= "                        \n";
+    $html .= "                        if (searchMode === 'all') {\n";
+    $html .= "                            match = funcName.includes(searchTerm) || funcCode.includes(searchTerm) || funcComment.includes(searchTerm) || fileName.includes(searchTerm);\n";
+    $html .= "                        } else if (searchMode === 'name') {\n";
+    $html .= "                            match = funcName.includes(searchTerm);\n";
+    $html .= "                        } else if (searchMode === 'code') {\n";
+    $html .= "                            match = funcCode.includes(searchTerm);\n";
+    $html .= "                        } else if (searchMode === 'comment') {\n";
+    $html .= "                            match = funcComment.includes(searchTerm);\n";
+    $html .= "                        }\n";
     $html .= "                        \n";
     $html .= "                        if (searchTerm === '' || match) {\n";
     $html .= "                            item.classList.remove('hidden');\n";

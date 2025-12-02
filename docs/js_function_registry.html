@@ -58,12 +58,32 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <header>
 <div class="container">
 <h1>🔍 MOOP JavaScript Function Registry</h1>
-<p>Auto-generated function documentation • Generated: 2025-11-26 16:56:56</p>
+<p>Auto-generated function documentation • Generated: 2025-12-02 15:19:18</p>
 </div>
 </header>
 <div class="container">
 <div class="search-box">
-<input type="text" id="searchInput" placeholder="🔍 Search functions, files, or usage..." onkeyup="filterSearch()">
+<div style="margin-bottom: 15px;">
+<input type="text" id="searchInput" placeholder="🔍 Search..." onkeyup="filterSearch()">
+</div>
+<div style="display: flex; gap: 20px; flex-wrap: wrap; padding: 10px; background: #f9f9f9; border-radius: 4px;">
+<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+<input type="radio" name="searchMode" value="all" checked onchange="filterSearch()" style="cursor: pointer;">
+<span>Search All</span>
+</label>
+<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+<input type="radio" name="searchMode" value="name" onchange="filterSearch()" style="cursor: pointer;">
+<span>Function Names Only</span>
+</label>
+<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+<input type="radio" name="searchMode" value="code" onchange="filterSearch()" style="cursor: pointer;">
+<span>Code Only</span>
+</label>
+<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+<input type="radio" name="searchMode" value="comment" onchange="filterSearch()" style="cursor: pointer;">
+<span>Comments Only</span>
+</label>
+</div>
 </div>
 <div class="stats">
 <div class="stat-box"><strong>51</strong><span>Total Functions</span></div>
@@ -71,7 +91,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="unused-section">
 <div class="unused-header" onclick="toggleUnused(this)">
-<span>⚠️ 5 Unused Function(s) Found</span>
+<span>⚠️ 6 Unused Function(s) Found</span>
 <span class="unusedArrow">▶</span>
 </div>
 <div class="unused-content hidden">
@@ -79,7 +99,8 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul style="margin: 10px 0; padding-left: 20px;">
 <li><strong style="color: #cc0000;">downloadResultsHTML()</strong> in <code>js/blast-manager.js</code> (line 9)</li>
 <li><strong style="color: #cc0000;">handleToolClick()</strong> in <code>js/index.js</code> (line 2)</li>
-<li><strong style="color: #cc0000;">fixFilePermissions()</strong> in <code>js/permission-manager.js</code> (line 15)</li>
+<li><strong style="color: #cc0000;">fixFilePermissions()</strong> in <code>js/permission-manager.js</code> (line 16)</li>
+<li><strong style="color: #cc0000;">md5()</strong> in <code>js/permission-manager.js</code> (line 79)</li>
 <li><strong style="color: #cc0000;">draw_blast_graph()</strong> in <code>js/modules/blast-canvas-graph.js</code> (line 2)</li>
 <li><strong style="color: #cc0000;">move_bg_rect()</strong> in <code>js/modules/blast-canvas-graph.js</code> (line 437)</li>
 </ul>
@@ -135,7 +156,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>tools/blast.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 563</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-outline-secondary&quot; onclick=&quot;downloadResultsText();&quot;&gt;</small></li>
+<li><code>line 604</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-outline-secondary&quot; onclick=&quot;downloadResultsText();&quot;&gt;</small></li>
 </ul></li>
 </ul>
 </div>
@@ -168,7 +189,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>tools/blast.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 556</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-light&quot; onclick=&quot;clearResults();&quot; title=&quot;Clear results an</small></li>
+<li><code>line 597</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-light&quot; onclick=&quot;clearResults();&quot; title=&quot;Clear results an</small></li>
 </ul></li>
 </ul>
 </div>
@@ -195,7 +216,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>tools/blast.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 284</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-success&quot; onclick=&quot;clearBlastSourceFilters();&quot;&gt;</small></li>
+<li><code>line 325</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-success&quot; onclick=&quot;clearBlastSourceFilters();&quot;&gt;</small></li>
 </ul></li>
 </ul>
 </div>
@@ -218,8 +239,8 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>js/blast-manager.js</strong> (2x)
 <ul style="margin-top: 5px;">
-<li><code>line 221</code>: <small>initializeBlastManager();</small></li>
-<li><code>line 226</code>: <small>initializeBlastManager();</small></li>
+<li><code>line 244</code>: <small>initializeBlastManager();</small></li>
+<li><code>line 249</code>: <small>initializeBlastManager();</small></li>
 </ul></li>
 </ul>
 </div>
@@ -242,19 +263,20 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="function-item">
 <div class="function-header" onclick="toggleFunctionDetails(this)">
-<div><span class="function-name">updateCurrentSelectionDisplay()</span><span class="function-counter">7</span> <span class="function-line">Line 58</span></div>
+<div><span class="function-name">updateCurrentSelectionDisplay()</span><span class="function-counter">8</span> <span class="function-line">Line 58</span></div>
 <span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/blast-manager.js: updateCurrentSelectionDisplay()</div>
 <div class="function-details">
 <div class="function-usages">
-<strong>📍 Called in 2 file(s) (7 times):</strong>
+<strong>📍 Called in 2 file(s) (8 times):</strong>
 <ul>
-<li><strong>js/blast-manager.js</strong> (3x)
+<li><strong>js/blast-manager.js</strong> (4x)
 <ul style="margin-top: 5px;">
 <li><code>line 59</code>: <small>window.updateCurrentSelectionDisplay();</small></li>
 <li><code>line 74</code>: <small>updateCurrentSelectionDisplay();</small></li>
-<li><code>line 116</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 95</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 139</code>: <small>updateCurrentSelectionDisplay();</small></li>
 </ul></li>
 <li><strong>js/sequence-retrieval.js</strong> (4x)
 <ul style="margin-top: 5px;">
@@ -279,7 +301,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="function-item">
 <div class="function-header" onclick="toggleFunctionDetails(this)">
-<div><span class="function-name">autoScrollToResults()</span><span class="function-counter">3</span> <span class="function-line">Line 208</span></div>
+<div><span class="function-name">autoScrollToResults()</span><span class="function-counter">3</span> <span class="function-line">Line 231</span></div>
 <span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/blast-manager.js: autoScrollToResults()</div>
@@ -289,12 +311,12 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>js/blast-manager.js</strong> (2x)
 <ul style="margin-top: 5px;">
-<li><code>line 222</code>: <small>autoScrollToResults();</small></li>
-<li><code>line 227</code>: <small>autoScrollToResults();</small></li>
+<li><code>line 245</code>: <small>autoScrollToResults();</small></li>
+<li><code>line 250</code>: <small>autoScrollToResults();</small></li>
 </ul></li>
 <li><strong>tools/blast.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 617</code>: <small>autoScrollToResults();</small></li>
+<li><code>line 703</code>: <small>autoScrollToResults();</small></li>
 </ul></li>
 </ul>
 </div>
@@ -745,8 +767,8 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>admin/manage_organisms.php</strong> (2x)
 <ul style="margin-top: 5px;">
-<li><code>line 29</code>: <small>$result = fixDatabasePermissions($db_file);</small></li>
-<li><code>line 704</code>: <small>&lt;button class=&quot;btn btn-warning btn-sm&quot; onclick=&quot;fixDatabasePermissions(event, &#039;&lt;?= $org_safe ?&gt;&#039;)&quot;&gt;</small></li>
+<li><code>line 28</code>: <small>$result = fixDatabasePermissions($db_file);</small></li>
+<li><code>line 705</code>: <small>&lt;button class=&quot;btn btn-warning btn-sm&quot; onclick=&quot;fixDatabasePermissions(event, &#039;&lt;?= $org_safe ?&gt;&#039;)&quot;&gt;</small></li>
 </ul></li>
 </ul>
 </div>
@@ -782,7 +804,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>admin/manage_organisms.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 929</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-success&quot; onclick=&quot;saveMetadata(event, &#039;&lt;?= $org_safe ?&gt;&#039;)&quot;&gt;</small></li>
+<li><code>line 930</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-success&quot; onclick=&quot;saveMetadata(event, &#039;&lt;?= $org_safe ?&gt;&#039;)&quot;&gt;</small></li>
 </ul></li>
 </ul>
 </div>
@@ -818,7 +840,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>admin/manage_organisms.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 889</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-primary mb-4&quot; onclick=&quot;addMetadataImage(&#039;&lt;?= $org_safe ?</small></li>
+<li><code>line 890</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-primary mb-4&quot; onclick=&quot;addMetadataImage(&#039;&lt;?= $org_safe ?</small></li>
 </ul></li>
 </ul>
 </div>
@@ -850,7 +872,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </ul></li>
 <li><strong>admin/manage_organisms.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 876</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataImage(&#039;&lt;?= $or</small></li>
+<li><code>line 877</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataImage(&#039;&lt;?= $or</small></li>
 </ul></li>
 </ul>
 </div>
@@ -879,7 +901,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>admin/manage_organisms.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 923</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-primary mb-4&quot; onclick=&quot;addMetadataParagraph(&#039;&lt;?= $org_sa</small></li>
+<li><code>line 924</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-primary mb-4&quot; onclick=&quot;addMetadataParagraph(&#039;&lt;?= $org_sa</small></li>
 </ul></li>
 </ul>
 </div>
@@ -910,7 +932,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </ul></li>
 <li><strong>admin/manage_organisms.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 901</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataParagraph(&#039;&lt;?=</small></li>
+<li><code>line 902</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-btn&quot; onclick=&quot;removeMetadataParagraph(&#039;&lt;?=</small></li>
 </ul></li>
 </ul>
 </div>
@@ -939,8 +961,8 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>admin/manage_organisms.php</strong> (2x)
 <ul style="margin-top: 5px;">
-<li><code>line 51</code>: <small>$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);</small></li>
-<li><code>line 1090</code>: <small>&lt;button class=&quot;btn btn-info btn-sm w-100&quot; onclick=&quot;renameAssemblyDirectory(event, &#039;&lt;?= htmlspecialch</small></li>
+<li><code>line 48</code>: <small>$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);</small></li>
+<li><code>line 1091</code>: <small>&lt;button class=&quot;btn btn-info btn-sm w-100&quot; onclick=&quot;renameAssemblyDirectory(event, &#039;&lt;?= htmlspecialch</small></li>
 </ul></li>
 </ul>
 </div>
@@ -972,8 +994,8 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>admin/manage_organisms.php</strong> (2x)
 <ul style="margin-top: 5px;">
-<li><code>line 72</code>: <small>$result = deleteAssemblyDirectory($organism_dir, $dir_name);</small></li>
-<li><code>line 1123</code>: <small>&lt;button class=&quot;btn btn-danger btn-sm w-100&quot; onclick=&quot;deleteAssemblyDirectory(event, &#039;&lt;?= htmlspecial</small></li>
+<li><code>line 67</code>: <small>$result = deleteAssemblyDirectory($organism_dir, $dir_name);</small></li>
+<li><code>line 1124</code>: <small>&lt;button class=&quot;btn btn-danger btn-sm w-100&quot; onclick=&quot;deleteAssemblyDirectory(event, &#039;&lt;?= htmlspecial</small></li>
 </ul></li>
 </ul>
 </div>
@@ -1037,6 +1059,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <div class="file-info">
 <strong>📋 Included in:</strong>
 <div class="php-pages">
+<span class="php-page">tools/assembly_display.php</span>
 <span class="php-page">tools/groups_display.php</span>
 <span class="php-page">tools/multi_organism_search.php</span>
 <span class="php-page">tools/organism_display.php</span>
@@ -1118,14 +1141,18 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="function-item">
 <div class="function-header" onclick="toggleFunctionDetails(this)">
-<div><span class="function-name">isSourceVisible()</span><span class="function-counter">5</span> <span class="function-line">Line 13</span></div>
+<div><span class="function-name">isSourceVisible()</span><span class="function-counter">6</span> <span class="function-line">Line 13</span></div>
 <span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/source-list-manager.js: isSourceVisible()</div>
 <div class="function-details">
 <div class="function-usages">
-<strong>📍 Called in 2 file(s) (5 times):</strong>
+<strong>📍 Called in 3 file(s) (6 times):</strong>
 <ul>
+<li><strong>js/blast-manager.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 86</code>: <small>if (line &amp;&amp; !window.isSourceVisible(line)) {</small></li>
+</ul></li>
 <li><strong>js/sequence-retrieval.js</strong> (2x)
 <ul style="margin-top: 5px;">
 <li><code>line 98</code>: <small>if (line &amp;&amp; !isSourceVisible(line)) {</small></li>
@@ -1316,19 +1343,20 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="function-item">
 <div class="function-header" onclick="toggleFunctionDetails(this)">
-<div><span class="function-name">updateCurrentSelectionDisplay()</span><span class="function-counter">7</span> <span class="function-line">Line 188</span></div>
+<div><span class="function-name">updateCurrentSelectionDisplay()</span><span class="function-counter">8</span> <span class="function-line">Line 188</span></div>
 <span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/source-list-manager.js: updateCurrentSelectionDisplay()</div>
 <div class="function-details">
 <div class="function-usages">
-<strong>📍 Called in 2 file(s) (7 times):</strong>
+<strong>📍 Called in 2 file(s) (8 times):</strong>
 <ul>
-<li><strong>js/blast-manager.js</strong> (3x)
+<li><strong>js/blast-manager.js</strong> (4x)
 <ul style="margin-top: 5px;">
 <li><code>line 59</code>: <small>window.updateCurrentSelectionDisplay();</small></li>
 <li><code>line 74</code>: <small>updateCurrentSelectionDisplay();</small></li>
-<li><code>line 116</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 95</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 139</code>: <small>updateCurrentSelectionDisplay();</small></li>
 </ul></li>
 <li><strong>js/sequence-retrieval.js</strong> (4x)
 <ul style="margin-top: 5px;">
@@ -1440,18 +1468,22 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="function-item">
 <div class="function-header" onclick="toggleFunctionDetails(this)">
-<div><span class="function-name">detectSequenceType()</span><span class="function-counter">2</span> <span class="function-line">Line 29</span></div>
+<div><span class="function-name">detectSequenceType()</span><span class="function-counter">3</span> <span class="function-line">Line 29</span></div>
 <span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/utilities.js: detectSequenceType()</div>
 <div class="function-details">
 <div class="function-usages">
-<strong>📍 Called in 1 file(s) (2 times):</strong>
+<strong>📍 Called in 2 file(s) (3 times):</strong>
 <ul>
 <li><strong>js/blast-manager.js</strong> (2x)
 <ul style="margin-top: 5px;">
-<li><code>line 159</code>: <small>const result = detectSequenceType(this.value);</small></li>
-<li><code>line 173</code>: <small>const result = detectSequenceType(queryTextarea.value);</small></li>
+<li><code>line 182</code>: <small>const result = detectSequenceType(this.value);</small></li>
+<li><code>line 196</code>: <small>const result = detectSequenceType(queryTextarea.value);</small></li>
+</ul></li>
+<li><strong>tools/blast.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 684</code>: <small>const result = detectSequenceType(queryField.value);</small></li>
 </ul></li>
 </ul>
 </div>
@@ -1478,18 +1510,22 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="function-item">
 <div class="function-header" onclick="toggleFunctionDetails(this)">
-<div><span class="function-name">filterBlastPrograms()</span><span class="function-counter">2</span> <span class="function-line">Line 93</span></div>
+<div><span class="function-name">filterBlastPrograms()</span><span class="function-counter">3</span> <span class="function-line">Line 93</span></div>
 <span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/utilities.js: filterBlastPrograms()</div>
 <div class="function-details">
 <div class="function-usages">
-<strong>📍 Called in 1 file(s) (2 times):</strong>
+<strong>📍 Called in 2 file(s) (3 times):</strong>
 <ul>
 <li><strong>js/blast-manager.js</strong> (2x)
 <ul style="margin-top: 5px;">
-<li><code>line 166</code>: <small>filterBlastPrograms(result.type, &#039;blast_program&#039;);</small></li>
-<li><code>line 176</code>: <small>filterBlastPrograms(result.type, &#039;blast_program&#039;);</small></li>
+<li><code>line 189</code>: <small>filterBlastPrograms(result.type, &#039;blast_program&#039;);</small></li>
+<li><code>line 199</code>: <small>filterBlastPrograms(result.type, &#039;blast_program&#039;);</small></li>
+</ul></li>
+<li><strong>tools/blast.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 691</code>: <small>filterBlastPrograms(result.type, &#039;blast_program&#039;);</small></li>
 </ul></li>
 </ul>
 </div>
@@ -1513,18 +1549,22 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="function-item">
 <div class="function-header" onclick="toggleFunctionDetails(this)">
-<div><span class="function-name">updateSequenceTypeInfo()</span><span class="function-counter">2</span> <span class="function-line">Line 139</span></div>
+<div><span class="function-name">updateSequenceTypeInfo()</span><span class="function-counter">3</span> <span class="function-line">Line 139</span></div>
 <span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/utilities.js: updateSequenceTypeInfo()</div>
 <div class="function-details">
 <div class="function-usages">
-<strong>📍 Called in 1 file(s) (2 times):</strong>
+<strong>📍 Called in 2 file(s) (3 times):</strong>
 <ul>
 <li><strong>js/blast-manager.js</strong> (2x)
 <ul style="margin-top: 5px;">
-<li><code>line 162</code>: <small>updateSequenceTypeInfo(result.message, &#039;sequenceTypeInfo&#039;, &#039;sequenceTypeMessage&#039;);</small></li>
-<li><code>line 174</code>: <small>updateSequenceTypeInfo(result.message, &#039;sequenceTypeInfo&#039;, &#039;sequenceTypeMessage&#039;);</small></li>
+<li><code>line 185</code>: <small>updateSequenceTypeInfo(result.message, &#039;sequenceTypeInfo&#039;, &#039;sequenceTypeMessage&#039;);</small></li>
+<li><code>line 197</code>: <small>updateSequenceTypeInfo(result.message, &#039;sequenceTypeInfo&#039;, &#039;sequenceTypeMessage&#039;);</small></li>
+</ul></li>
+<li><strong>tools/blast.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 687</code>: <small>updateSequenceTypeInfo(result.message, &#039;sequenceTypeInfo&#039;, &#039;sequenceTypeMessage&#039;);</small></li>
 </ul></li>
 </ul>
 </div>
@@ -1549,24 +1589,26 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="function-item">
 <div class="function-header" onclick="toggleFunctionDetails(this)">
-<div><span class="function-name">updateDatabaseList()</span><span class="function-counter">5</span> <span class="function-line">Line 161</span></div>
+<div><span class="function-name">updateDatabaseList()</span><span class="function-counter">7</span> <span class="function-line">Line 161</span></div>
 <span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/utilities.js: updateDatabaseList()</div>
 <div class="function-details">
 <div class="function-usages">
-<strong>📍 Called in 2 file(s) (5 times):</strong>
+<strong>📍 Called in 2 file(s) (7 times):</strong>
 <ul>
-<li><strong>js/blast-manager.js</strong> (3x)
+<li><strong>js/blast-manager.js</strong> (4x)
 <ul style="margin-top: 5px;">
 <li><code>line 73</code>: <small>updateDatabaseList();</small></li>
-<li><code>line 119</code>: <small>updateDatabaseList();</small></li>
-<li><code>line 167</code>: <small>updateDatabaseList();</small></li>
+<li><code>line 96</code>: <small>updateDatabaseList();</small></li>
+<li><code>line 142</code>: <small>updateDatabaseList();</small></li>
+<li><code>line 190</code>: <small>updateDatabaseList();</small></li>
 </ul></li>
-<li><strong>tools/blast.php</strong> (2x)
+<li><strong>tools/blast.php</strong> (3x)
 <ul style="margin-top: 5px;">
-<li><code>line 259</code>: <small>&lt;select id=&quot;blast_program&quot; name=&quot;blast_program&quot; class=&quot;form-control&quot; onchange=&quot;updateDatabaseList();</small></li>
-<li><code>line 344</code>: <small>onchange=&quot;updateDatabaseList();&quot;</small></li>
+<li><code>line 300</code>: <small>&lt;select id=&quot;blast_program&quot; name=&quot;blast_program&quot; class=&quot;form-control&quot; onchange=&quot;updateDatabaseList();</small></li>
+<li><code>line 385</code>: <small>onchange=&quot;updateDatabaseList();&quot;</small></li>
+<li><code>line 695</code>: <small>updateDatabaseList();</small></li>
 </ul></li>
 </ul>
 </div>
@@ -1604,7 +1646,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="function-item">
 <div class="function-header" onclick="toggleFunctionDetails(this)">
-<div><span class="function-name">fixFilePermissions()</span><span class="function-counter">0</span> <span class="function-line">Line 15</span></div>
+<div><span class="function-name">fixFilePermissions()</span><span class="function-counter">0</span> <span class="function-line">Line 16</span></div>
 <span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/permission-manager.js: fixFilePermissions()</div>
@@ -1614,7 +1656,6 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <code>{
   event.preventDefault();
   
-  const resultId = &#039;fixResult-&#039; + md5(filePath);
   const resultDiv = document.getElementById(resultId);
   const button = event.target.closest(&#039;button&#039;);
   
@@ -1628,26 +1669,18 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
   button.disabled = true;
   button.innerHTML = &#039;&lt;i class=&quot;fa fa-spinner fa-spin&quot;&gt;&lt;/i&gt; Fixing...&#039;;
   
-  resultDiv.innerHTML = &#039;&lt;div class=&quot;al</code>
+  resultDiv.innerHTML = &#039;&lt;div class=&quot;alert alert-info small&quot;&gt;Processing...&lt;/div&gt;&#039;;</code>
 </div>
 </div>
 </div>
 <div class="function-item">
 <div class="function-header" onclick="toggleFunctionDetails(this)">
-<div><span class="function-name">md5()</span><span class="function-counter">1</span> <span class="function-line">Line 79</span></div>
+<div><span class="function-name">md5()</span><span class="function-counter">0</span> <span class="function-line">Line 79</span></div>
 <span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/permission-manager.js: md5()</div>
 <div class="function-details">
-<div class="function-usages">
-<strong>📍 Called in 1 file(s) (1 times):</strong>
-<ul>
-<li><strong>js/permission-manager.js</strong> (1x)
-<ul style="margin-top: 5px;">
-<li><code>line 19</code>: <small>const resultId = &#039;fixResult-&#039; + md5(filePath);</small></li>
-</ul></li>
-</ul>
-</div>
+<p><em>Not called anywhere</em></p>
 <div class="function-code">
 <code>{
   // Simple hash function - not cryptographically secure but good for IDs
@@ -1775,7 +1808,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <ul>
 <li><strong>tools/retrieve_sequences.php</strong> (1x)
 <ul style="margin-top: 5px;">
-<li><code>line 241</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-success&quot; onclick=&quot;clearSourceFilter();&quot;&gt;</small></li>
+<li><code>line 293</code>: <small>&lt;button type=&quot;button&quot; class=&quot;btn btn-success&quot; onclick=&quot;clearSourceFilter();&quot;&gt;</small></li>
 </ul></li>
 </ul>
 </div>
@@ -1810,19 +1843,20 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 <div class="function-item">
 <div class="function-header" onclick="toggleFunctionDetails(this)">
-<div><span class="function-name">updateCurrentSelectionDisplay()</span><span class="function-counter">7</span> <span class="function-line">Line 70</span></div>
+<div><span class="function-name">updateCurrentSelectionDisplay()</span><span class="function-counter">8</span> <span class="function-line">Line 70</span></div>
 <span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/sequence-retrieval.js: updateCurrentSelectionDisplay()</div>
 <div class="function-details">
 <div class="function-usages">
-<strong>📍 Called in 2 file(s) (7 times):</strong>
+<strong>📍 Called in 2 file(s) (8 times):</strong>
 <ul>
-<li><strong>js/blast-manager.js</strong> (3x)
+<li><strong>js/blast-manager.js</strong> (4x)
 <ul style="margin-top: 5px;">
 <li><code>line 59</code>: <small>window.updateCurrentSelectionDisplay();</small></li>
 <li><code>line 74</code>: <small>updateCurrentSelectionDisplay();</small></li>
-<li><code>line 116</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 95</code>: <small>updateCurrentSelectionDisplay();</small></li>
+<li><code>line 139</code>: <small>updateCurrentSelectionDisplay();</small></li>
 </ul></li>
 <li><strong>js/sequence-retrieval.js</strong> (4x)
 <ul style="margin-top: 5px;">
@@ -1969,6 +2003,7 @@ function updateToggleButton() {
 
 function filterSearch() {
   const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+  const searchMode = document.querySelector('input[name="searchMode"]:checked').value;
   const fileSections = document.querySelectorAll('.file-section');
   
   fileSections.forEach(section => {
@@ -1978,8 +2013,20 @@ function filterSearch() {
     
     functionItems.forEach(item => {
       const funcName = item.querySelector('.function-name').textContent.toLowerCase();
-      const funcDetails = item.querySelector('.function-details').textContent.toLowerCase();
-      const match = funcName.includes(searchTerm) || funcDetails.includes(searchTerm) || fileName.includes(searchTerm);
+      const funcCode = item.querySelector('.function-details') ? item.querySelector('.function-details').textContent.toLowerCase() : '';
+      const funcComment = item.querySelector('.function-comment') ? item.querySelector('.function-comment').textContent.toLowerCase() : '';
+      
+      let match = false;
+      
+      if (searchMode === 'all') {
+        match = funcName.includes(searchTerm) || funcCode.includes(searchTerm) || funcComment.includes(searchTerm) || fileName.includes(searchTerm);
+      } else if (searchMode === 'name') {
+        match = funcName.includes(searchTerm);
+      } else if (searchMode === 'code') {
+        match = funcCode.includes(searchTerm);
+      } else if (searchMode === 'comment') {
+        match = funcComment.includes(searchTerm);
+      }
       
       if (searchTerm === '' || match) {
         item.classList.remove('hidden-search');

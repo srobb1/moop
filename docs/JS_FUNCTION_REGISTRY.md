@@ -1,6 +1,6 @@
 # JavaScript Function Registry
 
-Generated: 2025-11-26 16:56:56
+Generated: 2025-12-02 15:19:19
 
 ## Summary
 - **Total Functions**: 51
@@ -21,48 +21,49 @@ Generated: 2025-11-26 16:56:56
 
 **Called in 1 file(s) (1 times):**
 - `tools/blast.php` (1x):
-  - Line 563: `<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadResultsText();\">`
+  - Line 604: `<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadResultsText();\">`
 
 ### `clearResults()` (Line 44)
 
 **Called in 1 file(s) (1 times):**
 - `tools/blast.php` (1x):
-  - Line 556: `<button type=\"button\" class=\"btn btn-sm btn-light\" onclick=\"clearResults();\" title=\"Clear results and start new search\">`
+  - Line 597: `<button type=\"button\" class=\"btn btn-sm btn-light\" onclick=\"clearResults();\" title=\"Clear results and start new search\">`
 
 ### `clearBlastSourceFilters()` (Line 52)
 
 **Called in 1 file(s) (1 times):**
 - `tools/blast.php` (1x):
-  - Line 284: `<button type=\"button\" class=\"btn btn-success\" onclick=\"clearBlastSourceFilters();\">`
+  - Line 325: `<button type=\"button\" class=\"btn btn-success\" onclick=\"clearBlastSourceFilters();\">`
 
 ### `initializeBlastManager()` (Line 56)
 
 **Called in 1 file(s) (2 times):**
 - `js/blast-manager.js` (2x):
-  - Line 221: `initializeBlastManager();`
-  - Line 226: `initializeBlastManager();`
+  - Line 244: `initializeBlastManager();`
+  - Line 249: `initializeBlastManager();`
 
 ### `updateCurrentSelectionDisplay()` (Line 58)
 
-**Called in 2 file(s) (7 times):**
-- `js/blast-manager.js` (3x):
+**Called in 2 file(s) (8 times):**
+- `js/blast-manager.js` (4x):
   - Line 59: `window.updateCurrentSelectionDisplay();`
   - Line 74: `updateCurrentSelectionDisplay();`
-  - Line 116: `updateCurrentSelectionDisplay();`
+  - Line 95: `updateCurrentSelectionDisplay();`
+  - Line 139: `updateCurrentSelectionDisplay();`
 - `js/sequence-retrieval.js` (4x):
   - Line 71: `window.updateCurrentSelectionDisplay(\'currentSelection\', \'fasta-source-line\', true);`
   - Line 91: `updateCurrentSelectionDisplay();`
   - Line 106: `updateCurrentSelectionDisplay();`
   - Line 155: `updateCurrentSelectionDisplay();`
 
-### `autoScrollToResults()` (Line 208)
+### `autoScrollToResults()` (Line 231)
 
 **Called in 2 file(s) (3 times):**
 - `js/blast-manager.js` (2x):
-  - Line 222: `autoScrollToResults();`
-  - Line 227: `autoScrollToResults();`
+  - Line 245: `autoScrollToResults();`
+  - Line 250: `autoScrollToResults();`
 - `tools/blast.php` (1x):
-  - Line 617: `autoScrollToResults();`
+  - Line 703: `autoScrollToResults();`
 
 ---
 
@@ -173,20 +174,20 @@ Generated: 2025-11-26 16:56:56
 
 **Called in 1 file(s) (2 times):**
 - `admin/manage_organisms.php` (2x):
-  - Line 29: `$result = fixDatabasePermissions($db_file);`
-  - Line 704: `<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, \'<?= $org_safe ?>\')\">`
+  - Line 28: `$result = fixDatabasePermissions($db_file);`
+  - Line 705: `<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, \'<?= $org_safe ?>\')\">`
 
 ### `saveMetadata()` (Line 60)
 
 **Called in 1 file(s) (1 times):**
 - `admin/manage_organisms.php` (1x):
-  - Line 929: `<button type=\"button\" class=\"btn btn-success\" onclick=\"saveMetadata(event, \'<?= $org_safe ?>\')\">`
+  - Line 930: `<button type=\"button\" class=\"btn btn-success\" onclick=\"saveMetadata(event, \'<?= $org_safe ?>\')\">`
 
 ### `addMetadataImage()` (Line 176)
 
 **Called in 1 file(s) (1 times):**
 - `admin/manage_organisms.php` (1x):
-  - Line 889: `<button type=\"button\" class=\"btn btn-sm btn-primary mb-4\" onclick=\"addMetadataImage(\'<?= $org_safe ?>\')\">`
+  - Line 890: `<button type=\"button\" class=\"btn btn-sm btn-primary mb-4\" onclick=\"addMetadataImage(\'<?= $org_safe ?>\')\">`
 
 ### `removeMetadataImage()` (Line 198)
 
@@ -194,13 +195,13 @@ Generated: 2025-11-26 16:56:56
 - `js/modules/organism-management.js` (1x):
   - Line 183: `<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataImage(\'${organism}\', ${newIndex})\" style=\"float: right;\">Remove</button>`
 - `admin/manage_organisms.php` (1x):
-  - Line 876: `<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataImage(\'<?= $org_safe ?>\', <?= $idx ?>)\" style=\"float: right;\">Remove</button>`
+  - Line 877: `<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataImage(\'<?= $org_safe ?>\', <?= $idx ?>)\" style=\"float: right;\">Remove</button>`
 
 ### `addMetadataParagraph()` (Line 208)
 
 **Called in 1 file(s) (1 times):**
 - `admin/manage_organisms.php` (1x):
-  - Line 923: `<button type=\"button\" class=\"btn btn-sm btn-primary mb-4\" onclick=\"addMetadataParagraph(\'<?= $org_safe ?>\')\">`
+  - Line 924: `<button type=\"button\" class=\"btn btn-sm btn-primary mb-4\" onclick=\"addMetadataParagraph(\'<?= $org_safe ?>\')\">`
 
 ### `removeMetadataParagraph()` (Line 239)
 
@@ -208,21 +209,21 @@ Generated: 2025-11-26 16:56:56
 - `js/modules/organism-management.js` (1x):
   - Line 215: `<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataParagraph(\'${organism}\', ${newIndex})\" style=\"float: right;\">Remove</button>`
 - `admin/manage_organisms.php` (1x):
-  - Line 901: `<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataParagraph(\'<?= $org_safe ?>\', <?= $idx ?>)\" style=\"float: right;\">Remove</button>`
+  - Line 902: `<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataParagraph(\'<?= $org_safe ?>\', <?= $idx ?>)\" style=\"float: right;\">Remove</button>`
 
 ### `renameAssemblyDirectory()` (Line 249)
 
 **Called in 1 file(s) (2 times):**
 - `admin/manage_organisms.php` (2x):
-  - Line 51: `$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);`
-  - Line 1090: `<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
+  - Line 48: `$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);`
+  - Line 1091: `<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
 
 ### `deleteAssemblyDirectory()` (Line 324)
 
 **Called in 1 file(s) (2 times):**
 - `admin/manage_organisms.php` (2x):
-  - Line 72: `$result = deleteAssemblyDirectory($organism_dir, $dir_name);`
-  - Line 1123: `<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
+  - Line 67: `$result = deleteAssemblyDirectory($organism_dir, $dir_name);`
+  - Line 1124: `<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, \'<?= htmlspecialchars($organism) ?>\', \'<?= htmlspecialchars($safe_asm_id) ?>\')\">`
 
 ---
 
@@ -246,6 +247,7 @@ Generated: 2025-11-26 16:56:56
 **2 function(s)**
 
 **Included in:**
+- `tools/assembly_display.php`
 - `tools/groups_display.php`
 - `tools/multi_organism_search.php`
 - `tools/organism_display.php`
@@ -276,7 +278,9 @@ Generated: 2025-11-26 16:56:56
 
 ### `isSourceVisible()` (Line 13)
 
-**Called in 2 file(s) (5 times):**
+**Called in 3 file(s) (6 times):**
+- `js/blast-manager.js` (1x):
+  - Line 86: `if (line && !window.isSourceVisible(line)) {`
 - `js/sequence-retrieval.js` (2x):
   - Line 98: `if (line && !isSourceVisible(line)) {`
   - Line 142: `if (line && !isSourceVisible(line)) {`
@@ -320,11 +324,12 @@ Generated: 2025-11-26 16:56:56
 
 ### `updateCurrentSelectionDisplay()` (Line 188)
 
-**Called in 2 file(s) (7 times):**
-- `js/blast-manager.js` (3x):
+**Called in 2 file(s) (8 times):**
+- `js/blast-manager.js` (4x):
   - Line 59: `window.updateCurrentSelectionDisplay();`
   - Line 74: `updateCurrentSelectionDisplay();`
-  - Line 116: `updateCurrentSelectionDisplay();`
+  - Line 95: `updateCurrentSelectionDisplay();`
+  - Line 139: `updateCurrentSelectionDisplay();`
 - `js/sequence-retrieval.js` (4x):
   - Line 71: `window.updateCurrentSelectionDisplay(\'currentSelection\', \'fasta-source-line\', true);`
   - Line 91: `updateCurrentSelectionDisplay();`
@@ -368,35 +373,43 @@ Generated: 2025-11-26 16:56:56
 
 ### `detectSequenceType()` (Line 29)
 
-**Called in 1 file(s) (2 times):**
+**Called in 2 file(s) (3 times):**
 - `js/blast-manager.js` (2x):
-  - Line 159: `const result = detectSequenceType(this.value);`
-  - Line 173: `const result = detectSequenceType(queryTextarea.value);`
+  - Line 182: `const result = detectSequenceType(this.value);`
+  - Line 196: `const result = detectSequenceType(queryTextarea.value);`
+- `tools/blast.php` (1x):
+  - Line 684: `const result = detectSequenceType(queryField.value);`
 
 ### `filterBlastPrograms()` (Line 93)
 
-**Called in 1 file(s) (2 times):**
+**Called in 2 file(s) (3 times):**
 - `js/blast-manager.js` (2x):
-  - Line 166: `filterBlastPrograms(result.type, \'blast_program\');`
-  - Line 176: `filterBlastPrograms(result.type, \'blast_program\');`
+  - Line 189: `filterBlastPrograms(result.type, \'blast_program\');`
+  - Line 199: `filterBlastPrograms(result.type, \'blast_program\');`
+- `tools/blast.php` (1x):
+  - Line 691: `filterBlastPrograms(result.type, \'blast_program\');`
 
 ### `updateSequenceTypeInfo()` (Line 139)
 
-**Called in 1 file(s) (2 times):**
+**Called in 2 file(s) (3 times):**
 - `js/blast-manager.js` (2x):
-  - Line 162: `updateSequenceTypeInfo(result.message, \'sequenceTypeInfo\', \'sequenceTypeMessage\');`
-  - Line 174: `updateSequenceTypeInfo(result.message, \'sequenceTypeInfo\', \'sequenceTypeMessage\');`
+  - Line 185: `updateSequenceTypeInfo(result.message, \'sequenceTypeInfo\', \'sequenceTypeMessage\');`
+  - Line 197: `updateSequenceTypeInfo(result.message, \'sequenceTypeInfo\', \'sequenceTypeMessage\');`
+- `tools/blast.php` (1x):
+  - Line 687: `updateSequenceTypeInfo(result.message, \'sequenceTypeInfo\', \'sequenceTypeMessage\');`
 
 ### `updateDatabaseList()` (Line 161)
 
-**Called in 2 file(s) (5 times):**
-- `js/blast-manager.js` (3x):
+**Called in 2 file(s) (7 times):**
+- `js/blast-manager.js` (4x):
   - Line 73: `updateDatabaseList();`
-  - Line 119: `updateDatabaseList();`
-  - Line 167: `updateDatabaseList();`
-- `tools/blast.php` (2x):
-  - Line 259: `<select id=\"blast_program\" name=\"blast_program\" class=\"form-control\" onchange=\"updateDatabaseList();\">`
-  - Line 344: `onchange=\"updateDatabaseList();\"`
+  - Line 96: `updateDatabaseList();`
+  - Line 142: `updateDatabaseList();`
+  - Line 190: `updateDatabaseList();`
+- `tools/blast.php` (3x):
+  - Line 300: `<select id=\"blast_program\" name=\"blast_program\" class=\"form-control\" onchange=\"updateDatabaseList();\">`
+  - Line 385: `onchange=\"updateDatabaseList();\"`
+  - Line 695: `updateDatabaseList();`
 
 ---
 
@@ -411,15 +424,13 @@ Generated: 2025-11-26 16:56:56
 - `admin/manage_phylo_tree.php`
 - `admin/manage_registry.php`
 
-### `fixFilePermissions()` (Line 15)
+### `fixFilePermissions()` (Line 16)
 
 **Not called anywhere**
 
 ### `md5()` (Line 79)
 
-**Called in 1 file(s) (1 times):**
-- `js/permission-manager.js` (1x):
-  - Line 19: `const resultId = \'fixResult-\' + md5(filePath);`
+**Not called anywhere**
 
 ### `escapeHtml()` (Line 96)
 
@@ -470,7 +481,7 @@ Generated: 2025-11-26 16:56:56
 
 **Called in 1 file(s) (1 times):**
 - `tools/retrieve_sequences.php` (1x):
-  - Line 241: `<button type=\"button\" class=\"btn btn-success\" onclick=\"clearSourceFilter();\">`
+  - Line 293: `<button type=\"button\" class=\"btn btn-success\" onclick=\"clearSourceFilter();\">`
 
 ### `initializeSequenceRetrieval()` (Line 21)
 
@@ -481,11 +492,12 @@ Generated: 2025-11-26 16:56:56
 
 ### `updateCurrentSelectionDisplay()` (Line 70)
 
-**Called in 2 file(s) (7 times):**
-- `js/blast-manager.js` (3x):
+**Called in 2 file(s) (8 times):**
+- `js/blast-manager.js` (4x):
   - Line 59: `window.updateCurrentSelectionDisplay();`
   - Line 74: `updateCurrentSelectionDisplay();`
-  - Line 116: `updateCurrentSelectionDisplay();`
+  - Line 95: `updateCurrentSelectionDisplay();`
+  - Line 139: `updateCurrentSelectionDisplay();`
 - `js/sequence-retrieval.js` (4x):
   - Line 71: `window.updateCurrentSelectionDisplay(\'currentSelection\', \'fasta-source-line\', true);`
   - Line 91: `updateCurrentSelectionDisplay();`
