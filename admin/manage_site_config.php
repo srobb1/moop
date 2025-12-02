@@ -110,11 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get editable config metadata
 $editable_config = $config->getEditableConfigMetadata();
 
-// If IP ranges are empty in editable config, use defaults from site_config.php
-if (empty($editable_config['auto_login_ip_ranges']['current_value'])) {
-    $editable_config['auto_login_ip_ranges']['current_value'] = $config->getArray('auto_login_ip_ranges', []);
-}
-
 // Check file permissions
 $config_file = $config_dir . '/config_editable.json';
 $file_writable = is_writable($config_file);
