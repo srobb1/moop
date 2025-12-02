@@ -31,8 +31,9 @@ include_once __DIR__ . '/admin_init.php';
           <li>Monitor system health and errors</li>
         </ul>
         
-        <p class="mb-0"><strong>Available Tools:</strong></p>
+        <p><strong>Available Tools:</strong></p>
         <ul class="mb-0">
+          <li><strong>Manage Site Configuration</strong> - Edit site title, admin email, and appearance settings</li>
           <li><strong>Manage Users</strong> - Create collaborator accounts and control access</li>
           <li><strong>Manage Organisms</strong> - View and manage all organism data</li>
           <li><strong>Manage Groups</strong> - Tag organisms with flexible categories</li>
@@ -40,12 +41,23 @@ include_once __DIR__ . '/admin_init.php';
           <li><strong>Manage Taxonomy Tree</strong> - Build the organism selector</li>
           <li><strong>Error Logs</strong> - Monitor system health</li>
           <li><strong>Function Registry</strong> - Maintain code documentation</li>
+          <li><strong>Filesystem Permissions</strong> - Check and fix file permissions</li>
         </ul>
       </div>
     </div>
   </div>
   
   <div class="row mt-4">
+    <div class="col-md-6 mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fa fa-cog"></i> Manage Site Configuration</h5>
+          <p class="card-text">Edit site settings like title, branding, and admin contact information.</p>
+          <a href="manage_site_config.php" class="btn btn-primary">Go to Site Configuration</a>
+        </div>
+      </div>
+    </div>
+    
     <div class="col-md-6 mb-3">
       <div class="card h-100">
         <div class="card-body">
