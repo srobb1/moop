@@ -195,7 +195,9 @@ function performPermissionCheck($path, $item) {
         return $result;
     }
     
-    $perms = substr(sprintf('%o', fileperms($path)), -4);
+    $perms_full = substr(sprintf('%o', fileperms($path)), -4);
+    // Remove leading zero for comparison (0664 -> 664, 02775 -> 2775)
+    $perms = ltrim($perms_full, '0') ?: '0';
     $owner = posix_getpwuid(fileowner($path))['name'] ?? 'unknown';
     $group = posix_getgrgid(filegroup($path))['name'] ?? 'unknown';
     
