@@ -33,10 +33,32 @@ include_once __DIR__ . '/includes/header.php';
 <body class="bg-light">
 <div class="container py-5">
   <!-- Page Header -->
+
+  <!-- Site Info Card -->
+  <div class="row g-4 justify-content-center mb-5">
+    <div class="col-md-8 col-lg-6">
+      <div class="card h-100 shadow-sm border-0 rounded-3 bg-info bg-opacity-10">
+        <div class="card-body">
+          <h3 class="card-title fw-bold text-dark mb-3">
+            <i class="fa fa-info-circle"></i> About <?=$siteTitle?> Site
+          </h3>
+          <p class="card-text text-muted mb-0">
+            <strong>MOOP</strong> — to keep company, associate closely. Explore and discover how diverse organisms associate closely together on one platform.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Page Divider Line -->
   <div class="text-center mb-5">
     <h1 class="fw-bold mb-3"><?=$siteTitle?></h1>
     <hr class="mx-auto page-header-divider">
-    <h2 class="fw-bold mt-4 mb-3">Available Organisms</h2>
+  </div>
+
+  <!-- Available Organisms Header -->
+  <div class="text-center mb-4">
+    <h2 class="fw-bold mb-3">Available Organisms</h2>
     <p class="text-muted">
       <i class="fa fa-network-wired"></i> IP: <span class="fw-semibold"><?= htmlspecialchars($ip) ?></span>  
       &nbsp;|&nbsp; <i class="fa fa-user-shield"></i> Access: <span class="fw-semibold"><?= htmlspecialchars(get_access_level()) ?></span>
@@ -60,21 +82,11 @@ include_once __DIR__ . '/includes/header.php';
     <div class="row g-4 justify-content-center">
       <?php foreach ($cards_to_display as $card): ?>
         <div class="col-md-6 col-lg-4">
-          <a href="<?= htmlspecialchars($card['link']) ?>" target="_blank" class="text-decoration-none">
+          <a href="<?= htmlspecialchars($card['link']) ?>" target="_blank" class="text-decoration-none card-link">
             <div class="card h-100 shadow-sm border-0 rounded-3 organism-card">
               <div class="card-body text-center d-flex flex-column">
-                <div class="mb-3">
-                  <div class="organism-icon mx-auto">
-                    <i class="fa fa-dna"></i>
-                  </div>
-                </div>
-                <h5 class="card-title mb-3 fw-bold text-dark"><?= $card['title'] ?></h5>
+                <h3 class="card-title mb-3 fw-bold text-dark"><?= $card['title'] ?></h3>
                 <p class="card-text text-muted mb-3"><?= $card['text'] ?></p>
-                <div class="mt-auto">
-                  <span class="btn btn-primary btn-sm">
-                    View Details <i class="fa fa-arrow-right"></i>
-                  </span>
-                </div>
               </div>
             </div>
           </a>
@@ -89,7 +101,7 @@ include_once __DIR__ . '/includes/header.php';
       <div class="col-lg-8">
         <div class="card shadow-sm">
           <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="fa fa-project-diagram"></i> Taxonomy Tree</h5>
+            <h5 class="mb-0"><i class="fa fa-project-diagram"></i> Taxonomy Tree</h3>
           </div>
           <div class="card-body taxonomy-tree-scroll">
             <div id="taxonomy-tree-container"></div>
@@ -102,7 +114,7 @@ include_once __DIR__ . '/includes/header.php';
             <h5 class="mb-0">
               Selected Organisms 
               <span class="badge bg-light text-dark" id="selected-count">0</span>
-            </h5>
+            </h3>
           </div>
           <div class="card-body">
             <div id="selected-organisms-list" class="mb-3">
