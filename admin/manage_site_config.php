@@ -1,12 +1,6 @@
 <?php
 include_once __DIR__ . '/admin_init.php';
 
-// Check admin access
-if (!isAdmin()) {
-    header('Location: /moop/access_denied.php');
-    exit;
-}
-
 $config_dir = $config->getPath('root_path') . '/' . $config->getString('site') . '/config';
 $message = '';
 $error = '';
