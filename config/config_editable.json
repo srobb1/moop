@@ -16,11 +16,11 @@
         },
         "genome": {
             "pattern": "genome.fa",
-            "label": "GENOME"
+            "label": "Genome"
         }
     },
     "_metadata": {
-        "last_updated": "2025-12-02T21:40:17+00:00",
+        "last_updated": "2025-12-02T21:46:38+00:00",
         "last_updated_by": "admin"
     }
 }

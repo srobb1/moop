@@ -552,10 +552,51 @@ class ConfigManager
             }
         }
         
+        // Log the change
+        $this->logConfigChange($data, $config_dir);
+        
         return [
             'success' => true,
             'message' => 'Configuration saved successfully'
         ];
+    }
+
+    /**
+     * Log configuration changes to change_log file
+     * 
+     * @param array $data The configuration data that was changed
+     * @param string $config_dir Directory containing change_log
+     * @return void
+     */
+    private function logConfigChange($data, $config_dir)
+    {
+        $log_dir = dirname($config_dir) . '/change_log';
+        
+        // Ensure log directory exists
+        if (!is_dir($log_dir)) {
+            @mkdir($log_dir, 0775, true);
+        }
+        
+        $log_file = $log_dir . '/site_config.log';
+        
+        $timestamp = date('Y-m-d H:i:s');
+        $username = get_username() ?? 'unknown';
+        
+        // Build changes description
+        $changes = [];
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                // For sequence types, show count
+                $changes[] = "$key (types: " . count($value) . ")";
+            } else {
+                $changes[] = "$key";
+            }
+        }
+        $changes_str = implode(', ', $changes);
+        
+        $log_entry = "[$timestamp] UPDATE by $username | Changed: $changes_str\n";
+        
+        @file_put_contents($log_file, $log_entry, FILE_APPEND);
     }
 
     /**
