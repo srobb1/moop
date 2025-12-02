@@ -381,8 +381,8 @@ if (!$file_writable && file_exists($config_file)) {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($banner_images as $banner_file): ?>
-                                            <tr>
+                                            <?php foreach ($banner_images as $idx => $banner_file): ?>
+                                            <tr class="<?= $idx % 2 === 0 ? 'table-light' : '' ?>">
                                                 <td class="text-center">
                                                     <input type="radio" 
                                                            name="header_img" 
