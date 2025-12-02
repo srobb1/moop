@@ -318,10 +318,12 @@ $organisms = $organisms;
         <div class="mb-0">
           <h6 class="fw-bold mb-2"><i class="fa fa-star"></i> Overall Status</h6>
           <p class="mb-2">
-            <span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete</span> - Organism has assemblies and a valid database
-            <br><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> No Database</span> - Organism has assemblies but no database file
-            <br><span class="badge bg-danger"><i class="fa fa-times-circle"></i> No Assemblies</span> - Organism directory exists but has no assemblies
+            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">7</span></button> - All 7 checks passed
+            <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-success">X</span></button> - Some checks passed (see modal for details)
+            <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Critical <span class="badge bg-danger">0</span></button> - No checks passed (no database or no assemblies)
           </p>
+          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the status button to see the detailed checklist of all 7 setup requirements.</p>
+          <p class="small text-muted"><strong>Checklist includes:</strong> Assemblies • FASTA files • BLAST indexes • Database file • Database readable • Assemblies in groups • Organism in tree</p>
         </div>
       </div>
     </div>
@@ -505,15 +507,20 @@ $organisms = $organisms;
                    $status = getOrganismOverallStatus($organism, $data, $groups_data, $phylo_tree_file, $sequence_types);
                    $pass_count = $status['pass_count'];
                    $total_count = $status['total_count'];
+                   $safe_org_id = preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism);
                  ?>
                  <?php if ($status['all_pass']): ?>
-                   <span class="badge bg-success status-badge" title="All checks passed: <?= $pass_count ?>/<?= $total_count ?>">
-                     <i class="fa fa-check-circle"></i> Complete
-                   </span>
+                   <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#statusModal<?= $safe_org_id ?>">
+                     <i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">7</span>
+                   </button>
+                 <?php elseif ($pass_count > 0): ?>
+                   <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#statusModal<?= $safe_org_id ?>">
+                     <i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-success"><?= $pass_count ?></span>
+                   </button>
                  <?php else: ?>
-                   <span class="badge bg-warning status-badge" title="Checks passed: <?= $pass_count ?>/<?= $total_count ?>">
-                     <i class="fa fa-exclamation-triangle"></i> <?= $pass_count ?>/<?= $total_count ?>
-                   </span>
+                   <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#statusModal<?= $safe_org_id ?>">
+                     <i class="fa fa-times-circle"></i> Critical <span class="badge bg-danger">0</span>
+                   </button>
                  <?php endif; ?>
                </td>
              </tr>
@@ -1344,6 +1351,118 @@ $(document).ready(function() {
 
 </body>
 </html>
+
+<!-- Organism Status Modals -->
+<?php foreach ($organisms as $organism => $data): ?>
+  <?php 
+    $status = getOrganismOverallStatus($organism, $data, $groups_data, $phylo_tree_file, $sequence_types);
+    $safe_org_id = preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism);
+    $checks = $status['checks'];
+    $pass_count = $status['pass_count'];
+  ?>
+  <div class="modal fade" id="statusModal<?= $safe_org_id ?>" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa fa-star"></i> Status: <?= htmlspecialchars($organism) ?></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="card mb-3">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="fa fa-list-check"></i> <strong>Setup Checklist</strong></h6>
+                <span class="badge bg-success fs-6"><?= $pass_count ?>/7 Complete</span>
+              </div>
+              
+              <div class="list-group">
+                <div class="list-group-item <?= $checks['has_assemblies'] ? '' : 'bg-light' ?>">
+                  <div class="d-flex align-items-center">
+                    <?php if ($checks['has_assemblies']): ?>
+                      <i class="fa fa-check-circle text-success me-2" style="font-size: 18px;"></i>
+                    <?php else: ?>
+                      <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
+                    <?php endif; ?>
+                    <span><strong>Has assemblies</strong></span>
+                  </div>
+                </div>
+                
+                <div class="list-group-item <?= $checks['has_fasta'] ? '' : 'bg-light' ?>">
+                  <div class="d-flex align-items-center">
+                    <?php if ($checks['has_fasta']): ?>
+                      <i class="fa fa-check-circle text-success me-2" style="font-size: 18px;"></i>
+                    <?php else: ?>
+                      <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
+                    <?php endif; ?>
+                    <span><strong>Has FASTA files</strong></span>
+                  </div>
+                </div>
+                
+                <div class="list-group-item <?= $checks['has_blast_indexes'] ? '' : 'bg-light' ?>">
+                  <div class="d-flex align-items-center">
+                    <?php if ($checks['has_blast_indexes']): ?>
+                      <i class="fa fa-check-circle text-success me-2" style="font-size: 18px;"></i>
+                    <?php else: ?>
+                      <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
+                    <?php endif; ?>
+                    <span><strong>Has BLAST indexes</strong></span>
+                  </div>
+                </div>
+                
+                <div class="list-group-item <?= $checks['has_database'] ? '' : 'bg-light' ?>">
+                  <div class="d-flex align-items-center">
+                    <?php if ($checks['has_database']): ?>
+                      <i class="fa fa-check-circle text-success me-2" style="font-size: 18px;"></i>
+                    <?php else: ?>
+                      <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
+                    <?php endif; ?>
+                    <span><strong>Has database file</strong></span>
+                  </div>
+                </div>
+                
+                <div class="list-group-item <?= $checks['database_readable'] ? '' : 'bg-light' ?>">
+                  <div class="d-flex align-items-center">
+                    <?php if ($checks['database_readable']): ?>
+                      <i class="fa fa-check-circle text-success me-2" style="font-size: 18px;"></i>
+                    <?php else: ?>
+                      <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
+                    <?php endif; ?>
+                    <span><strong>Database is readable</strong></span>
+                  </div>
+                </div>
+                
+                <div class="list-group-item <?= $checks['assemblies_in_groups'] ? '' : 'bg-light' ?>">
+                  <div class="d-flex align-items-center">
+                    <?php if ($checks['assemblies_in_groups']): ?>
+                      <i class="fa fa-check-circle text-success me-2" style="font-size: 18px;"></i>
+                    <?php else: ?>
+                      <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
+                    <?php endif; ?>
+                    <span><strong>Assemblies in groups</strong></span>
+                  </div>
+                </div>
+                
+                <div class="list-group-item <?= $checks['in_phylo_tree'] ? '' : 'bg-light' ?>">
+                  <div class="d-flex align-items-center">
+                    <?php if ($checks['in_phylo_tree']): ?>
+                      <i class="fa fa-check-circle text-success me-2" style="font-size: 18px;"></i>
+                    <?php else: ?>
+                      <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
+                    <?php endif; ?>
+                    <span><strong>In phylogenetic tree</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<?php endforeach; ?>
 
 <?php
 include_once '../includes/footer.php';
