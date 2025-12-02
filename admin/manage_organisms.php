@@ -596,15 +596,7 @@ $organisms = $organisms;
     </div>
     <div class="card-body">
       <div class="row">
-        <div class="col-md-4">
-          <div class="d-grid">
-            <a href="manage_groups.php" target="_blank" class="btn btn-primary">
-              <i class="fa fa-layer-group"></i> Assign to Groups
-            </a>
-            <small class="text-muted mt-2">Add organisms to organism groups</small>
-          </div>
-        </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
           <div class="d-grid">
             <a href="manage_groups.php" target="_blank" class="btn btn-primary">
               <i class="fa fa-layer-group"></i> Manage Groups & Descriptions
@@ -612,7 +604,7 @@ $organisms = $organisms;
             <small class="text-muted mt-2">Manage group metadata</small>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
           <div class="d-grid">
             <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#helpModal">
               <i class="fa fa-question-circle"></i> Upload Help
