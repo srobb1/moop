@@ -428,32 +428,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
     </div>
   <?php endif; ?>
 
-  <!-- Info Panel -->
-  <div class="card mb-4">
-    <div class="card-header bg-info text-white">
-      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About This Page</h5>
-    </div>
-    <div class="card-body">
-      <p><strong>Purpose:</strong> This page manages annotation types and their database counts. Annotation types are the different categories of analysis results stored in your SQLite databases (like Orthologs, Homologs, Domains, Gene Ontology, etc.).</p>
-      
-      <p><strong>How it works:</strong></p>
-      <ul>
-        <li><strong>Automatic Detection:</strong> This page automatically monitors your SQLite database files for changes. When you modify the databases, the annotation counts are automatically recalculated on the next page load.</li>
-        <li><strong>Database Tracking:</strong> The system stores a modification timestamp of your SQLite files. If a newer SQLite file is detected, counts are automatically refreshed (takes 2-3 seconds).</li>
-        <li><strong>Missing Data Detection:</strong> If any annotation type is missing its counts or the counts are empty, the page will automatically query the databases to fill them in.</li>
-      </ul>
-      
-      <p><strong>For Administrators:</strong></p>
-      <ul>
-        <li>You can add synonyms for annotation types (alternate names that users might search for)</li>
-        <li>You can customize the display label to show a different name than the database name</li>
-        <li>You can reorder annotation types by dragging them - this order appears on gene pages</li>
-        <li>You can add descriptions to help users understand each annotation type</li>
-      </ul>
-      
-      <p class="mb-0 text-muted"><small><i class="fa fa-clock-o"></i> The system tracks database modifications automatically, so you don't need to manually refresh counts.</small></p>
-    </div>
-  </div>
 
   <!-- PHASE 3: Annotation Type Configuration -->
   <?php if (!empty($annotation_config['annotation_types'])): ?>
