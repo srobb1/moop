@@ -10,7 +10,7 @@ $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
 $sequence_types = $config->getSequenceTypes();
 $groups_data = getGroupData();
-$phylo_tree_file = $config->getPath('metadata_path') . '/phylo_tree_config.json';
+$taxonomy_tree_file = $config->getPath('metadata_path') . '/taxonomy_tree_config.json';
 
 // Get all organisms info once (used by both AJAX handler and page display)
 $organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);
@@ -398,7 +398,7 @@ $organisms = $organisms;
                </td>
                <td>
                  <?php 
-                   $in_phylo_tree = isAssemblyInPhyloTree($organism, '', $phylo_tree_file);
+                   $in_phylo_tree = isAssemblyInPhyloTree($organism, '', $taxonomy_tree_file);
                  ?>
                  <?php if ($in_phylo_tree): ?>
                    <a href="manage_taxonomy_tree.php" class="btn btn-sm btn-outline-success" title="Click to manage taxonomy tree">
@@ -519,7 +519,7 @@ $organisms = $organisms;
                <td>
                  <?php 
                    // Get comprehensive status
-                   $status = getOrganismOverallStatus($organism, $data, $groups_data, $phylo_tree_file, $sequence_types);
+                   $status = getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree_file, $sequence_types);
                    $pass_count = $status['pass_count'];
                    $total_count = $status['total_count'];
                    $safe_org_id = preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism);
@@ -1370,7 +1370,7 @@ $(document).ready(function() {
 <!-- Organism Status Modals -->
 <?php foreach ($organisms as $organism => $data): ?>
   <?php 
-    $status = getOrganismOverallStatus($organism, $data, $groups_data, $phylo_tree_file, $sequence_types);
+    $status = getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree_file, $sequence_types);
     $safe_org_id = preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism);
     $checks = $status['checks'];
     $pass_count = $status['pass_count'];

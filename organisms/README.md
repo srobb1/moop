@@ -27,7 +27,7 @@ Anoura_caudifer [genus_species]
 Organism and assembly visibility is managed through the metadata directory (`../metadata/`):
 - `organism_assembly_groups.json` - Defines which organisms and assemblies are available and their access level
 - `group_descriptions.json` - Provides grouping and display information
-- `phylo_tree_config.json` - Defines the phylogenetic tree structure
+- `taxonomy_tree_config.json` - Defines the taxonomy tree structure
 - `annotation_config.json` - Specifies annotation types and properties
 
 The configuration determines which organisms/assemblies are visible to different users and how they are displayed in the application.

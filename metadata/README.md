@@ -4,8 +4,8 @@ This directory contains JSON configuration files that define the application's d
 
 ## Configuration Files
 
-### `phylo_tree_config.json`
-Defines the phylogenetic tree structure and layout configuration. Used to display evolutionary relationships between organisms in the phylogenetic tree view.
+### `taxonomy_tree_config.json`
+Defines the taxonomy tree structure and layout configuration. Used to display evolutionary relationships between organisms in the phylogenetic tree view.
 
 ### `group_descriptions.json`
 Contains descriptions and metadata for organism groupings. Provides display information for organizing and categorizing organisms by taxonomic or functional groups.
