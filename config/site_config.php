@@ -83,24 +83,29 @@ return [
     // EDITABLE in Admin Dashboard: Use "Manage Site Configuration" to:
     //   - Enable/disable sequence types for users
     //   - Customize display labels (e.g., "Transcript" instead of "mRNA")
+    //   - Customize badge colors
     // File patterns are read-only (tied to actual filenames in organism directories)
     // Current values come from config_editable.json if customized, otherwise defaults below
     'sequence_types' => [
         'protein' => [
             'pattern' => 'protein.aa.fa',
             'label' => 'Protein',
+            'color' => 'bg-info',
         ],
         'transcript' => [
             'pattern' => 'transcript.nt.fa',
             'label' => 'mRNA',
+            'color' => 'bg-feature-mrna',
         ],
         'cds' => [
             'pattern' => 'cds.nt.fa',
             'label' => 'CDS',
+            'color' => 'bg-success',
         ],
         'genome' => [
             'pattern' => 'genome.fa',
             'label' => 'GENOME',
+            'color' => 'bg-warning text-dark',
         ]
     ],
     

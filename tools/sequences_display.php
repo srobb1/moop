@@ -187,14 +187,8 @@ if (!empty($sequence_errors)) {
                         echo '    <div class="collapse-section" data-toggle="collapse" data-target="#seq_' . $seq_type . '" aria-expanded="true">';
                         echo '      <i class="fas fa-minus toggle-icon text-info"></i>';
                         echo '      <strong class="ms-2 text-dark">';
-                        // Map sequence types to badge colors
-                        $badge_class = match($seq_type) {
-                            'transcript' => 'bg-feature-mrna',
-                            'protein' => 'bg-info',
-                            'cds' => 'bg-success',
-                            'genome' => 'bg-warning text-dark',
-                            default => 'bg-secondary'
-                        };
+                        // Get badge color from config, with fallback to default
+                        $badge_class = $config['color'] ?? 'bg-secondary';
                         echo '        <span class="text-white px-2 py-1 rounded ' . $badge_class . '">' . htmlspecialchars($config['label']) . '</span>';
                         echo '        (' . count($sequences) . ' sequence' . (count($sequences) > 1 ? 's' : '') . ')';
                         echo '      </strong>';

@@ -4,19 +4,23 @@
     "sequence_types": {
         "protein": {
             "pattern": "protein.aa.fa",
-            "label": "Protein"
+            "label": "Protein",
+            "color": "bg-info"
         },
         "transcript": {
             "pattern": "transcript.nt.fa",
-            "label": "mRNA"
+            "label": "mRNA",
+            "color": "bg-feature-mrna"
         },
         "cds": {
             "pattern": "cds.nt.fa",
-            "label": "CDS"
+            "label": "CDS",
+            "color": "bg-success"
         },
         "genome": {
             "pattern": "genome.fa",
-            "label": "Genome"
+            "label": "Genome",
+            "color": "bg-warning text-dark"
         }
     },
     "header_img": "SIMR_1200x300_0.jpg",
