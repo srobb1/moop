@@ -596,7 +596,15 @@ $organisms = $organisms;
     </div>
     <div class="card-body">
       <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-4">
+          <div class="d-grid">
+            <a href="manage_taxonomy_tree.php" target="_blank" class="btn btn-primary">
+              <i class="fa fa-project-diagram"></i> Manage Taxonomy Tree
+            </a>
+            <small class="text-muted mt-2">Build the organism selector</small>
+          </div>
+        </div>
+        <div class="col-md-4">
           <div class="d-grid">
             <a href="manage_groups.php" target="_blank" class="btn btn-primary">
               <i class="fa fa-layer-group"></i> Manage Groups & Descriptions
@@ -604,7 +612,7 @@ $organisms = $organisms;
             <small class="text-muted mt-2">Manage group metadata</small>
           </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
           <div class="d-grid">
             <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#helpModal">
               <i class="fa fa-question-circle"></i> Upload Help
