@@ -175,6 +175,16 @@ $organisms = $organisms;
     .folder-icon { color: #ffc107; }
     .db-icon { color: #28a745; }
     .status-badge { font-size: 0.75rem; }
+    
+    #legendContent {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    
+    #legendContent.show {
+      max-height: 2000px;
+    }
   </style>
 </head>
 <body class="bg-light">
@@ -264,7 +274,7 @@ $organisms = $organisms;
 
   <!-- Legend Box -->
   <div class="card mb-4">
-    <div class="card-header bg-light" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#legendContent" role="button">
+    <div class="card-header bg-light" style="cursor: pointer;" id="legendHeader" role="button">
       <h6 class="mb-0">
         <i class="fa fa-book"></i> <strong>Legend & Status Guide</strong>
         <span class="ms-2">
@@ -275,7 +285,7 @@ $organisms = $organisms;
         <i class="fa fa-chevron-down float-end" id="legendChevron"></i>
       </h6>
     </div>
-    <div class="collapse" id="legendContent">
+    <div id="legendContent">
       <div class="card-body">
         <!-- Assemblies Legend -->
         <div class="mb-4">
@@ -330,19 +340,24 @@ $organisms = $organisms;
   </div>
 
   <script>
-    // Legend collapse arrow animation
+    // Simple legend toggle
+    const legendHeader = document.getElementById('legendHeader');
     const legendContent = document.getElementById('legendContent');
     const legendChevron = document.getElementById('legendChevron');
     
-    legendContent.addEventListener('show.bs.collapse', function() {
-      legendChevron.style.transform = 'rotate(180deg)';
-      legendChevron.style.transition = 'transform 0.3s ease';
-    });
-    
-    legendContent.addEventListener('hide.bs.collapse', function() {
-      legendChevron.style.transform = 'rotate(0deg)';
-      legendChevron.style.transition = 'transform 0.3s ease';
-    });
+    if (legendHeader && legendContent) {
+      legendHeader.addEventListener('click', function() {
+        const isOpen = legendContent.classList.contains('show');
+        
+        if (isOpen) {
+          legendContent.classList.remove('show');
+          legendChevron.style.transform = 'rotate(0deg)';
+        } else {
+          legendContent.classList.add('show');
+          legendChevron.style.transform = 'rotate(180deg)';
+        }
+      });
+    }
   </script>
 
   <!-- Current Organisms Table -->
