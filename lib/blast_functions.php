@@ -391,4 +391,77 @@ function validateBlastSequence($sequence) {
     return ['valid' => true, 'error' => ''];
 }
 
+/**
+ * Validate BLAST index files for FASTA sequences
+ * Checks if BLAST databases have their index files (.nhr, .nin, .nsq for nucleotide, .phr, .pin, .psq for protein)
+ * @param string $assembly_path Path to assembly directory
+ * @param array $sequence_types Configured sequence types
+ * @return array Array with 'databases' containing status of each FASTA file
+ */
+function validateBlastIndexFiles($assembly_path, $sequence_types = []) {
+    $result = [
+        'databases' => [],
+        'missing_count' => 0,
+        'total_count' => 0
+    ];
+    
+    if (!is_dir($assembly_path)) {
+        return $result;
+    }
+    
+    // Map sequence types to BLAST index extensions
+    $type_mapping = [
+        'protein' => ['name' => 'Protein', 'extensions' => ['phr', 'pin', 'psq']],
+        'cds' => ['name' => 'CDS', 'extensions' => ['nhr', 'nin', 'nsq']],
+        'transcript' => ['name' => 'Transcript', 'extensions' => ['nhr', 'nin', 'nsq']],
+    ];
+    
+    // Check for each configured sequence type
+    if (!empty($sequence_types)) {
+        foreach ($sequence_types as $seq_type => $config) {
+            $pattern = $config['pattern'] ?? '';
+            if (empty($pattern)) {
+                continue;
+            }
+            
+            $file_path = "$assembly_path/$pattern";
+            
+            // Only check if FASTA file exists
+            if (!file_exists($file_path)) {
+                continue;
+            }
+            
+            $result['total_count']++;
+            $type_info = $type_mapping[$seq_type] ?? ['name' => ucfirst($seq_type), 'extensions' => ['nhr', 'nin', 'nsq']];
+            
+            $db_entry = [
+                'type' => $seq_type,
+                'name' => $type_info['name'],
+                'fasta' => basename($file_path),
+                'fasta_path' => $file_path,
+                'has_indexes' => true,
+                'missing_indexes' => []
+            ];
+            
+            // Check for all required index files
+            foreach ($type_info['extensions'] as $ext) {
+                $index_file = "$file_path.$ext";
+                if (!file_exists($index_file)) {
+                    $db_entry['has_indexes'] = false;
+                    $db_entry['missing_indexes'][] = $ext;
+                }
+            }
+            
+            if (!$db_entry['has_indexes']) {
+                $result['missing_count']++;
+            }
+            
+            $result['databases'][] = $db_entry;
+        }
+    }
+    
+    return $result;
+}
+
 ?>
+

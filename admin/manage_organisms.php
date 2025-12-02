@@ -3,11 +3,18 @@
 ob_start();
 
 include_once __DIR__ . '/admin_init.php';
+include_once __DIR__ . '/../lib/blast_functions.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
 $sequence_types = $config->getSequenceTypes();
+$groups_data = getGroupData();
+$phylo_tree_path = $config->getPath('phylo_tree_path');
+$phylo_tree_data = [];
+if (file_exists($phylo_tree_path . '/tree.json')) {
+    $phylo_tree_data = json_decode(file_get_contents($phylo_tree_path . '/tree.json'), true) ?? [];
+}
 
 // Get all organisms info once (used by both AJAX handler and page display)
 $organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);
@@ -298,7 +305,7 @@ $organisms = $organisms;
         </div>
 
         <!-- Metadata Status Legend -->
-        <div class="mb-0">
+        <div class="mb-3">
           <h6 class="fw-bold mb-2"><i class="fa fa-file-code"></i> Metadata Status</h6>
           <p class="mb-2">
             <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete</button> - organism.json exists with all required fields and is writable
@@ -309,6 +316,16 @@ $organisms = $organisms;
             <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete</button> - JSON valid but missing required fields
           </p>
           <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the metadata status button to edit metadata, add images, and write organism descriptions.</p>
+        </div>
+
+        <!-- Overall Status Legend -->
+        <div class="mb-0">
+          <h6 class="fw-bold mb-2"><i class="fa fa-star"></i> Overall Status</h6>
+          <p class="mb-2">
+            <span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete</span> - Organism has assemblies and a valid database
+            <br><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> No Database</span> - Organism has assemblies but no database file
+            <br><span class="badge bg-danger"><i class="fa fa-times-circle"></i> No Assemblies</span> - Organism directory exists but has no assemblies
+          </p>
         </div>
       </div>
     </div>
@@ -345,14 +362,13 @@ $organisms = $organisms;
              <th>DB Status</th>
              <th>Metadata Status</th>
              <th>Status</th>
-             <th>Path</th>
            </tr>
          </thead>
          <tbody>
            <?php foreach ($organisms as $organism => $data): ?>
              <tr>
                <td>
-                 <strong><?= htmlspecialchars($organism) ?></strong>
+               <strong title="Path: <?= htmlspecialchars($data['path']) ?>" style="cursor: help; border-bottom: 1px dotted #999;"><?= htmlspecialchars($organism) ?></strong>
                  <?php if (isset($data['info']['genus']) && isset($data['info']['species'])): ?>
                    <br><small class="text-muted"><em><?= htmlspecialchars($data['info']['genus']) ?> <?= htmlspecialchars($data['info']['species']) ?></em></small>
                  <?php endif; ?>
@@ -484,11 +500,8 @@ $organisms = $organisms;
                    <span class="badge bg-danger status-badge"><i class="fa fa-times-circle"></i> No Assemblies</span>
                  <?php endif; ?>
                </td>
-               <td>
-                <small class="font-monospace"><?= htmlspecialchars($data['path']) ?></small>
-              </td>
-            </tr>
-          <?php endforeach; ?>
+             </tr>
+           <?php endforeach; ?>
         </tbody>
       </table>
     </div>
@@ -952,6 +965,16 @@ $organisms = $organisms;
         $asm_fasta = $data['fasta_validation']['assemblies'][$assembly] ?? null;
         $is_missing = isset($data['fasta_validation']['missing_files'][$assembly]);
         $modal_id = 'asmModal' . $safe_asm_id;
+        $assembly_path = $data['path'] . '/' . $assembly;
+        
+        // Get BLAST index status
+        $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
+        
+        // Get group membership
+        $assembly_groups = getAssemblyGroups($organism, $assembly, $groups_data);
+        
+        // Check phylo tree membership
+        $in_phylo_tree = isAssemblyInPhyloTree($organism, $assembly, $phylo_tree_data);
         
         // Find if this assembly has database validation info
         $has_db_mismatch = false;
@@ -1158,6 +1181,73 @@ $organisms = $organisms;
                   <?php else: ?>
                     <div class="alert alert-warning mb-0">No FASTA file information available</div>
                   <?php endif; ?>
+                </div>
+              </div>
+
+              <!-- BLAST Index Status -->
+              <h6 class="fw-bold mb-2"><i class="fa fa-rocket"></i> BLAST Database Indexes</h6>
+              <div class="alert alert-info small mb-3">
+                <strong>Required:</strong> Each FASTA file needs BLAST index files (.nhr, .nin, .nsq for nucleotide; .phr, .pin, .psq for protein) to be searchable.
+              </div>
+              <div class="card mb-3 <?= $blast_validation['missing_count'] > 0 ? 'border-warning border-2' : 'border-success' ?>">
+                <div class="card-body small">
+                  <?php if (!empty($blast_validation['databases'])): ?>
+                    <ul class="mb-0">
+                      <?php foreach ($blast_validation['databases'] as $db): ?>
+                        <li class="mb-2 pb-2 border-bottom">
+                          <?php if ($db['has_indexes']): ?>
+                            <span class="badge bg-success"><i class="fa fa-check"></i></span>
+                            <strong><?= htmlspecialchars($db['name']) ?>:</strong> <?= htmlspecialchars($db['fasta']) ?>
+                            <br><small class="text-muted">Indexes: ✓ Present</small>
+                          <?php else: ?>
+                            <span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i></span>
+                            <strong><?= htmlspecialchars($db['name']) ?>:</strong> <?= htmlspecialchars($db['fasta']) ?>
+                            <br><small class="text-danger">Missing indexes: <?= htmlspecialchars(implode(', ', $db['missing_indexes'])) ?></small>
+                            <br><small class="text-muted">This FASTA file cannot be used for BLAST searches until indexes are created.</small>
+                          <?php endif; ?>
+                        </li>
+                      <?php endforeach; ?>
+                    </ul>
+                  <?php else: ?>
+                    <div class="alert alert-warning mb-0">No FASTA files found for BLAST indexing</div>
+                  <?php endif; ?>
+                </div>
+              </div>
+
+              <!-- Groups Status -->
+              <h6 class="fw-bold mb-2"><i class="fa fa-sitemap"></i> Group Membership</h6>
+              <div class="card mb-3">
+                <div class="card-body small">
+                  <?php if (!empty($assembly_groups)): ?>
+                    <p class="mb-2"><strong>This assembly is in <?= count($assembly_groups) ?> group(s):</strong></p>
+                    <ul class="mb-3">
+                      <?php foreach ($assembly_groups as $group): ?>
+                        <li><span class="badge bg-info"><?= htmlspecialchars($group) ?></span></li>
+                      <?php endforeach; ?>
+                    </ul>
+                  <?php else: ?>
+                    <p class="text-muted mb-3"><i class="fa fa-info-circle"></i> This assembly is not currently assigned to any groups.</p>
+                  <?php endif; ?>
+                  <a href="manage_groups.php" class="btn btn-sm btn-outline-primary">
+                    <i class="fa fa-edit"></i> Manage Groups
+                  </a>
+                </div>
+              </div>
+
+              <!-- Phylogenetic Tree Status -->
+              <h6 class="fw-bold mb-2"><i class="fa fa-tree"></i> Phylogenetic Tree</h6>
+              <div class="card mb-3 <?= $in_phylo_tree ? 'border-success' : 'border-warning' ?>">
+                <div class="card-body small">
+                  <?php if ($in_phylo_tree): ?>
+                    <p class="mb-2"><span class="badge bg-success"><i class="fa fa-check"></i> In Tree</span></p>
+                    <p class="text-muted mb-3">This assembly is included in the phylogenetic tree.</p>
+                  <?php else: ?>
+                    <p class="mb-2"><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Not in Tree</span></p>
+                    <p class="text-muted mb-3">This assembly is not currently included in the phylogenetic tree.</p>
+                  <?php endif; ?>
+                  <a href="manage_phylo_tree.php" class="btn btn-sm btn-outline-primary">
+                    <i class="fa fa-edit"></i> Manage Phylo Tree
+                  </a>
                 </div>
               </div>
 

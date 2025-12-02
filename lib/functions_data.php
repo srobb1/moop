@@ -598,3 +598,49 @@ function getDetailedOrganismsInfo($organism_data_path, $sequence_types = []) {
     
     return $organisms_info;
 }
+
+/**
+ * Check if an assembly is in any groups
+ * @param string $organism Organism name
+ * @param string $assembly Assembly name
+ * @param array $groups_data Groups data array
+ * @return array Array of group names containing this assembly, empty if none
+ */
+function getAssemblyGroups($organism, $assembly, $groups_data) {
+    $assembly_groups = [];
+    
+    foreach ($groups_data as $data) {
+        if (!empty($data['groups'])) {
+            foreach ($data['groups'] as $group) {
+                // Check if this organism and assembly match
+                if ($data['organism'] === $organism && $data['assembly'] === $assembly) {
+                    $assembly_groups[] = $group;
+                }
+            }
+        }
+    }
+    
+    return $assembly_groups;
+}
+
+/**
+ * Check if an assembly is in the phylogenetic tree
+ * @param string $organism Organism name
+ * @param string $assembly Assembly name
+ * @param array $tree_data Phylo tree data
+ * @return bool True if assembly is in tree, false otherwise
+ */
+function isAssemblyInPhyloTree($organism, $assembly, $tree_data) {
+    if (empty($tree_data['taxa']) || !is_array($tree_data['taxa'])) {
+        return false;
+    }
+    
+    foreach ($tree_data['taxa'] as $taxon) {
+        if ($taxon['organism'] === $organism && $taxon['assembly'] === $assembly) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
