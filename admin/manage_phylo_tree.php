@@ -279,7 +279,7 @@ document.getElementById('generateForm').addEventListener('submit', function() {
 function renderTreeNode(node, level = 0) {
     const indent = level * 20;
     const isLeaf = !!node.organism;
-    const icon = isLeaf ? '🔬' : (level === 0 ? '🌳' : '├');
+    const icon = isLeaf ? '🧬' : (level === 0 ? '🌳' : '├');
     
     let html = `<div style="margin-left: ${indent}px; padding: 4px 0;">`;
     html += `<span style="font-weight: ${isLeaf ? 'normal' : 'bold'}; font-style: ${isLeaf ? 'italic' : 'normal'}">`;
