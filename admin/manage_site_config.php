@@ -41,9 +41,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ];
                 }
             }
-            $data['auto_login_ip_ranges'] = $ip_ranges;
-        } else {
-            $data['auto_login_ip_ranges'] = [];
+            // Only include in data if there are actual IP ranges
+            if (!empty($ip_ranges)) {
+                $data['auto_login_ip_ranges'] = $ip_ranges;
+            }
         }
         
         // Handle file upload for header image
