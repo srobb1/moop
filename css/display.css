@@ -621,7 +621,7 @@ code {
 /* Reuses .feature-header structure from parent.css, with assembly-specific colors */
 
 .assembly-header {
-  background: linear-gradient(135deg, #0066cc 0%, #004a99 100%);
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
   color: white;
   padding: 2rem;
   border-radius: 0.5rem;
@@ -629,8 +629,25 @@ code {
 }
 
 .assembly-header h1 {
+  background-color: #d97706 !important;
   font-weight: 700;
   margin-bottom: 1rem;
+  color: white;
+}
+
+.assembly-header-custom {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.assembly-header-custom h1 {
+  background-color: #d97706 !important;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: white;
 }
 
 .assembly-value {
@@ -638,12 +655,28 @@ code {
 }
 
 .bg-assembly {
-  background-color: #ffc107 !important;
-  color: #333 !important;
+  background-color: #d97706 !important;
+  color: white !important;
 }
 
 .text-assembly {
-  color: #0066cc;
+  color: #d97706;
+}
+
+/* Assembly title and heading styles - consistent amber/orange color */
+.assembly-title,
+.assembly-heading {
+  color: #d97706;
+}
+
+.assembly-card-title {
+  color: #d97706;
+  font-weight: 600;
+}
+
+.assembly-badge {
+  background-color: #d97706 !important;
+  color: white !important;
 }
 
 /* Print styles */
