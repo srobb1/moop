@@ -6,6 +6,7 @@ include_once __DIR__ . '/includes/config_init.php';
 $config = ConfigManager::getInstance();
 $usersFile = $config->getPath('users_file');
 $users = json_decode(file_get_contents($usersFile), true);
+$siteTitle = $config->getString('siteTitle');
 
 $error = "";
 
@@ -33,35 +34,68 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $error = "Invalid username or password.";
     }
 }
-
-// ONLY include head.php AFTER authentication logic
-include_once 'includes/head.php';
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Login</title>
+  <title>Login - <?= htmlspecialchars($siteTitle) ?></title>
+  <?php include_once 'includes/head.php'; ?>
 </head>
-<body class="container py-5">
+<body class="bg-light">
 
-  <h2>Login</h2>
+<div class="container py-5">
+  <!-- Page Header -->
+  <div class="text-center mb-5">
+    <h1 class="fw-bold mb-3"><?= htmlspecialchars($siteTitle) ?></h1>
+    <hr class="mx-auto" style="width: 100px; border: 2px solid #0d6efd;">
+  </div>
 
-  <?php if ($error): ?>
-    <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-  <?php endif; ?>
+  <!-- Login Card -->
+  <div class="row g-4 justify-content-center mb-5">
+    <div class="col-md-8 col-lg-6">
+      <div class="card h-100 shadow-sm border-0 rounded-3">
+        <div class="card-body p-5">
+          <h2 class="card-title fw-bold text-dark mb-4 text-center">Login</h2>
 
-  <form method="post" class="mt-3">
-    <div class="mb-3">
-      <label for="username" class="form-label">Username</label>
-      <input type="text" class="form-control" id="username" name="username" required>
+          <?php if ($error): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              <i class="fa fa-exclamation-circle"></i> <?= htmlspecialchars($error) ?>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          <?php endif; ?>
+
+          <form method="post">
+            <div class="mb-4">
+              <label for="username" class="form-label fw-semibold text-dark">Username</label>
+              <input type="text" class="form-control form-control-lg" id="username" name="username" required>
+            </div>
+            <div class="mb-4">
+              <label for="password" class="form-label fw-semibold text-dark">Password</label>
+              <input type="password" class="form-control form-control-lg" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg w-100">
+              <i class="fa fa-sign-in"></i> Login
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
-    <div class="mb-3">
-      <label for="password" class="form-label">Password</label>
-      <input type="password" class="form-control" id="password" name="password" required>
+  </div>
+
+  <!-- Footer Note -->
+  <div class="row g-4 justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card border-0 rounded-3 bg-info bg-opacity-10">
+        <div class="card-body text-center">
+          <p class="card-text text-muted mb-0">
+            <small>Need assistance? Contact the administrator for account access.</small>
+          </p>
+        </div>
+      </div>
     </div>
-    <button type="submit" class="btn btn-primary">Login</button>
-  </form>
+  </div>
+</div>
 
 </body>
 </html>
