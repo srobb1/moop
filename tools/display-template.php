@@ -85,6 +85,22 @@ if (!empty($display_config['page_script'])) {
     $data['page_script'] = $display_config['page_script'];
 }
 
+// Ensure site variable is always set (required by layout.php and content files)
+if (!isset($data['site'])) {
+    $data['site'] = 'moop';
+}
+
+// Add CSS files for display pages (if not already set)
+if (!isset($data['page_styles'])) {
+    $site = $data['site'];
+    $data['page_styles'] = [
+        '/' . $site . '/css/display.css',
+        '/' . $site . '/css/parent.css',
+        '/' . $site . '/css/advanced-search-filter.css',
+        '/' . $site . '/css/search-controls.css',
+    ];
+}
+
 // Render page using layout system
 echo render_display_page(
     $display_config['content_file'],
