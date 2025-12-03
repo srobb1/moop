@@ -18,11 +18,11 @@
  * - Structural settings (paths, site, root_path) are NOT editable for safety
  * 
  * For multi-site deployments:
- * - 'site' is the directory name (e.g., 'moop', 'easy_gdb') 
+ * - 'site' is the directory name (e.g., 'moop', 'simrbase') 
  * - CHANGE THIS to deploy for a different site directory
  * - Derived paths are calculated automatically from root_path + site
  * - All absolute paths use root_path as base
- * - All URLs use /site as the web root (e.g., /moop/images, /easy_gdb/images)
+ * - All URLs use /site as the web root (e.g., /moop/images, /simrbase/images)
  */
 
 // Calculate derived paths from root_path and site (no need to edit these)
@@ -56,7 +56,7 @@ return [
     'siteTitle' => 'SIMRbase',  // Changed in config_editable.json if customized
     'header_img' => 'header_img.png',
     'banners_path' => "$site_path/images/banners",
-    'favicon_path' => "/$site/$images_dir/favicon.ico",
+    'favicon_filename' => 'favicon.ico',  // Changed in config_editable.json if customized
     'custom_css_path' => "$site_path/css/custom.css",
     
     // ======== OPTIONAL: Contact ========

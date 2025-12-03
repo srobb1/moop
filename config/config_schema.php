@@ -21,7 +21,7 @@ return [
         
         'required_config_keys' => [
             'root_path' => 'Server root directory (usually /var/www/html)',
-            'site' => 'Site subdirectory name (e.g., moop, easy_gdb) - CHANGE THIS for different sites',
+            'site' => 'Site subdirectory name (e.g., moop, simrbase) - CHANGE THIS for different sites',
             'site_path' => 'Full path to site (root_path + site)',
             'organism_data' => 'Path to organism database files',
             'metadata_path' => 'Path to metadata files',
@@ -42,7 +42,7 @@ return [
         
         'paths_explained' => [
             'root_path' => 'Server filesystem root (usually /var/www/html for web hosting)',
-            'site' => 'Your application\'s directory name within root_path. Change this when deploying a different site instance (e.g., "easy_gdb" instead of "moop")',
+            'site' => 'Your application\'s directory name within root_path. Change this when deploying a different site instance (e.g., "simrbase" instead of "moop")',
             'site_path' => 'Calculated as root_path + "/" + site. All app files are here.',
             'organism_data' => 'Where organism database files (.sqlite) and metadata live',
             'metadata_path' => 'Where JSON config files live (organism_assembly_groups.json, etc.)',

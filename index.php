@@ -43,11 +43,11 @@ include_once __DIR__ . '/includes/header.php';
 
   <!-- Site Info Card -->
   <div class="row g-4 justify-content-center mb-5">
-    <div class="col-md-8 col-lg-6">
+    <div class="col-md-12 col-lg-10">
       <div class="card h-100 shadow-sm border-0 rounded-3 bg-info bg-opacity-10">
         <div class="card-body">
           <h3 class="card-title fw-bold text-dark mb-3">
-            <i class="fa fa-info-circle"></i> About This Site
+            <!-- <i class="fa fa-info-circle"></i> About This Site -->
           </h3>
           <p class="card-text text-muted mb-0">
             <strong>MOOP</strong> — to keep company, associate closely. Explore and discover how diverse organisms associate closely together on one platform.
@@ -60,7 +60,7 @@ include_once __DIR__ . '/includes/header.php';
 
   <!-- Available Organisms Header -->
   <div class="text-center mb-4">
-    <h3 class="fw-bold mb-3"></h3>
+    <h3 class="fw-bold mb-3">Select organisms by group or customize seletion with the taxonomy tree </h3>
     <!--- hide ip and access for now
     <p class="text-muted">
       <i class="fa fa-network-wired"></i> IP: <span class="fw-semibold"><?= htmlspecialchars($ip) ?></span>  

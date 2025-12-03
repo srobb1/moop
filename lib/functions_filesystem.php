@@ -337,13 +337,16 @@ function getFileWriteError($filepath) {
     $web_group = $webserver['group'];
     
     $current_owner = function_exists('posix_getpwuid') ? posix_getpwuid(fileowner($filepath))['name'] ?? 'unknown' : 'unknown';
-    $current_perms = substr(sprintf('%o', fileperms($filepath)), -4);
+    $current_group = function_exists('posix_getgrgid') ? posix_getgrgid(filegroup($filepath))['name'] ?? 'unknown' : 'unknown';
+    $perms_full = substr(sprintf('%o', fileperms($filepath)), -4);
+    $current_perms = ltrim($perms_full, '0') ?: '0';
     
     // Command keeps original owner but changes group to webserver and sets perms to 664
     $fix_command = "sudo chgrp " . escapeshellarg($web_group) . " " . escapeshellarg($filepath) . " && sudo chmod 664 " . escapeshellarg($filepath);
     
     return [
         'owner' => $current_owner,
+        'group' => $current_group,
         'perms' => $current_perms,
         'web_user' => $web_user,
         'web_group' => $web_group,
@@ -426,7 +429,8 @@ function getDirectoryError($dirpath) {
     
     // Directory exists but not writable
     $current_owner = function_exists('posix_getpwuid') ? posix_getpwuid(fileowner($dirpath))['name'] ?? 'unknown' : 'unknown';
-    $current_perms = substr(sprintf('%o', fileperms($dirpath)), -4);
+    $perms_full = substr(sprintf('%o', fileperms($dirpath)), -4);
+    $current_perms = ltrim($perms_full, '0') ?: '0';
     
     return [
         'type' => 'not_writable',

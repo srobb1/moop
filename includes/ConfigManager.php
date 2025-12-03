@@ -109,7 +109,7 @@ class ConfigManager
             $editable_config = json_decode(file_get_contents($editable_config_path), true);
             if (is_array($editable_config)) {
                 // Only merge allowed keys to prevent overriding structural config
-                $allowed_editable_keys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_path', 'auto_login_ip_ranges'];
+                $allowed_editable_keys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges'];
                 foreach ($allowed_editable_keys as $key) {
                     // Only override if value is set AND non-empty (preserve site_config defaults for empty values)
                     if (isset($editable_config[$key]) && ($editable_config[$key] !== '' && $editable_config[$key] !== null)) {
@@ -160,6 +160,14 @@ class ConfigManager
     {
         if (!$this->ensureLoaded()) {
             return $default;
+        }
+
+        // Special handling: construct favicon_path from favicon_filename
+        if ($key === 'favicon_path') {
+            $site = $this->config['site'] ?? '';
+            $images_dir = $this->config['images_dir'] ?? 'images';
+            $favicon_filename = $this->config['favicon_filename'] ?? 'favicon.ico';
+            return "/$site/$images_dir/$favicon_filename";
         }
 
         return $this->config[$key] ?? $default;
@@ -479,7 +487,7 @@ class ConfigManager
     public function saveEditableConfig($data, $config_dir)
     {
         // Whitelist of allowed editable keys
-        $allowed_keys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_path', 'auto_login_ip_ranges'];
+        $allowed_keys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges'];
         
         // Filter to only allowed keys
         $editable_data = [];
@@ -670,13 +678,21 @@ class ConfigManager
                     'max_size_mb' => 5,
                 ],
             ],
-            'favicon_path' => [
-                'label' => 'Favicon Path',
-                'description' => 'Browser tab icon (relative path in images directory)',
-                'type' => 'text',
-                'current_value' => $this->getString('favicon_path', ''),
-                'max_length' => 255,
-                'note' => 'Example: /moop/images/favicon.ico (32x32 px recommended)',
+            'favicon_filename' => [
+                'label' => 'Favicon Image',
+                'description' => 'Browser tab icon (32x32 px recommended)',
+                'type' => 'file_upload',
+                'current_value' => $this->getString('favicon_filename', ''),
+                'upload_info' => [
+                    'destination' => 'images/',
+                    'recommended_dimensions' => '32 x 32 px',
+                    'min_width' => 16,
+                    'max_width' => 256,
+                    'min_height' => 16,
+                    'max_height' => 256,
+                    'allowed_types' => ['ico', 'png', 'jpg', 'jpeg', 'gif', 'webp'],
+                    'max_size_mb' => 1,
+                ],
             ],
             'auto_login_ip_ranges' => [
                 'label' => 'Auto-Login IP Ranges',
