@@ -206,25 +206,25 @@
     <div class="col-12">
       <div class="card shadow-sm">
         <div class="card-body">
-          <h3 class="card-title mb-4">Available Assemblies</h3>
+          <h3 class="card-title mb-4 assembly-title">Available Assemblies</h3>
           <div class="row g-3">
             <?php foreach ($accessible_assemblies as $assembly): ?>
               <?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?>
               <div class="col-md-6 col-lg-4">
                 <div class="card h-100 shadow-sm organism-card">
                   <div class="card-body text-center">
-                    <a href="/<?= $site ?>/tools/assembly_display.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>" 
+                    <a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>" 
                        target="_blank"
                        class="text-decoration-none">
-                      <h5 class="card-title mb-3">
+                      <h5 class="card-title mb-3 assembly-card-title">
                         <?= htmlspecialchars($assembly) ?> <i class="fa fa-external-link-alt"></i>
                       </h5>
                     </a>
                     <?php if (!empty($fasta_files)): ?>
                       <div class="mt-3 pt-2 border-top">
                         <?php foreach ($fasta_files as $type => $file_info): ?>
-                          <a href="/<?= $site ?>/tools/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>&type=<?= urlencode($type) ?>" 
-                             class="btn btn-sm btn-primary w-100 mb-2"
+                          <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>&type=<?= urlencode($type) ?>" 
+                             class="btn btn-sm <?= htmlspecialchars($file_info['color']) ?> w-100 mb-2"
                              download>
                             <i class="fa fa-download"></i> <?= htmlspecialchars($file_info['label']) ?>
                           </a>

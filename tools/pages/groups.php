@@ -131,7 +131,7 @@
                   $show_image = !empty($image_src);
                 ?>
                 <div class="col-md-6 col-lg-4">
-                  <a href="/<?= $site ?>/tools/organism_display.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
+                  <a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
                      class="text-decoration-none">
                     <div class="card h-100 shadow-sm organism-card">
                       <div class="card-body text-center">
@@ -167,40 +167,5 @@
 </div>
 
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-<!-- DataTables 1.13.4 core and Bootstrap 5 theme JavaScript -->
-<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
-<!-- DataTables Buttons 2.3.6 core functionality -->
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
-<!-- DataTables Buttons 2.3.6 with Bootstrap 5 theme -->
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap5.min.js"></script>
-<!-- HTML5 export module for CSV and Excel functionality -->
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
-<!-- Print functionality for DataTables -->
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
-<!-- Column visibility toggle functionality -->
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
-<!-- jszip for Excel export functionality -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<!-- Column reordering functionality -->
-<script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
-<script src="/<?= $site ?>/js/modules/datatable-config.js"></script>
-<script src="/<?= $site ?>/js/modules/shared-results-table.js"></script>
-<script src="/<?= $site ?>/js/modules/annotation-search.js"></script>
-<script src="/<?= $site ?>/js/modules/advanced-search-filter.js"></script>
-<script>
-// Data variables - PHP provides these for use by the external JS file
-const groupOrganisms = <?= json_encode(array_keys($group_organisms)) ?>;
-const groupName = <?= json_encode($group_name) ?>;
-const sitePath = '/<?= $site ?>';
-</script>
 
-<!-- Page-specific logic -->
-<script src="/<?= $site ?>/js/groups-display.js"></script>
 
-</body>
-</html>
-
-<?php
-include_once __DIR__ . '/../includes/footer.php';

@@ -1,3 +1,5 @@
+      <div class="container mt-5">
+  <div class="row mb-4">
     <!-- Title and Search Column -->
     <div class="col-lg-8">
       <div class="card shadow-sm h-100">
@@ -74,7 +76,7 @@
                 $common_name = $organism_info['common_name'] ?? '';
             ?>
               <div class="col-md-6 col-lg-4">
-                <a href="/<?= $site ?>/tools/organism_display.php?organism=<?= urlencode($organism) ?><?php foreach($organism_list as $org): ?>&multi_search[]=<?= urlencode($org) ?><?php endforeach; ?>" 
+                <a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?><?php foreach($organism_list as $org): ?>&multi_search[]=<?= urlencode($org) ?><?php endforeach; ?>" 
                    class="text-decoration-none">
                   <div class="card h-100 shadow-sm organism-card">
                     <div class="card-body text-center">
@@ -105,35 +107,6 @@
       </div>
     </div>
   </div>
-
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
-<script src="/<?= $site ?>/js/modules/datatable-config.js"></script>
-<script src="/<?= $site ?>/js/modules/shared-results-table.js"></script>
-<script src="/<?= $site ?>/js/modules/annotation-search.js"></script>
-<script src="/<?= $site ?>/js/modules/advanced-search-filter.js"></script>
-<script>
-// Data variables - PHP provides these for use by the external JS file
-const selectedOrganisms = <?= json_encode(is_array($organisms) ? $organisms : [$organisms]) ?>;
-const totalOrganisms = selectedOrganisms.length;
-const sitePath = '/<?= $site ?>';
-</script>
-
-<!-- Page-specific logic -->
-<script src="/<?= $site ?>/js/multi-organism-search.js"></script>
-
-</body>
-</html>
-
-<?php
-include_once __DIR__ . '/../includes/footer.php';
+</div>

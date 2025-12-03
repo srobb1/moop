@@ -98,16 +98,16 @@
 
     <div class="<?= $show_image ? 'col-md-8' : 'col-12' ?>">
       <div class="feature-header assembly-header-custom shadow">
-        <h1 class="mb-0">
+        <h1 class="mb-0 assembly-heading">
           <?= htmlspecialchars($assembly_info['genome_name']) ?>
-          <span class="badge bg-light text-dark ms-2">Assembly</span>
+          <span class="badge bg-assembly ms-2">Assembly</span>
         </h1>
         
         <div class="feature-info-item">
           <strong>Accession:</strong> <span class="feature-value text-monospace"><?= htmlspecialchars($assembly_info['genome_accession']) ?></span>
         </div>
         <div class="feature-info-item">
-          <strong>Organism:</strong> <span class="feature-value"><em><a href="/<?= $site ?>/tools/organism_display.php?organism=<?= urlencode($organism_name) ?>" class="link-light-bordered"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></a></em></span>
+          <strong>Organism:</strong> <span class="feature-value"><em><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>" class="link-light-bordered"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></a></em></span>
         </div>
       </div>
     </div>
@@ -151,8 +151,8 @@
           <div class="row g-3">
             <?php foreach ($fasta_files as $type => $file_info): ?>
               <div class="col-6 col-md-3">
-                <a href="/<?= $site ?>/tools/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&type=<?= urlencode($type) ?>" 
-                   class="btn btn-primary w-100 py-4 fw-bold"
+                <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&type=<?= urlencode($type) ?>" 
+                   class="btn <?= htmlspecialchars($file_info['color']) ?> w-100 py-4 fw-bold"
                    style="border-radius: 0.75rem; font-size: 1rem;"
                    download>
                   <i class="fa fa-download me-2"></i><?= htmlspecialchars($file_info['label']) ?>
@@ -172,40 +172,5 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-<!-- DataTables 1.13.4 core and Bootstrap 5 theme JavaScript -->
-<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
-<!-- DataTables Buttons 2.3.6 core functionality -->
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
-<!-- DataTables Buttons 2.3.6 with Bootstrap 5 theme -->
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap5.min.js"></script>
-<!-- HTML5 export module for CSV and Excel functionality -->
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
-<!-- Print functionality for DataTables -->
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
-<!-- Column visibility toggle functionality -->
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
-<!-- jszip for Excel export functionality -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<!-- Column reordering functionality -->
-<script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
-<script src="/<?= $site ?>/js/modules/datatable-config.js"></script>
-<script src="/<?= $site ?>/js/modules/shared-results-table.js"></script>
 
-<script src="/<?= $site ?>/js/modules/annotation-search.js"></script>
-<script src="/<?= $site ?>/js/modules/advanced-search-filter.js"></script>
 
-<script>
-// Data variables - PHP provides these for use by the external JS file
-const sitePath = '/<?= $site ?>';
-const organismName = '<?= $organism_name ?>';
-const assemblyAccession = '<?= $assembly_accession ?>';
-</script>
-
-<!-- Page-specific logic -->
-<script src="/<?= $site ?>/js/assembly-display.js"></script>
-
-</body>
-</html>
-
-<?php
-include_once __DIR__ . '/../includes/footer.php';
