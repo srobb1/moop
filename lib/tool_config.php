@@ -32,7 +32,7 @@ $available_tools = [
         'icon' => 'fa-search',
         'description' => 'Search selected organisms',
         'btn_class' => 'btn-info',
-        'url_path' => '/tools/multi_organism_search.php',
+        'url_path' => '/tools/multi_organism.php',
         'context_params' => ['organisms', 'display_name'],
         'pages' => ['index'],  // Show only on index page
     ],
