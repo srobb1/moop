@@ -296,7 +296,8 @@ if (!$file_writable && file_exists($config_file)) {
                                 <?= htmlspecialchars($editable_config['sequence_types']['description']) ?>
                             </p>
                             
-                                 <table class="table table-sm table-bordered">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
                                     <thead class="table-light">
                                         <tr>
                                             <th style="width: 60px;">Enabled</th>
@@ -362,33 +363,33 @@ if (!$file_writable && file_exists($config_file)) {
                             </small>
                         </div>
 
-                        <!-- Header Image Upload -->
-                        <div class="mb-4">
-                            <label class="form-label">
-                                <strong><?= htmlspecialchars($editable_config['header_img']['label']) ?></strong>
-                            </label>
-                            <p class="text-muted small mb-3">
-                                <?= htmlspecialchars($editable_config['header_img']['description']) ?>
-                            </p>
-                            
-                            <div class="alert alert-info mb-3">
-                                <strong>Recommended:</strong> <?= $editable_config['header_img']['upload_info']['recommended_dimensions'] ?> <br>
-                                <strong>Accepted:</strong> <?= implode(', ', array_map('strtoupper', $editable_config['header_img']['upload_info']['allowed_types'])) ?> <br>
-                                <strong>Max size:</strong> <?= $editable_config['header_img']['upload_info']['max_size_mb'] ?> MB
-                            </div>
-                            
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <label for="header_upload" class="form-label"><strong>Upload New Banner Image:</strong></label>
-                                    <input type="file" class="form-control" id="header_upload" name="header_upload" accept="image/*">
-                                    <small class="form-text text-muted">Leave empty to keep current image</small>
+                            <!-- Header Image Upload -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <strong><?= htmlspecialchars($editable_config['header_img']['label']) ?></strong>
+                                </label>
+                                <p class="text-muted small mb-3">
+                                    <?= htmlspecialchars($editable_config['header_img']['description']) ?>
+                                </p>
+                                
+                                <div class="alert alert-info mb-3">
+                                    <strong>Recommended:</strong> <?= $editable_config['header_img']['upload_info']['recommended_dimensions'] ?> <br>
+                                    <strong>Accepted:</strong> <?= implode(', ', array_map('strtoupper', $editable_config['header_img']['upload_info']['allowed_types'])) ?> <br>
+                                    <strong>Max size:</strong> <?= $editable_config['header_img']['upload_info']['max_size_mb'] ?> MB
                                 </div>
-                            </div>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label for="header_upload" class="form-label"><strong>Upload New Banner Image:</strong></label>
+                                        <input type="file" class="form-control" id="header_upload" name="header_upload" accept="image/*">
+                                        <small class="form-text text-muted">Leave empty to keep current image</small>
+                                    </div>
+                                </div>
                             
                             <!-- Banner Images Gallery -->
                             <?php if (!empty($banner_images)): ?>
                             <div class="mb-4">
-                                <label><strong>Banner Images in Directory:</strong></label>
+                                <label class="form-label"><strong>Banner Images in Directory:</strong></label>
                                 <p class="text-muted small mb-3">Select fallback image to use if banner directory is empty.</p>
                                 
                                 <div class="table-responsive">
@@ -440,44 +441,44 @@ if (!$file_writable && file_exists($config_file)) {
                             <?php endif; ?>
                         </div>
 
-                        <!-- Favicon Path -->
-                        <div class="mb-4">
-                            <label for="favicon_path" class="form-label">
-                                <strong><?= htmlspecialchars($editable_config['favicon_path']['label']) ?></strong>
-                            </label>
-                            <input 
-                                type="text" 
-                                class="form-control" 
-                                id="favicon_path" 
-                                name="favicon_path" 
-                                value="<?= htmlspecialchars($editable_config['favicon_path']['current_value']) ?>"
-                                maxlength="<?= $editable_config['favicon_path']['max_length'] ?>"
-                                placeholder="/moop/images/favicon.ico">
-                            <small class="form-text text-muted">
-                                <?= htmlspecialchars($editable_config['favicon_path']['description']) ?> <br>
-                                <?= htmlspecialchars($editable_config['favicon_path']['note']) ?>
-                            </small>
-                        </div>
-
-                        <!-- Auto-Login IP Ranges -->
-                        <div class="mb-4">
-                            <label class="form-label">
-                                <strong><?= htmlspecialchars($editable_config['auto_login_ip_ranges']['label']) ?></strong>
-                            </label>
-                            <div class="alert alert-warning mb-3">
-                                <i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($editable_config['auto_login_ip_ranges']['note']) ?>
+                            <!-- Favicon Path -->
+                            <div class="mb-4">
+                                <label for="favicon_path" class="form-label">
+                                    <strong><?= htmlspecialchars($editable_config['favicon_path']['label']) ?></strong>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="favicon_path" 
+                                    name="favicon_path" 
+                                    value="<?= htmlspecialchars($editable_config['favicon_path']['current_value']) ?>"
+                                    maxlength="<?= $editable_config['favicon_path']['max_length'] ?>"
+                                    placeholder="/moop/images/favicon.ico">
+                                <small class="form-text text-muted">
+                                    <?= htmlspecialchars($editable_config['favicon_path']['description']) ?> <br>
+                                    <?= htmlspecialchars($editable_config['favicon_path']['note']) ?>
+                                </small>
                             </div>
-                            <p class="text-muted small mb-3">
-                                <?= htmlspecialchars($editable_config['auto_login_ip_ranges']['description']) ?>
-                            </p>
-                            
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>IP Range Start</th>
-                                            <th>IP Range End</th>
-                                            <th style="width: 60px;">Action</th>
+
+                            <!-- Auto-Login IP Ranges -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <strong><?= htmlspecialchars($editable_config['auto_login_ip_ranges']['label']) ?></strong>
+                                </label>
+                                <div class="alert alert-warning mb-3">
+                                    <i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($editable_config['auto_login_ip_ranges']['note']) ?>
+                                </div>
+                                <p class="text-muted small mb-3">
+                                    <?= htmlspecialchars($editable_config['auto_login_ip_ranges']['description']) ?>
+                                </p>
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>IP Range Start</th>
+                                                <th>IP Range End</th>
+                                                <th style="width: 60px;">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="ip_ranges_tbody">
@@ -521,13 +522,13 @@ if (!$file_writable && file_exists($config_file)) {
                             </small>
                         </div>
 
-                        <!-- Submit -->
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary" id="saveBtn" <?= !$file_writable ? 'disabled' : '' ?>>
-                                <i class="fa fa-save"></i> Save Changes
-                            </button>
-                            <button type="reset" class="btn btn-secondary">
-                                <i class="fa fa-undo"></i> Reset
+                            <!-- Submit -->
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary" id="saveBtn" <?= !$file_writable ? 'disabled' : '' ?>>
+                                    <i class="fa fa-save"></i> Save Changes
+                                </button>
+                                <button type="reset" class="btn btn-secondary">
+                                    <i class="fa fa-undo"></i> Reset
                             </button>
                         </div>
                     </form>
