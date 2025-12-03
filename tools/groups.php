@@ -1,17 +1,36 @@
 <?php
 /**
- * GROUPS DISPLAY PAGE - Wrapper
+ * GROUPS DISPLAY PAGE
  * 
- * This is the main entry point for group display pages.
- * It:
- * 1. Loads context (group data, organisms in group)
- * 2. Handles access control
- * 3. Configures the display template
- * 4. Uses generic template system to render the page
+ * ========== DATA FLOW ==========
  * 
- * The actual HTML content is in: pages/groups.php
- * The generic rendering is in: display-template.php
- * The layout/structure is in: includes/layout.php
+ * Browser Request → This file (groups.php)
+ *   ↓
+ * Validate user access
+ *   ↓
+ * Load group data from database
+ *   ↓
+ * Configure layout (title, scripts, styles)
+ *   ↓
+ * Call render_display_page() with content file + data
+ *   ↓
+ * layout.php renders complete HTML page
+ *   ↓
+ * Content file (pages/groups.php) displays data
+ * 
+ * ========== RESPONSIBILITIES ==========
+ * 
+ * This file does:
+ * - Validate user access (via access_control.php)
+ * - Load group data from database
+ * - Configure title, scripts, styles
+ * - Pass data to render_display_page()
+ * 
+ * This file does NOT:
+ * - Output HTML directly (layout.php does that)
+ * - Include <html>, <head>, <body> tags (layout.php does that)
+ * - Load CSS/JS libraries (layout.php does that)
+ * - Display content (pages/groups.php does that)
  */
 
 include_once __DIR__ . '/tool_init.php';
@@ -19,6 +38,8 @@ include_once __DIR__ . '/tool_init.php';
 // Load page-specific config
 $metadata_path = $config->getPath('metadata_path');
 $organism_data = $config->getPath('organism_data');
+$absolute_images_path = $config->getPath('absolute_images_path');
+$images_path = $config->getString('images_path');
 
 // Get the group name from query parameter
 $group_name = $_GET['group'] ?? '';
@@ -54,12 +75,13 @@ if (!is_public_group($group_name)) {
 
 // Configure display template
 $display_config = [
-    'title' => htmlspecialchars($group_name) . ' - ' . $siteTitle,
+    'title' => htmlspecialchars($group_name) . ' - ' . $config->getString('siteTitle'),
     'content_file' => __DIR__ . '/pages/groups.php',
     'page_script' => "/$site/js/groups-display.js",
     'inline_scripts' => [
         "const sitePath = '/$site';",
-        "const groupName = '" . addslashes($group_name) . "';"
+        "const groupName = '" . addslashes($group_name) . "';",
+        "const groupOrganisms = " . json_encode($group_organisms) . ";"
     ]
 ];
 
@@ -69,7 +91,10 @@ $data = [
     'group_info' => $group_info,
     'group_organisms' => $group_organisms,
     'config' => $config,
-    'inline_scripts' => $display_config['inline_scripts']
+    'site' => $site,
+    'images_path' => $images_path,
+    'absolute_images_path' => $absolute_images_path,
+    'organism_data' => $organism_data,
 ];
 
 // Use generic display template

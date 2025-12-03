@@ -1,23 +1,44 @@
 <?php
 /**
- * MULTI-ORGANISM SEARCH PAGE - Wrapper
+ * MULTI-ORGANISM SEARCH PAGE
  * 
- * This is the main entry point for multi-organism search pages.
- * It:
- * 1. Loads and validates organisms
- * 2. Checks access control for all organisms
- * 3. Configures the display template
- * 4. Uses generic template system to render the page
+ * ========== DATA FLOW ==========
  * 
- * The actual HTML content is in: pages/multi_organism.php
- * The generic rendering is in: display-template.php
- * The layout/structure is in: includes/layout.php
+ * Browser Request → This file (multi_organism.php)
+ *   ↓
+ * Validate user access
+ *   ↓
+ * Load organism data from database
+ *   ↓
+ * Configure layout (title, scripts, styles)
+ *   ↓
+ * Call render_display_page() with content file + data
+ *   ↓
+ * layout.php renders complete HTML page
+ *   ↓
+ * Content file (pages/multi_organism.php) displays data
+ * 
+ * ========== RESPONSIBILITIES ==========
+ * 
+ * This file does:
+ * - Validate user access (via access_control.php)
+ * - Load organism data from database
+ * - Configure title, scripts, styles
+ * - Pass data to render_display_page()
+ * 
+ * This file does NOT:
+ * - Output HTML directly (layout.php does that)
+ * - Include <html>, <head>, <body> tags (layout.php does that)
+ * - Load CSS/JS libraries (layout.php does that)
+ * - Display content (pages/multi_organism.php does that)
  */
 
 include_once __DIR__ . '/tool_init.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
+$absolute_images_path = $config->getPath('absolute_images_path');
+$images_path = $config->getString('images_path');
 
 // Get organisms from query parameters
 $organisms = $_GET['organisms'] ?? [];
@@ -44,12 +65,13 @@ foreach ($organisms as $organism) {
 // Configure display template
 $organism_list = implode(', ', array_map('htmlspecialchars', $organisms));
 $display_config = [
-    'title' => 'Multi-Organism Search - ' . $siteTitle,
+    'title' => 'Multi-Organism Search - ' . $config->getString('siteTitle'),
     'content_file' => __DIR__ . '/pages/multi_organism.php',
     'page_script' => "/$site/js/multi-organism-search.js",
     'inline_scripts' => [
         "const sitePath = '/$site';",
-        "const searchOrganisms = " . json_encode($organisms) . ";"
+        "const selectedOrganisms = " . json_encode($organisms) . ";",
+        "const totalOrganisms = selectedOrganisms.length;"
     ]
 ];
 
@@ -58,6 +80,9 @@ $data = [
     'organisms' => $organisms,
     'organism_list' => $organism_list,
     'config' => $config,
+    'site' => $site,
+    'images_path' => $images_path,
+    'absolute_images_path' => $absolute_images_path,
     'inline_scripts' => $display_config['inline_scripts']
 ];
 

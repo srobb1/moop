@@ -1,16 +1,36 @@
 <?php
 /**
- * ASSEMBLY DISPLAY PAGE - Wrapper
+ * ASSEMBLY DISPLAY PAGE
  * 
- * This is the main entry point for assembly display pages.
- * It:
- * 1. Loads context (assembly data, organism info)
- * 2. Configures the display template
- * 3. Uses generic template system to render the page
+ * ========== DATA FLOW ==========
  * 
- * The actual HTML content is in: pages/assembly.php
- * The generic rendering is in: display-template.php
- * The layout/structure is in: includes/layout.php
+ * Browser Request → This file (assembly.php)
+ *   ↓
+ * Validate user access
+ *   ↓
+ * Load assembly data from database
+ *   ↓
+ * Configure layout (title, scripts, styles)
+ *   ↓
+ * Call render_display_page() with content file + data
+ *   ↓
+ * layout.php renders complete HTML page
+ *   ↓
+ * Content file (pages/assembly.php) displays data
+ * 
+ * ========== RESPONSIBILITIES ==========
+ * 
+ * This file does:
+ * - Validate user access (via access_control.php)
+ * - Load assembly data from database
+ * - Configure title, scripts, styles
+ * - Pass data to render_display_page()
+ * 
+ * This file does NOT:
+ * - Output HTML directly (layout.php does that)
+ * - Include <html>, <head>, <body> tags (layout.php does that)
+ * - Load CSS/JS libraries (layout.php does that)
+ * - Display content (pages/assembly.php does that)
  */
 
 include_once __DIR__ . '/tool_init.php';
@@ -54,7 +74,7 @@ if (empty($assembly_info)) {
 
 // Configure display template
 $display_config = [
-    'title' => htmlspecialchars($assembly_info['genome_name']) . ' - ' . $siteTitle,
+    'title' => htmlspecialchars($assembly_info['genome_name']) . ' - ' . $config->getString('siteTitle'),
     'content_file' => __DIR__ . '/pages/assembly.php',
     'page_script' => "/$site/js/assembly-display.js",
     'inline_scripts' => [
@@ -70,6 +90,10 @@ $data = [
     'assembly_info' => $assembly_info,
     'organism_name' => $organism_name,
     'organism_info' => $organism_info,
+    'assembly_accession' => $assembly_info['genome_accession'] ?? '',
+    'site' => $site,
+    'images_path' => $config->getString('images_path'),
+    'absolute_images_path' => $config->getPath('absolute_images_path'),
     'db_path' => $db_path,
     'config' => $config,
     'inline_scripts' => $display_config['inline_scripts']
