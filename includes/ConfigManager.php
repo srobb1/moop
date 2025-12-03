@@ -111,7 +111,8 @@ class ConfigManager
                 // Only merge allowed keys to prevent overriding structural config
                 $allowed_editable_keys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_path', 'auto_login_ip_ranges'];
                 foreach ($allowed_editable_keys as $key) {
-                    if (isset($editable_config[$key])) {
+                    // Only override if value is set AND non-empty (preserve site_config defaults for empty values)
+                    if (isset($editable_config[$key]) && ($editable_config[$key] !== '' && $editable_config[$key] !== null)) {
                         $this->config[$key] = $editable_config[$key];
                     }
                 }
