@@ -45,6 +45,9 @@ $site = $config->getString('site');
     <!-- Display Styles (feature colors, badges, etc.) -->
     <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
     
+    <!-- Search Controls Styles (search and filter buttons) -->
+    <link rel="stylesheet" href="/<?= $site ?>/css/search-controls.css">
+    
     <!-- Optional custom CSS if defined in config -->
     <?php
       $custom_css_path = $config->getPath('custom_css_path', '');
