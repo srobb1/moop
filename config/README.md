@@ -95,31 +95,48 @@ Runtime configuration that can be edited through the Admin Dashboard. Contains o
 }
 ```
 
-### 3. **config_schema.php** - Validation Schema
-Defines the required structure and validation rules for all configuration values.
+### 3. **config_schema.php** - Configuration Documentation Reference
+**Important Note:** Despite its name, this is NOT a formal validation schema. It's a **textual reference guide** for admins and developers about the configuration system.
 
-**What it provides:**
-- List of required configuration keys
-- Data types for each setting
-- Path validation rules
-- Default fallback values
-- Human-readable descriptions
+**What it actually contains:**
+- Quick-start guide for admins
+- List of required vs optional config keys
+- Explanations of what each path means
+- How to add new tools
+- How to add new configuration values
+- Multi-site deployment instructions
+- Troubleshooting tips
+- Security notes
 
-**Used by:**
-- ConfigManager to validate configuration
-- Documentation tools
-- Automated tests
-- Migration/upgrade scripts
+**What it does NOT do:**
+- It does NOT enforce validation rules (ConfigManager has hardcoded `requiredKeys` instead)
+- It does NOT validate data types
+- It does NOT perform runtime validation
 
-**Example:**
+**Actual validation happens in:**
+- `ConfigManager.php` has hardcoded `requiredKeys` array (lines 53-61)
+- `ConfigManager->validate()` method (line 372) only checks if required keys exist
+- That's it - no data type validation, no complex rules
+
+**Example of what's in config_schema.php:**
 ```php
-'siteTitle' => [
-    'type' => 'string',
-    'required' => true,
-    'max_length' => 100,
-    'description' => 'Site name displayed throughout application'
+'required_config_keys' => [
+    'root_path' => 'Server root directory (usually /var/www/html)',
+    'site' => 'Site subdirectory name (e.g., moop, simrbase)',
+    'siteTitle' => 'Display name of your site',
+    'admin_email' => 'Contact email for admins',
+],
+
+'troubleshooting' => [
+    'config_not_loading' => 'Check if config/site_config.php exists and is readable',
+    'site_won\'t_load' => 'Check required paths in site_config.php exist on server',
 ],
 ```
+
+**Used by:**
+- Admins as a reference guide when configuring the system
+- Developers when adding new settings or debugging
+- Not automatically processed by code
 
 ### 4. **tools_config.php** - External Tools Configuration
 Configuration for external tools and services that MOOP integrates with (BLAST, aligners, etc.).
@@ -160,6 +177,7 @@ The entry point for loading configuration in any page. Should be included once p
 ```php
 include_once __DIR__ . '/includes/config_init.php';
 $config = ConfigManager::getInstance();
+$siteTitle = $config->getString('siteTitle');
 ```
 
 ### 6. **build_and_load_db** - Database Build Script
@@ -197,12 +215,48 @@ When requesting a config value, ConfigManager looks in this order:
 
 1. **config_editable.json** (user overrides) - highest priority
 2. **site_config.php** (defaults) - fallback
-3. **config_schema.php** (hardcoded defaults) - final fallback
+3. **Hardcoded defaults in ConfigManager** - final fallback (requiredKeys only)
 
 Example with `siteTitle`:
 - If admin edited it: use value from `config_editable.json`
 - Otherwise: use value from `site_config.php`
-- Otherwise: use value from schema
+- Otherwise: return null (no hardcoded fallback for siteTitle)
+
+### Validation System
+
+ConfigManager has a **basic validation** system that only checks if required keys exist:
+
+```php
+// Required keys are hardcoded in ConfigManager
+private $requiredKeys = [
+    'root_path',
+    'site',
+    'site_path',
+    'organism_data',
+    'metadata_path',
+    'siteTitle',
+    'admin_email',
+];
+
+// validate() method only checks if these keys are present
+public function validate() {
+    foreach ($this->requiredKeys as $key) {
+        if (!isset($this->config[$key])) {
+            $this->errors[] = "Missing required config: $key";
+        }
+    }
+    return empty($this->errors);
+}
+```
+
+**What validation does:**
+- ✅ Checks if all required keys exist
+- ❌ Does NOT validate data types
+- ❌ Does NOT validate path values
+- ❌ Does NOT check if paths are readable
+- ❌ Does NOT apply complex rules
+
+**Note:** `config_schema.php` is purely documentation and is NOT used for validation. To add validation rules, they would need to be added to ConfigManager's `validate()` method.
 
 ### Editing Configuration
 
