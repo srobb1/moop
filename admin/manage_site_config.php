@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'siteTitle' => $_POST['siteTitle'] ?? '',
             'admin_email' => $_POST['admin_email'] ?? '',
             'header_img' => $_POST['header_img'] ?? '',
-            'favicon_path' => $_POST['favicon_path'] ?? '',
+            'favicon_filename' => $_POST['favicon_filename'] ?? '',
         ];
         
         // Parse sequence types from form
@@ -119,6 +119,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         } else {
                             $error = "Failed to save uploaded file. Check directory permissions.";
                         }
+                    }
+                }
+            }
+        }
+        
+        // Handle file upload for favicon
+        if (isset($_FILES['favicon_upload']) && $_FILES['favicon_upload']['error'] == UPLOAD_ERR_OK) {
+            $images_path = $config->getPath('absolute_images_path');
+            
+            $file = $_FILES['favicon_upload'];
+            $allowed_types = ['ico', 'png', 'jpg', 'jpeg', 'gif', 'webp'];
+            $max_size = 1 * 1024 * 1024; // 1MB
+            
+            $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            
+            // Validate file
+            if (!in_array($file_ext, $allowed_types)) {
+                $error = "Invalid favicon file type. Allowed: " . implode(', ', $allowed_types);
+            } elseif ($file['size'] > $max_size) {
+                $error = "Favicon file too large. Maximum: 1MB";
+            } else {
+                // For favicon, check dimensions if it's an image
+                if (in_array($file_ext, ['png', 'jpg', 'jpeg', 'gif', 'webp'])) {
+                    $img_info = @getimagesize($file['tmp_name']);
+                    if ($img_info === false) {
+                        $error = "Invalid image file";
+                    } else {
+                        $width = $img_info[0];
+                        $height = $img_info[1];
+                        
+                        if ($width < 16 || $width > 256 || $height < 16 || $height > 256) {
+                            $error = "Favicon dimensions must be 16-256px. Your image: {$width}x{$height}";
+                        } else {
+                            // Upload successful
+                            $filename = 'favicon.' . $file_ext;
+                            $destination = $images_path . '/' . $filename;
+                            
+                            if (move_uploaded_file($file['tmp_name'], $destination)) {
+                                $data['favicon_filename'] = $filename;
+                            } else {
+                                $error = "Failed to save uploaded favicon. Check directory permissions.";
+                            }
+                        }
+                    }
+                } else {
+                    // For .ico files, just accept them
+                    $filename = 'favicon.' . $file_ext;
+                    $destination = $images_path . '/' . $filename;
+                    
+                    if (move_uploaded_file($file['tmp_name'], $destination)) {
+                        $data['favicon_filename'] = $filename;
+                    } else {
+                        $error = "Failed to save uploaded favicon. Check directory permissions.";
                     }
                 }
             }
@@ -441,24 +494,69 @@ if (!$file_writable && file_exists($config_file)) {
                             <?php endif; ?>
                         </div>
 
-                            <!-- Favicon Path -->
+                            <!-- Favicon Image Upload -->
                             <div class="mb-4">
-                                <label for="favicon_path" class="form-label">
-                                    <strong><?= htmlspecialchars($editable_config['favicon_path']['label']) ?></strong>
+                                <label for="favicon_upload" class="form-label">
+                                    <strong><?= htmlspecialchars($editable_config['favicon_filename']['label']) ?></strong>
                                 </label>
+                                
+                                <!-- Current Favicon Preview -->
+                                <?php if (!empty($editable_config['favicon_filename']['current_value'])): ?>
+                                    <div class="mb-3 p-3 bg-light rounded border">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div>
+                                                <small class="text-muted d-block mb-2"><strong>Current Favicon:</strong></small>
+                                                <img id="favicon_preview" 
+                                                     src="<?= '/' . $config->getString('images_path') . '/' . htmlspecialchars($editable_config['favicon_filename']['current_value']) . '?t=' . time() ?>" 
+                                                     alt="Current Favicon" 
+                                                     style="width: 64px; height: 64px; border: 1px solid #ddd; padding: 4px; background: white;">
+                                            </div>
+                                            <div>
+                                                <small class="text-muted"><?= htmlspecialchars($editable_config['favicon_filename']['current_value']) ?></small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <!-- File Upload Input -->
                                 <input 
-                                    type="text" 
+                                    type="file" 
                                     class="form-control" 
-                                    id="favicon_path" 
-                                    name="favicon_path" 
-                                    value="<?= htmlspecialchars($editable_config['favicon_path']['current_value']) ?>"
-                                    maxlength="<?= $editable_config['favicon_path']['max_length'] ?>"
-                                    placeholder="/moop/images/favicon.ico">
-                                <small class="form-text text-muted">
-                                    <?= htmlspecialchars($editable_config['favicon_path']['description']) ?> <br>
-                                    <?= htmlspecialchars($editable_config['favicon_path']['note']) ?>
+                                    id="favicon_upload" 
+                                    name="favicon_upload" 
+                                    accept=".ico,.png,.jpg,.jpeg,.gif,.webp">
+                                
+                                <!-- Upload Preview (before submit) -->
+                                <div id="favicon_upload_preview" class="mt-3" style="display: none;">
+                                    <small class="text-muted d-block mb-2"><strong>New Favicon Preview:</strong></small>
+                                    <img id="favicon_new_preview" 
+                                         alt="New Favicon Preview" 
+                                         style="width: 64px; height: 64px; border: 1px solid #ddd; padding: 4px; background: white;">
+                                </div>
+                                
+                                <small class="form-text text-muted d-block mt-2">
+                                    <?= htmlspecialchars($editable_config['favicon_filename']['description']) ?> <br>
+                                    <strong>Recommended:</strong> <?= $editable_config['favicon_filename']['upload_info']['recommended_dimensions'] ?> <br>
+                                    <strong>Accepted:</strong> <?= implode(', ', array_map('strtoupper', $editable_config['favicon_filename']['upload_info']['allowed_types'])) ?> <br>
+                                    <strong>Max size:</strong> <?= $editable_config['favicon_filename']['upload_info']['max_size_mb'] ?> MB
                                 </small>
                             </div>
+                            
+                            <script>
+                            document.getElementById('favicon_upload').addEventListener('change', function(e) {
+                                const file = e.target.files[0];
+                                if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = function(event) {
+                                        document.getElementById('favicon_new_preview').src = event.target.result;
+                                        document.getElementById('favicon_upload_preview').style.display = 'block';
+                                    };
+                                    reader.readAsDataURL(file);
+                                } else {
+                                    document.getElementById('favicon_upload_preview').style.display = 'none';
+                                }
+                            });
+                            </script>
 
                             <!-- Auto-Login IP Ranges -->
                             <div class="mb-4">
