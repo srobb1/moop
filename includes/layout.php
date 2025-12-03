@@ -2,32 +2,76 @@
 /**
  * PAGE LAYOUT SYSTEM - Core Infrastructure
  * 
- * Provides unified page rendering with automatic header/footer wrapping.
- * All display pages (organism.php, assembly.php, etc.) use this system.
+ * ========== CLEAN ARCHITECTURE OVERVIEW ==========
  * 
- * This is the heart of the clean architecture:
- * - Handles all HTML structure (<!DOCTYPE>, <html>, <head>, <body>, closing tags)
- * - Loads all resources in one place (CSS, JS, meta tags)
- * - Separates content from structure
- * - Enables single-point layout management
+ * DATA FLOW:
+ *   Display Page (organism.php)
+ *     ↓
+ *   Loads data, validates access, configures layout
+ *     ↓
+ *   Calls render_display_page(content_file, data, title)
+ *     ↓
+ *   layout.php (this file)
+ *     ↓
+ *   Outputs HTML structure with embedded content file
+ *     ↓
+ *   Browser displays complete page
  * 
- * KEY BENEFITS:
+ * ========== FILE RESPONSIBILITIES ==========
+ * 
+ * Display Page (e.g., tools/organism.php):
+ *   - Validates user access
+ *   - Loads organism data from database
+ *   - Configures layout (title, scripts, styles)
+ *   - Calls render_display_page() with content file and data
+ * 
+ * Content File (e.g., tools/pages/organism.php):
+ *   - ONLY displays HTML/data received
+ *   - Does NOT include <html>, <head>, <body> tags
+ *   - Does NOT load CSS/JS libraries (layout.php handles that)
+ *   - Uses variables passed from display page
+ * 
+ * layout.php (this file):
+ *   - Provides render_display_page() function
+ *   - Outputs complete HTML structure (<!DOCTYPE>, <html>, etc.)
+ *   - Loads all CSS/JS libraries in one place
+ *   - Includes navbar, footer, content file in proper order
+ *   - Executes inline scripts after libraries load
+ * 
+ * ========== KEY BENEFITS ==========
+ * 
  * - One file to change layout site-wide
  * - Consistent HTML structure guaranteed
  * - Proper opening and closing of all tags
  * - Clean separation: wrapper handles structure, content handles display
+ * - All scripts load in consistent order
+ * - No duplicate script loading
  * 
- * USAGE:
+ * ========== USAGE EXAMPLE ==========
+ * 
+ *   // In tools/organism.php:
+ *   include_once __DIR__ . '/../includes/access_control.php';
+ *   include_once __DIR__ . '/../includes/layout.php';
+ *   
+ *   $organism_name = $_GET['organism'];
+ *   $organism_data = loadOrganism($organism_name);
+ *   
  *   echo render_display_page(
- *       'tools/pages/organism.php',
+ *       __DIR__ . '/pages/organism.php',
  *       [
  *           'organism_name' => $organism_name,
- *           'config' => $config,
+ *           'organism_data' => $organism_data,
+ *           'page_script' => '/moop/js/organism-display.js',
+ *           'inline_scripts' => [
+ *               "const sitePath = '/moop';",
+ *               "const organism = '" . addslashes($organism_name) . "';"
+ *           ]
  *       ],
- *       'Page Title Here'
+ *       'Organism Display'
  *   );
  * 
- * FUNCTIONS PROVIDED:
+ * ========== FUNCTIONS PROVIDED ==========
+ * 
  * - render_display_page() - Main function, wraps content with full HTML structure
  * - render_json_response() - Alternative for AJAX endpoints returning JSON
  */
@@ -35,36 +79,42 @@
 /**
  * Render a display page with full HTML structure
  * 
+ * IMPORTANT: Call access_control.php ONCE at the top of your page BEFORE calling this function.
+ * This ensures authentication/authorization is handled only once per page load.
+ * 
  * This function:
- * 1. Ensures config is loaded
- * 2. Includes access control
- * 3. Extracts data to variables
- * 4. Outputs complete HTML structure
- * 5. Includes content file in middle
- * 6. Returns complete page as string
+ * 1. Extracts data to variables (making $organism_name available instead of $data['organism_name'])
+ * 2. Outputs complete HTML structure
+ * 3. Includes content file in the middle
+ * 4. Returns complete page as string
  * 
  * @param string $content_file Path to content file to include (relative or absolute)
  * @param array $data Data to make available to content file as variables
+ *                     Optional keys:
+ *                     - 'page_styles' (array) - Additional CSS files: ['/moop/css/custom.css', '/moop/css/other.css']
+ *                     - 'page_script' (string) - Page-specific JS file to load after libraries
+ *                     - 'inline_scripts' (array) - JS code to execute inline (variables, init)
  * @param string $title HTML page title (shown in browser tab)
  * @return string Complete HTML page ready to output
  * 
  * @example
+ *   // At top of your page:
+ *   include_once __DIR__ . '/includes/access_control.php';
+ *   include_once __DIR__ . '/includes/layout.php';
+ *   
+ *   // Later in your page:
  *   echo render_display_page('tools/pages/organism.php', [
  *       'organism_name' => $name,
  *       'config' => $config,
- *       'inline_scripts' => ["const sitePath = '/moop';", "const organismName = 'E_coli';"],
- *       'page_script' => '/moop/js/organism-display.js'
+ *       'page_styles' => ['/moop/css/display.css', '/moop/css/parent.css'],
+ *       'page_script' => '/moop/js/organism-display.js',
+ *       'inline_scripts' => [
+ *           "const sitePath = '/moop';",
+ *           "const organism = '" . addslashes($name) . "';"
+ *       ]
  *   ], 'Organism Display');
  */
 function render_display_page($content_file, $data = [], $title = '') {
-    // Ensure config is loaded
-    if (!class_exists('ConfigManager')) {
-        include_once __DIR__ . '/config_init.php';
-    }
-    
-    // Include access control (authentication, permissions)
-    include_once __DIR__ . '/access_control.php';
-    
     // Get config instance for use in layout
     $config = ConfigManager::getInstance();
     
@@ -82,6 +132,15 @@ function render_display_page($content_file, $data = [], $title = '') {
     <head>
         <title><?= htmlspecialchars($title) ?></title>
         <?php include_once __DIR__ . '/head-resources.php'; ?>
+        
+        <!-- Page-specific styles (if provided in data) -->
+        <?php
+        if (isset($page_styles) && is_array($page_styles)) {
+            foreach ($page_styles as $style) {
+                echo '<link rel="stylesheet" href="' . htmlspecialchars($style) . '">' . "\n";
+            }
+        }
+        ?>
     </head>
     <body class="bg-light">
         <?php include_once __DIR__ . '/navbar.php'; ?>
@@ -132,9 +191,11 @@ function render_display_page($content_file, $data = [], $title = '') {
         <!-- Inline scripts - Page-specific variable definitions (must load before page_script) -->
         <?php
         if (isset($inline_scripts) && is_array($inline_scripts)) {
+            echo '<script>' . "\n";
             foreach ($inline_scripts as $script) {
-                echo '<script>' . "\n" . $script . "\n" . '</script>' . "\n";
+                echo $script . "\n";
             }
+            echo '</script>' . "\n";
         }
         ?>
         
