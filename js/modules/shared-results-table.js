@@ -12,11 +12,11 @@
  * @param {string} organism - The organism identifier
  * @param {Array} results - Array of result objects
  * @param {string} sitePath - The site base path
- * @param {string} linkBasePath - Base path for feature links (e.g., 'tools/parent_display.php' or 'tools/parent_display.php')
+ * @param {string} linkBasePath - Base path for feature links (e.g., 'tools/parent.php' or 'tools/parent.php')
  * @param {string} imageUrl - Optional URL to organism image thumbnail
  * @returns {string} HTML string for the table
  */
-function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 'tools/parent_display.php', imageUrl = '', searchKeywords = '') {
+function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 'tools/parent.php', imageUrl = '', searchKeywords = '') {
     const tableId = '#resultsTable_' + organism.replace(/[^a-zA-Z0-9]/g, '_');
     const selectId = organism.replace(/[^a-zA-Z0-9]/g, '_');
     const genus = results[0]?.genus || '';
