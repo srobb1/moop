@@ -35,7 +35,7 @@ function getAllGroupCards($group_data) {
                 $cards[$group] = [
                     'title' => $group,
                     'text' => "Explore $group Data",
-                    'link' => 'tools/groups_display.php?group=' . urlencode($group)
+                    'link' => 'tools/groups.php?group=' . urlencode($group)
                 ];
             }
         }
@@ -61,7 +61,7 @@ function getPublicGroupCards($group_data) {
                     $public_groups[$group] = [
                         'title' => $group,
                         'text' => "Explore $group Data",
-                        'link' => 'tools/groups_display.php?group=' . urlencode($group)
+                        'link' => 'tools/groups.php?group=' . urlencode($group)
                     ];
                 }
             }
@@ -145,7 +145,8 @@ function getAssemblyFastaFiles($organism_name, $assembly_name) {
                 if (strpos($filename, $config['pattern']) !== false) {
                     $fasta_files[$type] = [
                         'path' => $relative_path,
-                        'label' => $config['label']
+                        'label' => $config['label'],
+                        'color' => $config['color']
                     ];
                     break;
                 }
@@ -177,7 +178,7 @@ function getIndexDisplayCards($group_data) {
                 $cards_to_display[$organism] = [
                     'title' => $formatted_name,
                     'text'  => "Explore " . strip_tags($formatted_name) . " Data",
-                    'link'  => 'tools/organism_display.php?organism=' . urlencode($organism)
+                    'link'  => 'tools/organism.php?organism=' . urlencode($organism)
                 ];
             }
         }
