@@ -166,22 +166,118 @@ Configuration for external tools and services that MOOP integrates with (BLAST, 
 ### 5. **config_init.php** - Initialization Bootstrap
 The entry point for loading configuration in any page. Should be included once per page load.
 
-**What it does:**
-1. Requires ConfigManager class
-2. Initializes ConfigManager singleton
-3. Loads both `site_config.php` and `tools_config.php`
-4. Validates configuration (can be disabled with env var)
-5. Logs any missing or invalid keys
+**What ConfigManager is:**
+- A singleton class (one instance shared across entire page)
+- Centralizes all configuration access
+- Loads and merges configuration from multiple files
+- Caches configuration in memory for performance
+- Provides type-safe getters for different value types
+
+**What config_init.php does:**
+1. Requires the ConfigManager class
+2. Creates a singleton instance of ConfigManager
+3. Initializes it with `site_config.php` and `tools_config.php`
+4. Validates that all required keys exist
+5. Logs any missing or invalid keys to error log
 
 **How to use:**
 ```php
+// Include once per page
 include_once __DIR__ . '/includes/config_init.php';
+
+// Get the singleton instance (same instance throughout page)
 $config = ConfigManager::getInstance();
+
+// Use it to access configuration
 $siteTitle = $config->getString('siteTitle');
+$organism_path = $config->getPath('organism_data');
 ```
+
+**Note:** Once initialized, you can call `ConfigManager::getInstance()` anywhere in your code without re-including config_init.php. The singleton pattern ensures it's the same instance.
 
 ### 6. **build_and_load_db** - Database Build Script
 Utility script (likely a shell script) for building and loading the SQLite databases from FASTA files.
+
+---
+
+## How ConfigManager Works (Step by Step)
+
+### 1. Initialization - What Happens on Page Load
+
+```
+Page Load
+    ↓
+include config_init.php
+    ↓
+ConfigManager::getInstance() 
+    └─→ Creates singleton (one instance for entire page)
+    ↓
+ConfigManager->initialize(site_config.php, tools_config.php)
+    ├─→ Load site_config.php (default values)
+    ├─→ Load config_editable.json (if exists, user overrides)
+    ├─→ Load tools_config.php (tool registry)
+    ├─→ Merge all three (editable overrides site_config)
+    ├─→ Validate (check required keys exist)
+    └─→ Cache in memory (ready to use)
+    ↓
+Configuration is now ready to use throughout the page
+```
+
+### 2. Merging Configuration
+
+When a config value is requested, ConfigManager searches in this order:
+
+```
+Request: $config->getString('siteTitle')
+    ↓
+Check config_editable.json first (has it been edited by admin?)
+    ├─→ YES: Return edited value
+    ├─→ NO: Continue to next
+    ↓
+Check site_config.php (what's the default?)
+    ├─→ YES: Return default value
+    ├─→ NO: Continue to next
+    ↓
+Return NULL (no value found)
+```
+
+**Real Example:**
+```
+Admin edits siteTitle to "My Custom Title"
+    ↓
+ConfigManager saves to config_editable.json
+    ↓
+Next page load:
+    - config_editable.json has: "My Custom Title"
+    - site_config.php has: "SIMRbase" (original)
+    ↓
+Request $config->getString('siteTitle')
+    ↓
+Finds "My Custom Title" in config_editable.json (highest priority)
+    ↓
+Returns "My Custom Title"
+```
+
+### 3. The Singleton Pattern
+
+ConfigManager uses the singleton pattern - **one shared instance**:
+
+```php
+// First call - creates the instance
+$config = ConfigManager::getInstance();
+
+// Second call - returns the SAME instance (doesn't reload)
+$config = ConfigManager::getInstance();  // Same object as above
+
+// Throughout the entire page - all code uses the same instance
+// No reloading, no re-merging, just cached memory access
+```
+
+This means:
+- ✅ Configuration is loaded only once per page load
+- ✅ Very fast (just returns cached data)
+- ✅ Memory efficient (one instance for entire page)
+- ✅ Consistent (all code sees same values)
 
 ---
 
@@ -224,39 +320,52 @@ Example with `siteTitle`:
 
 ### Validation System
 
-ConfigManager has a **basic validation** system that only checks if required keys exist:
+ConfigManager has a **basic validation** system that only checks if required keys exist. Here's exactly what happens:
 
+**1. Required Keys (hardcoded in ConfigManager)**
 ```php
-// Required keys are hardcoded in ConfigManager
+// These 7 keys MUST exist in configuration
 private $requiredKeys = [
-    'root_path',
-    'site',
-    'site_path',
-    'organism_data',
-    'metadata_path',
-    'siteTitle',
-    'admin_email',
+    'root_path',      // Base server directory
+    'site',           // Site subdirectory name
+    'site_path',      // Full path (root_path + site)
+    'organism_data',  // Organism data directory
+    'metadata_path',  // Metadata configuration directory
+    'siteTitle',      // Site display name
+    'admin_email',    // Admin contact email
 ];
+```
 
-// validate() method only checks if these keys are present
+**2. What validate() Does**
+```php
 public function validate() {
+    $this->errors = [];
+    
+    // Just checks if each required key exists
     foreach ($this->requiredKeys as $key) {
         if (!isset($this->config[$key])) {
             $this->errors[] = "Missing required config: $key";
         }
     }
-    return empty($this->errors);
+    
+    return empty($this->errors);  // Returns true if no errors
 }
 ```
 
-**What validation does:**
-- ✅ Checks if all required keys exist
-- ❌ Does NOT validate data types
-- ❌ Does NOT validate path values
-- ❌ Does NOT check if paths are readable
-- ❌ Does NOT apply complex rules
+**3. Validation Checklist**
+- ✅ Checks if all 7 required keys exist
+- ✅ Returns list of missing keys via `getMissingKeys()`
+- ❌ Does NOT validate data types (string vs array)
+- ❌ Does NOT validate path values (doesn't check if paths exist)
+- ❌ Does NOT check if paths are readable by web server
+- ❌ Does NOT apply complex rules or constraints
 
-**Note:** `config_schema.php` is purely documentation and is NOT used for validation. To add validation rules, they would need to be added to ConfigManager's `validate()` method.
+**4. When Validation Runs**
+- Automatically on page load (in config_init.php)
+- Can be disabled with `VALIDATE_CONFIG=false` environment variable
+- Errors are logged but don't prevent app from running
+
+**Important Note:** To add more validation (e.g., checking if paths are readable), you would need to add code to ConfigManager's `validate()` method.
 
 ### Editing Configuration
 
