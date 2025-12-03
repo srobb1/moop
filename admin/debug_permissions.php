@@ -10,7 +10,7 @@ $parent = dirname($file);
 <html lang="en">
 <head>
     <title>Debug Permissions - www-data View</title>
-    <?php include_once '../includes/head.php'; ?>
+    <?php include_once '../includes/head-resources.php'; ?>
 </head>
 <body class="bg-light">
 

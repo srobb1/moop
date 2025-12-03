@@ -258,7 +258,7 @@ foreach ($all_organisms as $organism => $assemblies) {
 <html lang="en">
 <head>
   <title>Manage Groups</title>
-  <?php include_once '../includes/head.php'; ?>
+  <?php include_once '../includes/head-resources.php'; ?>
 </head>
 <body class="bg-light">
 

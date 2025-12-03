@@ -343,7 +343,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
 <html lang="en">
 <head>
   <title>Manage Annotation Sections</title>
-  <?php include_once __DIR__ . '/../includes/head.php'; ?>
+  <?php include_once __DIR__ . '/../includes/head-resources.php'; ?>
   <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
 </head>
 <body class="bg-light">

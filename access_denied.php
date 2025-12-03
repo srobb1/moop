@@ -12,7 +12,7 @@ $site = $config->getString('site');
 <html lang="en">
 <head>
   <title>Access Denied - <?= htmlspecialchars($siteTitle) ?></title>
-  <?php include_once __DIR__ . '/includes/head.php'; ?>
+  <?php include_once __DIR__ . '/includes/head-resources.php'; ?>
 </head>
 <body class="bg-light">
 

@@ -126,7 +126,7 @@ if (empty($uniquenames)) {
 }
 
 // Now include the HTML headers
-include_once __DIR__ . '/../includes/head.php';
+include_once __DIR__ . '/../includes/head-resources.php';
 include_once __DIR__ . '/../includes/navbar.php';
 ?>
 <!DOCTYPE html>

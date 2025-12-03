@@ -16,7 +16,7 @@ $organism_info = $organism_context['info'];
 <html lang="en">
 <head>
   <title><?= htmlspecialchars($organism_info['common_name'] ?? str_replace('_', ' ', $organism_name)) ?> - <?= $siteTitle ?></title>
-  <?php include_once __DIR__ . '/../includes/head.php'; ?>
+  <?php include_once __DIR__ . '/../includes/head-resources.php'; ?>
   <!-- Display page styles (consolidated from display_styles.css and shared_results_table.css) -->
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
   <link rel="stylesheet" href="/<?= $site ?>/css/advanced-search-filter.css">

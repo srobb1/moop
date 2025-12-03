@@ -29,7 +29,7 @@ $user_access_json = json_encode($taxonomy_user_access);
 
 $siteTitle = $config->getString('siteTitle');
 
-include_once __DIR__ . '/includes/header.php';
+include_once __DIR__ . '/includes/page-setup.php';
 ?>
 
 <body class="bg-light">

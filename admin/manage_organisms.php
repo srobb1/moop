@@ -173,7 +173,7 @@ $organisms = $organisms;
 <html lang="en">
 <head>
   <title>Manage Organisms</title>
-  <?php include_once '../includes/head.php'; ?>
+  <?php include_once '../includes/head-resources.php'; ?>
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
   <style>
     .structure-box {

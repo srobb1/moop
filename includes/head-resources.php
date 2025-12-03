@@ -1,29 +1,60 @@
-<!doctype html>
-<html lang="en">
 <?php
-session_start();
-include_once __DIR__ . '/config_init.php';
-include_once __DIR__ . '/access_control.php';
+/**
+ * HEAD RESOURCES - Stylesheet and Meta Tags for <head>
+ * 
+ * Contains only content that goes INSIDE the <head> tag:
+ * - Meta tags (charset, viewport, favicon)
+ * - CSS links (Bootstrap, MOOP custom styles)
+ * - JavaScript that needs early loading (if any)
+ * 
+ * This file does NOT:
+ * - Output <!DOCTYPE>, <html>, or <head> tags (page provides these)
+ * - Include page-setup.php (that's for full page structure)
+ * 
+ * INCLUDED BY: page-setup.php (which sets up full page)
+ * PAIRED WITH: footer.php (via page-setup.php)
+ * 
+ * USAGE:
+ *   <head>
+ *     <title>Your Title</title>
+ *     <?php include_once __DIR__ . '/head-resources.php'; ?>
+ *   </head>
+ * 
+ * Note: All CSS and JS loads happen here centrally
+ */
 
+// Ensure config is loaded
+if (!class_exists('ConfigManager')) {
+    include_once __DIR__ . '/config_init.php';
+}
+$config = ConfigManager::getInstance();
+$images_path = $config->getString('images_path');
+$site = $config->getString('site');
 ?>
 
-  <head>
-    <title><?php $config = ConfigManager::getInstance(); echo $config->getString('siteTitle'); ?></title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href=<?php echo "/" . $config->getString('images_path') . "/favicon.ico";?>
+    <link rel="icon" href="<?php echo "/$images_path/favicon.ico"; ?>">
 
     <!-- Bootstrap 5.3.2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- MOOP Base Styles (consolidated layout styles) -->
-    <link rel="stylesheet" href="/<?= $config->getString('site') ?>/css/moop.css">
-    <!-- <link rel="stylesheet" href="/<?= $config->getString('site') ?>/css/tree.css"> DISABLED: Conflicts with new bash-style tree -->
-
-
+    
+    <!-- MOOP Base Styles (global styles + loader animation) -->
+    <link rel="stylesheet" href="/<?= $site ?>/css/moop.css">
+    
+    <!-- Display Styles (feature colors, badges, etc.) -->
+    <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
+    
+    <!-- Optional custom CSS if defined in config -->
     <?php
-      $custom_css_path = $config->getPath('custom_css_path');
-      if ($custom_css_path && file_exists($custom_css_path)) {
-        echo "<link rel=\"stylesheet\" href=\"$custom_css_path\">";
+      $custom_css_path = $config->getPath('custom_css_path', '');
+      if (!empty($custom_css_path)) {
+          if (file_exists($custom_css_path)) {
+              echo "<link rel=\"stylesheet\" href=\"$custom_css_path\">";
+          } else {
+              // Log warning if custom CSS path is configured but file doesn't exist
+              error_log("Warning: custom_css_path configured in site_config.php but file not found: $custom_css_path");
+          }
       }
     ?>
 
@@ -31,12 +62,8 @@ include_once __DIR__ . '/access_control.php';
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
     <!-- DataTables Buttons 2.3.6 with Bootstrap 5 theme -->
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.bootstrap5.min.css">
-    <!-- DataTables Buttons 1.6.4 CSS for button styling -->
-    <!-- DataTables Buttons 1.6.4 CSS - NOT NECESSARY (v2.3.6 provides all needed styling) -->
-    <!-- <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.4/css/buttons.dataTables.min.css"> -->
     <!-- Column reordering functionality -->
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/colreorder/1.5.5/css/colReorder.dataTables.min.css">
-
 
     <!-- jQuery library - required for DataTables plugin -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -72,59 +99,3 @@ include_once __DIR__ . '/access_control.php';
 
     <!-- Font Awesome 5.7.0 - REQUIRED for download button icons (copy, CSV, Excel, print) -->
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
-  </head>
-
-  <body>
-
-  <?php include_once __DIR__ . '/banner.php'; ?>
-
-
-<?php
-include_once __DIR__ . '/toolbar.php';
-?>
-
-<div id="jb_cookies_Modal" class="modal fade" role="dialog">
-  <div class="modal-dialog">
-
-    <!-- Modal content-->
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
-        <h4 class="modal-title">Cookies policy</h4>
-      </div>
-      <div class="modal-body">
-        <p>
-          Jbrowse uses cookies to remember your configuration in the genome browser, such as track load and position.
-          When using Jbrowse in this site you accept the use of these cookies.
-        </p>
-      </div>
-      <div class="modal-footer">
-        <a id="jb_ok_cookies" href="/jbrowse/" target="_blank" type="button" class="btn btn-default">OK</a>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<script>
-  jQuery(document).ready(function() {
-
-    var jb_link = "/jbrowse/";
-
-    $(".jbrowse_link").click(function(event){
-      event.preventDefault();
-      jb_link = $(this).attr('href');
-      $("#jb_ok_cookies").attr('href', jb_link);
-      $("#jb_cookies_Modal").modal();
-    });
-
-    $("#jb_ok_cookies").click(function(event){
-      $("#jb_cookies_Modal").modal("hide");
-    });
-
-  });
-</script>
-
-<style>
-
-</style>

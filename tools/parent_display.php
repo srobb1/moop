@@ -140,7 +140,7 @@ $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 <html lang="en">
 <head>
 <title><?= htmlspecialchars($feature_uniquename) ?> - <?= $siteTitle ?></title>
-<?php include_once __DIR__ . '/../includes/head.php'; ?>
+<?php include_once __DIR__ . '/../includes/head-resources.php'; ?>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
 <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
 <link rel="stylesheet" href="/<?= $site ?>/css/parent.css">

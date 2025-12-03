@@ -212,14 +212,14 @@ if (!empty($sequence_ids_provided)) {
 $available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_types);
 
 // Now include the HTML headers
-include_once __DIR__ . '/../includes/head.php';
+include_once __DIR__ . '/../includes/head-resources.php';
 include_once __DIR__ . '/../includes/navbar.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <title>Sequence Search - <?= htmlspecialchars($siteTitle) ?></title>
-    <?php include_once __DIR__ . '/../includes/head.php'; ?>
+    <?php include_once __DIR__ . '/../includes/head-resources.php'; ?>
     <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
     <style>
         .tooltip { z-index: 9999 !important; }

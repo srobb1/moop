@@ -32,7 +32,7 @@ foreach ($organisms as $organism) {
 <html lang="en">
 <head>
   <title>Multi-Organism Search - <?= $siteTitle ?></title>
-  <?php include_once __DIR__ . '/../includes/head.php'; ?>
+  <?php include_once __DIR__ . '/../includes/head-resources.php'; ?>
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
   <link rel="stylesheet" href="/<?= $site ?>/css/advanced-search-filter.css">
   <link rel="stylesheet" href="/<?= $site ?>/css/search-controls.css">

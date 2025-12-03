@@ -44,7 +44,7 @@ if (empty($assembly_info)) {
 <html lang="en">
 <head>
   <title><?= htmlspecialchars($assembly_info['genome_name']) ?> - <?= $siteTitle ?></title>
-  <?php include_once __DIR__ . '/../includes/head.php'; ?>
+  <?php include_once __DIR__ . '/../includes/head-resources.php'; ?>
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
   <link rel="stylesheet" href="/<?= $site ?>/css/parent.css">
   <link rel="stylesheet" href="/<?= $site ?>/css/advanced-search-filter.css">

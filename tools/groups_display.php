@@ -44,7 +44,7 @@ if (!is_public_group($group_name)) {
 <html lang="en">
 <head>
   <title><?= htmlspecialchars($group_name) ?> - <?= $siteTitle ?></title>
-  <?php include_once __DIR__ . '/../includes/head.php'; ?>
+  <?php include_once __DIR__ . '/../includes/head-resources.php'; ?>
   <!-- Display page styles (consolidated from display_styles.css and shared_results_table.css) -->
   <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
   <!-- Advanced search filter modal styles -->

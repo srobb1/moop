@@ -232,7 +232,7 @@ if (!$file_writable && file_exists($config_file)) {
 <html lang="en">
 <head>
     <title>Manage Site Configuration - Admin</title>
-    <?php include_once __DIR__ . '/../includes/head.php'; ?>
+    <?php include_once __DIR__ . '/../includes/head-resources.php'; ?>
 </head>
 <body class="bg-light">
 

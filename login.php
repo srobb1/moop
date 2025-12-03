@@ -40,7 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <html lang="en">
 <head>
   <title>Login - <?= htmlspecialchars($siteTitle) ?></title>
-  <?php include_once 'includes/head.php'; ?>
+  <?php include_once 'includes/head-resources.php'; ?>
 </head>
 <body class="bg-light">
 

@@ -57,7 +57,7 @@ $js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);
 <html lang="en">
 <head>
   <title>Function Registry Management</title>
-  <?php include_once '../includes/head.php'; ?>
+  <?php include_once '../includes/head-resources.php'; ?>
 </head>
 <body class="bg-light">
   <?php include_once '../includes/navbar.php'; ?>

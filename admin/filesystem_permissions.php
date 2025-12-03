@@ -282,7 +282,7 @@ function performPermissionCheck($path, $item) {
 <html lang="en">
 <head>
     <title>Filesystem Permissions</title>
-    <?php include_once __DIR__ . '/../includes/head.php'; ?>
+    <?php include_once __DIR__ . '/../includes/head-resources.php'; ?>
     <style>
         .permission-status {
             font-family: monospace;
