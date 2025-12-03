@@ -52,6 +52,7 @@
  *   echo render_display_page('tools/pages/organism.php', [
  *       'organism_name' => $name,
  *       'config' => $config,
+ *       'inline_scripts' => ["const sitePath = '/moop';", "const organismName = 'E_coli';"],
  *       'page_script' => '/moop/js/organism-display.js'
  *   ], 'Organism Display');
  */
@@ -128,7 +129,16 @@ function render_display_page($content_file, $data = [], $title = '') {
         <script src="/<?= $config->getString('site') ?>/js/modules/annotation-search.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/advanced-search-filter.js"></script>
         
-        <!-- Page-specific script (if provided in data) -->
+        <!-- Inline scripts - Page-specific variable definitions (must load before page_script) -->
+        <?php
+        if (isset($inline_scripts) && is_array($inline_scripts)) {
+            foreach ($inline_scripts as $script) {
+                echo '<script>' . "\n" . $script . "\n" . '</script>' . "\n";
+            }
+        }
+        ?>
+        
+        <!-- Page-specific script file -->
         <?php
         if (isset($page_script)) {
             echo '<script src="' . htmlspecialchars($page_script) . '"></script>' . "\n";

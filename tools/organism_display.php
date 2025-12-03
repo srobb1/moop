@@ -1,30 +1,25 @@
 <?php
 /**
- * ORGANISM DISPLAY - Wrapper / Entry Point
+ * ORGANISM DISPLAY PAGE
  * 
- * Part of clean architecture refactoring.
- * This wrapper coordinates the display of an organism page.
+ * Entry point for displaying a single organism's information.
  * 
- * Workflow:
- * 1. Load initialization (tool_init.php)
- * 2. Load layout system (layout.php)
- * 3. Get organism context/data
- * 4. Prepare data for content file
- * 5. Call render_display_page() which:
- *    - Loads all CSS/JS
- *    - Includes navbar/footer
- *    - Renders content file
- *    - Returns complete HTML page
+ * Uses generic template system (display-template.php) for:
+ * - HTML structure
+ * - Script loading
+ * - Layout consistency
  * 
- * The actual display content is in: tools/pages/organism.php
- * The HTML structure is handled by: includes/layout.php
+ * This file is responsible for:
+ * 1. Loading organism data
+ * 2. Validating access
+ * 3. Configuring display template
+ * 4. Including generic template to render page
  */
 
-// Load initialization and layout system
+// Load initialization
 include_once __DIR__ . '/tool_init.php';
-include_once __DIR__ . '/../includes/layout.php';
 
-// Load page-specific config
+// Get config values
 $organism_data = $config->getPath('organism_data');
 $absolute_images_path = $config->getPath('absolute_images_path');
 $images_path = $config->getString('images_path');
@@ -35,28 +30,30 @@ $organism_context = setupOrganismDisplayContext($_GET['organism'] ?? '', $organi
 $organism_name = $organism_context['name'];
 $organism_info = $organism_context['info'];
 
-// Prepare data array for content file
-// These variables will be extracted and available in tools/pages/organism.php
+// Configure display template
+$display_config = [
+    'title' => htmlspecialchars(
+        ($organism_info['common_name'] ?? str_replace('_', ' ', $organism_name)) . ' - ' . $config->getString('siteTitle')
+    ),
+    'content_file' => __DIR__ . '/pages/organism.php',
+    'page_script' => '/' . $site . '/js/organism-display.js',
+    'inline_scripts' => [
+        "const sitePath = '/" . $site . "';",
+        "const organismName = '" . addslashes($organism_name) . "';"
+    ]
+];
+
+// Prepare data for content file
 $data = [
     'organism_name' => $organism_name,
     'organism_info' => $organism_info,
     'config' => $config,
+    'site' => $site,
     'images_path' => $images_path,
     'absolute_images_path' => $absolute_images_path,
-    'site' => $site,
-    'page_script' => '/' . $site . '/js/organism-display.js'
 ];
 
-// Build page title
-$page_title = htmlspecialchars(
-    ($organism_info['common_name'] ?? str_replace('_', ' ', $organism_name)) . ' - ' . $config->getString('siteTitle')
-);
-
-// Render using layout system
-echo render_display_page(
-    __DIR__ . '/pages/organism.php',
-    $data,
-    $page_title
-);
+// Use generic template to render
+include_once __DIR__ . '/display-template.php';
 
 ?>

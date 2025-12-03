@@ -2,22 +2,21 @@
 /**
  * ORGANISM DISPLAY - Content File
  * 
- * This file contains ONLY the display content for an organism page.
- * No HTML structure, no scripts, no styling - just content.
+ * Pure display content - no HTML structure, scripts, or styling.
  * 
  * Layout system (layout.php) handles:
  * - HTML structure (<!DOCTYPE>, <html>, <head>, <body>)
  * - All CSS and resources
- * - All scripts
+ * - All scripts and inline variables
  * - Navbar and footer
  * 
- * This file has access to all variables extracted from $data array:
- * - $organism_name - Organism ID (e.g., 'E_coli')
- * - $organism_info - Full organism information
- * - $config - ConfigManager instance
- * - $images_path - Relative path to images
- * - $absolute_images_path - Absolute path to images
- * - $site - Site config value
+ * This file has access to variables passed from organism_display.php:
+ * - $organism_name
+ * - $organism_info
+ * - $config
+ * - $site
+ * - $images_path
+ * - $absolute_images_path
  */
 ?>
 
