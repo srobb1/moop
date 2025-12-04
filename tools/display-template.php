@@ -12,7 +12,7 @@
  * 
  * How It Works:
  * ─────────────
- * 1. Child page (e.g., organism_display.php) includes this file
+ * 1. Child page (e.g., tools/organism.php) includes this file
  * 2. Child page sets up the context/data specific to that page
  * 3. Child page defines $display_config with:
  *    - title: Page title
