@@ -35,6 +35,51 @@
     </div>
     <?php endif; ?>
 
+    <!-- About Section -->
+    <div class="card mb-4 border-info">
+        <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutErrorLog">
+            <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Error Log Viewer <i class="fa fa-chevron-down float-end"></i></h5>
+        </div>
+        <div class="collapse" id="aboutErrorLog">
+            <div class="card-body">
+                <p><strong>Purpose:</strong> Monitor and troubleshoot errors that occur in the system. All errors are logged automatically to help diagnose issues.</p>
+                
+                <p><strong>What Gets Logged:</strong></p>
+                <ul>
+                    <li>Database connection errors</li>
+                    <li>File permission issues</li>
+                    <li>Missing data files or configuration</li>
+                    <li>BLAST execution errors</li>
+                    <li>Search and query failures</li>
+                    <li>User authentication problems</li>
+                    <li>Invalid input or malformed requests</li>
+                </ul>
+                
+                <p><strong>How to Use This Page:</strong></p>
+                <ul>
+                    <li><strong>View errors:</strong> Latest errors appear at the top of the list</li>
+                    <li><strong>Filter by type:</strong> Use "Error Type" dropdown to see specific error categories</li>
+                    <li><strong>Filter by organism:</strong> Use "Organism" dropdown to see errors related to specific organisms</li>
+                    <li><strong>Search:</strong> Use the search box to find errors by message, user, or IP address</li>
+                    <li><strong>Clear log:</strong> Use the "Clear Log" button to remove all errors (after reviewing them)</li>
+                </ul>
+                
+                <p><strong>Error Information Displayed:</strong></p>
+                <ul>
+                    <li><strong>Timestamp:</strong> When the error occurred</li>
+                    <li><strong>Error Type:</strong> Category of error (e.g., "Database Error", "File Not Found")</li>
+                    <li><strong>Context:</strong> Which organism or component was affected</li>
+                    <li><strong>User:</strong> Which user was logged in (or "anonymous")</li>
+                    <li><strong>IP Address:</strong> Where the request came from</li>
+                    <li><strong>Page:</strong> Which page or script generated the error</li>
+                    <li><strong>Details:</strong> Additional error information for debugging</li>
+                </ul>
+                
+                <p class="mb-0"><strong>Tips for Troubleshooting:</strong> If errors persist after clearing the log, check file permissions on the organisms directory, verify database files exist and are readable, and ensure all required configuration files are present.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Filter Panel -->
     <div class="card mb-4">
         <div class="card-header bg-light">
