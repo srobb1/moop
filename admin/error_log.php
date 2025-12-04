@@ -85,32 +85,6 @@ $data = [
     'filter_type' => $filter_type,
     'filter_organism' => $filter_organism,
     'filter_search' => $filter_search,
-    'inline_scripts' => [
-        // Collapse handler for About section
-        "(function() {
-            const style = document.createElement('style');
-            style.textContent = `.collapse { display: none; } .collapse.show { display: block; }`;
-            document.head.appendChild(style);
-            document.addEventListener('DOMContentLoaded', function() {
-                const triggers = document.querySelectorAll('[data-bs-toggle=\"collapse\"]');
-                triggers.forEach(function(trigger) {
-                    trigger.removeAttribute('data-bs-toggle');
-                    trigger.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        e.stopImmediatePropagation();
-                        const target = this.getAttribute('data-bs-target') || this.getAttribute('href');
-                        if (target) {
-                            const element = document.querySelector(target);
-                            if (element) {
-                                element.classList.toggle('show');
-                            }
-                        }
-                    }, true);
-                });
-            });
-        })();"
-    ]
 ];
 
 // Render page using layout system
