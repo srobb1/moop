@@ -481,3 +481,24 @@ function removeFeatureTag(element, organism) {
     });
 })();
 
+
+/**
+ * Legend Toggle Handler
+ * Handles the Legend & Status Guide section
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    const legendHeader = document.getElementById('legendHeader');
+    const legendContent = document.getElementById('legendContent');
+    
+    if (legendHeader && legendContent) {
+        // Initialize legend as closed
+        legendContent.style.display = 'none';
+        
+        legendHeader.addEventListener('click', function(e) {
+            e.preventDefault();
+            const isOpen = legendContent.style.display !== 'none';
+            legendContent.style.display = isOpen ? 'none' : 'block';
+            console.log('Legend toggled:', isOpen ? 'closing' : 'opening');
+        });
+    }
+});
