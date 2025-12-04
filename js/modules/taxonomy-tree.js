@@ -91,7 +91,7 @@ class PhyloTree {
             window.open(`tools/organism.php?organism=${encodeURIComponent(organisms[0])}&multi_search[]=${encodeURIComponent(organisms[0])}`, '_blank');
         } else {
             const params = organisms.map(org => `organisms[]=${encodeURIComponent(org)}`).join('&');
-            window.open(`tools/multi_organism_search.php?${params}`, '_blank');
+            window.open(`tools/multi_organism.php?${params}`, '_blank');
         }
     }
 
