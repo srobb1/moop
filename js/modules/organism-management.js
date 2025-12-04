@@ -502,3 +502,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+/**
+ * Toggle Path Display
+ * Shows/hides the organism directory path
+ */
+function togglePath(button, organism_path, organism) {
+    const pathId = 'path-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
+    let pathDiv = document.getElementById(pathId);
+    
+    if (pathDiv) {
+        // Already exists, toggle visibility
+        if (pathDiv.style.display === 'none') {
+            pathDiv.style.display = 'block';
+            button.innerHTML = '<i class="fa fa-folder-open"></i> Hide Path';
+        } else {
+            pathDiv.style.display = 'none';
+            button.innerHTML = '<i class="fa fa-folder"></i> View Path';
+        }
+    } else {
+        // Create the path display
+        pathDiv = document.createElement('div');
+        pathDiv.id = pathId;
+        pathDiv.className = 'mt-2';
+        pathDiv.innerHTML = '<small class="font-monospace text-muted" style="user-select: all; cursor: text;">' + organism_path + '</small>';
+        button.parentNode.insertBefore(pathDiv, button.nextSibling);
+        button.innerHTML = '<i class="fa fa-folder-open"></i> Hide Path';
+    }
+}
