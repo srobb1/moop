@@ -189,7 +189,7 @@ $data = [
         "const sitePath = '/" . $config->getString('site') . "';",
         "// Load shared admin utilities
         const script = document.createElement('script');
-        script.src = '/' + sitePath + '/js/admin-utilities.js';
+        script.src = sitePath + '/js/admin-utilities.js';
         document.head.appendChild(script);"
     ]
 ];
