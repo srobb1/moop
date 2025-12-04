@@ -65,6 +65,7 @@ return [
     
     // ======== OPTIONAL: Files ========
     'users_file' => "$root_path/users.json",
+    'error_log_file' => "$site_path/logs/error.log",
     
     // ======== OPTIONAL: IP-Based Auto-Login ========
     // IP ranges for automatic login with full access (development/local testing)
