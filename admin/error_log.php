@@ -73,7 +73,6 @@ sort($organisms);
 $display_config = [
     'title' => 'Error Log Viewer - ' . $siteTitle,
     'content_file' => __DIR__ . '/pages/error_log.php',
-    'page_script' => '/' . $config->getString('site') . '/js/admin-utilities.js',
 ];
 
 // Prepare data for content file
@@ -86,6 +85,12 @@ $data = [
     'filter_type' => $filter_type,
     'filter_organism' => $filter_organism,
     'filter_search' => $filter_search,
+    'inline_scripts' => [
+        "// Load shared admin utilities
+        const script = document.createElement('script');
+        script.src = '/" . $config->getString('site') . "/js/admin-utilities.js';
+        document.head.appendChild(script);"
+    ]
 ];
 
 // Render page using layout system
