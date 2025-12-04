@@ -73,6 +73,7 @@ sort($organisms);
 $display_config = [
     'title' => 'Error Log Viewer - ' . $siteTitle,
     'content_file' => __DIR__ . '/pages/error_log.php',
+    'page_script' => '/' . $config->getString('site') . '/js/admin-utilities.js',
 ];
 
 // Prepare data for content file
