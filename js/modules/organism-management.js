@@ -467,13 +467,11 @@ function removeFeatureTag(element, organism) {
                 e.stopImmediatePropagation();
                 
                 const target = this.getAttribute('data-bs-target') || this.getAttribute('href');
-                console.log('Manual collapse toggle:', target);
                 if (target) {
                     const element = document.querySelector(target);
                     if (element) {
                         const before = element.classList.contains('show');
                         element.classList.toggle('show');
-                        console.log('Toggled from', before, 'to', element.classList.contains('show'));
                     }
                 }
             }, true);
@@ -498,7 +496,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const isOpen = legendContent.style.display !== 'none';
             legendContent.style.display = isOpen ? 'none' : 'block';
-            console.log('Legend toggled:', isOpen ? 'closing' : 'opening');
         });
     }
 });
