@@ -436,3 +436,41 @@ function removeFeatureTag(element, organism) {
 }
 
 // Uses window.escapeHtml from utilities.js
+
+/**
+ * Simple Collapse Handler
+ * Manually toggle all collapses
+ */
+(function() {
+    // Add styles
+    const style = document.createElement('style');
+    style.textContent = `
+        .collapse {
+            display: none;
+        }
+        .collapse.show {
+            display: block;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Add toggle functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const triggers = document.querySelectorAll('[data-bs-toggle="collapse"]');
+        triggers.forEach(function(trigger) {
+            trigger.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                const target = this.getAttribute('data-bs-target') || this.getAttribute('href');
+                if (target) {
+                    const element = document.querySelector(target);
+                    if (element) {
+                        element.classList.toggle('show');
+                    }
+                }
+            }, true);
+        });
+    });
+})();

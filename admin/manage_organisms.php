@@ -186,20 +186,7 @@ $data = [
     'taxonomy_tree_file' => $taxonomy_tree_file,
     'page_script' => '/' . $config->getString('site') . '/js/modules/organism-management.js',
     'inline_scripts' => [
-        "const style = document.createElement('style');
-        style.textContent = `.collapse:not(.show) { display: none !important; } .collapse.show { display: block !important; }`;
-        document.head.appendChild(style);
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            const aboutElement = document.getElementById('aboutOrganismManagement');
-            if (aboutElement) {
-                // Prevent Bootstrap from re-showing after hide
-                aboutElement.addEventListener('hide.bs.collapse', function(e) {
-                    // Do nothing - just let it hide
-                    return true;
-                });
-            }
-        });"
+        "const sitePath = '/" . $config->getString('site') . "';"
     ]
 ];
 
