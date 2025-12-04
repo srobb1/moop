@@ -438,7 +438,7 @@ function removeFeatureTag(element, organism) {
 // Uses window.escapeHtml from utilities.js
 
 /**
- * Simple Collapse Handler
+ * Simple Collapse Handler - REPLACES Bootstrap Collapse
  * Manually toggle all collapses
  */
 (function() {
@@ -458,19 +458,26 @@ function removeFeatureTag(element, organism) {
     document.addEventListener('DOMContentLoaded', function() {
         const triggers = document.querySelectorAll('[data-bs-toggle="collapse"]');
         triggers.forEach(function(trigger) {
+            // Remove data-bs-toggle to prevent Bootstrap from handling it
+            trigger.removeAttribute('data-bs-toggle');
+            
             trigger.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
                 
                 const target = this.getAttribute('data-bs-target') || this.getAttribute('href');
+                console.log('Manual collapse toggle:', target);
                 if (target) {
                     const element = document.querySelector(target);
                     if (element) {
+                        const before = element.classList.contains('show');
                         element.classList.toggle('show');
+                        console.log('Toggled from', before, 'to', element.classList.contains('show'));
                     }
                 }
             }, true);
         });
     });
 })();
+
