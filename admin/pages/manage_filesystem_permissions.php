@@ -1,58 +1,5 @@
 <?php
-/**
- * MANAGE FILESYSTEM PERMISSIONS - Display Page
- * 
- * Shows comprehensive permission guide and validates all files/directories
- */
-
-// Extract variables from $data array
-extract($data);
-
-// Function to perform permission check - moved here as part of display logic
-function performPermissionCheck($path, $item) {
-    $result = [
-        'name' => $item['name'],
-        'path' => $path,
-        'exists' => file_exists($path),
-        'type' => $item['type'],
-        'required_perms' => $item['required_perms'],
-        'required_group' => $item['required_group'] ?? 'www-data',
-        'reason' => $item['reason'] ?? '',
-        'why_write' => $item['why_write'] ?? '',
-        'sticky_bit' => $item['sticky_bit'] ?? false,
-        'issues' => [],
-    ];
-    
-    if (!$result['exists']) {
-        $result['issues'][] = 'Path does not exist';
-        return $result;
-    }
-    
-    $perms_full = substr(sprintf('%o', fileperms($path)), -4);
-    // Remove leading zero for comparison (0664 -> 664, 02775 -> 2775)
-    $perms = ltrim($perms_full, '0') ?: '0';
-    $owner = posix_getpwuid(fileowner($path))['name'] ?? 'unknown';
-    $group = posix_getgrgid(filegroup($path))['name'] ?? 'unknown';
-    
-    $result['current_perms'] = $perms;
-    $result['current_owner'] = $owner;
-    $result['current_group'] = $group;
-    $result['is_readable'] = is_readable($path);
-    $result['is_writable'] = is_writable($path);
-    
-    // Check permissions
-    if ($perms !== $item['required_perms']) {
-        $result['issues'][] = "Permissions are $perms, should be " . $item['required_perms'];
-    }
-    
-    // Check group
-    if (isset($item['required_group']) && $group !== $item['required_group']) {
-        $result['issues'][] = "Group is $group, should be " . $item['required_group'];
-    }
-    
-    return $result;
-}
-
+// Function is defined in the wrapper (manage_filesystem_permissions.php)
 ?>
 
 <style>
@@ -119,24 +66,39 @@ function performPermissionCheck($path, $item) {
 </style>
 
 <h2><i class="fa fa-lock"></i> Filesystem Permissions</h2>
-<p class="text-muted">Complete guide to file and directory permissions required for the system</p>
+<p class="text-muted">Manage file and directory permissions for system reliability</p>
 
-<!-- Overview Card -->
+<!-- About Section -->
 <div class="card mb-4 border-info">
-    <div class="card-header bg-info bg-opacity-10">
-        <h5 class="mb-0"><i class="fa fa-info-circle"></i> Why Permissions Matter</h5>
+    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutPermissions">
+        <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Filesystem Permissions <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
-     <div class="card-body">
-        <p><strong>The web server (<?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?>) needs different permission levels for different files:</strong></p>
-        <ul>
-            <li><strong>Read (644):</strong> Database files that are pre-built and read-only</li>
-            <li><strong>Read + Write (664):</strong> Configuration files that admins edit</li>
-            <li><strong>Directory with SGID (2775):</strong> Directories where files are created - SGID ensures new files automatically inherit the group</li>
-        </ul>
-        <div class="mt-3 p-3 bg-light rounded">
-            <strong><i class="fa fa-sticky-note"></i> What is SGID (Set-Group-ID)?</strong>
-            <p class="mb-0 mt-2">SGID is the first digit in 4-digit permissions (the "2" in 2775). When set on a directory, it ensures all new files created within that directory automatically inherit the directory's group (www-data in our case). This displays as a lowercase <code>s</code> in the group execute position: <code>drwxrwsr-x</code>.</p>
-            <p class="mb-0 mt-2"><strong>Note:</strong> This is different from the sticky bit (which would show as <code>t</code> and uses "1" as the first digit, like 1775). SGID is what we use here for automatic group assignment.</p>
+    <div class="collapse" id="aboutPermissions">
+        <div class="card-body">
+            <p><strong>Purpose:</strong> Verify and manage file and directory permissions to ensure the web server can read and write files it needs while maintaining security.</p>
+            
+            <p><strong>Why It Matters:</strong></p>
+            <ul>
+                <li>The web server (<?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?>) needs specific permissions to function correctly</li>
+                <li>Incorrect permissions can cause upload failures, configuration save errors, and feature breakdowns</li>
+                <li>Over-permissive files (777, 666) create security vulnerabilities</li>
+                <li>SGID bits on directories ensure new files automatically inherit the correct group ownership</li>
+            </ul>
+            
+            <p><strong>Permission Levels:</strong></p>
+            <ul>
+                <li><strong>644 (rw-r--r--):</strong> Read-only files that don't change (databases)</li>
+                <li><strong>664 (rw-rw-r--):</strong> Configuration files edited by admins through the web interface</li>
+                <li><strong>2775 (drwxrwsr-x):</strong> Directories with SGID - ensures new files automatically get correct group</li>
+            </ul>
+            
+            <p class="mb-0"><strong>What You Can Do Here:</strong></p>
+            <ul class="mb-0">
+                <li>View current permissions for all system files and directories</li>
+                <li>Identify permission issues immediately with visual indicators</li>
+                <li>Get copy-paste commands to fix any permission problems</li>
+                <li>Understand why each permission is needed</li>
+            </ul>
         </div>
     </div>
 </div>
