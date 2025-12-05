@@ -1,69 +1,10 @@
 <?php
-// Function is defined in the wrapper (manage_filesystem_permissions.php)
+// Styles are loaded from manage-filesystem-permissions.css via page_styles in layout.php
 ?>
 
-<style>
-    .permission-status {
-        font-family: monospace;
-        font-size: 0.9em;
-        padding: 8px 12px;
-        border-radius: 4px;
-        background: #f8f9fa;
-        border-left: 4px solid #6c757d;
-    }
-    .permission-status.ok {
-        border-left-color: #28a745;
-        background: #d4edda;
-    }
-    .permission-status.warning {
-        border-left-color: #ffc107;
-        background: #fff3cd;
-    }
-    .permission-status.error {
-        border-left-color: #dc3545;
-        background: #f8d7da;
-    }
-    .perm-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 10px;
-        margin-top: 10px;
-    }
-    .perm-item {
-        padding: 10px;
-        background: #f8f9fa;
-        border-radius: 4px;
-        border: 1px solid #dee2e6;
-    }
-    .perm-item strong {
-        display: block;
-        margin-bottom: 5px;
-        font-size: 0.85em;
-        color: #495057;
-    }
-    .perm-value {
-        font-weight: bold;
-        color: #212529;
-        font-size: 1.1em;
-    }
-    .sticky-bit {
-        background: #e7f3ff;
-        padding: 10px;
-        border-left: 4px solid #0066cc;
-        margin-top: 10px;
-        border-radius: 4px;
-    }
-    .fix-command {
-        background: #f5f5f5;
-        border: 1px solid #ddd;
-        padding: 12px;
-        border-radius: 4px;
-        margin: 10px 0;
-        word-break: break-all;
-        font-family: monospace;
-        font-size: 0.9em;
-    }
-</style>
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
 
 <h2><i class="fa fa-lock"></i> Filesystem Permissions</h2>
 <p class="text-muted">Manage file and directory permissions for system reliability</p>
@@ -338,3 +279,7 @@ foreach ($grouped as $group_name => $items):
     <?php endif; ?>
 </div>
 <?php endforeach; ?>
+
+        </div>
+    </div>
+</div>

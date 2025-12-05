@@ -313,6 +313,7 @@ $data = [
     'web_user' => $web_user,
     'web_group' => $web_group,
     'config' => $config,
+    'page_styles' => ['/moop/css/manage-filesystem-permissions.css'],
 ];
 
 $display_config = [

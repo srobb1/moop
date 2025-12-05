@@ -140,7 +140,7 @@
         <div class="card-body">
           <h5 class="card-title"><i class="fa fa-lock"></i> Filesystem Permissions</h5>
           <p class="card-text">Complete guide to file and directory permissions. Check and fix permission issues.</p>
-          <a href="filesystem_permissions.php" class="btn btn-primary">Check Permissions</a>
+          <a href="manage_filesystem_permissions.php" class="btn btn-primary">Check Permissions</a>
         </div>
       </div>
     </div>
