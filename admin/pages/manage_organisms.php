@@ -1211,7 +1211,7 @@
 <?php endforeach; ?>
 
 
-<- Backwards compatible with existing Organism Management Scripts -->
+<!-- Backwards compatible with existing Organism Management Scripts -->
 
 
 <!-- Help Modal -->
