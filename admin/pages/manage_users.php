@@ -311,6 +311,18 @@
             <label class="form-check-label" for="editIsAdmin"><strong>Is Admin</strong></label>
           </div>
           
+          <!-- Stale Assemblies Section -->
+          <div class="mb-3" id="edit-stale-section" style="display: none;">
+            <div class="alert alert-warning">
+              <strong><i class="fa fa-exclamation-circle"></i> Stale Assemblies</strong>
+              <p class="mb-2 small">These assemblies were deleted or moved. Remove them from user access:</p>
+              <div id="edit-stale-list" style="margin-bottom: 10px;"></div>
+              <button type="button" class="btn btn-sm btn-warning" id="remove-all-stale-btn">
+                <i class="fa fa-trash"></i> Remove All Stale
+              </button>
+            </div>
+          </div>
+          
           <div class="mb-3" id="edit-groups-section">
             <label class="form-label">Access Groups</label>
             <div id="edit-access-container"></div>

@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Handle edit buttons
-  document.querySelectorAll('.edit-btn').forEach(btn => {
+  document.querySelectorAll('.edit-user-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       const row = this.closest('tr');
       const username = row.getAttribute('data-username');
@@ -227,29 +227,121 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get current user access
         const userGroups = userData.groups || {};
         
-        // Build organism chips
-        Object.keys(allOrganisms).forEach(organism => {
+        // Collect all organisms (both existing and stale from user access)
+        const allOrganismsToShow = new Set(Object.keys(allOrganisms));
+        Object.keys(userGroups).forEach(org => allOrganismsToShow.add(org));
+        
+        // Find stale assemblies
+        const staleAssembliesList = [];
+        Object.keys(userGroups).forEach(organism => {
+          const assemblies = allOrganisms[organism] || [];
+          (userGroups[organism] || []).forEach(assembly => {
+            if (!assemblies.includes(assembly)) {
+              staleAssembliesList.push({organism, assembly});
+            }
+          });
+        });
+        
+        // Show stale section if there are any
+        const staleSection = document.getElementById('edit-stale-section');
+        const staleList = document.getElementById('edit-stale-list');
+        
+        if (staleAssembliesList.length > 0) {
+          staleSection.style.display = 'block';
+          staleList.innerHTML = '';
+          
+          staleAssembliesList.forEach((item, idx) => {
+            const chip = document.createElement('span');
+            chip.className = 'tag-chip tag-chip-stale';
+            chip.style.marginRight = '5px';
+            chip.style.marginBottom = '5px';
+            chip.style.display = 'inline-block';
+            chip.innerHTML = `${item.organism}: ${item.assembly} 
+              <i class="fa fa-times" style="cursor: pointer; margin-left: 5px;" onclick="this.closest('span').remove(); updateEditHiddenInputs();"></i>`;
+            
+            staleList.appendChild(chip);
+          });
+          
+          // Remove all button handler
+          document.getElementById('remove-all-stale-btn').onclick = function(e) {
+            e.preventDefault();
+            staleAssembliesList.forEach(item => {
+              // Remove from hidden inputs
+              const hiddenContainer = document.getElementById('edit-selected-hidden');
+              Array.from(hiddenContainer.querySelectorAll(`input[value="${item.assembly}"][name="groups[${item.organism}][]"]`)).forEach(inp => inp.remove());
+            });
+            staleList.innerHTML = '';
+            staleSection.style.display = 'none';
+            updateEditHiddenInputs();
+          };
+        } else {
+          staleSection.style.display = 'none';
+        }
+        
+        // Build organism chips sorted - using collapsible compact layout
+        Array.from(allOrganismsToShow).sort().forEach(organism => {
           const orgDiv = document.createElement('div');
           orgDiv.className = 'organism-group-edit';
           orgDiv.setAttribute('data-organism-name', organism.toLowerCase());
-          orgDiv.style.marginBottom = '15px';
+          orgDiv.style.borderBottom = '1px solid #dee2e6';
+          orgDiv.style.padding = '8px 10px';
           
-          const label = document.createElement('div');
-          label.style.fontWeight = 'bold';
-          label.style.marginBottom = '8px';
-          label.textContent = organism;
-          orgDiv.appendChild(label);
+          // Collapsible header
+          const header = document.createElement('div');
+          header.style.fontWeight = '600';
+          header.style.fontSize = '12px';
+          header.style.marginBottom = '6px';
+          header.style.cursor = 'pointer';
+          header.style.userSelect = 'none';
           
-          allOrganisms[organism].forEach(assembly => {
+          const chevron = document.createElement('i');
+          chevron.className = 'fa fa-chevron-right';
+          chevron.style.marginRight = '6px';
+          
+          header.appendChild(chevron);
+          header.appendChild(document.createTextNode(organism));
+          
+          // Assembly container (hidden by default)
+          const assemblyContainer = document.createElement('div');
+          assemblyContainer.style.display = 'none';
+          
+          // Get assemblies for this organism (or empty array if stale)
+          const assemblies = allOrganisms[organism] || [];
+          
+          // Also include any stale assemblies the user has
+          const staleAssemblies = (userGroups[organism] || []).filter(asm => !assemblies.includes(asm));
+          
+          // Combine active and stale, showing stale ones with different styling
+          const allAssemblies = [...assemblies, ...staleAssemblies];
+          
+          allAssemblies.forEach(assembly => {
+            const isStale = !assemblies.includes(assembly);
             const chip = document.createElement('span');
-            chip.className = 'tag-chip-selector';
+            chip.className = isStale ? 'tag-chip-selector tag-chip-stale' : 'tag-chip-selector';
             chip.setAttribute('data-organism', organism);
             chip.setAttribute('data-assembly', assembly);
-            chip.style.background = getColorForOrganism(organism);
-            chip.style.borderColor = getColorForOrganism(organism);
-            chip.style.color = 'white';
+            chip.style.fontSize = '11px';
+            chip.style.padding = '3px 8px';
+            chip.style.margin = '2px';
+            
+            if (isStale) {
+              // Stale assembly - red outline
+              chip.style.background = 'transparent';
+              chip.style.color = '#dc3545';
+              chip.style.borderColor = '#dc3545';
+              chip.style.border = '2px solid #dc3545';
+            } else {
+              // Active assembly - colored
+              chip.style.background = getColorForOrganism(organism);
+              chip.style.borderColor = getColorForOrganism(organism);
+              chip.style.color = 'white';
+              chip.style.border = '2px solid ' + getColorForOrganism(organism);
+            }
+            
             chip.style.opacity = '0.5';
-            chip.textContent = assembly;
+            chip.style.cursor = 'pointer';
+            chip.style.display = 'inline-block';
+            chip.textContent = assembly + (isStale ? ' (stale)' : '');
             
             // Check if selected
             if (userGroups[organism] && userGroups[organism].includes(assembly)) {
@@ -267,12 +359,27 @@ document.addEventListener('DOMContentLoaded', function() {
               updateEditHiddenInputs();
             });
             
-            orgDiv.appendChild(chip);
+            assemblyContainer.appendChild(chip);
           });
           
+          // Toggle handler
+          header.addEventListener('click', function() {
+            const isHidden = assemblyContainer.style.display === 'none';
+            assemblyContainer.style.display = isHidden ? 'block' : 'none';
+            chevron.classList.toggle('fa-chevron-right');
+            chevron.classList.toggle('fa-chevron-down');
+          });
+          
+          orgDiv.appendChild(header);
+          orgDiv.appendChild(assemblyContainer);
           container.appendChild(orgDiv);
         });
       }
+      
+      // Update username display and show modal
+      document.getElementById('editUsername').textContent = username;
+      const editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+      editModal.show();
     });
   });
   
@@ -311,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Handle delete buttons
-  document.querySelectorAll('.delete-btn').forEach(btn => {
+  document.querySelectorAll('.delete-user-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       const row = this.closest('tr');
       const username = row.getAttribute('data-username');
