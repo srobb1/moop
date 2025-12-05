@@ -284,6 +284,17 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initial render
   renderAssemblySelector();
   
+  // Initialize DataTable for users list
+  if (typeof $ !== 'undefined' && $.fn.DataTable) {
+    $('#usersTable').DataTable({
+      pageLength: 10,
+      order: [[0, 'asc']],
+      columnDefs: [
+        { targets: 5, orderable: false } // Disable sorting on Actions column
+      ]
+    });
+  }
+  
   // Admin checkbox handler
   document.getElementById('isAdmin').addEventListener('change', toggleAccessSection);
   
