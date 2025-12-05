@@ -24,7 +24,7 @@
         }
     },
     "header_img": "SIMR_1200x300_0.jpg",
-    "favicon_filename": "",
+    "favicon_filename": "favicon.ico",
     "auto_login_ip_ranges": [
         {
             "start": "127.0.0.11",
