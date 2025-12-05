@@ -61,7 +61,7 @@
   <!-- About Section -->
   <div class="card mb-4 border-info">
     <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutUserAccessControl">
-      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About User Access Control <i class="fa fa-chevron-right float-end"></i></h5>
+      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About User Access Control <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
     <div class="collapse" id="aboutUserAccessControl">
       <div class="card-body">

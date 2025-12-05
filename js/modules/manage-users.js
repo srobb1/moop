@@ -475,13 +475,6 @@ document.addEventListener('DOMContentLoaded', function() {
           const element = document.querySelector(target);
           if (element) {
             element.classList.toggle('show');
-            
-            // Toggle chevron icon if present
-            const chevron = this.querySelector('i.fa-chevron-down, i.fa-chevron-up');
-            if (chevron) {
-              chevron.classList.toggle('fa-chevron-down');
-              chevron.classList.toggle('fa-chevron-up');
-            }
           }
         }
       }, true);
