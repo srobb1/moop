@@ -24,7 +24,7 @@
         }
     },
     "header_img": "SIMR_1200x300_0.jpg",
-    "favicon_filename": "favicon.ico",
+    "favicon_filename": "",
     "auto_login_ip_ranges": [
         {
             "start": "127.0.0.11",
@@ -32,7 +32,7 @@
         }
     ],
     "_metadata": {
-        "last_updated": "2025-12-03T16:39:46+00:00",
+        "last_updated": "2025-12-05T20:31:51+00:00",
         "last_updated_by": "admin"
     }
 }

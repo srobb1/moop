@@ -11,22 +11,31 @@ Convert legacy monolithic PHP display pages to clean architecture pattern:
 
 ===== COMPLETED ===== 
 
-✅ ADMIN PAGES (7/13 converted):
+✅ ADMIN PAGES (8/13 converted):
    1. admin.php - Dashboard wrapper + content file
    2. error_log.php - Error viewer wrapper + content file + About section
    3. manage_organisms.php - Organism manager wrapper + content file + About section
       * All AJAX handlers (fix_permissions, rename_assembly, delete_assembly, save_metadata)
       * Uses organism-management.js for complex UI
       * Admin-utilities.js for shared collapse functionality
+      * Delete assembly directory button
    4. manage_groups.php - Group manager wrapper + content file + About section
       * Uses manage-groups.js for assembly selector and filtering
    5. manage_users.php - User manager wrapper + content file + About section
       * Form-based UI for create/edit users with assembly access control
       * Stale assembly audit section
+      * Assembly count display in user table
+      * Selected assemblies preview
    6. manage_annotations.php - Annotation manager wrapper + content file + About section
       * Sortable annotation types with jQuery UI
       * Edit descriptions, customize synonyms, manage DB types
-   7. (Additional refinements to admin pages: permissions checks, UI improvements)
+      * DB Type display for annotations
+   7. manage_site_config.php - Site configuration wrapper + content file + About section
+      * Edit site title, admin email, banner images, favicon
+      * Sequence types configuration with color preview
+      * Auto-login IP ranges management
+      * File upload handling with validation
+   8. (Additional refinements: permissions checks, UI improvements, inline script support)
 
 ✅ MAIN DISPLAY PAGES (3/3 completed):
    1. index.php - Homepage (wrapper + content in tools/pages/)

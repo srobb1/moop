@@ -6,7 +6,7 @@
             
             <!-- About Section -->
             <div class="card mb-4 border-info">
-                <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;">
+                <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutSiteConfig">
                     <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Site Configuration <i class="fa fa-chevron-down float-end"></i></h5>
                 </div>
                 <div class="collapse" id="aboutSiteConfig">

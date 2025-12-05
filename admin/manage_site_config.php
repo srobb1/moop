@@ -258,6 +258,7 @@ $data = [
     'organism_data' => $organism_data,
     'metadata_path' => $metadata_path,
     'config_file' => $config_file,
+    'page_script' => '/' . $site . '/js/modules/manage-site-config.js',
 ];
 
 // Render page using layout system
