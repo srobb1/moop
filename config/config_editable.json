@@ -20,7 +20,7 @@
         "genome": {
             "pattern": "genome.fa",
             "label": "Genome",
-            "color": "bg-warning text-dark"
+            "color": "#26d984"
         }
     },
     "header_img": "SIMR_1200x300_0.jpg",
@@ -32,7 +32,7 @@
         }
     ],
     "_metadata": {
-        "last_updated": "2025-12-05T21:21:23+00:00",
+        "last_updated": "2025-12-05T21:26:44+00:00",
         "last_updated_by": "admin"
     }
 }
