@@ -45,7 +45,5 @@ $site = $config->getString('site');
 include_once __DIR__ . '/../lib/moop_functions.php';
 include_once __DIR__ . '/../lib/functions_display.php';
 include_once __DIR__ . '/../lib/functions_filesystem.php';
-include_once __DIR__ . '/../includes/head-resources.php';
-include_once __DIR__ . '/../includes/navbar.php';
 
 ?>
