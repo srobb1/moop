@@ -61,17 +61,47 @@
   <!-- About Section -->
   <div class="card mb-4 border-info">
     <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutUserAccessControl">
-      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About User Access Control <i class="fa fa-chevron-down float-end"></i></h5>
+      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About User Access Control <i class="fa fa-chevron-right float-end"></i></h5>
     </div>
-    <div class="collapse show" id="aboutUserAccessControl">
+    <div class="collapse" id="aboutUserAccessControl">
       <div class="card-body">
-        <p><strong>Purpose:</strong> Create and manage user accounts, controlling access to organism data.</p>
+        <p><strong>Purpose:</strong> Create and manage user accounts, controlling access to organism assemblies.</p>
+        
         <p><strong>Why It Matters:</strong> The system has two access models:</p>
         <ol>
-          <li><strong>Admin Users:</strong> Have automatic full access to all organisms</li>
-          <li><strong>Regular Users:</strong> Have access only to assemblies you explicitly assign</li>
+          <li><strong>Internal Network Users (IP-based):</strong> All users from your institution's IP range automatically have FULL access to ALL organisms - no login needed</li>
+          <li><strong>Collaborators (Account-based):</strong> External users you invite with accounts and specific assembly access</li>
+          <li><strong>Admin Users:</strong> Full system access for managing organisms, groups, users, and configuration</li>
         </ol>
-        <p><strong>Stale Assemblies:</strong> Appear when an organism/assembly is deleted but user still has access assigned. Use the audit section to clean these up.</p>
+        
+        <p><strong>How It Works:</strong></p>
+        <ul>
+          <li>Internal users are recognized by IP address (configured in site settings)</li>
+          <li>Collaborators create accounts and log in</li>
+          <li>Each Collaborator gets access to assemblies you assign them (can span multiple organisms)</li>
+          <li>Admin users have automatic full access to everything</li>
+          <li>Regular users MUST have at least 1 assembly assigned (unless promoted to admin)</li>
+        </ul>
+        
+        <p><strong>Access Management:</strong></p>
+        <ul>
+          <li><strong>Create User:</strong> Add new account with assemblies user can access</li>
+          <li><strong>Edit User:</strong> Modify account details, add/remove assemblies, promote to admin</li>
+          <li><strong>Delete User:</strong> Remove account and all access</li>
+          <li><strong>Stale Assemblies:</strong> Automatically tracked - appears when directories are deleted but user still has access</li>
+          <li><strong>Preview:</strong> See selected assemblies in real-time as you add them</li>
+        </ul>
+        
+        <p class="mb-0"><strong>What You Can Do:</strong></p>
+        <ul class="mb-0">
+          <li>Add new user accounts for external collaborators</li>
+          <li>Assign specific organism assemblies to each user</li>
+          <li>Search through large organism lists with the filter</li>
+          <li>Edit existing accounts and update assembly access</li>
+          <li>Remove users when collaboration ends</li>
+          <li>Create Admin users with full system access</li>
+          <li>View and remove stale assembly references</li>
+        </ul>
       </div>
     </div>
   </div>
