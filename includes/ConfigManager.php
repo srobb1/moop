@@ -113,7 +113,19 @@ class ConfigManager
                 foreach ($allowed_editable_keys as $key) {
                     // Only override if value is set AND non-empty (preserve site_config defaults for empty values)
                     if (isset($editable_config[$key]) && ($editable_config[$key] !== '' && $editable_config[$key] !== null)) {
-                        $this->config[$key] = $editable_config[$key];
+                        // Special handling for nested arrays - deep merge to preserve defaults
+                        if ($key === 'sequence_types' && is_array($editable_config[$key]) && is_array($this->config[$key] ?? [])) {
+                            foreach ($editable_config[$key] as $seq_type => $seq_config) {
+                                // Merge with defaults for this sequence type
+                                if (isset($this->config[$key][$seq_type])) {
+                                    $this->config[$key][$seq_type] = array_merge($this->config[$key][$seq_type], $seq_config);
+                                } else {
+                                    $this->config[$key][$seq_type] = $seq_config;
+                                }
+                            }
+                        } else {
+                            $this->config[$key] = $editable_config[$key];
+                        }
                     }
                 }
             }
