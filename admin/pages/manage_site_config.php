@@ -288,22 +288,26 @@
                     </div>
                     <div class="card-body">
                         <!-- Current Favicon Preview -->
-                        <?php if (!empty($editable_config['favicon_filename']['current_value'])): ?>
-                            <div class="mb-3 p-3 bg-light rounded border">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div>
-                                        <small class="text-muted d-block mb-2"><strong>Current Favicon:</strong></small>
-                                        <img id="favicon_preview" 
-                                             src="<?= '/' . $config->getString('images_path') . '/' . htmlspecialchars($editable_config['favicon_filename']['current_value']) . '?t=' . time() ?>" 
-                                             alt="Current Favicon" 
-                                             style="width: 64px; height: 64px; border: 1px solid #ddd; padding: 4px; background: white;">
+                        <div class="mb-3 p-3 bg-light rounded border">
+                            <div class="d-flex align-items-center gap-3">
+                                <div>
+                                    <small class="text-muted d-block mb-2"><strong>Current Favicon:</strong></small>
+                                    <?php if (!empty($editable_config['favicon_filename']['current_value'])): ?>
+                                    <img id="favicon_preview" 
+                                         src="<?= '/' . $config->getString('images_path') . '/' . htmlspecialchars($editable_config['favicon_filename']['current_value']) . '?t=' . time() ?>" 
+                                         alt="Current Favicon" 
+                                         style="width: 64px; height: 64px; border: 1px solid #ddd; padding: 4px; background: white;">
+                                    <?php else: ?>
+                                    <div style="width: 64px; height: 64px; border: 1px solid #ddd; padding: 4px; background: white; display: flex; align-items: center; justify-content: center; color: #999;">
+                                        <i class="fa fa-image"></i>
                                     </div>
-                                    <div>
-                                        <small class="text-muted"><?= htmlspecialchars($editable_config['favicon_filename']['current_value']) ?></small>
-                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                                <div>
+                                    <small class="text-muted"><?= !empty($editable_config['favicon_filename']['current_value']) ? htmlspecialchars($editable_config['favicon_filename']['current_value']) : 'None' ?></small>
                                 </div>
                             </div>
-                        <?php endif; ?>
+                        </div>
                         
                         <label for="favicon_upload" class="form-label">
                             <strong><?= htmlspecialchars($editable_config['favicon_filename']['label']) ?></strong>
@@ -339,22 +343,6 @@
                     </div>
                 </div>
                 
-                <script>
-                document.getElementById('favicon_upload').addEventListener('change', function(e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = function(event) {
-                            document.getElementById('favicon_new_preview').src = event.target.result;
-                            document.getElementById('favicon_upload_preview').style.display = 'block';
-                        };
-                        reader.readAsDataURL(file);
-                    } else {
-                        document.getElementById('favicon_upload_preview').style.display = 'none';
-                    }
-                });
-                </script>
-
                 <!-- Auto-Login IP Ranges Card -->
                 <div class="card shadow-sm mb-3">
                     <div class="card-header bg-primary text-white">

@@ -152,3 +152,38 @@
     });
 })();
 
+/**
+ * Favicon Upload Preview Handler
+ */
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        const faviconUpload = document.getElementById('favicon_upload');
+        const faviconPreviewDiv = document.getElementById('favicon_upload_preview');
+        const faviconPreviewImg = document.getElementById('favicon_new_preview');
+        
+        if (faviconUpload && faviconPreviewDiv && faviconPreviewImg) {
+            faviconUpload.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        faviconPreviewImg.src = event.target.result;
+                        faviconPreviewDiv.style.display = 'block';
+                    };
+                    reader.onerror = function() {
+                        console.error('FileReader error');
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    faviconPreviewDiv.style.display = 'none';
+                }
+            });
+        } else {
+            console.warn('Favicon preview elements not found:', {
+                faviconUpload: !!faviconUpload,
+                faviconPreviewDiv: !!faviconPreviewDiv,
+                faviconPreviewImg: !!faviconPreviewImg
+            });
+        }
+    });
+})();
