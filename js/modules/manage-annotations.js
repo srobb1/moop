@@ -110,9 +110,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Edit type description button
   $('.edit-type-desc-btn').on('click', function() {
       const typeName = $(this).data('type');
-      // Use attribute selector to handle type names with spaces
-      const descElement = $('p[id="desc-type-' + typeName.replace(/"/g, '\\"') + '"]');
-      const currentDesc = descElement.data('full-desc') || descElement.text().trim();
+      // Find the description element by closest card and look for the description p tag
+      const card = $(this).closest('.card');
+      const descElement = card.find('p[id^="desc-type-"]');
+      const currentDesc = descElement.data('full-desc') || 'No description';
       
       $('#editTypeDescName').text(typeName);
       $('#editTypeName').val(typeName);

@@ -107,7 +107,16 @@
                     <?= ($type_config['in_database'] ?? false) ? 'In Use' : 'Not In Use' ?>
                   </span>
                 </h6>
-                <div style="font-size: 0.85rem;"><small class="text-muted">DB Type: <code><?= htmlspecialchars($type_name) ?></code></small></div>
+                <div style="font-size: 0.85rem;">
+                  <small class="text-muted">
+                    DB Type: 
+                    <?php if ($type_config['in_database'] ?? false): ?>
+                      <code><?= htmlspecialchars($type_name) ?></code>
+                    <?php else: ?>
+                      <span class="text-danger"><strong>Not in DB</strong></span>
+                    <?php endif; ?>
+                  </small>
+                </div>
                 <?php if (!empty($type_config['synonyms'])): ?>
                 <div style="margin-top: 5px;"><small class="text-muted"><?= count($type_config['synonyms']) ?> synonym(s)</small></div>
                 <?php endif; ?>
