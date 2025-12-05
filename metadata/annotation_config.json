@@ -47,7 +47,9 @@
             "in_database": true,
             "annotation_count": 65699,
             "feature_count": 130601,
-            "synonyms": []
+            "synonyms": [
+                "Protein Domains"
+            ]
         },
         "Gene Ontology": {
             "display_name": "Gene Ontology",

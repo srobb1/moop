@@ -247,8 +247,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
         $new_synonym = trim($_POST['new_synonym'] ?? '');
         
         if (!empty($type_name) && !empty($new_synonym) && isset($annotation_config['annotation_types'][$type_name])) {
-            // Check if synonym is already a DB annotation type
-            if (isset($all_db_annotation_types[$new_synonym])) {
+            // Check if synonym is the same as the type name
+            if ($new_synonym === $type_name) {
+                $message = "Cannot add '$new_synonym' as synonym - it's the same as the annotation type name";
+                $messageType = "warning";
+            } else if (isset($all_db_annotation_types[$new_synonym])) {
                 $message = "Cannot add '$new_synonym' as synonym - it's already an annotation type in the database";
                 $messageType = "danger";
             } else if (!isset($annotation_config['annotation_types'][$type_name]['synonyms'])) {
