@@ -15,9 +15,13 @@ $site = $config->getString('site');
 
 // Load page-specific config
 $usersFile = $config->getPath('users_file');
+$organism_data_path = $config->getPath('organism_data');
 
 // Handle standard AJAX fix permissions request
 handleAdminAjax();
+
+// Load organisms for access control
+$organisms = getOrganismsWithAssemblies($organism_data_path);
 
 $users = [];
 $file_write_error = null;
@@ -156,8 +160,23 @@ $data = [
     'file_write_error' => $file_write_error,
     'message' => $message,
     'messageType' => $messageType,
+    'organisms' => $organisms,
     'config' => $config,
     'page_script' => '/' . $site . '/js/modules/manage-users.js',
+    'inline_scripts' => [
+        "const allOrganisms = " . json_encode($organisms) . ";",
+        "const allUsers = " . json_encode($users) . ";",
+        "const colors = ['#007bff', '#28a745', '#17a2b8', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#20c997', '#e83e8c', '#6610f2'];",
+        "const organismColorMap = {};",
+        "let nextColorIndex = 0;",
+        "function getColorForOrganism(organism) {",
+        "  if (!organismColorMap[organism]) {",
+        "    organismColorMap[organism] = colors[nextColorIndex % colors.length];",
+        "    nextColorIndex++;",
+        "  }",
+        "  return organismColorMap[organism];",
+        "}"
+    ]
 ];
 
 // Render page using layout system
