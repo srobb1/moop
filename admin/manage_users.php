@@ -221,7 +221,10 @@ $data = [
     'messageType' => $messageType,
     'stale_entries_audit' => $stale_entries_audit,
     'config' => $config,
-    'page_script' => '/' . $site . '/js/modules/manage-users.js',
+    'page_script' => [
+        '/' . $site . '/js/admin-utilities.js',
+        '/' . $site . '/js/modules/manage-users.js'
+    ],
     'inline_scripts' => [
         "const allOrganisms = " . json_encode($organisms) . ";",
         "const allUsers = " . json_encode($users) . ";",

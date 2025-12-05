@@ -370,6 +370,7 @@ $data = [
     ],
     'page_script' => [
         'https://code.jquery.com/ui/1.14.0/jquery-ui.min.js',
+        '/' . $site . '/js/admin-utilities.js',
         '/' . $site . '/js/modules/manage-annotations.js'
     ],
 ];

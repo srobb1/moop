@@ -265,7 +265,10 @@ $data = [
     'stale_entries' => $stale_entries,
     'existing_groups' => $all_existing_groups,
     'config' => $config,
-    'page_script' => '/' . $site . '/js/modules/manage-groups.js',
+    'page_script' => [
+        '/' . $site . '/js/admin-utilities.js',
+        '/' . $site . '/js/modules/manage-groups.js'
+    ],
     'inline_scripts' => [
         "const sitePath = '/" . $site . "';",
         "const isDescFileWriteError = " . ($desc_file_write_error ? 'true' : 'false') . ";",
