@@ -17,7 +17,7 @@ let allExpanded = false;
 
 function resetForm() {
   document.getElementById('userForm').reset();
-  document.getElementById('username').disabled = false;
+  document.getElementById('username').readOnly = false;
   document.getElementById('is_create').value = '1';
   document.getElementById('original_username').value = '';
   document.getElementById('form-title').textContent = 'Create New User';
@@ -72,6 +72,7 @@ function renderAssemblySelector() {
       
       // Check if selected
       if (selectedAccess[organism] && selectedAccess[organism].includes(assembly)) {
+        console.log('Marking as selected:', organism, assembly);
         chip.classList.add('selected');
         chip.style.opacity = '1';
       } else {
@@ -186,12 +187,19 @@ function updateHiddenInputs() {
 }
 
 function populateForm(username) {
+  console.log('populateForm called for:', username);
+  console.log('allUsers:', allUsers);
+  console.log('userData:', allUsers[username]);
+  
   const userData = allUsers[username];
-  if (!userData) return;
+  if (!userData) {
+    console.error('User not found:', username);
+    return;
+  }
   
   // Fill basic fields
   document.getElementById('username').value = username;
-  document.getElementById('username').disabled = true;
+  document.getElementById('username').readOnly = true;
   document.getElementById('email').value = userData.email || '';
   document.getElementById('first_name').value = userData.first_name || '';
   document.getElementById('last_name').value = userData.last_name || '';
@@ -216,16 +224,23 @@ function populateForm(username) {
   
   // Build selected assemblies from user data
   selectedAccess = {};
+  console.log('userData.access:', userData.access);
   if (userData.access && typeof userData.access === 'object') {
+    console.log('Building selectedAccess from user data');
     Object.keys(userData.access).forEach(organism => {
+      console.log('Processing organism:', organism, 'assemblies:', userData.access[organism]);
       if (Array.isArray(userData.access[organism])) {
         selectedAccess[organism] = [...userData.access[organism]];
       }
     });
   }
   
+  console.log('selectedAccess:', selectedAccess);
+  
   // Re-render to show selections
+  console.log('Calling renderAssemblySelector');
   renderAssemblySelector();
+  updateHiddenInputs();
   
   // Show stale alert if any
   const staleAssemblies = [];

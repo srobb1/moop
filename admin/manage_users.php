@@ -66,7 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $message = "Username is required.";
             $messageType = "danger";
         } 
-        elseif (isset($_POST['is_create']) && isset($users[$username])) {
+        elseif ($_POST['is_create'] === '1' && isset($users[$username])) {
             $message = "Username already exists.";
             $messageType = "warning";
         }
@@ -76,7 +76,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
         else {
             // Determine if create or update
-            $is_create = isset($_POST['is_create']) || !isset($users[$username]);
+            $is_create = $_POST['is_create'] === '1';
             $original_username = $_POST['original_username'] ?? $username;
 
             if ($is_create) {
