@@ -135,10 +135,10 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width: 60px;">Enabled</th>
-                                        <th style="width: 30%;">Type</th>
-                                        <th style="width: 30%;">Display Label</th>
-                                        <th style="width: 30%;">Badge Color</th>
-                                        <th style="width: 10%;">Pattern</th>
+                                        <th style="width: 22%;">Type</th>
+                                        <th style="width: 22%;">Display Label</th>
+                                        <th style="width: 22%;">Badge Color</th>
+                                        <th style="width: 24%; white-space: nowrap;">Pattern</th>
                                     </tr>
                                 </thead>
                                 <tbody>
