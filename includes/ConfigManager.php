@@ -682,7 +682,7 @@ class ConfigManager
                 'label' => 'Favicon Image',
                 'description' => 'Browser tab icon (32x32 px recommended)',
                 'type' => 'file_upload',
-                'current_value' => $this->getString('favicon_filename', ''),
+                'current_value' => $this->getString('favicon_filename', 'favicon.ico'),
                 'upload_info' => [
                     'destination' => 'images/',
                     'recommended_dimensions' => '32 x 32 px',
