@@ -263,11 +263,13 @@ $data = [
     'descriptions_data' => $descriptions_data,
     'unrepresented_organisms' => $unrepresented_organisms,
     'stale_entries' => $stale_entries,
+    'existing_groups' => $all_existing_groups,
     'config' => $config,
     'page_script' => '/' . $site . '/js/modules/manage-groups.js',
     'inline_scripts' => [
         "const sitePath = '/" . $site . "';",
-        "const isDescFileWriteError = " . ($desc_file_write_error ? 'true' : 'false') . ";"
+        "const isDescFileWriteError = " . ($desc_file_write_error ? 'true' : 'false') . ";",
+        "const existingGroups = " . json_encode($all_existing_groups) . ";"
     ]
 ];
 
