@@ -1,12 +1,382 @@
 =============================================================================
-MOOP - PHASE 2: MANAGE USERS REDESIGN - COMPLETE & PRODUCTION READY
+MOOP - ONGOING ADMIN SYSTEM REFINEMENT & BUGFIXES
 =============================================================================
 
-DATE: December 5, 2025
-STATUS: ✅ COMPLETE & TESTED
+DATE: December 5, 2025 (EXTENDED Session - Major Milestone Reached)
+STATUS: ✅ IN PROGRESS - Multiple Admin Tools Refined + System Improvements
 
 =============================================================================
-FINAL TESTING RESULTS
+TODAY'S MAJOR ACCOMPLISHMENTS
+=============================================================================
+
+✅ MANAGE_USERS COMPLETE REDESIGN (From modal-based to form-based UI)
+   - Hybrid approach: form above, users table below
+   - Create user section with assembly selector
+   - Selected assemblies preview (real-time badges)
+   - Existing users table with sorting/pagination
+   - Edit/delete functionality
+   - Stale assemblies management & audit section
+   - All tested and working
+
+✅ SYSTEM PERMISSIONS ENHANCEMENTS
+   - Added subdirectory permission checks for organism directories
+   - Only displays problematic directories (not all)
+   - Clear fix command: chmod -R 2775 /organisms
+   - Integrated into Organism Data Directories section
+   - Helps admins debug rename/move issues
+
+✅ ASSEMBLY MANAGEMENT IN ORGANISMS
+   - Added delete assembly directory button to modal
+   - Clear warning about what's being deleted
+   - Integrated with existing orphaned directory delete
+   - Tested and working
+
+✅ SEARCH FUNCTIONALITY RESTORED
+   - Fixed groups.php search (was showing "searching undefined")
+   - Fixed data passing to search handler
+   - Groups page search fully functional
+   - Key feature of MOOP restored
+
+✅ CODE CLEANUP
+   - Removed HTML comments from organism management page
+   - Cleaned up backwards compatibility notes
+
+=============================================================================
+FINAL TESTING RESULTS - MANAGE_USERS
+=============================================================================
+
+✅ CREATE NEW USER - WORKS
+   - Form clears, username editable
+   - Password required
+   - Assembly selection required (unless admin)
+   - Preview badges show selections in real-time
+   - Submit creates user in users.json
+
+✅ EDIT EXISTING USER - WORKS
+   - Click Edit button on table
+   - Form populates with user data
+   - Username read-only (but submitted via POST)
+   - Can modify all fields
+   - Can add/remove assemblies
+   - Preview shows current assemblies
+   - Stale assemblies shown if any
+   - Submit updates users.json
+
+✅ DELETE USER - WORKS
+   - Click Delete button
+   - Confirm dialog
+   - User removed from users.json
+   - Table refreshes
+
+✅ ASSEMBLY PREVIEW - WORKS
+   - Real-time badges as you select/deselect
+   - Color-coded by organism
+   - Individual X buttons to remove from preview
+   - Sorted by organism name
+   - Empty state with helpful message
+
+✅ STALE ASSEMBLIES - WORKS
+   - Inline alert when editing user with stale entries
+   - Individual remove buttons
+   - Separate audit section at bottom
+   - Collapsible (hidden by default)
+   - Bulk "Remove from All" operations
+
+✅ DATA TABLE - WORKS
+   - Sorting on all columns
+   - Pagination (10 per page)
+   - Assembly count display
+   - Stale count badge
+
+✅ FORM VALIDATION - WORKS
+   - Requires >= 1 assembly (unless admin)
+   - Admin checkbox hides assembly selection
+   - Prevents invalid submission
+
+✅ ABOUT SECTION - WORKS
+   - Collapsed by default
+   - Opens/closes smoothly
+   - Chevron rotates properly
+   - Matches manage_organisms behavior
+
+=============================================================================
+FEATURES IMPLEMENTED IN MANAGE_USERS
+=============================================================================
+
+1. FORM-BASED UI (No Modals)
+   - Single form for create and edit
+   - Context-aware button ("Create User" / "Update User")
+   - Smooth transitions between modes
+   - Clear form button to reset
+
+2. SELECTED ASSEMBLIES PREVIEW
+   - Live preview of selections
+   - Color-coded badges (by organism)
+   - Quick remove buttons on each badge
+   - Empty state message
+   - Disabled for admin users
+
+3. COLLAPSIBLE ORGANISM SELECTION
+   - Compact design scales to 100+ organisms
+   - Search/filter functionality
+   - Expand All / Collapse All buttons
+   - Auto-expand when filtering
+   - Color-coded tags
+
+4. STALE ASSEMBLIES MANAGEMENT
+   - Inline alert in edit mode
+   - Individual removal
+   - Bulk removal across all users
+   - Clear visual distinction
+   - Separate audit section
+
+5. EXISTING USERS TABLE
+   - DataTable with sorting & pagination
+   - Username | Email | Name | # Assemblies | Stale ⚠️ | Actions
+   - Edit & Delete buttons
+   - Assembly count badge
+   - Stale warning badge
+
+6. VALIDATION & SECURITY
+   - Required field validation
+   - Min 1 assembly requirement (unless admin)
+   - Admin grants full access
+   - Password hashing (bcrypt)
+   - Optional password on edit
+
+7. ABOUT SECTION
+   - Collapsed by default
+   - Comprehensive documentation
+   - Explains two access models
+   - Lists all operations available
+
+=============================================================================
+KEY TECHNICAL FIXES APPLIED (Recent Session)
+=============================================================================
+
+1. Assembly Rendering
+   - Fixed: renderAssemblySelector called before DOM ready
+   - Solution: Moved to DOMContentLoaded event
+
+2. Data Structure Alignment
+   - Changed from 'groups' to 'access' to match existing JSON
+   - Maintained backward compatibility with existing users
+
+3. Edit Form Submission
+   - Fixed: Username field not sent (was using disabled)
+   - Solution: Changed to readOnly attribute
+   - Fixed: is_create validation not checking value
+   - Solution: Changed to $_POST['is_create'] === '1'
+
+4. Assembly Preview
+   - Added: Real-time selected assemblies display
+   - Shows: Color-coded badges with remove buttons
+   - Updates: On every selection change
+   - Integrates: With main assembly selector
+
+5. DataTable Integration
+   - Added: Sorting and pagination
+   - Configured: Actions column non-sortable
+   - Set: 10 rows per page
+
+6. Collapse Handler Fix
+   - Fixed: Chevron behavior to match manage_organisms
+   - Removed: Problematic chevron toggle logic
+   - Solution: Use universal collapse handler pattern
+   - Result: Clean, consistent UI across admin pages
+
+=============================================================================
+FILES MODIFIED THIS SESSION
+=============================================================================
+
+admin/manage_users.php
+   - Form handling (create vs update)
+   - POST processing with validation
+   - Stale assembly detection
+   - Data passing to content file
+
+admin/pages/manage_users.php
+   - Complete UI redesign
+   - Form at top (create/edit)
+   - Users table with sorting
+   - Selected assemblies preview
+   - Stale audit section at bottom
+   - About/help section (collapsed by default)
+
+js/modules/manage-users.js
+   - Form population & reset
+   - Assembly selector rendering
+   - Preview badge generation
+   - Edit/Delete button handlers
+   - Form validation
+   - DataTable initialization
+   - Universal collapse handler
+   - Filter & expand/collapse logic
+
+admin/filesystem_permissions.php
+   - Added subdirectory permission checks
+   - Enhanced display of permission issues
+   - Clear fix commands with sudo
+
+admin/manage_organisms.php
+   - Added delete assembly directory button
+   - Clear warnings about deletions
+
+admin/manage_groups.php
+   - Fixed search functionality
+
+=============================================================================
+DATA STRUCTURE - users.json
+=============================================================================
+
+{
+  "username": {
+    "password": "$2y$10$...",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "account_host": "Lab Name",
+    "access": {
+      "Organism1": ["assembly1", "assembly2"],
+      "Organism2": ["assembly3"]
+    },
+    "role": "user|admin"
+  }
+}
+
+NOTES:
+- Admin users have role="admin", empty access []
+- Regular users have role="user", must have >= 1 assembly
+- access is organism → assembly array mapping
+- password is bcrypt hashed
+- All fields optional except username and password (on create)
+
+=============================================================================
+ADMIN TOOLS STATUS - COMPLETE OVERVIEW
+=============================================================================
+
+COMPLETED & PRODUCTION-READY:
+  ✅ manage_organisms.php - Full clean architecture (tested)
+  ✅ manage_groups.php - Full clean architecture (tested)
+  ✅ manage_users.php - Full clean architecture (tested today)
+  ✅ error_log.php - Clean architecture
+  ✅ filesystem_permissions.php - Enhanced with subdirectory checks (tested)
+
+PARTIALLY REFACTORED:
+  ⏳ manage_annotations.php - Wrapper & content split, needs verification
+
+NOT YET REFACTORED:
+  [ ] manage_registry.php - ~400 lines
+  [ ] manage_taxonomy_tree.php - ~400 lines
+  [ ] manage_site_config.php - 1074 lines (defer - very complex)
+  [ ] admin.php - Dashboard (do last)
+  [ ] convert_groups.php - Legacy tool
+  [ ] debug_permissions.php - Already exists
+
+=============================================================================
+NEXT PHASE - PRIORITY ORDER
+=============================================================================
+
+PHASE 2 (Immediate - ~1-2 hours each):
+  1. manage_annotations.php - Verify partial refactoring, complete if needed
+  2. manage_registry.php - Analyze and refactor
+  3. manage_taxonomy_tree.php - Analyze and refactor
+
+PHASE 3 (Deferred - Complex):
+  4. manage_site_config.php - Large refactoring (1074 lines, multiple sections)
+
+PHASE 4 (Final):
+  5. admin.php - Dashboard (depends on all others working)
+
+FUTURE:
+  - Public page conversion to clean architecture
+  - Full system testing
+  - Performance optimization
+  - Bulk operations and audit logging
+
+=============================================================================
+USERS.JSON BACKUP STATUS
+=============================================================================
+
+Created backups at multiple checkpoints during refactoring:
+- manage_users.php.bak2 - Pre-redesign state
+- manage_users.phpBAK - Earlier state
+
+All operations tested and validated before proceeding.
+
+=============================================================================
+COMMIT SUMMARY (This Extended Session)
+=============================================================================
+
+Multiple commits made to track progress:
+- manage_users complete redesign
+- System permissions enhancements
+- Assembly management improvements
+- Search functionality restoration
+- Code cleanup
+
+All commits are incremental and reversible if needed.
+
+=============================================================================
+KNOWN LIMITATIONS & FUTURE IMPROVEMENTS
+=============================================================================
+
+1. Password Security
+   - Passwords visible in form (consider: masked input)
+   - Consider: Password strength validation
+   - Consider: Show/hide toggle
+
+2. Bulk Operations
+   - Could add: "Grant organism X to all users"
+   - Could add: "Remove organism X from all users"
+   - Could add: "Bulk create users" (CSV import)
+
+3. UI Enhancements
+   - Could add: Tooltips on each field
+   - Could add: Confirmation dialogs
+   - Could add: Recent users list
+
+4. Audit Trail
+   - Could add: Log of user modifications
+   - Could add: Who edited, when, what changed
+
+5. Export/Import
+   - Could add: Export users as CSV
+   - Could add: Bulk import
+
+=============================================================================
+NEXT SESSION - QUICK START
+=============================================================================
+
+To continue, you have 3 options:
+
+OPTION 1: Complete manage_annotations.php
+   - It's already partially refactored
+   - Just needs verification and any final tweaks
+   - Fastest path (highest priority)
+
+OPTION 2: Start manage_registry.php
+   - Medium complexity
+   - ~400 lines, no UI split yet
+   - Similar refactoring pattern to previous tools
+
+OPTION 3: Start manage_taxonomy_tree.php
+   - Medium complexity
+   - ~400 lines, likely hierarchical UI
+   - May have special UI considerations
+
+AVOID FOR NOW:
+   - manage_site_config.php is too complex to rush
+   - admin.php should be done last
+
+All the refactored admin tools follow the same clean architecture pattern:
+1. Wrapper processes POST data
+2. Content file in pages/ handles UI/display
+3. JavaScript module handles interactions
+4. Universal patterns (collapse handler, etc.) already established
+
+=============================================================================
+END OF EXTENDED SESSION SUMMARY
 =============================================================================
 
 ✅ CREATE NEW USER - WORKS
@@ -304,18 +674,75 @@ KNOWN LIMITATIONS & FUTURE IMPROVEMENTS
    - Could add: Bulk user import
 
 =============================================================================
-NEXT PHASE
+NEXT PHASE - ADMIN TOOLS REMAINING
 =============================================================================
 
-Phase 2 Remaining:
-- [ ] manage_site_config.php - Redesign with clean architecture
-- [ ] manage_annotations.php - Complete redesign (currently basic)
+Phase 2 Remaining (5 tools):
+- [ ] manage_site_config.php - 1074 lines, complex (lower priority - complex)
+- [ ] manage_annotations.php - 520 lines, UI partially split (HIGH PRIORITY)
+- [ ] manage_registry.php - ~400 lines (check after annotations)
+- [ ] manage_taxonomy_tree.php - ~400 lines (check after registry)
+- [ ] admin.php - Main dashboard (depends on other tools working)
+
+Additional Admin Tools:
+- [ ] convert_groups.php - Legacy conversion tool
+- [ ] debug_permissions.php - Already exists & enhanced
+- [ ] DEVELOPER_GUIDE.md - Already in admin folder
 
 Phase 3 (Future):
 - [ ] Convert remaining admin pages
 - [ ] Convert public pages to clean architecture
 - [ ] Full system testing
 - [ ] Performance optimization
+
+=============================================================================
+TODAY'S ADDITIONAL FIXES (Latest Session)
+=============================================================================
+
+✅ SYSTEM PERMISSIONS IMPROVEMENTS:
+   - Added subdirectory permission checks for organisms
+   - Only displays problematic directories (not all)
+   - Clear fix command with sudo (chmod -R 2775)
+   - Integrated into Organism Data Directories section
+   - Helps admins debug rename/move permission issues
+
+✅ ASSEMBLY MANAGEMENT ENHANCEMENTS:
+   - Added delete assembly directory button to modal
+   - Clear warning about what's being deleted
+   - Integrated with existing orphaned directory delete
+   - Separate option for synced assemblies
+
+✅ SEARCH FUNCTIONALITY:
+   - Fixed groups.php search (was showing "searching undefined")
+   - Fixed data passing to search handler
+   - Groups page search now fully functional
+   - Key feature of MOOP restored
+
+✅ CODE CLEANUP:
+   - Removed HTML comments from organism management page
+   - Cleaned up backwards compatibility notes
+
+=============================================================================
+ADMIN TOOLS STATUS
+=============================================================================
+
+COMPLETED & TESTED:
+  ✅ manage_organisms.php - Full clean architecture
+  ✅ manage_groups.php - Full clean architecture  
+  ✅ manage_users.php - Full clean architecture (today)
+  ✅ error_log.php - Clean architecture
+  ✅ filesystem_permissions.php - Enhanced with subdirectory checks
+
+IN PROGRESS:
+  ⏳ manage_site_config.php - Next priority
+  ⏳ manage_annotations.php - After config
+
+NOT YET STARTED:
+  [ ] admin.php - Admin dashboard
+  [ ] manage_taxonomy_tree.php
+  [ ] manage_registry.php
+  [ ] convert_groups.php
+  [ ] debug_permissions.php
 
 =============================================================================
 NOTES FOR NEXT SESSION
@@ -329,6 +756,14 @@ keep the system clean.
 
 Key patterns used here (universal collapse handler, form population,
 preview badges, etc.) can be reused in manage_site_config.php redesign.
+
+System permissions management is now more robust with targeted subdirectory
+checks that don't overwhelm admins with output. Only shows actual problems.
+
+Assembly management in organism page now includes delete capability with
+clear warnings about what's being deleted.
+
+Search functionality across MOOP pages is now fully restored and tested.
 
 =============================================================================
 END OF SESSION SUMMARY
