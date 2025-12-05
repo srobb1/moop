@@ -42,3 +42,5 @@
         });
     });
 })();
+
+console.log('admin-utilities.js loaded');

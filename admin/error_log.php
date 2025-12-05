@@ -14,6 +14,7 @@ include_once __DIR__ . '/../includes/layout.php';
 
 // Get config
 $siteTitle = $config->getString('siteTitle');
+$site = $config->getString('site');
 
 // Handle clear log action
 $cleared = false;
@@ -85,7 +86,7 @@ $data = [
     'filter_type' => $filter_type,
     'filter_organism' => $filter_organism,
     'filter_search' => $filter_search,
-    'page_script' => '/' . $config->getString('site') . '/js/admin-utilities.js',
+    'page_script' => '/' . $site . '/js/admin-utilities.js',
 ];
 
 // Render page using layout system

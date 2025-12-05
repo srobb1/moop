@@ -417,6 +417,62 @@ function deleteAssemblyDirectory(event, organism, safeAsmId) {
     });
 }
 
+function deleteCurrentAssemblyDirectory(event, organism, safeAsmId) {
+    event.preventDefault();
+    
+    // Get the current assembly name from the modal title or data attribute
+    const modalElement = document.getElementById('asmModal' + safeAsmId);
+    const assemblyName = modalElement ? modalElement.getAttribute('data-assembly-name') : null;
+    
+    if (!assemblyName) {
+        alert('Unable to determine assembly directory name');
+        return;
+    }
+    
+    if (!confirm('⚠️  CAUTION: You are about to permanently delete the assembly directory "' + assemblyName + '" for organism "' + organism + '".\n\nThis action CANNOT be undone!\n\nAre you absolutely sure you want to continue?')) {
+        return;
+    }
+    
+    const button = event.target.closest('button');
+    button.disabled = true;
+    button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Deleting...';
+    
+    fetch('manage_organisms.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: 'action=delete_assembly&organism=' + encodeURIComponent(organism) + 
+              '&dir_name=' + encodeURIComponent(assemblyName)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Assembly directory deleted successfully! The modal will close.');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+            // Refresh the page after a short delay to show updated list
+            setTimeout(() => location.reload(), 500);
+        } else {
+            button.disabled = false;
+            button.innerHTML = '<i class="fa fa-trash-alt"></i> Delete Assembly Directory';
+            
+            let message = data.message || 'Unknown error';
+            if (data.command) {
+                message += '\n\nWeb server lacks permissions. Run this command on the server:\n' + data.command;
+            }
+            alert('❌ Deletion failed!\n\n' + message);
+        }
+    })
+    .catch(error => {
+        button.disabled = false;
+        button.innerHTML = '<i class="fa fa-trash-alt"></i> Delete Assembly Directory';
+        alert('Error: ' + error);
+    });
+}
+
 function addFeatureTag(organism, type) {
     const inputId = type + '-feature-input-' + organism;
     const containerId = type + '-features-' + organism;
