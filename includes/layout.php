@@ -92,7 +92,7 @@
  * @param array $data Data to make available to content file as variables
  *                     Optional keys:
  *                     - 'page_styles' (array) - Additional CSS files: ['/moop/css/custom.css', '/moop/css/other.css']
- *                     - 'page_script' (string) - Page-specific JS file to load after libraries
+ *                     - 'page_script' (string|array) - Page-specific JS file(s): '/moop/js/script.js' or ['/moop/js/script1.js', '/moop/js/script2.js']
  *                     - 'inline_scripts' (array) - JS code to execute inline (variables, init)
  * @param string $title HTML page title (shown in browser tab)
  * @return string Complete HTML page ready to output
@@ -199,18 +199,23 @@ function render_display_page($content_file, $data = [], $title = '') {
         }
         ?>
         
-        <!-- Page-specific script file
+        <!-- Page-specific script file(s)
              
              HOW TO USE page_script:
              
              1. PASSING page_script TO render_display_page():
                 - Add 'page_script' key to the $data array passed to render_display_page()
-                - Value should be absolute web path: '/moop/js/my-script.js' or '/' . $site . '/js/my-script.js'
+                - Value can be a STRING or ARRAY:
+                  * String: '/moop/js/my-script.js'
+                  * Array: ['/moop/js/jquery-ui.js', '/moop/js/my-script.js']
                 
-                Example in admin/error_log.php:
+                Example in admin/manage_annotations.php:
                     $data = [
-                        'errors' => $errors,
-                        'page_script' => '/' . $config->getString('site') . '/js/admin-utilities.js',
+                        'annotations' => $annotations,
+                        'page_script' => [
+                            '/' . $config->getString('site') . '/js/jquery-ui.min.js',
+                            '/' . $config->getString('site') . '/js/modules/manage-annotations.js'
+                        ],
                     ];
              
              2. WHAT page_script IS USED FOR:
@@ -224,7 +229,7 @@ function render_display_page($content_file, $data = [], $title = '') {
                 2. Navbar HTML
                 3. Content file HTML (main page content)
                 4. inline_scripts (global vars like sitePath, inline handlers)
-                5. page_script (page-specific JS module) ← YOU ARE HERE
+                5. page_script (page-specific JS module(s)) ← YOU ARE HERE
                 6. Footer
              
              4. ACCESSING VARIABLES FROM inline_scripts:
@@ -242,7 +247,11 @@ function render_display_page($content_file, $data = [], $title = '') {
         -->
         <?php
         if (isset($page_script)) {
-            echo '<script src="' . htmlspecialchars($page_script) . '"></script>' . "\n";
+            // Handle both string and array
+            $scripts = is_array($page_script) ? $page_script : [$page_script];
+            foreach ($scripts as $script) {
+                echo '<script src="' . htmlspecialchars($script) . '"></script>' . "\n";
+            }
         }
         ?>
     </body>

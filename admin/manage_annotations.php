@@ -358,7 +358,17 @@ $data = [
     'message' => $message,
     'messageType' => $messageType,
     'config' => $config,
-    'page_script' => '/' . $site . '/js/modules/manage-annotations.js',
+    'page_styles' => [
+        'https://code.jquery.com/ui/1.14.0/themes/base/jquery-ui.css'
+    ],
+    'inline_scripts' => [
+        "window.allSections = " . json_encode($annotation_config['analysis_order']) . ";",
+        "window.originalOrder = [...window.allSections];"
+    ],
+    'page_script' => [
+        'https://code.jquery.com/ui/1.14.0/jquery-ui.min.js',
+        '/' . $site . '/js/modules/manage-annotations.js'
+    ],
 ];
 
 // Render page using layout system

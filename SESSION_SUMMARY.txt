@@ -730,19 +730,18 @@ COMPLETED & TESTED:
   ✅ manage_organisms.php - Full clean architecture
   ✅ manage_groups.php - Full clean architecture  
   ✅ manage_users.php - Full clean architecture (today)
+  ✅ manage_annotations.php - Fixed collapse handler & chevron (today)
   ✅ error_log.php - Clean architecture
   ✅ filesystem_permissions.php - Enhanced with subdirectory checks
 
-IN PROGRESS:
-  ⏳ manage_site_config.php - Next priority
-  ⏳ manage_annotations.php - After config
+NEXT PHASE (Priority Order):
+  1. manage_registry.php - ~400 lines
+  2. manage_taxonomy_tree.php - ~400 lines  
+  3. manage_site_config.php - 1074 lines (complex - lower priority)
+  4. admin.php - Admin dashboard (final)
 
 NOT YET STARTED:
-  [ ] admin.php - Admin dashboard
-  [ ] manage_taxonomy_tree.php
-  [ ] manage_registry.php
-  [ ] convert_groups.php
-  [ ] debug_permissions.php
+  [ ] convert_groups.php - Legacy tool
 
 =============================================================================
 NOTES FOR NEXT SESSION
