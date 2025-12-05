@@ -232,6 +232,29 @@ foreach ($permission_items as $item) {
     }
 }
 
+// Check assembly subdirectories for rename/move permission issues
+$assembly_subdir_issues = [];
+if (is_dir($organism_data)) {
+    foreach (scandir($organism_data) as $organism) {
+        if ($organism !== '.' && $organism !== '..' && is_dir($organism_data . '/' . $organism)) {
+            $subdir_path = $organism_data . '/' . $organism;
+            $check = performPermissionCheck($subdir_path, [
+                'name' => 'Assembly Subdirectory',
+                'type' => 'directory',
+                'required_perms' => '2775',
+                'required_group' => 'www-data',
+                'reason' => 'SGID required for assembly rename operations',
+                'why_write' => 'Web server needs to rename/move assembly subdirectories',
+            ]);
+            
+            // Only include in report if there are issues
+            if (!empty($check['issues'])) {
+                $assembly_subdir_issues[] = $check;
+            }
+        }
+    }
+}
+
 function performPermissionCheck($path, $item) {
     $result = [
         'name' => $item['name'],
@@ -472,13 +495,24 @@ function performPermissionCheck($path, $item) {
     </div>
 
     <!-- Quick Fixes for Common Issues -->
-    <div class="card mb-4 border-warning">
-        <div class="card-header bg-warning bg-opacity-10">
-            <h5 class="mb-0"><i class="fa fa-wrench"></i> Quick Fixes for Assembly Directories</h5>
+    <?php if (!empty($assembly_subdir_issues)): ?>
+    <div class="card mb-4 border-danger">
+        <div class="card-header bg-danger bg-opacity-10">
+            <h5 class="mb-0"><i class="fa fa-exclamation-circle text-danger"></i> ⚠️ Assembly Directory Permissions Issue Detected</h5>
         </div>
         <div class="card-body">
-            <p><strong>⚠️ Assembly directories need SGID (2775) for web server to rename/move assemblies.</strong></p>
-            <p>If you're getting "permission denied" errors when trying to rename assembly directories in the admin interface, run this command on the server:</p>
+            <p><strong>The following assembly subdirectories have incorrect permissions and need to be fixed:</strong></p>
+            
+            <div class="mb-3">
+                <?php foreach ($assembly_subdir_issues as $issue): ?>
+                <div class="alert alert-warning mb-2">
+                    <strong><?= htmlspecialchars($issue['path']) ?></strong><br>
+                    <small>Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>) | Required: 2775 (group: www-data)</small>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <p><strong>Run this command on the server to fix all assembly directories:</strong></p>
             
             <div class="fix-command">
                 chmod -R 2775 <?= htmlspecialchars($organism_data) ?><br>
@@ -490,9 +524,20 @@ function performPermissionCheck($path, $item) {
                 <li>Sets all organism directories to 2775 (rwxrwsr-x) - with SGID bit</li>
                 <li>Ensures all directories have www-data as the group</li>
                 <li>Applies to ALL assembly subdirectories recursively</li>
+                <li>After running, refresh this page to verify the fix</li>
             </ul>
         </div>
     </div>
+    <?php else: ?>
+    <div class="card mb-4 border-success">
+        <div class="card-header bg-success bg-opacity-10">
+            <h5 class="mb-0"><i class="fa fa-check-circle text-success"></i> Assembly Directory Permissions</h5>
+        </div>
+        <div class="card-body">
+            <p class="mb-0"><strong>✓ All assembly subdirectories have correct permissions (2775) for rename/move operations.</strong></p>
+        </div>
+    </div>
+    <?php endif; ?>
 
         <!-- Detailed Permission Groups -->
     <?php
