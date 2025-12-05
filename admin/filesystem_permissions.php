@@ -494,50 +494,6 @@ function performPermissionCheck($path, $item) {
         </div>
     </div>
 
-    <!-- Quick Fixes for Common Issues -->
-    <?php if (!empty($assembly_subdir_issues)): ?>
-    <div class="card mb-4 border-danger">
-        <div class="card-header bg-danger bg-opacity-10">
-            <h5 class="mb-0"><i class="fa fa-exclamation-circle text-danger"></i> ⚠️ Assembly Directory Permissions Issue Detected</h5>
-        </div>
-        <div class="card-body">
-            <p><strong>The following assembly subdirectories have incorrect permissions and need to be fixed:</strong></p>
-            
-            <div class="mb-3">
-                <?php foreach ($assembly_subdir_issues as $issue): ?>
-                <div class="alert alert-warning mb-2">
-                    <strong><?= htmlspecialchars($issue['path']) ?></strong><br>
-                    <small>Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>) | Required: 2775 (group: www-data)</small>
-                </div>
-                <?php endforeach; ?>
-            </div>
-            
-            <p><strong>Run this command on the server to fix all assembly directories:</strong></p>
-            
-            <div class="fix-command">
-                chmod -R 2775 <?= htmlspecialchars($organism_data) ?><br>
-                chgrp -R www-data <?= htmlspecialchars($organism_data) ?>
-            </div>
-            
-            <p class="small text-muted mb-0"><strong>What this does:</strong></p>
-            <ul class="small text-muted">
-                <li>Sets all organism directories to 2775 (rwxrwsr-x) - with SGID bit</li>
-                <li>Ensures all directories have www-data as the group</li>
-                <li>Applies to ALL assembly subdirectories recursively</li>
-                <li>After running, refresh this page to verify the fix</li>
-            </ul>
-        </div>
-    </div>
-    <?php else: ?>
-    <div class="card mb-4 border-success">
-        <div class="card-header bg-success bg-opacity-10">
-            <h5 class="mb-0"><i class="fa fa-check-circle text-success"></i> Assembly Directory Permissions</h5>
-        </div>
-        <div class="card-body">
-            <p class="mb-0"><strong>✓ All assembly subdirectories have correct permissions (2775) for rename/move operations.</strong></p>
-        </div>
-    </div>
-    <?php endif; ?>
 
         <!-- Detailed Permission Groups -->
     <?php
@@ -649,6 +605,31 @@ function performPermissionCheck($path, $item) {
             <?php endif; ?>
             <?php endforeach; ?>
         </div>
+        
+        <!-- Assembly Subdirectory Check -->
+        <?php if ($group_name === 'Organism Data Directories'): ?>
+        <div class="card-footer bg-light">
+            <?php if (!empty($assembly_subdir_issues)): ?>
+            <h6 class="mb-3"><i class="fa fa-folder"></i> Assembly Subdirectories</h6>
+            <p class="text-danger mb-3"><strong>⚠️ Some assembly subdirectories have permission issues:</strong></p>
+            <div class="mb-3">
+                <?php foreach ($assembly_subdir_issues as $issue): ?>
+                <div class="alert alert-warning mb-2">
+                    <strong><?= htmlspecialchars($issue['path']) ?></strong><br>
+                    <small>Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>) | Required: 2775 (group: www-data)</small>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <p class="mb-2"><strong>To fix all assembly directories, run:</strong></p>
+            <div class="fix-command">
+                chmod -R 2775 <?= htmlspecialchars($organism_data) ?><br>
+                chgrp -R www-data <?= htmlspecialchars($organism_data) ?>
+            </div>
+            <?php else: ?>
+            <p class="mb-0 text-success"><strong><i class="fa fa-check-circle"></i> ✓ All assembly subdirectories have correct permissions (2775) for rename/move operations.</strong></p>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
     </div>
     <?php endforeach; ?>
     
