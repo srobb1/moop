@@ -31,12 +31,5 @@
             "Bats",
             "New"
         ]
-    },
-    {
-        "organism": "Anoura_caudifer",
-        "assembly": "test",
-        "groups": [
-            "New"
-        ]
     }
 ]
