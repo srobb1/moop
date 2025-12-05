@@ -622,8 +622,8 @@ function performPermissionCheck($path, $item) {
             </div>
             <p class="mb-2"><strong>To fix all assembly directories, run:</strong></p>
             <div class="fix-command">
-                chmod -R 2775 <?= htmlspecialchars($organism_data) ?><br>
-                chgrp -R www-data <?= htmlspecialchars($organism_data) ?>
+                sudo chmod -R 2775 <?= htmlspecialchars($organism_data) ?><br>
+                sudo chgrp -R www-data <?= htmlspecialchars($organism_data) ?>
             </div>
             <?php else: ?>
             <p class="mb-0 text-success"><strong><i class="fa fa-check-circle"></i> ✓ All assembly subdirectories have correct permissions (2775) for rename/move operations.</strong></p>
