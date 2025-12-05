@@ -223,8 +223,20 @@
                     <?php if (!empty($fasta_files)): ?>
                       <div class="mt-3 pt-2 border-top">
                         <?php foreach ($fasta_files as $type => $file_info): ?>
+                          <?php 
+                            $color = $file_info['color'] ?? 'btn-secondary';
+                            $style = '';
+                            // Check if it's a hex color
+                            if (preg_match('/^#[0-9a-f]{3}([0-9a-f]{3})?$/i', $color)) {
+                              $style = 'style="background-color: ' . htmlspecialchars($color) . '; border-color: ' . htmlspecialchars($color) . ';"';
+                              $color = '';
+                            } else {
+                              $color = htmlspecialchars($color);
+                            }
+                          ?>
                           <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>&type=<?= urlencode($type) ?>" 
-                             class="btn btn-sm <?= htmlspecialchars($file_info['color']) ?> w-100 mb-2"
+                             class="btn btn-sm <?= $color ?> w-100 mb-2 text-white"
+                             <?= $style ?>
                              download>
                             <i class="fa fa-download"></i> <?= htmlspecialchars($file_info['label']) ?>
                           </a>

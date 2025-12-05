@@ -150,10 +150,21 @@
           <h3 class="card-title mb-4"><i class="fa fa-download"></i> Download Sequence Files</h3>
           <div class="row g-3">
             <?php foreach ($fasta_files as $type => $file_info): ?>
+              <?php 
+                $color = $file_info['color'] ?? 'btn-secondary';
+                $style = '';
+                // Check if it's a hex color
+                if (preg_match('/^#[0-9a-f]{3}([0-9a-f]{3})?$/i', $color)) {
+                  $style = 'background-color: ' . htmlspecialchars($color) . '; border-color: ' . htmlspecialchars($color) . ';';
+                  $color = '';
+                } else {
+                  $color = htmlspecialchars($color);
+                }
+              ?>
               <div class="col-6 col-md-3">
                 <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&type=<?= urlencode($type) ?>" 
-                   class="btn <?= htmlspecialchars($file_info['color']) ?> w-100 py-4 fw-bold"
-                   style="border-radius: 0.75rem; font-size: 1rem;"
+                   class="btn <?= $color ?> w-100 py-4 fw-bold text-white"
+                   style="border-radius: 0.75rem; font-size: 1rem; <?= $style ?>"
                    download>
                   <i class="fa fa-download me-2"></i><?= htmlspecialchars($file_info['label']) ?>
                 </a>
