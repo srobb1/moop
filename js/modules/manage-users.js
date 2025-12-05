@@ -28,11 +28,19 @@ function resetForm() {
   document.getElementById('stale-items').innerHTML = '';
   isEditMode = false;
   selectedAssemblies = {};
-  renderAssemblySelector();
+  // Don't call renderAssemblySelector here - it will be called after DOM is ready
 }
 
 function renderAssemblySelector() {
+  console.log('renderAssemblySelector called, allOrganisms count:', Object.keys(allOrganisms).length);
   const container = document.getElementById('access-container');
+  console.log('Container found:', !!container);
+  
+  if (!container) {
+    console.error('access-container not found!');
+    return;
+  }
+  
   container.innerHTML = '';
   
   Object.keys(allOrganisms).sort().forEach(organism => {
@@ -266,6 +274,10 @@ function validateForm() {
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('manage-users.js loaded');
+  console.log('allOrganisms:', allOrganisms);
+  console.log('allUsers:', allUsers);
+  
   // Pre-assign colors
   Object.keys(allOrganisms).forEach(org => getColorForOrganism(org));
   
