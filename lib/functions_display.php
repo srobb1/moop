@@ -457,3 +457,38 @@ function generatePermissionAlert($file_path, $title = '', $problem = '', $file_t
     
     return $html;
 }
+
+/**
+ * Convert color value to class or style attribute
+ * 
+ * Handles both Bootstrap CSS classes and custom hex colors.
+ * For hex colors, returns style attribute. For Bootstrap classes, returns class name.
+ * 
+ * TODO: Use this function in other places that display sequence type colors:
+ * - search/results pages that show sequence badges
+ * - any other pages using $file_info['color'] or sequence_types colors
+ * 
+ * @param string $color Color value - either Bootstrap class (bg-info, bg-success) or hex (#FF5733)
+ * @return array ['class' => string, 'style' => string] - one will be empty, other populated
+ */
+function getColorClassOrStyle($color) {
+    $result = [
+        'class' => '',
+        'style' => ''
+    ];
+    
+    if (empty($color)) {
+        $result['class'] = 'btn-secondary';
+        return $result;
+    }
+    
+    // Check if it's a hex color (#RGB or #RRGGBB)
+    if (preg_match('/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', $color)) {
+        $result['style'] = 'background-color: ' . htmlspecialchars($color) . '; border-color: ' . htmlspecialchars($color) . ';';
+    } else {
+        // Treat as Bootstrap class
+        $result['class'] = htmlspecialchars($color);
+    }
+    
+    return $result;
+}
