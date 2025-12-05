@@ -1,0 +1,212 @@
+=============================================================================
+MOOP - PHASE 2: MANAGE USERS REDESIGN - COMPLETE
+=============================================================================
+
+DATE: December 5, 2025
+STATUS: ✅ COMPLETE & TESTED
+
+=============================================================================
+WHAT WAS ACCOMPLISHED
+=============================================================================
+
+PREVIOUS STATE (Before Redesign):
+- Modal-based edit interface (Bootstrap modals)
+- Scattered form elements across page
+- Assembly selection not intuitive for large datasets
+- Stale assemblies difficult to manage
+- Edit button not functional
+
+NEW DESIGN (Completed):
+✅ Form-based UI (no modals)
+   - Single form handles both create and edit
+   - Username read-only when editing
+   - Button context changes: "Create User" ↔ "Update User"
+
+✅ Inline Stale Assemblies Alert
+   - Shows when editing a user with stale entries
+   - Individual remove buttons (X) for each stale assembly
+   - "Remove All Stale" button for bulk removal
+   - Auto-populated from user's access data
+
+✅ Collapsible Organism Selection
+   - Compact layout scales to 100+ organisms
+   - Search/filter for organism names
+   - Expand All / Collapse All buttons
+   - Color-coded tags (filled = active, red outline = stale)
+   - Auto-expands when filtering
+   - Collapse on filter clear
+
+✅ Existing Users Table
+   - Columns: Username | Email | Name | # Assemblies | Stale ⚠️ | Actions
+   - DataTable with sorting and pagination
+   - Badge counts for cleanliness
+   - Edit/Delete buttons per user
+
+✅ Stale Assemblies Audit Section
+   - Shows ALL stale entries across all users
+   - Table: User | Email | Organism | Assembly | Remove | Remove from All
+   - Individual and bulk removal operations
+   - Yellow warning background
+   - Collapsible (hidden by default)
+
+✅ Assembly Validation
+   - Requires >= 1 assembly UNLESS admin
+   - Admin grants automatic full access
+   - Form prevents invalid submission
+
+✅ About Section
+   - Collapsible intro with context
+   - Explains admin vs regular user access models
+
+=============================================================================
+TECHNICAL CHANGES
+=============================================================================
+
+Files Modified:
+1. admin/manage_users.php (Wrapper)
+   - Form handling (create vs update logic)
+   - Stale assembly detection & audit building
+   - POST processing with validation
+   - Data passing to content file via $data array
+
+2. admin/pages/manage_users.php (Content)
+   - Redesigned layout with form at top
+   - Existing users table with HTML
+   - Stale audit section at bottom
+   - Manual collapse handlers (Bootstrap-free)
+
+3. js/modules/manage-users.js (JavaScript)
+   - Form population from URL/table click
+   - Assembly selector rendering & management
+   - Form validation
+   - Edit/Delete button handlers
+   - DataTable initialization
+   - Collapse handlers
+   - Filter logic with auto-expand
+
+Data Structure Changes:
+- Changed from 'groups' to 'access' (array of assemblies user can access)
+- Hidden input names: access[organism][]
+- Maintains compatibility with existing users.json
+
+=============================================================================
+KEY FEATURES
+=============================================================================
+
+1. CREATE USER
+   - Fill form (username, email, name, account host)
+   - Set password
+   - Select at least 1 assembly (or check Admin)
+   - Submit → saved to users.json with assembled access array
+
+2. EDIT USER
+   - Click Edit button on existing user row
+   - Form populates with current data
+   - Username becomes read-only
+   - Button changes to "Update User"
+   - Can modify any field
+   - Can add/remove assemblies
+   - Stale assemblies shown if any
+   - Submit → updates users.json
+
+3. DELETE USER
+   - Click Delete button
+   - Confirm dialog
+   - Removed from users.json
+
+4. MANAGE STALE ASSEMBLIES
+   - When editing: inline alert shows stale entries with remove buttons
+   - Separate audit section shows ALL stale across all users
+   - Individual remove: removes from specific user
+   - Remove from All: removes from ALL users with that stale entry
+
+5. SEARCH & FILTER
+   - Type organism name → filters organisms
+   - Matching organisms auto-expand
+   - Clear filter → all collapse back
+   - Expand All / Collapse All buttons work across visible organisms
+
+=============================================================================
+TESTING PERFORMED
+=============================================================================
+
+✅ Create new user - WORKS
+✅ Edit existing user - WORKS
+✅ Assembly count display - WORKS
+✅ Stale assembly detection - WORKS
+✅ Stale audit section - WORKS & COLLAPSIBLE
+✅ DataTable sorting/pagination - WORKS
+✅ Form validation - WORKS
+✅ Filter & expand/collapse - WORKS
+
+=============================================================================
+DATA STRUCTURE (users.json)
+=============================================================================
+
+{
+  "username": {
+    "password": "hashed_password",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "account_host": "Lab Name",
+    "access": {
+      "Organism1": ["assembly1", "assembly2"],
+      "Organism2": ["assembly3"]
+    },
+    "role": "user" | "admin"
+  }
+}
+
+Admin users:
+- Role = "admin"
+- No specific access needed (auto-grants all)
+- Empty access array [] is fine
+
+Regular users:
+- Role = "user"
+- Must have at least 1 assembly in access
+- access is a map of organism → array of assemblies
+
+=============================================================================
+KNOWN ISSUES / FUTURE IMPROVEMENTS
+=============================================================================
+
+1. Password handling
+   - Create user: password required
+   - Edit user: password optional (leave blank to keep)
+   - Currently plain text in form (should be POST only)
+
+2. Bulk operations
+   - Could add "Remove all access to organism X from all users"
+   - Could add "Grant organism X to all users"
+
+3. UI Polish
+   - Could add tooltips explaining each field
+   - Could add confirmation dialogs for destructive ops
+
+4. Export/Import
+   - Could add CSV export of users
+   - Could add bulk import feature
+
+=============================================================================
+NEXT STEPS
+=============================================================================
+
+1. Confirm all workflows work in production
+2. Test with 100+ organisms (scale test)
+3. Test stale removal with many users
+4. Consider additional improvements above
+5. Move to manage_site_config.php redesign (Phase 2 continues)
+
+=============================================================================
+COMMIT HISTORY
+=============================================================================
+
+760a1f0 - Step 1-2: Redesign manage_users - form-based UI, stale audit section, assembly validation
+c725737 - Fix: Move renderAssemblySelector to DOMContentLoaded, add debug logging
+e1dd02f - Add DataTable initialization for users table with sorting and paging
+707fc45 - Change data structure from 'groups' to 'access' for assemblies user can access
+560a396 - Remove debug console.log statements from manage-users.js
+
+=============================================================================
