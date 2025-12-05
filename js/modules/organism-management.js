@@ -3,6 +3,21 @@
  * Handles database permissions, assembly operations, and metadata editing
  */
 
+/**
+ * Escape HTML special characters (local copy - also in utilities.js, permission-manager.js, sequence-retrieval.js)
+ * TODO: Refactor to load utilities.js as shared module instead of duplicating
+ */
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
 function fixDatabasePermissions(event, organism) {
     event.preventDefault();
     
