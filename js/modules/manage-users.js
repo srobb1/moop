@@ -110,6 +110,47 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
+  // Handle Expand/Collapse All button
+  const toggleAllBtn = document.getElementById('toggle-all-btn');
+  let allExpanded = false;
+  
+  if (toggleAllBtn) {
+    toggleAllBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const organismGroups = document.querySelectorAll('.organism-group');
+      const assemblyDivs = document.querySelectorAll('.organism-group > div[style*="display"]');
+      
+      allExpanded = !allExpanded;
+      
+      assemblyDivs.forEach(function(div) {
+        div.style.display = allExpanded ? 'block' : 'none';
+      });
+      
+      // Update icon and text
+      const icon = toggleAllBtn.querySelector('i');
+      if (allExpanded) {
+        icon.classList.remove('fa-plus');
+        icon.classList.add('fa-minus');
+        toggleAllBtn.innerHTML = '<i class="fa fa-minus"></i> Collapse All';
+      } else {
+        icon.classList.remove('fa-minus');
+        icon.classList.add('fa-plus');
+        toggleAllBtn.innerHTML = '<i class="fa fa-plus"></i> Expand All';
+      }
+      
+      // Update chevrons in organisms
+      document.querySelectorAll('.organism-toggle i').forEach(chevron => {
+        if (allExpanded) {
+          chevron.classList.remove('fa-chevron-right');
+          chevron.classList.add('fa-chevron-down');
+        } else {
+          chevron.classList.remove('fa-chevron-down');
+          chevron.classList.add('fa-chevron-right');
+        }
+      });
+    });
+  }
+  
   // Filter organisms
   if (organismFilter) {
     organismFilter.addEventListener('input', function() {
@@ -125,12 +166,24 @@ document.addEventListener('DOMContentLoaded', function() {
             const assemblyDiv = group.querySelector('div[style*="display"]');
             if (assemblyDiv) {
               assemblyDiv.style.display = 'block';
+              // Update chevron
+              const toggle = group.querySelector('.organism-toggle i');
+              if (toggle) {
+                toggle.classList.remove('fa-chevron-right');
+                toggle.classList.add('fa-chevron-down');
+              }
             }
           }
         } else {
           group.style.display = 'none';
         }
       });
+      
+      // Reset toggle state when filtering
+      allExpanded = false;
+      if (toggleAllBtn) {
+        toggleAllBtn.innerHTML = '<i class="fa fa-plus"></i> Expand All';
+      }
     });
   }
   

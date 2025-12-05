@@ -130,14 +130,17 @@
             <div class="mb-3" id="groups-section">
               <label class="form-label">Access Groups</label>
               <small class="text-muted d-block mb-2">Filter and click organism assemblies to grant access (not applicable for admins)</small>
-              <div class="mb-2">
+              <div class="mb-2 d-flex gap-2">
                 <input type="text" id="organism-filter" class="form-control form-control-sm" placeholder="Filter organisms...">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="toggle-all-btn" title="Expand/Collapse all">
+                  <i class="fa fa-plus"></i> Expand All
+                </button>
               </div>
               <div class="border rounded" style="max-height: 400px; overflow-y: auto; background-color: #f8f9fa;" id="create-access-container">
                 <?php foreach ($organisms as $organism => $assemblies): ?>
                   <div class="organism-group" data-organism-name="<?= strtolower(htmlspecialchars($organism)) ?>" style="border-bottom: 1px solid #dee2e6; padding: 8px 10px;">
-                    <div style="font-weight: 600; font-size: 12px; margin-bottom: 6px; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none';">
-                      ▶ <?= htmlspecialchars($organism) ?>
+                    <div style="font-weight: 600; font-size: 12px; margin-bottom: 6px; cursor: pointer;" class="organism-toggle" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('i').classList.toggle('fa-chevron-right'); this.querySelector('i').classList.toggle('fa-chevron-down');">
+                      <i class="fa fa-chevron-right"></i> <?= htmlspecialchars($organism) ?>
                     </div>
                     <div style="display: none;">
                       <?php foreach ($assemblies as $assembly): ?>
