@@ -2,8 +2,11 @@
 /**
  * MANAGE USERS - Wrapper
  * 
- * Handles admin access verification and renders user management
- * using clean architecture layout system.
+ * Redesigned for form-based create/edit UI with:
+ * - Single form handles both create and edit
+ * - Inline stale assemblies alert when editing
+ * - Separate stale audit section for bulk operations
+ * - Assembly selection validation (min 1 unless admin)
  */
 
 include_once __DIR__ . '/admin_init.php';
@@ -38,53 +41,95 @@ $file_write_error = getFileWriteError($usersFile);
 
 $message = "";
 $messageType = "";
+$edit_mode = false;
+$edit_username = null;
 
+// Handle form submission (create or update)
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($file_write_error) {
         $message = "Users file is not writable. Please fix permissions first.";
         $messageType = "danger";
     }
-    // Handle user creation
-    elseif (isset($_POST['create_user'])) {
+    elseif (isset($_POST['create_or_update_user'])) {
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
+        $new_password = $_POST['new_password'] ?? '';
         $email = trim($_POST['email'] ?? '');
         $first_name = trim($_POST['first_name'] ?? '');
         $last_name = trim($_POST['last_name'] ?? '');
         $account_host = trim($_POST['account_host'] ?? '');
-        $groups   = $_POST['groups'] ?? [];
+        $groups = $_POST['groups'] ?? [];
         $is_admin = isset($_POST['isAdmin']);
 
-        if (empty($username) || empty($password)) {
-            $message = "Username and password are required.";
+        // Validation
+        if (empty($username)) {
+            $message = "Username is required.";
             $messageType = "danger";
-        } elseif (isset($users[$username])) {
-            $message = "That username already exists.";
+        } 
+        elseif (isset($_POST['is_create']) && isset($users[$username])) {
+            $message = "Username already exists.";
             $messageType = "warning";
-        } else {
-            // Hash password
-            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            
-            $users[$username] = [
-                'password' => $hashedPassword,
-                'email' => $email,
-                'first_name' => $first_name,
-                'last_name' => $last_name,
-                'account_host' => $account_host,
-                'groups' => $groups,
-                'is_admin' => $is_admin
-            ];
+        }
+        elseif (!$is_admin && empty($groups)) {
+            $message = "Must select at least one assembly (or check Admin for full access).";
+            $messageType = "danger";
+        }
+        else {
+            // Determine if create or update
+            $is_create = isset($_POST['is_create']) || !isset($users[$username]);
+            $original_username = $_POST['original_username'] ?? $username;
 
-            if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
-                $message = "User $username created successfully!";
-                $messageType = "success";
+            if ($is_create) {
+                // Create new user
+                if (empty($password)) {
+                    $message = "Password is required for new users.";
+                    $messageType = "danger";
+                } else {
+                    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                    $users[$username] = [
+                        'password' => $hashedPassword,
+                        'email' => $email,
+                        'first_name' => $first_name,
+                        'last_name' => $last_name,
+                        'account_host' => $account_host,
+                        'groups' => $groups,
+                        'role' => $is_admin ? 'admin' : 'user'
+                    ];
+
+                    if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
+                        $message = "User $username created successfully!";
+                        $messageType = "success";
+                    } else {
+                        $message = "Error saving user. Check file permissions.";
+                        $messageType = "danger";
+                    }
+                }
             } else {
-                $message = "Error saving user. Check file permissions.";
-                $messageType = "danger";
+                // Update existing user
+                if (isset($users[$original_username])) {
+                    $users[$original_username]['email'] = $email;
+                    $users[$original_username]['first_name'] = $first_name;
+                    $users[$original_username]['last_name'] = $last_name;
+                    $users[$original_username]['account_host'] = $account_host;
+                    $users[$original_username]['groups'] = $groups;
+                    $users[$original_username]['role'] = $is_admin ? 'admin' : 'user';
+
+                    // Update password only if provided
+                    if (!empty($new_password)) {
+                        $users[$original_username]['password'] = password_hash($new_password, PASSWORD_DEFAULT);
+                    }
+
+                    if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
+                        $message = "User $original_username updated successfully!";
+                        $messageType = "success";
+                    } else {
+                        $message = "Error saving user changes. Check file permissions.";
+                        $messageType = "danger";
+                    }
+                }
             }
         }
     }
-    // Handle user deletion
     elseif (isset($_POST['delete_user'])) {
         $username = $_POST['username'];
         
@@ -99,50 +144,63 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         }
     }
-    // Handle user update
-    elseif (isset($_POST['update_user'])) {
+    elseif (isset($_POST['remove_stale_assembly'])) {
         $username = $_POST['username'];
-        $email = trim($_POST['email'] ?? '');
-        $first_name = trim($_POST['first_name'] ?? '');
-        $last_name = trim($_POST['last_name'] ?? '');
-        $account_host = trim($_POST['account_host'] ?? '');
-        $groups = $_POST['groups'] ?? [];
-        $is_admin = isset($_POST['isAdmin']);
+        $organism = $_POST['organism'];
+        $assembly = $_POST['assembly'];
 
-        if (isset($users[$username])) {
-            $users[$username]['email'] = $email;
-            $users[$username]['first_name'] = $first_name;
-            $users[$username]['last_name'] = $last_name;
-            $users[$username]['account_host'] = $account_host;
-            $users[$username]['groups'] = $groups;
-            $users[$username]['is_admin'] = $is_admin;
-
-            if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
-                $message = "User $username updated successfully!";
-                $messageType = "success";
-            } else {
-                $message = "Error saving user changes. Check file permissions.";
-                $messageType = "danger";
+        if (isset($users[$username]) && isset($users[$username]['groups'][$organism])) {
+            $key = array_search($assembly, $users[$username]['groups'][$organism]);
+            if ($key !== false) {
+                unset($users[$username]['groups'][$organism][$key]);
+                $users[$username]['groups'][$organism] = array_values($users[$username]['groups'][$organism]);
+                
+                if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
+                    $message = "Stale assembly removed from user.";
+                    $messageType = "success";
+                }
             }
         }
     }
-    // Handle password change
-    elseif (isset($_POST['change_password'])) {
-        $username = $_POST['username'];
-        $new_password = $_POST['new_password'] ?? '';
+    elseif (isset($_POST['remove_stale_from_all'])) {
+        $organism = $_POST['organism'];
+        $assembly = $_POST['assembly'];
+        $removed_count = 0;
 
-        if (empty($new_password)) {
-            $message = "New password is required.";
-            $messageType = "danger";
-        } elseif (isset($users[$username])) {
-            $users[$username]['password'] = password_hash($new_password, PASSWORD_DEFAULT);
+        foreach ($users as $user => $userData) {
+            if (isset($userData['groups'][$organism])) {
+                $key = array_search($assembly, $userData['groups'][$organism]);
+                if ($key !== false) {
+                    unset($users[$user]['groups'][$organism][$key]);
+                    $users[$user]['groups'][$organism] = array_values($users[$user]['groups'][$organism]);
+                    $removed_count++;
+                }
+            }
+        }
 
-            if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
-                $message = "Password for user $username changed successfully!";
-                $messageType = "success";
-            } else {
-                $message = "Error saving password change. Check file permissions.";
-                $messageType = "danger";
+        if ($removed_count > 0 && file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
+            $message = "Stale assembly removed from $removed_count user(s).";
+            $messageType = "success";
+        }
+    }
+}
+
+// Build stale assemblies list (all users, all stale entries)
+$stale_entries_audit = [];
+foreach ($users as $username => $userData) {
+    $userGroups = $userData['groups'] ?? [];
+    foreach ($userGroups as $organism => $assemblies) {
+        if (is_array($assemblies)) {
+            foreach ($assemblies as $assembly) {
+                // Check if assembly exists in filesystem
+                if (!isset($organisms[$organism]) || !in_array($assembly, $organisms[$organism])) {
+                    $stale_entries_audit[] = [
+                        'username' => $username,
+                        'organism' => $organism,
+                        'assembly' => $assembly,
+                        'email' => $userData['email'] ?? ''
+                    ];
+                }
             }
         }
     }
@@ -157,10 +215,11 @@ $display_config = [
 // Prepare data for content file
 $data = [
     'users' => $users,
+    'organisms' => $organisms,
     'file_write_error' => $file_write_error,
     'message' => $message,
     'messageType' => $messageType,
-    'organisms' => $organisms,
+    'stale_entries_audit' => $stale_entries_audit,
     'config' => $config,
     'page_script' => '/' . $site . '/js/modules/manage-users.js',
     'inline_scripts' => [
