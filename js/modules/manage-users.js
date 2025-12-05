@@ -12,7 +12,7 @@
 // Global state
 let isEditMode = false;
 let currentEditUsername = '';
-let selectedAssemblies = {};
+let selectedAccess = {};
 let allExpanded = false;
 
 function resetForm() {
@@ -27,7 +27,7 @@ function resetForm() {
   document.getElementById('stale-alert').style.display = 'none';
   document.getElementById('stale-items').innerHTML = '';
   isEditMode = false;
-  selectedAssemblies = {};
+  selectedAccess = {};
   // Don't call renderAssemblySelector here - it will be called after DOM is ready
 }
 
@@ -74,7 +74,7 @@ function renderAssemblySelector() {
       chip.textContent = assembly;
       
       // Check if selected
-      if (selectedAssemblies[organism] && selectedAssemblies[organism].includes(assembly)) {
+      if (selectedAccess[organism] && selectedAccess[organism].includes(assembly)) {
         chip.classList.add('selected');
         chip.style.opacity = '1';
       } else {
@@ -91,18 +91,18 @@ function renderAssemblySelector() {
         this.classList.toggle('selected');
         if (this.classList.contains('selected')) {
           this.style.opacity = '1';
-          if (!selectedAssemblies[organism]) {
-            selectedAssemblies[organism] = [];
+          if (!selectedAccess[organism]) {
+            selectedAccess[organism] = [];
           }
-          if (!selectedAssemblies[organism].includes(assembly)) {
-            selectedAssemblies[organism].push(assembly);
+          if (!selectedAccess[organism].includes(assembly)) {
+            selectedAccess[organism].push(assembly);
           }
         } else {
           this.style.opacity = '0.5';
-          if (selectedAssemblies[organism]) {
-            selectedAssemblies[organism] = selectedAssemblies[organism].filter(a => a !== assembly);
-            if (selectedAssemblies[organism].length === 0) {
-              delete selectedAssemblies[organism];
+          if (selectedAccess[organism]) {
+            selectedAccess[organism] = selectedAccess[organism].filter(a => a !== assembly);
+            if (selectedAccess[organism].length === 0) {
+              delete selectedAccess[organism];
             }
           }
         }
@@ -130,11 +130,11 @@ function updateHiddenInputs() {
   const hiddenContainer = document.getElementById('selected-assemblies-hidden');
   hiddenContainer.innerHTML = '';
   
-  Object.keys(selectedAssemblies).forEach(organism => {
-    selectedAssemblies[organism].forEach(assembly => {
+  Object.keys(selectedAccess).forEach(organism => {
+    selectedAccess[organism].forEach(assembly => {
       const input = document.createElement('input');
       input.type = 'hidden';
-      input.name = `groups[${organism}][]`;
+      input.name = `access[${organism}][]`;
       input.value = assembly;
       hiddenContainer.appendChild(input);
     });
@@ -171,11 +171,11 @@ function populateForm(username) {
   isEditMode = true;
   
   // Build selected assemblies from user data
-  selectedAssemblies = {};
-  if (userData.groups && typeof userData.groups === 'object') {
-    Object.keys(userData.groups).forEach(organism => {
-      if (Array.isArray(userData.groups[organism])) {
-        selectedAssemblies[organism] = [...userData.groups[organism]];
+  selectedAccess = {};
+  if (userData.access && typeof userData.access === 'object') {
+    Object.keys(userData.access).forEach(organism => {
+      if (Array.isArray(userData.access[organism])) {
+        selectedAccess[organism] = [...userData.access[organism]];
       }
     });
   }
@@ -185,9 +185,9 @@ function populateForm(username) {
   
   // Show stale alert if any
   const staleAssemblies = [];
-  Object.keys(userData.groups || {}).forEach(organism => {
+  Object.keys(userData.access || {}).forEach(organism => {
     const assemblies = allOrganisms[organism] || [];
-    (userData.groups[organism] || []).forEach(assembly => {
+    (userData.access[organism] || []).forEach(assembly => {
       if (!assemblies.includes(assembly)) {
         staleAssemblies.push({organism, assembly});
       }
@@ -214,10 +214,10 @@ function populateForm(username) {
       removeBtn.style.marginLeft = '5px';
       removeBtn.style.fontWeight = 'bold';
       removeBtn.addEventListener('click', function() {
-        if (selectedAssemblies[item.organism]) {
-          selectedAssemblies[item.organism] = selectedAssemblies[item.organism].filter(a => a !== item.assembly);
-          if (selectedAssemblies[item.organism].length === 0) {
-            delete selectedAssemblies[item.organism];
+        if (selectedAccess[item.organism]) {
+          selectedAccess[item.organism] = selectedAccess[item.organism].filter(a => a !== item.assembly);
+          if (selectedAccess[item.organism].length === 0) {
+            delete selectedAccess[item.organism];
           }
         }
         updateHiddenInputs();
@@ -249,7 +249,7 @@ function toggleAccessSection() {
     accessSection.style.opacity = '0.5';
     accessSection.style.pointerEvents = 'none';
     requiredBadge.style.display = 'none';
-    selectedAssemblies = {}; // Clear selections for admin
+    selectedAccess = {}; // Clear selections for admin
     updateHiddenInputs();
   } else {
     accessSection.style.opacity = '1';
@@ -260,8 +260,8 @@ function toggleAccessSection() {
 
 function validateForm() {
   const isAdmin = document.getElementById('isAdmin').checked;
-  const hasAssemblies = Object.keys(selectedAssemblies).some(org => 
-    selectedAssemblies[org] && selectedAssemblies[org].length > 0
+  const hasAssemblies = Object.keys(selectedAccess).some(org => 
+    selectedAccess[org] && selectedAccess[org].length > 0
   );
   
   if (!isAdmin && !hasAssemblies) {

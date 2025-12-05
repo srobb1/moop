@@ -58,7 +58,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $first_name = trim($_POST['first_name'] ?? '');
         $last_name = trim($_POST['last_name'] ?? '');
         $account_host = trim($_POST['account_host'] ?? '');
-        $groups = $_POST['groups'] ?? [];
+        $access = $_POST['access'] ?? [];
         $is_admin = isset($_POST['isAdmin']);
 
         // Validation
@@ -70,7 +70,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $message = "Username already exists.";
             $messageType = "warning";
         }
-        elseif (!$is_admin && empty($groups)) {
+        elseif (!$is_admin && empty($access)) {
             $message = "Must select at least one assembly (or check Admin for full access).";
             $messageType = "danger";
         }
@@ -92,7 +92,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         'first_name' => $first_name,
                         'last_name' => $last_name,
                         'account_host' => $account_host,
-                        'groups' => $groups,
+                        'access' => $access,
                         'role' => $is_admin ? 'admin' : 'user'
                     ];
 
@@ -111,7 +111,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $users[$original_username]['first_name'] = $first_name;
                     $users[$original_username]['last_name'] = $last_name;
                     $users[$original_username]['account_host'] = $account_host;
-                    $users[$original_username]['groups'] = $groups;
+                    $users[$original_username]['access'] = $access;
                     $users[$original_username]['role'] = $is_admin ? 'admin' : 'user';
 
                     // Update password only if provided
@@ -149,11 +149,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $organism = $_POST['organism'];
         $assembly = $_POST['assembly'];
 
-        if (isset($users[$username]) && isset($users[$username]['groups'][$organism])) {
-            $key = array_search($assembly, $users[$username]['groups'][$organism]);
+        if (isset($users[$username]) && isset($users[$username]['access'][$organism])) {
+            $key = array_search($assembly, $users[$username]['access'][$organism]);
             if ($key !== false) {
-                unset($users[$username]['groups'][$organism][$key]);
-                $users[$username]['groups'][$organism] = array_values($users[$username]['groups'][$organism]);
+                unset($users[$username]['access'][$organism][$key]);
+                $users[$username]['access'][$organism] = array_values($users[$username]['access'][$organism]);
                 
                 if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
                     $message = "Stale assembly removed from user.";
@@ -168,11 +168,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $removed_count = 0;
 
         foreach ($users as $user => $userData) {
-            if (isset($userData['groups'][$organism])) {
-                $key = array_search($assembly, $userData['groups'][$organism]);
+            if (isset($userData['access'][$organism])) {
+                $key = array_search($assembly, $userData['access'][$organism]);
                 if ($key !== false) {
-                    unset($users[$user]['groups'][$organism][$key]);
-                    $users[$user]['groups'][$organism] = array_values($users[$user]['groups'][$organism]);
+                    unset($users[$user]['access'][$organism][$key]);
+                    $users[$user]['access'][$organism] = array_values($users[$user]['access'][$organism]);
                     $removed_count++;
                 }
             }
@@ -188,8 +188,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 // Build stale assemblies list (all users, all stale entries)
 $stale_entries_audit = [];
 foreach ($users as $username => $userData) {
-    $userGroups = $userData['groups'] ?? [];
-    foreach ($userGroups as $organism => $assemblies) {
+    $userAccess = $userData['access'] ?? [];
+    foreach ($userAccess as $organism => $assemblies) {
         if (is_array($assemblies)) {
             foreach ($assemblies as $assembly) {
                 // Check if assembly exists in filesystem

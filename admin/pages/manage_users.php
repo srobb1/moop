@@ -193,8 +193,8 @@
                 $assemblyCount = 0;
                 $staleCount = 0;
                 
-                if (isset($userData['groups']) && is_array($userData['groups'])) {
-                  foreach ($userData['groups'] as $org => $assemblies) {
+                if (isset($userData['access']) && is_array($userData['access'])) {
+                  foreach ($userData['access'] as $org => $assemblies) {
                     if (is_array($assemblies)) {
                       foreach ($assemblies as $asm) {
                         $assemblyCount++;
