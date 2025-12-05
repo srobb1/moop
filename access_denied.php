@@ -32,6 +32,7 @@
 
 session_start();
 include_once __DIR__ . '/includes/config_init.php';
+include_once __DIR__ . '/includes/access_control.php';
 include_once __DIR__ . '/includes/layout.php';
 
 $config = ConfigManager::getInstance();
