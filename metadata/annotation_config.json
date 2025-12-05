@@ -28,11 +28,15 @@
             "display_name": "AI Annotations",
             "color": "purple",
             "order": 7,
-            "description": "AI-based protein function prediction uses computational techniques, such as machine learning and protein sequence language models to infer the biological roles of proteins from their sequences",
+            "description": "AI-based protein function prediction uses computational techniques, such as machine learning and protein sequence language models to infer the biological roles of proteins from their sequences. So far Sofia doesn't love these.",
             "enabled": true,
             "in_database": true,
             "annotation_count": 49921,
-            "feature_count": 108548
+            "feature_count": 108548,
+            "synonyms": [
+                "ProtNLM"
+            ],
+            "display_label": "ProtNLM"
         },
         "Domains": {
             "display_name": "Domains",

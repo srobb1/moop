@@ -110,7 +110,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // Edit type description button
   $('.edit-type-desc-btn').on('click', function() {
       const typeName = $(this).data('type');
-      const currentDesc = $('#desc-type-' + typeName).data('full-desc') || $('#desc-type-' + typeName).text().trim();
+      // Use attribute selector to handle type names with spaces
+      const descElement = $('p[id="desc-type-' + typeName.replace(/"/g, '\\"') + '"]');
+      const currentDesc = descElement.data('full-desc') || descElement.text().trim();
       
       $('#editTypeDescName').text(typeName);
       $('#editTypeName').val(typeName);
