@@ -471,6 +471,29 @@ function performPermissionCheck($path, $item) {
         </div>
     </div>
 
+    <!-- Quick Fixes for Common Issues -->
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning bg-opacity-10">
+            <h5 class="mb-0"><i class="fa fa-wrench"></i> Quick Fixes for Assembly Directories</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>⚠️ Assembly directories need SGID (2775) for web server to rename/move assemblies.</strong></p>
+            <p>If you're getting "permission denied" errors when trying to rename assembly directories in the admin interface, run this command on the server:</p>
+            
+            <div class="fix-command">
+                chmod -R 2775 <?= htmlspecialchars($organism_data) ?><br>
+                chgrp -R www-data <?= htmlspecialchars($organism_data) ?>
+            </div>
+            
+            <p class="small text-muted mb-0"><strong>What this does:</strong></p>
+            <ul class="small text-muted">
+                <li>Sets all organism directories to 2775 (rwxrwsr-x) - with SGID bit</li>
+                <li>Ensures all directories have www-data as the group</li>
+                <li>Applies to ALL assembly subdirectories recursively</li>
+            </ul>
+        </div>
+    </div>
+
         <!-- Detailed Permission Groups -->
     <?php
     $grouped = [];
