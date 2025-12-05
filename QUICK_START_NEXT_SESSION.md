@@ -2,12 +2,12 @@
 
 ## 📍 Where We Are
 
-- ✅ **3 admin pages converted** (admin, error_log, manage_organisms)
+- ✅ **4 admin pages converted** (admin, error_log, manage_organisms, manage_filesystem_permissions)
 - ✅ **5 tool display pages converted** (organism, assembly, groups, multi_organism, parent)
 - ✅ **3 main pages converted** (index, login, access_denied)
 - ✅ **Infrastructure complete** (layout.php, admin-utilities.js, etc.)
 
-**Total: 8/13 admin pages done · 42% overall completion**
+**Total: 9/13 admin pages done · 45% overall completion**
 
 ---
 
