@@ -53,3 +53,102 @@
         });
     });
 })();
+
+/**
+ * Banner Image Upload Handler
+ */
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        const uploadBtn = document.getElementById('uploadHeaderBtn');
+        const fileInput = document.getElementById('header_upload');
+        
+        if (uploadBtn && fileInput) {
+            uploadBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    alert('Please select a file to upload');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('action', 'upload_banner');
+                formData.append('banner_file', fileInput.files[0]);
+                
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Uploading...';
+                
+                fetch(window.location.pathname, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = '<i class="fa fa-upload"></i> Upload';
+                    
+                    if (data.success) {
+                        alert('Banner uploaded successfully: ' + data.filename);
+                        fileInput.value = '';
+                        // Reload page to show new banner in gallery
+                        location.reload();
+                    } else {
+                        alert('Upload failed: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = '<i class="fa fa-upload"></i> Upload';
+                    alert('Error: ' + error.message);
+                });
+            });
+        }
+    });
+})();
+
+/**
+ * Banner Image Delete Handler
+ */
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteButtons = document.querySelectorAll('.delete-banner');
+        deleteButtons.forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const filename = this.getAttribute('data-filename');
+                if (!filename) {
+                    alert('Error: No filename provided');
+                    return;
+                }
+                
+                if (!confirm('Are you sure you want to delete this banner image?')) {
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('action', 'delete_banner');
+                formData.append('filename', filename);
+                
+                fetch(window.location.pathname, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Banner deleted successfully');
+                        // Reload page to update gallery
+                        location.reload();
+                    } else {
+                        alert('Delete failed: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+            });
+        });
+    });
+})();
+

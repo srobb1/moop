@@ -6,32 +6,126 @@
  * management using clean architecture layout system.
  */
 
-// Handle banner deletion via AJAX BEFORE including admin_init (which includes navbar/HTML)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_banner') {
-    // Minimal init just for config
-    include_once __DIR__ . '/../includes/ConfigManager.php';
-    $config = ConfigManager::getInstance();
-    $config->initialize(__DIR__ . '/../config/site_config.php', __DIR__ . '/../config/tools_config.php');
-    
-    $banners_path = $config->getPath('absolute_images_path') . '/banners';
-    $filename = $_POST['filename'] ?? '';
-    
-    header('Content-Type: application/json');
-    
-    if (!empty($filename) && preg_match('/^[a-zA-Z0-9._-]+$/', $filename)) {
-        $file_path = $banners_path . '/' . basename($filename);
-        if (file_exists($file_path) && is_file($file_path)) {
-            if (unlink($file_path)) {
-                echo json_encode(['success' => true, 'message' => 'Banner deleted']);
-                exit;
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to delete file']);
-                exit;
+// Handle banner operations via AJAX BEFORE including admin_init (which includes navbar/HTML)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Handle banner deletion
+    if (isset($_POST['action']) && $_POST['action'] === 'delete_banner') {
+        // Minimal init just for config
+        include_once __DIR__ . '/../includes/ConfigManager.php';
+        $config = ConfigManager::getInstance();
+        $config->initialize(__DIR__ . '/../config/site_config.php', __DIR__ . '/../config/tools_config.php');
+        
+        $banners_path = $config->getPath('absolute_images_path') . '/banners';
+        $filename = $_POST['filename'] ?? '';
+        
+        header('Content-Type: application/json');
+        
+        if (!empty($filename) && preg_match('/^[a-zA-Z0-9._-]+$/', $filename)) {
+            $file_path = $banners_path . '/' . basename($filename);
+            if (file_exists($file_path) && is_file($file_path)) {
+                if (unlink($file_path)) {
+                    echo json_encode(['success' => true, 'message' => 'Banner deleted']);
+                    exit;
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Failed to delete file']);
+                    exit;
+                }
             }
         }
+        echo json_encode(['success' => false, 'message' => 'Invalid file']);
+        exit;
     }
-    echo json_encode(['success' => false, 'message' => 'Invalid file']);
-    exit;
+    
+    // Handle banner upload via AJAX
+    if (isset($_POST['action']) && $_POST['action'] === 'upload_banner') {
+        // Minimal init just for config
+        include_once __DIR__ . '/../includes/ConfigManager.php';
+        $config = ConfigManager::getInstance();
+        $config->initialize(__DIR__ . '/../config/site_config.php', __DIR__ . '/../config/tools_config.php');
+        
+        $banners_path = $config->getPath('absolute_images_path') . '/banners';
+        
+        // Create banners directory if it doesn't exist
+        if (!is_dir($banners_path)) {
+            @mkdir($banners_path, 0775, true);
+        }
+        
+        header('Content-Type: application/json');
+        
+        if (!isset($_FILES['banner_file'])) {
+            echo json_encode(['success' => false, 'message' => 'No file provided']);
+            exit;
+        }
+        
+        $file = $_FILES['banner_file'];
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            $error_msg = match($file['error']) {
+                UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize',
+                UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE',
+                UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
+                UPLOAD_ERR_NO_FILE => 'No file was uploaded',
+                UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary directory',
+                UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
+                UPLOAD_ERR_EXTENSION => 'File upload stopped by extension',
+                default => 'Unknown upload error'
+            };
+            echo json_encode(['success' => false, 'message' => $error_msg]);
+            exit;
+        }
+        
+        $allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        $max_size = 5 * 1024 * 1024; // 5MB
+        
+        $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        
+        // Validate file
+        if (!in_array($file_ext, $allowed_types)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid file type. Allowed: ' . implode(', ', $allowed_types)]);
+            exit;
+        }
+        
+        if ($file['size'] > $max_size) {
+            echo json_encode(['success' => false, 'message' => 'File too large. Maximum: 5MB']);
+            exit;
+        }
+        
+        // Get image dimensions
+        $img_info = @getimagesize($file['tmp_name']);
+        if ($img_info === false) {
+            echo json_encode(['success' => false, 'message' => 'Invalid image file']);
+            exit;
+        }
+        
+        $width = $img_info[0];
+        $height = $img_info[1];
+        
+        if ($width < 1200 || $width > 4000 || $height < 200 || $height > 500) {
+            echo json_encode(['success' => false, 'message' => "Image dimensions must be 1200-4000px wide and 200-500px tall. Your image: {$width}x{$height}"]);
+            exit;
+        }
+        
+        // Use original filename, sanitize it
+        $base_name = pathinfo($file['name'], PATHINFO_FILENAME);
+        $base_name = preg_replace('/[^a-zA-Z0-9_-]/', '_', $base_name);
+        $filename = $base_name . '.' . $file_ext;
+        $destination = $banners_path . '/' . $filename;
+        
+        // Handle filename collision
+        $counter = 1;
+        while (file_exists($destination)) {
+            $filename = $base_name . '_' . $counter . '.' . $file_ext;
+            $destination = $banners_path . '/' . $filename;
+            $counter++;
+        }
+        
+        if (move_uploaded_file($file['tmp_name'], $destination)) {
+            echo json_encode(['success' => true, 'message' => 'Banner uploaded successfully', 'filename' => $filename]);
+            exit;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to save uploaded file. Check directory permissions.']);
+            exit;
+        }
+    }
 }
 
 // Now include admin_init for regular page loads

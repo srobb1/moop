@@ -216,7 +216,12 @@
                         
                         <div class="mb-4">
                             <label for="header_upload" class="form-label"><strong>Upload New Banner Image:</strong></label>
-                            <input type="file" class="form-control" id="header_upload" name="header_upload" accept="image/*">
+                            <div class="input-group">
+                                <input type="file" class="form-control" id="header_upload" name="header_upload" accept="image/*">
+                                <button type="button" class="btn btn-outline-primary" id="uploadHeaderBtn">
+                                    <i class="fa fa-upload"></i> Upload
+                                </button>
+                            </div>
                             <small class="form-text text-muted">Leave empty to keep current image</small>
                         </div>
                         
@@ -305,12 +310,17 @@
                         </label>
                         
                         <!-- File Upload Input -->
-                        <input 
-                            type="file" 
-                            class="form-control" 
-                            id="favicon_upload" 
-                            name="favicon_upload" 
-                            accept=".ico,.png,.jpg,.jpeg,.gif,.webp">
+                        <div class="input-group mb-3">
+                            <input 
+                                type="file" 
+                                class="form-control" 
+                                id="favicon_upload" 
+                                name="favicon_upload" 
+                                accept=".ico,.png,.jpg,.jpeg,.gif,.webp">
+                            <button type="submit" class="btn btn-outline-primary" id="uploadFaviconBtn" name="action" value="save_config">
+                                <i class="fa fa-upload"></i> Upload
+                            </button>
+                        </div>
                         
                         <!-- Upload Preview (before submit) -->
                         <div id="favicon_upload_preview" class="mt-3" style="display: none;">
