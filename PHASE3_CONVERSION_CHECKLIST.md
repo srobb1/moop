@@ -21,14 +21,14 @@
 ### TO CONVERT - Admin Pages:
 - [ ] admin/admin.php - Admin dashboard
 - [ ] admin/manage_site_config.php - Site configuration
-- [ ] admin/filesystem_permissions.php - Permissions management
-- [ ] admin/manage_organisms.php - Organism management
-- [ ] admin/manage_groups.php - Group management
-- [ ] admin/manage_users.php - User management
+- [✅] admin/filesystem_permissions.php - Permissions management (enhanced)
+- [✅] admin/manage_organisms.php - Organism management (complete)
+- [✅] admin/manage_groups.php - Group management (complete)
+- [✅] admin/manage_users.php - User management (complete today)
 - [ ] admin/manage_taxonomy_tree.php - Taxonomy management
 - [ ] admin/manage_registry.php - Registry management
 - [ ] admin/manage_annotations.php - Annotations management
-- [ ] admin/error_log.php - Error log viewer
+- [✅] admin/error_log.php - Error log viewer (complete)
 - [ ] admin/convert_groups.php - Group conversion tool
 - [ ] admin/debug_permissions.php - Debug permissions
 - [ ] admin/admin_access_check.php - (Helper file - check if needs conversion)

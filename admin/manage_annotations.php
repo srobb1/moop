@@ -337,8 +337,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
     }
 }
 
-?>
-
 // Reorganize includes
 include_once __DIR__ . '/../includes/layout.php';
 
@@ -354,12 +352,12 @@ $display_config = [
 
 // Prepare data for content file
 $data = [
-    'annotations' => $annotations,
+    'annotation_config' => $annotation_config,
+    'all_db_annotation_types' => $all_db_annotation_types,
     'file_write_error' => $file_write_error,
     'message' => $message,
     'messageType' => $messageType,
     'config' => $config,
-    'organisms' => $organisms,
     'page_script' => '/' . $site . '/js/modules/manage-annotations.js',
 ];
 
