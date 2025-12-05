@@ -107,6 +107,35 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('ERROR: #sortable-annotation-types not found');
   }
   
+  // Preserve open state of customize sections across page reloads
+  const customizeForms = document.querySelectorAll('.type-details form');
+  customizeForms.forEach(form => {
+    form.addEventListener('submit', function(e) {
+      const detailsId = this.closest('.type-details').id;
+      if (detailsId) {
+        sessionStorage.setItem('openCustomizeSection', detailsId);
+      }
+    });
+  });
+  
+  // Restore open state if previously opened
+  const openSection = sessionStorage.getItem('openCustomizeSection');
+  if (openSection) {
+    const element = document.getElementById(openSection);
+    if (element) {
+      element.style.display = 'block';
+      // Rotate the chevron on the button
+      const button = document.querySelector(`[data-type="${openSection.replace('details-', '')}"].expand-type-btn`);
+      if (button) {
+        const chevron = button.querySelector('.fa-chevron-down');
+        if (chevron) {
+          chevron.style.transform = 'rotate(-180deg)';
+        }
+      }
+    }
+    sessionStorage.removeItem('openCustomizeSection');
+  }
+  
   // Edit type description button
   $('.edit-type-desc-btn').on('click', function() {
       const typeName = $(this).data('type');
