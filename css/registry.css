@@ -1,0 +1,247 @@
+/* Registry Display Styling */
+
+#registryContent {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 15px;
+}
+
+.file-section {
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.file-header {
+    padding: 12px 15px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
+    font-weight: bold;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.file-header:hover {
+    background-color: #e9ecef;
+}
+
+.file-header-title {
+    flex: 1;
+}
+
+.file-header-count {
+    font-size: 0.85em;
+    color: #666;
+    background-color: #e9ecef;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 10px;
+}
+
+.functions-list {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.functions-list.open {
+    max-height: 10000px;
+}
+
+.function-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.function-item:last-child {
+    border-bottom: none;
+}
+
+.function-item.hidden {
+    display: none !important;
+}
+
+.function-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.function-header:hover {
+    color: #0066cc;
+}
+
+.function-name {
+    font-weight: bold;
+    color: #0066cc;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.expand-arrow {
+    margin-left: 10px;
+    color: #999;
+}
+
+.function-meta {
+    font-size: 0.85em;
+    color: #666;
+    margin: 4px 0 0 0;
+}
+
+.function-comment {
+    margin-top: 8px;
+    padding: 8px;
+    background-color: #f0f0f0;
+    border-left: 3px solid #0066cc;
+    font-size: 0.9em;
+    line-height: 1.5;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.function-code {
+    margin-top: 8px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.function-code.open {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.function-code code {
+    display: block;
+    padding: 10px;
+    background-color: #272822;
+    color: #f8f8f2;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.85em;
+    overflow-x: auto;
+    line-height: 1.4;
+}
+
+.usage-section {
+    margin-top: 8px;
+    padding: 8px;
+    background-color: #e8f4f8;
+    border-left: 3px solid #0066cc;
+    border-radius: 2px;
+}
+
+.usage-section.unused {
+    background-color: #ffe8e8;
+    border-left-color: #cc0000;
+}
+
+.usage-section strong {
+    color: #0066cc;
+}
+
+.usage-section.unused strong {
+    color: #cc0000;
+}
+
+.usage-file {
+    margin: 4px 0 0 0;
+    font-size: 0.85em;
+    color: #555;
+}
+
+.usage-file code {
+    background-color: rgba(0, 102, 204, 0.1);
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.unused-badge {
+    background-color: #ffe8e8;
+    color: #cc0000;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .file-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .file-header-count {
+        margin-top: 8px;
+        margin-left: 0;
+    }
+
+    .function-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .expand-arrow {
+        margin-left: 0;
+        margin-top: 4px;
+    }
+
+    #registryContent {
+        max-height: 100% !important;
+    }
+}
+
+/* Search highlight */
+.search-highlight {
+    background-color: #ffeb3b;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+/* Statistics cards */
+.stats-card {
+    text-align: center;
+    padding: 15px;
+}
+
+.stats-card h4 {
+    margin: 0;
+    font-size: 1.8em;
+    font-weight: bold;
+}
+
+.stats-card p {
+    margin: 5px 0 0 0;
+    font-size: 0.9em;
+    color: #666;
+}
+
+/* Loading state */
+.registry-loading {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+}
+
+/* Empty state */
+.registry-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+}
+
+.registry-empty i {
+    font-size: 2.5em;
+    color: #ddd;
+    margin-bottom: 10px;
+}
