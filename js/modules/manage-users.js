@@ -125,17 +125,64 @@ function renderAssemblySelector() {
 
 function updateHiddenInputs() {
   const hiddenContainer = document.getElementById('selected-assemblies-hidden');
-  hiddenContainer.innerHTML = '';
+  const previewContainer = document.getElementById('selected-preview');
   
-  Object.keys(selectedAccess).forEach(organism => {
+  hiddenContainer.innerHTML = '';
+  previewContainer.innerHTML = '';
+  
+  let totalCount = 0;
+  
+  Object.keys(selectedAccess).sort().forEach(organism => {
     selectedAccess[organism].forEach(assembly => {
+      totalCount++;
+      
+      // Add hidden input
       const input = document.createElement('input');
       input.type = 'hidden';
       input.name = `access[${organism}][]`;
       input.value = assembly;
       hiddenContainer.appendChild(input);
+      
+      // Add preview badge
+      const badge = document.createElement('span');
+      badge.className = 'tag-chip';
+      badge.style.background = getColorForOrganism(organism);
+      badge.style.borderColor = getColorForOrganism(organism);
+      badge.style.color = 'white';
+      badge.style.marginRight = '5px';
+      badge.style.marginBottom = '5px';
+      badge.style.display = 'inline-block';
+      badge.textContent = `${organism}: ${assembly}`;
+      
+      // Add remove button to badge
+      const removeBtn = document.createElement('i');
+      removeBtn.className = 'fa fa-times';
+      removeBtn.style.cursor = 'pointer';
+      removeBtn.style.marginLeft = '8px';
+      removeBtn.style.fontWeight = 'bold';
+      removeBtn.style.opacity = '0.8';
+      removeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        // Remove from selectedAccess
+        if (selectedAccess[organism]) {
+          selectedAccess[organism] = selectedAccess[organism].filter(a => a !== assembly);
+          if (selectedAccess[organism].length === 0) {
+            delete selectedAccess[organism];
+          }
+        }
+        // Re-render both preview and selector
+        updateHiddenInputs();
+        renderAssemblySelector();
+      });
+      
+      badge.appendChild(removeBtn);
+      previewContainer.appendChild(badge);
     });
   });
+  
+  if (totalCount === 0) {
+    previewContainer.innerHTML = '<span class="text-muted small"><i class="fa fa-check-circle"></i> Select assemblies above to see them here</span>';
+  }
 }
 
 function populateForm(username) {
@@ -240,17 +287,22 @@ function populateForm(username) {
 function toggleAccessSection() {
   const isAdmin = document.getElementById('isAdmin').checked;
   const accessSection = document.getElementById('access-section');
+  const previewSection = document.getElementById('preview-section');
   const requiredBadge = document.getElementById('required-badge');
   
   if (isAdmin) {
     accessSection.style.opacity = '0.5';
     accessSection.style.pointerEvents = 'none';
+    previewSection.style.opacity = '0.5';
+    previewSection.style.pointerEvents = 'none';
     requiredBadge.style.display = 'none';
     selectedAccess = {}; // Clear selections for admin
     updateHiddenInputs();
   } else {
     accessSection.style.opacity = '1';
     accessSection.style.pointerEvents = 'auto';
+    previewSection.style.opacity = '1';
+    previewSection.style.pointerEvents = 'auto';
     requiredBadge.style.display = 'inline';
   }
 }

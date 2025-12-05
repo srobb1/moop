@@ -156,6 +156,14 @@
           <div id="selected-assemblies-hidden"></div>
         </div>
 
+        <!-- SELECTED ASSEMBLIES PREVIEW -->
+        <div class="mb-3" id="preview-section">
+          <label class="form-label">Selected Assemblies</label>
+          <div id="selected-preview" class="p-3 border rounded" style="background-color: #f8f9fa; min-height: 50px;">
+            <span class="text-muted small"><i class="fa fa-check-circle"></i> Select assemblies above to see them here</span>
+          </div>
+        </div>
+
         <!-- Form Actions -->
         <div class="mt-4">
           <button type="submit" class="btn btn-success" id="submit-btn">
