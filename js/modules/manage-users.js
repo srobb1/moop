@@ -32,12 +32,9 @@ function resetForm() {
 }
 
 function renderAssemblySelector() {
-  console.log('renderAssemblySelector called, allOrganisms count:', Object.keys(allOrganisms).length);
   const container = document.getElementById('access-container');
-  console.log('Container found:', !!container);
   
   if (!container) {
-    console.error('access-container not found!');
     return;
   }
   
@@ -274,10 +271,6 @@ function validateForm() {
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('manage-users.js loaded');
-  console.log('allOrganisms:', allOrganisms);
-  console.log('allUsers:', allUsers);
-  
   // Pre-assign colors
   Object.keys(allOrganisms).forEach(org => getColorForOrganism(org));
   
