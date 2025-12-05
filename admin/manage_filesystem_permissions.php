@@ -303,9 +303,10 @@ function performPermissionCheck($path, $item) {
 }
 
 // Prepare data for display
+$site = $config->getString('site');
 $data = [
     'siteTitle' => $config->getString('siteTitle'),
-    'site' => $config->getString('site'),
+    'site' => $site,
     'checks' => $checks,
     'assembly_subdir_issues' => $assembly_subdir_issues,
     'organism_data' => $organism_data,
@@ -314,6 +315,9 @@ $data = [
     'web_group' => $web_group,
     'config' => $config,
     'page_styles' => ['/moop/css/manage-filesystem-permissions.css'],
+    'page_script' => [
+        '/' . $site . '/js/admin-utilities.js',
+    ],
 ];
 
 $display_config = [
