@@ -11,13 +11,22 @@ Convert legacy monolithic PHP display pages to clean architecture pattern:
 
 ===== COMPLETED ===== 
 
-✅ ADMIN PAGES (3/13 converted):
+✅ ADMIN PAGES (7/13 converted):
    1. admin.php - Dashboard wrapper + content file
    2. error_log.php - Error viewer wrapper + content file + About section
    3. manage_organisms.php - Organism manager wrapper + content file + About section
       * All AJAX handlers (fix_permissions, rename_assembly, delete_assembly, save_metadata)
       * Uses organism-management.js for complex UI
       * Admin-utilities.js for shared collapse functionality
+   4. manage_groups.php - Group manager wrapper + content file + About section
+      * Uses manage-groups.js for assembly selector and filtering
+   5. manage_users.php - User manager wrapper + content file + About section
+      * Form-based UI for create/edit users with assembly access control
+      * Stale assembly audit section
+   6. manage_annotations.php - Annotation manager wrapper + content file + About section
+      * Sortable annotation types with jQuery UI
+      * Edit descriptions, customize synonyms, manage DB types
+   7. (Additional refinements to admin pages: permissions checks, UI improvements)
 
 ✅ MAIN DISPLAY PAGES (3/3 completed):
    1. index.php - Homepage (wrapper + content in tools/pages/)
@@ -195,15 +204,24 @@ is now proven and reliable across different page types.
 ===== FILE ORGANIZATION =====
 
 /admin/
-├── admin.php ......................... Wrapper
-├── error_log.php ..................... Wrapper
-├── manage_organisms.php .............. Wrapper + AJAX handlers
-├── manage_groups.php ................. (TO CONVERT)
-├── manage_users.php .................. (TO CONVERT)
+├── admin.php ......................... Wrapper ✅
+├── error_log.php ..................... Wrapper ✅
+├── manage_organisms.php .............. Wrapper + AJAX handlers ✅
+├── manage_groups.php ................. Wrapper ✅
+├── manage_users.php .................. Wrapper ✅
+├── manage_annotations.php ............ Wrapper ✅
+├── manage_site_config.php ............ (TO CONVERT)
+├── manage_registry.php ............... (PHASE 3)
+├── manage_taxonomy_tree.php .......... (PHASE 3)
+├── manage_database_config.php ........ (PHASE 3)
 ├── pages/
-│   ├── admin.php ..................... Content
-│   ├── error_log.php ................. Content
-│   └── manage_organisms.php .......... Content
+│   ├── admin.php ..................... Content ✅
+│   ├── error_log.php ................. Content ✅
+│   ├── manage_organisms.php .......... Content ✅
+│   ├── manage_groups.php ............. Content ✅
+│   ├── manage_users.php .............. Content ✅
+│   ├── manage_annotations.php ........ Content ✅
+│   └── manage_site_config.php ........ (TO CREATE)
 
 /tools/
 ├── organism.php ...................... Wrapper
