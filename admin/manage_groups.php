@@ -226,6 +226,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     exit();
 }
 
+// Identify unrepresented organisms/assemblies
+$represented_organisms = [];
+foreach ($groups_data as $data) {
+    $represented_organisms[$data['organism']][] = $data['assembly'];
+}
+
+$unrepresented_organisms = [];
+foreach ($all_organisms as $organism => $assemblies) {
+    foreach ($assemblies as $assembly) {
+        if (!isset($represented_organisms[$organism]) || !in_array($assembly, $represented_organisms[$organism])) {
+            $unrepresented_organisms[$organism][] = $assembly;
+        }
+    }
+}
+
+// Find stale entries (entries in groups_data but not in filesystem)
+$stale_entries = array_filter($groups_data_with_status, function($data) {
+    return !$data['_fs_exists'];
+});
+
 // Configure display
 $display_config = [
     'title' => 'Manage Groups - ' . $siteTitle,
@@ -239,8 +259,10 @@ $data = [
     'desc_file_write_error' => $desc_file_write_error,
     'change_log_error' => $change_log_error,
     'all_organisms' => $all_organisms,
-    'groups_data' => $groups_data_with_status,
+    'groups_data_with_status' => $groups_data_with_status,
     'descriptions_data' => $descriptions_data,
+    'unrepresented_organisms' => $unrepresented_organisms,
+    'stale_entries' => $stale_entries,
     'config' => $config,
     'page_script' => '/' . $site . '/js/modules/manage-groups.js',
     'inline_scripts' => [
