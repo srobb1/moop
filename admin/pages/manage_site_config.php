@@ -170,9 +170,13 @@
                                                        data-seq-type="<?= htmlspecialchars($seq_type) ?>"
                                                        placeholder="e.g., bg-info">
                                                 <span class="input-group-text p-0 ps-2">
-                                                    <span class="badge text-white px-2 py-1 <?= htmlspecialchars($seq_config['color'] ?? 'bg-secondary') ?>" 
+                                                    <?php 
+                                                      $colorInfo = getColorClassOrStyle($seq_config['color'] ?? 'bg-secondary');
+                                                    ?>
+                                                    <span class="badge text-white px-2 py-1 <?= $colorInfo['class'] ?>" 
                                                           id="badge_<?= htmlspecialchars($seq_type) ?>"
-                                                          data-seq-type="<?= htmlspecialchars($seq_type) ?>">
+                                                          data-seq-type="<?= htmlspecialchars($seq_type) ?>"
+                                                          <?php if ($colorInfo['style']): ?>style="<?= $colorInfo['style'] ?>"<?php endif; ?>>
                                                         <?= htmlspecialchars($seq_config['label'] ?? $seq_type) ?>
                                                     </span>
                                                 </span>
