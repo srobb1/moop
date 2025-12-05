@@ -104,7 +104,10 @@ $data = [
     'current_tree' => $current_tree,
     'config' => $config,
     'site' => $site,
-    'page_script' => '/' . $site . '/js/modules/manage-taxonomy-tree.js',
+    'page_script' => [
+        '/' . $site . '/js/admin-utilities.js',
+        '/' . $site . '/js/modules/manage-taxonomy-tree.js'
+    ],
     'inline_scripts' => [
         "const sitePath = '/" . $site . "';",
         "const currentTree = " . json_encode($current_tree) . ";"
