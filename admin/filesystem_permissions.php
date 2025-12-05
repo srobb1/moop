@@ -93,7 +93,7 @@ $permission_items = [
         'required_owner' => $moop_owner,
         'required_group' => 'www-data',
         'reason' => 'SGID (Set-Group-ID) bit ensures new files automatically get www-data as group',
-        'why_write' => 'Web server needs to read databases and organism.json files',
+        'why_write' => 'Web server needs to read databases, organism.json files, and RENAME/MOVE assembly subdirectories during admin operations',
         'sgid_bit' => true,
     ],
     
@@ -421,6 +421,7 @@ function performPermissionCheck($path, $item) {
                 <li><strong>Use 644 for read-only files:</strong> Database files that don't change</li>
                 <li><strong>Never use 777 or 666:</strong> This allows anyone to access/modify files (security risk)</li>
                 <li><strong>Check permissions regularly:</strong> Use this page to verify all permissions are correct</li>
+                <li><strong>For assembly rename operations:</strong> Organism directories need 2775 (write + execute) to allow web server to rename/move subdirectories. If rename fails in the admin interface, verify permissions here.</li>
             </ul>
         </div>
     </div>
