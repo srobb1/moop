@@ -118,8 +118,15 @@ document.addEventListener('DOMContentLoaded', function() {
       
       organismGroups.forEach(function(group) {
         const organismName = group.getAttribute('data-organism-name');
-        if (organismName.includes(filterValue)) {
+        if (filterValue === '' || organismName.includes(filterValue)) {
           group.style.display = '';
+          // Auto-expand filtered organisms
+          if (filterValue !== '') {
+            const assemblyDiv = group.querySelector('div[style*="display"]');
+            if (assemblyDiv) {
+              assemblyDiv.style.display = 'block';
+            }
+          }
         } else {
           group.style.display = 'none';
         }

@@ -129,19 +129,22 @@
 
             <div class="mb-3" id="groups-section">
               <label class="form-label">Access Groups</label>
-              <small class="text-muted d-block mb-2">Click on organism assemblies to grant access (not applicable for admins)</small>
+              <small class="text-muted d-block mb-2">Filter and click organism assemblies to grant access (not applicable for admins)</small>
               <div class="mb-2">
-                <input type="text" id="organism-filter" class="form-control" placeholder="Filter organisms by name...">
+                <input type="text" id="organism-filter" class="form-control form-control-sm" placeholder="Filter organisms...">
               </div>
-              <div class="border rounded p-3" style="max-height: 500px; overflow-y: auto; background-color: #f8f9fa;" id="create-access-container">
+              <div class="border rounded" style="max-height: 400px; overflow-y: auto; background-color: #f8f9fa;" id="create-access-container">
                 <?php foreach ($organisms as $organism => $assemblies): ?>
-                  <div class="organism-group mb-3" data-organism-name="<?= strtolower(htmlspecialchars($organism)) ?>">
-                    <h6><?= htmlspecialchars($organism) ?></h6>
-                    <div>
+                  <div class="organism-group" data-organism-name="<?= strtolower(htmlspecialchars($organism)) ?>" style="border-bottom: 1px solid #dee2e6; padding: 8px 10px;">
+                    <div style="font-weight: 600; font-size: 12px; margin-bottom: 6px; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none';">
+                      ▶ <?= htmlspecialchars($organism) ?>
+                    </div>
+                    <div style="display: none;">
                       <?php foreach ($assemblies as $assembly): ?>
                         <span class="tag-chip-selector create-chip" 
                               data-organism="<?= htmlspecialchars($organism) ?>" 
-                              data-assembly="<?= htmlspecialchars($assembly) ?>">
+                              data-assembly="<?= htmlspecialchars($assembly) ?>"
+                              style="font-size: 11px; padding: 3px 8px; margin: 2px;">
                           <?= htmlspecialchars($assembly) ?>
                         </span>
                       <?php endforeach; ?>
