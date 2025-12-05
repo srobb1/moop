@@ -1,7 +1,13 @@
 <?php
-// Styles loaded from manage-registry.css via page_styles in layout.php
-// JavaScript loaded from permission-manager.js and manage-registry.js via page_script
+/**
+ * MANAGE REGISTRY - Content File
+ * Styles loaded from manage-registry.css via page_styles in layout.php
+ * JavaScript loaded from permission-manager.js and manage-registry.js via page_script
+ */
 ?>
+
+<div class="container mt-5">
+  <h2><i class="fa fa-th-list"></i> Manage Function Registries</h2>
 
     <!-- About Section -->
     <div class="card mb-4 border-info">
@@ -140,3 +146,4 @@
         <strong>Permissions:</strong> If you get permission errors when updating, click the <strong>Permissions Help</strong> button for instructions.
       </p>
     </div>
+</div>

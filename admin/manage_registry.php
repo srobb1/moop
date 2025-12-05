@@ -46,6 +46,7 @@ $data = [
     'js_last_update' => $js_last_update,
     'docs_path' => $docs_path,
     'page_script' => [
+        '/' . $site . '/js/admin-utilities.js',
         '/' . $site . '/js/permission-manager.js',
         '/' . $site . '/js/modules/manage-registry.js',
     ],
