@@ -304,7 +304,7 @@
   <?php if (isset($_SESSION['success_message'])): ?>
     <div class="alert alert-success alert-dismissible fade show">
       <?= htmlspecialchars($_SESSION['success_message']) ?>
-      <button type="button" class="close" data-dismiss="alert">&times;</button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     <?php unset($_SESSION['success_message']); ?>
   <?php endif; ?>
@@ -312,7 +312,7 @@
   <?php if (isset($_SESSION['error_message'])): ?>
     <div class="alert alert-danger alert-dismissible fade show">
       <?= htmlspecialchars($_SESSION['error_message']) ?>
-      <button type="button" class="close" data-dismiss="alert">&times;</button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     <?php unset($_SESSION['error_message']); ?>
   <?php endif; ?>
