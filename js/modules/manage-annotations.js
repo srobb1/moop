@@ -19,10 +19,6 @@
         .fa-chevron-down {
             transition: transform 0.3s ease;
         }
-        .collapse.show ~ .card-header .fa-chevron-down,
-        [data-bs-target].collapsed .fa-chevron-down {
-            transform: rotate(-180deg);
-        }
         .fa-grip-vertical {
             cursor: grab;
             margin-right: 10px;
@@ -62,12 +58,13 @@
                 if (target) {
                     const element = document.querySelector(target);
                     if (element) {
+                        const isOpen = element.classList.contains('show');
                         element.classList.toggle('show');
                         
                         // Rotate chevron
                         const chevron = this.querySelector('.fa-chevron-down');
                         if (chevron) {
-                            chevron.style.transform = element.classList.contains('show') 
+                            chevron.style.transform = !isOpen 
                                 ? 'rotate(-180deg)' 
                                 : 'rotate(0deg)';
                         }
