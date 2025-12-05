@@ -48,8 +48,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Pre-assign colors to existing organisms (color function defined in inline_scripts)
   Object.keys(allOrganisms).forEach(org => getColorForOrganism(org));
   
-  // Apply colors to existing chips
-  document.querySelectorAll('.tag-chip').forEach(chip => {
+  // Apply colors to existing chips (but NOT stale ones)
+  document.querySelectorAll('.tag-chip:not(.tag-chip-stale)').forEach(chip => {
     const organism = chip.getAttribute('data-organism');
     if (organism) {
       chip.style.background = getColorForOrganism(organism);

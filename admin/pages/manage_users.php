@@ -162,6 +162,19 @@
     </div>
   </div>
   
+  <!-- Legend for Assembly Status -->
+  <div class="alert alert-info mb-4">
+    <strong><i class="fa fa-info-circle"></i> Assembly Status Legend:</strong>
+    <div style="margin-top: 10px;">
+      <span class="tag-chip">Active Assembly</span>
+      <span style="margin-left: 10px; margin-right: 10px;">— Assembly exists and is available (filled with color)</span>
+    </div>
+    <div style="margin-top: 8px;">
+      <span class="tag-chip tag-chip-stale">Stale Assembly</span>
+      <span style="margin-left: 10px;">— Assembly was deleted or moved (red outline, no fill). Admin should remove from user access.</span>
+    </div>
+  </div>
+  
   <!-- Existing Users Table -->
   <div class="row">
     <div class="col-12">
@@ -215,7 +228,11 @@
                         foreach ($userData['access'] as $org => $assemblies) {
                             if (is_array($assemblies)) {
                                 foreach ($assemblies as $asm) {
-                                    echo '<span class="tag-chip" data-organism="'.htmlspecialchars($org).'" data-assembly="'.htmlspecialchars($asm).'">' . htmlspecialchars($org) . ': ' . htmlspecialchars($asm) . '</span>';
+                                    // Check if assembly exists in filesystem
+                                    $exists = isset($organisms[$org]) && in_array($asm, $organisms[$org]);
+                                    $class = $exists ? 'tag-chip' : 'tag-chip tag-chip-stale';
+                                    $title = $exists ? '' : ' title="Assembly no longer exists - please remove from user access"';
+                                    echo '<span class="' . $class . '" data-organism="'.htmlspecialchars($org).'" data-assembly="'.htmlspecialchars($asm).'"' . $title . '>' . htmlspecialchars($org) . ': ' . htmlspecialchars($asm) . '</span>';
                                 }
                             }
                         }
@@ -315,6 +332,11 @@
   }
   .tag-chip.removable {
     cursor: pointer;
+  }
+  .tag-chip.tag-chip-stale {
+    background: transparent;
+    color: #dc3545;
+    border: 2px solid #dc3545;
   }
   .tag-chip .remove {
     margin-left: 5px;
