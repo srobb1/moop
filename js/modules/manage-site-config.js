@@ -187,3 +187,42 @@
         }
     });
 })();
+
+/**
+ * Sequence Type Color Input Handler
+ */
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        const colorInputs = document.querySelectorAll('.color-input');
+        colorInputs.forEach(function(input) {
+            // Function to update badge color
+            function updateBadgeColor() {
+                const seqType = input.getAttribute('data-seq-type');
+                const badgeElement = document.getElementById('badge_' + seqType);
+                if (badgeElement && input.value.trim()) {
+                    const colorValue = input.value.trim();
+                    
+                    // Check if it's a hex color (starts with # or is a color name)
+                    if (colorValue.startsWith('#') || /^[0-9a-f]{3}([0-9a-f]{3})?$/i.test(colorValue)) {
+                        // Hex color - use inline style
+                        badgeElement.style.backgroundColor = colorValue;
+                        badgeElement.style.color = 'white';
+                        // Remove Bootstrap classes
+                        badgeElement.className = badgeElement.className.replace(/bg-\S+|text-\S+/g, '').trim();
+                    } else {
+                        // Assume it's a Bootstrap class
+                        badgeElement.style.backgroundColor = '';
+                        badgeElement.style.color = '';
+                        // Remove all bg-* and text-* classes
+                        badgeElement.className = badgeElement.className.replace(/bg-\S+|text-\S+/g, '').trim();
+                        // Add the Bootstrap class
+                        badgeElement.className += ' ' + colorValue;
+                    }
+                }
+            }
+            
+            input.addEventListener('change', updateBadgeColor);
+            input.addEventListener('input', updateBadgeColor);
+        });
+    });
+})();
