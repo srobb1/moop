@@ -11,6 +11,7 @@
     border: 1px solid #ddd;
     border-radius: 4px;
     background-color: white;
+    overflow: visible;
 }
 
 .file-header {
@@ -46,10 +47,12 @@
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease;
+    padding: 0;
 }
 
 .functions-list.open {
     max-height: 10000px;
+    overflow: visible;
 }
 
 .function-item {
@@ -246,4 +249,196 @@
     font-size: 2.5em;
     color: #ddd;
     margin-bottom: 10px;
+}
+
+/* Admin page overrides */
+.file-section {
+    background: white;
+    margin: 15px 0;
+    border-radius: 4px;
+    overflow: visible;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-left: 4px solid #3498db;
+}
+
+.file-section.hidden {
+    display: none !important;
+}
+
+.file-header {
+    background: #34495e;
+    color: white;
+    padding: 15px 20px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.file-header:hover {
+    background: #2c3e50;
+}
+
+.functions-list {
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.functions-list.open {
+    max-height: 10000px;
+    overflow: visible;
+}
+
+.function-item {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ecf0f1;
+    transition: background-color 0.2s;
+}
+
+.function-item:last-child {
+    border-bottom: none;
+}
+
+.function-item:hover {
+    background-color: #f9f9f9;
+}
+
+.function-item.hidden {
+    display: none !important;
+}
+
+.function-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding-bottom: 10px;
+    user-select: none;
+}
+
+.function-header:hover {
+    color: #3498db;
+}
+
+.function-name {
+    font-family: 'Courier New', monospace;
+    color: #2980b9;
+    font-weight: 500;
+}
+
+.function-counter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #3498db;
+    color: white;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.expand-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    margin-left: 10px;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+}
+
+.function-line {
+    font-size: 11px;
+    color: #7f8c8d;
+}
+
+.function-code {
+    display: none;
+    background: #f8f8f8;
+    padding: 15px;
+    margin-top: 10px;
+    border-radius: 4px;
+    border-left: 3px solid #3498db;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.function-code.open {
+    display: block;
+    max-height: 10000px;
+}
+
+.function-comment {
+    background: #fffacd;
+    padding: 12px 15px;
+    margin: 10px 0;
+    border-left: 3px solid #f39c12;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.function-comment pre {
+    margin: 0;
+    font-family: 'Courier New', monospace;
+    color: #555;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.function-usages {
+    background: #e8f4f8;
+    padding: 12px 15px;
+    margin: 10px 0;
+    border-left: 3px solid #3498db;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.function-usages strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #2c3e50;
+}
+
+.function-usages ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.function-usages li {
+    margin: 6px 0;
+}
+
+.function-usages code {
+    display: inline;
+    background: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #bbb;
+}
+
+.file-count {
+    font-size: 12px;
+    color: #7f8c8d;
+    margin-left: 10px;
+}
+
+.unused-content {
+    display: block;
+}
+
+.unused-content.hidden {
+    display: none !important;
 }

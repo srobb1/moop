@@ -47,11 +47,12 @@ function renderRegistry() {
         fileCount++;
         const fileSection = document.createElement('div');
         fileSection.className = 'file-section';
+        fileSection.style.overflow = 'visible';
         fileSection.setAttribute('data-file', fileData.name);
         
         const header = document.createElement('div');
         header.className = 'file-header';
-        header.onclick = function() { toggleFile(this); };
+        header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; cursor: pointer;';
         header.innerHTML = `
             📄 ${htmlEscape(fileData.name)} <span class="file-count">(${fileData.count})</span>
             <span class="expand-arrow">▶</span>
@@ -59,6 +60,7 @@ function renderRegistry() {
         
         const listContainer = document.createElement('div');
         listContainer.className = 'functions-list';
+        listContainer.style.cssText = 'max-height: 0; overflow: hidden; transition: max-height 0.3s ease; padding: 0;';
         
         fileData.functions.forEach(func => {
             const item = document.createElement('div');
@@ -154,8 +156,9 @@ function renderRegistry() {
     const headers = container.querySelectorAll('.file-header');
     headers.forEach((header) => {
         header.style.cursor = 'pointer';
-        header.addEventListener('click', function() {
-            toggleFile(this);
+        header.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleFile(header);
         });
     });
 }
@@ -166,13 +169,32 @@ function renderRegistry() {
 function toggleFile(header) {
     const list = header.nextElementSibling;
     if (list && list.classList.contains('functions-list')) {
+        const isOpen = list.classList.contains('open');
         list.classList.toggle('open');
+        
+        console.log('=== toggleFile Debug ===');
+        console.log('isOpen before:', isOpen);
+        console.log('classList after toggle:', list.className);
+        console.log('Has open class now:', list.classList.contains('open'));
+        
+        // Force inline styles to ensure visibility
+        if (list.classList.contains('open')) {
+            list.style.maxHeight = '10000px';
+            list.style.overflow = 'visible';
+            console.log('Applied OPEN styles. list.style.maxHeight:', list.style.maxHeight);
+            console.log('Computed max-height:', window.getComputedStyle(list).maxHeight);
+        } else {
+            list.style.maxHeight = '0';
+            list.style.overflow = 'hidden';
+            console.log('Applied CLOSED styles');
+        }
+        
         const arrow = header.querySelector('.expand-arrow');
         if (arrow) {
-            arrow.textContent = list.classList.contains('open') ? '▼' : '▶';
+            arrow.textContent = !isOpen ? '▼' : '▶';
+            console.log('Arrow updated to:', arrow.textContent);
         }
-    } else {
-        console.error('FAILED: nextElementSibling is not a functions-list');
+        console.log('======================');
     }
 }
 
@@ -208,11 +230,47 @@ function toggleUnusedSection(header) {
 }
 
 /**
+ * Toggle all file sections (toggleAll and toggleAllFiles are aliases)
+ */
+function toggleAll() {
+    const lists = document.querySelectorAll('.functions-list');
+    const hiddenCount = document.querySelectorAll('.functions-list:not(.open)').length;
+    
+    lists.forEach(list => {
+        if (hiddenCount > 0) {
+            list.classList.add('open');
+            // Apply inline styles for open state
+            list.style.maxHeight = '10000px';
+            list.style.overflow = 'visible';
+        } else {
+            list.classList.remove('open');
+            // Apply inline styles for closed state
+            list.style.maxHeight = '0';
+            list.style.overflow = 'hidden';
+        }
+    });
+    
+    // Update all arrows
+    document.querySelectorAll('.file-header .expand-arrow').forEach(arrow => {
+        const list = arrow.closest('.file-header').nextElementSibling;
+        if (list && list.classList.contains('functions-list')) {
+            arrow.textContent = list.classList.contains('open') ? '▼' : '▶';
+        }
+    });
+}
+
+function toggleAllFiles() {
+    toggleAll();
+}
+
+/**
  * Expand all files
  */
 function expandAllFiles() {
     document.querySelectorAll('.functions-list').forEach(list => {
         list.classList.add('open');
+        list.style.maxHeight = '10000px';
+        list.style.overflow = 'visible';
         const header = list.previousElementSibling;
         if (header) {
             const arrow = header.querySelector('.expand-arrow');
@@ -227,6 +285,8 @@ function expandAllFiles() {
 function collapseAllFiles() {
     document.querySelectorAll('.functions-list').forEach(list => {
         list.classList.remove('open');
+        list.style.maxHeight = '0';
+        list.style.overflow = 'hidden';
         const header = list.previousElementSibling;
         if (header) {
             const arrow = header.querySelector('.expand-arrow');

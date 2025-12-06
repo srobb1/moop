@@ -42,4 +42,4 @@ $display_config = [
 ];
 
 // Include template (which includes layout system)
-include_once __DIR__ . '/../tools/registry-template.php';
+include_once __DIR__ . '/registry-template.php';
