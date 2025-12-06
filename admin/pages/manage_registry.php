@@ -308,7 +308,7 @@ if (file_exists($json_registry)) {
         <div class="card mb-4">
             <div class="card-header bg-dark text-white" style="display: flex; justify-content: space-between; align-items: center;">
                 <h5 class="mb-0"><i class="fa fa-list"></i> Functions</h5>
-                <button class="btn btn-sm btn-light" onclick="toggleAllFiles()" title="Toggle all sections">
+                <button class="btn btn-sm btn-light" id="toggleAllFilesBtn" title="Toggle all sections">
                     <i class="fa fa-folder-open"></i> Toggle All
                 </button>
             </div>
@@ -320,7 +320,7 @@ if (file_exists($json_registry)) {
         <?php if (!empty($registry['unused'])): ?>
         <!-- Unused Functions Alert -->
         <div class="card mb-4 border-danger">
-            <div class="card-header bg-danger text-white" style="cursor: pointer;" onclick="toggleUnusedSection(this)">
+            <div class="card-header bg-danger text-white" style="cursor: pointer;" id="unusedSectionHeader">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h5 class="mb-0"><i class="fa fa-exclamation-circle"></i> ⚠️ <?php echo count($registry['unused']); ?> Unused Function(s) Found</h5>
                     <span class="unused-arrow">▶</span>

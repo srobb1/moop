@@ -12,6 +12,19 @@ document.addEventListener('DOMContentLoaded', function() {
         registryData = JSON.parse(dataElement.textContent);
         renderRegistry();
     }
+    
+    // Attach event listeners
+    const toggleAllBtn = document.getElementById('toggleAllFilesBtn');
+    if (toggleAllBtn) {
+        toggleAllBtn.addEventListener('click', toggleAllFiles);
+    }
+    
+    const unusedHeader = document.getElementById('unusedSectionHeader');
+    if (unusedHeader) {
+        unusedHeader.addEventListener('click', function() {
+            toggleUnusedSection(this);
+        });
+    }
 });
 
 /**
