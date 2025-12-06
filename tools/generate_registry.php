@@ -402,7 +402,7 @@ function generateHtmlDocs($registry, $docs_path) {
     ksort($registry);
     foreach ($registry as $file => $functions) {
         $html .= "        <div class=\"file-section\">\n";
-        $html .= "            <div class=\"file-header\" onclick=\"toggleFile(this)\">📄 " . htmlspecialchars($file) . " (" . count($functions) . ")</div>\n";
+        $html .= "            <div class=\"file-header\" onclick=\"toggleFile(this)\">📄 " . htmlspecialchars($file) . " (" . count($functions) . ") <span class=\"expand-arrow\" style=\"float: right;\">▶</span></div>\n";
         $html .= "            <div class=\"functions-list\">\n";
         
         foreach ($functions as $func) {

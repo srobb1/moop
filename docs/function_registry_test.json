@@ -1,0 +1,108 @@
+{
+  "metadata": {
+    "generated": "2025-12-06 00:22:00",
+    "totalFunctions": 5,
+    "totalFiles": 2,
+    "duplicates": 0
+  },
+  "files": [
+    {
+      "name": "lib/test_functions.php",
+      "count": 3,
+      "functions": [
+        {
+          "name": "testFunc1",
+          "line": 10,
+          "comment": "Test function 1",
+          "code": "function testFunc1() {\n    return true;\n}",
+          "usageCount": 2,
+          "usages": [
+            {
+              "file": "index.php",
+              "line": 25,
+              "context": "testFunc1();"
+            },
+            {
+              "file": "admin/panel.php",
+              "line": 50,
+              "context": "$result = testFunc1();"
+            }
+          ]
+        },
+        {
+          "name": "testFunc2",
+          "line": 20,
+          "comment": "Test function 2 - does something useful",
+          "code": "function testFunc2($param) {\n    if (empty($param)) {\n        return false;\n    }\n    return processData($param);\n}",
+          "usageCount": 1,
+          "usages": [
+            {
+              "file": "tools/helper.php",
+              "line": 15,
+              "context": "$data = testFunc2($input);"
+            }
+          ]
+        },
+        {
+          "name": "testFunc3",
+          "line": 30,
+          "comment": "Unused test function",
+          "code": "function testFunc3() {\n    return 'This is never called';\n}",
+          "usageCount": 0,
+          "usages": []
+        }
+      ]
+    },
+    {
+      "name": "tools/utilities.php",
+      "count": 2,
+      "functions": [
+        {
+          "name": "helperFunc1",
+          "line": 5,
+          "comment": "Helper function 1",
+          "code": "function helperFunc1($a, $b) {\n    return $a + $b;\n}",
+          "usageCount": 1,
+          "usages": [
+            {
+              "file": "lib/test_functions.php",
+              "line": 22,
+              "context": "$sum = helperFunc1($x, $y);"
+            }
+          ]
+        },
+        {
+          "name": "helperFunc2",
+          "line": 12,
+          "comment": "Helper function 2",
+          "code": "function helperFunc2($text) {\n    return strtoupper($text);\n}",
+          "usageCount": 3,
+          "usages": [
+            {
+              "file": "index.php",
+              "line": 40,
+              "context": "echo helperFunc2($name);"
+            },
+            {
+              "file": "admin/panel.php",
+              "line": 60,
+              "context": "$output = helperFunc2($str);"
+            },
+            {
+              "file": "tools/utilities.php",
+              "line": 50,
+              "context": "return helperFunc2($value);"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "unused": [
+    {
+      "name": "testFunc3",
+      "file": "lib/test_functions.php",
+      "line": 30
+    }
+  ]
+}

@@ -14,6 +14,22 @@ function loadRegistry() {
  * Update statistics from registry data
  */
 function updateStats() {
+    // If we have registry data available, use it directly
+    const dataElement = document.getElementById('registryData');
+    if (dataElement) {
+        try {
+            const data = JSON.parse(dataElement.textContent);
+            const unusedEl = document.getElementById('unusedCount');
+            if (unusedEl && data.unused) {
+                unusedEl.textContent = data.unused.length;
+                return; // Don't calculate from DOM if we have JSON data
+            }
+        } catch(e) {
+            console.log('Could not parse registry data');
+        }
+    }
+    
+    // Fall back to DOM-based calculation
     const fileSections = document.querySelectorAll('.file-section');
     const totalFiles = fileSections.length;
     
@@ -183,13 +199,17 @@ function toggleFile(header) {
     const list = header.nextElementSibling;
     if (list && list.classList.contains('functions-list')) {
         list.classList.toggle('open');
+        const arrow = header.querySelector('.expand-arrow');
+        if (arrow) {
+            arrow.textContent = list.classList.contains('open') ? '▼' : '▶';
+        }
     }
 }
 
 /**
- * Expand all file sections
+ * Toggle all file sections (toggleAll and toggleAllFiles are aliases)
  */
-function toggleAllFiles() {
+function toggleAll() {
     const lists = document.querySelectorAll('.functions-list');
     const hiddenCount = document.querySelectorAll('.functions-list:not(.open)').length;
     
@@ -200,6 +220,10 @@ function toggleAllFiles() {
             list.classList.remove('open');
         }
     });
+}
+
+function toggleAllFiles() {
+    toggleAll();
 }
 
 /**
@@ -221,9 +245,9 @@ function collapseAllFiles() {
 }
 
 /**
- * Toggle function code visibility
+ * Toggle function code visibility (toggleCode and toggleFunctionCode are aliases)
  */
-function toggleFunctionCode(header) {
+function toggleCode(header) {
     const item = header.closest('.function-item');
     if (!item) return;
     
@@ -235,6 +259,10 @@ function toggleFunctionCode(header) {
             arrow.textContent = codeBlock.classList.contains('open') ? '▼' : '▶';
         }
     }
+}
+
+function toggleFunctionCode(header) {
+    toggleCode(header);
 }
 
 /**
@@ -281,6 +309,20 @@ function downloadRegistry() {
 }
 
 /**
+ * Toggle unused functions section visibility
+ */
+function toggleUnused(header) {
+    const content = header.nextElementSibling;
+    if (content && content.classList.contains('unused-content')) {
+        content.classList.toggle('hidden');
+        const arrow = header.querySelector('.unusedArrow');
+        if (arrow) {
+            arrow.textContent = content.classList.contains('hidden') ? '▶' : '▼';
+        }
+    }
+}
+
+/**
  * Clear search
  */
 function clearSearch() {
@@ -312,15 +354,6 @@ document.addEventListener('DOMContentLoaded', function() {
     fileHeaders.forEach(header => {
         header.addEventListener('click', function() {
             toggleFile(this);
-        });
-    });
-    
-    const functionHeaders = document.querySelectorAll('.function-header');
-    functionHeaders.forEach(header => {
-        header.addEventListener('click', function(e) {
-            if (e.target.closest('.expand-arrow')) {
-                toggleFunctionCode(this);
-            }
         });
     });
 });
