@@ -3,7 +3,7 @@
  * MANAGE REGISTRY - Admin Controller
  * 
  * Displays the interactive PHP function registry with admin authentication.
- * Uses the same visualization as tools/registry.php but requires admin access.
+ * Uses registry-template.php for consistent layout with tools/registry.php
  */
 
 ob_start();
@@ -12,7 +12,7 @@ include_once __DIR__ . '/admin_init.php';
 // Load config and data
 $config = ConfigManager::getInstance();
 $docs_path = $config->getPath('docs_path');
-$json_registry = $docs_path . '/function_registry.json';
+$json_registry = $docs_path . '/function_registry_test.json';
 
 // Load JSON registry
 $registry = null;
@@ -38,15 +38,8 @@ $data = [
 $display_config = [
     'content_file' => __DIR__ . '/pages/manage_registry.php',
     'title' => 'Function Registry',
-    'page_script' => '/' . $site . '/js/registry.js'
+    'page_script' => '/' . $site . '/js/manage-registry.js'
 ];
 
-// Include layout system
-include_once __DIR__ . '/../includes/layout.php';
-echo render_display_page(
-    $display_config['content_file'],
-    $data,
-    $display_config['title']
-);
-
-?>
+// Include template (which includes layout system)
+include_once __DIR__ . '/../tools/registry-template.php';
