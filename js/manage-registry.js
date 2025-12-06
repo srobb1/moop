@@ -1,199 +1,154 @@
 /**
- * Registry Display JavaScript
- * Handles search, filtering, toggling, and generation for function registries
+ * Registry JavaScript Functions
+ * Handles rendering, searching, filtering, and toggling
  */
 
-/**
- * Load and display registry on page load
- */
-function loadRegistry() {
-    updateStats();
-}
+let registryData = null;
 
-/**
- * Update statistics from registry data
- */
-function updateStats() {
-    // If we have registry data available, use it directly
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
     const dataElement = document.getElementById('registryData');
     if (dataElement) {
-        try {
-            const data = JSON.parse(dataElement.textContent);
-            const unusedEl = document.getElementById('unusedCount');
-            if (unusedEl && data.unused) {
-                unusedEl.textContent = data.unused.length;
-                return; // Don't calculate from DOM if we have JSON data
-            }
-        } catch(e) {
-            console.log('Could not parse registry data');
-        }
+        registryData = JSON.parse(dataElement.textContent);
+        renderRegistry();
+    }
+});
+
+/**
+ * Render registry from JSON data
+ */
+function renderRegistry() {
+    if (!registryData || !registryData.files) {
+        return;
     }
     
-    // Fall back to DOM-based calculation
-    const fileSections = document.querySelectorAll('.file-section');
-    const totalFiles = fileSections.length;
-    
-    let totalFunctions = 0;
-    let usedFunctions = 0;
-    let unusedFunctions = 0;
-    
-    fileSections.forEach(section => {
-        const items = section.querySelectorAll('.function-item');
-        totalFunctions += items.length;
-        
-        items.forEach(item => {
-            const usageText = item.textContent;
-            if (usageText.includes('Used in: 0 files') || usageText.includes('possibly unused') || item.querySelector('.unused-badge')) {
-                unusedFunctions++;
-            } else {
-                usedFunctions++;
-            }
-        });
-    });
-    
-    const totalEl = document.getElementById('totalCount');
-    const fileEl = document.getElementById('fileCount');
-    const usedEl = document.getElementById('usedCount');
-    const unusedEl = document.getElementById('unusedCount');
-    
-    if (totalEl) totalEl.textContent = totalFunctions || '-';
-    if (fileEl) fileEl.textContent = totalFiles || '-';
-    if (usedEl) usedEl.textContent = usedFunctions || '-';
-    if (unusedEl) unusedEl.textContent = unusedFunctions || '-';
-}
-
-/**
- * Generate/update registry
- */
-function generateRegistry() {
-    const btn = document.getElementById('generateBtn');
-    const msg = document.getElementById('registryMessage');
-    
-    if (!btn) return;
-    
-    const registryType = btn.dataset.registryType || 'php';
-    
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating...';
-    
-    fetch('/admin/api/generate_registry.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            type: registryType
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (msg) {
-            msg.innerHTML = `<div class="alert alert-${data.success ? 'success' : 'danger'}">
-                <i class="fa fa-${data.success ? 'check' : 'exclamation'}"></i> ${data.message}
-            </div>`;
-        }
-        
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa fa-refresh"></i> Generate/Update Registry';
-        
-        if (data.success) {
-            setTimeout(() => location.reload(), 1500);
-        }
-    })
-    .catch(error => {
-        if (msg) {
-            msg.innerHTML = `<div class="alert alert-danger">
-                <i class="fa fa-exclamation"></i> Error: ${error.message}
-            </div>`;
-        }
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa fa-refresh"></i> Generate/Update Registry';
-    });
-}
-
-/**
- * Search/filter functions
- */
-function filterFunctions() {
-    const searchInput = document.getElementById('searchInput');
-    if (!searchInput) return;
-    
-    const searchTerm = searchInput.value.toLowerCase();
-    const searchMode = document.querySelector('input[name="searchMode"]:checked');
-    const mode = searchMode ? searchMode.value : 'all';
-    const fileSections = document.querySelectorAll('.file-section');
-    
-    let visibleSections = 0;
-    let totalMatches = 0;
-    
-    fileSections.forEach(section => {
-        const fileHeader = section.querySelector('.file-header');
-        const fileName = fileHeader ? fileHeader.textContent.toLowerCase() : '';
-        const functionItems = section.querySelectorAll('.function-item');
-        let hasVisibleFunction = false;
-        let sectionMatches = 0;
-        
-        functionItems.forEach(item => {
-            const funcNameEl = item.querySelector('.function-name');
-            const funcName = funcNameEl ? funcNameEl.textContent.toLowerCase() : '';
-            const funcCodeEl = item.querySelector('.function-code');
-            const funcCode = funcCodeEl ? funcCodeEl.textContent.toLowerCase() : '';
-            const funcCommentEl = item.querySelector('.function-comment');
-            const funcComment = funcCommentEl ? funcCommentEl.textContent.toLowerCase() : '';
-            
-            let match = false;
-            
-            if (searchTerm === '') {
-                match = true;
-            } else {
-                if (mode === 'all') {
-                    match = funcName.includes(searchTerm) || funcCode.includes(searchTerm) || funcComment.includes(searchTerm) || fileName.includes(searchTerm);
-                } else if (mode === 'name') {
-                    match = funcName.includes(searchTerm);
-                } else if (mode === 'code') {
-                    match = funcCode.includes(searchTerm);
-                } else if (mode === 'comment') {
-                    match = funcComment.includes(searchTerm);
-                }
-            }
-            
-            if (match) {
-                item.classList.remove('hidden');
-                hasVisibleFunction = true;
-                sectionMatches++;
-                totalMatches++;
-            } else {
-                item.classList.add('hidden');
-            }
-        });
-        
-        if (hasVisibleFunction || (searchTerm !== '' && fileName.includes(searchTerm))) {
-            section.classList.remove('hidden');
-            visibleSections++;
-            
-            // Auto-expand if searching
-            if (searchTerm !== '') {
-                const list = section.querySelector('.functions-list');
-                if (list) list.classList.add('open');
-            }
-        } else {
-            section.classList.add('hidden');
-        }
-    });
-    
-    // Show message if no results
-    const msg = document.getElementById('searchMessage');
-    if (msg) {
-        if (searchTerm !== '' && totalMatches === 0) {
-            msg.innerHTML = `<div class="alert alert-info"><i class="fa fa-info-circle"></i> No functions match your search.</div>`;
-        } else {
-            msg.innerHTML = '';
-        }
+    const container = document.getElementById('filesContainer');
+    if (!container) {
+        return;
     }
+    
+    container.innerHTML = '';
+    
+    let fileCount = 0;
+    registryData.files.forEach(fileData => {
+        fileCount++;
+        const fileSection = document.createElement('div');
+        fileSection.className = 'file-section';
+        fileSection.setAttribute('data-file', fileData.name);
+        
+        const header = document.createElement('div');
+        header.className = 'file-header';
+        header.onclick = function() { toggleFile(this); };
+        header.innerHTML = `
+            📄 ${htmlEscape(fileData.name)} <span class="file-count">(${fileData.count})</span>
+            <span class="expand-arrow">▶</span>
+        `;
+        
+        const listContainer = document.createElement('div');
+        listContainer.className = 'functions-list';
+        
+        fileData.functions.forEach(func => {
+            const item = document.createElement('div');
+            item.className = 'function-item';
+            item.setAttribute('data-func', func.name);
+            
+            // Function header with toggle
+            const funcHeader = document.createElement('div');
+            funcHeader.className = 'function-header';
+            funcHeader.onclick = function() { toggleFunctionCode(this); };
+            funcHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="function-name">${htmlEscape(func.name)}()</span>
+                    <span class="function-counter">${func.usageCount}</span>
+                    <span class="function-line">Line ${func.line}</span>
+                </div>
+                <span class="expand-arrow">▶</span>
+            `;
+            item.appendChild(funcHeader);
+            
+            // File location
+            const fileLoc = document.createElement('div');
+            fileLoc.style.cssText = "font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 0; border-bottom: 1px solid #ecf0f1; user-select: all;";
+            fileLoc.textContent = `${fileData.name}: ${func.name}()`;
+            item.appendChild(fileLoc);
+            
+            // Comment if exists
+            if (func.comment) {
+                const comment = document.createElement('div');
+                comment.className = 'function-comment';
+                const pre = document.createElement('pre');
+                pre.textContent = func.comment;
+                comment.appendChild(pre);
+                item.appendChild(comment);
+            }
+            
+            // Usages
+            if (func.usages && func.usages.length > 0) {
+                const usages = document.createElement('div');
+                usages.className = 'function-usages';
+                
+                const usagesByFile = {};
+                func.usages.forEach(usage => {
+                    if (!usagesByFile[usage.file]) {
+                        usagesByFile[usage.file] = [];
+                    }
+                    usagesByFile[usage.file].push(usage);
+                });
+                
+                let html = `<strong>📍 Used in ${Object.keys(usagesByFile).length} file(s) (${func.usages.length} times):</strong>
+                    <ul>`;
+                
+                Object.entries(usagesByFile).forEach(([file, usages]) => {
+                    html += `<li><strong>${htmlEscape(file)}</strong> (${usages.length}x)
+                        <ul style="margin-top: 5px;">`;
+                    
+                    usages.forEach(usage => {
+                        html += `<li><code>line ${usage.line}</code>: <small>${htmlEscape(usage.context.substring(0, 80))}</small></li>`;
+                    });
+                    
+                    html += `</ul></li>`;
+                });
+                
+                html += `</ul>`;
+                usages.innerHTML = html;
+                item.appendChild(usages);
+            }
+            
+            // Code
+            if (func.code) {
+                const code = document.createElement('div');
+                code.className = 'function-code';
+                code.innerHTML = `<pre>${htmlEscape(func.code)}</pre>`;
+                item.appendChild(code);
+            }
+            
+            listContainer.appendChild(item);
+        });
+        
+        fileSection.appendChild(header);
+        fileSection.appendChild(listContainer);
+        container.appendChild(fileSection);
+    });
+    
+    // Set up file sections
+    const sections = container.querySelectorAll('.file-section');
+    sections.forEach((section) => {
+        section.style.display = 'block';
+        section.style.visibility = 'visible';
+    });
+    
+    // Attach click listeners to all file headers
+    const headers = container.querySelectorAll('.file-header');
+    headers.forEach((header) => {
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', function() {
+            toggleFile(this);
+        });
+    });
 }
 
 /**
- * Toggle file section visibility
+ * Toggle file section
  */
 function toggleFile(header) {
     const list = header.nextElementSibling;
@@ -203,119 +158,36 @@ function toggleFile(header) {
         if (arrow) {
             arrow.textContent = list.classList.contains('open') ? '▼' : '▶';
         }
+    } else {
+        console.error('FAILED: nextElementSibling is not a functions-list');
     }
 }
 
 /**
- * Toggle all file sections (toggleAll and toggleAllFiles are aliases)
+ * Toggle function code visibility
  */
-function toggleAll() {
-    const lists = document.querySelectorAll('.functions-list');
-    const hiddenCount = document.querySelectorAll('.functions-list:not(.open)').length;
-    
-    lists.forEach(list => {
-        if (hiddenCount > 0) {
-            list.classList.add('open');
-        } else {
-            list.classList.remove('open');
-        }
-    });
-}
-
-function toggleAllFiles() {
-    toggleAll();
-}
-
-/**
- * Expand all file sections
- */
-function expandAllFiles() {
-    document.querySelectorAll('.functions-list').forEach(list => {
-        list.classList.add('open');
-    });
-}
-
-/**
- * Collapse all file sections
- */
-function collapseAllFiles() {
-    document.querySelectorAll('.functions-list').forEach(list => {
-        list.classList.remove('open');
-    });
-}
-
-/**
- * Toggle function code visibility (toggleCode and toggleFunctionCode are aliases)
- */
-function toggleCode(header) {
+function toggleFunctionCode(header) {
     const item = header.closest('.function-item');
     if (!item) return;
     
-    const codeBlock = item.querySelector('.function-code');
-    if (codeBlock) {
-        codeBlock.classList.toggle('open');
+    const code = item.querySelector('.function-code');
+    if (code) {
+        code.classList.toggle('open');
         const arrow = header.querySelector('.expand-arrow');
         if (arrow) {
-            arrow.textContent = codeBlock.classList.contains('open') ? '▼' : '▶';
+            arrow.textContent = code.classList.contains('open') ? '▼' : '▶';
         }
     }
 }
 
-function toggleFunctionCode(header) {
-    toggleCode(header);
-}
-
 /**
- * Download registry as JSON
+ * Toggle unused section
  */
-function downloadRegistry() {
-    const registryType = document.body.dataset.registryType || 'php';
-    const fileSections = document.querySelectorAll('.file-section');
-    const registry = {};
-    
-    fileSections.forEach(section => {
-        const fileHeader = section.querySelector('.file-header-title');
-        const fileName = fileHeader ? fileHeader.textContent.trim() : 'unknown';
-        registry[fileName] = [];
-        
-        section.querySelectorAll('.function-item').forEach(item => {
-            const funcNameEl = item.querySelector('.function-name');
-            const funcName = funcNameEl ? funcNameEl.textContent.trim() : '';
-            const funcCodeEl = item.querySelector('.function-code');
-            const funcCode = funcCodeEl ? funcCodeEl.textContent.trim() : '';
-            const funcCommentEl = item.querySelector('.function-comment');
-            const funcComment = funcCommentEl ? funcCommentEl.textContent.trim() : '';
-            const metaEl = item.querySelector('.function-meta');
-            const meta = metaEl ? metaEl.textContent.trim() : '';
-            
-            registry[fileName].push({
-                name: funcName,
-                code: funcCode,
-                comment: funcComment,
-                meta: meta
-            });
-        });
-    });
-    
-    // Create download
-    const dataStr = JSON.stringify(registry, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = registryType + '_function_registry_' + new Date().toISOString().slice(0,10) + '.json';
-    link.click();
-    URL.revokeObjectURL(url);
-}
-
-/**
- * Toggle unused functions section visibility
- */
-function toggleUnused(header) {
+function toggleUnusedSection(header) {
     const content = header.nextElementSibling;
     if (content && content.classList.contains('unused-content')) {
         content.classList.toggle('hidden');
-        const arrow = header.querySelector('.unusedArrow');
+        const arrow = header.querySelector('.unused-arrow');
         if (arrow) {
             arrow.textContent = content.classList.contains('hidden') ? '▶' : '▼';
         }
@@ -323,37 +195,168 @@ function toggleUnused(header) {
 }
 
 /**
+ * Expand all files
+ */
+function expandAllFiles() {
+    document.querySelectorAll('.functions-list').forEach(list => {
+        list.classList.add('open');
+        const header = list.previousElementSibling;
+        if (header) {
+            const arrow = header.querySelector('.expand-arrow');
+            if (arrow) arrow.textContent = '▼';
+        }
+    });
+}
+
+/**
+ * Collapse all files
+ */
+function collapseAllFiles() {
+    document.querySelectorAll('.functions-list').forEach(list => {
+        list.classList.remove('open');
+        const header = list.previousElementSibling;
+        if (header) {
+            const arrow = header.querySelector('.expand-arrow');
+            if (arrow) arrow.textContent = '▶';
+        }
+    });
+}
+
+/**
+ * Filter/search registry
+ */
+function filterRegistry() {
+    const searchInput = document.getElementById('searchInput');
+    const searchMode = document.querySelector('input[name="searchMode"]:checked');
+    
+    if (!searchInput || !searchMode) return;
+    
+    const term = searchInput.value.toLowerCase();
+    const mode = searchMode.value;
+    
+    document.querySelectorAll('.file-section').forEach(section => {
+        const fileName = section.getAttribute('data-file').toLowerCase();
+        let hasVisibleFunc = false;
+        
+        section.querySelectorAll('.function-item').forEach(item => {
+            const funcName = item.getAttribute('data-func').toLowerCase();
+            const code = item.querySelector('.function-code') ? item.querySelector('.function-code').textContent.toLowerCase() : '';
+            const comment = item.querySelector('.function-comment') ? item.querySelector('.function-comment').textContent.toLowerCase() : '';
+            
+            let match = false;
+            
+            if (!term) {
+                match = true;
+            } else {
+                if (mode === 'all') {
+                    match = funcName.includes(term) || code.includes(term) || comment.includes(term) || fileName.includes(term);
+                } else if (mode === 'name') {
+                    match = funcName.includes(term);
+                } else if (mode === 'code') {
+                    match = code.includes(term);
+                } else if (mode === 'comment') {
+                    match = comment.includes(term);
+                }
+            }
+            
+            if (match) {
+                item.classList.remove('hidden');
+                hasVisibleFunc = true;
+            } else {
+                item.classList.add('hidden');
+            }
+        });
+        
+        if (hasVisibleFunc || !term || fileName.includes(term)) {
+            section.classList.remove('hidden');
+            if (term) {
+                section.querySelector('.functions-list').classList.add('open');
+                const header = section.querySelector('.file-header');
+                const arrow = header.querySelector('.expand-arrow');
+                if (arrow) arrow.textContent = '▼';
+            }
+        } else {
+            section.classList.add('hidden');
+        }
+    });
+}
+
+/**
  * Clear search
  */
 function clearSearch() {
-    const input = document.getElementById('searchInput');
-    if (input) {
-        input.value = '';
-        filterFunctions();
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = '';
+        filterRegistry();
     }
 }
 
 /**
- * Initialize registry page
+ * Download registry as JSON
  */
-document.addEventListener('DOMContentLoaded', function() {
-    loadRegistry();
+function downloadRegistry() {
+    if (!registryData) return;
     
-    // Set up event listeners
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('keyup', filterFunctions);
+    const dataStr = JSON.stringify(registryData, null, 2);
+    const blob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'function_registry_' + new Date().toISOString().slice(0, 10) + '.json';
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+/**
+ * Generate registry (placeholder - would call backend)
+ */
+function generateRegistry() {
+    const btn = document.getElementById('generateBtn');
+    const msg = document.getElementById('registryMessage');
+    
+    if (!btn) return;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating...';
+    
+    // This would call the backend
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-refresh"></i> Generate/Update Registry';
+    }, 2000);
+}
+
+/**
+ * HTML escape utility
+ */
+function htmlEscape(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Initialize registry on page load or immediately if DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        const dataElement = document.getElementById('registryData');
+        if (dataElement) {
+            try {
+                registryData = JSON.parse(dataElement.textContent);
+                renderRegistry();
+            } catch (e) {
+                console.error('Error parsing JSON or rendering:', e);
+            }
+        }
+    });
+} else {
+    const dataElement = document.getElementById('registryData');
+    if (dataElement) {
+        try {
+            registryData = JSON.parse(dataElement.textContent);
+            renderRegistry();
+        } catch (e) {
+            console.error('Error parsing JSON or rendering:', e);
+        }
     }
-    
-    const searchRadios = document.querySelectorAll('input[name="searchMode"]');
-    searchRadios.forEach(radio => {
-        radio.addEventListener('change', filterFunctions);
-    });
-    
-    const fileHeaders = document.querySelectorAll('.file-header');
-    fileHeaders.forEach(header => {
-        header.addEventListener('click', function() {
-            toggleFile(this);
-        });
-    });
-});
+}
