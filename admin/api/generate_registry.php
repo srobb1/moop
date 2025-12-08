@@ -25,7 +25,7 @@ if (!in_array($type, ['php', 'js'])) {
 }
 
 // Determine which generator to run
-$generator = $type === 'php' ? 'generate_registry.php' : 'generate_js_registry.php';
+$generator = $type === 'php' ? 'generate_registry_json.php' : 'generate_js_registry_json.php';
 $generator_path = __DIR__ . '/../../tools/' . $generator;
 
 if (!file_exists($generator_path)) {
