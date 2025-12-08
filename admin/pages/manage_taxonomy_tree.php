@@ -202,13 +202,3 @@
     <?php endif; ?>
 </div>
 
-<style>
-.tree-preview {
-    font-family: 'Courier New', monospace;
-    max-height: 500px;
-    overflow-y: auto;
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 5px;
-}
-</style>

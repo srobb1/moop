@@ -448,14 +448,6 @@
 </div>
 
 <!-- Structural Settings Tutorial Modal -->
-<style>
-.modal-body .nav-tabs .nav-link {
-    color: #212529 !important;
-}
-.modal-body .nav-tabs .nav-link.active {
-    color: #212529 !important;
-}
-</style>
 <div class="modal fade" id="structuralSettingsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">

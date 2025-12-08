@@ -352,6 +352,9 @@ $data = [
     'organism_data' => $organism_data,
     'metadata_path' => $metadata_path,
     'config_file' => $config_file,
+    'page_styles' => [
+        '/' . $site . '/admin/css/manage-site-config.css'
+    ],
     'page_script' => [
         '/' . $site . '/js/admin-utilities.js',
         '/' . $site . '/js/modules/manage-site-config.js'

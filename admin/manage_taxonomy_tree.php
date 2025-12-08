@@ -104,6 +104,9 @@ $data = [
     'current_tree' => $current_tree,
     'config' => $config,
     'site' => $site,
+    'page_styles' => [
+        '/' . $site . '/admin/css/manage-taxonomy-tree.css'
+    ],
     'page_script' => [
         '/' . $site . '/js/admin-utilities.js',
         '/' . $site . '/js/modules/manage-taxonomy-tree.js'
