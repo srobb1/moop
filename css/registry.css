@@ -266,7 +266,7 @@
 }
 
 .file-header {
-    background: #34495e;
+    background: #6c757d;
     color: white;
     padding: 15px 20px;
     font-weight: bold;
@@ -278,7 +278,7 @@
 }
 
 .file-header:hover {
-    background: #2c3e50;
+    background: #5a6268;
 }
 
 .functions-list {
