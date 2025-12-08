@@ -16,6 +16,165 @@ $docs_path = $config->getPath('docs_path');
 $jsDir = __DIR__ . '/../js';
 $registry = [];
 
+/**
+ * Extract JSDoc comment to get parameter and return information
+ */
+function parseJsDoc($comment) {
+    $params = [];
+    $returnType = 'unknown';
+    $returnDescription = '';
+    
+    if (empty($comment)) {
+        return ['params' => $params, 'returnType' => $returnType, 'returnDescription' => $returnDescription];
+    }
+    
+    // Extract @param lines
+    if (preg_match_all('/@param\s+(?:\{([^}]+)\})?\s*(\w+)\s*-?\s*(.*)$/mi', $comment, $matches)) {
+        for ($i = 0; $i < count($matches[0]); $i++) {
+            $params[] = [
+                'name' => $matches[2][$i],
+                'type' => !empty($matches[1][$i]) ? $matches[1][$i] : 'any',
+                'description' => trim($matches[3][$i])
+            ];
+        }
+    }
+    
+    // Extract @returns/@return
+    if (preg_match('/@returns?\s+(?:\{([^}]+)\})?\s*-?\s*(.*)$/mi', $comment, $matches)) {
+        $returnType = !empty($matches[1]) ? $matches[1] : 'any';
+        $returnDescription = trim($matches[2]);
+    }
+    
+    return ['params' => $params, 'returnType' => $returnType, 'returnDescription' => $returnDescription];
+}
+
+/**
+ * Extract function calls from JS function body
+ */
+function extractJsFunctionCalls($code, $allFunctionNames) {
+    $calls = [];
+    
+    // Find function calls: functionName( or this.functionName(
+    if (preg_match_all('/(?:^|[\s\.])([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/', $code, $matches)) {
+        foreach ($matches[1] as $called) {
+            if (in_array($called, $allFunctionNames)) {
+                $calls[] = $called;
+            }
+        }
+    }
+    
+    return array_values(array_unique($calls));
+}
+
+/**
+ * Determine category for JS function
+ */
+function determineJsCategory($filename, $funcName) {
+    $filename = strtolower($filename);
+    $funcName = strtolower($funcName);
+    
+    // UI/DOM manipulation
+    if (strpos($filename, 'dom') !== false || strpos($filename, 'ui') !== false ||
+        strpos($funcName, 'render') !== false || strpos($funcName, 'display') !== false ||
+        strpos($funcName, 'show') !== false || strpos($funcName, 'hide') !== false) {
+        return 'ui-dom';
+    }
+    
+    // Event handling
+    if (strpos($funcName, 'event') !== false || strpos($funcName, 'listener') !== false ||
+        strpos($funcName, 'handler') !== false || strpos($funcName, 'click') !== false) {
+        return 'event-handling';
+    }
+    
+    // Data processing
+    if (strpos($funcName, 'parse') !== false || strpos($funcName, 'extract') !== false ||
+        strpos($funcName, 'filter') !== false || strpos($funcName, 'search') !== false) {
+        return 'data-processing';
+    }
+    
+    // Search/Filter
+    if (strpos($filename, 'search') !== false || strpos($filename, 'filter') !== false ||
+        strpos($funcName, 'search') !== false || strpos($funcName, 'filter') !== false) {
+        return 'search-filter';
+    }
+    
+    // Download/Export
+    if (strpos($funcName, 'download') !== false || strpos($funcName, 'export') !== false) {
+        return 'export';
+    }
+    
+    // DataTables
+    if (strpos($filename, 'datatable') !== false || strpos($filename, 'table') !== false) {
+        return 'datatable';
+    }
+    
+    // Admin tools
+    if (strpos($filename, 'manage') !== false || strpos($filename, 'admin') !== false) {
+        return 'admin';
+    }
+    
+    // BLAST
+    if (strpos($filename, 'blast') !== false) {
+        return 'blast';
+    }
+    
+    // Utilities
+    if (strpos($funcName, 'escape') !== false || strpos($funcName, 'sanitize') !== false) {
+        return 'utilities';
+    }
+    
+    return 'general';
+}
+
+/**
+ * Determine tags for JS function
+ */
+function determineJsTags($comment, $code, $funcName) {
+    $tags = [];
+    
+    // DOM manipulation
+    if (preg_match('/\.innerHTML|\.textContent|appendChild|removeChild|classList|setAttribute|getElementById|querySelector/i', $code)) {
+        $tags[] = 'dom-manipulation';
+    }
+    
+    // Asynchronous
+    if (preg_match('/async|await|\.then|\.catch|Promise|setTimeout/i', $code)) {
+        $tags[] = 'asynchronous';
+    }
+    
+    // AJAX/HTTP
+    if (preg_match('/fetch|XMLHttpRequest|\.ajax|\.get|\.post/i', $code)) {
+        $tags[] = 'ajax';
+    }
+    
+    // Event listener
+    if (preg_match('/addEventListener|on\w+\s*=|\.on\(/i', $code)) {
+        $tags[] = 'event-listener';
+    }
+    
+    // State modification
+    if (preg_match('/\w+\s*=/i', $code)) {
+        $tags[] = 'state-modifying';
+    }
+    
+    // Loop operations
+    if (preg_match('/forEach|for\s*\(|while\s*\(/i', $code)) {
+        $tags[] = 'loops';
+    }
+    
+    // Error handling
+    if (preg_match('/try\s*\{|catch|throw|error/i', $code)) {
+        $tags[] = 'error-handling';
+    }
+    
+    // Validation
+    if (preg_match('/validate|check|verify/i', $code)) {
+        $tags[] = 'validation';
+    }
+    
+    return array_values(array_unique($tags));
+}
+
 // Scan JS files and extract functions
 echo "🔍 Scanning JavaScript files...\n";
 $files = array_merge(
@@ -23,11 +182,43 @@ $files = array_merge(
     glob($jsDir . '/modules/*.js') ?: []
 );
 
+// First pass: collect all function names
+echo "🔍 Scanning JavaScript files (pass 1: collecting function names)...\n";
+$allJsFunctionNames = [];
+$jsFilesContent = [];
+
 foreach ($files as $file) {
     if (strpos($file, '.min.js') !== false || strpos($file, 'unused') !== false) continue;
     
     $content = file_get_contents($file);
+    $jsFilesContent[$file] = $content;
+    
+    // Match function declarations and arrow functions
+    $patterns = [
+        '/(?:^|\s)function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/m',
+        '/(?:^|\s)(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(?:function|\()/m',
+    ];
+    
+    foreach ($patterns as $pattern) {
+        if (preg_match_all($pattern, $content, $matches)) {
+            foreach ($matches[1] as $funcName) {
+                if (!in_array($funcName, $allJsFunctionNames)) {
+                    $allJsFunctionNames[] = $funcName;
+                }
+            }
+        }
+    }
+}
+
+// Second pass: extract functions with full metadata
+echo "🔍 Scanning JavaScript files (pass 2: extracting metadata)...\n";
+
+foreach ($files as $file) {
+    if (strpos($file, '.min.js') !== false || strpos($file, 'unused') !== false) continue;
+    
+    $content = $jsFilesContent[$file];
     $functions = [];
+    $fileName = basename($file);
     
     // Match function declarations and arrow functions
     $patterns = [
@@ -68,11 +259,34 @@ foreach ($files as $file) {
                     }
                 }
                 
+                // Extract JSDoc comment (look for /** ... */ before function)
+                $jsDocComment = '';
+                $beforeFunc = substr($content, 0, $startPos);
+                if (preg_match('/\/\*\*.*?\*\/\s*$/s', $beforeFunc, $jsDocMatch)) {
+                    $jsDocComment = $jsDocMatch[0];
+                }
+                
+                // Parse JSDoc for parameters and return type
+                $docInfo = parseJsDoc($jsDocComment);
+                
+                // Extract internal function calls
+                $internalCalls = extractJsFunctionCalls($functionCode, $allJsFunctionNames);
+                
+                // Determine category and tags
+                $category = determineJsCategory($fileName, $funcName);
+                $tags = determineJsTags($jsDocComment, $functionCode, $funcName);
+                
                 $functions[] = [
                     'name' => $funcName,
                     'line' => $lineNum,
-                    'comment' => '',
+                    'comment' => $jsDocComment,
                     'code' => trim($functionCode),
+                    'parameters' => $docInfo['params'],
+                    'returnType' => $docInfo['returnType'],
+                    'returnDescription' => $docInfo['returnDescription'],
+                    'internalCalls' => $internalCalls,
+                    'category' => $category,
+                    'tags' => $tags,
                     'usageCount' => 0,
                     'usages' => [],
                     'phpFilesCount' => 0,

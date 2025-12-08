@@ -27,6 +27,127 @@ $scanDirs = [
 $excludePatterns = ['.backup', 'generate_registry', 'function_registry'];
 
 /**
+ * Determine category based on filename and function name
+ */
+function determineCategory($filename, $funcName) {
+    $filename = strtolower($filename);
+    $funcName = strtolower($funcName);
+    
+    // Database functions
+    if (strpos($filename, 'database') !== false || strpos($filename, 'queries') !== false || 
+        strpos($funcName, 'fetch') !== false || strpos($funcName, 'query') !== false ||
+        strpos($funcName, 'db') !== false) {
+        return 'database';
+    }
+    
+    // Filesystem functions
+    if (strpos($filename, 'filesystem') !== false || strpos($filename, 'file') !== false ||
+        strpos($funcName, 'file') !== false || strpos($funcName, 'directory') !== false ||
+        strpos($funcName, 'path') !== false) {
+        return 'filesystem';
+    }
+    
+    // Validation/Security
+    if (strpos($funcName, 'validate') !== false || strpos($funcName, 'sanitize') !== false ||
+        strpos($funcName, 'escape') !== false || strpos($funcName, 'check') !== false ||
+        strpos($funcName, 'permission') !== false) {
+        return 'validation';
+    }
+    
+    // Configuration
+    if (strpos($filename, 'config') !== false || strpos($funcName, 'config') !== false) {
+        return 'configuration';
+    }
+    
+    // Access control
+    if (strpos($filename, 'access') !== false || strpos($funcName, 'access') !== false ||
+        strpos($funcName, 'auth') !== false) {
+        return 'security';
+    }
+    
+    // Data manipulation
+    if (strpos($funcName, 'parse') !== false || strpos($funcName, 'extract') !== false ||
+        strpos($funcName, 'transform') !== false || strpos($funcName, 'convert') !== false) {
+        return 'data-processing';
+    }
+    
+    // Organism/Biology related
+    if (strpos($filename, 'organism') !== false || strpos($funcName, 'organism') !== false ||
+        strpos($funcName, 'assembly') !== false || strpos($funcName, 'genome') !== false) {
+        return 'organisms';
+    }
+    
+    // BLAST/Tools
+    if (strpos($filename, 'blast') !== false || strpos($funcName, 'blast') !== false) {
+        return 'tools-blast';
+    }
+    
+    // Search/Indexing
+    if (strpos($funcName, 'search') !== false || strpos($funcName, 'index') !== false) {
+        return 'search';
+    }
+    
+    // UI/Display
+    if (strpos($funcName, 'render') !== false || strpos($funcName, 'display') !== false ||
+        strpos($funcName, 'html') !== false || strpos($funcName, 'format') !== false) {
+        return 'ui';
+    }
+    
+    return 'utility';
+}
+
+/**
+ * Determine tags based on function characteristics
+ */
+function determineTags($comment, $code, $funcName) {
+    $tags = [];
+    
+    // Check if function modifies data
+    if (preg_match('/file_put_contents|fwrite|INSERT|UPDATE|DELETE|unlink|rename|mkdir|chmod/i', $code)) {
+        $tags[] = 'mutation';
+    } else {
+        $tags[] = 'readonly';
+    }
+    
+    // Check if it handles errors
+    if (preg_match('/try\s*\{|catch|throw|error|exception/i', $code)) {
+        $tags[] = 'error-handling';
+    }
+    
+    // Check if it uses database
+    if (preg_match('/\$db|\$pdo|PDO|mysqli|query|fetch|execute/i', $code)) {
+        $tags[] = 'database-dependent';
+    }
+    
+    // Check if it does file I/O
+    if (preg_match('/file_get|file_put|fopen|fread|fwrite|file_exists|is_dir|glob|scandir|readdir/i', $code)) {
+        $tags[] = 'file-io';
+    }
+    
+    // Check if it's a helper/utility
+    if (strpos($comment, 'helper') !== false || strpos($comment, 'utility') !== false) {
+        $tags[] = 'helper';
+    }
+    
+    // Check for security operations
+    if (preg_match('/password|hash|encrypt|decrypt|token|auth|permission|privilege/i', $code)) {
+        $tags[] = 'security-related';
+    }
+    
+    // Check for loops (performance concern)
+    if (preg_match('/foreach|for\s*\(|while\s*\(/i', $code)) {
+        $tags[] = 'loops';
+    }
+    
+    // Check for recursion
+    if (preg_match('/\b' . preg_quote($funcName) . '\s*\(/', $code)) {
+        $tags[] = 'recursive';
+    }
+    
+    return array_values(array_unique($tags));
+}
+
+/**
  * Extract comment block before a function
  */
 function extractCommentBlock($content, $funcPos) {
@@ -56,9 +177,59 @@ function extractCommentBlock($content, $funcPos) {
 }
 
 /**
+ * Parse PHPDoc comment to extract parameter and return type information
+ */
+function parsePhpDoc($comment) {
+    $params = [];
+    $returnType = 'void';
+    $returnDescription = '';
+    
+    if (empty($comment)) {
+        return ['params' => $params, 'returnType' => $returnType, 'returnDescription' => $returnDescription];
+    }
+    
+    // Extract @param lines
+    if (preg_match_all('/@param\s+(\S+)\s+\$(\w+)\s*-?\s*(.*)$/m', $comment, $matches)) {
+        for ($i = 0; $i < count($matches[0]); $i++) {
+            $params[] = [
+                'name' => $matches[2][$i],
+                'type' => $matches[1][$i],
+                'description' => trim($matches[3][$i])
+            ];
+        }
+    }
+    
+    // Extract @return
+    if (preg_match('/@return\s+(\S+)\s*-?\s*(.*)$/m', $comment, $matches)) {
+        $returnType = $matches[1];
+        $returnDescription = trim($matches[2]);
+    }
+    
+    return ['params' => $params, 'returnType' => $returnType, 'returnDescription' => $returnDescription];
+}
+
+/**
+ * Extract function calls from function body (internal dependencies)
+ */
+function extractInternalCalls($functionBody, $allFunctionNames) {
+    $calls = [];
+    
+    // Find all function calls in the form: functionName(
+    if (preg_match_all('/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/', $functionBody, $matches)) {
+        foreach ($matches[1] as $called) {
+            if (in_array($called, $allFunctionNames) && $called !== '__construct') {
+                $calls[] = $called;
+            }
+        }
+    }
+    
+    return array_values(array_unique($calls));
+}
+
+/**
  * Extract PHP functions from a PHP file
  */
-function extractFunctions($filePath) {
+function extractFunctions($filePath, $allFunctionNames = []) {
     $content = file_get_contents($filePath);
     $functions = [];
     
@@ -110,11 +281,29 @@ function extractFunctions($filePath) {
                 }
             }
             
+            // Parse PHPDoc for parameters and return type
+            $docInfo = parsePhpDoc($comment);
+            
+            // Extract internal function calls (dependencies)
+            $internalCalls = extractInternalCalls($functionCode, $allFunctionNames);
+            
+            // Determine category based on filename and function name
+            $category = determineCategory(basename($filePath), $funcName);
+            
+            // Determine tags based on function characteristics
+            $tags = determineTags($comment, $functionCode, $funcName);
+            
             $functions[] = [
                 'name' => $funcName,
                 'line' => $lineNum,
                 'comment' => $comment,
-                'code' => trim($functionCode)
+                'code' => trim($functionCode),
+                'parameters' => $docInfo['params'],
+                'returnType' => $docInfo['returnType'],
+                'returnDescription' => $docInfo['returnDescription'],
+                'internalCalls' => $internalCalls,
+                'category' => $category,
+                'tags' => $tags
             ];
         }
     }
@@ -195,8 +384,11 @@ function findFunctionUsages($funcName, $scanDirs, $definitionFile) {
     return $usages;
 }
 
-// Scan all directories
-echo "🔍 Scanning directories...\n";
+// Scan all directories - First pass: collect all function names
+echo "🔍 Scanning directories (pass 1: collecting function names)...\n";
+$allFunctionNames = [];
+$tempRegistry = [];
+
 foreach ($scanDirs as $dir) {
     if (!is_dir($dir)) continue;
     
@@ -214,7 +406,39 @@ foreach ($scanDirs as $dir) {
         if ($skip) continue;
         
         $relativePath = str_replace(__DIR__ . '/../', '', $file);
-        $functions = extractFunctions($file);
+        $functions = extractFunctions($file, []);  // First pass without dependencies
+        
+        if (!empty($functions)) {
+            $tempRegistry[$relativePath] = $functions;
+            foreach ($functions as $func) {
+                $allFunctionNames[] = $func['name'];
+            }
+        }
+    }
+}
+
+// Second pass: re-extract with dependency information
+echo "🔍 Scanning directories (pass 2: extracting dependencies)...\n";
+$registry = [];
+
+foreach ($scanDirs as $dir) {
+    if (!is_dir($dir)) continue;
+    
+    $files = glob($dir . '/*.php');
+    foreach ($files as $file) {
+        $fileName = basename($file);
+        
+        $skip = false;
+        foreach ($excludePatterns as $pattern) {
+            if (strpos($fileName, $pattern) !== false) {
+                $skip = true;
+                break;
+            }
+        }
+        if ($skip) continue;
+        
+        $relativePath = str_replace(__DIR__ . '/../', '', $file);
+        $functions = extractFunctions($file, $allFunctionNames);  // Second pass WITH dependencies
         
         if (!empty($functions)) {
             $registry[$relativePath] = $functions;
@@ -271,6 +495,12 @@ foreach ($registry as $file => $functions) {
             'line' => $func['line'],
             'comment' => $func['comment'],
             'code' => $func['code'],
+            'parameters' => $func['parameters'] ?? [],
+            'returnType' => $func['returnType'] ?? 'void',
+            'returnDescription' => $func['returnDescription'] ?? '',
+            'internalCalls' => $func['internalCalls'] ?? [],
+            'category' => $func['category'] ?? 'utility',
+            'tags' => $func['tags'] ?? [],
             'usageCount' => count($usages),
             'usages' => $usages
         ];
