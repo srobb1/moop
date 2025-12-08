@@ -81,7 +81,8 @@ $display_config = [
     'inline_scripts' => [
         "const sitePath = '/$site';",
         "const groupName = '" . addslashes($group_name) . "';",
-        "const groupOrganisms = " . json_encode(array_keys($group_organisms)) . ";"
+        "const groupOrganisms = " . json_encode(array_keys($group_organisms)) . ";",
+        "const siteTitle = '" . addslashes($config->getString('siteTitle')) . "';"
     ]
 ];
 

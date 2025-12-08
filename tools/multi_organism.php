@@ -71,7 +71,8 @@ $display_config = [
     'inline_scripts' => [
         "const sitePath = '/$site';",
         "const selectedOrganisms = " . json_encode($organisms) . ";",
-        "const totalOrganisms = selectedOrganisms.length;"
+        "const totalOrganisms = selectedOrganisms.length;",
+        "const siteTitle = '" . addslashes($config->getString('siteTitle')) . "';"
     ]
 ];
 

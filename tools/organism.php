@@ -56,7 +56,8 @@ $display_config = [
     'page_script' => '/' . $site . '/js/organism-display.js',
     'inline_scripts' => [
         "const sitePath = '/" . $site . "';",
-        "const organismName = '" . addslashes($organism_name) . "';"
+        "const organismName = '" . addslashes($organism_name) . "';",
+        "const siteTitle = '" . addslashes($config->getString('siteTitle')) . "';"
     ]
 ];
 

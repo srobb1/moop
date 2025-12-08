@@ -65,7 +65,8 @@ $display_config = [
         "const sitePath = '/$site';",
         "const assemblyName = '" . addslashes($assembly_info['genome_name']) . "';",
         "const assemblyAccession = '" . addslashes($assembly_info['genome_accession'] ?? '') . "';",
-        "const organismName = '" . addslashes($organism_name) . "';"
+        "const organismName = '" . addslashes($organism_name) . "';",
+        "const siteTitle = '" . addslashes($config->getString('siteTitle')) . "';"
     ]
 ];
 

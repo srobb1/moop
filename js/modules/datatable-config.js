@@ -10,11 +10,21 @@ const DataTableExportConfig = {
         },
         csv: {
             extend: 'csv',
-            text: '<i class="fas fa-file-csv"></i> CSV'
+            text: '<i class="fas fa-file-csv"></i> CSV',
+            title: function() {
+                // Remove site title from filename to avoid trailing dash
+                const title = document.title;
+                return title.replace(' - ' + siteTitle, '').trim();
+            }
         },
         excel: {
             extend: 'excel',
-            text: '<i class="fas fa-file-excel"></i> Excel'
+            text: '<i class="fas fa-file-excel"></i> Excel',
+            title: function() {
+                // Remove site title from filename to avoid trailing dash
+                const title = document.title;
+                return title.replace(' - ' + siteTitle, '').trim();
+            }
         },
         print: {
             extend: 'print',
