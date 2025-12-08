@@ -134,6 +134,39 @@ if (file_exists($json_registry)) {
                 >
             </div>
             
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Filter by Category:</label>
+                    <select id="categoryFilter" class="form-select form-select-sm" onchange="filterRegistry()">
+                        <option value="">All Categories</option>
+                        <option value="database">📊 Database</option>
+                        <option value="filesystem">📁 Filesystem</option>
+                        <option value="validation">✓ Validation</option>
+                        <option value="security">🔒 Security</option>
+                        <option value="configuration">⚙️ Configuration</option>
+                        <option value="organisms">🧬 Organisms</option>
+                        <option value="tools-blast">⚡ BLAST Tools</option>
+                        <option value="search">🔍 Search</option>
+                        <option value="ui">🎨 UI/Display</option>
+                        <option value="data-processing">🔄 Data Processing</option>
+                        <option value="utility">🛠️ Utility</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Filter by Type:</label>
+                    <select id="typeFilter" class="form-select form-select-sm" onchange="filterRegistry()">
+                        <option value="">All Types</option>
+                        <option value="mutation">Mutation (modifies data)</option>
+                        <option value="readonly">Read-only (safe)</option>
+                        <option value="error-handling">Error Handling</option>
+                        <option value="database-dependent">Database Operations</option>
+                        <option value="file-io">File I/O</option>
+                        <option value="recursive">Recursive</option>
+                        <option value="loops">Contains Loops</option>
+                    </select>
+                </div>
+            </div>
+            
             <div class="mb-3">
                 <label class="form-label">Search in:</label>
                 <div>
@@ -158,7 +191,7 @@ if (file_exists($json_registry)) {
             
             <div class="mb-0">
                 <button class="btn btn-sm btn-secondary" onclick="clearSearch()">
-                    <i class="fa fa-times"></i> Clear Search
+                    <i class="fa fa-times"></i> Clear All Filters
                 </button>
             </div>
             <div id="searchMessage" class="mt-2"></div>

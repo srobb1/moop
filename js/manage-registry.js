@@ -71,10 +71,59 @@ function renderRegistry() {
             const funcHeader = document.createElement('div');
             funcHeader.className = 'function-header';
             funcHeader.onclick = function() { toggleFunctionCode(this); };
+            
+            // Build badges for category and tags
+            let categoryBadge = '';
+            if (func.category) {
+                const categoryColors = {
+                    'database': '#e8f4f8',
+                    'filesystem': '#f0e8f8',
+                    'validation': '#f8f4e8',
+                    'security': '#f8e8e8',
+                    'configuration': '#e8f0f8',
+                    'organisms': '#e8f8f0',
+                    'tools-blast': '#f8e8f8',
+                    'search': '#f8f0e8',
+                    'ui': '#e8e8f8',
+                    'data-processing': '#f0f8e8',
+                    'utility': '#f8f8e8'
+                };
+                const bgColor = categoryColors[func.category] || '#f0f0f0';
+                categoryBadge = `<span class="badge" style="background-color: ${bgColor}; color: #333; font-size: 11px; margin-left: 8px;">${htmlEscape(func.category)}</span>`;
+            }
+            
+            // Build tag badges
+            let tagBadges = '';
+            if (func.tags && Array.isArray(func.tags)) {
+                tagBadges = func.tags.slice(0, 2).map(tag => {
+                    const tagColors = {
+                        'mutation': '#ffcccc',
+                        'readonly': '#ccffcc',
+                        'error-handling': '#fff0cc',
+                        'database-dependent': '#cce6ff',
+                        'file-io': '#f0ccff',
+                        'helper': '#ffffcc',
+                        'security-related': '#ffccee',
+                        'loops': '#ffddcc',
+                        'recursive': '#ccffee',
+                        'dom-manipulation': '#ccffff',
+                        'asynchronous': '#ffccdd',
+                        'ajax': '#ddffcc',
+                        'event-listener': '#eeccff',
+                        'state-modifying': '#ffddee',
+                        'validation': '#ccddff'
+                    };
+                    const bgColor = tagColors[tag] || '#e0e0e0';
+                    return `<span class="badge" style="background-color: ${bgColor}; color: #333; font-size: 10px; margin-left: 4px;">${htmlEscape(tag)}</span>`;
+                }).join('');
+            }
+            
             funcHeader.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <span class="function-name">${htmlEscape(func.name)}()</span>
-                    <span class="function-counter">${func.usageCount}</span>
+                    ${categoryBadge}
+                    ${tagBadges}
+                    <span class="function-counter" style="margin-left: auto;">${func.usageCount}</span>
                     <span class="function-line">Line ${func.line}</span>
                 </div>
                 <span class="expand-arrow">▶</span>
@@ -95,6 +144,47 @@ function renderRegistry() {
                 pre.textContent = func.comment;
                 comment.appendChild(pre);
                 item.appendChild(comment);
+            }
+            
+            // Parameters and Return Type
+            if ((func.parameters && func.parameters.length > 0) || func.returnType) {
+                const metadata = document.createElement('div');
+                metadata.style.cssText = 'background: #f8f9fa; border-left: 4px solid #007bff; padding: 10px 12px; margin: 8px 0; border-radius: 3px;';
+                
+                let metadataHTML = '<strong style="color: #0056b3;">📋 Function Signature:</strong><br>';
+                
+                // Parameters
+                if (func.parameters && func.parameters.length > 0) {
+                    metadataHTML += '<span style="color: #666; font-size: 12px;"><strong>Parameters:</strong></span><ul style="margin: 5px 0 10px 20px; padding: 0; list-style: none;">';
+                    func.parameters.forEach(param => {
+                        metadataHTML += `<li style="font-size: 12px; color: #333;"><code>${htmlEscape(param.name)}</code> <span style="color: #999;">({${htmlEscape(param.type)}})</span> - ${htmlEscape(param.description || 'no description')}</li>`;
+                    });
+                    metadataHTML += '</ul>';
+                }
+                
+                // Return Type
+                if (func.returnType && func.returnType !== 'void') {
+                    metadataHTML += `<span style="color: #666; font-size: 12px;"><strong>Returns:</strong> <code>${htmlEscape(func.returnType)}</code></span>`;
+                    if (func.returnDescription) {
+                        metadataHTML += ` - ${htmlEscape(func.returnDescription)}`;
+                    }
+                }
+                
+                metadata.innerHTML = metadataHTML;
+                item.appendChild(metadata);
+            }
+            
+            // Internal Dependencies (internalCalls)
+            if (func.internalCalls && func.internalCalls.length > 0) {
+                const deps = document.createElement('div');
+                deps.style.cssText = 'background: #e8f5e9; border-left: 4px solid #4caf50; padding: 10px 12px; margin: 8px 0; border-radius: 3px;';
+                
+                let depsHTML = '<strong style="color: #2e7d32;">🔗 Function Dependencies:</strong><br>';
+                depsHTML += '<span style="font-size: 12px; color: #333;">Calls these functions internally:</span><br>';
+                depsHTML += func.internalCalls.map(call => `<code style="background: #c8e6c9; padding: 2px 6px; border-radius: 3px; margin: 2px 2px 2px 0; display: inline-block; font-size: 11px;">${htmlEscape(call)}()</code>`).join('');
+                
+                deps.innerHTML = depsHTML;
+                item.appendChild(deps);
             }
             
             // PHP Files using this function (JS specific)
@@ -309,12 +399,18 @@ function collapseAllFiles() {
  */
 function filterRegistry() {
     const searchInput = document.getElementById('searchInput');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const typeFilter = document.getElementById('typeFilter');
     const searchMode = document.querySelector('input[name="searchMode"]:checked');
     
     if (!searchInput || !searchMode) return;
     
     const term = searchInput.value.toLowerCase();
+    const categoryTerm = categoryFilter ? categoryFilter.value : '';
+    const typeTerm = typeFilter ? typeFilter.value : '';
     const mode = searchMode.value;
+    
+    let visibleCount = 0;
     
     document.querySelectorAll('.file-section').forEach(section => {
         const fileName = section.getAttribute('data-file').toLowerCase();
@@ -325,33 +421,60 @@ function filterRegistry() {
             const code = item.querySelector('.function-code') ? item.querySelector('.function-code').textContent.toLowerCase() : '';
             const comment = item.querySelector('.function-comment') ? item.querySelector('.function-comment').textContent.toLowerCase() : '';
             
-            let match = false;
+            // Get category and tags from the function object in registry data
+            let funcCategory = '';
+            let funcTags = [];
             
-            if (!term) {
-                match = true;
-            } else {
-                if (mode === 'all') {
-                    match = funcName.includes(term) || code.includes(term) || comment.includes(term) || fileName.includes(term);
-                } else if (mode === 'name') {
-                    match = funcName.includes(term);
-                } else if (mode === 'code') {
-                    match = code.includes(term);
-                } else if (mode === 'comment') {
-                    match = comment.includes(term);
+            if (registryData && registryData.files) {
+                for (let file of registryData.files) {
+                    const func = file.functions.find(f => f.name.toLowerCase() === funcName);
+                    if (func) {
+                        funcCategory = func.category || '';
+                        funcTags = func.tags || [];
+                        break;
+                    }
                 }
+            }
+            
+            let match = true;
+            
+            // Text search
+            if (term) {
+                let textMatch = false;
+                if (mode === 'all') {
+                    textMatch = funcName.includes(term) || code.includes(term) || comment.includes(term) || fileName.includes(term);
+                } else if (mode === 'name') {
+                    textMatch = funcName.includes(term);
+                } else if (mode === 'code') {
+                    textMatch = code.includes(term);
+                } else if (mode === 'comment') {
+                    textMatch = comment.includes(term);
+                }
+                match = match && textMatch;
+            }
+            
+            // Category filter
+            if (categoryTerm && funcCategory !== categoryTerm) {
+                match = false;
+            }
+            
+            // Type filter (tag-based)
+            if (typeTerm && !funcTags.includes(typeTerm)) {
+                match = false;
             }
             
             if (match) {
                 item.classList.remove('hidden');
                 hasVisibleFunc = true;
+                visibleCount++;
             } else {
                 item.classList.add('hidden');
             }
         });
         
-        if (hasVisibleFunc || !term || fileName.includes(term)) {
+        if (hasVisibleFunc || (!term && !categoryTerm && !typeTerm) || fileName.includes(term)) {
             section.classList.remove('hidden');
-            if (term) {
+            if (term || categoryTerm || typeTerm) {
                 section.querySelector('.functions-list').classList.add('open');
                 const header = section.querySelector('.file-header');
                 const arrow = header.querySelector('.expand-arrow');
@@ -361,6 +484,16 @@ function filterRegistry() {
             section.classList.add('hidden');
         }
     });
+    
+    // Update search message
+    const searchMsg = document.getElementById('searchMessage');
+    if (searchMsg) {
+        if (term || categoryTerm || typeTerm) {
+            searchMsg.innerHTML = `<small class="text-muted">Found <strong>${visibleCount}</strong> matching function(s)</small>`;
+        } else {
+            searchMsg.innerHTML = '';
+        }
+    }
 }
 
 /**
@@ -368,10 +501,24 @@ function filterRegistry() {
  */
 function clearSearch() {
     const searchInput = document.getElementById('searchInput');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const typeFilter = document.getElementById('typeFilter');
+    const searchModeAll = document.getElementById('searchAll');
+    
     if (searchInput) {
         searchInput.value = '';
-        filterRegistry();
     }
+    if (categoryFilter) {
+        categoryFilter.value = '';
+    }
+    if (typeFilter) {
+        typeFilter.value = '';
+    }
+    if (searchModeAll) {
+        searchModeAll.checked = true;
+    }
+    
+    filterRegistry();
 }
 
 /**
