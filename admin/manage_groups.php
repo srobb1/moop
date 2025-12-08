@@ -265,6 +265,9 @@ $data = [
     'stale_entries' => $stale_entries,
     'existing_groups' => $all_existing_groups,
     'config' => $config,
+    'page_styles' => [
+        '/' . $site . '/admin/css/manage-groups.css'
+    ],
     'page_script' => [
         '/' . $site . '/js/admin-utilities.js',
         '/' . $site . '/js/modules/manage-groups.js'
