@@ -97,6 +97,25 @@ function renderRegistry() {
                 item.appendChild(comment);
             }
             
+            // PHP Files using this function (JS specific)
+            if (func.phpFilesCount && func.phpFilesCount > 0 && func.phpFiles) {
+                const phpFiles = document.createElement('div');
+                phpFiles.className = 'function-usages';
+                phpFiles.style.backgroundColor = '#f0e6ff';
+                phpFiles.style.borderLeftColor = '#9966ff';
+                
+                let html = `<strong>🐘 Used in ${func.phpFilesCount} PHP file(s):</strong>
+                    <ul>`;
+                
+                func.phpFiles.forEach(phpFile => {
+                    html += `<li><code>${htmlEscape(phpFile)}</code></li>`;
+                });
+                
+                html += `</ul>`;
+                phpFiles.innerHTML = html;
+                item.appendChild(phpFiles);
+            }
+            
             // Usages
             if (func.usages && func.usages.length > 0) {
                 const usages = document.createElement('div');
@@ -110,7 +129,7 @@ function renderRegistry() {
                     usagesByFile[usage.file].push(usage);
                 });
                 
-                let html = `<strong>📍 Used in ${Object.keys(usagesByFile).length} file(s) (${func.usages.length} times):</strong>
+                let html = `<strong>📍 Function calls in ${Object.keys(usagesByFile).length} file(s) (${func.usages.length} times):</strong>
                     <ul>`;
                 
                 Object.entries(usagesByFile).forEach(([file, usages]) => {
@@ -172,29 +191,19 @@ function toggleFile(header) {
         const isOpen = list.classList.contains('open');
         list.classList.toggle('open');
         
-        console.log('=== toggleFile Debug ===');
-        console.log('isOpen before:', isOpen);
-        console.log('classList after toggle:', list.className);
-        console.log('Has open class now:', list.classList.contains('open'));
-        
         // Force inline styles to ensure visibility
         if (list.classList.contains('open')) {
             list.style.maxHeight = '10000px';
             list.style.overflow = 'visible';
-            console.log('Applied OPEN styles. list.style.maxHeight:', list.style.maxHeight);
-            console.log('Computed max-height:', window.getComputedStyle(list).maxHeight);
         } else {
             list.style.maxHeight = '0';
             list.style.overflow = 'hidden';
-            console.log('Applied CLOSED styles');
         }
         
         const arrow = header.querySelector('.expand-arrow');
         if (arrow) {
             arrow.textContent = !isOpen ? '▼' : '▶';
-            console.log('Arrow updated to:', arrow.textContent);
         }
-        console.log('======================');
     }
 }
 
@@ -382,7 +391,7 @@ function downloadRegistry() {
 }
 
 /**
- * Generate registry (placeholder - would call backend)
+ * Generate registry by calling backend API
  */
 function generateRegistry() {
     const btn = document.getElementById('generateBtn');
@@ -390,14 +399,59 @@ function generateRegistry() {
     
     if (!btn) return;
     
+    // Get registry type from button data attribute (default to 'php')
+    const registryType = btn.getAttribute('data-registry-type') || 'php';
+    
     btn.disabled = true;
     btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating...';
     
-    // This would call the backend
-    setTimeout(() => {
+    // Call the backend API to generate registry
+    fetch('/moop/admin/api/generate_registry.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ type: registryType })
+    })
+    .then(response => response.json())
+    .then(data => {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa fa-refresh"></i> Generate/Update Registry';
-    }, 2000);
+        
+        if (data.success) {
+            // Show success message
+            if (msg) {
+                msg.innerHTML = '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+                    '<i class="fa fa-check-circle"></i> ' + data.message +
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                    '</div>';
+            }
+            
+            // Reload page after 2 seconds to show updated status
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            // Show error message
+            if (msg) {
+                msg.innerHTML = '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+                    '<i class="fa fa-exclamation-circle"></i> ' + data.message +
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                    '</div>';
+            }
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-refresh"></i> Generate/Update Registry';
+        
+        if (msg) {
+            msg.innerHTML = '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+                '<i class="fa fa-exclamation-circle"></i> Error: ' + error.message +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                '</div>';
+        }
+    });
 }
 
 /**
