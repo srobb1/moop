@@ -451,14 +451,21 @@ function getDirectoryError($dirpath) {
  * Get the last update time from registry files
  * 
  * Attempts to extract "Generated:" timestamp from HTML file first,
- * then falls back to file modification time
+ * then falls back to file modification time. Also checks if any PHP files
+ * in the codebase are newer than the registry, indicating it needs updating.
  * 
  * @param string $htmlFile - Path to HTML registry file
  * @param string $mdFile - Path to Markdown registry file (fallback)
- * @return string - Last update timestamp in format 'Y-m-d H:i:s' or 'Never'
+ * @param string $scanDirBase - Base path for scanning PHP files (defaults to parent of lib/)
+ * @return array - Array with keys:
+ *                 'timestamp' => Last update timestamp in format 'Y-m-d H:i:s' or 'Never'
+ *                 'isStale' => Boolean indicating if registry needs updating
+ *                 'status' => String message ('Up to date' or 'You should update')
  */
-function getRegistryLastUpdate($htmlFile, $mdFile) {
+function getRegistryLastUpdate($htmlFile, $mdFile, $scanDirBase = null) {
     $lastUpdate = 'Never';
+    $lastUpdateTime = 0;
+    $isStale = false;
     
     // Try to get from HTML file first (has "Generated:" timestamp)
     if (file_exists($htmlFile) && is_readable($htmlFile)) {
@@ -466,18 +473,77 @@ function getRegistryLastUpdate($htmlFile, $mdFile) {
         // Look for "Generated: YYYY-MM-DD HH:MM:SS" in the HTML
         if (preg_match('/Generated:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/', $content, $matches)) {
             $lastUpdate = $matches[1];
-            return $lastUpdate;
+            $lastUpdateTime = strtotime($lastUpdate);
         }
     }
     
     // Fallback to file modification time
-    if (file_exists($htmlFile)) {
-        $lastUpdate = date('Y-m-d H:i:s', filemtime($htmlFile));
-    } elseif (file_exists($mdFile)) {
-        $lastUpdate = date('Y-m-d H:i:s', filemtime($mdFile));
+    if ($lastUpdateTime === 0) {
+        if (file_exists($htmlFile)) {
+            $lastUpdateTime = filemtime($htmlFile);
+            $lastUpdate = date('Y-m-d H:i:s', $lastUpdateTime);
+        } elseif (file_exists($mdFile)) {
+            $lastUpdateTime = filemtime($mdFile);
+            $lastUpdate = date('Y-m-d H:i:s', $lastUpdateTime);
+        }
     }
     
-    return $lastUpdate;
+    // Check if any PHP files are newer than the registry (only if registry exists)
+    if ($lastUpdateTime > 0) {
+        if ($scanDirBase === null) {
+            // Default to parent directory of lib/
+            $scanDirBase = dirname(dirname(__FILE__));
+        }
+        
+        $scanDirs = [
+            $scanDirBase . '/lib',
+            $scanDirBase . '/tools',
+            $scanDirBase . '/admin',
+            $scanDirBase
+        ];
+        
+        foreach ($scanDirs as $dir) {
+            if (!is_dir($dir)) continue;
+            
+            try {
+                $files = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($dir),
+                    RecursiveIteratorIterator::LEAVES_ONLY
+                );
+                
+                foreach ($files as $file) {
+                    if (!$file->isFile() || $file->getExtension() !== 'php') continue;
+                    
+                    $filePath = $file->getRealPath();
+                    
+                    // Skip excluded files and directories
+                    $excludePatterns = ['docs/', 'logs/', 'notes/', 'not_used/', '.git/', 'generate_registry'];
+                    $skip = false;
+                    foreach ($excludePatterns as $pattern) {
+                        if (strpos($filePath, $pattern) !== false) {
+                            $skip = true;
+                            break;
+                        }
+                    }
+                    if ($skip) continue;
+                    
+                    $fileTime = filemtime($filePath);
+                    if ($fileTime > $lastUpdateTime) {
+                        $isStale = true;
+                        break 2;
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("Error checking PHP file timestamps: " . $e->getMessage());
+            }
+        }
+    }
+    
+    return [
+        'timestamp' => $lastUpdate,
+        'isStale' => $isStale,
+        'status' => $isStale ? 'You should update' : 'Up to date'
+    ];
 }
 
 /**
