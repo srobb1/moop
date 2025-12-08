@@ -186,6 +186,10 @@ if (file_exists($json_registry)) {
                         <input class="form-check-input" type="radio" name="searchMode" id="searchComment" value="comment" onchange="filterRegistry()">
                         <label class="form-check-label" for="searchComment">Comments</label>
                     </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="searchMode" id="searchParameters" value="parameters" onchange="filterRegistry()">
+                        <label class="form-check-label" for="searchParameters">Parameters</label>
+                    </div>
                 </div>
             </div>
             

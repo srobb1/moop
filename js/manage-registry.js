@@ -449,6 +449,22 @@ function filterRegistry() {
                     textMatch = code.includes(term);
                 } else if (mode === 'comment') {
                     textMatch = comment.includes(term);
+                } else if (mode === 'parameters') {
+                    // Search in parameters from registry data
+                    if (registryData && registryData.files) {
+                        for (let file of registryData.files) {
+                            const func = file.functions.find(f => f.name.toLowerCase() === funcName);
+                            if (func && Array.isArray(func.parameters) && func.parameters.length > 0) {
+                                textMatch = func.parameters.some(param => {
+                                    if (!param) return false;
+                                    return (param.name && param.name.toLowerCase().includes(term)) || 
+                                           (param.type && param.type.toLowerCase().includes(term)) || 
+                                           (param.description && param.description.toLowerCase().includes(term));
+                                });
+                            }
+                            if (textMatch) break;
+                        }
+                    }
                 }
                 match = match && textMatch;
             }
@@ -472,7 +488,7 @@ function filterRegistry() {
             }
         });
         
-        if (hasVisibleFunc || (!term && !categoryTerm && !typeTerm) || fileName.includes(term)) {
+        if (hasVisibleFunc || (!term && !categoryTerm && !typeTerm)) {
             section.classList.remove('hidden');
             if (term || categoryTerm || typeTerm) {
                 section.querySelector('.functions-list').classList.add('open');
