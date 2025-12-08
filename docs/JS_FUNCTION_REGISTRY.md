@@ -1,10 +1,10 @@
 # JavaScript Function Registry
 
-Generated: 2025-12-05 22:38:15
+Generated: 2025-12-08 20:14:29
 
 ## Summary
-- **Total Functions**: 78
-- **Files Scanned**: 18
+- **Total Functions**: 105
+- **Files Scanned**: 20
 
 ## js/blast-manager.js
 
@@ -84,6 +84,164 @@ Generated: 2025-12-05 22:38:15
 - `tools/pages/index.php` (2x):
   - Line 36: `<button type=\"button\" class=\"btn btn-outline-primary active\" id=\"card-view-btn\" onclick=\"switchView(\'card\')\">`
   - Line 39: `<button type=\"button\" class=\"btn btn-outline-primary\" id=\"tree-view-btn\" onclick=\"switchView(\'tree\')\">`
+
+---
+
+## js/manage-registry.js
+
+**13 function(s)**
+
+**Included in:**
+- `admin/manage_js_registry.php`
+- `admin/manage_registry.php`
+
+### `renderRegistry()` (Line 32)
+
+**Called in 2 file(s) (6 times):**
+- `js/manage-registry.js` (3x):
+  - Line 13: `renderRegistry();`
+  - Line 464: `renderRegistry();`
+  - Line 475: `renderRegistry();`
+- `tools/pages/registry.php` (3x):
+  - Line 362: `renderRegistry();`
+  - Line 695: `renderRegistry();`
+  - Line 706: `renderRegistry();`
+
+### `toggleFile()` (Line 168)
+
+**Called in 4 file(s) (5 times):**
+- `js/manage-registry.js` (1x):
+  - Line 161: `toggleFile(header);`
+- `js/registry.js` (1x):
+  - Line 356: `toggleFile(this);`
+- `tools/generate_registry.php` (1x):
+  - Line 405: `$html .= \"            <div class=\\\"file-header\\\" onclick=\\\"toggleFile(this)\\\">📄 \" . htmlspecialchars($file) . \" (\" . count($functions) . \") <span class=\\\"expand-arrow\\\" style=\\\"float: right;\\\">▶</span></div>\\n\";`
+- `tools/pages/registry.php` (2x):
+  - Line 390: `header.onclick = function() { toggleFile(this); };`
+  - Line 494: `toggleFile(this);`
+
+### `toggleFunctionCode()` (Line 203)
+
+**Called in 2 file(s) (2 times):**
+- `js/manage-registry.js` (1x):
+  - Line 73: `funcHeader.onclick = function() { toggleFunctionCode(this); };`
+- `tools/pages/registry.php` (1x):
+  - Line 407: `funcHeader.onclick = function() { toggleFunctionCode(this); };`
+
+### `toggleUnusedSection()` (Line 220)
+
+**Called in 2 file(s) (2 times):**
+- `js/manage-registry.js` (1x):
+  - Line 25: `toggleUnusedSection(this);`
+- `tools/pages/registry.php` (1x):
+  - Line 323: `<div class=\"card-header bg-danger text-white\" style=\"cursor: pointer;\" onclick=\"toggleUnusedSection(this)\">`
+
+### `toggleAll()` (Line 234)
+
+**Called in 4 file(s) (4 times):**
+- `js/manage-registry.js` (1x):
+  - Line 263: `toggleAll();`
+- `js/registry.js` (1x):
+  - Line 226: `toggleAll();`
+- `tools/generate_js_registry.php` (1x):
+  - Line 306: `$html .= \"<button id=\\\"toggleBtn\\\" onclick=\\\"toggleAll()\\\" style=\\\"flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;\\\">📂 Expand All</button>\\n\";`
+- `tools/generate_registry.php` (1x):
+  - Line 398: `$html .= \"            <button id=\\\"toggleBtn\\\" onclick=\\\"toggleAll()\\\" style=\\\"flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;\\\">📂 Expand All</button>\\n\";`
+
+### `toggleAllFiles()` (Line 261)
+
+**Called in 1 file(s) (1 times):**
+- `tools/pages/registry.php` (1x):
+  - Line 311: `<button class=\"btn btn-sm btn-light\" onclick=\"toggleAllFiles()\" title=\"Toggle all sections\">`
+
+### `expandAllFiles()` (Line 268)
+
+**Called in 1 file(s) (1 times):**
+- `tools/pages/js_registry.php` (1x):
+  - Line 96: `<button class=\"btn btn-sm btn-secondary\" onclick=\"expandAllFiles()\">`
+
+### `collapseAllFiles()` (Line 284)
+
+**Called in 1 file(s) (1 times):**
+- `tools/pages/js_registry.php` (1x):
+  - Line 99: `<button class=\"btn btn-sm btn-secondary\" onclick=\"collapseAllFiles()\">`
+
+### `filterRegistry()` (Line 300)
+
+**Called in 4 file(s) (17 times):**
+- `js/manage-registry.js` (1x):
+  - Line 364: `filterRegistry();`
+- `admin/pages/manage_js_registry.php` (5x):
+  - Line 133: `onkeyup=\"filterRegistry()\"`
+  - Line 141: `<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchAll\" value=\"all\" checked onchange=\"filterRegistry()\">`
+  - Line 145: `<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchName\" value=\"name\" onchange=\"filterRegistry()\">`
+  - Line 149: `<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchCode\" value=\"code\" onchange=\"filterRegistry()\">`
+  - Line 153: `<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchComment\" value=\"comment\" onchange=\"filterRegistry()\">`
+- `admin/pages/manage_registry.php` (5x):
+  - Line 133: `onkeyup=\"filterRegistry()\"`
+  - Line 141: `<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchAll\" value=\"all\" checked onchange=\"filterRegistry()\">`
+  - Line 145: `<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchName\" value=\"name\" onchange=\"filterRegistry()\">`
+  - Line 149: `<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchCode\" value=\"code\" onchange=\"filterRegistry()\">`
+  - Line 153: `<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchComment\" value=\"comment\" onchange=\"filterRegistry()\">`
+- `tools/pages/registry.php` (6x):
+  - Line 266: `onkeyup=\"filterRegistry()\"`
+  - Line 274: `<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchAll\" value=\"all\" checked onchange=\"filterRegistry()\">`
+  - Line 278: `<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchName\" value=\"name\" onchange=\"filterRegistry()\">`
+  - Line 282: `<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchCode\" value=\"code\" onchange=\"filterRegistry()\">`
+  - Line 286: `<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchComment\" value=\"comment\" onchange=\"filterRegistry()\">`
+  - Line 640: `filterRegistry();`
+
+### `clearSearch()` (Line 359)
+
+**Called in 4 file(s) (4 times):**
+- `admin/pages/manage_js_registry.php` (1x):
+  - Line 160: `<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">`
+- `admin/pages/manage_registry.php` (1x):
+  - Line 160: `<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">`
+- `tools/pages/js_registry.php` (1x):
+  - Line 102: `<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">`
+- `tools/pages/registry.php` (1x):
+  - Line 293: `<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">`
+
+### `downloadRegistry()` (Line 370)
+
+**Called in 4 file(s) (4 times):**
+- `admin/pages/manage_js_registry.php` (1x):
+  - Line 63: `<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">`
+- `admin/pages/manage_registry.php` (1x):
+  - Line 63: `<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">`
+- `tools/pages/js_registry.php` (1x):
+  - Line 46: `<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">`
+- `tools/pages/registry.php` (1x):
+  - Line 207: `<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">`
+
+### `generateRegistry()` (Line 386)
+
+**Called in 4 file(s) (4 times):**
+- `admin/pages/manage_js_registry.php` (1x):
+  - Line 58: `<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"js\">`
+- `admin/pages/manage_registry.php` (1x):
+  - Line 58: `<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"php\">`
+- `tools/pages/js_registry.php` (1x):
+  - Line 41: `<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"js\">`
+- `tools/pages/registry.php` (1x):
+  - Line 202: `<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"php\">`
+
+### `htmlEscape()` (Line 450)
+
+**Called in 2 file(s) (10 times):**
+- `js/manage-registry.js` (5x):
+  - Line 57: `📄 ${htmlEscape(fileData.name)} <span class=\"file-count\">(${fileData.count})</span>`
+  - Line 76: `<span class=\"function-name\">${htmlEscape(func.name)}()</span>`
+  - Line 117: `html += `<li><strong>${htmlEscape(file)}</strong> (${usages.length}x)`
+  - Line 121: `html += `<li><code>line ${usage.line}</code>: <small>${htmlEscape(usage.context.substring(0, 80))}</small></li>`;`
+  - Line 136: `code.innerHTML = `<pre>${htmlEscape(func.code)}</pre>`;`
+- `tools/pages/registry.php` (5x):
+  - Line 392: `📄 ${htmlEscape(fileData.name)} <span class=\"file-count\">(${fileData.count})</span>`
+  - Line 410: `<span class=\"function-name\">${htmlEscape(func.name)}()</span>`
+  - Line 451: `html += `<li><strong>${htmlEscape(file)}</strong> (${usages.length}x)`
+  - Line 455: `html += `<li><code>line ${usage.line}</code>: <small>${htmlEscape(usage.context.substring(0, 80))}</small></li>`;`
+  - Line 470: `code.innerHTML = `<pre>${htmlEscape(func.code)}</pre>`;`
 
 ---
 
@@ -267,15 +425,12 @@ Generated: 2025-12-05 22:38:15
 **1 function(s)**
 
 **Included in:**
+- `admin/manage_js_registry.php`
 - `admin/manage_registry.php`
-- `admin/pages/manage_registry.php`
 
 ### `updateRegistry()` (Line 9)
 
-**Called in 1 file(s) (2 times):**
-- `admin/pages/manage_registry.php` (2x):
-  - Line 94: `<button class=\"btn btn-warning btn-sm w-100\" onclick=\"updateRegistry(\'php\')\">`
-  - Line 121: `<button class=\"btn btn-warning btn-sm w-100\" onclick=\"updateRegistry(\'js\')\">`
+**Not called anywhere**
 
 ---
 
@@ -719,8 +874,6 @@ Generated: 2025-12-05 22:38:15
 
 **Included in:**
 - `admin/manage_organisms_old.php`
-- `admin/manage_registry.php`
-- `admin/pages/manage_registry.php`
 
 ### `fixFilePermissions()` (Line 16)
 
@@ -747,6 +900,151 @@ Generated: 2025-12-05 22:38:15
   - Line 175: `html += \'<code class=\"text-break\">\' + escapeHtml(response.error.command) + \'</code>\';`
   - Line 324: `html += \'<code class=\"text-break\">\' + escapeHtml(data.command) + \'</code><br>\';`
   - Line 393: `html += \'<code class=\"text-break\">\' + escapeHtml(data.command) + \'</code><br>\';`
+
+---
+
+## js/registry.js
+
+**14 function(s)**
+
+**Included in:**
+- `admin/manage_js_registry.php`
+- `admin/manage_registry.php`
+- `admin/registry-template.php`
+- `admin/pages/manage_js_registry.php`
+- `admin/pages/manage_registry.php`
+- `admin/tools/generate_registry_json.php`
+- `tools/generate_registry_json.php`
+- `tools/js_registry.php`
+- `tools/registry-template.php`
+- `tools/registry.php`
+
+### `loadRegistry()` (Line 8)
+
+**Called in 1 file(s) (1 times):**
+- `js/registry.js` (1x):
+  - Line 340: `loadRegistry();`
+
+### `updateStats()` (Line 15)
+
+**Called in 1 file(s) (1 times):**
+- `js/registry.js` (1x):
+  - Line 10: `updateStats();`
+
+### `generateRegistry()` (Line 67)
+
+**Called in 4 file(s) (4 times):**
+- `admin/pages/manage_js_registry.php` (1x):
+  - Line 58: `<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"js\">`
+- `admin/pages/manage_registry.php` (1x):
+  - Line 58: `<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"php\">`
+- `tools/pages/js_registry.php` (1x):
+  - Line 41: `<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"js\">`
+- `tools/pages/registry.php` (1x):
+  - Line 202: `<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"php\">`
+
+### `filterFunctions()` (Line 116)
+
+**Called in 2 file(s) (6 times):**
+- `js/registry.js` (1x):
+  - Line 332: `filterFunctions();`
+- `tools/generate_registry.php` (5x):
+  - Line 334: `$html .= \"                <input type=\\\"text\\\" id=\\\"searchInput\\\" placeholder=\\\"🔍 Search...\\\" onkeyup=\\\"filterFunctions()\\\">\\n\";`
+  - Line 338: `$html .= \"                    <input type=\\\"radio\\\" name=\\\"searchMode\\\" value=\\\"all\\\" checked onchange=\\\"filterFunctions()\\\" style=\\\"cursor: pointer;\\\">\\n\";`
+  - Line 342: `$html .= \"                    <input type=\\\"radio\\\" name=\\\"searchMode\\\" value=\\\"name\\\" onchange=\\\"filterFunctions()\\\" style=\\\"cursor: pointer;\\\">\\n\";`
+  - Line 346: `$html .= \"                    <input type=\\\"radio\\\" name=\\\"searchMode\\\" value=\\\"code\\\" onchange=\\\"filterFunctions()\\\" style=\\\"cursor: pointer;\\\">\\n\";`
+  - Line 350: `$html .= \"                    <input type=\\\"radio\\\" name=\\\"searchMode\\\" value=\\\"comment\\\" onchange=\\\"filterFunctions()\\\" style=\\\"cursor: pointer;\\\">\\n\";`
+
+### `toggleFile()` (Line 197)
+
+**Called in 4 file(s) (5 times):**
+- `js/manage-registry.js` (1x):
+  - Line 161: `toggleFile(header);`
+- `js/registry.js` (1x):
+  - Line 356: `toggleFile(this);`
+- `tools/generate_registry.php` (1x):
+  - Line 405: `$html .= \"            <div class=\\\"file-header\\\" onclick=\\\"toggleFile(this)\\\">📄 \" . htmlspecialchars($file) . \" (\" . count($functions) . \") <span class=\\\"expand-arrow\\\" style=\\\"float: right;\\\">▶</span></div>\\n\";`
+- `tools/pages/registry.php` (2x):
+  - Line 390: `header.onclick = function() { toggleFile(this); };`
+  - Line 494: `toggleFile(this);`
+
+### `toggleAll()` (Line 211)
+
+**Called in 4 file(s) (4 times):**
+- `js/manage-registry.js` (1x):
+  - Line 263: `toggleAll();`
+- `js/registry.js` (1x):
+  - Line 226: `toggleAll();`
+- `tools/generate_js_registry.php` (1x):
+  - Line 306: `$html .= \"<button id=\\\"toggleBtn\\\" onclick=\\\"toggleAll()\\\" style=\\\"flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;\\\">📂 Expand All</button>\\n\";`
+- `tools/generate_registry.php` (1x):
+  - Line 398: `$html .= \"            <button id=\\\"toggleBtn\\\" onclick=\\\"toggleAll()\\\" style=\\\"flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;\\\">📂 Expand All</button>\\n\";`
+
+### `toggleAllFiles()` (Line 224)
+
+**Called in 1 file(s) (1 times):**
+- `tools/pages/registry.php` (1x):
+  - Line 311: `<button class=\"btn btn-sm btn-light\" onclick=\"toggleAllFiles()\" title=\"Toggle all sections\">`
+
+### `expandAllFiles()` (Line 231)
+
+**Called in 1 file(s) (1 times):**
+- `tools/pages/js_registry.php` (1x):
+  - Line 96: `<button class=\"btn btn-sm btn-secondary\" onclick=\"expandAllFiles()\">`
+
+### `collapseAllFiles()` (Line 240)
+
+**Called in 1 file(s) (1 times):**
+- `tools/pages/js_registry.php` (1x):
+  - Line 99: `<button class=\"btn btn-sm btn-secondary\" onclick=\"collapseAllFiles()\">`
+
+### `toggleCode()` (Line 249)
+
+**Called in 2 file(s) (2 times):**
+- `js/registry.js` (1x):
+  - Line 265: `toggleCode(header);`
+- `tools/generate_registry.php` (1x):
+  - Line 413: `$html .= \"                    <div class=\\\"function-header\\\" onclick=\\\"toggleCode(this)\\\">\\n\";`
+
+### `toggleFunctionCode()` (Line 263)
+
+**Called in 2 file(s) (2 times):**
+- `js/manage-registry.js` (1x):
+  - Line 73: `funcHeader.onclick = function() { toggleFunctionCode(this); };`
+- `tools/pages/registry.php` (1x):
+  - Line 407: `funcHeader.onclick = function() { toggleFunctionCode(this); };`
+
+### `downloadRegistry()` (Line 270)
+
+**Called in 4 file(s) (4 times):**
+- `admin/pages/manage_js_registry.php` (1x):
+  - Line 63: `<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">`
+- `admin/pages/manage_registry.php` (1x):
+  - Line 63: `<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">`
+- `tools/pages/js_registry.php` (1x):
+  - Line 46: `<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">`
+- `tools/pages/registry.php` (1x):
+  - Line 207: `<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">`
+
+### `toggleUnused()` (Line 313)
+
+**Called in 2 file(s) (2 times):**
+- `tools/generate_js_registry.php` (1x):
+  - Line 289: `$html .= \"<div class=\\\"unused-header\\\" onclick=\\\"toggleUnused(this)\\\">\\n\";`
+- `tools/generate_registry.php` (1x):
+  - Line 381: `$html .= \"            <div style=\\\"background: #cc0000; color: white; padding: 15px 20px; font-weight: bold; cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center;\\\" onclick=\\\"toggleUnused(this)\\\">\\n\";`
+
+### `clearSearch()` (Line 327)
+
+**Called in 4 file(s) (4 times):**
+- `admin/pages/manage_js_registry.php` (1x):
+  - Line 160: `<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">`
+- `admin/pages/manage_registry.php` (1x):
+  - Line 160: `<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">`
+- `tools/pages/js_registry.php` (1x):
+  - Line 102: `<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">`
+- `tools/pages/registry.php` (1x):
+  - Line 293: `<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">`
 
 ---
 

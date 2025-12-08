@@ -58,7 +58,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <header>
 <div class="container">
 <h1>🔍 MOOP JavaScript Function Registry</h1>
-<p>Auto-generated function documentation • Generated: 2025-12-05 22:38:15</p>
+<p>Auto-generated function documentation • Generated: 2025-12-08 20:14:29</p>
 </div>
 </header>
 <div class="container">
@@ -86,12 +86,12 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 </div>
 </div>
 <div class="stats">
-<div class="stat-box"><strong>78</strong><span>Total Functions</span></div>
-<div class="stat-box"><strong>18</strong><span>Files</span></div>
+<div class="stat-box"><strong>105</strong><span>Total Functions</span></div>
+<div class="stat-box"><strong>20</strong><span>Files</span></div>
 </div>
 <div class="unused-section">
 <div class="unused-header" onclick="toggleUnused(this)">
-<span>⚠️ 6 Unused Function(s) Found</span>
+<span>⚠️ 7 Unused Function(s) Found</span>
 <span class="unusedArrow">▶</span>
 </div>
 <div class="unused-content hidden">
@@ -103,6 +103,7 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <li><strong style="color: #cc0000;">md5()</strong> in <code>js/permission-manager.js</code> (line 79)</li>
 <li><strong style="color: #cc0000;">draw_blast_graph()</strong> in <code>js/modules/blast-canvas-graph.js</code> (line 2)</li>
 <li><strong style="color: #cc0000;">move_bg_rect()</strong> in <code>js/modules/blast-canvas-graph.js</code> (line 437)</li>
+<li><strong style="color: #cc0000;">updateRegistry()</strong> in <code>js/modules/manage-registry.js</code> (line 9)</li>
 </ul>
 </div>
 </div>
@@ -404,6 +405,538 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
   } else {
     cardView.style.display = &#039;none&#039;;
     treeView.style.display = &#039;block&#039;</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/manage-registry.js (13)</div>
+<div class="functions-list hidden">
+<div class="file-info">
+<strong>📋 Included in:</strong>
+<div class="php-pages">
+<span class="php-page">admin/manage_js_registry.php</span>
+<span class="php-page">admin/manage_registry.php</span>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">renderRegistry()</span><span class="function-counter">6</span> <span class="function-line">Line 32</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: renderRegistry()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (6 times):</strong>
+<ul>
+<li><strong>js/manage-registry.js</strong> (3x)
+<ul style="margin-top: 5px;">
+<li><code>line 13</code>: <small>renderRegistry();</small></li>
+<li><code>line 464</code>: <small>renderRegistry();</small></li>
+<li><code>line 475</code>: <small>renderRegistry();</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (3x)
+<ul style="margin-top: 5px;">
+<li><code>line 362</code>: <small>renderRegistry();</small></li>
+<li><code>line 695</code>: <small>renderRegistry();</small></li>
+<li><code>line 706</code>: <small>renderRegistry();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    if (!registryData || !registryData.files) {
+        return;
+    }
+    
+    const container = document.getElementById(&#039;filesContainer&#039;);
+    if (!container) {
+        return;
+    }
+    
+    container.innerHTML = &#039;&#039;;
+    
+    let fileCount = 0;
+    registryData.files.forEach(fileData =&gt; {
+        fileCount++;
+        const fileSection = document.createElement(&#039;div&#039;);
+        fileSection.className = &#039;file-section&#039;;
+        fileSection.style.overflow = &#039;visible&#039;;
+        fileSection.setAttribu</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">toggleFile()</span><span class="function-counter">5</span> <span class="function-line">Line 168</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: toggleFile()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 4 file(s) (5 times):</strong>
+<ul>
+<li><strong>js/manage-registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 161</code>: <small>toggleFile(header);</small></li>
+</ul></li>
+<li><strong>js/registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 356</code>: <small>toggleFile(this);</small></li>
+</ul></li>
+<li><strong>tools/generate_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 405</code>: <small>$html .= &quot;            &lt;div class=\&quot;file-header\&quot; onclick=\&quot;toggleFile(this)\&quot;&gt;📄 &quot; . htmlspecialch</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 390</code>: <small>header.onclick = function() { toggleFile(this); };</small></li>
+<li><code>line 494</code>: <small>toggleFile(this);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const list = header.nextElementSibling;
+    if (list &amp;&amp; list.classList.contains(&#039;functions-list&#039;)) {
+        const isOpen = list.classList.contains(&#039;open&#039;);
+        list.classList.toggle(&#039;open&#039;);
+        
+        console.log(&#039;=== toggleFile Debug ===&#039;);
+        console.log(&#039;isOpen before:&#039;, isOpen);
+        console.log(&#039;classList after toggle:&#039;, list.className);
+        console.log(&#039;Has open class now:&#039;, list.classList.contains(&#039;open&#039;));
+        
+        // Force inline styles to ensure vi</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">toggleFunctionCode()</span><span class="function-counter">2</span> <span class="function-line">Line 203</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: toggleFunctionCode()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/manage-registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 73</code>: <small>funcHeader.onclick = function() { toggleFunctionCode(this); };</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 407</code>: <small>funcHeader.onclick = function() { toggleFunctionCode(this); };</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const item = header.closest(&#039;.function-item&#039;);
+    if (!item) return;
+    
+    const code = item.querySelector(&#039;.function-code&#039;);
+    if (code) {
+        code.classList.toggle(&#039;open&#039;);
+        const arrow = header.querySelector(&#039;.expand-arrow&#039;);
+        if (arrow) {
+            arrow.textContent = code.classList.contains(&#039;open&#039;) ? &#039;▼&#039; : &#039;▶&#039;;
+        }
+    }
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">toggleUnusedSection()</span><span class="function-counter">2</span> <span class="function-line">Line 220</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: toggleUnusedSection()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/manage-registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 25</code>: <small>toggleUnusedSection(this);</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 323</code>: <small>&lt;div class=&quot;card-header bg-danger text-white&quot; style=&quot;cursor: pointer;&quot; onclick=&quot;toggleUnusedSection(</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const content = header.nextElementSibling;
+    if (content &amp;&amp; content.classList.contains(&#039;unused-content&#039;)) {
+        content.classList.toggle(&#039;hidden&#039;);
+        const arrow = header.querySelector(&#039;.unused-arrow&#039;);
+        if (arrow) {
+            arrow.textContent = content.classList.contains(&#039;hidden&#039;) ? &#039;▶&#039; : &#039;▼&#039;;
+        }
+    }
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">toggleAll()</span><span class="function-counter">4</span> <span class="function-line">Line 234</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: toggleAll()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 4 file(s) (4 times):</strong>
+<ul>
+<li><strong>js/manage-registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 263</code>: <small>toggleAll();</small></li>
+</ul></li>
+<li><strong>js/registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 226</code>: <small>toggleAll();</small></li>
+</ul></li>
+<li><strong>tools/generate_js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 306</code>: <small>$html .= &quot;&lt;button id=\&quot;toggleBtn\&quot; onclick=\&quot;toggleAll()\&quot; style=\&quot;flex: 1; padding: 10px; backgroun</small></li>
+</ul></li>
+<li><strong>tools/generate_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 398</code>: <small>$html .= &quot;            &lt;button id=\&quot;toggleBtn\&quot; onclick=\&quot;toggleAll()\&quot; style=\&quot;flex: 1; padding: 10p</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const lists = document.querySelectorAll(&#039;.functions-list&#039;);
+    const hiddenCount = document.querySelectorAll(&#039;.functions-list:not(.open)&#039;).length;
+    
+    lists.forEach(list =&gt; {
+        if (hiddenCount &gt; 0) {
+            list.classList.add(&#039;open&#039;);
+            // Apply inline styles for open state
+            list.style.maxHeight = &#039;10000px&#039;;
+            list.style.overflow = &#039;visible&#039;;
+        } else {
+            list.classList.remove(&#039;open&#039;);
+            // Apply inline styles for cl</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">toggleAllFiles()</span><span class="function-counter">1</span> <span class="function-line">Line 261</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: toggleAllFiles()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>tools/pages/registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 311</code>: <small>&lt;button class=&quot;btn btn-sm btn-light&quot; onclick=&quot;toggleAllFiles()&quot; title=&quot;Toggle all sections&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    toggleAll();
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">expandAllFiles()</span><span class="function-counter">1</span> <span class="function-line">Line 268</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: expandAllFiles()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>tools/pages/js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 96</code>: <small>&lt;button class=&quot;btn btn-sm btn-secondary&quot; onclick=&quot;expandAllFiles()&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    document.querySelectorAll(&#039;.functions-list&#039;).forEach(list =&gt; {
+        list.classList.add(&#039;open&#039;);
+        list.style.maxHeight = &#039;10000px&#039;;
+        list.style.overflow = &#039;visible&#039;;
+        const header = list.previousElementSibling;
+        if (header) {
+            const arrow = header.querySelector(&#039;.expand-arrow&#039;);
+            if (arrow) arrow.textContent = &#039;▼&#039;;
+        }
+    });
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">collapseAllFiles()</span><span class="function-counter">1</span> <span class="function-line">Line 284</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: collapseAllFiles()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>tools/pages/js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 99</code>: <small>&lt;button class=&quot;btn btn-sm btn-secondary&quot; onclick=&quot;collapseAllFiles()&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    document.querySelectorAll(&#039;.functions-list&#039;).forEach(list =&gt; {
+        list.classList.remove(&#039;open&#039;);
+        list.style.maxHeight = &#039;0&#039;;
+        list.style.overflow = &#039;hidden&#039;;
+        const header = list.previousElementSibling;
+        if (header) {
+            const arrow = header.querySelector(&#039;.expand-arrow&#039;);
+            if (arrow) arrow.textContent = &#039;▶&#039;;
+        }
+    });
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">filterRegistry()</span><span class="function-counter">17</span> <span class="function-line">Line 300</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: filterRegistry()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 4 file(s) (17 times):</strong>
+<ul>
+<li><strong>js/manage-registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 364</code>: <small>filterRegistry();</small></li>
+</ul></li>
+<li><strong>admin/pages/manage_js_registry.php</strong> (5x)
+<ul style="margin-top: 5px;">
+<li><code>line 133</code>: <small>onkeyup=&quot;filterRegistry()&quot;</small></li>
+<li><code>line 141</code>: <small>&lt;input class=&quot;form-check-input&quot; type=&quot;radio&quot; name=&quot;searchMode&quot; id=&quot;searchAll&quot; value=&quot;all&quot; checked on</small></li>
+<li><code>line 145</code>: <small>&lt;input class=&quot;form-check-input&quot; type=&quot;radio&quot; name=&quot;searchMode&quot; id=&quot;searchName&quot; value=&quot;name&quot; onchange</small></li>
+<li><code>line 149</code>: <small>&lt;input class=&quot;form-check-input&quot; type=&quot;radio&quot; name=&quot;searchMode&quot; id=&quot;searchCode&quot; value=&quot;code&quot; onchange</small></li>
+<li><code>line 153</code>: <small>&lt;input class=&quot;form-check-input&quot; type=&quot;radio&quot; name=&quot;searchMode&quot; id=&quot;searchComment&quot; value=&quot;comment&quot; on</small></li>
+</ul></li>
+<li><strong>admin/pages/manage_registry.php</strong> (5x)
+<ul style="margin-top: 5px;">
+<li><code>line 133</code>: <small>onkeyup=&quot;filterRegistry()&quot;</small></li>
+<li><code>line 141</code>: <small>&lt;input class=&quot;form-check-input&quot; type=&quot;radio&quot; name=&quot;searchMode&quot; id=&quot;searchAll&quot; value=&quot;all&quot; checked on</small></li>
+<li><code>line 145</code>: <small>&lt;input class=&quot;form-check-input&quot; type=&quot;radio&quot; name=&quot;searchMode&quot; id=&quot;searchName&quot; value=&quot;name&quot; onchange</small></li>
+<li><code>line 149</code>: <small>&lt;input class=&quot;form-check-input&quot; type=&quot;radio&quot; name=&quot;searchMode&quot; id=&quot;searchCode&quot; value=&quot;code&quot; onchange</small></li>
+<li><code>line 153</code>: <small>&lt;input class=&quot;form-check-input&quot; type=&quot;radio&quot; name=&quot;searchMode&quot; id=&quot;searchComment&quot; value=&quot;comment&quot; on</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (6x)
+<ul style="margin-top: 5px;">
+<li><code>line 266</code>: <small>onkeyup=&quot;filterRegistry()&quot;</small></li>
+<li><code>line 274</code>: <small>&lt;input class=&quot;form-check-input&quot; type=&quot;radio&quot; name=&quot;searchMode&quot; id=&quot;searchAll&quot; value=&quot;all&quot; checked on</small></li>
+<li><code>line 278</code>: <small>&lt;input class=&quot;form-check-input&quot; type=&quot;radio&quot; name=&quot;searchMode&quot; id=&quot;searchName&quot; value=&quot;name&quot; onchange</small></li>
+<li><code>line 282</code>: <small>&lt;input class=&quot;form-check-input&quot; type=&quot;radio&quot; name=&quot;searchMode&quot; id=&quot;searchCode&quot; value=&quot;code&quot; onchange</small></li>
+<li><code>line 286</code>: <small>&lt;input class=&quot;form-check-input&quot; type=&quot;radio&quot; name=&quot;searchMode&quot; id=&quot;searchComment&quot; value=&quot;comment&quot; on</small></li>
+<li><code>line 640</code>: <small>filterRegistry();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const searchInput = document.getElementById(&#039;searchInput&#039;);
+    const searchMode = document.querySelector(&#039;input[name=&quot;searchMode&quot;]:checked&#039;);
+    
+    if (!searchInput || !searchMode) return;
+    
+    const term = searchInput.value.toLowerCase();
+    const mode = searchMode.value;
+    
+    document.querySelectorAll(&#039;.file-section&#039;).forEach(section =&gt; {
+        const fileName = section.getAttribute(&#039;data-file&#039;).toLowerCase();
+        let hasVisibleFunc = false;
+        
+        section.que</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">clearSearch()</span><span class="function-counter">4</span> <span class="function-line">Line 359</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: clearSearch()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 4 file(s) (4 times):</strong>
+<ul>
+<li><strong>admin/pages/manage_js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 160</code>: <small>&lt;button class=&quot;btn btn-sm btn-secondary&quot; onclick=&quot;clearSearch()&quot;&gt;</small></li>
+</ul></li>
+<li><strong>admin/pages/manage_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 160</code>: <small>&lt;button class=&quot;btn btn-sm btn-secondary&quot; onclick=&quot;clearSearch()&quot;&gt;</small></li>
+</ul></li>
+<li><strong>tools/pages/js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 102</code>: <small>&lt;button class=&quot;btn btn-sm btn-secondary&quot; onclick=&quot;clearSearch()&quot;&gt;</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 293</code>: <small>&lt;button class=&quot;btn btn-sm btn-secondary&quot; onclick=&quot;clearSearch()&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const searchInput = document.getElementById(&#039;searchInput&#039;);
+    if (searchInput) {
+        searchInput.value = &#039;&#039;;
+        filterRegistry();
+    }
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">downloadRegistry()</span><span class="function-counter">4</span> <span class="function-line">Line 370</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: downloadRegistry()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 4 file(s) (4 times):</strong>
+<ul>
+<li><strong>admin/pages/manage_js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 63</code>: <small>&lt;button class=&quot;btn btn-info w-100&quot; onclick=&quot;downloadRegistry()&quot; title=&quot;Download as JSON&quot;&gt;</small></li>
+</ul></li>
+<li><strong>admin/pages/manage_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 63</code>: <small>&lt;button class=&quot;btn btn-info w-100&quot; onclick=&quot;downloadRegistry()&quot; title=&quot;Download as JSON&quot;&gt;</small></li>
+</ul></li>
+<li><strong>tools/pages/js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 46</code>: <small>&lt;button class=&quot;btn btn-info w-100&quot; onclick=&quot;downloadRegistry()&quot; title=&quot;Download as JSON&quot;&gt;</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 207</code>: <small>&lt;button class=&quot;btn btn-info w-100&quot; onclick=&quot;downloadRegistry()&quot; title=&quot;Download as JSON&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    if (!registryData) return;
+    
+    const dataStr = JSON.stringify(registryData, null, 2);
+    const blob = new Blob([dataStr], {type: &#039;application/json&#039;});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement(&#039;a&#039;);
+    link.href = url;
+    link.download = &#039;function_registry_&#039; + new Date().toISOString().slice(0, 10) + &#039;.json&#039;;
+    link.click();
+    URL.revokeObjectURL(url);
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">generateRegistry()</span><span class="function-counter">4</span> <span class="function-line">Line 386</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: generateRegistry()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 4 file(s) (4 times):</strong>
+<ul>
+<li><strong>admin/pages/manage_js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 58</code>: <small>&lt;button class=&quot;btn btn-primary w-100&quot; onclick=&quot;generateRegistry()&quot; id=&quot;generateBtn&quot; data-registry-ty</small></li>
+</ul></li>
+<li><strong>admin/pages/manage_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 58</code>: <small>&lt;button class=&quot;btn btn-primary w-100&quot; onclick=&quot;generateRegistry()&quot; id=&quot;generateBtn&quot; data-registry-ty</small></li>
+</ul></li>
+<li><strong>tools/pages/js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 41</code>: <small>&lt;button class=&quot;btn btn-primary w-100&quot; onclick=&quot;generateRegistry()&quot; id=&quot;generateBtn&quot; data-registry-ty</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 202</code>: <small>&lt;button class=&quot;btn btn-primary w-100&quot; onclick=&quot;generateRegistry()&quot; id=&quot;generateBtn&quot; data-registry-ty</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const btn = document.getElementById(&#039;generateBtn&#039;);
+    const msg = document.getElementById(&#039;registryMessage&#039;);
+    
+    if (!btn) return;
+    
+    // Get registry type from button data attribute (default to &#039;php&#039;)
+    const registryType = btn.getAttribute(&#039;data-registry-type&#039;) || &#039;php&#039;;
+    
+    btn.disabled = true;
+    btn.innerHTML = &#039;&lt;i class=&quot;fa fa-spinner fa-spin&quot;&gt;&lt;/i&gt; Generating...&#039;;
+    
+    // Call the backend API to generate registry
+    fetch(&#039;/moop/admin/api/generate_registry.p</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">htmlEscape()</span><span class="function-counter">10</span> <span class="function-line">Line 450</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/manage-registry.js: htmlEscape()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (10 times):</strong>
+<ul>
+<li><strong>js/manage-registry.js</strong> (5x)
+<ul style="margin-top: 5px;">
+<li><code>line 57</code>: <small>📄 ${htmlEscape(fileData.name)} &lt;span class=&quot;file-count&quot;&gt;(${fileData.count})&lt;/span&gt;</small></li>
+<li><code>line 76</code>: <small>&lt;span class=&quot;function-name&quot;&gt;${htmlEscape(func.name)}()&lt;/span&gt;</small></li>
+<li><code>line 117</code>: <small>html += `&lt;li&gt;&lt;strong&gt;${htmlEscape(file)}&lt;/strong&gt; (${usages.length}x)</small></li>
+<li><code>line 121</code>: <small>html += `&lt;li&gt;&lt;code&gt;line ${usage.line}&lt;/code&gt;: &lt;small&gt;${htmlEscape(usage.context.substring(0, 80))}&lt;/</small></li>
+<li><code>line 136</code>: <small>code.innerHTML = `&lt;pre&gt;${htmlEscape(func.code)}&lt;/pre&gt;`;</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (5x)
+<ul style="margin-top: 5px;">
+<li><code>line 392</code>: <small>📄 ${htmlEscape(fileData.name)} &lt;span class=&quot;file-count&quot;&gt;(${fileData.count})&lt;/span&gt;</small></li>
+<li><code>line 410</code>: <small>&lt;span class=&quot;function-name&quot;&gt;${htmlEscape(func.name)}()&lt;/span&gt;</small></li>
+<li><code>line 451</code>: <small>html += `&lt;li&gt;&lt;strong&gt;${htmlEscape(file)}&lt;/strong&gt; (${usages.length}x)</small></li>
+<li><code>line 455</code>: <small>html += `&lt;li&gt;&lt;code&gt;line ${usage.line}&lt;/code&gt;: &lt;small&gt;${htmlEscape(usage.context.substring(0, 80))}&lt;/</small></li>
+<li><code>line 470</code>: <small>code.innerHTML = `&lt;pre&gt;${htmlEscape(func.code)}&lt;/pre&gt;`;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const div = document.createElement(&#039;div&#039;);
+    div.textContent = text;
+    return div.innerHTML;
+}</code>
 </div>
 </div>
 </div>
@@ -1139,27 +1672,18 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <div class="file-info">
 <strong>📋 Included in:</strong>
 <div class="php-pages">
+<span class="php-page">admin/manage_js_registry.php</span>
 <span class="php-page">admin/manage_registry.php</span>
-<span class="php-page">admin/pages/manage_registry.php</span>
 </div>
 </div>
 <div class="function-item">
 <div class="function-header" onclick="toggleFunctionDetails(this)">
-<div><span class="function-name">updateRegistry()</span><span class="function-counter">2</span> <span class="function-line">Line 9</span></div>
+<div><span class="function-name">updateRegistry()</span><span class="function-counter">0</span> <span class="function-line">Line 9</span></div>
 <span class="expand-arrow">▶</span>
 </div>
 <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/modules/manage-registry.js: updateRegistry()</div>
 <div class="function-details">
-<div class="function-usages">
-<strong>📍 Called in 1 file(s) (2 times):</strong>
-<ul>
-<li><strong>admin/pages/manage_registry.php</strong> (2x)
-<ul style="margin-top: 5px;">
-<li><code>line 94</code>: <small>&lt;button class=&quot;btn btn-warning btn-sm w-100&quot; onclick=&quot;updateRegistry(&#039;php&#039;)&quot;&gt;</small></li>
-<li><code>line 121</code>: <small>&lt;button class=&quot;btn btn-warning btn-sm w-100&quot; onclick=&quot;updateRegistry(&#039;js&#039;)&quot;&gt;</small></li>
-</ul></li>
-</ul>
-</div>
+<p><em>Not called anywhere</em></p>
 <div class="function-code">
 <code>{
     const typeLabel = type === &#039;php&#039; ? &#039;PHP&#039; : &#039;JavaScript&#039;;
@@ -2673,8 +3197,6 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
 <strong>📋 Included in:</strong>
 <div class="php-pages">
 <span class="php-page">admin/manage_organisms_old.php</span>
-<span class="php-page">admin/manage_registry.php</span>
-<span class="php-page">admin/pages/manage_registry.php</span>
 </div>
 </div>
 <div class="function-item">
@@ -2768,6 +3290,513 @@ input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px so
   const div = document.createElement(&#039;div&#039;);
   div.textContent = text;
   return div.innerHTML;
+}</code>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="file-section">
+<div class="file-header">📄 js/registry.js (14)</div>
+<div class="functions-list hidden">
+<div class="file-info">
+<strong>📋 Included in:</strong>
+<div class="php-pages">
+<span class="php-page">admin/manage_js_registry.php</span>
+<span class="php-page">admin/manage_registry.php</span>
+<span class="php-page">admin/registry-template.php</span>
+<span class="php-page">admin/pages/manage_js_registry.php</span>
+<span class="php-page">admin/pages/manage_registry.php</span>
+<span class="php-page">admin/tools/generate_registry_json.php</span>
+<span class="php-page">tools/generate_registry_json.php</span>
+<span class="php-page">tools/js_registry.php</span>
+<span class="php-page">tools/registry-template.php</span>
+<span class="php-page">tools/registry.php</span>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">loadRegistry()</span><span class="function-counter">1</span> <span class="function-line">Line 8</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: loadRegistry()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 340</code>: <small>loadRegistry();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    updateStats();
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">updateStats()</span><span class="function-counter">1</span> <span class="function-line">Line 15</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: updateStats()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>js/registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 10</code>: <small>updateStats();</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    // If we have registry data available, use it directly
+    const dataElement = document.getElementById(&#039;registryData&#039;);
+    if (dataElement) {
+        try {
+            const data = JSON.parse(dataElement.textContent);
+            const unusedEl = document.getElementById(&#039;unusedCount&#039;);
+            if (unusedEl &amp;&amp; data.unused) {
+                unusedEl.textContent = data.unused.length;
+                return; // Don&#039;t calculate from DOM if we have JSON data
+            }
+        } catch(e</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">generateRegistry()</span><span class="function-counter">4</span> <span class="function-line">Line 67</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: generateRegistry()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 4 file(s) (4 times):</strong>
+<ul>
+<li><strong>admin/pages/manage_js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 58</code>: <small>&lt;button class=&quot;btn btn-primary w-100&quot; onclick=&quot;generateRegistry()&quot; id=&quot;generateBtn&quot; data-registry-ty</small></li>
+</ul></li>
+<li><strong>admin/pages/manage_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 58</code>: <small>&lt;button class=&quot;btn btn-primary w-100&quot; onclick=&quot;generateRegistry()&quot; id=&quot;generateBtn&quot; data-registry-ty</small></li>
+</ul></li>
+<li><strong>tools/pages/js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 41</code>: <small>&lt;button class=&quot;btn btn-primary w-100&quot; onclick=&quot;generateRegistry()&quot; id=&quot;generateBtn&quot; data-registry-ty</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 202</code>: <small>&lt;button class=&quot;btn btn-primary w-100&quot; onclick=&quot;generateRegistry()&quot; id=&quot;generateBtn&quot; data-registry-ty</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const btn = document.getElementById(&#039;generateBtn&#039;);
+    const msg = document.getElementById(&#039;registryMessage&#039;);
+    
+    if (!btn) return;
+    
+    const registryType = btn.dataset.registryType || &#039;php&#039;;
+    
+    btn.disabled = true;
+    btn.innerHTML = &#039;&lt;i class=&quot;fa fa-spinner fa-spin&quot;&gt;&lt;/i&gt; Generating...&#039;;
+    
+    fetch(&#039;/admin/api/generate_registry.php&#039;, {
+        method: &#039;POST&#039;,
+        headers: {
+            &#039;Content-Type&#039;: &#039;application/json&#039;
+        },
+        body: JSON.stringify({</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">filterFunctions()</span><span class="function-counter">6</span> <span class="function-line">Line 116</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: filterFunctions()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (6 times):</strong>
+<ul>
+<li><strong>js/registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 332</code>: <small>filterFunctions();</small></li>
+</ul></li>
+<li><strong>tools/generate_registry.php</strong> (5x)
+<ul style="margin-top: 5px;">
+<li><code>line 334</code>: <small>$html .= &quot;                &lt;input type=\&quot;text\&quot; id=\&quot;searchInput\&quot; placeholder=\&quot;🔍 Search...\&quot; onk</small></li>
+<li><code>line 338</code>: <small>$html .= &quot;                    &lt;input type=\&quot;radio\&quot; name=\&quot;searchMode\&quot; value=\&quot;all\&quot; checked onchan</small></li>
+<li><code>line 342</code>: <small>$html .= &quot;                    &lt;input type=\&quot;radio\&quot; name=\&quot;searchMode\&quot; value=\&quot;name\&quot; onchange=\&quot;fi</small></li>
+<li><code>line 346</code>: <small>$html .= &quot;                    &lt;input type=\&quot;radio\&quot; name=\&quot;searchMode\&quot; value=\&quot;code\&quot; onchange=\&quot;fi</small></li>
+<li><code>line 350</code>: <small>$html .= &quot;                    &lt;input type=\&quot;radio\&quot; name=\&quot;searchMode\&quot; value=\&quot;comment\&quot; onchange=\</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const searchInput = document.getElementById(&#039;searchInput&#039;);
+    if (!searchInput) return;
+    
+    const searchTerm = searchInput.value.toLowerCase();
+    const searchMode = document.querySelector(&#039;input[name=&quot;searchMode&quot;]:checked&#039;);
+    const mode = searchMode ? searchMode.value : &#039;all&#039;;
+    const fileSections = document.querySelectorAll(&#039;.file-section&#039;);
+    
+    let visibleSections = 0;
+    let totalMatches = 0;
+    
+    fileSections.forEach(section =&gt; {
+        const fileHeader = secti</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">toggleFile()</span><span class="function-counter">5</span> <span class="function-line">Line 197</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: toggleFile()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 4 file(s) (5 times):</strong>
+<ul>
+<li><strong>js/manage-registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 161</code>: <small>toggleFile(header);</small></li>
+</ul></li>
+<li><strong>js/registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 356</code>: <small>toggleFile(this);</small></li>
+</ul></li>
+<li><strong>tools/generate_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 405</code>: <small>$html .= &quot;            &lt;div class=\&quot;file-header\&quot; onclick=\&quot;toggleFile(this)\&quot;&gt;📄 &quot; . htmlspecialch</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (2x)
+<ul style="margin-top: 5px;">
+<li><code>line 390</code>: <small>header.onclick = function() { toggleFile(this); };</small></li>
+<li><code>line 494</code>: <small>toggleFile(this);</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const list = header.nextElementSibling;
+    if (list &amp;&amp; list.classList.contains(&#039;functions-list&#039;)) {
+        list.classList.toggle(&#039;open&#039;);
+        const arrow = header.querySelector(&#039;.expand-arrow&#039;);
+        if (arrow) {
+            arrow.textContent = list.classList.contains(&#039;open&#039;) ? &#039;▼&#039; : &#039;▶&#039;;
+        }
+    }
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">toggleAll()</span><span class="function-counter">4</span> <span class="function-line">Line 211</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: toggleAll()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 4 file(s) (4 times):</strong>
+<ul>
+<li><strong>js/manage-registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 263</code>: <small>toggleAll();</small></li>
+</ul></li>
+<li><strong>js/registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 226</code>: <small>toggleAll();</small></li>
+</ul></li>
+<li><strong>tools/generate_js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 306</code>: <small>$html .= &quot;&lt;button id=\&quot;toggleBtn\&quot; onclick=\&quot;toggleAll()\&quot; style=\&quot;flex: 1; padding: 10px; backgroun</small></li>
+</ul></li>
+<li><strong>tools/generate_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 398</code>: <small>$html .= &quot;            &lt;button id=\&quot;toggleBtn\&quot; onclick=\&quot;toggleAll()\&quot; style=\&quot;flex: 1; padding: 10p</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const lists = document.querySelectorAll(&#039;.functions-list&#039;);
+    const hiddenCount = document.querySelectorAll(&#039;.functions-list:not(.open)&#039;).length;
+    
+    lists.forEach(list =&gt; {
+        if (hiddenCount &gt; 0) {
+            list.classList.add(&#039;open&#039;);
+        } else {
+            list.classList.remove(&#039;open&#039;);
+        }
+    });
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">toggleAllFiles()</span><span class="function-counter">1</span> <span class="function-line">Line 224</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: toggleAllFiles()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>tools/pages/registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 311</code>: <small>&lt;button class=&quot;btn btn-sm btn-light&quot; onclick=&quot;toggleAllFiles()&quot; title=&quot;Toggle all sections&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    toggleAll();
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">expandAllFiles()</span><span class="function-counter">1</span> <span class="function-line">Line 231</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: expandAllFiles()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>tools/pages/js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 96</code>: <small>&lt;button class=&quot;btn btn-sm btn-secondary&quot; onclick=&quot;expandAllFiles()&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    document.querySelectorAll(&#039;.functions-list&#039;).forEach(list =&gt; {
+        list.classList.add(&#039;open&#039;);
+    });
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">collapseAllFiles()</span><span class="function-counter">1</span> <span class="function-line">Line 240</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: collapseAllFiles()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 1 file(s) (1 times):</strong>
+<ul>
+<li><strong>tools/pages/js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 99</code>: <small>&lt;button class=&quot;btn btn-sm btn-secondary&quot; onclick=&quot;collapseAllFiles()&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    document.querySelectorAll(&#039;.functions-list&#039;).forEach(list =&gt; {
+        list.classList.remove(&#039;open&#039;);
+    });
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">toggleCode()</span><span class="function-counter">2</span> <span class="function-line">Line 249</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: toggleCode()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 265</code>: <small>toggleCode(header);</small></li>
+</ul></li>
+<li><strong>tools/generate_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 413</code>: <small>$html .= &quot;                    &lt;div class=\&quot;function-header\&quot; onclick=\&quot;toggleCode(this)\&quot;&gt;\n&quot;;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const item = header.closest(&#039;.function-item&#039;);
+    if (!item) return;
+    
+    const codeBlock = item.querySelector(&#039;.function-code&#039;);
+    if (codeBlock) {
+        codeBlock.classList.toggle(&#039;open&#039;);
+        const arrow = header.querySelector(&#039;.expand-arrow&#039;);
+        if (arrow) {
+            arrow.textContent = codeBlock.classList.contains(&#039;open&#039;) ? &#039;▼&#039; : &#039;▶&#039;;
+        }
+    }
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">toggleFunctionCode()</span><span class="function-counter">2</span> <span class="function-line">Line 263</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: toggleFunctionCode()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (2 times):</strong>
+<ul>
+<li><strong>js/manage-registry.js</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 73</code>: <small>funcHeader.onclick = function() { toggleFunctionCode(this); };</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 407</code>: <small>funcHeader.onclick = function() { toggleFunctionCode(this); };</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    toggleCode(header);
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">downloadRegistry()</span><span class="function-counter">4</span> <span class="function-line">Line 270</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: downloadRegistry()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 4 file(s) (4 times):</strong>
+<ul>
+<li><strong>admin/pages/manage_js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 63</code>: <small>&lt;button class=&quot;btn btn-info w-100&quot; onclick=&quot;downloadRegistry()&quot; title=&quot;Download as JSON&quot;&gt;</small></li>
+</ul></li>
+<li><strong>admin/pages/manage_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 63</code>: <small>&lt;button class=&quot;btn btn-info w-100&quot; onclick=&quot;downloadRegistry()&quot; title=&quot;Download as JSON&quot;&gt;</small></li>
+</ul></li>
+<li><strong>tools/pages/js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 46</code>: <small>&lt;button class=&quot;btn btn-info w-100&quot; onclick=&quot;downloadRegistry()&quot; title=&quot;Download as JSON&quot;&gt;</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 207</code>: <small>&lt;button class=&quot;btn btn-info w-100&quot; onclick=&quot;downloadRegistry()&quot; title=&quot;Download as JSON&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const registryType = document.body.dataset.registryType || &#039;php&#039;;
+    const fileSections = document.querySelectorAll(&#039;.file-section&#039;);
+    const registry = {};
+    
+    fileSections.forEach(section =&gt; {
+        const fileHeader = section.querySelector(&#039;.file-header-title&#039;);
+        const fileName = fileHeader ? fileHeader.textContent.trim() : &#039;unknown&#039;;
+        registry[fileName] = [];
+        
+        section.querySelectorAll(&#039;.function-item&#039;).forEach(item =&gt; {
+            const funcNameE</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">toggleUnused()</span><span class="function-counter">2</span> <span class="function-line">Line 313</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: toggleUnused()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 2 file(s) (2 times):</strong>
+<ul>
+<li><strong>tools/generate_js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 289</code>: <small>$html .= &quot;&lt;div class=\&quot;unused-header\&quot; onclick=\&quot;toggleUnused(this)\&quot;&gt;\n&quot;;</small></li>
+</ul></li>
+<li><strong>tools/generate_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 381</code>: <small>$html .= &quot;            &lt;div style=\&quot;background: #cc0000; color: white; padding: 15px 20px; font-weigh</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const content = header.nextElementSibling;
+    if (content &amp;&amp; content.classList.contains(&#039;unused-content&#039;)) {
+        content.classList.toggle(&#039;hidden&#039;);
+        const arrow = header.querySelector(&#039;.unusedArrow&#039;);
+        if (arrow) {
+            arrow.textContent = content.classList.contains(&#039;hidden&#039;) ? &#039;▶&#039; : &#039;▼&#039;;
+        }
+    }
+}</code>
+</div>
+</div>
+</div>
+<div class="function-item">
+<div class="function-header" onclick="toggleFunctionDetails(this)">
+<div><span class="function-name">clearSearch()</span><span class="function-counter">4</span> <span class="function-line">Line 327</span></div>
+<span class="expand-arrow">▶</span>
+</div>
+<div style="font-family: 'Courier New', monospace; font-size: 12px; color: #666; padding: 8px 15px; border-bottom: 1px solid #ecf0f1; user-select: all; cursor: copy;" title="Click to select">js/registry.js: clearSearch()</div>
+<div class="function-details">
+<div class="function-usages">
+<strong>📍 Called in 4 file(s) (4 times):</strong>
+<ul>
+<li><strong>admin/pages/manage_js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 160</code>: <small>&lt;button class=&quot;btn btn-sm btn-secondary&quot; onclick=&quot;clearSearch()&quot;&gt;</small></li>
+</ul></li>
+<li><strong>admin/pages/manage_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 160</code>: <small>&lt;button class=&quot;btn btn-sm btn-secondary&quot; onclick=&quot;clearSearch()&quot;&gt;</small></li>
+</ul></li>
+<li><strong>tools/pages/js_registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 102</code>: <small>&lt;button class=&quot;btn btn-sm btn-secondary&quot; onclick=&quot;clearSearch()&quot;&gt;</small></li>
+</ul></li>
+<li><strong>tools/pages/registry.php</strong> (1x)
+<ul style="margin-top: 5px;">
+<li><code>line 293</code>: <small>&lt;button class=&quot;btn btn-sm btn-secondary&quot; onclick=&quot;clearSearch()&quot;&gt;</small></li>
+</ul></li>
+</ul>
+</div>
+<div class="function-code">
+<code>{
+    const input = document.getElementById(&#039;searchInput&#039;);
+    if (input) {
+        input.value = &#039;&#039;;
+        filterFunctions();
+    }
 }</code>
 </div>
 </div>

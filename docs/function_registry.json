@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "generated": "2025-12-06 00:18:15",
+        "generated": "2025-12-08 20:05:38",
         "totalFunctions": 138,
         "totalFiles": 21,
         "duplicates": 1
@@ -1638,7 +1638,7 @@
                     "line": 354,
                     "comment": "/**\n* Generate a permission alert HTML for a file or directory\n*\n* Shows current status (readable, writable) and provides either:\n* 1. A \"Fix Permissions\" button if web server can fix it automatically\n* 2. Manual fix instructions with commands if web server lacks permissions\n*\n* @param string $file_path Path to file or directory\n* @param string $title Alert title (e.g., \"Metadata File Permission Issue\")\n* @param string $problem Description of the problem\n* @param string $file_type Type for AJAX call: 'file' or 'directory'\n* @param string $organism Optional organism name for targeting\n* @return string HTML for the permission alert, empty if no issues\n*/",
                     "code": "function generatePermissionAlert($file_path, $title = '', $problem = '', $file_type = 'file', $organism = '') {\n    // Check current permissions\n    $readable = is_readable($file_path);\n    $writable = is_writable($file_path);\n    \n    // If everything is fine, return empty\n    if ($readable && $writable) {\n        return '';\n    }\n    \n    // Get file/directory info\n    $exists = file_exists($file_path);\n    if (!$exists) {\n        return '';\n    }\n    \n    $is_dir = is_dir($file_path);\n    $file_size = $is_dir ? 'directory' : filesize($file_path) . ' bytes';\n    $owner = @posix_getpwuid(fileowner($file_path));\n    $owner_name = $owner !== false ? $owner['name'] : 'unknown';\n    $perms = substr(sprintf('%o', fileperms($file_path)), -3);\n    $webserver = getWebServerUser();\n    $web_user = $webserver['user'];\n    $web_group = $webserver['group'];\n    \n    // Determine if web server can fix permissions\n    $can_fix = is_writable(dirname($file_path)) || is_writable($file_path);\n    \n    // Determine what's wrong\n    $issue = '';\n    if (!$readable && !$writable) {\n        $issue = 'Cannot read or write';\n    } elseif (!$readable) {\n        $issue = 'Cannot read (permission denied)';\n    } else {\n        $issue = 'Cannot write (read-only)';\n    }\n    \n    $safe_path = htmlspecialchars($file_path);\n    $safe_title = htmlspecialchars($title ?: $issue);\n    $safe_problem = htmlspecialchars($problem);\n    $safe_organism = htmlspecialchars($organism);\n    \n    // Start building alert HTML\n    $html = '<div class=\"alert alert-warning alert-dismissible fade show mb-3\">' . \"\\n\";\n    $html .= '  <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' . \"\\n\";\n    $html .= '  <h6><i class=\"fa fa-exclamation-circle\"></i> ' . $safe_title . '</h6>' . \"\\n\";\n    \n    if ($safe_problem) {\n        $html .= '  <p class=\"mb-2\"><strong>Problem:</strong> ' . $safe_problem . '</p>' . \"\\n\";\n    }\n    \n    $html .= '  <p class=\"mb-3\"><strong>Current Status:</strong></p>' . \"\\n\";\n    $html .= '  <ul class=\"mb-3 small\">' . \"\\n\";\n    $html .= '    <li>Path: <code>' . $safe_path . '</code></li>' . \"\\n\";\n    $html .= '    <li>Type: ' . ($is_dir ? 'Directory' : 'File') . '</li>' . \"\\n\";\n    $html .= '    <li>Owner: <code>' . htmlspecialchars($owner_name) . '</code></li>' . \"\\n\";\n    $html .= '    <li>Permissions: <code>' . $perms . '</code></li>' . \"\\n\";\n    $html .= '    <li>Readable: <span class=\"badge ' . ($readable ? 'bg-success' : 'bg-danger') . '\">' . ($readable ? '\u2713 Yes' : '\u2717 No') . '</span></li>' . \"\\n\";\n    $html .= '    <li>Writable: <span class=\"badge ' . ($writable ? 'bg-success' : 'bg-danger') . '\">' . ($writable ? '\u2713 Yes' : '\u2717 No') . '</span></li>' . \"\\n\";\n    $html .= '    <li>Web server user: <code>' . htmlspecialchars($web_user) . '</code></li>' . \"\\n\";\n    $html .= '  </ul>' . \"\\n\";\n    \n    if ($can_fix) {\n        // Web server can fix it - offer button\n        $resultId = 'fixResult-' . uniqid();\n        $html .= '  <p class=\"mb-2\"><strong>Quick Fix:</strong> Click the button below to attempt automatic fix:</p>' . \"\\n\";\n        $html .= '  <button class=\"btn btn-warning btn-sm\" onclick=\\'fixFilePermissions(event, ' . json_encode($file_path) . ', ' . json_encode($file_type) . ', ' . json_encode($organism) . ', ' . json_encode($resultId) . ');\\'>' . \"\\n\";\n        $html .= '    <i class=\"fa fa-wrench\"></i> Fix Permissions' . \"\\n\";\n        $html .= '  </button>' . \"\\n\";\n        $html .= '  <div id=\"' . $resultId . '\" class=\"mt-3\"></div>' . \"\\n\";\n        \n        // Show manual instructions as alternative\n        $html .= '  <p class=\"mb-2 mt-4\"><strong>Or manually on the server:</strong></p>' . \"\\n\";\n        $html .= '  <div style=\"margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;\">' . \"\\n\";\n        $html .= '    <code style=\"word-break: break-all; display: block; font-size: 0.9em;\">' . \"\\n\";\n        if ($is_dir) {\n            $html .= '      sudo chgrp -R ' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . \"\\n\";\n            $html .= '      sudo chmod -R 775 ' . $safe_path . \"\\n\";\n        } else {\n            $html .= '      sudo chgrp ' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . \"\\n\";\n            $html .= '      sudo chmod 664 ' . $safe_path . \"\\n\";\n        }\n        $html .= '    </code>' . \"\\n\";\n        $html .= '  </div>' . \"\\n\";\n    } else {\n        // Web server cannot fix - show manual instructions\n        $html .= '  <p class=\"mb-2\"><strong>To Fix:</strong> Run this command on the server:</p>' . \"\\n\";\n        $html .= '  <div style=\"margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;\">' . \"\\n\";\n        $html .= '    <code style=\"word-break: break-all; display: block; font-size: 0.9em;\">' . \"\\n\";\n        if ($is_dir) {\n            $html .= '      sudo chgrp -R ' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . \"\\n\";\n            $html .= '      sudo chmod -R 775 ' . $safe_path . \"\\n\";\n        } else {\n            $html .= '      sudo chgrp ' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . \"\\n\";\n            $html .= '      sudo chmod 664 ' . $safe_path . \"\\n\";\n        }\n        $html .= '    </code>' . \"\\n\";\n        $html .= '  </div>' . \"\\n\";\n    }\n    \n    $html .= '  <p class=\"small text-muted mb-0\">After fixing permissions, refresh this page.</p>' . \"\\n\";\n    $html .= '</div>' . \"\\n\";\n    \n    return $html;\n}",
-                    "usageCount": 8,
+                    "usageCount": 4,
                     "usages": [
                         {
                             "file": "/data/moop/admin/pages/manage_organisms.php",
@@ -1654,26 +1654,6 @@
                             "file": "/data/moop/admin/pages/manage_groups.php",
                             "line": 296,
                             "context": "echo generatePermissionAlert("
-                        },
-                        {
-                            "file": "/data/moop/admin/pages/manage_registry.php",
-                            "line": 50,
-                            "context": "<?php echo generatePermissionAlert("
-                        },
-                        {
-                            "file": "/data/moop/admin/pages/manage_registry.php",
-                            "line": 57,
-                            "context": "<?php echo generatePermissionAlert("
-                        },
-                        {
-                            "file": "/data/moop/admin/pages/manage_registry.php",
-                            "line": 64,
-                            "context": "<?php echo generatePermissionAlert("
-                        },
-                        {
-                            "file": "/data/moop/admin/pages/manage_registry.php",
-                            "line": 71,
-                            "context": "<?php echo generatePermissionAlert("
                         },
                         {
                             "file": "/data/moop/admin/manage_organisms_old.php",
@@ -2063,26 +2043,21 @@
                 },
                 {
                     "name": "getRegistryLastUpdate",
-                    "line": 460,
-                    "comment": "/**\n* Get the last update time from registry files\n*\n* Attempts to extract \"Generated:\" timestamp from HTML file first,\n* then falls back to file modification time\n*\n* @param string $htmlFile - Path to HTML registry file\n* @param string $mdFile - Path to Markdown registry file (fallback)\n* @return string - Last update timestamp in format 'Y-m-d H:i:s' or 'Never'\n*/",
-                    "code": "function getRegistryLastUpdate($htmlFile, $mdFile) {\n    $lastUpdate = 'Never';\n    \n    // Try to get from HTML file first (has \"Generated:\" timestamp)\n    if (file_exists($htmlFile) && is_readable($htmlFile)) {\n        $content = file_get_contents($htmlFile);\n        // Look for \"Generated: YYYY-MM-DD HH:MM:SS\" in the HTML\n        if (preg_match('/Generated:\\s*(\\d{4}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}:\\d{2})/', $content, $matches)) {\n            $lastUpdate = $matches[1];\n            return $lastUpdate;\n        }\n    }\n    \n    // Fallback to file modification time\n    if (file_exists($htmlFile)) {\n        $lastUpdate = date('Y-m-d H:i:s', filemtime($htmlFile));\n    } elseif (file_exists($mdFile)) {\n        $lastUpdate = date('Y-m-d H:i:s', filemtime($mdFile));\n    }\n    \n    return $lastUpdate;\n}",
-                    "usageCount": 2,
+                    "line": 465,
+                    "comment": "/**\n* Get the last update time from registry files\n*\n* Attempts to extract \"Generated:\" timestamp from HTML file first,\n* then falls back to file modification time. Also checks if any PHP files\n* in the codebase are newer than the registry, indicating it needs updating.\n*\n* @param string $htmlFile - Path to HTML registry file\n* @param string $mdFile - Path to Markdown registry file (fallback)\n* @param string $scanDirBase - Base path for scanning PHP files (defaults to parent of lib/)\n* @return array - Array with keys:\n*                 'timestamp' => Last update timestamp in format 'Y-m-d H:i:s' or 'Never'\n*                 'isStale' => Boolean indicating if registry needs updating\n*                 'status' => String message ('Up to date' or 'You should update')\n*/",
+                    "code": "function getRegistryLastUpdate($htmlFile, $mdFile, $scanDirBase = null) {\n    $lastUpdate = 'Never';\n    $lastUpdateTime = 0;\n    $isStale = false;\n    \n    // Try to get from HTML file first (has \"Generated:\" timestamp)\n    if (file_exists($htmlFile) && is_readable($htmlFile)) {\n        $content = file_get_contents($htmlFile);\n        // Look for \"Generated: YYYY-MM-DD HH:MM:SS\" in the HTML\n        if (preg_match('/Generated:\\s*(\\d{4}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}:\\d{2})/', $content, $matches)) {\n            $lastUpdate = $matches[1];\n            $lastUpdateTime = strtotime($lastUpdate);\n        }\n    }\n    \n    // Fallback to file modification time\n    if ($lastUpdateTime === 0) {\n        if (file_exists($htmlFile)) {\n            $lastUpdateTime = filemtime($htmlFile);\n            $lastUpdate = date('Y-m-d H:i:s', $lastUpdateTime);\n        } elseif (file_exists($mdFile)) {\n            $lastUpdateTime = filemtime($mdFile);\n            $lastUpdate = date('Y-m-d H:i:s', $lastUpdateTime);\n        }\n    }\n    \n    // Check if any PHP files are newer than the registry (only if registry exists)\n    if ($lastUpdateTime > 0) {\n        if ($scanDirBase === null) {\n            // Default to parent directory of lib/\n            $scanDirBase = dirname(dirname(__FILE__));\n        }\n        \n        $scanDirs = [\n            $scanDirBase . '/lib',\n            $scanDirBase . '/tools',\n            $scanDirBase . '/admin',\n            $scanDirBase\n        ];\n        \n        foreach ($scanDirs as $dir) {\n            if (!is_dir($dir)) continue;\n            \n            try {\n                $files = new RecursiveIteratorIterator(\n                    new RecursiveDirectoryIterator($dir),\n                    RecursiveIteratorIterator::LEAVES_ONLY\n                );\n                \n                foreach ($files as $file) {\n                    if (!$file->isFile() || $file->getExtension() !== 'php') continue;\n                    \n                    $filePath = $file->getRealPath();\n                    \n                    // Skip excluded files and directories\n                    $excludePatterns = ['docs/', 'logs/', 'notes/', 'not_used/', '.git/', 'generate_registry'];\n                    $skip = false;\n                    foreach ($excludePatterns as $pattern) {\n                        if (strpos($filePath, $pattern) !== false) {\n                            $skip = true;\n                            break;\n                        }\n                    }\n                    if ($skip) continue;\n                    \n                    $fileTime = filemtime($filePath);\n                    if ($fileTime > $lastUpdateTime) {\n                        $isStale = true;\n                        break 2;\n                    }\n                }\n            } catch (Exception $e) {\n                error_log(\"Error checking PHP file timestamps: \" . $e->getMessage());\n            }\n        }\n    }\n    \n    return [\n        'timestamp' => $lastUpdate,\n        'isStale' => $isStale,\n        'status' => $isStale ? 'You should update' : 'Up to date'\n    ];\n}",
+                    "usageCount": 1,
                     "usages": [
                         {
-                            "file": "/data/moop/admin/manage_registry.php",
-                            "line": 32,
-                            "context": "$php_last_update = getRegistryLastUpdate($php_registry_html, $php_registry_md);"
-                        },
-                        {
-                            "file": "/data/moop/admin/manage_registry.php",
-                            "line": 33,
-                            "context": "$js_last_update = getRegistryLastUpdate($js_registry_html, $js_registry_md);"
+                            "file": "/data/moop/admin/pages/manage_registry.php",
+                            "line": 21,
+                            "context": "$registryStatus = getRegistryLastUpdate($json_registry, $json_registry);"
                         }
                     ]
                 },
                 {
                     "name": "getNewestSqliteModTime",
-                    "line": 493,
+                    "line": 559,
                     "comment": "/**\n* Get the newest SQLite database modification timestamp\n*\n* Scans all SQLite files in organism subdirectories and returns the most recent modification time\n* Each organism has a structure: organisms/OrganismName/organism.sqlite\n*\n* @param string $organisms_path - Path to organisms directory\n* @return array - Array with 'timestamp' (Y-m-d H:i:s), 'unix_time' (timestamp), and 'iso8601'\n*                 Returns null if no SQLite files found\n*/",
                     "code": "function getNewestSqliteModTime($organisms_path) {\n    if (!is_dir($organisms_path)) {\n        return null;\n    }\n    \n    $newest_time = 0;\n    $found = false;\n    \n    try {\n        // Scan organism directories one level deep\n        $organisms = scandir($organisms_path);\n        foreach ($organisms as $organism) {\n            if ($organism === '.' || $organism === '..') {\n                continue;\n            }\n            \n            $organism_dir = $organisms_path . '/' . $organism;\n            if (!is_dir($organism_dir)) {\n                continue;\n            }\n            \n            $sqlite_file = $organism_dir . '/organism.sqlite';\n            if (file_exists($sqlite_file)) {\n                $mtime = filemtime($sqlite_file);\n                if ($mtime > $newest_time) {\n                    $newest_time = $mtime;\n                    $found = true;\n                }\n            }\n        }\n    } catch (Exception $e) {\n        error_log(\"Error scanning SQLite files: \" . $e->getMessage());\n        return null;\n    }\n    \n    if (!$found) {\n        return null;\n    }\n    \n    return [\n        'unix_time' => $newest_time,\n        'timestamp' => date('Y-m-d H:i:s', $newest_time),\n        'iso8601' => date('c', $newest_time)\n    ];\n}",
                     "usageCount": 1,
@@ -2524,7 +2499,7 @@
                     "line": 251,
                     "comment": "/**\n* Handle AJAX requests at page start\n*\n* Consolidates common AJAX request handling for admin pages.\n* Handles JSON response headers and early exit for AJAX requests.\n*\n* Supported actions:\n* - 'fix_file_permissions': Calls handleFixFilePermissionsAjax()\n* - Custom actions: Pass callback function to handle additional actions\n*\n* @param callable|null $customHandler - Optional callback for custom actions\n*                                       Receives $_POST['action'] and should return true if handled\n* @return void - Exits after sending response\n*/",
                     "code": "function handleAdminAjax($customHandler = null) {\n    if (!isset($_POST['action'])) {\n        return; // Not a POST request with action\n    }\n    \n    $action = $_POST['action'];\n    $isStandardAction = ($action === 'fix_file_permissions');\n    $hasCustomHandler = ($customHandler && is_callable($customHandler));\n    \n    // Only process AJAX requests if we have a handler for them\n    if (!$isStandardAction && !$hasCustomHandler) {\n        return; // No handler for this action, let page process normally\n    }\n    \n    // Only clear buffer for AJAX handlers\n    while (ob_get_level()) {\n        ob_end_clean();\n    }\n    header('Content-Type: application/json');\n    \n    // Handle standard fix_file_permissions action\n    if ($isStandardAction) {\n        echo json_encode(handleFixFilePermissionsAjax());\n        exit;\n    }\n    \n    // Pass to custom handler if provided\n    if ($hasCustomHandler) {\n        $handled = call_user_func($customHandler, $action);\n        if ($handled) {\n            exit;\n        }\n    }\n}",
-                    "usageCount": 6,
+                    "usageCount": 5,
                     "usages": [
                         {
                             "file": "/data/moop/admin/manage_taxonomy_tree.php",
@@ -2550,11 +2525,6 @@
                             "file": "/data/moop/admin/manage_organisms.php",
                             "line": 19,
                             "context": "handleAdminAjax(function($action) use ($organisms) {"
-                        },
-                        {
-                            "file": "/data/moop/admin/manage_registry.php",
-                            "line": 16,
-                            "context": "handleAdminAjax('handleRegistryAjax'); // Handle standard + custom AJAX"
                         }
                     ]
                 }
