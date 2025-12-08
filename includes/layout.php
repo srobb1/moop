@@ -183,6 +183,7 @@ function render_display_page($content_file, $data = [], $title = '') {
         <script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
         
         <!-- MOOP shared modules - Available to all pages -->
+        <script src="/<?= $config->getString('site') ?>/js/modules/utilities.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/datatable-config.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/shared-results-table.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/annotation-search.js"></script>

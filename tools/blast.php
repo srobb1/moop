@@ -648,7 +648,7 @@ foreach ($sources_by_group as $group => $organisms) {
 ?>
 </script>
 
-<script src="/<?= $site ?>/js/modules/utilities.js"></script>
+<!-- Note: utilities.js is now loaded globally in layout.php -->
 <script src="/<?= $site ?>/js/modules/source-list-manager.js"></script>
 <script src="/<?= $site ?>/js/blast-manager.js"></script>
 

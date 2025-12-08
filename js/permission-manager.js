@@ -91,11 +91,4 @@ function md5(str) {
   return Math.abs(hash).toString(16);
 }
 
-/**
- * Escape HTML special characters to prevent XSS
- */
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+

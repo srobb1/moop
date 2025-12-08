@@ -199,7 +199,7 @@ function saveMetadata(event, organism) {
     });
 }
 
-// Uses window.escapeHtml from utilities.js
+// Uses escapeHtml from utilities.js (loaded globally in layout.php)
 
 function addMetadataImage(organism) {
     const container = document.getElementById('images-container-' + organism);
@@ -506,7 +506,7 @@ function removeFeatureTag(element, organism) {
     element.closest('.feature-tag').remove();
 }
 
-// Uses window.escapeHtml from utilities.js
+// Uses escapeHtml from utilities.js (loaded globally in layout.php)
 
 /**
  * Simple Collapse Handler - REPLACES Bootstrap Collapse

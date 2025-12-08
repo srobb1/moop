@@ -4,17 +4,6 @@
  * filtering, copy-to-clipboard functionality, and search ID display
  */
 
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
-}
-
 function clearSourceFilter() {
     clearSourceFilters('sourceFilter', 'selected_source', 'fasta-source-line', null, 'downloadForm');
 }
