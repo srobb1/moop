@@ -90,7 +90,7 @@
           <div class="card-body">
             <h5 class="card-title"><i class="fa fa-dna"></i> Manage Organisms</h5>
             <p class="card-text">View current organisms, assemblies, and learn how to add new data.</p>
-            <a href="manage_organisms.php" class="btn btn-primary">Go to Manage Organisms</a>
+            <a href="manage_organisms.php" class="btn btn-success">Go to Manage Organisms</a>
           </div>
         </div>
       </div>
@@ -100,7 +100,7 @@
           <div class="card-body">
             <h5 class="card-title"><i class="fa fa-layer-group"></i> Manage Groups</h5>
             <p class="card-text">Configure organism assembly groups and group descriptions.</p>
-            <a href="manage_groups.php" class="btn btn-primary">Go to Manage Groups</a>
+            <a href="manage_groups.php" class="btn btn-success">Go to Manage Groups</a>
           </div>
         </div>
       </div>
@@ -110,7 +110,7 @@
           <div class="card-body">
             <h5 class="card-title"><i class="fa fa-tags"></i> Manage Annotation Sections</h5>
             <p class="card-text">Configure annotation section types and descriptions.</p>
-            <a href="manage_annotations.php" class="btn btn-primary">Go to Annotation Sections</a>
+            <a href="manage_annotations.php" class="btn btn-success">Go to Annotation Sections</a>
           </div>
         </div>
       </div>
@@ -120,7 +120,7 @@
           <div class="card-body">
             <h5 class="card-title"><i class="fa fa-project-diagram"></i> Manage Taxonomy Tree</h5>
             <p class="card-text">Generate and customize the taxonomy tree from organism taxonomy data.</p>
-            <a href="manage_taxonomy_tree.php" class="btn btn-primary">Go to Taxonomy Tree</a>
+            <a href="manage_taxonomy_tree.php" class="btn btn-success">Go to Taxonomy Tree</a>
           </div>
         </div>
       </div>
@@ -136,7 +136,7 @@
           <div class="card-body">
             <h5 class="card-title"><i class="fa fa-code"></i> PHP Function Registry</h5>
             <p class="card-text">Manage and view all PHP functions. Update, search, and track usage.</p>
-            <a href="manage_registry.php" class="btn btn-primary">Manage PHP Registry</a>
+            <a href="manage_registry.php" class="btn btn-info">Manage PHP Registry</a>
           </div>
         </div>
       </div>
@@ -146,7 +146,7 @@
           <div class="card-body">
             <h5 class="card-title"><i class="fa fa-file-code"></i> JavaScript Function Registry</h5>
             <p class="card-text">Manage and view all JavaScript functions. Update, search, and track usage.</p>
-            <a href="manage_js_registry.php" class="btn btn-primary">Manage JS Registry</a>
+            <a href="manage_js_registry.php" class="btn btn-info">Manage JS Registry</a>
           </div>
         </div>
       </div>
@@ -156,7 +156,7 @@
           <div class="card-body">
             <h5 class="card-title"><i class="fa fa-lock"></i> Filesystem Permissions</h5>
             <p class="card-text">Complete guide to file and directory permissions. Check and fix permission issues.</p>
-            <a href="manage_filesystem_permissions.php" class="btn btn-primary">Check Permissions</a>
+            <a href="manage_filesystem_permissions.php" class="btn btn-info">Check Permissions</a>
           </div>
         </div>
       </div>
@@ -166,7 +166,7 @@
           <div class="card-body">
             <h5 class="card-title"><i class="fa fa-exclamation-triangle"></i> Error Logs</h5>
             <p class="card-text">View and manage application error logs for debugging and monitoring.</p>
-            <a href="manage_error_log.php" class="btn btn-primary">View Error Logs</a>
+            <a href="manage_error_log.php" class="btn btn-info">View Error Logs</a>
           </div>
         </div>
       </div>
