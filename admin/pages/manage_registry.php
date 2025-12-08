@@ -6,15 +6,22 @@
 
 $config = ConfigManager::getInstance();
 $docs_path = $config->getPath('docs_path');
-$json_registry = $docs_path . '/function_registry_test.json';
+$json_registry = $docs_path . '/function_registry.json';
 
 // Load JSON registry
 $registry = null;
 $lastUpdate = 'Never';
+$registryStatus = [];
 if (file_exists($json_registry)) {
-    $lastUpdate = date('Y-m-d H:i:s', filemtime($json_registry));
     $json_content = file_get_contents($json_registry);
     $registry = json_decode($json_content, true);
+    
+    // Get registry status (includes staleness check)
+    require_once __DIR__ . '/../../lib/functions_filesystem.php';
+    $registryStatus = getRegistryLastUpdate($json_registry, $json_registry);
+    $lastUpdate = $registryStatus['timestamp'];
+    $isStale = $registryStatus['isStale'];
+    $statusMessage = $registryStatus['status'];
 }
 ?>
 
@@ -24,17 +31,19 @@ if (file_exists($json_registry)) {
     
     <!-- Info Card -->
     <div class="card mb-4 border-info">
-        <div class="card-header bg-info bg-opacity-10">
-            <h5 class="mb-0"><i class="fa fa-info-circle"></i> About This Registry</h5>
+        <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutRegistry">
+            <h5 class="mb-0"><i class="fa fa-info-circle"></i> About This Registry <i class="fa fa-chevron-down float-end"></i></h5>
         </div>
-        <div class="card-body">
-            <p>This is an auto-generated registry of all PHP functions in your codebase. It includes:</p>
-            <ul class="mb-0">
-                <li>All functions from <code>lib/</code>, <code>tools/</code>, <code>admin/</code>, and root directories</li>
-                <li>Function documentation and comments</li>
-                <li>Usage tracking (where each function is called)</li>
-                <li>Detection of unused functions</li>
-            </ul>
+        <div class="collapse" id="aboutRegistry">
+            <div class="card-body">
+                <p>This is an auto-generated registry of all PHP functions in your codebase. It includes:</p>
+                <ul class="mb-0">
+                    <li>All functions from <code>lib/</code>, <code>tools/</code>, <code>admin/</code>, and root directories</li>
+                    <li>Function documentation and comments</li>
+                    <li>Usage tracking (where each function is called)</li>
+                    <li>Detection of unused functions</li>
+                </ul>
+            </div>
         </div>
     </div>
     
@@ -58,6 +67,17 @@ if (file_exists($json_registry)) {
             </div>
             <small class="text-muted">
                 <i class="fa fa-clock-o"></i> Last updated: <strong><?php echo $lastUpdate; ?></strong>
+                <?php if ($registry): ?>
+                    <?php if ($isStale): ?>
+                        <span class="badge bg-warning text-dark ms-2" title="Some PHP files are newer than the registry">
+                            <i class="fa fa-exclamation-triangle"></i> You should update
+                        </span>
+                    <?php else: ?>
+                        <span class="badge bg-success ms-2" title="All PHP files are up to date">
+                            <i class="fa fa-check-circle"></i> Up to date
+                        </span>
+                    <?php endif; ?>
+                <?php endif; ?>
             </small>
             <div id="registryMessage" class="mt-2"></div>
         </div>
@@ -189,7 +209,7 @@ if (file_exists($json_registry)) {
         
         <!-- Embedded registry data for JavaScript -->
         <script type="application/json" id="registryData">
-<?php echo json_encode($registry, JSON_UNESCAPED_SLASHES); ?></script>
+<?php echo json_encode($registry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?></script>
     <?php endif; ?>
 </div>
 

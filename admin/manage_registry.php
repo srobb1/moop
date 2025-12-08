@@ -12,7 +12,7 @@ include_once __DIR__ . '/admin_init.php';
 // Load config and data
 $config = ConfigManager::getInstance();
 $docs_path = $config->getPath('docs_path');
-$json_registry = $docs_path . '/function_registry_test.json';
+$json_registry = $docs_path . '/function_registry.json';
 
 // Load JSON registry
 $registry = null;
@@ -38,7 +38,10 @@ $data = [
 $display_config = [
     'content_file' => __DIR__ . '/pages/manage_registry.php',
     'title' => 'Function Registry',
-    'page_script' => '/' . $site . '/js/manage-registry.js'
+    'page_script' => [
+       '/' . $site . '/js/manage-registry.js',
+       '/' . $site . '/js/admin-utilities.js',
+     ]
 ];
 
 // Include template (which includes layout system)
