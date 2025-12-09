@@ -135,7 +135,22 @@
                     rows="6" 
                     placeholder="Enter feature IDs (one per line or comma-separated)"
                     ><?= htmlspecialchars($uniquenames_string) ?></textarea>
-                <small class="form-text text-muted">Enter one ID per line, or use commas to separate multiple IDs on one line.</small>
+                <small class="form-text text-muted">Enter IDs one per line or comma-separated</small>
+                <small class="form-text text-muted d-block mt-2">
+                    Example IDs: <?= htmlspecialchars(implode(', ', array_slice($sample_feature_ids, 0, 2))) ?>
+                </small>
+                
+                <!-- Sample IDs Help -->
+                <?php if (!empty($sample_feature_ids)): ?>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadSampleIds()">
+                            <i class="fa fa-bookmark"></i> Load Example IDs
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearFeatureIds()">
+                            <i class="fa fa-times"></i> Clear
+                        </button>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <!-- Submit button -->
@@ -168,3 +183,10 @@
     .tooltip-inner { background-color: #000 !important; }
     body { position: relative; }
 </style>
+
+<script>
+// Make sample feature IDs available to JavaScript
+<?php if (!empty($sample_feature_ids)): ?>
+    window.sampleFeatureIds = <?= json_encode($sample_feature_ids) ?>;
+<?php endif; ?>
+</script>

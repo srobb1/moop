@@ -190,6 +190,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
+        // Parse BLAST sample sequences from form
+        if (isset($_POST['blast_sample_sequences']) && is_array($_POST['blast_sample_sequences'])) {
+            $sample_sequences = [];
+            $has_protein = !empty(trim($_POST['blast_sample_sequences']['protein'] ?? ''));
+            $has_nucleotide = !empty(trim($_POST['blast_sample_sequences']['nucleotide'] ?? ''));
+            
+            // Require at least one sequence
+            if ($has_protein || $has_nucleotide) {
+                if ($has_protein) {
+                    $sample_sequences['protein'] = trim($_POST['blast_sample_sequences']['protein']);
+                }
+                if ($has_nucleotide) {
+                    $sample_sequences['nucleotide'] = trim($_POST['blast_sample_sequences']['nucleotide']);
+                }
+                $data['blast_sample_sequences'] = $sample_sequences;
+            } else {
+                $error = 'BLAST sample sequences cannot be empty. Please provide at least one sample sequence.';
+            }
+        }
+        
+        // Parse sample feature IDs from form
+        if (isset($_POST['sample_feature_ids']) && !empty(trim($_POST['sample_feature_ids']))) {
+            $ids_text = trim($_POST['sample_feature_ids']);
+            $ids = array_filter(array_map('trim', explode("\n", $ids_text)));
+            
+            if (!empty($ids)) {
+                $data['sample_feature_ids'] = $ids;
+            } else {
+                $error = 'Sample feature IDs cannot be empty. Please provide at least one ID.';
+            }
+        } elseif (empty($error)) {
+            $error = 'Sample feature IDs cannot be empty. Please provide at least one ID.';
+        }
+        
         // Handle file upload for header image
         if (isset($_FILES['header_upload']) && $_FILES['header_upload']['error'] == UPLOAD_ERR_OK) {
             $banners_path = $config->getPath('absolute_images_path') . '/banners';

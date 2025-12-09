@@ -233,7 +233,10 @@ $available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $seq
 $display_config = [
     'title' => 'Sequence Retrieval & Download - ' . htmlspecialchars($siteTitle),
     'content_file' => __DIR__ . '/pages/retrieve_sequences.php',
-    'page_script' => '/' . $site . '/js/sequence-retrieval.js'
+    'page_script' => [
+        '/' . $site . '/js/modules/source-list-manager.js',
+        '/' . $site . '/js/sequence-retrieval.js'
+    ]
 ];
 
 // Prepare data for content file
@@ -256,6 +259,7 @@ $data = [
     'found_ids' => $found_ids,
     'should_scroll_to_results' => $should_scroll_to_results,
     'selected_source' => $selected_source,
+    'sample_feature_ids' => $config->getArray('sample_feature_ids', []),
     'page_styles' => [
         '/' . $site . '/css/display.css',
     ]

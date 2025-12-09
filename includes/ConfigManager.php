@@ -713,6 +713,23 @@ class ConfigManager
                 'current_value' => $this->getArray('auto_login_ip_ranges', []),
                 'note' => 'WARNING: Only use for development. Provides full access without login.',
             ],
+            'blast_sample_sequences' => [
+                'label' => 'BLAST Sample Sequences',
+                'description' => 'Sample sequences for BLAST testing',
+                'type' => 'sample_sequences',
+                'current_value' => $this->getArray('blast_sample_sequences', [
+                    'protein' => '',
+                    'nucleotide' => '',
+                ]),
+                'note' => 'Protein and nucleotide sequences for users to test BLAST. Cannot be empty.',
+            ],
+            'sample_feature_ids' => [
+                'label' => 'Sample Feature IDs',
+                'description' => 'Sample feature IDs for sequence retrieval testing',
+                'type' => 'sample_ids',
+                'current_value' => $this->getArray('sample_feature_ids', []),
+                'note' => 'Example IDs that users can paste into retrieve sequences tool. Enter one per line. Cannot be empty.',
+            ],
         ];
     }
 }

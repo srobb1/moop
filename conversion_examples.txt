@@ -1,0 +1,413 @@
+TOOL CONVERSION - CONCRETE CODE EXAMPLES
+=========================================
+
+EXAMPLE 1: retrieve_selected_sequences.php (SIMPLEST)
+=====================================================
+
+CURRENT STRUCTURE (209 lines):
+```php
+<?php
+// ... includes and config ...
+
+// STEP 1: Check if download is requested
+$download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
+$sequence_type = trim($_POST['sequence_type'] ?? '');
+
+// STEP 2: Process form if submitted
+if (!empty($sequence_ids_provided)) {
+    $displayed_content = extractSequencesForAllTypes(...);
+}
+
+// STEP 3: Send file if download was requested
+if ($download_file_flag && !empty($sequence_type)) {
+    sendFileDownload($displayed_content[$sequence_type], ...);
+}
+
+// STEP 4: Build HTML (includes navbar, html, body tags)
+include_once __DIR__ . '/../includes/head-resources.php';
+include_once __DIR__ . '/../includes/navbar.php';
+?>
+<!DOCTYPE html>
+<html>...
+```
+
+CONVERTED STRUCTURE:
+====================
+
+tools/retrieve_selected_sequences.php (refactored controller):
+```php
+<?php
+/**
+ * Download Selected Sequences
+ * 
+ * Handles form submission, file extraction, and downloads
+ */
+
+ob_start();
+$download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
+$sequence_type = trim($_POST['sequence_type'] ?? '');
+$sequence_ids_provided = !empty($_POST['uniquenames']) || !empty($_GET['uniquenames']);
+
+include_once __DIR__ . '/tool_init.php';
+include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/extract_search_helpers.php';
+
+ob_end_clean();
+
+// Validate access
+$organism_name = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
+$assembly_name = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
+
+if (empty($assembly_name)) {
+    header("Location: /$site/access_denied.php?error=assembly_required");
+    exit;
+}
+
+if (!has_assembly_access($organism_name, $assembly_name)) {
+    if (!is_logged_in()) {
+        header("Location: /$site/login.php");
+    } else {
+        header("Location: /$site/access_denied.php");
+    }
+    exit;
+}
+
+// *** KEY: Check for download BEFORE template ***
+if ($download_file_flag && !empty($sequence_type) && isset($displayed_content[$sequence_type])) {
+    sendFileDownload($displayed_content[$sequence_type], $sequence_type, ...);
+    exit; // NEVER reaches template
+}
+
+// *** Process form data ***
+$displayed_content = [];
+if (!empty($sequence_ids_provided)) {
+    $extraction_errors = [];
+    // ... extraction logic ...
+    $displayed_content = extractSequencesForAllTypes(...);
+}
+
+// *** Set up template configuration ***
+$display_config = [
+    'title' => 'Download Selected Sequences',
+    'content_file' => __DIR__ . '/pages/retrieve_selected_sequences.php',
+    'page_script' => '/moop/js/retrieve-selected-sequences.js',  // If needed
+];
+
+// *** Build data array for content file ***
+$data = [
+    'site' => $site,
+    'siteTitle' => $siteTitle,
+    'organism_name' => $organism_name,
+    'assembly_name' => $assembly_name,
+    'uniquenames' => $uniquenames,
+    'displayed_content' => $displayed_content,
+    'sequence_types' => $sequence_types,
+    'available_sequences' => formatSequenceResults($displayed_content, $sequence_types),
+    'uniquenames_string' => $uniquenames_string,
+];
+
+// *** Include template - it renders complete page ***
+include_once __DIR__ . '/display-template.php';
+?>
+```
+
+tools/pages/retrieve_selected_sequences.php (content view):
+```php
+<?php
+/**
+ * Download Selected Sequences - Content View
+ * 
+ * Displays form and extraction results
+ * $data array available with:
+ * - organism_name, assembly_name, uniquenames
+ * - displayed_content, sequence_types
+ * - available_sequences, uniquenames_string
+ */
+?>
+
+<div class="container">
+    <div class="mb-4"></div>
+
+    <h2 class="mb-4"><i class="fa fa-dna"></i> Download Selected Sequences</h2>
+
+    <div class="alert alert-info">
+        <strong>Organism:</strong> <em><?= htmlspecialchars($data['organism_name']) ?></em><br>
+        <strong>Selected Features:</strong> <span class="badge bg-secondary"><?= count($data['uniquenames']) ?></span>
+    </div>
+
+    <div class="mb-4">
+        <h5>Selected Feature IDs</h5>
+        <div class="selected-ids">
+            <?php foreach (array_slice($data['uniquenames'], 0, 10) as $id): ?>
+                <span class="badge-custom"><?= htmlspecialchars($id) ?></span>
+            <?php endforeach; ?>
+            <?php if (count($data['uniquenames']) > 10): ?>
+                <span class="badge-custom">+<?= count($data['uniquenames']) - 10 ?> more</span>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <?php if (empty($data['displayed_content'])): ?>
+        <!-- If no sequences yet, show submit button -->
+        <form method="POST">
+            <input type="hidden" name="organism" value="<?= htmlspecialchars($data['organism_name']) ?>">
+            <input type="hidden" name="uniquenames" value="<?= htmlspecialchars($data['uniquenames_string']) ?>">
+            <input type="hidden" name="assembly" value="<?= htmlspecialchars($data['assembly_name']) ?>">
+            
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fa fa-eye"></i> Display All Sequences
+                </button>
+            </div>
+        </form>
+    <?php else: ?>
+        <!-- Display extracted sequences -->
+        <hr class="my-4">
+        
+        <!-- Form for downloads -->
+        <form method="POST">
+            <!-- Hidden fields to preserve state -->
+            <input type="hidden" name="organism" value="<?= htmlspecialchars($data['organism_name']) ?>">
+            <input type="hidden" name="uniquenames" value="<?= htmlspecialchars($data['uniquenames_string']) ?>">
+            <input type="hidden" name="assembly" value="<?= htmlspecialchars($data['assembly_name']) ?>">
+            
+            <!-- Sequence type selector -->
+            <div class="mb-3">
+                <label class="form-label">Sequence Type:</label>
+                <?php foreach ($data['sequence_types'] as $type): ?>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="sequence_type" 
+                               id="seq_<?= $type['type'] ?>" value="<?= $type['type'] ?>" 
+                               <?= isset($data['displayed_content'][$type['type']]) ? '' : 'disabled' ?>>
+                        <label class="form-check-label" for="seq_<?= $type['type'] ?>">
+                            <?= htmlspecialchars($type['name']) ?>
+                        </label>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <!-- Download button -->
+            <button type="submit" name="download_file" value="1" class="btn btn-success">
+                <i class="fa fa-download"></i> Download FASTA
+            </button>
+        </form>
+        
+        <!-- Display sequences -->
+        <div class="mt-4">
+            <?php foreach ($data['available_sequences'] as $seq): ?>
+                <div class="sequence-block">...</div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+</div>
+```
+
+KEY POINTS:
+1. Controller (tool.php):
+   - Checks download BEFORE template (exit if true)
+   - Processes form/extraction
+   - Builds $data and $display_config
+   - Includes display-template.php
+
+2. Content (pages/tool.php):
+   - Uses $data array for all variables
+   - Renders form with hidden inputs for state
+   - Same HTML as before, just uses $data['var'] instead of $var
+
+3. Result:
+   - Monolithic 209 lines → Controller 100 lines + View 109 lines
+   - Cleaner separation of concerns
+   - All functionality preserved
+   - Works with new layout infrastructure
+
+
+EXAMPLE 2: blast.php (MOST COMPLEX)
+====================================
+
+CURRENT: 710 lines monolithic file
+- Lines 1-215: Config, validation, BLAST execution
+- Lines 216-220: Include headers/navbar
+- Lines 221-650: HTML form and results
+- Lines 651-705: JavaScript and footer
+
+CONVERTED:
+- tools/blast.php: ~180 lines (config, validation, BLAST execution)
+- tools/pages/blast.php: ~450 lines (form and results HTML)
+- js/blast-tool.js: ~400 lines (JavaScript extracted as-is)
+
+tools/blast.php (refactored):
+```php
+<?php
+/**
+ * BLAST Search Tool
+ * 
+ * Responsibilities:
+ * - Validate access
+ * - Load organism/assembly data
+ * - Process BLAST searches
+ * - Build data for template
+ */
+
+include_once __DIR__ . '/tool_init.php';
+include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/blast_results_visualizer.php';
+
+// Config
+$organism_data = $config->getPath('organism_data');
+$is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
+
+// Get context and parameters
+$context = parseContextParameters();
+$sources_by_group = getAccessibleAssemblies();
+$accessible_sources = flattenSourcesList($sources_by_group);
+
+// Parse form parameters
+$search_query = trim($_POST['query'] ?? '');
+$blast_program = trim($_POST['blast_program'] ?? 'blastx');
+$selected_source = trim($_POST['selected_source'] ?? '');
+$blast_db = trim($_POST['blast_db'] ?? '');
+
+// Initialize state
+$search_error = null;
+$blast_result = null;
+
+// Process BLAST search if form submitted
+if (!empty($search_query) && !empty($selected_source) && !empty($blast_program)) {
+    // Validation and execution
+    $validation = validateBlastSequence($search_query);
+    if (!$validation['valid']) {
+        $search_error = "Invalid sequence: " . $validation['error'];
+    } else {
+        // Execute BLAST
+        $blast_result = executeBlastSearch(...);
+        if (!$blast_result['success']) {
+            $search_error = $blast_result['error'];
+        }
+    }
+}
+
+// Set up template
+$display_config = [
+    'title' => 'BLAST Search',
+    'content_file' => __DIR__ . '/pages/blast.php',
+    'page_script' => '/moop/js/blast-tool.js',
+    'inline_scripts' => [
+        "const sourcesByGroup = " . json_encode($sources_by_group) . ";",
+        "const isLoggedIn = " . ($is_logged_in ? 'true' : 'false') . ";",
+        "const blastPrograms = " . json_encode($blast_programs) . ";",
+    ]
+];
+
+$data = [
+    'site' => $site,
+    'siteTitle' => $siteTitle,
+    'accessible_sources' => $accessible_sources,
+    'search_query' => $search_query,
+    'selected_source' => $selected_source,
+    'blast_program' => $blast_program,
+    'search_error' => $search_error,
+    'blast_result' => $blast_result,
+    'blast_programs' => $blast_programs,
+    'databases' => $databases,
+    'context' => $context,
+];
+
+include_once __DIR__ . '/display-template.php';
+?>
+```
+
+tools/pages/blast.php:
+```php
+<?php
+/**
+ * BLAST Search - Content View
+ * 
+ * Renders the BLAST search form and results
+ * Data available in $data array
+ */
+?>
+
+<div class="container mt-5">
+    <h2 class="mb-4"><i class="fa fa-dna"></i> BLAST Search</h2>
+    
+    <?php if (empty($data['accessible_sources'])): ?>
+        <div class="alert alert-warning">
+            No accessible assemblies found.
+        </div>
+    <?php else: ?>
+        <div class="fasta-info-box">
+            <!-- Usage instructions -->
+        </div>
+        
+        <?php if (!empty($data['search_error'])): ?>
+            <div class="alert alert-danger">
+                <?= htmlspecialchars($data['search_error']) ?>
+            </div>
+        <?php endif; ?>
+        
+        <!-- BLAST Search Form -->
+        <form method="POST" id="blastForm">
+            <!-- Form fields using $data array -->
+            <input type="hidden" name="query" id="query" 
+                   value="<?= htmlspecialchars($data['search_query']) ?>">
+            <input type="hidden" name="selected_source" id="selected_source"
+                   value="<?= htmlspecialchars($data['selected_source']) ?>">
+            <!-- ... more form fields ... -->
+        </form>
+        
+        <!-- BLAST Results if available -->
+        <?php if (isset($data['blast_result']) && $data['blast_result']['success']): ?>
+            <div id="blastResults">
+                <!-- Results visualization -->
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
+</div>
+```
+
+js/blast-tool.js:
+```javascript
+// Extract all JavaScript exactly as-is from lines 265-705 of original blast.php
+// No changes needed, just referenced via $display_config['page_script']
+
+function detectSequenceType(sequence) { ... }
+function filterBlastPrograms(type) { ... }
+function updateDatabaseList() { ... }
+// ... all other functions ...
+```
+
+RESULT FOR BLAST:
+- Original: 710 lines in one file
+- Refactored:
+  * Controller: ~180 lines
+  * View: ~450 lines  
+  * JavaScript: ~400 lines (extracted as-is, same file)
+- Benefits:
+  * Clear separation of concerns
+  * JavaScript is reusable/testable
+  * View can be modified without touching logic
+  * Controller logic clearly visible
+  * All existing functionality preserved
+
+CONVERSION CHECKLIST:
+====================
+
+For each tool:
+
+□ Create tools/pages/TOOL.php with HTML from original
+□ Create tools/TOOL.php refactored controller
+  □ Keep all logic (validation, processing)
+  □ Add $display_config array
+  □ Add $data array
+  □ Move download checks to BEFORE template
+  □ Include display-template.php at end
+□ Extract inline JavaScript if significant
+  □ Create js/TOOL-name.js
+  □ Reference in $display_config['page_script']
+□ Test functionality
+  □ Form submissions
+  □ File downloads
+  □ State preservation
+  □ Access control
+□ Commit changes
+

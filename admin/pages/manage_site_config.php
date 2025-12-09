@@ -406,6 +406,95 @@
                     </div>
                 </div>
 
+                <!-- BLAST Sample Sequences -->
+                <div class="card card-config">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">
+                                <i class="fa fa-flask"></i>
+                                <?= htmlspecialchars($editable_config['blast_sample_sequences']['label']) ?>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <?php if ($editable_config['blast_sample_sequences']['note']): ?>
+                            <div class="alert alert-info mb-3">
+                                <i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($editable_config['blast_sample_sequences']['note']) ?>
+                            </div>
+                        <?php endif; ?>
+                        <p class="text-muted small">
+                            <?= htmlspecialchars($editable_config['blast_sample_sequences']['description']) ?>
+                        </p>
+                        
+                        <!-- Protein Sample -->
+                        <div class="mb-3">
+                            <label for="blast_sample_protein" class="form-label">
+                                <strong>Protein Sample Sequence</strong>
+                            </label>
+                            <textarea 
+                                id="blast_sample_protein" 
+                                name="blast_sample_sequences[protein]" 
+                                class="form-control" 
+                                rows="5"
+                                placeholder="Enter sample protein sequence..."
+                                required><?= htmlspecialchars($editable_config['blast_sample_sequences']['current_value']['protein'] ?? '') ?></textarea>
+                            <small class="form-text text-muted">FASTA format or plain text</small>
+                        </div>
+                        
+                        <!-- Nucleotide Sample -->
+                        <div class="mb-3">
+                            <label for="blast_sample_nucleotide" class="form-label">
+                                <strong>Nucleotide Sample Sequence</strong>
+                            </label>
+                            <textarea 
+                                id="blast_sample_nucleotide" 
+                                name="blast_sample_sequences[nucleotide]" 
+                                class="form-control" 
+                                rows="5"
+                                placeholder="Enter sample nucleotide sequence..."
+                                required><?= htmlspecialchars($editable_config['blast_sample_sequences']['current_value']['nucleotide'] ?? '') ?></textarea>
+                            <small class="form-text text-muted">FASTA format or plain text</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sample Feature IDs -->
+                <div class="card card-config">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">
+                                <i class="fa fa-bookmark"></i>
+                                <?= htmlspecialchars($editable_config['sample_feature_ids']['label']) ?>
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <?php if ($editable_config['sample_feature_ids']['note']): ?>
+                            <div class="alert alert-info mb-3">
+                                <i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($editable_config['sample_feature_ids']['note']) ?>
+                            </div>
+                        <?php endif; ?>
+                        <p class="text-muted small">
+                            <?= htmlspecialchars($editable_config['sample_feature_ids']['description']) ?>
+                        </p>
+                        
+                        <label for="sample_feature_ids" class="form-label">
+                            <strong>Feature IDs (one per line)</strong>
+                        </label>
+                        <textarea 
+                            id="sample_feature_ids" 
+                            name="sample_feature_ids" 
+                            class="form-control" 
+                            rows="5"
+                            placeholder="Example:&#10;ACA1_PVKU01000001.1_000001.1&#10;ACA1_PVKU01005411.1_000003.1"
+                            required><?php 
+                            $ids = $editable_config['sample_feature_ids']['current_value'];
+                            echo is_array($ids) ? htmlspecialchars(implode("\n", $ids)) : htmlspecialchars($ids);
+                        ?></textarea>
+                        <small class="form-text text-muted">Enter one feature ID per line</small>
+                    </div>
+                </div>
+
                 <!-- Submit Buttons -->
                 <div class="d-flex gap-2 mb-4">
                     <button type="submit" class="btn btn-primary btn-lg" id="saveBtn" <?= !$file_writable ? 'disabled' : '' ?>>

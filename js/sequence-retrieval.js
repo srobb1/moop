@@ -154,6 +154,10 @@ function initializeSequenceRetrieval(options = {}) {
     function updateSearchIdsDisplay() {
         if (!featureIdsTextarea) return;
         
+        // Check if searchIdsDisplay element exists before trying to update it
+        const searchIdsDisplay = document.getElementById('searchIdsDisplay');
+        if (!searchIdsDisplay) return; // Element doesn't exist on this page, skip
+        
         // Get user input IDs
         const rawIds = featureIdsTextarea.value.trim();
         const userInputIds = rawIds
@@ -278,7 +282,42 @@ function initializeCopyTooltips() {
     });
 }
 
+
+// Clear feature IDs textarea
+function clearFeatureIds() {
+    const featureIds = document.getElementById('featureIds');
+    
+    if (!featureIds) {
+        console.error('featureIds field not found');
+        return;
+    }
+    
+    featureIds.value = '';
+    featureIds.focus();
+}
+
 // Initialize on DOM ready
+
+// Load sample feature IDs into textarea
+function loadSampleIds() {
+    const sampleIds = typeof window.sampleFeatureIds !== 'undefined' ? window.sampleFeatureIds : [];
+    const featureIds = document.getElementById('featureIds');
+    
+    if (!featureIds) {
+        console.error('featureIds field not found');
+        return;
+    }
+    
+    if (sampleIds.length === 0) {
+        console.error('No sample IDs configured');
+        return;
+    }
+    
+    // Load samples one per line
+    featureIds.value = sampleIds.join('\n');
+    featureIds.focus();
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
         // Check if shouldScroll option was provided via PHP
