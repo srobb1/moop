@@ -5,7 +5,6 @@
  */
 
 require_once __DIR__ . '/../../includes/config_init.php';
-require_once __DIR__ . '/../../includes/auth_check.php';
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
