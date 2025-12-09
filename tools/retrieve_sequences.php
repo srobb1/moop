@@ -1,9 +1,28 @@
 <?php
 /**
- * FASTA Sequence Download Tool
- * Allows users to manually search for and download sequences
- * Accessible from organism, assembly, and groups display pages
- * Uses blastdbcmd to extract from FASTA BLAST databases
+ * RETRIEVE SEQUENCES - Sequence Download Tool
+ * 
+ * Allows users to manually search for and download sequences.
+ * Accessible from organism, assembly, and groups display pages.
+ * Uses blastdbcmd to extract from FASTA BLAST databases.
+ * 
+ * ========== DATA FLOW ==========
+ * 
+ * Browser Request → This file (controller)
+ *   ↓
+ * Validate user access to assembly
+ *   ↓
+ * Extract sequences if IDs provided
+ *   ↓
+ * IF download flag → sendFile() + exit (never reaches template)
+ *   ↓
+ * Configure layout (title, scripts, styles)
+ *   ↓
+ * Call display-template.php with content file + data
+ *   ↓
+ * layout.php renders complete HTML page
+ *   ↓
+ * Content file (pages/retrieve_sequences.php) displays data
  */
 
 // Start output buffering to prevent any stray whitespace from includes
@@ -58,6 +77,8 @@ $selected_assembly = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
 $displayed_content = [];
 $should_scroll_to_results = false;
 $uniquenames = [];
+$found_ids = [];
+$download_error_msg = '';
 
 // Initialize selected_source based on organism and assembly
 // This ensures the correct radio button is pre-selected when the page loads with URL parameters
@@ -85,7 +106,6 @@ if (!empty($selected_organism) && !empty($selected_assembly)) {
     // If not found by direct accession match, try via genome_id lookup
     if (!$source_found) {
         try {
-            $organism_data = $config->getPath('organism_data');
             $db_path = "$organism_data/$selected_organism/organism.sqlite";
             [$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($selected_assembly, $db_path);
             
@@ -172,7 +192,6 @@ if (!empty($sequence_ids_provided)) {
         }
         
         // Parse returned sequences to find which IDs were actually found
-        $found_ids = [];
         foreach ($displayed_content as $seq_type => $fasta_content) {
             // Extract all header lines (start with >) from FASTA
             preg_match_all('/^>([^\s]+)/m', $fasta_content, $matches);
@@ -181,8 +200,6 @@ if (!empty($sequence_ids_provided)) {
             }
         }
         $found_ids = array_unique($found_ids);
-    } else {
-        $found_ids = [];
     }
     
     // Log any errors
@@ -193,7 +210,6 @@ if (!empty($sequence_ids_provided)) {
     }
     
     // Set download error message only if no content was retrieved
-    $download_error_msg = '';
     if (empty($displayed_content) && !empty($extraction_errors)) {
         $download_error_msg = implode(' ', $extraction_errors);
     }
@@ -202,262 +218,50 @@ if (!empty($sequence_ids_provided)) {
     $should_scroll_to_results = !empty($displayed_content);
     
     // If download flag is set and we have content, send the specific sequence type
+    // Must do this BEFORE including the template to avoid headers already sent error
     if ($download_file_flag && !empty($sequence_type) && isset($displayed_content[$sequence_type])) {
         $file_format = $_POST['file_format'] ?? 'fasta';
         sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);
+        exit; // Never reaches template
     }
 }
 
-// Display form - get available sequence types from all accessible sources
+// Get available sequence types from all accessible sources
 $available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_types);
 
-// Now include the HTML headers
-include_once __DIR__ . '/../includes/head-resources.php';
-include_once __DIR__ . '/../includes/navbar.php';
+// Configure display template
+$display_config = [
+    'title' => 'Sequence Retrieval & Download - ' . htmlspecialchars($siteTitle),
+    'content_file' => __DIR__ . '/pages/retrieve_sequences.php',
+    'page_script' => '/' . $site . '/js/sequence-retrieval.js'
+];
+
+// Prepare data for content file
+$data = [
+    'site' => $site,
+    'siteTitle' => $siteTitle,
+    'config' => $config,
+    'accessible_sources' => $accessible_sources,
+    'selected_organism' => $selected_organism,
+    'selected_assembly' => $selected_assembly,
+    'uniquenames_string' => $uniquenames_string,
+    'displayed_content' => $displayed_content,
+    'sequence_types' => $sequence_types,
+    'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $sequence_types) : [],
+    'context' => $context,
+    'filter_organisms' => $filter_organisms,
+    'sources_by_group' => $sources_by_group,
+    'download_error_msg' => $download_error_msg,
+    'uniquenames' => $uniquenames,
+    'found_ids' => $found_ids,
+    'should_scroll_to_results' => $should_scroll_to_results,
+    'selected_source' => $selected_source,
+    'page_styles' => [
+        '/' . $site . '/css/display.css',
+    ]
+];
+
+// Use generic template to render
+include_once __DIR__ . '/display-template.php';
+
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Sequence Search - <?= htmlspecialchars($siteTitle) ?></title>
-    <?php include_once __DIR__ . '/../includes/head-resources.php'; ?>
-    <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
-    <style>
-        .tooltip { z-index: 9999 !important; }
-        .tooltip-inner { background-color: #000 !important; }
-        /* Ensure tooltip is positioned relative to body, not constrained containers */
-        body { position: relative; }
-    </style>
-</head>
-<body class="bg-light">
-
-<?php include_once __DIR__ . '/../includes/navbar.php'; ?>
-
-<div class="container mt-5">
-    <!-- Navigation Buttons -->
-    <div class="mb-3"></div>
-
-    <h2 class="mb-4"><i class="fa fa-dna"></i> Sequence Retrieval & Download</h2>
-
-    <?php if (empty($accessible_sources)): ?>
-        <div class="alert alert-warning">
-            <strong>No accessible assemblies found.</strong>
-            <p class="mb-0">You do not have access to any organism assemblies, or the data directory is misconfigured.</p>
-        </div>
-    <?php else: ?>
-        <div class="fasta-info-box">
-            <strong><i class="fa fa-info-circle"></i> How to use:</strong>
-            <ol class="mb-0 mt-2">
-                <li>Select which organism and assembly to extract from</li>
-                <li>Enter gene/feature IDs (one per line or comma-separated)</li>
-                <li>Click "Display Sequences" to see all available sequence types</li>
-                <li>Copy or download as needed</li>
-            </ol>
-        </div>
-
-        <?php if (!empty($download_error_msg)): ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <strong><i class="fa fa-exclamation-circle"></i> Error:</strong> <?= htmlspecialchars($download_error_msg) ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <?php endif; ?>
-
-        <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <form method="POST" id="downloadForm">
-            <!-- Hidden fields for selected source (populated by JavaScript on submit) -->
-            <input type="hidden" name="organism" value="<?= htmlspecialchars($selected_organism) ?>">
-            <input type="hidden" name="assembly" value="<?= htmlspecialchars($selected_assembly) ?>">
-            <!-- Hidden context fields for back button and navigation (preserve original context) -->
-            <input type="hidden" name="context_organism" value="<?= htmlspecialchars($context['organism']) ?>">
-            <input type="hidden" name="context_assembly" value="<?= htmlspecialchars($context['assembly']) ?>">
-            <input type="hidden" name="context_group" value="<?= htmlspecialchars($context['group']) ?>">
-            <input type="hidden" name="display_name" value="<?= htmlspecialchars($context['display_name']) ?>">
-            <!-- Hidden field with expanded uniquenames for display purposes -->
-            <input type="hidden" id="expandedUniqueames" value="<?= htmlspecialchars(json_encode($uniquenames ?? [])) ?>">
-            <!-- Hidden field with found IDs (IDs that were actually returned by blastdbcmd) -->
-            <input type="hidden" id="foundIds" value="<?= htmlspecialchars(json_encode($found_ids ?? [])) ?>">
-
-            <!-- Source Selection with Compact Badges -->
-            <div class="fasta-source-selector">
-                <label class="form-label"><strong>Select Source</strong></label>
-                
-                <!-- Filter input with clear button -->
-                <div class="fasta-source-filter">
-                    <div class="input-group input-group-sm">
-                        <input 
-                            type="text" 
-                            class="form-control" 
-                            id="sourceFilter" 
-                            placeholder="Filter by group, organism, or assembly..."
-                            value="<?= htmlspecialchars($context['organism'] ?: $context['group']) ?>"
-                            >
-                        <button type="button" class="btn btn-success" onclick="clearSourceFilter();">
-                            <i class="fa fa-times"></i> Clear Filters
-                        </button>
-                    </div>
-                </div>
-                <?php if (!empty($filter_organisms)): ?>
-                    <small class="form-text text-muted d-block mt-2" id="filterMessage"><i class="fa fa-filter"></i> Showing only: <?= htmlspecialchars(implode(', ', $filter_organisms)) ?></small>
-                <?php endif; ?>
-                
-                <!-- Scrollable list of sources -->
-                <div class="fasta-source-list">
-                    <?php 
-                    $group_color_map = assignGroupColors($sources_by_group);
-                    
-                    foreach ($sources_by_group as $group_name => $organisms): 
-                        $group_color = $group_color_map[$group_name];
-                        
-                        foreach ($organisms as $organism => $assemblies): 
-                            foreach ($assemblies as $source): 
-                                $search_text = strtolower("$group_name $organism $source[assembly]");
-                                
-                                // Determine if this source should be hidden due to organism filter on initial load
-                                $is_filtered_out = !empty($filter_organisms) && !in_array($organism, $filter_organisms);
-                                $display_style = $is_filtered_out ? ' style="display: none;"' : '';
-                                ?>
-                                <div class="fasta-source-line" data-search="<?= htmlspecialchars($search_text) ?>"<?= $display_style ?>>
-                                    <!-- Radio selector at far left -->
-                                    <input 
-                                        type="radio" 
-                                        name="selected_source" 
-                                        value="<?= htmlspecialchars($source['organism'] . '|' . $source['assembly']) ?>"
-                                        data-organism="<?= htmlspecialchars($source['organism']) ?>"
-                                        data-assembly="<?= htmlspecialchars($source['assembly']) ?>"
-                                        >
-                                    
-                                    <!-- Group badge - colorful -->
-                                    <span class="badge badge-sm bg-<?= $group_color ?> text-white">
-                                        <?= htmlspecialchars($group_name) ?>
-                                    </span>
-                                    
-                                    <!-- Organism badge - all gray -->
-                                    <span class="badge badge-sm bg-secondary text-white">
-                                        <?= htmlspecialchars($organism) ?>
-                                    </span>
-                                    
-                                    <!-- Assembly badge - all dark blue -->
-                                    <span class="badge badge-sm bg-info text-white">
-                                        <?= htmlspecialchars($source['assembly']) ?>
-                                    </span>
-                                </div>
-                            <?php endforeach; 
-                        endforeach; 
-                    endforeach; ?>
-                </div>
-                <small class="form-text text-muted d-block mt-2">Select an assembly from the list above.</small>
-            </div>
-
-            <!-- Current Selection Display -->
-            <div class="mb-4 p-3 bg-light border rounded">
-                <strong>Currently Selected:</strong>
-                <div id="currentSelection" style="margin-top: 8px; font-size: 14px;">
-                    <span style="color: #999;">None selected</span>
-                </div>
-            </div>
-
-            <!-- Feature ID Input -->
-            <div class="mb-4">
-                <label for="featureIds" class="form-label"><strong>Feature/Gene IDs</strong></label>
-                <textarea 
-                    class="form-control textarea-ids" 
-                    id="featureIds"
-                    name="uniquenames" 
-                    rows="6" 
-                    placeholder="Enter feature IDs (one per line or comma-separated)&#10;Example:&#10;AT1G01010&#10;AT1G01020&#10;AT1G01030"
-                    required><?= htmlspecialchars($uniquenames_string) ?></textarea>
-                <small class="form-text text-muted">Enter one ID per line, or use commas to separate multiple IDs on one line.</small>
-            </div>
-
-            <!-- Search IDs Display (shows expanded IDs with children) -->
-            <div class="mb-4 p-3 bg-light border rounded">
-                <strong>IDs to Search:</strong>
-                <div id="searchIdsDisplay" style="margin-top: 8px; font-size: 14px; max-height: 150px; overflow-y: auto;">
-                    <?php if (!empty($uniquenames) && !empty($sequence_ids_provided)): ?>
-                        <?php foreach ($uniquenames as $id): ?>
-                            <?php $is_child = strpos($id, '.t') !== false || strpos($id, '.1') !== false; ?>
-                            <div style="padding: 4px 0;">
-                                <span style="background: <?= $is_child ? '#d4edda' : '#e8f4f8' ?>; padding: 2px 6px; border-radius: 3px;">
-                                    <?= htmlspecialchars($id) ?>
-                                </span>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <span style="color: #999;">Enter IDs above to see expanded list (including children)</span>
-                    <?php endif; ?>
-                </div>
-            </div>
-            
-            <!-- Collapsed info about Parent and Child IDs -->
-            <div class="mt-3">
-                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#idInfoCollapse" aria-expanded="false" aria-controls="idInfoCollapse">
-                    <i class="fa fa-info-circle"></i> About Parent and Child IDs
-                </button>
-                <div class="collapse mt-2" id="idInfoCollapse">
-                    <div class="p-3 bg-light border rounded">
-                        <p class="mb-0">
-                            When you enter a parent gene ID (e.g., <code>g24397</code>), the system looks it up in the organism's database 
-                            and automatically retrieves all associated child transcript IDs (e.g., <code>g24397.t1</code>, <code>g24397.t2</code>). 
-                            All IDs (parents and children) are then used to search the FASTA sequence database using <code>blastdbcmd</code>. 
-                            The "IDs to Search" box shows which ones were found 
-                            (<span style="background: #d4edda; padding: 2px 4px; border-radius: 2px;">green</span>) 
-                            and which were not found 
-                            (<span style="background: #f8d7da; padding: 2px 4px; border-radius: 2px;">red</span>).
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Submit button to display all sequences -->
-            <div class="d-grid gap-2 d-md-flex gap-md-2 mt-4">
-                <button type="submit" class="btn btn-primary btn-lg">
-                    <i class="fa fa-eye"></i> Display All Sequences
-                </button>
-            </div>
-            </form>
-            
-            <!-- Debug: Show the blastdbcmd command if one was generated -->
-            <?php if (!empty($debug_cmd)): ?>
-                <div class="mt-4 p-3 bg-info bg-opacity-10 border border-info rounded">
-                    <strong>Debug Command:</strong>
-                    <div style="margin-top: 8px; font-family: monospace; word-break: break-all; font-size: 12px;">
-                        <?= htmlspecialchars($debug_cmd) ?>
-                    </div>
-                </div>
-            <?php endif; ?>
-        </div>
-
-    <!-- Sequences Display Section -->
-    <?php if (!empty($displayed_content)): ?>
-        <hr class="my-5" id="sequences-section">
-        <?php
-        // Set up variables for sequences_display.php
-        $gene_name = implode(', ', $uniquenames);  // Use expanded uniquenames
-        $organism_name = $selected_organism;
-        $assembly_name = $selected_assembly;
-        $enable_downloads = true;
-        
-        // Format results for sequences_display.php component
-        $available_sequences = formatSequenceResults($displayed_content, $sequence_types);
-        
-        // Include the reusable sequences display component
-        include_once __DIR__ . '/sequences_display.php';
-        ?>
-    <?php endif; ?>
-</div>
-
-<?php endif; ?>
-
-<script>
-// Pass scroll preference from PHP to JavaScript
-const scrollToResults = <?= $should_scroll_to_results ? 'true' : 'false' ?>;
-
-// Store the previously selected source (for form restoration)
-const previouslySelectedSource = '<?= addslashes($selected_source) ?>';
-</script>
-
-<script src="/<?= $site ?>/js/modules/source-list-manager.js"></script>
-<script src="/<?= $site ?>/js/sequence-retrieval.js"></script>
-
-<?php include_once __DIR__ . '/../includes/footer.php'; ?>
-</body>
-</html>
