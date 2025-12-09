@@ -201,6 +201,7 @@ echo render_display_page(
         'retrieve_these_seqs' => $retrieve_these_seqs,
         'enable_downloads' => true,
         'assembly_name' => $genome_accession,
+        'site' => $site,
         'page_styles' => ["/moop/css/parent.css"],
         'page_script' => [
             "/moop/js/modules/collapse-handler.js",

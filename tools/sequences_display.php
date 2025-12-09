@@ -31,6 +31,7 @@ if (!isset($sequence_types)) {
 
 // Include error logging (logError function)
 include_once __DIR__ . '/../lib/moop_functions.php';
+include_once __DIR__ . '/../lib/blast_functions.php';
 
 // Initialize download settings
 $enable_downloads = $enable_downloads ?? false;
@@ -209,7 +210,8 @@ if (!empty($sequence_errors)) {
                         // Add download button if enabled
                         if ($enable_downloads && !empty($assembly_name) && !empty($organism_name) && !empty($gene_name)) {
                             echo '      <div class="margin-top">';
-                            echo '        <form method="POST" class="display-inline">';
+                            echo '        <!-- DEBUG: organism=' . htmlspecialchars($organism_name) . ' assembly=' . htmlspecialchars($assembly_name) . ' seq_type=' . htmlspecialchars($seq_type) . ' -->';
+                            echo '        <form method="POST" action="" class="display-inline" data-organism="' . htmlspecialchars($organism_name) . '" data-assembly="' . htmlspecialchars($assembly_name) . '" data-seq-type="' . htmlspecialchars($seq_type) . '" onsubmit="console.log(\'Form submit:\', {organism: this.organism.value, assembly: this.assembly.value, sequence_type: this.sequence_type.value, uniquenames: this.uniquenames.value, download_file: this.download_file.value})">';
                             echo '          <input type="hidden" name="organism" value="' . htmlspecialchars($organism_name) . '">';
                             echo '          <input type="hidden" name="assembly" value="' . htmlspecialchars($assembly_name) . '">';
                             echo '          <input type="hidden" name="sequence_type" value="' . htmlspecialchars($seq_type) . '">';
