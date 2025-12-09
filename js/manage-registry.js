@@ -165,10 +165,14 @@ function renderRegistry() {
                 }
                 
                 // Return Type
-                if (func.returnType && func.returnType !== 'void') {
-                    metadataHTML += `<span style="color: #666; font-size: 12px;"><strong>Returns:</strong> <code>${htmlEscape(func.returnType)}</code></span>`;
-                    if (func.returnDescription) {
-                        metadataHTML += ` - ${htmlEscape(func.returnDescription)}`;
+                if (func.returnType) {
+                    if (func.returnType !== 'void') {
+                        metadataHTML += `<span style="color: #666; font-size: 12px;"><strong>Returns:</strong> <code>${htmlEscape(func.returnType)}</code></span>`;
+                        if (func.returnDescription) {
+                            metadataHTML += ` - ${htmlEscape(func.returnDescription)}`;
+                        }
+                    } else {
+                        metadataHTML += `<span style="color: #666; font-size: 12px;"><strong>Returns:</strong> <code>void</code> (no return value)</span>`;
                     }
                 }
                 
