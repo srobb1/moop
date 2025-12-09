@@ -17,10 +17,17 @@ $json_registry = $docs_path . '/function_registry.json';
 // Load JSON registry
 $registry = null;
 $lastUpdate = 'Never';
+$registryStatus = [];
 if (file_exists($json_registry)) {
-    $lastUpdate = date('Y-m-d H:i:s', filemtime($json_registry));
     $json_content = file_get_contents($json_registry);
     $registry = json_decode($json_content, true);
+    
+    // Get registry status (includes staleness check)
+    require_once __DIR__ . '/../lib/functions_filesystem.php';
+    $registryStatus = getRegistryLastUpdate($json_registry, $json_registry);
+    $lastUpdate = $registryStatus['timestamp'];
+    $isStale = $registryStatus['isStale'];
+    $statusMessage = $registryStatus['status'];
 }
 
 $site = $config->getString('site');
@@ -32,6 +39,9 @@ $data = [
     'config' => $config,
     'registry' => $registry,
     'lastUpdate' => $lastUpdate,
+    'registryStatus' => $registryStatus,
+    'isStale' => $registryStatus['isStale'] ?? false,
+    'statusMessage' => $registryStatus['status'] ?? '',
 ];
 
 // Configure display

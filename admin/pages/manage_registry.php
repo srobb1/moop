@@ -3,28 +3,7 @@
  * PHP Function Registry Display
  * Renders registry from JSON data with search, filtering, and toggle functionality
  */
-
-$config = ConfigManager::getInstance();
-$docs_path = $config->getPath('docs_path');
-$json_registry = $docs_path . '/function_registry.json';
-
-// Load JSON registry
-$registry = null;
-$lastUpdate = 'Never';
-$registryStatus = [];
-if (file_exists($json_registry)) {
-    $json_content = file_get_contents($json_registry);
-    $registry = json_decode($json_content, true);
-    
-    // Get registry status (includes staleness check)
-    require_once __DIR__ . '/../../lib/functions_filesystem.php';
-    $registryStatus = getRegistryLastUpdate($json_registry, $json_registry);
-    $lastUpdate = $registryStatus['timestamp'];
-    $isStale = $registryStatus['isStale'];
-    $statusMessage = $registryStatus['status'];
-}
 ?>
-
 
 <div class="container mt-5">
     <h2><i class="fa fa-code"></i> PHP Function Registry</h2>
