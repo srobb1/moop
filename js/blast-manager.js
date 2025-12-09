@@ -249,3 +249,52 @@ if (document.readyState === 'loading') {
     initializeBlastManager();
     autoScrollToResults();
 }
+
+// Load sample sequence
+function loadSampleSequence(type) {
+    const queryField = document.getElementById('query');
+    const programField = document.getElementById('blast_program');
+    
+    if (!queryField) {
+        console.error('query field not found');
+        return;
+    }
+    
+    if (type === 'protein' && sampleSequences['protein']) {
+        queryField.value = sampleSequences['protein'];
+        if (programField) {
+            programField.value = 'blastx';
+        }
+    } else if (type === 'nucleotide' && sampleSequences['nucleotide']) {
+        queryField.value = sampleSequences['nucleotide'];
+        if (programField) {
+            programField.value = 'blastn';
+        }
+    } else {
+        console.error('Sample not found for type:', type);
+        return;
+    }
+    
+    // Detect sequence type and update UI if function exists
+    if (typeof detectSequenceType === 'function') {
+        const result = detectSequenceType(queryField.value);
+        
+        // Update sequence type message if function exists
+        if (typeof updateSequenceTypeInfo === 'function') {
+            updateSequenceTypeInfo(result.message, 'sequenceTypeInfo', 'sequenceTypeMessage');
+        }
+        
+        // Filter BLAST programs based on detected type
+        if (typeof filterBlastPrograms === 'function' && result.type !== 'unknown') {
+            filterBlastPrograms(result.type, 'blast_program');
+        }
+    }
+    
+    // Update database list
+    if (typeof updateDatabaseList === 'function') {
+        updateDatabaseList();
+    }
+    
+    // Scroll to top so user can see the loaded sequence
+    queryField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
