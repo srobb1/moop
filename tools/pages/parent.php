@@ -182,6 +182,9 @@
     // Set up variables for sequences_display.php with download support
     $enable_downloads = true;
     $assembly_name = $genome_accession;
+
+    $organism_data = $config->getPath('organism_data');
+
     // organism_name is already set above
     
     // Include sequences display component

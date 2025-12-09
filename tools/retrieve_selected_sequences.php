@@ -116,13 +116,8 @@ if (!empty($sequence_ids_provided)) {
         }
     }
     
-    // If download flag is set and we have content, send the specific sequence type
-    // Must do this BEFORE including the template to avoid headers already sent error
-    if ($download_file_flag && !empty($sequence_type) && isset($displayed_content[$sequence_type])) {
-        $file_format = $_POST['file_format'] ?? 'fasta';
-        sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);
-        exit; // Never reaches template
-    }
+    // Handle download request if present
+    handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type] ?? null);
 }
 
 // Parse form data for display

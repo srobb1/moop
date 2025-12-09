@@ -37,9 +37,20 @@
  * - uniquename: Feature uniquename (required)
  */
 
+// Check for download request early (before other processing)
+$download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
+$sequence_type = trim($_POST['sequence_type'] ?? '');
+
+// Start output buffering if download is requested to prevent any stray output
+if ($download_file_flag) {
+    ob_start();
+}
+
 include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../includes/layout.php';
 include_once __DIR__ . '/../lib/parent_functions.php';
+include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/extract_search_helpers.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
@@ -174,6 +185,44 @@ foreach ($children as $child) {
     $all_feature_ids[] = $child['feature_id'];
 }
 $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
+
+// Build gene_name for sequences (parent + all children) - needed for downloads
+$retrieve_these_seqs = [$feature_uniquename];
+foreach ($children as $child) {
+    $retrieve_these_seqs[] = $child['feature_uniquename'];
+}
+$retrieve_these_seqs = array_unique($retrieve_these_seqs);
+$gene_name = implode(",", $retrieve_these_seqs);
+
+// Handle download request if present (BEFORE rendering page)
+if ($download_file_flag && !empty($sequence_type)) {
+    $organism_dir = "$organism_data/$organism_name";
+    $dirs = array_diff(scandir($organism_dir), ['.', '..']);
+    $assembly_dir = null;
+    
+    foreach ($dirs as $item) {
+        $full_path = "$organism_dir/$item";
+        if (is_dir($full_path) && !in_array(basename($full_path), ['fasta_files'])) {
+            $assembly_dir = $full_path;
+            break;
+        }
+    }
+    
+    if (!empty($assembly_dir)) {
+        // Use the same extraction function as retrieve_sequences
+        $feature_ids = array_map('trim', explode(',', $gene_name));
+        $extract_result = extractSequencesForAllTypes($assembly_dir, $feature_ids, $sequence_types, $organism_name, $genome_accession);
+        $displayed_content = $extract_result['content'];
+        
+        if (!empty($displayed_content) && isset($displayed_content[$sequence_type])) {
+            // Clear output buffer if one was started
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type]);
+        }
+    }
+}
 
 // Render page using layout system
 echo render_display_page(

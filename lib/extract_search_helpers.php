@@ -297,4 +297,42 @@ function getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_type
     return $available_types;
 }
 
+/**
+ * Handle sequence download request
+ * 
+ * Checks for download flag and sends file if conditions are met.
+ * Works with both array-based sequences (from extractSequencesFromFasta)
+ * and string-based sequences (from extractSequencesForAllTypes).
+ * 
+ * @param bool $download_flag - Whether download was requested
+ * @param string $sequence_type - The sequence type to download
+ * @param array|string $sequence_data - Either array of sequences or a string
+ * @return bool - True if download was sent and script exited, false otherwise
+ */
+function handleSequenceDownload($download_flag, $sequence_type, $sequence_data) {
+    if (!$download_flag || empty($sequence_type)) {
+        return false;
+    }
+    
+    // Handle both formats: array (from extractSequencesFromFasta) and string (from extractSequencesForAllTypes)
+    $fasta_content = '';
+    if (is_array($sequence_data)) {
+        // Array format: feature_id => content
+        if (!empty($sequence_data)) {
+            $fasta_content = implode("\n", $sequence_data);
+        }
+    } else if (is_string($sequence_data)) {
+        // String format: already combined FASTA content
+        $fasta_content = $sequence_data;
+    }
+    
+    if (!empty($fasta_content)) {
+        $file_format = $_POST['file_format'] ?? 'fasta';
+        sendFileDownload($fasta_content, $sequence_type, $file_format);
+        exit;
+    }
+    
+    return false;
+}
+
 ?>

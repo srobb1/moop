@@ -32,11 +32,21 @@ if (!isset($sequence_types)) {
 // Include error logging (logError function)
 include_once __DIR__ . '/../lib/moop_functions.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/extract_search_helpers.php';
 
 // Initialize download settings
 $enable_downloads = $enable_downloads ?? false;
 $assembly_name = $assembly_name ?? '';
 $download_script_url = $download_script_url ?? '';
+
+// Check for download request (may come from POST)
+$download_file_flag = $download_file_flag ?? (isset($_POST['download_file']) && $_POST['download_file'] == '1');
+$sequence_type = $sequence_type ?? trim($_POST['sequence_type'] ?? '');
+
+// Get gene_name from POST if not already set (for download requests)
+if (empty($gene_name) && !empty($_POST['uniquenames'])) {
+    $gene_name = trim($_POST['uniquenames']);
+}
 
 // Initialize error tracking
 $sequence_errors = [];
@@ -119,6 +129,11 @@ if (empty($sequence_errors) && !empty($available_sequences) && !empty($gene_name
     if (!empty($extraction_errors)) {
         $sequence_errors = array_merge($sequence_errors, $extraction_errors);
     }
+}
+
+// Handle download request if present (BEFORE displaying HTML)
+if ($download_file_flag && !empty($sequence_type) && isset($available_sequences[$sequence_type]['sequences'])) {
+    handleSequenceDownload($download_file_flag, $sequence_type, $available_sequences[$sequence_type]['sequences']);
 }
 
 // Display error messages if any occurred
@@ -210,8 +225,7 @@ if (!empty($sequence_errors)) {
                         // Add download button if enabled
                         if ($enable_downloads && !empty($assembly_name) && !empty($organism_name) && !empty($gene_name)) {
                             echo '      <div class="margin-top">';
-                            echo '        <!-- DEBUG: organism=' . htmlspecialchars($organism_name) . ' assembly=' . htmlspecialchars($assembly_name) . ' seq_type=' . htmlspecialchars($seq_type) . ' -->';
-                            echo '        <form method="POST" action="" class="display-inline" data-organism="' . htmlspecialchars($organism_name) . '" data-assembly="' . htmlspecialchars($assembly_name) . '" data-seq-type="' . htmlspecialchars($seq_type) . '" onsubmit="console.log(\'Form submit:\', {organism: this.organism.value, assembly: this.assembly.value, sequence_type: this.sequence_type.value, uniquenames: this.uniquenames.value, download_file: this.download_file.value})">';
+                            echo '        <form method="POST" action="" class="display-inline">';
                             echo '          <input type="hidden" name="organism" value="' . htmlspecialchars($organism_name) . '">';
                             echo '          <input type="hidden" name="assembly" value="' . htmlspecialchars($assembly_name) . '">';
                             echo '          <input type="hidden" name="sequence_type" value="' . htmlspecialchars($seq_type) . '">';
