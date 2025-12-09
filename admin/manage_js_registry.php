@@ -6,6 +6,9 @@
  * Uses registry-template.php for consistent layout with tools/registry.php
  */
 
+// Increase memory limit for large JSON parsing
+ini_set('memory_limit', '512M');
+
 ob_start();
 include_once __DIR__ . '/admin_init.php';
 

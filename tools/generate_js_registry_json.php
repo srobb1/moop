@@ -21,7 +21,7 @@ $registry = [];
  */
 function parseJsDoc($comment) {
     $params = [];
-    $returnType = 'unknown';
+    $returnType = 'void';
     $returnDescription = '';
     
     if (empty($comment)) {
@@ -259,10 +259,14 @@ foreach ($files as $file) {
                     }
                 }
                 
-                // Extract JSDoc comment (look for /** ... */ before function)
+                // Extract JSDoc comment (look for /** ... */ immediately before function)
                 $jsDocComment = '';
-                $beforeFunc = substr($content, 0, $startPos);
-                if (preg_match('/\/\*\*.*?\*\/\s*$/s', $beforeFunc, $jsDocMatch)) {
+                // Get only the last 1000 chars before function to avoid matching file header
+                $startSearch = max(0, $startPos - 1000);
+                $nearFunc = substr($content, $startSearch, $startPos - $startSearch);
+                // Find the LAST occurrence of /** ... */ in this section
+                // Use non-greedy match with limited scope
+                if (preg_match('/\/\*\*[^*]*(?:\*(?!\/)[^*]*)*\*\/(?:\s|\/\/[^\n]*\n)*$/s', $nearFunc, $jsDocMatch)) {
                     $jsDocComment = $jsDocMatch[0];
                 }
                 
