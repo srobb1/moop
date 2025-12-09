@@ -1,8 +1,27 @@
 <?php
 /**
- * FASTA Download Tool
- * Allows users to download sequences (protein, CDS, mRNA) for selected features
- * Uses blastdbcmd to extract from FASTA BLAST databases
+ * RETRIEVE SELECTED SEQUENCES - Download Tool
+ * 
+ * Allows users to download sequences (protein, CDS, mRNA) for selected features.
+ * Uses blastdbcmd to extract from FASTA BLAST databases.
+ * 
+ * ========== DATA FLOW ==========
+ * 
+ * Browser Request → This file (controller)
+ *   ↓
+ * Validate user access to assembly
+ *   ↓
+ * Extract sequence IDs and load sequences if requested
+ *   ↓
+ * IF download flag → sendFile() + exit (never reaches template)
+ *   ↓
+ * Configure layout (title, scripts, styles)
+ *   ↓
+ * Call display-template.php with content file + data
+ *   ↓
+ * layout.php renders complete HTML page
+ *   ↓
+ * Content file (pages/retrieve_selected_sequences.php) displays data
  */
 
 // Start output buffering to catch any stray output from includes
@@ -11,7 +30,6 @@ ob_start();
 // Get parameters before including config to avoid output before headers
 $download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
 $sequence_type = trim($_POST['sequence_type'] ?? '');
-// Check if sequence IDs provided (from form submission OR from GET link)
 $sequence_ids_provided = !empty($_POST['uniquenames']) || !empty($_GET['uniquenames']);
 
 include_once __DIR__ . '/tool_init.php';
@@ -36,9 +54,8 @@ if (empty($assembly_name)) {
     exit;
 }
 
-// Check access to the requested assembly (allows public assemblies, logged-in users with access, or admins)
+// Check access to the requested assembly
 if (!has_assembly_access($organism_name, $assembly_name)) {
-    // Redirect to login if not logged in, or access_denied if logged in but no access
     if (!is_logged_in()) {
         header("Location: /$site/login.php");
     } else {
@@ -51,14 +68,6 @@ if (!has_assembly_access($organism_name, $assembly_name)) {
 $organism_data = $config->getPath('organism_data');
 $sequence_types = $config->getSequenceTypes();
 $siteTitle = $config->getString('siteTitle');
-$header_img = $config->getString('header_img');
-$images_path = $config->getString('images_path');
-
-// Parse context parameters
-$context = parseContextParameters();
-
-// Check if user is logged in
-$is_logged_in = is_logged_in();
 
 // Initialize displayed content
 $displayed_content = [];
@@ -108,13 +117,15 @@ if (!empty($sequence_ids_provided)) {
     }
     
     // If download flag is set and we have content, send the specific sequence type
+    // Must do this BEFORE including the template to avoid headers already sent error
     if ($download_file_flag && !empty($sequence_type) && isset($displayed_content[$sequence_type])) {
         $file_format = $_POST['file_format'] ?? 'fasta';
         sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);
+        exit; // Never reaches template
     }
 }
 
-// Display form
+// Parse form data for display
 $uniquenames = array_filter(array_map('trim', explode(',', $uniquenames_string)));
 
 if (empty($organism_name)) {
@@ -125,85 +136,31 @@ if (empty($uniquenames)) {
     die('Error: No feature IDs provided.');
 }
 
-// Now include the HTML headers
-include_once __DIR__ . '/../includes/head-resources.php';
-include_once __DIR__ . '/../includes/navbar.php';
+// Configure display template
+$display_config = [
+    'title' => 'Download Selected Sequences - ' . htmlspecialchars($siteTitle),
+    'content_file' => __DIR__ . '/pages/retrieve_selected_sequences.php',
+    'page_script' => null,
+    'inline_scripts' => []
+];
+
+// Prepare data for content file
+$data = [
+    'site' => $site,
+    'siteTitle' => $siteTitle,
+    'organism_name' => $organism_name,
+    'assembly_name' => $assembly_name,
+    'uniquenames' => $uniquenames,
+    'uniquenames_string' => $uniquenames_string,
+    'displayed_content' => $displayed_content,
+    'sequence_types' => $sequence_types,
+    'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $sequence_types) : [],
+    'page_styles' => [
+        '/' . $site . '/css/display.css',
+    ]
+];
+
+// Use generic template to render
+include_once __DIR__ . '/display-template.php';
+
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>FASTA Download - <?= htmlspecialchars($siteTitle) ?></title>
-    <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
-    <style>
-        body { padding: 20px; background-color: #f8f9fa; }
-        .container { max-width: 1200px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin: 0 auto; }
-        .sequence-option { padding: 15px; border: 1px solid #dee2e6; border-radius: 5px; margin-bottom: 10px; cursor: pointer; }
-        .sequence-option:hover { background-color: #f8f9fa; border-color: #0d6efd; }
-        .sequence-option input[type="radio"] { margin-right: 10px; }
-        .selected-ids { background-color: #f8f9fa; padding: 15px; border-radius: 5px; max-height: 150px; overflow-y: auto; }
-        .badge-custom { display: inline-block; background-color: #0d6efd; color: white; padding: 5px 10px; margin: 3px; border-radius: 3px; font-size: 0.85em; }
-        .tooltip { z-index: 9999 !important; }
-        .tooltip-inner { background-color: #000 !important; }
-        /* Ensure tooltip is positioned relative to body, not constrained containers */
-        body { position: relative; }
-    </style>
-</head>
-<body>
-<div class="container">
-    <div class="mb-4"></div>
-
-    <h2 class="mb-4"><i class="fa fa-dna"></i> Download Selected Sequences</h2>
-
-    <div class="alert alert-info">
-        <strong>Organism:</strong> <em><?= htmlspecialchars($organism_name) ?></em><br>
-        <strong>Selected Features:</strong> <span class="badge bg-secondary"><?= count($uniquenames) ?></span>
-    </div>
-
-    <div class="mb-4">
-        <h5>Selected Feature IDs</h5>
-        <div class="selected-ids">
-            <?php foreach (array_slice($uniquenames, 0, 10) as $id): ?>
-                <span class="badge-custom"><?= htmlspecialchars($id) ?></span>
-            <?php endforeach; ?>
-            <?php if (count($uniquenames) > 10): ?>
-                <span class="badge-custom">+<?= count($uniquenames) - 10 ?> more</span>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <?php if (empty($displayed_content)): ?>
-        <!-- If no sequences yet, just show simple submit button -->
-        <form method="POST">
-            <input type="hidden" name="organism" value="<?= htmlspecialchars($organism_name) ?>">
-            <input type="hidden" name="uniquenames" value="<?= htmlspecialchars($uniquenames_string) ?>">
-            <input type="hidden" name="assembly" value="<?= htmlspecialchars($assembly_name) ?>">
-            
-            <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-primary btn-lg">
-                    <i class="fa fa-eye"></i> Display All Sequences
-                </button>
-            </div>
-        </form>
-    <?php else: ?>
-        <!-- Sequences Display Section -->
-        <hr class="my-4">
-        <?php
-        // Set up variables for sequences_display.php
-        // Keep the values already set from extraction (which used GET/POST from line 45)
-        // organism_name and assembly_name were populated during extraction
-        $gene_name = $uniquenames_string;
-        $enable_downloads = true;
-        
-        // Format results for sequences_display.php component
-        $available_sequences = formatSequenceResults($displayed_content, $sequence_types);
-        
-        // Include the reusable sequences display component
-        include_once __DIR__ . '/sequences_display.php';
-        ?>
-    <?php endif; ?>
-</div>
-
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script src="/<?= $site ?>/js/modules/copy-to-clipboard.js"></script>
-</body>
-</html>
