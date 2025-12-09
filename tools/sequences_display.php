@@ -325,3 +325,4 @@ function extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, &$error
 
 
 <script src="/<?= $site ?>/js/modules/copy-to-clipboard.js"></script>
+<script src="/<?= $site ?>/js/modules/collapse-handler.js"></script>

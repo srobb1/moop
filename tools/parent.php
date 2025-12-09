@@ -202,7 +202,10 @@ echo render_display_page(
         'enable_downloads' => true,
         'assembly_name' => $genome_accession,
         'page_styles' => ["/moop/css/parent.css"],
-        'page_script' => ["/moop/js/modules/parent-tools.js"]
+        'page_script' => [
+            "/moop/js/modules/collapse-handler.js",
+            "/moop/js/modules/parent-tools.js"
+        ]
     ],
     htmlspecialchars($feature_uniquename)
 );
