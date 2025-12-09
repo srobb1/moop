@@ -63,5 +63,3 @@
     <?php endif; ?>
 </div>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script src="/<?= $site ?>/js/modules/copy-to-clipboard.js"></script>
