@@ -157,6 +157,7 @@ $data = [
     'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $sequence_types) : [],
     'page_styles' => [
         '/' . $site . '/css/display.css',
+        '/' . $site . '/css/retrieve-selected-sequences.css',
     ]
 ];
 

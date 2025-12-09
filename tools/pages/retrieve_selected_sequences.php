@@ -65,16 +65,3 @@
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="/<?= $site ?>/js/modules/copy-to-clipboard.js"></script>
-
-<style>
-    body { padding: 20px; background-color: #f8f9fa; }
-    .container { max-width: 1200px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin: 0 auto; }
-    .sequence-option { padding: 15px; border: 1px solid #dee2e6; border-radius: 5px; margin-bottom: 10px; cursor: pointer; }
-    .sequence-option:hover { background-color: #f8f9fa; border-color: #0d6efd; }
-    .sequence-option input[type="radio"] { margin-right: 10px; }
-    .selected-ids { background-color: #f8f9fa; padding: 15px; border-radius: 5px; max-height: 150px; overflow-y: auto; }
-    .badge-custom { display: inline-block; background-color: #0d6efd; color: white; padding: 5px 10px; margin: 3px; border-radius: 3px; font-size: 0.85em; }
-    .tooltip { z-index: 9999 !important; }
-    .tooltip-inner { background-color: #000 !important; }
-    body { position: relative; }
-</style>

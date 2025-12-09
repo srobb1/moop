@@ -178,12 +178,6 @@
     <?php endif; ?>
 </div>
 
-<style>
-    .tooltip { z-index: 9999 !important; }
-    .tooltip-inner { background-color: #000 !important; }
-    body { position: relative; }
-</style>
-
 <script>
 // Make sample feature IDs available to JavaScript
 <?php if (!empty($sample_feature_ids)): ?>

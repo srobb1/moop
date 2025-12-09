@@ -489,3 +489,12 @@ footer .footer-meta {
     text-align: left;
   }
 }
+
+/* Bootstrap tooltip z-index override (used on organism, assembly, groups, blast, retrieve_sequences pages) */
+.tooltip {
+    z-index: 9999 !important;
+}
+
+.tooltip-inner {
+    background-color: #000 !important;
+}

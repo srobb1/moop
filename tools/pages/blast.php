@@ -251,9 +251,3 @@
         
     <?php endif; ?>
 </div>
-
-<style>
-    .tooltip { z-index: 9999 !important; }
-    .tooltip-inner { background-color: #000 !important; }
-    body { position: relative; }
-</style>
