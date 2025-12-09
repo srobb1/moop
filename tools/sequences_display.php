@@ -164,7 +164,7 @@ if (!empty($sequence_errors)) {
     ?>
     <div class="card shadow-sm mb-4">
         <div class="card-header d-flex align-items-center justify-content-between">
-            <div class="collapse-section d-flex align-items-center" data-toggle="collapse" data-target="#sequencesSection" aria-expanded="true">
+            <div class="collapse-section d-flex align-items-center" data-bs-toggle="collapse" data-bs-target="#sequencesSection" aria-expanded="true">
                 <i class="fas fa-minus toggle-icon text-primary"></i>
                 <strong class="ms-2">Sequences</strong>
             </div>
@@ -184,7 +184,7 @@ if (!empty($sequence_errors)) {
                     if (!empty($sequences)) {
                         echo '<div class="card annotation-card border-info mb-3">';
                         echo '  <div class="card-header card-header-light-info">';
-                        echo '    <div class="collapse-section" data-toggle="collapse" data-target="#seq_' . $seq_type . '" aria-expanded="true">';
+                        echo '    <div class="collapse-section" data-bs-toggle="collapse" data-bs-target="#seq_' . $seq_type . '" aria-expanded="true">';
                         echo '      <i class="fas fa-minus toggle-icon text-info"></i>';
                         echo '      <strong class="ms-2 text-dark">';
                         // Get badge color from config, with fallback to default
