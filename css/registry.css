@@ -1,178 +1,444 @@
-/**
- * Registry Styles - PHP/JS Function Registry Display
- */
+/* Registry Display Styling */
 
-/* File section styling */
-.file-section { 
-    background: white; 
-    margin: 15px 0; 
-    border-radius: 4px; 
-    overflow: hidden; 
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-    border-left: 4px solid #3498db; 
+#registryContent {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 15px;
 }
 
-.file-section.hidden { 
-    display: none !important; 
+.file-section {
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    overflow: visible;
 }
 
-/* File header styling */
-.file-header { 
-    background: #34495e; 
-    color: white; 
-    padding: 15px 20px; 
-    font-weight: bold; 
-    cursor: pointer; 
-    user-select: none; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
+.file-header {
+    padding: 12px 15px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
+    font-weight: bold;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.file-header:hover { 
-    background: #2c3e50; 
+.file-header:hover {
+    background-color: #e9ecef;
 }
 
-/* Functions list styling */
-.functions-list { 
-    padding: 0; 
+.file-header-title {
+    flex: 1;
+}
+
+.file-header-count {
+    font-size: 0.85em;
+    color: #666;
+    background-color: #e9ecef;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 10px;
+}
+
+.functions-list {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0;
+}
+
+.functions-list.open {
+    max-height: 10000px;
+    overflow: visible;
+}
+
+.function-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.function-item:last-child {
+    border-bottom: none;
+}
+
+.function-item.hidden {
+    display: none !important;
+}
+
+.function-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.function-header:hover {
+    color: #0066cc;
+}
+
+.function-name {
+    font-weight: bold;
+    color: #0066cc;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.expand-arrow {
+    margin-left: 10px;
+    color: #999;
+}
+
+.function-meta {
+    font-size: 0.85em;
+    color: #666;
+    margin: 4px 0 0 0;
+}
+
+.function-comment {
+    margin-top: 8px;
+    padding: 8px;
+    background-color: #f0f0f0;
+    border-left: 3px solid #0066cc;
+    font-size: 0.9em;
+    line-height: 1.5;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.function-code {
+    margin-top: 8px;
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease;
 }
 
-.functions-list.open { 
+.function-code.open {
+    max-height: 2000px;
+    overflow-y: auto;
+}
+
+.function-code code {
+    display: block;
+    padding: 15px;
+    background-color: #272822;
+    color: #f8f8f2;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9em;
+    overflow-x: auto;
+    line-height: 1.6;
+    border: 1px solid #1a1a1a;
+    white-space: pre;
+}
+
+.usage-section {
+    margin-top: 8px;
+    padding: 8px;
+    background-color: #e8f4f8;
+    border-left: 3px solid #0066cc;
+    border-radius: 2px;
+}
+
+.usage-section.unused {
+    background-color: #ffe8e8;
+    border-left-color: #cc0000;
+}
+
+.usage-section strong {
+    color: #0066cc;
+}
+
+.usage-section.unused strong {
+    color: #cc0000;
+}
+
+.usage-file {
+    margin: 4px 0 0 0;
+    font-size: 0.85em;
+    color: #555;
+}
+
+.usage-file code {
+    background-color: rgba(0, 102, 204, 0.1);
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.unused-badge {
+    background-color: #ffe8e8;
+    color: #cc0000;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .file-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .file-header-count {
+        margin-top: 8px;
+        margin-left: 0;
+    }
+
+    .function-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .expand-arrow {
+        margin-left: 0;
+        margin-top: 4px;
+    }
+
+    #registryContent {
+        max-height: 100% !important;
+    }
+}
+
+/* Search highlight */
+.search-highlight {
+    background-color: #ffeb3b;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+/* Statistics cards */
+.stats-card {
+    text-align: center;
+    padding: 15px;
+}
+
+.stats-card h4 {
+    margin: 0;
+    font-size: 1.8em;
+    font-weight: bold;
+}
+
+.stats-card p {
+    margin: 5px 0 0 0;
+    font-size: 0.9em;
+    color: #666;
+}
+
+/* Loading state */
+.registry-loading {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+}
+
+/* Empty state */
+.registry-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+}
+
+.registry-empty i {
+    font-size: 2.5em;
+    color: #ddd;
+    margin-bottom: 10px;
+}
+
+/* Admin page overrides */
+.file-section {
+    background: white;
+    margin: 15px 0;
+    border-radius: 4px;
+    overflow: visible;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-left: 4px solid #3498db;
+}
+
+.file-section.hidden {
+    display: none !important;
+}
+
+.file-header {
+    background: #6c757d;
+    color: white;
+    padding: 15px 20px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.file-header:hover {
+    background: #5a6268;
+}
+
+.functions-list {
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.functions-list.open {
+    max-height: 10000px;
+    overflow: visible;
+}
+
+.function-item {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ecf0f1;
+    transition: background-color 0.2s;
+}
+
+.function-item:last-child {
+    border-bottom: none;
+}
+
+.function-item:hover {
+    background-color: #f9f9f9;
+}
+
+.function-item.hidden {
+    display: none !important;
+}
+
+.function-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding-bottom: 10px;
+    user-select: none;
+}
+
+.function-header:hover {
+    color: #3498db;
+}
+
+.function-name {
+    font-family: 'Courier New', monospace;
+    color: #2980b9;
+    font-weight: 500;
+}
+
+.function-counter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #3498db;
+    color: white;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.expand-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    margin-left: 10px;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+}
+
+.function-line {
+    font-size: 11px;
+    color: #7f8c8d;
+}
+
+.function-code {
+    display: none;
+    background: #f8f8f8;
+    padding: 15px;
+    margin-top: 10px;
+    border-radius: 4px;
+    border-left: 3px solid #3498db;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.function-code.open {
+    display: block;
     max-height: 10000px;
 }
 
-/* Individual function item styling */
-.function-item { 
-    padding: 15px 20px; 
-    border-bottom: 1px solid #ecf0f1; 
-    transition: background-color 0.2s; 
+.function-comment {
+    background: #fffacd;
+    padding: 12px 15px;
+    margin: 10px 0;
+    border-left: 3px solid #f39c12;
+    border-radius: 3px;
+    font-size: 12px;
 }
 
-.function-item:last-child { 
-    border-bottom: none; 
+.function-comment pre {
+    margin: 0;
+    font-family: 'Courier New', monospace;
+    color: #555;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
-.function-item:hover { 
-    background-color: #f9f9f9; 
+.function-usages {
+    background: #e8f4f8;
+    padding: 12px 15px;
+    margin: 10px 0;
+    border-left: 3px solid #3498db;
+    border-radius: 3px;
+    font-size: 12px;
 }
 
-.function-item.hidden { 
-    display: none !important; 
+.function-usages strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #2c3e50;
 }
 
-/* Function name styling */
-.function-name { 
-    font-weight: 600; 
-    color: #2c3e50; 
-    padding: 8px 0; 
+.function-usages ul {
+    margin: 0;
+    padding-left: 20px;
 }
 
-/* Function code styling */
-.function-code { 
-    background: #f4f4f4; 
-    border: 1px solid #ddd; 
-    border-radius: 3px; 
-    padding: 10px; 
-    margin-top: 10px; 
-    overflow-x: auto; 
+.function-usages li {
+    margin: 6px 0;
 }
 
-.function-code.hidden { 
-    display: none !important; 
+.function-usages code {
+    display: inline;
+    background: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #bbb;
 }
 
-.function-code pre { 
-    margin: 0; 
-    font-size: 12px; 
-    color: #333; 
+.file-count {
+    font-size: 12px;
+    color: #7f8c8d;
+    margin-left: 10px;
 }
 
-/* Unused section styling */
-.unused-section { 
-    background: white; 
-    margin: 15px 0; 
-    border-radius: 4px; 
-    overflow: hidden; 
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-    border-left: 4px solid #e74c3c; 
+.unused-content {
+    display: block;
 }
 
-.unused-section-header { 
-    background: #c0392b; 
-    color: white; 
-    padding: 15px 20px; 
-    font-weight: bold; 
-    cursor: pointer; 
-    user-select: none; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-}
-
-.unused-section-header:hover { 
-    background: #a93226; 
-}
-
-.unused-content { 
-    padding: 15px 20px; 
-    list-style: none; 
-}
-
-.unused-content.hidden { 
-    display: none !important; 
-}
-
-.unused-content li { 
-    padding: 5px 0; 
-    color: #555; 
-}
-
-/* Toggle icon styling */
-.toggle-icon { 
-    font-size: 12px; 
-    transition: transform 0.3s ease; 
-}
-
-/* Search and control styling */
-.registry-controls { 
-    margin: 20px 0; 
-    padding: 15px; 
-    background: #ecf0f1; 
-    border-radius: 4px; 
-}
-
-.registry-controls input { 
-    width: 100%; 
-    padding: 10px; 
-    border: 1px solid #bdc3c7; 
-    border-radius: 3px; 
-    margin-bottom: 10px; 
-}
-
-.registry-controls button { 
-    padding: 8px 15px; 
-    margin-right: 10px; 
-    background: #3498db; 
-    color: white; 
-    border: none; 
-    border-radius: 3px; 
-    cursor: pointer; 
-}
-
-.registry-controls button:hover { 
-    background: #2980b9; 
-}
-
-/* Info box styling */
-.registry-info { 
-    background: #d1ecf1; 
-    border: 1px solid #bee5eb; 
-    color: #0c5460; 
-    padding: 15px; 
-    border-radius: 4px; 
-    margin-bottom: 20px; 
+.unused-content.hidden {
+    display: none !important;
 }
