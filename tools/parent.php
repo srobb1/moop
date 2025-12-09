@@ -93,12 +93,12 @@ if (isset($annotation_config['annotation_types'])) {
         return ($a['order'] ?? 999) - ($b['order'] ?? 999);
     });
     
-    foreach ($types as $key => $config) {
-        if ($config['enabled'] ?? true) {
+    foreach ($types as $key => $type_config) {
+        if ($type_config['enabled'] ?? true) {
             $analysis_order[] = $key;
-            $analysis_desc[$key] = $config['description'] ?? '';
-            $annotation_colors[$key] = $config['color'] ?? 'secondary';
-            $annotation_labels[$key] = $config['display_label'] ?? $key;
+            $analysis_desc[$key] = $type_config['description'] ?? '';
+            $annotation_colors[$key] = $type_config['color'] ?? 'secondary';
+            $annotation_labels[$key] = $type_config['display_label'] ?? $key;
         }
     }
 } else {
@@ -202,7 +202,7 @@ echo render_display_page(
         'enable_downloads' => true,
         'assembly_name' => $genome_accession,
         'page_styles' => ["/moop/css/parent.css"],
-        'page_script' => "/moop/js/modules/parent-tools.js"
+        'page_script' => ["/moop/js/modules/parent-tools.js"]
     ],
     htmlspecialchars($feature_uniquename)
 );

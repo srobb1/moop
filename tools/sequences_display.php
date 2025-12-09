@@ -80,15 +80,15 @@ if (empty($organism_name)) {
         } else {
             // Look for FASTA files
             $fasta_files_found = false;
-            foreach ($sequence_types as $seq_type => $config) {
-                $files = glob("$assembly_dir/*{$config['pattern']}");
+            foreach ($sequence_types as $seq_type => $seq_config) {
+                $files = glob("$assembly_dir/*{$seq_config['pattern']}");
                 
                 if (!empty($files)) {
                     $fasta_files_found = true;
                     $fasta_file = $files[0];
                     $available_sequences[$seq_type] = [
                         'file' => $fasta_file,
-                        'label' => $config['label'],
+                        'label' => $seq_config['label'],
                         'sequences' => []
                     ];
                 }
@@ -176,7 +176,7 @@ if (!empty($sequence_errors)) {
             <div class="card-body">
                 <?php
                 $seq_count = 0;
-                foreach ($sequence_types as $seq_type => $config) {
+                foreach ($sequence_types as $seq_type => $seq_config) {
                     $seq_count++;
                     $seq_data = $available_sequences[$seq_type] ?? [];
                     $sequences = $seq_data['sequences'] ?? [];
@@ -188,8 +188,8 @@ if (!empty($sequence_errors)) {
                         echo '      <i class="fas fa-minus toggle-icon text-info"></i>';
                         echo '      <strong class="ms-2 text-dark">';
                         // Get badge color from config, with fallback to default
-                        $badge_class = $config['color'] ?? 'bg-secondary';
-                        echo '        <span class="text-white px-2 py-1 rounded ' . $badge_class . '">' . htmlspecialchars($config['label']) . '</span>';
+                        $badge_class = $seq_config['color'] ?? 'bg-secondary';
+                        echo '        <span class="text-white px-2 py-1 rounded ' . $badge_class . '">' . htmlspecialchars($seq_config['label']) . '</span>';
                         echo '        (' . count($sequences) . ' sequence' . (count($sequences) > 1 ? 's' : '') . ')';
                         echo '      </strong>';
                         echo '    </div>';
@@ -216,7 +216,7 @@ if (!empty($sequence_errors)) {
                             echo '          <input type="hidden" name="uniquenames" value="' . htmlspecialchars($gene_name) . '">';
                             echo '          <input type="hidden" name="download_file" value="1">';
                             echo '          <button type="submit" class="btn btn-sm btn-success">';
-                            echo '            <i class="fa fa-download"></i> Download ' . htmlspecialchars($config['label']);
+                            echo '            <i class="fa fa-download"></i> Download ' . htmlspecialchars($seq_config['label']);
                             echo '          </button>';
                             echo '        </form>';
                             echo '      </div>';
