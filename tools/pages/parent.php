@@ -86,7 +86,7 @@
     <!-- Feature Hierarchy Section -->
     <div class="card shadow-sm mb-4">
         <div class="card-header d-flex align-items-center">
-            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#hierarchySection" aria-expanded="true">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#hierarchySection" aria-expanded="true" role="button">
                 <i class="fas fa-sitemap toggle-icon text-primary"></i>
             </span>
             <strong class="ms-2">Feature Hierarchy</strong>
@@ -112,7 +112,7 @@
     <div class="card shadow-sm mb-4">
         <div class="card-header d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center">
-                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="true">
+                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="true" role="button">
                     <i class="fas fa-minus toggle-icon text-primary"></i>
                 </span>
                 <strong class="ms-2">Annotations</strong>
