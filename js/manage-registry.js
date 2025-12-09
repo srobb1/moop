@@ -54,7 +54,9 @@ function renderRegistry() {
         header.className = 'file-header';
         header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; cursor: pointer;';
         header.innerHTML = `
-            📄 ${htmlEscape(fileData.name)} <span class="file-count">(${fileData.count})</span>
+            <span style="display: flex; align-items: center; gap: 8px;">
+                📄 ${htmlEscape(fileData.name)} <span class="badge bg-secondary">${fileData.count}</span>
+            </span>
             <span class="expand-arrow">▶</span>
         `;
         
@@ -265,10 +267,14 @@ function renderRegistry() {
     const headers = container.querySelectorAll('.file-header');
     headers.forEach((header) => {
         header.style.cursor = 'pointer';
-        header.addEventListener('click', function(e) {
-            e.stopPropagation();
-            toggleFile(header);
-        });
+        // Only attach listener if not already attached
+        if (!header.dataset.listenerAttached) {
+            header.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleFile(this);
+            });
+            header.dataset.listenerAttached = 'true';
+        }
     });
 }
 
@@ -276,7 +282,9 @@ function renderRegistry() {
  * Toggle file section
  */
 function toggleFile(header) {
-    const list = header.nextElementSibling;
+    // Make sure we're working with the actual file-header element
+    const fileHeader = header.closest('.file-header') || header;
+    const list = fileHeader.nextElementSibling;
     if (list && list.classList.contains('functions-list')) {
         const isOpen = list.classList.contains('open');
         list.classList.toggle('open');
@@ -290,7 +298,7 @@ function toggleFile(header) {
             list.style.overflow = 'hidden';
         }
         
-        const arrow = header.querySelector('.expand-arrow');
+        const arrow = fileHeader.querySelector('.expand-arrow');
         if (arrow) {
             arrow.textContent = !isOpen ? '▼' : '▶';
         }
@@ -465,6 +473,18 @@ function filterRegistry() {
                             if (textMatch) break;
                         }
                     }
+                } else if (mode === 'returns') {
+                    // Search in return type and description from registry data
+                    if (registryData && registryData.files) {
+                        for (let file of registryData.files) {
+                            const func = file.functions.find(f => f.name.toLowerCase() === funcName);
+                            if (func) {
+                                textMatch = (func.returnType && func.returnType.toLowerCase().includes(term)) || 
+                                           (func.returnDescription && func.returnDescription.toLowerCase().includes(term));
+                            }
+                            if (textMatch) break;
+                        }
+                    }
                 }
                 match = match && textMatch;
             }
@@ -491,7 +511,10 @@ function filterRegistry() {
         if (hasVisibleFunc || (!term && !categoryTerm && !typeTerm)) {
             section.classList.remove('hidden');
             if (term || categoryTerm || typeTerm) {
-                section.querySelector('.functions-list').classList.add('open');
+                const list = section.querySelector('.functions-list');
+                list.classList.add('open');
+                list.style.maxHeight = '10000px';
+                list.style.overflow = 'visible';
                 const header = section.querySelector('.file-header');
                 const arrow = header.querySelector('.expand-arrow');
                 if (arrow) arrow.textContent = '▼';

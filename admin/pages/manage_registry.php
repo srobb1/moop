@@ -169,7 +169,10 @@
                         <input class="form-check-input" type="radio" name="searchMode" id="searchParameters" value="parameters" onchange="filterRegistry()">
                         <label class="form-check-label" for="searchParameters">Parameters</label>
                     </div>
-                </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="searchMode" id="searchReturns" value="returns" onchange="filterRegistry()">
+                        <label class="form-check-label" for="searchReturns">Returns/Output</label>
+                    </div>
             </div>
             
             <div class="mb-0">
