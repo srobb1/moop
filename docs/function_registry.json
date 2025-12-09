@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "generated": "2025-12-08 21:59:41",
+        "generated": "2025-12-09 18:47:45",
         "totalFunctions": 139,
         "totalFiles": 19,
         "duplicates": 0
@@ -76,13 +76,13 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 159,
+                            "line": 176,
                             "context": "$all_dbs = getBlastDatabases($selected_source_obj['path']);"
                         },
                         {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 643,
-                            "context": "$dbs = getBlastDatabases($source['path']);"
+                            "line": 239,
+                            "context": "$databasesByAssembly[$key] = getBlastDatabases($source['path']);"
                         }
                     ]
                 },
@@ -162,7 +162,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 203,
+                            "line": 220,
                             "context": "$blast_result = executeBlastSearch($query_with_header, $blast_db, $blast_program, $blast_options);"
                         }
                     ]
@@ -250,7 +250,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 174,
+                            "line": 191,
                             "context": "$validation = validateBlastSequence($search_query);"
                         }
                     ]
@@ -518,8 +518,8 @@
                     "usageCount": 1,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/blast.php",
-                            "line": 613,
+                            "file": "/data/moop/tools/pages/blast.php",
+                            "line": 241,
                             "context": "<?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? []) ?>"
                         }
                     ]
@@ -833,8 +833,8 @@
                     "usageCount": 1,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/blast.php",
-                            "line": 610,
+                            "file": "/data/moop/tools/pages/blast.php",
+                            "line": 240,
                             "context": "<?= getToggleQuerySectionScript() ?>"
                         }
                     ]
@@ -962,7 +962,7 @@
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 149,
+                            "line": 169,
                             "context": "$feature_result = getFeatureByUniquename($uniquename, $db);"
                         }
                     ]
@@ -1284,17 +1284,12 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 1,
                     "usages": [
                         {
                             "file": "/data/moop/tools/annotation_search_ajax.php",
                             "line": 97,
                             "context": "$search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db, $source_filter, $assembly);"
-                        },
-                        {
-                            "file": "/data/moop/tests/benchmark_search.php",
-                            "line": 49,
-                            "context": "$results = searchFeaturesAndAnnotations($searchTerm, false, $dbFile);"
                         }
                     ]
                 },
@@ -1504,7 +1499,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 44,
+                            "line": 63,
                             "context": "$organism_result = parseOrganismParameter($organisms_param, '');"
                         }
                     ]
@@ -1525,21 +1520,16 @@
                         "readonly",
                         "recursive"
                     ],
-                    "usageCount": 3,
+                    "usageCount": 2,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/retrieve_selected_sequences.php",
-                            "line": 58,
-                            "context": "$context = parseContextParameters();"
-                        },
-                        {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 31,
+                            "line": 44,
                             "context": "$context = parseContextParameters();"
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 41,
+                            "line": 60,
                             "context": "$context = parseContextParameters();"
                         }
                     ]
@@ -1571,12 +1561,12 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/retrieve_selected_sequences.php",
-                            "line": 77,
+                            "line": 86,
                             "context": "$id_parse = parseFeatureIds($uniquenames_string);"
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 134,
+                            "line": 154,
                             "context": "$id_parse = parseFeatureIds($uniquenames_string);"
                         }
                     ]
@@ -1631,12 +1621,12 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/retrieve_selected_sequences.php",
-                            "line": 102,
+                            "line": 111,
                             "context": "$extract_result = extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types);"
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 168,
+                            "line": 188,
                             "context": "$extract_result = extractSequencesForAllTypes($fasta_source['path'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly);"
                         }
                     ]
@@ -1673,13 +1663,13 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/retrieve_selected_sequences.php",
-                            "line": 198,
-                            "context": "$available_sequences = formatSequenceResults($displayed_content, $sequence_types);"
+                            "line": 157,
+                            "context": "'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $sequence_types) : [],"
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 440,
-                            "context": "$available_sequences = formatSequenceResults($displayed_content, $sequence_types);"
+                            "line": 253,
+                            "context": "'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $sequence_types) : [],"
                         }
                     ]
                 },
@@ -1719,12 +1709,12 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/retrieve_selected_sequences.php",
-                            "line": 113,
+                            "line": 123,
                             "context": "sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);"
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 207,
+                            "line": 224,
                             "context": "sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);"
                         }
                     ]
@@ -1787,7 +1777,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 52,
+                            "line": 71,
                             "context": "$accessible_sources = flattenSourcesList($sources_by_group);"
                         }
                     ]
@@ -1818,8 +1808,8 @@
                     "usageCount": 1,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 305,
+                            "file": "/data/moop/tools/pages/retrieve_sequences.php",
+                            "line": 84,
                             "context": "$group_color_map = assignGroupColors($sources_by_group);"
                         }
                     ]
@@ -1857,7 +1847,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 212,
+                            "line": 230,
                             "context": "$available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_types);"
                         }
                     ]
@@ -1903,12 +1893,12 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 91,
+                            "line": 104,
                             "context": "[$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($context_assembly, $db_path);"
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 90,
+                            "line": 110,
                             "context": "[$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($selected_assembly, $db_path);"
                         }
                     ]
@@ -1949,12 +1939,12 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 38,
+                            "line": 51,
                             "context": "$sources_by_group = getAccessibleAssemblies();"
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 51,
+                            "line": 70,
                             "context": "$sources_by_group = getAccessibleAssemblies();"
                         }
                     ]
@@ -3169,7 +3159,7 @@
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 142,
+                            "line": 162,
                             "context": "$db = verifyOrganismDatabase($selected_organism, $organism_data);"
                         },
                         {
@@ -3416,42 +3406,12 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 7,
+                    "usageCount": 1,
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
                             "line": 553,
                             "context": "$json_validation = validateOrganismJson($organism_json);"
-                        },
-                        {
-                            "file": "/data/moop/tests/test_organism_json_validation.php",
-                            "line": 71,
-                            "context": "$result = validateOrganismJson($path);"
-                        },
-                        {
-                            "file": "/data/moop/tests/test_organism_json_validation.php",
-                            "line": 88,
-                            "context": "$result = validateOrganismJson($path);"
-                        },
-                        {
-                            "file": "/data/moop/tests/test_organism_json_validation.php",
-                            "line": 110,
-                            "context": "$result = validateOrganismJson($path);"
-                        },
-                        {
-                            "file": "/data/moop/tests/test_organism_json_validation.php",
-                            "line": 137,
-                            "context": "$result = validateOrganismJson($path);"
-                        },
-                        {
-                            "file": "/data/moop/tests/test_organism_json_validation.php",
-                            "line": 163,
-                            "context": "$result = validateOrganismJson($path);"
-                        },
-                        {
-                            "file": "/data/moop/tests/test_organism_json_validation.php",
-                            "line": 190,
-                            "context": "$result = validateOrganismJson($path);"
                         }
                     ]
                 },
@@ -3755,7 +3715,7 @@
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 191,
+                            "line": 208,
                             "context": "logError($err, \"download_fasta\", ['user' => $_SESSION['username'] ?? 'unknown']);"
                         }
                     ]
@@ -4230,7 +4190,7 @@
                         },
                         {
                             "file": "/data/moop/admin/manage_site_config.php",
-                            "line": 330,
+                            "line": 364,
                             "context": "$file_write_error = getFileWriteError($config_file);"
                         }
                     ]
@@ -4317,17 +4277,17 @@
                     "usageCount": 3,
                     "usages": [
                         {
-                            "file": "/data/moop/admin/pages/manage_registry.php",
-                            "line": 21,
-                            "context": "$registryStatus = getRegistryLastUpdate($json_registry, $json_registry);"
-                        },
-                        {
                             "file": "/data/moop/admin/pages/manage_js_registry.php",
                             "line": 21,
                             "context": "$registryStatus = getRegistryLastUpdate($json_registry, $json_registry);"
                         },
                         {
                             "file": "/data/moop/admin/manage_js_registry.php",
+                            "line": 27,
+                            "context": "$registryStatus = getRegistryLastUpdate($json_registry, $json_registry);"
+                        },
+                        {
+                            "file": "/data/moop/admin/manage_registry.php",
                             "line": 27,
                             "context": "$registryStatus = getRegistryLastUpdate($json_registry, $json_registry);"
                         }
@@ -5600,7 +5560,7 @@
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 153,
+                            "line": 173,
                             "context": "$children = getChildren($feature_id, $db);"
                         },
                         {
