@@ -34,10 +34,10 @@
   <div class="text-center mb-4">
     <div class="btn-group" role="group">
       <button type="button" class="btn btn-outline-primary active" id="card-view-btn" onclick="switchView('card')">
-        <i class="fa fa-th"></i> Card View
+        <i class="fa fa-th"></i> Group Select 
       </button>
       <button type="button" class="btn btn-outline-primary" id="tree-view-btn" onclick="switchView('tree')">
-        <i class="fa fa-project-diagram"></i> Tree View
+        <i class="fa fa-project-diagram"></i> Tree Select 
       </button>
     </div>
   </div>
@@ -71,6 +71,11 @@
           <div class="card-body">
             <!-- Tree Filter -->
             <div class="mb-3">
+              <small class="text-muted">
+                <i class="fa fa-info-circle text-info"></i> Click any node to select/deselect organisms. Selecting a higher branch selects all organisms below it. Then select a a tool from the Tool Box.
+              </small>
+            </div>
+            <div class="mb-3">
               <input 
                 type="text" 
                 class="form-control form-control-sm" 
@@ -98,10 +103,12 @@
             </div>
             
             <div class="mt-3">
+              <!--
               <small class="text-muted">
                 <i class="fa fa-info-circle"></i> Click any node to select/deselect organisms. 
                 Selecting a higher branch selects all organisms below it. Then select a tool to proceed.
               </small>
+              -->
             </div>
           </div>
         </div>
