@@ -70,59 +70,72 @@ $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
 $sources_by_group = getAccessibleAssemblies();
 $accessible_sources = flattenSourcesList($sources_by_group);
 
-// Initialize selected organism/assembly variables
-// Check both GET (from URL parameters like ?organism=X&assembly=Y) and POST (from form submission)
+// Initialize variables
+// Three separate variables for clarity:
+// - $selected_organism: organism name from URL/POST
+// - $selected_assembly_accession: genome accession (e.g., GCF_000151845.1)
+// - $selected_assembly_name: genome name (e.g., Pvam_2.0)
 $selected_organism = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
-$selected_assembly = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
+$selected_assembly_accession = '';
+$selected_assembly_name = '';
 $displayed_content = [];
 $should_scroll_to_results = false;
 $uniquenames = [];
 $ranges = [];
 $found_ids = [];
 $download_error_msg = '';
-
-// Initialize selected_source based on organism and assembly
-// This ensures the correct radio button is pre-selected when the page loads with URL parameters
 $selected_source = '';
+
+// Get the assembly parameter from URL/POST (could be name or accession)
+$assembly_param = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
 
 // First, try using context parameters (explicit intent to pre-select)
 if (!empty($context['organism']) && !empty($context['assembly'])) {
     $selected_organism = $context['organism'];
-    $selected_assembly = $context['assembly'];
+    $assembly_param = $context['assembly'];
 }
 
-if (!empty($selected_organism) && !empty($selected_assembly)) {
-    // First try direct match (assembly as-is)
-    $selected_source = $selected_organism . '|' . $selected_assembly;
-    
-    // If no direct match found by checking accessible_sources, try matching by genome_id
-    $source_found = false;
+// Resolve assembly parameter to both name and accession
+if (!empty($assembly_param)) {
     foreach ($accessible_sources as $source) {
-        if ($source['organism'] === $selected_organism && $source['assembly'] === $selected_assembly) {
-            $source_found = true;
-            break;
+        if (empty($selected_organism) || $source['organism'] === $selected_organism) {
+            // Match by assembly directory, genome_name, or genome_accession
+            if ($source['assembly'] === $assembly_param || 
+                $source['genome_name'] === $assembly_param || 
+                $source['genome_accession'] === $assembly_param) {
+                $selected_assembly_accession = $source['assembly'];
+                $selected_assembly_name = $source['genome_name'] ?? $source['assembly'];
+                if (empty($selected_organism)) {
+                    $selected_organism = $source['organism'];
+                }
+                break;
+            }
         }
     }
-    
-    // If not found by direct accession match, try via genome_id lookup
-    if (!$source_found) {
-        try {
-            $db_path = "$organism_data/$selected_organism/organism.sqlite";
-            [$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($selected_assembly, $db_path);
-            
-            // Now find source matching this genome_id
-            foreach ($accessible_sources as $source) {
-                if ($source['organism'] === $selected_organism && $source['genome_id'] == $genome_id_param) {
-                    $selected_source = $selected_organism . '|' . $source['assembly'];
-                    break;
-                }
-            }
-        } catch (Exception $e) {
-            // If lookup fails, stick with original assembly value
+}
+
+// Build filter_organisms list based on priority (assembly > organism > group)
+if (!empty($selected_assembly_name)) {
+    // Filter by assembly first (only show organism containing this assembly)
+    $filter_organisms = [];
+    foreach ($accessible_sources as $source) {
+        if (($source['genome_name'] === $selected_assembly_name || $source['assembly'] === $selected_assembly_accession) && 
+            !in_array($source['organism'], $filter_organisms)) {
+            $filter_organisms[] = $source['organism'];
         }
     }
 } elseif (!empty($selected_organism)) {
-    // If only organism specified (no assembly), select first assembly for that organism
+    // Filter by organism if no assembly specified
+    if (empty($filter_organisms)) {
+        $filter_organisms = [$selected_organism];
+    }
+}
+
+// Build selected_source for radio button selection
+if (!empty($selected_organism) && !empty($selected_assembly_accession)) {
+    $selected_source = $selected_organism . '|' . $selected_assembly_accession;
+} elseif (!empty($selected_organism)) {
+    // If only organism specified, select first assembly for that organism
     foreach ($accessible_sources as $source) {
         if ($source['organism'] === $selected_organism) {
             $selected_source = $selected_organism . '|' . $source['assembly'];
@@ -136,12 +149,12 @@ if (!empty($sequence_ids_provided)) {
     $extraction_errors = [];
     $original_uniquenames = []; // Initialize early in case of errors
     
-    // Find matching source for $selected_assembly
-    // Works whether $selected_assembly is accession or genome_name
+    // Find matching source for selected assembly
+    // Works with either accession or genome_name
     $fasta_source = null;
     foreach ($accessible_sources as $source) {
         if ($source['organism'] === $selected_organism && 
-            ($source['assembly'] === $selected_assembly || $source['genome_name'] === $selected_assembly)) {
+            ($source['assembly'] === $selected_assembly_accession || $source['genome_name'] === $selected_assembly_name)) {
             $fasta_source = $source;
             break;
         }
@@ -255,7 +268,7 @@ if (!empty($sequence_ids_provided)) {
     
     // Extract sequences for ALL available types
     if (empty($extraction_errors) && !empty($uniquenames)) {
-        $extract_result = extractSequencesForAllTypes($fasta_source['path'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly, $ranges, $original_uniquenames ?? [], $parent_to_children ?? []);
+        $extract_result = extractSequencesForAllTypes($fasta_source['path'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly_accession, $ranges, $original_uniquenames ?? [], $parent_to_children ?? []);
         $displayed_content = $extract_result['content'];
         if (!empty($extract_result['errors'])) {
             $extraction_errors = array_merge($extraction_errors, $extract_result['errors']);
@@ -320,7 +333,8 @@ $data = [
     'config' => $config,
     'accessible_sources' => $accessible_sources,
     'selected_organism' => $selected_organism,
-    'selected_assembly' => $selected_assembly,
+    'selected_assembly_accession' => $selected_assembly_accession,
+    'selected_assembly_name' => $selected_assembly_name,
     'uniquenames_string' => $uniquenames_string,
     'displayed_content' => $displayed_content,
     'sequence_types' => $sequence_types,

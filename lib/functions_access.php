@@ -37,6 +37,51 @@ function getAssemblyInfo($assembly, $db_path) {
 }
 
 /**
+ * Resolve source selection from organism and assembly parameters
+ * Handles both genome_name and genome_accession formats
+ * Returns the correct selected_source string for pre-selecting radio buttons
+ * 
+ * @param string $organism Organism name
+ * @param string $assembly Assembly (could be genome_name or genome_accession)
+ * @param array $accessible_sources Flattened list of sources with genome_id, genome_name, etc.
+ * @return string Selected source in format "organism|assembly_dir" or empty string if not found
+ */
+function resolveSourceSelection($organism, $assembly, $accessible_sources) {
+    // Try direct matches first: assembly dir, genome_name, or genome_id
+    foreach ($accessible_sources as $source) {
+        if ($source['organism'] === $organism) {
+            if ($source['assembly'] === $assembly || 
+                $source['genome_name'] === $assembly ||
+                $source['genome_id'] === $assembly) {
+                return $organism . '|' . $source['assembly'];
+            }
+        }
+    }
+    
+    // If not found by direct match, try via database lookup
+    $config = ConfigManager::getInstance();
+    $organism_data = $config->getPath('organism_data');
+    
+    try {
+        $db_path = "$organism_data/$organism/organism.sqlite";
+        [$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($assembly, $db_path);
+        
+        // Try matching by resolved genome_name
+        if (!empty($genome_name_param)) {
+            foreach ($accessible_sources as $source) {
+                if ($source['organism'] === $organism && $source['genome_name'] === $genome_name_param) {
+                    return $organism . '|' . $source['assembly'];
+                }
+            }
+        }
+    } catch (Exception $e) {
+        // If lookup fails, return empty
+    }
+    
+    return '';
+}
+
+/**
  * Get assemblies accessible to current user
  * Filters assemblies based on user access level and group membership
  * 
@@ -119,6 +164,7 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
                     
                     $genome_id = null;
                     $genome_name = null;
+                    $genome_accession = null;
                     $actual_assembly_dir = $assembly;  // Default to the directory name as-is
                     
                     // Find matching genome in validation results
@@ -128,6 +174,7 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
                             if ($genome['genome_name'] === $assembly || $genome['genome_accession'] === $assembly) {
                                 $genome_id = $genome['genome_id'];
                                 $genome_name = $genome['genome_name'];
+                                $genome_accession = $genome['genome_accession'];
                                 $actual_assembly_dir = $genome['directory_found'] ?? $assembly;
                                 break;
                             }
@@ -138,6 +185,7 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
                         'organism' => $org,
                         'assembly' => $actual_assembly_dir,  // Use the actual directory name
                         'genome_name' => $genome_name,
+                        'genome_accession' => $genome_accession,
                         'path' => "$organism_data/$org/$actual_assembly_dir",
                         'groups' => $entry_groups,
                         'genome_id' => $genome_id

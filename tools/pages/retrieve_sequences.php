@@ -13,7 +13,8 @@
  * - $uniquenames
  * - $found_ids
  * - $selected_organism
- * - $selected_assembly
+ * - $selected_assembly_accession
+ * - $selected_assembly_name
  * - $uniquenames_string
  * - $displayed_content
  * - $sequence_types
@@ -54,7 +55,7 @@
         <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
             <form method="POST" id="downloadForm">
             <input type="hidden" name="organism" value="<?= htmlspecialchars($selected_organism) ?>">
-            <input type="hidden" name="assembly" value="<?= htmlspecialchars($selected_assembly) ?>">
+            <input type="hidden" name="assembly" value="<?= htmlspecialchars($selected_assembly_accession) ?>">
             <input type="hidden" name="context_organism" value="<?= htmlspecialchars($context_organism) ?>">
             <input type="hidden" name="context_assembly" value="<?= htmlspecialchars($context_assembly) ?>">
             <input type="hidden" name="context_group" value="<?= htmlspecialchars($context_group) ?>">
@@ -100,6 +101,10 @@
                                         value="<?= htmlspecialchars($source['organism'] . '|' . $source['assembly']) ?>"
                                         data-organism="<?= htmlspecialchars($source['organism']) ?>"
                                         data-assembly="<?= htmlspecialchars($source['assembly']) ?>"
+                                        <?= ($selected_source === $source['organism'] . '|' . $source['assembly'] || 
+                                            ($selected_organism === $source['organism'] && 
+                                             ($selected_assembly_accession === $source['assembly'] || 
+                                              $selected_assembly_name === $source['genome_name']))) ? 'checked' : '' ?>
                                         >
                                     
                                     <span class="badge badge-sm bg-<?= $group_color ?> text-white">
@@ -197,7 +202,7 @@
             // Don't set $gene_name to prevent sequences_display.php from re-extracting
             $gene_name = '';
             $organism_name = $selected_organism;
-            $assembly_name = $selected_assembly;
+            $assembly_name = $selected_assembly_accession;
             $enable_downloads = true;
             $organism_data = $config->getPath('organism_data');
             

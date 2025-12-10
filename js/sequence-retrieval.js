@@ -45,13 +45,18 @@ function initializeSequenceRetrieval(options = {}) {
             }
         }
     } else {
-        // Auto-select first visible source if nothing was previously selected
+        // Auto-select first visible source only if nothing is already checked
         const allRadios = document.querySelectorAll('input[name="selected_source"]');
-        for (let radio of allRadios) {
-            const line = radio.closest('.fasta-source-line');
-            if (line && !line.classList.contains('hidden') && !radio.checked) {
-                radio.click();
-                break;
+        const anyChecked = Array.from(allRadios).some(radio => radio.checked);
+        
+        if (!anyChecked) {
+            // No radio is checked, auto-select first visible
+            for (let radio of allRadios) {
+                const line = radio.closest('.fasta-source-line');
+                if (line && !line.classList.contains('hidden')) {
+                    radio.click();
+                    break;
+                }
             }
         }
     }
