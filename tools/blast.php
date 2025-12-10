@@ -56,21 +56,18 @@ $organism_result = parseOrganismParameter($organisms_param, '');
 // Get form data
 $search_query = trim($_POST['query'] ?? '');
 $blast_program = trim($_POST['blast_program'] ?? 'blastx');
-$selected_source = trim($_POST['selected_source'] ?? '');
 $blast_db = trim($_POST['blast_db'] ?? '');
 
-// Extract selected organism and assembly from form if provided
-$selected_organism = '';
-$assembly_param = '';
-if (!empty($selected_source)) {
-    $source_parts = explode('|', $selected_source);
-    if (count($source_parts) === 2) {
-        $selected_organism = $source_parts[0];
-        $assembly_param = $source_parts[1];
-    }
+// Get the assembly parameter from URL/POST (could be name or accession)
+$assembly_param = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
+
+// First, try using context parameters (explicit intent to pre-select)
+if (!empty($context['organism']) && !empty($context['assembly'])) {
+    $assembly_param = $context['assembly'];
 }
 
 // Use centralized source selection helper
+$selected_organism = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
 $source_selection = prepareSourceSelection(
     $context,
     $sources_by_group,
