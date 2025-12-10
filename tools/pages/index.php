@@ -75,7 +75,7 @@
                 type="text" 
                 class="form-control form-control-sm" 
                 id="taxonomy-filter" 
-                placeholder="Filter organisms by name..."
+                placeholder="Filter by name..."
                 >
             </div>
             <div class="taxonomy-tree-scroll">
