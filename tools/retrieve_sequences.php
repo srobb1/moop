@@ -77,6 +77,7 @@ $selected_assembly = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
 $displayed_content = [];
 $should_scroll_to_results = false;
 $uniquenames = [];
+$ranges = [];
 $found_ids = [];
 $download_error_msg = '';
 
@@ -133,6 +134,7 @@ if (!empty($selected_organism) && !empty($selected_assembly)) {
 // If sequence IDs are provided, extract ALL sequence types
 if (!empty($sequence_ids_provided)) {
     $extraction_errors = [];
+    $original_uniquenames = []; // Initialize early in case of errors
     
     // Find matching source for $selected_assembly
     // Works whether $selected_assembly is accession or genome_name
@@ -156,14 +158,34 @@ if (!empty($sequence_ids_provided)) {
             $extraction_errors[] = $id_parse['error'];
         } else {
             $uniquenames = $id_parse['uniquenames'];
+            $ranges = $id_parse['ranges'] ?? [];  // Extract ranges from parsing result
+            
+            // Save original uniquenames to check which children were explicitly listed
+            $original_uniquenames = $uniquenames;
             
             // Get children for each parent ID (like parent_display.php does)
             try {
                 $db = verifyOrganismDatabase($selected_organism, $organism_data);
                 
                 $expanded_uniquenames = [];
+                $parent_to_children = []; // Track parent->children mapping
                 foreach ($uniquenames as $uniquename) {
                     $expanded_uniquenames[] = $uniquename;
+                    
+                    // Check if any children of this ID are already in the input with ranges
+                    // If so, skip auto-expansion (children are explicitly requested)
+                    $has_ranged_children = false;
+                    foreach ($ranges as $range_entry) {
+                        // Get the ID part from the range
+                        $range_id = explode(':', $range_entry)[0];
+                        $range_id = explode(' ', $range_id)[0];
+                        
+                        // Check if this is a child of current uniquename
+                        if (preg_match('/^' . preg_quote($uniquename) . '\.\d+$/', $range_id)) {
+                            $has_ranged_children = true;
+                            break;
+                        }
+                    }
                     
                     // Lookup feature to get feature_id
                     $feature_result = getFeatureByUniquename($uniquename, $db);
@@ -171,21 +193,69 @@ if (!empty($sequence_ids_provided)) {
                         $feature_id = $feature_result['feature_id'];
                         // Get all children
                         $children = getChildren($feature_id, $db);
-                        foreach ($children as $child) {
-                            $expanded_uniquenames[] = $child['feature_uniquename'];
+                        if (!empty($children)) {
+                            $child_names = [];
+                            foreach ($children as $child) {
+                                $child_name = $child['feature_uniquename'];
+                                
+                                // If children are already explicitly provided (with ranges), don't auto-add others
+                                if ($has_ranged_children) {
+                                    // Only add child if it's already in the expanded list
+                                    $already_present = in_array($child_name, $expanded_uniquenames);
+                                    if ($already_present) {
+                                        $child_names[] = $child_name;
+                                    }
+                                } else {
+                                    // No ranged children found - add all children
+                                    if (!in_array($child_name, $expanded_uniquenames)) {
+                                        $expanded_uniquenames[] = $child_name;
+                                    }
+                                    $child_names[] = $child_name;
+                                }
+                            }
+                            if (!empty($child_names)) {
+                                $parent_to_children[$uniquename] = $child_names;
+                            }
                         }
                     }
                 }
                 $uniquenames = array_unique($expanded_uniquenames);
+                
+                // Track which children were explicitly listed in the input without ranges
+                $explicitly_listed_children = [];
+                foreach ($original_uniquenames as $id) {
+                    foreach ($parent_to_children as $parent => $children) {
+                        if (in_array($id, $children)) {
+                            // Check if this child has a range
+                            $has_range = false;
+                            foreach ($ranges as $range_entry) {
+                                $range_id = explode(':', $range_entry)[0];
+                                $range_id = explode(' ', $range_id)[0];
+                                if ($range_id === $id) {
+                                    $has_range = true;
+                                    break;
+                                }
+                            }
+                            if (!$has_range) {
+                                $explicitly_listed_children[] = $id;
+                            }
+                        }
+                    }
+                }
+                
+                // Don't expand ranges here - blast_functions will handle building the batch file
+                // with all 4 categories (no-range inputs, their children, ranged inputs, their children)
+                
             } catch (Exception $e) {
                 // If database lookup fails, just use original IDs
+                $parent_to_children = [];
             }
         }
     }
     
     // Extract sequences for ALL available types
     if (empty($extraction_errors) && !empty($uniquenames)) {
-        $extract_result = extractSequencesForAllTypes($fasta_source['path'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly);
+        $extract_result = extractSequencesForAllTypes($fasta_source['path'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly, $ranges, $original_uniquenames ?? [], $parent_to_children ?? []);
         $displayed_content = $extract_result['content'];
         if (!empty($extract_result['errors'])) {
             $extraction_errors = array_merge($extraction_errors, $extract_result['errors']);
@@ -196,7 +266,15 @@ if (!empty($sequence_ids_provided)) {
             // Extract all header lines (start with >) from FASTA
             preg_match_all('/^>([^\s]+)/m', $fasta_content, $matches);
             if (!empty($matches[1])) {
-                $found_ids = array_merge($found_ids, $matches[1]);
+                foreach ($matches[1] as $header_id) {
+                    $found_ids[] = $header_id;
+                    
+                    // Also add the plain ID without range (e.g., XP_023382306.1 from XP_023382306.1:1-10)
+                    if (strpos($header_id, ':') !== false) {
+                        $plain_id = explode(':', $header_id)[0];
+                        $found_ids[] = $plain_id;
+                    }
+                }
             }
         }
         $found_ids = array_unique($found_ids);
@@ -229,8 +307,9 @@ $display_config = [
     'title' => 'Sequence Retrieval & Download - ' . htmlspecialchars($siteTitle),
     'content_file' => __DIR__ . '/pages/retrieve_sequences.php',
     'page_script' => [
+	'/' . $site . '/js/modules/utilities.js',
         '/' . $site . '/js/modules/source-list-manager.js',
-        '/' . $site . '/js/sequence-retrieval.js'
+	'/' . $site . '/js/sequence-retrieval.js'
     ]
 ];
 
@@ -255,6 +334,7 @@ $data = [
     'should_scroll_to_results' => $should_scroll_to_results,
     'selected_source' => $selected_source,
     'sample_feature_ids' => $config->getArray('sample_feature_ids', []),
+    'parent_to_children' => $parent_to_children ?? [],
     'page_styles' => [
         '/' . $site . '/css/display.css',
     ]

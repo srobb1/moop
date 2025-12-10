@@ -156,7 +156,10 @@ function initializeSequenceRetrieval(options = {}) {
         
         // Check if searchIdsDisplay element exists before trying to update it
         const searchIdsDisplay = document.getElementById('searchIdsDisplay');
-        if (!searchIdsDisplay) return; // Element doesn't exist on this page, skip
+        if (!searchIdsDisplay) {
+            return; // Element doesn't exist on this page, skip
+        }
+        
         
         // Get user input IDs
         const rawIds = featureIdsTextarea.value.trim();
@@ -165,14 +168,32 @@ function initializeSequenceRetrieval(options = {}) {
             .map(id => id.trim())
             .filter(id => id.length > 0);
         
+        
         // Get found IDs from server (IDs that were actually returned by blastdbcmd)
         let foundIds = [];
         if (foundIdsField && foundIdsField.value) {
             try {
                 foundIds = JSON.parse(foundIdsField.value);
             } catch (e) {
-                // JSON parse failed
+                // If field has JSON, try to use it
+                foundIds = [];
             }
+        }
+        // Also check window.foundIds as fallback
+        if (!Array.isArray(foundIds) || foundIds.length === 0) {
+            foundIds = (window.foundIds && Array.isArray(window.foundIds)) ? window.foundIds : [];
+        }
+        
+        // If still empty, try to extract from displayed FASTA sequences on the page
+        if (foundIds.length === 0) {
+            // Look for FASTA headers (lines starting with >) in the sequence display areas
+            const fastaRegex = />([^\s]+)/g;
+            const displayContent = document.body.textContent;
+            let match;
+            while ((match = fastaRegex.exec(displayContent)) !== null) {
+                foundIds.push(match[1]);
+            }
+            foundIds = [...new Set(foundIds)]; // Remove duplicates
         }
         
         // First check if server sent expanded uniquenames (after form submission)
@@ -193,22 +214,69 @@ function initializeSequenceRetrieval(options = {}) {
             if (!rawIds) {
                 document.getElementById('searchIdsDisplay').innerHTML = 
                     '<span style="color: #999;">Enter IDs above to see expanded list (including children)</span>';
+                searchIdsDisplay.style.display = 'block';
                 return;
             }
             idsToDisplay = userInputIds;
         }
         
-        // Display the IDs - color based on whether they were found by blastdbcmd
-        const displayHtml = idsToDisplay
-            .map((id) => {
-                // Always use found/not found coloring (foundIds will be empty before search, but that's OK)
-                const bgColor = foundIds.includes(id) ? '#d4edda' : '#f8d7da';  // Green=found, Red=not found
-                return `<div style="padding: 4px 0;"><span style="background: ${bgColor}; padding: 2px 6px; border-radius: 3px;">${escapeHtml(id)}</span></div>`;
-            })
-            .join('');
+        // Display the IDs with parent-child hierarchy
+        let displayHtml = '';
+        const parentToChildren = window.parentToChildren || {};
+        const processedIds = new Set();
+        
+        // Ensure foundIds is an array
+        if (!Array.isArray(foundIds)) {
+            foundIds = [];
+        }
+        
+        idsToDisplay.forEach((id) => {
+            if (processedIds.has(id)) return;
+            
+            const isFound = foundIds.some(foundId => foundId === id || foundId.startsWith(id + ':') || foundId.startsWith(id + ' '));
+            const bgColor = isFound ? '#d4edda' : '#f8d7da';  // Green=found, Red=not found
+            
+            displayHtml += `<div style="padding: 4px 0;">
+                <span style="background: ${bgColor}; padding: 2px 6px; border-radius: 3px; font-weight: bold;">${escapeHtml(id)}</span>`;
+            
+            processedIds.add(id);
+            
+            // If this ID has children, show them nested
+            if (parentToChildren[id] && Array.isArray(parentToChildren[id])) {
+                parentToChildren[id].forEach(childId => {
+                    if (processedIds.has(childId)) return;
+                    
+                    const childFound = foundIds.some(foundId => foundId === childId || foundId.startsWith(childId + ':') || foundId.startsWith(childId + ' '));
+                    const childBgColor = childFound ? '#d4edda' : '#f8d7da';
+                    
+                    displayHtml += `<div style="padding: 4px 0; margin-left: 20px; border-left: 2px solid #ccc; padding-left: 8px;">
+                        <span style="background: ${childBgColor}; padding: 2px 6px; border-radius: 3px;">${escapeHtml(childId)}</span>
+                    </div>`;
+                    
+                    processedIds.add(childId);
+                });
+            }
+            
+            displayHtml += `</div>`;
+        });
+        
+        // Add any IDs that weren't parents (in case they have no parent in display)
+        idsToDisplay.forEach((id) => {
+            if (processedIds.has(id)) return;
+            
+            const isFound = foundIds.some(foundId => foundId === id || foundId.startsWith(id + ':') || foundId.startsWith(id + ' '));
+            const bgColor = isFound ? '#d4edda' : '#f8d7da';
+            
+            displayHtml += `<div style="padding: 4px 0;">
+                <span style="background: ${bgColor}; padding: 2px 6px; border-radius: 3px;">${escapeHtml(id)}</span>
+            </div>`;
+            
+            processedIds.add(id);
+        });
         
         document.getElementById('searchIdsDisplay').innerHTML = displayHtml || 
             '<span style="color: #999;">No valid IDs entered</span>';
+        searchIdsDisplay.style.display = 'block';
     }
     
     if (featureIdsTextarea) {
@@ -323,6 +391,7 @@ if (document.readyState === 'loading') {
         // Check if shouldScroll option was provided via PHP
         const shouldScroll = typeof scrollToResults !== 'undefined' ? scrollToResults : false;
         initializeSequenceRetrieval({ shouldScroll: shouldScroll });
+        
         // Delay tooltip initialization to ensure Bootstrap is loaded
         setTimeout(initializeCopyTooltips, 500);
     });
@@ -330,5 +399,6 @@ if (document.readyState === 'loading') {
     // Already loaded
     const shouldScroll = typeof scrollToResults !== 'undefined' ? scrollToResults : false;
     initializeSequenceRetrieval({ shouldScroll: shouldScroll });
+    
     setTimeout(initializeCopyTooltips, 500);
 }

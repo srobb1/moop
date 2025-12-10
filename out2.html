@@ -1,0 +1,510 @@
+<html lang="en"><head>
+        <title>Sequence Retrieval &amp; Download - SIMRbase</title>
+        
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="/moop/images/favicon.ico">
+
+    <!-- Bootstrap 5.3.2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- MOOP Base Styles (global styles + loader animation) -->
+    <link rel="stylesheet" href="/moop/css/moop.css">
+    
+    <!-- Display Styles (feature colors, badges, etc.) -->
+    <link rel="stylesheet" href="/moop/css/display.css">
+    
+    <!-- Search Controls Styles (search and filter buttons) -->
+    <link rel="stylesheet" href="/moop/css/search-controls.css">
+    
+    <!-- Optional custom CSS if defined in config -->
+    
+    <!-- DataTables 1.13.4 core and Bootstrap 5 theme -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+    <!-- DataTables Buttons 2.3.6 with Bootstrap 5 theme -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.bootstrap5.min.css">
+    <!-- Column reordering functionality -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/colreorder/1.5.5/css/colReorder.dataTables.min.css">
+
+    <!-- jQuery library - required for DataTables plugin -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <!-- Bootstrap 5.3.2 Bundle (includes Popper for dropdowns/tooltips) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- DataTables 1.13.4 CORE library (MUST load before theme and extensions) -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <!-- DataTables 1.13.4 Bootstrap 5 theme -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+    <!-- DataTables Buttons 2.3.6 CORE (modern functionality) -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+    <!-- DataTables Buttons 2.3.6 Bootstrap 5 theme -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap5.min.js"></script>
+    <!-- DataTables Buttons 2.3.6 extensions (CSV, Excel, Print, ColVis) -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+
+    <!-- DataTables 1.10.24 (LEGACY: Required for button compatibility in hybrid approach) -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script>
+    <!-- DataTables Buttons 1.6.4 (LEGACY: Required for core button functionality in hybrid approach) -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.6.4/js/dataTables.buttons.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.6.4/js/buttons.bootstrap4.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.6.4/js/buttons.html5.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.6.4/js/buttons.print.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.6.4/js/buttons.colVis.min.js"></script>
+
+    <!-- jszip for Excel export functionality -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" type="text/javascript"></script>
+
+    <!-- Font Awesome 5.7.0 - REQUIRED for download button icons (copy, CSV, Excel, print) -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
+        
+        <!-- Page-specific styles (if provided in data) -->
+        <link rel="stylesheet" href="/moop/css/display.css">
+    </head>
+    <body class="bg-light">
+        
+<div class="easygdb-top">  <div class="banner-blur" style="background: url(/moop/images/banners/Nfur_2_1200x300.jpg) center center no-repeat; background-size:cover;"></div>  <div class="banner-image-wrapper"><img class="banner-image" src="/moop/images/banners/Nfur_2_1200x300.jpg" alt="Banner"></div></div>
+<nav class="navbar navbar-expand-md bg-dark navbar-dark sticky-top">
+
+<a class="navbar-brand" href="/moop/index.php"><img id="site_logo" src="/moop/images/favicon.ico" alt="DB_Logo"></a>
+  <!-- Toggler/collapsibe Button -->
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsibleNavbar">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <div class="collapse navbar-collapse" id="collapsibleNavbar">
+    <ul class="navbar-nav">
+      <li class="nav-item"><a class="nav-link" href="/moop/index.php"><i class="fa fa-home"></i>SIMRbase</a></li><li class="nav-item"><a class="nav-link" href="/about.php">About</a></li><li class="nav-item"><a class="nav-link" href="/Public/help/00_help.php">Help</a></li><li class="nav-item"><a class="nav-link" href="/moop/admin/admin.php"><i class="fa fa-tools"></i> Admin Tools</a></li>      
+    </ul>
+  
+  </div>
+
+  <ul class="navbar-nav ml-auto">
+    <li class="nav-item"><a id="logout_link" class="nav-link" href="/moop/logout.php">Log Out <i class="fa fa-sign-out-alt"></i></a></li>  </ul>
+
+</nav>
+        
+        <div class="container-fluid py-4">
+            
+<div class="container mt-5">
+    <div class="mb-3"></div>
+
+    <h2 class="mb-4"><i class="fa fa-dna"></i> Sequence Retrieval &amp; Download</h2>
+
+            <div class="fasta-info-box">
+            <strong><i class="fa fa-info-circle"></i> How to use:</strong>
+            <ol class="mb-0 mt-2">
+                <li>Select which organism and assembly to extract from</li>
+                <li>Enter gene/feature IDs (one per line or comma-separated)</li>
+                <li>Click "Display Sequences" to see all available sequence types</li>
+                <li>Copy or download as needed</li>
+            </ol>
+        </div>
+
+        
+        <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <form method="POST" id="downloadForm">
+            <input type="hidden" name="organism" value="Pteropus_vampyrus">
+            <input type="hidden" name="assembly" value="Pvam_2.0">
+            <input type="hidden" name="context_organism" value="">
+            <input type="hidden" name="context_assembly" value="">
+            <input type="hidden" name="context_group" value="">
+            <input type="hidden" id="expandedUniqueames" value="[&quot;105310009&quot;,&quot;XM_023526538.1&quot;,&quot;XP_023382306.1&quot;,&quot;XM_023526536.1&quot;,&quot;XP_023382304.1&quot;,&quot;XM_023526535.1&quot;,&quot;XP_023382303.1&quot;,&quot;XM_023526534.1&quot;,&quot;XP_023382302.1&quot;,&quot;XM_023526537.1&quot;,&quot;XP_023382305.1&quot;,&quot;XM_011386229.2&quot;,&quot;XP_011384531.1&quot;]">
+            <input type="hidden" id="foundIds" value="[&quot;XP_023382306.1:1-10&quot;,&quot;XP_023382304.1:1-10&quot;,&quot;XP_023382303.1:1-10&quot;,&quot;XP_023382302.1:1-10&quot;,&quot;XP_023382305.1:1-10&quot;,&quot;XP_011384531.1:1-10&quot;,&quot;XM_023526538.1:1-10&quot;,&quot;XM_023526536.1:1-10&quot;,&quot;XM_023526535.1:1-10&quot;,&quot;XM_023526534.1:1-10&quot;,&quot;XM_023526537.1:1-10&quot;,&quot;XM_011386229.2:1-10&quot;]">
+
+            <!-- Source Selection -->
+            <div class="fasta-source-selector">
+                <label class="form-label"><strong>Select Source</strong></label>
+                
+                <div class="fasta-source-filter">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="sourceFilter" placeholder="Filter by group, organism, or assembly..." value="">
+                        <button type="button" class="btn btn-success" onclick="clearSourceFilter();">
+                            <i class="fa fa-times"></i> Clear Filters
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="fasta-source-list">
+                                                    <div class="fasta-source-line" data-search="public anoura_caudifer gca_004027475.1">
+                                    <input type="radio" name="selected_source" value="Anoura_caudifer|GCA_004027475.1" data-organism="Anoura_caudifer" data-assembly="GCA_004027475.1">
+                                    
+                                    <span class="badge badge-sm bg-primary text-white">
+                                        Public                                    </span>
+                                    <span class="badge badge-sm bg-secondary text-white">
+                                        Anoura_caudifer                                    </span>
+                                    <span class="badge badge-sm bg-info text-white">
+                                        GCA_004027475.1                                    </span>
+                                </div>
+                                                            <div class="fasta-source-line" data-search="public montipora_capitata hiv3">
+                                    <input type="radio" name="selected_source" value="Montipora_capitata|HIv3" data-organism="Montipora_capitata" data-assembly="HIv3">
+                                    
+                                    <span class="badge badge-sm bg-primary text-white">
+                                        Public                                    </span>
+                                    <span class="badge badge-sm bg-secondary text-white">
+                                        Montipora_capitata                                    </span>
+                                    <span class="badge badge-sm bg-info text-white">
+                                        HIv3                                    </span>
+                                </div>
+                                                            <div class="fasta-source-line" data-search="bats anoura_caudifer gca_004027475.1">
+                                    <input type="radio" name="selected_source" value="Anoura_caudifer|GCA_004027475.1" data-organism="Anoura_caudifer" data-assembly="GCA_004027475.1">
+                                    
+                                    <span class="badge badge-sm bg-success text-white">
+                                        Bats                                    </span>
+                                    <span class="badge badge-sm bg-secondary text-white">
+                                        Anoura_caudifer                                    </span>
+                                    <span class="badge badge-sm bg-info text-white">
+                                        GCA_004027475.1                                    </span>
+                                </div>
+                                                            <div class="fasta-source-line" data-search="bats lasiurus_cinereus gca_011751095.1">
+                                    <input type="radio" name="selected_source" value="Lasiurus_cinereus|GCA_011751095.1" data-organism="Lasiurus_cinereus" data-assembly="GCA_011751095.1">
+                                    
+                                    <span class="badge badge-sm bg-success text-white">
+                                        Bats                                    </span>
+                                    <span class="badge badge-sm bg-secondary text-white">
+                                        Lasiurus_cinereus                                    </span>
+                                    <span class="badge badge-sm bg-info text-white">
+                                        GCA_011751095.1                                    </span>
+                                </div>
+                                                            <div class="fasta-source-line" data-search="bats pteropus_vampyrus pvam_2.0">
+                                    <input type="radio" name="selected_source" value="Pteropus_vampyrus|Pvam_2.0" data-organism="Pteropus_vampyrus" data-assembly="Pvam_2.0">
+                                    
+                                    <span class="badge badge-sm bg-success text-white">
+                                        Bats                                    </span>
+                                    <span class="badge badge-sm bg-secondary text-white">
+                                        Pteropus_vampyrus                                    </span>
+                                    <span class="badge badge-sm bg-info text-white">
+                                        Pvam_2.0                                    </span>
+                                </div>
+                                                            <div class="fasta-source-line" data-search="corals montipora_capitata hiv3">
+                                    <input type="radio" name="selected_source" value="Montipora_capitata|HIv3" data-organism="Montipora_capitata" data-assembly="HIv3">
+                                    
+                                    <span class="badge badge-sm bg-info text-white">
+                                        Corals                                    </span>
+                                    <span class="badge badge-sm bg-secondary text-white">
+                                        Montipora_capitata                                    </span>
+                                    <span class="badge badge-sm bg-info text-white">
+                                        HIv3                                    </span>
+                                </div>
+                                                            <div class="fasta-source-line" data-search="cute anoura_caudifer gca_004027475.1">
+                                    <input type="radio" name="selected_source" value="Anoura_caudifer|GCA_004027475.1" data-organism="Anoura_caudifer" data-assembly="GCA_004027475.1">
+                                    
+                                    <span class="badge badge-sm bg-warning text-white">
+                                        Cute                                    </span>
+                                    <span class="badge badge-sm bg-secondary text-white">
+                                        Anoura_caudifer                                    </span>
+                                    <span class="badge badge-sm bg-info text-white">
+                                        GCA_004027475.1                                    </span>
+                                </div>
+                                                            <div class="fasta-source-line" data-search="cute lasiurus_cinereus gca_011751095.1">
+                                    <input type="radio" name="selected_source" value="Lasiurus_cinereus|GCA_011751095.1" data-organism="Lasiurus_cinereus" data-assembly="GCA_011751095.1">
+                                    
+                                    <span class="badge badge-sm bg-warning text-white">
+                                        Cute                                    </span>
+                                    <span class="badge badge-sm bg-secondary text-white">
+                                        Lasiurus_cinereus                                    </span>
+                                    <span class="badge badge-sm bg-info text-white">
+                                        GCA_011751095.1                                    </span>
+                                </div>
+                                                            <div class="fasta-source-line" data-search="new pteropus_vampyrus pvam_2.0">
+                                    <input type="radio" name="selected_source" value="Pteropus_vampyrus|Pvam_2.0" data-organism="Pteropus_vampyrus" data-assembly="Pvam_2.0">
+                                    
+                                    <span class="badge badge-sm bg-danger text-white">
+                                        New                                    </span>
+                                    <span class="badge badge-sm bg-secondary text-white">
+                                        Pteropus_vampyrus                                    </span>
+                                    <span class="badge badge-sm bg-info text-white">
+                                        Pvam_2.0                                    </span>
+                                </div>
+                                            </div>
+            </div>
+
+            <!-- Current Selection Display -->
+            <div class="mb-4 p-3 bg-light border rounded">
+                <strong>Currently Selected:</strong>
+                <div id="currentSelection" style="margin-top: 8px; font-size: 14px;">
+            <div style="color: #28a745; font-weight: bold;">
+                Public &gt; Anoura_caudifer &gt; GCA_004027475.1
+            </div>
+        </div>
+            </div>
+
+            <!-- Feature ID Input -->
+            <div class="mb-4">
+                <label for="featureIds" class="form-label"><strong>Feature/Gene IDs</strong></label>
+                <textarea class="form-control textarea-ids" id="featureIds" name="uniquenames" rows="6" placeholder="Enter feature IDs (one per line or comma-separated)">105310009 1-10
+XM_023526538.1
+XP_023382306.1</textarea>
+                <small class="form-text text-muted">Enter IDs one per line or comma-separated</small>
+                <small class="form-text text-muted d-block mt-2">
+                    Example IDs: ACA1_PVKU01000001.1_000001.1, ACA1_PVKU01005411.1_000003.1                </small>
+                
+                <!-- Sample IDs Help -->
+                                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadSampleIds()">
+                            <i class="fa fa-bookmark"></i> Load Example IDs
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearFeatureIds()">
+                            <i class="fa fa-times"></i> Clear
+                        </button>
+                    </div>
+                                
+                <!-- IDs to Search Display -->
+                <div id="searchIdsDisplay" class="mt-3 p-3 bg-light border rounded" style="display: block;"><div style="padding: 4px 0;"><span style="background: #f8d7da; padding: 2px 6px; border-radius: 3px;">105310009</span></div><div style="padding: 4px 0;"><span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">XM_023526538.1</span></div><div style="padding: 4px 0;"><span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">XP_023382306.1</span></div><div style="padding: 4px 0;"><span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">XM_023526536.1</span></div><div style="padding: 4px 0;"><span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">XP_023382304.1</span></div><div style="padding: 4px 0;"><span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">XM_023526535.1</span></div><div style="padding: 4px 0;"><span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">XP_023382303.1</span></div><div style="padding: 4px 0;"><span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">XM_023526534.1</span></div><div style="padding: 4px 0;"><span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">XP_023382302.1</span></div><div style="padding: 4px 0;"><span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">XM_023526537.1</span></div><div style="padding: 4px 0;"><span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">XP_023382305.1</span></div><div style="padding: 4px 0;"><span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">XM_011386229.2</span></div><div style="padding: 4px 0;"><span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">XP_011384531.1</span></div></div>
+                
+                <!-- Collapsed info about Parent and Child IDs -->
+                <div class="mt-3">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-target="#idInfoCollapse" aria-expanded="false" aria-controls="idInfoCollapse">
+                        <i class="fa fa-info-circle"></i> About Parent and Child IDs
+                    </button>
+                    <div class="collapse mt-2" id="idInfoCollapse">
+                        <div class="p-3 bg-light border rounded">
+                            <p class="mb-0">
+                                When you enter a parent gene ID (e.g., <code>g24397</code>), the system looks it up in the organism's database 
+                                and automatically retrieves all associated child transcript IDs (e.g., <code>g24397.t1</code>, <code>g24397.t2</code>). 
+                                All IDs (parents and children) are then used to search the FASTA sequence database using <code>blastdbcmd</code>. 
+                                The "IDs to Search" box shows which ones were found 
+                                (<span style="background: #d4edda; padding: 2px 4px; border-radius: 2px;">green</span>) 
+                                and which were not found 
+                                (<span style="background: #f8d7da; padding: 2px 4px; border-radius: 2px;">red</span>).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit button -->
+            <div class="d-grid gap-2 d-md-flex gap-md-2 mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fa fa-eye"></i> Display All Sequences
+                </button>
+            </div>
+            </form>
+        </div>
+
+        <!-- Sequences Display Section -->
+                    <hr class="my-5" id="sequences-section">
+                <div class="card shadow-sm mb-4">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="collapse-section d-flex align-items-center" data-bs-target="#sequencesSection" aria-expanded="true">
+                <i class="fas fa-minus toggle-icon text-primary"></i>
+                <strong class="ms-2">Sequences</strong>
+            </div>
+            <a href="#" class="btn btn-sm btn-outline-secondary" title="Back to top">
+                <i class="fas fa-arrow-up"></i> Back to Top
+            </a>
+        </div>
+        <div id="sequencesSection" class="collapse show">
+            <div class="card-body">
+                <div class="card annotation-card border-info mb-3">  <div class="card-header card-header-light-info">    <div class="collapse-section" data-bs-target="#seq_protein" aria-expanded="true">      <i class="fas fa-minus toggle-icon text-info"></i>      <strong class="ms-2 text-dark">        <span class="text-white px-2 py-1 rounded bg-info">Protein</span>        (6 sequences)      </strong>    </div>  </div>  <div id="seq_protein" class="collapse show">    <div class="card-body">      <div class="card bg-light">        <div class="card-body copyable font-monospace-small cursor-pointer preserve-whitespace">&gt;XP_023382306.1:1-10 histone deacetylase 6 isoform X1 [Pteropus vampyrus]
+MTSTGQDSTT
+Error: [blastdbcmd] Skipped XM_023526536.1
+
+&gt;XP_023382304.1:1-10 histone deacetylase 6 isoform X1 [Pteropus vampyrus]
+MTSTGQDSTT
+Error: [blastdbcmd] Skipped XM_023526535.1
+
+&gt;XP_023382303.1:1-10 histone deacetylase 6 isoform X1 [Pteropus vampyrus]
+MTSTGQDSTT
+Error: [blastdbcmd] Skipped XM_023526534.1
+
+&gt;XP_023382302.1:1-10 histone deacetylase 6 isoform X1 [Pteropus vampyrus]
+MTSTGQDSTT
+Error: [blastdbcmd] Skipped XM_023526537.1
+
+&gt;XP_023382305.1:1-10 histone deacetylase 6 isoform X1 [Pteropus vampyrus]
+MTSTGQDSTT
+Error: [blastdbcmd] Skipped XM_011386229.2
+
+&gt;XP_011384531.1:1-10 histone deacetylase 6 isoform X2 [Pteropus vampyrus]
+MTSTGQDSTT        </div>      </div>      <div class="margin-top">        <form method="POST" action="" class="display-inline">          <input type="hidden" name="organism" value="Pteropus_vampyrus">          <input type="hidden" name="assembly" value="Pvam_2.0">          <input type="hidden" name="sequence_type" value="protein">          <input type="hidden" name="uniquenames" value="105310009 1-10
+XM_023526538.1
+XP_023382306.1">          <input type="hidden" name="download_file" value="1">          <button type="submit" class="btn btn-sm btn-success">            <i class="fa fa-download"></i> Download Protein          </button>        </form>      </div>    </div>  </div></div><div class="card annotation-card border-info mb-3">  <div class="card-header card-header-light-info">    <div class="collapse-section" data-bs-target="#seq_transcript" aria-expanded="true">      <i class="fas fa-minus toggle-icon text-info"></i>      <strong class="ms-2 text-dark">        <span class="text-white px-2 py-1 rounded bg-feature-mrna">mRNA</span>        (6 sequences)      </strong>    </div>  </div>  <div id="seq_transcript" class="collapse show">    <div class="card-body">      <div class="card bg-light">        <div class="card-body copyable font-monospace-small cursor-pointer preserve-whitespace">&gt;XM_023526538.1:1-10 PREDICTED: Pteropus vampyrus histone deacetylase 6 (HDAC6), transcript variant X6, mRNA
+CCGGGCTCCG
+Error: [blastdbcmd] Skipped XP_023382306.1
+
+&gt;XM_023526536.1:1-10 PREDICTED: Pteropus vampyrus histone deacetylase 6 (HDAC6), transcript variant X3, mRNA
+ATCACGGCGC
+Error: [blastdbcmd] Skipped XP_023382304.1
+
+&gt;XM_023526535.1:1-10 PREDICTED: Pteropus vampyrus histone deacetylase 6 (HDAC6), transcript variant X2, mRNA
+GGGGGAGGGG
+Error: [blastdbcmd] Skipped XP_023382303.1
+
+&gt;XM_023526534.1:1-10 PREDICTED: Pteropus vampyrus histone deacetylase 6 (HDAC6), transcript variant X1, mRNA
+AAGGGGCGGT
+Error: [blastdbcmd] Skipped XP_023382302.1
+
+&gt;XM_023526537.1:1-10 PREDICTED: Pteropus vampyrus histone deacetylase 6 (HDAC6), transcript variant X4, mRNA
+GGGGCGGGAT
+Error: [blastdbcmd] Skipped XP_023382305.1
+
+&gt;XM_011386229.2:1-10 PREDICTED: Pteropus vampyrus histone deacetylase 6 (HDAC6), transcript variant X5, mRNA
+GTCATCACGG
+Error: [blastdbcmd] Skipped XP_011384531.1        </div>      </div>      <div class="margin-top">        <form method="POST" action="" class="display-inline">          <input type="hidden" name="organism" value="Pteropus_vampyrus">          <input type="hidden" name="assembly" value="Pvam_2.0">          <input type="hidden" name="sequence_type" value="transcript">          <input type="hidden" name="uniquenames" value="105310009 1-10
+XM_023526538.1
+XP_023382306.1">          <input type="hidden" name="download_file" value="1">          <button type="submit" class="btn btn-sm btn-success">            <i class="fa fa-download"></i> Download mRNA          </button>        </form>      </div>    </div>  </div></div><div class="card annotation-card border-info mb-3">  <div class="card-header card-header-light-info">    <div class="collapse-section" data-bs-target="#seq_cds" aria-expanded="true">      <i class="fas fa-minus toggle-icon text-info"></i>      <strong class="ms-2 text-dark">        <span class="text-white px-2 py-1 rounded bg-success">CDS</span>        (6 sequences)      </strong>    </div>  </div>  <div id="seq_cds" class="collapse show">    <div class="card-body">      <div class="card bg-light">        <div class="card-body copyable font-monospace-small cursor-pointer preserve-whitespace">&gt;XP_023382306.1:1-10 lcl|NW_011889765.1_cds_XP_023382306.1_42252 [gene=HDAC6] [db_xref=GeneID:105310009] [protein=histone deacetylase 6 isoform X1] [protein_id=XP_023382306.1] [location=complement(join(204280..204441,205846..205974,206072..206218,206346..206456,206543..206994,207106..207280,208625..208774,210240..210432,210546..210614,211101..211234,211526..211694,211847..211975,212063..212237,212473..212540,212629..212735,213069..213158,213236..213295,213387..213452,213566..213692,217816..217884,218009..218113,219089..219186,219332..219428,220146..220186,220277..220361,222187..222275,222410..222538,222623..222712))] [gbkey=CDS]
+ATGACCTCCA
+Error: [blastdbcmd] Skipped XM_023526536.1
+
+&gt;XP_023382304.1:1-10 lcl|NW_011889765.1_cds_XP_023382304.1_42250 [gene=HDAC6] [db_xref=GeneID:105310009] [protein=histone deacetylase 6 isoform X1] [protein_id=XP_023382304.1] [location=complement(join(204280..204441,205846..205974,206072..206218,206346..206456,206543..206994,207106..207280,208625..208774,210240..210432,210546..210614,211101..211234,211526..211694,211847..211975,212063..212237,212473..212540,212629..212735,213069..213158,213236..213295,213387..213452,213566..213692,217816..217884,218009..218113,219089..219186,219332..219428,220146..220186,220277..220361,222187..222275,222410..222538,222623..222712))] [gbkey=CDS]
+ATGACCTCCA
+Error: [blastdbcmd] Skipped XM_023526535.1
+
+&gt;XP_023382303.1:1-10 lcl|NW_011889765.1_cds_XP_023382303.1_42249 [gene=HDAC6] [db_xref=GeneID:105310009] [protein=histone deacetylase 6 isoform X1] [protein_id=XP_023382303.1] [location=complement(join(204280..204441,205846..205974,206072..206218,206346..206456,206543..206994,207106..207280,208625..208774,210240..210432,210546..210614,211101..211234,211526..211694,211847..211975,212063..212237,212473..212540,212629..212735,213069..213158,213236..213295,213387..213452,213566..213692,217816..217884,218009..218113,219089..219186,219332..219428,220146..220186,220277..220361,222187..222275,222410..222538,222623..222712))] [gbkey=CDS]
+ATGACCTCCA
+Error: [blastdbcmd] Skipped XM_023526534.1
+
+&gt;XP_023382302.1:1-10 lcl|NW_011889765.1_cds_XP_023382302.1_42248 [gene=HDAC6] [db_xref=GeneID:105310009] [protein=histone deacetylase 6 isoform X1] [protein_id=XP_023382302.1] [location=complement(join(204280..204441,205846..205974,206072..206218,206346..206456,206543..206994,207106..207280,208625..208774,210240..210432,210546..210614,211101..211234,211526..211694,211847..211975,212063..212237,212473..212540,212629..212735,213069..213158,213236..213295,213387..213452,213566..213692,217816..217884,218009..218113,219089..219186,219332..219428,220146..220186,220277..220361,222187..222275,222410..222538,222623..222712))] [gbkey=CDS]
+ATGACCTCCA
+Error: [blastdbcmd] Skipped XM_023526537.1
+
+&gt;XP_023382305.1:1-10 lcl|NW_011889765.1_cds_XP_023382305.1_42251 [gene=HDAC6] [db_xref=GeneID:105310009] [protein=histone deacetylase 6 isoform X1] [protein_id=XP_023382305.1] [location=complement(join(204280..204441,205846..205974,206072..206218,206346..206456,206543..206994,207106..207280,208625..208774,210240..210432,210546..210614,211101..211234,211526..211694,211847..211975,212063..212237,212473..212540,212629..212735,213069..213158,213236..213295,213387..213452,213566..213692,217816..217884,218009..218113,219089..219186,219332..219428,220146..220186,220277..220361,222187..222275,222410..222538,222623..222712))] [gbkey=CDS]
+ATGACCTCCA
+Error: [blastdbcmd] Skipped XM_011386229.2
+
+&gt;XP_011384531.1:1-10 lcl|NW_011889765.1_cds_XP_011384531.1_42253 [gene=HDAC6] [db_xref=GeneID:105310009] [protein=histone deacetylase 6 isoform X2] [protein_id=XP_011384531.1] [location=complement(join(205568..205636,205846..205974,206072..206218,206346..206456,206543..206994,207106..207280,208625..208774,210240..210432,210546..210614,211101..211234,211526..211694,211847..211975,212063..212237,212473..212540,212629..212735,213069..213158,213236..213295,213387..213452,213566..213692,217816..217884,218009..218113,219089..219186,219332..219428,220146..220186,220277..220361,222187..222275,222410..222538,222623..222712))] [gbkey=CDS]
+ATGACCTCCA        </div>      </div>      <div class="margin-top">        <form method="POST" action="" class="display-inline">          <input type="hidden" name="organism" value="Pteropus_vampyrus">          <input type="hidden" name="assembly" value="Pvam_2.0">          <input type="hidden" name="sequence_type" value="cds">          <input type="hidden" name="uniquenames" value="105310009 1-10
+XM_023526538.1
+XP_023382306.1">          <input type="hidden" name="download_file" value="1">          <button type="submit" class="btn btn-sm btn-success">            <i class="fa fa-download"></i> Download CDS          </button>        </form>      </div>    </div>  </div></div>            </div>
+        </div>
+    </div>
+    
+
+
+<script src="/moop/js/modules/copy-to-clipboard.js"></script>
+<script src="/moop/js/modules/collapse-handler.js"></script>
+            </div>
+
+<script>
+// Make sample feature IDs available to JavaScript
+    window.sampleFeatureIds = ["ACA1_PVKU01000001.1_000001.1","ACA1_PVKU01005411.1_000003.1"];
+
+// Pass found IDs to JavaScript for coloring
+window.foundIds = ["XP_023382306.1:1-10","XP_023382304.1:1-10","XP_023382303.1:1-10","XP_023382302.1:1-10","XP_023382305.1:1-10","XP_011384531.1:1-10","XM_023526538.1:1-10","XM_023526536.1:1-10","XM_023526535.1:1-10","XM_023526534.1:1-10","XM_023526537.1:1-10","XM_011386229.2:1-10"];
+</script>
+        </div>
+        
+        <footer>
+    <div class="footer-content">
+        <!-- Left: Logo and Institute Info -->
+        <div class="footer-section">
+            <div class="footer-info">
+                <div class="footer-logo">
+                    Logo
+                </div>
+                <div class="footer-text">
+                    <strong>Hosting Institute</strong><br>
+                    <span class="footer-subtitle">Institute Name Here</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Support and Links -->
+        <div class="footer-section footer-center">
+            <div class="footer-text">
+                <p>Questions, issues, requests, or missing/incorrect data?</p>
+                <p>
+                                        <a href="mailto:smr@stowers.org">
+                        <i class="fas fa-envelope"></i> Contact Administrator
+                    </a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Right: Links and License -->
+        <div class="footer-section footer-right">
+            <div class="footer-text">
+                <p>
+                    <a href="https://github.com/gboncoraglio/moop" target="_blank" rel="noopener">
+                        <i class="fab fa-github"></i> MOOP on GitHub
+                    </a>
+                </p>
+                <p>
+                    <span class="footer-meta">License: <a href="#">Placeholder License</a></span>
+                    <span class="footer-meta">© 2025 All rights reserved</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+        
+        
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap5.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+        <script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
+        
+        <!-- MOOP shared modules - Available to all pages -->
+        <script src="/moop/js/modules/utilities.js"></script>
+        <script src="/moop/js/modules/datatable-config.js"></script>
+        <script src="/moop/js/modules/shared-results-table.js"></script>
+        <script src="/moop/js/modules/annotation-search.js"></script>
+        <script src="/moop/js/modules/advanced-search-filter.js"></script>
+        
+        <!-- Inline scripts - Page-specific variable definitions (must load before page_script) -->
+                
+        <!-- Page-specific script file(s)
+             
+             HOW TO USE page_script:
+             
+             1. PASSING page_script TO render_display_page():
+                - Add 'page_script' key to the $data array passed to render_display_page()
+                - Value can be a STRING or ARRAY:
+                  * String: '/moop/js/my-script.js'
+                  * Array: ['/moop/js/jquery-ui.js', '/moop/js/my-script.js']
+                
+                Example in admin/manage_annotations.php:
+                    $data = [
+                        'annotations' => $annotations,
+                        'page_script' => [
+                            '/' . $config->getString('site') . '/js/jquery-ui.min.js',
+                            '/' . $config->getString('site') . '/js/modules/manage-annotations.js'
+                        ],
+                    ];
+             
+             2. WHAT page_script IS USED FOR:
+                - Load JavaScript modules specific to that page
+                - Runs AFTER all inline_scripts (so inline vars are available)
+                - Runs AFTER all Bootstrap, jQuery, and other libraries
+                - Good place for page-specific event handlers, DOM manipulation, etc.
+             
+             3. SCRIPT LOAD ORDER (IMPORTANT):
+                1. Bootstrap CSS and libraries (head-resources.php)
+                2. Navbar HTML
+                3. Content file HTML (main page content)
+                4. inline_scripts (global vars like sitePath, inline handlers)
+                5. page_script (page-specific JS module(s)) ← YOU ARE HERE
+                6. Footer
+             
+             4. ACCESSING VARIABLES FROM inline_scripts:
+                - inline_scripts defines page-wide variables (sitePath, organism, etc.)
+                - page_script can use those variables since it loads after inline_scripts
+                
+                Example:
+                    inline_scripts: "const sitePath = '/moop';"
+                    page_script: "alert(sitePath); // Works! sitePath is defined"
+             
+             5. SHARED UTILITIES:
+                - Use js/admin-utilities.js for handlers needed on multiple admin pages
+                - Use js/modules/*.js for page-specific logic
+                - Put reusable DOM manipulation in admin-utilities.js
+        -->
+        <script src="/moop/js/modules/utilities.js"></script>
+<script src="/moop/js/modules/source-list-manager.js"></script>
+<script src="/moop/js/sequence-retrieval.js"></script>
+    
+    
+    </body></html>

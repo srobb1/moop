@@ -17,6 +17,7 @@
  * - $uniquenames_string
  * - $displayed_content
  * - $sequence_types
+ * - $available_sequences
  * - $selected_source
  * - $site
  */
@@ -151,6 +152,32 @@
                         </button>
                     </div>
                 <?php endif; ?>
+                
+                <!-- IDs to Search Display -->
+                <div id="searchIdsDisplay" class="mt-3 p-3 bg-light border rounded" style="display: none;">
+                    <small class="text-muted d-block mb-2"><strong>IDs to Search:</strong></small>
+                    <div id="searchIdsContent"></div>
+                </div>
+                
+                <!-- Collapsed info about Parent and Child IDs -->
+                <div class="mt-3">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#idInfoCollapse" aria-expanded="false" aria-controls="idInfoCollapse">
+                        <i class="fa fa-info-circle"></i> About Parent and Child IDs
+                    </button>
+                    <div class="collapse mt-2" id="idInfoCollapse">
+                        <div class="p-3 bg-light border rounded">
+                            <p class="mb-0">
+                                When you enter a parent gene ID (e.g., <code>g24397</code>), the system looks it up in the organism's database 
+                                and automatically retrieves all associated child transcript IDs (e.g., <code>g24397.t1</code>, <code>g24397.t2</code>). 
+                                All IDs (parents and children) are then used to search the FASTA sequence database using <code>blastdbcmd</code>. 
+                                The "IDs to Search" box shows which ones were found 
+                                (<span style="background: #d4edda; padding: 2px 4px; border-radius: 2px;">green</span>) 
+                                and which were not found 
+                                (<span style="background: #f8d7da; padding: 2px 4px; border-radius: 2px;">red</span>).
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Submit button -->
@@ -166,7 +193,9 @@
         <?php if (!empty($displayed_content)): ?>
             <hr class="my-5" id="sequences-section">
             <?php
-            $gene_name = implode(', ', $uniquenames);
+            // For retrieve_sequences.php, we have pre-extracted sequences with ranges
+            // Don't set $gene_name to prevent sequences_display.php from re-extracting
+            $gene_name = '';
             $organism_name = $selected_organism;
             $assembly_name = $selected_assembly;
             $enable_downloads = true;
@@ -183,4 +212,10 @@
 <?php if (!empty($sample_feature_ids)): ?>
     window.sampleFeatureIds = <?= json_encode($sample_feature_ids) ?>;
 <?php endif; ?>
+
+// Pass found IDs to JavaScript for coloring
+window.foundIds = <?= json_encode($found_ids ?? []) ?>;
+
+// Pass parent-to-children mapping for display
+window.parentToChildren = <?= json_encode($parent_to_children ?? []) ?>;
 </script>

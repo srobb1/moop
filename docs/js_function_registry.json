@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "generated": "2025-12-09 19:32:41",
+        "generated": "2025-12-10 16:58:36",
         "totalFunctions": 111,
         "totalFiles": 21,
         "duplicates": 0
@@ -391,12 +391,12 @@
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 659,
+                            "line": 663,
                             "context": "renderRegistry();"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 670,
+                            "line": 674,
                             "context": "renderRegistry();"
                         },
                         {
@@ -413,7 +413,7 @@
                 },
                 {
                     "name": "toggleFile",
-                    "line": 283,
+                    "line": 287,
                     "comment": "/**\n * Toggle file section\n */",
                     "code": "{\n    // Make sure we're working with the actual file-header element\n    const fileHeader = header.closest('.file-header') || header;\n    const list = fileHeader.nextElementSibling;\n    if (list && list.classList.contains('functions-list')) {\n        const isOpen = list.classList.contains('open');\n        list.classList.toggle('open');\n        \n        // Force inline styles to ensure visibility\n        if (list.classList.contains('open')) {\n            list.style.maxHeight = '10000px';\n            list.style.overflow = 'visible';\n        } else {\n            list.style.maxHeight = '0';\n            list.style.overflow = 'hidden';\n        }\n        \n        const arrow = fileHeader.querySelector('.expand-arrow');\n        if (arrow) {\n            arrow.textContent = !isOpen ? '\u25bc' : '\u25b6';\n        }\n    }\n}",
                     "parameters": [],
@@ -430,7 +430,7 @@
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
-                            "line": 274,
+                            "line": 278,
                             "context": "toggleFile(this);"
                         },
                         {
@@ -447,7 +447,7 @@
                 },
                 {
                     "name": "toggleFunctionCode",
-                    "line": 310,
+                    "line": 314,
                     "comment": "/**\n * Toggle function code visibility\n */",
                     "code": "{\n    const item = header.closest('.function-item');\n    if (!item) return;\n    \n    const code = item.querySelector('.function-code');\n    if (code) {\n        code.classList.toggle('open');\n        const arrow = header.querySelector('.expand-arrow');\n        if (arrow) {\n            arrow.textContent = code.classList.contains('open') ? '\u25bc' : '\u25b6';\n        }\n    }\n}",
                     "parameters": [],
@@ -476,7 +476,7 @@
                 },
                 {
                     "name": "toggleUnusedSection",
-                    "line": 327,
+                    "line": 331,
                     "comment": "/**\n * Toggle unused section\n */",
                     "code": "{\n    const content = header.nextElementSibling;\n    if (content && content.classList.contains('unused-content')) {\n        content.classList.toggle('hidden');\n        const arrow = header.querySelector('.unused-arrow');\n        if (arrow) {\n            arrow.textContent = content.classList.contains('hidden') ? '\u25b6' : '\u25bc';\n        }\n    }\n}",
                     "parameters": [],
@@ -505,7 +505,7 @@
                 },
                 {
                     "name": "toggleAll",
-                    "line": 341,
+                    "line": 345,
                     "comment": "/**\n * Toggle all file sections (toggleAll and toggleAllFiles are aliases)\n */",
                     "code": "{\n    const lists = document.querySelectorAll('.functions-list');\n    const hiddenCount = document.querySelectorAll('.functions-list:not(.open)').length;\n    \n    lists.forEach(list => {\n        if (hiddenCount > 0) {\n            list.classList.add('open');\n            // Apply inline styles for open state\n            list.style.maxHeight = '10000px';\n            list.style.overflow = 'visible';\n        } else {\n            list.classList.remove('open');\n            // Apply inline styles for closed state\n            list.style.maxHeight = '0';\n            list.style.overflow = 'hidden';\n        }\n    });\n    \n    // Update all arrows\n    document.querySelectorAll('.file-header .expand-arrow').forEach(arrow => {\n        const list = arrow.closest('.file-header').nextElementSibling;\n        if (list && list.classList.contains('functions-list')) {\n            arrow.textContent = list.classList.contains('open') ? '\u25bc' : '\u25b6';\n        }\n    });\n}",
                     "parameters": [],
@@ -523,7 +523,7 @@
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
-                            "line": 370,
+                            "line": 374,
                             "context": "toggleAll();"
                         },
                         {
@@ -540,7 +540,7 @@
                 },
                 {
                     "name": "toggleAllFiles",
-                    "line": 368,
+                    "line": 372,
                     "comment": "",
                     "code": "{\n    toggleAll();\n}",
                     "parameters": [],
@@ -561,7 +561,7 @@
                 },
                 {
                     "name": "expandAllFiles",
-                    "line": 375,
+                    "line": 379,
                     "comment": "/**\n * Expand all files\n */",
                     "code": "{\n    document.querySelectorAll('.functions-list').forEach(list => {\n        list.classList.add('open');\n        list.style.maxHeight = '10000px';\n        list.style.overflow = 'visible';\n        const header = list.previousElementSibling;\n        if (header) {\n            const arrow = header.querySelector('.expand-arrow');\n            if (arrow) arrow.textContent = '\u25bc';\n        }\n    });\n}",
                     "parameters": [],
@@ -596,7 +596,7 @@
                 },
                 {
                     "name": "collapseAllFiles",
-                    "line": 391,
+                    "line": 395,
                     "comment": "/**\n * Collapse all files\n */",
                     "code": "{\n    document.querySelectorAll('.functions-list').forEach(list => {\n        list.classList.remove('open');\n        list.style.maxHeight = '0';\n        list.style.overflow = 'hidden';\n        const header = list.previousElementSibling;\n        if (header) {\n            const arrow = header.querySelector('.expand-arrow');\n            if (arrow) arrow.textContent = '\u25b6';\n        }\n    });\n}",
                     "parameters": [],
@@ -631,7 +631,7 @@
                 },
                 {
                     "name": "filterRegistry",
-                    "line": 407,
+                    "line": 411,
                     "comment": "/**\n * Filter/search registry\n */",
                     "code": "{\n    const searchInput = document.getElementById('searchInput');\n    const categoryFilter = document.getElementById('categoryFilter');\n    const typeFilter = document.getElementById('typeFilter');\n    const searchMode = document.querySelector('input[name=\"searchMode\"]:checked');\n    \n    if (!searchInput || !searchMode) return;\n    \n    const term = searchInput.value.toLowerCase();\n    const categoryTerm = categoryFilter ? categoryFilter.value : '';\n    const typeTerm = typeFilter ? typeFilter.value : '';\n    const mode = searchMode.value;\n    \n    let visibleCount = 0;\n    \n    document.querySelectorAll('.file-section').forEach(section => {\n        const fileName = section.getAttribute('data-file').toLowerCase();\n        let hasVisibleFunc = false;\n        \n        section.querySelectorAll('.function-item').forEach(item => {\n            const funcName = item.getAttribute('data-func').toLowerCase();\n            const code = item.querySelector('.function-code') ? item.querySelector('.function-code').textContent.toLowerCase() : '';\n            const comment = item.querySelector('.function-comment') ? item.querySelector('.function-comment').textContent.toLowerCase() : '';\n            \n            // Get category and tags from the function object in registry data\n            let funcCategory = '';\n            let funcTags = [];\n            \n            if (registryData && registryData.files) {\n                for (let file of registryData.files) {\n                    const func = file.functions.find(f => f.name.toLowerCase() === funcName);\n                    if (func) {\n                        funcCategory = func.category || '';\n                        funcTags = func.tags || [];\n                        break;\n                    }\n                }\n            }\n            \n            let match = true;\n            \n            // Text search\n            if (term) {\n                let textMatch = false;\n                if (mode === 'all') {\n                    text",
                     "parameters": [],
@@ -650,7 +650,7 @@
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
-                            "line": 560,
+                            "line": 564,
                             "context": "filterRegistry();"
                         },
                         {
@@ -747,7 +747,7 @@
                 },
                 {
                     "name": "clearSearch",
-                    "line": 540,
+                    "line": 544,
                     "comment": "/**\n * Clear search\n */",
                     "code": "{\n    const searchInput = document.getElementById('searchInput');\n    const categoryFilter = document.getElementById('categoryFilter');\n    const typeFilter = document.getElementById('typeFilter');\n    const searchModeAll = document.getElementById('searchAll');\n    \n    if (searchInput) {\n        searchInput.value = '';\n    }\n    if (categoryFilter) {\n        categoryFilter.value = '';\n    }\n    if (typeFilter) {\n        typeFilter.value = '';\n    }\n    if (searchModeAll) {\n        searchModeAll.checked = true;\n    }\n    \n    filterRegistry();\n}",
                     "parameters": [],
@@ -794,7 +794,7 @@
                 },
                 {
                     "name": "downloadRegistry",
-                    "line": 565,
+                    "line": 569,
                     "comment": "/**\n * Download registry as JSON\n */",
                     "code": "{\n    if (!registryData) return;\n    \n    const dataStr = JSON.stringify(registryData, null, 2);\n    const blob = new Blob([dataStr], {type: 'application/json'});\n    const url = URL.createObjectURL(blob);\n    const link = document.createElement('a');\n    link.href = url;\n    link.download = 'function_registry_' + new Date().toISOString().slice(0, 10) + '.json';\n    link.click();\n    URL.revokeObjectURL(url);\n}",
                     "parameters": [],
@@ -836,7 +836,7 @@
                 },
                 {
                     "name": "generateRegistry",
-                    "line": 581,
+                    "line": 585,
                     "comment": "/**\n * Generate registry by calling backend API\n */",
                     "code": "{\n    const btn = document.getElementById('generateBtn');\n    const msg = document.getElementById('registryMessage');\n    \n    if (!btn) return;\n    \n    // Get registry type from button data attribute (default to 'php')\n    const registryType = btn.getAttribute('data-registry-type') || 'php';\n    \n    btn.disabled = true;\n    btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Generating...';\n    \n    // Call the backend API to generate registry\n    fetch('/moop/admin/api/generate_registry.php', {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/json'\n        },\n        body: JSON.stringify({ type: registryType })\n    })\n    .then(response => response.json())\n    .then(data => {\n        btn.disabled = false;\n        btn.innerHTML = '<i class=\"fa fa-refresh\"></i> Generate/Update Registry';\n        \n        if (data.success) {\n            // Show success message\n            if (msg) {\n                msg.innerHTML = '<div class=\"alert alert-success alert-dismissible fade show\" role=\"alert\">' +\n                    '<i class=\"fa fa-check-circle\"></i> ' + data.message +\n                    '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' +\n                    '</div>';\n            }\n            \n            // Reload page after 2 seconds to show updated status\n            setTimeout(() => {\n                location.reload();\n            }, 2000);\n        } else {\n            // Show error message\n            if (msg) {\n                msg.innerHTML = '<div class=\"alert alert-danger alert-dismissible fade show\" role=\"alert\">' +\n                    '<i class=\"fa fa-exclamation-circle\"></i> ' + data.message +\n                    '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' +\n                    '</div>';\n            }\n        }\n    })\n    .catch(error => {\n        btn.disabled = false;\n        btn.innerHTML = '<i class=\"fa fa-refresh\"></i> Generate/Update Registry';",
                     "parameters": [],
@@ -884,7 +884,7 @@
                 },
                 {
                     "name": "htmlEscape",
-                    "line": 645,
+                    "line": 649,
                     "comment": "/**\n * HTML escape utility\n */",
                     "code": "{\n    const div = document.createElement('div');\n    div.textContent = text;\n    return div.innerHTML;\n}",
                     "parameters": [],
@@ -926,37 +926,37 @@
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 169,
+                            "line": 170,
                             "context": "metadataHTML += `<span style=\"color: #666; font-size: 12px;\"><strong>Returns:</strong> <code>${htmlEscape(func.returnType)}</code></span>`;"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 171,
+                            "line": 172,
                             "context": "metadataHTML += ` - ${htmlEscape(func.returnDescription)}`;"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 186,
+                            "line": 190,
                             "context": "depsHTML += func.internalCalls.map(call => `<code style=\"background: #c8e6c9; padding: 2px 6px; border-radius: 3px; margin: 2px 2px 2px 0; display: inline-block; font-size: 11px;\">${htmlEscape(call)}()</code>`).join('');"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 203,
+                            "line": 207,
                             "context": "html += `<li><code>${htmlEscape(phpFile)}</code></li>`;"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 228,
+                            "line": 232,
                             "context": "html += `<li><strong>${htmlEscape(file)}</strong> (${usages.length}x)"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 232,
+                            "line": 236,
                             "context": "html += `<li><code>line ${usage.line}</code>: <small>${htmlEscape(usage.context.substring(0, 80))}</small></li>`;"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 247,
+                            "line": 251,
                             "context": "code.innerHTML = `<pre>${htmlEscape(func.code)}</pre>`;"
                         }
                     ],
@@ -2183,7 +2183,7 @@
                     "tags": [
                         "state-modifying"
                     ],
-                    "usageCount": 11,
+                    "usageCount": 12,
                     "usages": [
                         {
                             "file": "js/permission-manager.js",
@@ -2239,6 +2239,11 @@
                             "file": "js/modules/organism-management.js",
                             "line": 393,
                             "context": "html += '<code class=\"text-break\">' + escapeHtml(data.command) + '</code><br>';"
+                        },
+                        {
+                            "file": "tools/pages/retrieve_sequences.php",
+                            "line": 252,
+                            "context": "return `<div style=\"padding: 4px 0;\"><span style=\"background: ${bgColor}; padding: 2px 6px; border-radius: 3px;\">${escapeHtml(id)}</span></div>`;"
                         }
                     ],
                     "phpFilesCount": 1,
@@ -3692,7 +3697,7 @@
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
-                            "line": 274,
+                            "line": 278,
                             "context": "toggleFile(this);"
                         },
                         {
@@ -3731,7 +3736,7 @@
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
-                            "line": 370,
+                            "line": 374,
                             "context": "toggleAll();"
                         },
                         {
@@ -4073,7 +4078,7 @@
                     "usages": [
                         {
                             "file": "tools/pages/retrieve_sequences.php",
-                            "line": 76,
+                            "line": 77,
                             "context": "<button type=\"button\" class=\"btn btn-success\" onclick=\"clearSourceFilter();\">"
                         }
                     ],
@@ -4195,11 +4200,21 @@
                         "error-handling",
                         "validation"
                     ],
-                    "usageCount": 1,
+                    "usageCount": 3,
                     "usages": [
                         {
                             "file": "js/sequence-retrieval.js",
                             "line": 218,
+                            "context": "updateSearchIdsDisplay();"
+                        },
+                        {
+                            "file": "tools/pages/retrieve_sequences.php",
+                            "line": 220,
+                            "context": "function updateSearchIdsDisplay() {"
+                        },
+                        {
+                            "file": "tools/pages/retrieve_sequences.php",
+                            "line": 266,
                             "context": "updateSearchIdsDisplay();"
                         }
                     ],
@@ -4260,7 +4275,7 @@
                     "usages": [
                         {
                             "file": "tools/pages/retrieve_sequences.php",
-                            "line": 149,
+                            "line": 150,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"clearFeatureIds()\">"
                         }
                     ],
@@ -4289,7 +4304,7 @@
                     "usages": [
                         {
                             "file": "tools/pages/retrieve_sequences.php",
-                            "line": 146,
+                            "line": 147,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"loadSampleIds()\">"
                         }
                     ],
@@ -4351,7 +4366,7 @@
         {
             "name": "toggleAllFiles",
             "file": "js/manage-registry.js",
-            "line": 368
+            "line": 372
         },
         {
             "name": "fixFilePermissions",

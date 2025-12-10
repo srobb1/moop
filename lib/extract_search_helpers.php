@@ -76,42 +76,82 @@ function parseContextParameters() {
  * Parse and validate feature IDs from user input
  * 
  * Handles both comma and newline separated formats
+ * Detects range patterns (ID:1..10, ID:1-10, ID 1..10, ID 1-10) and returns them separately
  * 
- * @param string $uniquenames_string - Comma or newline separated IDs
- * @return array - ['valid' => bool, 'uniquenames' => [], 'error' => '']
+ * @param string $uniquenames_string - Comma or newline separated IDs with optional ranges
+ * @return array - ['valid' => bool, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => bool, 'error' => '']
  */
 function parseFeatureIds($uniquenames_string) {
     $uniquenames = [];
+    $ranges = [];
     
     if (empty($uniquenames_string)) {
-        return ['valid' => false, 'uniquenames' => [], 'error' => 'No feature IDs provided'];
+        return ['valid' => false, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => false, 'error' => 'No feature IDs provided'];
     }
     
     // Handle both comma and newline separated formats
-    $uniquenames = array_filter(array_map('trim', 
+    $entries = array_filter(array_map('trim', 
         preg_split('/[\n,]+/', $uniquenames_string)
     ));
     
-    if (empty($uniquenames)) {
-        return ['valid' => false, 'uniquenames' => [], 'error' => 'No valid feature IDs found'];
+    if (empty($entries)) {
+        return ['valid' => false, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => false, 'error' => 'No valid feature IDs found'];
     }
     
-    return ['valid' => true, 'uniquenames' => $uniquenames, 'error' => ''];
+    // Process each entry to detect range patterns
+    // Patterns: "ID:1..10", "ID:1-10", "ID 1..10", "ID 1-10"
+    foreach ($entries as $entry) {
+        // Check for range patterns
+        if (preg_match('/^(.+?)[\s:]+(\d+)[.\-]\.?(\d+)$/', $entry, $matches)) {
+            $id = trim($matches[1]);
+            $start = $matches[2];
+            $end = $matches[3];
+            
+            // Validate range (start should be <= end)
+            if ((int)$start <= (int)$end) {
+                // Store in format expected by blastdbcmd: "ID:start-end"
+                $ranges[] = "$id:$start-$end";
+                $uniquenames[] = $id;
+            } else {
+                // Invalid range, skip or treat as error
+                continue;
+            }
+        } else {
+            // Regular ID without range
+            $uniquenames[] = $entry;
+        }
+    }
+    
+    $uniquenames = array_unique($uniquenames);
+    
+    if (empty($uniquenames)) {
+        return ['valid' => false, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => false, 'error' => 'No valid feature IDs found'];
+    }
+    
+    return [
+        'valid' => true, 
+        'uniquenames' => array_values($uniquenames), 
+        'ranges' => $ranges,
+        'has_ranges' => !empty($ranges),
+        'error' => ''
+    ];
 }
 
 /**
  * Extract sequences for all available types from BLAST database
  * 
  * Iterates through all sequence types and extracts for the given feature IDs
+ * Supports range notation for subsequence extraction
  * 
  * @param string $assembly_dir - Path to assembly directory
  * @param array $uniquenames - Feature IDs to extract
  * @param array $sequence_types - Available sequence type configurations (from site_config)
  * @param string $organism - Organism name (for parent/child database lookup)
  * @param string $assembly - Assembly name (for parent/child database lookup)
+ * @param array $ranges - Optional array of range strings ("ID:start-end") for subsequence extraction
  * @return array - ['success' => bool, 'content' => [...], 'errors' => []]
  */
-function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types, $organism = '', $assembly = '') {
+function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types, $organism = '', $assembly = '', $ranges = [], $original_input_ids = [], $parent_to_children = []) {
     $displayed_content = [];
     $errors = [];
     
@@ -120,7 +160,7 @@ function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_type
         
         if (!empty($files)) {
             $fasta_file = $files[0];
-            $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);
+            $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly, $ranges, $original_input_ids, $parent_to_children);
             
             if ($extract_result['success']) {
                 // Remove blank lines
@@ -141,7 +181,7 @@ function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_type
             $files = glob("$assembly_dir/*{$config['pattern']}");
             if (!empty($files)) {
                 $fasta_file = $files[0];
-                $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);
+                $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly, $ranges, $original_input_ids, $parent_to_children);
                 if (!empty($extract_result['error'])) {
                     $errors[] = $extract_result['error'];
                     break;
@@ -170,9 +210,43 @@ function formatSequenceResults($displayed_content, $sequence_types) {
     $available_sequences = [];
     
     foreach ($displayed_content as $seq_type => $content) {
+        
+        // Parse FASTA content into individual sequences by ID
+        $sequences = [];
+        if (!empty($content)) {
+            $current_id = null;
+            $current_seq = [];
+            $lines = explode("\n", $content);
+            
+            foreach ($lines as $line) {
+                if (strpos($line, '>') === 0) {
+                    // Header line
+                    if (!is_null($current_id)) {
+                        // Store previous sequence with full FASTA format (including >)
+                        $sequences[$current_id] = implode("\n", array_merge([">" . $current_id], $current_seq));
+                    }
+                    // Extract ID from header (remove leading '>')
+                    $current_id = substr($line, 1);
+                    $current_seq = [];
+                } else if (!empty($line)) {
+                    // Sequence line (skip empty lines)
+                    $current_seq[] = $line;
+                }
+            }
+            
+            // Store last sequence with full FASTA format
+            if (!is_null($current_id)) {
+                $sequences[$current_id] = implode("\n", array_merge([">" . $current_id], $current_seq));
+            }
+        }
+        
+        foreach ($sequences as $id => $seq_content) {
+            $first_line = explode("\n", $seq_content)[0];
+        }
+        
         $available_sequences[$seq_type] = [
             'label' => $sequence_types[$seq_type]['label'] ?? ucfirst($seq_type),
-            'sequences' => [$content]  // Wrap in array as sequences_display expects
+            'sequences' => $sequences
         ];
     }
     

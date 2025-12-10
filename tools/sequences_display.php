@@ -57,77 +57,96 @@ if (!isset($available_sequences)) {
     $available_sequences = [];
 }
 
-// Validate required parameters
-if (empty($organism_name)) {
-    $sequence_errors[] = 'Organism name not specified';
-} elseif (empty($gene_name)) {
-    // No sequences requested - this is not an error, just no display needed
-    $gene_name = '';
+// Check if sequences are already pre-populated (from retrieve_sequences.php)
+$has_prepopulated_sequences = !empty($available_sequences) && array_reduce($available_sequences, function($carry, $item) {
+    return $carry || (!empty($item['sequences']) || isset($item['label']));
+}, false);
+
+// If sequences are pre-populated, skip all the extraction setup
+if ($has_prepopulated_sequences) {
+    // Sequences already extracted - just display them
 } else {
-    // Get the organism directory path
-    $organism_dir = "$organism_data/$organism_name";
-    
-    // Validate organism directory exists
-    if (!is_dir($organism_dir)) {
-        $sequence_errors[] = "Organism directory not found: $organism_name";
+    // Normal setup: look for FASTA files and prepare for extraction
+    // Validate required parameters
+    if (empty($organism_name)) {
+        $sequence_errors[] = 'Organism name not specified';
+    } elseif (empty($gene_name)) {
+        // No sequences requested - this is not an error, just no display needed
+        $gene_name = '';
     } else {
-        // Find the assembly directory
-        $dirs = array_diff(scandir($organism_dir), ['.', '..']);
-        $assembly_found = false;
+        // Get the organism directory path
+        $organism_dir = "$organism_data/$organism_name";
         
-        foreach ($dirs as $item) {
-            $full_path = "$organism_dir/$item";
-            if (is_dir($full_path) && !in_array(basename($full_path), ['fasta_files'])) {
-                $assembly_dir = $full_path;
-                $assembly_found = true;
-                break;
-            }
-        }
-        
-        if (!$assembly_found) {
-            $sequence_errors[] = "Assembly directory not found in: $organism_name";
-        } elseif (!is_dir($assembly_dir)) {
-            $sequence_errors[] = "Assembly directory is not readable: " . basename($assembly_dir);
+        // Validate organism directory exists
+        if (!is_dir($organism_dir)) {
+            $sequence_errors[] = "Organism directory not found: $organism_name";
         } else {
-            // Look for FASTA files
-            $fasta_files_found = false;
-            foreach ($sequence_types as $seq_type => $seq_config) {
-                $files = glob("$assembly_dir/*{$seq_config['pattern']}");
-                
-                if (!empty($files)) {
-                    $fasta_files_found = true;
-                    $fasta_file = $files[0];
-                    $available_sequences[$seq_type] = [
-                        'file' => $fasta_file,
-                        'label' => $seq_config['label'],
-                        'sequences' => []
-                    ];
+            // Find the assembly directory
+            $dirs = array_diff(scandir($organism_dir), ['.', '..']);
+            $assembly_found = false;
+            
+            foreach ($dirs as $item) {
+                $full_path = "$organism_dir/$item";
+                if (is_dir($full_path) && !in_array(basename($full_path), ['fasta_files'])) {
+                    $assembly_dir = $full_path;
+                    $assembly_found = true;
+                    break;
                 }
             }
             
-            if (!$fasta_files_found) {
-                $sequence_errors[] = "No FASTA sequence files found for: $organism_name";
+            if (!$assembly_found) {
+                $sequence_errors[] = "Assembly directory not found in: $organism_name";
+            } elseif (!is_dir($assembly_dir)) {
+                $sequence_errors[] = "Assembly directory is not readable: " . basename($assembly_dir);
+            } else {
+                // Look for FASTA files
+                $fasta_files_found = false;
+                foreach ($sequence_types as $seq_type => $seq_config) {
+                    $files = glob("$assembly_dir/*{$seq_config['pattern']}");
+                    
+                    if (!empty($files)) {
+                        $fasta_files_found = true;
+                        $fasta_file = $files[0];
+                        $available_sequences[$seq_type] = [
+                            'file' => $fasta_file,
+                            'label' => $seq_config['label'],
+                            'sequences' => []
+                        ];
+                    }
+                }
+                
+                if (!$fasta_files_found) {
+                    $sequence_errors[] = "No FASTA sequence files found for: $organism_name";
+                }
             }
         }
     }
 }
 
-// If we have sequence files available, try to extract sequences
-if (empty($sequence_errors) && !empty($available_sequences) && !empty($gene_name)) {
-    $feature_ids = array_map('trim', explode(',', $gene_name));
-    $extraction_errors = [];
-    
-    foreach ($available_sequences as $seq_type => $seq_data) {
-        $fasta_file = $available_sequences[$seq_type]['file'];
+// If we have sequence files available, try to extract sequences (unless already pre-populated)
+// Check if any sequences are already pre-populated (from retrieve_sequences.php)
+$has_prepopulated_sequences_2 = !empty($available_sequences) && array_reduce($available_sequences, function($carry, $item) {
+    return $carry || !empty($item['sequences']);
+}, false);
+
+if (empty($sequence_errors) && !empty($available_sequences) && (!empty($gene_name) || $has_prepopulated_sequences_2)) {
+    // Only extract if NOT pre-populated
+    if (!$has_prepopulated_sequences_2 && !empty($gene_name)) {
+        $feature_ids = array_map('trim', explode(',', $gene_name));
+        $extraction_errors = [];
         
-        // Extract sequences and track errors
-        $sequences = extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, $extraction_errors);
-        $available_sequences[$seq_type]['sequences'] = $sequences;
-    }
-    
-    // Collect extraction errors
-    if (!empty($extraction_errors)) {
-        $sequence_errors = array_merge($sequence_errors, $extraction_errors);
+        foreach ($available_sequences as $seq_type => $seq_data) {
+            $fasta_file = $available_sequences[$seq_type]['file'];
+            
+            // Extract sequences and track errors
+            $sequences = extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, $extraction_errors);
+            $available_sequences[$seq_type]['sequences'] = $sequences;
+        }
+        
+        // Collect extraction errors
+        if (!empty($extraction_errors)) {
+            $sequence_errors = array_merge($sequence_errors, $extraction_errors);
+        }
     }
 }
 
