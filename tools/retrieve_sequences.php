@@ -129,6 +129,14 @@ if (!empty($selected_assembly_name)) {
     if (empty($filter_organisms)) {
         $filter_organisms = [$selected_organism];
     }
+} elseif (!empty($context['group'])) {
+    // Filter by group if only group specified
+    $filter_organisms = [];
+    if (isset($sources_by_group[$context['group']])) {
+        foreach ($sources_by_group[$context['group']] as $organism => $assemblies) {
+            $filter_organisms[] = $organism;
+        }
+    }
 }
 
 // Build selected_source for radio button selection
@@ -139,6 +147,18 @@ if (!empty($selected_organism) && !empty($selected_assembly_accession)) {
     foreach ($accessible_sources as $source) {
         if ($source['organism'] === $selected_organism) {
             $selected_source = $selected_organism . '|' . $source['assembly'];
+            break;
+        }
+    }
+} elseif (!empty($context['group']) && !empty($filter_organisms)) {
+    // If only group specified, select first organism's first assembly from that group
+    $first_organism = reset($filter_organisms);
+    foreach ($accessible_sources as $source) {
+        if ($source['organism'] === $first_organism && $source['group'] === $context['group']) {
+            $selected_source = $first_organism . '|' . $source['assembly'];
+            $selected_organism = $first_organism;
+            $selected_assembly_accession = $source['assembly'];
+            $selected_assembly_name = $source['genome_name'] ?? $source['assembly'];
             break;
         }
     }
@@ -340,6 +360,9 @@ $data = [
     'sequence_types' => $sequence_types,
     'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $sequence_types) : [],
     'context' => $context,
+    'context_organism' => $context['organism'] ?? '',
+    'context_assembly' => $context['assembly'] ?? '',
+    'context_group' => $context['group'] ?? '',
     'filter_organisms' => $filter_organisms,
     'sources_by_group' => $sources_by_group,
     'download_error_msg' => $download_error_msg,
