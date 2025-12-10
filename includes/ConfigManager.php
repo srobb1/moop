@@ -61,6 +61,12 @@ class ConfigManager
     ];
 
     /**
+     * Editable configuration keys - whitelisted keys that can be edited via admin UI
+     * Used in both initialize() and saveEditableConfig() to ensure consistency
+     */
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences'];
+
+    /**
      * Private constructor - use getInstance() instead
      */
     private function __construct() {}
@@ -108,9 +114,8 @@ class ConfigManager
         if (file_exists($editable_config_path)) {
             $editable_config = json_decode(file_get_contents($editable_config_path), true);
             if (is_array($editable_config)) {
-                // Only merge allowed keys to prevent overriding structural config
-                $allowed_editable_keys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences'];
-                foreach ($allowed_editable_keys as $key) {
+                // Use the centralized whitelist
+                foreach ($this->editableConfigKeys as $key) {
                     // Only override if value is set AND non-empty (preserve site_config defaults for empty values)
                     if (isset($editable_config[$key]) && ($editable_config[$key] !== '' && $editable_config[$key] !== null)) {
                         // Special handling for nested arrays - deep merge to preserve defaults
@@ -498,8 +503,8 @@ class ConfigManager
      */
     public function saveEditableConfig($data, $config_dir)
     {
-        // Whitelist of allowed editable keys
-        $allowed_keys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences'];
+        // Use the centralized whitelist of allowed editable keys
+        $allowed_keys = $this->editableConfigKeys;
         
         // Filter to only allowed keys
         $editable_data = [];
