@@ -499,7 +499,7 @@ class ConfigManager
     public function saveEditableConfig($data, $config_dir)
     {
         // Whitelist of allowed editable keys
-        $allowed_keys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges'];
+        $allowed_keys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences'];
         
         // Filter to only allowed keys
         $editable_data = [];
@@ -559,7 +559,7 @@ class ConfigManager
                     }
                 }
                 
-                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges') {
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'blast_sample_sequences') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);
