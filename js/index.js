@@ -68,6 +68,38 @@ function switchView(view) {
     // Initialize tree on first view
     if (!phyloTree) {
       initPhyloTree(treeData, userAccess);
+      // Setup filter listener after tree is initialized
+      setupTaxonomyFilter();
     }
   }
+}
+
+function setupTaxonomyFilter() {
+  const filterInput = document.getElementById('taxonomy-filter');
+  if (!filterInput) return;
+  
+  filterInput.addEventListener('keyup', function() {
+    filterTaxonomyTree(this.value.toLowerCase());
+  });
+}
+
+function filterTaxonomyTree(filterText) {
+  const nodes = document.querySelectorAll('.phylo-node');
+  
+  nodes.forEach(node => {
+    const nodeLabel = node.textContent.toLowerCase();
+    const matches = filterText === '' || nodeLabel.includes(filterText);
+    
+    if (matches) {
+      node.style.display = '';
+      // Show parent nodes if this node is visible
+      let parent = node.closest('.phylo-children')?.parentElement;
+      while (parent && parent.classList.contains('phylo-node')) {
+        parent.style.display = '';
+        parent = parent.closest('.phylo-children')?.parentElement;
+      }
+    } else {
+      node.style.display = 'none';
+    }
+  });
 }

@@ -68,8 +68,19 @@
           <div class="card-header bg-primary text-white">
             <h5 class="mb-0"><i class="fa fa-project-diagram"></i> Taxonomy Tree</h5>
           </div>
-          <div class="card-body taxonomy-tree-scroll">
-            <div id="taxonomy-tree-container"></div>
+          <div class="card-body">
+            <!-- Tree Filter -->
+            <div class="mb-3">
+              <input 
+                type="text" 
+                class="form-control form-control-sm" 
+                id="taxonomy-filter" 
+                placeholder="Filter organisms by name..."
+                >
+            </div>
+            <div class="taxonomy-tree-scroll">
+              <div id="taxonomy-tree-container"></div>
+            </div>
           </div>
         </div>
       </div>
