@@ -96,77 +96,11 @@
             </div>
 
             <!-- Source Selection -->
-            <div class="fasta-source-selector">
-                <label class="form-label"><strong>Select Source</strong></label>
-                
-                <div class="fasta-source-filter">
-                    <div class="input-group input-group-sm">
-                        <input 
-                            type="text" 
-                            class="form-control" 
-                            id="sourceFilter" 
-                            placeholder="Filter by group, organism, or assembly..."
-                            value="<?= htmlspecialchars($context_organism ?: $context_group) ?>"
-                            >
-                        <button type="button" class="btn btn-success" onclick="clearBlastSourceFilters();">
-                            <i class="fa fa-times"></i> Clear Filters
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="fasta-source-list">
-                    <?php 
-                    $group_colors = ['primary', 'success', 'info', 'warning', 'danger', 'secondary', 'dark'];
-                    $group_color_map = [];
-                    
-                    foreach ($sources_by_group as $group_name => $organisms): 
-                        if (!isset($group_color_map[$group_name])) {
-                            $group_color_map[$group_name] = $group_colors[count($group_color_map) % count($group_colors)];
-                        }
-                        $group_color = $group_color_map[$group_name];
-                        
-                        foreach ($organisms as $organism => $assemblies): 
-                            foreach ($assemblies as $source): 
-                                $search_text = strtolower("$group_name $organism $source[assembly]");
-                                $matches_context = true;
-                                
-                                if (!empty($context_assembly)) {
-                                    $matches_context = ($source['organism'] === $context_organism && $source['assembly'] === $context_assembly);
-                                } elseif (!empty($context_organism)) {
-                                    $matches_context = ($source['organism'] === $context_organism);
-                                } elseif (!empty($context_group)) {
-                                    $matches_context = ($group_name === $context_group);
-                                }
-                                
-                                $hidden_class = !$matches_context ? 'hidden' : '';
-                                ?>
-                                <div class="fasta-source-line <?= $hidden_class ?>" data-search="<?= htmlspecialchars($search_text) ?>">
-                                    <input 
-                                        type="radio" 
-                                        name="selected_source" 
-                                        value="<?= htmlspecialchars($source['organism'] . '|' . $source['assembly']) ?>"
-                                        data-organism="<?= htmlspecialchars($source['organism']) ?>"
-                                        data-assembly="<?= htmlspecialchars($source['assembly']) ?>"
-                                        data-path="<?= htmlspecialchars($source['path']) ?>"
-                                        onchange="updateDatabaseList();"
-                                        <?= ($selected_source === ($source['organism'] . '|' . $source['assembly'])) ? 'checked' : '' ?>
-                                    >
-                                    
-                                    <span class="badge badge-sm bg-<?= $group_color ?> text-white">
-                                        <?= htmlspecialchars($group_name) ?>
-                                    </span>
-                                    <span class="badge badge-sm bg-secondary text-white">
-                                        <?= htmlspecialchars($organism) ?>
-                                    </span>
-                                    <span class="badge badge-sm bg-info text-white">
-                                        <?= htmlspecialchars($source['assembly']) ?>
-                                    </span>
-                                </div>
-                            <?php endforeach; 
-                        endforeach; 
-                    endforeach; ?>
-                </div>
-            </div>
+            <?php
+            $clear_filter_function = 'clearBlastSourceFilters';
+            $on_change_function = 'updateDatabaseList';
+            include __DIR__ . '/../../includes/source-list.php';
+            ?>
 
             <!-- Current Selection Display -->
             <div class="mb-4 p-3 bg-light border rounded">

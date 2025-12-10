@@ -82,16 +82,23 @@ $blast_program = trim($_POST['blast_program'] ?? 'blastx');
 $selected_source = trim($_POST['selected_source'] ?? '');
 $blast_db = trim($_POST['blast_db'] ?? '');
 
+// Initialize selection variables
+$selected_organism = '';
+$selected_assembly_name = '';
+$selected_assembly_accession = '';
+
 // Initialize selected_source from context if not set from form
 // When arriving with context_organism and context_assembly, pre-select that source
 if (empty($selected_source) && !empty($context_organism) && !empty($context_assembly)) {
-    $selected_source = $context_organism . '|' . $context_assembly;
-    
     // Try to find matching source - assembly param might be accession or genome_name
     $source_found = false;
     foreach ($accessible_sources as $source) {
         if ($source['organism'] === $context_organism && $source['assembly'] === $context_assembly) {
             // Direct match found
+            $selected_organism = $source['organism'];
+            $selected_assembly_name = $source['genome_name'];
+            $selected_assembly_accession = $source['assembly'];
+            $selected_source = $context_organism . '|' . $context_assembly;
             $source_found = true;
             break;
         }
@@ -107,13 +114,31 @@ if (empty($selected_source) && !empty($context_organism) && !empty($context_asse
             if (!empty($genome_id_param)) {
                 foreach ($accessible_sources as $source) {
                     if ($source['organism'] === $context_organism && $source['genome_id'] == $genome_id_param) {
+                        $selected_organism = $source['organism'];
+                        $selected_assembly_name = $source['genome_name'];
+                        $selected_assembly_accession = $source['assembly'];
                         $selected_source = $context_organism . '|' . $source['assembly'];
                         break;
                     }
                 }
             }
         } catch (Exception $e) {
-            // If lookup fails, keep original selected_source
+            // If lookup fails, keep original values
+        }
+    }
+} elseif (!empty($selected_source)) {
+    // Extract organism and assembly from selected_source
+    $source_parts = explode('|', $selected_source);
+    if (count($source_parts) === 2) {
+        $selected_organism = $source_parts[0];
+        $selected_assembly_accession = $source_parts[1];
+        
+        // Find the matching source to get genome_name
+        foreach ($accessible_sources as $source) {
+            if ($source['organism'] === $selected_organism && $source['assembly'] === $selected_assembly_accession) {
+                $selected_assembly_name = $source['genome_name'];
+                break;
+            }
         }
     }
 }
@@ -268,10 +293,14 @@ $data = [
     'context_assembly' => $context_assembly,
     'context_group' => $context_group,
     'display_name' => $display_name,
+    'filter_organisms' => $filter_organisms,
     'filter_organisms_string' => $filter_organisms_string,
     'search_query' => $search_query,
     'blast_program' => $blast_program,
     'selected_source' => $selected_source,
+    'selected_organism' => $selected_organism,
+    'selected_assembly_name' => $selected_assembly_name,
+    'selected_assembly_accession' => $selected_assembly_accession,
     'blast_db' => $blast_db,
     'search_error' => $search_error,
     'blast_result' => $blast_result,
