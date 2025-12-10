@@ -20,6 +20,8 @@
  * - $sequence_types
  * - $available_sequences
  * - $selected_source
+ * - $sample_feature_ids
+ * - $parent_to_children
  * - $site
  */
 ?>
@@ -88,7 +90,7 @@
                     ><?= htmlspecialchars($uniquenames_string) ?></textarea>
                 <small class="form-text text-muted">Enter IDs one per line or comma-separated</small>
                 <small class="form-text text-muted d-block mt-2">
-                    Example IDs: <?= htmlspecialchars(implode(', ', array_slice($sample_feature_ids, 0, 2))) ?>
+                    Example IDs: <?= htmlspecialchars(implode(', ', array_slice($sample_feature_ids, 0, 2))) ?><?= count($sample_feature_ids) > 2 ? ' (and ' . (count($sample_feature_ids) - 2) . ' more)' : '' ?>
                 </small>
                 
                 <!-- Sample IDs Help -->
