@@ -105,7 +105,7 @@ $data = [
     'config' => $config,
     'site' => $site,
     'page_styles' => [
-        '/' . $site . '/admin/css/manage-taxonomy-tree.css'
+        '/' . $site . '/css/manage-taxonomy-tree.css'
     ],
     'page_script' => [
         '/' . $site . '/js/admin-utilities.js',

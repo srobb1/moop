@@ -222,7 +222,7 @@ $data = [
     'stale_entries_audit' => $stale_entries_audit,
     'config' => $config,
     'page_styles' => [
-        '/' . $site . '/admin/css/manage-users.css'
+        '/' . $site . '/css/manage-users.css'
     ],
     'page_script' => [
         '/' . $site . '/js/admin-utilities.js',

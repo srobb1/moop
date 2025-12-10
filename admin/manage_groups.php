@@ -266,7 +266,7 @@ $data = [
     'existing_groups' => $all_existing_groups,
     'config' => $config,
     'page_styles' => [
-        '/' . $site . '/admin/css/manage-groups.css'
+        '/' . $site . '/css/manage-groups.css'
     ],
     'page_script' => [
         '/' . $site . '/js/admin-utilities.js',

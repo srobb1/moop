@@ -1,9 +1,0 @@
-/* Manage Site Configuration Styling */
-
-.modal-body .nav-tabs .nav-link {
-    color: #212529 !important;
-}
-
-.modal-body .nav-tabs .nav-link.active {
-    color: #212529 !important;
-}
