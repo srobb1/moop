@@ -162,6 +162,18 @@ if (!empty($selected_organism) && !empty($selected_assembly_accession)) {
             break;
         }
     }
+} elseif (!empty($filter_organisms)) {
+    // If only organisms list specified (e.g., from multi-organism search), select first one's first assembly
+    $first_organism = reset($filter_organisms);
+    foreach ($accessible_sources as $source) {
+        if ($source['organism'] === $first_organism) {
+            $selected_source = $first_organism . '|' . $source['assembly'];
+            $selected_organism = $first_organism;
+            $selected_assembly_accession = $source['assembly'];
+            $selected_assembly_name = $source['genome_name'] ?? $source['assembly'];
+            break;
+        }
+    }
 }
 
 // If sequence IDs are provided, extract ALL sequence types
