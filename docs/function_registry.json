@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "generated": "2025-12-09 18:47:45",
-        "totalFunctions": 139,
+        "generated": "2025-12-10 16:05:12",
+        "totalFunctions": 140,
         "totalFiles": 19,
         "duplicates": 0
     },
@@ -914,7 +914,7 @@
                         },
                         {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 142,
+                            "line": 153,
                             "context": "$row = getFeatureById($ancestor_feature_id, $db, $accessible_genome_ids);"
                         }
                     ]
@@ -1466,7 +1466,7 @@
         },
         {
             "name": "lib/extract_search_helpers.php",
-            "count": 10,
+            "count": 11,
             "functions": [
                 {
                     "name": "parseOrganismParameter",
@@ -1617,7 +1617,7 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 3,
                     "usages": [
                         {
                             "file": "/data/moop/tools/retrieve_selected_sequences.php",
@@ -1628,6 +1628,11 @@
                             "file": "/data/moop/tools/retrieve_sequences.php",
                             "line": 188,
                             "context": "$extract_result = extractSequencesForAllTypes($fasta_source['path'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly);"
+                        },
+                        {
+                            "file": "/data/moop/tools/parent.php",
+                            "line": 214,
+                            "context": "$extract_result = extractSequencesForAllTypes($assembly_dir, $feature_ids, $sequence_types, $organism_name, $genome_accession);"
                         }
                     ]
                 },
@@ -1663,12 +1668,12 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/retrieve_selected_sequences.php",
-                            "line": 157,
+                            "line": 152,
                             "context": "'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $sequence_types) : [],"
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 253,
+                            "line": 248,
                             "context": "'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $sequence_types) : [],"
                         }
                     ]
@@ -1705,17 +1710,12 @@
                         "readonly",
                         "recursive"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 1,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/retrieve_selected_sequences.php",
-                            "line": 123,
-                            "context": "sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);"
-                        },
-                        {
-                            "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 224,
-                            "context": "sendFileDownload($displayed_content[$sequence_type], $sequence_type, $file_format);"
+                            "file": "/data/moop/lib/extract_search_helpers.php",
+                            "line": 331,
+                            "context": "sendFileDownload($fasta_content, $sequence_type, $file_format);"
                         }
                     ]
                 },
@@ -1847,8 +1847,65 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 230,
+                            "line": 225,
                             "context": "$available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_types);"
+                        }
+                    ]
+                },
+                {
+                    "name": "handleSequenceDownload",
+                    "line": 312,
+                    "comment": "/**\n* Handle sequence download request\n*\n* Checks for download flag and sends file if conditions are met.\n* Works with both array-based sequences (from extractSequencesFromFasta)\n* and string-based sequences (from extractSequencesForAllTypes).\n*\n* @param bool $download_flag - Whether download was requested\n* @param string $sequence_type - The sequence type to download\n* @param array|string $sequence_data - Either array of sequences or a string\n* @return bool - True if download was sent and script exited, false otherwise\n*/",
+                    "code": "function handleSequenceDownload($download_flag, $sequence_type, $sequence_data) {\n    if (!$download_flag || empty($sequence_type)) {\n        return false;\n    }\n    \n    // Handle both formats: array (from extractSequencesFromFasta) and string (from extractSequencesForAllTypes)\n    $fasta_content = '';\n    if (is_array($sequence_data)) {\n        // Array format: feature_id => content\n        if (!empty($sequence_data)) {\n            $fasta_content = implode(\"\\n\", $sequence_data);\n        }\n    } else if (is_string($sequence_data)) {\n        // String format: already combined FASTA content\n        $fasta_content = $sequence_data;\n    }\n    \n    if (!empty($fasta_content)) {\n        $file_format = $_POST['file_format'] ?? 'fasta';\n        sendFileDownload($fasta_content, $sequence_type, $file_format);\n        exit;\n    }\n    \n    return false;\n}",
+                    "parameters": [
+                        {
+                            "name": "download_flag",
+                            "type": "bool",
+                            "description": "Whether download was requested"
+                        },
+                        {
+                            "name": "sequence_type",
+                            "type": "string",
+                            "description": "The sequence type to download"
+                        },
+                        {
+                            "name": "sequence_data",
+                            "type": "array|string",
+                            "description": "Either array of sequences or a string"
+                        }
+                    ],
+                    "returnType": "bool",
+                    "returnDescription": "True if download was sent and script exited, false otherwise",
+                    "internalCalls": [
+                        "handleSequenceDownload",
+                        "sendFileDownload"
+                    ],
+                    "category": "utility",
+                    "tags": [
+                        "readonly",
+                        "recursive"
+                    ],
+                    "usageCount": 4,
+                    "usages": [
+                        {
+                            "file": "/data/moop/tools/retrieve_selected_sequences.php",
+                            "line": 120,
+                            "context": "handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type] ?? null);"
+                        },
+                        {
+                            "file": "/data/moop/tools/retrieve_sequences.php",
+                            "line": 221,
+                            "context": "handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type] ?? null);"
+                        },
+                        {
+                            "file": "/data/moop/tools/parent.php",
+                            "line": 222,
+                            "context": "handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type]);"
+                        },
+                        {
+                            "file": "/data/moop/tools/sequences_display.php",
+                            "line": 136,
+                            "context": "handleSequenceDownload($download_file_flag, $sequence_type, $available_sequences[$sequence_type]['sequences']);"
                         }
                     ]
                 }
@@ -2075,7 +2132,7 @@
                         },
                         {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 65,
+                            "line": 76,
                             "context": "$group_data = getGroupData();"
                         },
                         {
@@ -2392,14 +2449,14 @@
                             "context": "$organisms = getOrganismsWithAssemblies($organisms_path);"
                         },
                         {
-                            "file": "/data/moop/admin/manage_users.php",
-                            "line": 27,
-                            "context": "$organisms = getOrganismsWithAssemblies($organism_data_path);"
-                        },
-                        {
                             "file": "/data/moop/admin/manage_groups.php",
                             "line": 53,
                             "context": "$all_organisms = getOrganismsWithAssemblies($organism_data_path);"
+                        },
+                        {
+                            "file": "/data/moop/admin/manage_users.php",
+                            "line": 27,
+                            "context": "$organisms = getOrganismsWithAssemblies($organism_data_path);"
                         }
                     ]
                 },
@@ -3058,7 +3115,7 @@
                         },
                         {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 72,
+                            "line": 83,
                             "context": "$accessible_genome_ids = getAccessibleGenomeIds($organism_name, $accessible_assemblies, $db);"
                         }
                     ]
@@ -3164,7 +3221,7 @@
                         },
                         {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 62,
+                            "line": 73,
                             "context": "$db = verifyOrganismDatabase($organism_name, $organism_data);"
                         }
                     ]
@@ -3483,7 +3540,7 @@
                         },
                         {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 57,
+                            "line": 68,
                             "context": "$organism_context = setupOrganismDisplayContext($_GET['organism'], $organism_data, true);"
                         }
                     ]
@@ -3694,11 +3751,6 @@
                             "context": "logError('getOrganismImageCaption received invalid organism_info', 'organism_image', ["
                         },
                         {
-                            "file": "/data/moop/tools/sequences_display.php",
-                            "line": 126,
-                            "context": "logError("
-                        },
-                        {
                             "file": "/data/moop/tools/annotation_search_ajax.php",
                             "line": 66,
                             "context": "logError('Database not found for organism', $organism, ["
@@ -3717,6 +3769,11 @@
                             "file": "/data/moop/tools/retrieve_sequences.php",
                             "line": 208,
                             "context": "logError($err, \"download_fasta\", ['user' => $_SESSION['username'] ?? 'unknown']);"
+                        },
+                        {
+                            "file": "/data/moop/tools/sequences_display.php",
+                            "line": 142,
+                            "context": "logError("
                         }
                     ]
                 },
@@ -4159,19 +4216,24 @@
                     "usageCount": 7,
                     "usages": [
                         {
+                            "file": "/data/moop/admin/manage_site_config.php",
+                            "line": 364,
+                            "context": "$file_write_error = getFileWriteError($config_file);"
+                        },
+                        {
                             "file": "/data/moop/admin/manage_annotations.php",
                             "line": 12,
                             "context": "$file_write_error = getFileWriteError($config_file);"
                         },
                         {
+                            "file": "/data/moop/admin/manage_organisms.php",
+                            "line": 148,
+                            "context": "$write_error = getFileWriteError($organism_json_path);"
+                        },
+                        {
                             "file": "/data/moop/admin/manage_taxonomy_tree.php",
                             "line": 27,
                             "context": "$file_write_error = getFileWriteError($tree_config_file);"
-                        },
-                        {
-                            "file": "/data/moop/admin/manage_users.php",
-                            "line": 40,
-                            "context": "$file_write_error = getFileWriteError($usersFile);"
                         },
                         {
                             "file": "/data/moop/admin/manage_groups.php",
@@ -4184,14 +4246,9 @@
                             "context": "$desc_file_write_error = getFileWriteError($descriptions_file);"
                         },
                         {
-                            "file": "/data/moop/admin/manage_organisms.php",
-                            "line": 148,
-                            "context": "$write_error = getFileWriteError($organism_json_path);"
-                        },
-                        {
-                            "file": "/data/moop/admin/manage_site_config.php",
-                            "line": 364,
-                            "context": "$file_write_error = getFileWriteError($config_file);"
+                            "file": "/data/moop/admin/manage_users.php",
+                            "line": 40,
+                            "context": "$file_write_error = getFileWriteError($usersFile);"
                         }
                     ]
                 },
@@ -4283,7 +4340,7 @@
                         },
                         {
                             "file": "/data/moop/admin/manage_js_registry.php",
-                            "line": 27,
+                            "line": 30,
                             "context": "$registryStatus = getRegistryLastUpdate($json_registry, $json_registry);"
                         },
                         {
@@ -4463,7 +4520,7 @@
                         },
                         {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 81,
+                            "line": 92,
                             "context": "$annotation_config = loadJsonFileRequired($annotation_config_file, \"Missing annotation_config.json\");"
                         }
                     ]
@@ -5033,13 +5090,13 @@
                     "usageCount": 4,
                     "usages": [
                         {
-                            "file": "/data/moop/admin/manage_taxonomy_tree.php",
-                            "line": 21,
-                            "context": "handleAdminAjax();"
+                            "file": "/data/moop/admin/manage_organisms.php",
+                            "line": 19,
+                            "context": "handleAdminAjax(function($action) use ($organisms) {"
                         },
                         {
-                            "file": "/data/moop/admin/manage_users.php",
-                            "line": 24,
+                            "file": "/data/moop/admin/manage_taxonomy_tree.php",
+                            "line": 21,
                             "context": "handleAdminAjax();"
                         },
                         {
@@ -5048,9 +5105,9 @@
                             "context": "handleAdminAjax();"
                         },
                         {
-                            "file": "/data/moop/admin/manage_organisms.php",
-                            "line": 19,
-                            "context": "handleAdminAjax(function($action) use ($organisms) {"
+                            "file": "/data/moop/admin/manage_users.php",
+                            "line": 24,
+                            "context": "handleAdminAjax();"
                         }
                     ]
                 }
@@ -5146,14 +5203,14 @@
                             "context": "$context = createToolContext('multi_organism_search', ['organisms' => $organisms]);"
                         },
                         {
-                            "file": "/data/moop/tools/pages/parent.php",
-                            "line": 75,
-                            "context": "$context = createToolContext('parent', ["
-                        },
-                        {
                             "file": "/data/moop/tools/pages/index.php",
                             "line": 100,
                             "context": "$context = createToolContext('index', ['use_onclick_handler' => true]);"
+                        },
+                        {
+                            "file": "/data/moop/tools/pages/parent.php",
+                            "line": 75,
+                            "context": "$context = createToolContext('parent', ["
                         },
                         {
                             "file": "/data/moop/tools/old/groups_display.php",
@@ -5458,7 +5515,7 @@
                         },
                         {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 115,
+                            "line": 126,
                             "context": "$ancestors = getAncestors($uniquename, $db, $accessible_genome_ids);"
                         }
                     ]
@@ -5565,7 +5622,7 @@
                         },
                         {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 169,
+                            "line": 180,
                             "context": "$children = getChildren($feature_id, $db, $accessible_genome_ids);"
                         }
                     ]
@@ -5619,7 +5676,7 @@
                         },
                         {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 166,
+                            "line": 177,
                             "context": "$children_hierarchical = getChildrenHierarchical($feature_id, $db, $accessible_genome_ids);"
                         }
                     ]
@@ -5745,7 +5802,7 @@
                         },
                         {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 176,
+                            "line": 187,
                             "context": "$all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);"
                         }
                     ]
@@ -5813,7 +5870,7 @@
                     "name": "generateChildAnnotationCards",
                     "line": 347,
                     "comment": "/**\n* Generate nested child annotation cards (recursive)\n* Renders child and grandchild features with their annotations in nested card structure\n* Each level has its own collapsible card with unique color based on feature type\n*\n* @param array $child - Child feature array from hierarchical structure\n* @param array $all_annotations - Cached annotations organized by feature_id\n* @param array $analysis_order - Annotation types in order\n* @param array $annotation_colors - Color mapping for annotation types\n* @param array $annotation_labels - Display labels for annotation types\n* @param array $analysis_desc - Descriptions for annotation types\n* @param string $organism_name - Organism name for export\n* @param int &$count - Counter for unique table IDs (passed by reference)\n* @param bool $is_grandchild - Internal flag for styling grandchild level\n* @return string - HTML for child/grandchild annotation cards\n*/",
-                    "code": "function generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, &$count, $is_grandchild = false) {\n    $child_feature_id = $child['feature_id'];\n    $child_uniquename = $child['feature_uniquename'];\n    $child_type = $child['feature_type'];\n    \n    // Count annotations for this child\n    $child_annotation_count = 0;\n    $child_annotation_types = [];\n    foreach ($analysis_order as $annotation_type) {\n        $annot_results = $all_annotations[$child_feature_id][$annotation_type] ?? [];\n        if (!empty($annot_results)) {\n            $child_annotation_count += count($annot_results);\n            $child_annotation_types[$annotation_type] = count($annot_results);\n        }\n    }\n    \n    // Determine header styling based on feature type and nesting level\n    $header_class = 'child-feature-header';\n    $badge_class = 'bg-feature-mrna';\n    \n    if ($is_grandchild) {\n        $header_class = 'child-feature-header grandchild-feature-header';\n        if ($child_type == 'protein' || $child_type == 'polypeptide') {\n            $badge_class = 'bg-feature-protein';\n        } else {\n            $badge_class = 'bg-secondary';\n        }\n    }\n    \n    $html = '<div class=\"card annotation-card border-info\">';\n    $html .= \"  <div class=\\\"card-header d-flex align-items-center $header_class\\\">\";\n    $html .= \"    <span class=\\\"collapse-section\\\" data-bs-toggle=\\\"collapse\\\" data-bs-target=\\\"#child_$child_feature_id\\\" aria-expanded=\\\"true\\\">\";\n    $html .= \"      <i class=\\\"fas fa-minus toggle-icon text-info\\\"></i>\";\n    $html .= \"    </span>\";\n    $html .= \"    <strong class=\\\"ms-2 text-dark\\\"><span class=\\\"text-white px-2 py-1 rounded child-feature-badge $badge_class badge-xlg\\\">$child_uniquename ($child_type)</span></strong>\";\n    \n    // Show colored annotation type badges\n    if ($child_annotation_count > 0) {\n        foreach ($child_annotation_types as $type_name => $type_count) {\n            $badge_color = $annotation_colors[$type_name] ?? 'warning';\n            $text_color = in_array($badge_color, ['warning', 'info', 'secondary']) ? 'text-dark' : 'text-white';\n            $display_label = $annotation_labels[$type_name] ?? $type_name;\n            $section_id = \"annot_section_\" . preg_replace('/[^a-zA-Z0-9_]/', '_', $child_uniquename . '_' . $type_name);\n            $html .= \" <a href=\\\"#$section_id\\\" class=\\\"badge bg-$badge_color $text_color ms-1 text-decoration-none badge-s\\\" style=\\\"cursor: pointer;\\\">$display_label</a>\";\n        }\n    } else {\n        $html .= \" <span class=\\\"badge bg-secondary ms-2\\\">No annotations</span>\";\n    }\n    \n    $html .= '  </div>';\n    $html .= \"  <div id=\\\"child_$child_feature_id\\\" class=\\\"collapse show\\\">\";\n    $html .= '    <div class=\"card-body\">';\n    \n    $child_has_annotations = false;\n    foreach ($analysis_order as $annotation_type) {\n        $count++;\n        $annot_results = $all_annotations[$child_feature_id][$annotation_type] ?? [];\n        if (!empty($annot_results)) {\n            $child_has_annotations = true;\n            $color = $annotation_colors[$annotation_type] ?? 'warning';\n            $display_label = $annotation_labels[$annotation_type] ?? $annotation_type;\n            $html .= generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);\n        }\n    }\n    \n    if (!$child_has_annotations) {\n        $type_label = ($child_type === 'mRNA') ? 'transcript' : strtolower($child_type);\n        $html .= \"<p class=\\\"text-muted\\\"><i class=\\\"fas fa-info-circle\\\"></i> No annotations loaded for this $type_label.</p>\";\n    }\n    \n    // Render grandchildren (recursively)\n    if (!empty($child['grandchildren'])) {\n        foreach ($child['grandchildren'] as $grandchild) {\n            $html .= generateChildAnnotationCards($grandchild, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, true);\n        }\n    }\n    \n    $html .= '    </div>';\n    $html .= '  </div>';\n    $html .= '</div>';\n    \n    return $html;\n}",
+                    "code": "function generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, &$count, $is_grandchild = false) {\n    $child_feature_id = $child['feature_id'];\n    $child_uniquename = $child['feature_uniquename'];\n    $child_type = $child['feature_type'];\n    \n    // Count annotations for this child\n    $child_annotation_count = 0;\n    $child_annotation_types = [];\n    foreach ($analysis_order as $annotation_type) {\n        $annot_results = $all_annotations[$child_feature_id][$annotation_type] ?? [];\n        if (!empty($annot_results)) {\n            $child_annotation_count += count($annot_results);\n            $child_annotation_types[$annotation_type] = count($annot_results);\n        }\n    }\n    \n    // Determine header styling based on feature type and nesting level\n    $header_class = 'child-feature-header';\n    $badge_class = 'bg-feature-mrna';\n    \n    if ($is_grandchild) {\n        $header_class = 'child-feature-header grandchild-feature-header';\n        if ($child_type == 'protein' || $child_type == 'polypeptide') {\n            $badge_class = 'bg-feature-protein';\n        } else {\n            $badge_class = 'bg-secondary';\n        }\n    }\n    \n    $html = '<div class=\"card annotation-card border-info\">';\n    $html .= \"  <div class=\\\"card-header d-flex align-items-center $header_class\\\">\";\n    $html .= \"    <span class=\\\"collapse-section\\\" data-bs-toggle=\\\"collapse\\\" data-bs-target=\\\"#child_$child_feature_id\\\" aria-expanded=\\\"true\\\" role=\\\"button\\\">\";\n    $html .= \"      <i class=\\\"fas fa-minus toggle-icon text-info\\\"></i>\";\n    $html .= \"    </span>\";\n    $html .= \"    <strong class=\\\"ms-2 text-dark\\\"><span class=\\\"text-white px-2 py-1 rounded child-feature-badge $badge_class badge-xlg\\\">$child_uniquename ($child_type)</span></strong>\";\n    \n    // Show colored annotation type badges\n    if ($child_annotation_count > 0) {\n        foreach ($child_annotation_types as $type_name => $type_count) {\n            $badge_color = $annotation_colors[$type_name] ?? 'warning';\n            $text_color = in_array($badge_color, ['warning', 'info', 'secondary']) ? 'text-dark' : 'text-white';\n            $display_label = $annotation_labels[$type_name] ?? $type_name;\n            $section_id = \"annot_section_\" . preg_replace('/[^a-zA-Z0-9_]/', '_', $child_uniquename . '_' . $type_name);\n            $html .= \" <a href=\\\"#$section_id\\\" class=\\\"badge bg-$badge_color $text_color ms-1 text-decoration-none badge-s\\\" style=\\\"cursor: pointer;\\\">$display_label</a>\";\n        }\n    } else {\n        $html .= \" <span class=\\\"badge bg-secondary ms-2\\\">No annotations</span>\";\n    }\n    \n    $html .= '  </div>';\n    $html .= \"  <div id=\\\"child_$child_feature_id\\\" class=\\\"collapse show\\\">\";\n    $html .= '    <div class=\"card-body\">';\n    \n    $child_has_annotations = false;\n    foreach ($analysis_order as $annotation_type) {\n        $count++;\n        $annot_results = $all_annotations[$child_feature_id][$annotation_type] ?? [];\n        if (!empty($annot_results)) {\n            $child_has_annotations = true;\n            $color = $annotation_colors[$annotation_type] ?? 'warning';\n            $display_label = $annotation_labels[$annotation_type] ?? $annotation_type;\n            $html .= generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);\n        }\n    }\n    \n    if (!$child_has_annotations) {\n        $type_label = ($child_type === 'mRNA') ? 'transcript' : strtolower($child_type);\n        $html .= \"<p class=\\\"text-muted\\\"><i class=\\\"fas fa-info-circle\\\"></i> No annotations loaded for this $type_label.</p>\";\n    }\n    \n    // Render grandchildren (recursively)\n    if (!empty($child['grandchildren'])) {\n        foreach ($child['grandchildren'] as $grandchild) {\n            $html .= generateChildAnnotationCards($grandchild, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, true);\n        }\n    }\n    \n    $html .= '    </div>';\n    $html .= '  </div>';\n    $html .= '</div>';\n    \n    return $html;\n}",
                     "parameters": [
                         {
                             "name": "child",
@@ -6045,7 +6102,7 @@
                     "name": "parseJsDoc",
                     "line": 22,
                     "comment": "/**\n* Extract JSDoc comment to get parameter and return information\n*/",
-                    "code": "function parseJsDoc($comment) {\n    $params = [];\n    $returnType = 'unknown';\n    $returnDescription = '';\n    \n    if (empty($comment)) {\n        return ['params' => $params, 'returnType' => $returnType, 'returnDescription' => $returnDescription];\n    }\n    \n    // Extract @param lines\n    if (preg_match_all('/@param\\s+(?:\\{([^}]+)\\}",
+                    "code": "function parseJsDoc($comment) {\n    $params = [];\n    $returnType = 'void';\n    $returnDescription = '';\n    \n    if (empty($comment)) {\n        return ['params' => $params, 'returnType' => $returnType, 'returnDescription' => $returnDescription];\n    }\n    \n    // Extract @param lines\n    if (preg_match_all('/@param\\s+(?:\\{([^}]+)\\}",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -6061,7 +6118,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/generate_js_registry_json.php",
-                            "line": 270,
+                            "line": 274,
                             "context": "$docInfo = parseJsDoc($jsDocComment);"
                         }
                     ]
@@ -6087,7 +6144,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/generate_js_registry_json.php",
-                            "line": 273,
+                            "line": 277,
                             "context": "$internalCalls = extractJsFunctionCalls($functionCode, $allJsFunctionNames);"
                         }
                     ]
@@ -6112,7 +6169,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/generate_js_registry_json.php",
-                            "line": 276,
+                            "line": 280,
                             "context": "$category = determineJsCategory($fileName, $funcName);"
                         }
                     ]
@@ -6121,7 +6178,7 @@
                     "name": "determineJsTags",
                     "line": 132,
                     "comment": "/**\n* Determine tags for JS function\n*/",
-                    "code": "function determineJsTags($comment, $code, $funcName) {\n    $tags = [];\n    \n    // DOM manipulation\n    if (preg_match('/\\.innerHTML|\\.textContent|appendChild|removeChild|classList|setAttribute|getElementById|querySelector/i', $code)) {\n        $tags[] = 'dom-manipulation';\n    }\n    \n    // Asynchronous\n    if (preg_match('/async|await|\\.then|\\.catch|Promise|setTimeout/i', $code)) {\n        $tags[] = 'asynchronous';\n    }\n    \n    // AJAX/HTTP\n    if (preg_match('/fetch|XMLHttpRequest|\\.ajax|\\.get|\\.post/i', $code)) {\n        $tags[] = 'ajax';\n    }\n    \n    // Event listener\n    if (preg_match('/addEventListener|on\\w+\\s*=|\\.on\\(/i', $code)) {\n        $tags[] = 'event-listener';\n    }\n    \n    // State modification\n    if (preg_match('/\\w+\\s*=/i', $code)) {\n        $tags[] = 'state-modifying';\n    }\n    \n    // Loop operations\n    if (preg_match('/forEach|for\\s*\\(|while\\s*\\(/i', $code)) {\n        $tags[] = 'loops';\n    }\n    \n    // Error handling\n    if (preg_match('/try\\s*\\{|catch|throw|error/i', $code)) {\n        $tags[] = 'error-handling';\n    }\n    \n    // Validation\n    if (preg_match('/validate|check|verify/i', $code)) {\n        $tags[] = 'validation';\n    }\n    \n    return array_values(array_unique($tags));\n}\n\n// Scan JS files and extract functions\necho \"\ud83d\udd0d Scanning JavaScript files...\\n\";\n$files = array_merge(\n    glob($jsDir . '/*.js') ?: [],\n    glob($jsDir . '/modules/*.js') ?: []\n);\n\n// First pass: collect all function names\necho \"\ud83d\udd0d Scanning JavaScript files (pass 1: collecting function names)...\\n\";\n$allJsFunctionNames = [];\n$jsFilesContent = [];\n\nforeach ($files as $file) {\n    if (strpos($file, '.min.js') !== false || strpos($file, 'unused') !== false) continue;\n    \n    $content = file_get_contents($file);\n    $jsFilesContent[$file] = $content;\n    \n    // Match function declarations and arrow functions\n    $patterns = [\n        '/(?:^|\\s)function\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\(/m',\n        '/(?:^|\\s)(?:const|let|var)\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*=\\s*(?:function|\\()/m',\n    ];\n    \n    foreach ($patterns as $pattern) {\n        if (preg_match_all($pattern, $content, $matches)) {\n            foreach ($matches[1] as $funcName) {\n                if (!in_array($funcName, $allJsFunctionNames)) {\n                    $allJsFunctionNames[] = $funcName;\n                }\n            }\n        }\n    }\n}\n\n// Second pass: extract functions with full metadata\necho \"\ud83d\udd0d Scanning JavaScript files (pass 2: extracting metadata)...\\n\";\n\nforeach ($files as $file) {\n    if (strpos($file, '.min.js') !== false || strpos($file, 'unused') !== false) continue;\n    \n    $content = $jsFilesContent[$file];\n    $functions = [];\n    $fileName = basename($file);\n    \n    // Match function declarations and arrow functions\n    $patterns = [\n        '/(?:^|\\s)function\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\(/m',\n        '/(?:^|\\s)(?:const|let|var)\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*=\\s*(?:function|\\()/m',\n    ];\n    \n    foreach ($patterns as $pattern) {\n        if (preg_match_all($pattern, $content, $matches, PREG_OFFSET_CAPTURE)) {\n            foreach ($matches[0] as $idx => $match) {\n                $funcName = $matches[1][$idx][0];\n                $startPos = $match[1];\n                $lineNum = substr_count($content, \"\\n\", 0, $startPos) + 1;\n                \n                // Extract function code by finding matching braces\n                $braceCount = 0;\n                $functionCode = '';\n                $chars = str_split($content);\n                \n                // Find opening brace\n                $bodyStart = $startPos;\n                for ($i = $startPos; $i < strlen($content); $i++) {\n                    if ($chars[$i] === '{') {\n                        $bodyStart = $i;\n                        break;\n                    }\n                }\n                \n                // Extract until matching closing brace\n                for ($i = $bodyStart; $i < strlen($content) && $i < $bodyStart + 2000; $i++) {\n                    $char = $chars[$i];\n                    $functionCode .= $char;\n                    \n                    if ($char === '{') $braceCount++;\n                    elseif ($char === '}') {\n                        $braceCount--;\n                        if ($braceCount === 0) break;\n                    }\n                }\n                \n                // Extract JSDoc comment (look for /** ... */ before function)\n                $jsDocComment = '';\n                $beforeFunc = substr($content, 0, $startPos);\n                if (preg_match('/\\/\\*\\*.*?\\*\\/\\s*$/s', $beforeFunc, $jsDocMatch)) {\n                    $jsDocComment = $jsDocMatch[0];\n                }\n                \n                // Parse JSDoc for parameters and return type\n                $docInfo = parseJsDoc($jsDocComment);\n                \n                // Extract internal function calls\n                $internalCalls = extractJsFunctionCalls($functionCode, $allJsFunctionNames);\n                \n                // Determine category and tags\n                $category = determineJsCategory($fileName, $funcName);\n                $tags = determineJsTags($jsDocComment, $functionCode, $funcName);\n                \n                $functions[] = [\n                    'name' => $funcName,\n                    'line' => $lineNum,\n                    'comment' => $jsDocComment,\n                    'code' => trim($functionCode),\n                    'parameters' => $docInfo['params'],\n                    'returnType' => $docInfo['returnType'],\n                    'returnDescription' => $docInfo['returnDescription'],\n                    'internalCalls' => $internalCalls,\n                    'category' => $category,\n                    'tags' => $tags,\n                    'usageCount' => 0,\n                    'usages' => [],\n                    'phpFilesCount' => 0,\n                    'phpFiles' => []\n                ];\n            }\n        }\n    }\n    \n    if (!empty($functions)) {\n        $relativePath = str_replace(__DIR__ . '/../', '', $file);\n        $registry[$relativePath] = $functions;\n    }\n}\n\n// Find which PHP files include/use each JS file\necho \"\ud83d\udd0d Scanning for PHP files using JavaScript...\\n\";\n$phpFilesByJsFile = [];\nforeach ($registry as $jsFile => $funcs) {\n    $jsFileName = basename($jsFile);\n    $phpFiles = [];\n    \n    $searchDirs = [\n        __DIR__ . '/../*.php',\n        __DIR__ . '/../admin/*.php',\n        __DIR__ . '/../admin/**/*.php',\n        __DIR__ . '/../tools/*.php',\n        __DIR__ . '/../tools/**/*.php',\n    ];\n    \n    $allPhpFiles = [];\n    foreach ($searchDirs as $pattern) {\n        $allPhpFiles = array_merge($allPhpFiles, glob($pattern));\n    }\n    \n    foreach (array_unique($allPhpFiles) as $phpFile) {\n        if (file_exists($phpFile) && strpos(file_get_contents($phpFile), $jsFileName) !== false) {\n            $phpFiles[] = str_replace(__DIR__ . '/../', '', $phpFile);\n        }\n    }\n    \n    if (!empty($phpFiles)) {\n        $phpFilesByJsFile[$jsFile] = array_unique($phpFiles);\n    }\n}\n\n// Find function usages in JS and PHP files\necho \"\ud83d\udd0d Scanning for function usages...\\n\";\n$scanDirs = [\n    __DIR__ . '/../js',\n    __DIR__ . '/../admin',\n    __DIR__ . '/../tools',\n    __DIR__ . '/..'\n];\n\nforeach ($registry as $jsFile => &$functions) {\n    foreach ($functions as &$func) {\n        $usages = [];\n        $seen = [];\n        $searchPattern = '/\\b' . preg_quote($func['name'], '/') . '\\s*\\(/';\n        \n        // Search in JS files\n        $jsFiles = array_merge(\n            glob($jsDir . '/*.js') ?: [],\n            glob($jsDir . '/modules/*.js') ?: []\n        );\n        \n        foreach ($jsFiles as $file) {\n            if (strpos($file, '.min.js') !== false || strpos($file, 'unused') !== false) continue;\n            \n            $content = file_get_contents($file);\n            \n            if (preg_match_all($searchPattern, $content, $matches, PREG_OFFSET_CAPTURE)) {\n                foreach ($matches[0] as $match) {\n                    $lineNum = substr_count($content, \"\\n\", 0, $match[1]) + 1;\n                    \n                    $lines = explode(\"\\n\", $content);\n                    $contextLine = isset($lines[$lineNum - 1]) ? trim($lines[$lineNum - 1]) : '';\n                    \n                    // Skip comments\n                    if (preg_match('/^\\s*(\\/\\/|\\/\\*|\\*|#)/', $contextLine)) continue;\n                    \n                    // Skip function definition\n                    if (preg_match('/(?:^|\\s)(?:function|const|let|var)\\s+' . preg_quote($func['name']) . '\\s*[=:\\(]/', $contextLine)) continue;\n                    \n                    $relativeFile = str_replace(__DIR__ . '/../', '', $file);\n                    $usageKey = $relativeFile . ':' . $lineNum;\n                    \n                    if (isset($seen[$usageKey])) continue;\n                    $seen[$usageKey] = true;\n                    \n                    $usages[] = [\n                        'file' => $relativeFile,\n                        'line' => $lineNum,\n                        'context' => $contextLine\n                    ];\n                }\n            }\n        }\n        \n        // Also search in PHP files for inline JS calls\n        $phpFiles = array_merge(\n            glob(__DIR__ . '/../*.php') ?: [],\n            glob(__DIR__ . '/../admin/*.php') ?: [],\n            glob(__DIR__ . '/../admin/**/*.php') ?: [],\n            glob(__DIR__ . '/../tools/*.php') ?: [],\n            glob(__DIR__ . '/../tools/**/*.php') ?: []\n        );\n        \n        foreach (array_unique($phpFiles) as $phpFile) {\n            if (!file_exists($phpFile) || strpos($phpFile, 'function_registry') !== false) continue;\n            \n            $content = file_get_contents($phpFile);\n            \n            if (preg_match_all($searchPattern, $content, $matches, PREG_OFFSET_CAPTURE)) {\n                foreach ($matches[0] as $match) {\n                    $lineNum = substr_count($content, \"\\n\", 0, $match[1]) + 1;\n                    \n                    $lines = explode(\"\\n\", $content);\n                    $contextLine = isset($lines[$lineNum - 1]) ? trim($lines[$lineNum - 1]) : '';\n                    \n                    // Skip PHP comments\n                    if (preg_match('/^\\s*(\\/\\/|\\/\\*|\\*|#)/', $contextLine)) continue;\n                    \n                    $relativeFile = str_replace(__DIR__ . '/../', '', $phpFile);\n                    $usageKey = $relativeFile . ':' . $lineNum;\n                    \n                    if (isset($seen[$usageKey])) continue;\n                    $seen[$usageKey] = true;\n                    \n                    $usages[] = [\n                        'file' => $relativeFile,\n                        'line' => $lineNum,\n                        'context' => $contextLine\n                    ];\n                }\n            }\n        }\n        \n        $func['usageCount'] = count($usages);\n        $func['usages'] = $usages;\n        \n        // Add PHP files that include this JS file\n        if (isset($phpFilesByJsFile[$jsFile])) {\n            $func['phpFilesCount'] = count($phpFilesByJsFile[$jsFile]);\n            $func['phpFiles'] = $phpFilesByJsFile[$jsFile];\n        }\n    }\n}\nunset($func);\n\n// Build registry data structure\n$totalFuncs = 0;\n$fileArray = [];\n\nforeach ($registry as $file => $functions) {\n    $totalFuncs += count($functions);\n    $fileArray[] = [\n        'name' => $file,\n        'count' => count($functions),\n        'functions' => $functions\n    ];\n}\n\n// Find unused functions\n$unused = [];\nforeach ($fileArray as $fileEntry) {\n    foreach ($fileEntry['functions'] as $func) {\n        if ($func['usageCount'] === 0) {\n            $unused[] = [\n                'name' => $func['name'],\n                'file' => $fileEntry['name'],\n                'line' => $func['line']\n            ];\n        }\n    }\n}\n\n// Sort files by name\nusort($fileArray, function($a, $b) {\n    return strcmp($a['name'], $b['name']);\n});\n\n// Build final registry\n$registryData = [\n    'metadata' => [\n        'generated' => date('Y-m-d H:i:s'),\n        'totalFunctions' => $totalFuncs,\n        'totalFiles' => count($fileArray),\n        'duplicates' => 0,\n    ],\n    'files' => $fileArray,\n    'unused' => $unused,\n];\n\n// Save JSON\n$jsonFile = $docs_path . '/js_function_registry.json';\n@mkdir(dirname($jsonFile), 0755, true);\n\n$json = json_encode($registryData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);\nif (file_put_contents($jsonFile, $json)) {\n    echo \"\\n\u2705 JavaScript Registry generated successfully!\\n\";\n    echo \"   File: \" . str_replace(__DIR__ . '/../', '', $jsonFile) . \"\\n\";\n    echo \"   Total Functions: \" . $totalFuncs . \"\\n\";\n    echo \"   Files Scanned: \" . count($fileArray) . \"\\n\";\n    echo \"   Unused Functions: \" . count($unused) . \"\\n\";\n} else {\n    echo \"\\n\u274c Error writing JSON file\\n\";\n    exit(1);\n}",
+                    "code": "function determineJsTags($comment, $code, $funcName) {\n    $tags = [];\n    \n    // DOM manipulation\n    if (preg_match('/\\.innerHTML|\\.textContent|appendChild|removeChild|classList|setAttribute|getElementById|querySelector/i', $code)) {\n        $tags[] = 'dom-manipulation';\n    }\n    \n    // Asynchronous\n    if (preg_match('/async|await|\\.then|\\.catch|Promise|setTimeout/i', $code)) {\n        $tags[] = 'asynchronous';\n    }\n    \n    // AJAX/HTTP\n    if (preg_match('/fetch|XMLHttpRequest|\\.ajax|\\.get|\\.post/i', $code)) {\n        $tags[] = 'ajax';\n    }\n    \n    // Event listener\n    if (preg_match('/addEventListener|on\\w+\\s*=|\\.on\\(/i', $code)) {\n        $tags[] = 'event-listener';\n    }\n    \n    // State modification\n    if (preg_match('/\\w+\\s*=/i', $code)) {\n        $tags[] = 'state-modifying';\n    }\n    \n    // Loop operations\n    if (preg_match('/forEach|for\\s*\\(|while\\s*\\(/i', $code)) {\n        $tags[] = 'loops';\n    }\n    \n    // Error handling\n    if (preg_match('/try\\s*\\{|catch|throw|error/i', $code)) {\n        $tags[] = 'error-handling';\n    }\n    \n    // Validation\n    if (preg_match('/validate|check|verify/i', $code)) {\n        $tags[] = 'validation';\n    }\n    \n    return array_values(array_unique($tags));\n}\n\n// Scan JS files and extract functions\necho \"\ud83d\udd0d Scanning JavaScript files...\\n\";\n$files = array_merge(\n    glob($jsDir . '/*.js') ?: [],\n    glob($jsDir . '/modules/*.js') ?: []\n);\n\n// First pass: collect all function names\necho \"\ud83d\udd0d Scanning JavaScript files (pass 1: collecting function names)...\\n\";\n$allJsFunctionNames = [];\n$jsFilesContent = [];\n\nforeach ($files as $file) {\n    if (strpos($file, '.min.js') !== false || strpos($file, 'unused') !== false) continue;\n    \n    $content = file_get_contents($file);\n    $jsFilesContent[$file] = $content;\n    \n    // Match function declarations and arrow functions\n    $patterns = [\n        '/(?:^|\\s)function\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\(/m',\n        '/(?:^|\\s)(?:const|let|var)\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*=\\s*(?:function|\\()/m',\n    ];\n    \n    foreach ($patterns as $pattern) {\n        if (preg_match_all($pattern, $content, $matches)) {\n            foreach ($matches[1] as $funcName) {\n                if (!in_array($funcName, $allJsFunctionNames)) {\n                    $allJsFunctionNames[] = $funcName;\n                }\n            }\n        }\n    }\n}\n\n// Second pass: extract functions with full metadata\necho \"\ud83d\udd0d Scanning JavaScript files (pass 2: extracting metadata)...\\n\";\n\nforeach ($files as $file) {\n    if (strpos($file, '.min.js') !== false || strpos($file, 'unused') !== false) continue;\n    \n    $content = $jsFilesContent[$file];\n    $functions = [];\n    $fileName = basename($file);\n    \n    // Match function declarations and arrow functions\n    $patterns = [\n        '/(?:^|\\s)function\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\(/m',\n        '/(?:^|\\s)(?:const|let|var)\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*=\\s*(?:function|\\()/m',\n    ];\n    \n    foreach ($patterns as $pattern) {\n        if (preg_match_all($pattern, $content, $matches, PREG_OFFSET_CAPTURE)) {\n            foreach ($matches[0] as $idx => $match) {\n                $funcName = $matches[1][$idx][0];\n                $startPos = $match[1];\n                $lineNum = substr_count($content, \"\\n\", 0, $startPos) + 1;\n                \n                // Extract function code by finding matching braces\n                $braceCount = 0;\n                $functionCode = '';\n                $chars = str_split($content);\n                \n                // Find opening brace\n                $bodyStart = $startPos;\n                for ($i = $startPos; $i < strlen($content); $i++) {\n                    if ($chars[$i] === '{') {\n                        $bodyStart = $i;\n                        break;\n                    }\n                }\n                \n                // Extract until matching closing brace\n                for ($i = $bodyStart; $i < strlen($content) && $i < $bodyStart + 2000; $i++) {\n                    $char = $chars[$i];\n                    $functionCode .= $char;\n                    \n                    if ($char === '{') $braceCount++;\n                    elseif ($char === '}') {\n                        $braceCount--;\n                        if ($braceCount === 0) break;\n                    }\n                }\n                \n                // Extract JSDoc comment (look for /** ... */ immediately before function)\n                $jsDocComment = '';\n                // Get only the last 1000 chars before function to avoid matching file header\n                $startSearch = max(0, $startPos - 1000);\n                $nearFunc = substr($content, $startSearch, $startPos - $startSearch);\n                // Find the LAST occurrence of /** ... */ in this section\n                // Use non-greedy match with limited scope\n                if (preg_match('/\\/\\*\\*[^*]*(?:\\*(?!\\/)[^*]*)*\\*\\/(?:\\s|\\/\\/[^\\n]*\\n)*$/s', $nearFunc, $jsDocMatch)) {\n                    $jsDocComment = $jsDocMatch[0];\n                }\n                \n                // Parse JSDoc for parameters and return type\n                $docInfo = parseJsDoc($jsDocComment);\n                \n                // Extract internal function calls\n                $internalCalls = extractJsFunctionCalls($functionCode, $allJsFunctionNames);\n                \n                // Determine category and tags\n                $category = determineJsCategory($fileName, $funcName);\n                $tags = determineJsTags($jsDocComment, $functionCode, $funcName);\n                \n                $functions[] = [\n                    'name' => $funcName,\n                    'line' => $lineNum,\n                    'comment' => $jsDocComment,\n                    'code' => trim($functionCode),\n                    'parameters' => $docInfo['params'],\n                    'returnType' => $docInfo['returnType'],\n                    'returnDescription' => $docInfo['returnDescription'],\n                    'internalCalls' => $internalCalls,\n                    'category' => $category,\n                    'tags' => $tags,\n                    'usageCount' => 0,\n                    'usages' => [],\n                    'phpFilesCount' => 0,\n                    'phpFiles' => []\n                ];\n            }\n        }\n    }\n    \n    if (!empty($functions)) {\n        $relativePath = str_replace(__DIR__ . '/../', '', $file);\n        $registry[$relativePath] = $functions;\n    }\n}\n\n// Find which PHP files include/use each JS file\necho \"\ud83d\udd0d Scanning for PHP files using JavaScript...\\n\";\n$phpFilesByJsFile = [];\nforeach ($registry as $jsFile => $funcs) {\n    $jsFileName = basename($jsFile);\n    $phpFiles = [];\n    \n    $searchDirs = [\n        __DIR__ . '/../*.php',\n        __DIR__ . '/../admin/*.php',\n        __DIR__ . '/../admin/**/*.php',\n        __DIR__ . '/../tools/*.php',\n        __DIR__ . '/../tools/**/*.php',\n    ];\n    \n    $allPhpFiles = [];\n    foreach ($searchDirs as $pattern) {\n        $allPhpFiles = array_merge($allPhpFiles, glob($pattern));\n    }\n    \n    foreach (array_unique($allPhpFiles) as $phpFile) {\n        if (file_exists($phpFile) && strpos(file_get_contents($phpFile), $jsFileName) !== false) {\n            $phpFiles[] = str_replace(__DIR__ . '/../', '', $phpFile);\n        }\n    }\n    \n    if (!empty($phpFiles)) {\n        $phpFilesByJsFile[$jsFile] = array_unique($phpFiles);\n    }\n}\n\n// Find function usages in JS and PHP files\necho \"\ud83d\udd0d Scanning for function usages...\\n\";\n$scanDirs = [\n    __DIR__ . '/../js',\n    __DIR__ . '/../admin',\n    __DIR__ . '/../tools',\n    __DIR__ . '/..'\n];\n\nforeach ($registry as $jsFile => &$functions) {\n    foreach ($functions as &$func) {\n        $usages = [];\n        $seen = [];\n        $searchPattern = '/\\b' . preg_quote($func['name'], '/') . '\\s*\\(/';\n        \n        // Search in JS files\n        $jsFiles = array_merge(\n            glob($jsDir . '/*.js') ?: [],\n            glob($jsDir . '/modules/*.js') ?: []\n        );\n        \n        foreach ($jsFiles as $file) {\n            if (strpos($file, '.min.js') !== false || strpos($file, 'unused') !== false) continue;\n            \n            $content = file_get_contents($file);\n            \n            if (preg_match_all($searchPattern, $content, $matches, PREG_OFFSET_CAPTURE)) {\n                foreach ($matches[0] as $match) {\n                    $lineNum = substr_count($content, \"\\n\", 0, $match[1]) + 1;\n                    \n                    $lines = explode(\"\\n\", $content);\n                    $contextLine = isset($lines[$lineNum - 1]) ? trim($lines[$lineNum - 1]) : '';\n                    \n                    // Skip comments\n                    if (preg_match('/^\\s*(\\/\\/|\\/\\*|\\*|#)/', $contextLine)) continue;\n                    \n                    // Skip function definition\n                    if (preg_match('/(?:^|\\s)(?:function|const|let|var)\\s+' . preg_quote($func['name']) . '\\s*[=:\\(]/', $contextLine)) continue;\n                    \n                    $relativeFile = str_replace(__DIR__ . '/../', '', $file);\n                    $usageKey = $relativeFile . ':' . $lineNum;\n                    \n                    if (isset($seen[$usageKey])) continue;\n                    $seen[$usageKey] = true;\n                    \n                    $usages[] = [\n                        'file' => $relativeFile,\n                        'line' => $lineNum,\n                        'context' => $contextLine\n                    ];\n                }\n            }\n        }\n        \n        // Also search in PHP files for inline JS calls\n        $phpFiles = array_merge(\n            glob(__DIR__ . '/../*.php') ?: [],\n            glob(__DIR__ . '/../admin/*.php') ?: [],\n            glob(__DIR__ . '/../admin/**/*.php') ?: [],\n            glob(__DIR__ . '/../tools/*.php') ?: [],\n            glob(__DIR__ . '/../tools/**/*.php') ?: []\n        );\n        \n        foreach (array_unique($phpFiles) as $phpFile) {\n            if (!file_exists($phpFile) || strpos($phpFile, 'function_registry') !== false) continue;\n            \n            $content = file_get_contents($phpFile);\n            \n            if (preg_match_all($searchPattern, $content, $matches, PREG_OFFSET_CAPTURE)) {\n                foreach ($matches[0] as $match) {\n                    $lineNum = substr_count($content, \"\\n\", 0, $match[1]) + 1;\n                    \n                    $lines = explode(\"\\n\", $content);\n                    $contextLine = isset($lines[$lineNum - 1]) ? trim($lines[$lineNum - 1]) : '';\n                    \n                    // Skip PHP comments\n                    if (preg_match('/^\\s*(\\/\\/|\\/\\*|\\*|#)/', $contextLine)) continue;\n                    \n                    $relativeFile = str_replace(__DIR__ . '/../', '', $phpFile);\n                    $usageKey = $relativeFile . ':' . $lineNum;\n                    \n                    if (isset($seen[$usageKey])) continue;\n                    $seen[$usageKey] = true;\n                    \n                    $usages[] = [\n                        'file' => $relativeFile,\n                        'line' => $lineNum,\n                        'context' => $contextLine\n                    ];\n                }\n            }\n        }\n        \n        $func['usageCount'] = count($usages);\n        $func['usages'] = $usages;\n        \n        // Add PHP files that include this JS file\n        if (isset($phpFilesByJsFile[$jsFile])) {\n            $func['phpFilesCount'] = count($phpFilesByJsFile[$jsFile]);\n            $func['phpFiles'] = $phpFilesByJsFile[$jsFile];\n        }\n    }\n}\nunset($func);\n\n// Build registry data structure\n$totalFuncs = 0;\n$fileArray = [];\n\nforeach ($registry as $file => $functions) {\n    $totalFuncs += count($functions);\n    $fileArray[] = [\n        'name' => $file,\n        'count' => count($functions),\n        'functions' => $functions\n    ];\n}\n\n// Find unused functions\n$unused = [];\nforeach ($fileArray as $fileEntry) {\n    foreach ($fileEntry['functions'] as $func) {\n        if ($func['usageCount'] === 0) {\n            $unused[] = [\n                'name' => $func['name'],\n                'file' => $fileEntry['name'],\n                'line' => $func['line']\n            ];\n        }\n    }\n}\n\n// Sort files by name\nusort($fileArray, function($a, $b) {\n    return strcmp($a['name'], $b['name']);\n});\n\n// Build final registry\n$registryData = [\n    'metadata' => [\n        'generated' => date('Y-m-d H:i:s'),\n        'totalFunctions' => $totalFuncs,\n        'totalFiles' => count($fileArray),\n        'duplicates' => 0,\n    ],\n    'files' => $fileArray,\n    'unused' => $unused,\n];\n\n// Save JSON\n$jsonFile = $docs_path . '/js_function_registry.json';\n@mkdir(dirname($jsonFile), 0755, true);\n\n$json = json_encode($registryData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);\nif (file_put_contents($jsonFile, $json)) {\n    echo \"\\n\u2705 JavaScript Registry generated successfully!\\n\";\n    echo \"   File: \" . str_replace(__DIR__ . '/../', '', $jsonFile) . \"\\n\";\n    echo \"   Total Functions: \" . $totalFuncs . \"\\n\";\n    echo \"   Files Scanned: \" . count($fileArray) . \"\\n\";\n    echo \"   Unused Functions: \" . count($unused) . \"\\n\";\n} else {\n    echo \"\\n\u274c Error writing JSON file\\n\";\n    exit(1);\n}",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -6144,7 +6201,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/generate_js_registry_json.php",
-                            "line": 277,
+                            "line": 281,
                             "context": "$tags = determineJsTags($jsDocComment, $functionCode, $funcName);"
                         }
                     ]
@@ -6157,7 +6214,7 @@
             "functions": [
                 {
                     "name": "extractSequencesFromFasta",
-                    "line": 113,
+                    "line": 124,
                     "comment": "/**\n* Extract sequences from a FASTA file for specific feature IDs\n*\n* @param string $fasta_file Path to FASTA file\n* @param array $feature_ids Array of feature IDs to extract\n* @return array Associative array with feature_id => sequence content\n*/",
                     "code": "function extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, &$errors) {\n    $sequences = [];\n    \n    // Validate inputs\n    if (empty($fasta_file)) {\n        $errors[] = \"FASTA file path is empty for $seq_type sequences\";\n        return $sequences;\n    }\n    \n    if (empty($feature_ids)) {\n        $errors[] = \"No feature IDs provided to extract\";\n        return $sequences;\n    }\n    \n    // Check if file exists\n    if (!file_exists($fasta_file)) {\n        $errors[] = \"FASTA file not found for $seq_type: \" . basename($fasta_file);\n        return $sequences;\n    }\n    \n    // Build list of IDs to search, including variants for parent/child relationships\n    $search_ids = [];\n    foreach ($feature_ids as $id) {\n        $search_ids[] = $id;\n        // Also try with .1 suffix if not already present (for parent->child relationships)\n        if (substr($id, -2) !== '.1') {\n            $search_ids[] = $id . '.1';\n        }\n    }\n    \n    // Use blastdbcmd to extract sequences - it accepts comma-separated IDs\n    $ids_string = implode(',', $search_ids);\n    $cmd = \"blastdbcmd -db \" . escapeshellarg($fasta_file) . \" -entry \" . escapeshellarg($ids_string) . \" 2>/dev/null\";\n    $output = [];\n    $return_var = 0;\n    @exec($cmd, $output, $return_var);\n    \n    // Check if blastdbcmd executed\n    if ($return_var > 1) {\n        // Return code 1 is expected when some IDs don't exist, but >1 is an error\n        $errors[] = \"Error extracting $seq_type sequences (exit code: $return_var). Ensure blastdbcmd is installed and FASTA files are formatted correctly.\";\n        return $sequences;\n    }\n    \n    // Check if we got any output\n    // If empty, it just means these IDs don't exist in this file type (e.g., gene IDs won't be in genome.fa)\n    // Return empty sequences gracefully - not an error\n    if (empty($output)) {\n        return $sequences;\n    }\n    \n    // Parse FASTA output into individual sequences by feature ID\n    $current_id = null;\n    $current_seq = [];\n    \n    foreach ($output as $line) {\n        if (strpos($line, '>') === 0) {\n            // Header line\n            if (!is_null($current_id)) {\n                // Store previous sequence with full FASTA format (including >)\n                $sequences[$current_id] = implode(\"\\n\", array_merge([\">\" . $current_id], $current_seq));\n            }\n            // Extract ID from header (remove leading '>')\n            $current_id = substr($line, 1);\n            $current_seq = [];\n        } else {\n            // Sequence line\n            $current_seq[] = $line;\n        }\n    }\n    \n    // Store last sequence with full FASTA format\n    if (!is_null($current_id)) {\n        $sequences[$current_id] = implode(\"\\n\", array_merge([\">\" . $current_id], $current_seq));\n    }\n    \n    return $sequences;\n}",
                     "parameters": [
@@ -6190,7 +6247,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/sequences_display.php",
-                            "line": 113,
+                            "line": 124,
                             "context": "$sequences = extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, $extraction_errors);"
                         }
                     ]
