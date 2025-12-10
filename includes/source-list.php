@@ -57,7 +57,8 @@ foreach ($sources_by_group as $group_name => $organisms) {
             
             foreach ($organisms as $organism => $assemblies): 
                 foreach ($assemblies as $source): 
-                    $search_text = strtolower("$group_name $organism $source[assembly]");
+                    $genome_name = $source['genome_name'] ?? $source['assembly'];
+                    $search_text = strtolower("$group_name $organism $source[assembly] $genome_name");
                     
                     // Determine if this source should be hidden (filtered out)
                     $is_filtered_out = false;
@@ -98,7 +99,7 @@ foreach ($sources_by_group as $group_name => $organisms) {
                             <?= htmlspecialchars($organism) ?>
                         </span>
                         <span class="badge badge-sm bg-info text-white">
-                            <?= htmlspecialchars($source['assembly']) ?>
+                            <?= htmlspecialchars($source['genome_name'] ?? $source['assembly']) ?>
                         </span>
                     </div>
                 <?php endforeach; 

@@ -21,46 +21,6 @@ function initializeSequenceRetrieval(options = {}) {
         }
     }
     
-    // Restore previously selected source or auto-select first visible
-    if (typeof previouslySelectedSource !== 'undefined' && previouslySelectedSource) {
-        const allSourceRadios = document.querySelectorAll(`input[name="selected_source"][value="${previouslySelectedSource}"]`);
-        let prevSourceRadio = null;
-        
-        for (let radio of allSourceRadios) {
-            const line = radio.closest('.fasta-source-line');
-            if (line && !line.classList.contains('hidden')) {
-                prevSourceRadio = radio;
-                break;
-            }
-        }
-        
-        if (prevSourceRadio) {
-            prevSourceRadio.checked = true;
-        } else {
-            // Fall back to first visible if restoration failed
-            const firstRadio = document.querySelector('input[name="selected_source"]');
-            const firstLine = firstRadio ? firstRadio.closest('.fasta-source-line') : null;
-            if (firstLine && !firstLine.classList.contains('hidden')) {
-                firstRadio.checked = true;
-            }
-        }
-    } else {
-        // Auto-select first visible source only if nothing is already checked
-        const allRadios = document.querySelectorAll('input[name="selected_source"]');
-        const anyChecked = Array.from(allRadios).some(radio => radio.checked);
-        
-        if (!anyChecked) {
-            // No radio is checked, auto-select first visible
-            for (let radio of allRadios) {
-                const line = radio.closest('.fasta-source-line');
-                if (line && !line.classList.contains('hidden')) {
-                    radio.click();
-                    break;
-                }
-            }
-        }
-    }
-    
     function updateCurrentSelectionDisplay() {
         window.updateCurrentSelectionDisplay('currentSelection', 'fasta-source-line', true);
         const selectionDiv = document.getElementById('currentSelection');
@@ -70,11 +30,13 @@ function initializeSequenceRetrieval(options = {}) {
         }
     }
     
-    // Initialize source list manager with form-specific callback
-    initializeSourceListManager({
+    // Use centralized source selector initialization
+    initializeSourceSelector({
+        formId: 'downloadForm',
         filterId: 'sourceFilter',
         radioName: 'selected_source',
         sourceListClass: 'fasta-source-line',
+        shouldAutoSelect: typeof window.shouldAutoSelect !== 'undefined' ? window.shouldAutoSelect : true,
         onSelectionChange: function(radio) {
             // Update hidden form fields when selection changes
             if (form) {
@@ -83,16 +45,9 @@ function initializeSequenceRetrieval(options = {}) {
             }
             // Update display text
             updateCurrentSelectionDisplay();
-        }
-    });
-    
-    // Disable hidden radios on page load
-    document.querySelectorAll('input[name="selected_source"]').forEach(radio => {
-        const line = radio.closest('.fasta-source-line');
-        if (line && !isSourceVisible(line)) {
-            radio.disabled = true;
-        } else {
-            radio.disabled = false;
+        },
+        onFilterChange: function() {
+            updateCurrentSelectionDisplay();
         }
     });
     
@@ -122,32 +77,6 @@ function initializeSequenceRetrieval(options = {}) {
                 alert('Please select an assembly before searching.');
                 return false;
             }
-        });
-    }
-    
-    // Add event listener for filter input changes
-    const filterInput = document.getElementById('sourceFilter');
-    if (filterInput) {
-        filterInput.addEventListener('keyup', function() {
-            // After filter is applied, check visibility and update display
-            setTimeout(function() {
-                document.querySelectorAll('input[name="selected_source"]').forEach(radio => {
-                    const line = radio.closest('.fasta-source-line');
-                    if (line && !isSourceVisible(line)) {
-                        if (radio.checked) {
-                            radio.checked = false;
-                            if (form) {
-                                form.querySelector('input[name="organism"]').value = '';
-                                form.querySelector('input[name="assembly"]').value = '';
-                            }
-                        }
-                        radio.disabled = true;
-                    } else {
-                        radio.disabled = false;
-                    }
-                });
-                updateCurrentSelectionDisplay();
-            }, 10);
         });
     }
     

@@ -41,7 +41,7 @@
             <strong><i class="fa fa-info-circle"></i> How to use:</strong>
             <ol class="mb-0 mt-2">
                 <li>Select which organism and assembly to extract from</li>
-                <li>Enter gene/feature IDs (one per line or comma-separated)</li>
+                <li>Enter gene/feature IDs (one per line or comma-separated).</li>
                 <li>Click "Display Sequences" to see all available sequence types</li>
                 <li>Copy or download as needed</li>
             </ol>
@@ -86,9 +86,10 @@
                     id="featureIds"
                     name="uniquenames" 
                     rows="6" 
-                    placeholder="Enter feature IDs (one per line or comma-separated)"
+		    placeholder="Enter feature IDs.
+One ID per line or comma-separated.
+Accepted sequence cooridate ranges formats: ID 1-10, ID:1..10, ID:1-10."
                     ><?= htmlspecialchars($uniquenames_string) ?></textarea>
-                <small class="form-text text-muted">Enter IDs one per line or comma-separated</small>
                 <small class="form-text text-muted d-block mt-2">
                     Example IDs: <?= htmlspecialchars(implode(', ', array_slice($sample_feature_ids, 0, 2))) ?><?= count($sample_feature_ids) > 2 ? ' (and ' . (count($sample_feature_ids) - 2) . ' more)' : '' ?>
                 </small>
@@ -170,4 +171,7 @@ window.foundIds = <?= json_encode($found_ids ?? []) ?>;
 
 // Pass parent-to-children mapping for display
 window.parentToChildren = <?= json_encode($parent_to_children ?? []) ?>;
+
+// Pass auto-select flag to JavaScript
+window.shouldAutoSelect = <?= json_encode($should_auto_select ?? true) ?>;
 </script>

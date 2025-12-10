@@ -37,6 +37,7 @@ $sequence_type = trim($_POST['sequence_type'] ?? '');
 include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
+include_once __DIR__ . '/../includes/source-selector-helpers.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
@@ -61,7 +62,6 @@ $context = parseContextParameters();
 
 $organisms_param = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
 $organism_result = parseOrganismParameter($organisms_param, '');
-$filter_organisms = $organism_result['organisms'];
 
 // Get uniquenames (may be empty on initial page load)
 $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
@@ -71,86 +71,39 @@ $sources_by_group = getAccessibleAssemblies();
 $accessible_sources = flattenSourcesList($sources_by_group);
 
 // Initialize variables
-// Three separate variables for clarity:
-// - $selected_organism: organism name from URL/POST
-// - $selected_assembly_accession: genome accession (e.g., GCF_000151845.1)
-// - $selected_assembly_name: genome name (e.g., Pvam_2.0)
-$selected_organism = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
-$selected_assembly_accession = '';
-$selected_assembly_name = '';
 $displayed_content = [];
 $should_scroll_to_results = false;
 $uniquenames = [];
 $ranges = [];
 $found_ids = [];
 $download_error_msg = '';
-$selected_source = '';
 
 // Get the assembly parameter from URL/POST (could be name or accession)
 $assembly_param = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
 
 // First, try using context parameters (explicit intent to pre-select)
 if (!empty($context['organism']) && !empty($context['assembly'])) {
-    $selected_organism = $context['organism'];
     $assembly_param = $context['assembly'];
 }
 
-// Resolve assembly parameter to both name and accession
-if (!empty($assembly_param)) {
-    foreach ($accessible_sources as $source) {
-        if (empty($selected_organism) || $source['organism'] === $selected_organism) {
-            // Match by assembly directory, genome_name, or genome_accession
-            if ($source['assembly'] === $assembly_param || 
-                $source['genome_name'] === $assembly_param || 
-                $source['genome_accession'] === $assembly_param) {
-                $selected_assembly_accession = $source['assembly'];
-                $selected_assembly_name = $source['genome_name'] ?? $source['assembly'];
-                if (empty($selected_organism)) {
-                    $selected_organism = $source['organism'];
-                }
-                break;
-            }
-        }
-    }
-}
-
-// Build filter_organisms list based on priority (assembly > organism > group)
-if (!empty($selected_assembly_name)) {
-    // Filter by assembly first (only show organism containing this assembly)
-    $filter_organisms = [];
-    foreach ($accessible_sources as $source) {
-        if (($source['genome_name'] === $selected_assembly_name || $source['assembly'] === $selected_assembly_accession) && 
-            !in_array($source['organism'], $filter_organisms)) {
-            $filter_organisms[] = $source['organism'];
-        }
-    }
-} elseif (!empty($selected_organism)) {
-    // Filter by organism if no assembly specified
-    if (empty($filter_organisms)) {
-        $filter_organisms = [$selected_organism];
-    }
-} elseif (!empty($context['group'])) {
-    // Filter by group if only group specified
-    $filter_organisms = [];
-    if (isset($sources_by_group[$context['group']])) {
-        foreach ($sources_by_group[$context['group']] as $organism => $assemblies) {
-            $filter_organisms[] = $organism;
-        }
-    }
-}
-
-// Build selected_source for radio button selection
-$selection_result = determineSelectedSource(
+// Use centralized source selection helper
+$selected_organism = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
+$source_selection = prepareSourceSelection(
     $context,
-    $filter_organisms,
+    $sources_by_group,
     $accessible_sources,
     $selected_organism,
-    $selected_assembly_accession
+    $assembly_param,
+    $organism_result['organisms']
 );
-$selected_source = $selection_result['selected_source'];
-$selected_organism = $selection_result['selected_organism'];
-$selected_assembly_accession = $selection_result['selected_assembly_accession'];
-$selected_assembly_name = $selection_result['selected_assembly_name'];
+
+// Extract selected values
+$filter_organisms = $source_selection['filter_organisms'];
+$selected_source = $source_selection['selected_source'];
+$selected_organism = $source_selection['selected_organism'];
+$selected_assembly_accession = $source_selection['selected_assembly_accession'];
+$selected_assembly_name = $source_selection['selected_assembly_name'];
+$should_auto_select = $source_selection['should_auto_select'];
 
 // If sequence IDs are provided, extract ALL sequence types
 if (!empty($sequence_ids_provided)) {
@@ -351,6 +304,7 @@ $data = [
     'context_organism' => $context['organism'] ?? '',
     'context_assembly' => $context['assembly'] ?? '',
     'context_group' => $context['group'] ?? '',
+    'should_auto_select' => $should_auto_select,
     'filter_organisms' => $filter_organisms,
     'sources_by_group' => $sources_by_group,
     'download_error_msg' => $download_error_msg,

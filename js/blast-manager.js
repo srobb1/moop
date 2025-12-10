@@ -55,6 +55,8 @@ function clearBlastSourceFilters() {
 }
 
 function initializeBlastManager() {
+    const form = document.getElementById('blastForm');
+
     function updateCurrentSelectionDisplay() {
         window.updateCurrentSelectionDisplay();
         const selectionDiv = document.getElementById('currentSelection');
@@ -63,77 +65,22 @@ function initializeBlastManager() {
             selectionDiv.innerHTML = '<span style="color: #999;">None selected</span>';
         }
     }
-    
-    // Initialize source list manager with callback
-    initializeSourceListManager({
+
+    // Use centralized source selector initialization
+    initializeSourceSelector({
+        formId: 'blastForm',
         filterId: 'sourceFilter',
         radioName: 'selected_source',
         sourceListClass: 'fasta-source-line',
         onSelectionChange: function(radio) {
             updateDatabaseList();
             updateCurrentSelectionDisplay();
+        },
+        onFilterChange: function() {
+            updateCurrentSelectionDisplay();
+            updateDatabaseList();
         }
     });
-    
-    // Add filter listener to uncheck hidden sources (like retrieve_sequences does)
-    const filterInput = document.getElementById('sourceFilter');
-    if (filterInput) {
-        filterInput.addEventListener('keyup', function() {
-            // After filter is applied, check visibility and uncheck hidden items
-            setTimeout(function() {
-                document.querySelectorAll('input[name="selected_source"]').forEach(radio => {
-                    const line = radio.closest('.fasta-source-line');
-                    if (line && !window.isSourceVisible(line)) {
-                        if (radio.checked) {
-                            radio.checked = false;
-                        }
-                        radio.disabled = true;
-                    } else {
-                        radio.disabled = false;
-                    }
-                });
-                updateCurrentSelectionDisplay();
-                updateDatabaseList();
-            }, 10);
-        });
-    }
-    
-    // Restore previously selected source (if form was resubmitted)
-    if (previouslySelectedSource) {
-        const allSourceRadios = document.querySelectorAll(`input[name="selected_source"][value="${previouslySelectedSource}"]`);
-        let prevSourceRadio = null;
-        
-        for (let radio of allSourceRadios) {
-            const line = radio.closest('.fasta-source-line');
-            if (line && !line.classList.contains('hidden')) {
-                prevSourceRadio = radio;
-                break;
-            }
-        }
-        
-        if (prevSourceRadio) {
-            prevSourceRadio.checked = true;
-        } else {
-            // Fall back to first visible if restoration failed
-            const firstRadio = document.querySelector('input[name="selected_source"]');
-            const firstLine = firstRadio ? firstRadio.closest('.fasta-source-line') : null;
-            if (firstLine && !firstLine.classList.contains('hidden')) {
-                firstRadio.checked = true;
-            }
-        }
-    }
-    
-    // Only auto-select first if nothing was restored
-    if (!previouslySelectedSource) {
-        const allRadios = document.querySelectorAll('input[name="selected_source"]');
-        for (let radio of allRadios) {
-            const line = radio.closest('.fasta-source-line');
-            if (line && !line.classList.contains('hidden') && !radio.checked) {
-                radio.click();
-                break;
-            }
-        }
-    }
     
     // Update display on page load
     updateCurrentSelectionDisplay();
@@ -150,7 +97,6 @@ function initializeBlastManager() {
     }
     
     // Handle form submission
-    const form = document.getElementById('blastForm');
     if (form) {
         form.addEventListener('submit', function(e) {
             const selectedSource = document.querySelector('input[name="selected_source"]:checked');

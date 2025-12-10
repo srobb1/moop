@@ -34,6 +34,7 @@ include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/blast_results_visualizer.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
+include_once __DIR__ . '/../includes/source-selector-helpers.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
@@ -42,39 +43,15 @@ $siteTitle = $config->getString('siteTitle');
 
 // Get context parameters from referring page using standard parser
 $context = parseContextParameters();
-$context_organism = $context['organism'];
-$context_assembly = $context['assembly'];
-$context_group = $context['group'];
 $display_name = $context['display_name'];
 
-// Get ALL accessible assemblies early (needed for pre-selection logic below)
+// Get ALL accessible assemblies early (needed for source selection)
 $sources_by_group = getAccessibleAssemblies();
-$accessible_sources = [];
-foreach ($sources_by_group as $group => $organisms) {
-    foreach ($organisms as $org => $assemblies) {
-        $accessible_sources = array_merge($accessible_sources, $assemblies);
-    }
-}
+$accessible_sources = flattenSourcesList($sources_by_group);
 
 // Get organisms for filtering - support both array and comma-separated string formats
-// Array format: organisms[] from multi-search context (via tool_config.php)
-// String format: comma-separated organisms from form resubmission
 $organisms_param = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
-$filter_organisms = [];
-$filter_organisms_string = '';
-
-if (is_array($organisms_param)) {
-    // Array format (from multi-search via tool links)
-    $filter_organisms = array_filter($organisms_param);
-    $filter_organisms_string = implode(',', $filter_organisms);
-} else {
-    // String format (comma-separated or from form resubmission)
-    $filter_organisms_string = trim($organisms_param);
-    if (!empty($filter_organisms_string)) {
-        $filter_organisms = array_map('trim', explode(',', $filter_organisms_string));
-        $filter_organisms = array_filter($filter_organisms);
-    }
-}
+$organism_result = parseOrganismParameter($organisms_param, '');
 
 // Get form data
 $search_query = trim($_POST['query'] ?? '');
@@ -82,66 +59,38 @@ $blast_program = trim($_POST['blast_program'] ?? 'blastx');
 $selected_source = trim($_POST['selected_source'] ?? '');
 $blast_db = trim($_POST['blast_db'] ?? '');
 
-// Initialize selection variables
+// Extract selected organism and assembly from form if provided
 $selected_organism = '';
-$selected_assembly_name = '';
-$selected_assembly_accession = '';
-
-// Initialize selected_source from context if not set from form
-// When arriving with context_organism and context_assembly, pre-select that source
-if (empty($selected_source) && !empty($context_organism) && !empty($context_assembly)) {
-    // Try to find matching source - assembly param might be accession or genome_name
-    $source_found = false;
-    foreach ($accessible_sources as $source) {
-        if ($source['organism'] === $context_organism && $source['assembly'] === $context_assembly) {
-            // Direct match found
-            $selected_organism = $source['organism'];
-            $selected_assembly_name = $source['genome_name'];
-            $selected_assembly_accession = $source['assembly'];
-            $selected_source = $context_organism . '|' . $context_assembly;
-            $source_found = true;
-            break;
-        }
-    }
-    
-    // If not found by direct match, try via genome_id lookup to find actual directory name
-    if (!$source_found) {
-        try {
-            $db_path = "$organism_data/$context_organism/organism.sqlite";
-            [$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($context_assembly, $db_path);
-            
-            // Now find source matching this genome_id
-            if (!empty($genome_id_param)) {
-                foreach ($accessible_sources as $source) {
-                    if ($source['organism'] === $context_organism && $source['genome_id'] == $genome_id_param) {
-                        $selected_organism = $source['organism'];
-                        $selected_assembly_name = $source['genome_name'];
-                        $selected_assembly_accession = $source['assembly'];
-                        $selected_source = $context_organism . '|' . $source['assembly'];
-                        break;
-                    }
-                }
-            }
-        } catch (Exception $e) {
-            // If lookup fails, keep original values
-        }
-    }
-} elseif (!empty($selected_source)) {
-    // Extract organism and assembly from selected_source
+$assembly_param = '';
+if (!empty($selected_source)) {
     $source_parts = explode('|', $selected_source);
     if (count($source_parts) === 2) {
         $selected_organism = $source_parts[0];
-        $selected_assembly_accession = $source_parts[1];
-        
-        // Find the matching source to get genome_name
-        foreach ($accessible_sources as $source) {
-            if ($source['organism'] === $selected_organism && $source['assembly'] === $selected_assembly_accession) {
-                $selected_assembly_name = $source['genome_name'];
-                break;
-            }
-        }
+        $assembly_param = $source_parts[1];
     }
 }
+
+// Use centralized source selection helper
+$source_selection = prepareSourceSelection(
+    $context,
+    $sources_by_group,
+    $accessible_sources,
+    $selected_organism,
+    $assembly_param,
+    $organism_result['organisms']
+);
+
+// Extract selected values
+$filter_organisms = $source_selection['filter_organisms'];
+$selected_source = $source_selection['selected_source'];
+$selected_organism = $source_selection['selected_organism'];
+$selected_assembly_accession = $source_selection['selected_assembly_accession'];
+$selected_assembly_name = $source_selection['selected_assembly_name'];
+
+// Extract context values for backward compatibility
+$context_organism = $context['organism'];
+$context_assembly = $context['assembly'];
+$context_group = $context['group'];
 
 // Handle evalue with custom option
 $evalue = trim($_POST['evalue'] ?? '1e-3');

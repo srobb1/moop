@@ -256,3 +256,149 @@ function initializeSourceListManager(options = {}) {
     // Apply initial filter only (don't auto-select - let caller decide)
     applySourceFilter(filterId, sourceListClass);
 }
+
+/**
+ * Initialize source selector with unified logic for all tools
+ * Handles group filters, multi-organism filters, and auto-selection logic
+ * 
+ * Cases:
+ * 1. Assembly specified: show assembly name, auto-select
+ * 2. Organism specified: show organism name, auto-select
+ * 3. Group specified: show group name, DON'T auto-select (let user choose)
+ * 4. Multiple organisms: show empty filter, restrict list, auto-select first if needed
+ * 
+ * @param {Object} options - Configuration options
+ * @param {string} options.formId - ID of form (default: 'blastForm')
+ * @param {string} options.filterId - ID of filter input (default: 'sourceFilter')
+ * @param {string} options.radioName - Name of radio buttons (default: 'selected_source')
+ * @param {string} options.sourceListClass - CSS class of source items (default: 'fasta-source-line')
+ * @param {Function} options.onSelectionChange - Callback when selection changes
+ * @param {Function} options.onFilterChange - Callback when filter changes
+ */
+function initializeSourceSelector(options = {}) {
+    const {
+        formId = 'blastForm',
+        filterId = 'sourceFilter',
+        radioName = 'selected_source',
+        sourceListClass = 'fasta-source-line',
+        shouldAutoSelect = true,
+        onSelectionChange = null,
+        onFilterChange = null
+    } = options;
+
+    const form = document.getElementById(formId);
+    if (!form) {
+        console.warn('Source selector: Form not found:', formId);
+        return;
+    }
+
+    // Check if a group context filter is active
+    const contextGroupField = form.querySelector('input[name="context_group"]');
+    const hasGroupFilter = contextGroupField && contextGroupField.value && contextGroupField.value.trim() !== '';
+    
+    // Don't auto-select if shouldAutoSelect is false OR if a group filter is active
+    const doAutoSelect = shouldAutoSelect && !hasGroupFilter;
+
+    // Initialize source list manager
+    initializeSourceListManager({
+        filterId: filterId,
+        radioName: radioName,
+        sourceListClass: sourceListClass,
+        onSelectionChange: onSelectionChange
+    });
+
+    // Add filter listener for visibility and state management
+    const filterInput = document.getElementById(filterId);
+    if (filterInput) {
+        filterInput.addEventListener('keyup', function() {
+            setTimeout(function() {
+                // Update radio button state based on visibility
+                document.querySelectorAll(`input[name="${radioName}"]`).forEach(radio => {
+                    const line = radio.closest('.' + sourceListClass);
+                    if (line && !isSourceVisible(line)) {
+                        if (radio.checked) {
+                            radio.checked = false;
+                        }
+                        radio.disabled = true;
+                    } else {
+                        radio.disabled = false;
+                    }
+                });
+
+                if (onFilterChange) {
+                    onFilterChange();
+                }
+            }, 10);
+        });
+    }
+
+    // Restore previously selected source or auto-select first visible
+    const anyChecked = Array.from(document.querySelectorAll(`input[name="${radioName}"]`)).some(radio => radio.checked);
+
+    if (typeof previouslySelectedSource !== 'undefined' && previouslySelectedSource) {
+        // Try to restore previously selected source
+        const allSourceRadios = document.querySelectorAll(`input[name="${radioName}"][value="${previouslySelectedSource}"]`);
+        let prevSourceRadio = null;
+
+        for (let radio of allSourceRadios) {
+            const line = radio.closest('.' + sourceListClass);
+            if (line && isSourceVisible(line)) {
+                prevSourceRadio = radio;
+                break;
+            }
+        }
+
+        if (prevSourceRadio) {
+            prevSourceRadio.checked = true;
+            if (onSelectionChange) {
+                onSelectionChange(prevSourceRadio);
+            }
+        } else {
+            // Fall back to first visible if restoration failed
+            const firstRadio = document.querySelector(`input[name="${radioName}"]`);
+            if (firstRadio && isSourceVisible(firstRadio.closest('.' + sourceListClass))) {
+                firstRadio.checked = true;
+                if (onSelectionChange) {
+                    onSelectionChange(firstRadio);
+                }
+            }
+        }
+    } else if (!anyChecked && doAutoSelect) {
+        // Auto-select first visible source ONLY if:
+        // 1. Nothing is already checked AND
+        // 2. shouldAutoSelect is true AND
+        // 3. No group filter is active
+        const allRadios = document.querySelectorAll(`input[name="${radioName}"]`);
+        for (let radio of allRadios) {
+            const line = radio.closest('.' + sourceListClass);
+            if (line && isSourceVisible(line)) {
+                radio.click();
+                if (onSelectionChange) {
+                    onSelectionChange(radio);
+                }
+                break;
+            }
+        }
+    } else if (!anyChecked && !doAutoSelect) {
+        // For group filters or multi-organism filters: select first visible without triggering click event
+        // This ensures a selection exists but doesn't trigger dependent updates
+        const allRadios = document.querySelectorAll(`input[name="${radioName}"]`);
+        for (let radio of allRadios) {
+            const line = radio.closest('.' + sourceListClass);
+            if (line && isSourceVisible(line)) {
+                radio.checked = true;
+                break;
+            }
+        }
+    }
+
+    // Disable hidden radios on load
+    document.querySelectorAll(`input[name="${radioName}"]`).forEach(radio => {
+        const line = radio.closest('.' + sourceListClass);
+        if (line && !isSourceVisible(line)) {
+            radio.disabled = true;
+        } else {
+            radio.disabled = false;
+        }
+    });
+}
