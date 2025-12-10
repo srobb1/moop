@@ -397,11 +397,13 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
         
         // Step 3: Add all input IDs with ranges (formatted as "ID range")
         foreach ($input_ids_with_ranges as $id) {
-            foreach ($ranges as $range_entry) {
-                $range_id = explode(':', $range_entry)[0];
+            // Find the corresponding converted range in $batch_ranges
+            foreach (array_keys($ranges) as $idx) {
+                $range_id = explode(':', $ranges[$idx])[0];
                 $range_id = explode(' ', $range_id)[0];
                 if ($range_id === $id) {
-                    $batch_entries[] = $range_entry;
+                    // Use the converted batch_ranges entry (with space, not colon)
+                    $batch_entries[] = $batch_ranges[$idx];
                     break;
                 }
             }
