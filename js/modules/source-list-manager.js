@@ -139,6 +139,14 @@ function clearSourceFilters(filterId = 'sourceFilter', radioName = 'selected_sou
         filterInput.value = '';
     }
     
+    // Clear context parameters from form (group, organisms, etc.)
+    if (form) {
+        const contextFields = form.querySelectorAll('input[name^="context_"]');
+        contextFields.forEach(field => {
+            field.value = '';
+        });
+    }
+    
     // Show all source lines (remove inline display: none)
     sourceLines.forEach(line => {
         line.style.display = '';
