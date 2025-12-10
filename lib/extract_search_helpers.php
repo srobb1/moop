@@ -409,4 +409,78 @@ function handleSequenceDownload($download_flag, $sequence_type, $sequence_data) 
     return false;
 }
 
+/**
+ * Determine selected source (organism/assembly) based on URL/POST parameters
+ * 
+ * Selection priority (highest to lowest):
+ * 1. Explicit assembly parameter
+ * 2. Explicit organism parameter
+ * 3. Group parameter (select first organism from group)
+ * 4. Organisms filter list (select first organism)
+ * 
+ * @param array $context - Context parameters [organism, assembly, group, display_name, context_page]
+ * @param array $filter_organisms - Pre-filtered list of organisms (from organisms[] or group)
+ * @param array $accessible_sources - Flat list of all accessible sources
+ * @param string $selected_organism - Optional pre-selected organism (input/output)
+ * @param string $selected_assembly_accession - Optional pre-selected assembly (input/output)
+ * @return array - ['selected_source' => 'org|assembly', 'selected_organism' => 'org', 'selected_assembly_accession' => 'accession', 'selected_assembly_name' => 'name']
+ */
+function determineSelectedSource($context, $filter_organisms, $accessible_sources, $selected_organism = '', $selected_assembly_accession = '') {
+    $result = [
+        'selected_source' => '',
+        'selected_organism' => $selected_organism,
+        'selected_assembly_accession' => $selected_assembly_accession,
+        'selected_assembly_name' => ''
+    ];
+    
+    // Case 1: Both organism and assembly explicitly specified
+    if (!empty($selected_organism) && !empty($selected_assembly_accession)) {
+        $result['selected_source'] = $selected_organism . '|' . $selected_assembly_accession;
+        return $result;
+    }
+    
+    // Case 2: Only organism specified (select its first assembly)
+    if (!empty($selected_organism)) {
+        foreach ($accessible_sources as $source) {
+            if ($source['organism'] === $selected_organism) {
+                $result['selected_source'] = $selected_organism . '|' . $source['assembly'];
+                $result['selected_assembly_accession'] = $source['assembly'];
+                $result['selected_assembly_name'] = $source['genome_name'] ?? $source['assembly'];
+                return $result;
+            }
+        }
+    }
+    
+    // Case 3: Group specified (select first organism from group, then its first assembly)
+    if (!empty($context['group']) && !empty($filter_organisms)) {
+        $first_organism = reset($filter_organisms);
+        foreach ($accessible_sources as $source) {
+            if ($source['organism'] === $first_organism && in_array($context['group'], $source['groups'] ?? [])) {
+                $result['selected_source'] = $first_organism . '|' . $source['assembly'];
+                $result['selected_organism'] = $first_organism;
+                $result['selected_assembly_accession'] = $source['assembly'];
+                $result['selected_assembly_name'] = $source['genome_name'] ?? $source['assembly'];
+                return $result;
+            }
+        }
+    }
+    
+    // Case 4: Organisms filter list specified (select first organism, then its first assembly)
+    if (!empty($filter_organisms)) {
+        $first_organism = reset($filter_organisms);
+        foreach ($accessible_sources as $source) {
+            if ($source['organism'] === $first_organism) {
+                $result['selected_source'] = $first_organism . '|' . $source['assembly'];
+                $result['selected_organism'] = $first_organism;
+                $result['selected_assembly_accession'] = $source['assembly'];
+                $result['selected_assembly_name'] = $source['genome_name'] ?? $source['assembly'];
+                return $result;
+            }
+        }
+    }
+    
+    // No selection could be determined
+    return $result;
+}
+
 ?>

@@ -140,41 +140,17 @@ if (!empty($selected_assembly_name)) {
 }
 
 // Build selected_source for radio button selection
-if (!empty($selected_organism) && !empty($selected_assembly_accession)) {
-    $selected_source = $selected_organism . '|' . $selected_assembly_accession;
-} elseif (!empty($selected_organism)) {
-    // If only organism specified, select first assembly for that organism
-    foreach ($accessible_sources as $source) {
-        if ($source['organism'] === $selected_organism) {
-            $selected_source = $selected_organism . '|' . $source['assembly'];
-            break;
-        }
-    }
-} elseif (!empty($context['group']) && !empty($filter_organisms)) {
-    // If only group specified, select first organism's first assembly from that group
-    $first_organism = reset($filter_organisms);
-    foreach ($accessible_sources as $source) {
-        if ($source['organism'] === $first_organism && in_array($context['group'], $source['groups'] ?? [])) {
-            $selected_source = $first_organism . '|' . $source['assembly'];
-            $selected_organism = $first_organism;
-            $selected_assembly_accession = $source['assembly'];
-            $selected_assembly_name = $source['genome_name'] ?? $source['assembly'];
-            break;
-        }
-    }
-} elseif (!empty($filter_organisms)) {
-    // If only organisms list specified (e.g., from multi-organism search), select first one's first assembly
-    $first_organism = reset($filter_organisms);
-    foreach ($accessible_sources as $source) {
-        if ($source['organism'] === $first_organism) {
-            $selected_source = $first_organism . '|' . $source['assembly'];
-            $selected_organism = $first_organism;
-            $selected_assembly_accession = $source['assembly'];
-            $selected_assembly_name = $source['genome_name'] ?? $source['assembly'];
-            break;
-        }
-    }
-}
+$selection_result = determineSelectedSource(
+    $context,
+    $filter_organisms,
+    $accessible_sources,
+    $selected_organism,
+    $selected_assembly_accession
+);
+$selected_source = $selection_result['selected_source'];
+$selected_organism = $selection_result['selected_organism'];
+$selected_assembly_accession = $selection_result['selected_assembly_accession'];
+$selected_assembly_name = $selection_result['selected_assembly_name'];
 
 // If sequence IDs are provided, extract ALL sequence types
 if (!empty($sequence_ids_provided)) {
