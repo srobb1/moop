@@ -154,7 +154,7 @@ if (!empty($selected_organism) && !empty($selected_assembly_accession)) {
     // If only group specified, select first organism's first assembly from that group
     $first_organism = reset($filter_organisms);
     foreach ($accessible_sources as $source) {
-        if ($source['organism'] === $first_organism && $source['group'] === $context['group']) {
+        if ($source['organism'] === $first_organism && in_array($context['group'], $source['groups'] ?? [])) {
             $selected_source = $first_organism . '|' . $source['assembly'];
             $selected_organism = $first_organism;
             $selected_assembly_accession = $source['assembly'];
