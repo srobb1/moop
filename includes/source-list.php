@@ -42,7 +42,7 @@ foreach ($sources_by_group as $group_name => $organisms) {
                 class="form-control" 
                 id="sourceFilter" 
                 placeholder="Filter by group, organism, or assembly..."
-                value="<?= htmlspecialchars($context_organism ?: $context_group) ?>"
+                value="<?= htmlspecialchars($selected_assembly_name ?: ($selected_organism ?: $context_group)) ?>"
                 >
             <button type="button" class="btn btn-success" onclick="<?= $clear_filter_function ?? 'clearSourceFilter' ?>();">
                 <i class="fa fa-times"></i> Clear Filters
