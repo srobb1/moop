@@ -56,6 +56,7 @@ include_once __DIR__ . '/../lib/extract_search_helpers.php';
 $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
 $sequence_types = $config->getSequenceTypes();
+$siteTitle = $config->getString('siteTitle');
 
 // Validate required parameters
 if (empty($_GET['organism']) || empty($_GET['uniquename'])) {
@@ -224,6 +225,7 @@ if ($download_file_flag && !empty($sequence_type)) {
     }
 }
 
+
 // Render page using layout system
 echo render_display_page(
     __DIR__ . '/pages/parent.php',
@@ -251,10 +253,14 @@ echo render_display_page(
         'enable_downloads' => true,
         'assembly_name' => $genome_accession,
         'site' => $site,
+	'siteTitle' => $siteTitle,
         'page_styles' => ["/moop/css/parent.css"],
         'page_script' => [
             "/moop/js/modules/collapse-handler.js",
             "/moop/js/modules/parent-tools.js"
+        ],
+        'inline_scripts' => [
+            "const siteTitle = '" . addslashes($siteTitle) . "';"
         ]
     ],
     htmlspecialchars($feature_uniquename)
