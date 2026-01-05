@@ -274,7 +274,7 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile, $genome_ids = []) {
  * @param bool $is_last - Internal use for recursion
  * @return string - HTML string with nested ul/li tree structure
  */
-function generateTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true, $genome_ids = []) {
+function generateTreeHTML($feature_id, $dbFile, $all_annotations = [], $analysis_order = [], $prefix = '', $is_last = true, $genome_ids = []) {
     $results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);
 
     if (empty($results)) {
@@ -289,6 +289,7 @@ function generateTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true, $
         
         $feature_type = htmlspecialchars($row['feature_type']);
         $feature_name = htmlspecialchars($row['feature_uniquename']);
+        $child_feature_id = $row['feature_id'];
         
         // Color code badges by feature type
         $badge_class = 'bg-secondary';
@@ -311,16 +312,32 @@ function generateTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true, $
             $text_color = 'text-white';
         }
         
+        // Calculate annotation count for this child
+        $child_annot_count = 0;
+        if (isset($all_annotations[$child_feature_id])) {
+            foreach ($all_annotations[$child_feature_id] as $annotation_type => $annots) {
+                $child_annot_count += count($annots);
+            }
+        }
+        
+        // Generate anchor for first annotation type (or use first one available)
+        $child_annot_anchor = preg_replace('/[^a-zA-Z0-9_]/', '_', $row['feature_uniquename'] . '_' . ($analysis_order[0] ?? 'annotation'));
+        
         // Tree character - └── for last child, ├── for others
         $tree_char = $is_last_child ? '└── ' : '├── ';
         
         $html .= "<li>";
         $html .= "<span class=\"tree-char\">$tree_char</span>";
-        $html .= "<span class=\"text-dark\">$feature_name</span> ";
+        $html .= "<a href=\"#annot_section_$child_annot_anchor\" class=\"link-light-bordered text-decoration-none\"><span class=\"text-dark\">$feature_name</span></a> ";
         $html .= "<span class=\"badge $badge_class $text_color\">$feature_type</span>";
         
+        // Add annotation count badge if there are annotations
+        if ($child_annot_count > 0) {
+            $html .= " <span class=\"badge bg-success text-white badge-sm\">$child_annot_count annotation" . ($child_annot_count > 1 ? 's' : '') . "</span>";
+        }
+        
         // Recursive call for nested children
-        $html .= generateTreeHTML($row['feature_id'], $dbFile, $prefix, $is_last_child, $genome_ids);
+        $html .= generateTreeHTML($child_feature_id, $dbFile, $all_annotations, $analysis_order, $prefix, $is_last_child, $genome_ids);
         $html .= "</li>";
     }
     $html .= "</ul>";

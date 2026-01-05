@@ -97,9 +97,22 @@
                     <div class="tree">
                         <ul id="tree1">
                             <li>
-                                <span class="feature-color-gene"><strong><?= htmlspecialchars($feature_uniquename) ?></strong></span> 
+                                <?php
+                                // Calculate annotation count for parent feature
+                                $parent_annot_count = 0;
+                                if (isset($all_annotations[$feature_id])) {
+                                    foreach ($all_annotations[$feature_id] as $annotation_type => $annots) {
+                                        $parent_annot_count += count($annots);
+                                    }
+                                }
+                                $parent_annot_anchor = preg_replace('/[^a-zA-Z0-9_]/', '_', $feature_uniquename . '_' . ($analysis_order[0] ?? 'annotation'));
+                                ?>
+                                <span class="feature-color-gene"><strong><a href="#annot_section_<?= htmlspecialchars($parent_annot_anchor) ?>" class="link-light-bordered text-decoration-none"><?= htmlspecialchars($feature_uniquename) ?></a></strong></span> 
                                 <span class="badge bg-feature-gene text-white badge-sm"><?= htmlspecialchars($type) ?></span>
-                                <?= generateTreeHTML($feature_id, $db) ?>
+                                <?php if ($parent_annot_count > 0): ?>
+                                    <span class="badge bg-success text-white badge-sm"><?= $parent_annot_count ?> annotation<?= $parent_annot_count > 1 ? 's' : '' ?></span>
+                                <?php endif; ?>
+                                <?= generateTreeHTML($feature_id, $db, $all_annotations, $analysis_order) ?>
                             </li>
                         </ul>
                     </div>
