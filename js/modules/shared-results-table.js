@@ -346,8 +346,8 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
                 
                 <p style="margin-bottom: 0;"><strong>View All Matches:</strong> Click "Expand All Matches" to see all matching annotations for each sequence. This shows exactly which search terms were found and where they were found (name, description, or specific annotation).</p>
             </div>
-            <div class="simple-view-container" data-organism="${selectId}">
-                <div class="table-responsive" style="overflow-x: auto; width: 100%;">
+            <div class="simple-view-container" data-organism="${selectId}" style="background-color: #f0f8f0; padding: 0.75rem; border-radius: 0.25rem;">
+                <div class="table-responsive" style="overflow-x: auto; width: 100%; background-color: #f0f8f0; border-radius: 0.25rem;">
                     <table id="${tableId}" class="table table-sm table-striped table-hover results-table">
                         <thead>
                             <tr>
@@ -406,7 +406,7 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
                     </table>
                 </div>
             </div>
-            <div class="expanded-view-container" data-organism="${selectId}" style="display: none;">
+            <div class="expanded-view-container" data-organism="${selectId}" style="display: none; background-color: #f0f8ff; padding: 0.75rem; border-radius: 0.25rem;">
                 <!-- Full table will be inserted here -->
             </div>
         </div>
