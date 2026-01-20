@@ -147,6 +147,7 @@
                             <li><strong>Orthologs:</strong> Orthologous sequences found in other organisms using tools like OMA or EggNOG</li>
                             <li><strong>Protein Domains:</strong> Conserved structural domains identified using InterProScan or similar tools</li>
                         </ul>
+                        <p class="mb-0 mt-2"><small><strong>Note:</strong> Annotation sections are only displayed if the sequence has results for that type. If a sequence has no annotations of a specific type, that section will not appear.</small></p>
                     </div>
                 </div>
                 <?php
