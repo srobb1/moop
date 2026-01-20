@@ -361,6 +361,7 @@ $data = [
     'message' => $message,
     'messageType' => $messageType,
     'config' => $config,
+    'config_file' => $config_file,
     'page_styles' => [
         'https://code.jquery.com/ui/1.14.0/themes/base/jquery-ui.css'
     ],

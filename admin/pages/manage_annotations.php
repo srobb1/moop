@@ -30,13 +30,20 @@
         </ul>
         
         <p class="mb-0"><strong>What You Can Do:</strong></p>
-        <ul class="mb-0">
+        <ul>
           <li>Add synonyms for annotation types (alternate search names)</li>
           <li>Customize the display label shown to users</li>
           <li>Edit descriptions for each annotation type</li>
           <li>Drag and drop to reorder how annotations appear</li>
           <li>Delete annotation types that have no data</li>
           <li>Enable/disable annotation types per organism</li>
+        </ul>
+        
+        <hr class="my-3">
+        
+        <p><strong>Configuration Files:</strong></p>
+        <ul class="mb-0">
+          <li><strong>Annotation Configuration:</strong> <code><?= htmlspecialchars($config_file) ?></code></li>
         </ul>
       </div>
     </div>
@@ -75,21 +82,6 @@
       <p><small class="text-muted">After running the command, refresh this page.</small></p>
     </div>
   <?php endif; ?>
-
-  <!-- Configuration Files Info -->
-  <div class="card mb-4 border-info">
-    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#configFilesInfo">
-      <h5 class="mb-0"><i class="fa fa-file-code"></i> Configuration Files <i class="fa fa-chevron-down float-end"></i></h5>
-    </div>
-    <div class="collapse show" id="configFilesInfo">
-      <div class="card-body">
-        <p><strong>Location of annotation configuration files:</strong></p>
-        <ul class="mb-0">
-          <li><strong>Annotation Configuration:</strong> <code><?= htmlspecialchars($config_file) ?></code></li>
-        </ul>
-      </div>
-    </div>
-  </div>
 
   <!-- PHASE 3: Annotation Type Configuration -->
   <?php if (!empty($annotation_config['annotation_types'])): ?>
