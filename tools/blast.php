@@ -217,6 +217,7 @@ $display_config = [
     'title' => 'BLAST Search - ' . htmlspecialchars($siteTitle),
     'content_file' => __DIR__ . '/pages/blast.php',
     'page_script' => [
+        '/' . $site . '/js/modules/collapse-handler.js',
         '/' . $site . '/js/modules/source-list-manager.js',
         '/' . $site . '/js/blast-manager.js'
     ],
