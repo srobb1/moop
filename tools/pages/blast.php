@@ -127,24 +127,141 @@
                 </button>
                 
                 <div id="advOptions" class="collapse mt-3">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label for="evalue" class="form-label"><strong>E-value Threshold</strong></label>
-                            <select id="evalue" name="evalue" class="form-select">
-                                <option value="1e-3" <?= $evalue === '1e-3' ? 'selected' : '' ?>>1e-3 (default)</option>
-                                <option value="0.1" <?= $evalue === '0.1' ? 'selected' : '' ?>>0.1</option>
-                                <option value="1" <?= $evalue === '1' ? 'selected' : '' ?>>1</option>
-                                <option value="10" <?= $evalue === '10' ? 'selected' : '' ?>>10</option>
-                            </select>
+                    <div class="card card-body">
+                        <!-- Basic Parameters -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="evalue" class="form-label"><strong>E-value Threshold</strong></label>
+                                <select id="evalue" name="evalue" class="form-select" onchange="toggleEvalueCustom()">
+                                    <option value="10" <?= $evalue === '10' ? 'selected' : '' ?>>10</option>
+                                    <option value="1" <?= $evalue === '1' ? 'selected' : '' ?>>1</option>
+                                    <option value="0.1" <?= $evalue === '0.1' ? 'selected' : '' ?>>0.1</option>
+                                    <option value="1e-3" <?= $evalue === '1e-3' ? 'selected' : '' ?>>1e-3 (default)</option>
+                                    <option value="1e-6" <?= $evalue === '1e-6' ? 'selected' : '' ?>>1e-6</option>
+                                    <option value="1e-9" <?= $evalue === '1e-9' ? 'selected' : '' ?>>1e-9</option>
+                                    <option value="1e-12" <?= $evalue === '1e-12' ? 'selected' : '' ?>>1e-12</option>
+                                    <option value="custom" <?= !in_array($evalue, ['10', '1', '0.1', '1e-3', '1e-6', '1e-9', '1e-12']) && !empty($evalue) ? 'selected' : '' ?>>Custom</option>
+                                </select>
+                                <div id="evalue_custom_container" style="display: <?= !in_array($evalue, ['10', '1', '0.1', '1e-3', '1e-6', '1e-9', '1e-12']) && !empty($evalue) ? 'block' : 'none' ?>; margin-top: 8px;">
+                                    <input type="text" id="evalue_custom" name="evalue_custom" class="form-control" placeholder="e.g., 1e-15, 0.05" value="<?= !in_array($evalue, ['10', '1', '0.1', '1e-3', '1e-6', '1e-9', '1e-12']) && !empty($evalue) ? htmlspecialchars($evalue) : htmlspecialchars($evalue_custom) ?>">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="max_results" class="form-label"><strong>Maximum Hits</strong></label>
+                                <input type="number" id="max_results" name="max_results" class="form-control" value="<?= htmlspecialchars($max_results) ?>" min="1">
+                                <small class="form-text text-muted">Maximum number of hits to return</small>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label for="max_results" class="form-label"><strong>Max Results</strong></label>
-                            <select id="max_results" name="max_results" class="form-select">
-                                <option value="10" <?= $max_results === '10' ? 'selected' : '' ?>>10</option>
-                                <option value="25" <?= $max_results === '25' ? 'selected' : '' ?>>25</option>
-                                <option value="50" <?= $max_results === '50' ? 'selected' : '' ?>>50 (default)</option>
-                                <option value="100" <?= $max_results === '100' ? 'selected' : '' ?>>100</option>
-                            </select>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="matrix" class="form-label"><strong>Scoring Matrix</strong></label>
+                                <select id="matrix" name="matrix" class="form-select">
+                                    <option value="BLOSUM45" <?= isset($blast_options) && $blast_options['matrix'] === 'BLOSUM45' ? 'selected' : '' ?>>BLOSUM45</option>
+                                    <option value="BLOSUM62" <?= !isset($blast_options) || (isset($blast_options) && $blast_options['matrix'] === 'BLOSUM62') ? 'selected' : '' ?>>BLOSUM62 (default)</option>
+                                    <option value="BLOSUM80" <?= isset($blast_options) && $blast_options['matrix'] === 'BLOSUM80' ? 'selected' : '' ?>>BLOSUM80</option>
+                                    <option value="PAM30" <?= isset($blast_options) && $blast_options['matrix'] === 'PAM30' ? 'selected' : '' ?>>PAM30</option>
+                                    <option value="PAM70" <?= isset($blast_options) && $blast_options['matrix'] === 'PAM70' ? 'selected' : '' ?>>PAM70</option>
+                                    <option value="PAM250" <?= isset($blast_options) && $blast_options['matrix'] === 'PAM250' ? 'selected' : '' ?>>PAM250</option>
+                                </select>
+                                <small class="form-text text-muted">Only used for protein searches</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" name="filter_seq" id="filter_seq" <?= (isset($blast_options) && $blast_options['filter']) ? 'checked' : '' ?>>
+                                    <label class="form-check-label" for="filter_seq">
+                                        Filter low complexity regions
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Advanced Options -->
+                        <hr class="my-4">
+                        <h6 class="text-muted mb-3">Additional Parameters</h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="word_size" class="form-label"><strong>Word Size</strong></label>
+                                <input type="number" id="word_size" name="word_size" class="form-control" value="<?= isset($blast_options) && $blast_options['word_size'] ? htmlspecialchars($blast_options['word_size']) : '' ?>" placeholder="Default (program-specific)" min="1">
+                                <small class="form-text text-muted">Length of initial exact match (typically 11 for blastn, 3 for blastp)</small>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="max_hsps" class="form-label"><strong>Max HSPs</strong></label>
+                                <input type="number" id="max_hsps" name="max_hsps" class="form-control" value="<?= isset($blast_options) && $blast_options['max_hsps'] ? htmlspecialchars($blast_options['max_hsps']) : '' ?>" placeholder="Unlimited" min="1">
+                                <small class="form-text text-muted">Maximum number of HSPs to return per subject</small>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="perc_identity" class="form-label"><strong>Percent Identity</strong></label>
+                                <input type="number" id="perc_identity" name="perc_identity" class="form-control" value="<?= isset($blast_options) && $blast_options['perc_identity'] ? htmlspecialchars($blast_options['perc_identity']) : '' ?>" placeholder="No threshold" min="0" max="100" step="0.1">
+                                <small class="form-text text-muted">Minimum percent identity (0-100)</small>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="culling_limit" class="form-label"><strong>Culling Limit</strong></label>
+                                <input type="number" id="culling_limit" name="culling_limit" class="form-control" value="<?= isset($blast_options) && $blast_options['culling_limit'] ? htmlspecialchars($blast_options['culling_limit']) : '' ?>" placeholder="No limit" min="0">
+                                <small class="form-text text-muted">Max alignments per subject (0 = unlimited)</small>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="gapopen" class="form-label"><strong>Gap Open Penalty</strong></label>
+                                <input type="number" id="gapopen" name="gapopen" class="form-control" value="<?= isset($blast_options) && $blast_options['gapopen'] ? htmlspecialchars($blast_options['gapopen']) : '' ?>" placeholder="Default" min="1">
+                                <small class="form-text text-muted">Cost to open a gap</small>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="gapextend" class="form-label"><strong>Gap Extend Penalty</strong></label>
+                                <input type="number" id="gapextend" name="gapextend" class="form-control" value="<?= isset($blast_options) && $blast_options['gapextend'] ? htmlspecialchars($blast_options['gapextend']) : '' ?>" placeholder="Default" min="1">
+                                <small class="form-text text-muted">Cost to extend a gap</small>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="threshold" class="form-label"><strong>Threshold</strong></label>
+                                <input type="number" id="threshold" name="threshold" class="form-control" value="<?= isset($blast_options) && $blast_options['threshold'] ? htmlspecialchars($blast_options['threshold']) : '' ?>" placeholder="Default" step="0.1">
+                                <small class="form-text text-muted">Minimum score for extending HSP (protein searches)</small>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="strand" class="form-label"><strong>Strand (DNA only)</strong></label>
+                                <select id="strand" name="strand" class="form-select">
+                                    <option value="plus" <?= isset($blast_options) && $blast_options['strand'] === 'plus' ? 'selected' : 'selected' ?>>Plus strand</option>
+                                    <option value="minus" <?= isset($blast_options) && $blast_options['strand'] === 'minus' ? 'selected' : '' ?>>Minus strand</option>
+                                    <option value="both" <?= isset($blast_options) && $blast_options['strand'] === 'both' ? 'selected' : '' ?>>Both strands</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="soft_masking" id="soft_masking" <?= isset($blast_options) && $blast_options['soft_masking'] ? 'checked' : '' ?>>
+                                    <label class="form-check-label" for="soft_masking">
+                                        <strong>Soft Masking</strong>
+                                    </label>
+                                </div>
+                                <small class="form-text text-muted d-block">Apply soft masking to query and database</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ungapped" id="ungapped" <?= isset($blast_options) && $blast_options['ungapped'] ? 'checked' : '' ?>>
+                                    <label class="form-check-label" for="ungapped">
+                                        <strong>Ungapped</strong>
+                                    </label>
+                                </div>
+                                <small class="form-text text-muted d-block">Perform ungapped alignment only</small>
+                            </div>
                         </div>
                     </div>
                 </div>
