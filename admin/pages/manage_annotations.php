@@ -76,6 +76,20 @@
     </div>
   <?php endif; ?>
 
+  <!-- Configuration Files Info -->
+  <div class="card mb-4 border-info">
+    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#configFilesInfo">
+      <h5 class="mb-0"><i class="fa fa-file-code"></i> Configuration Files <i class="fa fa-chevron-down float-end"></i></h5>
+    </div>
+    <div class="collapse show" id="configFilesInfo">
+      <div class="card-body">
+        <p><strong>Location of annotation configuration files:</strong></p>
+        <ul class="mb-0">
+          <li><strong>Annotation Configuration:</strong> <code><?= htmlspecialchars($config_file) ?></code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
 
   <!-- PHASE 3: Annotation Type Configuration -->
   <?php if (!empty($annotation_config['annotation_types'])): ?>
