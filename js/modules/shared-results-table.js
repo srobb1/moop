@@ -330,6 +330,7 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
                 <button type="button" class="btn btn-sm btn-outline-info info-icon-btn" data-info-id="info-${selectId}" title="Learn about search results" style="cursor: pointer; padding: 0.375rem 0.625rem; border: 1px solid #17a2b8;">
                     <i class="fa fa-info-circle"></i>
                 </button>
+                <small class="text-muted" style="font-size: 0.85rem;"><em>Note: Horizontal scrolling may be necessary to view the complete table</em></small>
             </div>
             <div class="info-box mb-3" id="info-${selectId}" style="display: none; background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 0.25rem; padding: 0.75rem 1.25rem;">
                 <p><strong>Simple View:</strong> Displays a unique list of sequence IDs that have matches to your search terms. This gives you a clean overview of all sequences found without duplication.</p>

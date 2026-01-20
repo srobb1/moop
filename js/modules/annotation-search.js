@@ -369,16 +369,13 @@ class AnnotationSearch {
             $('#searchProgress').html(`
                 ${capMessageHtml}
                 ${warningsHtml}
-                <div class="alert alert-success mb-3">
-                    <button class="btn btn-link text-start p-0 w-100 text-decoration-none collapsed" 
-                            type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}"
-                            style="text-align: left; color: inherit;">
-                        <i class="fa fa-check-circle"></i> <strong>Search complete!</strong> Found ${this.allResults.length} total result${this.allResults.length !== 1 ? 's' : ''} across ${this.searchedOrganisms} organisms.
-                        <span style="float: right; margin-top: 2px;">
-                            <i class="fa fa-chevron-down"></i>
-                        </span>
-                    </button>
-                    <div class="collapse mt-3" id="${collapseId}">
+                <button class="btn btn-outline-secondary w-100 mb-3 search-hints-toggle" 
+                        type="button" data-collapse-id="${collapseId}"
+                        style="cursor: pointer;">
+                    <i class="fa fa-check-circle text-success"></i> <strong>Search complete!</strong> Found ${this.allResults.length} total result${this.allResults.length !== 1 ? 's' : ''} across ${this.searchedOrganisms} organisms.
+                </button>
+                <div class="search-hints-content mb-3" id="${collapseId}" style="display: none;">
+                    <div class="alert alert-info">
                         <small>
                             <strong>How to use results:</strong><br>
                             • <strong>Filter:</strong> Use the input boxes above each column header to filter results.<br>
@@ -390,6 +387,13 @@ class AnnotationSearch {
                 </div>
                 ${jumpToHtml}
             `);
+            
+            // Setup toggle handler for search hints
+            $(document).on('click', `.search-hints-toggle[data-collapse-id="${collapseId}"]`, function(e) {
+                e.preventDefault();
+                const contentBox = $(`#${collapseId}`);
+                contentBox.slideToggle(200);
+            });
         }
         
         // Optional: scroll to results
