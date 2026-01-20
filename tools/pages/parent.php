@@ -129,6 +129,9 @@
                     <i class="fas fa-minus toggle-icon text-primary"></i>
                 </span>
                 <strong class="ms-2">Annotations</strong>
+                <button class="btn btn-sm btn-link p-0 ms-2 annotation-info-btn" type="button" data-bs-toggle="collapse" data-bs-target="#annotationsInfo" aria-expanded="false" title="What is an annotation?">
+                    <i class="fas fa-info-circle"></i>
+                </button>
             </div>
             <a href="#" class="btn btn-sm btn-outline-secondary" title="Back to top">
                 <i class="fas fa-arrow-up"></i> Back to Top
@@ -136,6 +139,16 @@
         </div>
         <div id="annotationsSection" class="collapse show">
             <div class="card-body">
+                <div class="collapse mb-3" id="annotationsInfo">
+                    <div class="alert alert-info mb-3 font-size-xsmall">
+                        <strong>What is an annotation?</strong> An annotation is a functional or comparative hit that this sequence obtains through computational analysis. Examples include:
+                        <ul class="mb-0 mt-2">
+                            <li><strong>Homologs:</strong> Homologous sequences found in other organisms using tools like BLAST</li>
+                            <li><strong>Orthologs:</strong> Orthologous sequences found in other organisms using tools like OMA or EggNOG</li>
+                            <li><strong>Protein Domains:</strong> Conserved structural domains identified using InterProScan or similar tools</li>
+                        </ul>
+                    </div>
+                </div>
                 <?php
                 // Parent annotations - using cached results
                 $count = 0;
