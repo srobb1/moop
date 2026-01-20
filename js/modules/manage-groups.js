@@ -350,4 +350,163 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('html-p-json-' + groupName).value = JSON.stringify(paragraphs);
     });
   });
+
+  // Handle "Edit Groups" button for existing assemblies (RESTORED from original)
+  document.querySelectorAll('.edit-groups').forEach(button => {
+    const row = button.closest('tr');
+    const groupsSpan = row.querySelector('.groups-display');
+    const updateButton = row.querySelector('.update-btn');
+    const cancelButton = row.querySelector('.cancel-btn');
+    const organism = row.getAttribute('data-organism');
+    const assembly = row.getAttribute('data-assembly');
+    
+    // Get current tags from chip elements
+    const chipElements = groupsSpan.querySelectorAll('.tag-chip');
+    let selectedTags = Array.from(chipElements).map(chip => chip.textContent.trim());
+    const originalTags = [...selectedTags]; // Store original state
+    
+    // Color the chips on page load
+    chipElements.forEach((chip, index) => {
+      if (selectedTags[index]) {
+        chip.style.background = getColorForTag(selectedTags[index]);
+        chip.style.borderColor = getColorForTag(selectedTags[index]);
+      }
+    });
+    
+    // Create tag editor container
+    const tagEditor = document.createElement('div');
+    tagEditor.className = 'tag-editor';
+    
+    // Create selected tags display
+    const selectedDisplay = document.createElement('div');
+    selectedDisplay.className = 'selected-tags-display';
+    selectedDisplay.innerHTML = '<small class="text-muted">Selected tags:</small>';
+    tagEditor.appendChild(selectedDisplay);
+    
+    // Create available tags section
+    const availableSection = document.createElement('div');
+    availableSection.innerHTML = '<small class="text-muted">Available tags (click to add):</small><br>';
+    tagEditor.appendChild(availableSection);
+    
+    // Create new tag input
+    const newTagDiv = document.createElement('div');
+    newTagDiv.className = 'new-tag-input';
+    newTagDiv.innerHTML = `
+      <small class="text-muted">Add new tag:</small><br>
+      <input type="text" class="form-control form-control-sm d-inline-block" style="width: 150px;" placeholder="New tag name">
+      <button type="button" class="btn btn-sm btn-primary add-new-tag">Add</button>
+    `;
+    tagEditor.appendChild(newTagDiv);
+    
+    groupsSpan.parentNode.insertBefore(tagEditor, groupsSpan.nextSibling);
+    
+    function renderTags() {
+      // Render selected tags
+      selectedDisplay.innerHTML = '<small class="text-muted">Selected tags:</small><br>';
+      selectedTags.forEach(tag => {
+        const chip = document.createElement('span');
+        chip.className = 'tag-chip selected';
+        chip.style.background = getColorForTag(tag);
+        chip.style.borderColor = getColorForTag(tag);
+        chip.innerHTML = `${tag} <span class="remove">×</span>`;
+        chip.onclick = function() {
+          selectedTags = selectedTags.filter(t => t !== tag);
+          renderTags();
+        };
+        selectedDisplay.appendChild(chip);
+      });
+      
+      // Render available tags
+      availableSection.innerHTML = '<small class="text-muted">Available tags (click to add):</small><br>';
+      existingGroups.forEach(tag => {
+        if (!selectedTags.includes(tag)) {
+          const chip = document.createElement('span');
+          chip.className = 'tag-chip available';
+          chip.textContent = tag;
+          chip.onclick = function() {
+            selectedTags.push(tag);
+            renderTags();
+          };
+          availableSection.appendChild(chip);
+        }
+      });
+    }
+    
+    // Add new tag functionality
+    const newTagInput = newTagDiv.querySelector('input');
+    const addNewTagBtn = newTagDiv.querySelector('.add-new-tag');
+    
+    addNewTagBtn.addEventListener('click', function() {
+      const newTag = newTagInput.value.trim();
+      if (newTag && !selectedTags.includes(newTag)) {
+        selectedTags.push(newTag);
+        if (!existingGroups.includes(newTag)) {
+          existingGroups.push(newTag);
+        }
+        newTagInput.value = '';
+        renderTags();
+      }
+    });
+    
+    newTagInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        addNewTagBtn.click();
+      }
+    });
+
+    button.addEventListener('click', function() {
+      groupsSpan.style.display = 'none';
+      button.style.display = 'none';
+      tagEditor.style.display = 'block';
+      updateButton.style.display = 'inline-block';
+      cancelButton.style.display = 'inline-block';
+      renderTags();
+    });
+
+    updateButton.addEventListener('click', function() {
+      // Create a form and submit
+      const form = document.createElement('form');
+      form.method = 'post';
+      form.action = 'manage_groups.php';
+      
+      const orgInput = document.createElement('input');
+      orgInput.type = 'hidden';
+      orgInput.name = 'organism';
+      orgInput.value = organism;
+      
+      const asmInput = document.createElement('input');
+      asmInput.type = 'hidden';
+      asmInput.name = 'assembly';
+      asmInput.value = assembly;
+      
+      const groupsInput = document.createElement('input');
+      groupsInput.type = 'hidden';
+      groupsInput.name = 'groups';
+      groupsInput.value = selectedTags.join(', ');
+      
+      const updateInput = document.createElement('input');
+      updateInput.type = 'hidden';
+      updateInput.name = 'update';
+      updateInput.value = '1';
+      
+      form.appendChild(orgInput);
+      form.appendChild(asmInput);
+      form.appendChild(groupsInput);
+      form.appendChild(updateInput);
+      
+      document.body.appendChild(form);
+      form.submit();
+    });
+
+    cancelButton.addEventListener('click', function(event) {
+      event.preventDefault();
+      groupsSpan.style.display = 'inline';
+      tagEditor.style.display = 'none';
+      button.style.display = 'inline-block';
+      updateButton.style.display = 'none';
+      cancelButton.style.display = 'none';
+      // Reset selected tags
+      selectedTags = [...originalTags];
+    });
+  });
 });

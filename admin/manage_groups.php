@@ -255,6 +255,8 @@ $display_config = [
 // Prepare data for content file
 $data = [
     'groups_file' => $groups_file,
+    'descriptions_file' => $descriptions_file,
+    'metadata_path' => $metadata_path,
     'file_write_error' => $file_write_error,
     'desc_file_write_error' => $desc_file_write_error,
     'change_log_error' => $change_log_error,

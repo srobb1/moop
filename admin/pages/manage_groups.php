@@ -98,6 +98,15 @@
           <li>Track stale entries (deleted from filesystem)</li>
           <li>Visually edit group assignments with a tag interface</li>
         </ul>
+        
+        <hr class="my-3">
+        
+        <p><strong>Configuration Files:</strong></p>
+        <ul class="mb-0">
+          <li><strong>Group Assignments:</strong> <code><?= htmlspecialchars($groups_file) ?></code></li>
+          <li><strong>Group Descriptions:</strong> <code><?= htmlspecialchars($descriptions_file) ?></code></li>
+          <li><strong>Change Log:</strong> <code><?= htmlspecialchars($metadata_path . '/change_log/manage_groups.log') ?></code></li>
+        </ul>
       </div>
     </div>
   </div>
