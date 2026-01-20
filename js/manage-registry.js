@@ -55,7 +55,7 @@ function renderRegistry() {
         header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; cursor: pointer;';
         header.innerHTML = `
             <span style="display: flex; align-items: center; gap: 8px;">
-                📄 ${htmlEscape(fileData.name)} <span class="badge bg-secondary">${fileData.count}</span>
+                📄 ${htmlEscape(fileData.name)} <span class="badge bg-secondary" title="Number of functions in this file">contain ${fileData.count} function${fileData.count !== 1 ? 's' : ''}</span>
             </span>
             <span class="expand-arrow">▶</span>
         `;
@@ -125,7 +125,7 @@ function renderRegistry() {
                     <span class="function-name">${htmlEscape(func.name)}()</span>
                     ${categoryBadge}
                     ${tagBadges}
-                    <span class="function-counter" style="margin-left: auto;">${func.usageCount}</span>
+                    <span class="function-counter" style="margin-left: auto; background-color: #007bff; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; white-space: nowrap; font-size: 1.1em;" title="Number of times this function is called">called ${func.usageCount} time${func.usageCount !== 1 ? 's' : ''}</span>
                     <span class="function-line">Line ${func.line}</span>
                 </div>
                 <span class="expand-arrow">▶</span>
