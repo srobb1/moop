@@ -287,9 +287,15 @@ class AnnotationSearch {
         const organism = data.organism;
         const results = data.results;
         const imageUrl = data.organism_image_path || '';
+        const isUniquenameSearch = data.search_type === 'Gene/Transcript ID';
         
-        // Create results table using shared function
-        let tableHtml = createOrganismResultsTable(organism, results, this.config.sitePath, 'tools/parent.php', imageUrl, this.currentKeywords);
+        // Use simple view for keyword searches, full view for uniquename searches
+        let tableHtml;
+        if (!isUniquenameSearch && results.length > 0) {
+            tableHtml = createSimpleResultsTable(organism, results, this.config.sitePath, 'tools/parent.php', imageUrl);
+        } else {
+            tableHtml = createOrganismResultsTable(organism, results, this.config.sitePath, 'tools/parent.php', imageUrl, this.currentKeywords);
+        }
         
         // Add "Read More" button if configured
         if (!this.config.noReadMoreButton) {
@@ -302,10 +308,12 @@ class AnnotationSearch {
         
         $('#resultsContainer').append(tableHtml);
         
-        // Initialize table functionality
-        const tableId = '#resultsTable-' + organism.replace(/\s+/g, '-');
-        const selectId = '#selectCheckbox-' + organism.replace(/\s+/g, '-');
-        initializeResultsTable(tableId, selectId, true);
+        // Only initialize full DataTable for uniquename searches
+        if (isUniquenameSearch) {
+            const tableId = '#resultsTable-' + organism.replace(/\s+/g, '-');
+            const selectId = '#selectCheckbox-' + organism.replace(/\s+/g, '-');
+            initializeResultsTable(tableId, selectId, true);
+        }
     }
     
     finishSearch() {
