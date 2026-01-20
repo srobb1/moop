@@ -72,6 +72,7 @@ function renderRegistry() {
             // Function header with toggle
             const funcHeader = document.createElement('div');
             funcHeader.className = 'function-header';
+            funcHeader.style.cssText = 'overflow: visible; width: 100%;';
             funcHeader.onclick = function() { toggleFunctionCode(this); };
             
             // Build badges for category and tags
@@ -121,15 +122,17 @@ function renderRegistry() {
             }
             
             funcHeader.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
                     <span class="function-name">${htmlEscape(func.name)}()</span>
+                    <span class="function-line">Line ${func.line}</span>
                     ${categoryBadge}
                     ${tagBadges}
-                    <span class="function-counter" style="margin-left: auto; background-color: #007bff; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; white-space: nowrap; font-size: 1.1em;" title="Number of times this function is called">called ${func.usageCount} time${func.usageCount !== 1 ? 's' : ''}</span>
-                    <span class="function-line">Line ${func.line}</span>
                 </div>
-                <span class="expand-arrow">▶</span>
+                <div style="display: flex; align-items: center; gap: 10px; width: 100%; overflow: visible;">
+                    <span class="function-counter" style="background-color: #007bff; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; white-space: nowrap; font-size: 0.95em; min-width: fit-content;" title="Number of times this function is called">called ${func.usageCount} time${func.usageCount !== 1 ? 's' : ''}</span>
+                </div>
             `;
+            funcHeader.innerHTML += '<span class="expand-arrow">▶</span>';
             item.appendChild(funcHeader);
             
             // File location
