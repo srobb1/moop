@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "generated": "2025-12-10 16:58:36",
-        "totalFunctions": 111,
+        "generated": "2026-01-20 20:22:22",
+        "totalFunctions": 115,
         "totalFiles": 21,
         "duplicates": 0
     },
@@ -52,7 +52,7 @@
                     "usages": [
                         {
                             "file": "tools/pages/blast.php",
-                            "line": 235,
+                            "line": 286,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadResultsText();\">"
                         }
                     ],
@@ -96,14 +96,8 @@
                     ],
                     "category": "data-processing",
                     "tags": [],
-                    "usageCount": 1,
-                    "usages": [
-                        {
-                            "file": "tools/pages/blast.php",
-                            "line": 111,
-                            "context": "<button type=\"button\" class=\"btn btn-success\" onclick=\"clearBlastSourceFilters();\">"
-                        }
-                    ],
+                    "usageCount": 0,
+                    "usages": [],
                     "phpFilesCount": 1,
                     "phpFiles": [
                         "tools/blast.php"
@@ -113,36 +107,33 @@
                     "name": "initializeBlastManager",
                     "line": 56,
                     "comment": "",
-                    "code": "{\n    function updateCurrentSelectionDisplay() {\n        window.updateCurrentSelectionDisplay();\n        const selectionDiv = document.getElementById('currentSelection');\n        const checked = document.querySelector('input[name=\"selected_source\"]:checked');\n        if (!checked) {\n            selectionDiv.innerHTML = '<span style=\"color: #999;\">None selected</span>';\n        }\n    }\n    \n    // Initialize source list manager with callback\n    initializeSourceListManager({\n        filterId: 'sourceFilter',\n        radioName: 'selected_source',\n        sourceListClass: 'fasta-source-line',\n        onSelectionChange: function(radio) {\n            updateDatabaseList();\n            updateCurrentSelectionDisplay();\n        }\n    });\n    \n    // Add filter listener to uncheck hidden sources (like retrieve_sequences does)\n    const filterInput = document.getElementById('sourceFilter');\n    if (filterInput) {\n        filterInput.addEventListener('keyup', function() {\n            // After filter is applied, check visibility and uncheck hidden items\n            setTimeout(function() {\n                document.querySelectorAll('input[name=\"selected_source\"]').forEach(radio => {\n                    const line = radio.closest('.fasta-source-line');\n                    if (line && !window.isSourceVisible(line)) {\n                        if (radio.checked) {\n                            radio.checked = false;\n                        }\n                        radio.disabled = true;\n                    } else {\n                        radio.disabled = false;\n                    }\n                });\n                updateCurrentSelectionDisplay();\n                updateDatabaseList();\n            }, 10);\n        });\n    }\n    \n    // Restore previously selected source (if form was resubmitted)\n    if (previouslySelectedSource) {\n        const allSourceRadios = document.querySelectorAll(`input[name=\"selected_source\"][value=\"${previouslySelectedSource}\"]`);\n        let prevSourceRadio",
+                    "code": "{\n    const form = document.getElementById('blastForm');\n\n    function updateCurrentSelectionDisplay() {\n        window.updateCurrentSelectionDisplay();\n        const selectionDiv = document.getElementById('currentSelection');\n        const checked = document.querySelector('input[name=\"selected_source\"]:checked');\n        if (!checked) {\n            selectionDiv.innerHTML = '<span style=\"color: #999;\">None selected</span>';\n        }\n    }\n\n    // Use centralized source selector initialization\n    initializeSourceSelector({\n        formId: 'blastForm',\n        filterId: 'sourceFilter',\n        radioName: 'selected_source',\n        sourceListClass: 'fasta-source-line',\n        onSelectionChange: function(radio) {\n            updateDatabaseList();\n            updateCurrentSelectionDisplay();\n        },\n        onFilterChange: function() {\n            updateCurrentSelectionDisplay();\n            updateDatabaseList();\n        }\n    });\n    \n    // Update display on page load\n    updateCurrentSelectionDisplay();\n    \n    // Update database list based on selected source\n    updateDatabaseList();\n    \n    // Restore previously selected database (after updateDatabaseList renders the radio buttons)\n    if (previouslySelectedDb) {\n        const prevDbRadio = document.querySelector(`input[name=\"blast_db\"][value=\"${previouslySelectedDb}\"]`);\n        if (prevDbRadio) {\n            prevDbRadio.checked = true;\n        }\n    }\n    \n    // Handle form submission\n    if (form) {\n        form.addEventListener('submit', function(e) {\n            const selectedSource = document.querySelector('input[name=\"selected_source\"]:checked');\n            const selectedDb = document.querySelector('input[name=\"blast_db\"]:checked');\n            \n            if (!selectedSource || !selectedDb) {\n                e.preventDefault();\n                alert('Please select both an assembly and a database.');\n                return false;\n            }\n            \n            // Update hidden organism/asse",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
                     "internalCalls": [
                         "updateCurrentSelectionDisplay",
-                        "initializeSourceListManager",
-                        "updateDatabaseList",
-                        "isSourceVisible"
+                        "initializeSourceSelector",
+                        "updateDatabaseList"
                     ],
                     "category": "admin",
                     "tags": [
                         "dom-manipulation",
-                        "asynchronous",
                         "ajax",
                         "event-listener",
                         "state-modifying",
-                        "loops",
                         "validation"
                     ],
                     "usageCount": 2,
                     "usages": [
                         {
                             "file": "js/blast-manager.js",
-                            "line": 244,
+                            "line": 190,
                             "context": "initializeBlastManager();"
                         },
                         {
                             "file": "js/blast-manager.js",
-                            "line": 249,
+                            "line": 195,
                             "context": "initializeBlastManager();"
                         }
                     ],
@@ -153,7 +144,7 @@
                 },
                 {
                     "name": "updateCurrentSelectionDisplay",
-                    "line": 58,
+                    "line": 60,
                     "comment": "",
                     "code": "{\n        window.updateCurrentSelectionDisplay();\n        const selectionDiv = document.getElementById('currentSelection');\n        const checked = document.querySelector('input[name=\"selected_source\"]:checked');\n        if (!checked) {\n            selectionDiv.innerHTML = '<span style=\"color: #999;\">None selected</span>';\n        }\n    }",
                     "parameters": [],
@@ -174,42 +165,42 @@
                     "usages": [
                         {
                             "file": "js/blast-manager.js",
-                            "line": 59,
+                            "line": 61,
                             "context": "window.updateCurrentSelectionDisplay();"
                         },
                         {
                             "file": "js/blast-manager.js",
-                            "line": 74,
+                            "line": 77,
                             "context": "updateCurrentSelectionDisplay();"
                         },
                         {
                             "file": "js/blast-manager.js",
-                            "line": 95,
-                            "context": "updateCurrentSelectionDisplay();"
-                        },
-                        {
-                            "file": "js/blast-manager.js",
-                            "line": 139,
-                            "context": "updateCurrentSelectionDisplay();"
-                        },
-                        {
-                            "file": "js/sequence-retrieval.js",
-                            "line": 60,
-                            "context": "window.updateCurrentSelectionDisplay('currentSelection', 'fasta-source-line', true);"
-                        },
-                        {
-                            "file": "js/sequence-retrieval.js",
                             "line": 80,
                             "context": "updateCurrentSelectionDisplay();"
                         },
                         {
-                            "file": "js/sequence-retrieval.js",
-                            "line": 95,
+                            "file": "js/blast-manager.js",
+                            "line": 86,
                             "context": "updateCurrentSelectionDisplay();"
                         },
                         {
                             "file": "js/sequence-retrieval.js",
-                            "line": 144,
+                            "line": 25,
+                            "context": "window.updateCurrentSelectionDisplay('currentSelection', 'fasta-source-line', true);"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 47,
+                            "context": "updateCurrentSelectionDisplay();"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 50,
+                            "context": "updateCurrentSelectionDisplay();"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 55,
                             "context": "updateCurrentSelectionDisplay();"
                         }
                     ],
@@ -220,7 +211,7 @@
                 },
                 {
                     "name": "autoScrollToResults",
-                    "line": 231,
+                    "line": 177,
                     "comment": "",
                     "code": "{\n    document.addEventListener('DOMContentLoaded', function() {\n        const resultsSection = document.getElementById('blast-results-section');\n        if (resultsSection) {\n            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });\n        }\n    });\n}",
                     "parameters": [],
@@ -238,12 +229,12 @@
                     "usages": [
                         {
                             "file": "js/blast-manager.js",
-                            "line": 245,
+                            "line": 191,
                             "context": "autoScrollToResults();"
                         },
                         {
                             "file": "js/blast-manager.js",
-                            "line": 250,
+                            "line": 196,
                             "context": "autoScrollToResults();"
                         }
                     ],
@@ -254,7 +245,7 @@
                 },
                 {
                     "name": "loadSampleSequence",
-                    "line": 253,
+                    "line": 199,
                     "comment": "",
                     "code": "{\n    const queryField = document.getElementById('query');\n    const programField = document.getElementById('blast_program');\n    \n    if (!queryField) {\n        console.error('query field not found');\n        return;\n    }\n    \n    if (type === 'protein' && sampleSequences['protein']) {\n        queryField.value = sampleSequences['protein'];\n        if (programField) {\n            programField.value = 'blastx';\n        }\n    } else if (type === 'nucleotide' && sampleSequences['nucleotide']) {\n        queryField.value = sampleSequences['nucleotide'];\n        if (programField) {\n            programField.value = 'blastn';\n        }\n    } else {\n        console.error('Sample not found for type:', type);\n        return;\n    }\n    \n    // Detect sequence type and update UI if function exists\n    if (typeof detectSequenceType === 'function') {\n        const result = detectSequenceType(queryField.value);\n        \n        // Update sequence type message if function exists\n        if (typeof updateSequenceTypeInfo === 'function') {\n            updateSequenceTypeInfo(result.message, 'sequenceTypeInfo', 'sequenceTypeMessage');\n        }\n        \n        // Filter BLAST programs based on detected type\n        if (typeof filterBlastPrograms === 'function' && result.type !== 'unknown') {\n            filterBlastPrograms(result.type, 'blast_program');\n        }\n    }\n    \n    // Update database list\n    if (typeof updateDatabaseList === 'function') {\n        updateDatabaseList();\n    }\n    \n    // Scroll to top so user can see the loaded sequence\n    queryField.scrollIntoView({ behavior: 'smooth', block: 'center' });\n}",
                     "parameters": [],
@@ -295,7 +286,7 @@
         },
         {
             "name": "js/index.js",
-            "count": 2,
+            "count": 4,
             "functions": [
                 {
                     "name": "handleToolClick",
@@ -326,12 +317,13 @@
                     "name": "switchView",
                     "line": 50,
                     "comment": "",
-                    "code": "{\n  const cardView = document.getElementById('card-view');\n  const treeView = document.getElementById('tree-view');\n  const cardBtn = document.getElementById('card-view-btn');\n  const treeBtn = document.getElementById('tree-view-btn');\n  \n  if (view === 'card') {\n    cardView.style.display = 'block';\n    treeView.style.display = 'none';\n    cardBtn.classList.add('active');\n    treeBtn.classList.remove('active');\n  } else {\n    cardView.style.display = 'none';\n    treeView.style.display = 'block';\n    cardBtn.classList.remove('active');\n    treeBtn.classList.add('active');\n    \n    // Initialize tree on first view\n    if (!phyloTree) {\n      initPhyloTree(treeData, userAccess);\n    }\n  }\n}",
+                    "code": "{\n  const cardView = document.getElementById('card-view');\n  const treeView = document.getElementById('tree-view');\n  const cardBtn = document.getElementById('card-view-btn');\n  const treeBtn = document.getElementById('tree-view-btn');\n  \n  if (view === 'card') {\n    cardView.style.display = 'block';\n    treeView.style.display = 'none';\n    cardBtn.classList.add('active');\n    treeBtn.classList.remove('active');\n  } else {\n    cardView.style.display = 'none';\n    treeView.style.display = 'block';\n    cardBtn.classList.remove('active');\n    treeBtn.classList.add('active');\n    \n    // Initialize tree on first view\n    if (!phyloTree) {\n      initPhyloTree(treeData, userAccess);\n      // Setup filter listener after tree is initialized\n      setupTaxonomyFilter();\n    }\n  }\n}",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
                     "internalCalls": [
-                        "initPhyloTree"
+                        "initPhyloTree",
+                        "setupTaxonomyFilter"
                     ],
                     "category": "general",
                     "tags": [
@@ -356,6 +348,65 @@
                     "phpFiles": [
                         "tools/pages/index.php"
                     ]
+                },
+                {
+                    "name": "setupTaxonomyFilter",
+                    "line": 76,
+                    "comment": "",
+                    "code": "{\n  const filterInput = document.getElementById('taxonomy-filter');\n  if (!filterInput) return;\n  \n  filterInput.addEventListener('keyup', function() {\n    filterTaxonomyTree(this.value.toLowerCase());\n  });\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "filterTaxonomyTree"
+                    ],
+                    "category": "data-processing",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/index.js",
+                            "line": 72,
+                            "context": "setupTaxonomyFilter();"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "tools/pages/index.php"
+                    ]
+                },
+                {
+                    "name": "filterTaxonomyTree",
+                    "line": 85,
+                    "comment": "",
+                    "code": "{\n  const nodes = document.querySelectorAll('.phylo-node');\n  \n  nodes.forEach(node => {\n    const nodeLabel = node.textContent.toLowerCase();\n    const matches = filterText === '' || nodeLabel.includes(filterText);\n    \n    if (matches) {\n      node.style.display = '';\n      // Show parent nodes if this node is visible\n      let parent = node.closest('.phylo-children')?.parentElement;\n      while (parent && parent.classList.contains('phylo-node')) {\n        parent.style.display = '';\n        parent = parent.closest('.phylo-children')?.parentElement;\n      }\n    } else {\n      node.style.display = 'none';\n    }\n  });\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "data-processing",
+                    "tags": [
+                        "dom-manipulation",
+                        "state-modifying",
+                        "loops"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/index.js",
+                            "line": 82,
+                            "context": "filterTaxonomyTree(this.value.toLowerCase());"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "tools/pages/index.php"
+                    ]
                 }
             ]
         },
@@ -367,7 +418,7 @@
                     "name": "renderRegistry",
                     "line": 32,
                     "comment": "/**\n * Render registry from JSON data\n */",
-                    "code": "{\n    if (!registryData || !registryData.files) {\n        return;\n    }\n    \n    const container = document.getElementById('filesContainer');\n    if (!container) {\n        return;\n    }\n    \n    container.innerHTML = '';\n    \n    let fileCount = 0;\n    registryData.files.forEach(fileData => {\n        fileCount++;\n        const fileSection = document.createElement('div');\n        fileSection.className = 'file-section';\n        fileSection.style.overflow = 'visible';\n        fileSection.setAttribute('data-file', fileData.name);\n        \n        const header = document.createElement('div');\n        header.className = 'file-header';\n        header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; cursor: pointer;';\n        header.innerHTML = `\n            <span style=\"display: flex; align-items: center; gap: 8px;\">\n                \ud83d\udcc4 ${htmlEscape(fileData.name)} <span class=\"badge bg-secondary\">${fileData.count}</span>\n            </span>\n            <span class=\"expand-arrow\">\u25b6</span>\n        `;\n        \n        const listContainer = document.createElement('div');\n        listContainer.className = 'functions-list';\n        listContainer.style.cssText = 'max-height: 0; overflow: hidden; transition: max-height 0.3s ease; padding: 0;';\n        \n        fileData.functions.forEach(func => {\n            const item = document.createElement('div');\n            item.className = 'function-item';\n            item.setAttribute('data-func', func.name);\n            \n            // Function header with toggle\n            const funcHeader = document.createElement('div');\n            funcHeader.className = 'function-header';\n            funcHeader.onclick = function() { toggleFunctionCode(this); };\n            \n            // Build badges for category and tags\n            let categoryBadge = '';\n            if (func.category) {\n                const categoryColors = {\n                    'database': '#e8f4f8',\n                    'filesystem': '#f",
+                    "code": "{\n    if (!registryData || !registryData.files) {\n        return;\n    }\n    \n    const container = document.getElementById('filesContainer');\n    if (!container) {\n        return;\n    }\n    \n    container.innerHTML = '';\n    \n    let fileCount = 0;\n    registryData.files.forEach(fileData => {\n        fileCount++;\n        const fileSection = document.createElement('div');\n        fileSection.className = 'file-section';\n        fileSection.style.overflow = 'visible';\n        fileSection.setAttribute('data-file', fileData.name);\n        \n        const header = document.createElement('div');\n        header.className = 'file-header';\n        header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; cursor: pointer;';\n        header.innerHTML = `\n            <span style=\"display: flex; align-items: center; gap: 8px;\">\n                \ud83d\udcc4 ${htmlEscape(fileData.name)} <span class=\"badge bg-secondary\" title=\"Number of functions in this file\">[ contain ${fileData.count} function${fileData.count !== 1 ? 's' : ''} ]</span>\n            </span>\n            <span class=\"expand-arrow\">\u25b6</span>\n        `;\n        \n        const listContainer = document.createElement('div');\n        listContainer.className = 'functions-list';\n        listContainer.style.cssText = 'max-height: 0; overflow: hidden; transition: max-height 0.3s ease; padding: 0;';\n        \n        fileData.functions.forEach(func => {\n            const item = document.createElement('div');\n            item.className = 'function-item';\n            item.setAttribute('data-func', func.name);\n            \n            // Function header with toggle\n            const funcHeader = document.createElement('div');\n            funcHeader.className = 'function-header';\n            funcHeader.onclick = function() { toggleFunctionCode(this); };\n            \n            // Build badges for category and tags\n            let categoryBadge = '';\n            if (func.category) {\n                const cat",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -902,7 +953,7 @@
                         {
                             "file": "js/manage-registry.js",
                             "line": 58,
-                            "context": "\ud83d\udcc4 ${htmlEscape(fileData.name)} <span class=\"badge bg-secondary\">${fileData.count}</span>"
+                            "context": "\ud83d\udcc4 ${htmlEscape(fileData.name)} <span class=\"badge bg-secondary\" title=\"Number of functions in this file\">[ contain ${fileData.count} function${fileData.count !== 1 ? 's' : ''} ]</span>"
                         },
                         {
                             "file": "js/manage-registry.js",
@@ -1161,7 +1212,7 @@
                     "usages": [
                         {
                             "file": "js/sequence-retrieval.js",
-                            "line": 274,
+                            "line": 276,
                             "context": "updatePosition(event);"
                         },
                         {
@@ -1248,13 +1299,8 @@
                             "context": "$btn.find('span').text('Select All');"
                         }
                     ],
-                    "phpFilesCount": 4,
-                    "phpFiles": [
-                        "tools/old/assembly_display.php",
-                        "tools/old/groups_display.php",
-                        "tools/old/multi_organism_search.php",
-                        "tools/old/parent_display.php"
-                    ]
+                    "phpFilesCount": 0,
+                    "phpFiles": []
                 }
             ]
         },
@@ -1489,7 +1535,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 179,
+                            "line": 185,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger mt-2\" onclick=\"deleteType('<?= htmlspecialchars($type_name) ?>')\">"
                         }
                     ],
@@ -1502,7 +1548,7 @@
         },
         {
             "name": "js/modules/manage-groups.js",
-            "count": 7,
+            "count": 8,
             "functions": [
                 {
                     "name": "toggleGroup",
@@ -1524,7 +1570,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 296,
+                            "line": 305,
                             "context": "<div class=\"group-header\" onclick=\"toggleGroup('<?= htmlspecialchars($desc['group_name']) ?>')\" style=\"cursor: pointer; padding: 10px; background: #f8f9fa; border-radius: 3px; display: flex; justify-content: space-between; align-items: center;\">"
                         }
                     ],
@@ -1554,7 +1600,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 333,
+                            "line": 342,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-primary mb-3\" onclick=\"addImage('<?= htmlspecialchars($desc['group_name']) ?>')\" <?= $desc_file_write_error ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : '' ?>>+ Add Image</button>"
                         }
                     ],
@@ -1588,7 +1634,7 @@
                         },
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 321,
+                            "line": 330,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeImage('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)\" style=\"float: right;\" <?= $desc_file_write_error ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : '' ?>>Remove</button>"
                         }
                     ],
@@ -1618,7 +1664,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 357,
+                            "line": 366,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-primary mb-3\" onclick=\"addParagraph('<?= htmlspecialchars($desc['group_name']) ?>')\" <?= $desc_file_write_error ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : '' ?>>+ Add Paragraph</button>"
                         }
                     ],
@@ -1652,7 +1698,7 @@
                         },
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 339,
+                            "line": 348,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeParagraph('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)\" style=\"float: right;\" <?= $desc_file_write_error ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : '' ?>>Remove</button>"
                         }
                     ],
@@ -1672,7 +1718,7 @@
                     "internalCalls": [],
                     "category": "admin",
                     "tags": [],
-                    "usageCount": 7,
+                    "usageCount": 11,
                     "usages": [
                         {
                             "file": "js/modules/manage-groups.js",
@@ -1708,6 +1754,26 @@
                             "file": "js/modules/manage-groups.js",
                             "line": 182,
                             "context": "chip.style.borderColor = getColorForTag(tag);"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 371,
+                            "context": "chip.style.background = getColorForTag(selectedTags[index]);"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 372,
+                            "context": "chip.style.borderColor = getColorForTag(selectedTags[index]);"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 409,
+                            "context": "chip.style.background = getColorForTag(tag);"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 410,
+                            "context": "chip.style.borderColor = getColorForTag(tag);"
                         }
                     ],
                     "phpFilesCount": 1,
@@ -1734,7 +1800,7 @@
                         "state-modifying",
                         "loops"
                     ],
-                    "usageCount": 4,
+                    "usageCount": 8,
                     "usages": [
                         {
                             "file": "js/modules/manage-groups.js",
@@ -1754,6 +1820,93 @@
                         {
                             "file": "js/modules/manage-groups.js",
                             "line": 235,
+                            "context": "renderTags();"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 414,
+                            "context": "renderTags();"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 428,
+                            "context": "renderTags();"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 447,
+                            "context": "renderTags();"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 463,
+                            "context": "renderTags();"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_groups.php"
+                    ]
+                },
+                {
+                    "name": "renderTags",
+                    "line": 403,
+                    "comment": "",
+                    "code": "{\n      // Render selected tags\n      selectedDisplay.innerHTML = '<small class=\"text-muted\">Selected tags:</small><br>';\n      selectedTags.forEach(tag => {\n        const chip = document.createElement('span');\n        chip.className = 'tag-chip selected';\n        chip.style.background = getColorForTag(tag);\n        chip.style.borderColor = getColorForTag(tag);\n        chip.innerHTML = `${tag} <span class=\"remove\">\u00d7</span>`;\n        chip.onclick = function() {\n          selectedTags = selectedTags.filter(t => t !== tag);\n          renderTags();\n        };\n        selectedDisplay.appendChild(chip);\n      });\n      \n      // Render available tags\n      availableSection.innerHTML = '<small class=\"text-muted\">Available tags (click to add):</small><br>';\n      existingGroups.forEach(tag => {\n        if (!selectedTags.includes(tag)) {\n          const chip = document.createElement('span');\n          chip.className = 'tag-chip available';\n          chip.textContent = tag;\n          chip.onclick = function() {\n            selectedTags.push(tag);\n            renderTags();\n          };\n          availableSection.appendChild(chip);\n        }\n      });\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "getColorForTag",
+                        "renderTags"
+                    ],
+                    "category": "ui-dom",
+                    "tags": [
+                        "dom-manipulation",
+                        "event-listener",
+                        "state-modifying",
+                        "loops"
+                    ],
+                    "usageCount": 8,
+                    "usages": [
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 186,
+                            "context": "renderTags();"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 200,
+                            "context": "renderTags();"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 219,
+                            "context": "renderTags();"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 235,
+                            "context": "renderTags();"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 414,
+                            "context": "renderTags();"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 428,
+                            "context": "renderTags();"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 447,
+                            "context": "renderTags();"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 463,
                             "context": "renderTags();"
                         }
                     ],
@@ -2183,7 +2336,7 @@
                     "tags": [
                         "state-modifying"
                     ],
-                    "usageCount": 12,
+                    "usageCount": 13,
                     "usages": [
                         {
                             "file": "js/permission-manager.js",
@@ -2202,8 +2355,18 @@
                         },
                         {
                             "file": "js/sequence-retrieval.js",
-                            "line": 206,
-                            "context": "return `<div style=\"padding: 4px 0;\"><span style=\"background: ${bgColor}; padding: 2px 6px; border-radius: 3px;\">${escapeHtml(id)}</span></div>`;"
+                            "line": 174,
+                            "context": "<span style=\"background: ${bgColor}; padding: 2px 6px; border-radius: 3px; font-weight: bold;\">${escapeHtml(id)}</span>`;"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 187,
+                            "context": "<span style=\"background: ${childBgColor}; padding: 2px 6px; border-radius: 3px;\">${escapeHtml(childId)}</span>"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 205,
+                            "context": "<span style=\"background: ${bgColor}; padding: 2px 6px; border-radius: 3px;\">${escapeHtml(id)}</span>"
                         },
                         {
                             "file": "js/modules/organism-management.js",
@@ -2239,11 +2402,6 @@
                             "file": "js/modules/organism-management.js",
                             "line": 393,
                             "context": "html += '<code class=\"text-break\">' + escapeHtml(data.command) + '</code><br>';"
-                        },
-                        {
-                            "file": "tools/pages/retrieve_sequences.php",
-                            "line": 252,
-                            "context": "return `<div style=\"padding: 4px 0;\"><span style=\"background: ${bgColor}; padding: 2px 6px; border-radius: 3px;\">${escapeHtml(id)}</span></div>`;"
                         }
                     ],
                     "phpFilesCount": 1,
@@ -2709,12 +2867,8 @@
                             "context": "let tableHtml = createOrganismResultsTable(organism, results, this.config.sitePath, 'tools/parent.php', imageUrl, this.currentKeywords);"
                         }
                     ],
-                    "phpFilesCount": 3,
-                    "phpFiles": [
-                        "tools/old/assembly_display.php",
-                        "tools/old/groups_display.php",
-                        "tools/old/multi_organism_search.php"
-                    ]
+                    "phpFilesCount": 0,
+                    "phpFiles": []
                 },
                 {
                     "name": "initializeResultsTable",
@@ -2759,12 +2913,8 @@
                             "context": "setTimeout(() => initializeResultsTable(tableId, selectId, isUniquenameSearch), 100);"
                         }
                     ],
-                    "phpFilesCount": 3,
-                    "phpFiles": [
-                        "tools/old/assembly_display.php",
-                        "tools/old/groups_display.php",
-                        "tools/old/multi_organism_search.php"
-                    ]
+                    "phpFilesCount": 0,
+                    "phpFiles": []
                 },
                 {
                     "name": "highlightSearchTerms",
@@ -2798,18 +2948,14 @@
                             "context": "<td>${highlightSearchTerms(result.annotation_description, searchKeywords)}</td>`;"
                         }
                     ],
-                    "phpFilesCount": 3,
-                    "phpFiles": [
-                        "tools/old/assembly_display.php",
-                        "tools/old/groups_display.php",
-                        "tools/old/multi_organism_search.php"
-                    ]
+                    "phpFilesCount": 0,
+                    "phpFiles": []
                 }
             ]
         },
         {
             "name": "js/modules/source-list-manager.js",
-            "count": 10,
+            "count": 11,
             "functions": [
                 {
                     "name": "isSourceVisible",
@@ -2831,23 +2977,8 @@
                         "dom-manipulation",
                         "state-modifying"
                     ],
-                    "usageCount": 6,
+                    "usageCount": 9,
                     "usages": [
-                        {
-                            "file": "js/blast-manager.js",
-                            "line": 86,
-                            "context": "if (line && !window.isSourceVisible(line)) {"
-                        },
-                        {
-                            "file": "js/sequence-retrieval.js",
-                            "line": 87,
-                            "context": "if (line && !isSourceVisible(line)) {"
-                        },
-                        {
-                            "file": "js/sequence-retrieval.js",
-                            "line": 131,
-                            "context": "if (line && !isSourceVisible(line)) {"
-                        },
                         {
                             "file": "js/modules/source-list-manager.js",
                             "line": 63,
@@ -2862,6 +2993,36 @@
                             "file": "js/modules/source-list-manager.js",
                             "line": 204,
                             "context": "const isHidden = (showHiddenWarning && line && !isSourceVisible(line)) ? ' \u26a0\ufe0f (HIDDEN - FILTERED OUT)' : '';"
+                        },
+                        {
+                            "file": "js/modules/source-list-manager.js",
+                            "line": 318,
+                            "context": "if (line && !isSourceVisible(line)) {"
+                        },
+                        {
+                            "file": "js/modules/source-list-manager.js",
+                            "line": 345,
+                            "context": "if (line && isSourceVisible(line)) {"
+                        },
+                        {
+                            "file": "js/modules/source-list-manager.js",
+                            "line": 359,
+                            "context": "if (firstRadio && isSourceVisible(firstRadio.closest('.' + sourceListClass))) {"
+                        },
+                        {
+                            "file": "js/modules/source-list-manager.js",
+                            "line": 374,
+                            "context": "if (line && isSourceVisible(line)) {"
+                        },
+                        {
+                            "file": "js/modules/source-list-manager.js",
+                            "line": 388,
+                            "context": "if (line && isSourceVisible(line)) {"
+                        },
+                        {
+                            "file": "js/modules/source-list-manager.js",
+                            "line": 398,
+                            "context": "if (line && !isSourceVisible(line)) {"
                         }
                     ],
                     "phpFilesCount": 2,
@@ -3153,42 +3314,42 @@
                     "usages": [
                         {
                             "file": "js/blast-manager.js",
-                            "line": 59,
+                            "line": 61,
                             "context": "window.updateCurrentSelectionDisplay();"
                         },
                         {
                             "file": "js/blast-manager.js",
-                            "line": 74,
+                            "line": 77,
                             "context": "updateCurrentSelectionDisplay();"
                         },
                         {
                             "file": "js/blast-manager.js",
-                            "line": 95,
-                            "context": "updateCurrentSelectionDisplay();"
-                        },
-                        {
-                            "file": "js/blast-manager.js",
-                            "line": 139,
-                            "context": "updateCurrentSelectionDisplay();"
-                        },
-                        {
-                            "file": "js/sequence-retrieval.js",
-                            "line": 60,
-                            "context": "window.updateCurrentSelectionDisplay('currentSelection', 'fasta-source-line', true);"
-                        },
-                        {
-                            "file": "js/sequence-retrieval.js",
                             "line": 80,
                             "context": "updateCurrentSelectionDisplay();"
                         },
                         {
-                            "file": "js/sequence-retrieval.js",
-                            "line": 95,
+                            "file": "js/blast-manager.js",
+                            "line": 86,
                             "context": "updateCurrentSelectionDisplay();"
                         },
                         {
                             "file": "js/sequence-retrieval.js",
-                            "line": 144,
+                            "line": 25,
+                            "context": "window.updateCurrentSelectionDisplay('currentSelection', 'fasta-source-line', true);"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 47,
+                            "context": "updateCurrentSelectionDisplay();"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 50,
+                            "context": "updateCurrentSelectionDisplay();"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 55,
                             "context": "updateCurrentSelectionDisplay();"
                         }
                     ],
@@ -3240,17 +3401,78 @@
                     "internalCalls": [],
                     "category": "admin",
                     "tags": [],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/modules/source-list-manager.js",
+                            "line": 303,
+                            "context": "initializeSourceListManager({"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "tools/blast.php",
+                        "tools/retrieve_sequences.php"
+                    ]
+                },
+                {
+                    "name": "initializeSourceSelector",
+                    "line": 277,
+                    "comment": "/**\n * Initialize source selector with unified logic for all tools\n * Handles group filters, multi-organism filters, and auto-selection logic\n * \n * Cases:\n * 1. Assembly specified: show assembly name, auto-select\n * 2. Organism specified: show organism name, auto-select\n * 3. Group specified: show group name, DON'T auto-select (let user choose)\n * 4. Multiple organisms: show empty filter, restrict list, auto-select first if needed\n * \n * @param {Object} options - Configuration options\n * @param {string} options.formId - ID of form (default: 'blastForm')\n * @param {string} options.filterId - ID of filter input (default: 'sourceFilter')\n * @param {string} options.radioName - Name of radio buttons (default: 'selected_source')\n * @param {string} options.sourceListClass - CSS class of source items (default: 'fasta-source-line')\n * @param {Function} options.onSelectionChange - Callback when selection changes\n * @param {Function} options.onFilterChange - Callback when filter changes\n */",
+                    "code": "{}",
+                    "parameters": [
+                        {
+                            "name": "options",
+                            "type": "Object",
+                            "description": "Configuration options"
+                        },
+                        {
+                            "name": "options",
+                            "type": "string",
+                            "description": ".formId - ID of form (default: 'blastForm')"
+                        },
+                        {
+                            "name": "options",
+                            "type": "string",
+                            "description": ".filterId - ID of filter input (default: 'sourceFilter')"
+                        },
+                        {
+                            "name": "options",
+                            "type": "string",
+                            "description": ".radioName - Name of radio buttons (default: 'selected_source')"
+                        },
+                        {
+                            "name": "options",
+                            "type": "string",
+                            "description": ".sourceListClass - CSS class of source items (default: 'fasta-source-line')"
+                        },
+                        {
+                            "name": "options",
+                            "type": "Function",
+                            "description": ".onSelectionChange - Callback when selection changes"
+                        },
+                        {
+                            "name": "options",
+                            "type": "Function",
+                            "description": ".onFilterChange - Callback when filter changes"
+                        }
+                    ],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [],
                     "usageCount": 2,
                     "usages": [
                         {
                             "file": "js/blast-manager.js",
-                            "line": 68,
-                            "context": "initializeSourceListManager({"
+                            "line": 70,
+                            "context": "initializeSourceSelector({"
                         },
                         {
                             "file": "js/sequence-retrieval.js",
-                            "line": 69,
-                            "context": "initializeSourceListManager({"
+                            "line": 34,
+                            "context": "initializeSourceSelector({"
                         }
                     ],
                     "phpFilesCount": 2,
@@ -4074,14 +4296,8 @@
                     ],
                     "category": "data-processing",
                     "tags": [],
-                    "usageCount": 1,
-                    "usages": [
-                        {
-                            "file": "tools/pages/retrieve_sequences.php",
-                            "line": 77,
-                            "context": "<button type=\"button\" class=\"btn btn-success\" onclick=\"clearSourceFilter();\">"
-                        }
-                    ],
+                    "usageCount": 0,
+                    "usages": [],
                     "phpFilesCount": 1,
                     "phpFiles": [
                         "tools/retrieve_sequences.php"
@@ -4102,12 +4318,12 @@
                     "usages": [
                         {
                             "file": "js/sequence-retrieval.js",
-                            "line": 325,
+                            "line": 327,
                             "context": "initializeSequenceRetrieval({ shouldScroll: shouldScroll });"
                         },
                         {
                             "file": "js/sequence-retrieval.js",
-                            "line": 332,
+                            "line": 335,
                             "context": "initializeSequenceRetrieval({ shouldScroll: shouldScroll });"
                         }
                     ],
@@ -4118,7 +4334,7 @@
                 },
                 {
                     "name": "updateCurrentSelectionDisplay",
-                    "line": 59,
+                    "line": 24,
                     "comment": "",
                     "code": "{\n        window.updateCurrentSelectionDisplay('currentSelection', 'fasta-source-line', true);\n        const selectionDiv = document.getElementById('currentSelection');\n        const checked = document.querySelector('input[name=\"selected_source\"]:checked');\n        if (!checked) {\n            selectionDiv.innerHTML = '<span style=\"color: #999;\">None selected</span>';\n        }\n    }",
                     "parameters": [],
@@ -4139,42 +4355,42 @@
                     "usages": [
                         {
                             "file": "js/blast-manager.js",
-                            "line": 59,
+                            "line": 61,
                             "context": "window.updateCurrentSelectionDisplay();"
                         },
                         {
                             "file": "js/blast-manager.js",
-                            "line": 74,
+                            "line": 77,
                             "context": "updateCurrentSelectionDisplay();"
                         },
                         {
                             "file": "js/blast-manager.js",
-                            "line": 95,
-                            "context": "updateCurrentSelectionDisplay();"
-                        },
-                        {
-                            "file": "js/blast-manager.js",
-                            "line": 139,
-                            "context": "updateCurrentSelectionDisplay();"
-                        },
-                        {
-                            "file": "js/sequence-retrieval.js",
-                            "line": 60,
-                            "context": "window.updateCurrentSelectionDisplay('currentSelection', 'fasta-source-line', true);"
-                        },
-                        {
-                            "file": "js/sequence-retrieval.js",
                             "line": 80,
                             "context": "updateCurrentSelectionDisplay();"
                         },
                         {
-                            "file": "js/sequence-retrieval.js",
-                            "line": 95,
+                            "file": "js/blast-manager.js",
+                            "line": 86,
                             "context": "updateCurrentSelectionDisplay();"
                         },
                         {
                             "file": "js/sequence-retrieval.js",
-                            "line": 144,
+                            "line": 25,
+                            "context": "window.updateCurrentSelectionDisplay('currentSelection', 'fasta-source-line', true);"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 47,
+                            "context": "updateCurrentSelectionDisplay();"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 50,
+                            "context": "updateCurrentSelectionDisplay();"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 55,
                             "context": "updateCurrentSelectionDisplay();"
                         }
                     ],
@@ -4185,9 +4401,9 @@
                 },
                 {
                     "name": "updateSearchIdsDisplay",
-                    "line": 154,
+                    "line": 88,
                     "comment": "",
-                    "code": "{\n        if (!featureIdsTextarea) return;\n        \n        // Check if searchIdsDisplay element exists before trying to update it\n        const searchIdsDisplay = document.getElementById('searchIdsDisplay');\n        if (!searchIdsDisplay) return; // Element doesn't exist on this page, skip\n        \n        // Get user input IDs\n        const rawIds = featureIdsTextarea.value.trim();\n        const userInputIds = rawIds\n            .split(/[\\n,]+/)\n            .map(id => id.trim())\n            .filter(id => id.length > 0);\n        \n        // Get found IDs from server (IDs that were actually returned by blastdbcmd)\n        let foundIds = [];\n        if (foundIdsField && foundIdsField.value) {\n            try {\n                foundIds = JSON.parse(foundIdsField.value);\n            } catch (e) {\n                // JSON parse failed\n            }\n        }\n        \n        // First check if server sent expanded uniquenames (after form submission)\n        let idsToDisplay = [];\n        if (expandedUniqueamesField && expandedUniqueamesField.value) {\n            try {\n                const expanded = JSON.parse(expandedUniqueamesField.value);\n                if (Array.isArray(expanded) && expanded.length > 0) {\n                    idsToDisplay = expanded;\n                }\n            } catch (e) {\n                // JSON parse failed, fall back to user input\n            }\n        }\n        \n        // If no expanded IDs, use user input\n        if (idsToDisplay.length === 0) {\n            if (!rawIds) {\n                document.getElementById('searchIdsDisplay').innerHTML = \n                    '<span style=\"color: #999;\">Enter IDs above to see expanded list (including children)</span>';\n                return;\n            }\n            idsToDisplay = userInputIds;\n        }\n        \n        // Display the IDs - color based on whether they were found by blastdbcmd\n        const displayHtml = idsToDisplay\n            .map((id) => {\n                // Always use found/not f",
+                    "code": "{\n        if (!featureIdsTextarea) return;\n        \n        // Check if searchIdsDisplay element exists before trying to update it\n        const searchIdsDisplay = document.getElementById('searchIdsDisplay');\n        if (!searchIdsDisplay) {\n            return; // Element doesn't exist on this page, skip\n        }\n        \n        \n        // Get user input IDs\n        const rawIds = featureIdsTextarea.value.trim();\n        const userInputIds = rawIds\n            .split(/[\\n,]+/)\n            .map(id => id.trim())\n            .filter(id => id.length > 0);\n        \n        \n        // Get found IDs from server (IDs that were actually returned by blastdbcmd)\n        let foundIds = [];\n        if (foundIdsField && foundIdsField.value) {\n            try {\n                foundIds = JSON.parse(foundIdsField.value);\n            } catch (e) {\n                // If field has JSON, try to use it\n                foundIds = [];\n            }\n        }\n        // Also check window.foundIds as fallback\n        if (!Array.isArray(foundIds) || foundIds.length === 0) {\n            foundIds = (window.foundIds && Array.isArray(window.foundIds)) ? window.foundIds : [];\n        }\n        \n        // If still empty, try to extract from displayed FASTA sequences on the page\n        if (foundIds.length === 0) {\n            // Look for FASTA headers (lines starting with >) in the sequence display areas\n            const fastaRegex = />([^\\s]+)/g;\n            const displayContent = document.body.textContent;\n            let match;\n            while ((match = fastaRegex.exec(displayContent)) !== null) {\n                foundIds.push(match[1]);\n            }\n            foundIds = [...new Set(foundIds)]; // Remove duplicates\n        }\n        \n        // First check if server sent expanded uniquenames (after form submission)\n        let idsToDisplay = [];\n        if (expandedUniqueamesField && expandedUniqueamesField.value) {\n            try {\n                const expanded = JSON.parse(expand",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -4196,25 +4412,17 @@
                     "tags": [
                         "dom-manipulation",
                         "ajax",
+                        "event-listener",
                         "state-modifying",
+                        "loops",
                         "error-handling",
                         "validation"
                     ],
-                    "usageCount": 3,
+                    "usageCount": 1,
                     "usages": [
                         {
                             "file": "js/sequence-retrieval.js",
-                            "line": 218,
-                            "context": "updateSearchIdsDisplay();"
-                        },
-                        {
-                            "file": "tools/pages/retrieve_sequences.php",
                             "line": 220,
-                            "context": "function updateSearchIdsDisplay() {"
-                        },
-                        {
-                            "file": "tools/pages/retrieve_sequences.php",
-                            "line": 266,
                             "context": "updateSearchIdsDisplay();"
                         }
                     ],
@@ -4225,7 +4433,7 @@
                 },
                 {
                     "name": "initializeCopyTooltips",
-                    "line": 238,
+                    "line": 240,
                     "comment": "",
                     "code": "{\n    const copyables = document.querySelectorAll(\".copyable\");\n    copyables.forEach(el => {\n        // Custom simple tooltip that follows cursor\n        el.addEventListener(\"mouseenter\", function() {\n            // Remove any existing tooltip\n            const existing = document.getElementById(\"custom-copy-tooltip\");\n            if (existing) existing.remove();\n            \n            // Create simple tooltip\n            const tooltip = document.createElement(\"div\");\n            tooltip.id = \"custom-copy-tooltip\";\n            tooltip.textContent = \"Click to copy\";\n            tooltip.style.cssText = `\n                position: fixed;\n                background-color: #000;\n                color: #fff;\n                padding: 5px 10px;\n                border-radius: 4px;\n                font-size: 12px;\n                white-space: nowrap;\n                pointer-events: none;\n                z-index: 9999;\n            `;\n            document.body.appendChild(tooltip);\n            \n            // Update position on mousemove\n            const updatePosition = (e) => {\n                tooltip.style.left = (e.clientX + 10) + \"px\";\n                tooltip.style.top = (e.clientY - 30) + \"px\";\n            };\n            \n            el.addEventListener(\"mousemove\", updatePosition);\n            \n            // Initial position\n            updatePosition(event);\n            \n            el.addEventListener(\"mouseleave\", function() {\n                const existing = document.getElementById(\"custom-copy-tooltip\");\n                if (existing) existing.remove();\n                el.removeEventListener(\"mousemove\", updatePosition);\n            }, { once: true });\n        });\n    });\n}",
                     "parameters": [],
@@ -4257,7 +4465,7 @@
                 },
                 {
                     "name": "clearFeatureIds",
-                    "line": 286,
+                    "line": 288,
                     "comment": "",
                     "code": "{\n    const featureIds = document.getElementById('featureIds');\n    \n    if (!featureIds) {\n        console.error('featureIds field not found');\n        return;\n    }\n    \n    featureIds.value = '';\n    featureIds.focus();\n}",
                     "parameters": [],
@@ -4275,7 +4483,7 @@
                     "usages": [
                         {
                             "file": "tools/pages/retrieve_sequences.php",
-                            "line": 150,
+                            "line": 103,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"clearFeatureIds()\">"
                         }
                     ],
@@ -4286,7 +4494,7 @@
                 },
                 {
                     "name": "loadSampleIds",
-                    "line": 301,
+                    "line": 303,
                     "comment": "",
                     "code": "{\n    const sampleIds = typeof window.sampleFeatureIds !== 'undefined' ? window.sampleFeatureIds : [];\n    const featureIds = document.getElementById('featureIds');\n    \n    if (!featureIds) {\n        console.error('featureIds field not found');\n        return;\n    }\n    \n    if (sampleIds.length === 0) {\n        console.error('No sample IDs configured');\n        return;\n    }\n    \n    // Load samples one per line\n    featureIds.value = sampleIds.join('\\n');\n    featureIds.focus();\n}",
                     "parameters": [],
@@ -4304,7 +4512,7 @@
                     "usages": [
                         {
                             "file": "tools/pages/retrieve_sequences.php",
-                            "line": 147,
+                            "line": 100,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"loadSampleIds()\">"
                         }
                     ],
@@ -4315,7 +4523,7 @@
                 },
                 {
                     "name": "updatePosition",
-                    "line": 266,
+                    "line": 268,
                     "comment": "",
                     "code": "{\n                tooltip.style.left = (e.clientX + 10) + \"px\";\n                tooltip.style.top = (e.clientY - 30) + \"px\";\n            }",
                     "parameters": [],
@@ -4330,7 +4538,7 @@
                     "usages": [
                         {
                             "file": "js/sequence-retrieval.js",
-                            "line": 274,
+                            "line": 276,
                             "context": "updatePosition(event);"
                         },
                         {
@@ -4357,6 +4565,11 @@
             "name": "clearResults",
             "file": "js/blast-manager.js",
             "line": 44
+        },
+        {
+            "name": "clearBlastSourceFilters",
+            "file": "js/blast-manager.js",
+            "line": 52
         },
         {
             "name": "handleToolClick",
@@ -4387,6 +4600,11 @@
             "name": "toggleUnused",
             "file": "js/registry.js",
             "line": 313
+        },
+        {
+            "name": "clearSourceFilter",
+            "file": "js/sequence-retrieval.js",
+            "line": 6
         },
         {
             "name": "draw_blast_graph",
