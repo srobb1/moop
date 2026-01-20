@@ -149,7 +149,7 @@
 			// color is defined and configurable in the annotation_config.json. example "gene ontology" : "#ffc107" 
                         $color = $annotation_colors[$annotation_type] ?? 'warning';
                         $display_label = $annotation_labels[$annotation_type] ?? $annotation_type;
-                        echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);
+                        echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name, $annotation_type);
                     }
                 }
                 

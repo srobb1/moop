@@ -115,9 +115,10 @@ function getChildrenHierarchical($feature_id, $dbFile, $genome_ids = []) {
  * @param string $desc - Description/definition of annotation type
  * @param string $color - Bootstrap color class for badge
  * @param string $organism - Organism name (for export)
+ * @param string $annotation_type_key - Database key for annotation type (used for anchor ID)
  * @return string - HTML for the annotation table section
  */
-function generateAnnotationTableHTML($results, $uniquename, $type, $count, $annotation_type, $desc, $color = 'warning', $organism = '') {
+function generateAnnotationTableHTML($results, $uniquename, $type, $count, $annotation_type, $desc, $color = 'warning', $organism = '', $annotation_type_key = '') {
     if (empty($results)) {
         return '';
     }
@@ -133,7 +134,9 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
     $border_class = "border-$color";
     
     // Create unique ID for this annotation section
-    $section_id = "annot_section_" . preg_replace('/[^a-zA-Z0-9_]/', '_', $uniquename . '_' . $annotation_type);
+    // Use annotation_type_key if provided, otherwise fall back to annotation_type
+    $key_for_anchor = $annotation_type_key ?: $annotation_type;
+    $section_id = "annot_section_" . preg_replace('/[^a-zA-Z0-9_]/', '_', $uniquename . '_' . $key_for_anchor);
     
     $html = '<div class="annotation-section mb-3 ' . htmlspecialchars($border_class) . '" id="' . htmlspecialchars($section_id) . '">';
     $html .= '<div class="d-flex justify-content-between align-items-center mb-2">';
@@ -422,7 +425,7 @@ function generateChildAnnotationCards($child, $all_annotations, $analysis_order,
             $child_has_annotations = true;
             $color = $annotation_colors[$annotation_type] ?? 'warning';
             $display_label = $annotation_labels[$annotation_type] ?? $annotation_type;
-            $html .= generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);
+            $html .= generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name, $annotation_type);
         }
     }
     

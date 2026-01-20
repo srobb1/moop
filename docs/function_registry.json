@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "generated": "2025-12-10 16:05:12",
-        "totalFunctions": 140,
+        "generated": "2026-01-05 19:57:39",
+        "totalFunctions": 142,
         "totalFiles": 19,
         "duplicates": 0
     },
@@ -76,12 +76,12 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 176,
+                            "line": 147,
                             "context": "$all_dbs = getBlastDatabases($selected_source_obj['path']);"
                         },
                         {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 239,
+                            "line": 210,
                             "context": "$databasesByAssembly[$key] = getBlastDatabases($source['path']);"
                         }
                     ]
@@ -162,7 +162,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 220,
+                            "line": 191,
                             "context": "$blast_result = executeBlastSearch($query_with_header, $blast_db, $blast_program, $blast_options);"
                         }
                     ]
@@ -171,7 +171,7 @@
                     "name": "extractSequencesFromBlastDb",
                     "line": 299,
                     "comment": "/**\n* Extract sequences from BLAST database using blastdbcmd\n* Used by fasta extract and download tools\n* Supports parent->child lookup from database\n*\n* @param string $blast_db Path to BLAST database (without extension)\n* @param array $sequence_ids Array of sequence IDs to extract\n* @param string $organism Optional organism name for parent/child lookup\n* @param string $assembly Optional assembly name for parent/child lookup\n* @return array Result array with 'success', 'content', and 'error' keys\n*/",
-                    "code": "function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $assembly = '') {\n    $result = [\n        'success' => false,\n        'content' => '',\n        'error' => ''\n    ];\n    \n    if (empty($sequence_ids) || !is_array($sequence_ids)) {\n        $result['error'] = 'No sequence IDs provided';\n        return $result;\n    }\n    \n    if (!file_exists($blast_db . '.nhr') && !file_exists($blast_db . '.phr')) {\n        $result['error'] = 'BLAST database not found';\n        return $result;\n    }\n    \n    // Use blastdbcmd to extract sequences\n    // IDs have already been expanded via database lookup to include children\n    $ids_string = implode(',', $sequence_ids);\n    $cmd = \"blastdbcmd -db \" . escapeshellarg($blast_db) . \" -entry \" . escapeshellarg($ids_string) . \" 2>/dev/null\";\n    $output = [];\n    $return_var = 0;\n    @exec($cmd, $output, $return_var);\n    \n    // Check if blastdbcmd executed\n    if ($return_var > 1) {\n        // Return code 1 is expected when some IDs don't exist, but >1 is an error\n        $result['error'] = \"Error extracting sequences (exit code: $return_var). Ensure blastdbcmd is installed and FASTA files are formatted correctly.\";\n        return $result;\n    }\n    \n    // Check if we got any output\n    if (empty($output)) {\n        $result['error'] = 'No sequences found for the requested IDs';\n        return $result;\n    }\n    \n    $result['success'] = true;\n    $result['content'] = implode(\"\\n\", $output);\n    \n    return $result;\n}",
+                    "code": "function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $assembly = '', $ranges = [], $original_input_ids = [], $parent_to_children = []) {\n    $result = [\n        'success' => false,\n        'content' => '',\n        'error' => ''\n    ];\n    \n    if (empty($sequence_ids) || !is_array($sequence_ids)) {\n        $result['error'] = 'No sequence IDs provided';\n        return $result;\n    }\n    \n    if (!file_exists($blast_db . '.nhr') && !file_exists($blast_db . '.phr')) {\n        $result['error'] = 'BLAST database not found';\n        return $result;\n    }\n    \n    // Check if $ranges is provided and not empty\n    if (!empty($ranges)) {\n        // Use batch mode with range file\n        // Convert ranges from \"ID:start-end\" format to \"ID start-end\" format for blastdbcmd\n        $batch_ranges = array_map(function($range) {\n            // Convert \"ID:start-end\" or \"ID:start-end\" to \"ID start-end\"\n            return preg_replace('/^([^:]+):(\\d+-\\d+)$/', '$1 $2', $range);\n        }, $ranges);\n        \n        // Build batch entries: converted ranges + regular IDs as full sequences\n        // Ranges apply to parent AND all children\n        $ids_with_ranges = array_map(function($range) {\n            return explode(':', $range)[0];\n        }, $ranges);\n        \n        // For each ranged ID, find and add all its children with the same range\n        $expanded_ranges = [];\n        foreach ($batch_ranges as $range_entry) {\n            $expanded_ranges[] = $range_entry; // Add the original range\n            \n            // Extract the ID and range portion from \"ID start-end\"\n            if (preg_match('/^(.+?)\\s+(\\d+-\\d+)$/', $range_entry, $matches)) {\n                $parent_id = $matches[1];\n                $range_portion = $matches[2];\n                \n                // Find all children of this parent in sequence_ids and add with same range\n                foreach ($sequence_ids as $id) {\n                    // Check if this ID is a child of parent_id (e.g., \"ID.1\", \"ID.2\")\n                    if (preg_match('/^' . preg_quote($parent_id) . '\\.\\d+$/', $id)) {\n                        $expanded_ranges[] = \"$id $range_portion\";\n                    }\n                }\n            }\n        }\n        \n        // Build batch file following the 4-step plan:\n        // 1. Add all no-range input IDs (as full sequences)\n        // 2. Add all children of input IDs with no ranges (as full sequences)\n        // 3. Add all input IDs with ranges (with range formatting)\n        // 4. Add all children of input IDs with ranges (with same ranges as parent)\n        \n        $batch_entries = [];\n        \n        // Separate original input IDs into those with and without ranges\n        $input_ids_with_ranges = [];\n        $input_ids_no_ranges = [];\n        \n        foreach ($original_input_ids as $id) {\n            $has_range = false;\n            foreach ($ranges as $range_entry) {\n                $range_id = explode(':', $range_entry)[0];\n                $range_id = explode(' ', $range_id)[0];\n                if ($range_id === $id) {\n                    $has_range = true;\n                    break;\n                }\n            }\n            if ($has_range) {\n                $input_ids_with_ranges[] = $id;\n            } else {\n                $input_ids_no_ranges[] = $id;\n            }\n        }\n        \n        // Step 1: Add all no-range input IDs (full sequences)\n        foreach ($input_ids_no_ranges as $id) {\n            if (in_array($id, $sequence_ids)) {\n                $batch_entries[] = $id;\n            }\n        }\n        \n        // Step 2: Add all children of input IDs with no ranges (full sequences)\n        foreach ($input_ids_no_ranges as $parent_id) {\n            if (isset($parent_to_children[$parent_id])) {\n                foreach ($parent_to_children[$parent_id] as $child_id) {\n                    if (in_array($child_id, $sequence_ids)) {\n                        $batch_entries[] = $child_id;\n                    }\n                }\n            }\n        }\n        \n        // Step 3: Add all input IDs with ranges (formatted as \"ID range\")\n        foreach ($input_ids_with_ranges as $id) {\n            // Find the corresponding converted range in $batch_ranges\n            foreach (array_keys($ranges) as $idx) {\n                $range_id = explode(':', $ranges[$idx])[0];\n                $range_id = explode(' ', $range_id)[0];\n                if ($range_id === $id) {\n                    // Use the converted batch_ranges entry (with space, not colon)\n                    $batch_entries[] = $batch_ranges[$idx];\n                    break;\n                }\n            }\n        }\n        \n        // Step 4: Add all children of input IDs with ranges (with same ranges as parent)\n        foreach ($input_ids_with_ranges as $parent_id) {\n            if (isset($parent_to_children[$parent_id])) {\n                // Find the range for this parent\n                $parent_range = '';\n                foreach ($ranges as $range_entry) {\n                    $range_id = explode(':', $range_entry)[0];\n                    $range_id = explode(' ', $range_id)[0];\n                    if ($range_id === $parent_id) {\n                        // Extract range portion\n                        $parent_range = strpos($range_entry, ':') !== false ? \n                            explode(':', $range_entry)[1] : \n                            explode(' ', $range_entry)[1];\n                        break;\n                    }\n                }\n                \n                // Add each child with same range\n                if (!empty($parent_range)) {\n                    foreach ($parent_to_children[$parent_id] as $child_id) {\n                        if (in_array($child_id, $sequence_ids)) {\n                            $batch_entries[] = \"$child_id $parent_range\";\n                        }\n                    }\n                }\n            }\n        }\n        \n        $temp_file = tempnam(sys_get_temp_dir(), 'blastdb_');\n        if ($temp_file === false) {\n            $result['error'] = 'Failed to create temporary file for batch processing';\n            return $result;\n        }\n        \n        // Write batch entries to temporary file\n        if (file_put_contents($temp_file, implode(\"\\n\", $batch_entries)) === false) {\n            @unlink($temp_file);\n            $result['error'] = 'Failed to write batch file for range extraction';\n            return $result;\n        }\n        \n        // Execute: blastdbcmd -db ... -entry_batch temp_file\n        $cmd = \"blastdbcmd -db \" . escapeshellarg($blast_db) . \" -entry_batch \" . escapeshellarg($temp_file) . \" 2>&1\";\n        \n        $output = [];\n        $return_var = 0;\n        @exec($cmd, $output, $return_var);\n        \n        // Delete temp file after execution\n        @unlink($temp_file);\n        \n        // Filter out blastdbcmd error messages (lines starting with \"Error:\")\n        $output = array_filter($output, function($line) {\n            return strpos(trim($line), 'Error:') !== 0;\n        });\n        \n        // Check if blastdbcmd executed\n        if ($return_var > 1) {\n            $result['error'] = \"Error extracting sequences (exit code: $return_var). Ensure blastdbcmd is installed and FASTA files are formatted correctly.\";\n            return $result;\n        }\n        \n        // Check if we got any output\n        if (empty($output)) {\n            $result['error'] = 'No sequences found for the requested IDs and ranges';\n            return $result;\n        }\n    } else {\n        // No ranges - use current logic: Execute: blastdbcmd -db ... -entry IDs\n        $ids_string = implode(',', $sequence_ids);\n        $cmd = \"blastdbcmd -db \" . escapeshellarg($blast_db) . \" -entry \" . escapeshellarg($ids_string) . \" 2>/dev/null\";\n        $output = [];\n        $return_var = 0;\n        @exec($cmd, $output, $return_var);\n        \n        // Filter out blastdbcmd error messages (lines starting with \"Error:\")\n        $output = array_filter($output, function($line) {\n            return strpos(trim($line), 'Error:') !== 0;\n        });\n        \n        // Check if blastdbcmd executed\n        if ($return_var > 1) {\n            // Return code 1 is expected when some IDs don't exist, but >1 is an error\n            $result['error'] = \"Error extracting sequences (exit code: $return_var). Ensure blastdbcmd is installed and FASTA files are formatted correctly.\";\n            return $result;\n        }\n        \n        // Check if we got any output\n        if (empty($output)) {\n            $result['error'] = 'No sequences found for the requested IDs';\n            return $result;\n        }\n    }\n    \n    $result['success'] = true;\n    $result['content'] = implode(\"\\n\", $output);\n    \n    return $result;\n}",
                     "parameters": [
                         {
                             "name": "blast_db",
@@ -201,29 +201,30 @@
                     ],
                     "category": "database",
                     "tags": [
-                        "readonly",
+                        "mutation",
                         "error-handling",
                         "database-dependent",
                         "file-io",
+                        "loops",
                         "recursive"
                     ],
                     "usageCount": 2,
                     "usages": [
                         {
                             "file": "/data/moop/lib/extract_search_helpers.php",
-                            "line": 123,
-                            "context": "$extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);"
+                            "line": 163,
+                            "context": "$extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly, $ranges, $original_input_ids, $parent_to_children);"
                         },
                         {
                             "file": "/data/moop/lib/extract_search_helpers.php",
-                            "line": 144,
-                            "context": "$extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);"
+                            "line": 184,
+                            "context": "$extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly, $ranges, $original_input_ids, $parent_to_children);"
                         }
                     ]
                 },
                 {
                     "name": "validateBlastSequence",
-                    "line": 350,
+                    "line": 519,
                     "comment": "/**\n* Validate BLAST sequence input\n* Checks if input is valid FASTA format\n*\n* @param string $sequence Raw sequence input (may or may not have FASTA header)\n* @return array Array with 'valid' bool and 'error' string\n*/",
                     "code": "function validateBlastSequence($sequence) {\n    $sequence = trim($sequence);\n    \n    if (empty($sequence)) {\n        return ['valid' => false, 'error' => 'Sequence is empty'];\n    }\n    \n    // If sequence doesn't start with >, add a header\n    if ($sequence[0] !== '>') {\n        $sequence = \">query_sequence\\n\" . $sequence;\n    }\n    \n    // Basic FASTA format validation\n    $lines = explode(\"\\n\", $sequence);\n    $in_header = true;\n    $seq_count = 0;\n    \n    foreach ($lines as $line) {\n        $line = trim($line);\n        if (empty($line)) {\n            continue;\n        }\n        \n        if ($line[0] === '>') {\n            if (!$in_header && $seq_count === 0) {\n                return ['valid' => false, 'error' => 'Invalid FASTA format: sequence expected before header'];\n            }\n            $in_header = true;\n            $seq_count = 0;\n        } else {\n            if ($in_header) {\n                $in_header = false;\n            }\n            $seq_count += strlen($line);\n        }\n    }\n    \n    if ($seq_count === 0) {\n        return ['valid' => false, 'error' => 'No sequence data found'];\n    }\n    \n    return ['valid' => true, 'error' => ''];\n}",
                     "parameters": [
@@ -250,14 +251,14 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 191,
+                            "line": 162,
                             "context": "$validation = validateBlastSequence($search_query);"
                         }
                     ]
                 },
                 {
                     "name": "validateBlastIndexFiles",
-                    "line": 401,
+                    "line": 570,
                     "comment": "/**\n* Validate BLAST index files for FASTA sequences\n* Checks if BLAST databases have their index files (.nhr, .nin, .nsq for nucleotide, .phr, .pin, .psq for protein)\n* @param string $assembly_path Path to assembly directory\n* @param array $sequence_types Configured sequence types\n* @return array Array with 'databases' containing status of each FASTA file\n*/",
                     "code": "function validateBlastIndexFiles($assembly_path, $sequence_types = []) {\n    $result = [\n        'databases' => [],\n        'missing_count' => 0,\n        'total_count' => 0\n    ];\n    \n    if (!is_dir($assembly_path)) {\n        return $result;\n    }\n    \n    // Map sequence types to BLAST index extensions\n    $type_mapping = [\n        'protein' => ['name' => 'Protein', 'extensions' => ['phr', 'pin', 'psq']],\n        'cds' => ['name' => 'CDS', 'extensions' => ['nhr', 'nin', 'nsq']],\n        'transcript' => ['name' => 'Transcript', 'extensions' => ['nhr', 'nin', 'nsq']],\n    ];\n    \n    // Check for each configured sequence type\n    if (!empty($sequence_types)) {\n        foreach ($sequence_types as $seq_type => $config) {\n            $pattern = $config['pattern'] ?? '';\n            if (empty($pattern)) {\n                continue;\n            }\n            \n            $file_path = \"$assembly_path/$pattern\";\n            \n            // Only check if FASTA file exists\n            if (!file_exists($file_path)) {\n                continue;\n            }\n            \n            $result['total_count']++;\n            $type_info = $type_mapping[$seq_type] ?? ['name' => ucfirst($seq_type), 'extensions' => ['nhr', 'nin', 'nsq']];\n            \n            $db_entry = [\n                'type' => $seq_type,\n                'name' => $type_info['name'],\n                'fasta' => basename($file_path),\n                'fasta_path' => $file_path,\n                'has_indexes' => true,\n                'missing_indexes' => []\n            ];\n            \n            // Check for all required index files\n            foreach ($type_info['extensions'] as $ext) {\n                $index_file = \"$file_path.$ext\";\n                if (!file_exists($index_file)) {\n                    $db_entry['has_indexes'] = false;\n                    $db_entry['missing_indexes'][] = $ext;\n                }\n            }\n            \n            if (!$db_entry['has_indexes']) {\n                $result['missing_count']++;\n            }\n            \n            $result['databases'][] = $db_entry;\n        }\n    }\n    \n    return $result;\n}",
                     "parameters": [
@@ -519,7 +520,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/pages/blast.php",
-                            "line": 241,
+                            "line": 175,
                             "context": "<?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? []) ?>"
                         }
                     ]
@@ -834,7 +835,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/pages/blast.php",
-                            "line": 240,
+                            "line": 174,
                             "context": "<?= getToggleQuerySectionScript() ?>"
                         }
                     ]
@@ -905,16 +906,11 @@
                         "database-dependent",
                         "recursive"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 1,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 102,
-                            "context": "$row = getFeatureById($ancestor_feature_id, $db, $accessible_genome_ids);"
-                        },
-                        {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 153,
+                            "line": 154,
                             "context": "$row = getFeatureById($ancestor_feature_id, $db, $accessible_genome_ids);"
                         }
                     ]
@@ -962,7 +958,7 @@
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 169,
+                            "line": 165,
                             "context": "$feature_result = getFeatureByUniquename($uniquename, $db);"
                         }
                     ]
@@ -1230,17 +1226,12 @@
                         "database-dependent",
                         "recursive"
                     ],
-                    "usageCount": 3,
+                    "usageCount": 2,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/old/assembly_display.php",
-                            "line": 20,
-                            "context": "$assembly_info = getAssemblyStats($assembly_param, $db_path);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/assembly_display1.php",
-                            "line": 19,
-                            "context": "$assembly_info = getAssemblyStats($assembly_accession, $db_path);"
+                            "file": "/data/moop/tools/pages/organism.php",
+                            "line": 161,
+                            "context": "$assembly_info = getAssemblyStats($data['assembly'], $db_path);"
                         },
                         {
                             "file": "/data/moop/tools/assembly.php",
@@ -1466,7 +1457,7 @@
         },
         {
             "name": "lib/extract_search_helpers.php",
-            "count": 11,
+            "count": 12,
             "functions": [
                 {
                     "name": "parseOrganismParameter",
@@ -1495,11 +1486,16 @@
                         "readonly",
                         "recursive"
                     ],
-                    "usageCount": 1,
+                    "usageCount": 2,
                     "usages": [
                         {
+                            "file": "/data/moop/tools/blast.php",
+                            "line": 54,
+                            "context": "$organism_result = parseOrganismParameter($organisms_param, '');"
+                        },
+                        {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 63,
+                            "line": 64,
                             "context": "$organism_result = parseOrganismParameter($organisms_param, '');"
                         }
                     ]
@@ -1524,30 +1520,30 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 44,
+                            "line": 45,
                             "context": "$context = parseContextParameters();"
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 60,
+                            "line": 61,
                             "context": "$context = parseContextParameters();"
                         }
                     ]
                 },
                 {
                     "name": "parseFeatureIds",
-                    "line": 83,
-                    "comment": "/**\n* Parse and validate feature IDs from user input\n*\n* Handles both comma and newline separated formats\n*\n* @param string $uniquenames_string - Comma or newline separated IDs\n* @return array - ['valid' => bool, 'uniquenames' => [], 'error' => '']\n*/",
-                    "code": "function parseFeatureIds($uniquenames_string) {\n    $uniquenames = [];\n    \n    if (empty($uniquenames_string)) {\n        return ['valid' => false, 'uniquenames' => [], 'error' => 'No feature IDs provided'];\n    }\n    \n    // Handle both comma and newline separated formats\n    $uniquenames = array_filter(array_map('trim', \n        preg_split('/[\\n,]+/', $uniquenames_string)\n    ));\n    \n    if (empty($uniquenames)) {\n        return ['valid' => false, 'uniquenames' => [], 'error' => 'No valid feature IDs found'];\n    }\n    \n    return ['valid' => true, 'uniquenames' => $uniquenames, 'error' => ''];\n}",
+                    "line": 84,
+                    "comment": "/**\n* Parse and validate feature IDs from user input\n*\n* Handles both comma and newline separated formats\n* Detects range patterns (ID:1..10, ID:1-10, ID 1..10, ID 1-10) and returns them separately\n*\n* @param string $uniquenames_string - Comma or newline separated IDs with optional ranges\n* @return array - ['valid' => bool, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => bool, 'error' => '']\n*/",
+                    "code": "function parseFeatureIds($uniquenames_string) {\n    $uniquenames = [];\n    $ranges = [];\n    \n    if (empty($uniquenames_string)) {\n        return ['valid' => false, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => false, 'error' => 'No feature IDs provided'];\n    }\n    \n    // Handle both comma and newline separated formats\n    $entries = array_filter(array_map('trim', \n        preg_split('/[\\n,]+/', $uniquenames_string)\n    ));\n    \n    if (empty($entries)) {\n        return ['valid' => false, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => false, 'error' => 'No valid feature IDs found'];\n    }\n    \n    // Process each entry to detect range patterns\n    // Patterns: \"ID:1..10\", \"ID:1-10\", \"ID 1..10\", \"ID 1-10\"\n    foreach ($entries as $entry) {\n        // Check for range patterns\n        if (preg_match('/^(.+?)[\\s:]+(\\d+)[.\\-]\\.?(\\d+)$/', $entry, $matches)) {\n            $id = trim($matches[1]);\n            $start = $matches[2];\n            $end = $matches[3];\n            \n            // Validate range (start should be <= end)\n            if ((int)$start <= (int)$end) {\n                // Store in format expected by blastdbcmd: \"ID:start-end\"\n                $ranges[] = \"$id:$start-$end\";\n                $uniquenames[] = $id;\n            } else {\n                // Invalid range, skip or treat as error\n                continue;\n            }\n        } else {\n            // Regular ID without range\n            $uniquenames[] = $entry;\n        }\n    }\n    \n    $uniquenames = array_unique($uniquenames);\n    \n    if (empty($uniquenames)) {\n        return ['valid' => false, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => false, 'error' => 'No valid feature IDs found'];\n    }\n    \n    return [\n        'valid' => true, \n        'uniquenames' => array_values($uniquenames), \n        'ranges' => $ranges,\n        'has_ranges' => !empty($ranges),\n        'error' => ''\n    ];\n}",
                     "parameters": [
                         {
                             "name": "uniquenames_string",
                             "type": "string",
-                            "description": "Comma or newline separated IDs"
+                            "description": "Comma or newline separated IDs with optional ranges"
                         }
                     ],
                     "returnType": "array",
-                    "returnDescription": "['valid' => bool, 'uniquenames' => [], 'error' => '']",
+                    "returnDescription": "['valid' => bool, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => bool, 'error' => '']",
                     "internalCalls": [
                         "parseFeatureIds"
                     ],
@@ -1555,6 +1551,7 @@
                     "tags": [
                         "readonly",
                         "error-handling",
+                        "loops",
                         "recursive"
                     ],
                     "usageCount": 2,
@@ -1566,16 +1563,16 @@
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 154,
+                            "line": 130,
                             "context": "$id_parse = parseFeatureIds($uniquenames_string);"
                         }
                     ]
                 },
                 {
                     "name": "extractSequencesForAllTypes",
-                    "line": 114,
-                    "comment": "/**\n* Extract sequences for all available types from BLAST database\n*\n* Iterates through all sequence types and extracts for the given feature IDs\n*\n* @param string $assembly_dir - Path to assembly directory\n* @param array $uniquenames - Feature IDs to extract\n* @param array $sequence_types - Available sequence type configurations (from site_config)\n* @param string $organism - Organism name (for parent/child database lookup)\n* @param string $assembly - Assembly name (for parent/child database lookup)\n* @return array - ['success' => bool, 'content' => [...], 'errors' => []]\n*/",
-                    "code": "function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types, $organism = '', $assembly = '') {\n    $displayed_content = [];\n    $errors = [];\n    \n    foreach ($sequence_types as $seq_type => $config) {\n        $files = glob(\"$assembly_dir/*{$config['pattern']}\");\n        \n        if (!empty($files)) {\n            $fasta_file = $files[0];\n            $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);\n            \n            if ($extract_result['success']) {\n                // Remove blank lines\n                $lines = explode(\"\\n\", $extract_result['content']);\n                $lines = array_filter($lines, function($line) {\n                    return trim($line) !== '';\n                });\n                $displayed_content[$seq_type] = implode(\"\\n\", $lines);\n            } else {\n                $errors[] = \"Failed to extract $seq_type sequences\";\n            }\n        }\n    }\n    \n    // Only report \"no sequences found\" errors if we got no content at all\n    if (empty($displayed_content)) {\n        foreach ($sequence_types as $seq_type => $config) {\n            $files = glob(\"$assembly_dir/*{$config['pattern']}\");\n            if (!empty($files)) {\n                $fasta_file = $files[0];\n                $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly);\n                if (!empty($extract_result['error'])) {\n                    $errors[] = $extract_result['error'];\n                    break;\n                }\n            }\n        }\n    }\n    \n    return [\n        'success' => !empty($displayed_content),\n        'content' => $displayed_content,\n        'errors' => $errors\n    ];\n}",
+                    "line": 154,
+                    "comment": "/**\n* Extract sequences for all available types from BLAST database\n*\n* Iterates through all sequence types and extracts for the given feature IDs\n* Supports range notation for subsequence extraction\n*\n* @param string $assembly_dir - Path to assembly directory\n* @param array $uniquenames - Feature IDs to extract\n* @param array $sequence_types - Available sequence type configurations (from site_config)\n* @param string $organism - Organism name (for parent/child database lookup)\n* @param string $assembly - Assembly name (for parent/child database lookup)\n* @param array $ranges - Optional array of range strings (\"ID:start-end\") for subsequence extraction\n* @return array - ['success' => bool, 'content' => [...], 'errors' => []]\n*/",
+                    "code": "function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types, $organism = '', $assembly = '', $ranges = [], $original_input_ids = [], $parent_to_children = []) {\n    $displayed_content = [];\n    $errors = [];\n    \n    foreach ($sequence_types as $seq_type => $config) {\n        $files = glob(\"$assembly_dir/*{$config['pattern']}\");\n        \n        if (!empty($files)) {\n            $fasta_file = $files[0];\n            $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly, $ranges, $original_input_ids, $parent_to_children);\n            \n            if ($extract_result['success']) {\n                // Remove blank lines\n                $lines = explode(\"\\n\", $extract_result['content']);\n                $lines = array_filter($lines, function($line) {\n                    return trim($line) !== '';\n                });\n                $displayed_content[$seq_type] = implode(\"\\n\", $lines);\n            } else {\n                $errors[] = \"Failed to extract $seq_type sequences\";\n            }\n        }\n    }\n    \n    // Only report \"no sequences found\" errors if we got no content at all\n    if (empty($displayed_content)) {\n        foreach ($sequence_types as $seq_type => $config) {\n            $files = glob(\"$assembly_dir/*{$config['pattern']}\");\n            if (!empty($files)) {\n                $fasta_file = $files[0];\n                $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly, $ranges, $original_input_ids, $parent_to_children);\n                if (!empty($extract_result['error'])) {\n                    $errors[] = $extract_result['error'];\n                    break;\n                }\n            }\n        }\n    }\n    \n    return [\n        'success' => !empty($displayed_content),\n        'content' => $displayed_content,\n        'errors' => $errors\n    ];\n}",
                     "parameters": [
                         {
                             "name": "assembly_dir",
@@ -1601,6 +1598,11 @@
                             "name": "assembly",
                             "type": "string",
                             "description": "Assembly name (for parent/child database lookup)"
+                        },
+                        {
+                            "name": "ranges",
+                            "type": "array",
+                            "description": "Optional array of range strings (\"ID:start-end\") for subsequence extraction"
                         }
                     ],
                     "returnType": "array",
@@ -1620,27 +1622,27 @@
                     "usageCount": 3,
                     "usages": [
                         {
+                            "file": "/data/moop/tools/parent.php",
+                            "line": 215,
+                            "context": "$extract_result = extractSequencesForAllTypes($assembly_dir, $feature_ids, $sequence_types, $organism_name, $genome_accession);"
+                        },
+                        {
                             "file": "/data/moop/tools/retrieve_selected_sequences.php",
                             "line": 111,
                             "context": "$extract_result = extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types);"
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 188,
-                            "context": "$extract_result = extractSequencesForAllTypes($fasta_source['path'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly);"
-                        },
-                        {
-                            "file": "/data/moop/tools/parent.php",
-                            "line": 214,
-                            "context": "$extract_result = extractSequencesForAllTypes($assembly_dir, $feature_ids, $sequence_types, $organism_name, $genome_accession);"
+                            "line": 232,
+                            "context": "$extract_result = extractSequencesForAllTypes($fasta_source['path'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly_accession, $ranges, $original_uniquenames ?? [], $parent_to_children ?? []);"
                         }
                     ]
                 },
                 {
                     "name": "formatSequenceResults",
-                    "line": 169,
+                    "line": 209,
                     "comment": "/**\n* Format extracted sequences for display component\n*\n* Converts extracted content into format expected by sequences_display.php\n*\n* @param array $displayed_content - Extracted sequences by type\n* @param array $sequence_types - Type configurations (from site_config)\n* @return array - Formatted for sequences_display.php inclusion\n*/",
-                    "code": "function formatSequenceResults($displayed_content, $sequence_types) {\n    $available_sequences = [];\n    \n    foreach ($displayed_content as $seq_type => $content) {\n        $available_sequences[$seq_type] = [\n            'label' => $sequence_types[$seq_type]['label'] ?? ucfirst($seq_type),\n            'sequences' => [$content]  // Wrap in array as sequences_display expects\n        ];\n    }\n    \n    return $available_sequences;\n}",
+                    "code": "function formatSequenceResults($displayed_content, $sequence_types) {\n    $available_sequences = [];\n    \n    foreach ($displayed_content as $seq_type => $content) {\n        \n        // Parse FASTA content into individual sequences by ID\n        $sequences = [];\n        if (!empty($content)) {\n            $current_id = null;\n            $current_seq = [];\n            $lines = explode(\"\\n\", $content);\n            \n            foreach ($lines as $line) {\n                if (strpos($line, '>') === 0) {\n                    // Header line\n                    if (!is_null($current_id)) {\n                        // Store previous sequence with full FASTA format (including >)\n                        $sequences[$current_id] = implode(\"\\n\", array_merge([\">\" . $current_id], $current_seq));\n                    }\n                    // Extract ID from header (remove leading '>')\n                    $current_id = substr($line, 1);\n                    $current_seq = [];\n                } else if (!empty($line)) {\n                    // Sequence line (skip empty lines)\n                    $current_seq[] = $line;\n                }\n            }\n            \n            // Store last sequence with full FASTA format\n            if (!is_null($current_id)) {\n                $sequences[$current_id] = implode(\"\\n\", array_merge([\">\" . $current_id], $current_seq));\n            }\n        }\n        \n        foreach ($sequences as $id => $seq_content) {\n            $first_line = explode(\"\\n\", $seq_content)[0];\n        }\n        \n        $available_sequences[$seq_type] = [\n            'label' => $sequence_types[$seq_type]['label'] ?? ucfirst($seq_type),\n            'sequences' => $sequences\n        ];\n    }\n    \n    return $available_sequences;\n}",
                     "parameters": [
                         {
                             "name": "displayed_content",
@@ -1673,14 +1675,14 @@
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 248,
+                            "line": 302,
                             "context": "'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $sequence_types) : [],"
                         }
                     ]
                 },
                 {
                     "name": "sendFileDownload",
-                    "line": 192,
+                    "line": 266,
                     "comment": "/**\n* Send file download response and exit\n*\n* Sets appropriate headers and outputs file content\n* Should be called before any HTML output\n*\n* @param string $content - File content to download\n* @param string $sequence_type - Type of sequence (for filename)\n* @param string $file_format - Format (fasta or txt)\n*/",
                     "code": "function sendFileDownload($content, $sequence_type, $file_format = 'fasta') {\n    $ext = ($file_format === 'txt') ? 'txt' : 'fasta';\n    $filename = \"sequences_{$sequence_type}_\" . date(\"Y-m-d_His\") . \".{$ext}\";\n    \n    header('Content-Type: application/octet-stream');\n    header(\"Content-Disposition: attachment; filename={$filename}\");\n    header('Content-Length: ' . strlen($content));\n    echo $content;\n    exit;\n}",
                     "parameters": [
@@ -1714,14 +1716,14 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/extract_search_helpers.php",
-                            "line": 331,
+                            "line": 405,
                             "context": "sendFileDownload($fasta_content, $sequence_type, $file_format);"
                         }
                     ]
                 },
                 {
                     "name": "buildFilteredSourcesList",
-                    "line": 212,
+                    "line": 286,
                     "comment": "/**\n* Build organism-filtered list of accessible assembly sources\n*\n* Filters nested sources array by organism list\n*\n* @param array $sources_by_group - Nested array from getAccessibleAssemblies()\n* @param array $filter_organisms - Optional organism filter list\n* @return array - Nested array [group][organism][...assemblies]\n*/",
                     "code": "function buildFilteredSourcesList($sources_by_group, $filter_organisms = []) {\n    $filtered = [];\n    \n    foreach ($sources_by_group as $group_name => $organisms) {\n        foreach ($organisms as $organism => $assemblies) {\n            // Skip if organism filter is set and this organism is not in it\n            if (!empty($filter_organisms) && !in_array($organism, $filter_organisms)) {\n                continue;\n            }\n            \n            if (!isset($filtered[$group_name])) {\n                $filtered[$group_name] = [];\n            }\n            $filtered[$group_name][$organism] = $assemblies;\n        }\n    }\n    \n    return $filtered;\n}",
                     "parameters": [
@@ -1752,7 +1754,7 @@
                 },
                 {
                     "name": "flattenSourcesList",
-                    "line": 241,
+                    "line": 315,
                     "comment": "/**\n* Flatten nested sources array for sequential processing\n*\n* Converts nested [group][organism][...sources] structure to flat list\n* Useful for iterating all sources without nested loops\n*\n* @param array $sources_by_group - Nested array from getAccessibleAssemblies()\n* @return array - Flat list of all sources\n*/",
                     "code": "function flattenSourcesList($sources_by_group) {\n    $accessible_sources = [];\n    \n    foreach ($sources_by_group as $group => $organisms) {\n        foreach ($organisms as $org => $assemblies) {\n            $accessible_sources = array_merge($accessible_sources, $assemblies);\n        }\n    }\n    \n    return $accessible_sources;\n}",
                     "parameters": [
@@ -1773,8 +1775,13 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 1,
+                    "usageCount": 2,
                     "usages": [
+                        {
+                            "file": "/data/moop/tools/blast.php",
+                            "line": 50,
+                            "context": "$accessible_sources = flattenSourcesList($sources_by_group);"
+                        },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
                             "line": 71,
@@ -1784,7 +1791,7 @@
                 },
                 {
                     "name": "assignGroupColors",
-                    "line": 262,
+                    "line": 336,
                     "comment": "/**\n* Assign Bootstrap colors to groups for consistent UI display\n*\n* Uses Bootstrap color palette cyclically across groups\n* Same group always gets same color (idempotent)\n*\n* @param array $sources_by_group - Groups to assign colors to\n* @return array - [group_name => bootstrap_color]\n*/",
                     "code": "function assignGroupColors($sources_by_group) {\n    $group_colors = ['primary', 'success', 'info', 'warning', 'danger', 'secondary', 'dark'];\n    $group_color_map = [];\n    \n    foreach ($sources_by_group as $group_name => $organisms) {\n        if (!isset($group_color_map[$group_name])) {\n            $group_color_map[$group_name] = $group_colors[count($group_color_map) % count($group_colors)];\n        }\n    }\n    \n    return $group_color_map;\n}",
                     "parameters": [
@@ -1805,18 +1812,12 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 1,
-                    "usages": [
-                        {
-                            "file": "/data/moop/tools/pages/retrieve_sequences.php",
-                            "line": 84,
-                            "context": "$group_color_map = assignGroupColors($sources_by_group);"
-                        }
-                    ]
+                    "usageCount": 0,
+                    "usages": []
                 },
                 {
                     "name": "getAvailableSequenceTypesForDisplay",
-                    "line": 285,
+                    "line": 359,
                     "comment": "/**\n* Get available sequence types from all accessible sources\n*\n* Scans assembly directories to determine which sequence types are available\n* Useful for populating UI dropdowns/display options\n*\n* @param array $accessible_sources - Flattened list of sources\n* @param array $sequence_types - Type configurations (from site_config)\n* @return array - [type => label] for types that have available files\n*/",
                     "code": "function getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_types) {\n    $available_types = [];\n    \n    foreach ($accessible_sources as $source) {\n        foreach ($sequence_types as $seq_type => $config) {\n            $files = glob($source['path'] . \"/*{$config['pattern']}\");\n            if (!empty($files)) {\n                $available_types[$seq_type] = $config['label'];\n            }\n        }\n    }\n    \n    return $available_types;\n}",
                     "parameters": [
@@ -1847,14 +1848,14 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 225,
+                            "line": 277,
                             "context": "$available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_types);"
                         }
                     ]
                 },
                 {
                     "name": "handleSequenceDownload",
-                    "line": 312,
+                    "line": 386,
                     "comment": "/**\n* Handle sequence download request\n*\n* Checks for download flag and sends file if conditions are met.\n* Works with both array-based sequences (from extractSequencesFromFasta)\n* and string-based sequences (from extractSequencesForAllTypes).\n*\n* @param bool $download_flag - Whether download was requested\n* @param string $sequence_type - The sequence type to download\n* @param array|string $sequence_data - Either array of sequences or a string\n* @return bool - True if download was sent and script exited, false otherwise\n*/",
                     "code": "function handleSequenceDownload($download_flag, $sequence_type, $sequence_data) {\n    if (!$download_flag || empty($sequence_type)) {\n        return false;\n    }\n    \n    // Handle both formats: array (from extractSequencesFromFasta) and string (from extractSequencesForAllTypes)\n    $fasta_content = '';\n    if (is_array($sequence_data)) {\n        // Array format: feature_id => content\n        if (!empty($sequence_data)) {\n            $fasta_content = implode(\"\\n\", $sequence_data);\n        }\n    } else if (is_string($sequence_data)) {\n        // String format: already combined FASTA content\n        $fasta_content = $sequence_data;\n    }\n    \n    if (!empty($fasta_content)) {\n        $file_format = $_POST['file_format'] ?? 'fasta';\n        sendFileDownload($fasta_content, $sequence_type, $file_format);\n        exit;\n    }\n    \n    return false;\n}",
                     "parameters": [
@@ -1888,24 +1889,76 @@
                     "usageCount": 4,
                     "usages": [
                         {
+                            "file": "/data/moop/tools/parent.php",
+                            "line": 223,
+                            "context": "handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type]);"
+                        },
+                        {
                             "file": "/data/moop/tools/retrieve_selected_sequences.php",
                             "line": 120,
                             "context": "handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type] ?? null);"
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 221,
+                            "line": 273,
                             "context": "handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type] ?? null);"
                         },
                         {
-                            "file": "/data/moop/tools/parent.php",
-                            "line": 222,
-                            "context": "handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type]);"
+                            "file": "/data/moop/tools/sequences_display.php",
+                            "line": 155,
+                            "context": "handleSequenceDownload($download_file_flag, $sequence_type, $available_sequences[$sequence_type]['sequences']);"
+                        }
+                    ]
+                },
+                {
+                    "name": "determineSelectedSource",
+                    "line": 428,
+                    "comment": "/**\n* Determine selected source (organism/assembly) based on URL/POST parameters\n*\n* Selection priority (highest to lowest):\n* 1. Explicit assembly parameter\n* 2. Explicit organism parameter\n* 3. Group parameter (select first organism from group)\n* 4. Organisms filter list (select first organism)\n*\n* @param array $context - Context parameters [organism, assembly, group, display_name, context_page]\n* @param array $filter_organisms - Pre-filtered list of organisms (from organisms[] or group)\n* @param array $accessible_sources - Flat list of all accessible sources\n* @param string $selected_organism - Optional pre-selected organism (input/output)\n* @param string $selected_assembly_accession - Optional pre-selected assembly (input/output)\n* @return array - ['selected_source' => 'org|assembly', 'selected_organism' => 'org', 'selected_assembly_accession' => 'accession', 'selected_assembly_name' => 'name']\n*/",
+                    "code": "function determineSelectedSource($context, $filter_organisms, $accessible_sources, $selected_organism = '', $selected_assembly_accession = '') {\n    $result = [\n        'selected_source' => '',\n        'selected_organism' => $selected_organism,\n        'selected_assembly_accession' => $selected_assembly_accession,\n        'selected_assembly_name' => ''\n    ];\n    \n    // Case 1: Both organism and assembly explicitly specified\n    if (!empty($selected_organism) && !empty($selected_assembly_accession)) {\n        $result['selected_source'] = $selected_organism . '|' . $selected_assembly_accession;\n        return $result;\n    }\n    \n    // Case 2: Only organism specified (select its first assembly)\n    if (!empty($selected_organism)) {\n        foreach ($accessible_sources as $source) {\n            if ($source['organism'] === $selected_organism) {\n                $result['selected_source'] = $selected_organism . '|' . $source['assembly'];\n                $result['selected_assembly_accession'] = $source['assembly'];\n                $result['selected_assembly_name'] = $source['genome_name'] ?? $source['assembly'];\n                return $result;\n            }\n        }\n    }\n    \n    // Case 3: Group specified (select first organism from group, then its first assembly)\n    if (!empty($context['group']) && !empty($filter_organisms)) {\n        $first_organism = reset($filter_organisms);\n        foreach ($accessible_sources as $source) {\n            if ($source['organism'] === $first_organism && in_array($context['group'], $source['groups'] ?? [])) {\n                $result['selected_source'] = $first_organism . '|' . $source['assembly'];\n                $result['selected_organism'] = $first_organism;\n                $result['selected_assembly_accession'] = $source['assembly'];\n                $result['selected_assembly_name'] = $source['genome_name'] ?? $source['assembly'];\n                return $result;\n            }\n        }\n    }\n    \n    // Case 4: Organisms filter list specified (select first organism, then its first assembly)\n    if (!empty($filter_organisms)) {\n        $first_organism = reset($filter_organisms);\n        foreach ($accessible_sources as $source) {\n            if ($source['organism'] === $first_organism) {\n                $result['selected_source'] = $first_organism . '|' . $source['assembly'];\n                $result['selected_organism'] = $first_organism;\n                $result['selected_assembly_accession'] = $source['assembly'];\n                $result['selected_assembly_name'] = $source['genome_name'] ?? $source['assembly'];\n                return $result;\n            }\n        }\n    }\n    \n    // No selection could be determined\n    return $result;\n}",
+                    "parameters": [
+                        {
+                            "name": "context",
+                            "type": "array",
+                            "description": "Context parameters [organism, assembly, group, display_name, context_page]"
                         },
                         {
-                            "file": "/data/moop/tools/sequences_display.php",
-                            "line": 136,
-                            "context": "handleSequenceDownload($download_file_flag, $sequence_type, $available_sequences[$sequence_type]['sequences']);"
+                            "name": "filter_organisms",
+                            "type": "array",
+                            "description": "Pre-filtered list of organisms (from organisms[] or group)"
+                        },
+                        {
+                            "name": "accessible_sources",
+                            "type": "array",
+                            "description": "Flat list of all accessible sources"
+                        },
+                        {
+                            "name": "selected_organism",
+                            "type": "string",
+                            "description": "Optional pre-selected organism (input/output)"
+                        },
+                        {
+                            "name": "selected_assembly_accession",
+                            "type": "string",
+                            "description": "Optional pre-selected assembly (input/output)"
+                        }
+                    ],
+                    "returnType": "array",
+                    "returnDescription": "['selected_source' => 'org|assembly', 'selected_organism' => 'org', 'selected_assembly_accession' => 'accession', 'selected_assembly_name' => 'name']",
+                    "internalCalls": [
+                        "determineSelectedSource"
+                    ],
+                    "category": "utility",
+                    "tags": [
+                        "readonly",
+                        "loops",
+                        "recursive"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "/data/moop/includes/source-selector-helpers.php",
+                            "line": 135,
+                            "context": "$selection_result = determineSelectedSource("
                         }
                     ]
                 }
@@ -1913,7 +1966,7 @@
         },
         {
             "name": "lib/functions_access.php",
-            "count": 4,
+            "count": 5,
             "functions": [
                 {
                     "name": "getAssemblyInfo",
@@ -1946,25 +1999,59 @@
                         "file-io",
                         "recursive"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 1,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/blast.php",
-                            "line": 104,
-                            "context": "[$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($context_assembly, $db_path);"
-                        },
-                        {
-                            "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 110,
-                            "context": "[$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($selected_assembly, $db_path);"
+                            "file": "/data/moop/lib/functions_access.php",
+                            "line": 67,
+                            "context": "[$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($assembly, $db_path);"
                         }
                     ]
                 },
                 {
+                    "name": "resolveSourceSelection",
+                    "line": 49,
+                    "comment": "/**\n* Resolve source selection from organism and assembly parameters\n* Handles both genome_name and genome_accession formats\n* Returns the correct selected_source string for pre-selecting radio buttons\n*\n* @param string $organism Organism name\n* @param string $assembly Assembly (could be genome_name or genome_accession)\n* @param array $accessible_sources Flattened list of sources with genome_id, genome_name, etc.\n* @return string Selected source in format \"organism|assembly_dir\" or empty string if not found\n*/",
+                    "code": "function resolveSourceSelection($organism, $assembly, $accessible_sources) {\n    // Try direct matches first: assembly dir, genome_name, or genome_id\n    foreach ($accessible_sources as $source) {\n        if ($source['organism'] === $organism) {\n            if ($source['assembly'] === $assembly || \n                $source['genome_name'] === $assembly ||\n                $source['genome_id'] === $assembly) {\n                return $organism . '|' . $source['assembly'];\n            }\n        }\n    }\n    \n    // If not found by direct match, try via database lookup\n    $config = ConfigManager::getInstance();\n    $organism_data = $config->getPath('organism_data');\n    \n    try {\n        $db_path = \"$organism_data/$organism/organism.sqlite\";\n        [$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($assembly, $db_path);\n        \n        // Try matching by resolved genome_name\n        if (!empty($genome_name_param)) {\n            foreach ($accessible_sources as $source) {\n                if ($source['organism'] === $organism && $source['genome_name'] === $genome_name_param) {\n                    return $organism . '|' . $source['assembly'];\n                }\n            }\n        }\n    } catch (Exception $e) {\n        // If lookup fails, return empty\n    }\n    \n    return '';\n}",
+                    "parameters": [
+                        {
+                            "name": "organism",
+                            "type": "string",
+                            "description": "Organism name"
+                        },
+                        {
+                            "name": "assembly",
+                            "type": "string",
+                            "description": "Assembly (could be genome_name or genome_accession)"
+                        },
+                        {
+                            "name": "accessible_sources",
+                            "type": "array",
+                            "description": "Flattened list of sources with genome_id, genome_name, etc."
+                        }
+                    ],
+                    "returnType": "string",
+                    "returnDescription": "Selected source in format \"organism|assembly_dir\" or empty string if not found",
+                    "internalCalls": [
+                        "resolveSourceSelection",
+                        "getAssemblyInfo"
+                    ],
+                    "category": "security",
+                    "tags": [
+                        "readonly",
+                        "error-handling",
+                        "database-dependent",
+                        "loops",
+                        "recursive"
+                    ],
+                    "usageCount": 0,
+                    "usages": []
+                },
+                {
                     "name": "getAccessibleAssemblies",
-                    "line": 47,
+                    "line": 92,
                     "comment": "/**\n* Get assemblies accessible to current user\n* Filters assemblies based on user access level and group membership\n*\n* @param string $specific_organism Optional organism to filter by\n* @param string $specific_assembly Optional assembly to filter by\n* @return array Organized by group -> organism, or assemblies for specific organism/assembly\n*/",
-                    "code": "function getAccessibleAssemblies($specific_organism = null, $specific_assembly = null) {\n    $config = ConfigManager::getInstance();\n    $organism_data = $config->getPath('organism_data');\n    $metadata_path = $config->getPath('metadata_path');\n    \n    // Load groups data\n    $groups_data = [];\n    $groups_file = \"$metadata_path/organism_assembly_groups.json\";\n    if (file_exists($groups_file)) {\n        $groups_data = json_decode(file_get_contents($groups_file), true) ?: [];\n    }\n    \n    $accessible_sources = [];\n    \n    // Filter entries based on referrer (specific org/assembly or all)\n    $entries_to_process = $groups_data;\n    \n    if (!empty($specific_organism)) {\n        $entries_to_process = array_filter($groups_data, function($entry) use ($specific_organism) {\n            return $entry['organism'] === $specific_organism;\n        });\n    }\n    \n    if (!empty($specific_assembly)) {\n        $entries_to_process = array_filter($entries_to_process, function($entry) use ($specific_assembly) {\n            return $entry['assembly'] === $specific_assembly;\n        });\n    }\n    \n    // Build list of accessible sources using assembly-based permissions\n    foreach ($entries_to_process as $entry) {\n        $org = $entry['organism'];\n        $assembly = $entry['assembly'];\n        $entry_groups = $entry['groups'] ?? [];\n        \n        // Check if user has access to this specific assembly\n        // 1. ALL/Admin users have access to everything\n        // 2. Public assemblies are accessible to everyone\n        // 3. Collaborators can access assemblies in their $_SESSION['access'] list\n        $access_granted = false;\n        \n        if (has_access('ALL')) {\n            $access_granted = true;\n        } elseif (is_public_assembly($org, $assembly)) {\n            $access_granted = true;\n        } elseif (has_access('Collaborator')) {\n            // Check if user has access to this specific assembly\n            $user_access = get_user_access();\n            if (isset($user_access[$org]) && is_array($user_access[$org]) && in_array($assembly, $user_access[$org])) {\n                $access_granted = true;\n            }\n        }\n        \n        if ($access_granted) {\n            $assembly_path = \"$organism_data/$org/$assembly\";\n            \n            // Only include assembly if directory exists AND has FASTA files\n            if (is_dir($assembly_path)) {\n                // Check if assembly has any FASTA files (protein, transcript, cds, or genome)\n                $has_fasta = false;\n                foreach (['.fa', '.fasta', '.faa', '.nt.fa', '.aa.fa'] as $ext) {\n                    if (glob(\"$assembly_path/*$ext\")) {\n                        $has_fasta = true;\n                        break;\n                    }\n                }\n                \n                if ($has_fasta) {\n                    $db_path = \"$organism_data/$org/organism.sqlite\";\n                    \n                    // Use validateAssemblyDirectories to get the actual directory mapping\n                    $assembly_validation = validateAssemblyDirectories($db_path, \"$organism_data/$org\");\n                    \n                    $genome_id = null;\n                    $genome_name = null;\n                    $actual_assembly_dir = $assembly;  // Default to the directory name as-is\n                    \n                    // Find matching genome in validation results\n                    if ($assembly_validation && !empty($assembly_validation['genomes'])) {\n                        foreach ($assembly_validation['genomes'] as $genome) {\n                            // Match by either genome_name or genome_accession\n                            if ($genome['genome_name'] === $assembly || $genome['genome_accession'] === $assembly) {\n                                $genome_id = $genome['genome_id'];\n                                $genome_name = $genome['genome_name'];\n                                $actual_assembly_dir = $genome['directory_found'] ?? $assembly;\n                                break;\n                            }\n                        }\n                    }\n                    \n                    $accessible_sources[] = [\n                        'organism' => $org,\n                        'assembly' => $actual_assembly_dir,  // Use the actual directory name\n                        'genome_name' => $genome_name,\n                        'path' => \"$organism_data/$org/$actual_assembly_dir\",\n                        'groups' => $entry_groups,\n                        'genome_id' => $genome_id\n                    ];\n                }\n            }\n        }\n    }\n    \n    // Organize by group -> organism\n    $organized = [];\n    foreach ($accessible_sources as $source) {\n        foreach ($source['groups'] as $group) {\n            if (!isset($organized[$group])) {\n                $organized[$group] = [];\n            }\n            $org = $source['organism'];\n            if (!isset($organized[$group][$org])) {\n                $organized[$group][$org] = [];\n            }\n            $organized[$group][$org][] = $source;\n        }\n    }\n    \n    // Sort groups (Public first, then alphabetically)\n    uksort($organized, function($a, $b) {\n        if ($a === 'Public') return -1;\n        if ($b === 'Public') return 1;\n        return strcasecmp($a, $b);\n    });\n    \n    // Sort organisms within each group alphabetically\n    foreach ($organized as &$group_data) {\n        ksort($group_data);\n    }\n    \n    return $organized;\n}",
+                    "code": "function getAccessibleAssemblies($specific_organism = null, $specific_assembly = null) {\n    $config = ConfigManager::getInstance();\n    $organism_data = $config->getPath('organism_data');\n    $metadata_path = $config->getPath('metadata_path');\n    \n    // Load groups data\n    $groups_data = [];\n    $groups_file = \"$metadata_path/organism_assembly_groups.json\";\n    if (file_exists($groups_file)) {\n        $groups_data = json_decode(file_get_contents($groups_file), true) ?: [];\n    }\n    \n    $accessible_sources = [];\n    \n    // Filter entries based on referrer (specific org/assembly or all)\n    $entries_to_process = $groups_data;\n    \n    if (!empty($specific_organism)) {\n        $entries_to_process = array_filter($groups_data, function($entry) use ($specific_organism) {\n            return $entry['organism'] === $specific_organism;\n        });\n    }\n    \n    if (!empty($specific_assembly)) {\n        $entries_to_process = array_filter($entries_to_process, function($entry) use ($specific_assembly) {\n            return $entry['assembly'] === $specific_assembly;\n        });\n    }\n    \n    // Build list of accessible sources using assembly-based permissions\n    foreach ($entries_to_process as $entry) {\n        $org = $entry['organism'];\n        $assembly = $entry['assembly'];\n        $entry_groups = $entry['groups'] ?? [];\n        \n        // Check if user has access to this specific assembly\n        // 1. ALL/Admin users have access to everything\n        // 2. Public assemblies are accessible to everyone\n        // 3. Collaborators can access assemblies in their $_SESSION['access'] list\n        $access_granted = false;\n        \n        if (has_access('ALL')) {\n            $access_granted = true;\n        } elseif (is_public_assembly($org, $assembly)) {\n            $access_granted = true;\n        } elseif (has_access('Collaborator')) {\n            // Check if user has access to this specific assembly\n            $user_access = get_user_access();\n            if (isset($user_access[$org]) && is_array($user_access[$org]) && in_array($assembly, $user_access[$org])) {\n                $access_granted = true;\n            }\n        }\n        \n        if ($access_granted) {\n            $assembly_path = \"$organism_data/$org/$assembly\";\n            \n            // Only include assembly if directory exists AND has FASTA files\n            if (is_dir($assembly_path)) {\n                // Check if assembly has any FASTA files (protein, transcript, cds, or genome)\n                $has_fasta = false;\n                foreach (['.fa', '.fasta', '.faa', '.nt.fa', '.aa.fa'] as $ext) {\n                    if (glob(\"$assembly_path/*$ext\")) {\n                        $has_fasta = true;\n                        break;\n                    }\n                }\n                \n                if ($has_fasta) {\n                    $db_path = \"$organism_data/$org/organism.sqlite\";\n                    \n                    // Use validateAssemblyDirectories to get the actual directory mapping\n                    $assembly_validation = validateAssemblyDirectories($db_path, \"$organism_data/$org\");\n                    \n                    $genome_id = null;\n                    $genome_name = null;\n                    $genome_accession = null;\n                    $actual_assembly_dir = $assembly;  // Default to the directory name as-is\n                    \n                    // Find matching genome in validation results\n                    if ($assembly_validation && !empty($assembly_validation['genomes'])) {\n                        foreach ($assembly_validation['genomes'] as $genome) {\n                            // Match by either genome_name or genome_accession\n                            if ($genome['genome_name'] === $assembly || $genome['genome_accession'] === $assembly) {\n                                $genome_id = $genome['genome_id'];\n                                $genome_name = $genome['genome_name'];\n                                $genome_accession = $genome['genome_accession'];\n                                $actual_assembly_dir = $genome['directory_found'] ?? $assembly;\n                                break;\n                            }\n                        }\n                    }\n                    \n                    $accessible_sources[] = [\n                        'organism' => $org,\n                        'assembly' => $actual_assembly_dir,  // Use the actual directory name\n                        'genome_name' => $genome_name,\n                        'genome_accession' => $genome_accession,\n                        'path' => \"$organism_data/$org/$actual_assembly_dir\",\n                        'groups' => $entry_groups,\n                        'genome_id' => $genome_id\n                    ];\n                }\n            }\n        }\n    }\n    \n    // Organize by group -> organism\n    $organized = [];\n    foreach ($accessible_sources as $source) {\n        foreach ($source['groups'] as $group) {\n            if (!isset($organized[$group])) {\n                $organized[$group] = [];\n            }\n            $org = $source['organism'];\n            if (!isset($organized[$group][$org])) {\n                $organized[$group][$org] = [];\n            }\n            $organized[$group][$org][] = $source;\n        }\n    }\n    \n    // Sort groups (Public first, then alphabetically)\n    uksort($organized, function($a, $b) {\n        if ($a === 'Public') return -1;\n        if ($b === 'Public') return 1;\n        return strcasecmp($a, $b);\n    });\n    \n    // Sort organisms within each group alphabetically\n    foreach ($organized as &$group_data) {\n        ksort($group_data);\n    }\n    \n    return $organized;\n}",
                     "parameters": [
                         {
                             "name": "specific_organism",
@@ -1996,7 +2083,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/blast.php",
-                            "line": 51,
+                            "line": 49,
                             "context": "$sources_by_group = getAccessibleAssemblies();"
                         },
                         {
@@ -2008,7 +2095,7 @@
                 },
                 {
                     "name": "getTaxonomyTreeUserAccess",
-                    "line": 187,
+                    "line": 235,
                     "comment": "/**\n* Get taxonomy tree user access for display\n* Returns organisms accessible to current user for taxonomy tree display\n*\n* @param array $group_data Array of organism/assembly/groups data\n* @return array Array of accessible organisms with true value\n*/",
                     "code": "function getTaxonomyTreeUserAccess($group_data) {\n    $taxonomy_user_access = [];\n    \n    if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {\n        // Admin gets access to all organisms\n        foreach ($group_data as $data) {\n            $organism = $data['organism'];\n            if (!isset($taxonomy_user_access[$organism])) {\n                $taxonomy_user_access[$organism] = true;\n            }\n        }\n    } elseif (is_logged_in()) {\n        // Logged-in users get their specific access\n        $taxonomy_user_access = get_user_access();\n    } else {\n        // Public users: get organisms in Public group\n        foreach ($group_data as $data) {\n            if (in_array('Public', $data['groups'])) {\n                $organism = $data['organism'];\n                if (!isset($taxonomy_user_access[$organism])) {\n                    $taxonomy_user_access[$organism] = true;\n                }\n            }\n        }\n    }\n    \n    return $taxonomy_user_access;\n}",
                     "parameters": [
@@ -2040,7 +2127,7 @@
                 },
                 {
                     "name": "requireAccess",
-                    "line": 226,
+                    "line": 274,
                     "comment": "/**\n* Require user to have specific access level or redirect to access denied\n*\n* @param string $level Required access level (e.g., 'Collaborator', 'Admin')\n* @param string $resource Resource name (e.g., group name or organism name)\n* @param array $options Options array with keys:\n*   - redirect_on_deny (bool, default: true) - Redirect to deny page if no access\n*   - deny_page (string, default: /$site/access_denied.php) - URL to redirect to\n* @return bool True if user has access, false otherwise\n*/",
                     "code": "function requireAccess($level, $resource, $options = []) {\n    global $site;\n    \n    $redirect_on_deny = $options['redirect_on_deny'] ?? true;\n    $deny_page = $options['deny_page'] ?? \"/$site/access_denied.php\";\n    \n    $has_access = has_access($level, $resource);\n    \n    if (!$has_access && $redirect_on_deny) {\n        header(\"Location: $deny_page\");\n        exit;\n    }\n    \n    return $has_access;\n}",
                     "parameters": [
@@ -2071,16 +2158,11 @@
                         "file-io",
                         "recursive"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 1,
                     "usages": [
                         {
                             "file": "/data/moop/tools/groups.php",
                             "line": 73,
-                            "context": "requireAccess('Collaborator', $group_name);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/groups_display.php",
-                            "line": 39,
                             "context": "requireAccess('Collaborator', $group_name);"
                         }
                     ]
@@ -2108,11 +2190,16 @@
                         "file-io",
                         "recursive"
                     ],
-                    "usageCount": 7,
+                    "usageCount": 6,
                     "usages": [
                         {
                             "file": "/data/moop/tools/pages/organism.php",
-                            "line": 192,
+                            "line": 153,
+                            "context": "$group_data = getGroupData();"
+                        },
+                        {
+                            "file": "/data/moop/tools/pages/organism.php",
+                            "line": 258,
                             "context": "$group_data = getGroupData();"
                         },
                         {
@@ -2121,18 +2208,8 @@
                             "context": "$group_data = getGroupData();"
                         },
                         {
-                            "file": "/data/moop/tools/old/groups_display.php",
-                            "line": 23,
-                            "context": "$group_data = getGroupData();"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 25,
-                            "context": "$group_data = getGroupData();"
-                        },
-                        {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 76,
+                            "line": 77,
                             "context": "$group_data = getGroupData();"
                         },
                         {
@@ -2244,16 +2321,11 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 1,
                     "usages": [
                         {
                             "file": "/data/moop/tools/groups.php",
                             "line": 69,
-                            "context": "$group_organisms = getAccessibleOrganismsInGroup($group_name, $group_data);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/groups_display.php",
-                            "line": 35,
                             "context": "$group_organisms = getAccessibleOrganismsInGroup($group_name, $group_data);"
                         }
                     ]
@@ -2287,26 +2359,21 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 4,
+                    "usageCount": 3,
                     "usages": [
                         {
                             "file": "/data/moop/tools/pages/organism.php",
-                            "line": 212,
+                            "line": 193,
+                            "context": "<?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly_item['accession']); ?>"
+                        },
+                        {
+                            "file": "/data/moop/tools/pages/organism.php",
+                            "line": 278,
                             "context": "<?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?>"
                         },
                         {
                             "file": "/data/moop/tools/pages/assembly.php",
                             "line": 142,
-                            "context": "$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/assembly_display.php",
-                            "line": 204,
-                            "context": "$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/assembly_display1.php",
-                            "line": 108,
                             "context": "$fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);"
                         }
                     ]
@@ -2942,7 +3009,7 @@
                         "database-dependent",
                         "recursive"
                     ],
-                    "usageCount": 18,
+                    "usageCount": 17,
                     "usages": [
                         {
                             "file": "/data/moop/lib/parent_functions.php",
@@ -3028,11 +3095,6 @@
                             "file": "/data/moop/lib/functions_access.php",
                             "line": 26,
                             "context": "$results = fetchData($query, $db_path, [$assembly, $assembly]);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/assembly_display.php",
-                            "line": 34,
-                            "context": "$results = fetchData($query, $db_path, [$assembly_param]);"
                         }
                     ]
                 },
@@ -3106,16 +3168,11 @@
                         "database-dependent",
                         "recursive"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 1,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 32,
-                            "context": "$accessible_genome_ids = getAccessibleGenomeIds($organism_name, $accessible_assemblies, $db);"
-                        },
-                        {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 83,
+                            "line": 84,
                             "context": "$accessible_genome_ids = getAccessibleGenomeIds($organism_name, $accessible_assemblies, $db);"
                         }
                     ]
@@ -3192,22 +3249,12 @@
                         "file-io",
                         "recursive"
                     ],
-                    "usageCount": 6,
+                    "usageCount": 4,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/old/assembly_display.php",
-                            "line": 16,
+                            "file": "/data/moop/tools/pages/organism.php",
+                            "line": 155,
                             "context": "$db_path = verifyOrganismDatabase($organism_name, $organism_data);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/assembly_display1.php",
-                            "line": 16,
-                            "context": "$db_path = verifyOrganismDatabase($organism_name, $organism_data);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 22,
-                            "context": "$db = verifyOrganismDatabase($organism_name, $organism_data);"
                         },
                         {
                             "file": "/data/moop/tools/assembly.php",
@@ -3215,14 +3262,14 @@
                             "context": "$db_path = verifyOrganismDatabase($organism_name, $organism_data);"
                         },
                         {
-                            "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 162,
-                            "context": "$db = verifyOrganismDatabase($selected_organism, $organism_data);"
+                            "file": "/data/moop/tools/parent.php",
+                            "line": 74,
+                            "context": "$db = verifyOrganismDatabase($organism_name, $organism_data);"
                         },
                         {
-                            "file": "/data/moop/tools/parent.php",
-                            "line": 73,
-                            "context": "$db = verifyOrganismDatabase($organism_name, $organism_data);"
+                            "file": "/data/moop/tools/retrieve_sequences.php",
+                            "line": 142,
+                            "context": "$db = verifyOrganismDatabase($selected_organism, $organism_data);"
                         }
                     ]
                 }
@@ -3266,16 +3313,11 @@
                         "readonly",
                         "recursive"
                     ],
-                    "usageCount": 3,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "/data/moop/tools/pages/multi_organism.php",
                             "line": 70,
-                            "context": "$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/multi_organism_search.php",
-                            "line": 115,
                             "context": "$organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);"
                         },
                         {
@@ -3320,7 +3362,7 @@
                         "file-io",
                         "recursive"
                     ],
-                    "usageCount": 4,
+                    "usageCount": 3,
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_display.php",
@@ -3335,11 +3377,6 @@
                         {
                             "file": "/data/moop/tools/pages/groups.php",
                             "line": 130,
-                            "context": "$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/groups_display.php",
-                            "line": 188,
                             "context": "$image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);"
                         }
                     ]
@@ -3417,7 +3454,7 @@
                         "readonly",
                         "recursive"
                     ],
-                    "usageCount": 3,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "/data/moop/tools/pages/organism.php",
@@ -3427,11 +3464,6 @@
                         {
                             "file": "/data/moop/tools/pages/assembly.php",
                             "line": 69,
-                            "context": "$image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/assembly_display.php",
-                            "line": 131,
                             "context": "$image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path);"
                         }
                     ]
@@ -3511,23 +3543,8 @@
                         "readonly",
                         "recursive"
                     ],
-                    "usageCount": 6,
+                    "usageCount": 3,
                     "usages": [
-                        {
-                            "file": "/data/moop/tools/old/assembly_display.php",
-                            "line": 12,
-                            "context": "$organism_context = setupOrganismDisplayContext($organism_name, $organism_data, true);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/assembly_display1.php",
-                            "line": 12,
-                            "context": "$organism_context = setupOrganismDisplayContext($organism_name, $organism_data, true);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 18,
-                            "context": "$organism_context = setupOrganismDisplayContext($organism_name, $organism_data, true);"
-                        },
                         {
                             "file": "/data/moop/tools/assembly.php",
                             "line": 46,
@@ -3540,7 +3557,7 @@
                         },
                         {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 68,
+                            "line": 69,
                             "context": "$organism_context = setupOrganismDisplayContext($_GET['organism'], $organism_data, true);"
                         }
                     ]
@@ -3675,11 +3692,16 @@
                         "readonly",
                         "recursive"
                     ],
-                    "usageCount": 3,
+                    "usageCount": 4,
                     "usages": [
                         {
                             "file": "/data/moop/tools/pages/organism.php",
-                            "line": 227,
+                            "line": 197,
+                            "context": "$colorInfo = getColorClassOrStyle($file_info['color'] ?? '');"
+                        },
+                        {
+                            "file": "/data/moop/tools/pages/organism.php",
+                            "line": 293,
                             "context": "$colorInfo = getColorClassOrStyle($file_info['color'] ?? '');"
                         },
                         {
@@ -3767,12 +3789,12 @@
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 208,
+                            "line": 260,
                             "context": "logError($err, \"download_fasta\", ['user' => $_SESSION['username'] ?? 'unknown']);"
                         },
                         {
                             "file": "/data/moop/tools/sequences_display.php",
-                            "line": 142,
+                            "line": 161,
                             "context": "logError("
                         }
                     ]
@@ -4011,7 +4033,7 @@
                         },
                         {
                             "file": "/data/moop/lib/functions_access.php",
-                            "line": 118,
+                            "line": 163,
                             "context": "$assembly_validation = validateAssemblyDirectories($db_path, \"$organism_data/$org\");"
                         }
                     ]
@@ -4418,7 +4440,7 @@
                         "file-io",
                         "recursive"
                     ],
-                    "usageCount": 11,
+                    "usageCount": 10,
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_database.php",
@@ -4438,11 +4460,6 @@
                         {
                             "file": "/data/moop/tools/groups.php",
                             "line": 54,
-                            "context": "$group_descriptions = loadJsonFile($group_descriptions_file, []);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/groups_display.php",
-                            "line": 20,
                             "context": "$group_descriptions = loadJsonFile($group_descriptions_file, []);"
                         },
                         {
@@ -4511,16 +4528,11 @@
                         "file-io",
                         "recursive"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 1,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 41,
-                            "context": "$annotation_config = loadJsonFileRequired($annotation_config_file, \"Missing annotation_config.json\");"
-                        },
-                        {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 92,
+                            "line": 93,
                             "context": "$annotation_config = loadJsonFileRequired($annotation_config_file, \"Missing annotation_config.json\");"
                         }
                     ]
@@ -5180,7 +5192,7 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 11,
+                    "usageCount": 6,
                     "usages": [
                         {
                             "file": "/data/moop/tools/pages/organism.php",
@@ -5204,37 +5216,12 @@
                         },
                         {
                             "file": "/data/moop/tools/pages/index.php",
-                            "line": 100,
+                            "line": 118,
                             "context": "$context = createToolContext('index', ['use_onclick_handler' => true]);"
                         },
                         {
                             "file": "/data/moop/tools/pages/parent.php",
                             "line": 75,
-                            "context": "$context = createToolContext('parent', ["
-                        },
-                        {
-                            "file": "/data/moop/tools/old/groups_display.php",
-                            "line": 100,
-                            "context": "$context = createToolContext('group', ['group' => $group_name]);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/assembly_display.php",
-                            "line": 104,
-                            "context": "$context = createToolContext('assembly', ["
-                        },
-                        {
-                            "file": "/data/moop/tools/old/assembly_display1.php",
-                            "line": 72,
-                            "context": "$context = createToolContext('assembly', ["
-                        },
-                        {
-                            "file": "/data/moop/tools/old/multi_organism_search.php",
-                            "line": 85,
-                            "context": "$context = createToolContext('multi_organism_search', ['organisms' => $organisms]);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 205,
                             "context": "$context = createToolContext('parent', ["
                         }
                     ]
@@ -5385,27 +5372,12 @@
                         "readonly",
                         "recursive"
                     ],
-                    "usageCount": 5,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_display.php",
                             "line": 268,
                             "context": "$organism_name = validateOrganismParam($organism_name, $redirect_home);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/assembly_display.php",
-                            "line": 8,
-                            "context": "$organism_name = validateOrganismParam($_GET['organism'] ?? '');"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/assembly_display1.php",
-                            "line": 8,
-                            "context": "$organism_name = validateOrganismParam($_GET['organism'] ?? '');"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 11,
-                            "context": "$organism_name = validateOrganismParam($_GET['organism'] ?? '', null);"
                         },
                         {
                             "file": "/data/moop/tools/assembly.php",
@@ -5441,23 +5413,8 @@
                         "readonly",
                         "recursive"
                     ],
-                    "usageCount": 4,
+                    "usageCount": 1,
                     "usages": [
-                        {
-                            "file": "/data/moop/tools/old/assembly_display.php",
-                            "line": 9,
-                            "context": "$assembly_param = validateAssemblyParam($_GET['assembly'] ?? '');"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/assembly_display1.php",
-                            "line": 9,
-                            "context": "$assembly_accession = validateAssemblyParam($_GET['assembly'] ?? '');"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 12,
-                            "context": "$uniquename = validateAssemblyParam($_GET['uniquename'] ?? '', null);"
-                        },
                         {
                             "file": "/data/moop/tools/assembly.php",
                             "line": 43,
@@ -5506,16 +5463,11 @@
                         "database-dependent",
                         "recursive"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 1,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 75,
-                            "context": "$ancestors = getAncestors($uniquename, $db, $accessible_genome_ids);"
-                        },
-                        {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 126,
+                            "line": 127,
                             "context": "$ancestors = getAncestors($uniquename, $db, $accessible_genome_ids);"
                         }
                     ]
@@ -5603,7 +5555,7 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 4,
+                    "usageCount": 3,
                     "usages": [
                         {
                             "file": "/data/moop/lib/parent_functions.php",
@@ -5611,19 +5563,14 @@
                             "context": "$child_descendants = getChildren($row['feature_id'], $dbFile, $genome_ids);"
                         },
                         {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 129,
+                            "file": "/data/moop/tools/parent.php",
+                            "line": 181,
                             "context": "$children = getChildren($feature_id, $db, $accessible_genome_ids);"
                         },
                         {
                             "file": "/data/moop/tools/retrieve_sequences.php",
-                            "line": 173,
+                            "line": 169,
                             "context": "$children = getChildren($feature_id, $db);"
-                        },
-                        {
-                            "file": "/data/moop/tools/parent.php",
-                            "line": 180,
-                            "context": "$children = getChildren($feature_id, $db, $accessible_genome_ids);"
                         }
                     ]
                 },
@@ -5662,7 +5609,7 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 3,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "/data/moop/lib/parent_functions.php",
@@ -5670,13 +5617,8 @@
                             "context": "$child['grandchildren'] = getChildrenHierarchical($child['feature_id'], $dbFile, $genome_ids);"
                         },
                         {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 126,
-                            "context": "$children_hierarchical = getChildrenHierarchical($feature_id, $db, $accessible_genome_ids);"
-                        },
-                        {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 177,
+                            "line": 178,
                             "context": "$children_hierarchical = getChildrenHierarchical($feature_id, $db, $accessible_genome_ids);"
                         }
                     ]
@@ -5739,21 +5681,16 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 3,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "/data/moop/lib/parent_functions.php",
-                            "line": 408,
+                            "line": 425,
                             "context": "$html .= generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);"
                         },
                         {
                             "file": "/data/moop/tools/pages/parent.php",
-                            "line": 139,
-                            "context": "echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 269,
+                            "line": 152,
                             "context": "echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);"
                         }
                     ]
@@ -5793,16 +5730,11 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 1,
                     "usages": [
                         {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 136,
-                            "context": "$all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);"
-                        },
-                        {
                             "file": "/data/moop/tools/parent.php",
-                            "line": 187,
+                            "line": 188,
                             "context": "$all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);"
                         }
                     ]
@@ -5811,7 +5743,7 @@
                     "name": "generateTreeHTML",
                     "line": 277,
                     "comment": "/**\n* Generate tree-style HTML for feature hierarchy\n* Creates a hierarchical list with box-drawing characters (like Unix 'tree' command)\n*\n* @param int $feature_id - The parent feature ID\n* @param string $dbFile - Path to SQLite database\n* @param string $prefix - Internal use for recursion\n* @param bool $is_last - Internal use for recursion\n* @return string - HTML string with nested ul/li tree structure\n*/",
-                    "code": "function generateTreeHTML($feature_id, $dbFile, $prefix = '', $is_last = true, $genome_ids = []) {\n    $results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);\n\n    if (empty($results)) {\n        return '';\n    }\n    \n    $html = \"<ul>\";\n    $total = count($results);\n    \n    foreach ($results as $index => $row) {\n        $is_last_child = ($index === $total - 1);\n        \n        $feature_type = htmlspecialchars($row['feature_type']);\n        $feature_name = htmlspecialchars($row['feature_uniquename']);\n        \n        // Color code badges by feature type\n        $badge_class = 'bg-secondary';\n        $text_color = 'text-white';\n        \n        if ($feature_type == 'mRNA') {\n            $badge_class = 'bg-feature-mrna';\n            $text_color = 'text-white';\n        } elseif ($feature_type == 'CDS') {\n            $badge_class = 'bg-info';\n            $text_color = 'text-white';\n        } elseif ($feature_type == 'exon') {\n            $badge_class = 'bg-warning';\n            $text_color = 'text-dark';\n        } elseif ($feature_type == 'gene') {\n            $badge_class = 'bg-feature-gene';\n            $text_color = 'text-white';\n        } elseif ($feature_type == 'protein' || $feature_type == 'polypeptide') {\n            $badge_class = 'bg-feature-protein';\n            $text_color = 'text-white';\n        }\n        \n        // Tree character - \u2514\u2500\u2500 for last child, \u251c\u2500\u2500 for others\n        $tree_char = $is_last_child ? '\u2514\u2500\u2500 ' : '\u251c\u2500\u2500 ';\n        \n        $html .= \"<li>\";\n        $html .= \"<span class=\\\"tree-char\\\">$tree_char</span>\";\n        $html .= \"<span class=\\\"text-dark\\\">$feature_name</span> \";\n        $html .= \"<span class=\\\"badge $badge_class $text_color\\\">$feature_type</span>\";\n        \n        // Recursive call for nested children\n        $html .= generateTreeHTML($row['feature_id'], $dbFile, $prefix, $is_last_child, $genome_ids);\n        $html .= \"</li>\";\n    }\n    $html .= \"</ul>\";\n\n    return $html;\n}",
+                    "code": "function generateTreeHTML($feature_id, $dbFile, $all_annotations = [], $analysis_order = [], $prefix = '', $is_last = true, $genome_ids = []) {\n    $results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);\n\n    if (empty($results)) {\n        return '';\n    }\n    \n    $html = \"<ul>\";\n    $total = count($results);\n    \n    foreach ($results as $index => $row) {\n        $is_last_child = ($index === $total - 1);\n        \n        $feature_type = htmlspecialchars($row['feature_type']);\n        $feature_name = htmlspecialchars($row['feature_uniquename']);\n        $child_feature_id = $row['feature_id'];\n        \n        // Color code badges by feature type\n        $badge_class = 'bg-secondary';\n        $text_color = 'text-white';\n        \n        if ($feature_type == 'mRNA') {\n            $badge_class = 'bg-feature-mrna';\n            $text_color = 'text-white';\n        } elseif ($feature_type == 'CDS') {\n            $badge_class = 'bg-info';\n            $text_color = 'text-white';\n        } elseif ($feature_type == 'exon') {\n            $badge_class = 'bg-warning';\n            $text_color = 'text-dark';\n        } elseif ($feature_type == 'gene') {\n            $badge_class = 'bg-feature-gene';\n            $text_color = 'text-white';\n        } elseif ($feature_type == 'protein' || $feature_type == 'polypeptide') {\n            $badge_class = 'bg-feature-protein';\n            $text_color = 'text-white';\n        }\n        \n        // Calculate annotation count for this child\n        $child_annot_count = 0;\n        if (isset($all_annotations[$child_feature_id])) {\n            foreach ($all_annotations[$child_feature_id] as $annotation_type => $annots) {\n                $child_annot_count += count($annots);\n            }\n        }\n        \n        // Generate anchor for first annotation type (or use first one available)\n        $child_annot_anchor = preg_replace('/[^a-zA-Z0-9_]/', '_', $row['feature_uniquename'] . '_' . ($analysis_order[0] ?? 'annotation'));\n        \n        // Tree character - \u2514\u2500\u2500 for last child, \u251c\u2500\u2500 for others\n        $tree_char = $is_last_child ? '\u2514\u2500\u2500 ' : '\u251c\u2500\u2500 ';\n        \n        $html .= \"<li>\";\n        $html .= \"<span class=\\\"tree-char\\\">$tree_char</span>\";\n        $html .= \"<a href=\\\"#annot_section_$child_annot_anchor\\\" class=\\\"link-light-bordered text-decoration-none\\\"><span class=\\\"text-dark\\\">$feature_name</span></a> \";\n        $html .= \"<span class=\\\"badge $badge_class $text_color\\\">$feature_type</span>\";\n        \n        // Add annotation count badge if there are annotations\n        if ($child_annot_count > 0) {\n            $html .= \" <span class=\\\"badge bg-success text-white badge-sm\\\">$child_annot_count annotation\" . ($child_annot_count > 1 ? 's' : '') . \"</span>\";\n        }\n        \n        // Recursive call for nested children\n        $html .= generateTreeHTML($child_feature_id, $dbFile, $all_annotations, $analysis_order, $prefix, $is_last_child, $genome_ids);\n        $html .= \"</li>\";\n    }\n    $html .= \"</ul>\";\n\n    return $html;\n}",
                     "parameters": [
                         {
                             "name": "feature_id",
@@ -5847,28 +5779,23 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 3,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "/data/moop/lib/parent_functions.php",
-                            "line": 323,
-                            "context": "$html .= generateTreeHTML($row['feature_id'], $dbFile, $prefix, $is_last_child, $genome_ids);"
+                            "line": 340,
+                            "context": "$html .= generateTreeHTML($child_feature_id, $dbFile, $all_annotations, $analysis_order, $prefix, $is_last_child, $genome_ids);"
                         },
                         {
                             "file": "/data/moop/tools/pages/parent.php",
-                            "line": 102,
-                            "context": "<?= generateTreeHTML($feature_id, $db) ?>"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 232,
-                            "context": "<?= generateTreeHTML($feature_id, $db) ?>"
+                            "line": 115,
+                            "context": "<?= generateTreeHTML($feature_id, $db, $all_annotations, $analysis_order) ?>"
                         }
                     ]
                 },
                 {
                     "name": "generateChildAnnotationCards",
-                    "line": 347,
+                    "line": 364,
                     "comment": "/**\n* Generate nested child annotation cards (recursive)\n* Renders child and grandchild features with their annotations in nested card structure\n* Each level has its own collapsible card with unique color based on feature type\n*\n* @param array $child - Child feature array from hierarchical structure\n* @param array $all_annotations - Cached annotations organized by feature_id\n* @param array $analysis_order - Annotation types in order\n* @param array $annotation_colors - Color mapping for annotation types\n* @param array $annotation_labels - Display labels for annotation types\n* @param array $analysis_desc - Descriptions for annotation types\n* @param string $organism_name - Organism name for export\n* @param int &$count - Counter for unique table IDs (passed by reference)\n* @param bool $is_grandchild - Internal flag for styling grandchild level\n* @return string - HTML for child/grandchild annotation cards\n*/",
                     "code": "function generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, &$count, $is_grandchild = false) {\n    $child_feature_id = $child['feature_id'];\n    $child_uniquename = $child['feature_uniquename'];\n    $child_type = $child['feature_type'];\n    \n    // Count annotations for this child\n    $child_annotation_count = 0;\n    $child_annotation_types = [];\n    foreach ($analysis_order as $annotation_type) {\n        $annot_results = $all_annotations[$child_feature_id][$annotation_type] ?? [];\n        if (!empty($annot_results)) {\n            $child_annotation_count += count($annot_results);\n            $child_annotation_types[$annotation_type] = count($annot_results);\n        }\n    }\n    \n    // Determine header styling based on feature type and nesting level\n    $header_class = 'child-feature-header';\n    $badge_class = 'bg-feature-mrna';\n    \n    if ($is_grandchild) {\n        $header_class = 'child-feature-header grandchild-feature-header';\n        if ($child_type == 'protein' || $child_type == 'polypeptide') {\n            $badge_class = 'bg-feature-protein';\n        } else {\n            $badge_class = 'bg-secondary';\n        }\n    }\n    \n    $html = '<div class=\"card annotation-card border-info\">';\n    $html .= \"  <div class=\\\"card-header d-flex align-items-center $header_class\\\">\";\n    $html .= \"    <span class=\\\"collapse-section\\\" data-bs-toggle=\\\"collapse\\\" data-bs-target=\\\"#child_$child_feature_id\\\" aria-expanded=\\\"true\\\" role=\\\"button\\\">\";\n    $html .= \"      <i class=\\\"fas fa-minus toggle-icon text-info\\\"></i>\";\n    $html .= \"    </span>\";\n    $html .= \"    <strong class=\\\"ms-2 text-dark\\\"><span class=\\\"text-white px-2 py-1 rounded child-feature-badge $badge_class badge-xlg\\\">$child_uniquename ($child_type)</span></strong>\";\n    \n    // Show colored annotation type badges\n    if ($child_annotation_count > 0) {\n        foreach ($child_annotation_types as $type_name => $type_count) {\n            $badge_color = $annotation_colors[$type_name] ?? 'warning';\n            $text_color = in_array($badge_color, ['warning', 'info', 'secondary']) ? 'text-dark' : 'text-white';\n            $display_label = $annotation_labels[$type_name] ?? $type_name;\n            $section_id = \"annot_section_\" . preg_replace('/[^a-zA-Z0-9_]/', '_', $child_uniquename . '_' . $type_name);\n            $html .= \" <a href=\\\"#$section_id\\\" class=\\\"badge bg-$badge_color $text_color ms-1 text-decoration-none badge-s\\\" style=\\\"cursor: pointer;\\\">$display_label</a>\";\n        }\n    } else {\n        $html .= \" <span class=\\\"badge bg-secondary ms-2\\\">No annotations</span>\";\n    }\n    \n    $html .= '  </div>';\n    $html .= \"  <div id=\\\"child_$child_feature_id\\\" class=\\\"collapse show\\\">\";\n    $html .= '    <div class=\"card-body\">';\n    \n    $child_has_annotations = false;\n    foreach ($analysis_order as $annotation_type) {\n        $count++;\n        $annot_results = $all_annotations[$child_feature_id][$annotation_type] ?? [];\n        if (!empty($annot_results)) {\n            $child_has_annotations = true;\n            $color = $annotation_colors[$annotation_type] ?? 'warning';\n            $display_label = $annotation_labels[$annotation_type] ?? $annotation_type;\n            $html .= generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name);\n        }\n    }\n    \n    if (!$child_has_annotations) {\n        $type_label = ($child_type === 'mRNA') ? 'transcript' : strtolower($child_type);\n        $html .= \"<p class=\\\"text-muted\\\"><i class=\\\"fas fa-info-circle\\\"></i> No annotations loaded for this $type_label.</p>\";\n    }\n    \n    // Render grandchildren (recursively)\n    if (!empty($child['grandchildren'])) {\n        foreach ($child['grandchildren'] as $grandchild) {\n            $html .= generateChildAnnotationCards($grandchild, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, true);\n        }\n    }\n    \n    $html .= '    </div>';\n    $html .= '  </div>';\n    $html .= '</div>';\n    \n    return $html;\n}",
                     "parameters": [
@@ -5925,21 +5852,16 @@
                         "loops",
                         "recursive"
                     ],
-                    "usageCount": 3,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "/data/moop/lib/parent_functions.php",
-                            "line": 420,
+                            "line": 437,
                             "context": "$html .= generateChildAnnotationCards($grandchild, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, true);"
                         },
                         {
                             "file": "/data/moop/tools/pages/parent.php",
-                            "line": 159,
-                            "context": "echo generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count);"
-                        },
-                        {
-                            "file": "/data/moop/tools/old/parent_display.php",
-                            "line": 289,
+                            "line": 172,
                             "context": "echo generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count);"
                         }
                     ]
@@ -5982,12 +5904,12 @@
                         },
                         {
                             "file": "/data/moop/includes/ConfigManager.php",
-                            "line": 306,
+                            "line": 311,
                             "context": "$tool = $this->getTool($tool_id);"
                         },
                         {
                             "file": "/data/moop/includes/ConfigManager.php",
-                            "line": 340,
+                            "line": 345,
                             "context": "$tool = $this->getTool($tool_id);"
                         }
                     ]
@@ -6214,7 +6136,7 @@
             "functions": [
                 {
                     "name": "extractSequencesFromFasta",
-                    "line": 124,
+                    "line": 142,
                     "comment": "/**\n* Extract sequences from a FASTA file for specific feature IDs\n*\n* @param string $fasta_file Path to FASTA file\n* @param array $feature_ids Array of feature IDs to extract\n* @return array Associative array with feature_id => sequence content\n*/",
                     "code": "function extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, &$errors) {\n    $sequences = [];\n    \n    // Validate inputs\n    if (empty($fasta_file)) {\n        $errors[] = \"FASTA file path is empty for $seq_type sequences\";\n        return $sequences;\n    }\n    \n    if (empty($feature_ids)) {\n        $errors[] = \"No feature IDs provided to extract\";\n        return $sequences;\n    }\n    \n    // Check if file exists\n    if (!file_exists($fasta_file)) {\n        $errors[] = \"FASTA file not found for $seq_type: \" . basename($fasta_file);\n        return $sequences;\n    }\n    \n    // Build list of IDs to search, including variants for parent/child relationships\n    $search_ids = [];\n    foreach ($feature_ids as $id) {\n        $search_ids[] = $id;\n        // Also try with .1 suffix if not already present (for parent->child relationships)\n        if (substr($id, -2) !== '.1') {\n            $search_ids[] = $id . '.1';\n        }\n    }\n    \n    // Use blastdbcmd to extract sequences - it accepts comma-separated IDs\n    $ids_string = implode(',', $search_ids);\n    $cmd = \"blastdbcmd -db \" . escapeshellarg($fasta_file) . \" -entry \" . escapeshellarg($ids_string) . \" 2>/dev/null\";\n    $output = [];\n    $return_var = 0;\n    @exec($cmd, $output, $return_var);\n    \n    // Check if blastdbcmd executed\n    if ($return_var > 1) {\n        // Return code 1 is expected when some IDs don't exist, but >1 is an error\n        $errors[] = \"Error extracting $seq_type sequences (exit code: $return_var). Ensure blastdbcmd is installed and FASTA files are formatted correctly.\";\n        return $sequences;\n    }\n    \n    // Check if we got any output\n    // If empty, it just means these IDs don't exist in this file type (e.g., gene IDs won't be in genome.fa)\n    // Return empty sequences gracefully - not an error\n    if (empty($output)) {\n        return $sequences;\n    }\n    \n    // Parse FASTA output into individual sequences by feature ID\n    $current_id = null;\n    $current_seq = [];\n    \n    foreach ($output as $line) {\n        if (strpos($line, '>') === 0) {\n            // Header line\n            if (!is_null($current_id)) {\n                // Store previous sequence with full FASTA format (including >)\n                $sequences[$current_id] = implode(\"\\n\", array_merge([\">\" . $current_id], $current_seq));\n            }\n            // Extract ID from header (remove leading '>')\n            $current_id = substr($line, 1);\n            $current_seq = [];\n        } else {\n            // Sequence line\n            $current_seq[] = $line;\n        }\n    }\n    \n    // Store last sequence with full FASTA format\n    if (!is_null($current_id)) {\n        $sequences[$current_id] = implode(\"\\n\", array_merge([\">\" . $current_id], $current_seq));\n    }\n    \n    return $sequences;\n}",
                     "parameters": [
@@ -6247,7 +6169,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/tools/sequences_display.php",
-                            "line": 124,
+                            "line": 142,
                             "context": "$sequences = extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, $extraction_errors);"
                         }
                     ]
@@ -6309,7 +6231,17 @@
         {
             "name": "buildFilteredSourcesList",
             "file": "lib/extract_search_helpers.php",
-            "line": 212
+            "line": 286
+        },
+        {
+            "name": "assignGroupColors",
+            "file": "lib/extract_search_helpers.php",
+            "line": 336
+        },
+        {
+            "name": "resolveSourceSelection",
+            "file": "lib/functions_access.php",
+            "line": 49
         },
         {
             "name": "buildLikeConditions",
