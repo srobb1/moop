@@ -323,10 +323,27 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
                 <span class="badge bg-primary">${uniqueFeatureCount} result${uniqueFeatureCount !== 1 ? 's' : ''}</span>
                 <span class="badge bg-info">${results.length} total annotation match${results.length !== 1 ? 'es' : ''}</span>
             </h5>
-            <div class="mb-2">
+            <div class="mb-2 d-flex gap-2 align-items-center">
                 <button type="button" class="btn btn-sm btn-primary toggle-view-btn" data-organism="${selectId}" data-view="simple" title="Toggle between simple and detailed view">
-                    <i class="fa fa-expand"></i> View All Details
+                    <i class="fa fa-expand"></i> Expand All Matches
                 </button>
+                <button type="button" class="btn btn-sm btn-outline-info info-icon-btn" data-info-id="info-${selectId}" title="Learn about search results" style="cursor: pointer; padding: 0.375rem 0.625rem; border: 1px solid #17a2b8;">
+                    <i class="fa fa-info-circle"></i>
+                </button>
+            </div>
+            <div class="info-box mb-3" id="info-${selectId}" style="display: none; background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 0.25rem; padding: 0.75rem 1.25rem;">
+                <p><strong>Simple View:</strong> Displays a unique list of sequence IDs that have matches to your search terms. This gives you a clean overview of all sequences found without duplication.</p>
+                
+                <p><strong>What Gets Matched:</strong> Your search terms are matched against:</p>
+                <ul style="margin-bottom: 0.5rem;">
+                    <li><strong>Sequence Name:</strong> The name of the sequence</li>
+                    <li><strong>Sequence Description:</strong> The description of the sequence</li>
+                    <li><strong>Annotations:</strong> Matches from comparative analyses like BLAST, which compare your sequences against sequences in other organisms</li>
+                </ul>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>Why Different Results:</strong> A sequence may have a name and description different from what matched your search. This means one of its annotations (from analyses like BLAST) matched your search terms, not the sequence name or description itself.</p>
+                
+                <p style="margin-bottom: 0;"><strong>View All Matches:</strong> Click "Expand All Matches" to see all matching annotations for each sequence. This shows exactly which search terms were found and where they were found (name, description, or specific annotation).</p>
             </div>
             <div class="simple-view-container" data-organism="${selectId}">
                 <div class="table-responsive" style="overflow-x: auto; width: 100%;">
@@ -487,6 +504,13 @@ function initializeSimpleResultsTable(tableId, selectId, organism, results, site
         }
     });
     
+    // Setup info icon toggle
+    $(document).on('click', `.info-icon-btn[data-info-id="info-${selectId}"]`, function(e) {
+        e.preventDefault();
+        const infoBox = $(`#info-${selectId}`);
+        infoBox.slideToggle(200);
+    });
+    
     // Setup toggle button
     initializeViewToggle(organism, results, sitePath, selectId);
 }
@@ -615,7 +639,7 @@ function initializeViewToggle(organism, results, sitePath, selectId) {
             // Switch to simple view
             simpleContainer.style.display = 'block';
             expandedContainer.style.display = 'none';
-            toggleBtn.innerHTML = '<i class="fa fa-expand"></i> View All Details';
+            toggleBtn.innerHTML = '<i class="fa fa-expand"></i> Expand All Matches';
         }
     });
 }
