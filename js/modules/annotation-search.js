@@ -292,7 +292,7 @@ class AnnotationSearch {
         // Use simple view for keyword searches, full view for uniquename searches
         let tableHtml;
         if (!isUniquenameSearch && results.length > 0) {
-            tableHtml = createSimpleResultsTable(organism, results, this.config.sitePath, 'tools/parent.php', imageUrl);
+            tableHtml = createSimpleResultsTable(organism, results, this.config.sitePath, 'tools/parent.php', imageUrl, this.currentKeywords);
         } else {
             tableHtml = createOrganismResultsTable(organism, results, this.config.sitePath, 'tools/parent.php', imageUrl, this.currentKeywords);
         }
