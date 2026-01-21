@@ -51,8 +51,9 @@
     </div>
     <div class="card-body">
         <?php 
-        $total = count($checks);
-        $ok = count(array_filter($checks, fn($c) => empty($c['issues'])));
+        $all_checks = array_merge($checks, $assembly_subdir_issues);
+        $total = count($all_checks);
+        $ok = count(array_filter($all_checks, fn($c) => empty($c['issues'])));
         $warning = $total - $ok;
         ?>
         <div class="row mb-3">
