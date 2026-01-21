@@ -330,7 +330,12 @@
                   <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeImage('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)" style="float: right;" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Remove</button>
                   <div class="form-group">
                     <label>Image File</label>
-                    <input type="text" class="form-control image-file" value="<?= htmlspecialchars($image['file']) ?>" placeholder="e.g., Reef0607_0.jpg">
+                    <div class="input-group">
+                      <input type="text" class="form-control image-file" value="<?= htmlspecialchars($image['file']) ?>" placeholder="e.g., Reef0607_0.jpg">
+                      <button type="button" class="btn btn-outline-secondary upload-image-btn" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Upload</button>
+                    </div>
+                    <input type="file" class="image-upload-input" style="display:none;" accept="image/*">
+                    <small class="form-text text-muted">Or upload a photo directly</small>
                   </div>
                   <div class="form-group">
                     <label>Caption (HTML allowed)</label>

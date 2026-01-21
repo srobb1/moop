@@ -28,7 +28,12 @@ function addImage(groupName) {
       <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeImage('${groupName}', ${newIndex})" style="float: right;" ${isDescFileWriteError ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : ''}>Remove</button>
       <div class="form-group">
         <label>Image File</label>
-        <input type="text" class="form-control image-file" value="" placeholder="e.g., Reef0607_0.jpg">
+        <div class="input-group">
+          <input type="text" class="form-control image-file" value="" placeholder="e.g., Reef0607_0.jpg">
+          <button type="button" class="btn btn-outline-secondary upload-image-btn" ${isDescFileWriteError ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : ''}>Upload</button>
+        </div>
+        <input type="file" class="image-upload-input" style="display:none;" accept="image/*">
+        <small class="form-text text-muted">Or upload a photo directly</small>
       </div>
       <div class="form-group">
         <label>Caption (HTML allowed)</label>
@@ -38,6 +43,7 @@ function addImage(groupName) {
   `;
   
   container.insertAdjacentHTML('beforeend', html);
+  attachImageUploadHandler(container.lastElementChild);
 }
 
 function removeImage(groupName, index) {
@@ -48,6 +54,51 @@ function removeImage(groupName, index) {
   } else {
     alert('At least one image entry must remain (it can be empty).');
   }
+}
+
+function attachImageUploadHandler(imageItemElement) {
+  const uploadBtn = imageItemElement.querySelector('.upload-image-btn');
+  const fileInput = imageItemElement.querySelector('.image-upload-input');
+  const fileNameInput = imageItemElement.querySelector('.image-file');
+  
+  uploadBtn.addEventListener('click', function() {
+    fileInput.click();
+  });
+  
+  fileInput.addEventListener('change', function(e) {
+    if (this.files.length > 0) {
+      const file = this.files[0];
+      const formData = new FormData();
+      formData.append('upload_image', true);
+      formData.append('image_file', file);
+      
+      // Show loading state
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = 'Uploading...';
+      
+      fetch('/' + sitePath.replace(/^\//, '') + '/admin/manage_groups.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload';
+        
+        if (data.success) {
+          fileNameInput.value = data.filename;
+          alert('Image uploaded successfully!');
+        } else {
+          alert('Upload failed: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(error => {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload';
+        alert('Upload error: ' + error.message);
+      });
+    }
+  });
 }
 
 function addParagraph(groupName) {
@@ -131,6 +182,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const groupName = chip.getAttribute('data-group-name');
     chip.style.background = getColorForTag(groupName);
     chip.style.borderColor = getColorForTag(groupName);
+  });
+
+  // Attach upload handlers to all existing image items
+  document.querySelectorAll('.image-item').forEach(imageItem => {
+    attachImageUploadHandler(imageItem);
   });
 
   // Handle "Add Groups" button for new assemblies
