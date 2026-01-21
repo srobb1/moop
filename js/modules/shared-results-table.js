@@ -265,8 +265,16 @@ function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
  * @param {Array} results - Array of result objects
  * @returns {Object} Grouped results: {feature_uniquename: {feature: obj, annotations: [array]}}
  */
+/**
+ * Groups search results by feature_uniquename, preserving database sort order
+ * 
+ * @param {Array} results - Array of result objects
+ * @returns {Array} Array of [uniquename, data] pairs in database sort order
+ */
 function groupResultsByFeature(results) {
     const grouped = {};
+    const order = [];
+    
     results.forEach(result => {
         const key = result.feature_uniquename;
         if (!grouped[key]) {
@@ -274,10 +282,13 @@ function groupResultsByFeature(results) {
                 feature: result,
                 annotations: []
             };
+            order.push(key);
         }
         grouped[key].annotations.push(result);
     });
-    return grouped;
+    
+    // Return as array of entries in the order they first appeared
+    return order.map(key => [key, grouped[key]]);
 }
 
 /**
@@ -289,9 +300,10 @@ function groupResultsByFeature(results) {
  * @param {string} sitePath - The site base path
  * @param {string} linkBasePath - Base path for feature links
  * @param {string} imageUrl - Optional URL to organism image thumbnail
+ * @param {string} searchKeywords - Search keywords for highlighting in expanded view
  * @returns {string} HTML string for the simple table
  */
-function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 'tools/parent.php', imageUrl = '') {
+function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 'tools/parent.php', imageUrl = '', searchKeywords = '') {
     const tableId = 'simple_resultsTable_' + organism.replace(/[^a-zA-Z0-9]/g, '_');
     const selectId = organism.replace(/[^a-zA-Z0-9]/g, '_');
     const genus = results[0]?.genus || '';
@@ -315,12 +327,12 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
     
     // Group results by feature to get unique features and match counts
     const grouped = groupResultsByFeature(results);
-    const uniqueFeatureCount = Object.keys(grouped).length;
+    const uniqueFeatureCount = grouped.length;
     
     let html = `
         <div class="organism-results" id="${anchorId}">
             <h5>${imageHtml}${organismDisplay}${commonNameDisplay}
-                <span class="badge bg-primary">${uniqueFeatureCount} result${uniqueFeatureCount !== 1 ? 's' : ''}</span>
+                <span class="badge bg-primary">${uniqueFeatureCount} unique feature${uniqueFeatureCount !== 1 ? 's' : ''}</span>
                 <span class="badge bg-info">${results.length} total annotation match${results.length !== 1 ? 'es' : ''}</span>
             </h5>
             <div class="mb-2 d-flex gap-2 align-items-center">
@@ -333,16 +345,16 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
                 <small class="text-muted" style="font-size: 0.85rem;"><em>Note: Horizontal scrolling may be necessary to view the complete table</em></small>
             </div>
             <div class="info-box mb-3" id="info-${selectId}" style="display: none; background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 0.25rem; padding: 0.75rem 1.25rem;">
-                <p><strong>Simple View:</strong> Displays a unique list of sequence IDs that have matches to your search terms. This gives you a clean overview of all sequences found without duplication.</p>
+                <p><strong>Simple View:</strong> Displays a unique list of feature/sequence IDs that have matches to your search terms. Providing an overview of all features found without duplication.</p>
                 
                 <p><strong>What Gets Matched:</strong> Your search terms are matched against:</p>
                 <ul style="margin-bottom: 0.5rem;">
                     <li><strong>Sequence Name:</strong> The name of the sequence</li>
                     <li><strong>Sequence Description:</strong> The description of the sequence</li>
-                    <li><strong>Annotations:</strong> Matches from comparative analyses like BLAST, which compare your sequences against sequences in other organisms</li>
+                    <li><strong>Annotations:</strong> Matches from comparative analyses like BLAST, which compare these sequences against sequences in other organisms</li>
                 </ul>
                 
-                <p style="margin-bottom: 0.5rem;"><strong>Why Different Results:</strong> A sequence may have a name and description different from what matched your search. This means one of its annotations (from analyses like BLAST) matched your search terms, not the sequence name or description itself.</p>
+                <p style="margin-bottom: 0.5rem;"><strong>Why Different Results:</strong> A feature/sequence may have a name and description different from what matched your search. This means one of its annotations (from analyses like BLAST) matched your search terms, not the sequence name or description itself.</p>
                 
                 <p style="margin-bottom: 0;"><strong>View All Matches:</strong> Click "Expand All Matches" to see all matching annotations for each sequence. This shows exactly which search terms were found and where they were found (name, description, or specific annotation).</p>
             </div>
@@ -384,7 +396,7 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
                         <tbody>`;
     
     // Get first result for each unique feature and include match count
-    Object.entries(grouped).forEach(([uniquename, data]) => {
+    grouped.forEach(([uniquename, data]) => {
         const result = data.feature;
         const matchCount = data.annotations.length;
         const featureUrl = `${sitePath}/${linkBasePath}?organism=${encodeURIComponent(organism)}&uniquename=${encodeURIComponent(uniquename)}`;
@@ -413,7 +425,7 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
     `;
     
     setTimeout(() => {
-        initializeSimpleResultsTable(tableId, selectId, organism, results, sitePath);
+        initializeSimpleResultsTable(tableId, selectId, organism, results, sitePath, searchKeywords);
     }, 100);
     
     return html;
@@ -422,7 +434,7 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
 /**
  * Initialize simple results table with DataTables and toggle functionality
  */
-function initializeSimpleResultsTable(tableId, selectId, organism, results, sitePath) {
+function initializeSimpleResultsTable(tableId, selectId, organism, results, sitePath, searchKeywords = '') {
     // Populate filter containers
     $('#' + tableId + ' .column-filter-container').each(function(i) {
         const columnIndex = $(this).data('column-index');
@@ -513,13 +525,13 @@ function initializeSimpleResultsTable(tableId, selectId, organism, results, site
     });
     
     // Setup toggle button
-    initializeViewToggle(organism, results, sitePath, selectId);
+    initializeViewToggle(organism, results, sitePath, selectId, searchKeywords);
 }
 
 /**
  * Toggle between simple and expanded views
  */
-function initializeViewToggle(organism, results, sitePath, selectId) {
+function initializeViewToggle(organism, results, sitePath, selectId, searchKeywords = '') {
     
     // Find the parent organism results div
     const containers = document.querySelectorAll(`[data-organism="${selectId}"]`);
@@ -606,17 +618,30 @@ function initializeViewToggle(organism, results, sitePath, selectId) {
                 // Add all result rows
                 results.forEach(result => {
                     const featureUrl = `${sitePath}/tools/parent.php?organism=${encodeURIComponent(organism)}&uniquename=${encodeURIComponent(result.feature_uniquename)}`;
+                    const highlightSearchTerms = (text, keywords) => {
+                        if (!keywords || !text) return text;
+                        
+                        const terms = keywords.trim().split(/\s+/).filter(t => t.length >= 3);
+                        if (terms.length === 0) return text;
+                        
+                        let highlighted = text;
+                        terms.forEach(term => {
+                            const regex = new RegExp(`${term}`, 'gi');
+                            highlighted = highlighted.replace(regex, `<strong style="background-color: #fff3cd; font-weight: bold;">$&</strong>`);
+                        });
+                        return highlighted;
+                    };
                     html += `
                         <tr data-genome-accession="${encodeURIComponent(result.genome_accession || '')}">
                             <td><input type="checkbox" class="row-select"></td>
                             <td><em>${result.genus} ${result.species}</em><br><small class="text-muted">${result.common_name}</small></td>
                             <td>${result.feature_type}</td>
                             <td><a href="${featureUrl}" target="_blank">${result.feature_uniquename}</a></td>
-                            <td>${result.feature_name || ''}</td>
-                            <td>${result.feature_description || ''}</td>
+                            <td>${highlightSearchTerms(result.feature_name || '', searchKeywords)}</td>
+                            <td>${highlightSearchTerms(result.feature_description || '', searchKeywords)}</td>
                             <td>${result.annotation_source_name || ''}</td>
                             <td>${result.annotation_accession || ''}</td>
-                            <td>${result.annotation_description || ''}</td>
+                            <td>${highlightSearchTerms(result.annotation_description || '', searchKeywords)}</td>
                         </tr>`;
                 });
                 
