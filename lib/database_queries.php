@@ -290,6 +290,7 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
         $like_pattern = "%$search_term_clean%";
         $regex_exact = '\b' . preg_quote($search_term_clean, '/') . '\b';
         $regex_start = '\b' . preg_quote($search_term_clean, '/');
+        $regex_start_of_string = '^' . preg_quote($search_term_clean, '/');
         
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
                          a.annotation_accession, a.annotation_description, 
@@ -327,14 +328,18 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
                        WHEN f.feature_name REGEXP ? THEN 1
                        WHEN f.feature_name REGEXP ? THEN 2
                        WHEN f.feature_description REGEXP ? THEN 3
-                       WHEN a.annotation_description REGEXP ? THEN 4
-                       ELSE 5
+                       WHEN f.feature_description REGEXP ? THEN 4
+                       WHEN f.feature_description LIKE ? THEN 5
+                       WHEN a.annotation_description REGEXP ? THEN 6
+                       ELSE 7
                      END,
                      f.feature_uniquename";
         
         $params[] = $regex_exact;
         $params[] = $regex_start;
+        $params[] = $regex_start_of_string;
         $params[] = $regex_start;
+        $params[] = "%$search_term_clean%";
         $params[] = $regex_exact;
         
     } else {
@@ -349,6 +354,7 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
         $primary_pattern = "%$primary_term%";
         $regex_exact = '\b' . preg_quote($primary_term, '/') . '\b';
         $regex_start = '\b' . preg_quote($primary_term, '/');
+        $regex_start_of_string = '^' . preg_quote($primary_term, '/');
         
         // Build conditions: (col1 LIKE term1 OR col2 LIKE term1 OR ...) AND (col1 LIKE term2 OR ...)
         $conditions = [];
@@ -396,15 +402,19 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
                       WHEN f.feature_name REGEXP ? THEN 1
                       WHEN f.feature_name REGEXP ? THEN 2
                       WHEN f.feature_description REGEXP ? THEN 3
-                      WHEN a.annotation_description REGEXP ? THEN 4
-                      ELSE 5
+                      WHEN f.feature_description REGEXP ? THEN 4
+                      WHEN f.feature_description LIKE ? THEN 5
+                      WHEN a.annotation_description REGEXP ? THEN 6
+                      ELSE 7
                     END,
                     f.feature_uniquename";
         
         // Add primary term patterns for CASE statement to params
         $params[] = $regex_exact;
         $params[] = $regex_start;
+        $params[] = $regex_start_of_string;
         $params[] = $regex_start;
+        $params[] = "%$primary_term%";
         $params[] = $regex_exact;
     }
     
