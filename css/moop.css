@@ -504,3 +504,50 @@ footer .footer-meta {
     font-size: 0.85em;
     overflow-x: auto;
 }
+
+/* ========== CUSTOM BOOTSTRAP EXTENDED COLORS ========== */
+/* Additional colors for annotation badges and UI elements */
+.bg-indigo {
+  background-color: #6366f1 !important;
+}
+
+.bg-purple {
+  background-color: #a855f7 !important;
+}
+
+.bg-pink {
+  background-color: #ec4899 !important;
+}
+
+.btn-outline-indigo {
+  color: #6366f1;
+  border-color: #6366f1;
+}
+
+.btn-outline-indigo:hover {
+  color: #fff;
+  background-color: #6366f1;
+  border-color: #6366f1;
+}
+
+.btn-outline-purple {
+  color: #a855f7;
+  border-color: #a855f7;
+}
+
+.btn-outline-purple:hover {
+  color: #fff;
+  background-color: #a855f7;
+  border-color: #a855f7;
+}
+
+.btn-outline-pink {
+  color: #ec4899;
+  border-color: #ec4899;
+}
+
+.btn-outline-pink:hover {
+  color: #fff;
+  background-color: #ec4899;
+  border-color: #ec4899;
+}

@@ -321,6 +321,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
         }
     }
     
+    if (isset($_POST['_form_action']) && $_POST['_form_action'] === 'update_color') {
+        $type_name = trim($_POST['type_name'] ?? '');
+        $color = trim($_POST['color'] ?? '');
+        
+        // Validate color is one of the allowed Bootstrap colors or custom colors
+        $allowed_colors = ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'light', 'dark', 'indigo', 'purple', 'pink'];
+        
+        if (!empty($type_name) && in_array($color, $allowed_colors) && isset($annotation_config['annotation_types'][$type_name])) {
+            $annotation_config['annotation_types'][$type_name]['color'] = $color;
+            saveJsonFile($config_file, $annotation_config);
+            $message = "Updated color for '$type_name' to '$color'";
+            $messageType = "success";
+        }
+    }
+    
     if (isset($_POST['_form_action']) && $_POST['_form_action'] === 'update_type_description') {
         $type_name = trim($_POST['type_name'] ?? '');
         $description = trim($_POST['description'] ?? '');

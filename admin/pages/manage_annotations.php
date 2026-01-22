@@ -111,7 +111,10 @@
                 <h6 class="mb-1">
                   <i class="fa fa-grip-vertical text-muted"></i>
                   <strong><?= htmlspecialchars($type_config['display_label'] ?? $type_name) ?></strong>
-                  <span class="badge bg-<?= ($type_config['in_database'] ?? false) ? 'success' : 'warning' ?>" style="margin-left: 8px;">
+                  <span class="badge bg-<?= ($type_config['color'] ?? 'secondary') ?>" style="margin-left: 8px;">
+                    <?= htmlspecialchars($type_name) ?>
+                  </span>
+                  <span class="badge bg-<?= ($type_config['in_database'] ?? false) ? 'success' : 'warning' ?>" style="margin-left: 4px;">
                     <?= ($type_config['in_database'] ?? false) ? 'In Use' : 'Not In Use' ?>
                   </span>
                 </h6>
@@ -188,6 +191,55 @@
                   <i class="fa fa-trash"></i> Delete
                 </button>
                 <?php endif; ?>
+              </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Color Selection -->
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h6>Display Color</h6>
+                <div class="btn-group" role="group" style="flex-wrap: wrap; gap: 0.25rem;">
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_primary_<?= htmlspecialchars($type_name) ?>" value="primary" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'primary' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <label class="btn btn-sm" for="color_primary_<?= htmlspecialchars($type_name) ?>" style="background-color: #0d6efd; color: white; border: none; padding: 0.375rem 0.75rem;">Primary</label>
+                  
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_secondary_<?= htmlspecialchars($type_name) ?>" value="secondary" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'secondary' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <label class="btn btn-sm" for="color_secondary_<?= htmlspecialchars($type_name) ?>" style="background-color: #6c757d; color: white; border: none; padding: 0.375rem 0.75rem;">Secondary</label>
+                  
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_success_<?= htmlspecialchars($type_name) ?>" value="success" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'success' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <label class="btn btn-sm" for="color_success_<?= htmlspecialchars($type_name) ?>" style="background-color: #198754; color: white; border: none; padding: 0.375rem 0.75rem;">Success</label>
+                  
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_danger_<?= htmlspecialchars($type_name) ?>" value="danger" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'danger' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <label class="btn btn-sm" for="color_danger_<?= htmlspecialchars($type_name) ?>" style="background-color: #dc3545; color: white; border: none; padding: 0.375rem 0.75rem;">Danger</label>
+                  
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_warning_<?= htmlspecialchars($type_name) ?>" value="warning" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'warning' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <label class="btn btn-sm" for="color_warning_<?= htmlspecialchars($type_name) ?>" style="background-color: #ffc107; color: black; border: none; padding: 0.375rem 0.75rem;">Warning</label>
+                  
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_info_<?= htmlspecialchars($type_name) ?>" value="info" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'info' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <label class="btn btn-sm" for="color_info_<?= htmlspecialchars($type_name) ?>" style="background-color: #0dcaf0; color: black; border: none; padding: 0.375rem 0.75rem;">Info</label>
+                  
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_light_<?= htmlspecialchars($type_name) ?>" value="light" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'light' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <label class="btn btn-sm" for="color_light_<?= htmlspecialchars($type_name) ?>" style="background-color: #f8f9fa; color: black; border: 1px solid #dee2e6; padding: 0.375rem 0.75rem;">Light</label>
+                  
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_dark_<?= htmlspecialchars($type_name) ?>" value="dark" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'dark' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <label class="btn btn-sm" for="color_dark_<?= htmlspecialchars($type_name) ?>" style="background-color: #212529; color: white; border: none; padding: 0.375rem 0.75rem;">Dark</label>
+                  
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_indigo_<?= htmlspecialchars($type_name) ?>" value="indigo" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'indigo' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <label class="btn btn-sm" for="color_indigo_<?= htmlspecialchars($type_name) ?>" style="background-color: #6366f1; color: white; border: none; padding: 0.375rem 0.75rem;">Indigo</label>
+                  
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_purple_<?= htmlspecialchars($type_name) ?>" value="purple" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'purple' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <label class="btn btn-sm" for="color_purple_<?= htmlspecialchars($type_name) ?>" style="background-color: #a855f7; color: white; border: none; padding: 0.375rem 0.75rem;">Purple</label>
+                  
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_pink_<?= htmlspecialchars($type_name) ?>" value="pink" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'pink' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <label class="btn btn-sm" for="color_pink_<?= htmlspecialchars($type_name) ?>" style="background-color: #ec4899; color: white; border: none; padding: 0.375rem 0.75rem;">Pink</label>
+                </div>
+                <form method="post" action="manage_annotations.php" class="d-none" id="colorForm_<?= htmlspecialchars($type_name) ?>" onsubmit="event.stopPropagation(); this.querySelector('input[name=\'_form_action\']').value = 'update_color';">
+                  <input type="hidden" name="_form_action" value="">
+                  <input type="hidden" name="type_name" value="<?= htmlspecialchars($type_name) ?>">
+                  <input type="hidden" name="color" id="colorValue_<?= htmlspecialchars($type_name) ?>" value="">
+                </form>
+                <small class="text-muted d-block mt-2">Click a color to update annotation badge color</small>
               </div>
             </div>
             
