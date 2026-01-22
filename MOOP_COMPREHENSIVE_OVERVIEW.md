@@ -15,10 +15,14 @@
 5. [Data Organization](#data-organization)
 6. [Search Functionality](#search-functionality)
 7. [Annotation System](#annotation-system)
-8. [Tools & Features](#tools--features)
-9. [Administrative Management](#administrative-management)
-10. [Dependencies & Requirements](#dependencies--requirements)
-11. [Deployment Architecture](#deployment-architecture)
+8. [Configuration Management System](#configuration-management-system)
+9. [Source Selector System](#source-selector-system)
+10. [Include System: Related Components](#include-system-related-components)
+11. [Tools & Features](#tools--features)
+12. [Centralized Function Library & Registry System](#centralized-function-library--registry-system)
+13. [Administrative Management](#administrative-management)
+14. [Dependencies & Requirements](#dependencies--requirements)
+15. [Deployment Architecture](#deployment-architecture)
 
 ---
 
@@ -195,28 +199,31 @@
 │   │  ├── retrieve_selected_sequences.php # Selected sequences page
 │   │  └── [other page templates]    # Additional pages
 │
-├── lib/                              # Library functions (shared)
-│   ├── display_functions.php         # Core display rendering helpers
-│   ├── parent_functions.php          # Parent/feature display helpers
-│   ├── blast_functions.php           # BLAST integration & searching
+├── lib/                              # Library functions (shared, centralized)
+│   ├── blast_functions.php           # BLAST searching & database operations
 │   ├── blast_results_visualizer.php  # BLAST results formatting
-│   ├── extract_search_helpers.php    # Sequence extraction & search
+│   ├── common_functions.php          # Common/shared utility functions
 │   ├── database_queries.php          # Database query operations
-│   ├── moop_functions.php            # General utility functions
-│   ├── search_functions.php          # Search operation helpers
+│   ├── display_functions.php         # Display rendering helpers (minimal)
+│   ├── extract_search_helpers.php    # Sequence extraction & search
 │   ├── fasta_download_handler.php    # FASTA download processing
-│   ├── functions_access.php          # Access control functions
-│   ├── functions_data.php            # Data retrieval functions
-│   ├── functions_database.php        # Database helper functions
-│   ├── functions_errorlog.php        # Error logging functions
-│   ├── functions_filesystem.php      # File system operations
-│   ├── functions_json.php            # JSON handling functions
-│   ├── functions_system.php          # System utility functions
-│   ├── functions_tools.php           # Tool support functions
-│   ├── functions_validation.php      # Input validation functions
-│   ├── common_functions.php          # Common/shared functions
+│   ├── functions_access.php          # Access control & permissions
+│   ├── functions_data.php            # Data retrieval & loading
+│   ├── functions_database.php        # Database connection & helpers
+│   ├── functions_display.php         # Display utilities & formatting
+│   ├── functions_errorlog.php        # Error logging & handling
+│   ├── functions_filesystem.php      # File system & path operations
+│   ├── functions_json.php            # JSON loading & validation
+│   ├── functions_system.php          # System utilities & cleanup
+│   ├── functions_tools.php           # Tool support & context
+│   ├── functions_validation.php      # Input validation & sanitization
+│   ├── moop_functions.php            # General-purpose utilities
+│   ├── parent_functions.php          # Feature/parent display helpers
+│   ├── search_functions.php          # Search & query helpers
 │   ├── tool_config.php               # Tool configuration
-│   └── tool_section.php              # Tool section rendering
+│   ├── tool_section.php              # Tool section rendering
+│   ├── blast_functions.php.backup    # Backup of BLAST functions
+│   └── README.md                     # Library documentation
 │
 ├── js/                               # Client-side scripts
 │   ├── modules/                      # Feature modules
@@ -1601,6 +1608,232 @@ $context = createToolContext('tool_name', [
 ```
 
 **Benefit:** Faster workflow, less clicking, contextual awareness
+
+---
+
+## Centralized Function Library & Registry System
+
+MOOP uses a centralized approach to managing functions across PHP and JavaScript to maintain consistency and reduce duplication.
+
+### Philosophy
+
+**Goal:** Single source of truth for reusable functions
+
+- **Organize by category:** Functions grouped by purpose (data, display, validation, etc.)
+- **Avoid duplication:** Shared functions in `/lib/` instead of duplicated across tools
+- **Registry visibility:** Admin interface to discover available functions
+- **Progressive enhancement:** Functions documented and tracked
+
+### PHP Function Organization
+
+All shared PHP functions are organized in `/data/moop/lib/`:
+
+#### By Category
+
+**Data & Retrieval:**
+- `functions_data.php` - Load organisms, assemblies, groups
+- `database_queries.php` - Database operations
+- `functions_database.php` - Connection & helpers
+- `functions_json.php` - JSON file handling
+
+**Display & Rendering:**
+- `functions_display.php` - Display utilities & formatting
+- `display_functions.php` - Organism image/display logic
+- `parent_functions.php` - Feature detail page helpers
+- `tool_section.php` - Tool section rendering
+
+**Searching & Analysis:**
+- `search_functions.php` - Search & query helpers
+- `blast_functions.php` - BLAST operations
+- `blast_results_visualizer.php` - BLAST result formatting
+- `extract_search_helpers.php` - Sequence extraction
+
+**File & System:**
+- `functions_filesystem.php` - File/path operations
+- `functions_system.php` - System utilities & cleanup
+- `fasta_download_handler.php` - FASTA download processing
+
+**Security & Validation:**
+- `functions_access.php` - Access control & permissions
+- `functions_validation.php` - Input validation & sanitization
+- `functions_errorlog.php` - Error logging & handling
+
+**Utilities:**
+- `moop_functions.php` - General utilities
+- `common_functions.php` - Common/shared functions
+- `tool_config.php` - Tool configuration
+- `functions_tools.php` - Tool support & context
+
+### PHP Function Registry
+
+**Purpose:** Discover and manage PHP functions available in MOOP
+
+**Location:** `/docs/function_registry.json` (auto-generated)
+
+**Admin Interface:** `/admin/manage_registry.php`
+
+**What's Tracked:**
+- Function name
+- File location
+- Parameters
+- Return value
+- Description
+- Usage examples
+- Last updated
+
+**Example Entry:**
+```json
+{
+  "function_name": "getAccessibleOrganisms",
+  "file": "lib/functions_data.php",
+  "parameters": {
+    "user_id": "string (optional, defaults to $_SESSION['user']['id'])"
+  },
+  "returns": "array of organisms user can access",
+  "description": "Get list of organisms accessible by current user",
+  "examples": [
+    "$orgs = getAccessibleOrganisms();"
+  ]
+}
+```
+
+**Updating Registry:**
+
+The registry is auto-generated by scanning `/lib/` PHP files for documented functions. To add a function:
+
+1. Write function in appropriate `/lib/` file
+2. Add documentation comment:
+   ```php
+   /**
+    * Function description
+    * 
+    * @param type $param Description
+    * @return type Description
+    */
+   function myFunction($param) { ... }
+   ```
+3. Generate registry via admin: "Manage > Function Registry" → "Generate Registry"
+4. Registry updates automatically
+
+### JavaScript Function Organization
+
+Shared JavaScript functions organized in `/data/moop/js/`:
+
+**Modules** (feature-specific):
+- `js/modules/datatable-config.js` - DataTables configuration
+- `js/modules/parent-tools.js` - Feature page tools
+- `js/modules/collapse-handler.js` - UI interactions
+
+**Libraries:**
+- Third-party JS libraries in `js/libraries/`
+
+**Inline Scripts:**
+- Page-specific JavaScript included inline in controllers
+- Passed via `$display_config['inline_scripts']`
+
+### JavaScript Function Registry
+
+**Purpose:** Discover and manage JavaScript functions available in MOOP
+
+**Location:** `/docs/js_function_registry.json` (auto-generated)
+
+**Admin Interface:** `/admin/manage_js_registry.php`
+
+**What's Tracked:**
+- Function name
+- File location
+- Parameters
+- Return value
+- Description
+- Usage examples
+- Last updated
+
+**Example Entry:**
+```json
+{
+  "function_name": "initDataTable",
+  "file": "js/modules/datatable-config.js",
+  "parameters": {
+    "tableId": "string - element ID of table"
+  },
+  "returns": "DataTable instance",
+  "description": "Initialize DataTables with MOOP configuration",
+  "examples": [
+    "const dt = initDataTable('#myTable');"
+  ]
+}
+```
+
+**Adding Functions:**
+
+1. Write function in appropriate `js/` file
+2. Add documentation comment:
+   ```js
+   /**
+    * Function description
+    * 
+    * @param {type} param - Description
+    * @returns {type} Description
+    */
+   function myFunction(param) { ... }
+   ```
+3. Generate registry via admin: "Manage > JS Registry" → "Generate Registry"
+4. Registry updates automatically
+
+### Benefits of Centralization
+
+1. **Discoverability** - Find existing functions via admin interface
+2. **Consistency** - All tools use same implementation
+3. **Maintainability** - Fix bug once, all tools get fix
+4. **Reusability** - Developers know where to find functions
+5. **Documentation** - Registry serves as API documentation
+6. **Quality** - Reduces duplicate/conflicting implementations
+7. **Audit Trail** - Track when functions were last updated
+
+### Common Patterns
+
+**Finding a function:**
+1. Login as admin
+2. Navigate to "Manage > Function Registry"
+3. Search for function name or keyword
+4. View file location and parameters
+5. Click to see full documentation
+
+**Adding a function to lib:**
+1. Determine category (data? display? validation?)
+2. Add to appropriate `functions_*.php` file
+3. Document with PHPDoc comments
+4. Include in your tool: `include_once __DIR__ . '/../lib/functions_category.php';`
+5. Regenerate registry via admin
+
+**Using a function from lib:**
+1. Determine which file it's in (check registry)
+2. Include that file at top of your script
+3. Call the function
+4. Example:
+   ```php
+   include_once __DIR__ . '/../lib/functions_data.php';
+   $organisms = getAccessibleOrganisms();
+   ```
+
+### Registry Management (Admin Only)
+
+**Regenerate PHP Registry:**
+- Admin → Manage → Function Registry → "Regenerate Registry"
+- Scans all `/lib/*.php` files
+- Extracts function names, parameters, documentation
+- Updates `/docs/function_registry.json`
+
+**Regenerate JS Registry:**
+- Admin → Manage → JS Registry → "Regenerate Registry"
+- Scans `/js/modules/*.js` files
+- Extracts function names, parameters, documentation
+- Updates `/docs/js_function_registry.json`
+
+**Registry Staleness:**
+- System detects when PHP files updated since last registry generation
+- Warns admin registry may be out of date
+- Auto-suggests regeneration
 
 ---
 
