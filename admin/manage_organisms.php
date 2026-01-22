@@ -183,6 +183,7 @@ $data = [
     'groups_data' => $groups_data,
     'sequence_types' => $sequence_types,
     'config' => $config,
+    'organism_data' => $organism_data,
     'taxonomy_tree_file' => $taxonomy_tree_file,
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
