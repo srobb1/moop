@@ -174,11 +174,7 @@
 │   │  ├── retrieve_sequences.php    # Sequence download page
 │   │  ├── retrieve_selected_sequences.php # Selected sequences page
 │   │  └── [other page templates]    # Additional pages
-│   └── includes/                     # Tool-specific libraries
-│       ├── parent_functions.php      # Parent/feature display helpers
-│       ├── blast_functions.php       # BLAST integration helpers
-│       ├── extract_search_helpers.php # Sequence extraction
-│       └── [other libraries]
+│   └── includes/                     # Empty directory (currently unused)
 │
 ├── lib/                              # Library functions (shared)
 │   ├── display_functions.php         # Core display rendering helpers
