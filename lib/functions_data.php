@@ -683,20 +683,30 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         }
     }
     
-    // 3. Is there a BLAST index file for existing FASTA files?
+    // 3. Are BLAST indexes present for ALL FASTA files?
+    // This check fails if there are FASTA files but any are missing BLAST indexes
     if ($checks['has_fasta']) {
+        $all_have_indexes = true;
+        $has_any_fasta = false;
+        
         foreach ($data['assemblies'] as $assembly) {
             $assembly_path = $data['path'] . '/' . $assembly;
             $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
+            
             if (!empty($blast_validation['databases'])) {
                 foreach ($blast_validation['databases'] as $db) {
-                    if ($db['has_indexes']) {
-                        $checks['has_blast_indexes'] = true;
+                    $has_any_fasta = true;
+                    // If any FASTA file doesn't have indexes, fail the check
+                    if (!$db['has_indexes']) {
+                        $all_have_indexes = false;
                         break 2;
                     }
                 }
             }
         }
+        
+        // Set to true only if we found FASTA files AND all have indexes
+        $checks['has_blast_indexes'] = ($has_any_fasta && $all_have_indexes);
     }
     
     // 4. Is there a database file?
