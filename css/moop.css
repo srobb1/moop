@@ -498,3 +498,9 @@ footer .footer-meta {
 .tooltip-inner {
     background-color: #000 !important;
 }
+
+/* ========== CODE BLOCK STYLING ========== */
+.code-example {
+    font-size: 0.85em;
+    overflow-x: auto;
+}
