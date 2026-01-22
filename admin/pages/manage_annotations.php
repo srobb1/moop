@@ -111,7 +111,7 @@
                 <h6 class="mb-1">
                   <i class="fa fa-grip-vertical text-muted"></i>
                   <strong><?= htmlspecialchars($type_config['display_label'] ?? $type_name) ?></strong>
-                  <span class="badge bg-<?= ($type_config['color'] ?? 'secondary') ?>" style="margin-left: 8px;">
+                  <span class="badge text-white bg-<?= ($type_config['color'] ?? 'secondary') ?>" style="margin-left: 8px;">
                     <?= htmlspecialchars($type_name) ?>
                   </span>
                   <span class="badge bg-<?= ($type_config['in_database'] ?? false) ? 'success' : 'warning' ?>" style="margin-left: 4px;">

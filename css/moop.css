@@ -551,3 +551,19 @@ footer .footer-meta {
   background-color: #ec4899;
   border-color: #ec4899;
 }
+
+/* Badge styling for custom colors */
+.badge.bg-indigo {
+  background-color: #6366f1 !important;
+  color: white !important;
+}
+
+.badge.bg-purple {
+  background-color: #a855f7 !important;
+  color: white !important;
+}
+
+.badge.bg-pink {
+  background-color: #ec4899 !important;
+  color: white !important;
+}
