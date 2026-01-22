@@ -34,7 +34,7 @@
                 <div class="flex-grow-1">
                     <h1 class="mb-3">
                         <?php if (!empty($description)): ?>
-                            <?= htmlspecialchars($description) ?>
+                            <?= htmlspecialchars(decodeAnnotationText($description)) ?>
                         <?php else: ?>
                             <?= htmlspecialchars($feature_uniquename) ?>
                         <?php endif; ?>

@@ -132,3 +132,22 @@ function validateAssemblyParam($assembly, $redirect_on_empty = '/moop/index.php'
     }
     return $assembly;
 }
+/**
+ * Decode URL-encoded annotation/description text for display
+ * Converts %3D back to =, %3B back to ;, etc.
+ * 
+ * Used when displaying descriptions/annotations from database that were
+ * URL-encoded for GFF file storage.
+ * 
+ * @param string $text - URL-encoded text from database
+ * @return string - Decoded, readable text
+ */
+function decodeAnnotationText($text) {
+    if (empty($text)) {
+        return $text;
+    }
+    // Decode URL-encoded characters: %XX -> character
+    return preg_replace_callback('/%([0-9A-F]{2})/i', function($matches) {
+        return chr(hexdec($matches[1]));
+    }, $text);
+}
