@@ -2,6 +2,31 @@
  * Manage Annotations - Page-Specific Functionality
  */
 
+/**
+ * Submit color form when color is selected
+ */
+function submitColorForm(radioButton) {
+  if (!radioButton.checked) return;
+  
+  const typeName = radioButton.getAttribute('data-type');
+  const color = radioButton.value;
+  
+  const form = document.getElementById(`colorForm_${typeName}`);
+  if (!form) return;
+  
+  const colorInput = document.getElementById(`colorValue_${typeName}`);
+  if (!colorInput) return;
+  
+  // Set the hidden _form_action before submitting
+  const formActionInput = form.querySelector('input[name="_form_action"]');
+  if (formActionInput) {
+    formActionInput.value = 'update_color';
+  }
+  
+  colorInput.value = color;
+  form.submit();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   // Setup DataTables if present
   const annotationsTables = document.querySelectorAll('.annotations-table');
