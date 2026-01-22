@@ -1149,6 +1149,162 @@ ConfigManager loads merged config:
 
 ---
 
+## Source Selector System
+
+MOOP uses a unified **source selector** component for tools that need to filter and select FASTA sources (genomes/assemblies):
+
+### Usage in Tools
+
+**Tools that use source selector:**
+- `tools/retrieve_sequences.php` - Download FASTA by feature ID
+- `tools/blast.php` - BLAST sequence search
+
+### Components
+
+#### source-selector-helpers.php
+**Purpose:** Centralized logic for source selection and filtering
+
+**Main Function:** `prepareSourceSelection()`
+- Takes context parameters (organism, assembly, group)
+- Builds filtered organism list based on context
+- Determines auto-selection behavior
+- Returns selection state for the UI
+
+**Parameters:**
+```php
+prepareSourceSelection(
+    $context,              // Parsed context: organism, assembly, group
+    $sources_by_group,     // Nested sources organized by group
+    $accessible_sources,   // Flat list of accessible sources
+    $selected_organism,    // User's selected organism (POST/GET)
+    $assembly_param,       // User's selected assembly (POST/GET)
+    $organisms_param       // Multi-organism filtering (?organisms[])
+);
+```
+
+**Returns:**
+```php
+[
+    'filter_organisms' => [...],       // Organisms to show in dropdown
+    'selected_source' => '...',        // Which radio button to select
+    'selected_organism' => '...',      // Currently selected organism
+    'selected_assembly_accession' => '...',  // Assembly ID
+    'selected_assembly_name' => '...',       // Display name
+    'should_auto_select' => true/false,      // Auto-select in JS?
+    'context_group' => '...'           // Current group context
+]
+```
+
+**Selection Rules:**
+1. **Assembly specified** → Auto-select that assembly
+2. **Organism specified** → Auto-select first assembly of that organism
+3. **Group specified** → Show group, don't auto-select (user chooses)
+4. **Multiple organisms** → Restrict list to those organisms only
+
+#### source-list.php
+**Purpose:** Renders the FASTA source selector HTML component
+
+**What It Displays:**
+- Organism/Assembly list with filtering
+- Radio buttons to select source
+- Search/filter box to find sources
+- Color-coded by group
+- Handles multi-level selection (organism → assembly)
+
+**Required Variables:**
+```php
+$sources_by_group          // Array organized by group
+$context_organism          // Current organism context
+$context_assembly          // Current assembly context
+$context_group             // Current group context
+$selected_source           // Which source is selected
+$selected_organism         // Selected organism name
+$selected_assembly_accession // Selected assembly ID
+$filter_organisms          // Which organisms to display
+```
+
+**Optional Callbacks:**
+```php
+$clear_filter_function     // JS function for "Clear" button
+$on_change_function        // JS function on selection change
+```
+
+### Data Flow
+
+```
+Tool (retrieve_sequences.php or blast.php)
+    ↓
+Include source-selector-helpers.php
+    ↓
+Call prepareSourceSelection()
+├─ Parse context (organism, assembly, group)
+├─ Build filtered organism list
+├─ Determine auto-selection
+└─ Return selection state
+    ↓
+Include source-list.php
+├─ Use selection state to render HTML
+├─ Display organism/assembly list
+├─ Show selected source
+└─ Include source-list-manager.js for interactivity
+    ↓
+User selects source
+    ↓
+JavaScript handles selection
+└─ Updates form and re-filters if needed
+```
+
+### Example: Sequence Extraction Tool
+
+**User Context:**
+- User browsing Bats group
+- Views organism: Lasiurus_cinereus
+- Clicks "Sequence Extraction Tool"
+
+**Flow:**
+```
+tools/retrieve_sequences.php
+    ↓
+1. Parse context: organism=Lasiurus_cinereus
+    ↓
+2. Include source-selector-helpers.php
+    ↓
+3. Call prepareSourceSelection()
+   - filter_organisms = [Lasiurus_cinereus]  (only this organism)
+   - should_auto_select = true
+   - selected_assembly = first assembly of Lasiurus
+    ↓
+4. Include source-list.php
+   - Renders selector with Lasiurus assemblies only
+   - First assembly pre-selected
+   - User sees filtered list, doesn't have to re-select
+    ↓
+5. Tool works with pre-selected source
+   - User can change if needed
+   - Form remembers last selection
+```
+
+### JavaScript Integration
+
+**JavaScript file:** `js/modules/source-list-manager.js`
+
+**Functionality:**
+- Handles organism dropdown changes
+- Filters assembly list based on selected organism
+- Updates radio button selection
+- Auto-selects when page loads (if `should_auto_select = true`)
+- Manages "Clear Filter" button
+
+### Benefits
+
+1. **Consistent UX** - Same source selector in all tools
+2. **Context-Aware** - Pre-filters based on where user came from
+3. **No Redundant Selection** - Auto-selects when obvious
+4. **User Control** - Users can still change selection
+5. **Code Reuse** - Single component used by multiple tools
+
+---
+
 ## Tools & Features
 
 ### User-Facing Tools
