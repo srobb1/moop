@@ -1305,6 +1305,225 @@ tools/retrieve_sequences.php
 
 ---
 
+## Include System: Related Components
+
+MOOP's `/includes/` directory contains interconnected components that work together to provide page structure, configuration, and access control. Here's how they relate:
+
+### Group 1: Page Structure & Layout System
+
+**Files:** `layout.php`, `page-setup.php`, `footer.php`
+
+**Purpose:** Provide the complete HTML page skeleton and rendering pipeline
+
+**Architecture:**
+
+```
+Controller Page (e.g., tools/organism.php)
+    ↓
+1. Include config_init.php (setup config)
+2. Include access_control.php (check permissions)
+3. Prepare data ($title, $scripts, $styles, etc.)
+4. Call render_display_page(content_file, $data, $title)
+    ↓
+render_display_page() function (in layout.php)
+    ↓
+Includes page-setup.php
+    ├─ Opens: <!DOCTYPE>, <html>, <head>
+    ├─ Includes head-resources.php
+    ├─ Sets meta tags, CSS, fonts
+    ├─ Opens <body>
+    ├─ Includes navbar.php (header + toolbar)
+    └─ Outputs opening HTML structure
+        ↓
+Then includes the content file (e.g., tools/pages/organism.php)
+    ├─ Outputs page-specific content
+    ├─ Uses $data passed from controller
+    └─ Does NOT include any page structure tags
+        ↓
+Then includes footer.php
+    ├─ Closes </body>
+    ├─ Includes footer content
+    └─ Closes </html>
+```
+
+**How They Work Together:**
+
+- **layout.php**: Core rendering function `render_display_page()`
+  - Orchestrates page rendering
+  - Calls page-setup.php at start
+  - Includes content file in middle
+  - Calls footer.php at end
+
+- **page-setup.php**: Opening HTML structure
+  - Outputs: `<!DOCTYPE html>`, `<html>`, `<head>`
+  - Includes head-resources.php
+  - Opens `<body>` tag
+  - Includes navbar.php
+  - Must be paired with footer.php
+
+- **footer.php**: Closing HTML structure
+  - Outputs footer content
+  - Closes `</body>` and `</html>`
+  - Paired with page-setup.php
+
+**Clean Separation:**
+- Controllers load data and prepare variables
+- Content files display data (no page structure)
+- layout.php orchestrates (controller ↔ content file ↔ footer)
+- Result: reusable content files, consistent page structure
+
+---
+
+### Group 2: Page Header Components
+
+**Files:** `head-resources.php`, `navbar.php`, `banner.php`, `toolbar.php`
+
+**Purpose:** Build the opening section of the page (header area)
+
+**Architecture:**
+
+```
+page-setup.php opens the page
+    ↓
+Includes head-resources.php (in <head> tag)
+    ├─ Meta tags (charset, viewport)
+    ├─ CSS links (Bootstrap, MOOP styles)
+    ├─ Favicon link
+    ├─ Font links (Roboto, etc.)
+    └─ Other <head> resources
+        ↓
+Includes navbar.php (right after <body> opens)
+    ├─ Includes banner.php
+    │  ├─ Gets banner images from config
+    │  ├─ Rotates between banners
+    │  ├─ Uses blurred background + sharp image
+    │  └─ Falls back to default header_img
+    └─ Includes toolbar.php
+       ├─ Displays tool toolbar
+       ├─ Shows current location/context
+       └─ Provides navigation help
+```
+
+**How They Work Together:**
+
+- **head-resources.php**: Assets for the browser
+  - Meta tags tell browser how to render
+  - CSS files style the page
+  - Fonts and icons load early
+
+- **navbar.php**: Main page header
+  - Includes banner.php at top
+  - Includes toolbar.php below banner
+  - Combines visual header with functional toolbar
+
+- **banner.php**: Visual header
+  - Rotates banner images
+  - Uses ConfigManager to get banner paths
+  - Handles fallback to default image
+  - Creates visual branding at page top
+
+- **toolbar.php**: Functional navigation
+  - Shows tool context
+  - Provides quick navigation
+  - Displays current user/session info
+
+**Rendering Order:**
+1. `head-resources.php` runs inside `<head>` (CSS, meta, fonts)
+2. `page-setup.php` opens `<body>`
+3. `navbar.php` runs (displays header)
+4. `banner.php` displays rotating images (via navbar)
+5. `toolbar.php` displays toolbar (via navbar)
+6. Content file displays actual page content
+7. `footer.php` closes page
+
+---
+
+### Group 3: Configuration & Access Control System
+
+**Files:** `config_init.php`, `ConfigManager.php`, `access_control.php`
+
+**Purpose:** Initialize configuration and validate user access
+
+**Architecture:**
+
+```
+Every Page Load
+    ↓
+include config_init.php
+    ├─ Requires ConfigManager.php class
+    ├─ Initializes ConfigManager singleton
+    ├─ Loads site_config.php (defaults)
+    ├─ Loads config_editable.json (overrides)
+    └─ Makes $config available globally
+        ↓
+include access_control.php
+    ├─ Checks $_SESSION for authentication
+    ├─ Validates user permissions
+    ├─ Checks IP-based access
+    ├─ Determines access level
+    └─ Sets $_SESSION variables for page
+        ↓
+Page continues with:
+    - $config available from ConfigManager::getInstance()
+    - $_SESSION variables set for access control
+    - User permissions validated
+```
+
+**How They Work Together:**
+
+- **ConfigManager.php**: Manages all configuration
+  - Singleton pattern (one instance per page)
+  - Loads both static and editable config
+  - Provides methods: `getPath()`, `getString()`, `getArray()`
+  - Returns merged config (defaults + overrides)
+
+- **config_init.php**: Initialize configuration
+  - One-time setup per page
+  - Creates ConfigManager singleton
+  - Loads both config files
+  - No user access control (that's separate)
+
+- **access_control.php**: Validate user access
+  - Checks if user is logged in
+  - Validates permissions for page
+  - Checks IP-based access
+  - Separate from configuration (clean separation)
+
+**Security Design:**
+- Config loading and access control are separate
+- Config doesn't touch $_SESSION (that's access_control's job)
+- Access control doesn't load site paths (that's ConfigManager's job)
+- If either fails, page can't render (safe failure)
+
+---
+
+### Group 4: Configuration Reference Files
+
+**Files:** `config/README.md`
+
+**Purpose:** Documentation for configuration system
+
+**Contains:**
+- How to edit site_config.php
+- How to use config_editable.json
+- Available configuration keys
+- How ConfigManager merges configs
+- Security best practices
+
+**Used By:** Admins and developers setting up MOOP
+
+---
+
+### Group 5: Legacy/Backup Files
+
+**Files:** `navigation.php.backup`
+
+**Status:** Backup of previous navigation system
+
+**Note:** Not currently in use. Kept for reference during transition.
+
+---
+
 ## Tools & Features
 
 ### User-Facing Tools
