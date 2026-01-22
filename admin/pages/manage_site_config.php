@@ -20,7 +20,7 @@
                             <li><strong>Header Banner Image</strong> - Large banner image at the top of pages</li>
                             <li><strong>Favicon</strong> - Small icon displayed in browser tab</li>
                             <li><strong>Sequence Types</strong> - Configure display labels and colors for sequence file types</li>
-                            <li><strong>Auto-Login IP Ranges</strong> - Allow automatic login from specific IP addresses (institutional networks)</li>
+                            <li><strong>Auto-Login IP Ranges</strong> - Allow automatic login and all access to assemblies from specific IP addresses (institutional networks)</li>
                         </ul>
                         
                         <p class="mb-0"><small class="text-muted"><i class="fa fa-lock"></i> <strong>Structural settings</strong> (paths, directories, database connections) are not editable to maintain system integrity. <a href="#" data-bs-toggle="modal" data-bs-target="#structuralSettingsModal">Learn how to change these →</a></small></p>

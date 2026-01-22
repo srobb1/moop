@@ -713,10 +713,10 @@ class ConfigManager
             ],
             'auto_login_ip_ranges' => [
                 'label' => 'Auto-Login IP Ranges',
-                'description' => 'IP ranges for automatic admin login (development/testing only)',
+                'description' => 'IP ranges for automatic login and access to all assemblies.',
                 'type' => 'ip_ranges',
                 'current_value' => $this->getArray('auto_login_ip_ranges', []),
-                'note' => 'WARNING: Only use for development. Provides full access without login.',
+                'note' => 'WARNING: Use for institutional access to all assemblies. Provides full access to all assemblies without login.',
             ],
             'blast_sample_sequences' => [
                 'label' => 'BLAST Sample Sequences',
