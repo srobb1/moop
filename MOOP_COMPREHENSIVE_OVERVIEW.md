@@ -253,6 +253,114 @@
 
 ---
 
+## Page Architecture: Controllers & View Templates
+
+MOOP uses a **controller + view template pattern** for both admin and user-facing pages:
+
+### Pattern Overview
+
+```
+User Request
+    ↓
+Controller (admin/manage_organisms.php or tools/organism.php)
+├─ Process request
+├─ Handle AJAX/form submissions  
+├─ Validate permissions
+├─ Query database
+└─ Call view template
+    ↓
+View Template (admin/pages/manage_organisms.php or tools/pages/organism.php)
+├─ Render HTML
+├─ Display data
+└─ Include layout (header, footer, etc.)
+```
+
+### Admin Pages
+
+**Controllers** (root admin/*.php files):
+- Handle business logic and data processing
+- Process form submissions and AJAX requests
+- Validate permissions and access
+- Query database and manipulate data
+- Call appropriate view template
+
+**View Templates** (admin/pages/*.php files):
+- Render HTML for the user interface
+- Display data passed from controller
+- Handle form inputs and buttons
+- Wrapped with layout.php (header/footer)
+
+**Example:**
+```php
+// admin/manage_organisms.php (controller)
+- Handles organism creation/editing
+- Processes form submissions
+- Handles permission fixes
+- Calls admin/pages/manage_organisms.php
+
+// admin/pages/manage_organisms.php (view)
+- Displays organism list
+- Shows form for adding/editing
+- Renders UI elements
+- Included via layout.php
+```
+
+### User-Facing Pages (Tools)
+
+**Controllers** (tools/*.php files):
+- Display organism, assembly, or feature information
+- Handle searches and filters
+- Process downloads and exports
+- Validate user access
+
+**View Templates** (tools/pages/*.php files):
+- Render organism/assembly/feature pages
+- Display search results
+- Show feature details and annotations
+
+**Example:**
+```php
+// tools/organism.php (controller)
+- Get organism data
+- Get all assemblies
+- Validate permissions
+- Calls tools/pages/organism.php
+
+// tools/pages/organism.php (view)
+- Displays organism information
+- Lists assemblies
+- Shows feature search
+- Included via layout.php
+```
+
+### Key Files
+
+**Layout System** (includes/layout.php):
+- Wraps all pages with header and footer
+- Includes head resources (CSS, JS)
+- Provides navbar, banner, footer
+- Manages page structure
+
+**Admin Pages** (15 controllers + 12 views):
+- Controllers: manage_*.php, admin.php, organism_checklist.php
+- Views: admin/pages/manage_*.php, admin/pages/organism_checklist.php
+- Support files: admin_init.php, admin_access_check.php, registry-template.php
+
+**User Pages** (controllers + views):
+- Controllers: organism.php, assembly.php, parent.php, groups.php, multi_organism.php, blast.php, etc.
+- Views: tools/pages/[corresponding files]
+
+### Shared Libraries
+
+All pages use shared functions from `/data/moop/lib/`:
+- Database queries
+- Permission checks
+- Display helpers
+- Validation functions
+- File operations
+
+---
+
 ## Core Concepts
 
 ### 1. Organisms vs. Assemblies vs. Features
