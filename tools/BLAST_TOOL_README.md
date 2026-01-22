@@ -112,11 +112,7 @@ pages/blast.php displays results
 
 ### Database Requirements
 
-BLAST databases are created during organism setup with:
-- `create_schema_sqlite.sql` - SQLite schema
-- `import_genes_sqlite.pl` - Import gene data
-- `load_annotations_fast.pl` - Load annotations
-- `setup_new_db_and_load_data_fast_per_org.sh` - Orchestration
+BLAST databases are created using `makeblastdb` command during organism setup.
 
 Database files for each assembly:
 ```
@@ -124,6 +120,13 @@ Database files for each assembly:
 ├── *.nhr, *.nin, *.nsq    (nucleotide BLAST databases)
 └── *.phr, *.pin, *.psq    (protein BLAST databases)
 ```
+
+**Note:** SQLite databases (genes.sqlite, annotations.sqlite) are created separately for searching feature data via:
+- `create_schema_sqlite.sql` - SQLite schema
+- `import_genes_sqlite.pl` - Import gene data
+- `load_annotations_fast.pl` - Load annotations
+
+These are used for feature search, not BLAST searches.
 
 ---
 
