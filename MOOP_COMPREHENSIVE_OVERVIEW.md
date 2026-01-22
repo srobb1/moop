@@ -149,19 +149,18 @@
 │       └── setup_new_db_and_load_data_fast_per_org.sh # Bash setup script
 │
 ├── includes/                         # Shared includes
-│   ├── layout.php                    # HTML template/layout
+│   ├── layout.php                    # HTML template/layout wrapper
 │   ├── ConfigManager.php             # Configuration manager class
 │   ├── access_control.php            # Permission helpers & IP validation
 │   ├── config_init.php               # Configuration initialization
-│   ├── page-setup.php                # Page setup utilities
-│   ├── head-resources.php            # HTML head resources (CSS, JS)
-│   ├── banner.php                    # Site banner/header
-│   ├── navbar.php                    # Navigation bar
-│   ├── footer.php                    # Site footer
-│   ├── toolbar.php                   # Tool toolbar
-│   ├── source-list.php               # Annotation source management
-│   ├── source-selector-helpers.php   # Source selection utilities
-│   └── moop_functions.php            # Utility functions
+│   ├── page-setup.php                # Page setup & initialization utilities
+│   ├── head-resources.php            # HTML head resources (CSS, JS, fonts)
+│   ├── banner.php                    # Site banner/header component
+│   ├── navbar.php                    # Navigation bar component
+│   ├── footer.php                    # Site footer component
+│   ├── toolbar.php                   # Tool toolbar component
+│   ├── source-list.php               # Annotation source list component
+│   └── source-selector-helpers.php   # Source selection helper functions
 │
 ├── tools/                            # User-facing tools
 │   ├── organism.php                  # Organism display controller
