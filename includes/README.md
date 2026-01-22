@@ -1,502 +1,432 @@
-# Includes Directory Documentation
+# Includes Directory Reference
 
-The `includes/` directory contains shared PHP files that are included by pages throughout the application. These handle common functionality like configuration, access control, and UI components.
+The `/includes/` directory contains shared components that work together to provide page structure, configuration management, and access control.
 
 ---
 
-## Core Files
+## File Overview
 
-### 1. **config_init.php** - Configuration Bootstrap
-Initializes the configuration system on every page that needs it.
+### Core Configuration & Access Control
+
+#### ConfigManager.php
+**Purpose:** Singleton class for centralized configuration management
 
 **What it does:**
-- Loads the ConfigManager class
-- Creates a singleton instance
-- Initializes configuration from config files
-- Validates required keys
+- Loads site_config.php (static defaults)
+- Loads config_editable.json (runtime overrides)
+- Merges both configurations
+- Provides methods to retrieve config values: `getPath()`, `getString()`, `getArray()`
 
-**How to use:**
+**Usage:**
 ```php
-// Include once per page
-include_once __DIR__ . '/includes/config_init.php';
-
-// Then use ConfigManager anywhere
 $config = ConfigManager::getInstance();
-$site_title = $config->getString('siteTitle');
+$site_path = $config->getPath('site_path');
+$title = $config->getString('siteTitle');
 ```
 
-**See Also:** For complete ConfigManager documentation, refer to `config/README.md`
+**Important:** Never instantiate directly - always use `getInstance()`
 
 ---
 
-### 2. **ConfigManager.php** - Configuration Access Layer
-The main class for centralized configuration management. This is a singleton that loads and caches all configuration.
-
-**Key Features:**
-- Single instance per page (singleton pattern)
-- Type-safe getters: `getString()`, `getPath()`, `getArray()`, `getAll()`
-- Merges defaults with user edits
-- Validates required keys
-- In-memory caching for performance
-
-**Common Methods:**
-```php
-$config = ConfigManager::getInstance();
-
-// Get values
-$config->getString('siteTitle');           // String value
-$config->getPath('organism_data');         // Path (filesystem safe)
-$config->getArray('sequence_types');       // Array value
-$config->getAll();                         // All config
-
-// Tools
-$config->getAllTools();                    // Tool registry
-$config->getTool('blast');                 // Single tool
-
-// Validation
-$config->validate();                       // Returns true/false
-$config->getMissingKeys();                 // List missing keys
-```
-
-**Important:** Do NOT modify this file directly. For configuration questions, refer to `config/README.md`. To extend validation, add to the `validate()` method in this file.
-
----
-
-### 3. **access_control.php** - Authentication & Authorization
-Manages user sessions, authentication, and permission checks. Separate from configuration.
+#### config_init.php
+**Purpose:** Bootstrap file to initialize configuration
 
 **What it does:**
-- Starts PHP session
-- Handles IP-based auto-login (from config)
-- Provides user authentication state
-- Provides permission check functions
-- Redirects unauthorized users
+- Requires ConfigManager.php
+- Creates ConfigManager singleton instance
+- Loads both configuration files (static + editable)
+- Makes $config available to page
 
-**Key Functions:**
+**Usage:**
 ```php
-// After including access_control.php, these are available:
-
-// Check if user is logged in
-if (isset($_SESSION['username'])) {
-    // User is logged in
-}
-
-// Check if user is admin
-if (isset($_SESSION['is_admin']) && $_SESSION['is_admin']) {
-    // User is admin
-}
-
-// Set permissions in SESSION (done by login handler)
-$_SESSION['username'] = 'username';
-$_SESSION['is_admin'] = true;
-$_SESSION['groups'] = ['group1', 'group2'];
+<?php
+include_once __DIR__ . '/config_init.php';
+// ConfigManager now initialized and ready to use
+$config = ConfigManager::getInstance();
+?>
 ```
 
-**When to include:**
-- Any page that requires user authentication
-- Any page that needs to check user permissions
-- Admin pages
-
-**When NOT to include:**
-- Public pages that don't need authentication
-- API endpoints that handle their own auth
-- Static asset handlers
-
-**Important Security Note:** This file does NOT make authorization decisions on its own. Each page is responsible for checking permissions. Access control is separated from configuration—they are completely independent systems.
+**Important:** Include this ONCE per page load, usually early
 
 ---
 
-### 4. **head.php** - HTML Head Content
-Common `<head>` section content included by all pages.
+#### access_control.php
+**Purpose:** User authentication and permission validation
+
+**What it does:**
+- Checks $_SESSION for logged-in user
+- Validates user permissions
+- Checks IP-based access
+- Determines access level (ALL, Admin, Collaborator, Visitor)
+- Sets $_SESSION variables
+
+**Usage:**
+```php
+<?php
+include_once __DIR__ . '/config_init.php';
+include_once __DIR__ . '/access_control.php';
+// User access is now validated
+?>
+```
+
+**Security Design:** 
+- Separate from configuration (ConfigManager doesn't touch $_SESSION)
+- Checks happen before page renders
+- Invalid access results in early exit
+
+---
+
+### Page Structure & Layout
+
+#### layout.php
+**Purpose:** Core rendering function for page structure
+
+**Main Function:** `render_display_page($content_file, $data, $title)`
+
+**What it does:**
+- Orchestrates page rendering
+- Calls page-setup.php to open HTML
+- Includes content file in the middle
+- Calls footer.php to close HTML
+- Passes $data to content file
+
+**Usage:**
+```php
+<?php
+include_once __DIR__ . '/config_init.php';
+include_once __DIR__ . '/access_control.php';
+
+$title = "Page Title";
+$data = ['organism' => 'Example', 'count' => 42];
+$content_file = __DIR__ . '/../tools/pages/organism.php';
+
+render_display_page($content_file, $data, $title);
+?>
+```
+
+---
+
+#### page-setup.php
+**Purpose:** Opens the HTML page structure
+
+**What it outputs:**
+- `<!DOCTYPE html>`
+- `<html lang="en">` opening tag
+- `<head>` section with meta tags
+- Includes head-resources.php for CSS/JS
+- Opens `<body>` tag
+- Includes navbar.php (header with banner & toolbar)
+
+**Important:** Must be paired with footer.php
+
+**Called by:** layout.php (not usually called directly)
+
+---
+
+#### footer.php
+**Purpose:** Closes the HTML page structure
+
+**What it outputs:**
+- Footer HTML content
+- Closes `</body>` tag
+- Closes `</html>` tag
+
+**Paired with:** page-setup.php
+
+**Called by:** layout.php (not usually called directly)
+
+---
+
+### Page Header Components
+
+#### head-resources.php
+**Purpose:** HTML head content (CSS, meta tags, fonts)
 
 **What it contains:**
-- Meta tags (charset, viewport)
-- Bootstrap CSS/JS links
-- MOOP custom CSS
+- Meta charset and viewport
+- Bootstrap CSS
+- MOOP custom CSS (moop.css)
 - Favicon link
-- Common JavaScript libraries
+- Font links (Roboto, etc.)
+- Other head resources
 
-**What it does NOT include:**
-- `<!DOCTYPE>`, `<html>`, `<head>` tags (page provides these)
-- Page-specific stylesheets or scripts
-
-**How to use:**
-```php
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Your Page Title</title>
-    <?php include_once __DIR__ . '/../includes/head.php'; ?>
-</head>
-<body>
-    <!-- Your content -->
-</body>
-</html>
-```
+**Included by:** page-setup.php
 
 **Configuration-aware:**
-- Loads site favicon from config
-- Uses site path from config for CSS/JS URLs
+- Uses config for favicon
+- Uses config for CSS paths
 
 ---
 
-### 5. **header.php** - HTML Header with Navigation
-Full HTML header including navigation bar, site title, and banner.
+#### navbar.php
+**Purpose:** Main page header (banner + toolbar)
 
 **What it includes:**
-- `<!DOCTYPE>`, `<html>`, `<head>` tags
-- Common `<head>` content (via head.php)
-- Session start and access control
-- Navigation bar
-- Site header with title and banner
-- Body tag opening
+- Calls banner.php (rotating header images)
+- Calls toolbar.php (navigation toolbar)
+- Provides visual header area
 
-**How to use:**
-```php
-<?php include_once __DIR__ . '/../includes/header.php'; ?>
-
-<!-- Your page content here -->
-
-<?php include_once __DIR__ . '/../includes/footer.php'; ?>
-```
-
-**Important:**
-- This includes BOTH `<head>` and the opening `<body>` tag
-- Use with `footer.php` to complete the page structure
-- Automatically includes access control (checks authentication)
+**Included by:** page-setup.php (automatically)
 
 ---
 
-### 6. **footer.php** - HTML Footer and Page Closure
-Closes the `</body>` and `</html>` tags. Usually included with `header.php`.
+#### banner.php
+**Purpose:** Rotating banner images at page top
 
-**What it contains:**
-- Footer HTML
-- Page analytics/tracking (if configured)
-- `</body>` and `</html>` tags
+**What it does:**
+- Scans /images/banners/ for images
+- Rotates between banners on each page load
+- Uses blurred background + sharp foreground
+- Falls back to config header_img if no banners found
 
-**How to use:**
-```php
-<?php include_once __DIR__ . '/../includes/header.php'; ?>
+**Configuration:** 
+- Gets banner path from ConfigManager
+- Uses header_img as fallback
 
-<!-- Your page content here -->
-
-<?php include_once __DIR__ . '/../includes/footer.php'; ?>
-```
+**Included by:** navbar.php (automatically)
 
 ---
 
-### 7. **navbar.php** - Navigation Bar Component
-Standalone navigation bar that can be included separately.
+#### toolbar.php
+**Purpose:** Tool toolbar showing context and navigation
 
-**Usage:**
-```php
-<?php include_once __DIR__ . '/../includes/navbar.php'; ?>
-```
+**What it displays:**
+- Current location/context
+- Tool information
+- Navigation help
+- User session info
 
-**When to use:**
-- When you need just the navbar without full header
-- Custom page layouts
+**Configuration-aware:**
+- Gets tool info from config
 
----
-
-### 8. **toolbar.php** - Admin Toolbar Component
-Toolbar for admin pages with action buttons and status indicators.
-
-**Usage:**
-```php
-<?php include_once __DIR__ . '/../includes/toolbar.php'; ?>
-```
-
-**When to use:**
-- Admin pages that need consistent toolbar
-- Pages with bulk actions or status displays
+**Included by:** navbar.php (automatically)
 
 ---
 
-### 9. **banner.php** - Banner/Alert Component
-Reusable banner component for alerts, notifications, and status messages.
+### Source Selection Components
 
-**Usage:**
-```php
-<?php include_once __DIR__ . '/../includes/banner.php'; ?>
-```
+#### source-selector-helpers.php
+**Purpose:** Centralized logic for organism/assembly selection
 
-**Parameters:** Usually controlled by page-level variables before including
+**Main Function:** `prepareSourceSelection($context, $sources_by_group, ...)`
+
+**What it does:**
+- Parses context (organism, assembly, group)
+- Builds filtered organism list
+- Determines auto-selection
+- Returns selection state
+
+**Used by:** retrieve_sequences.php, blast.php
+
+---
+
+#### source-list.php
+**Purpose:** HTML component for source selection UI
+
+**What it renders:**
+- Organism/Assembly list
+- Radio buttons for selection
+- Filter/search box
+- Color-coded by group
+
+**Required Variables:**
+- $sources_by_group
+- $selected_source
+- $filter_organisms
+
+**Used by:** Tools that need FASTA source selection
 
 ---
 
 ## Include Patterns
 
-### Basic Page Structure
+### Basic Page Structure (via layout.php)
 ```php
 <?php
-// 1. Start configuration
-include_once __DIR__ . '/includes/config_init.php';
+// Controller page (e.g., tools/organism.php)
+include_once __DIR__ . '/../includes/config_init.php';
+include_once __DIR__ . '/../includes/access_control.php';
 
-// 2. Include header (handles auth, HTML setup)
-include_once __DIR__ . '/includes/header.php';
+// Prepare data
+$title = "Organism Browser";
+$data = ['organism' => 'Example'];
 
-// 3. Your page content
-
-// 4. Include footer
-include_once __DIR__ . '/includes/footer.php';
+// Render page
+render_display_page(
+    __DIR__ . '/pages/organism.php',
+    $data,
+    $title
+);
 ?>
 ```
 
-### Admin Page Structure
+### Admin Page Structure (with output buffering)
 ```php
 <?php
-// 1. Output buffering for AJAX handling (see note below)
+// Start output buffering for AJAX
 ob_start();
 
-// 2. Include admin init (which includes config and access control)
-include_once __DIR__ . '/admin/admin_init.php';
+// Initialize admin environment
+include_once __DIR__ . '/admin_init.php';  // includes config_init.php
 
-// 3. Handle AJAX requests at top of file
+// Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    // Handle AJAX
+    $result = handleAdminAction($_POST['action']);
+    header('Content-Type: application/json');
+    echo json_encode($result);
     exit;
 }
 
-// 4. Stop output buffering
+// Clear buffer and render HTML
 ob_end_clean();
-
-// 5. Include header
-include_once __DIR__ . '/includes/header.php';
-
-// 6. Page content
-
-// 7. Include footer
-include_once __DIR__ . '/includes/footer.php';
+include_once __DIR__ . '/layout.php';
+render_display_page(
+    __DIR__ . '/pages/manage_organisms.php',
+    $data,
+    'Manage Organisms'
+);
 ?>
 ```
 
 ---
 
-## Important Concepts
+## Include Dependencies
 
-### Output Buffering (ob_start, ob_get_clean, etc.)
-
-**What it is:**
-Output buffering captures all PHP output (echo, HTML, etc.) into memory instead of immediately sending to browser.
-
-**Why some admin pages use it:**
-Admin pages need to handle AJAX requests that return JSON data, not HTML. Output buffering allows pages to:
-1. Capture any debug output or warnings
-2. Process AJAX requests before sending any HTML
-3. Return clean JSON responses without HTML interference
-
-**Example:**
-```php
-<?php
-ob_start();  // Start capturing output
-
-include_once __DIR__ . '/admin/admin_init.php';
-
-// Handle AJAX - exits before HTML is output
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    $result = handleAction($_POST['action']);
-    header('Content-Type: application/json');
-    echo json_encode($result);
-    exit;  // Don't output HTML, just JSON
-}
-
-ob_end_clean();  // Clear captured output, start fresh
-
-// Now output HTML normally
-include_once __DIR__ . '/includes/header.php';
-// ... HTML content
-include_once __DIR__ . '/includes/footer.php';
-?>
-```
-
-**Without output buffering:**
-- If any warnings/notices occur, they'd be output to browser
-- AJAX responses would be mixed with debug messages
-- Responses wouldn't be valid JSON
-
-**With output buffering:**
-- Debug output is captured but discarded
-- AJAX requests return pure JSON
-- HTML pages render cleanly
-
-**Used in:**
-- `admin/manage_organisms.php`
-- `admin/manage_groups.php`
-- `admin/manage_registry.php`
-- `admin/filesystem_permissions.php`
-- Other admin pages that handle AJAX
-
----
-
-## Load Order & Dependencies
-
-The typical include order is important:
-
-1. **config_init.php** - Must be first (loads ConfigManager)
-2. **access_control.php** - After config (needs ConfigManager)
-3. **header.php** - After auth setup (may check permissions)
-4. **Page-specific content**
-5. **footer.php** - Last (closes HTML)
-
-**DO NOT:**
-- Include files out of order
-- Include config_init.php after header.php
-- Include access_control.php before config_init.php
-- Mix include methods (one page uses different order)
+**Critical order:**
+1. **config_init.php** - MUST be first (loads ConfigManager)
+2. **access_control.php** - After config_init (uses ConfigManager)
+3. **layout.php** / **page-setup.php** - After both above
+4. Content or other components
 
 **Why order matters:**
-- ConfigManager must be loaded before anything tries to use it
-- Access control depends on ConfigManager
-- Header needs to know if user is authenticated
+- ConfigManager must exist before config_init.php finishes
+- access_control.php needs ConfigManager to function
+- Page structure needs both config and access control ready
+
+**DO NOT:**
+- ❌ Include header/footer in wrong order
+- ❌ Use ConfigManager before config_init.php
+- ❌ Check permissions before access_control.php
+- ❌ Mix old (head.php) and new (head-resources.php) naming
 
 ---
 
-## Common Mistakes
+## Configuration Integration
 
-### ❌ Wrong: Including in wrong order
-```php
-<?php
-include_once __DIR__ . '/includes/header.php';  // Too early!
-include_once __DIR__ . '/includes/config_init.php';  // Too late!
-?>
-```
+All includes that use configuration do so via ConfigManager:
 
-### ✅ Right: Correct order
-```php
-<?php
-include_once __DIR__ . '/includes/config_init.php';
-include_once __DIR__ . '/includes/header.php';
-?>
-```
+- **page-setup.php**: Gets site title from config
+- **head-resources.php**: Gets favicon and CSS paths from config
+- **banner.php**: Gets banner path from config
+- **navbar.php**: Gets tool info from config
 
-### ❌ Wrong: Calling ConfigManager before including config_init.php
-```php
-<?php
-$config = ConfigManager::getInstance();  // ERROR: Class doesn't exist
-include_once __DIR__ . '/includes/config_init.php';
-?>
-```
+Configuration is never hardcoded - it all goes through ConfigManager.
 
-### ✅ Right: Include first, then use
-```php
-<?php
-include_once __DIR__ . '/includes/config_init.php';
-$config = ConfigManager::getInstance();  // Works!
-?>
-```
-
-### ❌ Wrong: Forgetting ob_start on AJAX page
-```php
-<?php
-// Errors/warnings output to browser as plain text
-echo "ERROR: Connection failed";  
-// Then AJAX tries to parse as JSON - fails
-echo json_encode(['success' => true]);
-?>
-```
-
-### ✅ Right: Using output buffering
-```php
-<?php
-ob_start();  // Capture everything
-// Warnings are captured but discarded
-echo json_encode(['success' => true]);  // Only this is output
-?>
-```
+For configuration details, see `/config/README.md`
 
 ---
 
-## Configuration Reference
+## Security
 
-For complete information about configuration and ConfigManager, see **`config/README.md`**
+### Separation of Concerns
+- **ConfigManager + config_init.php**: Configuration loading only
+- **access_control.php**: User authentication only
+- **layout.php + page-setup.php**: Page structure only
+- Each has one responsibility, making security audits easier
 
-This document covers includes. Configuration documentation is separate because:
-- Configuration is loaded via ConfigManager (in this directory)
-- Configuration files are in config/ directory
-- Documentation belongs with the files it describes
+### Access Control Flow
+```
+Page loads
+    ↓
+config_init.php initializes ConfigManager
+    ↓
+access_control.php checks user
+    ↓
+If valid → page renders
+If invalid → access_control.php exits early
+```
 
----
-
-## Troubleshooting
-
-### "Call to undefined function" or "Class not found"
-- Check that required includes are in place
-- Verify include order is correct
-- Check file paths are correct
-
-### "Headers already sent" error
-- This means HTML was output before you tried to set headers
-- Usually happens with AJAX pages not using output buffering
-- Add `ob_start()` at the top of the page
-
-### "Configuration not loading"
-- Verify config_init.php is included
-- Check that config files exist in config/ directory
-- See config/README.md for configuration troubleshooting
-
-### Page looks broken (missing CSS/styling)
-- head.php wasn't included
-- Check that header.php or head.php is included
-- Verify CSS paths in head.php are correct
+### ConfigManager Security
+- No direct file access in controllers
+- All paths go through ConfigManager
+- Prevents directory traversal attacks
+- Centralizes security logic
 
 ---
 
-## Adding New Includes
-
-When creating a new include file:
-
-1. **Add clear documentation header**
-   ```php
-   <?php
-   /**
-    * File Name - Brief description
-    * 
-    * What this file does
-    * What it requires
-    * How to use it
-    */
-   ```
-
-2. **Check dependencies**
-   - Does it need ConfigManager? Require config_init.php
-   - Does it need auth? Require access_control.php
-
-3. **Follow naming conventions**
-   - Components: `component_name.php` (e.g., `toolbar.php`)
-   - System files: `system_function.php` (e.g., `config_init.php`)
-
-4. **Document in this README**
-   - Add section describing the file
-   - Explain how to use it
-   - Note any dependencies
-
----
-
-## File Reference
+## File Structure Reference
 
 ```
 includes/
-├── ConfigManager.php          # Configuration singleton class
-├── config_init.php            # Bootstrap ConfigManager
-├── access_control.php         # Authentication & authorization
-├── head.php                   # Common <head> content
-├── header.php                 # Full <head> + header + nav
-├── footer.php                 # Footer + page closure
-├── navbar.php                 # Standalone navbar
-├── toolbar.php                # Admin toolbar
-├── banner.php                 # Banner/alert component
-├── README.md                  # This file
-└── navigation.php.backup      # Backup (not used)
+├── ConfigManager.php                # Configuration singleton
+├── config_init.php                  # Bootstrap ConfigManager
+├── access_control.php               # Authentication & authorization
+├── layout.php                       # Page rendering orchestrator
+├── page-setup.php                   # Open HTML page
+├── footer.php                       # Close HTML page
+├── head-resources.php               # CSS/meta/fonts for <head>
+├── navbar.php                       # Header area (banner + toolbar)
+├── banner.php                       # Rotating banner images
+├── toolbar.php                      # Navigation toolbar
+├── source-selector-helpers.php      # Organism/assembly selection logic
+├── source-list.php                  # Source selection UI component
+└── README.md                        # This file
 ```
 
 ---
 
-## Next Steps
+## Common Mistakes & Solutions
 
-1. **Using Configuration:** Refer to `config/README.md` for ConfigManager usage
-2. **Checking Permissions:** Use functions from `access_control.php`
-3. **Building Pages:** Use `header.php` + content + `footer.php`
-4. **Admin Pages:** Use `ob_start()` + AJAX handling + `ob_end_clean()`
-5. **Adding Includes:** Follow the pattern above and document here
+### ❌ "Call to undefined ConfigManager"
+**Cause:** ConfigManager::getInstance() called before config_init.php included
+
+**Fix:**
+```php
+<?php
+include_once __DIR__ . '/config_init.php';  // Include FIRST
+$config = ConfigManager::getInstance();      // Then use
+?>
+```
+
+### ❌ "Cannot modify header information"
+**Cause:** HTML output before setting headers (usually on AJAX pages)
+
+**Fix:** Use output buffering on AJAX pages
+```php
+<?php
+ob_start();  // Capture output
+// ... process
+header('Content-Type: application/json');  // Safe now
+echo json_encode($result);
+?>
+```
+
+### ❌ "Undefined $_SESSION variable"
+**Cause:** access_control.php not included
+
+**Fix:**
+```php
+<?php
+include_once __DIR__ . '/config_init.php';
+include_once __DIR__ . '/access_control.php';  // Include this
+// Now $_SESSION is set
+?>
+```
+
+### ❌ Page looks broken (no styling)
+**Cause:** head-resources.php not included
+
+**Fix:** Use layout.php or page-setup.php which include it automatically
+
+---
+
+## For More Information
+
+- **Configuration details:** See `/config/README.md`
+- **Page architecture:** See `MOOP_COMPREHENSIVE_OVERVIEW.md`
+- **Admin pages:** See `/admin/DEVELOPER_GUIDE.md`
+- **Tools:** See `/tools/DEVELOPER_GUIDE.md`
+
+---
+
+**Last Updated:** January 2026
