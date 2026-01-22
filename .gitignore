@@ -13,6 +13,7 @@ images/*
 tools/not_using/
 notes/
 not_used/
+metadata/*
 
 # Logs
 organisms/*log
