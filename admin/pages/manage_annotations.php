@@ -23,8 +23,10 @@
         
         <p><strong>How It Works:</strong></p>
         <ul>
-          <li>The system automatically scans your organism databases for annotation types</li>
-          <li>It tracks modification timestamps so counts update automatically</li>
+          <li>The system automatically scans your organism databases for annotation types each time you load this page</li>
+          <li>It tracks modification timestamps - if any database is newer than the last scan, it updates automatically</li>
+          <li>New annotation types found in databases are automatically added to the configuration with default settings</li>
+          <li>The display order is automatically maintained, with new types added at the end</li>
           <li>You can customize how each type appears to users</li>
           <li>Reordering here changes how annotations display on gene pages</li>
         </ul>

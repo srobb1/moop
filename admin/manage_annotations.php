@@ -103,6 +103,19 @@ try {
         if (!empty($annotation_config) && isset($annotation_config['annotation_types'])) {
             $annotation_config = syncAnnotationTypes($annotation_config, $all_db_annotation_types);
             
+            // Rebuild annotation_type_order to include all types sorted by order field
+            $type_order = [];
+            foreach ($annotation_config['annotation_types'] as $type_name => $type_config) {
+                $type_order[] = [
+                    'name' => $type_name,
+                    'order' => $type_config['order'] ?? 999
+                ];
+            }
+            usort($type_order, function($a, $b) {
+                return $a['order'] - $b['order'];
+            });
+            $annotation_config['annotation_type_order'] = array_map(function($item) { return $item['name']; }, $type_order);
+            
             // Update the SQLite modification timestamp
             if ($newest_mod_info !== null) {
                 $annotation_config['sqlite_mod_time'] = $newest_mod_info['unix_time'];
