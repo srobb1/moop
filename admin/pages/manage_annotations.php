@@ -202,28 +202,28 @@
                 <h6>Display Color</h6>
                 <div class="btn-group" role="group" style="flex-wrap: wrap; gap: 0.25rem;">
                   <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_primary_<?= htmlspecialchars($type_name) ?>" value="primary" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'primary' ? 'checked' : '' ?> onchange="submitColorForm(this)">
-                  <label class="btn btn-sm" for="color_primary_<?= htmlspecialchars($type_name) ?>" style="background-color: #0d6efd; color: white; border: none; padding: 0.375rem 0.75rem;">Primary</label>
+                  <label class="btn btn-sm" for="color_primary_<?= htmlspecialchars($type_name) ?>" style="background-color: #0d6efd; color: white; border: none; padding: 0.375rem 0.75rem;">Blue</label>
                   
                   <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_secondary_<?= htmlspecialchars($type_name) ?>" value="secondary" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'secondary' ? 'checked' : '' ?> onchange="submitColorForm(this)">
-                  <label class="btn btn-sm" for="color_secondary_<?= htmlspecialchars($type_name) ?>" style="background-color: #6c757d; color: white; border: none; padding: 0.375rem 0.75rem;">Secondary</label>
+                  <label class="btn btn-sm" for="color_secondary_<?= htmlspecialchars($type_name) ?>" style="background-color: #6c757d; color: white; border: none; padding: 0.375rem 0.75rem;">Gray</label>
                   
                   <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_success_<?= htmlspecialchars($type_name) ?>" value="success" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'success' ? 'checked' : '' ?> onchange="submitColorForm(this)">
-                  <label class="btn btn-sm" for="color_success_<?= htmlspecialchars($type_name) ?>" style="background-color: #198754; color: white; border: none; padding: 0.375rem 0.75rem;">Success</label>
+                  <label class="btn btn-sm" for="color_success_<?= htmlspecialchars($type_name) ?>" style="background-color: #198754; color: white; border: none; padding: 0.375rem 0.75rem;">Green</label>
                   
                   <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_danger_<?= htmlspecialchars($type_name) ?>" value="danger" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'danger' ? 'checked' : '' ?> onchange="submitColorForm(this)">
-                  <label class="btn btn-sm" for="color_danger_<?= htmlspecialchars($type_name) ?>" style="background-color: #dc3545; color: white; border: none; padding: 0.375rem 0.75rem;">Danger</label>
+                  <label class="btn btn-sm" for="color_danger_<?= htmlspecialchars($type_name) ?>" style="background-color: #dc3545; color: white; border: none; padding: 0.375rem 0.75rem;">Red</label>
                   
                   <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_warning_<?= htmlspecialchars($type_name) ?>" value="warning" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'warning' ? 'checked' : '' ?> onchange="submitColorForm(this)">
-                  <label class="btn btn-sm" for="color_warning_<?= htmlspecialchars($type_name) ?>" style="background-color: #ffc107; color: black; border: none; padding: 0.375rem 0.75rem;">Warning</label>
+                  <label class="btn btn-sm" for="color_warning_<?= htmlspecialchars($type_name) ?>" style="background-color: #ffc107; color: black; border: none; padding: 0.375rem 0.75rem;">Orange</label>
                   
                   <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_info_<?= htmlspecialchars($type_name) ?>" value="info" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'info' ? 'checked' : '' ?> onchange="submitColorForm(this)">
-                  <label class="btn btn-sm" for="color_info_<?= htmlspecialchars($type_name) ?>" style="background-color: #0dcaf0; color: black; border: none; padding: 0.375rem 0.75rem;">Info</label>
+                  <label class="btn btn-sm" for="color_info_<?= htmlspecialchars($type_name) ?>" style="background-color: #0dcaf0; color: black; border: none; padding: 0.375rem 0.75rem;">Cyan</label>
                   
                   <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_light_<?= htmlspecialchars($type_name) ?>" value="light" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'light' ? 'checked' : '' ?> onchange="submitColorForm(this)">
-                  <label class="btn btn-sm" for="color_light_<?= htmlspecialchars($type_name) ?>" style="background-color: #f8f9fa; color: black; border: 1px solid #dee2e6; padding: 0.375rem 0.75rem;">Light</label>
+                  <label class="btn btn-sm" for="color_light_<?= htmlspecialchars($type_name) ?>" style="background-color: #f8f9fa; color: black; border: 1px solid #dee2e6; padding: 0.375rem 0.75rem;">White</label>
                   
                   <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_dark_<?= htmlspecialchars($type_name) ?>" value="dark" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'dark' ? 'checked' : '' ?> onchange="submitColorForm(this)">
-                  <label class="btn btn-sm" for="color_dark_<?= htmlspecialchars($type_name) ?>" style="background-color: #212529; color: white; border: none; padding: 0.375rem 0.75rem;">Dark</label>
+                  <label class="btn btn-sm" for="color_dark_<?= htmlspecialchars($type_name) ?>" style="background-color: #212529; color: white; border: none; padding: 0.375rem 0.75rem;">Black</label>
                   
                   <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_indigo_<?= htmlspecialchars($type_name) ?>" value="indigo" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'indigo' ? 'checked' : '' ?> onchange="submitColorForm(this)">
                   <label class="btn btn-sm" for="color_indigo_<?= htmlspecialchars($type_name) ?>" style="background-color: #6366f1; color: white; border: none; padding: 0.375rem 0.75rem;">Indigo</label>
