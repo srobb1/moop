@@ -1015,6 +1015,141 @@ On each feature detail page:
 
 ---
 
+## Configuration Management System
+
+MOOP uses a dual-config system with static defaults and dynamic editable overrides:
+
+### Configuration Files
+
+#### site_config.php (Static Defaults)
+**Location:** `/data/moop/config/site_config.php`
+
+- Defines all default configuration values
+- PHP file with hardcoded constants and arrays
+- Never modified by users/admins
+- Contains:
+  - File paths (organism_data, metadata, logs, etc.)
+  - Site title and branding defaults
+  - Feature ID samples
+  - BLAST sample sequences
+  - IP whitelisting rules
+
+**Purpose:** Single source of truth for system paths and default settings
+
+#### config_editable.json (Runtime Overrides)
+**Location:** `/data/moop/config/config_editable.json`
+
+- JSON file with editable configuration values
+- Can be modified through admin UI (manage_site_config.php)
+- Only whitelisted keys can be edited (security)
+- Contains only values that differ from defaults
+- Overrides site_config.php values when present
+
+**Editable Keys (Whitelisted):**
+- `siteTitle` - Site display name
+- `admin_email` - Admin contact email
+- `sequence_types` - Available sequence output formats
+- `header_img` - Header image settings
+- `favicon_filename` - Favicon file
+- `auto_login_ip_ranges` - IP ranges for auto-login
+- `sample_feature_ids` - Example feature IDs for UI
+- `blast_sample_sequences` - Example FASTA sequences
+
+### How They Relate
+
+```
+ConfigManager (includes/ConfigManager.php)
+    ↓
+1. Load defaults from site_config.php
+    ↓
+2. Check if config_editable.json exists
+    ↓
+3. If exists, overlay editable values:
+   For each whitelisted key:
+   - If value in config_editable.json → Use it
+   - Otherwise → Use default from site_config.php
+    ↓
+Final Configuration (merged result)
+```
+
+### Admin Management Interface
+
+#### admin/manage_site_config.php
+**Purpose:** Admin tool to edit configuration
+
+**What It Does:**
+1. **Loads current configuration** from ConfigManager
+   - Shows defaults (site_config.php)
+   - Shows current overrides (config_editable.json)
+   
+2. **Provides editable form fields**
+   - Only for whitelisted keys
+   - Other settings cannot be edited (secure)
+   
+3. **Saves changes**
+   - Writes to config_editable.json only
+   - Never modifies site_config.php
+   - Uses ConfigManager::saveEditableConfig()
+
+4. **Additional Features:**
+   - Banner image upload/management
+   - Settings validation
+   - Changes take effect immediately
+
+### Data Flow
+
+```
+Admin User
+    ↓
+Navigates to: /admin/manage_site_config.php
+    ↓
+admin/manage_site_config.php (controller)
+├─ Loads current config via ConfigManager
+├─ Validates admin permissions
+└─ Calls admin/pages/manage_site_config.php (view)
+    ↓
+admin/pages/manage_site_config.php (view)
+├─ Displays form with current values
+├─ Shows editable fields only
+└─ Includes file upload for banners
+    ↓
+User submits form
+    ↓
+Admin handles POST request
+├─ Validates input
+├─ Calls ConfigManager::saveEditableConfig()
+└─ Writes to config_editable.json
+    ↓
+Next page load
+    ↓
+ConfigManager loads merged config:
+├─ site_config.php (defaults)
+└─ config_editable.json (overrides)
+```
+
+### Security & Best Practices
+
+**Static Separation:**
+- `site_config.php` - Never edited, version controlled, production defaults
+- `config_editable.json` - Only edited via admin UI, user-customizable
+
+**Whitelist System:**
+- Only specific keys can be edited
+- Prevents accidental modification of critical paths
+- Defined in ConfigManager::$editableConfigKeys
+
+**File Permissions:**
+- `site_config.php` - Version controlled, read-only after deployment
+- `config_editable.json` - Writable by web server (www-data)
+- Allows user customization without code changes
+
+**No Direct Edit:**
+- Users should NOT manually edit these files
+- All changes go through admin UI (manage_site_config.php)
+- Ensures validation and consistency
+
+---
+
 ## Tools & Features
 
 ### User-Facing Tools
