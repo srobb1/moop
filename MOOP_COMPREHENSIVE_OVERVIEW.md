@@ -149,6 +149,7 @@
 │       └── setup_new_db_and_load_data_fast_per_org.sh # Bash setup script
 │
 ├── includes/                         # Shared includes
+│   ├── README.md                     # Include system reference documentation
 │   ├── layout.php                    # HTML template/layout wrapper
 │   ├── ConfigManager.php             # Configuration manager class
 │   ├── access_control.php            # Permission helpers & IP validation
@@ -163,6 +164,10 @@
 │   └── source-selector-helpers.php   # Source selection helper functions
 │
 ├── tools/                            # User-facing tools
+│   ├── README.md                     # (via DEVELOPER_GUIDE.md)
+│   ├── DEVELOPER_GUIDE.md            # Tool development guide
+│   ├── BLAST_TOOL_README.md          # BLAST tool documentation
+│   ├── BLAST_QUICK_REFERENCE.md      # BLAST quick reference
 │   ├── organism.php                  # Organism display controller
 │   ├── assembly.php                  # Assembly display controller
 │   ├── parent.php                    # Feature detail controller
