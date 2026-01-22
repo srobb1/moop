@@ -122,8 +122,7 @@
 │   ├── organism_checklist.php        # Organism setup checklist
 │   ├── pages/                        # Admin page templates
 │   ├── api/                          # Admin API endpoints
-│   ├── tools/                        # Admin-specific utilities
-│   └── css/                          # Admin-specific styles
+│   └── tools/                        # Admin-specific utilities
 │
 ├── config/                           # Configuration files
 │   ├── site_config.php               # Site settings (paths, titles)
