@@ -40,6 +40,7 @@
         
         <p><strong>Available Tools:</strong></p>
         <ul class="mb-0">
+          <li><strong>New Organism Setup Checklist</strong> - Step-by-step guide for adding new organisms with links to admin tools</li>
           <li><strong>Manage Site Configuration</strong> - Edit site title, admin email, and appearance settings</li>
           <li><strong>Manage Users</strong> - Create collaborator accounts and control access</li>
           <li><strong>Manage Organisms</strong> - View and manage all organism data</li>
@@ -85,6 +86,18 @@
   <div class="mt-5">
     <h3 class="mb-3"><i class="fa fa-database"></i> Data Management</h3>
     <div class="row">
+      <div class="col-md-6 mb-3">
+        <div class="card h-100 border-success">
+          <div class="card-header bg-success bg-opacity-10">
+            <h5 class="card-title mb-0"><i class="fa fa-clipboard-list"></i> New Organism Setup Checklist</h5>
+          </div>
+          <div class="card-body">
+            <p class="card-text">Step-by-step guide for adding a new organism with quick links to all required admin tools.</p>
+            <a href="organism_checklist.php" class="btn btn-success">Go to Setup Checklist</a>
+          </div>
+        </div>
+      </div>
+      
       <div class="col-md-6 mb-3">
         <div class="card h-100">
           <div class="card-body">
