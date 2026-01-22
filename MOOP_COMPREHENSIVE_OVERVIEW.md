@@ -119,7 +119,6 @@
 │   ├── manage_filesystem_permissions.php # Diagnose & fix file permissions
 │   ├── manage_registry.php           # Function registry management
 │   ├── manage_js_registry.php        # JavaScript registry management
-│   ├── debug_permissions.php         # Permission debugging tool
 │   ├── organism_checklist.php        # Organism setup checklist
 │   ├── pages/                        # Admin page templates
 │   ├── api/                          # Admin API endpoints
