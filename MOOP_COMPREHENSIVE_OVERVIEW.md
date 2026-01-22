@@ -174,7 +174,6 @@
 │   │  ├── retrieve_sequences.php    # Sequence download page
 │   │  ├── retrieve_selected_sequences.php # Selected sequences page
 │   │  └── [other page templates]    # Additional pages
-│   └── includes/                     # Empty directory (currently unused)
 │
 ├── lib/                              # Library functions (shared)
 │   ├── display_functions.php         # Core display rendering helpers
