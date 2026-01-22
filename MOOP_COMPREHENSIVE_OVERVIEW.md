@@ -121,8 +121,7 @@
 │   ├── manage_js_registry.php        # JavaScript registry management
 │   ├── organism_checklist.php        # Organism setup checklist
 │   ├── pages/                        # Admin page templates
-│   ├── api/                          # Admin API endpoints
-│   └── tools/                        # Admin-specific utilities
+│   └── api/                          # Admin API endpoints
 │
 ├── config/                           # Configuration files
 │   ├── site_config.php               # Site settings (paths, titles)
