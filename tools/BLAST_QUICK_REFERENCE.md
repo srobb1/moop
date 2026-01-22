@@ -1,107 +1,206 @@
-# BLAST Tool - Quick Reference
+# BLAST Search Tool - Quick Reference
 
 ## 🚀 Quick Start for Users
 
-1. **Access the tool**: Click "BLAST Search" from any page's Tools section, or go to `/moop/tools/blast/index.php`
-2. **Paste sequence**: Enter your DNA or protein sequence (FASTA format or raw)
-3. **Choose program**: Select BLASTn, BLASTp, BLASTx, tBLASTn, or tBLASTx
-4. **Select database**: Pick assembly → database automatically updates
-5. **Search**: Click "Search" button to run
+### Access the Tool
+- Navigate to: `/moop/tools/blast.php`
+- Or click "BLAST Search" from any page's Tools menu
 
-## 🔍 Quick Reference for Developers
+### Basic Steps
+1. **Select organism** from dropdown
+2. **Select assembly** (auto-filters for selected organism)
+3. **Paste sequence** (FASTA or raw DNA/protein)
+4. **Choose BLAST program** (BLASTn, BLASTp, BLASTx, tBLASTn, tBLASTx)
+5. **Click Search** button
+6. **View results** displayed below
 
-### Using BLAST Functions
+### Example
 
-```php
-include_once __DIR__ . '/tools/blast_functions.php';
-
-// Get databases for an assembly
-$dbs = getBlastDatabases('/path/to/assembly');
-
-// Filter for program type
-$compatible = filterDatabasesByProgram($dbs, 'blastp');
-
-// Run search
-$result = executeBlastSearch($seq, '/db/path', 'blastp', 
-    ['evalue' => '1e-6', 'max_hits' => 50]);
-
-// Extract sequences
-$extract = extractSequencesFromBlastDb('/db/path', ['seq1', 'seq2']);
-
-// Validate input
-$valid = validateBlastSequence($user_input);
+**Input:**
+```
+Organism: Homo sapiens
+Assembly: GRCh38 (hg38)
+Program: BLASTp
+Sequence: MGHFDDRRGGYVASSDPDEQAEVERRL...
 ```
 
-## 📊 Database Compatibility Matrix
+**Output:** Table with matches sorted by E-value
 
-| Program | Input Type | Database Type | File Extension |
-|---------|-----------|---------------|----------------|
-| BLASTn | DNA | Nucleotide | .nhr + .nin/.nal + .nsq |
-| BLASTp | Protein | Protein | .phr + .pin/.pal + .psq |
-| BLASTx | DNA (→Protein) | Protein | .phr + .pin/.pal + .psq |
-| tBLASTn | Protein (→DNA) | Nucleotide | .nhr + .nin/.nal + .nsq |
-| tBLASTx | DNA | Nucleotide | .nhr + .nin/.nal + .nsq |
+---
 
-## 🔧 Troubleshooting
+## 📊 Program Reference
 
-### "No compatible databases found"
-- Verify BLAST+ is installed: `which blastp`
-- Check database files exist: `ls -l /path/to/organism/*/.*hr`
-- Verify file permissions: `ls -l /path/to/*.nhr`
+| Program | Input Type | Database | Best For |
+|---------|-----------|----------|----------|
+| **BLASTn** | DNA sequence | Nucleotide | Finding similar DNA |
+| **BLASTp** | Protein sequence | Protein | Finding similar proteins |
+| **BLASTx** | DNA sequence (→protein) | Protein | Finding protein matches for gene |
+| **tBLASTn** | Protein (→DNA) | Nucleotide | Finding genes for protein |
+| **tBLASTx** | DNA (→DNA) | Nucleotide | Finding DNA matches with translation |
 
-### "BLAST database not found"
-- Ensure database basename matches: `/path/to/db.nhr`, `/path/to/db.nin`, etc.
-- Check all required files exist together
-- Don't include extension in database path
+---
 
-### "You do not have access to the selected assembly"
-- Verify assembly is in your user's access list
-- Contact administrator if you should have access
+## 🔧 Advanced Options
+
+When you need fine-tuning:
+
+- **E-value:** Confidence threshold (default: 1e-6)
+  - Higher = more results, lower quality (1e-3)
+  - Lower = fewer results, higher quality (1e-100)
+
+- **Max Hits:** Number of matches to show (default: 50)
+  - Larger = more results, slower search
+  - Smaller = faster search
+
+- **Matrix:** Scoring system (for protein only)
+  - BLOSUM62: General purpose (default)
+  - BLOSUM80: Similar sequences
+  - BLOSUM45: Distant sequences
+
+- **Complexity Filter:** Remove low-complexity regions (default: yes)
+  - Removes repetitive/simple sequences
+  - Usually improves specificity
+
+---
+
+## 🔍 Common Use Cases
+
+### Find homologous genes
+```
+Program: BLASTn
+Input: Known gene sequence (DNA)
+Result: Find similar genes in database
+```
+
+### Find protein family members
+```
+Program: BLASTp
+Input: Protein sequence
+Result: Find similar proteins across organisms
+```
+
+### Find gene for a protein
+```
+Program: tBLASTn
+Input: Protein sequence
+Result: Find genes that encode similar proteins
+```
+
+### Find protein-coding regions in DNA
+```
+Program: BLASTx
+Input: DNA sequence
+Result: Find where it matches known proteins
+```
+
+---
 
 ## 📁 File Structure
 
 ```
-/moop/tools/
-├── blast_functions.php          ← Core BLAST functions (NEW)
-├── blast/
-│   └── index.php               ← BLAST search interface (NEW)
-├── extract/
-│   ├── fasta_extract.php       ← Uses blast_functions.php
-│   └── download_fasta.php      ← Uses blast_functions.php
-├── display/
-│   └── sequences_display.php   ← Uses blast_functions.php
-├── tool_config.php             ← BLAST registered here
-└── BLAST_TOOL_README.md        ← Full documentation
+/data/moop/
+├── tools/
+│   ├── blast.php                    ← Controller
+│   ├── pages/blast.php              ← View template
+│   └── BLAST_*.md                   ← Documentation
+│
+└── lib/
+    ├── blast_functions.php          ← Core functions
+    └── blast_results_visualizer.php ← Result formatting
 ```
 
-## 🎯 Key Features
+---
 
-- **Dynamic filtering**: Database list updates based on BLAST program
-- **Access control**: Only shows accessible assemblies
-- **Responsive UI**: Works on desktop and mobile
-- **Advanced options**: E-value, matrix, hit count, complexity filter
-- **Result download**: Export results as HTML file
+## 💻 For Developers
+
+### Include Functions
+
+```php
+include_once __DIR__ . '/../lib/blast_functions.php';
+```
+
+### Get Databases
+
+```php
+$dbs = getBlastDatabases('/organism_data/Organism/Assembly');
+```
+
+### Filter by Program
+
+```php
+$compatible = filterDatabasesByProgram($dbs, 'blastp');
+```
+
+### Run Search
+
+```php
+$result = executeBlastSearch(
+    $sequence,           // FASTA or raw
+    '/path/to/database',
+    'blastp',            // program name
+    [                    // options
+        'evalue' => '1e-6',
+        'max_target_seqs' => 50
+    ]
+);
+```
+
+### Validate Sequence
+
+```php
+$valid = validateBlastSequence($user_input);
+if (!$valid['success']) {
+    echo "Error: " . $valid['message'];
+}
+```
+
+---
 
 ## ⚡ Performance Tips
 
-- Use higher e-value (less stringent) for quick screening
-- Use lower e-value (more stringent) for focused searches
-- Reduce max hits for faster results on large databases
-- BLASTn is typically fastest, BLASTp slowest
+### Faster Searches
+- Use higher E-value (less stringent)
+- Reduce max hits
+- Search smaller databases
+- Use BLASTn (fastest)
 
-## 🔒 Security Features
+### More Sensitive
+- Use lower E-value (more stringent)
+- Increase max hits
+- Use appropriate program for sequence type
 
-- User permissions respected
-- SQL injection prevention (proper escaping)
-- BASH command injection prevention (escapeshellarg)
-- Input validation before execution
-- Error messages don't expose system paths
+### Typical Times
+- BLASTn on small DB: < 1 sec
+- BLASTp on large DB: 10-30 sec
+- tBLASTx on large DB: 30+ sec
 
-## 📞 Support
+---
 
-For issues:
-1. Check BLAST_TOOL_README.md for detailed docs
-2. Verify database setup (see "Database Format Requirements")
-3. Check server logs: `/var/log/apache2/error.log`
-4. Verify BLAST+ installation: `blastp -version`
+## ❓ Troubleshooting
 
+| Problem | Solution |
+|---------|----------|
+| "No databases found" | Databases not created for assembly |
+| "Assembly not accessible" | No permission for that assembly |
+| "Invalid sequence format" | Use FASTA or raw ACGT/amino acids |
+| "BLAST search failed" | Check `/data/moop/logs/error.log` |
+| "Empty results" | No matches found - try different E-value |
+
+---
+
+## 🔐 Security
+
+- ✓ Access control enforced
+- ✓ Input validation required
+- ✓ Command injection prevention
+- ✓ Errors don't expose system paths
+
+---
+
+## 📚 Full Documentation
+
+For complete details, see `BLAST_TOOL_README.md` or `DEVELOPER_GUIDE.md`
+
+---
+
+**Last Updated:** January 2026

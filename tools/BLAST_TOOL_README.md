@@ -1,301 +1,410 @@
-# BLAST Tool Implementation
+# BLAST Search Tool
 
 ## Overview
 
-The BLAST tool has been modernized to:
-1. **Match the existing style** of other MOOP tools (FASTA download, search tools)
-2. **Use centralized BLAST functions** shared across the application
-3. **Integrate with the toolbox system** for consistent UI/UX
-4. **Respect permission/access controls** for assemblies and databases
-5. **Dynamically filter databases** based on BLAST program type
+The BLAST Search tool integrates BLAST+ sequence searching into MOOP. Users can search sequences against organism databases while respecting access permissions and group/organism context.
+
+---
 
 ## Architecture
 
-### New Files Created
+### Controller & View Pattern
 
-#### `/data/moop/tools/blast_functions.php`
-Centralized BLAST utilities used across the application:
+**Controller:** `/data/moop/tools/blast.php`
+- Initializes tool environment
+- Loads accessible assemblies
+- Handles form submission
+- Processes BLAST searches
+- Prepares data for view
+- Calls layout system
 
-- **`getBlastDatabases($assembly_path)`** - Scans assembly directory for BLAST databases
-  - Returns array of available databases with type (nucleotide/protein)
-  - Used by BLAST interface and other tools
+**View:** `/data/moop/tools/pages/blast.php`
+- Renders source selector (organism/assembly)
+- Renders BLAST program selector
+- Renders sequence input form
+- Displays BLAST results
+- Includes JavaScript for interactivity
 
-- **`filterDatabasesByProgram($databases, $blast_program)`** - Filters databases by compatibility
-  - BLASTn, tBLASTn, tBLASTx work with nucleotide databases
-  - BLASTp, BLASTx work with protein databases
-  - Used to show only compatible databases in the UI
+### Libraries Used
 
-- **`executeBlastSearch($query_seq, $blast_db, $program, $options)`** - Runs BLAST command
-  - Takes FASTA sequence, database path, program, and options
-  - Returns structured result with output, error messages, and exit code
-  - Handles proper command escaping and error handling
+**lib/blast_functions.php**
+- `getBlastDatabases($assembly_path)` - Scan for BLAST databases
+- `filterDatabasesByProgram($databases, $blast_program)` - Filter by compatibility
+- `executeBlastSearch($query_seq, $db_path, $program, $options)` - Run BLAST
+- `validateBlastSequence($sequence)` - Validate input sequence
 
-- **`extractSequencesFromBlastDb($blast_db, $sequence_ids)`** - Extracts sequences via blastdbcmd
-  - Previously duplicated in fasta_extract.php, download_fasta.php, sequences_display.php
-  - Now consolidated and shared across all tools
+**lib/blast_results_visualizer.php**
+- Format BLAST XML results for display
+- Create HTML result tables
+- Highlight alignments
 
-- **`validateBlastSequence($sequence)`** - Validates FASTA input
-  - Checks for valid format
-  - Automatically adds FASTA header if missing
-  - Returns validation result with error message
+**lib/extract_search_helpers.php**
+- Sequence extraction helpers
+- Search utilities
 
-#### `/data/moop/tools/blast/index.php`
-Modern BLAST search interface:
+**includes/source-selector-helpers.php**
+- Source selection logic
+- Assembly filtering by context
 
-**Features:**
-- Responsive design matching existing FASTA download tool style
-- BLAST program selector (BLASTn, BLASTp, BLASTx, tBLASTn, tBLASTx)
-- Assembly selector with scrollable list
-- **Database list that updates dynamically** based on:
-  - Selected assembly
-  - Selected BLAST program (filters to compatible databases)
-- Advanced options: E-value, max hits, scoring matrix, low complexity filtering
-- Sequence validation before search
-- HTML results display with download option
+---
 
-**Access Control:**
-- Uses `getAccessibleAssemblies()` to respect user permissions
-- Only shows assemblies the user has access to
-- Validates assembly access before executing search
+## How It Works
 
-**User Experience:**
-- Auto-selects first assembly and updates database list
-- Database list grouped by type (nucleotide/protein)
-- Clear error messaging
-- Sequence input accepts both FASTA format and raw sequence
-- Results displayed inline with option to download
+### Data Flow
 
-### Modified Files
-
-#### `/data/moop/tools/tool_config.php`
-Added BLAST search tool to the toolbox system:
-```php
-'blast_search' => [
-    'id' => 'blast_search',
-    'name' => 'BLAST Search',
-    'icon' => 'fa-dna',
-    'description' => 'Search sequences against databases',
-    'btn_class' => 'btn-warning',
-    'url_path' => '/tools/blast/index.php',
-    'context_params' => [],
-    'pages' => 'all',
-]
+```
+User visits /tools/blast.php
+    ↓
+blast.php (controller) loads:
+├─ Configuration (organisms, sequences types, etc.)
+├─ Tool initialization (tool_init.php)
+├─ Access control (user permissions)
+├─ Accessible assemblies (respect user access)
+└─ BLAST libraries (blast_functions.php, etc.)
+    ↓
+Prepare data:
+├─ Get context (organism, assembly, group if provided)
+├─ Build source selector options
+├─ Prepare BLAST program choices
+└─ Load layout system
+    ↓
+render_display_page() calls layout.php with:
+├─ Content file: pages/blast.php
+├─ Data array with sources, programs, etc.
+└─ Page title
+    ↓
+pages/blast.php (view) displays:
+├─ Source selector (organism/assembly picker)
+├─ BLAST program selector
+├─ Sequence input textarea
+├─ Advanced options (evalue, maxhits, matrix)
+└─ Results if search was performed
+    ↓
+User enters sequence and selects:
+├─ BLAST program (BLASTn, BLASTp, etc.)
+├─ Organism/Assembly
+└─ Advanced options
+    ↓
+Form submitted to POST
+    ↓
+blast.php handles POST:
+├─ Validate sequence format
+├─ Validate selected assembly (access check)
+├─ Get database path from assembly
+├─ Execute BLAST search via executeBlastSearch()
+├─ Format results via blast_results_visualizer
+└─ Pass results back to view
+    ↓
+pages/blast.php displays results
 ```
 
-Now appears in the tools section on all display pages (organism, assembly, features, etc.)
+---
 
-#### `/data/moop/tools/extract/fasta_extract.php`
-- Replaced inline blastdbcmd code with call to `extractSequencesFromBlastDb()`
-- Cleaner, more maintainable code
-- Consistent error handling
+## BLAST Program Compatibility
 
-#### `/data/moop/tools/extract/download_fasta.php`
-- Replaced inline blastdbcmd code with call to `extractSequencesFromBlastDb()`
-- Improved error logging
-- Cleaner code flow
+| Program | Input | Database | Use Case |
+|---------|-------|----------|----------|
+| **BLASTn** | DNA | Nucleotide | DNA vs DNA |
+| **BLASTp** | Protein | Protein | Protein vs Protein |
+| **BLASTx** | DNA (→Protein) | Protein | DNA translated vs Protein |
+| **tBLASTn** | Protein (→DNA) | Nucleotide | Protein vs DNA translated |
+| **tBLASTx** | DNA (→DNA) | Nucleotide | DNA translated vs DNA translated |
 
-#### `/data/moop/tools/display/sequences_display.php`
-- Replaced inline blastdbcmd code with call to `extractSequencesFromBlastDb()`
-- Better error handling and messaging
-- Code consistency
+### Database Requirements
 
-## Key Features
+BLAST databases are created during organism setup with:
+- `create_schema_sqlite.sql` - SQLite schema
+- `import_genes_sqlite.pl` - Import gene data
+- `load_annotations_fast.pl` - Load annotations
+- `setup_new_db_and_load_data_fast_per_org.sh` - Orchestration
 
-### 1. Dynamic Database Filtering
-
-The BLAST program selector automatically updates the available database list:
-
-```javascript
-// When user changes BLAST program
-function updateDatabaseList() {
-    const selectedProgram = document.getElementById('blast_program').value;
-    const allDatabases = /* databases for selected assembly */;
-    
-    // Filter databases by program compatibility
-    const compatible = allDatabases.filter(db => {
-        if (['blastp', 'blastx'].includes(program)) 
-            return db.type === 'protein';
-        if (['blastn', 'tblastn', 'tblastx'].includes(program)) 
-            return db.type === 'nucleotide';
-        return true;
-    });
-}
+Database files for each assembly:
+```
+/organism_data/Organism/Assembly/
+├── *.nhr, *.nin, *.nsq    (nucleotide BLAST databases)
+└── *.phr, *.pin, *.psq    (protein BLAST databases)
 ```
 
-### 2. Access Control Integration
+---
 
-The tool respects MOOP's assembly access system:
+## Using the BLAST Tool
 
-```php
-// Get only assemblies user has access to
-$sources_by_group = getAccessibleAssemblies();
+### For End Users
 
-// Verify access before executing search
-$selected_source = null;
-foreach ($accessible_sources as $source) {
-    if ($source['assembly'] === $selected_assembly) {
-        $selected_source = $source;
-        break;
-    }
-}
+1. **Access the Tool**
+   - Click "BLAST Search" from any page's Tools menu
+   - Or navigate directly to `/moop/tools/blast.php`
 
-if (!$selected_source) {
-    $search_error = "You do not have access to the selected assembly.";
-}
-```
+2. **Select Source**
+   - Choose organism from dropdown
+   - Choose assembly (auto-filters from selected organism)
+   - Available assemblies depend on user permissions
 
-### 3. Unified BLAST Function Library
+3. **Enter Sequence**
+   - Paste FASTA format: `>header\nACGT...`
+   - Or paste raw sequence: `ACGT...`
+   - Tool auto-detects and validates
 
-All BLAST operations now use centralized functions:
+4. **Choose Program**
+   - Select BLAST program (BLASTn, BLASTp, BLASTx, tBLASTn, tBLASTx)
+   - Automatically filters compatible databases
 
-| Previous Location | Function | New Location |
-|---|---|---|
-| fasta_extract.php (inline) | Extract sequences | blast_functions.php |
-| download_fasta.php (inline) | Extract sequences | blast_functions.php |
-| sequences_display.php (inline) | Extract sequences | blast_functions.php |
-| blast/old/ files | BLAST execution | blast_functions.php |
+5. **Optional: Advanced Settings**
+   - E-value threshold (default: 1e-6)
+   - Max number of hits (default: 50)
+   - Scoring matrix (for protein searches)
+   - Low complexity filtering (yes/no)
 
-## Usage
+6. **Search**
+   - Click "Search" button
+   - Results display below after search completes
 
-### For Users
-
-1. Navigate to BLAST Search from the tools menu or any organism/assembly page
-2. Paste DNA or protein sequence (FASTA format or raw)
-3. Select BLAST program (automatically filters compatible databases)
-4. Choose assembly and database
-5. Adjust advanced options if needed
-6. Click "Search" to execute
-7. View results inline or download as HTML
+7. **Download Results**
+   - Results shown in HTML table format
+   - Can copy/save from browser
 
 ### For Developers
 
-#### Using BLAST Functions
+#### Including BLAST Functions
 
 ```php
-include_once __DIR__ . '/../blast_functions.php';
-
-// Get databases for an assembly
-$databases = getBlastDatabases('/path/to/assembly');
-
-// Filter for specific program
-$protein_dbs = filterDatabasesByProgram($databases, 'blastp');
-
-// Execute search
-$result = executeBlastSearch(
-    $sequence,
-    '/path/to/database',
-    'blastp',
-    ['evalue' => '1e-6', 'max_hits' => 50]
-);
-
-if ($result['success']) {
-    echo $result['output'];
-} else {
-    echo "Error: " . $result['error'];
-}
-
-// Extract sequences
-$extract = extractSequencesFromBlastDb(
-    '/path/to/database',
-    ['seq1', 'seq2', 'seq3']
-);
+include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/blast_results_visualizer.php';
 ```
 
-#### Adding BLAST to Toolbox
-
-BLAST is already registered in `tool_config.php` and appears in the tools section on all pages. To show it on specific pages only, modify:
+#### Getting Available Databases
 
 ```php
-'pages' => ['organism', 'assembly'],  // Show only on these pages
+$assembly_path = '/data/moop/organism_data/Homo_sapiens/GRCh38';
+$databases = getBlastDatabases($assembly_path);
+
+// Returns array like:
+// [
+//   'refseq_rna' => ['type' => 'nucleotide', 'path' => '...'],
+//   'proteins' => ['type' => 'protein', 'path' => '...'],
+//   ...
+// ]
 ```
 
-## Design Decisions
+#### Filtering Databases by Program
 
-### 1. Centralized Functions
-Rather than duplicating blastdbcmd code across multiple files, all BLAST operations are in one file. This:
-- Reduces code duplication
-- Makes maintenance easier
-- Ensures consistent error handling
-- Allows for easier future improvements
+```php
+$compatible_dbs = filterDatabasesByProgram($databases, 'blastp');
+// Returns only protein databases for BLASTp
+```
 
-### 2. Dynamic Database Filtering
-Database lists are filtered by BLAST program type in JavaScript to:
-- Provide immediate user feedback
-- Prevent invalid program/database combinations
-- Improve user experience
+#### Running a BLAST Search
 
-### 3. Access Control at Multiple Levels
-- Assembly-level filtering (only accessible assemblies shown)
-- Runtime validation (verify access before search)
-- This ensures consistency with other MOOP tools
+```php
+$query = '>test\nMGHFDDRRGGYVASSDPDEQAEVRERL...';
+$db_path = '/data/moop/organism_data/Homo_sapiens/GRCh38/proteins';
+$options = [
+    'evalue' => '1e-6',
+    'max_target_seqs' => 50,
+    'matrix' => 'BLOSUM62',  // for protein
+    'dust' => 'yes'
+];
 
-### 4. Responsive Design
-The interface uses Bootstrap and custom CSS matching:
-- FASTA download tool styling
-- Existing color scheme
-- Accessibility best practices
+$result = executeBlastSearch($query, $db_path, 'blastp', $options);
 
-## Database Format Requirements
+// Returns:
+// [
+//   'success' => true,
+//   'output' => '<XML...>',
+//   'error' => '',
+//   'exit_code' => 0
+// ]
+```
 
-BLAST databases must follow standard NCBI format:
+#### Displaying Results
 
-**Nucleotide Databases:**
-- `.nhr` - Header file (required)
-- `.nin` - Index file (required) OR `.nal` - Alias list
-- `.nsq` - Sequence file (required)
+```php
+$html_results = formatBlastResults($result['output']);
+echo $html_results;
+```
 
-**Protein Databases:**
-- `.phr` - Header file (required)
-- `.pin` - Index file (required) OR `.pal` - Alias list
-- `.psq` - Sequence file (required)
+---
 
-The `getBlastDatabases()` function automatically detects and lists available databases.
+## Configuration
 
-## Future Enhancements
+The BLAST tool uses configuration from ConfigManager:
 
-Possible improvements:
-1. Multi-sequence BLAST searches (fasta input with multiple sequences)
-2. BLAST job queue/background processing for long searches
-3. Results visualization and alignment viewing
-4. Saved search history
-5. Custom BLAST parameter presets
-6. Export results in multiple formats (CSV, JSON, etc.)
+```php
+$config = ConfigManager::getInstance();
+
+// Get paths
+$organism_data = $config->getPath('organism_data');
+$metadata_path = $config->getPath('metadata_path');
+
+// Get settings
+$sequence_types = $config->getSequenceTypes();
+$site_title = $config->getString('siteTitle');
+```
+
+---
+
+## File Structure
+
+```
+tools/
+├── blast.php                        # BLAST controller
+├── pages/
+│   └── blast.php                    # BLAST view template
+├── BLAST_TOOL_README.md             # This file
+├── BLAST_QUICK_REFERENCE.md         # Quick reference guide
+└── DEVELOPER_GUIDE.md               # General tools guide
+
+lib/
+├── blast_functions.php              # BLAST functions
+├── blast_functions.php.backup       # Backup of functions
+├── blast_results_visualizer.php     # Result formatting
+├── extract_search_helpers.php       # Search helpers
+└── [other library files]
+```
+
+---
+
+## Security Features
+
+### Access Control
+
+- Respects user permissions for assemblies
+- Only shows assemblies user can access
+- Validates assembly access before executing search
+
+### Input Validation
+
+- Validates FASTA format before executing
+- Auto-adds FASTA header if missing
+- Validates sequence characters (ATGC for DNA, standard amino acids for protein)
+
+### Command Security
+
+- Uses `escapeshellarg()` for all BLAST arguments
+- Prevents command injection
+- Validates database paths
+
+### Error Handling
+
+- Errors logged to `/data/moop/logs/error.log`
+- User-friendly error messages (no system paths exposed)
+- Graceful failure on missing databases
+
+---
 
 ## Troubleshooting
 
-### "Selected BLAST database not found"
-- Verify database files exist in assembly directory
-- Check database naming follows NCBI format
-- Ensure .nhr/.phr and .nin/.pin or .nal/.pal files present
+### "No databases found for this assembly"
 
-### "No compatible databases found for this program"
-- Verify BLAST program is correctly selecting
-- Check assembly has databases of compatible type
-- For BLASTp/BLASTx - need protein databases (.phr)
-- For BLASTn/tBLASTn/tBLASTx - need nucleotide databases (.nhr)
+**Causes:**
+- Assembly doesn't have BLAST databases created yet
+- BLAST+ not installed on server
+- Database files corrupted or missing
 
-### "BLAST execution failed"
-- Check BLAST+ is installed on the server: `which blastp`
-- Verify database files are readable: `ls -l database.*`
-- Check BLAST can access database: `blastdbinfo -db /path/to/database`
+**Solution:**
+- Verify BLAST+ is installed: `which blastp`
+- Check files exist: `ls -la /organism_data/Organism/Assembly/`
+- Recreate databases using setup scripts
 
-### "No sequences found for requested IDs"
-- Verify sequence IDs match exactly (case-sensitive)
-- Check sequence IDs exist in database: `blastdbcmd -db ... -info`
-- Check for leading/trailing whitespace in IDs
+### "Selected assembly not accessible"
 
-## Testing
+**Causes:**
+- User doesn't have permission for assembly
+- Assembly removed from user's access list
 
-All modified files have been validated for:
-- PHP syntax correctness
-- Function availability
-- Integration with existing code
-- Access control flow
+**Solution:**
+- Contact administrator
+- Check user permissions in admin interface
 
-To test the BLAST tool:
-1. Ensure assemblies with BLAST databases exist
-2. Navigate to `/moop/tools/blast/index.php`
-3. Verify assemblies appear in the selector
-4. Verify database list updates when BLAST program changes
-5. Test with a sample sequence
+### "Invalid sequence format"
 
+**Causes:**
+- Sequence contains invalid characters
+- Malformed FASTA header
+- Empty sequence
+
+**Solution:**
+- Ensure FASTA format: `>header\nACGT...`
+- Or just raw sequence: `ACGTACGT...`
+- Remove special characters (numbers, symbols)
+- Ensure non-empty
+
+### "BLAST search failed"
+
+**Causes:**
+- BLAST+ not installed
+- Database corrupted
+- Server system error
+- Timeout on large sequences
+
+**Solution:**
+- Check server logs: `/data/moop/logs/error.log`
+- Try smaller sequence or different database
+- Contact system administrator
+
+### "Empty results"
+
+**Causes:**
+- No matches found (expected)
+- E-value threshold too stringent
+- Wrong sequence type for database
+
+**Solution:**
+- Try lower E-value threshold (less stringent, more results)
+- Verify program matches sequence type
+- Try different assembly/database
+
+---
+
+## Performance Considerations
+
+### Query Size
+- Small sequences (< 500bp): Fast
+- Medium sequences (500bp - 5kb): Moderate
+- Large sequences (> 5kb): Can take minutes
+
+### Database Size
+- Smaller databases: Faster
+- Larger databases (whole genomes): Slower
+
+### Optimization Tips
+
+1. **For Speed:**
+   - Use higher E-value (less stringent, faster)
+   - Reduce max hits requested
+   - Search against smaller assemblies
+
+2. **For Sensitivity:**
+   - Use lower E-value (more stringent, slower)
+   - Enable low complexity filtering
+   - Use appropriate matrix (BLOSUM62 for protein)
+
+3. **Typical Times:**
+   - BLASTn on small database: < 1 second
+   - BLASTp on large database: 10-30 seconds
+   - tBLASTx on large database: 30+ seconds
+
+---
+
+## Future Enhancements
+
+- [ ] Result caching for identical searches
+- [ ] Batch search (multiple sequences at once)
+- [ ] Result export (CSV, TSV, XML)
+- [ ] Search history and saved searches
+- [ ] Database selection by custom criteria
+- [ ] Advanced scoring options
+- [ ] Result filtering and sorting UI
+
+---
+
+## Related Documentation
+
+- **Tools Development:** See `DEVELOPER_GUIDE.md`
+- **Page Architecture:** See `MOOP_COMPREHENSIVE_OVERVIEW.md`
+- **Configuration:** See `/config/README.md`
+- **BLAST Quick Reference:** See `BLAST_QUICK_REFERENCE.md`
+
+---
+
+**Last Updated:** January 2026
