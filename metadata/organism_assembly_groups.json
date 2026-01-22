@@ -31,5 +31,13 @@
             "Bats",
             "New"
         ]
+    },
+    {
+        "organism": "Chamaeleo_calyptratus",
+        "assembly": "CCA3",
+        "groups": [
+            "New",
+            "Reptiles"
+        ]
     }
 ]

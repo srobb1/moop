@@ -61,7 +61,7 @@
         "in_use": true
     },
     {
-        "group_name": "No Data",
+        "group_name": "New",
         "images": [
             {
                 "file": "",
@@ -70,7 +70,7 @@
         ],
         "html_p": [
             {
-                "text": "Just a test, no data here.",
+                "text": "These are organisms that are new to the site.",
                 "style": "",
                 "class": ""
             }
@@ -95,7 +95,44 @@
         "in_use": true
     },
     {
-        "group_name": "New",
+        "group_name": "Reptiles",
+        "images": [
+            {
+                "file": "Reptile003d.jpg",
+                "caption": "Reptiles, from Nouveau Larousse Illustr\u00e9, 1897\u20131904, notice the inclusion of amphibians (below the crocodilians). Image from <a href=\"https:\/\/en.wikipedia.org\/wiki\/Reptile#\/media\/File:Reptile003d.jpg\">wikimedia<\/a>. "
+            }
+        ],
+        "html_p": [
+            {
+                "text": "Reptiles, as commonly defined, are tetrapod vertebrate animals with an ectothermic metabolism and amniotic development. Reptiles traditionally comprise four orders: Testudines (turtles), Crocodilia (crocodiles, alligators and gharials), Squamata (lizards and snakes) and Rhynchocephalia (tuatara), with about 12,000 extant species listed in the Reptile Database.[2] The study of the traditional reptile orders, customarily in combination with the study of modern amphibians, is called herpetology.\n\n",
+                "style": "",
+                "class": "fs-5"
+            },
+            {
+                "text": "Reptiles have been subject to several conflicting taxonomic definitions.[3] In classical evolutionary taxonomy, reptiles are gathered together under the class Reptilia (\/r\u025bp\u02c8t\u026ali\u0259\/ rep-TIL-ee-\u0259), which corresponds to common usage. Modern cladistic taxonomy regards that group as paraphyletic, since genetic and paleontological evidence has determined that birds (class Aves) are the only surviving group of Dinosauria, a major clade of diapsids that are more closely related to crocodilians than to other living reptiles, and thus birds are nested among reptiles (under the clade Archosauria) from a phylogenetic perspective. Many cladistic systems therefore redefine Reptilia as a clade (monophyletic group) including birds, though the precise definition of this clade varies between authors.[4][3] A similar concept is clade Sauropsida, which refers to all amniotes more closely related to modern reptiles than to mammals.[4]\n\n",
+                "style": "",
+                "class": ""
+            },
+            {
+                "text": "The earliest known members of the reptile lineage appeared during the late Carboniferous period, having evolved from advanced reptiliomorph tetrapods which became increasingly adapted to life on dry land.[5] Genetic and fossil data argues that the two largest lineages of reptiles, Archosauromorpha (crocodilians, birds, and kin) and Lepidosauromorpha (lizards, and kin), diverged during the Permian period.[6] In addition to the living reptiles, there are many diverse groups that are now extinct, in some cases due to mass extinction events. In particular, the Cretaceous\u2013Paleogene extinction event wiped out the pterosaurs, plesiosaurs, and all non-avian dinosaurs alongside many species of crocodyliforms and squamates (e.g., mosasaurs). Modern non-bird reptiles inhabit all the continents except Antarctica.\n\n",
+                "style": "",
+                "class": ""
+            },
+            {
+                "text": "Extant reptiles range in size from the tiny Jaragua dwarf gecko (Sphaerodactylus ariasae), which only grow up to 17 mm (0.7 in); to the saltwater crocodile (Crocodylus porosus), which can reach over 6 m (19.7 ft) in length and weigh over 1,000 kg (2,200 lb). As tetrapods, reptiles generally have four limbs or, in the case of snakes and legless lizards, are descended from four-limbed ancestors but have lost the limbs through evolution. Unlike the anamniotic amphibians, reptiles do not rely on waterbodies for reproduction and have no aquatic larval stage. Most reptiles are oviparous with shelled eggs, although several species of squamates are viviparous, as were some extinct marine reptile clades.[7] As amniotes, reptile eggs have extraembryonic membranes that retain water and facilitate biochemical exchange with the external environment, allowing reptiles to reproduce on dry land, even in extreme, arid habitats. Viviparous species have the eggs developing and hatching inside the mother's body, usually by internal incubation, although some species can nourish the eggs as fetuses through various forms of placenta analogs, with some providing initial parental care for their hatchlings.\n\n",
+                "style": "",
+                "class": ""
+            },
+            {
+                "text": "Text is from <a href=\"https:\/\/en.wikipedia.org\/wiki\/Reptile\">wikipedia<\/a>",
+                "style": "",
+                "class": ""
+            }
+        ],
+        "in_use": true
+    },
+    {
+        "group_name": "No Data",
         "images": [
             {
                 "file": "",
@@ -104,7 +141,7 @@
         ],
         "html_p": [
             {
-                "text": "These are all new",
+                "text": "Just a test, no data here.",
                 "style": "",
                 "class": ""
             }

@@ -276,3 +276,27 @@ const DataTableExportConfig = {
     }
 };
 
+// Custom search plugin for substring matching on tables with 'substring-search' class
+$.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+    // Only apply to tables with the substring-search class
+    if (!$(settings.nTable).hasClass('substring-search')) {
+        return true;
+    }
+    
+    var searchValue = settings.oPreviousSearch.sSearch;
+    if (!searchValue) {
+        return true;
+    }
+    
+    searchValue = searchValue.toLowerCase();
+    
+    // Search through visible columns (skip hidden export-only columns 0-3)
+    for (var i = 4; i < data.length; i++) {
+        if (data[i].toLowerCase().indexOf(searchValue) !== -1) {
+            return true;
+        }
+    }
+    
+    return false;
+});
+

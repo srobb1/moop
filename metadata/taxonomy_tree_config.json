@@ -67,6 +67,32 @@
                                                 ]
                                             }
                                         ]
+                                    },
+                                    {
+                                        "name": "Lepidosauria",
+                                        "children": [
+                                            {
+                                                "name": "Squamata",
+                                                "children": [
+                                                    {
+                                                        "name": "Chamaeleonidae",
+                                                        "children": [
+                                                            {
+                                                                "name": "Chamaeleo",
+                                                                "children": [
+                                                                    {
+                                                                        "name": "Chamaeleo calyptratus",
+                                                                        "organism": "Chamaeleo_calyptratus",
+                                                                        "common_name": "Veiled",
+                                                                        "image": "images/ncbi_taxonomy/179908.jpg"
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
                                     }
                                 ]
                             },

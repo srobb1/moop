@@ -166,7 +166,7 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
     
     // Table with DataTables
     $html .= "<div class=\"table-responsive\">";
-    $html .= "<table id=\"" . htmlspecialchars($table_id) . "\" class=\"table table-sm table-striped table-hover\" style=\"width:100%;\">";
+    $html .= "<table id=\"" . htmlspecialchars($table_id) . "\" class=\"table table-sm table-striped table-hover substring-search\" style=\"width:100%;\">";
     $html .= "<thead><tr>";
     $html .= "<th class=\"export-only\">Organism</th>";
     $html .= "<th class=\"export-only\">Feature ID</th>";

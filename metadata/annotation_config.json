@@ -7,8 +7,8 @@
             "description": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs<\/strong>. Genes separated by gene duplication events are called paralogs.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 310777,
-            "feature_count": 118325,
+            "annotation_count": 367018,
+            "feature_count": 142613,
             "synonyms": [
                 "Orthology"
             ],
@@ -17,12 +17,12 @@
         "Homologs": {
             "display_name": "Homologs",
             "color": "info",
-            "order": 2,
+            "order": 3,
             "description": "<strong>Homologous<\/strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 795603,
-            "feature_count": 114351
+            "annotation_count": 1009358,
+            "feature_count": 138934
         },
         "AI Annotations": {
             "display_name": "AI Annotations",
@@ -31,8 +31,8 @@
             "description": "AI-based protein function prediction uses computational techniques, such as machine learning and protein sequence language models to infer the biological roles of proteins from their sequences. So far Sofia doesn't love these.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 49921,
-            "feature_count": 108548,
+            "annotation_count": 62184,
+            "feature_count": 129986,
             "synonyms": [
                 "ProtNLM"
             ],
@@ -41,12 +41,12 @@
         "Domains": {
             "display_name": "Domains",
             "color": "success",
-            "order": 3,
+            "order": 4,
             "description": "Protein domains are conserved structural and functional units that can evolve, function, and exist independently. Domain annotations identify these conserved regions using databases like InterPro, Pfam, and SMART.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 65699,
-            "feature_count": 130601,
+            "annotation_count": 82071,
+            "feature_count": 157316,
             "synonyms": [
                 "Protein Domains"
             ]
@@ -58,8 +58,8 @@
             "description": "Gene Ontology (GO) provides a controlled vocabulary to describe gene products in terms of their biological processes, cellular components, and molecular functions in a species-independent manner.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 120390,
-            "feature_count": 106445
+            "annotation_count": 143045,
+            "feature_count": 129142
         },
         "Gene Families": {
             "display_name": "Gene Families",
@@ -68,8 +68,8 @@
             "description": "Gene families are groups of genes that share similar sequences and often similar functions, typically arising from gene duplication events. Examples include PANTHER, TreeFam, and other classification systems.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 78017,
-            "feature_count": 116739
+            "annotation_count": 97072,
+            "feature_count": 140554
         },
         "Mapping": {
             "display_name": "Mapping",
@@ -100,6 +100,19 @@
             "in_database": false,
             "annotation_count": 0,
             "feature_count": 0
+        },
+        "RBBH Homolog": {
+            "display_name": "RBBH Homolog",
+            "display_label": "RBBH Homolog",
+            "color": "pink",
+            "order": 2,
+            "description": "Reciprocal Best BLAST Hits are homologs identified with more stringent criteria than just BLAST best hit. The two homologs need to be reciprocal best hits when the BLAST is performed in each direction, DB-A BLASTED against DB-B  and DB-B vs DB-A.",
+            "enabled": true,
+            "synonyms": [],
+            "in_database": true,
+            "annotation_count": 54082,
+            "feature_count": 17141,
+            "new": true
         }
     },
     "organisms": [],
@@ -186,9 +199,9 @@
     },
     "annotation_type_order": [
         "Orthologs",
+        "RBBH Homolog",
         "Homologs",
         "Domains",
-        "Homology",
         "Gene Ontology",
         "Gene Families",
         "AI Annotations",
@@ -196,5 +209,5 @@
         "Aliases",
         "Publications"
     ],
-    "sqlite_mod_time": 1764616003
+    "sqlite_mod_time": 1769108310
 }
