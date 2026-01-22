@@ -1514,16 +1514,6 @@ Page continues with:
 
 ---
 
-### Group 5: Legacy/Backup Files
-
-**Files:** `navigation.php.backup`
-
-**Status:** Backup of previous navigation system
-
-**Note:** Not currently in use. Kept for reference during transition.
-
----
-
 ## Tools & Features
 
 ### User-Facing Tools
