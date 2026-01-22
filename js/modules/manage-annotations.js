@@ -13,25 +13,19 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Make annotation types sortable - auto-save on stop
   if ($('#sortable-annotation-types').length) {
-      console.log('Initializing annotation types sortable');
-      console.log('Found ' + $('#sortable-annotation-types .card').length + ' cards to sort');
       
       $('#sortable-annotation-types').sortable({
           handle: '.fa-grip-vertical',
           items: '.card',
           start: function(event, ui) {
-              console.log('Drag started');
           },
           change: function(event, ui) {
-              console.log('Item moved during drag');
           },
           stop: function(event, ui) {
-              console.log('Drag stopped - auto-saving order');
               saveTypeOrder();
           }
       });
   } else {
-      console.log('ERROR: #sortable-annotation-types not found');
   }
   
   // Preserve open state of customize sections across page reloads
@@ -82,7 +76,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const forms = document.querySelectorAll('form');
   forms.forEach(form => {
     form.addEventListener('submit', function(e) {
-      console.log('Form submitted:', this.name || 'unnamed');
       const buttons = this.querySelectorAll('button[type="submit"]');
       buttons.forEach(btn => {
         btn.disabled = true;
@@ -105,12 +98,8 @@ function saveTypeOrder() {
         }
     });
     
-    console.log('saveTypeOrder called');
-    console.log('Saving annotation type order:', newOrder);
-    console.log('Order array length:', newOrder.length);
     
     if (newOrder.length === 0) {
-        console.error('No types found to save!');
         return;
     }
     
@@ -126,18 +115,14 @@ function saveTypeOrder() {
         })
     })
     .then(response => {
-        console.log('Response received:', response.status);
         if (response.ok) {
-            console.log('Order saved successfully');
             // Show brief success message
             showSaveNotification('Order saved successfully');
         } else {
-            console.error('Server error:', response.status);
             showSaveNotification('Error saving order. Please try again.', 'danger');
         }
     })
     .catch(error => {
-        console.error('Error submitting form:', error);
         showSaveNotification('Error saving order: ' + error.message, 'danger');
     });
 }
