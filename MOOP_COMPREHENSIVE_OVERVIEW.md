@@ -106,22 +106,36 @@
 ```
 /data/moop/                           # Application root
 ├── admin/                            # Admin tools (requires login)
-│   ├── admin.php                     # Admin dashboard landing page
+│   ├── admin.php                     # Admin dashboard controller
 │   ├── admin_init.php                # Admin initialization & setup
 │   ├── admin_access_check.php        # Admin permission validation
-│   ├── manage_organisms.php          # Add/edit organisms
-│   ├── manage_users.php              # User account management
-│   ├── manage_site_config.php        # Site-wide configuration settings
-│   ├── manage_annotations.php        # Manage annotation sources & types
-│   ├── manage_taxonomy_tree.php      # Generate/edit phylogenetic tree
-│   ├── manage_groups.php             # Organize assemblies into groups
-│   ├── manage_error_log.php          # View/filter/clear system error logs
-│   ├── manage_filesystem_permissions.php # Diagnose & fix file permissions
-│   ├── manage_registry.php           # Function registry management
-│   ├── manage_js_registry.php        # JavaScript registry management
-│   ├── organism_checklist.php        # Organism setup checklist
-│   ├── pages/                        # Admin page templates
-│   └── api/                          # Admin API endpoints
+│   ├── manage_organisms.php          # Organism management controller
+│   ├── manage_users.php              # User management controller
+│   ├── manage_site_config.php        # Site config management controller
+│   ├── manage_annotations.php        # Annotation management controller
+│   ├── manage_taxonomy_tree.php      # Phylogenetic tree management controller
+│   ├── manage_groups.php             # Group management controller
+│   ├── manage_error_log.php          # Error log viewer controller
+│   ├── manage_filesystem_permissions.php # Permission management controller
+│   ├── manage_registry.php           # Function registry management controller
+│   ├── manage_js_registry.php        # JavaScript registry management controller
+│   ├── organism_checklist.php        # Organism checklist controller
+│   ├── registry-template.php         # Registry template helper
+│   ├── pages/                        # Admin display templates (view layer)
+│   │   ├── admin.php                # Admin dashboard/home UI
+│   │   ├── manage_organisms.php     # Organism management UI (1422 lines)
+│   │   ├── manage_users.php         # User account management UI
+│   │   ├── manage_site_config.php   # Site configuration UI (50KB)
+│   │   ├── manage_annotations.php   # Annotation source management UI
+│   │   ├── manage_taxonomy_tree.php # Phylogenetic tree UI
+│   │   ├── manage_groups.php        # Group organization UI
+│   │   ├── manage_filesystem_permissions.php # Permission management UI
+│   │   ├── manage_registry.php      # Function registry UI
+│   │   ├── manage_js_registry.php   # JavaScript registry UI
+│   │   ├── organism_checklist.php   # Organism setup checklist UI
+│   │   └── error_log.php            # Error log viewer UI
+│   ├── api/                          # Admin API endpoints (AJAX handlers)
+│   └── backups/                      # Backup files directory
 │
 ├── config/                           # Configuration files
 │   ├── site_config.php               # Site settings (paths, titles)
