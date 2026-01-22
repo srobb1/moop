@@ -150,6 +150,7 @@
           <p class="mb-2">
             <span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete</span> - Assembly directory exists with valid FASTA files
             <br><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Name Mismatch</span> - Directory name doesn't match database genome name
+            <br><span class="badge bg-secondary"><i class="fa fa-rocket"></i> Missing BLAST Indexes</span> - FASTA files present but BLAST indexes need to be generated
             <br><span class="badge bg-info"><i class="fa fa-times-circle"></i> Missing Files</span> - Assembly missing required FASTA files
           </p>
           <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click an assembly button for detailed information and available tools.</p>
@@ -274,10 +275,26 @@
                            $has_name_mismatch = !$matching;
                          }
                          
-                         // Determine badge style (danger/red for name mismatch priority, warning/orange for missing files)
+                         // Check if BLAST indexes are missing for FASTA files
+                         $has_missing_blast_indexes = false;
+                         $assembly_path = $data['path'] . '/' . $assembly;
+                         $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
+                         if (!empty($blast_validation['databases'])) {
+                           foreach ($blast_validation['databases'] as $db) {
+                             if (!$db['has_indexes']) {
+                               $has_missing_blast_indexes = true;
+                               break;
+                             }
+                           }
+                         }
+                         
+                         // Determine badge style
+                         // Priority: name mismatch > missing blast indexes > missing fasta files
                          $badge_class = 'bg-success';
                          if ($has_name_mismatch) {
                              $badge_class = 'bg-warning';
+                         } elseif ($has_missing_blast_indexes) {
+                             $badge_class = 'bg-secondary';
                          } elseif ($is_missing) {
                              $badge_class = 'bg-info';
                          }
@@ -1149,6 +1166,21 @@
                             <strong><?= htmlspecialchars($db['name']) ?>:</strong> <?= htmlspecialchars($db['fasta']) ?>
                             <br><small class="text-danger">Missing indexes: <?= htmlspecialchars(implode(', ', $db['missing_indexes'])) ?></small>
                             <br><small class="text-muted">This FASTA file cannot be used for BLAST searches until indexes are created.</small>
+                            <div class="mt-2 p-2 bg-light border rounded small">
+                              <strong class="d-block mb-2">To generate BLAST indexes, run on the server:</strong>
+                              <?php 
+                                $assembly_fullpath = $organism_data . '/' . $organism . '/' . $assembly;
+                                $fasta_full_path = $assembly_fullpath . '/' . $db['fasta'];
+                                $db_full_path = preg_replace('/\.(fa|fasta)$/', '', $fasta_full_path);
+                                $is_protein = strpos($db['fasta'], 'protein') !== false;
+                                $db_type = $is_protein ? 'prot' : 'nucl';
+                                $cd_cmd = "cd " . htmlspecialchars($assembly_fullpath);
+                                $makeblastdb_cmd = "makeblastdb -in " . htmlspecialchars($db['fasta']) . " -dbtype " . htmlspecialchars($db_type) ;
+                              ?>
+                              <code class="d-block" style="word-break: break-all; white-space: normal;">
+                                <?= $cd_cmd ?> && \<br><?= $makeblastdb_cmd ?>
+                              </code>
+                            </div>
                           <?php endif; ?>
                         </li>
                       <?php endforeach; ?>
