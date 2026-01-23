@@ -225,21 +225,70 @@
 │   ├── blast_functions.php.backup    # Backup of BLAST functions
 │   └── README.md                     # Library documentation
 │
-├── js/                               # Client-side scripts
+├── js/                               # Client-side JavaScript
+│   ├── admin-utilities.js            # Admin page helper functions
+│   ├── assembly-display.js           # Assembly page interactions
+│   ├── blast-manager.js              # BLAST tool functions
+│   ├── groups-display.js             # Groups page interactions
+│   ├── index.js                      # Site index/home interactions
+│   ├── manage-registry.js            # Function registry management
+│   ├── multi-organism-search.js      # Multi-organism search tool
+│   ├── organism-display.js           # Organism page interactions
+│   ├── permission-manager.js         # Permission management
+│   ├── registry.js                   # Registry functions (public)
+│   ├── sequence-retrieval.js         # Sequence download tool
 │   ├── modules/                      # Feature modules
-│   │   ├── datatable-config.js       # DataTables export config
+│   │   ├── advanced-search-filter.js # Advanced search filtering
+│   │   ├── annotation-search.js      # Annotation searching
+│   │   ├── blast-canvas-graph.js     # BLAST result visualization
+│   │   ├── collapse-handler.js       # Collapsible UI elements
+│   │   ├── copy-to-clipboard.js      # Copy text to clipboard
+│   │   ├── datatable-config.js       # DataTables configuration
+│   │   ├── download-handler.js       # File download handling
+│   │   ├── manage-annotations.js     # Annotation management UI
+│   │   ├── manage-groups.js          # Group management UI
+│   │   ├── manage-registry.js        # Registry management UI
+│   │   ├── manage-site-config.js     # Site config management UI
+│   │   ├── manage-taxonomy-tree.js   # Taxonomy tree management UI
+│   │   ├── manage-users.js           # User management UI
+│   │   ├── organism-management.js    # Organism management UI
 │   │   ├── parent-tools.js           # Feature page tools
-│   │   └── collapse-handler.js       # UI interactions
-│   └── libraries/                    # Third-party JS
+│   │   ├── shared-results-table.js   # Reusable results table
+│   │   ├── source-list-manager.js    # Source/organism selector
+│   │   ├── taxonomy-tree.js          # Phylogenetic tree display
+│   │   └── utilities.js              # Shared utility functions
+│   └── unused/                       # Third-party & deprecated libraries
+│       ├── apexcharts.min.js         # Charting library (unused)
+│       ├── bootstrap.min.js          # Bootstrap framework (unused)
+│       ├── jquery.min.js             # jQuery library (unused)
+│       ├── jszip.min.js              # ZIP handling (unused)
+│       ├── kinetic-v5.1.0.min.js     # Canvas library (unused)
+│       ├── openGPlink.js             # Gene linking (unused)
+│       └── popper.min.js             # Popper library (unused)
 │
 ├── css/                              # Stylesheets
+│   ├── advanced-search-filter.css    # Search filter styling
+│   ├── bootstrap.min.css             # Bootstrap framework
+│   ├── datatables.css                # DataTables styling
+│   ├── datatables.min.css            # DataTables (minified)
+│   ├── display.css                   # Display page styling
+│   ├── manage-filesystem-permissions.css # Permissions UI
+│   ├── manage-groups.css             # Group management UI
+│   ├── manage-site-config.css        # Site config UI
+│   ├── manage-taxonomy-tree.css      # Taxonomy tree UI
+│   ├── manage-users.css              # User management UI
 │   ├── moop.css                      # Main stylesheet
-│   └── component-styles.css          # Component-specific styles
+│   ├── parent.css                    # Feature detail page
+│   ├── registry.css                  # Registry UI
+│   ├── retrieve-selected-sequences.css # Sequence download UI
+│   └── search-controls.css           # Search controls styling
 │
 ├── metadata/                         # Configuration data
-│   ├── organism_assembly_groups.json # Org-Assembly-Group mapping
 │   ├── annotation_config.json        # Annotation source definitions
-│   └── taxonomy_tree_config.json     # Phylogenetic tree (generated)
+│   ├── group_descriptions.json       # Group descriptions & metadata
+│   ├── organism_assembly_groups.json # Org-Assembly-Group mapping
+│   ├── taxonomy_tree_config.json     # Phylogenetic tree (auto-generated)
+│   └── test_permissions.json         # Test permission definitions
 │
 ├── organisms/                        # Symlinks to organism data
 │   ├── Anoura_caudifer -> /path/to/data/Anoura_caudifer
