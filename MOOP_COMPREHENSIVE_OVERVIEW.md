@@ -257,14 +257,6 @@
 │   │   ├── source-list-manager.js    # Source/organism selector
 │   │   ├── taxonomy-tree.js          # Phylogenetic tree display
 │   │   └── utilities.js              # Shared utility functions
-│   └── unused/                       # Third-party & deprecated libraries
-│       ├── apexcharts.min.js         # Charting library (unused)
-│       ├── bootstrap.min.js          # Bootstrap framework (unused)
-│       ├── jquery.min.js             # jQuery library (unused)
-│       ├── jszip.min.js              # ZIP handling (unused)
-│       ├── kinetic-v5.1.0.min.js     # Canvas library (unused)
-│       ├── openGPlink.js             # Gene linking (unused)
-│       └── popper.min.js             # Popper library (unused)
 │
 ├── css/                              # Stylesheets
 │   ├── advanced-search-filter.css    # Search filter styling
