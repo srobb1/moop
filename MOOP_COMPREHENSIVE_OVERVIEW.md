@@ -226,6 +226,7 @@
 │   └── README.md                     # Library documentation
 │
 ├── js/                               # Client-side JavaScript
+│   ├── README.md                     # JavaScript organization guide
 │   ├── admin-utilities.js            # Admin page helper functions
 │   ├── assembly-display.js           # Assembly page interactions
 │   ├── blast-manager.js              # BLAST tool functions
