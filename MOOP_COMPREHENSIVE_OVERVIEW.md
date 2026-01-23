@@ -278,16 +278,20 @@
 │   └── search-controls.css           # Search controls styling
 │
 ├── metadata/                         # Configuration data
+│   ├── README.md                     # Metadata directory documentation
 │   ├── annotation_config.json        # Annotation source definitions
 │   ├── group_descriptions.json       # Group descriptions & metadata
 │   ├── organism_assembly_groups.json # Org-Assembly-Group mapping
 │   ├── taxonomy_tree_config.json     # Phylogenetic tree (auto-generated)
-│   └── test_permissions.json         # Test permission definitions
+│   ├── backups/                      # Backup and changelog directory
+│   │   └── *.backup_* files and logs
+│   └── change_log/                   # Audit trail of config changes
 │
-├── organisms/                        # Symlinks to organism data
-│   ├── Anoura_caudifer -> /path/to/data/Anoura_caudifer
-│   ├── Lasiurus_cinereus -> /path/to/data/Lasiurus_cinereus
-│   └── ...
+├── organisms/                        # Organism data directories
+│   ├── README.md                     # Organisms directory documentation
+│   ├── Anoura_caudifer/              # Organism data directory
+│   ├── Lasiurus_cinereus/            # Organism data directory
+│   └── ...                           # Additional organisms
 │
 └── logs/                             # System logs
     ├── error_log.json                # Detailed error log
@@ -825,15 +829,52 @@ Table: annotation_source
 [Plus other tables for genome, organism, hierarchy...]
 ```
 
+### Organism Data Storage & Management
+
+**Location:** `/data/moop/organisms/`
+
+**Structure:**
+```
+organisms/
+├─ organism.sqlite          # Single SQLite database containing all organism metadata
+├─ README.md               # Documentation on organism management
+└─ [organism-specific directories as configured in site config]
+```
+
+**Key Details:**
+
+- **Single SQLite Database:** `organism.sqlite` contains all organisms and their assemblies, not one per organism
+- **FASTA Files:** Patterns for organism/assembly FASTA files are configured in site configuration (`admin/manage_site_config.php`)
+- **Management:** Organism and assembly status can be reviewed in the `admin/manage_organisms.php` page
+- **Multiple Groups:** One organism can belong to multiple groups (e.g., "Primates" and "Mammals"). Group membership is managed in `admin/manage_groups.php`
+- **Phylogenetic Organization:** Organisms are organized in a tree structure for taxonomic browsing and searches. The tree structure is managed in `admin/manage_taxonomy_tree.php`
+
+**Organism Metadata Includes:**
+- Common name and scientific name
+- Taxonomy (genus, species, family, order, etc.)
+- Public/private status
+- Associated groups
+- Available assemblies and their statuses
+- File locations for FASTA and annotation data
+
+**Related Files:**
+- `admin/manage_organisms.php` - UI for managing organisms and assemblies
+- `admin/pages/manage_organisms.php` - View/display template
+- `admin/manage_groups.php` - UI for managing groups (organisms can belong to multiple groups)
+- `includes/ConfigManager.php` - Reads FASTA file patterns from site config
+- `metadata/organism_tree.json` - Phylogenetic tree for navigation
+
+---
+
 ### File Organization Per Assembly
 
 ```
-/organism_data/
+/configured_organism_data_path/
 └─ Organism_Name/
    ├─ assembly_v1/
-   │  ├─ reference_genome.fasta       (or .fa, .fna)
+   │  ├─ reference_genome.fasta       (or .fa, .fna - pattern from site config)
    │  ├─ proteins.faa
-   │  ├─ blast_nt/                    (BLAST database)
+   │  ├─ blast_nt/                    (BLAST database - created with makeblastdb)
    │  │  ├─ reference_genome.00.nhr
    │  │  ├─ reference_genome.00.nin
    │  │  ├─ reference_genome.00.nsq
@@ -850,6 +891,11 @@ Table: annotation_source
       │  └─ [more BLAST files]
       └─ [annotations, metadata]
 ```
+
+**FASTA File Patterns:**
+- Patterns are NOT hardcoded; they are configured in site config
+- Examples: `*.fasta`, `*.fa`, `*.fna` for nucleotides; `*.faa` for proteins
+- Allows flexibility for different naming conventions across organisms
 
 ---
 
@@ -2464,7 +2510,7 @@ Security:
 ```
 /organism_data/
 ├── Anoura_caudifer/
-│   ├── Anoura_caudifer.db           (SQLite database)
+│   ├── organism.sqlite               (SQLite database - features, annotations)
 │   ├── assembly_v1/
 │   │   ├── reference_genome.fasta
 │   │   ├── blast_nt/ [BLAST indices]
@@ -2475,7 +2521,7 @@ Security:
 │       └── proteins.faa
 │
 ├── Lasiurus_cinereus/
-│   ├── Lasiurus_cinereus.db
+│   ├── organism.sqlite
 │   ├── GCA_011751065.1/
 │   │   ├── reference_genome.fasta
 │   │   ├── blast_nt/ [BLAST indices]
