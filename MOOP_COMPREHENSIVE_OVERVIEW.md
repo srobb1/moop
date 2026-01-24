@@ -575,7 +575,7 @@ Result:
 
 MOOP recognizes four types of users with distinct access patterns:
 
-#### 1. **ALL Users (IP-Based Auto-Login)**
+#### 1. **VIEW ALL (IP-Based Auto-Login)**
 
 ```
 Criteria:       Client IP in allowed range (defined in access_control.php)
@@ -794,39 +794,52 @@ Defines how assemblies are grouped (UI organization) and which are public.
 Each organism has one SQLite database containing:
 
 ```
+Table: organism
+├─ organism_id          (PRIMARY KEY)
+├─ genus                (genus name)
+├─ species              (species name)
+├─ subtype              (optional subspecies)
+├─ common_name          (display name)
+└─ taxon_id             (optional taxonomy ID)
+
+Table: genome
+├─ genome_id            (PRIMARY KEY)
+├─ organism_id          (links to organism)
+├─ genome_name          (assembly name)
+├─ genome_accession     (assembly accession)
+└─ genome_description   (description)
+
 Table: feature
-├─ feature_id          (PRIMARY KEY)
-├─ feature_uniquename  (unique ID for this organism)
-├─ feature_type        (gene, mRNA, exon, etc.)
-├─ feature_name        (display name)
-├─ feature_description (text description)
-├─ genome_id           (which assembly)
-├─ organism_id         (which organism)
-└─ [other fields...]
+├─ feature_id           (PRIMARY KEY)
+├─ feature_uniquename   (unique ID - UNIQUE constraint)
+├─ feature_type         (gene, mRNA, exon, etc.)
+├─ feature_name         (display name)
+├─ feature_description  (text description)
+├─ genome_id            (which assembly)
+├─ organism_id          (which organism)
+└─ parent_feature_id    (hierarchical - parent feature if applicable)
 
 Table: annotation
 ├─ annotation_id        (PRIMARY KEY)
 ├─ annotation_accession (external ID: NM_123456)
 ├─ annotation_description (text from external source)
-├─ annotation_source_id (which source: BLAST, InterPro, etc.)
-└─ [other fields...]
+└─ annotation_source_id (links to source)
 
 Table: feature_annotation
 ├─ feature_annotation_id (PRIMARY KEY)
 ├─ feature_id           (links to feature)
 ├─ annotation_id        (links to annotation)
-├─ score               (e-value, bit score, confidence)
-├─ date                (when calculated)
-└─ [other fields...]
+├─ score                (e-value, bit score, confidence)
+└─ date                 (when calculated)
 
 Table: annotation_source
 ├─ annotation_source_id (PRIMARY KEY)
 ├─ annotation_source_name (NCBI, InterPro, UniProt, etc.)
+├─ annotation_source_version (version info)
 ├─ annotation_accession_url (URL template for links)
-├─ annotation_type      (homolog, domain, ortholog, etc.)
-└─ [other fields...]
+├─ annotation_source_url (source website URL)
+└─ annotation_type      (homolog, domain, ortholog, etc.)
 
-[Plus other tables for genome, organism, hierarchy...]
 ```
 
 ### Organism Data Storage & Management
@@ -836,65 +849,65 @@ Table: annotation_source
 **Structure:**
 ```
 organisms/
-├─ organism.sqlite          # Single SQLite database containing all organism metadata
-├─ README.md               # Documentation on organism management
-└─ [organism-specific directories as configured in site config]
+├─ Organism_Name_1/
+│  └─ organism.sqlite          # SQLite database for this organism
+├─ Organism_Name_2/
+│  └─ organism.sqlite          # SQLite database for this organism
+└─ [more organism directories...]
 ```
 
 **Key Details:**
 
-- **Single SQLite Database:** `organism.sqlite` contains all organisms and their assemblies, not one per organism
+- **Per-Organism SQLite Database:** Each organism has its own `organism.sqlite` containing all metadata, features, annotations, and relationships for that organism
 - **FASTA Files:** Patterns for organism/assembly FASTA files are configured in site configuration (`admin/manage_site_config.php`)
 - **Management:** Organism and assembly status can be reviewed in the `admin/manage_organisms.php` page
 - **Multiple Groups:** One organism can belong to multiple groups (e.g., "Primates" and "Mammals"). Group membership is managed in `admin/manage_groups.php`
 - **Phylogenetic Organization:** Organisms are organized in a tree structure for taxonomic browsing and searches. The tree structure is managed in `admin/manage_taxonomy_tree.php`
 
 **Organism Metadata Includes:**
-- Common name and scientific name
-- Taxonomy (genus, species, family, order, etc.)
-- Public/private status
-- Associated groups
-- Available assemblies and their statuses
-- File locations for FASTA and annotation data
+- Common name and scientific name (stored in: `organism.sqlite` - `organism` table)
+- Taxonomy: genus, species, family, order, etc. (stored in: `organism.sqlite` - `organism` table)
+- Available assemblies and their statuses (stored in: `organism.sqlite` - `genome` table)
+- Associated groups/membership (stored in: `metadata/organism_assembly_groups.json`)
+- Public/private status (indicated via group membership; e.g., "Public" group indicates public organism)
 
 **Related Files:**
+- `organisms/[OrganismName]/organism.sqlite` - Per-organism database with all metadata, features, and annotations
+- `metadata/organism_assembly_groups.json` - Maps organisms and assemblies to groups (public/private, categorization)
+- `metadata/group_descriptions.json` - Group definitions and descriptions
+- `metadata/taxonomy_tree_config.json` - Phylogenetic tree organization for navigation
 - `admin/manage_organisms.php` - UI for managing organisms and assemblies
-- `admin/pages/manage_organisms.php` - View/display template
-- `admin/manage_groups.php` - UI for managing groups (organisms can belong to multiple groups)
-- `includes/ConfigManager.php` - Reads FASTA file patterns from site config
-- `metadata/organism_tree.json` - Phylogenetic tree for navigation
+- `admin/manage_groups.php` - UI for managing group memberships
+- `admin/manage_taxonomy_tree.php` - UI for managing phylogenetic tree structure
 
 ---
 
 ### File Organization Per Assembly
 
 ```
-/configured_organism_data_path/
+/data/moop/organisms/
 └─ Organism_Name/
-   ├─ assembly_v1/
-   │  ├─ reference_genome.fasta       (or .fa, .fna - pattern from site config)
-   │  ├─ proteins.faa
-   │  ├─ blast_nt/                    (BLAST database - created with makeblastdb)
-   │  │  ├─ reference_genome.00.nhr
-   │  │  ├─ reference_genome.00.nin
-   │  │  ├─ reference_genome.00.nsq
-   │  │  └─ [more BLAST files]
-   │  └─ [annotations, metadata]
-   │
-   └─ GCA_004027475.1/
-      ├─ reference_genome.fasta
-      ├─ proteins.faa
-      ├─ blast_nt/
-      │  ├─ reference_genome.00.nhr
-      │  ├─ reference_genome.00.nin
-      │  ├─ reference_genome.00.nsq
-      │  └─ [more BLAST files]
-      └─ [annotations, metadata]
+   └─ Assembly_Accession/                  (assembly name/accession as configured)
+      ├─ genome.fa                         (reference genome nucleotides)
+      ├─ transcript.nt.fa                  (mRNA/transcript sequences)
+      ├─ cds.nt.fa                         (coding sequence nucleotides)
+      ├─ protein.aa.fa                     (protein sequences)
+      ├─ genome.fa.n*                      (BLAST database files for genome)
+      ├─ transcript.nt.fa.n*               (BLAST database files for transcripts)
+      ├─ cds.nt.fa.n*                      (BLAST database files for CDS)
+      └─ protein.aa.fa.p*                  (BLAST database files for proteins)
 ```
 
-**FASTA File Patterns:**
-- Patterns are NOT hardcoded; they are configured in site config
-- Examples: `*.fasta`, `*.fa`, `*.fna` for nucleotides; `*.faa` for proteins
+**File Naming Conventions:**
+- Sequence type patterns are configured in `config/config_editable.json` under `sequence_types`
+- Current patterns: `genome.fa`, `transcript.nt.fa`, `cds.nt.fa`, `protein.aa.fa`
+- BLAST database files (when present) are created using `makeblastdb` and are identified by file extensions:
+  - Nucleotide databases: `.n*` extensions (nhr, nin, nsq, ndb, nog, nos, not, ntf, nto)
+  - Protein databases: `.p*` extensions (phr, pin, psq, pdb, pot, ptf, pto)
+- If BLAST database files are missing, helpful tips with `makeblastdb` commands are displayed to guide creation
+
+**Configuration:**
+- File patterns are NOT hardcoded and can be customized in `config/config_editable.json`
 - Allows flexibility for different naming conventions across organisms
 
 ---
