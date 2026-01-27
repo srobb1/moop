@@ -56,7 +56,7 @@
               <th>Organism</th>
               <th>Total</th>
               <th>Database</th>
-              <th>FASTA</th>
+              <th>FASTA Files</th>
               <th>BLAST</th>
               <th>Notes</th>
             </tr>
@@ -66,17 +66,17 @@
               <td><strong>Anoura_caudifer</strong></td>
               <td>3.0 GB</td>
               <td>131 MB</td>
-              <td>57 MB</td>
+              <td>2.8 GB</td>
               <td>11 MB</td>
-              <td>Large genome (2.2 GB)</td>
+              <td>Genome 2.2 GB + transcripts/CDS/protein</td>
             </tr>
             <tr>
               <td><strong>Chamaeleo_calyptratus</strong></td>
               <td>2.9 GB</td>
               <td>113 MB</td>
-              <td>97 MB</td>
+              <td>2.7 GB</td>
               <td>15 MB</td>
-              <td>Large genome (2.0 GB)</td>
+              <td>Genome 2.0 GB + transcripts/CDS/protein</td>
             </tr>
             <tr>
               <td><strong>Lasiurus_cinereus</strong></td>
@@ -98,15 +98,15 @@
               <td><strong>Pteropus_vampyrus</strong></td>
               <td>3.6 GB</td>
               <td>152 MB</td>
-              <td>152 MB</td>
+              <td>3.4 GB</td>
               <td>26 MB</td>
-              <td>Large genome (2.1 GB)</td>
+              <td>Genome 2.1 GB + transcripts/CDS/protein</td>
             </tr>
             <tr class="table-active">
               <td><strong>AVERAGE (Complete)</strong></td>
               <td><strong>3.2 GB</strong></td>
               <td><strong>132 MB</strong></td>
-              <td><strong>102 MB</strong></td>
+              <td><strong>3.0 GB</strong></td>
               <td><strong>17 MB</strong></td>
               <td>Complete datasets only (genome.fa included)</td>
             </tr>
@@ -149,36 +149,20 @@
       <div class="col-lg-6">
         <div class="card mb-3">
           <div class="card-header bg-info bg-opacity-10">
-            <strong>Genome Sequences (genome.fa)</strong>
+            <strong>FASTA Files (All Sequence Data)</strong>
           </div>
           <div class="card-body">
             <ul class="mb-0">
-              <li><strong>Range:</strong> 2.0 GB - 2.2 GB per organism</li>
-              <li><strong>Average (complete):</strong> ~2.7 GB per organism</li>
-              <li><strong>Content:</strong> Full reference genome file</li>
+              <li><strong>Range:</strong> 2.7 GB - 3.4 GB per organism</li>
+              <li><strong>Average (complete):</strong> 3.0 GB per organism</li>
+              <li><strong>Includes:</strong> genome.fa, transcript.nt.fa, cds.nt.fa, protein.aa.fa</li>
               <li><strong>Growth:</strong> Fixed size for each organism</li>
-              <li><strong>% of Total:</strong> ~87% per complete organism</li>
-              <li><strong>Note:</strong> Largest storage component</li>
+              <li><strong>% of Total:</strong> ~94% per complete organism</li>
+              <li><strong>Largest component:</strong> genome.fa (2.0-2.2 GB)</li>
             </ul>
           </div>
         </div>
       </div>
-
-      <div class="col-lg-6">
-        <div class="card mb-3">
-          <div class="card-header bg-info bg-opacity-10">
-            <strong>Reference FASTA Files (transcript/CDS/protein)</strong>
-          </div>
-          <div class="card-body">
-            <ul class="mb-0">
-              <li><strong>Range:</strong> 57 MB - 152 MB per organism</li>
-              <li><strong>Average (complete):</strong> 102 MB per organism</li>
-              <li><strong>Types:</strong> transcript.nt.fa, cds.nt.fa, protein.aa.fa</li>
-              <li><strong>Growth:</strong> Minimal after initial load</li>
-              <li><strong>% of Total:</strong> ~3% per complete organism</li>
-            </ul>
-          </div>
-        </div>
       </div>
 
       <div class="col-lg-6">
@@ -348,14 +332,14 @@
 For 100 organisms:
 ─────────────────────────────────
 Database files (SQLite):   13.2 GB (100 × 132 MB)
-Genome sequences (FASTA):  270 GB  (100 × 2.7 GB) ← Largest component
-Transcript/CDS FASTA:      5 GB    (100 × 50 MB) ← Included in 102 MB avg
-Protein FASTA:             3 GB    (100 × 30 MB) ← Included in 102 MB avg
-BLAST indices:             1.7 GB  (100 × 17 MB)
+FASTA Files (all):        300 GB  (100 × 3.0 GB)
+  ├─ genome.fa            270 GB  (~90% of FASTA)
+  └─ transcripts/CDS/protein 30 GB (~10% of FASTA)
+BLAST indices:             1.7 GB (100 × 17 MB)
 Other files/metadata:      2-3 GB
 ────────────────────────────────
-SUBTOTAL:                  ~295 GB
-With 20% overhead:         ~354 GB
+SUBTOTAL:                  ~317 GB
+With 20% overhead:         ~380 GB
 Recommended allocation:    400 GB (with growth room)</code></pre>
     </div>
   </section>
