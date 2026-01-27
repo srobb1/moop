@@ -109,7 +109,7 @@ Org 3             Genus3        species3       Name3          2.8 Mb        51% 
 - Click column headers to sort (ascending/descending)
 - Filter by text in any column
 - Min/Max range filters for numeric columns (genome size, GC %, etc.)
-- Color coding for values (e.g., low/med/high annotation coverage)
+
 
 **Grouping:**
 - Optional: Group by genus or higher taxonomy

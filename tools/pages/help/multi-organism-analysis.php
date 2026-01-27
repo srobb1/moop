@@ -68,7 +68,7 @@
           <ul class="text-muted">
             <li>Results are organized in tables with organism columns</li>
             <li>You can sort and filter by any column</li>
-            <li>Color coding helps distinguish organisms visually</li>
+            <li>Organism names clearly identify which results come from which organism</li>
             <li>Export options let you download results for further analysis</li>
           </ul>
 
