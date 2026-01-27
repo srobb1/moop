@@ -84,7 +84,7 @@
               <td>252 MB</td>
               <td>59 MB</td>
               <td>11 MB</td>
-              <td>Large database</td>
+              <td>Large database, <strong>no genome.fa</strong></td>
             </tr>
             <tr>
               <td><strong>Montipora_capitata</strong></td>
@@ -92,7 +92,7 @@
               <td>155 MB</td>
               <td>25 MB</td>
               <td>21 MB</td>
-              <td>Smaller organism</td>
+              <td>Smaller organism, <strong>no genome.fa</strong></td>
             </tr>
             <tr>
               <td><strong>Pteropus_vampyrus</strong></td>
@@ -113,6 +113,18 @@
           </tbody>
         </table>
       </div>
+    </div>
+
+    <div class="alert alert-warning mt-3">
+      <strong><i class="fa fa-exclamation-triangle"></i> Important: Missing genome.fa Files</strong>
+      <p class="mb-0"><strong>Lasiurus_cinereus</strong> and <strong>Montipora_capitata</strong> do not have full genome FASTA files. These organisms have:</p>
+      <ul class="mb-0 mt-2">
+        <li>Transcript sequences (transcript.nt.fa)</li>
+        <li>Coding sequences (cds.nt.fa)</li>
+        <li>Protein sequences (protein.aa.fa)</li>
+        <li><strong>❌ NO full genome reference (genome.fa)</strong></li>
+      </ul>
+      <p class="mb-0 mt-2">This affects capacity planning—not all organisms have complete genomic data. When adding new organisms, verify which sequence files are available.</p>
     </div>
 
     <h4 class="mt-4">Storage Breakdown by Component Type</h4>

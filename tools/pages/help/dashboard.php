@@ -69,7 +69,7 @@ $tutorials = [
     ],
     [
         'id' => 'system-requirements',
-        'title' => 'System Requirements & Planning',
+        'title' => 'System Requirements & Planning (Technical)',
         'description' => 'Hardware sizing, performance benchmarks, resource planning, and cost estimation based on organism scale.',
         'icon' => 'fa-server',
         'color' => 'info',
