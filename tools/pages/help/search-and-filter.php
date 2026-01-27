@@ -79,6 +79,23 @@
             <li><strong>View details:</strong> Click on a result row to see full information</li>
           </ul>
 
+          <h5 class="fw-semibold text-dark mt-3 mb-2">Understanding Search Results Ranking</h5>
+          <p class="text-muted mb-3">
+            When you search, MOOP returns up to 2,000 results ranked by significance:
+          </p>
+          <ul class="text-muted">
+            <li><strong>Ranked by Significance:</strong> Results are sorted automatically with the most relevant matches at the top
+              <ul>
+                <li>Matches in the sequence name or description rank higher (more specific)</li>
+                <li>Matches in annotations rank lower (less specific, but still relevant)</li>
+                <li>Results where your search term appears exactly as typed rank higher than partial matches</li>
+                <li>Results where your search term appears at the start of a word rank higher than matches in the middle</li>
+              </ul>
+            </li>
+            <li><strong>Result Limit:</strong> Due to performance, MOOP returns a maximum of 2,000 results. If you get exactly 2,000 results, you may have more matches that aren't shown. Try refining your search with more specific terms or by selecting fewer organisms to see additional results</li>
+            <li><strong>Sort by Score:</strong> You can click the Score column header to re-rank results, allowing you to see different matches first after applying filters</li>
+          </ul>
+
           <h5 class="fw-semibold text-dark mt-3 mb-2">Simple View vs. Expanded View</h5>
           <p class="text-muted mb-3">
             MOOP provides two ways to view your search results:
