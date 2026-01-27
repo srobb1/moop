@@ -661,6 +661,11 @@ Peak RAM = Recommended × 1.25 (for load spikes)</code></pre>
               <td>50-70%</td>
               <td>10-30 minutes/organism</td>
             </tr>
+            <tr>
+              <td><strong>Taxonomy Tree Generation</strong></td>
+              <td>< 5%</td>
+              <td>100 ms - 5 seconds (all organisms)</td>
+            </tr>
           </tbody>
         </table>
 
@@ -739,7 +744,20 @@ Optimal with BLAST = Cores × 2 (hyperthreading helps)</code></pre>
         </ul>
       </div>
     </div>
-  </section>
+
+    <h4 class="mt-4">Taxonomy Tree Generation</h4>
+    <div class="card mb-4">
+      <div class="card-body">
+        <ul>
+          <li><strong>Build tree from 5 organisms:</strong> 100-500 ms</li>
+          <li><strong>Build tree from 20 organisms:</strong> 500 ms - 2 seconds</li>
+          <li><strong>Build tree from 100+ organisms:</strong> 2-5 seconds</li>
+          <li><strong>CPU Usage:</strong> Low (< 5%)</li>
+          <li><strong>Memory Usage:</strong> Low (< 50 MB)</li>
+          <li><strong>Operation:</strong> Reads organism metadata and builds hierarchical JSON structure</li>
+        </ul>
+      </div>
+    </div>
 
   <!-- Section 6: Monitoring -->
   <section id="monitoring" class="mt-5">
