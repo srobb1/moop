@@ -76,7 +76,7 @@
           <ul class="text-muted">
             <li><strong>Start small:</strong> Begin with 2-3 organisms before scaling up</li>
             <li><strong>Use filtering:</strong> Apply filters to focus on relevant results</li>
-            <li><strong>Compare side-by-side:</strong> Use the table view to easily spot differences</li>
+            <li><strong>Review results by organism:</strong> Check which organisms have matches for your search terms</li>
             <li><strong>Export for external tools:</strong> Download results for phylogenetic or statistical analysis</li>
             <li><strong>Use organism groups:</strong> Pre-defined groups are often good starting points</li>
           </ul>
