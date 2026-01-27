@@ -49,6 +49,18 @@
             <li><strong>Quality:</strong> Filter by quality scores or confidence levels</li>
           </ul>
 
+          <h5 class="fw-semibold text-dark mt-3 mb-2">Filtering Examples</h5>
+          <p class="text-muted mb-3">
+            Here are some common filtering scenarios:
+          </p>
+          <ul class="text-muted">
+            <li><strong>Search for Gene Ontology terms:</strong> Uncheck all annotation sources except "Gene Ontology" or "GO", then search for terms like "kinase" or "DNA binding"</li>
+            <li><strong>Find protein domain annotations:</strong> Filter to show only "InterPro", "Pfam", or "SMART" sources, then search for domain names</li>
+            <li><strong>Look for sequences of specific length:</strong> Use the length filter to find small regulatory RNAs or large proteins within your search results</li>
+            <li><strong>Find high-quality annotations:</strong> Apply quality filters to show only predictions with high confidence scores</li>
+            <li><strong>Compare across annotation databases:</strong> Search with different annotation sources selected to see which databases have information about your gene</li>
+          </ul>
+
           <h5 class="fw-semibold text-dark mt-3 mb-2">Filtering Organisms in Group Searches</h5>
           <p class="text-muted mb-3">
             When searching within a group, you can control which organisms are included:
@@ -112,7 +124,7 @@
             <li>Use quotation marks for exact matches: <code>"exact phrase"</code></li>
             <li>Search for partial matches by entering part of a word or ID (e.g., <code>gene</code> will find "gene1", "gene2", etc.)</li>
             <li>Combine multiple filters for more precise results</li>
-            <li>Download results as CSV or FASTA to save your findings</li>
+            <li>Download results as Excel, CSV, or FASTA to save your findings</li>
             <li>Remember to deselect organisms you don't need to speed up searches</li>
           </ul>
         </div>
