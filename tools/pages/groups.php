@@ -104,13 +104,16 @@
           <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="card-title mb-0">Organisms in <?= htmlspecialchars($group_name) ?> Group</h3>
             <?php if (!empty($group_organisms)): ?>
-              <div class="btn-group" role="group">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllOrganisms">
-                  Select All
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllOrganisms">
-                  Deselect All
-                </button>
+              <div>
+                <div class="btn-group" role="group">
+                  <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllOrganisms">
+                    Select All
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllOrganisms">
+                    Deselect All
+                  </button>
+                </div>
+                <small class="d-block text-muted mt-2">Check/uncheck organisms to modify which are included in the search</small>
               </div>
             <?php endif; ?>
           </div>
