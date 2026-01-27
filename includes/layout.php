@@ -162,6 +162,9 @@ function render_display_page($content_file, $data = [], $title = '') {
         
         <?php include_once __DIR__ . '/footer.php'; ?>
         
+        <!-- Loading Indicator for Database Scanning -->
+        <?php include_once __DIR__ . '/loading-indicator.php'; ?>
+        
         <!-- 
         SCRIPT MANAGEMENT - All external scripts in one place
         This ensures:
@@ -188,6 +191,9 @@ function render_display_page($content_file, $data = [], $title = '') {
         <script src="/<?= $config->getString('site') ?>/js/modules/shared-results-table.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/annotation-search.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/advanced-search-filter.js"></script>
+        
+        <!-- Loading Indicator - Available to all pages for database scanning operations -->
+        <script src="/<?= $config->getString('site') ?>/js/loading-indicator.js"></script>
         
         <!-- Inline scripts - Page-specific variable definitions (must load before page_script) -->
         <?php

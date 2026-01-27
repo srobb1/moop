@@ -48,6 +48,9 @@ $site = $config->getString('site');
     <!-- Search Controls Styles (search and filter buttons) -->
     <link rel="stylesheet" href="/<?= $site ?>/css/search-controls.css">
     
+    <!-- Loading Indicator Styles (for database scanning operations) -->
+    <link rel="stylesheet" href="/<?= $site ?>/css/loading-indicator.css">
+    
     <!-- Optional custom CSS if defined in config -->
     <?php
       $custom_css_path = $config->getPath('custom_css_path', '');
