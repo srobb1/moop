@@ -33,15 +33,27 @@ document.addEventListener('click', function(event) {
   // Check if clicked element is a link to manage pages
   const link = event.target.closest('a');
   if (link) {
-    const href = link.href;
+    const href = link.href.toLowerCase();
     // Match manage_organisms.php or manage_annotations.php links
-    if (href.includes('manage_organisms.php') || href.includes('manage_annotations.php')) {
+    // Exclude hash links and admin.php navigation
+    if ((href.includes('manage_organisms.php') || href.includes('manage_annotations.php')) &&
+        !href.includes('#') && 
+        !href.includes('admin.php')) {
       // Show indicator immediately on click (before server queries)
       setTimeout(function() {
         showLoadingIndicator();
       }, 50);
     }
   }
+});
+
+/**
+ * Hide indicator when user uses browser back/forward buttons
+ * (popstate fires when going back/forward in history)
+ */
+window.addEventListener('popstate', function() {
+  // Going back to a previous page, hide the spinner
+  hideLoadingIndicator();
 });
 
 /**
