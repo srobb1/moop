@@ -1,0 +1,105 @@
+/**
+ * Loading Indicator Styles
+ * 
+ * Provides a full-screen loading indicator with spinner animation
+ * Used during database scanning and annotation counting operations
+ * 
+ * Usage: Include this CSS file and the loading-indicator.php include file
+ * Then call showLoadingIndicator() and hideLoadingIndicator() from JavaScript
+ */
+
+.loading-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+
+.loading-content {
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+}
+
+.loading-content h4 {
+  color: #333;
+  font-weight: 600;
+  margin: 0;
+}
+
+.loading-content .text-muted {
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+
+/* Spinner Animation */
+.spinner {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+}
+
+.spinner-ring {
+  box-sizing: border-box;
+  display: block;
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  margin: 8px;
+  border: 4px solid;
+  border-radius: 50%;
+  animation: spinner-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  border-color: #0d6efd transparent transparent transparent;
+}
+
+.spinner-ring:nth-child(1) {
+  animation-delay: -0.45s;
+}
+
+.spinner-ring:nth-child(2) {
+  animation-delay: -0.3s;
+}
+
+.spinner-ring:nth-child(3) {
+  animation-delay: -0.15s;
+}
+
+@keyframes spinner-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 576px) {
+  .loading-content {
+    padding: 30px 20px;
+    margin: 20px;
+  }
+
+  .spinner {
+    width: 60px;
+    height: 60px;
+  }
+
+  .spinner-ring {
+    width: 48px;
+    height: 48px;
+    margin: 6px;
+    border-width: 3px;
+  }
+}
