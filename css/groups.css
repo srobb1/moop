@@ -1,7 +1,7 @@
 /**
  * Groups Display - Organism Selector Styling
  * 
- * Styles for organism selector cards with checkboxes
+ * Styles for organism selector cards with improved checkbox styling
  */
 
 /* Organism selector card container */
@@ -12,26 +12,52 @@
 /* Checkbox overlay positioning */
 .organism-checkbox-overlay {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 12px;
+    right: 12px;
     z-index: 10;
-    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+/* Improved checkbox styling */
+.organism-checkbox {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    accent-color: #0d6efd;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 2px solid #d0d0d0;
     border-radius: 4px;
-    padding: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.organism-checkbox {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    accent-color: #0d6efd;
+.organism-checkbox:hover {
+    border-color: #0d6efd;
+    background-color: #f8f9ff;
 }
 
-/* Card styling when not hovered */
+.organism-checkbox:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Checkmark for checked state */
+.organism-checkbox:checked::after {
+    content: '✓';
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: -2px;
+}
+
+/* Card styling */
 .organism-selector-card .organism-card {
     border: 2px solid transparent;
     transition: all 0.2s ease;
@@ -49,19 +75,10 @@
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Link styling to prevent default behavior when clicking checkbox */
+/* Link styling to allow navigation */
 .organism-card-link {
     display: block;
     text-decoration: none !important;
 }
 
-/* Prevent card navigation when clicking checkbox */
-.organism-checkbox-overlay,
-.organism-checkbox {
-    pointer-events: all;
-}
 
-/* Ensure checkbox doesn't interfere with card link */
-.organism-checkbox-overlay + .organism-card-link {
-    pointer-events: auto;
-}

@@ -149,7 +149,7 @@
                        <input type="checkbox" class="organism-checkbox" data-organism="<?= htmlspecialchars($organism) ?>" checked>
                      </div>
                      <!-- Clickable card that links to organism page -->
-                  <a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
+<a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
                      class="text-decoration-none organism-card-link">
                     <div class="card h-100 shadow-sm organism-card">
                       <div class="card-body text-center">
