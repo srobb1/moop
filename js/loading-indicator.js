@@ -34,11 +34,10 @@ document.addEventListener('click', function(event) {
   const link = event.target.closest('a');
   if (link) {
     const href = link.href.toLowerCase();
-    // Match manage_organisms.php or manage_annotations.php links
-    // Exclude hash links and any admin pages
+    // Only show spinner when clicking links to manage_organisms.php or manage_annotations.php
+    // Exclude hash links
     if ((href.includes('manage_organisms.php') || href.includes('manage_annotations.php')) &&
-        !href.includes('#') && 
-        !href.includes('/admin/')) {
+        !href.includes('#')) {
       // Show indicator immediately on click (before server queries)
       setTimeout(function() {
         showLoadingIndicator();
