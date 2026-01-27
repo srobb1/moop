@@ -72,7 +72,6 @@
           <h4 class="fw-semibold text-dark mt-4 mb-2">Export Tips</h4>
           <ul class="text-muted">
             <li>Start with small exports to test the format before downloading large datasets</li>
-            <li>Check file encoding (UTF-8 is standard) before importing to other tools</li>
             <li>CSV files can use different delimiters - verify your tool's import settings</li>
             <li>Keep track of export dates if updating analyses over time</li>
             <li>For large exports, consider exporting in batches rather than all at once</li>
