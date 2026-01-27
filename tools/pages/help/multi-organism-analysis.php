@@ -57,7 +57,6 @@
           </p>
           <ul class="text-muted">
             <li><strong>Multi-Organism Search:</strong> Search across all selected organisms simultaneously</li>
-            <li><strong>Comparative Registry:</strong> View and compare organism metadata side-by-side</li>
             <li><strong>Sequence Retrieval:</strong> Retrieve sequences from multiple organisms</li>
             <li><strong>BLAST Search:</strong> Search your sequence against multiple organism databases</li>
           </ul>
