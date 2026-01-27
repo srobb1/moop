@@ -32,11 +32,15 @@ function hideLoadingIndicator() {
 document.addEventListener('click', function(event) {
   // Check if clicked element is a link to manage pages
   const link = event.target.closest('a');
-  if (link && (link.href.includes('manage_organisms') || link.href.includes('manage_annotations'))) {
-    // Show indicator immediately on click (before server queries)
-    setTimeout(function() {
-      showLoadingIndicator();
-    }, 50);
+  if (link) {
+    const href = link.href;
+    // Match manage_organisms.php or manage_annotations.php links
+    if (href.includes('manage_organisms.php') || href.includes('manage_annotations.php')) {
+      // Show indicator immediately on click (before server queries)
+      setTimeout(function() {
+        showLoadingIndicator();
+      }, 50);
+    }
   }
 });
 
