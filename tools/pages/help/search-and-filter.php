@@ -75,7 +75,7 @@
             Once you have search results:
           </p>
           <ul class="text-muted">
-            <li><strong>Sort columns:</strong> Click column headers to sort by any field</li>
+            <li><strong>Sort columns:</strong> Click column headers to sort by any field, including the Score column to rank matches by relevance</li>
             <li><strong>Search within results:</strong> Use the search box at the top of the table</li>
             <li><strong>Download results:</strong> Export your results in multiple formats: CSV, Excel (.xls), or FASTA</li>
             <li><strong>View details:</strong> Click on a result row to see full information</li>
