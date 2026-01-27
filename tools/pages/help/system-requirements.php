@@ -851,10 +851,10 @@ Optimal with BLAST = Cores × 2 (hyperthreading helps)</code></pre>
           </div>
           <div class="card-body">
             <ul class="mb-0" style="font-size: 0.9em;">
-              <li>☐ Daily backups (local or cloud)</li>
-              <li>☐ Monitor disk usage (alert at 80%)</li>
-              <li>☐ Monitor RAM during peak hours</li>
-              <li>☐ Log rotation for error logs</li>
+              <li>Daily backups (local or cloud)</li>
+              <li>Monitor disk usage (alert at 80%)</li>
+              <li>Monitor RAM during peak hours</li>
+              <li>Log rotation for error logs</li>
             </ul>
           </div>
         </div>
@@ -867,11 +867,11 @@ Optimal with BLAST = Cores × 2 (hyperthreading helps)</code></pre>
           </div>
           <div class="card-body">
             <ul class="mb-0" style="font-size: 0.9em;">
-              <li>☐ Daily automated backups (local + cloud)</li>
-              <li>☐ Disk health monitoring (SMART)</li>
-              <li>☐ RAM and CPU monitoring dashboards</li>
-              <li>☐ RAID-1 or RAID-5</li>
-              <li>☐ Network monitoring</li>
+              <li>Daily automated backups (local + cloud)</li>
+              <li>Disk health monitoring (SMART)</li>
+              <li>RAM and CPU monitoring dashboards</li>
+              <li>RAID-1 or RAID-5</li>
+              <li>Network monitoring</li>
             </ul>
           </div>
         </div>
@@ -884,13 +884,13 @@ Optimal with BLAST = Cores × 2 (hyperthreading helps)</code></pre>
           </div>
           <div class="card-body">
             <ul class="mb-0" style="font-size: 0.9em;">
-              <li>☐ Hourly + daily backups</li>
-              <li>☐ RAID-6 minimum</li>
-              <li>☐ Real-time monitoring (Prometheus, Grafana)</li>
-              <li>☐ Automated failover</li>
-              <li>☐ Dedicated backup server</li>
-              <li>☐ Network redundancy</li>
-              <li>☐ Quarterly capacity planning</li>
+              <li>Hourly + daily backups</li>
+              <li>RAID-6 minimum</li>
+              <li>Real-time monitoring (Prometheus, Grafana)</li>
+              <li>Automated failover</li>
+              <li>Dedicated backup server</li>
+              <li>Network redundancy</li>
+              <li>Quarterly capacity planning</li>
             </ul>
           </div>
         </div>
