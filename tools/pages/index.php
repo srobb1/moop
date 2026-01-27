@@ -17,8 +17,20 @@
     <div class="col-md-12 col-lg-10">
       <div class="card h-100 shadow-sm border-0 rounded-3 bg-info bg-opacity-10">
         <div class="card-body">
-          <p class="card-text text-muted mb-0">
+          <h5 class="fw-bold text-dark mb-3">Welcome to MOOP</h5>
+          <p class="card-text text-muted mb-3">
             <strong>MOOP</strong> — to keep company, associate closely. Explore and discover how diverse organisms associate closely together on one platform.
+          </p>
+          
+          <h6 class="fw-semibold text-dark mb-2">Get Started in 3 Steps:</h6>
+          <ol class="text-muted mb-3">
+            <li><strong>Select Organisms:</strong> Use <em>Group Select</em> for quick predefined groups or <em>Tree Select</em> for custom organism combinations</li>
+            <li><strong>Choose a Tool:</strong> Search sequences, run BLAST comparisons, browse the registry, or examine genome assemblies</li>
+            <li><strong>Explore Results:</strong> View interactive tables, visualizations, and download data for external analysis</li>
+          </ol>
+          
+          <p class="text-muted mb-0">
+            <strong>New to MOOP?</strong> <a href="help.php?page=getting-started" class="text-info text-decoration-none">Read the Getting Started guide</a> or explore other <a href="help.php" class="text-info text-decoration-none">tutorials and documentation</a> for detailed help.
           </p>
         </div>
       </div>
