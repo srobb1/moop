@@ -499,3 +499,195 @@ AND f.organism_id = ?
 **Affected Users:** Researchers, bioinformaticians, curators  
 **Priority:** Medium (useful for exploration, nice-to-have for v1.0)  
 **Budget:** 19-26 hours for full implementation (v1.0 with phases 1-3)
+
+---
+
+## REVISED: Separate Ontology Databases (Better Approach)
+
+**Note:** This updated approach uses separate SQLite files for each ontology instead of adding tables to organism.sqlite.
+
+### Why Separate Databases?
+
+1. **No organism.sqlite pollution** - keeps annotation data separate from ontology structure
+2. **Independent updates** - update GO without touching organism data
+3. **Scalable** - add new ontologies without modifying main database
+4. **Cleaner** - each database has single responsibility
+5. **Reusable** - ontology files could be shared across MOOP instances
+
+### Revised Architecture
+
+```
+/data/moop/metadata/ontologies/
+├── go.sqlite              # Gene Ontology
+├── chebi.sqlite           # Chemical Entities
+├── mesh.sqlite            # Medical Subject Headings
+└── custom.sqlite          # User-defined
+```
+
+### Database Schema (per ontology)
+
+Each ontology.sqlite contains ONLY ontology structure:
+
+```sql
+-- go.sqlite
+CREATE TABLE terms (
+    term_id VARCHAR(20) PRIMARY KEY,
+    name VARCHAR(255),
+    definition TEXT,
+    is_obsolete BOOLEAN,
+    created_date DATETIME
+);
+
+CREATE TABLE relationships (
+    parent_term_id VARCHAR(20),
+    child_term_id VARCHAR(20),
+    relationship_type VARCHAR(50),  -- 'is_a', 'part_of', 'regulates'
+    PRIMARY KEY (parent_term_id, child_term_id, relationship_type)
+);
+
+CREATE TABLE root_terms (
+    term_id VARCHAR(20) PRIMARY KEY
+);
+
+CREATE INDEX idx_parent ON relationships(parent_term_id);
+CREATE INDEX idx_child ON relationships(child_term_id);
+```
+
+### How Counts Work
+
+Counts are calculated ON-DEMAND by querying BOTH databases:
+
+```php
+function getTermCounts($term_id, $ontology, $organism_ids) {
+    // Get ontology database
+    $ont_db = OntologyManager::getDatabase($ontology);
+    
+    // Get all descendants from ontology DB
+    $descendants = getDescendantTerms($term_id, $ont_db);
+    $all_terms = array_merge([$term_id], $descendants);
+    
+    // Query organism.sqlite for sequences with these annotations
+    $org_db = new SQLite3(ORGANISM_DB_PATH, SQLITE3_OPEN_READONLY);
+    $query = "SELECT COUNT(DISTINCT f.feature_id)
+              FROM feature_annotation fa
+              JOIN annotation a ON fa.annotation_id = a.annotation_id
+              WHERE a.annotation_accession IN (" . implode(',', array_fill(0, count($all_terms), '?')) . ")
+              AND fa.organism_id IN (" . implode(',', $organism_ids) . ")";
+    
+    return $org_db->querySingle($query, $all_terms);
+}
+```
+
+### Connection Management
+
+```php
+class OntologyManager {
+    private static $connections = [];
+    
+    public static function getDatabase($ontology) {
+        if (!isset(self::$connections[$ontology])) {
+            $path = "/data/moop/metadata/ontologies/$ontology.sqlite";
+            self::$connections[$ontology] = new SQLite3($path, SQLITE3_OPEN_READONLY);
+        }
+        return self::$connections[$ontology];
+    }
+}
+```
+
+### Import Script
+
+New utility to create/update ontology databases:
+
+```php
+// /data/moop/scripts/import_ontology.php
+// Usage: php import_ontology.php GO /path/to/go.obo
+// Creates: /data/moop/metadata/ontologies/go.sqlite
+
+$ontology_name = $argv[1];  // 'GO', 'CHEBI', 'MESH'
+$obo_file = $argv[2];       // Path to OBO file
+
+$db = createOntologyDatabase($ontology_name);
+parseOboFile($obo_file, $db);
+buildIndices($db);
+echo "Created ontologies/$ontology_name.sqlite\n";
+```
+
+### Advantages Over Single Database
+
+| Aspect | Single DB | Separate DBs |
+|--------|-----------|--------------|
+| organism.sqlite size | Larger | Smaller |
+| Ontology updates | Touch organism DB | Independent |
+| Adding new ontology | Modify schema | Just add file |
+| Query complexity | Single DB joins | Two DB queries |
+| Connection overhead | None | Minimal (cached) |
+| Scalability | Limited | Excellent |
+
+### Performance Impact
+
+**Negligible:**
+- Open ontology DB once per session (connection pooling)
+- Ontology queries are simple (single DB, no joins)
+- Organism queries unchanged
+- Caching mitigates any cross-DB overhead
+
+### Caching Strategy
+
+```php
+$cache_key = md5("term_counts_$term_id" . implode("_", $organism_ids));
+
+if ($cached = cache_get($cache_key)) {
+    return $cached['count'];
+}
+
+// Calculate count (queries both databases)
+$count = getTermCounts($term_id, $ontology, $organism_ids);
+
+// Cache for 1 hour
+cache_set($cache_key, ['count' => $count], 3600);
+
+return $count;
+```
+
+### Revised Folder Structure
+
+```
+/data/moop/
+├── metadata/
+│   ├── organisms/           (existing)
+│   │   ├── organism1.json
+│   │   └── organism2.json
+│   └── ontologies/          (NEW)
+│       ├── go.sqlite        (NEW)
+│       ├── go.obo           (backup)
+│       ├── chebi.sqlite     (future)
+│       └── README.md        (ontology docs)
+├── lib/
+│   ├── ontology_functions.php  (NEW)
+│   └── ...
+├── tools/
+│   ├── ontology_browser.php    (NEW)
+│   ├── ontology_ajax.php       (NEW)
+│   └── pages/
+│       └── ontology_browser.php (NEW)
+├── scripts/
+│   └── import_ontology.php     (NEW)
+├── js/
+│   └── ontology_browser.js     (NEW)
+└── css/
+    └── ontology_browser.css    (NEW)
+```
+
+### Updated Implementation (No changes to phases)
+
+Still **Phase 1: 8-10 hours**
+- Parse OBO → create go.sqlite (1-2h)
+- Query functions, connection pooling (1-2h)
+- API endpoints (1h)
+- Tree UI (2-3h)
+
+**Key difference:** 
+- Functions query TWO databases instead of one
+- Connection caching eliminates overhead
+- No organism.sqlite schema changes needed
+
