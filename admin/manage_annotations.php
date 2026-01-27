@@ -395,8 +395,7 @@ $data = [
     ],
     'inline_scripts' => [
         "window.allSections = " . json_encode($annotation_config['analysis_order']) . ";",
-        "window.originalOrder = [...window.allSections];",
-        ($need_update ? "showLoadingIndicator();" : "")
+        "window.originalOrder = [...window.allSections];"
     ],
     'page_script' => [
         'https://code.jquery.com/ui/1.14.0/jquery-ui.min.js',

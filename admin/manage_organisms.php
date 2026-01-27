@@ -190,8 +190,7 @@ $data = [
         '/' . $config->getString('site') . '/js/modules/organism-management.js'
     ],
     'inline_scripts' => [
-        "const sitePath = '/" . $config->getString('site') . "';",
-        "showLoadingIndicator();"
+        "const sitePath = '/" . $config->getString('site') . "';"
     ]
 ];
 

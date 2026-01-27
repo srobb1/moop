@@ -26,8 +26,23 @@ function hideLoadingIndicator() {
 }
 
 /**
- * Show indicator on page load if database scanning might occur
- * Checks for data-needs-scan="true" attribute on page element
+ * Auto-show loading indicator on page navigation (before server queries start)
+ * Listen for navigation clicks to admin pages that do database scanning
+ */
+document.addEventListener('click', function(event) {
+  // Check if clicked element is a link to manage pages
+  const link = event.target.closest('a');
+  if (link && (link.href.includes('manage_organisms') || link.href.includes('manage_annotations'))) {
+    // Show indicator immediately on click (before server queries)
+    setTimeout(function() {
+      showLoadingIndicator();
+    }, 50);
+  }
+});
+
+/**
+ * Show indicator on page load if data-needs-scan="true" attribute exists
+ * Checks for data attribute on page element
  */
 document.addEventListener('DOMContentLoaded', function() {
   const pageElement = document.querySelector('[data-needs-scan="true"]');
@@ -49,3 +64,4 @@ document.addEventListener('DOMContentLoaded', function() {
 window.addEventListener('load', function() {
   hideLoadingIndicator();
 });
+
