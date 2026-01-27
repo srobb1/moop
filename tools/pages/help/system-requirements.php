@@ -163,7 +163,6 @@
           </div>
         </div>
       </div>
-      </div>
 
       <div class="col-lg-6">
         <div class="card mb-3">
@@ -186,14 +185,16 @@
       <div class="col-lg-6">
         <div class="card mb-3">
           <div class="card-header bg-warning bg-opacity-10">
-            <strong>Other Files</strong>
+            <strong>Metadata & Configuration</strong>
           </div>
           <div class="card-body">
             <ul class="mb-0">
               <li><strong>organism.json:</strong> 2-5 KB per organism</li>
-              <li><strong>Metadata:</strong> ~68 KB total (grows slowly)</li>
-              <li><strong>Genome storage:</strong> 87% of total (source FASTA)</li>
+              <li><strong>Taxonomy tree:</strong> ~50 KB (shared)</li>
+              <li><strong>Group metadata:</strong> ~18 KB (shared)</li>
+              <li><strong>Annotation config:</strong> ~10 KB (shared)</li>
               <li><strong>Growth:</strong> Very minimal</li>
+              <li><strong>% of Total:</strong> < 0.1% per organism</li>
             </ul>
           </div>
         </div>
