@@ -618,7 +618,6 @@ Recommended allocation:    400 GB (with growth room)</code></pre>
         <ul>
           <li><strong>Concurrent BLAST + Multi-organism search:</strong> High memory spike</li>
           <li><strong>Large export (CSV/Excel 10k+ rows):</strong> Sustained high memory</li>
-          <li><strong>Phylogenetic tree generation:</strong> Sustained (grows with organisms)</li>
         </ul>
 
         <h6 class="mt-3">Formula</h6>
@@ -658,19 +657,9 @@ Peak RAM = Recommended × 1.25 (for load spikes)</code></pre>
               <td>5-30 minutes</td>
             </tr>
             <tr>
-              <td><strong>Phylogenetic Tree Generation</strong></td>
-              <td>40-60%</td>
-              <td>1-5 minutes (100 orgs)</td>
-            </tr>
-            <tr>
               <td><strong>Database Indexing</strong></td>
               <td>50-70%</td>
               <td>10-30 minutes/organism</td>
-            </tr>
-            <tr>
-              <td><strong>Taxonomy Tree Auto-gen</strong></td>
-              <td>Moderate</td>
-              <td>~1 sec/organism (API limited)</td>
             </tr>
           </tbody>
         </table>
@@ -747,18 +736,6 @@ Optimal with BLAST = Cores × 2 (hyperthreading helps)</code></pre>
           <li><strong>Retrieve 10 sequences:</strong> 100-500 ms</li>
           <li><strong>Generate FASTA (10 KB):</strong> 200-800 ms</li>
           <li><strong>Export large results (1 MB CSV):</strong> 1-5 seconds</li>
-        </ul>
-      </div>
-    </div>
-
-    <h4 class="mt-4">Phylogenetic Tree Generation</h4>
-    <div class="card mb-4">
-      <div class="card-body">
-        <ul>
-          <li><strong>Auto-generate from 10 organisms:</strong> 1-2 minutes</li>
-          <li><strong>Auto-generate from 50 organisms:</strong> 5-10 minutes</li>
-          <li><strong>Auto-generate from 100 organisms:</strong> 10-20 minutes</li>
-          <li><strong>Note:</strong> Limited by NCBI API rate limits (3 req/sec)</li>
         </ul>
       </div>
     </div>
