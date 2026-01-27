@@ -110,10 +110,10 @@
           <h4 class="fw-semibold text-dark mt-4 mb-2">Search Tips</h4>
           <ul class="text-muted">
             <li>Use quotation marks for exact matches: <code>"exact phrase"</code></li>
-            <li>Use wildcards (* or ?) for partial matching: <code>gene*</code></li>
+            <li>Search for partial matches by entering part of a word or ID (e.g., <code>gene</code> will find "gene1", "gene2", etc.)</li>
             <li>Combine multiple filters for more precise results</li>
             <li>Download results as CSV or FASTA to save your findings</li>
-            <li>Note: Searches themselves cannot be saved, but you can download and keep results locally</li>
+            <li>Remember to deselect organisms you don't need to speed up searches</li>
           </ul>
         </div>
       </div>
