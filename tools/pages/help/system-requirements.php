@@ -38,9 +38,9 @@
 
   <!-- Alert Box -->
   <div class="alert alert-info">
-    <strong><i class="fa fa-info-circle"></i> Current Baseline:</strong> 
-    MOOP is currently running with <strong>5 organisms</strong>, <strong>11 GB total storage</strong>, and <strong>~2 GB average per organism</strong>. 
-    All calculations on this page are based on this empirical data.
+    <strong><i class="fa fa-info-circle"></i> Current Baseline (Complete Datasets):</strong> 
+    MOOP has <strong>3 organisms with complete data (genome.fa)</strong>, totaling <strong>9.5 GB</strong>, and <strong>~3.2 GB average per complete organism</strong>. 
+    All scaling calculations below are based on this empirical complete dataset. <em>Note: 2 smaller organisms lack full genome files, reducing their total size to 0.7 GB average.</em>
   </div>
 
   <!-- Section 1: Current Analysis -->
@@ -103,12 +103,12 @@
               <td>Large genome (2.1 GB)</td>
             </tr>
             <tr class="table-active">
-              <td><strong>AVERAGE</strong></td>
-              <td><strong>2.0 GB</strong></td>
-              <td><strong>161 MB</strong></td>
-              <td><strong>78 MB</strong></td>
+              <td><strong>AVERAGE (Complete)</strong></td>
+              <td><strong>3.2 GB</strong></td>
+              <td><strong>132 MB</strong></td>
+              <td><strong>102 MB</strong></td>
               <td><strong>17 MB</strong></td>
-              <td>Typical organism</td>
+              <td>Complete datasets only (genome.fa included)</td>
             </tr>
           </tbody>
         </table>
@@ -137,10 +137,10 @@
           <div class="card-body">
             <ul class="mb-0">
               <li><strong>Range:</strong> 113 MB - 252 MB per organism</li>
-              <li><strong>Average:</strong> 161 MB per organism</li>
+              <li><strong>Average (complete):</strong> 132 MB per organism</li>
               <li><strong>Stores:</strong> Features, annotations, relationships</li>
               <li><strong>Growth:</strong> 1-2 MB per 10,000 additional annotations</li>
-              <li><strong>% of Total:</strong> ~8% per organism</li>
+              <li><strong>% of Total:</strong> ~4% per complete organism</li>
             </ul>
           </div>
         </div>
@@ -149,15 +149,15 @@
       <div class="col-lg-6">
         <div class="card mb-3">
           <div class="card-header bg-info bg-opacity-10">
-            <strong>FASTA Files</strong>
+            <strong>FASTA Files (genome.fa included)</strong>
           </div>
           <div class="card-body">
             <ul class="mb-0">
-              <li><strong>Range:</strong> 25 MB - 152 MB per organism</li>
-              <li><strong>Average:</strong> 78 MB per organism</li>
+              <li><strong>Range:</strong> 57 MB - 152 MB per organism</li>
+              <li><strong>Average (complete):</strong> 102 MB per organism</li>
               <li><strong>Types:</strong> genome.fa, transcript.nt.fa, cds.nt.fa, protein.aa.fa</li>
               <li><strong>Growth:</strong> Minimal after initial load</li>
-              <li><strong>% of Total:</strong> ~4% per organism</li>
+              <li><strong>% of Total:</strong> ~3% per complete organism</li>
             </ul>
           </div>
         </div>
@@ -205,8 +205,8 @@
 
     <h4 class="mt-4">Disk Space Requirements Formula</h4>
     <div class="alert alert-light border">
-      <pre><code>Total Disk = (Average per organism × Number of organisms) × 1.2 (overhead)
-           = (2.0 GB × N) × 1.2</code></pre>
+      <pre><code>Total Disk = (Average per complete organism × Number of organisms) × 1.2 (overhead)
+           = (3.2 GB × N) × 1.2</code></pre>
     </div>
 
     <h4 class="mt-4">Disk Space by Scale</h4>
@@ -223,39 +223,45 @@
           </thead>
           <tbody>
             <tr>
-              <td><strong>5</strong></td>
-              <td>10 GB</td>
+              <td><strong>3</strong></td>
+              <td>9.6 GB</td>
               <td>15 GB</td>
-              <td>Current deployment</td>
+              <td>Current deployment (complete only)</td>
+            </tr>
+            <tr>
+              <td><strong>5</strong></td>
+              <td>16 GB</td>
+              <td>25 GB</td>
+              <td>Small lab</td>
             </tr>
             <tr>
               <td><strong>10</strong></td>
-              <td>20 GB</td>
-              <td>30 GB</td>
+              <td>32 GB</td>
+              <td>50 GB</td>
               <td>Small research group</td>
             </tr>
             <tr>
               <td><strong>20</strong></td>
-              <td>40 GB</td>
-              <td>50 GB</td>
+              <td>64 GB</td>
+              <td>80 GB</td>
               <td>Medium lab</td>
             </tr>
             <tr>
               <td><strong>50</strong></td>
-              <td>100 GB</td>
-              <td>125 GB</td>
+              <td>160 GB</td>
+              <td>200 GB</td>
               <td>Large lab</td>
             </tr>
             <tr>
               <td><strong>100</strong></td>
-              <td>200 GB</td>
-              <td>250 GB</td>
+              <td>320 GB</td>
+              <td>400 GB</td>
               <td>Multi-lab / institutional</td>
             </tr>
             <tr>
               <td><strong>200</strong></td>
-              <td>400 GB</td>
-              <td>500 GB</td>
+              <td>640 GB</td>
+              <td>800 GB</td>
               <td>Large institution</td>
             </tr>
           </tbody>
@@ -317,10 +323,10 @@
       </div>
     </div>
 
-    <h4 class="mt-4 mt-3">Storage Breakdown Example (100 Organisms)</h4>
+    <h4 class="mt-4 mt-3">Storage Breakdown Example (100 Organisms with Complete Data)</h4>
     <div class="alert alert-light border">
-      <pre><code>Database files:        16 GB (100 × 161 MB)
-FASTA files:           7.8 GB (100 × 78 MB)
+      <pre><code>Database files:        13.2 GB (100 × 132 MB)
+FASTA files:           10.2 GB (100 × 102 MB)
 BLAST indices:         1.7 GB (100 × 17 MB)
 Other files/overhead:  2-3 GB
 ────────────────────────────────
@@ -352,9 +358,18 @@ TOTAL:                ~27-28 GB usable
             </thead>
             <tbody>
               <tr>
-                <td><strong>5 org</strong></td>
+                <td><strong>3 org</strong></td>
                 <td>15 GB</td>
                 <td>8 GB</td>
+                <td>4c</td>
+                <td>2-3</td>
+                <td>1 serial</td>
+                <td>Current (complete)</td>
+              </tr>
+              <tr>
+                <td><strong>5 org</strong></td>
+                <td>25 GB</td>
+                <td>8-16 GB</td>
                 <td>4c</td>
                 <td>2-3</td>
                 <td>1 serial</td>
@@ -362,7 +377,7 @@ TOTAL:                ~27-28 GB usable
               </tr>
               <tr>
                 <td><strong>10 org</strong></td>
-                <td>30 GB</td>
+                <td>50 GB</td>
                 <td>16 GB</td>
                 <td>8c</td>
                 <td>4-5</td>
@@ -371,7 +386,7 @@ TOTAL:                ~27-28 GB usable
               </tr>
               <tr>
                 <td><strong>20 org</strong></td>
-                <td>50 GB</td>
+                <td>80 GB</td>
                 <td>32 GB</td>
                 <td>16c</td>
                 <td>8-10</td>
@@ -380,7 +395,7 @@ TOTAL:                ~27-28 GB usable
               </tr>
               <tr>
                 <td><strong>50 org</strong></td>
-                <td>125 GB</td>
+                <td>200 GB</td>
                 <td>64 GB</td>
                 <td>24c</td>
                 <td>15-20</td>
@@ -389,7 +404,7 @@ TOTAL:                ~27-28 GB usable
               </tr>
               <tr>
                 <td><strong>100 org</strong></td>
-                <td>250 GB</td>
+                <td>400 GB</td>
                 <td>128 GB</td>
                 <td>48c</td>
                 <td>30-50</td>
@@ -398,7 +413,7 @@ TOTAL:                ~27-28 GB usable
               </tr>
               <tr>
                 <td><strong>200+ org</strong></td>
-                <td>500+ GB</td>
+                <td>800+ GB</td>
                 <td>256+ GB</td>
                 <td>64+ c</td>
                 <td>100+</td>
@@ -411,7 +426,7 @@ TOTAL:                ~27-28 GB usable
       </div>
     </div>
 
-    <h4 class="mt-4">Configuration 1: Small Lab (5 Organisms) - CURRENT</h4>
+    <h4 class="mt-4">Configuration 1: Small Lab (3-5 Organisms with Complete Data)</h4>
     <div class="card mb-4">
       <div class="card-body">
         <div class="row">
@@ -420,7 +435,7 @@ TOTAL:                ~27-28 GB usable
             <ul>
               <li><strong>CPU:</strong> 4 cores / 2 GHz (Intel i5 or equivalent)</li>
               <li><strong>RAM:</strong> 8 GB</li>
-              <li><strong>Storage:</strong> 30 GB SSD (15 GB organisms + backups)</li>
+              <li><strong>Storage:</strong> 25 GB SSD (15-25 GB organisms + backups)</li>
               <li><strong>Network:</strong> 1 Gbps</li>
             </ul>
           </div>
@@ -428,7 +443,7 @@ TOTAL:                ~27-28 GB usable
             <h6>Performance</h6>
             <ul>
               <li><strong>Search response:</strong> < 1 second</li>
-              <li><strong>BLAST search:</strong> 5-15 minutes</li>
+              <li><strong>BLAST search:</strong> 5-20 minutes</li>
               <li><strong>Multi-organism search:</strong> 1-5 seconds</li>
               <li><strong>Concurrent users:</strong> 2-3</li>
             </ul>
@@ -1046,13 +1061,13 @@ TOTAL                  ~44 GB
     <div class="alert alert-success">
       <h5><i class="fa fa-lightbulb"></i> Key Takeaways</h5>
       <ul class="mb-0">
-        <li><strong>Current baseline:</strong> 2.0 GB average per organism, 161 MB database, 78 MB FASTA, 17 MB BLAST</li>
-        <li><strong>Disk growth:</strong> Simple formula: (2.0 GB × organisms) × 1.2 for overhead</li>
+        <li><strong>Complete dataset baseline:</strong> 3.2 GB average per organism (with genome.fa), 132 MB database, 102 MB FASTA, 17 MB BLAST</li>
+        <li><strong>Disk growth formula:</strong> (3.2 GB × organisms) × 1.2 for overhead</li>
         <li><strong>RAM formula:</strong> (organisms × 0.1 GB) + 4 GB base; peak = recommended × 1.25</li>
         <li><strong>CPU formula:</strong> (organisms ÷ 10) + 4 cores; double for optimal BLAST performance</li>
+        <li><strong>Important:</strong> Not all organisms have complete data. Verify genome.fa availability when adding new organisms.</li>
         <li><strong>BLAST is resource-intensive:</strong> Limit concurrent BLAST searches; uses all available cores</li>
         <li><strong>Scale incrementally:</strong> Plan for 6-month growth cycles, upgrade components as needed</li>
-        <li><strong>Monitor constantly:</strong> Set disk (80%), memory (85%), and CPU (90%) alerts</li>
       </ul>
     </div>
 
