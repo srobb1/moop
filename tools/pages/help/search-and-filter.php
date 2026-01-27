@@ -71,6 +71,31 @@
             <li><strong>View details:</strong> Click on a result row to see full information</li>
           </ul>
 
+          <h5 class="fw-semibold text-dark mt-3 mb-2">Simple View vs. Expanded View</h5>
+          <p class="text-muted mb-3">
+            MOOP provides two ways to view your search results:
+          </p>
+          <ul class="text-muted">
+            <li><strong>Simple View:</strong> Shows basic match information with sequence name, description, and top annotation
+              <ul>
+                <li>Use when you want a quick overview of results</li>
+                <li>Easier to scan through many results</li>
+                <li>Ideal for identifying which sequences match your search</li>
+              </ul>
+            </li>
+            <li><strong>Expanded View:</strong> Shows ALL matching annotations for each sequence with detailed information
+              <ul>
+                <li>Use when you need to see exactly where your search terms appeared</li>
+                <li>Shows every matching annotation and which search keywords matched</li>
+                <li>Useful for understanding why a sequence matched your search</li>
+              </ul>
+            </li>
+          </ul>
+
+          <p class="text-muted">
+            Click the <strong>"Expand All Matches"</strong> button to toggle between views. The simple view is shown by default for better performance with large result sets.
+          </p>
+
           <h4 class="fw-semibold text-dark mt-4 mb-2">Exporting Results</h4>
           <p class="text-muted mb-3">
             Save your search results for further analysis:
