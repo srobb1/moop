@@ -36,8 +36,6 @@
             <li><strong>CSV (Comma-Separated Values):</strong> Import into spreadsheets or databases</li>
             <li><strong>FASTA:</strong> Standard format for sequence data, compatible with most bioinformatics tools</li>
             <li><strong>Excel (.xlsx):</strong> For spreadsheet analysis with formatting</li>
-            <li><strong>JSON:</strong> For programmatic access and scripting</li>
-            <li><strong>GFF3:</strong> For genomic features and annotations</li>
           </ul>
 
           <h4 class="fw-semibold text-dark mt-4 mb-2">How to Export Results</h4>
@@ -68,7 +66,6 @@
           </p>
           <ul class="text-muted">
             <li><strong>CSV/Excel:</strong> Easy to open and manipulate in spreadsheet software</li>
-            <li><strong>GFF3:</strong> Standard format for genomic feature annotations</li>
             <li>You can filter which annotations to include before export</li>
           </ul>
 
