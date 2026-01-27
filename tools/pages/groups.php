@@ -101,13 +101,25 @@
     <div class="col-12">
       <div class="card shadow-sm">
         <div class="card-body">
-          <h3 class="card-title mb-4">Organisms in <?= htmlspecialchars($group_name) ?> Group</h3>
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="card-title mb-0">Organisms in <?= htmlspecialchars($group_name) ?> Group</h3>
+            <?php if (!empty($group_organisms)): ?>
+              <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllOrganisms">
+                  Select All
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllOrganisms">
+                  Deselect All
+                </button>
+              </div>
+            <?php endif; ?>
+          </div>
           <?php if (empty($group_organisms)): ?>
             <div class="alert alert-info mb-0">
               <i class="fa fa-info-circle"></i> No organisms are currently available in this group.
             </div>
           <?php else: ?>
-            <div class="row g-3">
+            <div class="row g-3" id="organismsGrid">
               <?php foreach ($group_organisms as $organism => $assemblies): ?>
                 <?php
                   $organism_json_path = "$organism_data/$organism/organism.json";
@@ -131,8 +143,14 @@
                   $show_image = !empty($image_src);
                 ?>
                 <div class="col-md-6 col-lg-4">
+                   <div class="organism-selector-card position-relative">
+                     <!-- Checkbox overlay -->
+                     <div class="organism-checkbox-overlay">
+                       <input type="checkbox" class="organism-checkbox" data-organism="<?= htmlspecialchars($organism) ?>" checked>
+                     </div>
+                     <!-- Clickable card that links to organism page -->
                   <a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
-                     class="text-decoration-none">
+                     class="text-decoration-none organism-card-link">
                     <div class="card h-100 shadow-sm organism-card">
                       <div class="card-body text-center">
                         <div class="organism-image-container mb-3">
@@ -156,6 +174,7 @@
                     </div>
                   </a>
                 </div>
+                     </div>
               <?php endforeach; ?>
             </div>
           <?php endif; ?>

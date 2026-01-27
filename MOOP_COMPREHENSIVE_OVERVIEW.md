@@ -924,7 +924,7 @@ organisms/
 ```
 User selects organisms/assemblies
           ↓
-User enters search term (organism name, common name, feature)
+User enters search term (feature ID, Gene ID, protein domain, gene name, gene description)
           ↓
 System queries selected assemblies
           ↓
@@ -1053,27 +1053,30 @@ Feature → [Has multiple annotations]
 
 Example: GENE_12345 (insulin gene)
 ├─ Annotation 1
-│  ├─ Type: Homolog
+│  ├─ Accession: NP_000207.1
+│  ├─ Description: Homo sapiens insulin
 │  ├─ Source: BLAST/NCBI
-│  ├─ Hit: NP_000207.1 (Homo sapiens insulin)
-│  ├─ Score: 1.2e-45 (e-value)
-│  ├─ Bit Score: 178
+│  ├─ Score: 1.2e-45 (e-value or classification)
+│  ├─ Date: 2024-12-02 (when calculated)
 │  └─ Link: https://www.ncbi.nlm.nih.gov/protein/NP_000207.1
 │
 ├─ Annotation 2
-│  ├─ Type: Protein Domain
+│  ├─ Accession: IPR003236
+│  ├─ Description: Insulin-like growth factor domain
 │  ├─ Source: InterPro
-│  ├─ Hit: IPR003236 (Insulin-like growth factor)
 │  ├─ Score: 1.5e-20
+│  ├─ Date: 2024-12-02
 │  └─ Link: https://www.ebi.ac.uk/interpro/entry/IPR003236
 │
 └─ Annotation 3
-   ├─ Type: GO Term
-   ├─ Source: InterPro → GO
-   ├─ Hit: GO:0005179 (hormone activity)
-   ├─ Evidence: IEA (inferred from electronic annotation)
-   └─ Link: http://amigo.geneontology.org/amigo/term/GO:0005179
+    ├─ Accession: GO:0005179
+    ├─ Description: hormone activity
+    ├─ Source: Gene Ontology
+    ├─ Score: Ortholog (annotation classification)
+    ├─ Date: 2024-12-02
+    └─ Link: http://amigo.geneontology.org/amigo/term/GO:0005179
 ```
+
 
 ### Annotation Configuration
 
@@ -1109,22 +1112,31 @@ Defined in `/data/moop/metadata/annotation_config.json`:
 
 ### Annotation Display on Feature Pages
 
-On each feature detail page:
+On each feature detail page, for each annotation type:
 
 ```
-┌─ Annotation Header ─────────────────────────────────────┐
-│ [Badge: Type]  [Badge: Count]  [Info icon]  [Search]    │
+┌─ Annotation Type Header ────────────────────────────────┐
+│ [Badge: Type]  [Badge: Count]  [Info]  [Filter Search]  │
+│                                   🔗       "Search..."   │
 ├─────────────────────────────────────────────────────────┤
 │ Table with columns:                                      │
 │ - Annotation ID (linked to external resource)           │
 │ - Description (text from source)                        │
-│ - Score (e-value, bit score, confidence)               │
+│ - Score (e-value, bit score, or classification)        │
 │ - Source (NCBI, InterPro, etc.)                         │
-│ - [Export buttons: CSV, Excel, Copy, Print]            │
+│                                                          │
+│ Export options: CSV, Excel, PDF, Print                  │
 ├─────────────────────────────────────────────────────────┤
-│ [Collapsible description of annotation type]            │
+│ [Collapsible info: explanation of annotation type]      │
 └─────────────────────────────────────────────────────────┘
 ```
+
+**Components:**
+- **Badge: Type** - Annotation type (e.g., "Homologs", "Orthologs")
+- **Badge: Count** - Number of results for this type
+- **Info Icon** - Toggles collapsible description below
+- **Filter Search** - DataTables search box (real-time substring filtering)
+- **Jump to Sequences** - Quick link to sequences section
 
 ---
 

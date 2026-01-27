@@ -22,11 +22,11 @@
       <?php
       echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/index.php"><i class="fa fa-home"></i>'. $title.'</a></li>';
 
-          echo '<li class="nav-item"><a class="nav-link" href="/about.php">About</a></li>';
+          echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/about.php">About</a></li>';
 
 
 
-echo '<li class="nav-item"><a class="nav-link" href="/Public/help/00_help.php">Help</a></li>';
+echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/help.php">Help</a></li>';
 
 if (is_logged_in() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
     echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/admin/admin.php"><i class="fa fa-tools"></i> Admin Tools</a></li>';

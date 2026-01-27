@@ -77,6 +77,9 @@ if (!is_public_group($group_name)) {
 $display_config = [
     'title' => htmlspecialchars($group_name) . ' - ' . $config->getString('siteTitle'),
     'content_file' => __DIR__ . '/pages/groups.php',
+    'page_styles' => [
+        "/$site/css/groups.css"
+    ],
     'page_script' => "/$site/js/groups-display.js",
     'inline_scripts' => [
         "const sitePath = '/$site';",

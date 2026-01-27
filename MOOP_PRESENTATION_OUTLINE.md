@@ -299,21 +299,36 @@ Workflow:
 **Per-Organism Directory:**
 ```
 Organism_Name/
-├── Organism_Name.db           (SQLite database)
+├── organism.sqlite            (SQLite database with all features & annotations)
+├── organism.json              (Organism metadata: taxon_id, common_name, etc.)
 ├── assembly_v1/
-│   ├── reference_genome.fasta
-│   ├── proteins.faa
-│   └── blast_nt/              (Indexed BLAST DB)
+│   ├── genome.fa              (Reference genome sequences)
+│   ├── transcript.nt.fa       (mRNA/transcript sequences)
+│   ├── cds.nt.fa              (Coding sequence nucleotides)
+│   ├── protein.aa.fa          (Protein sequences)
+│   ├── genome.fa.n*           (BLAST indices for genome)
+│   ├── transcript.nt.fa.n*    (BLAST indices for transcripts)
+│   ├── cds.nt.fa.n*           (BLAST indices for CDS)
+│   └── protein.aa.fa.p*       (BLAST indices for proteins)
 └── GCA_00000000.1/
-    ├── reference_genome.fasta
-    ├── proteins.faa
-    └── blast_nt/
+    ├── genome.fa
+    ├── transcript.nt.fa
+    ├── cds.nt.fa
+    ├── protein.aa.fa
+    └── [BLAST indices...]
 ```
+
+**Key Points:**
+- One `organism.sqlite` database per organism (contains all features, annotations, assemblies)
+- One subdirectory per assembly (contains sequence files and BLAST indices)
+- BLAST database files created with `makeblastdb` (extensions: .nhr, .nin, .nsq, etc. for nucleotide; .phr, .pin, .psq for protein)
+- Sequence file patterns configurable in `config_editable.json` (not hardcoded)
 
 **Scalability:**
 - New organisms added independently
 - Each organism has independent database
 - Assemblies can be added/updated without affecting others
+- FASTA and BLAST files organized per-assembly for easy management
 
 ### Slide 20: Admin Tools
 **Available Functions:**
@@ -336,11 +351,12 @@ Organism_Name/
 **Result:** No SQL injection, no unauthorized data access, no sensitive info leaks
 
 ### Slide 22-23: Technology Stack
+
 **Backend:**
-- PHP 7.4+ (application logic)
-- SQLite 3 (data storage)
+- PHP 7.4+ with modules: `pdo_sqlite`, `sqlite3`, `curl` (application logic)
+- SQLite 3 (system package + PHP extensions for data storage)
 - NCBI BLAST+ (sequence searching)
-- NCBI Taxonomy API (phylogenetic tree)
+- NCBI Taxonomy API (called via PHP HTTP functions for phylogenetic tree data)
 
 **Frontend:**
 - HTML5/CSS3 (semantic markup)
@@ -353,6 +369,11 @@ Organism_Name/
 - Apache 2.4+ or Nginx
 - Linux/Unix server
 - Symlinks for data mounting
+
+**System Dependencies:**
+- Curl (for NCBI API calls)
+- Git (for version control)
+- Make (for builds)
 
 ### Slide 24: Code Quality Principles
 **System Goals:**
@@ -453,7 +474,6 @@ Organism_Name/
 - PHP and dependencies
 - Database initialization
 - BLAST database setup
-- Symlink configuration
 
 ### Chapter 3: User Management
 - Creating user accounts
