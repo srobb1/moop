@@ -101,10 +101,16 @@
     <div class="col-12">
       <div class="card shadow-sm">
         <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="card-title mb-0">Organisms in <?= htmlspecialchars($group_name) ?> Group</h3>
-            <?php if (!empty($group_organisms)): ?>
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-start gap-3">
               <div>
+                <h3 class="card-title mb-1">Organisms in <?= htmlspecialchars($group_name) ?> Group</h3>
+                <?php if (!empty($group_organisms)): ?>
+                  <small class="text-muted d-block mb-2"><i class="fa fa-info-circle"></i> Check/uncheck organisms to modify which are included in the search</small>
+                  <small class="text-muted"><i class="fa fa-external-link-alt"></i> Click an organism card to visit its page for organism-specific information and single-organism searches</small>
+                <?php endif; ?>
+              </div>
+              <?php if (!empty($group_organisms)): ?>
                 <div class="btn-group" role="group">
                   <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllOrganisms">
                     Select All
@@ -113,9 +119,8 @@
                     Deselect All
                   </button>
                 </div>
-                <small class="d-block text-muted mt-2">Check/uncheck organisms to modify which are included in the search</small>
-              </div>
-            <?php endif; ?>
+              <?php endif; ?>
+            </div>
           </div>
           <?php if (empty($group_organisms)): ?>
             <div class="alert alert-info mb-0">
@@ -146,9 +151,9 @@
                   $show_image = !empty($image_src);
                 ?>
                 <div class="col-md-6 col-lg-4">
-                   <div class="organism-selector-card position-relative">
-                     <!-- Checkbox overlay -->
-                     <div class="organism-checkbox-overlay">
+                   <div class="organism-selector-card position-relative" data-organism="<?= htmlspecialchars($organism) ?>">
+                     <!-- Selection bar with checkbox -->
+                     <div class="organism-selection-bar">
                        <input type="checkbox" class="organism-checkbox" data-organism="<?= htmlspecialchars($organism) ?>" checked>
                      </div>
                      <!-- Clickable card that links to organism page -->

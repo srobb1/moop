@@ -18,6 +18,14 @@ function initOrganismSelection() {
     $(document).on('change', '.organism-checkbox', function() {
         const organism = $(this).data('organism');
         const isChecked = $(this).is(':checked');
+        const $card = $(this).closest('.organism-selector-card');
+        
+        // Update visual state
+        if (isChecked) {
+            $card.addClass('selected');
+        } else {
+            $card.removeClass('selected');
+        }
         
         if (isChecked && !selectedOrganisms.includes(organism)) {
             selectedOrganisms.push(organism);
@@ -33,6 +41,7 @@ function initOrganismSelection() {
     $('#selectAllOrganisms').on('click', function() {
         selectedOrganisms = [...groupOrganisms];
         $('.organism-checkbox').prop('checked', true);
+        $('.organism-selector-card').addClass('selected');
         updateSearchManager();
     });
     
@@ -40,7 +49,13 @@ function initOrganismSelection() {
     $('#deselectAllOrganisms').on('click', function() {
         selectedOrganisms = [];
         $('.organism-checkbox').prop('checked', false);
+        $('.organism-selector-card').removeClass('selected');
         updateSearchManager();
+    });
+    
+    // Initialize visual state for already-checked boxes
+    $('.organism-checkbox:checked').each(function() {
+        $(this).closest('.organism-selector-card').addClass('selected');
     });
 }
 
