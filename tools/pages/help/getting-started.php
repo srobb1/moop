@@ -51,10 +51,10 @@
             Once you've selected organisms, you'll see the Tool Box with available analysis and search tools:
           </p>
           <ul class="text-muted">
-            <li><strong>Search:</strong> Find sequences and annotations</li>
+            <li><strong>Search:</strong> Find sequences and annotations across selected organisms</li>
             <li><strong>BLAST:</strong> Compare sequences across organisms</li>
-            <li><strong>Registry:</strong> Browse organism data and metadata</li>
-            <li><strong>Assembly View:</strong> Examine genome assemblies</li>
+            <li><strong>Assembly View:</strong> Examine genome assemblies and structure</li>
+            <li><strong>Multi-Organism Analysis:</strong> Analyze data across multiple organisms simultaneously</li>
           </ul>
 
           <h4 class="fw-semibold text-dark mt-4 mb-2">4. Exploring Results</h4>
