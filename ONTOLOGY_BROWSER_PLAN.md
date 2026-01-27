@@ -316,29 +316,205 @@ GET /tools/ontology_ajax.php?action=get_term_counts&term_id=GO:0008150&organisms
 
 **Total Effort: 19-26 hours** (Phase 1-3 essential; Phase 4 optional for v1.0)
 
-### OBO File Format Handling
+## REVISED: goatools Integration for OBO Parsing
 
-**What we need to parse:**
+**Key Finding:** goatools has excellent OBO parsing capability but is NOT suitable for interactive web browser.
+
+### What goatools Can Provide
+
+**Excellent For:**
+1. **OBO Parsing** - Parse complex OBO format correctly
+2. **DAG Traversal** - Built-in methods for ancestors/descendants
+3. **Validation** - Verify our go.sqlite against goatools DAG
+4. **Comparison** - Ensure no terms/relationships lost during import
+
+**Not Suitable For:**
+1. **Web Server** - goatools is in-memory, loses state between requests
+2. **Concurrent Access** - Not designed for web scale
+3. **Caching** - No built-in caching for web scenarios
+4. **Count Calculation** - Doesn't know about our annotation data
+
+### Recommended Hybrid Approach
+
+**Use goatools ONLY for import/validation:**
+
 ```
-[Term]
-id: GO:0008150
-name: biological_process
-def: "Any process specifically pertinent to the functioning of an integrated living unit." [GOC:gs]
-is_a: GO:0003674 ! molecular_function
-relationship: part_of GO:0008150
+Step 1: Download GO OBO
+  wget http://purl.obolibrary.org/obo/go.obo
 
-[Term]
-id: GO:0009987
-name: cellular_process
-is_a: GO:0008150 ! biological_process
+Step 2: Parse with goatools (one-time)
+  python3 import_ontology.py go go.obo
+  → Creates: /data/moop/metadata/ontologies/go.sqlite
+
+Step 3: Use SQLite for browser queries
+  - Ontology Browser queries go.sqlite directly
+  - Fast, persistent, scalable
+  - No goatools dependency at runtime
+
+Step 4: Validation (periodic)
+  - Periodically validate go.sqlite against goatools
+  - Ensure no data loss during import
+  - Check when GO is updated
 ```
 
-**Import Strategy:**
-1. Download GO OBO file from http://purl.obolibrary.org/obo/go.obo
-2. Parse line-by-line into term objects
-3. Build parent/child relationships
-4. Store in database
-5. Calculate transitive closure (what terms have annotations through children)
+### Comparison: goatools DAG vs our go.sqlite
+
+| Aspect | goatools DAG (Python) | go.sqlite (SQLite) |
+|--------|----------------------|-------------------|
+| **Format** | In-memory graph object | Persistent database |
+| **Parsing** | Handles complex OBO | Need to implement or use goatools |
+| **Query speed** | Fast for single terms | Fast for any query |
+| **Scalability** | Loads entire GO (~45k terms) into RAM | Only load terms you need |
+| **Persistence** | Recreate on each script run | Persists across requests |
+| **Web integration** | Requires Python wrapper | Direct PHP/SQL queries |
+| **Count calculation** | Not supported | Can join with organism.sqlite |
+| **Caching** | Implicit in-memory | Native SQLite optimization |
+| **Concurrent access** | Limited | Excellent |
+
+### Implementation with goatools
+
+**New file: `scripts/import_ontology.py`**
+```python
+#!/usr/bin/env python3
+"""Import OBO file to SQLite using goatools"""
+
+from goatools.obo_parser import GODag
+import sqlite3
+import sys
+
+def import_ontology(ontology_name, obo_file, output_db):
+    """Parse OBO with goatools, store in SQLite"""
+    
+    print(f"Parsing {obo_file}...")
+    go = GODag(obo_file, optional_attrs=['relationship'])
+    
+    print(f"Creating {output_db}...")
+    db = sqlite3.connect(output_db)
+    db.execute("PRAGMA foreign_keys = ON")
+    
+    # Create schema
+    db.executescript("""
+        CREATE TABLE IF NOT EXISTS terms (
+            term_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            definition TEXT,
+            is_obsolete BOOLEAN DEFAULT 0
+        );
+        
+        CREATE TABLE IF NOT EXISTS relationships (
+            parent_term_id TEXT,
+            child_term_id TEXT,
+            relationship_type TEXT DEFAULT 'is_a',
+            PRIMARY KEY (parent_term_id, child_term_id, relationship_type),
+            FOREIGN KEY (parent_term_id) REFERENCES terms(term_id),
+            FOREIGN KEY (child_term_id) REFERENCES terms(term_id)
+        );
+        
+        CREATE INDEX idx_parent ON relationships(parent_term_id);
+        CREATE INDEX idx_child ON relationships(child_term_id);
+    """)
+    
+    # Import terms from goatools DAG
+    print(f"Importing {len(go)} terms...")
+    for term_id, term_obj in go.items():
+        db.execute("""
+            INSERT OR IGNORE INTO terms (term_id, name, definition, is_obsolete)
+            VALUES (?, ?, ?, ?)
+        """, (term_id, term_obj.name, term_obj.def_, term_obj.is_obsolete))
+    
+    # Import relationships
+    print("Building parent-child relationships...")
+    count = 0
+    for term_id, term_obj in go.items():
+        for parent in term_obj.parents:
+            db.execute("""
+                INSERT OR IGNORE INTO relationships 
+                (parent_term_id, child_term_id, relationship_type)
+                VALUES (?, ?, 'is_a')
+            """, (parent.id, term_id))
+            count += 1
+    
+    db.commit()
+    print(f"Imported {len(go)} terms and {count} relationships")
+    db.close()
+
+if __name__ == '__main__':
+    if len(sys.argv) != 4:
+        print(f"Usage: {sys.argv[0]} <ontology_name> <obo_file> <output_db>")
+        sys.exit(1)
+    
+    import_ontology(sys.argv[1], sys.argv[2], sys.argv[3])
+    print("Done!")
+```
+
+**Usage:**
+```bash
+python3 scripts/import_ontology.py GO go.obo metadata/ontologies/go.sqlite
+```
+
+### Validation Script with goatools
+
+**New file: `scripts/validate_ontology.py`**
+```python
+#!/usr/bin/env python3
+"""Validate go.sqlite against goatools DAG"""
+
+from goatools.obo_parser import GODag
+import sqlite3
+import sys
+
+def validate(obo_file, sqlite_db):
+    """Compare goatools DAG with our SQLite"""
+    
+    print("Loading goatools DAG...")
+    go = GODag(obo_file, optional_attrs=['relationship'])
+    
+    print("Loading SQLite...")
+    db = sqlite3.connect(sqlite_db)
+    
+    # Check term count
+    count_go = len(go)
+    count_db = db.execute("SELECT COUNT(*) FROM terms").fetchone()[0]
+    print(f"Terms - goatools: {count_go}, SQLite: {count_db}")
+    
+    if count_go != count_db:
+        print("⚠️  WARNING: Term count mismatch!")
+    
+    # Check some sample terms
+    print("\nValidating sample terms...")
+    for term_id in list(go.keys())[:10]:
+        go_term = go[term_id]
+        db_term = db.execute(
+            "SELECT name FROM terms WHERE term_id = ?", (term_id,)
+        ).fetchone()
+        
+        if db_term is None:
+            print(f"✗ Missing in SQLite: {term_id}")
+        elif db_term[0] != go_term.name:
+            print(f"✗ Name mismatch for {term_id}: '{db_term[0]}' != '{go_term.name}'")
+        else:
+            print(f"✓ {term_id} OK")
+    
+    db.close()
+    print("\nValidation complete!")
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print(f"Usage: {sys.argv[0]} <obo_file> <sqlite_db>")
+        sys.exit(1)
+    
+    validate(sys.argv[1], sys.argv[2])
+```
+
+### Updated Dependencies
+
+**File:** `scripts/go_enrichment_requirements.txt`
+```
+goatools==1.3.3    # Used for both enrichment AND ontology import
+openpyxl==3.11.2   # For enrichment results
+```
+
+Both tools (GO Enrichment AND Ontology Browser) can use goatools!
 
 ### Count Calculation Strategy
 
