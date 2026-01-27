@@ -633,8 +633,10 @@ Peak RAM = Recommended × 1.25 (for load spikes)</code></pre>
           <li><strong>Database query overhead:</strong> 2-3 GB</li>
           <li><strong>Free cache for OS:</strong> 2-4 GB</li>
           <li><strong>Safety margin:</strong> 2-3 GB</li>
-          <li><strong style="border-top: 2px solid #ccc; padding-top: 0.5rem;">Total needed: 12-18 GB minimum, 24+ GB recommended</strong></li>
         </ul>
+        <div class="alert alert-light border mt-2 mb-0">
+          <strong>Total needed:</strong> 12-18 GB minimum, 24+ GB recommended
+        </div>
       </div>
     </div>
 
