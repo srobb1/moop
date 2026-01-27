@@ -45,7 +45,6 @@
           <ul class="text-muted">
             <li><strong>Annotation Sources:</strong> Click the filter icon to select specific annotation sources to search within</li>
             <li><strong>Annotation Type:</strong> Show only certain annotation categories</li>
-            <li><strong>Length:</strong> Filter sequences by length range</li>
           </ul>
 
           <h5 class="fw-semibold text-dark mt-3 mb-2">Filtering Examples</h5>
@@ -55,7 +54,6 @@
           <ul class="text-muted">
             <li><strong>Search for Gene Ontology terms:</strong> Uncheck all annotation sources except "Gene Ontology" or "GO", then search for terms like "kinase" or "DNA binding", or search by GO ID like <code>GO:0016301</code> (kinase activity)</li>
             <li><strong>Find protein domain annotations:</strong> Filter to show only "InterPro", "Pfam", or "SMART" sources, then search for domain names or IDs like <code>PF00001</code> (7 transmembrane receptor)</li>
-            <li><strong>Look for sequences of specific length:</strong> Use the length filter to find small regulatory RNAs or large proteins within your search results</li>
             <li><strong>Compare across annotation databases:</strong> Search with different annotation sources selected to see which databases have information about your gene</li>
           </ul>
 
