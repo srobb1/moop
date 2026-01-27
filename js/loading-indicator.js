@@ -35,10 +35,10 @@ document.addEventListener('click', function(event) {
   if (link) {
     const href = link.href.toLowerCase();
     // Match manage_organisms.php or manage_annotations.php links
-    // Exclude hash links and admin.php navigation
+    // Exclude hash links and any admin pages
     if ((href.includes('manage_organisms.php') || href.includes('manage_annotations.php')) &&
         !href.includes('#') && 
-        !href.includes('admin.php')) {
+        !href.includes('/admin/')) {
       // Show indicator immediately on click (before server queries)
       setTimeout(function() {
         showLoadingIndicator();
@@ -50,9 +50,10 @@ document.addEventListener('click', function(event) {
 /**
  * Hide indicator when user uses browser back/forward buttons
  * (popstate fires when going back/forward in history)
+ * Don't show spinner when navigating away from manage pages
  */
 window.addEventListener('popstate', function() {
-  // Going back to a previous page, hide the spinner
+  // Going back to a previous page, hide the spinner and don't show it
   hideLoadingIndicator();
 });
 
