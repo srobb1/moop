@@ -53,6 +53,27 @@ $tutorials = [
         'icon' => 'fa-download',
         'color' => 'secondary',
     ],
+    [
+        'id' => 'organism-data-organization',
+        'title' => 'Data Organization (Technical)',
+        'description' => 'Technical guide on database schema, file organization, and data structure of organism data.',
+        'icon' => 'fa-database',
+        'color' => 'dark',
+    ],
+    [
+        'id' => 'organism-setup-and-searches',
+        'title' => 'Setup & Searches (Technical)',
+        'description' => 'Technical guide for setting up new organisms, configuring metadata, and understanding search mechanics and the parent page.',
+        'icon' => 'fa-cogs',
+        'color' => 'secondary',
+    ],
+    [
+        'id' => 'system-requirements',
+        'title' => 'System Requirements & Planning',
+        'description' => 'Hardware sizing, performance benchmarks, resource planning, and cost estimation based on organism scale.',
+        'icon' => 'fa-server',
+        'color' => 'info',
+    ],
 ];
 ?>
 
