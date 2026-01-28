@@ -26,58 +26,41 @@ function hideLoadingIndicator() {
 }
 
 /**
- * Auto-show loading indicator on page navigation (before server queries start)
- * Listen for navigation clicks to admin pages that do database scanning
+ * Auto-show loading indicator ONLY when clicking manage page links
+ * Only trigger on direct clicks to manage_organisms.php or manage_annotations.php
  */
 document.addEventListener('click', function(event) {
-  // Check if clicked element is a link to manage pages
   const link = event.target.closest('a');
   if (link) {
     const href = link.href.toLowerCase();
-    // Only show spinner when clicking links to manage_organisms.php or manage_annotations.php
-    // Exclude hash links
+    const currentUrl = window.location.href.toLowerCase();
+    
+    // ONLY show spinner when explicitly clicking manage page links
+    // AND we're not already on that page
     if ((href.includes('manage_organisms.php') || href.includes('manage_annotations.php')) &&
-        !href.includes('#')) {
-      // Show indicator immediately on click (before server queries)
-      setTimeout(function() {
-        showLoadingIndicator();
-      }, 50);
+        !href.includes('#') &&
+        !currentUrl.includes('manage_organisms.php') &&
+        !currentUrl.includes('manage_annotations.php')) {
+      showLoadingIndicator();
     }
   }
 });
 
 /**
- * Hide indicator when user uses browser back/forward buttons
- * (popstate fires when going back/forward in history)
- * Don't show spinner when navigating away from manage pages
- */
-window.addEventListener('popstate', function() {
-  // Going back to a previous page, hide the spinner and don't show it
-  hideLoadingIndicator();
-});
-
-/**
- * Show indicator on page load if data-needs-scan="true" attribute exists
- * Checks for data attribute on page element
- */
-document.addEventListener('DOMContentLoaded', function() {
-  const pageElement = document.querySelector('[data-needs-scan="true"]');
-  
-  if (pageElement) {
-    // Give the page 100ms to start rendering, then show if still loading
-    setTimeout(function() {
-      const indicator = document.getElementById('loadingIndicator');
-      if (indicator && !document.hidden) {
-        showLoadingIndicator();
-      }
-    }, 100);
-  }
-});
-
-/**
- * Auto-hide indicator when page is fully loaded
+ * Auto-hide indicator when page fully loads
+ * Use both 'load' and 'pageshow' events:
+ * - 'load' fires on normal page load
+ * - 'pageshow' fires on back/forward navigation (including cached pages)
  */
 window.addEventListener('load', function() {
   hideLoadingIndicator();
 });
+
+window.addEventListener('pageshow', function(event) {
+  // If navigating back via browser history, hide the spinner
+  if (event.persisted) {
+    hideLoadingIndicator();
+  }
+});
+
 
