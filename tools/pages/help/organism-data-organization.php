@@ -704,11 +704,12 @@ feature_annotation (many rows)
             <h6 class="mb-0"><i class="fa fa-search"></i> Query Examples</h6>
           </div>
           <div class="card-body">
-            <p><strong>Find all features with BLAST hits:</strong></p>
+            <p><strong>Find all features with homolog annotations:</strong></p>
             <pre class="mb-3 p-2 bg-light rounded" style="font-size: 11px;"><code>SELECT f.* FROM feature f
-JOIN feature_annotation fa
-JOIN annotation a
-WHERE a.annotation_source_id = 1</code></pre>
+JOIN feature_annotation fa ON f.feature_id = fa.feature_id
+JOIN annotation a ON fa.annotation_id = a.annotation_id
+JOIN annotation_source asrc ON a.annotation_source_id = asrc.annotation_source_id
+WHERE asrc.type = 'Homologs'</code></pre>
 
             <p><strong>Get protein domains for a gene:</strong></p>
             <pre class="mb-0 p-2 bg-light rounded" style="font-size: 11px;"><code>SELECT a.* FROM annotation a
