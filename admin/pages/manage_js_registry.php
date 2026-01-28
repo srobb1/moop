@@ -251,5 +251,12 @@ if (file_exists($json_registry)) {
         <script type="application/json" id="registryData">
 <?php echo json_encode($registry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?></script>
     <?php endif; ?>
+
+    <!-- Back to Admin Link (Bottom) -->
+    <div class="mt-5 mb-4">
+      <a href="admin.php" class="btn btn-outline-secondary btn-sm">
+        <i class="fa fa-arrow-left"></i> Back to Admin
+      </a>
+    </div>
 </div>
 
