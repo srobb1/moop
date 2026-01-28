@@ -54,6 +54,19 @@
   <div class="mt-5">
     <h3 class="mb-3"><i class="fa fa-list-check"></i> Setup Steps</h3>
 
+    <?php
+    // Load all organisms in system once (used by all steps)
+    $organisms_in_system = [];
+    if (is_dir($organism_data)) {
+        foreach (scandir($organism_data) as $item) {
+            if ($item !== '.' && $item !== '..' && is_dir("$organism_data/$item")) {
+                $organisms_in_system[] = $item;
+            }
+        }
+    }
+    sort($organisms_in_system);
+    ?>
+
     <!-- Step 1: Copy Files -->
     <div class="card mb-3 border-primary">
       <div class="card-header bg-primary bg-opacity-10">
@@ -157,6 +170,50 @@
           </div>
         </div>
 
+        <!-- organism.sqlite Status Check -->
+        <div class="mt-4">
+          <h6 class="fw-bold mb-3" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#sqliteStatusStep1" role="button" tabindex="0">
+            <i class="fa fa-database"></i> Database File Status <i class="fa fa-chevron-down float-end"></i>
+          </h6>
+          <div class="collapse show" id="sqliteStatusStep1">
+            <?php
+            // Check for missing SQLite databases
+            $missing_sqlite = [];
+            foreach ($organisms_in_system as $org) {
+                $sqlite_path = "$organism_data/$org/organism.sqlite";
+                if (!file_exists($sqlite_path)) {
+                    $missing_sqlite[] = $org;
+                }
+            }
+            ?>
+
+            <?php if (!empty($missing_sqlite)): ?>
+              <div class="alert alert-warning">
+                <i class="fa fa-exclamation-triangle"></i> <strong>Missing organism.sqlite files:</strong>
+                <p class="mb-3 mt-2">The following organisms don't have an <code>organism.sqlite</code> database file:</p>
+                <div class="bg-light p-2 rounded mb-3" style="max-height: 150px; overflow-y: auto;">
+                  <ul class="mb-0">
+                    <?php foreach ($missing_sqlite as $org): ?>
+                      <li><code><?= htmlspecialchars($org) ?>/organism.sqlite</code></li>
+                    <?php endforeach; ?>
+                  </ul>
+                </div>
+                
+                <p class="mb-2"><strong>What to do:</strong></p>
+                <ul class="mb-2">
+                  <li>Create your own <code>organism.sqlite</code> file with gene/feature data</li>
+                  <li>Or use an empty placeholder database to get started</li>
+                  <li>See the <a href="/moop/help.php?topic=organism-data-organization#database-schema" target="_blank"><strong>Database Schema section</strong></a> in the organism data organization help for detailed information on file format and structure</li>
+                </ul>
+              </div>
+            <?php else: ?>
+              <div class="alert alert-success">
+                <i class="fa fa-check-circle"></i> All organisms have <code>organism.sqlite</code> files!
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -177,19 +234,6 @@
         </ul>
 
         <?php
-        // Load all organisms in system first (if not already loaded)
-        if (empty($organisms_in_system)) {
-            $organisms_in_system = [];
-            if (is_dir($organism_data)) {
-                foreach (scandir($organism_data) as $item) {
-                    if ($item !== '.' && $item !== '..' && is_dir("$organism_data/$item")) {
-                        $organisms_in_system[] = $item;
-                    }
-                }
-            }
-            sort($organisms_in_system);
-        }
-        
         // Quick permission check on organism directories using same logic as manage_filesystem_permissions.php
         $permission_issues = [];
         
