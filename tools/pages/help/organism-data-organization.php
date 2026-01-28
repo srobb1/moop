@@ -641,13 +641,13 @@
 
     <h4 class="mt-3">Example Query</h4>
     <div class="alert alert-light border-left border-primary">
-      <strong>Find all exons in a gene:</strong>
+      <strong>Find all mRNAs of a gene:</strong>
       <pre class="mb-0"><code class="language-sql">SELECT * FROM feature
 WHERE parent_feature_id IN (
-    SELECT parent_feature_id FROM feature
+    SELECT feature_id FROM feature
     WHERE feature_id = ? AND feature_type = 'gene'
 )
-AND feature_type = 'exon';</code></pre>
+AND feature_type = 'mRNA';</code></pre>
     </div>
   </section>
 
