@@ -38,6 +38,13 @@
           <li>Verify each step is complete before moving on</li>
         </ul>
         
+        <p><strong>Built-in Checks & Actions:</strong> Each step includes automated checks to verify configuration and quick action buttons to fix easy-to-address issues:</p>
+        <ul>
+          <li><strong>Automated Checks:</strong> File permissions, missing configuration files, group assignments, and taxonomy tree membership</li>
+          <li><strong>Quick Fix Actions:</strong> Generate missing organism.json files, assign organisms to default groups, and add organisms to taxonomy tree</li>
+          <li><strong>Detailed Management:</strong> Links to full management pages for complex customizations</li>
+        </ul>
+        
         <p class="mb-0"><strong>Note:</strong> Most organism data files are uploaded directly to the server. Use the links below to manage access, configuration, and visibility.</p>
       </div>
     </div>
