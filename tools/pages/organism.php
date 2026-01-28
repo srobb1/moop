@@ -156,7 +156,7 @@
                         <div class="card-body">
                           <h6 class="card-title mb-2"><?= htmlspecialchars($group_name) ?></h6>
                           <p class="card-text small text-muted mb-0">
-                            <i class="fa fa-dna"></i> <?= htmlspecialchars($group_info['count']) ?> organism<?= $group_info['count'] !== 1 ? 's' : '' ?>
+                            <?= htmlspecialchars($group_info['count']) ?> organism<?= $group_info['count'] !== 1 ? 's' : '' ?>
                           </p>
                         </div>
                       </div>
