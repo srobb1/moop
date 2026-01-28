@@ -64,12 +64,30 @@ if ($is_taxonomy_group) {
     $taxonomy_tree_data = json_decode(file_get_contents("$metadata_path/taxonomy_tree_config.json"), true);
     $group_organisms = getOrganismsAtTaxonomyLevel($taxonomy_rank, $taxonomy_tree_data['tree'], $group_data);
     
-    // Create synthetic group info for taxonomy groups
+    // Fetch Wikipedia data for this taxonomic rank
+    $wiki_data = getWikipediaTaxonomyData($taxonomy_rank);
+    
+    // Create synthetic group info for taxonomy groups with Wikipedia content
     $group_info = [
         'group_name' => $taxonomy_rank,
-        'description' => "All organisms in the taxonomic rank: <em>$taxonomy_rank</em>",
-        'type' => 'taxonomy'
+        'description' => $wiki_data['description'] ?: "All organisms in the taxonomic rank: <em>$taxonomy_rank</em>",
+        'type' => 'taxonomy',
+        'wikipedia_url' => $wiki_data['wikipedia_url'],
+        'wikipedia_image' => $wiki_data['image_url']
     ];
+    
+    // Add HTML paragraph if we have a description
+    if (!empty($wiki_data['description'])) {
+        $group_info['html_p'] = [
+            [
+                'text' => htmlspecialchars($wiki_data['description']) . 
+                         '<br><br><small class="text-muted">Source: <a href="' . htmlspecialchars($wiki_data['wikipedia_url']) . 
+                         '" target="_blank">Wikipedia</a></small>',
+                'class' => '',
+                'style' => ''
+            ]
+        ];
+    }
     
     // Use taxonomy_rank as the display name everywhere (replaces $group_name in template)
     $group_name = $taxonomy_rank;

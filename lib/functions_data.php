@@ -871,3 +871,193 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         'total_count' => $total_count
     ];
 }
+
+/**
+ * Fetch Wikipedia data for a taxonomic rank/level
+ * Gets description and image from Wikipedia using the search API
+ * 
+ * @param string $rank_name Name of taxonomic rank (e.g., 'Primates', 'Mammalia')
+ * @return array Array with 'description' (HTML), 'image_url', 'wikipedia_url', 'source'
+ */
+function getWikipediaTaxonomyData($rank_name) {
+    $result = [
+        'description' => '',
+        'image_url' => '',
+        'wikipedia_url' => '',
+        'source' => 'Wikipedia'
+    ];
+    
+    if (empty($rank_name)) {
+        return $result;
+    }
+    
+    // Use Wikipedia API to search for the taxonomic rank
+    $wiki_search_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([
+        'action' => 'query',
+        'titles' => $rank_name,
+        'format' => 'json',
+        'prop' => 'extracts|pageimages|info',
+        'exlimit' => 1,
+        'exintro' => true,
+        'explaintext' => true,
+        'piprop' => 'thumbnail|original',
+        'pithumbsize' => 300,
+        'redirects' => true
+    ]);
+    
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 5,
+            'user_agent' => 'MOOP (github.com)'
+        ]
+    ]);
+    
+    $response = @file_get_contents($wiki_search_url, false, $context);
+    
+    if ($response === false) {
+        return $result;
+    }
+    
+    $data = json_decode($response, true);
+    
+    if (empty($data['query']['pages'])) {
+        return $result;
+    }
+    
+    // Get first (and usually only) page result
+    $pages = array_values($data['query']['pages']);
+    $page = $pages[0];
+    
+    if (!isset($page['pageid'])) {
+        // Page not found, try search instead
+        return getWikipediaTaxonomyDataFromSearch($rank_name);
+    }
+    
+    // Determine the actual title (in case of redirects)
+    $actual_title = $page['title'] ?? $rank_name;
+    
+    // Get the page URL
+    $result['wikipedia_url'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $actual_title);
+    
+    // Extract description from intro
+    if (!empty($page['extract'])) {
+        $description = $page['extract'];
+        // Truncate if too long
+        if (strlen($description) > 500) {
+            $description = substr($description, 0, 500) . '...';
+        }
+        $result['description'] = trim($description);
+    }
+    
+    // Extract image (try thumbnail first, then original)
+    if (!empty($page['thumbnail']['source'])) {
+        $result['image_url'] = $page['thumbnail']['source'];
+    } elseif (!empty($page['original']['source'])) {
+        $result['image_url'] = $page['original']['source'];
+    }
+    
+    return $result;
+}
+
+/**
+ * Search Wikipedia for taxonomic rank information
+ * Fallback when direct title lookup doesn't find good content
+ * 
+ * @param string $rank_name Name of taxonomic rank
+ * @return array Array with description, image, and Wikipedia URL
+ */
+function getWikipediaTaxonomyDataFromSearch($rank_name) {
+    $result = [
+        'description' => '',
+        'image_url' => '',
+        'wikipedia_url' => '',
+        'source' => 'Wikipedia'
+    ];
+    
+    // Search for the term
+    $search_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([
+        'action' => 'query',
+        'list' => 'search',
+        'srsearch' => $rank_name,
+        'format' => 'json',
+        'srlimit' => 3
+    ]);
+    
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 5,
+            'user_agent' => 'MOOP (github.com)'
+        ]
+    ]);
+    
+    $response = @file_get_contents($search_url, false, $context);
+    
+    if ($response === false) {
+        return $result;
+    }
+    
+    $data = json_decode($response, true);
+    
+    if (empty($data['query']['search'])) {
+        return $result;
+    }
+    
+    // Try the first few results to find one with content
+    foreach ($data['query']['search'] as $search_result) {
+        $found_title = $search_result['title'];
+        
+        // Fetch details about this page
+        $fetch_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([
+            'action' => 'query',
+            'titles' => $found_title,
+            'format' => 'json',
+            'prop' => 'extracts|pageimages',
+            'exintro' => true,
+            'explaintext' => true,
+            'piprop' => 'thumbnail|original',
+            'pithumbsize' => 300,
+            'redirects' => true
+        ]);
+        
+        $response = @file_get_contents($fetch_url, false, $context);
+        
+        if ($response === false) {
+            continue;
+        }
+        
+        $data = json_decode($response, true);
+        
+        if (empty($data['query']['pages'])) {
+            continue;
+        }
+        
+        $pages = array_values($data['query']['pages']);
+        $page = $pages[0];
+        
+        // Skip if no content
+        if (empty($page['extract'])) {
+            continue;
+        }
+        
+        if (!empty($page['extract'])) {
+            $description = $page['extract'];
+            if (strlen($description) > 500) {
+                $description = substr($description, 0, 500) . '...';
+            }
+            $result['description'] = trim($description);
+        }
+        
+        if (!empty($page['thumbnail']['source'])) {
+            $result['image_url'] = $page['thumbnail']['source'];
+        } elseif (!empty($page['original']['source'])) {
+            $result['image_url'] = $page['original']['source'];
+        }
+        
+        $result['wikipedia_url'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $page['title']);
+        
+        // Found a good result, return it
+        return $result;
+    }
+    
+    return $result;
+}

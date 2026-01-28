@@ -78,9 +78,19 @@
             </div>
           <?php endif; ?>
         <?php endforeach; ?>
+      <?php elseif (!empty($group_info['wikipedia_image'])): ?>
+        <!-- Wikipedia image for taxonomy groups -->
+        <div class="col-md-4 mb-3">
+          <div class="card">
+            <img src="<?= htmlspecialchars($group_info['wikipedia_image']) ?>" class="card-img-top" alt="<?= htmlspecialchars($group_name) ?>">
+            <div class="card-body">
+              <p class="card-text small text-muted">Image from <a href="<?= htmlspecialchars($group_info['wikipedia_url']) ?>" target="_blank">Wikipedia</a></p>
+            </div>
+          </div>
+        </div>
       <?php endif; ?>
       
-      <div class="<?= !empty($group_info['images'][0]['file']) ? 'col-md-8' : 'col-12' ?>">
+      <div class="<?= (!empty($group_info['images'][0]['file']) || !empty($group_info['wikipedia_image'])) ? 'col-md-8' : 'col-12' ?>">
         <div class="card shadow-sm">
           <div class="card-body">
             <h3 class="card-title mb-4">About <?= htmlspecialchars($group_name) ?></h3>
