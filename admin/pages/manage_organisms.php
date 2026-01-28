@@ -1305,10 +1305,6 @@
   </div>
 </div>
 
-
-</body>
-</html>
-
 <!-- Organism Status Modals -->
 <?php foreach ($organisms as $organism => $data): ?>
   <?php 

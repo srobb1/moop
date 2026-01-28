@@ -18,13 +18,6 @@
 ?>
 
 <div class="container mt-5">
-  <!-- Back to Admin Link -->
-  <div class="mb-4">
-    <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-      <i class="fa fa-arrow-left"></i> Back to Admin
-    </a>
-  </div>
-
   <h2><i class="fa fa-clipboard-list"></i> New Organism Setup Checklist</h2>
 
   <!-- About Section -->
@@ -559,13 +552,7 @@
 
 
   <!-- Navigation -->
-  <div class="mt-5 mb-5">
-    <p class="text-center">
-      <a href="admin.php" class="btn btn-secondary">
-        <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
-      </a>
-    </p>
-  </div>
+
 
 <style>
 .structure-box {

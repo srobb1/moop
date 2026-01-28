@@ -1,13 +1,12 @@
 <div class="container py-4">
-    <!-- Back to Admin Link -->
-    <div class="mb-4">
-      <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Admin
-      </a>
-    </div>
-
     <div class="row">
         <div class="col-12">
+            <!-- Back to Admin Link -->
+            <div class="mb-4">
+              <a href="admin.php" class="btn btn-outline-secondary btn-sm">
+                <i class="fa fa-arrow-left"></i> Back to Admin
+              </a>
+            </div>
             <h2><i class="fa fa-cog"></i> Manage Site Configuration</h2>
             <p class="text-muted">Edit site-wide settings and appearance</p>
             
@@ -543,10 +542,14 @@
     </div>
 
     <!-- Back to Admin Link (Bottom) -->
-    <div class="mt-5 mb-4">
-      <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Admin
-      </a>
+    <div class="row">
+        <div class="col-12">
+            <div class="mt-5 mb-4">
+              <a href="admin.php" class="btn btn-outline-secondary btn-sm">
+                <i class="fa fa-arrow-left"></i> Back to Admin
+              </a>
+            </div>
+        </div>
     </div>
 </div>
 
