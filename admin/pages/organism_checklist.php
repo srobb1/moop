@@ -169,7 +169,48 @@
           <li>Ensure databases are readable by the web server user</li>
         </ul>
 
-        <p class="mt-3"><strong>Go to:</strong> <a href="manage_filesystem_permissions.php" class="btn btn-primary"><i class="fa fa-lock"></i> Manage Filesystem Permissions</a></p>
+        <?php
+        // Quick permission check on organism directories
+        $permission_issues = [];
+        foreach ($organisms_in_system as $org) {
+            $org_dir = "$organism_data/$org";
+            
+            if (!is_readable($org_dir)) {
+                $permission_issues[] = "$org: Directory not readable by web server";
+            }
+            if (!is_writable($org_dir)) {
+                $permission_issues[] = "$org: Directory not writable by web server";
+            }
+            
+            // Check subdirectories
+            if (is_dir($org_dir)) {
+                foreach (scandir($org_dir) as $subdir) {
+                    if ($subdir !== '.' && $subdir !== '..' && is_dir("$org_dir/$subdir")) {
+                        if (!is_readable("$org_dir/$subdir")) {
+                            $permission_issues[] = "$org/$subdir: Directory not readable";
+                        }
+                    }
+                }
+            }
+        }
+        ?>
+        
+        <?php if (!empty($permission_issues)): ?>
+          <div class="alert alert-warning mt-3">
+            <i class="fa fa-exclamation-triangle"></i> <strong>Permission Issues Found:</strong>
+            <ul class="mb-0 mt-2">
+              <?php foreach ($permission_issues as $issue): ?>
+                <li><?= htmlspecialchars($issue) ?></li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+          <p class="mt-3"><strong>Full Management:</strong> <a href="manage_filesystem_permissions.php" class="btn btn-primary"><i class="fa fa-lock"></i> Manage Filesystem Permissions</a></p>
+        <?php else: ?>
+          <div class="alert alert-success mt-3">
+            <i class="fa fa-check-circle"></i> All organism directories have proper permissions!
+          </div>
+          <p class="mt-3"><strong>Full Management:</strong> <a href="manage_filesystem_permissions.php" class="btn btn-primary"><i class="fa fa-lock"></i> Manage Filesystem Permissions</a></p>
+        <?php endif; ?>
       </div>
     </div>
 
