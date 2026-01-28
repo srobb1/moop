@@ -151,7 +151,7 @@
                    ?>
                 <div class="mt-4">
                   <p class="mb-2">
-                    <small class="text-muted"><strong>Taxonomy:</strong></small><br>
+                    <small class="text-muted"><strong>Taxonomy:</strong></small>
                     <small class="text-muted">
                       <?php 
                       $breadcrumb_parts = [];
