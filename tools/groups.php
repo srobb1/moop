@@ -71,8 +71,8 @@ if ($is_taxonomy_group) {
         'type' => 'taxonomy'
     ];
     
-    // Set display name
-    $display_title = htmlspecialchars($taxonomy_rank);
+    // Use taxonomy_rank as the display name everywhere (replaces $group_name in template)
+    $group_name = $taxonomy_rank;
 } else {
     // Manual group: Use existing logic
     // Find the description for this group
@@ -86,9 +86,6 @@ if ($is_taxonomy_group) {
     
     // Get organisms in this group that user has access to
     $group_organisms = getAccessibleOrganismsInGroup($group_name, $group_data);
-    
-    // Set display name
-    $display_title = htmlspecialchars($group_name);
 }
 
 // Access control: Only check manual groups (taxonomy groups are based on tree data)
@@ -98,7 +95,7 @@ if (!$is_taxonomy_group && !is_public_group($group_name)) {
 
 // Configure display template
 $display_config = [
-    'title' => $display_title . ' - ' . $config->getString('siteTitle'),
+    'title' => htmlspecialchars($group_name) . ' - ' . $config->getString('siteTitle'),
     'content_file' => __DIR__ . '/pages/groups.php',
     'page_script' => [
         "/$site/js/modules/organism-utils.js",
@@ -107,7 +104,7 @@ $display_config = [
     ],
     'inline_scripts' => [
         "const sitePath = '/$site';",
-        "const groupName = '" . addslashes($is_taxonomy_group ? $taxonomy_rank : $group_name) . "';",
+        "const groupName = '" . addslashes($group_name) . "';",
         "const groupOrganisms = " . json_encode(array_keys($group_organisms)) . ";",
         "const siteTitle = '" . addslashes($config->getString('siteTitle')) . "';"
     ]
