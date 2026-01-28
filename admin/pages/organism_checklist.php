@@ -291,7 +291,57 @@
           </li>
         </ul>
 
-        <p class="mt-3"><strong>Go to:</strong> <a href="manage_groups.php" class="btn btn-warning"><i class="fa fa-layer-group"></i> Manage Groups</a></p>
+        <?php
+        // Load organism_assembly_groups.json
+        $groups_file = dirname($organism_data) . '/metadata/organism_assembly_groups.json';
+        $group_assignments = [];
+        
+        if (file_exists($groups_file)) {
+            $group_data = json_decode(file_get_contents($groups_file), true);
+            if (is_array($group_data)) {
+                foreach ($group_data as $item) {
+                    $org = $item['organism'] ?? '';
+                    if (!empty($org)) {
+                        $group_assignments[$org] = $item['groups'] ?? [];
+                    }
+                }
+            }
+        }
+        
+        // Check which organisms in the system don't have group assignments
+        $unassigned_organisms = [];
+        foreach ($organisms_in_system as $org) {
+            if (empty($group_assignments[$org])) {
+                $unassigned_organisms[] = $org;
+            }
+        }
+        ?>
+        
+        <?php if (!empty($unassigned_organisms)): ?>
+          <div class="alert alert-warning mt-3">
+            <i class="fa fa-exclamation-triangle"></i> <strong>Not Assigned to Groups:</strong>
+            <ul class="mb-0 mt-2">
+              <?php foreach ($unassigned_organisms as $org): ?>
+                <li><?= htmlspecialchars($org) ?></li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+          
+          <p class="mt-3"><strong>Quick Action:</strong></p>
+          <button type="button" class="btn btn-primary" id="assignToNewGroupBtn">
+            <i class="fa fa-plus-circle"></i> Add to "New" Group
+          </button>
+          <small class="text-muted d-block mt-2">
+            <i class="fa fa-info-circle"></i> This will add all unassigned organisms to the "New" group
+          </small>
+          <div id="assignToGroupStatus" style="display: none; margin-top: 1rem;"></div>
+        <?php else: ?>
+          <div class="alert alert-success mt-3">
+            <i class="fa fa-check-circle"></i> All organisms are assigned to groups!
+          </div>
+        <?php endif; ?>
+
+        <p class="mt-3"><strong>Full Management:</strong> <a href="manage_groups.php" class="btn btn-warning"><i class="fa fa-layer-group"></i> Manage Groups</a></p>
       </div>
     </div>
 
@@ -389,5 +439,47 @@ document.addEventListener('DOMContentLoaded', function() {
   if (btn) {
     btn.addEventListener('click', generateTreeFromChecklist);
   }
+  
+  const assignBtn = document.getElementById('assignToNewGroupBtn');
+  if (assignBtn) {
+    assignBtn.addEventListener('click', assignOrganismsToNewGroup);
+  }
 });
+
+// Assign unassigned organisms to "New" group
+async function assignOrganismsToNewGroup() {
+  const btn = document.getElementById('assignToNewGroupBtn');
+  const statusDiv = document.getElementById('assignToGroupStatus');
+  
+  // Disable button and show loading
+  btn.disabled = true;
+  statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Adding organisms to "New" group...</div>';
+  statusDiv.style.display = 'block';
+  
+  try {
+    const response = await fetch('api/assign_organisms_to_group.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'group=New'
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      statusDiv.innerHTML = `<div class="alert alert-success"><i class="fa fa-check-circle"></i> <strong>Success!</strong> Added ${data.count} organism-assembly entries to "New" group. Reloading...</div>`;
+      
+      // Reload the page after a short delay
+      setTimeout(() => {
+        location.reload();
+      }, 2000);
+    } else {
+      statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> Failed to add organisms to group. Please try again or use the full management page.</div>';
+      btn.disabled = false;
+    }
+  } catch (error) {
+    statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + error.message + '</div>';
+    btn.disabled = false;
+  }
+}
 </script>
