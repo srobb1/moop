@@ -175,19 +175,48 @@
         foreach ($organisms_in_system as $org) {
             $org_dir = "$organism_data/$org";
             
-            if (!is_readable($org_dir)) {
-                $permission_issues[] = "$org: Directory not readable by web server";
+            // Get file stats
+            $stat = @stat($org_dir);
+            if ($stat === false) {
+                $permission_issues[] = "$org: Cannot read directory stats";
+                continue;
             }
-            if (!is_writable($org_dir)) {
-                $permission_issues[] = "$org: Directory not writable by web server";
+            
+            $perms = substr(sprintf('%o', fileperms($org_dir)), -3);
+            
+            // Check if directory is accessible (needs at least 5 for read+execute)
+            // Format: rwx rwx rwx (owner, group, other)
+            $mode = $stat['mode'];
+            
+            // Extract permission bits
+            $owner_read = ($mode & 0x0100) ? 'r' : '-';
+            $owner_exec = ($mode & 0x0040) ? 'x' : '-';
+            $group_read = ($mode & 0x0020) ? 'r' : '-';
+            $group_exec = ($mode & 0x0008) ? 'x' : '-';
+            $other_read = ($mode & 0x0004) ? 'r' : '-';
+            $other_exec = ($mode & 0x0001) ? 'x' : '-';
+            
+            // Check if www-data (group) can read and execute
+            if ($group_read === '-' || $group_exec === '-') {
+                $permission_issues[] = "$org: Group (www-data) cannot read/execute directory (perms: $perms)";
             }
             
             // Check subdirectories
             if (is_dir($org_dir)) {
                 foreach (scandir($org_dir) as $subdir) {
                     if ($subdir !== '.' && $subdir !== '..' && is_dir("$org_dir/$subdir")) {
-                        if (!is_readable("$org_dir/$subdir")) {
-                            $permission_issues[] = "$org/$subdir: Directory not readable";
+                        $substat = @stat("$org_dir/$subdir");
+                        if ($substat === false) {
+                            $permission_issues[] = "$org/$subdir: Cannot read directory stats";
+                        } else {
+                            $subperms = substr(sprintf('%o', fileperms("$org_dir/$subdir")), -3);
+                            $submode = $substat['mode'];
+                            $sub_group_read = ($submode & 0x0020) ? 'r' : '-';
+                            $sub_group_exec = ($submode & 0x0008) ? 'x' : '-';
+                            
+                            if ($sub_group_read === '-' || $sub_group_exec === '-') {
+                                $permission_issues[] = "$org/$subdir: Group cannot read/execute (perms: $subperms)";
+                            }
                         }
                     }
                 }
