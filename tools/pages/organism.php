@@ -163,50 +163,7 @@
               }
           }
           ?>
-          
-          <?php if (!empty($compact_accessible_assemblies)): ?>
-            <div class="mt-4 pt-3 border-top">
-              <p class="mb-2"><strong>Available Genomes:</strong></p>
-              <div>
-                <div class="row g-2">
-                  <?php foreach ($compact_accessible_assemblies as $assembly_item): ?>
-                    <div class="col-12">
-                      <div class="row g-1">
-                        <div class="col-auto">
-                          <a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_item['accession']) ?>" 
-                             target="_blank"
-                             class="text-decoration-none fw-500 text-monospace" 
-                             style="font-size: 0.9rem;">
-                            <?= htmlspecialchars($assembly_item['genome_name']) ?>|<?= htmlspecialchars($assembly_item['genome_accession']) ?>
-                            <i class="fa fa-external-link-alt fa-xs"></i>
-                          </a>
-                        </div>
-                      </div>
-                      <div class="row g-1 mt-1">
-                        <?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly_item['accession']); ?>
-                        <?php if (!empty($fasta_files)): ?>
-                          <?php foreach ($fasta_files as $type => $file_info): ?>
-                            <?php 
-                              $colorInfo = getColorClassOrStyle($file_info['color'] ?? '');
-                            ?>
-                            <div class="col-auto">
-                              <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_item['accession']) ?>&type=<?= urlencode($type) ?>" 
-                                 class="btn btn-xs <?= $colorInfo['class'] ?> text-white text-decoration-none"
-                                 <?php if ($colorInfo['style']): ?>style="<?= $colorInfo['style'] ?>; font-size: 0.75rem; padding: 0.25rem 0.5rem;"<?php else: ?>style="font-size: 0.75rem; padding: 0.25rem 0.5rem;"<?php endif; ?>
-                                 download title="<?= htmlspecialchars($file_info['label']) ?>">
-                                <i class="fa fa-download fa-xs"></i> <?= htmlspecialchars($type) ?>
-                              </a>
-                            </div>
-                          <?php endforeach; ?>
-                        <?php endif; ?>
-                      </div>
-                    </div>
-                  <?php endforeach; ?>
-                </div>
-              </div>
-            </div>
-          <?php endif; ?>
-        </div>
+          </div>
       </div>
     </div>
   </div>
