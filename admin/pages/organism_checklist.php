@@ -170,6 +170,19 @@
         </ul>
 
         <?php
+        // Load all organisms in system first (if not already loaded)
+        if (empty($organisms_in_system)) {
+            $organisms_in_system = [];
+            if (is_dir($organism_data)) {
+                foreach (scandir($organism_data) as $item) {
+                    if ($item !== '.' && $item !== '..' && is_dir("$organism_data/$item")) {
+                        $organisms_in_system[] = $item;
+                    }
+                }
+            }
+            sort($organisms_in_system);
+        }
+        
         // Quick permission check on organism directories using same logic as manage_filesystem_permissions.php
         $permission_issues = [];
         
