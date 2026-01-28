@@ -85,23 +85,20 @@ $(document).ready(function() {
     $(document).on('click', '.organism-instructions-trigger', function(e) {
         e.stopPropagation();
         const instruction = $(this).data('instruction');
-        showInstructionModal(instruction);
+        showGroupInstructionModal(instruction);
     });
     
-    // Handle search instructions info icon click
-    $(document).on('click', '.search-instructions-trigger', function(e) {
-        e.stopPropagation();
-        const instruction = $(this).data('instruction');
-        showInstructionModal(instruction);
-    });
+    // Initialize search instructions handler
+    initializeSearchInstructionsHandler();
 });
 
 /**
- * Show instruction modal
+ * Show group instruction modal (for organism selection tips)
+ * Uses different modal ID to avoid conflict with search tips
  */
-function showInstructionModal(instruction) {
+function showGroupInstructionModal(instruction) {
     const modalHtml = `
-        <div class="modal fade" id="instructionModal" tabindex="-1">
+        <div class="modal fade" id="groupInstructionModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -120,11 +117,11 @@ function showInstructionModal(instruction) {
     `;
     
     // Remove existing modal if present
-    $('#instructionModal').remove();
+    $('#groupInstructionModal').remove();
     
     // Add and show modal
     $('body').append(modalHtml);
-    const modal = new bootstrap.Modal(document.getElementById('instructionModal'));
+    const modal = new bootstrap.Modal(document.getElementById('groupInstructionModal'));
     modal.show();
 }
 
