@@ -262,6 +262,71 @@ function getTaxonomyTreeUserAccess($group_data) {
 }
 
 /**
+ * Count organisms at a specific taxonomy rank that user has access to
+ * Traverses the taxonomy tree and counts all organisms under the given rank
+ * 
+ * @param array $tree_node Tree node to search in
+ * @param string $rank_name Name of the rank to count (e.g., 'Chordata', 'Mammalia')
+ * @param array $user_access User access array (organism_name => true)
+ * @return int Count of accessible organisms under this rank
+ */
+function countOrganismsAtTaxonomyRank($tree_node, $rank_name, $user_access) {
+    if (empty($tree_node) || empty($rank_name) || empty($user_access)) {
+        return 0;
+    }
+    
+    $count = 0;
+    
+    $traverse = function($node) use ($rank_name, $user_access, &$count, &$traverse) {
+        // Check if this is the node we're looking for
+        if ($node['name'] === $rank_name) {
+            // Count all organisms under this rank
+            $countOrganisms = function($n) use (&$countOrganisms, $user_access, &$count) {
+                if (isset($n['organism']) && isset($user_access[$n['organism']])) {
+                    $count++;
+                }
+                if (isset($n['children']) && is_array($n['children'])) {
+                    foreach ($n['children'] as $child) {
+                        $countOrganisms($child);
+                    }
+                }
+            };
+            $countOrganisms($node);
+            return;
+        }
+        
+        // Continue traversing down
+        if (isset($node['children']) && is_array($node['children'])) {
+            foreach ($node['children'] as $child) {
+                $traverse($child);
+            }
+        }
+    };
+    
+    $traverse($tree_node);
+    return $count;
+}
+
+/**
+ * Get taxonomy lineage with organism counts at each rank
+ * 
+ * @param array $lineage Array of lineage items with 'rank' and 'name' keys
+ * @param array $tree_node Root of taxonomy tree
+ * @param array $user_access User access array (organism_name => true)
+ * @return array Lineage with added 'count' key for each item
+ */
+function getTaxonomyLineageWithCounts($lineage, $tree_node, $user_access) {
+    if (empty($lineage) || empty($tree_node) || empty($user_access)) {
+        return $lineage;
+    }
+    
+    return array_map(function($item) use ($tree_node, $user_access) {
+        $item['count'] = countOrganismsAtTaxonomyRank($tree_node, $item['name'], $user_access);
+        return $item;
+    }, $lineage);
+}
+
+/**
  * Require user to have specific access level or redirect to access denied
  * 
  * @param string $level Required access level (e.g., 'Collaborator', 'Admin')

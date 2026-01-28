@@ -146,15 +146,20 @@
           $taxonomy_tree_file = $config->getPath('metadata_path') . '/taxonomy_tree_config.json';
           if (!empty($organism_info['taxon_id']) && isAssemblyInTaxonomyTree($organism_name, '', $taxonomy_tree_file)): 
               $lineage = fetch_taxonomy_lineage($organism_info['taxon_id']);
-              if (!empty($lineage)): ?>
+               if (!empty($lineage)): 
+                   $lineage_with_counts = getTaxonomyLineageWithCounts($lineage, $taxonomy_tree_data['tree'], $taxonomy_user_access);
+                   ?>
                 <div class="mt-4">
                   <p class="mb-2">
                     <small class="text-muted"><strong>Taxonomy:</strong></small><br>
                     <small class="text-muted">
                       <?php 
                       $breadcrumb_parts = [];
-                      foreach ($lineage as $item) {
-                          $breadcrumb_parts[] = htmlspecialchars($item['name']);
+                      foreach ($lineage_with_counts as $item) {
+                          $name = htmlspecialchars($item['name']);
+                          $count = isset($item['count']) ? $item['count'] : 0;
+                          $badge = $count > 0 ? " <span class=\"badge bg-secondary ms-1\">$count</span>" : '';
+                          $breadcrumb_parts[] = $name . $badge;
                       }
                       echo implode(' <i class="fa fa-chevron-right fa-xs"></i> ', $breadcrumb_parts);
                       ?>

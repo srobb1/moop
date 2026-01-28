@@ -41,11 +41,17 @@ $organism_data = $config->getPath('organism_data');
 $absolute_images_path = $config->getPath('absolute_images_path');
 $images_path = $config->getString('images_path');
 $site = $config->getString('site');
+$metadata_path = $config->getPath('metadata_path');
 
 // Setup organism context (validates param, loads info, checks access)
 $organism_context = setupOrganismDisplayContext($_GET['organism'] ?? '', $organism_data);
 $organism_name = $organism_context['name'];
 $organism_info = $organism_context['info'];
+
+// Load taxonomy tree and user access for breadcrumb counts
+$group_data = getGroupData();
+$taxonomy_user_access = getTaxonomyTreeUserAccess($group_data);
+$taxonomy_tree_data = json_decode(file_get_contents("$metadata_path/taxonomy_tree_config.json"), true);
 
 // Configure display template
 $display_config = [
@@ -72,6 +78,8 @@ $data = [
     'site' => $site,
     'images_path' => $images_path,
     'absolute_images_path' => $absolute_images_path,
+    'taxonomy_user_access' => $taxonomy_user_access,
+    'taxonomy_tree_data' => $taxonomy_tree_data,
 ];
 
 // Use generic template to render
