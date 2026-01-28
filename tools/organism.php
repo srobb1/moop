@@ -53,9 +53,15 @@ $group_data = getGroupData();
 $taxonomy_user_access = getTaxonomyTreeUserAccess($group_data);
 $taxonomy_tree_data = json_decode(file_get_contents("$metadata_path/taxonomy_tree_config.json"), true);
 
+// Build scientific name from genus and species
+$scientific_name = '';
+if (!empty($organism_info['genus']) && !empty($organism_info['species'])) {
+    $scientific_name = $organism_info['genus'] . ' ' . $organism_info['species'];
+}
+
 // If no description in organism info, fetch from Wikipedia
 if (empty($organism_info['html_p'])) {
-    $wiki_data = getWikipediaOrganismData($organism_name, $organism_info['scientific_name'] ?? '');
+    $wiki_data = getWikipediaOrganismData($organism_name, $scientific_name);
     if (!empty($wiki_data['description'])) {
         $organism_info['html_p'] = [
             [
@@ -71,7 +77,7 @@ if (empty($organism_info['html_p'])) {
 
 // If no image, fetch from Wikipedia
 if (empty($organism_info['images']) && empty(getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path)['image_path'])) {
-    $wiki_data = getWikipediaOrganismData($organism_name, $organism_info['scientific_name'] ?? '');
+    $wiki_data = getWikipediaOrganismData($organism_name, $scientific_name);
     if (!empty($wiki_data['image_url'])) {
         $organism_info['wikipedia_image'] = $wiki_data['image_url'];
         $organism_info['wikipedia_url'] = $wiki_data['wikipedia_url'];

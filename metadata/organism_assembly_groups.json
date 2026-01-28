@@ -39,5 +39,13 @@
             "New",
             "Reptiles"
         ]
+    },
+    {
+        "organism": "Bradypodion_pumilum",
+        "assembly": "BraPum1",
+        "groups": [
+            "Reptiles",
+            "New"
+        ]
     }
 ]
