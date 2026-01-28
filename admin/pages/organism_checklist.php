@@ -175,48 +175,61 @@
         foreach ($organisms_in_system as $org) {
             $org_dir = "$organism_data/$org";
             
-            // Get file stats
+            // Get file stats - this will fail if www-data can't read the directory
             $stat = @stat($org_dir);
             if ($stat === false) {
-                $permission_issues[] = "$org: Cannot read directory stats";
+                // stat() failed - likely a permission issue
+                $permission_issues[] = "$org: Directory permissions prevent access (cannot stat)";
                 continue;
             }
             
             $perms = substr(sprintf('%o', fileperms($org_dir)), -3);
-            
-            // Check if directory is accessible (needs at least 5 for read+execute)
-            // Format: rwx rwx rwx (owner, group, other)
             $mode = $stat['mode'];
             
-            // Extract permission bits
-            $owner_read = ($mode & 0x0100) ? 'r' : '-';
-            $owner_exec = ($mode & 0x0040) ? 'x' : '-';
+            // Extract permission bits for group (www-data is usually in group)
             $group_read = ($mode & 0x0020) ? 'r' : '-';
             $group_exec = ($mode & 0x0008) ? 'x' : '-';
             $other_read = ($mode & 0x0004) ? 'r' : '-';
             $other_exec = ($mode & 0x0001) ? 'x' : '-';
             
             // Check if www-data (group) can read and execute
+            // Need both read (4) and execute (1) = 5 minimum for group
             if ($group_read === '-' || $group_exec === '-') {
-                $permission_issues[] = "$org: Group (www-data) cannot read/execute directory (perms: $perms)";
+                $permission_issues[] = "$org: Group (www-data) cannot access directory (perms: $perms, need at least 750)";
             }
             
-            // Check subdirectories
+            // Check subdirectories only if we can access parent
             if (is_dir($org_dir)) {
-                foreach (scandir($org_dir) as $subdir) {
-                    if ($subdir !== '.' && $subdir !== '..' && is_dir("$org_dir/$subdir")) {
-                        $substat = @stat("$org_dir/$subdir");
+                foreach (scandir($org_dir) as $item) {
+                    $item_path = "$org_dir/$item";
+                    
+                    // Check subdirectories
+                    if ($item !== '.' && $item !== '..' && is_dir($item_path)) {
+                        $substat = @stat($item_path);
                         if ($substat === false) {
-                            $permission_issues[] = "$org/$subdir: Cannot read directory stats";
+                            $permission_issues[] = "$org/$item: Subdirectory permissions prevent access";
                         } else {
-                            $subperms = substr(sprintf('%o', fileperms("$org_dir/$subdir")), -3);
+                            $subperms = substr(sprintf('%o', fileperms($item_path)), -3);
                             $submode = $substat['mode'];
                             $sub_group_read = ($submode & 0x0020) ? 'r' : '-';
                             $sub_group_exec = ($submode & 0x0008) ? 'x' : '-';
                             
                             if ($sub_group_read === '-' || $sub_group_exec === '-') {
-                                $permission_issues[] = "$org/$subdir: Group cannot read/execute (perms: $subperms)";
+                                $permission_issues[] = "$org/$item: Group cannot access (perms: $subperms, need at least 750)";
                             }
+                        }
+                    }
+                    // Check files - should not be writable by group or others
+                    elseif ($item !== '.' && $item !== '..' && is_file($item_path)) {
+                        $fileperms = substr(sprintf('%o', fileperms($item_path)), -3);
+                        $filemode = @fileperms($item_path);
+                        
+                        // Check if group or others can write (permission bit 2 or 200)
+                        $group_write = ($filemode & 0x0010) ? 'w' : '-';
+                        $other_write = ($filemode & 0x0002) ? 'w' : '-';
+                        
+                        if ($group_write === 'w' || $other_write === 'w') {
+                            $permission_issues[] = "$org/$item: File is writable by group/others (perms: $fileperms, should be 644 or 755)";
                         }
                     }
                 }
