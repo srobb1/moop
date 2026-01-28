@@ -1255,3 +1255,77 @@ function getWikipediaOrganismDataFromSearch($organism_name) {
     
     return $result;
 }
+
+/**
+ * Fetch organism info from NCBI using genus and species
+ * Gets taxon_id and common name for a given genus/species
+ * 
+ * @param string $genus Organism genus
+ * @param string $species Organism species
+ * @return array Array with 'taxon_id', 'common_name', 'scientific_name', 'error'
+ */
+function fetchOrganismInfoFromNCBI($genus, $species) {
+    $result = [
+        'taxon_id' => '',
+        'common_name' => '',
+        'scientific_name' => "$genus $species",
+        'error' => ''
+    ];
+    
+    if (empty($genus) || empty($species)) {
+        $result['error'] = 'Genus and species are required';
+        return $result;
+    }
+    
+    // Search for the organism on NCBI
+    $search_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?' . http_build_query([
+        'db' => 'taxonomy',
+        'term' => "$genus $species[orgn]",
+        'retmode' => 'json'
+    ]);
+    
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 5,
+            'user_agent' => 'MOOP (github.com)'
+        ]
+    ]);
+    
+    $response = @file_get_contents($search_url, false, $context);
+    
+    if ($response === false) {
+        $result['error'] = 'Failed to connect to NCBI';
+        return $result;
+    }
+    
+    $data = json_decode($response, true);
+    
+    if (empty($data['esearchresult']['idlist'])) {
+        $result['error'] = 'Organism not found on NCBI';
+        return $result;
+    }
+    
+    $taxon_id = $data['esearchresult']['idlist'][0];
+    $result['taxon_id'] = $taxon_id;
+    
+    // Fetch full details
+    $fetch_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?' . http_build_query([
+        'db' => 'taxonomy',
+        'id' => $taxon_id,
+        'retmode' => 'json'
+    ]);
+    
+    $response = @file_get_contents($fetch_url, false, $context);
+    
+    if ($response === false) {
+        return $result;
+    }
+    
+    $data = json_decode($response, true);
+    
+    if (!empty($data['result'][$taxon_id]['commonname'])) {
+        $result['common_name'] = $data['result'][$taxon_id]['commonname'];
+    }
+    
+    return $result;
+}

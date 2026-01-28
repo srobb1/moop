@@ -197,7 +197,42 @@
           <li>Check that FASTA files are properly formatted for BLAST (if indexes are missing, you may need to rebuild BLAST indexes)</li>
         </ul>
 
-        <p class="mt-3"><strong>Go to:</strong> <a href="manage_organisms.php" class="btn btn-success"><i class="fa fa-dna"></i> Manage Organisms</a></p>
+        <?php
+        // Check for organisms missing organism.json
+        $organisms_missing_json = [];
+        foreach ($organisms_in_system as $org) {
+            $json_file = "$organism_data/$org/organism.json";
+            if (!file_exists($json_file)) {
+                $organisms_missing_json[] = $org;
+            }
+        }
+        ?>
+        
+        <?php if (!empty($organisms_missing_json)): ?>
+          <div class="alert alert-warning mt-3">
+            <i class="fa fa-exclamation-triangle"></i> <strong>Missing organism.json:</strong>
+            <ul class="mb-0 mt-2">
+              <?php foreach ($organisms_missing_json as $org): ?>
+                <li><?= htmlspecialchars($org) ?></li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+          
+          <p class="mt-3"><strong>Quick Action:</strong></p>
+          <button type="button" class="btn btn-primary" id="generateJsonBtn">
+            <i class="fa fa-magic"></i> Auto-Generate Missing Files
+          </button>
+          <small class="text-muted d-block mt-2">
+            <i class="fa fa-info-circle"></i> This will fetch organism data from NCBI and generate organism.json files
+          </small>
+          <div id="generateJsonStatus" style="display: none; margin-top: 1rem;"></div>
+        <?php else: ?>
+          <div class="alert alert-success mt-3">
+            <i class="fa fa-check-circle"></i> All organisms have organism.json files!
+          </div>
+        <?php endif; ?>
+
+        <p class="mt-3"><strong>Full Management:</strong> <a href="manage_organisms.php" class="btn btn-success"><i class="fa fa-dna"></i> Manage Organisms</a></p>
       </div>
     </div>
 
@@ -397,6 +432,51 @@
 </style>
 
 <script>
+// Auto-generate organism.json files
+async function generateOrganismJson() {
+  const btn = document.getElementById('generateJsonBtn');
+  const statusDiv = document.getElementById('generateJsonStatus');
+  
+  // Disable button and show loading
+  btn.disabled = true;
+  statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Generating organism.json files from NCBI (this may take a minute)...</div>';
+  statusDiv.style.display = 'block';
+  
+  try {
+    const response = await fetch('api/generate_organism_json.php', {
+      method: 'POST'
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      let message = `<strong>Success!</strong> Generated ${data.count} organism.json file${data.count !== 1 ? 's' : ''}. `;
+      
+      if (data.errors && data.errors.length > 0) {
+        message += `<strong>Errors:</strong> <ul class="mb-0 mt-2">`;
+        data.errors.forEach(err => {
+          message += `<li>${err}</li>`;
+        });
+        message += `</ul>`;
+        statusDiv.innerHTML = `<div class="alert alert-warning"><i class="fa fa-check-circle"></i> ${message}</div>`;
+      } else {
+        message += 'Reloading...';
+        statusDiv.innerHTML = `<div class="alert alert-success"><i class="fa fa-check-circle"></i> ${message}</div>`;
+      }
+      
+      // Reload the page after a short delay
+      setTimeout(() => {
+        location.reload();
+      }, 2000);
+    } else {
+      statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> Failed to generate files. Please try again or use the full management page.</div>';
+      btn.disabled = false;
+    }
+  } catch (error) {
+    statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + error.message + '</div>';
+    btn.disabled = false;
+  }
+}
+
 // Define function inline (will also be in admin-utilities.js but this ensures it's available)
 async function generateTreeFromChecklist() {
   const btn = document.getElementById('generateTreeBtn');
@@ -435,6 +515,11 @@ async function generateTreeFromChecklist() {
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
+  const genJsonBtn = document.getElementById('generateJsonBtn');
+  if (genJsonBtn) {
+    genJsonBtn.addEventListener('click', generateOrganismJson);
+  }
+  
   const btn = document.getElementById('generateTreeBtn');
   if (btn) {
     btn.addEventListener('click', generateTreeFromChecklist);
