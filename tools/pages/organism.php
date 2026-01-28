@@ -143,7 +143,8 @@
 
           <!-- Taxonomic Breadcrumb -->
           <?php
-          if (!empty($organism_info['taxon_id'])): 
+          $taxonomy_tree_file = $config->getPath('metadata_path') . '/taxonomy_tree_config.json';
+          if (!empty($organism_info['taxon_id']) && isAssemblyInTaxonomyTree($organism_name, '', $taxonomy_tree_file)): 
               $lineage = fetch_taxonomy_lineage($organism_info['taxon_id']);
               if (!empty($lineage)): ?>
                 <div class="mt-4">
