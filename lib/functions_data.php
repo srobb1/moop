@@ -1280,7 +1280,7 @@ function fetchOrganismInfoFromNCBI($genus, $species) {
     // Search for the organism on NCBI
     $search_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?' . http_build_query([
         'db' => 'taxonomy',
-        'term' => "$genus $species[orgn]",
+        'term' => "$genus $species",
         'retmode' => 'json'
     ]);
     

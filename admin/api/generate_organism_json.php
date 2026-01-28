@@ -5,6 +5,7 @@
  */
 
 include_once __DIR__ . '/../admin_init.php';
+include_once __DIR__ . '/../../lib/functions_data.php';
 
 // Only allow POST
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {

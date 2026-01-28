@@ -479,11 +479,6 @@ async function generateOrganismJson() {
     btn.disabled = false;
   }
 }
-  } catch (error) {
-    statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + error.message + '</div>';
-    btn.disabled = false;
-  }
-}
 
 // Define function inline (will also be in admin-utilities.js but this ensures it's available)
 async function generateTreeFromChecklist() {
