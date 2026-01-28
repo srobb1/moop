@@ -217,7 +217,56 @@
           <li>Organize it within the appropriate taxonomic hierarchy</li>
         </ul>
 
-        <p class="mt-3"><strong>Go to:</strong> <a href="manage_taxonomy_tree.php" class="btn btn-info"><i class="fa fa-sitemap"></i> Manage Taxonomy Tree</a></p>
+        <?php
+        // Load organisms and check which are in the taxonomy tree
+        $organisms_in_system = [];
+        if (is_dir($organism_data)) {
+            foreach (scandir($organism_data) as $item) {
+                if ($item !== '.' && $item !== '..' && is_dir("$organism_data/$item")) {
+                    $organisms_in_system[] = $item;
+                }
+            }
+        }
+        sort($organisms_in_system);
+        
+        // Check taxonomy tree
+        $tree_file = dirname($organism_data) . '/metadata/taxonomy_tree_config.json';
+        $organisms_not_in_tree = [];
+        
+        foreach ($organisms_in_system as $org) {
+            if (!isAssemblyInTaxonomyTree($org, '', $tree_file)) {
+                $organisms_not_in_tree[] = $org;
+            }
+        }
+        ?>
+        
+        <?php if (!empty($organisms_not_in_tree)): ?>
+          <div class="alert alert-warning mt-3">
+            <i class="fa fa-exclamation-triangle"></i> <strong>Missing from Taxonomy Tree:</strong>
+            <ul class="mb-0 mt-2">
+              <?php foreach ($organisms_not_in_tree as $org): ?>
+                <li><?= htmlspecialchars($org) ?></li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+          
+          <p class="mt-3"><strong>Quick Action:</strong></p>
+          <form method="post" action="manage_taxonomy_tree.php" style="display: inline;">
+            <input type="hidden" name="action" value="generate">
+            <button type="submit" class="btn btn-primary">
+              <i class="fa fa-sync-alt"></i> Auto-Generate Tree from NCBI
+            </button>
+            <small class="text-muted d-block mt-2">
+              <i class="fa fa-clock"></i> This will generate the tree for all organisms (~<?= count($organisms_in_system) ?> seconds)
+            </small>
+          </form>
+        <?php else: ?>
+          <div class="alert alert-success mt-3">
+            <i class="fa fa-check-circle"></i> All organisms are in the taxonomy tree!
+          </div>
+        <?php endif; ?>
+
+        <p class="mt-3"><strong>Full Management:</strong> <a href="manage_taxonomy_tree.php" class="btn btn-info"><i class="fa fa-sitemap"></i> Manage Taxonomy Tree</a></p>
       </div>
     </div>
 

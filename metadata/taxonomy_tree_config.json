@@ -78,12 +78,23 @@
                                                         "name": "Chamaeleonidae",
                                                         "children": [
                                                             {
+                                                                "name": "Bradypodion",
+                                                                "children": [
+                                                                    {
+                                                                        "name": "Bradypodion pumilum",
+                                                                        "organism": "Bradypodion_pumilum",
+                                                                        "common_name": "Cape dwarf chameleon",
+                                                                        "image": "images/ncbi_taxonomy/179887.jpg"
+                                                                    }
+                                                                ]
+                                                            },
+                                                            {
                                                                 "name": "Chamaeleo",
                                                                 "children": [
                                                                     {
                                                                         "name": "Chamaeleo calyptratus",
                                                                         "organism": "Chamaeleo_calyptratus",
-                                                                        "common_name": "Veiled",
+                                                                        "common_name": "Veiled Chameleon",
                                                                         "image": "images/ncbi_taxonomy/179908.jpg"
                                                                     }
                                                                 ]
