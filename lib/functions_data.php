@@ -119,6 +119,53 @@ function getAccessibleOrganismsInGroup($group_name, $group_data) {
 }
 
 /**
+ * Get all groups that contain a specific organism
+ * Returns group info including organism count for each group
+ * 
+ * @param string $organism_name The organism to find groups for
+ * @param array $group_data Array of organism/assembly/groups data (optional, will load if not provided)
+ * @return array Array of [group_name => ['count' => num_organisms, 'link' => url]]
+ */
+function getGroupsForOrganism($organism_name, $group_data = null) {
+    if ($group_data === null) {
+        $group_data = getGroupData();
+    }
+    
+    $organism_groups = [];
+    
+    // Find all groups containing this organism
+    foreach ($group_data as $data) {
+        if ($data['organism'] === $organism_name) {
+            foreach ($data['groups'] as $group) {
+                if (!isset($organism_groups[$group])) {
+                    $organism_groups[$group] = [
+                        'count' => 0,
+                        'link' => 'tools/groups.php?group=' . urlencode($group)
+                    ];
+                }
+            }
+        }
+    }
+    
+    // Count organisms in each group
+    foreach ($organism_groups as $group => &$info) {
+        $count = 0;
+        foreach ($group_data as $data) {
+            if (in_array($group, $data['groups'])) {
+                $count++;
+                break; // Count organisms, not assemblies
+            }
+        }
+        $info['count'] = $count;
+    }
+    
+    // Sort by group name
+    ksort($organism_groups);
+    
+    return $organism_groups;
+}
+
+/**
  * Get FASTA files for an assembly
  * 
  * Scans the assembly directory for FASTA files matching configured sequence types.

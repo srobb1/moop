@@ -141,9 +141,34 @@
             </p>
           <?php endif; ?>
 
+          <!-- Groups This Organism Belongs To -->
+          <?php
+          $organism_groups = getGroupsForOrganism($organism_name, $group_data);
+          if (!empty($organism_groups)): ?>
+            <div class="mt-4 pt-3 border-top">
+              <h5 class="mb-3"><i class="fa fa-sitemap"></i> Member of Groups</h5>
+              <div class="row g-2">
+                <?php foreach ($organism_groups as $group_name => $group_info): ?>
+                  <div class="col-sm-6 col-md-4">
+                    <a href="/<?= $site ?>/tools/groups.php?group=<?= urlencode($group_name) ?>" 
+                       class="text-decoration-none">
+                      <div class="card h-100 shadow-sm" style="transition: all 0.2s ease;">
+                        <div class="card-body">
+                          <h6 class="card-title mb-2"><?= htmlspecialchars($group_name) ?></h6>
+                          <p class="card-text small text-muted mb-0">
+                            <i class="fa fa-dna"></i> <?= htmlspecialchars($group_info['count']) ?> organism<?= $group_info['count'] !== 1 ? 's' : '' ?>
+                          </p>
+                        </div>
+                      </div>
+                    </a>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          <?php endif; ?>
+
           <!-- Compact Assemblies List -->
           <?php
-          $group_data = getGroupData();
           $organism_data = $config->getPath('organism_data');
           $db_path = verifyOrganismDatabase($organism_name, $organism_data);
           $compact_accessible_assemblies = [];
