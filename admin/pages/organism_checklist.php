@@ -198,6 +198,19 @@
         </ul>
 
         <?php
+        // Load all organisms in system (used by Steps 3, 4, and 5)
+        $organisms_in_system = [];
+        if (is_dir($organism_data)) {
+            foreach (scandir($organism_data) as $item) {
+                if ($item !== '.' && $item !== '..' && is_dir("$organism_data/$item")) {
+                    $organisms_in_system[] = $item;
+                }
+            }
+        }
+        sort($organisms_in_system);
+        ?>
+
+        <?php
         // Check for organisms missing organism.json
         $organisms_missing_json = [];
         foreach ($organisms_in_system as $org) {
@@ -253,17 +266,6 @@
         </ul>
 
         <?php
-        // Load organisms and check which are in the taxonomy tree
-        $organisms_in_system = [];
-        if (is_dir($organism_data)) {
-            foreach (scandir($organism_data) as $item) {
-                if ($item !== '.' && $item !== '..' && is_dir("$organism_data/$item")) {
-                    $organisms_in_system[] = $item;
-                }
-            }
-        }
-        sort($organisms_in_system);
-        
         // Check taxonomy tree
         $tree_file = dirname($organism_data) . '/metadata/taxonomy_tree_config.json';
         $organisms_not_in_tree = [];
@@ -468,9 +470,15 @@ async function generateOrganismJson() {
         location.reload();
       }, 2000);
     } else {
-      statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> Failed to generate files. Please try again or use the full management page.</div>';
+      const errorText = await response.text();
+      statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> Server returned ' + response.status + '. Response: ' + errorText.substring(0, 200) + '</div>';
       btn.disabled = false;
     }
+  } catch (error) {
+    statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + error.message + '</div>';
+    btn.disabled = false;
+  }
+}
   } catch (error) {
     statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + error.message + '</div>';
     btn.disabled = false;

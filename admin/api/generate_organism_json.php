@@ -63,10 +63,22 @@ foreach ($organisms_missing_json as $organism_name) {
     $json_file = "$organism_data_dir/$organism_name/organism.json";
     $json_content = json_encode($organism_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     
+    // Check if directory is writable
+    $organism_dir = dirname($json_file);
+    if (!is_dir($organism_dir)) {
+        $errors[] = "$organism_name: Directory not found: $organism_dir";
+        continue;
+    }
+    
+    if (!is_writable($organism_dir)) {
+        $errors[] = "$organism_name: Directory not writable: $organism_dir (permissions issue)";
+        continue;
+    }
+    
     if (file_put_contents($json_file, $json_content) !== false) {
         $count++;
     } else {
-        $errors[] = "$organism_name: Could not write to file";
+        $errors[] = "$organism_name: Could not write to file $json_file (check disk space and permissions)";
     }
     
     // Be nice to NCBI
