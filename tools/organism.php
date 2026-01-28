@@ -53,7 +53,10 @@ $display_config = [
         ($organism_info['common_name'] ?? str_replace('_', ' ', $organism_name)) . ' - ' . $config->getString('siteTitle')
     ),
     'content_file' => __DIR__ . '/pages/organism.php',
-    'page_script' => '/' . $site . '/js/organism-display.js',
+    'page_script' => [
+        '/' . $site . '/js/modules/search-utils.js',
+        '/' . $site . '/js/organism-display.js'
+    ],
     'inline_scripts' => [
         "const sitePath = '/" . $site . "';",
         "const organismName = '" . addslashes($organism_name) . "';",

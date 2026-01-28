@@ -60,7 +60,10 @@ if (empty($assembly_info)) {
 $display_config = [
     'title' => htmlspecialchars($assembly_info['genome_name']) . ' - ' . $config->getString('siteTitle'),
     'content_file' => __DIR__ . '/pages/assembly.php',
-    'page_script' => "/$site/js/assembly-display.js",
+    'page_script' => [
+        "/$site/js/modules/search-utils.js",
+        "/$site/js/assembly-display.js"
+    ],
     'inline_scripts' => [
         "const sitePath = '/$site';",
         "const assemblyName = '" . addslashes($assembly_info['genome_name']) . "';",
