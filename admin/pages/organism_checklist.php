@@ -251,15 +251,13 @@
           </div>
           
           <p class="mt-3"><strong>Quick Action:</strong></p>
-          <form method="post" action="manage_taxonomy_tree.php" style="display: inline;">
-            <input type="hidden" name="action" value="generate">
-            <button type="submit" class="btn btn-primary">
-              <i class="fa fa-sync-alt"></i> Auto-Generate Tree from NCBI
-            </button>
-            <small class="text-muted d-block mt-2">
-              <i class="fa fa-clock"></i> This will generate the tree for all organisms (~<?= count($organisms_in_system) ?> seconds)
-            </small>
-          </form>
+          <button type="button" class="btn btn-primary" id="generateTreeBtn">
+            <i class="fa fa-sync-alt"></i> Auto-Generate Tree from NCBI
+          </button>
+          <small class="text-muted d-block mt-2">
+            <i class="fa fa-clock"></i> This will generate the tree for all organisms (~<?= count($organisms_in_system) ?> seconds)
+          </small>
+          <div id="generateTreeStatus" style="display: none; margin-top: 1rem;"></div>
         <?php else: ?>
           <div class="alert alert-success mt-3">
             <i class="fa fa-check-circle"></i> All organisms are in the taxonomy tree!
@@ -347,3 +345,49 @@
   text-decoration: none;
 }
 </style>
+
+<script>
+// Define function inline (will also be in admin-utilities.js but this ensures it's available)
+async function generateTreeFromChecklist() {
+  const btn = document.getElementById('generateTreeBtn');
+  const statusDiv = document.getElementById('generateTreeStatus');
+  
+  // Disable button and show loading
+  btn.disabled = true;
+  statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Generating taxonomy tree from NCBI (this may take a minute)...</div>';
+  statusDiv.style.display = 'block';
+  
+  try {
+    const response = await fetch('manage_taxonomy_tree.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'action=generate'
+    });
+    
+    if (response.ok) {
+      statusDiv.innerHTML = '<div class="alert alert-success"><i class="fa fa-check-circle"></i> <strong>Success!</strong> Taxonomy tree has been generated. Reloading...</div>';
+      
+      // Reload the page after a short delay
+      setTimeout(() => {
+        location.reload();
+      }, 2000);
+    } else {
+      statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> Failed to generate tree. Please try again or use the full management page.</div>';
+      btn.disabled = false;
+    }
+  } catch (error) {
+    statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + error.message + '</div>';
+    btn.disabled = false;
+  }
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  const btn = document.getElementById('generateTreeBtn');
+  if (btn) {
+    btn.addEventListener('click', generateTreeFromChecklist);
+  }
+});
+</script>

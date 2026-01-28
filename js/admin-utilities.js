@@ -54,3 +54,62 @@
         });
     });
 })();
+
+/**
+ * Generate taxonomy tree from NCBI without leaving current page
+ * Used in organism_checklist.php
+ */
+function initGenerateTreeButton() {
+  const btn = document.getElementById('generateTreeBtn');
+  if (!btn) return;
+  
+  btn.addEventListener('click', generateTreeFromChecklist);
+}
+
+async function generateTreeFromChecklist() {
+  const btn = document.getElementById('generateTreeBtn');
+  const statusDiv = document.getElementById('generateTreeStatus');
+  
+  // Disable button and show loading
+  btn.disabled = true;
+  statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Generating taxonomy tree from NCBI (this may take a minute)...</div>';
+  statusDiv.style.display = 'block';
+  
+  try {
+    const response = await fetch('manage_taxonomy_tree.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'action=generate'
+    });
+    
+    const text = await response.text();
+    
+    if (response.ok) {
+      statusDiv.innerHTML = '<div class="alert alert-success"><i class="fa fa-check-circle"></i> <strong>Success!</strong> Taxonomy tree has been generated. Reloading...</div>';
+      
+      // Reload the page after a short delay
+      setTimeout(() => {
+        location.reload();
+      }, 2000);
+    } else {
+      statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> Failed to generate tree. Please try again or use the full management page.</div>';
+      btn.disabled = false;
+    }
+  } catch (error) {
+    statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + error.message + '</div>';
+    btn.disabled = false;
+  }
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', initGenerateTreeButton);
+
+// Also try immediate initialization in case DOMContentLoaded already fired
+if (document.readyState === 'loading') {
+  // DOM is still loading, wait for DOMContentLoaded
+} else {
+  // DOM is already loaded
+  initGenerateTreeButton();
+}
