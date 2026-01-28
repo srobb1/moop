@@ -141,6 +141,28 @@
             </p>
           <?php endif; ?>
 
+          <!-- Taxonomic Breadcrumb -->
+          <?php
+          if (!empty($organism_info['taxon_id'])): 
+              $lineage = fetch_taxonomy_lineage($organism_info['taxon_id']);
+              if (!empty($lineage)): ?>
+                <div class="mt-4">
+                  <p class="mb-2">
+                    <small class="text-muted"><strong>Taxonomy:</strong></small><br>
+                    <small class="text-muted">
+                      <?php 
+                      $breadcrumb_parts = [];
+                      foreach ($lineage as $item) {
+                          $breadcrumb_parts[] = htmlspecialchars($item['name']);
+                      }
+                      echo implode(' <i class="fa fa-chevron-right fa-xs"></i> ', $breadcrumb_parts);
+                      ?>
+                    </small>
+                  </p>
+                </div>
+              <?php endif;
+          endif; ?>
+
           <!-- Groups This Organism Belongs To -->
           <?php
           $organism_groups = getGroupsForOrganism($organism_name, $group_data);
