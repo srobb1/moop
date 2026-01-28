@@ -338,6 +338,24 @@ function loadOrganismInfo($organism_name, $organism_data_dir) {
 }
 
 /**
+ * Get organism database path if it exists
+ * Returns null if database doesn't exist (doesn't die like verifyOrganismDatabase)
+ * 
+ * @param string $organism_name - Organism name
+ * @param string $organism_data_dir - Path to organism data directory
+ * @return string|null - Database path if exists, null if not
+ */
+function getOrganismDatabase($organism_name, $organism_data_dir) {
+    $db_path = "$organism_data_dir/$organism_name/organism.sqlite";
+    
+    if (!file_exists($db_path)) {
+        return null;
+    }
+    
+    return $db_path;
+}
+
+/**
  * Verify organism database file exists
  * 
  * @param string $organism_name - Organism name

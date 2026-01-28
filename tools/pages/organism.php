@@ -209,19 +209,21 @@
           <!-- Compact Assemblies List -->
           <?php
           $organism_data = $config->getPath('organism_data');
-          $db_path = verifyOrganismDatabase($organism_name, $organism_data);
+          $db_path = getOrganismDatabase($organism_name, $organism_data);
           $compact_accessible_assemblies = [];
           
-          foreach ($group_data as $data) {
-              if ($data['organism'] === $organism_name) {
-                  if (has_assembly_access($organism_name, $data['assembly'])) {
-                      $assembly_info = getAssemblyStats($data['assembly'], $db_path);
-                      if (!empty($assembly_info)) {
-                          $compact_accessible_assemblies[] = [
-                              'accession' => $data['assembly'],
-                              'genome_name' => $assembly_info['genome_name'] ?? '',
-                              'genome_accession' => $assembly_info['genome_accession'] ?? $data['assembly']
-                          ];
+          if (!empty($db_path)) {
+              foreach ($group_data as $data) {
+                  if ($data['organism'] === $organism_name) {
+                      if (has_assembly_access($organism_name, $data['assembly'])) {
+                          $assembly_info = getAssemblyStats($data['assembly'], $db_path);
+                          if (!empty($assembly_info)) {
+                              $compact_accessible_assemblies[] = [
+                                  'accession' => $data['assembly'],
+                                  'genome_name' => $assembly_info['genome_name'] ?? '',
+                                  'genome_accession' => $assembly_info['genome_accession'] ?? $data['assembly']
+                              ];
+                          }
                       }
                   }
               }
