@@ -32,7 +32,15 @@
     <!-- Tools Column -->
     <div class="col-lg-4">
       <?php 
-      $context = createToolContext('group', ['group' => $group_name]);
+      // For taxonomy groups, pass organisms without group parameter (treated as multi-organism search)
+      $tool_context_params = [];
+      if ($is_taxonomy_group && !empty($organisms_list)) {
+          $tool_context_params['organisms'] = $organisms_list;
+          $tool_context_params['display_name'] = $group_name;
+      } else {
+          $tool_context_params['group'] = $group_name;
+      }
+      $context = createToolContext('group', $tool_context_params);
       include_once TOOL_SECTION_PATH;
       ?>
     </div>

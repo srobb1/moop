@@ -94,14 +94,16 @@ if (!$is_taxonomy_group && !is_public_group($group_name)) {
 }
 
 // Configure display template
+$page_scripts = [
+    "/$site/js/modules/organism-utils.js",
+    "/$site/js/modules/search-utils.js",
+    "/$site/js/groups-display.js"
+];
+
 $display_config = [
     'title' => htmlspecialchars($group_name) . ' - ' . $config->getString('siteTitle'),
     'content_file' => __DIR__ . '/pages/groups.php',
-    'page_script' => [
-        "/$site/js/modules/organism-utils.js",
-        "/$site/js/modules/search-utils.js",
-        "/$site/js/groups-display.js"
-    ],
+    'page_script' => $page_scripts,
     'inline_scripts' => [
         "const sitePath = '/$site';",
         "const groupName = '" . addslashes($group_name) . "';",
@@ -115,6 +117,8 @@ $data = [
     'group_name' => $group_name,
     'group_info' => $group_info,
     'group_organisms' => $group_organisms,
+    'organisms_list' => array_keys($group_organisms),  // For tool context
+    'is_taxonomy_group' => $is_taxonomy_group,
     'config' => $config,
     'site' => $site,
     'images_path' => $images_path,

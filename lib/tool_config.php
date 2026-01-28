@@ -80,16 +80,38 @@ function buildToolUrl($tool_id, $context, $site) {
     
     $url = "/$site" . $tool['url_path'];
     $params = [];
+    $organisms = [];
     
     // Build query parameters from context
     foreach ($tool['context_params'] as $param) {
         if (!empty($context[$param])) {
-            $params[$param] = $context[$param];
+            // Separate organisms array for special handling
+            if ($param === 'organisms' && is_array($context[$param])) {
+                $organisms = $context[$param];
+            } else {
+                $params[$param] = $context[$param];
+            }
         }
     }
     
+    if (empty($params) && empty($organisms)) {
+        return $url;
+    }
+    
+    // Build URL with regular params first
     if (!empty($params)) {
         $url .= '?' . http_build_query($params);
+        $separator = '&';
+    } else {
+        $separator = '?';
+    }
+    
+    // Append organisms with [] notation
+    if (!empty($organisms)) {
+        foreach ($organisms as $org) {
+            $url .= $separator . 'organisms[]=' . urlencode($org);
+            $separator = '&';
+        }
     }
     
     return $url;
