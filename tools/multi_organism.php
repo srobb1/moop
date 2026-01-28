@@ -72,9 +72,6 @@ $display_config = [
         "/$site/js/modules/search-utils.js",
         "/$site/js/multi-organism-search.js"
     ],
-    'page_styles' => [
-        "/$site/css/groups.css"
-    ],
     'inline_scripts' => [
         "const sitePath = '/$site';",
         "const allOrganisms = " . json_encode($organisms) . ";",
@@ -92,7 +89,10 @@ $data = [
     'site' => $site,
     'images_path' => $images_path,
     'absolute_images_path' => $absolute_images_path,
-    'inline_scripts' => $display_config['inline_scripts']
+    'inline_scripts' => $display_config['inline_scripts'],
+    'page_styles' => [
+        "/$site/css/groups.css"
+    ]
 ];
 
 // Use generic display template
