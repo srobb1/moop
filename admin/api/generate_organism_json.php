@@ -58,7 +58,11 @@ foreach ($organisms_missing_json as $organism_name) {
         'genus' => $genus,
         'species' => $species,
         'common_name' => $ncbi_data['common_name'] ?: $organism_name,
-        'taxon_id' => $ncbi_data['taxon_id']
+        'taxon_id' => $ncbi_data['taxon_id'],
+        'feature_types' => [
+            'parents' => ['gene'],
+            'children' => ['mRNA', 'transcript']
+        ]
     ];
     
     $json_file = "$organism_data_dir/$organism_name/organism.json";
