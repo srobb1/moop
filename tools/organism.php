@@ -60,7 +60,7 @@ if (!empty($organism_info['genus']) && !empty($organism_info['species'])) {
 }
 
 // If no description in organism info, fetch from Wikipedia
-if (empty($organism_info['html_p'])) {
+if (!isset($organism_info['html_p']) || empty($organism_info['html_p']) || !is_array($organism_info['html_p']) || count($organism_info['html_p']) === 0) {
     $wiki_data = getWikipediaOrganismData($organism_name, $scientific_name);
     if (!empty($wiki_data['description'])) {
         $organism_info['html_p'] = [
