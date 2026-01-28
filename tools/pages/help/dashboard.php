@@ -61,6 +61,13 @@ $tutorials = [
         'color' => 'dark',
     ],
     [
+        'id' => 'generating-annotations-and-databases',
+        'title' => 'Generating Annotations & Databases (Technical)',
+        'description' => 'Guide for generating functional annotations and creating/loading organism.sqlite databases.',
+        'icon' => 'fa-flask',
+        'color' => 'purple',
+    ],
+    [
         'id' => 'organism-setup-and-searches',
         'title' => 'Setup & Searches (Technical)',
         'description' => 'Technical guide for setting up new organisms, configuring metadata, and understanding search mechanics and the parent page.',
