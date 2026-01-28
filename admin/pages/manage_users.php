@@ -1,5 +1,12 @@
 <div class="container mt-5">
 
+  <!-- Back to Admin Link -->
+  <div class="mb-4">
+    <a href="admin.php" class="btn btn-outline-secondary btn-sm">
+      <i class="fa fa-arrow-left"></i> Back to Admin
+    </a>
+  </div>
+
   <!-- Messages -->
   <?php if ($message): ?>
     <div class="alert alert-<?= htmlspecialchars($messageType) ?> alert-dismissible fade show" role="alert">

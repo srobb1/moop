@@ -21,6 +21,13 @@
 ?>
 
 <div class="container mt-4">
+    <!-- Back to Admin Link -->
+    <div class="mb-4">
+      <a href="admin.php" class="btn btn-outline-secondary btn-sm">
+        <i class="fa fa-arrow-left"></i> Back to Admin
+      </a>
+    </div>
+
     <div class="row">
         <div class="col-md-12">
             <h1><i class="fas fa-exclamation-triangle"></i> Error Log Viewer</h1>
