@@ -85,6 +85,14 @@
     $image_src = $image_data['image_path'];
     $image_info = ['caption' => $image_data['caption'], 'link' => $image_data['link']];
     $show_image = !empty($image_src);
+    
+    // Fall back to Wikipedia image if no local image
+    if (!$show_image && !empty($organism_info['wikipedia_image'])) {
+        $image_src = $organism_info['wikipedia_image'];
+        $show_image = true;
+        $image_info = ['caption' => 'Image from Wikipedia', 'link' => $organism_info['wikipedia_url'] ?? ''];
+    }
+    
     $image_alt = htmlspecialchars($organism_info['common_name'] ?? $organism_name);
     ?>
     

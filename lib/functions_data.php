@@ -1061,3 +1061,197 @@ function getWikipediaTaxonomyDataFromSearch($rank_name) {
     
     return $result;
 }
+
+/**
+ * Fetch Wikipedia data for an organism (species)
+ * Gets description and image from Wikipedia using scientific name or common name
+ * 
+ * @param string $organism_name Common name or scientific name (e.g., 'Human', 'Homo sapiens')
+ * @param string $scientific_name Scientific name to try first (optional)
+ * @return array Array with 'description', 'image_url', 'wikipedia_url', 'source'
+ */
+function getWikipediaOrganismData($organism_name, $scientific_name = '') {
+    $result = [
+        'description' => '',
+        'image_url' => '',
+        'wikipedia_url' => '',
+        'source' => 'Wikipedia'
+    ];
+    
+    if (empty($organism_name) && empty($scientific_name)) {
+        return $result;
+    }
+    
+    // Try scientific name first, then common name
+    $names_to_try = array_filter([
+        $scientific_name,
+        $organism_name,
+        // Also try common name without underscores
+        str_replace('_', ' ', $organism_name)
+    ]);
+    
+    foreach ($names_to_try as $search_name) {
+        $wiki_search_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([
+            'action' => 'query',
+            'titles' => $search_name,
+            'format' => 'json',
+            'prop' => 'extracts|pageimages|info',
+            'exlimit' => 1,
+            'exintro' => true,
+            'explaintext' => true,
+            'piprop' => 'thumbnail|original',
+            'pithumbsize' => 400,
+            'redirects' => true
+        ]);
+        
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 5,
+                'user_agent' => 'MOOP (github.com)'
+            ]
+        ]);
+        
+        $response = @file_get_contents($wiki_search_url, false, $context);
+        
+        if ($response === false) {
+            continue;
+        }
+        
+        $data = json_decode($response, true);
+        
+        if (empty($data['query']['pages'])) {
+            continue;
+        }
+        
+        $pages = array_values($data['query']['pages']);
+        $page = $pages[0];
+        
+        if (!isset($page['pageid']) || empty($page['extract'])) {
+            continue;
+        }
+        
+        // Found good data, return it
+        $actual_title = $page['title'] ?? $search_name;
+        $result['wikipedia_url'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $actual_title);
+        
+        if (!empty($page['extract'])) {
+            $description = $page['extract'];
+            if (strlen($description) > 500) {
+                $description = substr($description, 0, 500) . '...';
+            }
+            $result['description'] = trim($description);
+        }
+        
+        if (!empty($page['thumbnail']['source'])) {
+            $result['image_url'] = $page['thumbnail']['source'];
+        } elseif (!empty($page['original']['source'])) {
+            $result['image_url'] = $page['original']['source'];
+        }
+        
+        return $result;
+    }
+    
+    // If direct search failed, try Wikipedia search API as fallback
+    return getWikipediaOrganismDataFromSearch($organism_name);
+}
+
+/**
+ * Search Wikipedia for organism information
+ * Fallback when direct title lookup doesn't find good content
+ * 
+ * @param string $organism_name Organism name to search for
+ * @return array Array with description, image, and Wikipedia URL
+ */
+function getWikipediaOrganismDataFromSearch($organism_name) {
+    $result = [
+        'description' => '',
+        'image_url' => '',
+        'wikipedia_url' => '',
+        'source' => 'Wikipedia'
+    ];
+    
+    // Search for the organism
+    $search_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([
+        'action' => 'query',
+        'list' => 'search',
+        'srsearch' => str_replace('_', ' ', $organism_name) . ' species animal',
+        'format' => 'json',
+        'srlimit' => 3
+    ]);
+    
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 5,
+            'user_agent' => 'MOOP (github.com)'
+        ]
+    ]);
+    
+    $response = @file_get_contents($search_url, false, $context);
+    
+    if ($response === false) {
+        return $result;
+    }
+    
+    $data = json_decode($response, true);
+    
+    if (empty($data['query']['search'])) {
+        return $result;
+    }
+    
+    // Try the first few results
+    foreach ($data['query']['search'] as $search_result) {
+        $found_title = $search_result['title'];
+        
+        // Fetch details about this page
+        $fetch_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([
+            'action' => 'query',
+            'titles' => $found_title,
+            'format' => 'json',
+            'prop' => 'extracts|pageimages',
+            'exintro' => true,
+            'explaintext' => true,
+            'piprop' => 'thumbnail|original',
+            'pithumbsize' => 400,
+            'redirects' => true
+        ]);
+        
+        $response = @file_get_contents($fetch_url, false, $context);
+        
+        if ($response === false) {
+            continue;
+        }
+        
+        $data = json_decode($response, true);
+        
+        if (empty($data['query']['pages'])) {
+            continue;
+        }
+        
+        $pages = array_values($data['query']['pages']);
+        $page = $pages[0];
+        
+        // Skip if no extract
+        if (empty($page['extract'])) {
+            continue;
+        }
+        
+        $description = $page['extract'];
+        if (strlen($description) > 500) {
+            $description = substr($description, 0, 500) . '...';
+        }
+        $result['description'] = trim($description);
+        
+        if (!empty($page['thumbnail']['source'])) {
+            $result['image_url'] = $page['thumbnail']['source'];
+        } elseif (!empty($page['original']['source'])) {
+            $result['image_url'] = $page['original']['source'];
+        }
+        
+        $result['wikipedia_url'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $page['title']);
+        
+        // Found a good result
+        return $result;
+    }
+    
+    return $result;
+}

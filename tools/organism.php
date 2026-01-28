@@ -53,6 +53,31 @@ $group_data = getGroupData();
 $taxonomy_user_access = getTaxonomyTreeUserAccess($group_data);
 $taxonomy_tree_data = json_decode(file_get_contents("$metadata_path/taxonomy_tree_config.json"), true);
 
+// If no description in organism info, fetch from Wikipedia
+if (empty($organism_info['html_p'])) {
+    $wiki_data = getWikipediaOrganismData($organism_name, $organism_info['scientific_name'] ?? '');
+    if (!empty($wiki_data['description'])) {
+        $organism_info['html_p'] = [
+            [
+                'text' => htmlspecialchars($wiki_data['description']) . 
+                         '<br><br><small class="text-muted">Source: <a href="' . htmlspecialchars($wiki_data['wikipedia_url']) . 
+                         '" target="_blank">Wikipedia</a></small>',
+                'class' => '',
+                'style' => ''
+            ]
+        ];
+    }
+}
+
+// If no image, fetch from Wikipedia
+if (empty($organism_info['images']) && empty(getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path)['image_path'])) {
+    $wiki_data = getWikipediaOrganismData($organism_name, $organism_info['scientific_name'] ?? '');
+    if (!empty($wiki_data['image_url'])) {
+        $organism_info['wikipedia_image'] = $wiki_data['image_url'];
+        $organism_info['wikipedia_url'] = $wiki_data['wikipedia_url'];
+    }
+}
+
 // Configure display template
 $display_config = [
     'title' => htmlspecialchars(
