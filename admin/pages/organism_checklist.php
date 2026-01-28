@@ -170,86 +170,83 @@
         </ul>
 
         <?php
-        // Quick permission check on organism directories
+        // Quick permission check on organism directories using same logic as manage_filesystem_permissions.php
         $permission_issues = [];
+        
         foreach ($organisms_in_system as $org) {
             $org_dir = "$organism_data/$org";
             
-            // Get file stats - this will fail if www-data can't read the directory
-            $stat = @stat($org_dir);
-            if ($stat === false) {
-                // stat() failed - likely a permission issue
-                $permission_issues[] = "$org: Directory permissions prevent access (cannot stat)";
+            if (!file_exists($org_dir)) {
+                $permission_issues[] = [
+                    'organism' => $org,
+                    'path' => $org_dir,
+                    'issues' => ['Directory does not exist']
+                ];
                 continue;
             }
             
-            $perms = substr(sprintf('%o', fileperms($org_dir)), -3);
-            $mode = $stat['mode'];
+            // Get full permission with leading digits (e.g., 2775, 0755)
+            $perms_full = substr(sprintf('%o', fileperms($org_dir)), -4);
+            $perms = ltrim($perms_full, '0') ?: '0';
             
-            // Extract permission bits for group (www-data is usually in group)
-            $group_read = ($mode & 0x0020) ? 'r' : '-';
-            $group_exec = ($mode & 0x0008) ? 'x' : '-';
-            $other_read = ($mode & 0x0004) ? 'r' : '-';
-            $other_exec = ($mode & 0x0001) ? 'x' : '-';
+            $group = posix_getgrgid(filegroup($org_dir))['name'] ?? 'unknown';
             
-            // Check if www-data (group) can read and execute
-            // Need both read (4) and execute (1) = 5 minimum for group
-            if ($group_read === '-' || $group_exec === '-') {
-                $permission_issues[] = "$org: Group (www-data) cannot access directory (perms: $perms, need at least 750)";
+            $issues = [];
+            
+            // Check permissions - should be 2775 (with SGID bit)
+            if ($perms !== '2775') {
+                $issues[] = "Permissions are $perms, should be 2775";
             }
             
-            // Check subdirectories only if we can access parent
-            if (is_dir($org_dir)) {
-                foreach (scandir($org_dir) as $item) {
-                    $item_path = "$org_dir/$item";
-                    
-                    // Check subdirectories
-                    if ($item !== '.' && $item !== '..' && is_dir($item_path)) {
-                        $substat = @stat($item_path);
-                        if ($substat === false) {
-                            $permission_issues[] = "$org/$item: Subdirectory permissions prevent access";
-                        } else {
-                            $subperms = substr(sprintf('%o', fileperms($item_path)), -3);
-                            $submode = $substat['mode'];
-                            $sub_group_read = ($submode & 0x0020) ? 'r' : '-';
-                            $sub_group_exec = ($submode & 0x0008) ? 'x' : '-';
-                            
-                            if ($sub_group_read === '-' || $sub_group_exec === '-') {
-                                $permission_issues[] = "$org/$item: Group cannot access (perms: $subperms, need at least 750)";
-                            }
-                        }
-                    }
-                    // Check files - should not be writable by group or others
-                    elseif ($item !== '.' && $item !== '..' && is_file($item_path)) {
-                        $fileperms = substr(sprintf('%o', fileperms($item_path)), -3);
-                        $filemode = @fileperms($item_path);
-                        
-                        // Check if group or others can write (permission bit 2 or 200)
-                        $group_write = ($filemode & 0x0010) ? 'w' : '-';
-                        $other_write = ($filemode & 0x0002) ? 'w' : '-';
-                        
-                        if ($group_write === 'w' || $other_write === 'w') {
-                            $permission_issues[] = "$org/$item: File is writable by group/others (perms: $fileperms, should be 644 or 755)";
-                        }
-                    }
-                }
+            // Check group - should be www-data
+            if ($group !== 'www-data') {
+                $issues[] = "Group is $group, should be www-data";
+            }
+            
+            if (!empty($issues)) {
+                $permission_issues[] = [
+                    'organism' => $org,
+                    'path' => $org_dir,
+                    'perms' => $perms,
+                    'group' => $group,
+                    'issues' => $issues
+                ];
             }
         }
+        
+        // DEBUG: Show what we're checking
+        // echo "<!-- Debug: organisms_in_system = " . implode(', ', $organisms_in_system) . " -->";
+        // echo "<!-- Debug: permission_issues count = " . count($permission_issues) . " -->";
         ?>
         
         <?php if (!empty($permission_issues)): ?>
           <div class="alert alert-warning mt-3">
             <i class="fa fa-exclamation-triangle"></i> <strong>Permission Issues Found:</strong>
             <ul class="mb-0 mt-2">
-              <?php foreach ($permission_issues as $issue): ?>
-                <li><?= htmlspecialchars($issue) ?></li>
+              <?php foreach ($permission_issues as $item): ?>
+                <li>
+                  <strong><?= htmlspecialchars($item['organism']) ?></strong><br>
+                  Current: <?= $item['perms'] ?? 'unknown' ?> (group: <?= htmlspecialchars($item['group'] ?? 'unknown') ?>) | Required: 2775 (group: www-data)
+                  <?php if (!empty($item['issues'])): ?>
+                    <ul class="mt-1 mb-0">
+                      <?php foreach ($item['issues'] as $issue): ?>
+                        <li><?= htmlspecialchars($issue) ?></li>
+                      <?php endforeach; ?>
+                    </ul>
+                  <?php endif; ?>
+                </li>
               <?php endforeach; ?>
             </ul>
+            <div class="mt-3 p-2 bg-dark text-light rounded" style="font-family: monospace; font-size: 0.85em;">
+              <strong>To fix all organism directories, run:</strong><br>
+              sudo chmod -R 2775 <?= htmlspecialchars($organism_data) ?><br>
+              sudo chgrp -R www-data <?= htmlspecialchars($organism_data) ?>
+            </div>
           </div>
           <p class="mt-3"><strong>Full Management:</strong> <a href="manage_filesystem_permissions.php" class="btn btn-primary"><i class="fa fa-lock"></i> Manage Filesystem Permissions</a></p>
         <?php else: ?>
           <div class="alert alert-success mt-3">
-            <i class="fa fa-check-circle"></i> All organism directories have proper permissions!
+            <i class="fa fa-check-circle"></i> All organism directories have proper permissions (2775, www-data group)!
           </div>
           <p class="mt-3"><strong>Full Management:</strong> <a href="manage_filesystem_permissions.php" class="btn btn-primary"><i class="fa fa-lock"></i> Manage Filesystem Permissions</a></p>
         <?php endif; ?>
