@@ -120,11 +120,11 @@ function getAccessibleOrganismsInGroup($group_name, $group_data) {
 
 /**
  * Get all groups that contain a specific organism
- * Returns group info including organism count for each group
+ * Returns group info including accessible organism count for each group
  * 
  * @param string $organism_name The organism to find groups for
  * @param array $group_data Array of organism/assembly/groups data (optional, will load if not provided)
- * @return array Array of [group_name => ['count' => num_organisms, 'link' => url]]
+ * @return array Array of [group_name => ['count' => num_accessible_organisms, 'link' => url]]
  */
 function getGroupsForOrganism($organism_name, $group_data = null) {
     if ($group_data === null) {
@@ -147,16 +147,10 @@ function getGroupsForOrganism($organism_name, $group_data = null) {
         }
     }
     
-    // Count organisms in each group
+    // Count accessible organisms in each group
     foreach ($organism_groups as $group => &$info) {
-        $count = 0;
-        foreach ($group_data as $data) {
-            if (in_array($group, $data['groups'])) {
-                $count++;
-                break; // Count organisms, not assemblies
-            }
-        }
-        $info['count'] = $count;
+        $accessible_organisms = getAccessibleOrganismsInGroup($group, $group_data);
+        $info['count'] = count($accessible_organisms);
     }
     
     // Sort by group name
