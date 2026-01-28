@@ -566,7 +566,6 @@
       </a>
     </p>
   </div>
-</div>
 
 <style>
 .structure-box {
