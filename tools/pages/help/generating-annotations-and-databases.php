@@ -101,7 +101,7 @@
               </div>
               <div class="card-body">
                 <p><strong>Source:</strong> Computational prediction or manual curation</p>
-                <p><strong>Tools:</strong> Blast2GO, InterProScan, PANNZER</p>
+                <p><strong>Tools:</strong> Blast2GO, InterProScan, PANTHER</p>
                 <p class="mb-0"><strong>Output:</strong> GO terms with evidence codes</p>
               </div>
             </div>
