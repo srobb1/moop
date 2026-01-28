@@ -78,6 +78,7 @@ $display_config = [
     'title' => htmlspecialchars($group_name) . ' - ' . $config->getString('siteTitle'),
     'content_file' => __DIR__ . '/pages/groups.php',
     'page_script' => [
+        "/$site/js/modules/organism-utils.js",
         "/$site/js/modules/search-utils.js",
         "/$site/js/groups-display.js"
     ],

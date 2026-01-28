@@ -9,58 +9,11 @@
  * - sitePath: the site path prefix
  */
 
-// Track which organisms are selected (default: all selected)
-let selectedOrganisms = [...groupOrganisms];
-
-// Initialize organism selection checkboxes
-function initOrganismSelection() {
-    // Handle individual organism checkboxes
-    $(document).on('change', '.organism-checkbox', function() {
-        const organism = $(this).data('organism');
-        const isChecked = $(this).is(':checked');
-        const $card = $(this).closest('.organism-selector-card');
-        
-        // Update visual state
-        if (isChecked) {
-            $card.addClass('selected');
-        } else {
-            $card.removeClass('selected');
-        }
-        
-        if (isChecked && !selectedOrganisms.includes(organism)) {
-            selectedOrganisms.push(organism);
-        } else if (!isChecked && selectedOrganisms.includes(organism)) {
-            selectedOrganisms = selectedOrganisms.filter(o => o !== organism);
-        }
-        
-        // Update search manager with selected organisms
-        updateSearchManager();
-    });
-    
-    // Handle "Select All" button
-    $('#selectAllOrganisms').on('click', function() {
-        selectedOrganisms = [...groupOrganisms];
-        $('.organism-checkbox').prop('checked', true);
-        $('.organism-selector-card').addClass('selected');
-        updateSearchManager();
-    });
-    
-    // Handle "Deselect All" button
-    $('#deselectAllOrganisms').on('click', function() {
-        selectedOrganisms = [];
-        $('.organism-checkbox').prop('checked', false);
-        $('.organism-selector-card').removeClass('selected');
-        updateSearchManager();
-    });
-    
-    // Initialize visual state for already-checked boxes
-    $('.organism-checkbox:checked').each(function() {
-        $(this).closest('.organism-selector-card').addClass('selected');
-    });
-}
+let selectedOrganisms = [];
 
 // Update search manager with currently selected organisms
-function updateSearchManager() {
+function updateGroupSearchManager(newSelectedOrganisms) {
+    selectedOrganisms = newSelectedOrganisms;
     searchManager.config.organismsVar = selectedOrganisms;
     searchManager.config.totalVar = selectedOrganisms.length;
 }
@@ -79,7 +32,8 @@ searchManager.init();
 
 // Initialize organism selection after page loads
 $(document).ready(function() {
-    initOrganismSelection();
+    // Initialize organism selection with callback to update search manager
+    selectedOrganisms = initializeOrganismSelection(groupOrganisms, updateGroupSearchManager);
     
     // Handle organism instructions info icon click
     $(document).on('click', '.organism-instructions-trigger', function(e) {

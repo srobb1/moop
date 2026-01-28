@@ -55,7 +55,19 @@
     <div class="col-12">
       <div class="card shadow-sm">
         <div class="card-body">
-          <h3 class="card-title mb-4">Selected Organisms</h3>
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+              <h3 class="card-title mb-0">Selected Organisms</h3>
+              <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-outline-secondary selectAllOrganisms">
+                  Select All
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary deselectAllOrganisms">
+                  Deselect All
+                </button>
+              </div>
+            </div>
+          </div>
           <div class="row g-3">
             <?php
             $organism_list = is_array($organisms) ? $organisms : [$organisms];
@@ -69,31 +81,38 @@
                 $common_name = $organism_info['common_name'] ?? '';
             ?>
               <div class="col-md-6 col-lg-4">
-                <a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?><?php foreach($organism_list as $org): ?>&multi_search[]=<?= urlencode($org) ?><?php endforeach; ?>" 
-                   class="text-decoration-none">
-                  <div class="card h-100 shadow-sm organism-card">
-                    <div class="card-body text-center">
-                      <div class="organism-image-container mb-3">
-                        <?php if ($show_image): ?>
-                          <img src="<?= $image_src ?>" 
-                               alt="<?= htmlspecialchars($organism) ?>"
-                               class="organism-card-image"
-                               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <?php endif; ?>
-                        <div class="organism-card-icon <?= $show_image ? 'display-none' : '' ?>" style="display: <?= $show_image ? 'none' : 'flex' ?>;">
-                          <i class="fa fa-dna fa-4x text-primary"></i>
+                <div class="organism-selector-card position-relative" data-organism="<?= htmlspecialchars($organism) ?>">
+                  <!-- Selection bar with checkbox -->
+                  <div class="organism-selection-bar">
+                    <input type="checkbox" class="organism-checkbox" data-organism="<?= htmlspecialchars($organism) ?>" checked>
+                  </div>
+                  <!-- Clickable card that links to organism page -->
+                  <a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?><?php foreach($organism_list as $org): ?>&multi_search[]=<?= urlencode($org) ?><?php endforeach; ?>" 
+                     class="text-decoration-none organism-card-link">
+                    <div class="card h-100 shadow-sm organism-card">
+                      <div class="card-body text-center">
+                        <div class="organism-image-container mb-3">
+                          <?php if ($show_image): ?>
+                            <img src="<?= $image_src ?>" 
+                                 alt="<?= htmlspecialchars($organism) ?>"
+                                 class="organism-card-image"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                          <?php endif; ?>
+                          <div class="organism-card-icon <?= $show_image ? 'display-none' : '' ?>" style="display: <?= $show_image ? 'none' : 'flex' ?>;">
+                            <i class="fa fa-dna fa-4x text-primary"></i>
+                          </div>
                         </div>
-                      </div>
-                      <h5 class="card-title mb-2">
-                        <em><?= htmlspecialchars($genus . ' ' . $species) ?></em>
-                      </h5>
-                      <?php if ($common_name): ?>
+                        <h5 class="card-title mb-2">
+                          <em><?= htmlspecialchars($genus . ' ' . $species) ?></em>
+                        </h5>
+                        <?php if ($common_name): ?>
                         <p class="text-muted mb-0"><?= htmlspecialchars($common_name) ?></p>
                       <?php endif; ?>
                     </div>
                   </div>
                 </a>
               </div>
+                </div>
             <?php endforeach; ?>
           </div>
         </div>

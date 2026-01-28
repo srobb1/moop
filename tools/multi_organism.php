@@ -68,13 +68,15 @@ $display_config = [
     'title' => 'Multi-Organism Search - ' . $config->getString('siteTitle'),
     'content_file' => __DIR__ . '/pages/multi_organism.php',
     'page_script' => [
+        "/$site/js/modules/organism-utils.js",
         "/$site/js/modules/search-utils.js",
         "/$site/js/multi-organism-search.js"
     ],
     'inline_scripts' => [
         "const sitePath = '/$site';",
-        "const selectedOrganisms = " . json_encode($organisms) . ";",
-        "const totalOrganisms = selectedOrganisms.length;",
+        "const allOrganisms = " . json_encode($organisms) . ";",
+        "let selectedOrganisms = allOrganisms;",
+        "const totalOrganisms = allOrganisms.length;",
         "const siteTitle = '" . addslashes($config->getString('siteTitle')) . "';"
     ]
 ];
