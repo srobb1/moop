@@ -60,7 +60,9 @@ class AdvancedSearchFilter {
         
         // Otherwise, select all sources by default
         for (const type in this.sourceTypes) {
-            for (const source of this.sourceTypes[type]) {
+            const typeData = this.sourceTypes[type];
+            const sources = typeData.sources || typeData; // Handle both new format with color and old format
+            for (const source of sources) {
                 this.selectedSources[source.name] = true;
             }
         }
@@ -99,7 +101,10 @@ class AdvancedSearchFilter {
         let sourceTypesHtml = '';
         
         for (const type in this.sourceTypes) {
-            const sources = this.sourceTypes[type];
+            const typeData = this.sourceTypes[type];
+            const sources = typeData.sources || typeData; // Handle both new format with color and old format
+            const color = typeData.color || 'secondary'; // Get color from new format
+            const description = typeData.description || ''; // Get description
             const typeId = this.sanitizeId(type);
             const sourcesHtml = sources.map(source => {
                 const isChecked = this.selectedSources[source.name] ? 'checked' : '';
@@ -117,10 +122,15 @@ class AdvancedSearchFilter {
             `;
             }).join('');
             
+            const infoIcon = description ? `<i class="fa fa-info-circle text-muted info-icon-trigger" style="cursor: pointer; margin-left: 0.5rem;" data-description="${escapeHtml(description)}" data-type="${escapeHtml(type)}"></i>` : '';
+            
             sourceTypesHtml += `
                 <div class="mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong>${type}</strong>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-${color} fs-6">${type}</span>
+                            ${infoIcon}
+                        </div>
                         <div>
                             <button type="button" class="btn btn-sm btn-outline-secondary select-type" 
                                     data-type="${type}">
@@ -151,7 +161,7 @@ class AdvancedSearchFilter {
                             <p class="text-muted small mb-3">
                                 Select annotation sources to include in your search. 
                                 All sources are selected by default. The numbers shown are total 
-                                annotations per source in this organism's database.
+                                annotations per source in these organisms' databases.
                             </p>
                             
                             <div class="mb-3">
@@ -201,6 +211,14 @@ class AdvancedSearchFilter {
         $(document).off('change', '.source-checkbox').on('change', '.source-checkbox', (e) => {
             const source = $(e.target).data('source');
             this.selectedSources[source] = e.target.checked;
+        });
+        
+        // Info icon click handler
+        $(document).off('click', '.info-icon-trigger').on('click', '.info-icon-trigger', (e) => {
+            e.stopPropagation();
+            const description = $(e.target).data('description');
+            const type = $(e.target).data('type');
+            this.showInfoModal(type, description);
         });
         
         // Apply filter button
@@ -276,6 +294,38 @@ class AdvancedSearchFilter {
      */
     sanitizeId(str) {
         return str.replace(/[^a-zA-Z0-9-_]/g, '_');
+    }
+    
+    /**
+     * Show info modal for an annotation type
+     */
+    showInfoModal(type, description) {
+        const modalHtml = `
+            <div class="modal fade" id="infoModal-${this.sanitizeId(type)}" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">${escapeHtml(type)}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${description}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if present
+        $(`#infoModal-${this.sanitizeId(type)}`).remove();
+        
+        // Add and show modal
+        $('body').append(modalHtml);
+        const modal = new bootstrap.Modal(document.getElementById(`infoModal-${this.sanitizeId(type)}`));
+        modal.show();
     }
 }
 
