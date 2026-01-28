@@ -159,7 +159,10 @@
                           $name = htmlspecialchars($item['name']);
                           $count = isset($item['count']) ? $item['count'] : 0;
                           $badge = $count > 0 ? " <span class=\"badge bg-secondary ms-1\">$count</span>" : '';
-                          $breadcrumb_parts[] = $name . $badge;
+                          
+                          // Create link to groups page with taxonomy_rank parameter
+                          $taxonomy_url = "/$site/tools/groups.php?taxonomy_rank=" . urlencode($item['name']);
+                          $breadcrumb_parts[] = "<a href=\"$taxonomy_url\" class=\"text-decoration-none text-muted\">$name$badge</a>";
                       }
                       echo implode(' <i class="fa fa-chevron-right fa-xs"></i> ', $breadcrumb_parts);
                       ?>

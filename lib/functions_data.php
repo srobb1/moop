@@ -160,6 +160,82 @@ function getGroupsForOrganism($organism_name, $group_data = null) {
 }
 
 /**
+ * Get organisms at a specific taxonomy rank that user has access to
+ * Traverses the taxonomy tree to find all organisms under a given taxonomic rank
+ * 
+ * @param string $rank_name Name of the taxonomy rank (e.g., 'Primates', 'Mammalia')
+ * @param array $tree_node Root of taxonomy tree
+ * @param array $group_data Array of organism/assembly/groups data
+ * @return array Array of [organism_name => [assemblies]] filtered by user access
+ */
+function getOrganismsAtTaxonomyLevel($rank_name, $tree_node, $group_data) {
+    if (empty($rank_name) || empty($tree_node) || empty($group_data)) {
+        return [];
+    }
+    
+    $organisms_at_level = [];
+    
+    // Find the rank in the tree and collect all organisms under it
+    $findOrganisms = function($node) use ($rank_name, &$organisms_at_level, &$findOrganisms) {
+        // Check if this is the target rank
+        if ($node['name'] === $rank_name) {
+            // Collect all organisms under this rank
+            $collectOrganisms = function($n) use (&$collectOrganisms, &$organisms_at_level) {
+                if (isset($n['organism'])) {
+                    $organisms_at_level[$n['organism']] = true;
+                }
+                if (isset($n['children']) && is_array($n['children'])) {
+                    foreach ($n['children'] as $child) {
+                        $collectOrganisms($child);
+                    }
+                }
+            };
+            $collectOrganisms($node);
+            return;
+        }
+        
+        // Continue traversing
+        if (isset($node['children']) && is_array($node['children'])) {
+            foreach ($node['children'] as $child) {
+                $findOrganisms($child);
+            }
+        }
+    };
+    
+    $findOrganisms($tree_node);
+    
+    // Now filter by user access and get assemblies
+    $accessible_organisms = [];
+    foreach ($organisms_at_level as $organism => $dummy) {
+        // Find all assemblies for this organism
+        $organism_assemblies = [];
+        foreach ($group_data as $data) {
+            if ($data['organism'] === $organism) {
+                $organism_assemblies[] = $data['assembly'];
+            }
+        }
+        
+        // Check if user has access to at least one assembly
+        $has_accessible_assembly = false;
+        foreach ($organism_assemblies as $assembly) {
+            if (has_assembly_access($organism, $assembly)) {
+                $has_accessible_assembly = true;
+                break;
+            }
+        }
+        
+        if ($has_accessible_assembly) {
+            $accessible_organisms[$organism] = $organism_assemblies;
+        }
+    }
+    
+    // Sort organisms alphabetically
+    ksort($accessible_organisms);
+    
+    return $accessible_organisms;
+}
+
+/**
  * Get FASTA files for an assembly
  * 
  * Scans the assembly directory for FASTA files matching configured sequence types.
