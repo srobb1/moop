@@ -34,6 +34,30 @@ if (!file_exists($db)) {
 // Get grouped sources
 $source_types = getAnnotationSourcesByType($db);
 
+// Load annotation config to get color for each type
+$metadata_path = $config->getPath('metadata_path');
+$config_file = "$metadata_path/annotation_config.json";
+$annotation_config = loadJsonFile($config_file, []);
+
+// Add color and description to each type
+$source_types_with_color = [];
+foreach ($source_types as $type => $sources) {
+    $color = 'secondary'; // default
+    $description = ''; // default
+    if (!empty($annotation_config['annotation_types'][$type]['color'])) {
+        $color = $annotation_config['annotation_types'][$type]['color'];
+    }
+    if (!empty($annotation_config['annotation_types'][$type]['description'])) {
+        $description = $annotation_config['annotation_types'][$type]['description'];
+    }
+    
+    $source_types_with_color[$type] = [
+        'sources' => $sources,
+        'color' => $color,
+        'description' => $description
+    ];
+}
+
 // Calculate totals
 $total_sources = 0;
 $total_count = 0;
@@ -46,7 +70,7 @@ foreach ($source_types as $type_sources) {
 
 echo json_encode([
     'organism' => $organism,
-    'source_types' => $source_types,
+    'source_types' => $source_types_with_color,
     'total_sources' => $total_sources,
     'total_annotations' => $total_count
 ]);

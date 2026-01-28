@@ -636,12 +636,27 @@ function getAnnotationSourcesByType($dbFile) {
             ];
         }
         
-        // Sort types in display order
-        $order = ['Gene Ontology', 'Gene Families', 'Domains', 'Orthologs', 'Homologs', 'AI Annotations'];
+        // Load annotation config to get proper ordering
+        global $config;
+        $metadata_path = $config->getPath('metadata_path');
+        $config_file = "$metadata_path/annotation_config.json";
+        $annotation_config = loadJsonFile($config_file, []);
+        
+        // Use annotation_type_order from config if available
         $sorted = [];
-        foreach ($order as $type) {
-            if (isset($grouped[$type])) {
-                $sorted[$type] = $grouped[$type];
+        if (!empty($annotation_config['annotation_type_order'])) {
+            // Add types in the order defined in config
+            foreach ($annotation_config['annotation_type_order'] as $type) {
+                if (isset($grouped[$type])) {
+                    $sorted[$type] = $grouped[$type];
+                }
+            }
+        }
+        
+        // Add any remaining types not in the config order (in case of dynamic types)
+        foreach ($grouped as $type => $sources) {
+            if (!isset($sorted[$type])) {
+                $sorted[$type] = $sources;
             }
         }
         
