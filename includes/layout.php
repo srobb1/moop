@@ -114,7 +114,7 @@
  *       ]
  *   ], 'Organism Display');
  */
-function render_display_page($content_file, $data = [], $title = '') {
+function render_display_page($content_file, $data = [], $title = '', $options = []) {
     // Get config instance for use in layout
     $config = ConfigManager::getInstance();
     
@@ -156,6 +156,20 @@ function render_display_page($content_file, $data = [], $title = '') {
                 echo '<i class="fa fa-exclamation-circle"></i> ';
                 echo 'Error: Content file not found: ' . htmlspecialchars($content_file);
                 echo '</div>';
+            }
+            ?>
+            
+            <!-- Back button at bottom (if provided in options) -->
+            <?php
+            if (isset($options['back_link']) && !empty($options['back_link'])) {
+                $back_label = $options['back_label'] ?? 'Back';
+                ?>
+                <div style="margin-top: 3rem; margin-bottom: 2rem;">
+                    <a href="<?= htmlspecialchars($options['back_link']) ?>" class="btn btn-secondary">
+                        <i class="fa fa-arrow-left"></i> <?= htmlspecialchars($back_label) ?>
+                    </a>
+                </div>
+                <?php
             }
             ?>
         </div>

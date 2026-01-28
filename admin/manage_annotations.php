@@ -408,7 +408,11 @@ $data = [
 echo render_display_page(
     $display_config['content_file'],
     $data,
-    $display_config['title']
+    $display_config['title'],
+    [
+        'back_link' => 'admin.php',
+        'back_label' => 'Back to Admin Dashboard'
+    ]
 );
 
 ?>
