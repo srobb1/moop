@@ -1,5 +1,10 @@
 <div class="container mt-5">
-
+  <!-- Back to Admin Dashboard Link -->
+  <div class="mb-4">
+    <a href="admin.php" class="btn btn-outline-secondary btn-sm">
+      <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
+    </a>
+  </div>
   <?php
   ?>
   
@@ -292,6 +297,12 @@
   </div>
   <?php endif; ?>
 
+  <!-- Back to Admin Dashboard Link (Bottom) -->
+  <div class="mt-5 mb-4">
+    <a href="admin.php" class="btn btn-outline-secondary btn-sm">
+      <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
+    </a>
+  </div>
 
 </div>
 
@@ -380,13 +391,6 @@
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
-  </div>
-
-  <!-- Back to Admin Link (Bottom) -->
-  <div class="mt-5 mb-4">
-    <a href="admin.php" class="btn btn-secondary">
-      <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
-    </a>
   </div>
 </div>
 
