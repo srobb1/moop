@@ -9,7 +9,8 @@
  * - sitePath: the site path prefix
  */
 
-let selectedOrganisms = [];
+let searchManager;
+let selectedOrganisms;
 
 // Update search manager with currently selected organisms
 function updateGroupSearchManager(newSelectedOrganisms) {
@@ -18,22 +19,25 @@ function updateGroupSearchManager(newSelectedOrganisms) {
     searchManager.config.totalVar = selectedOrganisms.length;
 }
 
-const searchManager = new AnnotationSearch({
-    formSelector: '#groupSearchForm',
-    organismsVar: selectedOrganisms,
-    totalVar: selectedOrganisms.length,
-    hideSections: ['#groupDescription', '#organismsSection'],
-    scrollToResults: false,
-    extraAjaxParams: {group: groupName},
-    noReadMoreButton: false
-});
-
-searchManager.init();
-
 // Initialize organism selection after page loads
 $(document).ready(function() {
     // Initialize organism selection with callback to update search manager
-    selectedOrganisms = initializeOrganismSelection(groupOrganisms, updateGroupSearchManager);
+    // This returns the array of currently selected organisms and sets up event listeners
+    const initialSelected = initializeOrganismSelection(groupOrganisms, updateGroupSearchManager);
+    selectedOrganisms = initialSelected;
+    
+    // Initialize search manager with selected organisms
+    searchManager = new AnnotationSearch({
+        formSelector: '#groupSearchForm',
+        organismsVar: selectedOrganisms,
+        totalVar: selectedOrganisms.length,
+        hideSections: ['#groupDescription', '#organismsSection'],
+        scrollToResults: false,
+        extraAjaxParams: {group: groupName},
+        noReadMoreButton: false
+    });
+    
+    searchManager.init();
     
     // Handle organism instructions info icon click
     $(document).on('click', '.organism-instructions-trigger', function(e) {

@@ -13,7 +13,8 @@
 
 class AdvancedSearchFilter {
     constructor(config) {
-        this.organism = config.organism;
+        // Accept either organisms array or single organism for backwards compatibility
+        this.organisms = config.organisms || (config.organism ? [config.organism] : []);
         this.sitePath = config.sitePath || '/moop';
         this.onApply = config.onApply || (() => {});
         this.sourceTypes = {};
@@ -32,9 +33,12 @@ class AdvancedSearchFilter {
      * Fetch grouped sources from server
      */
     fetchSources() {
+        // Build organisms parameter - comma-separated list
+        const organismsParam = this.organisms.join(',');
+        
         $.ajax({
             url: this.sitePath + '/tools/get_annotation_sources_grouped.php',
-            data: { organism: this.organism },
+            data: { organisms: organismsParam },
             method: 'GET',
             dataType: 'json',
             success: (data) => {
