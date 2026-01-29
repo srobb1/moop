@@ -335,8 +335,8 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
                 <span class="badge bg-primary">${uniqueFeatureCount} feature${uniqueFeatureCount !== 1 ? 's' : ''}</span>
                 <span class="badge bg-info">${results.length} annotation match${results.length !== 1 ? 'es' : ''}</span>
             </h5>
-            <div class="mb-2 d-flex gap-2 align-items-center">
-                <button type="button" class="btn btn-sm btn-primary toggle-view-btn" data-organism="${selectId}" data-view="simple" title="Toggle between simple and detailed view">
+            <div class="mb-3">
+                <button type="button" class="btn btn-sm btn-success toggle-view-btn" data-organism="${selectId}" data-view="simple" title="Toggle between simple and detailed view">
                     <i class="fa fa-expand"></i> Expand All Matches
                 </button>
             </div>
