@@ -27,10 +27,10 @@ if (file_exists($json_registry)) {
 
 
 <div class="container mt-5">
-    <!-- Back to Admin Link -->
+    <!-- Back to Admin Dashboard Link -->
     <div class="mb-4">
       <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Admin
+        <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
       </a>
     </div>
 
@@ -252,10 +252,10 @@ if (file_exists($json_registry)) {
 <?php echo json_encode($registry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?></script>
     <?php endif; ?>
 
-    <!-- Back to Admin Link (Bottom) -->
+    <!-- Back to Admin Dashboard Link (Bottom) -->
     <div class="mt-5 mb-4">
       <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Admin
+        <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
       </a>
     </div>
 </div>
