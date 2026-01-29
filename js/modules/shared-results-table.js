@@ -23,7 +23,7 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
     const species = results[0]?.species || '';
     const commonName = results[0]?.common_name || '';
     
-    const organismDisplay = `<em>${genus} ${species}</em>`;
+    const organismDisplay = `<a href="${sitePath}/tools/organism.php?organism=${encodeURIComponent(organism)}" style="text-decoration: none; color: inherit;"><em>${genus} ${species}</em></a>`;
     const commonNameDisplay = commonName ? ` (${commonName})` : '';
     
     const fallbackId = 'icon-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
@@ -310,7 +310,7 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
     const species = results[0]?.species || '';
     const commonName = results[0]?.common_name || '';
     
-    const organismDisplay = `<em>${genus} ${species}</em>`;
+    const organismDisplay = `<a href="${sitePath}/tools/organism.php?organism=${encodeURIComponent(organism)}" style="text-decoration: none; color: inherit;"><em>${genus} ${species}</em></a>`;
     const commonNameDisplay = commonName ? ` (${commonName})` : '';
     
     const fallbackId = 'icon-' + organism.replace(/[^a-zA-Z0-9]/g, '_');

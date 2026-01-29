@@ -299,15 +299,6 @@ class AnnotationSearch {
             tableHtml = createOrganismResultsTable(organism, results, this.config.sitePath, 'tools/parent.php', imageUrl, this.currentKeywords);
         }
         
-        // Add "Read More" button if configured
-        if (!this.config.noReadMoreButton) {
-            const readMoreUrl = this.config.sitePath + '/tools/organism.php?organism=' + encodeURIComponent(organism);
-            const readMoreBtn = `<a href="${readMoreUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary ms-2 font-size-small">
-                            <i class="fa fa-info-circle"></i> Read More
-                        </a>`;
-            tableHtml = tableHtml.replace(/(<span class="badge bg-primary">.*?<\/span>)/, `$1\n                ${readMoreBtn}`);
-        }
-        
         $('#resultsContainer').append(tableHtml);
         
         // Only initialize full DataTable for uniquename searches
