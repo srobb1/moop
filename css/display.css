@@ -372,15 +372,15 @@ code {
 
 /* Light blue background for search form sections */
 .bg-search-light {
-  background-color: #b3d8ed;
+  background-color: #e8f4f8;
 }
 
-/* Card header styling - light blue background */
+/* Card header styling - darker blue background */
 .card-header.bg-light {
   background-color: #b3d8ed !important;
 }
 
-/* Super light blue for selected organism background */
+/* Light blue for selected organism card background */
 .organism-card.selected {
   background-color: #e8f4f8 !important;
 }
