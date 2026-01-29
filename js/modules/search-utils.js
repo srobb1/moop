@@ -10,21 +10,24 @@
 function initializeSearchInstructionsHandler() {
     $(document).on('click', '.search-instructions-trigger', function(e) {
         e.stopPropagation();
-        const instruction = $(this).data('instruction');
+        const helpType = $(this).data('help-type') || 'basic';
+        const instruction = SEARCH_HELP[helpType] || $(this).data('instruction');
         showSearchInstructionModal(instruction);
     });
     
     // Handle search results help trigger
     $(document).on('click', '.search-results-help-trigger', function(e) {
         e.stopPropagation();
-        const instruction = $(this).data('instruction');
+        const helpType = $(this).data('help-type') || 'results';
+        const instruction = SEARCH_HELP[helpType] || $(this).data('instruction');
         showSearchInstructionModal(instruction);
     });
     
     // Also handle search hints trigger (in results section)
     $(document).on('click', '.search-hints-trigger', function(e) {
         e.stopPropagation();
-        const instruction = $(this).data('instruction');
+        const helpType = $(this).data('help-type') || 'results';
+        const instruction = SEARCH_HELP[helpType] || $(this).data('instruction');
         showSearchInstructionModal(instruction);
     });
 }

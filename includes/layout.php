@@ -203,6 +203,7 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
         <script src="/<?= $config->getString('site') ?>/js/modules/utilities.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/datatable-config.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/shared-results-table.js"></script>
+        <script src="/<?= $config->getString('site') ?>/js/modules/help-text.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/annotation-search.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/advanced-search-filter.js"></script>
         

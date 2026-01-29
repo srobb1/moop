@@ -12,7 +12,7 @@
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> <?= htmlspecialchars($group_name) ?>: Search Gene IDs and Annotations <i class="fa fa-info-circle search-instructions-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-instruction="<strong>Search Tips:</strong><br>&bull; <strong>Exact phrases:</strong> Use quotes like &quot;ABC transporter&quot; for exact matches<br>&bull; <strong>Multiple terms:</strong> Enter multiple keywords separated by spaces (e.g., kinase domain)<br>&bull; <strong>Short terms:</strong> Terms with fewer than 3 characters are automatically ignored<br>&bull; <strong>Gene IDs:</strong> Search by gene name, UniProt ID, or other identifiers<br>&bull; <strong>Annotations:</strong> Search across all annotation types in all organisms in this group<br>&bull; <strong>Select organisms:</strong> Use the checkboxes in the &quot;Organisms in Group&quot; section below to select/deselect which organisms to include in your search<br>&bull; <strong>Results limit:</strong> Results are capped at 2,500 per organism - use filters or more specific terms to refine<br>&bull; <strong>Advanced filtering:</strong> Click the filter button to limit search to specific annotation sources"></i></h4>
+          <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> <?= htmlspecialchars($group_name) ?>: Search Gene IDs and Annotations <i class="fa fa-info-circle search-instructions-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-help-type="group"></i></h4>
           <form id="groupSearchForm">
             <div class="row align-items-center">
               <div class="col">
@@ -50,7 +50,7 @@
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-5">
       <div class="card-header bg-info text-white">
-        <h4 class="mb-0"><i class="fa fa-list"></i> Search Results</h4>
+        <h4 class="mb-0"><i class="fa fa-list"></i> Search Results <i class="fa fa-info-circle search-results-help-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.9em;" data-help-type="results"></i></h4>
       </div>
       <div class="card-body">
         <div id="searchInfo" class="alert alert-info mb-3"></div>
