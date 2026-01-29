@@ -15,6 +15,15 @@
   color: #c49a1f !important;
 }
 
+/* ========== BADGE COLOR OVERRIDES ========== */
+.badge.results_feature_count {
+  background-color: #93c5fd !important;
+}
+
+.badge.results_annotation_count {
+  background-color: #67e8f9 !important;
+}
+
 /* ========== HEADER BACKGROUND COLORS ========== */
 .bg-search-results {
   background-color: #b3d8ed !important;
@@ -590,14 +599,14 @@ footer .footer-meta {
   color: white !important;
 }
 
-/* Toggle View Button - Muted Purple/Indigo */
+/* Toggle View Button - Medium Blue */
 .toggle-view-btn {
-  background-color: #8b7ba8 !important;
-  border-color: #8b7ba8 !important;
+  background-color: #3b82f6 !important;
+  border-color: #3b82f6 !important;
   color: white !important;
 }
 
 .toggle-view-btn:hover {
-  background-color: #7a6a96 !important;
-  border-color: #7a6a96 !important;
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
 }

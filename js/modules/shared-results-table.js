@@ -62,7 +62,7 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
     let html = `
         <div class="organism-results" id="${anchorId}">
             <h5>${imageHtml}${organismDisplay}${commonNameDisplay}
-                <span class="badge bg-primary">${results.length} annotation${results.length !== 1 ? 's' : ''}</span>
+                <span class="badge results_annotation_count">${results.length} annotation${results.length !== 1 ? 's' : ''}</span>
             </h5>
             <div class="table-responsive" style="overflow-x: auto; width: 100%;">
                 <table id="${tableId.substring(1)}" class="table table-sm table-striped table-hover results-table">
@@ -169,9 +169,9 @@ function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
         const columnIndex = $(this).data('column-index');
         if (columnIndex === 0) {
             // Select All button for first column
-            $(this).html('<button style="width:110px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0;" class="btn btn_select_all" id="toggle-select-btn' + selectId + '"><span>Select All</span></button>');
+            $(this).html('<button style="width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;" class="btn btn_select_all" id="toggle-select-btn' + selectId + '"><span>Select All</span></button>');
         } else {
-            $(this).html('<input style="text-align:left; border: solid 1px #808080; border-radius: 4px; width: 100%;" type="text" placeholder="Filter..." class="column-search">');
+            $(this).html('<input style="text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #e8e8e8;" type="text" placeholder="Filter..." class="column-search">');
         }
     });
     
@@ -335,8 +335,8 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
                 <span style="display: flex; align-items: center; gap: 0.5rem;">
                     ${imageHtml}${organismDisplay}${commonNameDisplay}
                 </span>
-                <span class="badge bg-primary">${uniqueFeatureCount} feature${uniqueFeatureCount !== 1 ? 's' : ''}</span>
-                <span class="badge bg-info">${results.length} annotation match${results.length !== 1 ? 'es' : ''}</span>
+                <span class="badge results_feature_count">${uniqueFeatureCount} feature${uniqueFeatureCount !== 1 ? 's' : ''}</span>
+                <span class="badge results_annotation_count">${results.length} annotation match${results.length !== 1 ? 'es' : ''}</span>
                 <button type="button" class="btn btn-sm toggle-view-btn" data-organism="${selectId}" data-view="simple" title="Toggle between simple and detailed view" style="margin-left: auto;">
                     <i class="fa fa-expand"></i> Expand All Matches
                 </button>
@@ -436,9 +436,9 @@ function initializeSimpleResultsTable(tableId, selectId, organism, results, site
     $('#' + tableId + ' .column-filter-container').each(function(i) {
         const columnIndex = $(this).data('column-index');
         if (columnIndex === 0) {
-            $(this).html('<button style="width:110px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0;" class="btn btn_select_all" id="toggle-select-btn' + selectId + '"><span>Select All</span></button>');
+            $(this).html('<button style="width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;" class="btn btn_select_all" id="toggle-select-btn' + selectId + '"><span>Select All</span></button>');
         } else {
-            $(this).html('<input style="text-align:left; border: solid 1px #808080; border-radius: 4px; width: 100%;" type="text" placeholder="Filter..." class="column-search">');
+            $(this).html('<input style="text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #e8e8e8;" type="text" placeholder="Filter..." class="column-search">');
         }
     });
     
