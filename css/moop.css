@@ -12,16 +12,6 @@
   color: #ffb300;
 }
 
-/* Search Results Help Trigger - White icon */
-.search-results-help-trigger {
-  color: white !important;
-  text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
-}
-
-.search-results-help-trigger:hover {
-  color: #e9ecef !important;
-}
-
 /* ========== NAVIGATION BUTTON STYLES ========== */
 .navigation-buttons-container {
     display: flex;
