@@ -492,3 +492,126 @@ function getColorClassOrStyle($color) {
     
     return $result;
 }
+
+/**
+ * Ensure directory exists with proper permissions
+ */
+function ensureDirectoryExists($directory, $owner = 'ubuntu', $group = 'www-data') {
+    if (is_dir($directory)) {
+        return true;
+    }
+    
+    if (!@mkdir($directory, 0775, true)) {
+        logError('Failed to create directory', 'directory_creation', ['directory' => $directory]);
+        return false;
+    }
+    
+    @chown($directory, $owner);
+    @chgrp($directory, $group);
+    @chmod($directory, 0775);
+    
+    return true;
+}
+
+/**
+ * Download image from Wikimedia and cache locally
+ */
+function downloadWikimediaImage($wiki_url, $cache_filename, $cache_directory = '') {
+    $config = ConfigManager::getInstance();
+    $site = $config->getString('site');
+    
+    if (empty($cache_directory)) {
+        $images_path = $config->getPath('images_path');
+        $cache_directory = $images_path . '/wikimedia';
+    }
+    
+    if (!ensureDirectoryExists($cache_directory)) {
+        logError('Could not create wikimedia cache directory', 'wikimedia_download', ['directory' => $cache_directory]);
+        return false;
+    }
+    
+    $cache_file = $cache_directory . '/' . basename($cache_filename);
+    
+    if (file_exists($cache_file)) {
+        return "/$site/images/wikimedia/" . basename($cache_filename);
+    }
+    
+    $context = stream_context_create([
+        'http' => ['timeout' => 10, 'user_agent' => 'MOOP/1.0'],
+        'https' => ['timeout' => 10, 'user_agent' => 'MOOP/1.0']
+    ]);
+    
+    $image_data = @file_get_contents($wiki_url, false, $context);
+    
+    if ($image_data === false) {
+        logError('Failed to download Wikimedia image', 'wikimedia_download', ['wiki_url' => $wiki_url]);
+        return false;
+    }
+    
+    if (@file_put_contents($cache_file, $image_data) === false) {
+        logError('Failed to write cached image', 'wikimedia_download', ['cache_file' => $cache_file]);
+        return false;
+    }
+    
+    @chmod($cache_file, 0664);
+    
+    return "/$site/images/wikimedia/" . basename($cache_filename);
+}
+
+/**
+ * Get image path for group with fallback logic
+ */
+function getGroupImagePath($group_info, $absolute_images_path = '') {
+    $config = ConfigManager::getInstance();
+    $site = $config->getString('site');
+    
+    if (empty($group_info) || !is_array($group_info) || empty($group_info['name'])) {
+        return '';
+    }
+    
+    $group_name = $group_info['name'];
+    $safe_group_name = basename($group_name);
+    
+    if (empty($absolute_images_path)) {
+        $absolute_images_path = $config->getPath('images_path');
+    }
+    
+    // 1. Check for custom group image
+    $extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    $custom_image_dir = "$absolute_images_path/groups/";
+    foreach ($extensions as $ext) {
+        $custom_image = $custom_image_dir . $safe_group_name . '.' . $ext;
+        if (file_exists($custom_image)) {
+            return "/$site/images/groups/" . $safe_group_name . '.' . $ext;
+        }
+    }
+    
+    // 2. Check for cached Wikimedia image
+    $wikimedia_dir = "$absolute_images_path/wikimedia/";
+    foreach ($extensions as $ext) {
+        $wikimedia_image = $wikimedia_dir . $safe_group_name . '.' . $ext;
+        if (file_exists($wikimedia_image)) {
+            return "/$site/images/wikimedia/" . $safe_group_name . '.' . $ext;
+        }
+    }
+    
+    // 3. Try to download from Wikipedia if URL available
+    if (!empty($group_info['wikipedia_image'])) {
+        $wiki_url = $group_info['wikipedia_image'];
+        if (strpos($wiki_url, 'wikimedia.org') !== false || strpos($wiki_url, 'wikipedia.org') !== false) {
+            $url_path = parse_url($wiki_url, PHP_URL_PATH);
+            $ext = pathinfo($url_path, PATHINFO_EXTENSION);
+            if (empty($ext)) {
+                $ext = 'jpg';
+            }
+            
+            $cache_filename = $safe_group_name . '.' . $ext;
+            $result = downloadWikimediaImage($wiki_url, $cache_filename, $wikimedia_dir);
+            if ($result !== false) {
+                return $result;
+            }
+        }
+    }
+    
+    return '';
+}
