@@ -79,15 +79,18 @@
           <?php endif; ?>
         <?php endforeach; ?>
       <?php elseif (!empty($group_info['wikipedia_image'])): ?>
-        <!-- Wikipedia image for taxonomy groups -->
-        <div class="col-md-4 mb-3">
-          <div class="card">
-            <img src="<?= htmlspecialchars($group_info['wikipedia_image']) ?>" class="card-img-top" alt="<?= htmlspecialchars($group_name) ?>">
-            <div class="card-body">
-              <p class="card-text small text-muted">Image from <a href="<?= htmlspecialchars($group_info['wikipedia_url']) ?>" target="_blank">Wikipedia</a></p>
+        <!-- Wikipedia image for taxonomy groups - cached locally -->
+        <?php $cached_image = getGroupImagePath($group_info, $absolute_images_path); ?>
+        <?php if (!empty($cached_image)): ?>
+          <div class="col-md-4 mb-3">
+            <div class="card">
+              <img src="<?= htmlspecialchars($cached_image) ?>" class="card-img-top" alt="<?= htmlspecialchars($group_name) ?>">
+              <div class="card-body">
+                <p class="card-text small text-muted">Image from <a href="<?= htmlspecialchars($group_info['wikipedia_url']) ?>" target="_blank">Wikipedia</a></p>
+              </div>
             </div>
           </div>
-        </div>
+        <?php endif; ?>
       <?php endif; ?>
       
       <div class="<?= (!empty($group_info['images'][0]['file']) || !empty($group_info['wikipedia_image'])) ? 'col-md-8' : 'col-12' ?>">
@@ -124,10 +127,10 @@
               </div>
               <?php if (!empty($group_organisms)): ?>
                 <div class="btn-group" role="group">
-                  <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllOrganisms">
+                  <button type="button" class="btn btn-sm btn-outline-secondary selectAllOrganisms">
                     Select All
                   </button>
-                  <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllOrganisms">
+                  <button type="button" class="btn btn-sm btn-outline-secondary deselectAllOrganisms">
                     Deselect All
                   </button>
                 </div>
