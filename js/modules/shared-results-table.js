@@ -331,15 +331,16 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
     
     let html = `
         <div class="organism-results" id="${anchorId}">
-            <h5>${imageHtml}${organismDisplay}${commonNameDisplay}
+            <h5 style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span style="display: flex; align-items: center; gap: 0.5rem;">
+                    ${imageHtml}${organismDisplay}${commonNameDisplay}
+                </span>
                 <span class="badge bg-primary">${uniqueFeatureCount} feature${uniqueFeatureCount !== 1 ? 's' : ''}</span>
                 <span class="badge bg-info">${results.length} annotation match${results.length !== 1 ? 'es' : ''}</span>
-            </h5>
-            <div class="mb-3">
-                <button type="button" class="btn btn-sm btn-success toggle-view-btn" data-organism="${selectId}" data-view="simple" title="Toggle between simple and detailed view">
+                <button type="button" class="btn btn-sm btn-success toggle-view-btn" data-organism="${selectId}" data-view="simple" title="Toggle between simple and detailed view" style="margin-left: auto;">
                     <i class="fa fa-expand"></i> Expand All Matches
                 </button>
-            </div>
+            </h5>
             <div class="info-box mb-3" id="info-${selectId}" style="display: none; background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 0.25rem; padding: 0.75rem 1.25rem;">
                 <p><strong>Simple View:</strong> Displays a unique list of feature/sequence IDs that have matches to your search terms. Providing an overview of all features found without duplication.</p>
                 
