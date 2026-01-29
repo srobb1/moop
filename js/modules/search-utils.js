@@ -39,13 +39,13 @@ function initializeSearchInstructionsHandler() {
 function showSearchInstructionModal(instruction) {
     const modalHtml = `
         <div class="modal fade" id="searchInstructionModal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Search Tips</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
                         ${instruction}
                     </div>
                     <div class="modal-footer">
