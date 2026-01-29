@@ -29,6 +29,7 @@
       <li><a href="#current-analysis">Current System Analysis</a></li>
       <li><a href="#scaling-projections">Scaling Projections</a></li>
       <li><a href="#configurations">Complete System Configurations</a></li>
+      <li><a href="#image-caching">Wikipedia Image Caching</a></li>
       <li><a href="#resource-breakdown">Resource Breakdown by Component</a></li>
       <li><a href="#performance-benchmarks">Performance Benchmarks</a></li>
       <li><a href="#monitoring">Monitoring & Alerts</a></li>
@@ -599,7 +600,198 @@ Recommended allocation:    400 GB (with growth room)</code></pre>
     </div>
   </section>
 
-  <!-- Section 4: Resource Breakdown -->
+  <!-- NEW: Image Caching Section -->
+  <section id="image-caching" class="mt-5">
+    <h3><i class="fa fa-image"></i> Wikipedia Image Caching for Taxonomy Groups</h3>
+
+    <h4 class="mt-4">Overview</h4>
+    <div class="alert alert-info">
+      <strong><i class="fa fa-info-circle"></i> Automatic Image Caching:</strong>
+      MOOP automatically downloads and caches Wikipedia/Wikimedia images for taxonomy groups on first access. 
+      This improves page load times and provides a better user experience.
+    </div>
+
+    <h4 class="mt-4">Storage Impact Estimation</h4>
+    <div class="card mb-4">
+      <div class="card-header bg-light">
+        <strong>Current Deployment (28 Taxonomy Groups)</strong>
+      </div>
+      <div class="card-body">
+        <table class="table table-sm">
+          <thead class="table-light">
+            <tr>
+              <th>Metric</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Total taxonomy groups</strong></td>
+              <td>28</td>
+            </tr>
+            <tr>
+              <td><strong>Average image size</strong></td>
+              <td>~116 KB</td>
+            </tr>
+            <tr>
+              <td><strong>Estimated total for all groups</strong></td>
+              <td><strong>~3.2 MB</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Current cached images</strong></td>
+              <td>3 images (Mammalia, Pteropodidae, Pteropus)</td>
+            </tr>
+            <tr>
+              <td><strong>Current cache size</strong></td>
+              <td>~352 KB</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h4 class="mt-4">How It Works</h4>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h6>Fallback Chain (in order):</h6>
+        <ol>
+          <li><strong>Check custom image:</strong> <code>/images/groups/{GroupName}.jpg</code> (manually uploaded)</li>
+          <li><strong>Check cached image:</strong> <code>/images/wikimedia/{GroupName}.jpg</code> (previously downloaded)</li>
+          <li><strong>Download from Wikipedia:</strong> Automatic on-demand download and cache</li>
+          <li><strong>No image:</strong> Display group without image (graceful failure)</li>
+        </ol>
+
+        <h6 class="mt-3">Benefits:</h6>
+        <ul>
+          <li><strong>Fast loading:</strong> Cached images are served locally after first load</li>
+          <li><strong>On-demand:</strong> Only downloads images users actually view</li>
+          <li><strong>Graceful:</strong> If download fails, page still works without image</li>
+          <li><strong>Automatic:</strong> No manual intervention needed</li>
+          <li><strong>Efficient:</strong> Minimal disk space usage</li>
+        </ul>
+      </div>
+    </div>
+
+    <h4 class="mt-4">Scaling to Larger Deployments</h4>
+    <div class="card mb-4">
+      <div class="card-body">
+        <table class="table table-sm">
+          <thead class="table-light">
+            <tr>
+              <th>Scenario</th>
+              <th>Groups</th>
+              <th>Avg Image</th>
+              <th>Total Cache</th>
+              <th>Assessment</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Current</strong></td>
+              <td>28</td>
+              <td>116 KB</td>
+              <td><strong>~3.2 MB</strong></td>
+              <td>Negligible</td>
+            </tr>
+            <tr>
+              <td><strong>50 groups</strong></td>
+              <td>50</td>
+              <td>116 KB</td>
+              <td><strong>~5.8 MB</strong></td>
+              <td>Negligible</td>
+            </tr>
+            <tr>
+              <td><strong>100 groups</strong></td>
+              <td>100</td>
+              <td>116 KB</td>
+              <td><strong>~11.6 MB</strong></td>
+              <td>Negligible</td>
+            </tr>
+            <tr>
+              <td><strong>500 groups</strong></td>
+              <td>500</td>
+              <td>116 KB</td>
+              <td><strong>~58 MB</strong></td>
+              <td>Negligible</td>
+            </tr>
+            <tr>
+              <td><strong>2000 groups</strong></td>
+              <td>2000</td>
+              <td>116 KB</td>
+              <td><strong>~232 MB</strong></td>
+              <td>Very reasonable</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="alert alert-light border mt-3 mb-0">
+          <strong>Conclusion:</strong> Image caching has <strong>negligible impact</strong> on disk usage. 
+          Even with 2,000 taxonomy groups, cached images would use only ~230 MB, which is less than 0.1% 
+          of typical deployment storage.
+        </div>
+      </div>
+    </div>
+
+    <h4 class="mt-4">Cache Directory</h4>
+    <div class="card mb-4">
+      <div class="card-body">
+        <p><strong>Location:</strong> <code>/images/wikimedia/</code></p>
+        <ul>
+          <li><strong>Permissions:</strong> 775 (rwxrwsr-x) for group access</li>
+          <li><strong>Owner:</strong> ubuntu:www-data (allows both manual and web server management)</li>
+          <li><strong>Auto-created:</strong> Directory is automatically created on first image download</li>
+          <li><strong>File format:</strong> Original format from Wikipedia (PNG, JPG, etc.)</li>
+        </ul>
+
+        <h6 class="mt-3">Example Contents:</h6>
+        <pre class="bg-light p-3 rounded"><code>$ ls -lah /images/wikimedia/
+Mammalia.png          (279 KB)
+Pteropodidae.jpg      (61 KB)
+Pteropus.jpg          (7 KB)
+...</code></pre>
+      </div>
+    </div>
+
+    <h4 class="mt-4">Troubleshooting</h4>
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-lg-6">
+            <h6><i class="fa fa-check-circle text-success"></i> Image displays correctly</h6>
+            <p>Image was either cached or downloaded successfully on first access. Subsequent page loads will be faster.</p>
+          </div>
+          <div class="col-lg-6">
+            <h6><i class="fa fa-exclamation-circle text-warning"></i> No image displayed</h6>
+            <p>Could mean:</p>
+            <ul>
+              <li>Wikipedia API is temporarily unavailable</li>
+              <li>No Wikipedia entry for that taxonomy group</li>
+              <li>Image URL format changed on Wikipedia</li>
+            </ul>
+            <p class="text-muted small">Page still functions normally without the image.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="mt-4">Manual Cache Management (Optional)</h4>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h6>Clear specific cached image:</h6>
+        <pre class="bg-light p-3 rounded"><code>rm /images/wikimedia/GroupName.jpg</code></pre>
+        <p class="text-muted small">Will be re-downloaded on next page access</p>
+
+        <h6 class="mt-3">Clear entire image cache:</h6>
+        <pre class="bg-light p-3 rounded"><code>rm -rf /images/wikimedia/*</code></pre>
+        <p class="text-muted small">All images will be re-downloaded on first access (may take longer initially)</p>
+
+        <h6 class="mt-3">Check cache size:</h6>
+        <pre class="bg-light p-3 rounded"><code>du -sh /images/wikimedia/</code></pre>
+        <p class="text-muted small">Shows total disk space used by cached images</p>
+      </div>
+    </div>
+
+  </section>
   <section id="resource-breakdown" class="mt-5">
     <h3><i class="fa fa-tachometer-alt"></i> Resource Breakdown by Component</h3>
 
