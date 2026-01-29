@@ -8,15 +8,23 @@ const BASIC_SEARCH_HELP = `<strong>How to Search</strong><br><br><strong>Single 
 
 const RESULTS_HELP = `<strong>Using Your Results</strong><br><br><strong>Filter Results:</strong><br>Use the search boxes above each column header to filter results. Type to narrow down results by specific values.<br><br><strong>Sort Results:</strong><br>Click any column header to sort ascending or descending. Click again to reverse the sort order.<br><br><strong>Select and Export:</strong><br>Use the checkboxes to select specific rows, then click export buttons at the bottom:<br>• <strong>Copy:</strong> Copy selected rows to clipboard<br>• <strong>CSV:</strong> Download as comma-separated values file<br>• <strong>Excel:</strong> Download as Excel spreadsheet<br>• <strong>PDF:</strong> Download as PDF document<br>• <strong>Print:</strong> Print selected results<br><br><strong>Column Visibility:</strong><br>Click the "Column Visibility" button to show or hide specific columns based on your needs.<br><br><strong>View Details:</strong><br>Click on any gene or annotation link to view detailed information on the gene/parent feature page.`;
 
+const ASSEMBLY_SEARCH_INFO = `<br><br><strong>Search Within a Single Assembly:</strong><br>To search within a single assembly, navigate to an organism page, then select the assembly page to limit your search to that specific assembly`;
+
+const ORGANISM_SELECTION_INFO = `<br><br><strong>Select Organisms:</strong><br>Note: This option is only available when searching from group or multi-organism pages. Use the checkboxes below to select/deselect which organisms to include in your search`;
+
+const RESULTS_LIMIT = `<br><br><strong>Results Limit:</strong><br>Results are capped at 2,500`;
+
+const FILTERING_INFO = `<br><br><strong>Filtering:</strong><br>Click the filter button to limit search to specific annotation sources`;
+
 const SEARCH_HELP = {
     // Basic search help (used on organism and assembly pages - no organism selection)
-    basic: `${BASIC_SEARCH_HELP}<br><br><strong>Results Limit:</strong><br>Results are capped at 2,500 - use more specific terms to refine your search<br><br><strong>Search Within a Single Assembly:</strong><br>If you want to search within a single assembly, navigate to an organism page, then select the assembly page to limit your search to that specific assembly<br><br><strong>Filtering:</strong><br>Click the filter button to limit search to specific annotation sources`,
+    basic: `${BASIC_SEARCH_HELP}${RESULTS_LIMIT} - use more specific terms to refine your search${ASSEMBLY_SEARCH_INFO}${FILTERING_INFO}`,
 
     // Group-specific search help
-    group: `${BASIC_SEARCH_HELP}<br><br><strong>Select Organisms:</strong><br>Note: This option is only available on group pages. Use the checkboxes in the "Organisms in Group" section below to select/deselect which organisms to include in your search<br><br><strong>Results Limit:</strong><br>Results are capped at 2,500 per organism - use more specific terms to refine your search<br><br><strong>Search Within a Single Assembly:</strong><br>To search within a single assembly, navigate to an organism page, then select the assembly page to limit your search to that specific assembly<br><br><strong>Filtering:</strong><br>Click the filter button to limit search to specific annotation sources`,
+    group: `${BASIC_SEARCH_HELP}${ORGANISM_SELECTION_INFO.replace('when searching from group or multi-organism pages', 'on group pages')}${RESULTS_LIMIT} per organism - use more specific terms to refine your search${ASSEMBLY_SEARCH_INFO}${FILTERING_INFO}`,
 
     // Multi-organism search help
-    multiOrganism: `${BASIC_SEARCH_HELP}<br><br><strong>Select Organisms:</strong><br>Note: This option is only available on multi-organism pages. Use the checkboxes in the "Selected Organisms" section below to select/deselect which organisms to include in your search<br><br><strong>Results Limit:</strong><br>Results are capped at 2,500 per organism - use more specific terms to refine your search<br><br><strong>Search Within a Single Assembly:</strong><br>To search within a single assembly, navigate to an organism page, then select the assembly page to limit your search to that specific assembly<br><br><strong>Filtering:</strong><br>Click the filter button to limit search to specific annotation sources`,
+    multiOrganism: `${BASIC_SEARCH_HELP}${ORGANISM_SELECTION_INFO.replace('when searching from group or multi-organism pages', 'on multi-organism pages')}${RESULTS_LIMIT} per organism - use more specific terms to refine your search${ASSEMBLY_SEARCH_INFO}${FILTERING_INFO}`,
 
     // Results help (same for all pages)
     results: RESULTS_HELP
