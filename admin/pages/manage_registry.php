@@ -6,10 +6,10 @@
 ?>
 
 <div class="container mt-5">
-    <!-- Back to Admin Link -->
+    <!-- Back to Admin Dashboard Link -->
     <div class="mb-4">
       <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Admin
+        <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
       </a>
     </div>
 
@@ -180,6 +180,7 @@
                         <input class="form-check-input" type="radio" name="searchMode" id="searchReturns" value="returns" onchange="filterRegistry()">
                         <label class="form-check-label" for="searchReturns">Returns/Output</label>
                     </div>
+                </div>
             </div>
             
             <div class="mb-0">
@@ -235,13 +236,12 @@
         
         <!-- Embedded registry data for JavaScript -->
         <script type="application/json" id="registryData">
-<?php echo json_encode($registry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?></script>
+          <?php echo json_encode($registry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?></script>
     <?php endif; ?>
-
-    <!-- Back to Admin Link (Bottom) -->
+    <!-- Back to Admin Dashboard Link (Bottom) -->
     <div class="mt-5 mb-4">
       <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Admin
+        <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
       </a>
     </div>
 </div>
