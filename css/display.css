@@ -863,3 +863,100 @@ code {
 .hit-highlighted {
   animation: blast-hit-highlight 3.5s ease-out forwards !important;
 }
+
+/* ========== ORGANISM PAGE HEADER STYLING ========== */
+.organism-metadata-section {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid #dee2e6;
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+.organism-metadata-section .metadata-item {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.organism-metadata-section .metadata-item:last-child {
+  margin-bottom: 0;
+}
+
+.organism-metadata-section label {
+  font-weight: 400;
+  color: #666;
+  font-size: 0.9rem;
+  display: inline;
+  margin-right: 0.5rem;
+}
+
+.organism-metadata-section .metadata-item a {
+  color: #0d6efd;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.organism-metadata-section .metadata-item a:hover {
+  color: #0a58ca;
+  text-decoration: underline;
+}
+
+/* Chip container for flexible layout */
+.chip-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Taxon ID chip styling */
+.taxon-id-chip {
+  display: inline-block;
+  background-color: #6366f1;
+  color: white !important;
+  text-decoration: none !important;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.taxon-id-chip:hover {
+  background-color: #4f46e5;
+  text-decoration: none !important;
+}
+
+/* Group chip styling */
+.group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ff7f50;
+  color: white !important;
+  text-decoration: none !important;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.group-chip:hover {
+  background-color: #ff6b35;
+  text-decoration: none !important;
+}
+
+.group-chip .badge {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+  color: white;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 12px;
+  margin: 0;
+}
+
+

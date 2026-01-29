@@ -121,33 +121,36 @@
 
     <div class="<?= $show_image ? 'col-md-8' : 'col-12' ?>">
       <div class="card shadow-sm">
-        <div class="card-body">
-          <h1 class="fw-bold mb-2">
-            <?= htmlspecialchars($organism_info['common_name'] ?? str_replace('_', ' ', $organism_name)) ?>
-          </h1>
-          <h3 class="text-muted mb-3">
-            <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> 
-                <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>
-          </h3>
-          
-          <?php if (!empty($organism_info['taxon_id'])): ?>
-            <p class="mb-3">
-              <strong>Taxon ID:</strong> 
-              <a href="https://www.ncbi.nlm.nih.gov/datasets/taxonomy/<?= htmlspecialchars($organism_info['taxon_id']) ?>" 
-                 target="_blank" 
-                 class="text-decoration-none">
-                <?= htmlspecialchars($organism_info['taxon_id']) ?>
-                <i class="fa fa-external-link-alt fa-xs"></i>
-              </a>
-            </p>
-          <?php endif; ?>
-
-          <?php if (!empty($organism_info['subclassification']['type']) && !empty($organism_info['subclassification']['value'])): ?>
-            <p class="mb-3">
-              <strong><?= htmlspecialchars($organism_info['subclassification']['type']) ?>:</strong> 
-              <?= htmlspecialchars($organism_info['subclassification']['value']) ?>
-            </p>
-          <?php endif; ?>
+                 <div class="card-body">
+           <h2 class="fw-bold mb-1" style="color: #0f766e;">
+             <?= htmlspecialchars($organism_info['common_name'] ?? str_replace('_', ' ', $organism_name)) ?>
+           </h2>
+           <p class="lead text-muted mb-4" style="font-size: 1.1rem; font-style: italic;">
+             <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> 
+                 <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>
+           </p>
+           
+           <!-- Metadata Section -->
+           <div class="organism-metadata-section mb-4">
+             <?php if (!empty($organism_info['taxon_id'])): ?>
+               <h6 class="text-muted mb-3" style="font-weight: 600;">NCBI Taxon ID</h6>
+               <div class="chip-container">
+                 <a href="https://www.ncbi.nlm.nih.gov/datasets/taxonomy/<?= htmlspecialchars($organism_info['taxon_id']) ?>" 
+                    target="_blank" 
+                    class="taxon-id-chip">
+                   <?= htmlspecialchars($organism_info['taxon_id']) ?>
+                   <i class="fa fa-external-link-alt fa-xs"></i>
+                 </a>
+               </div>
+             <?php endif; ?>
+ 
+             <?php if (!empty($organism_info['subclassification']['type']) && !empty($organism_info['subclassification']['value'])): ?>
+               <div class="metadata-item">
+                 <label class="text-muted small d-block mb-1"><?= htmlspecialchars($organism_info['subclassification']['type']) ?></label>
+                 <div><?= htmlspecialchars($organism_info['subclassification']['value']) ?></div>
+               </div>
+             <?php endif; ?>
+           </div>
 
           <!-- Taxonomic Breadcrumb -->
           <?php
@@ -157,26 +160,22 @@
                if (!empty($lineage)): 
                    $lineage_with_counts = getTaxonomyLineageWithCounts($lineage, $taxonomy_tree_data['tree'], $taxonomy_user_access);
                    ?>
-                <div class="mt-4">
-                  <p class="mb-2">
-                    <small class="text-muted"><strong>Taxonomy:</strong></small>
-                    <small class="text-muted">
-                      <?php 
-                      $breadcrumb_parts = [];
-                      foreach ($lineage_with_counts as $item) {
-                          $name = htmlspecialchars($item['name']);
-                          $count = isset($item['count']) ? $item['count'] : 0;
-                          $badge = $count > 0 ? " <span class=\"badge bg-secondary ms-1\">$count</span>" : '';
-                          
-                          // Create link to groups page with taxonomy_rank parameter
-                          $taxonomy_url = "/$site/tools/groups.php?taxonomy_rank=" . urlencode($item['name']);
-                          $breadcrumb_parts[] = "<a href=\"$taxonomy_url\" class=\"text-decoration-none text-muted\">$name$badge</a>";
-                      }
-                      echo implode(' <i class="fa fa-chevron-right fa-xs"></i> ', $breadcrumb_parts);
-                      ?>
-                    </small>
-                  </p>
-                </div>
+                                 <div class="mt-4 pt-3 border-top">
+                   <h6 class="text-muted mb-3" style="font-weight: 600;">Taxonomy Lineage</h6>
+                   <div class="breadcrumb clear-initial-trail">
+                     <?php 
+                     foreach ($lineage_with_counts as $item) {
+                         $name = htmlspecialchars($item['name']);
+                         $count = isset($item['count']) ? $item['count'] : 0;
+                         $badge = $count > 0 ? " <span class=\"badge\">$count</span>" : '';
+                         
+                         // Create link to groups page with taxonomy_rank parameter
+                         $taxonomy_url = "/$site/tools/groups.php?taxonomy_rank=" . urlencode($item['name']);
+                         echo "<div><a href=\"$taxonomy_url\">$name$badge</a></div>";
+                     }
+                     ?>
+                   </div>
+                 </div>
               <?php endif;
           endif; ?>
 
@@ -185,22 +184,14 @@
           $organism_groups = getGroupsForOrganism($organism_name, $group_data);
           if (!empty($organism_groups)): ?>
             <div class="mt-4 pt-3 border-top">
-              <h5 class="mb-3"><i class="fa fa-sitemap"></i> Member of Groups</h5>
-              <div class="row g-2">
+              <h6 class="text-muted mb-3" style="font-weight: 600;">Member of Groups</h6>
+              <div class="chip-container">
                 <?php foreach ($organism_groups as $group_name => $group_info): ?>
-                  <div class="col-sm-6 col-md-4">
-                    <a href="/<?= $site ?>/tools/groups.php?group=<?= urlencode($group_name) ?>" 
-                       class="text-decoration-none">
-                      <div class="card h-100 shadow-sm" style="transition: all 0.2s ease;">
-                        <div class="card-body">
-                          <h6 class="card-title mb-2"><?= htmlspecialchars($group_name) ?></h6>
-                          <p class="card-text small text-muted mb-0">
-                            <?= htmlspecialchars($group_info['count']) ?> organism<?= $group_info['count'] !== 1 ? 's' : '' ?>
-                          </p>
-                        </div>
-                      </div>
-                    </a>
-                  </div>
+                  <a href="/<?= $site ?>/tools/groups.php?group=<?= urlencode($group_name) ?>" 
+                     class="group-chip">
+                    <?= htmlspecialchars($group_name) ?>
+                    <span class="badge"><?= htmlspecialchars($group_info['count']) ?></span>
+                  </a>
                 <?php endforeach; ?>
               </div>
             </div>

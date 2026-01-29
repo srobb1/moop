@@ -45,6 +45,9 @@ $site = $config->getString('site');
     <!-- Display Styles (feature colors, badges, etc.) -->
     <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
     
+    <!-- Breadcrumb Trail Styles -->
+    <link rel="stylesheet" href="/<?= $site ?>/css/breadcrumbs.css">
+    
     <!-- Search Controls Styles (search and filter buttons) -->
     <link rel="stylesheet" href="/<?= $site ?>/css/search-controls.css">
     
