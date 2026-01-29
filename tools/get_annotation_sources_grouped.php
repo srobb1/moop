@@ -3,8 +3,8 @@
  * AJAX endpoint to get annotation sources grouped by type
  * Used by advanced search filter modal
  * 
- * Parameters: organism
- * Returns: JSON with grouped sources
+ * Parameters: organisms (comma-separated list) OR organism (single, for backwards compatibility)
+ * Returns: JSON with grouped sources (aggregated from all specified organisms)
  */
 
 ob_start();
@@ -16,32 +16,65 @@ ob_end_clean();
 
 header('Content-Type: application/json');
 
-$organism = $_GET['organism'] ?? '';
+// Accept either single organism or comma-separated list of organisms
+$organism_param = $_GET['organism'] ?? '';
+$organisms_param = $_GET['organisms'] ?? '';
 
-if (empty($organism)) {
+$organisms = [];
+if (!empty($organisms_param)) {
+    // Multiple organisms provided as comma-separated list
+    $organisms = array_filter(array_map('trim', explode(',', $organisms_param)));
+} elseif (!empty($organism_param)) {
+    // Single organism provided (backwards compatibility)
+    $organisms = [$organism_param];
+}
+
+if (empty($organisms)) {
     echo json_encode(['error' => 'Missing organism parameter']);
     exit;
 }
 
 $organism_data = $config->getPath('organism_data');
-$db = "$organism_data/$organism/organism.sqlite";
 
-if (!file_exists($db)) {
-    echo json_encode(['error' => 'Database not found for organism']);
-    exit;
-}
-
-// Get grouped sources
-$source_types = getAnnotationSourcesByType($db);
-
-// Load annotation config to get color for each type
+// Aggregate sources from all organisms
+$aggregated_sources = [];
 $metadata_path = $config->getPath('metadata_path');
 $config_file = "$metadata_path/annotation_config.json";
 $annotation_config = loadJsonFile($config_file, []);
 
-// Add color and description to each type
+foreach ($organisms as $organism) {
+    $db = "$organism_data/$organism/organism.sqlite";
+    
+    if (!file_exists($db)) {
+        continue; // Skip organisms without database
+    }
+    
+    // Get grouped sources for this organism
+    $source_types = getAnnotationSourcesByType($db);
+    
+    // Aggregate counts
+    foreach ($source_types as $type => $sources) {
+        if (!isset($aggregated_sources[$type])) {
+            $aggregated_sources[$type] = [];
+        }
+        
+        foreach ($sources as $source) {
+            $source_name = $source['name'];
+            if (!isset($aggregated_sources[$type][$source_name])) {
+                $aggregated_sources[$type][$source_name] = [
+                    'name' => $source_name,
+                    'count' => 0
+                ];
+            }
+            // Add counts from this organism
+            $aggregated_sources[$type][$source_name]['count'] += $source['count'];
+        }
+    }
+}
+
+// Convert back to indexed array format and add colors/descriptions
 $source_types_with_color = [];
-foreach ($source_types as $type => $sources) {
+foreach ($aggregated_sources as $type => $sources_by_name) {
     $color = 'secondary'; // default
     $description = ''; // default
     if (!empty($annotation_config['annotation_types'][$type]['color'])) {
@@ -52,7 +85,7 @@ foreach ($source_types as $type => $sources) {
     }
     
     $source_types_with_color[$type] = [
-        'sources' => $sources,
+        'sources' => array_values($sources_by_name),
         'color' => $color,
         'description' => $description
     ];
@@ -61,15 +94,15 @@ foreach ($source_types as $type => $sources) {
 // Calculate totals
 $total_sources = 0;
 $total_count = 0;
-foreach ($source_types as $type_sources) {
-    $total_sources += count($type_sources);
-    foreach ($type_sources as $source) {
+foreach ($source_types_with_color as $type_data) {
+    $total_sources += count($type_data['sources']);
+    foreach ($type_data['sources'] as $source) {
         $total_count += $source['count'];
     }
 }
 
 echo json_encode([
-    'organism' => $organism,
+    'organisms' => $organisms,
     'source_types' => $source_types_with_color,
     'total_sources' => $total_sources,
     'total_annotations' => $total_count
