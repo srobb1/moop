@@ -5,14 +5,14 @@
 /* ========== GLOBAL INFO ICON STYLING ========== */
 .fa-info-circle,
 .fa-info {
-  color: #d4a574 !important;
+  color: #d4af37 !important;
   transition: color 0.2s ease;
   text-shadow: none;
 }
 
 .fa-info-circle:hover,
 .fa-info:hover {
-  color: #c4945f !important;
+  color: #c49a1f !important;
 }
 
 /* ========== HEADER BACKGROUND COLORS ========== */
