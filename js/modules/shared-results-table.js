@@ -23,7 +23,7 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
     const species = results[0]?.species || '';
     const commonName = results[0]?.common_name || '';
     
-    const organismDisplay = `<a href="${sitePath}/tools/organism.php?organism=${encodeURIComponent(organism)}" style="text-decoration: none; color: inherit;"><em>${genus} ${species}</em></a>`;
+    const organismDisplay = `<a href="${sitePath}/tools/organism.php?organism=${encodeURIComponent(organism)}" style="text-decoration: none; color: #0f766e;"><em>${genus} ${species}</em> <i class="fa fa-external-link-alt" style="font-size: 0.8em; margin-left: 0.25rem;"></i></a>`;
     const commonNameDisplay = commonName ? ` (${commonName})` : '';
     
     const fallbackId = 'icon-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
@@ -62,7 +62,7 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
     let html = `
         <div class="organism-results" id="${anchorId}">
             <h5>${imageHtml}${organismDisplay}${commonNameDisplay}
-                <span class="badge bg-primary">${results.length} result${results.length !== 1 ? 's' : ''}</span>
+                <span class="badge bg-primary">${results.length} annotation${results.length !== 1 ? 's' : ''}</span>
             </h5>
             <div class="table-responsive" style="overflow-x: auto; width: 100%;">
                 <table id="${tableId.substring(1)}" class="table table-sm table-striped table-hover results-table">
@@ -310,7 +310,7 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
     const species = results[0]?.species || '';
     const commonName = results[0]?.common_name || '';
     
-    const organismDisplay = `<a href="${sitePath}/tools/organism.php?organism=${encodeURIComponent(organism)}" style="text-decoration: none; color: inherit;"><em>${genus} ${species}</em></a>`;
+    const organismDisplay = `<a href="${sitePath}/tools/organism.php?organism=${encodeURIComponent(organism)}" style="text-decoration: none; color: #0f766e;"><em>${genus} ${species}</em> <i class="fa fa-external-link-alt" style="font-size: 0.8em; margin-left: 0.25rem;"></i></a>`;
     const commonNameDisplay = commonName ? ` (${commonName})` : '';
     
     const fallbackId = 'icon-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
@@ -332,8 +332,8 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
     let html = `
         <div class="organism-results" id="${anchorId}">
             <h5>${imageHtml}${organismDisplay}${commonNameDisplay}
-                <span class="badge bg-primary">${uniqueFeatureCount} unique feature${uniqueFeatureCount !== 1 ? 's' : ''}</span>
-                <span class="badge bg-info">${results.length} total annotation match${results.length !== 1 ? 'es' : ''}</span>
+                <span class="badge bg-primary">${uniqueFeatureCount} feature${uniqueFeatureCount !== 1 ? 's' : ''}</span>
+                <span class="badge bg-info">${results.length} annotation match${results.length !== 1 ? 'es' : ''}</span>
             </h5>
             <div class="mb-2 d-flex gap-2 align-items-center">
                 <button type="button" class="btn btn-sm btn-primary toggle-view-btn" data-organism="${selectId}" data-view="simple" title="Toggle between simple and detailed view">
