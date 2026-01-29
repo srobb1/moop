@@ -12,7 +12,7 @@ function initializeSearchInstructionsHandler() {
         e.stopPropagation();
         const helpType = $(this).data('help-type') || 'basic';
         const instruction = SEARCH_HELP[helpType] || $(this).data('instruction');
-        showSearchInstructionModal(instruction);
+        showSearchInstructionModal(instruction, 'Search Tips');
     });
     
     // Handle search results help trigger
@@ -20,7 +20,7 @@ function initializeSearchInstructionsHandler() {
         e.stopPropagation();
         const helpType = $(this).data('help-type') || 'results';
         const instruction = SEARCH_HELP[helpType] || $(this).data('instruction');
-        showSearchInstructionModal(instruction);
+        showSearchInstructionModal(instruction, 'Search Results Help');
     });
     
     // Also handle search hints trigger (in results section)
@@ -28,21 +28,22 @@ function initializeSearchInstructionsHandler() {
         e.stopPropagation();
         const helpType = $(this).data('help-type') || 'results';
         const instruction = SEARCH_HELP[helpType] || $(this).data('instruction');
-        showSearchInstructionModal(instruction);
+        showSearchInstructionModal(instruction, 'Search Results Help');
     });
 }
 
 /**
  * Show search instruction modal
  * @param {string} instruction - HTML content to display in modal
+ * @param {string} title - Modal title
  */
-function showSearchInstructionModal(instruction) {
+function showSearchInstructionModal(instruction, title = 'Search Help') {
     const modalHtml = `
         <div class="modal fade" id="searchInstructionModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Search Results Help</h5>
+                        <h5 class="modal-title">${title}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
