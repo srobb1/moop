@@ -4,12 +4,12 @@
 
 /* ========== GLOBAL INFO ICON STYLING ========== */
 .fa-info-circle {
-  color: #ff9800;
+  color: #f5e6d3;
   transition: color 0.2s ease;
 }
 
 .fa-info-circle:hover {
-  color: #f57c00;
+  color: #e8d4b8;
 }
 
 /* ========== NAVIGATION BUTTON STYLES ========== */
