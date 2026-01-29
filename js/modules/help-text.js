@@ -10,7 +10,7 @@ const RESULTS_HELP = `<strong>Using Your Results</strong><br><br><strong>Filter 
 
 const SEARCH_HELP = {
     // Basic search help (used on organism and assembly pages - no organism selection)
-    basic: `${BASIC_SEARCH_HELP}<br><br><strong>Results Limit:</strong><br>Results are capped at 2,500 - use more specific terms to refine your search<br><br><strong>Filtering:</strong><br>Click the filter button to limit search to specific annotation sources`,
+    basic: `${BASIC_SEARCH_HELP}<br><br><strong>Results Limit:</strong><br>Results are capped at 2,500 - use more specific terms to refine your search<br><br><strong>Search Within a Single Assembly:</strong><br>If you want to search within a single assembly, navigate to an organism page, then select the assembly page to limit your search to that specific assembly<br><br><strong>Filtering:</strong><br>Click the filter button to limit search to specific annotation sources`,
 
     // Group-specific search help
     group: `${BASIC_SEARCH_HELP}<br><br><strong>Select Organisms:</strong><br>Note: This option is only available on group pages. Use the checkboxes in the "Organisms in Group" section below to select/deselect which organisms to include in your search<br><br><strong>Results Limit:</strong><br>Results are capped at 2,500 per organism - use more specific terms to refine your search<br><br><strong>Filtering:</strong><br>Click the filter button to limit search to specific annotation sources`,
