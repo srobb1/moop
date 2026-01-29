@@ -83,9 +83,10 @@
               <div class="col-md-6 col-lg-4">
                 <div class="organism-selector-card position-relative" data-organism="<?= htmlspecialchars($organism) ?>">
                   <!-- Selection bar with checkbox -->
-                  <div class="organism-selection-bar">
+                  <label class="organism-selection-bar">
                     <input type="checkbox" class="organism-checkbox" data-organism="<?= htmlspecialchars($organism) ?>" checked>
-                  </div>
+                    <span class="organism-selection-icon"></span>
+                  </label>
                   <!-- Clickable card that links to organism page -->
                   <a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?><?php foreach($organism_list as $org): ?>&multi_search[]=<?= urlencode($org) ?><?php endforeach; ?>" 
                      class="text-decoration-none organism-card-link">

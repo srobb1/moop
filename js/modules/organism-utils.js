@@ -14,6 +14,7 @@ function initializeOrganismSelection(allOrganisms, updateCallback) {
     // Track which organisms are selected (default: all selected)
     let selectedOrganisms = [...allOrganisms];
     
+
     // Handle individual organism checkboxes
     $(document).on('change', '.organism-checkbox', function() {
         const organism = $(this).data('organism');
