@@ -14,7 +14,8 @@ const ORGANISM_SELECTION_INFO = `<br><br><strong>Select Organisms:</strong><br>N
 
 const RESULTS_LIMIT = `<br><br><strong>Results Limit:</strong><br>Results are capped at 2,500`;
 
-const FILTERING_INFO = `<br><br><strong>Filtering:</strong><br>Click the filter button to limit search to specific annotation sources`;
+const FILTERING_INFO = `<br><br><strong>Filtering:</strong><br>Click the filter button to limit search to specific annotation sources. Example: limit searches to only "Ensembl Human Homologs (ENS_homo_sapiens)"`;
+
 
 const SEARCH_HELP = {
     // Basic search help (used on organism and assembly pages - no organism selection)
