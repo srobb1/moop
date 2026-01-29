@@ -13,6 +13,13 @@ function initializeSearchInstructionsHandler() {
         const instruction = $(this).data('instruction');
         showSearchInstructionModal(instruction);
     });
+    
+    // Also handle search hints trigger (in results section)
+    $(document).on('click', '.search-hints-trigger', function(e) {
+        e.stopPropagation();
+        const instruction = $(this).data('instruction');
+        showSearchInstructionModal(instruction);
+    });
 }
 
 /**

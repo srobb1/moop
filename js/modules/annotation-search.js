@@ -199,10 +199,13 @@ class AnnotationSearch {
         $('#searchResults').show();
         $('#resultsContainer').html('');
         
-        // Build search info with filters
-        let searchInfo = `Search: <strong>${keywords}</strong> across ${this.config.totalVar} organisms${searchExplanation}`;
+        // Build search info with description
+        let searchInfo = `Searched for any record containing <strong>${keywords}</strong>`;
         if (this.selectedSources && this.selectedSources.length > 0) {
-            searchInfo += `<br><small class="text-muted">Limited to: ${this.selectedSources.join(', ')}</small>`;
+            searchInfo += ` (limited to ${this.selectedSources.join(', ')})`;
+        }
+        if (searchExplanation) {
+            searchInfo += searchExplanation;
         }
         $('#searchInfo').html(searchInfo);
         
@@ -343,8 +346,7 @@ class AnnotationSearch {
         if (this.allResults.length === 0) {
             $('#searchProgress').html(capMessageHtml + warningsHtml + '<div class="alert alert-warning">No results found. Try different search terms.</div>');
         } else {
-            // Build jump-to navigation
-            let jumpToHtml = '<div class="alert alert-info mb-3"><strong>Jump to results for:</strong> ';
+            // Build jump-to navigation combined with results summary
             const organismCounts = {};
             this.allResults.forEach(r => {
                 if (!organismCounts[r.organism]) {
@@ -352,6 +354,9 @@ class AnnotationSearch {
                 }
                 organismCounts[r.organism]++;
             });
+            
+            let jumpToHtml = '<div class="alert alert-info mb-3">';
+            jumpToHtml += `<strong>Found ${this.allResults.length} matching annotation${this.allResults.length !== 1 ? 's' : ''} across ${Object.keys(organismCounts).length} feature${Object.keys(organismCounts).length !== 1 ? 's' : ''}:</strong> `;
             
             Object.keys(organismCounts).forEach((org, idx) => {
                 const anchorId = 'results-' + org.replace(/[^a-zA-Z0-9]/g, '_');
@@ -368,23 +373,8 @@ class AnnotationSearch {
             $('#searchProgress').html(`
                 ${capMessageHtml}
                 ${warningsHtml}
-                <button class="btn btn-outline-secondary w-100 mb-3 search-hints-toggle" 
-                        type="button" data-collapse-id="${collapseId}"
-                        style="cursor: pointer;">
-                    <i class="fa fa-check-circle text-success"></i> <strong>Search complete!</strong> Found ${this.allResults.length} total result${this.allResults.length !== 1 ? 's' : ''} across ${this.searchedOrganisms} organisms.
-                </button>
-                <div class="search-hints-content mb-3" id="${collapseId}" style="display: none;">
-                    <div class="alert alert-info">
-                        <small>
-                            <strong>How to use results:</strong><br>
-                            • <strong>Filter:</strong> Use the input boxes above each column header to filter results.<br>
-                            • <strong>Sort:</strong> Click column headers to sort ascending/descending.<br>
-                            • <strong>Export:</strong> Select rows with checkboxes, then click export buttons (Copy, CSV, Excel, PDF, Print).<br>
-                            • <strong>Columns:</strong> Use "Column Visibility" button to show/hide columns.
-                        </small>
-                    </div>
-                </div>
                 ${jumpToHtml}
+                <i class="fa fa-info-circle search-hints-trigger" style="cursor: pointer; margin-right: 0.5rem;" data-instruction="<strong>How to use results:</strong><br>• <strong>Filter:</strong> Use the input boxes above each column header to filter results.<br>• <strong>Sort:</strong> Click column headers to sort ascending/descending.<br>• <strong>Export:</strong> Select rows with checkboxes, then click export buttons (Copy, CSV, Excel, PDF, Print).<br>• <strong>Columns:</strong> Use 'Column Visibility' button to show/hide columns."></i> <small class="text-muted">Click for help</small>
             `);
             
             // Setup toggle handler for search hints
