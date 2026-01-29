@@ -312,7 +312,8 @@
 .function-name {
     font-family: 'Courier New', monospace;
     color: #2980b9;
-    font-weight: 500;
+    font-weight: 700;
+    font-size: 1.1em;
 }
 
 .function-counter {
