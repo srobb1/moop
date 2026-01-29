@@ -375,6 +375,11 @@ code {
   background-color: #b3d8ed;
 }
 
+/* Card header styling - light blue background */
+.card-header.bg-light {
+  background-color: #b3d8ed !important;
+}
+
 /* Muted text styling */
 .text-muted-gray {
   color: #999;
