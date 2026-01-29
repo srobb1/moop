@@ -77,12 +77,12 @@
 
 /* Card background and border when selected */
 .organism-selector-card.selected .organism-card {
-    background-color: #b3d8ed;
+    background-color: #e8f4f8;
 }
 
 /* Selection bar when checked */
 .organism-selector-card.selected .organism-selection-bar {
-    background-color: #b3d8ed;
+    background-color: #e8f4f8;
 }
 
 /* Selection bar hover effect */

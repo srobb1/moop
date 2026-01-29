@@ -380,6 +380,11 @@ code {
   background-color: #b3d8ed !important;
 }
 
+/* Super light blue for selected organism background */
+.organism-card.selected {
+  background-color: #e8f4f8 !important;
+}
+
 /* Muted text styling */
 .text-muted-gray {
   color: #999;
