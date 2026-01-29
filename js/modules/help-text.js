@@ -10,7 +10,7 @@ const RESULTS_HELP = `<strong>Using Your Results</strong><br><br><strong>Filter 
 
 const ASSEMBLY_SEARCH_INFO = `<br><br><strong>Search Within a Single Assembly:</strong><br>To search within a single assembly, navigate to an organism page, then select the assembly page to limit your search to that specific assembly`;
 
-const ORGANISM_SELECTION_INFO = `<br><br><strong>Select Organisms:</strong><br>Note: This option is only available when searching from group or multi-organism pages. Use the checkboxes below to select/deselect which organisms to include in your search`;
+const ORGANISM_SELECTION_INFO = `<br><br><strong>Select Organisms:</strong><br>Note: This option is only available on multiple organism search pages (Multi-organism and Groups). Use the checkboxes below to select/deselect which organisms to include in your search`;
 
 const RESULTS_LIMIT = `<br><br><strong>Results Limit:</strong><br>Results are capped at 2,500`;
 
