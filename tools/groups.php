@@ -69,6 +69,7 @@ if ($is_taxonomy_group) {
     
     // Create synthetic group info for taxonomy groups with Wikipedia content
     $group_info = [
+        'name' => $taxonomy_rank,
         'group_name' => $taxonomy_rank,
         'description' => $wiki_data['description'] ?: "All organisms in the taxonomic rank: <em>$taxonomy_rank</em>",
         'type' => 'taxonomy',
@@ -143,7 +144,8 @@ $data = [
     'absolute_images_path' => $absolute_images_path,
     'organism_data' => $organism_data,
     'page_styles' => [
-        "/$site/css/groups.css"
+        "/$site/css/groups.css",
+        "/$site/css/advanced-search-filter.css"
     ],
 ];
 
