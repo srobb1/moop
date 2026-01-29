@@ -2,6 +2,16 @@
 /* Global styles for MOOP (Modern Organism Observation Platform) */
 /* Last updated: Nov 2024 - Consolidated styling from inline styles */
 
+/* ========== GLOBAL INFO ICON STYLING ========== */
+.fa-info-circle {
+  color: #ffc107;
+  transition: color 0.2s ease;
+}
+
+.fa-info-circle:hover {
+  color: #ffb300;
+}
+
 /* ========== NAVIGATION BUTTON STYLES ========== */
 .navigation-buttons-container {
     display: flex;
