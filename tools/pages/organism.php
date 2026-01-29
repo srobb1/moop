@@ -34,7 +34,7 @@
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> Search Gene IDs and Annotations <i class="fa fa-info-circle search-instructions-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-help-type="basic"></i></h4>
+          <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> Search Gene IDs and Annotations <i class="fa fa-info-circle info-icon search-instructions-trigger" data-help-type="basic"></i></h4>
           <form id="organismSearchForm">
             <div class="row align-items-center">
               <div class="col">
@@ -68,7 +68,7 @@
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-4">
       <div class="card-header bg-search-results text-white">
-        <h4 class="mb-0"><i class="fa fa-list"></i> Search Results <i class="fa fa-info-circle search-results-help-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.9em;" data-help-type="results"></i></h4>
+        <h4 class="mb-0"><i class="fa fa-list"></i> Search Results <i class="fa fa-info-circle info-icon search-results-help-trigger" data-help-type="results"></i></h4>
       </div>
       <div class="card-body">
         <div id="searchInfo" class="alert alert-info mb-3"></div>
@@ -163,7 +163,7 @@
                                  <div class="mt-4 pt-3 border-top">
                    <h6 class="text-muted mb-3" style="font-weight: 600;">
                      Taxonomy Lineage
-                     <i class="fa fa-info-circle taxonomy-lineage-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 1em;" data-instruction="<strong>Taxonomy Lineage Counts:</strong><br>The numbers next to each taxonomic rank show how many organisms within that taxonomic group are available in <?= htmlspecialchars($config->getString('siteTitle')) ?>. <strong>Click a rank</strong> to view all organisms in that group."></i>
+                     <i class="fa fa-info-circle info-icon taxonomy-lineage-trigger" data-instruction="<strong>Taxonomy Lineage Counts:</strong><br>The numbers next to each taxonomic rank show how many organisms within that taxonomic group are available in <?= htmlspecialchars($config->getString('siteTitle')) ?>. <strong>Click a rank</strong> to view all organisms in that group."></i>
                    </h6>
                    <div class="breadcrumb clear-initial-trail">
                      <?php 
@@ -189,7 +189,7 @@
             <div class="mt-4 pt-3 border-top">
               <h6 class="text-muted mb-3" style="font-weight: 600;">
                 Member of Groups
-                <i class="fa fa-info-circle member-groups-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 1em;" data-instruction="<strong>Group Membership Counts:</strong><br>The numbers next to each group show how many organisms are members of that group. Groups are collections of organisms organized by research focus, taxonomy, or other criteria. <strong>Click a group</strong> to view all organisms in that group."></i>
+                <i class="fa fa-info-circle info-icon member-groups-trigger" data-instruction="<strong>Group Membership Counts:</strong><br>The numbers next to each group show how many organisms are members of that group. Groups are collections of organisms organized by research focus, taxonomy, or other criteria. <strong>Click a group</strong> to view all organisms in that group."></i>
               </h6>
               <div class="chip-container">
                 <?php foreach ($organism_groups as $group_name => $group_info): ?>

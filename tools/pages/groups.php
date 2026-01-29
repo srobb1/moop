@@ -12,7 +12,7 @@
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> <?= htmlspecialchars($group_name) ?>: Search Gene IDs and Annotations <i class="fa fa-info-circle search-instructions-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-help-type="group"></i></h4>
+          <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> <?= htmlspecialchars($group_name) ?>: Search Gene IDs and Annotations <i class="fa fa-info search-instructions-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-help-type="group"></i></h4>
           <form id="groupSearchForm">
             <div class="row align-items-center">
               <div class="col">
@@ -50,7 +50,7 @@
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-5">
       <div class="card-header bg-search-results text-white">
-        <h4 class="mb-0"><i class="fa fa-list"></i> Search Results <i class="fa fa-info-circle search-results-help-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.9em;" data-help-type="results"></i></h4>
+        <h4 class="mb-0"><i class="fa fa-list"></i> Search Results <i class="fa fa-info search-results-help-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.9em;" data-help-type="results"></i></h4>
       </div>
       <div class="card-body">
         <div id="searchInfo" class="alert alert-info mb-3"></div>
@@ -121,7 +121,7 @@
                 <h3 class="card-title mb-1">
                   Organisms in <?= htmlspecialchars($group_name) ?> Group
                   <?php if (!empty($group_organisms)): ?>
-                    <i class="fa fa-info-circle organism-instructions-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-instruction="Check/uncheck organisms to modify which are included in the search. Click an organism card to visit its page for organism-specific information and single-organism searches."></i>
+                    <i class="fa fa-info organism-instructions-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-instruction="Check/uncheck organisms to modify which are included in the search. Click an organism card to visit its page for organism-specific information and single-organism searches."></i>
                   <?php endif; ?>
                 </h3>
               </div>
@@ -139,7 +139,7 @@
           </div>
           <?php if (empty($group_organisms)): ?>
             <div class="alert alert-info mb-0">
-              <i class="fa fa-info-circle"></i> No organisms are currently available in this group.
+              <i class="fa fa-info"></i> No organisms are currently available in this group.
             </div>
           <?php else: ?>
             <div class="row g-3" id="organismsGrid">

@@ -3,18 +3,21 @@
 /* Last updated: Nov 2024 - Consolidated styling from inline styles */
 
 /* ========== GLOBAL INFO ICON STYLING ========== */
-.fa-info-circle {
-  color: #d4a574;
+.fa-info-circle,
+.fa-info {
+  color: #d4a574 !important;
   transition: color 0.2s ease;
+  text-shadow: none;
 }
 
-.fa-info-circle:hover {
-  color: #c4945f;
+.fa-info-circle:hover,
+.fa-info:hover {
+  color: #c4945f !important;
 }
 
 /* ========== HEADER BACKGROUND COLORS ========== */
 .bg-search-results {
-  background-color: #a8b5a8 !important;
+  background-color: #a8c5e0 !important;
 }
 
 .bg-tools {
