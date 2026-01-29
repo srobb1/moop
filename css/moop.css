@@ -4,12 +4,12 @@
 
 /* ========== GLOBAL INFO ICON STYLING ========== */
 .fa-info-circle {
-  color: #ffc107;
+  color: #ff9800;
   transition: color 0.2s ease;
 }
 
 .fa-info-circle:hover {
-  color: #ffb300;
+  color: #f57c00;
 }
 
 /* ========== NAVIGATION BUTTON STYLES ========== */
@@ -576,4 +576,16 @@ footer .footer-meta {
 .badge.bg-pink {
   background-color: #ec4899 !important;
   color: white !important;
+}
+
+/* Toggle View Button - Muted Purple/Indigo */
+.toggle-view-btn {
+  background-color: #8b7ba8 !important;
+  border-color: #8b7ba8 !important;
+  color: white !important;
+}
+
+.toggle-view-btn:hover {
+  background-color: #7a6a96 !important;
+  border-color: #7a6a96 !important;
 }
