@@ -121,7 +121,7 @@
                 <h3 class="card-title mb-1">
                   Organisms in <?= htmlspecialchars($group_name) ?> Group
                   <?php if (!empty($group_organisms)): ?>
-                    <i class="fa fa-info organism-instructions-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-instruction="Check/uncheck organisms to modify which are included in the search. Click an organism card to visit its page for organism-specific information and single-organism searches."></i>
+                    <i class="fa fa-info-circle organism-instructions-trigger info-icon" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-instruction="Check/uncheck organisms to modify which are included in the search. Click an organism card to visit its page for organism-specific information and single-organism searches."></i>
                   <?php endif; ?>
                 </h3>
               </div>
@@ -139,7 +139,7 @@
           </div>
           <?php if (empty($group_organisms)): ?>
             <div class="alert alert-info mb-0">
-              <i class="fa fa-info"></i> No organisms are currently available in this group.
+              <i class="fa fa-info-circle"></i> No organisms are currently available in this group.
             </div>
           <?php else: ?>
             <div class="row g-3" id="organismsGrid">
