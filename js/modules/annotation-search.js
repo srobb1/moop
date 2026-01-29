@@ -120,8 +120,9 @@ class AnnotationSearch {
      * Show advanced search filter modal
      */
     showFilterModal() {
-        // Get first organism for filter modal (they're all the same database)
-        const organism = this.config.organismsVar[0];
+        // Always pass organisms as array - works for single or multiple organisms
+        // Single organism page will have 1 item in array, multi-organism pages will have many
+        const organisms = this.config.organismsVar;
         
         // Convert selectedSources array to object for modal
         const selectedSourcesObj = {};
@@ -132,14 +133,12 @@ class AnnotationSearch {
         }
         
         const filter = new AdvancedSearchFilter({
-            organism: organism,
+            organisms: organisms,
             sitePath: this.config.sitePath,
-            selectedSources: selectedSourcesObj,  // Pass current selections as object
+            selectedSources: selectedSourcesObj,
             onApply: (selectedSources) => {
-                this.selectedSources = selectedSources;  // This is an array from getSelectedSources()
-                // Update button states
+                this.selectedSources = selectedSources;
                 this.updateFilterButtonState();
-                // Log confirmation (removed alert as it was annoying)
                 const message = selectedSources.length === 0 
                     ? 'No sources selected' 
                     : `Filtering to ${selectedSources.length} source(s)`;
