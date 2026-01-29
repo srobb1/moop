@@ -358,22 +358,11 @@ class AnnotationSearch {
             });
             jumpToHtml += '</div>';
             
-            // Generate unique ID for collapse
-            const collapseId = 'searchHintsCollapse-' + Date.now();
-            
             $('#searchProgress').html(`
                 ${capMessageHtml}
                 ${warningsHtml}
                 ${jumpToHtml}
-                <i class="fa fa-info-circle search-hints-trigger" style="cursor: pointer; margin-right: 0.5rem;" data-instruction="<strong>How to use results:</strong><br>• <strong>Filter:</strong> Use the input boxes above each column header to filter results.<br>• <strong>Sort:</strong> Click column headers to sort ascending/descending.<br>• <strong>Export:</strong> Select rows with checkboxes, then click export buttons (Copy, CSV, Excel, PDF, Print).<br>• <strong>Columns:</strong> Use 'Column Visibility' button to show/hide columns."></i> <small class="text-muted">Click for help</small>
             `);
-            
-            // Setup toggle handler for search hints
-            $(document).on('click', `.search-hints-toggle[data-collapse-id="${collapseId}"]`, function(e) {
-                e.preventDefault();
-                const contentBox = $(`#${collapseId}`);
-                contentBox.slideToggle(200);
-            });
         }
         
         // Optional: scroll to results
