@@ -12,6 +12,15 @@
   color: #c4945f;
 }
 
+/* ========== HEADER BACKGROUND COLORS ========== */
+.bg-search-results {
+  background-color: #a8b5a8 !important;
+}
+
+.bg-tools {
+  background-color: #7a9fa8 !important;
+}
+
 /* ========== NAVIGATION BUTTON STYLES ========== */
 .navigation-buttons-container {
     display: flex;

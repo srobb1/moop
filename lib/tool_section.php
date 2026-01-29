@@ -74,7 +74,7 @@ $use_onclick_handler = $context['page'] === 'index' && !empty($context['use_oncl
 
 <!-- Tools Section -->
 <div class="card shadow-sm" style="min-height: 200px;">
-    <div class="card-header bg-info text-white">
+    <div class="card-header bg-tools text-white">
         <h5 class="mb-0"><i class="fa fa-toolbox"></i> Tools</h5>
     </div>
     <div class="card-body p-2">
