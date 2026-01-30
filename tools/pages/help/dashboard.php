@@ -16,7 +16,7 @@ $tutorials = [
         'title' => 'Getting Started',
         'description' => 'Learn the basics of MOOP and how to navigate the platform.',
         'icon' => 'fa-rocket',
-        'color' => 'success',
+        'color' => 'info',
         'category' => 'general',
     ],
     [
@@ -29,18 +29,18 @@ $tutorials = [
     ],
     [
         'id' => 'taxonomy-tree-management',
-        'title' => 'Taxonomy Tree (In-Depth)',
-        'description' => 'Understand how the taxonomy tree works, how it\'s organized, and how administrators can manage it.',
+        'title' => 'Taxonomy Tree',
+        'description' => 'Understand how the taxonomy tree works, how it\'s organized, and how to use it for organism selection and management.',
         'icon' => 'fa-tree',
         'color' => 'success',
-        'category' => 'technical',
+        'category' => 'both',
     ],
     [
         'id' => 'search-and-filter',
         'title' => 'Search & Filter',
         'description' => 'Use advanced search and filtering to find specific sequences and annotations.',
         'icon' => 'fa-search',
-        'color' => 'primary',
+        'color' => 'info',
         'category' => 'general',
     ],
     [
@@ -48,7 +48,7 @@ $tutorials = [
         'title' => 'BLAST Search',
         'description' => 'Learn how to use BLAST to compare sequences across organisms.',
         'icon' => 'fa-exchange-alt',
-        'color' => 'warning',
+        'color' => 'info',
         'category' => 'general',
     ],
     [
@@ -56,7 +56,7 @@ $tutorials = [
         'title' => 'Multi-Organism Analysis',
         'description' => 'Compare and analyze data across multiple organisms simultaneously.',
         'icon' => 'fa-project-diagram',
-        'color' => 'danger',
+        'color' => 'info',
         'category' => 'general',
     ],
     [
@@ -64,7 +64,7 @@ $tutorials = [
         'title' => 'Exporting Data',
         'description' => 'Download sequences and data in various formats for external analysis.',
         'icon' => 'fa-download',
-        'color' => 'secondary',
+        'color' => 'info',
         'category' => 'general',
     ],
     [
@@ -80,7 +80,7 @@ $tutorials = [
         'title' => 'Generating Annotations & Databases (Technical)',
         'description' => 'Guide for generating functional annotations and creating/loading organism.sqlite databases.',
         'icon' => 'fa-flask',
-        'color' => 'purple',
+        'color' => 'dark',
         'category' => 'technical',
     ],
     [
@@ -88,7 +88,7 @@ $tutorials = [
         'title' => 'Setup & Searches (Technical)',
         'description' => 'Technical guide for setting up new organisms, configuring metadata, and understanding search mechanics and the parent page.',
         'icon' => 'fa-cogs',
-        'color' => 'secondary',
+        'color' => 'dark',
         'category' => 'technical',
     ],
     [
@@ -96,7 +96,7 @@ $tutorials = [
         'title' => 'System Requirements & Planning (Technical)',
         'description' => 'Hardware sizing, performance benchmarks, resource planning, and cost estimation based on organism scale.',
         'icon' => 'fa-server',
-        'color' => 'info',
+        'color' => 'dark',
         'category' => 'technical',
     ],
     [
@@ -104,7 +104,7 @@ $tutorials = [
         'title' => 'Function Registry Management (Technical)',
         'description' => 'Understand the function registry system, how registries are created and managed, and how to use them for custom functions.',
         'icon' => 'fa-list',
-        'color' => 'success',
+        'color' => 'dark',
         'category' => 'technical',
     ],
     [
@@ -112,7 +112,7 @@ $tutorials = [
         'title' => 'Permission Management & Alerts (Technical)',
         'description' => 'Learn how to manage file permissions, fix permission issues, and understand why permissions are critical to MOOP.',
         'icon' => 'fa-lock',
-        'color' => 'warning',
+        'color' => 'dark',
         'category' => 'technical',
     ],
 ];
@@ -153,8 +153,9 @@ $tutorials = [
   <div class="mb-4">
     <div class="btn-group" role="group" aria-label="Filter by category">
       <button type="button" class="btn btn-outline-primary active" data-category="all">All Topics</button>
-      <button type="button" class="btn btn-outline-success" data-category="general">General Use</button>
-      <button type="button" class="btn btn-outline-warning" data-category="technical">Technical (Admin)</button>
+      <button type="button" class="btn btn-outline-info" data-category="general">General Use</button>
+      <button type="button" class="btn btn-outline-success" data-category="both">For Everyone</button>
+      <button type="button" class="btn btn-outline-dark" data-category="technical">Technical (Admin)</button>
     </div>
   </div>
 
@@ -217,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const itemCategory = item.dataset.category;
       const itemSearchable = item.dataset.searchable;
       
-      const matchesCategory = activeCategory === 'all' || itemCategory === activeCategory;
+      const matchesCategory = activeCategory === 'all' || itemCategory === activeCategory || (activeCategory === 'general' && itemCategory === 'both') || (activeCategory === 'technical' && itemCategory === 'both');
       const matchesSearch = searchTerm === '' || itemSearchable.includes(searchTerm.toLowerCase());
       
       if (matchesCategory && matchesSearch) {
