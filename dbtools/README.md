@@ -34,13 +34,66 @@ Start here if you want to find homologous proteins for your genes.
 You need a conda-compatible package manager **only if you want to use these database tools**. Choose from several options:
 
 **When do you need conda/mamba?**
-1. **Database loading** - If you want to use our Perl scripts to create and load the SQLite database
-2. **DIAMOND analysis** - If you want to use our provided conda environment for DIAMOND BLASTP searches
-3. **Optional** - You can also set up your own analysis workflows and just use our database loading scripts
+1. **Database loading (minimal)** - Just need Perl, DBI, DBD::SQLite (smallest install)
+2. **DIAMOND analysis** - If you want to run DIAMOND BLASTP searches
+3. **InterProScan** - If you want to run protein domain analysis
+4. **Optional** - You can also set up your own analysis workflows and just use our database loading scripts
+
+### Minimal Install (Recommended for Database Loading Only)
+
+If you only need to load gene and annotation data into the database:
+
+```bash
+# Create minimal environment
+mamba create -n moop-dbtools-minimal -c bioconda -c conda-forge \
+  perl perl-dbi perl-dbd-sqlite
+
+# Activate environment
+mamba activate moop-dbtools-minimal
+```
+
+This minimal install is ~100 MB and includes everything needed for database creation and loading.
+
+### Full Install (With Analysis Tools)
+
+If you want to include DIAMOND, InterProScan, or both:
+
+```bash
+# Full environment with all tools
+mamba env create -f environment.yml
+mamba activate moop-dbtools
+```
+
+This install is larger (~2-3 GB) due to analysis tool databases.
+
+**Selective Installation:**
+
+If you want only specific tools, edit `environment.yml` before creating the environment:
+- Remove the `diamond` line if you have DIAMOND installed elsewhere
+- Remove the `interproscan` line if you don't need protein domain analysis (saves ~1-2 GB)
+
+Or install/remove after creation:
+```bash
+# Create minimal environment first
+mamba create -n moop-dbtools -c bioconda -c conda-forge perl perl-dbi perl-dbd-sqlite
+
+# Add specific tools as needed
+mamba activate moop-dbtools
+mamba install -c bioconda diamond
+mamba install -c bioconda interproscan
+
+# Or remove tools to save space
+mamba remove diamond interproscan
+```
+
+**Using External Tools:**
+
+You can still use our Perl parsing scripts with tools installed elsewhere:
+- Have DIAMOND on your system? Use `parse_diamondBlast2moopTSV.pl` with your own DIAMOND installation
+- Have InterProScan installed? Use `parse_interproscan2moopTSV.pl` with your own InterProScan
+- No need for conda at all if you already have these tools!
 
 If you already have Perl, DBI, and DBD::SQLite installed elsewhere, you don't need conda just for database loading.
-
-If you already have DIAMOND installed elsewhere, you don't need conda for analysis—just use our Perl parsing scripts with your own DIAMOND installation.
 
 **Available conda/mamba options:**
 - **Miniforge** (recommended) - Lightweight, conda-based, smallest download
@@ -135,6 +188,21 @@ diamond blastp --ultra-sensitive --evalue 1e-5 --query proteins.fa --db ref.dmnd
 ```bash
 perl parse_diamondBlast2moopTSV.pl hits.tsv "Database Name" "2025-06-17" "http://db.url" "http://accession.url/"
 ```
+
+**Run InterProScan protein domain analysis:**
+```bash
+interproscan.sh -i proteins.fa -f tsv -o proteins_interpro.tsv
+```
+
+**Parse InterProScan results:**
+```bash
+perl parse_interproscan2moopTSV.pl proteins_interpro.tsv
+```
+This automatically generates multiple MOOP-format TSV files:
+- One file per analysis type (Pfam, PANTHER, InterPro, etc.)
+- InterPro2GO.iprscan.moop.tsv and PANTHER2GO.iprscan.moop.tsv for Gene Ontology terms
+- Detects InterProScan version automatically
+- Caches GO.obo reference file for subsequent runs
 
 ## Comprehensive Workflow Examples
 
