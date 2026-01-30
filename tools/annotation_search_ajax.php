@@ -149,7 +149,7 @@ if (!empty($incomplete_records)) {
 
 // Check if results are capped at 2500
 $result_count = count($formatted_results);
-$is_capped = $result_count >= 2500 || !empty($warning_message);
+$is_capped = $result_count >= 2500;
 
 echo json_encode([
     'organism' => $organism,

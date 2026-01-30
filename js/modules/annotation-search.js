@@ -195,6 +195,7 @@ class AnnotationSearch {
         this.allResults = [];
         this.searchedOrganisms = 0;
         this.warnings = [];  // Collect warnings from each organism
+        this.cappedOrganisms = [];  // Reset capped organisms tracking for new search
         // NOTE: Do NOT reset this.selectedSources - it should persist across searches
         $('#searchResults').show();
         $('#resultsContainer').html('');
