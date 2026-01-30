@@ -146,6 +146,63 @@
         </div>
       </div>
 
+      <!-- Initial Setup Section -->
+      <div class="card shadow-sm border-0 rounded-3 mb-4">
+        <div class="card-body p-4">
+          <h3 class="fw-bold text-dark mb-3">Initial Setup</h3>
+          
+          <p class="text-muted mb-3">
+            During MOOP installation, you need to set up directory permissions so the web server can read and write to critical directories. This ensures MOOP can manage metadata, save logs, and update configuration files.
+          </p>
+
+          <h5 class="fw-semibold text-dark mb-3">Setup Strategy: SGID (Set-Group-ID) + Group Write Permissions</h5>
+          <p class="text-muted mb-3">
+            This approach allows the web server user (<code>www-data</code>) to modify files while the owner (<code>ubuntu</code>) retains control:
+          </p>
+          <ul class="text-muted mb-3">
+            <li><strong>Owner:</strong> Retains file control (usually <code>ubuntu</code>)</li>
+            <li><strong>Group:</strong> Set to web server user (<code>www-data</code>) for shared access</li>
+            <li><strong>Directory Permissions:</strong> <code>775</code> (rwxrwxr-x)</li>
+            <li><strong>File Permissions:</strong> <code>664</code> (rw-rw-r--)</li>
+            <li><strong>SGID Bit:</strong> Set on directories with <code>chmod g+s</code> to auto-assign group to new files</li>
+          </ul>
+
+          <h5 class="fw-semibold text-dark mb-2">Directories to Configure:</h5>
+          <ul class="text-muted mb-3">
+            <li><code>/data/moop/metadata/</code> - Organism metadata and configuration files</li>
+            <li><code>/data/moop/logs/</code> - Application and error logs</li>
+            <li><code>/data/moop/organisms/</code> - Organism databases and data files</li>
+            <li><code>/data/moop/images/ncbi_taxonomy/</code> - NCBI taxonomy images cache</li>
+            <li><code>/data/moop/admin/</code> - Admin panel uploads and caches</li>
+          </ul>
+
+          <h5 class="fw-semibold text-dark mb-2">Setup Commands:</h5>
+          <p class="text-muted mb-2">Run these commands for each directory (example shown for metadata):</p>
+          <div class="bg-light p-3 rounded border-left border-secondary mb-3">
+            <code class="text-dark d-block mb-2">sudo chmod g+s /data/moop/metadata</code>
+            <code class="text-dark d-block mb-2">sudo chmod 775 /data/moop/metadata</code>
+            <code class="text-dark d-block mb-2">sudo find /data/moop/metadata -type f -exec chmod 664 {} \;</code>
+            <code class="text-dark d-block">sudo find /data/moop/metadata -type d -exec chmod 775 {} \;</code>
+          </div>
+
+          <p class="text-muted mb-2">
+            Repeat for other directories by replacing <code>/data/moop/metadata</code> with the appropriate path.
+          </p>
+
+          <h5 class="fw-semibold text-dark mb-2">Verification:</h5>
+          <p class="text-muted mb-2">After running the commands, verify with:</p>
+          <div class="bg-light p-3 rounded border-left border-secondary mb-3">
+            <code class="text-dark d-block">ls -ld /data/moop/metadata /data/moop/logs /data/moop/organisms</code>
+          </div>
+          <p class="text-muted mb-2">
+            You should see an <code>s</code> in the group permission position (e.g., <code>drwxrwsr-x</code>):
+          </p>
+          <div class="bg-light p-3 rounded border-left border-secondary">
+            <code class="text-dark d-block">drwxrwsr-x  ubuntu www-data  /data/moop/metadata</code>
+          </div>
+        </div>
+      </div>
+
       <!-- Best Practices Section -->
       <div class="card shadow-sm border-0 rounded-3 mb-4">
         <div class="card-body p-4">
