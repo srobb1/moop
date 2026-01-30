@@ -206,86 +206,161 @@ This automatically generates multiple MOOP-format TSV files:
 
 ## Comprehensive Workflow Examples
 
-### Scenario 1: Loading GFF Gene Annotations + BLAST Homologs
+**Key Concept:** Each organism gets its own SQLite database file
 
-Complete workflow from GFF file to populated database:
+**Directory Structure:**
+```
+/var/www/html/moop/dbtools/
+├── test_data/                          # Input test files (GFF3, organisms.tsv)
+├── test_output/                        # Output directory for test workflows (gitignored)
+├── parse_*.pl                          # Parser scripts
+├── import_genes_sqlite.pl              # Database loader
+└── load_annotations_fast.pl            # Annotation loader
+
+Output databases created by workflows:
+├── test_output/Chamaeleo_calyptratus.sqlite
+├── test_output/Aeorestes_cinereus.sqlite
+└── ... (one per organism)
+```
+
+### Scenario 1: Complete Workflow with Test Data
+
+**Working directory:** `/var/www/html/moop/dbtools/test_output`
+
+Complete workflow from GFF file to organism-specific database using included test data:
 
 ```bash
-# 1. Create organisms metadata TSV (one-time setup for your organisms)
-cat > organisms.tsv << 'EOF'
+cd /var/www/html/moop/dbtools/test_output
+
+# 1. Convert GFF3 to MOOP gene TSV format using test data
+perl ../parse_GFF3_to_MOOP_TSV.pl ../test_data/genomic.gff3 ../test_data/organisms.tsv \
+  Chamaeleo calyptratus CCA3 > Chamaeleo_calyptratus.genes.tsv
+
+# 2. Create organism-specific database
+sqlite3 Chamaeleo_calyptratus.sqlite < ../create_schema_sqlite.sql
+
+# 3. Load genes into the database
+perl ../import_genes_sqlite.pl Chamaeleo_calyptratus.sqlite Chamaeleo_calyptratus.genes.tsv
+
+# 4. Verify genes loaded
+sqlite3 Chamaeleo_calyptratus.sqlite "SELECT COUNT(*) FROM feature;"
+
+# (Optional) If you have InterProScan results:
+# perl ../parse_InterProScan_to_MOOP_TSV.pl interpro_results.tsv
+# perl ../load_annotations_fast.pl Chamaeleo_calyptratus.sqlite PANTHER.iprscan.moop.tsv
+```
+
+### Scenario 1b: Production Workflow with DIAMOND
+
+**For production use with your own data (one database per organism):**
+
+```bash
+cd /var/www/html/moop/dbtools
+
+# 1. Create organisms metadata TSV (one-time setup)
+cat > my_organisms.tsv << 'EOF'
 genus	species	common-name	simrbase-prefix	source	accession	ncbi-taxon-id	feature-types
 Chamaeleo	calyptratus	Veiled Chameleon	CCA3	SIMR	CCA3	179908	mRNA,gene
 Aeorestes	cinereus	Hoary bat	ACI1	DNAzoo	GCA_011751095.1	257879	mRNA,gene
 EOF
 
-# 2. Convert GFF to MOOP gene TSV format
-perl parse_GFF3_to_MOOP_TSV.pl genomic.gff3 organisms.tsv Chamaeleo calyptratus CCA3 > genes.tsv
+# 2. Convert GFF3 to MOOP gene TSV format
+perl parse_GFF3_to_MOOP_TSV.pl your_genome.gff3 my_organisms.tsv \
+  Chamaeleo calyptratus CCA3 > Chamaeleo_calyptratus.genes.tsv
 
-# 3. Create empty database
-sqlite3 organism.sqlite < create_schema_sqlite.sql
+# 3. Create organism-specific database
+sqlite3 Chamaeleo_calyptratus.sqlite < create_schema_sqlite.sql
 
-# 4. Load genes into database
-perl import_genes_sqlite.pl organism.sqlite genes.tsv
+# 4. Load genes into the database
+perl import_genes_sqlite.pl Chamaeleo_calyptratus.sqlite Chamaeleo_calyptratus.genes.tsv
 
 # 5. Run DIAMOND BLAST (optional - for homolog annotations)
 diamond makedb --in uniprot_sprot.fasta --db uniprot_sprot.dmnd
 diamond blastp --ultra-sensitive --evalue 1e-5 \
   --query proteins.fa --db uniprot_sprot.dmnd \
-  --out tophit.tsv --max-target-seqs 1 \
+  --out Chamaeleo_calyptratus.tophit.tsv --max-target-seqs 1 \
   --outfmt 6 qseqid sseqid stitle evalue
 
 # 6. Parse DIAMOND results to MOOP format
-perl parse_DIAMOND_to_MOOP_TSV.pl tophit.tsv "UniProtKB/Swiss-Prot" "2025-06-17" \
+perl parse_DIAMOND_to_MOOP_TSV.pl Chamaeleo_calyptratus.tophit.tsv "UniProtKB/Swiss-Prot" "2025-06-17" \
   "https://www.uniprot.org" "https://www.uniprot.org/uniprotkb/"
 
-# 7. Load annotations into database
-perl load_annotations_fast.pl organism.sqlite UniProtKB_Swiss-Prot.homologs.moop.tsv
+# 7. Load annotations into the organism database
+perl load_annotations_fast.pl Chamaeleo_calyptratus.sqlite UniProtKB_Swiss-Prot.homologs.moop.tsv
 
-# 8. Copy to MOOP server
-scp organism.sqlite user@moop-server:/path/to/organisms/data/
+# 8. Copy organism database to MOOP server
+scp Chamaeleo_calyptratus.sqlite user@moop-server:/path/to/organisms/data/
 ```
 
-### Scenario 2: Multiple Organisms in Single Batch
+### Scenario 2: Batch Processing Multiple Organisms
 
-Process multiple organisms from one organizations TSV:
+**Working directory:** `/var/www/html/moop/dbtools`
+
+Process multiple organisms with a loop (each gets its own database):
 
 ```bash
-# organisms.tsv contains 10 organisms
-# Process each one:
+cd /var/www/html/moop/dbtools
+
+# Create/copy your organisms.tsv with multiple rows
+# Each organism will get its own database file
 
 for organism in "Chamaeleo calyptratus CCA3" "Aeorestes cinereus GCA_011751095.1"; do
   read genus species accession <<< "$organism"
+  org_name="${genus}_${species}"
   
-  # Convert GFF to MOOP format
-  perl parse_GFF3_to_MOOP_TSV.pl ${genus}_${species}.gff3 organisms.tsv \
-    $genus $species $accession > ${genus}_${species}.genes.tsv
+  # Convert GFF3 to MOOP format
+  perl parse_GFF3_to_MOOP_TSV.pl ${org_name}.gff3 my_organisms.tsv \
+    $genus $species $accession > ${org_name}.genes.tsv
   
-  # Load into database
-  perl import_genes_sqlite.pl organism.sqlite ${genus}_${species}.genes.tsv
+  # Create organism-specific database
+  sqlite3 ${org_name}.sqlite < create_schema_sqlite.sql
+  
+  # Load genes into organism database
+  perl import_genes_sqlite.pl ${org_name}.sqlite ${org_name}.genes.tsv
+  
+  echo "Completed: $org_name"
+done
+
+# Verify databases created
+ls -lh *.sqlite
+
+# Verify each database
+for db in *.sqlite; do
+  echo "Database: $db - Features: $(sqlite3 $db 'SELECT COUNT(*) FROM feature;')"
 done
 ```
 
-### Scenario 3: Test Data Included
+### Scenario 3: Test Data - Quick Validation
 
-Test the tools with included sample data:
+**Quick test using included sample data:**
 
 ```bash
-cd test_data
+cd /var/www/html/moop/dbtools/test_output
 
 # View organisms metadata
-cat organisms.tsv
+cat ../test_data/organisms.tsv
 
-# Extract features from test GFF file
-perl ../parse_GFF3_to_MOOP_TSV.pl genomic.gff3 organisms.tsv Chamaeleo calyptratus CCA3
+# Convert GFF3 to MOOP format (displays to screen)
+perl ../parse_GFF3_to_MOOP_TSV.pl ../test_data/genomic.gff3 ../test_data/organisms.tsv \
+  Chamaeleo calyptratus CCA3
 
-# Create database and load genes
-sqlite3 test_organism.sqlite < ../create_schema_sqlite.sql
-perl ../parse_GFF3_to_MOOP_TSV.pl genomic.gff3 organisms.tsv Chamaeleo calyptratus CCA3 > features.tsv
-perl ../import_genes_sqlite.pl test_organism.sqlite features.tsv
+# Full workflow: Create organism database and load genes
+sqlite3 Chamaeleo_calyptratus.sqlite < ../create_schema_sqlite.sql
+
+perl ../parse_GFF3_to_MOOP_TSV.pl ../test_data/genomic.gff3 ../test_data/organisms.tsv \
+  Chamaeleo calyptratus CCA3 > Chamaeleo_calyptratus.genes.tsv
+
+perl ../import_genes_sqlite.pl Chamaeleo_calyptratus.sqlite Chamaeleo_calyptratus.genes.tsv
 
 # Verify database loaded
-sqlite3 test_organism.sqlite "SELECT COUNT(*) FROM feature;"
+sqlite3 Chamaeleo_calyptratus.sqlite "SELECT COUNT(*) FROM feature;"
+sqlite3 Chamaeleo_calyptratus.sqlite "SELECT DISTINCT type FROM feature;"
 ```
+
+**Test files location:**
+- GFF3: `../test_data/genomic.gff3`
+- Organisms metadata: `../test_data/organisms.tsv`
+- Output database: `test_output/Chamaeleo_calyptratus.sqlite`
 
 ## Scripts Overview
 
