@@ -95,6 +95,13 @@ $tutorials = [
         'icon' => 'fa-list',
         'color' => 'success',
     ],
+    [
+        'id' => 'permission-management',
+        'title' => 'Permission Management & Alerts (Technical)',
+        'description' => 'Learn how to manage file permissions, fix permission issues, and understand why permissions are critical to MOOP.',
+        'icon' => 'fa-lock',
+        'color' => 'warning',
+    ],
 ];
 ?>
 
