@@ -210,8 +210,12 @@ function addMetadataImage(organism) {
         <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataImage('${organism}', ${newIndex})" style="float: right;">Remove</button>
         <div class="form-group mb-3">
           <label>Image File</label>
-          <input type="text" class="form-control image-file" value="" placeholder="e.g., organism_image.jpg">
-          <small class="text-muted">Place images in /moop/images/ directory</small>
+          <div class="input-group">
+            <input type="text" class="form-control image-file" value="" placeholder="e.g., organism_image.jpg">
+            <button type="button" class="btn btn-outline-secondary upload-image-btn">Upload</button>
+          </div>
+          <input type="file" class="image-upload-input" style="display:none;" accept="image/*">
+          <small class="form-text text-muted">Or upload a photo directly</small>
         </div>
         <div class="form-group">
           <label>Caption (HTML allowed)</label>
@@ -221,6 +225,10 @@ function addMetadataImage(organism) {
     `;
     
     container.insertAdjacentHTML('beforeend', html);
+    
+    // Attach upload handler to the new image item
+    const newItem = container.lastElementChild;
+    attachImageUploadHandler(newItem, organism);
 }
 
 function removeMetadataImage(organism, index) {
@@ -598,3 +606,59 @@ function togglePath(button, organism_path, organism) {
         button.innerHTML = '<i class="fa fa-folder-open"></i> Hide Path';
     }
 }
+
+function attachImageUploadHandler(imageItemElement, organism) {
+  const uploadBtn = imageItemElement.querySelector('.upload-image-btn');
+  const fileInput = imageItemElement.querySelector('.image-upload-input');
+  const fileNameInput = imageItemElement.querySelector('.image-file');
+  
+  uploadBtn.addEventListener('click', function() {
+    fileInput.click();
+  });
+  
+  fileInput.addEventListener('change', function(e) {
+    if (this.files.length > 0) {
+      const file = this.files[0];
+      const formData = new FormData();
+      formData.append('upload_image', true);
+      formData.append('image_file', file);
+      
+      // Show loading state
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = 'Uploading...';
+      
+      fetch('manage_organisms.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload';
+        
+        if (data.success) {
+          fileNameInput.value = data.filename;
+          alert('Image uploaded successfully!');
+        } else {
+          alert('Upload failed: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(error => {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload';
+        alert('Upload error: ' + error.message);
+      });
+    }
+  });
+}
+
+// Attach handlers to all existing image items when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  const imageContainers = document.querySelectorAll('[id^="images-container-"]');
+  imageContainers.forEach(container => {
+    const organism = container.id.replace('images-container-', '');
+    container.querySelectorAll('.image-item').forEach(item => {
+      attachImageUploadHandler(item, organism);
+    });
+  });
+});

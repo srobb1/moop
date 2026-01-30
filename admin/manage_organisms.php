@@ -15,6 +15,10 @@ $taxonomy_tree_file = $config->getPath('metadata_path') . '/taxonomy_tree_config
 // Get all organisms info once (used by both AJAX handler and page display)
 $organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);
 
+// Handle image upload via AJAX
+include_once __DIR__ . '/api/handle_image_upload.php';
+handleImageUpload($config);
+
 // Handle standard AJAX fix permissions request
 handleAdminAjax(function($action) use ($organisms) {
     // Handle organism-specific actions

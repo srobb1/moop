@@ -862,8 +862,12 @@
                   <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataImage('<?= $org_safe ?>', <?= $idx ?>)" style="float: right;">Remove</button>
                   <div class="form-group mb-3">
                     <label>Image File</label>
-                    <input type="text" class="form-control image-file" value="<?= htmlspecialchars($image['file'] ?? '') ?>" placeholder="e.g., organism_image.jpg">
-                    <small class="text-muted">Place images in /moop/images/ directory</small>
+                    <div class="input-group">
+                      <input type="text" class="form-control image-file" value="<?= htmlspecialchars($image['file'] ?? '') ?>" placeholder="e.g., organism_image.jpg">
+                      <button type="button" class="btn btn-outline-secondary upload-image-btn">Upload</button>
+                    </div>
+                    <input type="file" class="image-upload-input" style="display:none;" accept="image/*">
+                    <small class="form-text text-muted">Or upload a photo directly</small>
                   </div>
                   <div class="form-group">
                     <label>Caption (HTML allowed)</label>
