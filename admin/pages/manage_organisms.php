@@ -228,7 +228,7 @@
              <tr>
                <td>
                <strong>
-                 <a href="../../tools/organism.php?organism=<?= urlencode($organism) ?>" target="_blank" title="View organism page">
+                 <a href="../tools/organism.php?organism=<?= urlencode($organism) ?>" target="_blank" title="View organism page">
                    <?= htmlspecialchars($organism) ?>
                    <i class="fa fa-external-link-alt" style="font-size: 0.85em; margin-left: 0.25em;"></i>
                  </a>
