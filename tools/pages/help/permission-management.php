@@ -294,6 +294,22 @@
         </div>
       </div>
 
+      <!-- Admin Tool Section -->
+      <div class="card shadow-sm border-0 rounded-3 mb-4">
+        <div class="card-body p-4">
+          <h3 class="fw-bold text-dark mb-3">Permission Management Tool</h3>
+          <p class="text-muted mb-3">
+            MOOP provides an admin tool to identify and fix permission issues automatically. Access it at:
+          </p>
+          <p class="text-muted mb-0">
+            <strong>Admin Panel → Filesystem Permissions</strong> or navigate directly to <code>admin/manage_filesystem_permissions.php</code>
+          </p>
+          <p class="text-muted mt-2 small">
+            This tool scans all critical MOOP directories and provides one-click fixes for most permission issues, or clear instructions for manual fixes when needed.
+          </p>
+        </div>
+      </div>
+
       <!-- Related Topics Section -->
       <div class="card shadow-sm border-0 rounded-3 mb-4">
         <div class="card-body p-4">
