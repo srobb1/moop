@@ -1547,7 +1547,7 @@ function generateQueryScaleTicks($query_length) {
 
 /**
  * Generate query scale ruler with intelligent tick spacing
- * Ported from locBLAST unit() function - displays as positioned overlay
+ * Original MOOP implementation displaying as positioned overlay
  * Includes horizontal query bar representation aligned with HSP boxes
  * Tick lines are positioned absolutely and will be clipped by parent container
  * 
