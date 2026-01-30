@@ -1,0 +1,39 @@
+# MOOP Database Tools Conda Environment
+# 
+# Full environment with all analysis tools and dependencies
+# 
+# Installation:
+#   mamba env create -f environment.yml
+#   conda env create -f environment.yml
+# 
+# Activation:
+#   conda activate moop-dbtools
+#   mamba activate moop-dbtools
+#
+# Optional: Edit this file to remove tools you don't need:
+#   - Remove 'diamond' if you have it installed elsewhere (saves disk space)
+#   - Remove 'interproscan' if you don't need protein domain analysis (saves ~1-2 GB)
+#
+# Minimal alternative (no analysis tools):
+#   conda create -n moop-dbtools-minimal -c bioconda -c conda-forge \
+#     perl perl-dbi perl-dbd-sqlite
+
+name: moop-dbtools
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+
+dependencies:
+  # Core Perl dependencies for database operations
+  - perl
+  - perl-dbi
+  - perl-dbd-sqlite
+  
+  # Analysis tools (optional - can be commented out to save space)
+  - diamond      # BLASTP protein alignment (6.3.3+)
+  - interproscan # Protein domain analysis (5.5+)
+  
+  # Utilities
+  - curl
+  - wget
