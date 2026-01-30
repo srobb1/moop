@@ -89,8 +89,8 @@ mamba remove diamond interproscan
 **Using External Tools:**
 
 You can still use our Perl parsing scripts with tools installed elsewhere:
-- Have DIAMOND on your system? Use `parse_diamondBlast2moopTSV.pl` with your own DIAMOND installation
-- Have InterProScan installed? Use `parse_interproscan2moopTSV.pl` with your own InterProScan
+- Have DIAMOND on your system? Use `parse_DIAMOND_to_MOOP_TSV.pl` with your own DIAMOND installation
+- Have InterProScan installed? Use `parse_InterProScan_to_MOOP_TSV.pl` with your own InterProScan
 - No need for conda at all if you already have these tools!
 
 If you already have Perl, DBI, and DBD::SQLite installed elsewhere, you don't need conda just for database loading.
@@ -161,7 +161,7 @@ conda activate moop-dbtools
 
 **Convert GFF to MOOP gene format:**
 ```bash
-perl make_moopFeatureTable_fromGFF.pl genomic.gff organisms.tsv Chamaeleo calyptratus CCA3 > genes.tsv
+perl parse_GFF3_to_MOOP_TSV.pl genomic.gff3 organisms.tsv Chamaeleo calyptratus CCA3 > genes.tsv
 ```
 
 **Create empty database:**
@@ -186,7 +186,7 @@ diamond blastp --ultra-sensitive --evalue 1e-5 --query proteins.fa --db ref.dmnd
 
 **Parse DIAMOND results:**
 ```bash
-perl parse_diamondBlast2moopTSV.pl hits.tsv "Database Name" "2025-06-17" "http://db.url" "http://accession.url/"
+perl parse_DIAMOND_to_MOOP_TSV.pl hits.tsv "Database Name" "2025-06-17" "http://db.url" "http://accession.url/"
 ```
 
 **Run InterProScan protein domain analysis:**
@@ -196,7 +196,7 @@ interproscan.sh -i proteins.fa -f tsv -o proteins_interpro.tsv
 
 **Parse InterProScan results:**
 ```bash
-perl parse_interproscan2moopTSV.pl proteins_interpro.tsv
+perl parse_InterProScan_to_MOOP_TSV.pl proteins_interpro.tsv
 ```
 This automatically generates multiple MOOP-format TSV files:
 - One file per analysis type (Pfam, PANTHER, InterPro, etc.)
@@ -219,7 +219,7 @@ Aeorestes	cinereus	Hoary bat	ACI1	DNAzoo	GCA_011751095.1	257879	mRNA,gene
 EOF
 
 # 2. Convert GFF to MOOP gene TSV format
-perl make_moopFeatureTable_fromGFF.pl genomic.gff organisms.tsv Chamaeleo calyptratus CCA3 > genes.tsv
+perl parse_GFF3_to_MOOP_TSV.pl genomic.gff3 organisms.tsv Chamaeleo calyptratus CCA3 > genes.tsv
 
 # 3. Create empty database
 sqlite3 organism.sqlite < create_schema_sqlite.sql
@@ -235,7 +235,7 @@ diamond blastp --ultra-sensitive --evalue 1e-5 \
   --outfmt 6 qseqid sseqid stitle evalue
 
 # 6. Parse DIAMOND results to MOOP format
-perl parse_diamondBlast2moopTSV.pl tophit.tsv "UniProtKB/Swiss-Prot" "2025-06-17" \
+perl parse_DIAMOND_to_MOOP_TSV.pl tophit.tsv "UniProtKB/Swiss-Prot" "2025-06-17" \
   "https://www.uniprot.org" "https://www.uniprot.org/uniprotkb/"
 
 # 7. Load annotations into database
@@ -257,7 +257,7 @@ for organism in "Chamaeleo calyptratus CCA3" "Aeorestes cinereus GCA_011751095.1
   read genus species accession <<< "$organism"
   
   # Convert GFF to MOOP format
-  perl make_moopFeatureTable_fromGFF.pl ${genus}_${species}.gff organisms.tsv \
+  perl parse_GFF3_to_MOOP_TSV.pl ${genus}_${species}.gff3 organisms.tsv \
     $genus $species $accession > ${genus}_${species}.genes.tsv
   
   # Load into database
@@ -276,11 +276,11 @@ cd test_data
 cat organisms.tsv
 
 # Extract features from test GFF file
-perl ../make_moopFeatureTable_fromGFF.pl genomic.gff organisms.tsv Chamaeleo calyptratus CCA3
+perl ../parse_GFF3_to_MOOP_TSV.pl genomic.gff3 organisms.tsv Chamaeleo calyptratus CCA3
 
 # Create database and load genes
 sqlite3 test_organism.sqlite < ../create_schema_sqlite.sql
-perl ../make_moopFeatureTable_fromGFF.pl genomic.gff organisms.tsv Chamaeleo calyptratus CCA3 > features.tsv
+perl ../parse_GFF3_to_MOOP_TSV.pl genomic.gff3 organisms.tsv Chamaeleo calyptratus CCA3 > features.tsv
 perl ../import_genes_sqlite.pl test_organism.sqlite features.tsv
 
 # Verify database loaded
@@ -291,10 +291,10 @@ sqlite3 test_organism.sqlite "SELECT COUNT(*) FROM feature;"
 
 | Script | Purpose | Input | Output |
 |--------|---------|-------|--------|
-| `make_moopFeatureTable_fromGFF.pl` | Convert GFF to MOOP format | GFF3 + organisms.tsv | genes.tsv with headers |
+| `parse_GFF3_to_MOOP_TSV.pl` | Convert GFF to MOOP format | GFF3 + organisms.tsv | genes.tsv with headers |
 | `import_genes_sqlite.pl` | Load gene features | genes.tsv | Updated organism.sqlite |
 | `load_annotations_fast.pl` | Load annotations | annotations.tsv | Updated organism.sqlite |
-| `parse_diamondBlast2moopTSV.pl` | Convert DIAMOND output | tophit.tsv | `*_homologs.moop.tsv` |
+| `parse_DIAMOND_to_MOOP_TSV.pl` | Convert DIAMOND output | tophit.tsv | `*_homologs.moop.tsv` |
 | `create_schema_sqlite.sql` | Database schema | - | organism.sqlite |
 | `setup_new_db_and_load_data_fast_per_org.sh` | Orchestrate loading | - | Runs all steps |
 

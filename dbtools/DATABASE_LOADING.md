@@ -54,11 +54,11 @@ Chamaeleo	calyptratus	Veiled Chameleon	CCA3	SIMR	CCA3	179908	mRNA,gene	...
 Then convert your GFF file to MOOP TSV format:
 
 ```bash
-perl make_moopFeatureTable_fromGFF.pl genomic.gff organisms.tsv Chamaeleo calyptratus CCA3 > genes.tsv
+perl parse_GFF3_to_MOOP_TSV.pl genomic.gff3 organisms.tsv Chamaeleo calyptratus CCA3 > genes.tsv
 ```
 
 **Parameters:**
-- `genomic.gff` - Your GFF3 annotation file
+- `genomic.gff3` - Your GFF3 annotation file
 - `organisms.tsv` - Organisms metadata file
 - `Chamaeleo calyptratus CCA3` - Organism identifiers (genus, species, accession)
 - Output: `genes.tsv` (MOOP format with metadata headers)
@@ -145,10 +145,10 @@ PROTEIN_002	Q16342	Programmed cell death protein 2	2.04e-210
 
 ## Scripts Overview
 
-### `make_moopFeatureTable_fromGFF.pl`
+### `parse_GFF3_to_MOOP_TSV.pl`
 Converts GFF3 annotation files to MOOP TSV format for database loading. Reads organism metadata from a centralized TSV file.
 
-**Usage:** `perl make_moopFeatureTable_fromGFF.pl <genomic.gff> <organisms.tsv> <genus> <species> <accession>`
+**Usage:** `perl parse_GFF3_to_MOOP_TSV.pl <genomic.gff3> <organisms.tsv> <genus> <species> <accession>`
 
 **Features:**
 - Parses GFF3 files with ID, Name, Note, and Parent attributes
