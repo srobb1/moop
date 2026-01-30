@@ -4,9 +4,10 @@
  * Parses BLAST XML/text output and creates interactive visualizations
  * Displays: summary table, coverage maps, alignment viewer
  * 
- * HSP visualization with connecting lines adapted from locBLAST
- * (https://github.com/cobilab/locBLAST)
- * Licensed under GNU General Public License v3.0 (GPL-3.0)
+ * All code is original MOOP implementation using HTML/CSS
+ * No code derived from other projects; HSP visualization concept
+ * informed by study of locBLAST (https://github.com/cobilab/locBLAST)
+ * See notes/THIRD_PARTY_LICENSES.md for details
  */
 
 /**
