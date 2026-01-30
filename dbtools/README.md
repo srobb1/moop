@@ -29,6 +29,63 @@ Complete workflow for:
 
 Start here if you want to find homologous proteins for your genes.
 
+## Custom Analysis Formats
+
+**You are not limited to DIAMOND and InterProScan!** Any analysis tool output can be formatted to load into MOOP as long as it follows the MOOP annotation format rules:
+
+### Required Format for Annotations
+
+All annotation TSV files must have:
+
+**1. Metadata Headers (lines starting with `##`)**
+```
+## Annotation Source: Your Tool Name
+## Annotation Source Version: 1.0.0
+## Annotation Accession URL: https://example.com/
+## Annotation Source URL: https://example.com/
+## Annotation Type: Protein Domains | Gene Families | Gene Ontology | Custom
+## Annotation Creation Date: 2025-01-30
+```
+
+**2. Tab-Delimited Data Format**
+
+Column order matters. Column headers can be anything, but data must follow this format:
+
+```
+## Gene    Accession    Description    Score
+feature_uniquename    hit_id    hit_description    score_value
+```
+
+Where:
+- **Column 1 (feature_uniquename):** Must match `This_Uniquename` from your genes.tsv file
+- **Column 2 (hit_id):** Accession/ID for the hit in the reference database
+- **Column 3 (hit_description):** Text description of the hit
+- **Column 4 (score):** Numerical score, e-value, confidence, or other assessment metric
+
+### Example Custom Annotation Format
+
+```
+## Annotation Source: MyProteinPredictor
+## Annotation Source Version: 2.5.1
+## Annotation Accession URL: https://myserver.org/protein/
+## Annotation Source URL: https://myserver.org/
+## Annotation Type: Protein Families
+## Annotation Creation Date: 2025-01-30
+## MyGene    PredictorHit    FamilyInfo    Confidence
+CCA3t004839001.1    PRED001    Family_ABC    0.95
+CCA3t004843001.1    PRED002    Family_XYZ    0.87
+CCA3t004844001.1    PRED003    Family_ABC    0.92
+```
+
+### How to Load Your Custom Annotations
+
+Once formatted correctly:
+
+```bash
+# Load your custom annotations into the organism database
+perl load_annotations_fast.pl Chamaeleo_calyptratus.sqlite MyProteinPredictor.moop.tsv
+```
+
 ## Installing Conda or Mamba
 
 You need a conda-compatible package manager **only if you want to use these database tools**. Choose from several options:
