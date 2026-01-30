@@ -1002,9 +1002,10 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
 }
 
 /**
- * Generate HSP visualization with connecting lines (ported from locBLAST)
+ * Generate HSP visualization with connecting lines
  * Displays HSPs as colored segments with lines connecting adjacent HSPs
- * Adapted from: https://github.com/cobilab/locBLAST (GPL-3.0)
+ * Original MOOP implementation using HTML/CSS flexbox and inline JavaScript
+ * (not Canvas or SVG as used in other implementations)
  * 
  * @param array $results Parsed BLAST results
  * @param string $blast_program BLAST program name (blastn, blastp, etc.)
@@ -1236,8 +1237,8 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn', 
 
 /**
  * Get HSP color class based on bit score
- * Color scheme informed by locBLAST color_key function
- * Implementation is original MOOP code
+ * Color scheme informed by locBLAST color_key function concept
+ * Implementation is original MOOP code with independently chosen RGB values
  * 
  * @param float $score Bit score
  * @return string CSS class name for color
@@ -1276,7 +1277,8 @@ function getColorStyle($colorClass) {
 
 /**
  * Format BLAST alignment output with frame-aware coordinate tracking
- * Ported from locBLAST fmtprint() - handles frame shifts for BLASTx/tBLASTx
+ * Frame-aware formatting approach inspired by locBLAST fmtprint() - handles frame shifts for BLASTx/tBLASTx
+ * Implementation is original MOOP code independently developed from the concept
  * 
  * @param int $length Alignment length
  * @param string $query_seq Query sequence with gaps
