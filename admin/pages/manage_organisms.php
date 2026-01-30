@@ -227,7 +227,12 @@
            <?php foreach ($organisms as $organism => $data): ?>
              <tr>
                <td>
-               <strong><?= htmlspecialchars($organism) ?></strong>
+               <strong>
+                 <a href="../../tools/organism.php?organism=<?= urlencode($organism) ?>" target="_blank" title="View organism page">
+                   <?= htmlspecialchars($organism) ?>
+                   <i class="fa fa-external-link-alt" style="font-size: 0.85em; margin-left: 0.25em;"></i>
+                 </a>
+               </strong>
                  <?php if (isset($data['info']['genus']) && isset($data['info']['species'])): ?>
                    <br><small class="text-muted"><em><?= htmlspecialchars($data['info']['genus']) ?> <?= htmlspecialchars($data['info']['species']) ?></em></small>
                  <?php endif; ?>
