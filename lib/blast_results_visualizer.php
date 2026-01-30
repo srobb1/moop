@@ -13,6 +13,7 @@
 /**
  * Parse BLAST results from XML output
  * Supports multiple queries, each with Hit/HSP hierarchy
+ * Original MOOP implementation - independently developed
  * 
  * @param string $blast_xml Raw BLAST XML output
  * @return array Array of parsed query results, each with hits array

@@ -43,12 +43,20 @@ The locBLAST repository was cloned during development to:
   - No code derived from locBLAST
   - Color scheme concept informed by locBLAST's bit-score coloring approach (RGB values independently chosen)
 
-**Key Functions (all original):**
-- `generateCompleteBlastVisualization()` - Main visualization controller
-- `generateHspVisualizationWithLines()` - HSP display with interactive features
-- `formatBlastAlignment()` - Alignment text formatting (inspired by locBLAST frame-aware formatting concept)
-- `parseBlastXML()` - XML parsing and data extraction
-- `getHspColorClass()` - Color scheme based on bit scores (concept informed by locBLAST, but original implementation)
+**Key Functions and Attribution:**
+
+All functions below are original MOOP implementations, with some informed by locBLAST concepts:
+
+- `generateCompleteBlastVisualization()` - Main visualization controller (original)
+- `generateHspVisualizationWithLines()` - HSP display with interactive features using HTML/CSS flexbox (original)
+- `generateQueryScale()` - Query scale ruler with tick spacing (original implementation)
+- `parseBlastXML()` - XML parsing and data extraction (original)
+- `formatBlastAlignment()` - Alignment text formatting
+  - **Concept**: Inspired by locBLAST's `fmtprint()` function for frame-aware coordinate tracking in BLASTx/tBLASTx
+  - **Implementation**: Independently developed with original PHP logic for handling frame shifts
+- `getHspColorClass()` - Color scheme based on bit scores
+  - **Concept**: Informed by locBLAST's `color_key()` function for score-based coloring
+  - **Implementation**: Original PHP code with independently chosen RGB values
 
 ### Code Architecture
 
