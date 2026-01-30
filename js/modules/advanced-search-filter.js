@@ -142,7 +142,7 @@ class AdvancedSearchFilter {
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary deselect-type" 
                                     data-type="${type}">
-                                None
+                                Deselect All
                             </button>
                         </div>
                     </div>
