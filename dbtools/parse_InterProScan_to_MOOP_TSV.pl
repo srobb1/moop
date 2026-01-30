@@ -158,9 +158,9 @@ sub setup_go_reference {
     }
     
     print STDERR "Downloading GO.obo file (first run)...\n";
-    my $curl_result = system('curl -sOL http://purl.obolibrary.org/obo/go.obo 2>/dev/null');
+    my $curl_output = `curl -sOL http://purl.obolibrary.org/obo/go.obo 2>/dev/null`;
     
-    if ($curl_result == 0 && -e 'go.obo') {
+    if (-e 'go.obo') {
         print STDERR "Downloaded go.obo successfully. Parsing...\n";
         parse_go_obo_to_tsv();
     } else {
