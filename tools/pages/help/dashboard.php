@@ -17,6 +17,7 @@ $tutorials = [
         'description' => 'Learn the basics of MOOP and how to navigate the platform.',
         'icon' => 'fa-rocket',
         'color' => 'success',
+        'category' => 'general',
     ],
     [
         'id' => 'organism-selection',
@@ -24,6 +25,7 @@ $tutorials = [
         'description' => 'Choose organisms by group or use the interactive taxonomy tree for custom selections.',
         'icon' => 'fa-dna',
         'color' => 'info',
+        'category' => 'general',
     ],
     [
         'id' => 'taxonomy-tree-management',
@@ -31,6 +33,7 @@ $tutorials = [
         'description' => 'Understand how the taxonomy tree works, how it\'s organized, and how administrators can manage it.',
         'icon' => 'fa-tree',
         'color' => 'success',
+        'category' => 'technical',
     ],
     [
         'id' => 'search-and-filter',
@@ -38,6 +41,7 @@ $tutorials = [
         'description' => 'Use advanced search and filtering to find specific sequences and annotations.',
         'icon' => 'fa-search',
         'color' => 'primary',
+        'category' => 'general',
     ],
     [
         'id' => 'blast-tutorial',
@@ -45,6 +49,7 @@ $tutorials = [
         'description' => 'Learn how to use BLAST to compare sequences across organisms.',
         'icon' => 'fa-exchange-alt',
         'color' => 'warning',
+        'category' => 'general',
     ],
     [
         'id' => 'multi-organism-analysis',
@@ -52,6 +57,7 @@ $tutorials = [
         'description' => 'Compare and analyze data across multiple organisms simultaneously.',
         'icon' => 'fa-project-diagram',
         'color' => 'danger',
+        'category' => 'general',
     ],
     [
         'id' => 'data-export',
@@ -59,6 +65,7 @@ $tutorials = [
         'description' => 'Download sequences and data in various formats for external analysis.',
         'icon' => 'fa-download',
         'color' => 'secondary',
+        'category' => 'general',
     ],
     [
         'id' => 'organism-data-organization',
@@ -66,6 +73,7 @@ $tutorials = [
         'description' => 'Technical guide on database schema, file organization, and data structure of organism data.',
         'icon' => 'fa-database',
         'color' => 'dark',
+        'category' => 'technical',
     ],
     [
         'id' => 'generating-annotations-and-databases',
@@ -73,6 +81,7 @@ $tutorials = [
         'description' => 'Guide for generating functional annotations and creating/loading organism.sqlite databases.',
         'icon' => 'fa-flask',
         'color' => 'purple',
+        'category' => 'technical',
     ],
     [
         'id' => 'organism-setup-and-searches',
@@ -80,6 +89,7 @@ $tutorials = [
         'description' => 'Technical guide for setting up new organisms, configuring metadata, and understanding search mechanics and the parent page.',
         'icon' => 'fa-cogs',
         'color' => 'secondary',
+        'category' => 'technical',
     ],
     [
         'id' => 'system-requirements',
@@ -87,6 +97,7 @@ $tutorials = [
         'description' => 'Hardware sizing, performance benchmarks, resource planning, and cost estimation based on organism scale.',
         'icon' => 'fa-server',
         'color' => 'info',
+        'category' => 'technical',
     ],
     [
         'id' => 'function-registry-management',
@@ -94,6 +105,7 @@ $tutorials = [
         'description' => 'Understand the function registry system, how registries are created and managed, and how to use them for custom functions.',
         'icon' => 'fa-list',
         'color' => 'success',
+        'category' => 'technical',
     ],
     [
         'id' => 'permission-management',
@@ -101,6 +113,7 @@ $tutorials = [
         'description' => 'Learn how to manage file permissions, fix permission issues, and understand why permissions are critical to MOOP.',
         'icon' => 'fa-lock',
         'color' => 'warning',
+        'category' => 'technical',
     ],
 ];
 ?>
@@ -123,10 +136,32 @@ $tutorials = [
     </div>
   </div>
 
+  <!-- Search Section -->
+  <div class="mb-5">
+    <div class="input-group">
+      <input type="text" id="helpSearch" class="form-control form-control-lg" placeholder="Search help topics..." aria-label="Search help topics">
+      <span class="input-group-text bg-primary text-white">
+        <i class="fa fa-search"></i>
+      </span>
+    </div>
+    <small class="text-muted d-block mt-2">
+      <span id="searchInfo">Showing all <?= count($tutorials) ?> topics</span>
+    </small>
+  </div>
+
+  <!-- Category Filter Section -->
+  <div class="mb-4">
+    <div class="btn-group" role="group" aria-label="Filter by category">
+      <button type="button" class="btn btn-outline-primary active" data-category="all">All Topics</button>
+      <button type="button" class="btn btn-outline-success" data-category="general">General Use</button>
+      <button type="button" class="btn btn-outline-warning" data-category="technical">Technical (Admin)</button>
+    </div>
+  </div>
+
   <!-- Tutorials Grid -->
-  <div class="row">
+  <div class="row" id="tutorialsGrid">
     <?php foreach ($tutorials as $tutorial): ?>
-      <div class="col-md-6 col-lg-4 mb-4">
+      <div class="col-md-6 col-lg-4 mb-4 tutorial-item" data-category="<?= htmlspecialchars($tutorial['category']) ?>" data-searchable="<?= strtolower(htmlspecialchars($tutorial['title'] . ' ' . $tutorial['description'])) ?>">
         <a href="help.php?topic=<?= htmlspecialchars($tutorial['id']) ?>" class="text-decoration-none">
           <div class="card h-100 shadow-sm border-0 rounded-3 tutorial-card">
             <div class="card-body text-center d-flex flex-column">
@@ -142,6 +177,11 @@ $tutorials = [
       </div>
     <?php endforeach; ?>
   </div>
+
+  <div id="noResults" class="text-center text-muted py-5" style="display: none;">
+    <i class="fa fa-search fa-3x mb-3 opacity-50"></i>
+    <p class="fs-5">No help topics found matching your search.</p>
+  </div>
 </div>
 
 <style>
@@ -153,4 +193,68 @@ $tutorials = [
   transform: translateY(-5px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
 }
+
+.tutorial-item.hidden {
+  display: none;
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('helpSearch');
+  const categoryButtons = document.querySelectorAll('[data-category]');
+  const tutorialItems = document.querySelectorAll('.tutorial-item');
+  const searchInfo = document.getElementById('searchInfo');
+  const noResults = document.getElementById('noResults');
+  
+  let activeCategory = 'all';
+  let searchTerm = '';
+
+  function filterTutorials() {
+    let visibleCount = 0;
+
+    tutorialItems.forEach(item => {
+      const itemCategory = item.dataset.category;
+      const itemSearchable = item.dataset.searchable;
+      
+      const matchesCategory = activeCategory === 'all' || itemCategory === activeCategory;
+      const matchesSearch = searchTerm === '' || itemSearchable.includes(searchTerm.toLowerCase());
+      
+      if (matchesCategory && matchesSearch) {
+        item.classList.remove('hidden');
+        visibleCount++;
+      } else {
+        item.classList.add('hidden');
+      }
+    });
+
+    // Show/hide "no results" message
+    if (visibleCount === 0) {
+      noResults.style.display = 'block';
+      searchInfo.textContent = 'No topics found';
+    } else {
+      noResults.style.display = 'none';
+      searchInfo.textContent = `Showing ${visibleCount} of ${tutorialItems.length} topics`;
+    }
+  }
+
+  // Search input listener
+  searchInput.addEventListener('input', function() {
+    searchTerm = this.value.trim();
+    filterTutorials();
+  });
+
+  // Category filter buttons
+  document.querySelectorAll('.btn-group .btn').forEach(button => {
+    button.addEventListener('click', function() {
+      // Update active button
+      document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+      this.classList.add('active');
+      
+      // Update active category
+      activeCategory = this.dataset.category || 'all';
+      filterTutorials();
+    });
+  });
+});
+</script>
