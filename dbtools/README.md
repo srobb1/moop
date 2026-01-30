@@ -248,18 +248,34 @@ perl parse_DIAMOND_to_MOOP_TSV.pl hits.tsv "Database Name" "2025-06-17" "http://
 
 **Run InterProScan protein domain analysis:**
 ```bash
+# On the machine where InterProScan is installed:
 interproscan.sh -i proteins.fa -f tsv -o proteins_interpro.tsv
+
+# Capture the InterProScan version (optional but recommended)
+interproscan.sh --version > interproscan.version
 ```
 
 **Parse InterProScan results:**
 ```bash
+# If you have the interproscan.version file in the same directory:
 perl parse_InterProScan_to_MOOP_TSV.pl proteins_interpro.tsv
+
+# Or if running on a different machine, provide version explicitly:
+perl parse_InterProScan_to_MOOP_TSV.pl proteins_interpro.tsv --version 5.72-103.0
+
+# If version cannot be determined, script will use 'none_provided' with a warning
 ```
+
 This automatically generates multiple MOOP-format TSV files:
 - One file per analysis type (Pfam, PANTHER, InterPro, etc.)
 - InterPro2GO.iprscan.moop.tsv and PANTHER2GO.iprscan.moop.tsv for Gene Ontology terms
-- Detects InterProScan version automatically
+- Detects InterProScan version automatically (or accepts explicit version)
 - Caches GO.obo reference file for subsequent runs
+
+**Note:** If running InterProScan on one machine and parsing results on another:
+1. On analysis machine: `interproscan.sh --version > interproscan.version`
+2. Transfer both `proteins_interpro.tsv` and `interproscan.version` to parsing machine
+3. Run parser: `perl parse_InterProScan_to_MOOP_TSV.pl proteins_interpro.tsv`
 
 ## Comprehensive Workflow Examples
 

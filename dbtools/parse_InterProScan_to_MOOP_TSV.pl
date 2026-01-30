@@ -6,10 +6,14 @@ sub usage {
     my ($msg) = @_;
     print STDERR "ERROR: $msg\n" if $msg;
     print STDERR <<'EOF';
-Usage: parse_InterProScan_to_MOOP_TSV.pl <interproscan.tsv>
+Usage: parse_InterProScan_to_MOOP_TSV.pl <interproscan.tsv> [--version VERSION_STRING]
 
 Required arguments:
   interproscan.tsv    InterProScan output file (TSV format)
+
+Optional arguments:
+  --version VERSION   Explicitly provide InterProScan version (e.g., "5.72-103.0")
+                     If not provided, script will attempt to detect automatically
 
 Input format:
   InterProScan TSV output with columns:
@@ -22,25 +26,45 @@ Output files created:
   - PANTHER2GO.iprscan.moop.tsv (GO terms from PANTHER)
 
 Features:
-  - Automatically detects InterProScan version
+  - Automatically detects InterProScan version (or accepts explicit version)
   - Downloads GO.obo file if not present (cached locally)
   - Processes domain hits, gene families, and Gene Ontology terms
   - Generates MOOP-format TSV with metadata headers
 
-Example:
+Examples:
+  # Automatic version detection
   perl parse_InterProScan_to_MOOP_TSV.pl proteins_interpro.tsv
 
+  # Explicit version provided
+  perl parse_InterProScan_to_MOOP_TSV.pl proteins_interpro.tsv --version 5.72-103.0
+
+  # Get version from interproscan.sh and save to file (run on analysis machine)
+  interproscan.sh --version > interproscan.version
+  # Then use the version string in the next run on a different machine
+
 Requirements:
-  - InterProScan installed and in PATH
   - curl or wget (to download GO.obo if needed)
+  - If --version not provided: InterProScan installed and in PATH
 EOF
     exit 1;
 }
 
-# Validate arguments
-usage("Missing required arguments") unless @ARGV == 1;
+# Parse arguments
+usage("Missing required arguments") unless @ARGV >= 1;
 
 my $iprscan_tsv = shift;
+my $version;
+
+# Check for optional --version argument
+while (@ARGV) {
+    my $arg = shift;
+    if ($arg eq '--version') {
+        $version = shift;
+        usage("--version requires a version string") unless $version;
+    } else {
+        usage("Unknown argument: $arg");
+    }
+}
 
 # Validate input file
 usage("InterProScan file does not exist: $iprscan_tsv") unless -e $iprscan_tsv;
@@ -49,11 +73,41 @@ usage("InterProScan file is not readable: $iprscan_tsv") unless -r $iprscan_tsv;
 my %annot;
 my $GOTSV = 'go.tsv';
 
-# Get InterProScan version
-my $version = get_interproscan_version();
+# Try to get InterProScan version
 if (!$version) {
-    print STDERR "WARNING: Could not determine InterProScan version. Using 'unknown'\n";
-    $version = 'unknown';
+    # Try to read from interproscan.version file
+    if (-e 'interproscan.version') {
+        open my $fh, '<', 'interproscan.version' or do {
+            print STDERR "WARNING: Found interproscan.version file but could not read it\n";
+        };
+        if ($fh) {
+            chomp(my $file_version = <$fh>);
+            close $fh;
+            if ($file_version) {
+                $version = $file_version;
+                print STDERR "Read InterProScan version from interproscan.version: $version\n";
+            }
+        }
+    }
+    
+    # If still no version, try to detect from interproscan.sh command
+    if (!$version) {
+        $version = get_interproscan_version();
+    }
+    
+    # If still no version, use none_provided
+    if (!$version) {
+        $version = 'none_provided';
+        print STDERR "WARNING: Could not determine InterProScan version\n";
+        print STDERR "  - interproscan.sh not found or not in PATH\n";
+        print STDERR "  - interproscan.version file not found\n";
+        print STDERR "  - --version argument not provided\n";
+        print STDERR "  Using: '$version'\n";
+        print STDERR "  To provide version explicitly:\n";
+        print STDERR "    1. On analysis machine: interproscan.sh --version > interproscan.version\n";
+        print STDERR "    2. Copy interproscan.version to this machine\n";
+        print STDERR "    3. Or use: perl parse_InterProScan_to_MOOP_TSV.pl file.tsv --version VERSION\n";
+    }
 }
 
 print STDERR "Using InterProScan version: $version\n";
