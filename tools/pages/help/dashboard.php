@@ -88,6 +88,13 @@ $tutorials = [
         'icon' => 'fa-server',
         'color' => 'info',
     ],
+    [
+        'id' => 'function-registry-management',
+        'title' => 'Function Registry Management (Technical)',
+        'description' => 'Understand the function registry system, how registries are created and managed, and how to use them for custom functions.',
+        'icon' => 'fa-list',
+        'color' => 'success',
+    ],
 ];
 ?>
 
