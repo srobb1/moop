@@ -167,7 +167,9 @@
                    </h6>
                    <div class="breadcrumb clear-initial-trail">
                      <?php 
-                     foreach ($lineage_with_counts as $item) {
+                     // Exclude the last item (organism's own genus/species)
+                     $lineage_display = array_slice($lineage_with_counts, 0, -1);
+                     foreach ($lineage_display as $item) {
                          $name = htmlspecialchars($item['name']);
                          $count = isset($item['count']) ? $item['count'] : 0;
                          $badge = $count > 0 ? " <span class=\"badge\">$count</span>" : '';
