@@ -340,15 +340,17 @@ class AnnotationSearch {
         } else {
             // Build jump-to navigation combined with results summary
             const organismCounts = {};
+            const uniqueFeatures = new Set();
             this.allResults.forEach(r => {
                 if (!organismCounts[r.organism]) {
                     organismCounts[r.organism] = 0;
                 }
                 organismCounts[r.organism]++;
+                uniqueFeatures.add(r.feature_uniquename);
             });
             
             let jumpToHtml = '<div class="alert alert-info mb-3">';
-            jumpToHtml += `<strong>Found ${this.allResults.length} matching annotation${this.allResults.length !== 1 ? 's' : ''} across ${Object.keys(organismCounts).length} feature${Object.keys(organismCounts).length !== 1 ? 's' : ''}:</strong> `;
+            jumpToHtml += `<strong>Found ${this.allResults.length} matching annotation${this.allResults.length !== 1 ? 's' : ''} across ${uniqueFeatures.size} feature${uniqueFeatures.size !== 1 ? 's' : ''}:</strong> `;
             
             Object.keys(organismCounts).forEach((org, idx) => {
                 const anchorId = 'results-' + org.replace(/[^a-zA-Z0-9]/g, '_');
