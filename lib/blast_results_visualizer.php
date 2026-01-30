@@ -1236,7 +1236,8 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn', 
 
 /**
  * Get HSP color class based on bit score
- * Mirrors locBLAST color_key function
+ * Color scheme informed by locBLAST color_key function
+ * Implementation is original MOOP code
  * 
  * @param float $score Bit score
  * @return string CSS class name for color

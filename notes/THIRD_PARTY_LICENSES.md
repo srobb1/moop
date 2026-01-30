@@ -41,12 +41,14 @@ The locBLAST repository was cloned during development to:
   - Inline JavaScript for interactivity (hit navigation, highlighting)
   - Color-coded alignments based on BLAST scores
   - No code derived from locBLAST
+  - Color scheme concept informed by locBLAST's bit-score coloring approach (RGB values independently chosen)
 
 **Key Functions (all original):**
 - `generateCompleteBlastVisualization()` - Main visualization controller
 - `generateHspVisualizationWithLines()` - HSP display with interactive features
-- `formatBlastAlignment()` - Alignment text formatting
+- `formatBlastAlignment()` - Alignment text formatting (inspired by locBLAST frame-aware formatting concept)
 - `parseBlastXML()` - XML parsing and data extraction
+- `getHspColorClass()` - Color scheme based on bit scores (concept informed by locBLAST, but original implementation)
 
 ### Code Architecture
 
