@@ -26,6 +26,13 @@ $tutorials = [
         'color' => 'info',
     ],
     [
+        'id' => 'taxonomy-tree-management',
+        'title' => 'Taxonomy Tree (In-Depth)',
+        'description' => 'Understand how the taxonomy tree works, how it\'s organized, and how administrators can manage it.',
+        'icon' => 'fa-tree',
+        'color' => 'success',
+    ],
+    [
         'id' => 'search-and-filter',
         'title' => 'Search & Filter',
         'description' => 'Use advanced search and filtering to find specific sequences and annotations.',
