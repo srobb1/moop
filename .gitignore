@@ -24,3 +24,4 @@ organisms/*log
 .php-cs-fixer.cache
 .DS_Store
 Thumbs.db
+/var/www/html/moop/dbtools/test_output/
