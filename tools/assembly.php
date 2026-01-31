@@ -79,6 +79,7 @@ $data = [
     'organism_name' => $organism_name,
     'organism_info' => $organism_info,
     'assembly_accession' => $assembly_info['genome_accession'] ?? '',
+    'assembly_name' => $assembly_info['genome_name'] ?? '',
     'site' => $site,
     'images_path' => $config->getString('images_path'),
     'absolute_images_path' => $config->getPath('absolute_images_path'),

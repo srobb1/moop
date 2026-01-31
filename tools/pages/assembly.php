@@ -132,7 +132,15 @@
 
   <!-- Assembly Downloads Section -->
   <?php
-  $fasta_files = getAssemblyFastaFiles($organism_name, $assembly_accession);
+  // Get both genome_name and genome_accession from database
+  list($genome_id, $genome_name, $genome_accession) = getAssemblyInfo($assembly_accession, $db_path);
+  // Try genome_name first, then fall back to genome_accession if no files found
+  $fasta_files = getAssemblyFastaFiles($organism_name, $genome_name);
+  $genome_directory = $genome_name;
+  if (empty($fasta_files)) {
+      $fasta_files = getAssemblyFastaFiles($organism_name, $genome_accession);
+      $genome_directory = $genome_accession;
+  }
   ?>
   
   <?php if (!empty($fasta_files)): ?>
@@ -147,20 +155,20 @@
                 $colorInfo = getColorClassOrStyle($file_info['color'] ?? '');
               ?>
               <div class="col-6 col-md-3">
-                <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&type=<?= urlencode($type) ?>" 
+                <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&type=<?= urlencode($type) ?>" 
                    class="btn <?= $colorInfo['class'] ?> w-100 py-4 fw-bold text-white"
                    style="border-radius: 0.75rem; font-size: 1rem; <?= $colorInfo['style'] ?>"
                    download>
-                  <i class="fa fa-download me-2"></i><?= htmlspecialchars($file_info['label']) ?>
-                </a>
-              </div>
-            <?php endforeach; ?>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <?php endif; ?>
+                   <i class="fa fa-download me-2"></i><?= htmlspecialchars($file_info['label']) ?>
+                 </a>
+               </div>
+             <?php endforeach; ?>
+           </div>
+         </div>
+       </div>
+     </div>
+   </div>
+   <?php endif; ?>
 
 </div>
 

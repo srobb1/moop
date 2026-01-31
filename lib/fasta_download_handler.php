@@ -15,6 +15,7 @@ session_start();
 // Get parameters
 $organism = trim($_GET['organism'] ?? '');
 $assembly = trim($_GET['assembly'] ?? '');
+$genome_directory = trim($_GET['genome_directory'] ?? '');
 $type = trim($_GET['type'] ?? '');
 
 include_once __DIR__ . '/../includes/config_init.php';
@@ -54,6 +55,12 @@ if (!has_assembly_access($organism, $assembly)) {
 
 // Find FASTA file
 $assembly_dir = "$organism_data/$organism/$assembly";
+
+// If genome_directory is provided, use that instead
+if (!empty($genome_directory)) {
+    $assembly_dir = "$organism_data/$organism/$genome_directory";
+}
+
 if (!is_dir($assembly_dir)) {
     http_response_code(404);
     die('Error: Assembly directory not found.');
