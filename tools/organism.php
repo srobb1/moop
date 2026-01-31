@@ -107,6 +107,7 @@ $data = [
     'organism_info' => $organism_info,
     'config' => $config,
     'site' => $site,
+    'organism_data' => $organism_data,
     'images_path' => $images_path,
     'absolute_images_path' => $absolute_images_path,
     'taxonomy_user_access' => $taxonomy_user_access,

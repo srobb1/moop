@@ -372,3 +372,39 @@ function verifyOrganismDatabase($organism_name, $organism_data_dir) {
     
     return $db_path;
 }
+
+/**
+ * Get all assemblies (genomes) for an organism from its database
+ * Filters by user access permissions
+ * 
+ * @param string $organism_name - Organism name
+ * @param string $organism_data_dir - Path to organism data directory
+ * @return array - Array of assembly accessions accessible to current user, or empty array if none
+ */
+function getOrganismAssemblies($organism_name, $organism_data_dir) {
+    $db_path = getOrganismDatabase($organism_name, $organism_data_dir);
+    
+    if (empty($db_path)) {
+        return [];
+    }
+    
+    try {
+        $dbh = new PDO("sqlite:" . $db_path);
+        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        $stmt = $dbh->query("SELECT genome_accession FROM genome ORDER BY genome_name ASC");
+        $genomes = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        // Filter by user access
+        $accessible = [];
+        foreach ($genomes as $assembly) {
+            if (has_assembly_access($organism_name, $assembly)) {
+                $accessible[] = $assembly;
+            }
+        }
+        
+        return $accessible;
+    } catch (PDOException $e) {
+        return [];
+    }
+}

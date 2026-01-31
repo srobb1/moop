@@ -204,31 +204,28 @@
               </div>
             </div>
           <?php endif; ?>
-
-          <!-- Compact Assemblies List -->
+    
+          <!-- Get accessible assemblies for this organism -->
           <?php
-          $organism_data = $config->getPath('organism_data');
-          $db_path = getOrganismDatabase($organism_name, $organism_data);
-          $compact_accessible_assemblies = [];
-          
-          if (!empty($db_path)) {
-              foreach ($group_data as $data) {
-                  if ($data['organism'] === $organism_name) {
-                      if (has_assembly_access($organism_name, $data['assembly'])) {
-                          $assembly_info = getAssemblyStats($data['assembly'], $db_path);
-                          if (!empty($assembly_info)) {
-                              $compact_accessible_assemblies[] = [
-                                  'accession' => $data['assembly'],
-                                  'genome_name' => $assembly_info['genome_name'] ?? '',
-                                  'genome_accession' => $assembly_info['genome_accession'] ?? $data['assembly']
-                              ];
-                          }
-                      }
-                  }
-              }
-          }
+          $accessible_assemblies = getOrganismAssemblies($organism_name, $organism_data);
           ?>
-          </div>
+    
+          <!-- Assemblies Section -->
+          <?php
+          if (!empty($accessible_assemblies)): ?>
+            <div class="mt-4 pt-3 border-top">
+              <h6 class="text-muted mb-3" style="font-weight: 600;">Assemblies</h6>
+              <div class="chip-container">
+                <?php foreach ($accessible_assemblies as $assembly): ?>
+                  <a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>" 
+                     class="assembly-chip">
+                    <?= htmlspecialchars($assembly) ?>
+                  </a>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          <?php endif; ?>
+
       </div>
     </div>
   </div>
@@ -267,64 +264,4 @@
     </div>
   <?php endif; ?>
 
-  <!-- Assemblies Section -->
-  <?php
-  // Get accessible assemblies for this organism
-  $group_data = getGroupData();
-  $accessible_assemblies = [];
   
-  foreach ($group_data as $data) {
-      if ($data['organism'] === $organism_name) {
-          if (has_assembly_access($organism_name, $data['assembly'])) {
-              $accessible_assemblies[] = $data['assembly'];
-          }
-      }
-  }
-  ?>
-  
-  <?php if (!empty($accessible_assemblies)): ?>
-  <div class="row mb-5">
-    <div class="col-12">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <h3 class="card-title mb-4 assembly-title">Available Assemblies</h3>
-          <div class="row g-3">
-            <?php foreach ($accessible_assemblies as $assembly): ?>
-              <?php $fasta_files = getAssemblyFastaFiles($organism_name, $assembly); ?>
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100 shadow-sm organism-card">
-                  <div class="card-body text-center">
-                    <a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>" 
-                       target="_blank"
-                       class="text-decoration-none">
-                      <h5 class="card-title mb-3 assembly-card-title">
-                        <?= htmlspecialchars($assembly) ?> <i class="fa fa-external-link-alt"></i>
-                      </h5>
-                    </a>
-                    <?php if (!empty($fasta_files)): ?>
-                      <div class="mt-3 pt-2 border-top">
-                        <?php foreach ($fasta_files as $type => $file_info): ?>
-                          <?php 
-                            $colorInfo = getColorClassOrStyle($file_info['color'] ?? '');
-                          ?>
-                          <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>&type=<?= urlencode($type) ?>" 
-                             class="btn btn-sm <?= $colorInfo['class'] ?> w-100 mb-2 text-white"
-                             <?php if ($colorInfo['style']): ?>style="<?= $colorInfo['style'] ?>"<?php endif; ?>
-                             download>
-                            <i class="fa fa-download"></i> <?= htmlspecialchars($file_info['label']) ?>
-                          </a>
-                        <?php endforeach; ?>
-                      </div>
-                    <?php endif; ?>
-                  </div>
-                </div>
-              </div>
-            <?php endforeach; ?>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <?php endif; ?>
-  </div><!-- End organismContent -->
-</div>
