@@ -31,7 +31,46 @@ $(document).ready(function() {
     // Initialize organism selection with callback to update search manager
     selectedOrganisms = initializeOrganismSelection(allOrganisms, updateMultiSearchManager);
     
+    // Handle organism instructions info icon click
+    $(document).on('click', '.organism-instructions-trigger', function(e) {
+        e.stopPropagation();
+        const instruction = $(this).data('instruction');
+        showInstructionModal(instruction);
+    });
+    
     // Initialize search instructions handler
     initializeSearchInstructionsHandler();
 });
+
+/**
+ * Show instruction modal (for organism selection tips)
+ */
+function showInstructionModal(instruction) {
+    const modalHtml = `
+        <div class="modal fade" id="instructionModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Instructions</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        ${instruction}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if present
+    $('#instructionModal').remove();
+    
+    // Add and show modal
+    $('body').append(modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('instructionModal'));
+    modal.show();
+}
 

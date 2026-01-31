@@ -57,7 +57,12 @@
         <div class="card-body">
           <div class="mb-4">
             <div class="d-flex justify-content-between align-items-start gap-3">
-              <h3 class="card-title mb-0">Selected Organisms</h3>
+              <div>
+                <h3 class="card-title mb-0">
+                  Selected Organisms
+                  <i class="fa fa-info-circle organism-instructions-trigger info-icon" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-instruction="Check/uncheck organisms to modify which are included in the search. Click an organism card to visit its page for organism-specific information and single-organism searches."></i>
+                </h3>
+              </div>
               <div class="btn-group" role="group">
                 <button type="button" class="btn btn-sm btn-outline-secondary selectAllOrganisms">
                   Select All
