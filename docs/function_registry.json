@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "generated": "2026-01-31 22:43:17",
+        "generated": "2026-02-02 19:00:52",
         "totalFunctions": 157,
         "totalFiles": 19,
         "duplicates": 0
@@ -290,7 +290,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 834,
+                            "line": 811,
                             "context": "$blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);"
                         },
                         {
@@ -2362,7 +2362,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 307,
+                            "line": 284,
                             "context": "$all_cards = getAllGroupCards($group_data);"
                         }
                     ]
@@ -2394,12 +2394,12 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 313,
+                            "line": 290,
                             "context": "$cards_to_display = getPublicGroupCards($group_data);"
                         },
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 327,
+                            "line": 304,
                             "context": "$cards_to_display = getPublicGroupCards($group_data);"
                         }
                     ]
@@ -2529,9 +2529,9 @@
                 },
                 {
                     "name": "getAssemblyFastaFiles",
-                    "line": 249,
-                    "comment": "/**\n* Get FASTA files for an assembly\n*\n* Scans the assembly directory for FASTA files matching configured sequence types.\n* Uses patterns from $sequence_types global to identify file types (genome, protein, transcript, cds).\n* Accepts either assembly accession or directory name.\n*\n* @param string $organism_name The organism name\n* @param string $assembly_name The assembly name (accession or directory name)\n* @return array Associative array of type => ['path' => relative_path, 'label' => label]\n*/",
-                    "code": "function getAssemblyFastaFiles($organism_name, $assembly_name) {\n    $config = ConfigManager::getInstance();\n    $organism_data = $config->getPath('organism_data');\n    $sequence_types = $config->getSequenceTypes();\n    $fasta_files = [];\n    $assembly_dir = \"$organism_data/$organism_name/$assembly_name\";\n    \n    // If directory doesn't exist with the provided name, try to find it by querying the database\n    if (!is_dir($assembly_dir)) {\n        $db_path = getOrganismDatabase($organism_name, $organism_data);\n        if (!empty($db_path)) {\n            try {\n                $dbh = new PDO(\"sqlite:\" . $db_path);\n                $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);\n                \n                // Query by either accession or name\n                $stmt = $dbh->prepare(\"SELECT genome_name FROM genome WHERE genome_accession = ? OR genome_name = ?\");\n                $stmt->execute([$assembly_name, $assembly_name]);\n                $result = $stmt->fetch(PDO::FETCH_ASSOC);\n                \n                if ($result) {\n                    $assembly_dir = \"$organism_data/$organism_name/\" . $result['genome_name'];\n                }\n            } catch (PDOException $e) {\n                // If database query fails, continue with original directory\n            }\n        }\n    }\n    \n    if (is_dir($assembly_dir)) {\n        $fasta_files_found = glob($assembly_dir . '/*.fa');\n        foreach ($fasta_files_found as $fasta_file) {\n            $filename = basename($fasta_file);\n            $relative_path = \"$organism_name/\" . basename($assembly_dir) . \"/$filename\";\n            \n            foreach ($sequence_types as $type => $config) {\n                if (strpos($filename, $config['pattern']) !== false) {\n                    $fasta_files[$type] = [\n                        'path' => $relative_path,\n                        'label' => $config['label'],\n                        'color' => $config['color']\n                    ];\n                    break;\n                }\n            }\n        }\n    }\n    return $fasta_files;\n}",
+                    "line": 248,
+                    "comment": "/**\n* Get FASTA files for an assembly\n*\n* Scans the assembly directory for FASTA files matching configured sequence types.\n* Uses patterns from $sequence_types global to identify file types (genome, protein, transcript, cds).\n*\n* @param string $organism_name The organism name\n* @param string $assembly_name The assembly name (accession)\n* @return array Associative array of type => ['path' => relative_path, 'label' => label]\n*/",
+                    "code": "function getAssemblyFastaFiles($organism_name, $assembly_name) {\n    $config = ConfigManager::getInstance();\n    $organism_data = $config->getPath('organism_data');\n    $sequence_types = $config->getSequenceTypes();\n    $fasta_files = [];\n    $assembly_dir = \"$organism_data/$organism_name/$assembly_name\";\n    \n    if (is_dir($assembly_dir)) {\n        $fasta_files_found = glob($assembly_dir . '/*.fa');\n        foreach ($fasta_files_found as $fasta_file) {\n            $filename = basename($fasta_file);\n            $relative_path = \"$organism_name/$assembly_name/$filename\";\n            \n            foreach ($sequence_types as $type => $config) {\n                if (strpos($filename, $config['pattern']) !== false) {\n                    $fasta_files[$type] = [\n                        'path' => $relative_path,\n                        'label' => $config['label'],\n                        'color' => $config['color']\n                    ];\n                    break;\n                }\n            }\n        }\n    }\n    return $fasta_files;\n}",
                     "parameters": [
                         {
                             "name": "organism_name",
@@ -2541,20 +2541,17 @@
                         {
                             "name": "assembly_name",
                             "type": "string",
-                            "description": "The assembly name (accession or directory name)"
+                            "description": "The assembly name (accession)"
                         }
                     ],
                     "returnType": "array",
                     "returnDescription": "Associative array of type => ['path' => relative_path, 'label' => label]",
                     "internalCalls": [
-                        "getAssemblyFastaFiles",
-                        "getOrganismDatabase"
+                        "getAssemblyFastaFiles"
                     ],
                     "category": "filesystem",
                     "tags": [
                         "readonly",
-                        "error-handling",
-                        "database-dependent",
                         "file-io",
                         "loops",
                         "recursive"
@@ -2575,7 +2572,7 @@
                 },
                 {
                     "name": "getIndexDisplayCards",
-                    "line": 305,
+                    "line": 282,
                     "comment": "/**\n* Get cards to display on index page based on user access level\n*\n* @param array $group_data Array of group data from getGroupData()\n* @return array Cards to display with title, text, and link\n*/",
                     "code": "function getIndexDisplayCards($group_data) {\n    $cards_to_display = [];\n    $all_cards = getAllGroupCards($group_data);\n    \n    if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {\n        $cards_to_display = $all_cards;\n    } elseif (is_logged_in()) {\n        // Logged-in users see: public groups + their permitted organisms\n        $cards_to_display = getPublicGroupCards($group_data);\n        \n        foreach (get_user_access() as $organism => $assemblies) {\n            if (!isset($cards_to_display[$organism])) {\n                $formatted_name = formatIndexOrganismName($organism);\n                $cards_to_display[$organism] = [\n                    'title' => $formatted_name,\n                    'text'  => \"Explore \" . strip_tags($formatted_name) . \" Data\",\n                    'link'  => 'tools/organism.php?organism=' . urlencode($organism)\n                ];\n            }\n        }\n    } else {\n        // Visitors see only groups with public assemblies\n        $cards_to_display = getPublicGroupCards($group_data);\n    }\n    \n    return $cards_to_display;\n}",
                     "parameters": [
@@ -2610,7 +2607,7 @@
                 },
                 {
                     "name": "formatIndexOrganismName",
-                    "line": 317,
+                    "line": 294,
                     "comment": "/**\n* Format organism name for index page display with italics\n*\n* @param string $organism Organism name with underscores\n* @return string Formatted name with proper capitalization and italics\n*/",
                     "code": "function formatIndexOrganismName($organism) {\n    $parts = explode('_', $organism);\n    $formatted_name = ucfirst(strtolower($parts[0]));\n    for ($i = 1; $i < count($parts); $i++) {\n        $formatted_name .= ' ' . strtolower($parts[$i]);\n    }\n    return '<i>' . $formatted_name . '</i>';\n}",
                     "parameters": [
@@ -2635,14 +2632,14 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 317,
+                            "line": 294,
                             "context": "$formatted_name = formatIndexOrganismName($organism);"
                         }
                     ]
                 },
                 {
                     "name": "loadAllOrganismsMetadata",
-                    "line": 355,
+                    "line": 332,
                     "comment": "/**\n* Load all organisms' JSON metadata from organism_data directory\n* Central function used by manage_organisms.php and manage_taxonomy_tree.php\n*\n* @param string $organism_data_dir Path to organism data directory\n* @return array Associative array of organism_name => metadata\n*/",
                     "code": "function loadAllOrganismsMetadata($organism_data_dir) {\n    $organisms = [];\n    \n    if (!is_dir($organism_data_dir)) {\n        return $organisms;\n    }\n    \n    $entries = scandir($organism_data_dir);\n    foreach ($entries as $organism) {\n        // Skip hidden directories and non-directories\n        if ($organism[0] === '.' || !is_dir(\"$organism_data_dir/$organism\")) {\n            continue;\n        }\n        \n        // Load organism.json using loadJsonFile (from functions_json.php)\n        $organism_json_path = \"$organism_data_dir/$organism/organism.json\";\n        $organism_info = loadJsonFile($organism_json_path);\n        \n        if (!$organism_info) {\n            continue;\n        }\n        \n        // Handle improperly wrapped JSON (extra outer braces)\n        if (!isset($organism_info['genus']) && !isset($organism_info['common_name'])) {\n            $keys = array_keys($organism_info);\n            if (count($keys) > 0 && is_array($organism_info[$keys[0]]) && isset($organism_info[$keys[0]]['genus'])) {\n                $organism_info = $organism_info[$keys[0]];\n            }\n        }\n        \n        // Store organism metadata keyed by organism name\n        $organisms[$organism] = [\n            'genus' => $organism_info['genus'] ?? '',\n            'species' => $organism_info['species'] ?? '',\n            'common_name' => $organism_info['common_name'] ?? '',\n            'taxon_id' => $organism_info['taxon_id'] ?? '',\n            'images' => $organism_info['images'] ?? [],\n            'html_p' => $organism_info['html_p'] ?? []\n        ];\n    }\n    \n    return $organisms;\n}",
                     "parameters": [
@@ -2669,7 +2666,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 683,
+                            "line": 660,
                             "context": "$organisms_metadata = loadAllOrganismsMetadata($organism_data_path);"
                         },
                         {
@@ -2681,7 +2678,7 @@
                 },
                 {
                     "name": "getOrganismsWithAssemblies",
-                    "line": 409,
+                    "line": 386,
                     "comment": "/**\n* Get all organisms with their assemblies from filesystem\n*\n* Scans the organism data directory and returns a map of organisms to their assemblies.\n* Used for user permission management and group configuration.\n* Note: Database may have different/cached info - use this for filesystem truth.\n*\n* @param string $organism_data_path Path to organism data directory\n* @return array Associative array of organism_name => array of assembly names\n*/",
                     "code": "function getOrganismsWithAssemblies($organism_data_path) {\n    $orgs = [];\n    \n    if (!is_dir($organism_data_path)) {\n        return $orgs;\n    }\n    \n    $organisms = scandir($organism_data_path);\n    foreach ($organisms as $organism) {\n        if ($organism[0] === '.' || !is_dir(\"$organism_data_path/$organism\")) {\n            continue;\n        }\n        \n        $assemblies = [];\n        $assemblyPath = \"$organism_data_path/$organism\";\n        $files = scandir($assemblyPath);\n        foreach ($files as $file) {\n            if ($file[0] === '.' || !is_dir(\"$assemblyPath/$file\")) {\n                continue;\n            }\n            $assemblies[] = $file;\n        }\n        $orgs[$organism] = $assemblies;\n    }\n    return $orgs;\n}",
                     "parameters": [
@@ -2724,7 +2721,7 @@
                 },
                 {
                     "name": "getAllExistingGroups",
-                    "line": 445,
+                    "line": 422,
                     "comment": "/**\n* Get all existing groups from group data\n*\n* Extracts unique group names from organism_assembly_groups.json data\n* and returns a sorted list\n*\n* @param array $groups_data Array of organism/assembly/groups data\n* @return array Sorted list of unique group names\n*/",
                     "code": "function getAllExistingGroups($groups_data) {\n    $all_groups = [];\n    foreach ($groups_data as $data) {\n        if (!empty($data['groups'])) {\n            foreach ($data['groups'] as $group) {\n                $all_groups[$group] = true;\n            }\n        }\n    }\n    $group_list = array_keys($all_groups);\n    sort($group_list);\n    return $group_list;\n}",
                     "parameters": [
@@ -2756,7 +2753,7 @@
                 },
                 {
                     "name": "syncGroupDescriptions",
-                    "line": 469,
+                    "line": 446,
                     "comment": "/**\n* Sync group descriptions with existing groups\n*\n* Marks groups as in_use=true, marks unused groups as in_use=false,\n* and creates default structure for new groups\n*\n* @param array $existing_groups List of group names that exist\n* @param array $descriptions_data Current group descriptions\n* @return array Updated descriptions with synced in_use status\n*/",
                     "code": "function syncGroupDescriptions($existing_groups, $descriptions_data) {\n    $desc_map = [];\n    foreach ($descriptions_data as $desc) {\n        $desc_map[$desc['group_name']] = $desc;\n    }\n    \n    $updated_descriptions = [];\n    \n    // Update existing groups to in_use = true\n    foreach ($existing_groups as $group) {\n        if (isset($desc_map[$group])) {\n            $desc_map[$group]['in_use'] = true;\n            $updated_descriptions[] = $desc_map[$group];\n        } else {\n            // New group - add with default structure\n            $updated_descriptions[] = [\n                'group_name' => $group,\n                'images' => [\n                    [\n                        'file' => '',\n                        'caption' => ''\n                    ]\n                ],\n                'html_p' => [\n                    [\n                        'text' => '',\n                        'style' => '',\n                        'class' => ''\n                    ]\n                ],\n                'in_use' => true\n            ];\n        }\n        unset($desc_map[$group]);\n    }\n    \n    // Mark any remaining groups (not in existing groups) as in_use = false\n    foreach ($desc_map as $group_name => $desc) {\n        $desc['in_use'] = false;\n        $updated_descriptions[] = $desc;\n    }\n    \n    return $updated_descriptions;\n}",
                     "parameters": [
@@ -2793,7 +2790,7 @@
                 },
                 {
                     "name": "fetch_taxonomy_lineage",
-                    "line": 523,
+                    "line": 500,
                     "comment": "/**\n* Fetch taxonomic lineage from NCBI using XML parsing\n*\n* Retrieves the full taxonomic classification for an organism using NCBI's API\n* and returns it as an array of rank => name pairs\n*\n* @param int $taxon_id NCBI Taxonomy ID\n* @return array|null Array of ['rank' => x, 'name' => y] entries, or null if failed\n*/",
                     "code": "function fetch_taxonomy_lineage($taxon_id) {\n    $url = \"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id={$taxon_id}&retmode=xml\";\n    \n    $context = stream_context_create([\n        'http' => [\n            'timeout' => 10,\n            'user_agent' => 'MOOP Taxonomy Tree Generator'\n        ]\n    ]);\n    $response = @file_get_contents($url, false, $context);\n    \n    if ($response === false) {\n        return null;\n    }\n    \n    // Parse XML using regex since SimpleXML isn't always available\n    $lineage = [];\n    \n    // Extract Lineage text (semicolon-separated)\n    if (preg_match('/<Lineage>(.+?)<\\/Lineage>/s', $response, $matches)) {\n        $lineage_text = trim($matches[1]);\n        $lineage_parts = array_filter(array_map('trim', explode(';', $lineage_text)));\n        \n        // Extract ranks from LineageEx\n        $rank_map = [];\n        if (preg_match_all('/<Taxon>.*?<ScientificName>(.+?)<\\/ScientificName>.*?<Rank>(.+?)<\\/Rank>.*?<\\/Taxon>/s', $response, $matches, PREG_SET_ORDER)) {\n            foreach ($matches as $match) {\n                $sci_name = trim($match[1]);\n                $rank = trim($match[2]);\n                $rank_map[$sci_name] = $rank;\n            }\n        }\n        \n        // Build lineage array with matched ranks\n        $valid_ranks = ['superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus'];\n        foreach ($lineage_parts as $name) {\n            $rank = $rank_map[$name] ?? null;\n            \n            // Map domain to superkingdom\n            if ($rank === 'domain') {\n                $rank = 'superkingdom';\n            }\n            \n            // Only include standard taxonomic ranks (skip intermediate ranks like 'clade')\n            if ($rank && in_array($rank, $valid_ranks)) {\n                $lineage[] = [\n                    'rank' => $rank,\n                    'name' => $name\n                ];\n            }\n        }\n    }\n    \n    // Add the species itself\n    if (preg_match('/<ScientificName>(.+?)<\\/ScientificName>/', $response, $matches)) {\n        $sci_name = trim($matches[1]);\n        // Only add if it's not already in lineage\n        if (empty($lineage) || $lineage[count($lineage)-1]['name'] !== $sci_name) {\n            $lineage[] = [\n                'rank' => 'species',\n                'name' => $sci_name\n            ];\n        }\n    }\n    \n    return !empty($lineage) ? $lineage : null;\n}",
                     "parameters": [
@@ -2820,7 +2817,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 608,
+                            "line": 585,
                             "context": "$lineage = fetch_taxonomy_lineage($data['taxon_id']);"
                         },
                         {
@@ -2832,7 +2829,7 @@
                 },
                 {
                     "name": "build_tree_from_organisms",
-                    "line": 600,
+                    "line": 577,
                     "comment": "/**\n* Build taxonomy tree from organisms\n*\n* Creates a hierarchical tree structure from a list of organisms by fetching\n* their taxonomic lineage from NCBI and organizing by taxonomic ranks\n*\n* @param array $organisms Array of organism_name => ['taxon_id' => x, 'common_name' => y, ...]\n* @return array Tree structure: ['tree' => [...]]\n*/",
                     "code": "function build_tree_from_organisms($organisms) {\n    $all_lineages = [];\n    \n    foreach ($organisms as $organism_name => $data) {\n        if (empty($data['taxon_id'])) {\n            continue;\n        }\n        \n        $lineage = fetch_taxonomy_lineage($data['taxon_id']);\n        $image = fetch_organism_image($data['taxon_id'], $organism_name);\n        if ($lineage) {\n            $all_lineages[$organism_name] = [\n                'lineage' => $lineage,\n                'common_name' => $data['common_name'],\n                'image' => $image\n            ];\n        }\n        \n        // Be nice to NCBI - rate limit\n        usleep(350000); // 350ms = ~3 requests per second\n    }\n    \n    // Build tree structure\n    $tree = ['name' => 'Life', 'children' => []];\n    \n    foreach ($all_lineages as $organism_name => $info) {\n        $current = &$tree;\n        \n        foreach ($info['lineage'] as $level) {\n            $name = $level['name'];\n            $rank = $level['rank'];\n            \n            // Find or create child node\n            $found = false;\n            foreach ($current['children'] as &$child) {\n                if ($child['name'] === $name) {\n                    $current = &$child;\n                    $found = true;\n                    break;\n                }\n            }\n            \n            if (!$found) {\n                $new_node = ['name' => $name];\n                \n                // If this is the species level, add organism info\n                if ($rank === 'species') {\n                    $new_node['organism'] = $organism_name;\n                    $new_node['common_name'] = $info['common_name'];\n                    if ($info['image']) {\n                        $new_node['image'] = $info['image'];\n                    }\n                } else {\n                    $new_node['children'] = [];\n                }\n                \n                $current['children'][] = $new_node;\n                $current = &$current['children'][count($current['children']) - 1];\n            }\n        }\n    }\n    \n    return ['tree' => $tree];\n}",
                     "parameters": [
@@ -2867,7 +2864,7 @@
                 },
                 {
                     "name": "getDetailedOrganismsInfo",
-                    "line": 675,
+                    "line": 652,
                     "comment": "/**\n* Get detailed information about all organisms\n*\n* Aggregates organism metadata, assemblies, database info, and validation results\n* for all organisms in the system. Used for admin management and reporting.\n*\n* @param string $organism_data_path Path to organism data directory\n* @param array $sequence_types List of valid sequence types (e.g., ['cds', 'protein', 'genome'])\n* @return array Associative array of organism_name => array with metadata, assemblies, validations\n*/",
                     "code": "function getDetailedOrganismsInfo($organism_data_path, $sequence_types = []) {\n    $organisms_info = [];\n    \n    if (!is_dir($organism_data_path)) {\n        return $organisms_info;\n    }\n    \n    // Load all organisms' JSON metadata using consolidated function\n    $organisms_metadata = loadAllOrganismsMetadata($organism_data_path);\n    \n    $organisms = scandir($organism_data_path);\n    foreach ($organisms as $organism) {\n        if ($organism[0] === '.' || !is_dir(\"$organism_data_path/$organism\")) {\n            continue;\n        }\n        \n        // Get organism.json info (already loaded from consolidated function)\n        $organism_json = \"$organism_data_path/$organism/organism.json\";\n        $json_validation = validateOrganismJson($organism_json);\n        $info = $organisms_metadata[$organism] ?? [];\n        \n        // Get assemblies\n        $assemblies = [];\n        $assembly_path = \"$organism_data_path/$organism\";\n        $files = scandir($assembly_path);\n        foreach ($files as $file) {\n            if ($file[0] === '.' || !is_dir(\"$assembly_path/$file\")) {\n                continue;\n            }\n            $assemblies[] = $file;\n        }\n        \n        // Check for database file\n        $db_file = null;\n        if (file_exists(\"$organism_data_path/$organism/organism.sqlite\")) {\n            $db_file = \"$organism_data_path/$organism/organism.sqlite\";\n        }\n        \n        $has_db = !is_null($db_file);\n        \n        // Validate database integrity if database exists\n        $db_validation = null;\n        $assembly_validation = null;\n        $fasta_validation = null;\n        if ($has_db) {\n            $db_validation = validateDatabaseIntegrity($db_file);\n            // Also validate assembly directories\n            $assembly_validation = validateAssemblyDirectories($db_file, \"$organism_data_path/$organism\");\n        }\n        // Validate FASTA files in assembly directories\n        $fasta_validation = validateAssemblyFastaFiles(\"$organism_data_path/$organism\", $sequence_types);\n        \n        $organisms_info[$organism] = [\n            'info' => $info,\n            'assemblies' => $assemblies,\n            'has_db' => $has_db,\n            'db_file' => $db_file,\n            'db_validation' => $db_validation,\n            'assembly_validation' => $assembly_validation,\n            'fasta_validation' => $fasta_validation,\n            'json_validation' => $json_validation,\n            'path' => \"$organism_data_path/$organism\"\n        ];\n    }\n    \n    return $organisms_info;\n}",
                     "parameters": [
@@ -2911,7 +2908,7 @@
                 },
                 {
                     "name": "getAssemblyGroups",
-                    "line": 750,
+                    "line": 727,
                     "comment": "/**\n* Check if an assembly is in any groups\n* @param string $organism Organism name\n* @param string $assembly Assembly name\n* @param array $groups_data Groups data array\n* @return array Array of group names containing this assembly, empty if none\n*/",
                     "code": "function getAssemblyGroups($organism, $assembly, $groups_data) {\n    $assembly_groups = [];\n    \n    foreach ($groups_data as $data) {\n        if (!empty($data['groups'])) {\n            foreach ($data['groups'] as $group) {\n                // Check if this organism and assembly match\n                if ($data['organism'] === $organism && $data['assembly'] === $assembly) {\n                    $assembly_groups[] = $group;\n                }\n            }\n        }\n    }\n    \n    return $assembly_groups;\n}",
                     "parameters": [
@@ -2946,7 +2943,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 864,
+                            "line": 841,
                             "context": "$assembly_groups = getAssemblyGroups($organism, $assembly, $groups_data);"
                         },
                         {
@@ -2958,7 +2955,7 @@
                 },
                 {
                     "name": "isAssemblyInTaxonomyTree",
-                    "line": 774,
+                    "line": 751,
                     "comment": "/**\n* Check if an organism is in the taxonomy tree\n* @param string $organism Organism name\n* @param string $assembly Assembly name (optional, can be empty)\n* @param string $tree_file Path to taxonomy_tree_config.json file\n* @return bool True if organism is in tree, false otherwise\n*/",
                     "code": "function isAssemblyInTaxonomyTree($organism, $assembly, $tree_file) {\n    if (!file_exists($tree_file)) {\n        return false;\n    }\n    \n    $tree_content = file_get_contents($tree_file);\n    if (!$tree_content) {\n        return false;\n    }\n    \n    // Simply search for the organism name in the tree file\n    return strpos($tree_content, '\"organism\": \"' . $organism . '\"') !== false;\n}",
                     "parameters": [
@@ -2993,7 +2990,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 874,
+                            "line": 851,
                             "context": "$checks['in_taxonomy_tree'] = isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);"
                         },
                         {
@@ -3015,7 +3012,7 @@
                 },
                 {
                     "name": "getOrganismOverallStatus",
-                    "line": 798,
+                    "line": 775,
                     "comment": "/**\n* Get comprehensive status of an organism across all checks\n* @param string $organism Organism name\n* @param array $data Organism data from getDetailedOrganismsInfo\n* @param array $groups_data Groups data\n* @param string $taxonomy_tree_file Path to taxonomy_tree_config.json\n* @param array $sequence_types Configured sequence types\n* @return array Status with checks and overall status\n*/",
                     "code": "function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree_file, $sequence_types) {\n    $checks = [\n        'has_assemblies' => false,\n        'has_fasta' => false,\n        'has_blast_indexes' => false,\n        'has_database' => false,\n        'database_readable' => false,\n        'assemblies_in_groups' => false,\n        'in_taxonomy_tree' => false\n    ];\n    \n    // 1. Does it have at least one assembly?\n    $checks['has_assemblies'] = !empty($data['assemblies']);\n    \n    // 2. Is there at least one FASTA file in an assembly?\n    if ($checks['has_assemblies'] && !empty($data['fasta_validation']['assemblies'])) {\n        foreach ($data['fasta_validation']['assemblies'] as $asm_fasta) {\n            if (!empty($asm_fasta['fasta_files'])) {\n                foreach ($asm_fasta['fasta_files'] as $file_info) {\n                    if ($file_info['found']) {\n                        $checks['has_fasta'] = true;\n                        break 2;\n                    }\n                }\n            }\n        }\n    }\n    \n    // 3. Are BLAST indexes present for ALL FASTA files?\n    // This check fails if there are FASTA files but any are missing BLAST indexes\n    if ($checks['has_fasta']) {\n        $all_have_indexes = true;\n        $has_any_fasta = false;\n        \n        foreach ($data['assemblies'] as $assembly) {\n            $assembly_path = $data['path'] . '/' . $assembly;\n            $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);\n            \n            if (!empty($blast_validation['databases'])) {\n                foreach ($blast_validation['databases'] as $db) {\n                    $has_any_fasta = true;\n                    // If any FASTA file doesn't have indexes, fail the check\n                    if (!$db['has_indexes']) {\n                        $all_have_indexes = false;\n                        break 2;\n                    }\n                }\n            }\n        }\n        \n        // Set to true only if we found FASTA files AND all have indexes\n        $checks['has_blast_indexes'] = ($has_any_fasta && $all_have_indexes);\n    }\n    \n    // 4. Is there a database file?\n    $checks['has_database'] = $data['has_db'];\n    \n    // 5. Is the database readable?\n    if ($checks['has_database'] && !empty($data['db_validation'])) {\n        $checks['database_readable'] = $data['db_validation']['readable'];\n    }\n    \n    // 6. Is each assembly a member of at least one group?\n    if ($checks['has_assemblies']) {\n        $all_in_groups = true;\n        foreach ($data['assemblies'] as $assembly) {\n            $assembly_groups = getAssemblyGroups($organism, $assembly, $groups_data);\n            if (empty($assembly_groups)) {\n                $all_in_groups = false;\n                break;\n            }\n        }\n        $checks['assemblies_in_groups'] = $all_in_groups;\n    }\n    \n    // 7. Is the organism found in the tree?\n    $checks['in_taxonomy_tree'] = isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);\n    \n    // 8. Is metadata complete?\n    if (!empty($data['json_validation'])) {\n        $json_val = $data['json_validation'];\n        $checks['metadata_complete'] = ($json_val['exists'] && $json_val['readable'] && $json_val['valid_json'] && $json_val['has_required_fields'] && $json_val['writable']);\n    }\n    \n    // Calculate overall status\n    $all_pass = array_reduce($checks, function($carry, $item) {\n        return $carry && $item;\n    }, true);\n    \n    $pass_count = count(array_filter($checks));\n    $total_count = count($checks);\n    \n    return [\n        'checks' => $checks,\n        'all_pass' => $all_pass,\n        'pass_count' => $pass_count,\n        'total_count' => $total_count\n    ];\n}",
                     "parameters": [
@@ -3076,7 +3073,7 @@
                 },
                 {
                     "name": "getWikipediaTaxonomyData",
-                    "line": 905,
+                    "line": 882,
                     "comment": "/**\n* Fetch Wikipedia data for a taxonomic rank/level\n* Gets description and image from Wikipedia using the search API\n*\n* @param string $rank_name Name of taxonomic rank (e.g., 'Primates', 'Mammalia')\n* @return array Array with 'description' (HTML), 'image_url', 'wikipedia_url', 'source'\n*/",
                     "code": "function getWikipediaTaxonomyData($rank_name) {\n    $result = [\n        'description' => '',\n        'image_url' => '',\n        'wikipedia_url' => '',\n        'source' => 'Wikipedia'\n    ];\n    \n    if (empty($rank_name)) {\n        return $result;\n    }\n    \n    // Use Wikipedia API to search for the taxonomic rank\n    $wiki_search_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([\n        'action' => 'query',\n        'titles' => $rank_name,\n        'format' => 'json',\n        'prop' => 'extracts|pageimages|info',\n        'exlimit' => 1,\n        'exintro' => true,\n        'explaintext' => true,\n        'piprop' => 'thumbnail|original',\n        'pithumbsize' => 300,\n        'redirects' => true\n    ]);\n    \n    $context = stream_context_create([\n        'http' => [\n            'timeout' => 5,\n            'user_agent' => 'MOOP (github.com)'\n        ]\n    ]);\n    \n    $response = @file_get_contents($wiki_search_url, false, $context);\n    \n    if ($response === false) {\n        return $result;\n    }\n    \n    $data = json_decode($response, true);\n    \n    if (empty($data['query']['pages'])) {\n        return $result;\n    }\n    \n    // Get first (and usually only) page result\n    $pages = array_values($data['query']['pages']);\n    $page = $pages[0];\n    \n    if (!isset($page['pageid'])) {\n        // Page not found, try search instead\n        return getWikipediaTaxonomyDataFromSearch($rank_name);\n    }\n    \n    // Determine the actual title (in case of redirects)\n    $actual_title = $page['title'] ?? $rank_name;\n    \n    // Get the page URL\n    $result['wikipedia_url'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $actual_title);\n    \n    // Extract description from intro\n    if (!empty($page['extract'])) {\n        $description = $page['extract'];\n        // Truncate if too long\n        if (strlen($description) > 500) {\n            $description = substr($description, 0, 500) . '...';\n        }\n        $result['description'] = trim($description);\n    }\n    \n    // Extract image (try thumbnail first, then original)\n    if (!empty($page['thumbnail']['source'])) {\n        $result['image_url'] = $page['thumbnail']['source'];\n    } elseif (!empty($page['original']['source'])) {\n        $result['image_url'] = $page['original']['source'];\n    }\n    \n    return $result;\n}",
                     "parameters": [
@@ -3110,7 +3107,7 @@
                 },
                 {
                     "name": "getWikipediaTaxonomyDataFromSearch",
-                    "line": 956,
+                    "line": 933,
                     "comment": "/**\n* Search Wikipedia for taxonomic rank information\n* Fallback when direct title lookup doesn't find good content\n*\n* @param string $rank_name Name of taxonomic rank\n* @return array Array with description, image, and Wikipedia URL\n*/",
                     "code": "function getWikipediaTaxonomyDataFromSearch($rank_name) {\n    $result = [\n        'description' => '',\n        'image_url' => '',\n        'wikipedia_url' => '',\n        'source' => 'Wikipedia'\n    ];\n    \n    // Search for the term\n    $search_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([\n        'action' => 'query',\n        'list' => 'search',\n        'srsearch' => $rank_name,\n        'format' => 'json',\n        'srlimit' => 3\n    ]);\n    \n    $context = stream_context_create([\n        'http' => [\n            'timeout' => 5,\n            'user_agent' => 'MOOP (github.com)'\n        ]\n    ]);\n    \n    $response = @file_get_contents($search_url, false, $context);\n    \n    if ($response === false) {\n        return $result;\n    }\n    \n    $data = json_decode($response, true);\n    \n    if (empty($data['query']['search'])) {\n        return $result;\n    }\n    \n    // Try the first few results to find one with content\n    foreach ($data['query']['search'] as $search_result) {\n        $found_title = $search_result['title'];\n        \n        // Fetch details about this page\n        $fetch_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([\n            'action' => 'query',\n            'titles' => $found_title,\n            'format' => 'json',\n            'prop' => 'extracts|pageimages',\n            'exintro' => true,\n            'explaintext' => true,\n            'piprop' => 'thumbnail|original',\n            'pithumbsize' => 300,\n            'redirects' => true\n        ]);\n        \n        $response = @file_get_contents($fetch_url, false, $context);\n        \n        if ($response === false) {\n            continue;\n        }\n        \n        $data = json_decode($response, true);\n        \n        if (empty($data['query']['pages'])) {\n            continue;\n        }\n        \n        $pages = array_values($data['query']['pages']);\n        $page = $pages[0];\n        \n        // Skip if no content\n        if (empty($page['extract'])) {\n            continue;\n        }\n        \n        if (!empty($page['extract'])) {\n            $description = $page['extract'];\n            if (strlen($description) > 500) {\n                $description = substr($description, 0, 500) . '...';\n            }\n            $result['description'] = trim($description);\n        }\n        \n        if (!empty($page['thumbnail']['source'])) {\n            $result['image_url'] = $page['thumbnail']['source'];\n        } elseif (!empty($page['original']['source'])) {\n            $result['image_url'] = $page['original']['source'];\n        }\n        \n        $result['wikipedia_url'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $page['title']);\n        \n        // Found a good result, return it\n        return $result;\n    }\n    \n    return $result;\n}",
                     "parameters": [
@@ -3137,14 +3134,14 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 956,
+                            "line": 933,
                             "context": "return getWikipediaTaxonomyDataFromSearch($rank_name);"
                         }
                     ]
                 },
                 {
                     "name": "getWikipediaOrganismData",
-                    "line": 1096,
+                    "line": 1073,
                     "comment": "/**\n* Fetch Wikipedia data for an organism (species)\n* Gets description and image from Wikipedia using scientific name or common name\n*\n* @param string $organism_name Common name or scientific name (e.g., 'Human', 'Homo sapiens')\n* @param string $scientific_name Scientific name to try first (optional)\n* @return array Array with 'description', 'image_url', 'wikipedia_url', 'source'\n*/",
                     "code": "function getWikipediaOrganismData($organism_name, $scientific_name = '') {\n    $result = [\n        'description' => '',\n        'image_url' => '',\n        'wikipedia_url' => '',\n        'source' => 'Wikipedia'\n    ];\n    \n    if (empty($organism_name) && empty($scientific_name)) {\n        return $result;\n    }\n    \n    // Try scientific name first, then common name\n    $names_to_try = array_filter([\n        $scientific_name,\n        $organism_name,\n        // Also try common name without underscores\n        str_replace('_', ' ', $organism_name)\n    ]);\n    \n    foreach ($names_to_try as $search_name) {\n        $wiki_search_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([\n            'action' => 'query',\n            'titles' => $search_name,\n            'format' => 'json',\n            'prop' => 'extracts|pageimages|info',\n            'exlimit' => 1,\n            'exintro' => true,\n            'explaintext' => true,\n            'piprop' => 'thumbnail|original',\n            'pithumbsize' => 400,\n            'redirects' => true\n        ]);\n        \n        $context = stream_context_create([\n            'http' => [\n                'timeout' => 5,\n                'user_agent' => 'MOOP (github.com)'\n            ]\n        ]);\n        \n        $response = @file_get_contents($wiki_search_url, false, $context);\n        \n        if ($response === false) {\n            continue;\n        }\n        \n        $data = json_decode($response, true);\n        \n        if (empty($data['query']['pages'])) {\n            continue;\n        }\n        \n        $pages = array_values($data['query']['pages']);\n        $page = $pages[0];\n        \n        if (!isset($page['pageid']) || empty($page['extract'])) {\n            continue;\n        }\n        \n        // Found good data, return it\n        $actual_title = $page['title'] ?? $search_name;\n        $result['wikipedia_url'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $actual_title);\n        \n        if (!empty($page['extract'])) {\n            $description = $page['extract'];\n            if (strlen($description) > 500) {\n                $description = substr($description, 0, 500) . '...';\n            }\n            $result['description'] = trim($description);\n        }\n        \n        if (!empty($page['thumbnail']['source'])) {\n            $result['image_url'] = $page['thumbnail']['source'];\n        } elseif (!empty($page['original']['source'])) {\n            $result['image_url'] = $page['original']['source'];\n        }\n        \n        return $result;\n    }\n    \n    // If direct search failed, try Wikipedia search API as fallback\n    return getWikipediaOrganismDataFromSearch($organism_name);\n}",
                     "parameters": [
@@ -3189,7 +3186,7 @@
                 },
                 {
                     "name": "getWikipediaOrganismDataFromSearch",
-                    "line": 1178,
+                    "line": 1155,
                     "comment": "/**\n* Search Wikipedia for organism information\n* Fallback when direct title lookup doesn't find good content\n*\n* @param string $organism_name Organism name to search for\n* @return array Array with description, image, and Wikipedia URL\n*/",
                     "code": "function getWikipediaOrganismDataFromSearch($organism_name) {\n    $result = [\n        'description' => '',\n        'image_url' => '',\n        'wikipedia_url' => '',\n        'source' => 'Wikipedia'\n    ];\n    \n    // Search for the organism\n    $search_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([\n        'action' => 'query',\n        'list' => 'search',\n        'srsearch' => str_replace('_', ' ', $organism_name) . ' species animal',\n        'format' => 'json',\n        'srlimit' => 3\n    ]);\n    \n    $context = stream_context_create([\n        'http' => [\n            'timeout' => 5,\n            'user_agent' => 'MOOP (github.com)'\n        ]\n    ]);\n    \n    $response = @file_get_contents($search_url, false, $context);\n    \n    if ($response === false) {\n        return $result;\n    }\n    \n    $data = json_decode($response, true);\n    \n    if (empty($data['query']['search'])) {\n        return $result;\n    }\n    \n    // Try the first few results\n    foreach ($data['query']['search'] as $search_result) {\n        $found_title = $search_result['title'];\n        \n        // Fetch details about this page\n        $fetch_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([\n            'action' => 'query',\n            'titles' => $found_title,\n            'format' => 'json',\n            'prop' => 'extracts|pageimages',\n            'exintro' => true,\n            'explaintext' => true,\n            'piprop' => 'thumbnail|original',\n            'pithumbsize' => 400,\n            'redirects' => true\n        ]);\n        \n        $response = @file_get_contents($fetch_url, false, $context);\n        \n        if ($response === false) {\n            continue;\n        }\n        \n        $data = json_decode($response, true);\n        \n        if (empty($data['query']['pages'])) {\n            continue;\n        }\n        \n        $pages = array_values($data['query']['pages']);\n        $page = $pages[0];\n        \n        // Skip if no extract\n        if (empty($page['extract'])) {\n            continue;\n        }\n        \n        $description = $page['extract'];\n        if (strlen($description) > 500) {\n            $description = substr($description, 0, 500) . '...';\n        }\n        $result['description'] = trim($description);\n        \n        if (!empty($page['thumbnail']['source'])) {\n            $result['image_url'] = $page['thumbnail']['source'];\n        } elseif (!empty($page['original']['source'])) {\n            $result['image_url'] = $page['original']['source'];\n        }\n        \n        $result['wikipedia_url'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $page['title']);\n        \n        // Found a good result\n        return $result;\n    }\n    \n    return $result;\n}",
                     "parameters": [
@@ -3216,14 +3213,14 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 1178,
+                            "line": 1155,
                             "context": "return getWikipediaOrganismDataFromSearch($organism_name);"
                         }
                     ]
                 },
                 {
                     "name": "fetchOrganismInfoFromNCBI",
-                    "line": 1290,
+                    "line": 1267,
                     "comment": "/**\n* Fetch organism info from NCBI using genus and species\n* Gets taxon_id and common name for a given genus/species\n*\n* @param string $genus Organism genus\n* @param string $species Organism species\n* @return array Array with 'taxon_id', 'common_name', 'scientific_name', 'error'\n*/",
                     "code": "function fetchOrganismInfoFromNCBI($genus, $species) {\n    $result = [\n        'taxon_id' => '',\n        'common_name' => '',\n        'scientific_name' => \"$genus $species\",\n        'error' => ''\n    ];\n    \n    if (empty($genus) || empty($species)) {\n        $result['error'] = 'Genus and species are required';\n        return $result;\n    }\n    \n    // Search for the organism on NCBI\n    $search_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?' . http_build_query([\n        'db' => 'taxonomy',\n        'term' => \"$genus $species\",\n        'retmode' => 'json'\n    ]);\n    \n    $context = stream_context_create([\n        'http' => [\n            'timeout' => 5,\n            'user_agent' => 'MOOP (github.com)'\n        ]\n    ]);\n    \n    $response = @file_get_contents($search_url, false, $context);\n    \n    if ($response === false) {\n        $result['error'] = 'Failed to connect to NCBI';\n        return $result;\n    }\n    \n    $data = json_decode($response, true);\n    \n    if (empty($data['esearchresult']['idlist'])) {\n        $result['error'] = 'Organism not found on NCBI';\n        return $result;\n    }\n    \n    $taxon_id = $data['esearchresult']['idlist'][0];\n    $result['taxon_id'] = $taxon_id;\n    \n    // Fetch full details\n    $fetch_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?' . http_build_query([\n        'db' => 'taxonomy',\n        'id' => $taxon_id,\n        'retmode' => 'json'\n    ]);\n    \n    $response = @file_get_contents($fetch_url, false, $context);\n    \n    if ($response === false) {\n        return $result;\n    }\n    \n    $data = json_decode($response, true);\n    \n    if (!empty($data['result'][$taxon_id]['commonname'])) {\n        $result['common_name'] = $data['result'][$taxon_id]['commonname'];\n    }\n    \n    return $result;\n}",
                     "parameters": [
@@ -3332,7 +3329,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 720,
+                            "line": 697,
                             "context": "$db_validation = validateDatabaseIntegrity($db_file);"
                         }
                     ]
@@ -3649,17 +3646,12 @@
                         "file-io",
                         "recursive"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 1,
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_database.php",
                             "line": 385,
                             "context": "$db_path = getOrganismDatabase($organism_name, $organism_data_dir);"
-                        },
-                        {
-                            "file": "/data/moop/lib/functions_data.php",
-                            "line": 258,
-                            "context": "$db_path = getOrganismDatabase($organism_name, $organism_data);"
                         }
                     ]
                 },
@@ -3983,7 +3975,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 693,
+                            "line": 670,
                             "context": "$json_validation = validateOrganismJson($organism_json);"
                         }
                     ]
@@ -4084,7 +4076,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 609,
+                            "line": 586,
                             "context": "$image = fetch_organism_image($data['taxon_id'], $organism_name);"
                         }
                     ]
@@ -4606,14 +4598,14 @@
                     "usageCount": 2,
                     "usages": [
                         {
-                            "file": "/data/moop/lib/functions_data.php",
-                            "line": 722,
-                            "context": "$assembly_validation = validateAssemblyDirectories($db_file, \"$organism_data_path/$organism\");"
-                        },
-                        {
                             "file": "/data/moop/lib/functions_access.php",
                             "line": 163,
                             "context": "$assembly_validation = validateAssemblyDirectories($db_path, \"$organism_data/$org\");"
+                        },
+                        {
+                            "file": "/data/moop/lib/functions_data.php",
+                            "line": 699,
+                            "context": "$assembly_validation = validateAssemblyDirectories($db_file, \"$organism_data_path/$organism\");"
                         }
                     ]
                 },
@@ -4650,7 +4642,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_data.php",
-                            "line": 725,
+                            "line": 702,
                             "context": "$fasta_validation = validateAssemblyFastaFiles(\"$organism_data_path/$organism\", $sequence_types);"
                         }
                     ]
@@ -5032,14 +5024,14 @@
                             "context": "$organism_info = loadJsonFile($organism_json_path);"
                         },
                         {
-                            "file": "/data/moop/lib/functions_data.php",
-                            "line": 371,
-                            "context": "$organism_info = loadJsonFile($organism_json_path);"
-                        },
-                        {
                             "file": "/data/moop/lib/functions_json.php",
                             "line": 88,
                             "context": "$existing = loadJsonFile($file_path);"
+                        },
+                        {
+                            "file": "/data/moop/lib/functions_data.php",
+                            "line": 348,
+                            "context": "$organism_info = loadJsonFile($organism_json_path);"
                         },
                         {
                             "file": "/data/moop/tools/groups.php",

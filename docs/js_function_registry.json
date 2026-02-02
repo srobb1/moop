@@ -1,11 +1,103 @@
 {
     "metadata": {
-        "generated": "2026-01-20 20:22:22",
-        "totalFunctions": 115,
-        "totalFiles": 21,
+        "generated": "2026-02-02 19:01:06",
+        "totalFunctions": 135,
+        "totalFiles": 28,
         "duplicates": 0
     },
     "files": [
+        {
+            "name": "js/admin-utilities.js",
+            "count": 2,
+            "functions": [
+                {
+                    "name": "initGenerateTreeButton",
+                    "line": 61,
+                    "comment": "/**\n * Generate taxonomy tree from NCBI without leaving current page\n * Used in organism_checklist.php\n */",
+                    "code": "{\n  const btn = document.getElementById('generateTreeBtn');\n  if (!btn) return;\n  \n  btn.addEventListener('click', generateTreeFromChecklist);\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "validation"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/admin-utilities.js",
+                            "line": 114,
+                            "context": "initGenerateTreeButton();"
+                        }
+                    ],
+                    "phpFilesCount": 12,
+                    "phpFiles": [
+                        "admin/manage_annotations.php",
+                        "admin/manage_error_log.php",
+                        "admin/manage_filesystem_permissions.php",
+                        "admin/manage_groups.php",
+                        "admin/manage_js_registry.php",
+                        "admin/manage_organisms.php",
+                        "admin/manage_registry.php",
+                        "admin/manage_site_config.php",
+                        "admin/manage_taxonomy_tree.php",
+                        "admin/manage_users.php",
+                        "admin/organism_checklist.php",
+                        "admin/pages/organism_checklist.php"
+                    ]
+                },
+                {
+                    "name": "generateTreeFromChecklist",
+                    "line": 69,
+                    "comment": "",
+                    "code": "{\n  const btn = document.getElementById('generateTreeBtn');\n  const statusDiv = document.getElementById('generateTreeStatus');\n  \n  // Disable button and show loading\n  btn.disabled = true;\n  statusDiv.innerHTML = '<div class=\"alert alert-info\"><i class=\"fa fa-spinner fa-spin\"></i> Generating taxonomy tree from NCBI (this may take a minute)...</div>';\n  statusDiv.style.display = 'block';\n  \n  try {\n    const response = await fetch('manage_taxonomy_tree.php', {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/x-www-form-urlencoded',\n      },\n      body: 'action=generate'\n    });\n    \n    const text = await response.text();\n    \n    if (response.ok) {\n      statusDiv.innerHTML = '<div class=\"alert alert-success\"><i class=\"fa fa-check-circle\"></i> <strong>Success!</strong> Taxonomy tree has been generated. Reloading...</div>';\n      \n      // Reload the page after a short delay\n      setTimeout(() => {\n        location.reload();\n      }, 2000);\n    } else {\n      statusDiv.innerHTML = '<div class=\"alert alert-danger\"><i class=\"fa fa-exclamation-circle\"></i> <strong>Error:</strong> Failed to generate tree. Please try again or use the full management page.</div>';\n      btn.disabled = false;\n    }\n  } catch (error) {\n    statusDiv.innerHTML = '<div class=\"alert alert-danger\"><i class=\"fa fa-exclamation-circle\"></i> <strong>Error:</strong> ' + error.message + '</div>';\n    btn.disabled = false;\n  }\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "text"
+                    ],
+                    "category": "admin",
+                    "tags": [
+                        "dom-manipulation",
+                        "asynchronous",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "error-handling",
+                        "validation"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "admin/pages/organism_checklist.php",
+                            "line": 628,
+                            "context": "async function generateTreeFromChecklist() {"
+                        }
+                    ],
+                    "phpFilesCount": 12,
+                    "phpFiles": [
+                        "admin/manage_annotations.php",
+                        "admin/manage_error_log.php",
+                        "admin/manage_filesystem_permissions.php",
+                        "admin/manage_groups.php",
+                        "admin/manage_js_registry.php",
+                        "admin/manage_organisms.php",
+                        "admin/manage_registry.php",
+                        "admin/manage_site_config.php",
+                        "admin/manage_taxonomy_tree.php",
+                        "admin/manage_users.php",
+                        "admin/organism_checklist.php",
+                        "admin/pages/organism_checklist.php"
+                    ]
+                }
+            ]
+        },
         {
             "name": "js/blast-manager.js",
             "count": 8,
@@ -285,6 +377,60 @@
             ]
         },
         {
+            "name": "js/groups-display.js",
+            "count": 2,
+            "functions": [
+                {
+                    "name": "updateGroupSearchManager",
+                    "line": 15,
+                    "comment": "",
+                    "code": "{\n    selectedOrganisms = newSelectedOrganisms;\n    searchManager.config.organismsVar = selectedOrganisms;\n    searchManager.config.totalVar = selectedOrganisms.length;\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "data-processing",
+                    "tags": [
+                        "state-modifying"
+                    ],
+                    "usageCount": 0,
+                    "usages": [],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "tools/groups.php"
+                    ]
+                },
+                {
+                    "name": "showGroupInstructionModal",
+                    "line": 56,
+                    "comment": "/**\n * Show group instruction modal (for organism selection tips)\n * Uses different modal ID to avoid conflict with search tips\n */",
+                    "code": "{\n    const modalHtml = `\n        <div class=\"modal fade\" id=\"groupInstructionModal\" tabindex=\"-1\">\n            <div class=\"modal-dialog modal-dialog-centered\">\n                <div class=\"modal-content\">\n                    <div class=\"modal-header\">\n                        <h5 class=\"modal-title\">Instructions</h5>\n                        <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>\n                    </div>\n                    <div class=\"modal-body\">\n                        ${instruction}\n                    </div>\n                    <div class=\"modal-footer\">\n                        <button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    `;\n    \n    // Remove existing modal if present\n    $('#groupInstructionModal').remove();\n    \n    // Add and show modal\n    $('body').append(modalHtml);\n    const modal = new bootstrap.Modal(document.getElementById('groupInstructionModal'));\n    modal.show();\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "ui-dom",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "state-modifying"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/groups-display.js",
+                            "line": 46,
+                            "context": "showGroupInstructionModal(instruction);"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "tools/groups.php"
+                    ]
+                }
+            ]
+        },
+        {
             "name": "js/index.js",
             "count": 4,
             "functions": [
@@ -335,12 +481,12 @@
                     "usages": [
                         {
                             "file": "tools/pages/index.php",
-                            "line": 36,
+                            "line": 48,
                             "context": "<button type=\"button\" class=\"btn btn-outline-primary active\" id=\"card-view-btn\" onclick=\"switchView('card')\">"
                         },
                         {
                             "file": "tools/pages/index.php",
-                            "line": 39,
+                            "line": 51,
                             "context": "<button type=\"button\" class=\"btn btn-outline-primary\" id=\"tree-view-btn\" onclick=\"switchView('tree')\">"
                         }
                     ],
@@ -411,6 +557,69 @@
             ]
         },
         {
+            "name": "js/loading-indicator.js",
+            "count": 2,
+            "functions": [
+                {
+                    "name": "showLoadingIndicator",
+                    "line": 10,
+                    "comment": "/**\n * Show the loading indicator\n */",
+                    "code": "{\n  const indicator = document.getElementById('loadingIndicator');\n  if (indicator) {\n    indicator.style.display = 'flex';\n  }\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "ui-dom",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "state-modifying"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/loading-indicator.js",
+                            "line": 44,
+                            "context": "showLoadingIndicator();"
+                        }
+                    ],
+                    "phpFilesCount": 0,
+                    "phpFiles": []
+                },
+                {
+                    "name": "hideLoadingIndicator",
+                    "line": 20,
+                    "comment": "/**\n * Hide the loading indicator\n */",
+                    "code": "{\n  const indicator = document.getElementById('loadingIndicator');\n  if (indicator) {\n    indicator.style.display = 'none';\n  }\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "ui-dom",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "state-modifying"
+                    ],
+                    "usageCount": 2,
+                    "usages": [
+                        {
+                            "file": "js/loading-indicator.js",
+                            "line": 56,
+                            "context": "hideLoadingIndicator();"
+                        },
+                        {
+                            "file": "js/loading-indicator.js",
+                            "line": 62,
+                            "context": "hideLoadingIndicator();"
+                        }
+                    ],
+                    "phpFilesCount": 0,
+                    "phpFiles": []
+                }
+            ]
+        },
+        {
             "name": "js/manage-registry.js",
             "count": 13,
             "functions": [
@@ -418,7 +627,7 @@
                     "name": "renderRegistry",
                     "line": 32,
                     "comment": "/**\n * Render registry from JSON data\n */",
-                    "code": "{\n    if (!registryData || !registryData.files) {\n        return;\n    }\n    \n    const container = document.getElementById('filesContainer');\n    if (!container) {\n        return;\n    }\n    \n    container.innerHTML = '';\n    \n    let fileCount = 0;\n    registryData.files.forEach(fileData => {\n        fileCount++;\n        const fileSection = document.createElement('div');\n        fileSection.className = 'file-section';\n        fileSection.style.overflow = 'visible';\n        fileSection.setAttribute('data-file', fileData.name);\n        \n        const header = document.createElement('div');\n        header.className = 'file-header';\n        header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; cursor: pointer;';\n        header.innerHTML = `\n            <span style=\"display: flex; align-items: center; gap: 8px;\">\n                \ud83d\udcc4 ${htmlEscape(fileData.name)} <span class=\"badge bg-secondary\" title=\"Number of functions in this file\">[ contain ${fileData.count} function${fileData.count !== 1 ? 's' : ''} ]</span>\n            </span>\n            <span class=\"expand-arrow\">\u25b6</span>\n        `;\n        \n        const listContainer = document.createElement('div');\n        listContainer.className = 'functions-list';\n        listContainer.style.cssText = 'max-height: 0; overflow: hidden; transition: max-height 0.3s ease; padding: 0;';\n        \n        fileData.functions.forEach(func => {\n            const item = document.createElement('div');\n            item.className = 'function-item';\n            item.setAttribute('data-func', func.name);\n            \n            // Function header with toggle\n            const funcHeader = document.createElement('div');\n            funcHeader.className = 'function-header';\n            funcHeader.onclick = function() { toggleFunctionCode(this); };\n            \n            // Build badges for category and tags\n            let categoryBadge = '';\n            if (func.category) {\n                const cat",
+                    "code": "{\n    if (!registryData || !registryData.files) {\n        return;\n    }\n    \n    const container = document.getElementById('filesContainer');\n    if (!container) {\n        return;\n    }\n    \n    container.innerHTML = '';\n    \n    let fileCount = 0;\n    registryData.files.forEach(fileData => {\n        fileCount++;\n        const fileSection = document.createElement('div');\n        fileSection.className = 'file-section';\n        fileSection.style.overflow = 'visible';\n        fileSection.setAttribute('data-file', fileData.name);\n        \n        const header = document.createElement('div');\n        header.className = 'file-header';\n        header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; cursor: pointer;';\n        header.innerHTML = `\n            <span style=\"display: flex; align-items: center; gap: 8px;\">\n                \ud83d\udcc4 ${htmlEscape(fileData.name)} <span class=\"badge bg-secondary\" title=\"Number of functions in this file\">contain ${fileData.count} function${fileData.count !== 1 ? 's' : ''}</span>\n            </span>\n            <span class=\"expand-arrow\">\u25b6</span>\n        `;\n        \n        const listContainer = document.createElement('div');\n        listContainer.className = 'functions-list';\n        listContainer.style.cssText = 'max-height: 0; overflow: hidden; transition: max-height 0.3s ease; padding: 0;';\n        \n        fileData.functions.forEach(func => {\n            const item = document.createElement('div');\n            item.className = 'function-item';\n            item.setAttribute('data-func', func.name);\n            \n            // Function header with toggle\n            const funcHeader = document.createElement('div');\n            funcHeader.className = 'function-header';\n            funcHeader.style.cssText = 'overflow: visible; width: 100%;';\n            funcHeader.onclick = function() { toggleFunctionCode(this); };\n            \n            // Build badges for category and tags\n            let category",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -442,12 +651,12 @@
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 663,
+                            "line": 666,
                             "context": "renderRegistry();"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 674,
+                            "line": 677,
                             "context": "renderRegistry();"
                         },
                         {
@@ -464,7 +673,7 @@
                 },
                 {
                     "name": "toggleFile",
-                    "line": 287,
+                    "line": 290,
                     "comment": "/**\n * Toggle file section\n */",
                     "code": "{\n    // Make sure we're working with the actual file-header element\n    const fileHeader = header.closest('.file-header') || header;\n    const list = fileHeader.nextElementSibling;\n    if (list && list.classList.contains('functions-list')) {\n        const isOpen = list.classList.contains('open');\n        list.classList.toggle('open');\n        \n        // Force inline styles to ensure visibility\n        if (list.classList.contains('open')) {\n            list.style.maxHeight = '10000px';\n            list.style.overflow = 'visible';\n        } else {\n            list.style.maxHeight = '0';\n            list.style.overflow = 'hidden';\n        }\n        \n        const arrow = fileHeader.querySelector('.expand-arrow');\n        if (arrow) {\n            arrow.textContent = !isOpen ? '\u25bc' : '\u25b6';\n        }\n    }\n}",
                     "parameters": [],
@@ -481,7 +690,7 @@
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
-                            "line": 278,
+                            "line": 281,
                             "context": "toggleFile(this);"
                         },
                         {
@@ -498,7 +707,7 @@
                 },
                 {
                     "name": "toggleFunctionCode",
-                    "line": 314,
+                    "line": 317,
                     "comment": "/**\n * Toggle function code visibility\n */",
                     "code": "{\n    const item = header.closest('.function-item');\n    if (!item) return;\n    \n    const code = item.querySelector('.function-code');\n    if (code) {\n        code.classList.toggle('open');\n        const arrow = header.querySelector('.expand-arrow');\n        if (arrow) {\n            arrow.textContent = code.classList.contains('open') ? '\u25bc' : '\u25b6';\n        }\n    }\n}",
                     "parameters": [],
@@ -515,7 +724,7 @@
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
-                            "line": 75,
+                            "line": 76,
                             "context": "funcHeader.onclick = function() { toggleFunctionCode(this); };"
                         }
                     ],
@@ -527,7 +736,7 @@
                 },
                 {
                     "name": "toggleUnusedSection",
-                    "line": 331,
+                    "line": 334,
                     "comment": "/**\n * Toggle unused section\n */",
                     "code": "{\n    const content = header.nextElementSibling;\n    if (content && content.classList.contains('unused-content')) {\n        content.classList.toggle('hidden');\n        const arrow = header.querySelector('.unused-arrow');\n        if (arrow) {\n            arrow.textContent = content.classList.contains('hidden') ? '\u25b6' : '\u25bc';\n        }\n    }\n}",
                     "parameters": [],
@@ -556,7 +765,7 @@
                 },
                 {
                     "name": "toggleAll",
-                    "line": 345,
+                    "line": 348,
                     "comment": "/**\n * Toggle all file sections (toggleAll and toggleAllFiles are aliases)\n */",
                     "code": "{\n    const lists = document.querySelectorAll('.functions-list');\n    const hiddenCount = document.querySelectorAll('.functions-list:not(.open)').length;\n    \n    lists.forEach(list => {\n        if (hiddenCount > 0) {\n            list.classList.add('open');\n            // Apply inline styles for open state\n            list.style.maxHeight = '10000px';\n            list.style.overflow = 'visible';\n        } else {\n            list.classList.remove('open');\n            // Apply inline styles for closed state\n            list.style.maxHeight = '0';\n            list.style.overflow = 'hidden';\n        }\n    });\n    \n    // Update all arrows\n    document.querySelectorAll('.file-header .expand-arrow').forEach(arrow => {\n        const list = arrow.closest('.file-header').nextElementSibling;\n        if (list && list.classList.contains('functions-list')) {\n            arrow.textContent = list.classList.contains('open') ? '\u25bc' : '\u25b6';\n        }\n    });\n}",
                     "parameters": [],
@@ -574,7 +783,7 @@
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
-                            "line": 374,
+                            "line": 377,
                             "context": "toggleAll();"
                         },
                         {
@@ -591,7 +800,7 @@
                 },
                 {
                     "name": "toggleAllFiles",
-                    "line": 372,
+                    "line": 375,
                     "comment": "",
                     "code": "{\n    toggleAll();\n}",
                     "parameters": [],
@@ -612,7 +821,7 @@
                 },
                 {
                     "name": "expandAllFiles",
-                    "line": 379,
+                    "line": 382,
                     "comment": "/**\n * Expand all files\n */",
                     "code": "{\n    document.querySelectorAll('.functions-list').forEach(list => {\n        list.classList.add('open');\n        list.style.maxHeight = '10000px';\n        list.style.overflow = 'visible';\n        const header = list.previousElementSibling;\n        if (header) {\n            const arrow = header.querySelector('.expand-arrow');\n            if (arrow) arrow.textContent = '\u25bc';\n        }\n    });\n}",
                     "parameters": [],
@@ -647,7 +856,7 @@
                 },
                 {
                     "name": "collapseAllFiles",
-                    "line": 395,
+                    "line": 398,
                     "comment": "/**\n * Collapse all files\n */",
                     "code": "{\n    document.querySelectorAll('.functions-list').forEach(list => {\n        list.classList.remove('open');\n        list.style.maxHeight = '0';\n        list.style.overflow = 'hidden';\n        const header = list.previousElementSibling;\n        if (header) {\n            const arrow = header.querySelector('.expand-arrow');\n            if (arrow) arrow.textContent = '\u25b6';\n        }\n    });\n}",
                     "parameters": [],
@@ -682,7 +891,7 @@
                 },
                 {
                     "name": "filterRegistry",
-                    "line": 411,
+                    "line": 414,
                     "comment": "/**\n * Filter/search registry\n */",
                     "code": "{\n    const searchInput = document.getElementById('searchInput');\n    const categoryFilter = document.getElementById('categoryFilter');\n    const typeFilter = document.getElementById('typeFilter');\n    const searchMode = document.querySelector('input[name=\"searchMode\"]:checked');\n    \n    if (!searchInput || !searchMode) return;\n    \n    const term = searchInput.value.toLowerCase();\n    const categoryTerm = categoryFilter ? categoryFilter.value : '';\n    const typeTerm = typeFilter ? typeFilter.value : '';\n    const mode = searchMode.value;\n    \n    let visibleCount = 0;\n    \n    document.querySelectorAll('.file-section').forEach(section => {\n        const fileName = section.getAttribute('data-file').toLowerCase();\n        let hasVisibleFunc = false;\n        \n        section.querySelectorAll('.function-item').forEach(item => {\n            const funcName = item.getAttribute('data-func').toLowerCase();\n            const code = item.querySelector('.function-code') ? item.querySelector('.function-code').textContent.toLowerCase() : '';\n            const comment = item.querySelector('.function-comment') ? item.querySelector('.function-comment').textContent.toLowerCase() : '';\n            \n            // Get category and tags from the function object in registry data\n            let funcCategory = '';\n            let funcTags = [];\n            \n            if (registryData && registryData.files) {\n                for (let file of registryData.files) {\n                    const func = file.functions.find(f => f.name.toLowerCase() === funcName);\n                    if (func) {\n                        funcCategory = func.category || '';\n                        funcTags = func.tags || [];\n                        break;\n                    }\n                }\n            }\n            \n            let match = true;\n            \n            // Text search\n            if (term) {\n                let textMatch = false;\n                if (mode === 'all') {\n                    text",
                     "parameters": [],
@@ -701,87 +910,87 @@
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
-                            "line": 564,
+                            "line": 567,
                             "context": "filterRegistry();"
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 133,
+                            "line": 140,
                             "context": "onkeyup=\"filterRegistry()\""
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 140,
+                            "line": 147,
                             "context": "<select id=\"categoryFilter\" class=\"form-select form-select-sm\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 156,
+                            "line": 163,
                             "context": "<select id=\"typeFilter\" class=\"form-select form-select-sm\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 174,
+                            "line": 181,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchAll\" value=\"all\" checked onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 178,
+                            "line": 185,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchName\" value=\"name\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 182,
+                            "line": 189,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchCode\" value=\"code\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 186,
+                            "line": 193,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchComment\" value=\"comment\" onchange=\"filterRegistry()\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_registry.php",
-                            "line": 112,
-                            "context": "onkeyup=\"filterRegistry()\""
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
                             "line": 119,
+                            "context": "onkeyup=\"filterRegistry()\""
+                        },
+                        {
+                            "file": "admin/pages/manage_registry.php",
+                            "line": 126,
                             "context": "<select id=\"categoryFilter\" class=\"form-select form-select-sm\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 136,
+                            "line": 143,
                             "context": "<select id=\"typeFilter\" class=\"form-select form-select-sm\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 153,
+                            "line": 160,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchAll\" value=\"all\" checked onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 157,
+                            "line": 164,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchName\" value=\"name\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 161,
+                            "line": 168,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchCode\" value=\"code\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 165,
+                            "line": 172,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchComment\" value=\"comment\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 169,
+                            "line": 176,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchParameters\" value=\"parameters\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 173,
+                            "line": 180,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchReturns\" value=\"returns\" onchange=\"filterRegistry()\">"
                         },
                         {
@@ -798,7 +1007,7 @@
                 },
                 {
                     "name": "clearSearch",
-                    "line": 544,
+                    "line": 547,
                     "comment": "/**\n * Clear search\n */",
                     "code": "{\n    const searchInput = document.getElementById('searchInput');\n    const categoryFilter = document.getElementById('categoryFilter');\n    const typeFilter = document.getElementById('typeFilter');\n    const searchModeAll = document.getElementById('searchAll');\n    \n    if (searchInput) {\n        searchInput.value = '';\n    }\n    if (categoryFilter) {\n        categoryFilter.value = '';\n    }\n    if (typeFilter) {\n        typeFilter.value = '';\n    }\n    if (searchModeAll) {\n        searchModeAll.checked = true;\n    }\n    \n    filterRegistry();\n}",
                     "parameters": [],
@@ -818,12 +1027,12 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 193,
+                            "line": 200,
                             "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 179,
+                            "line": 187,
                             "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">"
                         },
                         {
@@ -845,7 +1054,7 @@
                 },
                 {
                     "name": "downloadRegistry",
-                    "line": 569,
+                    "line": 572,
                     "comment": "/**\n * Download registry as JSON\n */",
                     "code": "{\n    if (!registryData) return;\n    \n    const dataStr = JSON.stringify(registryData, null, 2);\n    const blob = new Blob([dataStr], {type: 'application/json'});\n    const url = URL.createObjectURL(blob);\n    const link = document.createElement('a');\n    link.href = url;\n    link.download = 'function_registry_' + new Date().toISOString().slice(0, 10) + '.json';\n    link.click();\n    URL.revokeObjectURL(url);\n}",
                     "parameters": [],
@@ -860,12 +1069,12 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 63,
+                            "line": 70,
                             "context": "<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 42,
+                            "line": 49,
                             "context": "<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">"
                         },
                         {
@@ -887,7 +1096,7 @@
                 },
                 {
                     "name": "generateRegistry",
-                    "line": 585,
+                    "line": 588,
                     "comment": "/**\n * Generate registry by calling backend API\n */",
                     "code": "{\n    const btn = document.getElementById('generateBtn');\n    const msg = document.getElementById('registryMessage');\n    \n    if (!btn) return;\n    \n    // Get registry type from button data attribute (default to 'php')\n    const registryType = btn.getAttribute('data-registry-type') || 'php';\n    \n    btn.disabled = true;\n    btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Generating...';\n    \n    // Call the backend API to generate registry\n    fetch('/moop/admin/api/generate_registry.php', {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/json'\n        },\n        body: JSON.stringify({ type: registryType })\n    })\n    .then(response => response.json())\n    .then(data => {\n        btn.disabled = false;\n        btn.innerHTML = '<i class=\"fa fa-refresh\"></i> Generate/Update Registry';\n        \n        if (data.success) {\n            // Show success message\n            if (msg) {\n                msg.innerHTML = '<div class=\"alert alert-success alert-dismissible fade show\" role=\"alert\">' +\n                    '<i class=\"fa fa-check-circle\"></i> ' + data.message +\n                    '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' +\n                    '</div>';\n            }\n            \n            // Reload page after 2 seconds to show updated status\n            setTimeout(() => {\n                location.reload();\n            }, 2000);\n        } else {\n            // Show error message\n            if (msg) {\n                msg.innerHTML = '<div class=\"alert alert-danger alert-dismissible fade show\" role=\"alert\">' +\n                    '<i class=\"fa fa-exclamation-circle\"></i> ' + data.message +\n                    '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' +\n                    '</div>';\n            }\n        }\n    })\n    .catch(error => {\n        btn.disabled = false;\n        btn.innerHTML = '<i class=\"fa fa-refresh\"></i> Generate/Update Registry';",
                     "parameters": [],
@@ -908,12 +1117,12 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 58,
+                            "line": 65,
                             "context": "<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"js\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 37,
+                            "line": 44,
                             "context": "<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"php\">"
                         },
                         {
@@ -935,7 +1144,7 @@
                 },
                 {
                     "name": "htmlEscape",
-                    "line": 649,
+                    "line": 652,
                     "comment": "/**\n * HTML escape utility\n */",
                     "code": "{\n    const div = document.createElement('div');\n    div.textContent = text;\n    return div.innerHTML;\n}",
                     "parameters": [],
@@ -953,61 +1162,61 @@
                         {
                             "file": "js/manage-registry.js",
                             "line": 58,
-                            "context": "\ud83d\udcc4 ${htmlEscape(fileData.name)} <span class=\"badge bg-secondary\" title=\"Number of functions in this file\">[ contain ${fileData.count} function${fileData.count !== 1 ? 's' : ''} ]</span>"
+                            "context": "\ud83d\udcc4 ${htmlEscape(fileData.name)} <span class=\"badge bg-secondary\" title=\"Number of functions in this file\">contain ${fileData.count} function${fileData.count !== 1 ? 's' : ''}</span>"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 94,
+                            "line": 95,
                             "context": "categoryBadge = `<span class=\"badge\" style=\"background-color: ${bgColor}; color: #333; font-size: 11px; margin-left: 8px;\">${htmlEscape(func.category)}</span>`;"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 119,
+                            "line": 120,
                             "context": "return `<span class=\"badge\" style=\"background-color: ${bgColor}; color: #333; font-size: 10px; margin-left: 4px;\">${htmlEscape(tag)}</span>`;"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 125,
+                            "line": 126,
                             "context": "<span class=\"function-name\">${htmlEscape(func.name)}()</span>"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 162,
+                            "line": 165,
                             "context": "metadataHTML += `<li style=\"font-size: 12px; color: #333;\"><code>${htmlEscape(param.name)}</code> <span style=\"color: #999;\">({${htmlEscape(param.type)}})</span> - ${htmlEscape(param.description || 'no description')}</li>`;"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 170,
+                            "line": 173,
                             "context": "metadataHTML += `<span style=\"color: #666; font-size: 12px;\"><strong>Returns:</strong> <code>${htmlEscape(func.returnType)}</code></span>`;"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 172,
+                            "line": 175,
                             "context": "metadataHTML += ` - ${htmlEscape(func.returnDescription)}`;"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 190,
+                            "line": 193,
                             "context": "depsHTML += func.internalCalls.map(call => `<code style=\"background: #c8e6c9; padding: 2px 6px; border-radius: 3px; margin: 2px 2px 2px 0; display: inline-block; font-size: 11px;\">${htmlEscape(call)}()</code>`).join('');"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 207,
+                            "line": 210,
                             "context": "html += `<li><code>${htmlEscape(phpFile)}</code></li>`;"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 232,
+                            "line": 235,
                             "context": "html += `<li><strong>${htmlEscape(file)}</strong> (${usages.length}x)"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 236,
+                            "line": 239,
                             "context": "html += `<li><code>line ${usage.line}</code>: <small>${htmlEscape(usage.context.substring(0, 80))}</small></li>`;"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 251,
+                            "line": 254,
                             "context": "code.innerHTML = `<pre>${htmlEscape(func.code)}</pre>`;"
                         }
                     ],
@@ -1246,11 +1455,11 @@
                         "state-modifying",
                         "validation"
                     ],
-                    "usageCount": 10,
+                    "usageCount": 15,
                     "usages": [
                         {
                             "file": "js/modules/annotation-search.js",
-                            "line": 274,
+                            "line": 277,
                             "context": "$('#progressFill').css('width', progress + '%').text(progress + '%');"
                         },
                         {
@@ -1275,7 +1484,7 @@
                         },
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 74,
+                            "line": 93,
                             "context": "$('#editTypeDescName').text(typeName);"
                         },
                         {
@@ -1297,6 +1506,31 @@
                             "file": "js/modules/shared-results-table.js",
                             "line": 257,
                             "context": "$btn.find('span').text('Select All');"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 496,
+                            "context": "$btn.find('span').text('Select All');"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 499,
+                            "context": "$btn.find('span').text('Deselect All');"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 511,
+                            "context": "$btn.find('span').text('Deselect All');"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 513,
+                            "context": "$btn.find('span').text('Select All');"
+                        },
+                        {
+                            "file": "admin/pages/organism_checklist.php",
+                            "line": 617,
+                            "context": "const errorText = await response.text();"
                         }
                     ],
                     "phpFilesCount": 0,
@@ -1418,13 +1652,93 @@
         },
         {
             "name": "js/modules/manage-annotations.js",
-            "count": 4,
+            "count": 5,
             "functions": [
                 {
+                    "name": "submitColorForm",
+                    "line": 7,
+                    "comment": "/**\n * Submit color form when color is selected\n */",
+                    "code": "{\n  if (!radioButton.checked) return;\n  \n  const typeName = radioButton.getAttribute('data-type');\n  const color = radioButton.value;\n  \n  const form = document.getElementById(`colorForm_${typeName}`);\n  if (!form) return;\n  \n  const colorInput = document.getElementById(`colorValue_${typeName}`);\n  if (!colorInput) return;\n  \n  // Set the hidden _form_action before submitting\n  const formActionInput = form.querySelector('input[name=\"_form_action\"]');\n  if (formActionInput) {\n    formActionInput.value = 'update_color';\n  }\n  \n  colorInput.value = color;\n  form.submit();\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "validation"
+                    ],
+                    "usageCount": 11,
+                    "usages": [
+                        {
+                            "file": "admin/pages/manage_annotations.php",
+                            "line": 210,
+                            "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_primary_<?= htmlspecialchars($type_name) ?>\" value=\"primary\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'primary' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
+                        },
+                        {
+                            "file": "admin/pages/manage_annotations.php",
+                            "line": 213,
+                            "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_secondary_<?= htmlspecialchars($type_name) ?>\" value=\"secondary\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'secondary' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
+                        },
+                        {
+                            "file": "admin/pages/manage_annotations.php",
+                            "line": 216,
+                            "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_success_<?= htmlspecialchars($type_name) ?>\" value=\"success\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'success' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
+                        },
+                        {
+                            "file": "admin/pages/manage_annotations.php",
+                            "line": 219,
+                            "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_danger_<?= htmlspecialchars($type_name) ?>\" value=\"danger\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'danger' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
+                        },
+                        {
+                            "file": "admin/pages/manage_annotations.php",
+                            "line": 222,
+                            "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_warning_<?= htmlspecialchars($type_name) ?>\" value=\"warning\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'warning' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
+                        },
+                        {
+                            "file": "admin/pages/manage_annotations.php",
+                            "line": 225,
+                            "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_info_<?= htmlspecialchars($type_name) ?>\" value=\"info\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'info' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
+                        },
+                        {
+                            "file": "admin/pages/manage_annotations.php",
+                            "line": 228,
+                            "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_light_<?= htmlspecialchars($type_name) ?>\" value=\"light\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'light' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
+                        },
+                        {
+                            "file": "admin/pages/manage_annotations.php",
+                            "line": 231,
+                            "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_dark_<?= htmlspecialchars($type_name) ?>\" value=\"dark\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'dark' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
+                        },
+                        {
+                            "file": "admin/pages/manage_annotations.php",
+                            "line": 234,
+                            "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_indigo_<?= htmlspecialchars($type_name) ?>\" value=\"indigo\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'indigo' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
+                        },
+                        {
+                            "file": "admin/pages/manage_annotations.php",
+                            "line": 237,
+                            "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_purple_<?= htmlspecialchars($type_name) ?>\" value=\"purple\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'purple' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
+                        },
+                        {
+                            "file": "admin/pages/manage_annotations.php",
+                            "line": 240,
+                            "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_pink_<?= htmlspecialchars($type_name) ?>\" value=\"pink\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'pink' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_annotations.php"
+                    ]
+                },
+                {
                     "name": "saveTypeOrder",
-                    "line": 98,
+                    "line": 116,
                     "comment": "",
-                    "code": "{\n    const newOrder = [];\n    $('#sortable-annotation-types .card').each(function() {\n        const type = $(this).data('type');\n        if (type) {\n            newOrder.push(type);\n        }\n    });\n    \n    console.log('saveTypeOrder called');\n    console.log('Saving annotation type order:', newOrder);\n    console.log('Order array length:', newOrder.length);\n    \n    if (newOrder.length === 0) {\n        console.error('No types found to save!');\n        return;\n    }\n    \n    // Use fetch API for more reliable form submission\n    fetch('manage_annotations.php', {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/x-www-form-urlencoded',\n        },\n        body: new URLSearchParams({\n            'update_type_order': '1',\n            'type_order_data': JSON.stringify(newOrder)\n        })\n    })\n    .then(response => {\n        console.log('Response received:', response.status);\n        if (response.ok) {\n            console.log('Order saved successfully');\n            // Show brief success message\n            showSaveNotification('Order saved successfully');\n        } else {\n            console.error('Server error:', response.status);\n            showSaveNotification('Error saving order. Please try again.', 'danger');\n        }\n    })\n    .catch(error => {\n        console.error('Error submitting form:', error);\n        showSaveNotification('Error saving order: ' + error.message, 'danger');\n    });\n}",
+                    "code": "{\n    const newOrder = [];\n    $('#sortable-annotation-types .card').each(function() {\n        const type = $(this).data('type');\n        if (type) {\n            newOrder.push(type);\n        }\n    });\n    \n    \n    if (newOrder.length === 0) {\n        return;\n    }\n    \n    // Use fetch API for more reliable form submission\n    fetch('manage_annotations.php', {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/x-www-form-urlencoded',\n        },\n        body: new URLSearchParams({\n            'update_type_order': '1',\n            'type_order_data': JSON.stringify(newOrder)\n        })\n    })\n    .then(response => {\n        if (response.ok) {\n            // Show brief success message\n            showSaveNotification('Order saved successfully');\n        } else {\n            showSaveNotification('Error saving order. Please try again.', 'danger');\n        }\n    })\n    .catch(error => {\n        showSaveNotification('Error saving order: ' + error.message, 'danger');\n    });\n}",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -1443,7 +1757,7 @@
                     "usages": [
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 30,
+                            "line": 50,
                             "context": "saveTypeOrder();"
                         }
                     ],
@@ -1454,7 +1768,7 @@
                 },
                 {
                     "name": "showSaveNotification",
-                    "line": 145,
+                    "line": 155,
                     "comment": "",
                     "code": "{\n    const alertDiv = $('<div>')\n        .addClass('alert alert-' + type + ' alert-dismissible fade show')\n        .attr('role', 'alert')\n        .html(message + '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>');\n    \n    // Insert at top of page and auto-dismiss after 3 seconds\n    $('main, .container, body').first().prepend(alertDiv);\n    setTimeout(() => {\n        alertDiv.fadeOut(300, function() { $(this).remove(); });\n    }, 3000);\n}",
                     "parameters": [],
@@ -1470,17 +1784,17 @@
                     "usages": [
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 133,
+                            "line": 145,
                             "context": "showSaveNotification('Order saved successfully');"
                         },
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 136,
+                            "line": 147,
                             "context": "showSaveNotification('Error saving order. Please try again.', 'danger');"
                         },
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 141,
+                            "line": 151,
                             "context": "showSaveNotification('Error saving order: ' + error.message, 'danger');"
                         }
                     ],
@@ -1491,7 +1805,7 @@
                 },
                 {
                     "name": "toggleTypeDetails",
-                    "line": 159,
+                    "line": 169,
                     "comment": "",
                     "code": "{\n  const details = document.getElementById('details-' + typeName);\n  const button = document.querySelector(`[data-type=\"${typeName}\"].expand-type-btn`);\n  if (details) {\n    if (details.style.display === 'none') {\n      details.style.display = 'block';\n      button.querySelector('i').className = 'fa fa-chevron-up';\n    } else {\n      details.style.display = 'none';\n      button.querySelector('i').className = 'fa fa-chevron-down';\n    }\n  }\n}",
                     "parameters": [],
@@ -1508,7 +1822,7 @@
                     "usages": [
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 202,
+                            "line": 212,
                             "context": "toggleTypeDetails(typeName);"
                         }
                     ],
@@ -1519,7 +1833,7 @@
                 },
                 {
                     "name": "deleteType",
-                    "line": 174,
+                    "line": 184,
                     "comment": "",
                     "code": "{\n  if (confirm('Delete annotation type \"' + typeName + '\"? This cannot be undone.')) {\n    const form = document.createElement('form');\n    form.method = 'POST';\n    \n    const typeInput = document.createElement('input');\n    typeInput.type = 'hidden';\n    typeInput.name = 'type_name';\n    typeInput.value = typeName;\n    form.appendChild(typeInput);\n    \n    const deleteInput = document.createElement('input');\n    deleteInput.type = 'hidden';\n    deleteInput.name = 'delete_annotation_type';\n    deleteInput.value = '1';\n    form.appendChild(deleteInput);\n    \n    document.body.appendChild(form);\n    form.submit();\n  }\n}",
                     "parameters": [],
@@ -1535,7 +1849,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 185,
+                            "line": 196,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger mt-2\" onclick=\"deleteType('<?= htmlspecialchars($type_name) ?>')\">"
                         }
                     ],
@@ -1548,7 +1862,7 @@
         },
         {
             "name": "js/modules/manage-groups.js",
-            "count": 8,
+            "count": 9,
             "functions": [
                 {
                     "name": "toggleGroup",
@@ -1570,7 +1884,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 305,
+                            "line": 311,
                             "context": "<div class=\"group-header\" onclick=\"toggleGroup('<?= htmlspecialchars($desc['group_name']) ?>')\" style=\"cursor: pointer; padding: 10px; background: #f8f9fa; border-radius: 3px; display: flex; justify-content: space-between; align-items: center;\">"
                         }
                     ],
@@ -1583,11 +1897,13 @@
                     "name": "addImage",
                     "line": 21,
                     "comment": "",
-                    "code": "{\n  const container = document.getElementById('images-container-' + groupName);\n  const newIndex = container.children.length;\n  \n  const html = `\n    <div class=\"image-item\" data-index=\"${newIndex}\" style=\"border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;\">\n      <button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeImage('${groupName}', ${newIndex})\" style=\"float: right;\" ${isDescFileWriteError ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : ''}>Remove</button>\n      <div class=\"form-group\">\n        <label>Image File</label>\n        <input type=\"text\" class=\"form-control image-file\" value=\"\" placeholder=\"e.g., Reef0607_0.jpg\">\n      </div>\n      <div class=\"form-group\">\n        <label>Caption (HTML allowed)</label>\n        <textarea class=\"form-control image-caption\" rows=\"2\"></textarea>\n      </div>\n    </div>\n  `;\n  \n  container.insertAdjacentHTML('beforeend', html);\n}",
+                    "code": "{\n  const container = document.getElementById('images-container-' + groupName);\n  const newIndex = container.children.length;\n  \n  const html = `\n    <div class=\"image-item\" data-index=\"${newIndex}\" style=\"border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;\">\n      <button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeImage('${groupName}', ${newIndex})\" style=\"float: right;\" ${isDescFileWriteError ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : ''}>Remove</button>\n      <div class=\"form-group\">\n        <label>Image File</label>\n        <div class=\"input-group\">\n          <input type=\"text\" class=\"form-control image-file\" value=\"\" placeholder=\"e.g., Reef0607_0.jpg\">\n          <button type=\"button\" class=\"btn btn-outline-secondary upload-image-btn\" ${isDescFileWriteError ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : ''}>Upload</button>\n        </div>\n        <input type=\"file\" class=\"image-upload-input\" style=\"display:none;\" accept=\"image/*\">\n        <small class=\"form-text text-muted\">Or upload a photo directly</small>\n      </div>\n      <div class=\"form-group\">\n        <label>Caption (HTML allowed)</label>\n        <textarea class=\"form-control image-caption\" rows=\"2\"></textarea>\n      </div>\n    </div>\n  `;\n  \n  container.insertAdjacentHTML('beforeend', html);\n  attachImageUploadHandler(container.lastElementChild);\n}",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
-                    "internalCalls": [],
+                    "internalCalls": [
+                        "attachImageUploadHandler"
+                    ],
                     "category": "admin",
                     "tags": [
                         "dom-manipulation",
@@ -1600,7 +1916,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 342,
+                            "line": 353,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-primary mb-3\" onclick=\"addImage('<?= htmlspecialchars($desc['group_name']) ?>')\" <?= $desc_file_write_error ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : '' ?>>+ Add Image</button>"
                         }
                     ],
@@ -1611,7 +1927,7 @@
                 },
                 {
                     "name": "removeImage",
-                    "line": 42,
+                    "line": 48,
                     "comment": "",
                     "code": "{\n  const container = document.getElementById('images-container-' + groupName);\n  const items = container.querySelectorAll('.image-item');\n  if (items.length > 1) {\n    items[index].remove();\n  } else {\n    alert('At least one image entry must remain (it can be empty).');\n  }\n}",
                     "parameters": [],
@@ -1634,7 +1950,7 @@
                         },
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 330,
+                            "line": 336,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeImage('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)\" style=\"float: right;\" <?= $desc_file_write_error ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : '' ?>>Remove</button>"
                         }
                     ],
@@ -1644,8 +1960,54 @@
                     ]
                 },
                 {
+                    "name": "attachImageUploadHandler",
+                    "line": 58,
+                    "comment": "",
+                    "code": "{\n  const uploadBtn = imageItemElement.querySelector('.upload-image-btn');\n  const fileInput = imageItemElement.querySelector('.image-upload-input');\n  const fileNameInput = imageItemElement.querySelector('.image-file');\n  \n  uploadBtn.addEventListener('click', function() {\n    fileInput.click();\n  });\n  \n  fileInput.addEventListener('change', function(e) {\n    if (this.files.length > 0) {\n      const file = this.files[0];\n      const formData = new FormData();\n      formData.append('upload_image', true);\n      formData.append('image_file', file);\n      \n      // Show loading state\n      uploadBtn.disabled = true;\n      uploadBtn.textContent = 'Uploading...';\n      \n      fetch('/' + sitePath.replace(/^\\//, '') + '/admin/manage_groups.php', {\n        method: 'POST',\n        body: formData\n      })\n      .then(response => response.json())\n      .then(data => {\n        uploadBtn.disabled = false;\n        uploadBtn.textContent = 'Upload';\n        \n        if (data.success) {\n          fileNameInput.value = data.filename;\n          alert('Image uploaded successfully!');\n        } else {\n          alert('Upload failed: ' + (data.error || 'Unknown error'));\n        }\n      })\n      .catch(error => {\n        uploadBtn.disabled = false;\n        uploadBtn.textContent = 'Upload';\n        alert('Upload error: ' + error.message);\n      });\n    }\n  });\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "event-handling",
+                    "tags": [
+                        "dom-manipulation",
+                        "asynchronous",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "error-handling"
+                    ],
+                    "usageCount": 4,
+                    "usages": [
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 46,
+                            "context": "attachImageUploadHandler(container.lastElementChild);"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 189,
+                            "context": "attachImageUploadHandler(imageItem);"
+                        },
+                        {
+                            "file": "js/modules/organism-management.js",
+                            "line": 231,
+                            "context": "attachImageUploadHandler(newItem, organism);"
+                        },
+                        {
+                            "file": "js/modules/organism-management.js",
+                            "line": 661,
+                            "context": "attachImageUploadHandler(item, organism);"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_groups.php"
+                    ]
+                },
+                {
                     "name": "addParagraph",
-                    "line": 52,
+                    "line": 103,
                     "comment": "",
                     "code": "{\n  const container = document.getElementById('paragraphs-container-' + groupName);\n  const newIndex = container.children.length;\n  \n  const html = `\n    <div class=\"paragraph-item\" data-index=\"${newIndex}\" style=\"border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;\">\n      <button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeParagraph('${groupName}', ${newIndex})\" style=\"float: right;\" ${isDescFileWriteError ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : ''}>Remove</button>\n      <div class=\"form-group\">\n        <label>Text (HTML allowed)</label>\n        <textarea class=\"form-control para-text\" rows=\"4\"></textarea>\n      </div>\n      <div class=\"form-row\">\n        <div class=\"form-group col-md-6\">\n          <label>CSS Style</label>\n          <input type=\"text\" class=\"form-control para-style\" value=\"\" placeholder=\"e.g., color: red;\">\n        </div>\n        <div class=\"form-group col-md-6\">\n          <label>CSS Class</label>\n          <input type=\"text\" class=\"form-control para-class\" value=\"\" placeholder=\"e.g., lead\">\n        </div>\n      </div>\n    </div>\n  `;\n  \n  container.insertAdjacentHTML('beforeend', html);\n}",
                     "parameters": [],
@@ -1664,7 +2026,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 366,
+                            "line": 377,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-primary mb-3\" onclick=\"addParagraph('<?= htmlspecialchars($desc['group_name']) ?>')\" <?= $desc_file_write_error ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : '' ?>>+ Add Paragraph</button>"
                         }
                     ],
@@ -1675,7 +2037,7 @@
                 },
                 {
                     "name": "removeParagraph",
-                    "line": 79,
+                    "line": 130,
                     "comment": "",
                     "code": "{\n  const container = document.getElementById('paragraphs-container-' + groupName);\n  const items = container.querySelectorAll('.paragraph-item');\n  if (items.length > 1) {\n    items[index].remove();\n  } else {\n    alert('At least one paragraph entry must remain (it can be empty).');\n  }\n}",
                     "parameters": [],
@@ -1693,12 +2055,12 @@
                     "usages": [
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 59,
+                            "line": 110,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeParagraph('${groupName}', ${newIndex})\" style=\"float: right;\" ${isDescFileWriteError ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : ''}>Remove</button>"
                         },
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 348,
+                            "line": 359,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeParagraph('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)\" style=\"float: right;\" <?= $desc_file_write_error ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : '' ?>>Remove</button>"
                         }
                     ],
@@ -1709,7 +2071,7 @@
                 },
                 {
                     "name": "getColorForTag",
-                    "line": 104,
+                    "line": 155,
                     "comment": "",
                     "code": "{\n    // If we've already assigned a color to this tag, use it\n    if (tagColorMap[tag]) {\n      return tagColorMap[tag];\n    }\n    \n    // Assign the next available color\n    tagColorMap[tag] = colors[nextColorIndex % colors.length];\n    nextColorIndex++;\n    \n    return tagColorMap[tag];\n  }",
                     "parameters": [],
@@ -1722,57 +2084,57 @@
                     "usages": [
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 119,
+                            "line": 170,
                             "context": "getColorForTag(tag);"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 125,
+                            "line": 176,
                             "context": "chip.style.background = getColorForTag(tag);"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 126,
+                            "line": 177,
                             "context": "chip.style.borderColor = getColorForTag(tag);"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 132,
+                            "line": 183,
                             "context": "chip.style.background = getColorForTag(groupName);"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 133,
+                            "line": 184,
                             "context": "chip.style.borderColor = getColorForTag(groupName);"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 181,
+                            "line": 237,
                             "context": "chip.style.background = getColorForTag(tag);"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 182,
+                            "line": 238,
                             "context": "chip.style.borderColor = getColorForTag(tag);"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 371,
+                            "line": 427,
                             "context": "chip.style.background = getColorForTag(selectedTags[index]);"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 372,
+                            "line": 428,
                             "context": "chip.style.borderColor = getColorForTag(selectedTags[index]);"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 409,
+                            "line": 465,
                             "context": "chip.style.background = getColorForTag(tag);"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 410,
+                            "line": 466,
                             "context": "chip.style.borderColor = getColorForTag(tag);"
                         }
                     ],
@@ -1783,7 +2145,7 @@
                 },
                 {
                     "name": "renderTags",
-                    "line": 175,
+                    "line": 231,
                     "comment": "",
                     "code": "{\n      // Render selected tags\n      selectedDisplay.innerHTML = '<small class=\"text-muted\">Selected tags:</small><br>';\n      selectedTags.forEach(tag => {\n        const chip = document.createElement('span');\n        chip.className = 'tag-chip selected';\n        chip.style.background = getColorForTag(tag);\n        chip.style.borderColor = getColorForTag(tag);\n        chip.innerHTML = `${tag} <span class=\"remove\">\u00d7</span>`;\n        chip.onclick = function() {\n          selectedTags = selectedTags.filter(t => t !== tag);\n          renderTags();\n        };\n        selectedDisplay.appendChild(chip);\n      });\n      \n      // Render available tags\n      availableSection.innerHTML = '<small class=\"text-muted\">Available tags (click to add):</small><br>';\n      existingGroups.forEach(tag => {\n        if (!selectedTags.includes(tag)) {\n          const chip = document.createElement('span');\n          chip.className = 'tag-chip available';\n          chip.textContent = tag;\n          chip.onclick = function() {\n            selectedTags.push(tag);\n            renderTags();\n          };\n          availableSection.appendChild(chip);\n        }\n      });\n    }",
                     "parameters": [],
@@ -1804,42 +2166,42 @@
                     "usages": [
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 186,
+                            "line": 242,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 200,
+                            "line": 256,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 219,
+                            "line": 275,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 235,
+                            "line": 291,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 414,
+                            "line": 470,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 428,
+                            "line": 484,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 447,
+                            "line": 503,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 463,
+                            "line": 519,
                             "context": "renderTags();"
                         }
                     ],
@@ -1850,7 +2212,7 @@
                 },
                 {
                     "name": "renderTags",
-                    "line": 403,
+                    "line": 459,
                     "comment": "",
                     "code": "{\n      // Render selected tags\n      selectedDisplay.innerHTML = '<small class=\"text-muted\">Selected tags:</small><br>';\n      selectedTags.forEach(tag => {\n        const chip = document.createElement('span');\n        chip.className = 'tag-chip selected';\n        chip.style.background = getColorForTag(tag);\n        chip.style.borderColor = getColorForTag(tag);\n        chip.innerHTML = `${tag} <span class=\"remove\">\u00d7</span>`;\n        chip.onclick = function() {\n          selectedTags = selectedTags.filter(t => t !== tag);\n          renderTags();\n        };\n        selectedDisplay.appendChild(chip);\n      });\n      \n      // Render available tags\n      availableSection.innerHTML = '<small class=\"text-muted\">Available tags (click to add):</small><br>';\n      existingGroups.forEach(tag => {\n        if (!selectedTags.includes(tag)) {\n          const chip = document.createElement('span');\n          chip.className = 'tag-chip available';\n          chip.textContent = tag;\n          chip.onclick = function() {\n            selectedTags.push(tag);\n            renderTags();\n          };\n          availableSection.appendChild(chip);\n        }\n      });\n    }",
                     "parameters": [],
@@ -1871,42 +2233,42 @@
                     "usages": [
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 186,
+                            "line": 242,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 200,
+                            "line": 256,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 219,
+                            "line": 275,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 235,
+                            "line": 291,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 414,
+                            "line": 470,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 428,
+                            "line": 484,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 447,
+                            "line": 503,
                             "context": "renderTags();"
                         },
                         {
                             "file": "js/modules/manage-groups.js",
-                            "line": 463,
+                            "line": 519,
                             "context": "renderTags();"
                         }
                     ],
@@ -2112,7 +2474,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 152,
+                            "line": 159,
                             "context": "<button type=\"button\" class=\"btn btn-secondary\" id=\"cancel-btn\" onclick=\"resetForm()\">"
                         }
                     ],
@@ -2321,7 +2683,7 @@
         },
         {
             "name": "js/modules/organism-management.js",
-            "count": 13,
+            "count": 14,
             "functions": [
                 {
                     "name": "escapeHtml",
@@ -2336,7 +2698,7 @@
                     "tags": [
                         "state-modifying"
                     ],
-                    "usageCount": 13,
+                    "usageCount": 15,
                     "usages": [
                         {
                             "file": "js/permission-manager.js",
@@ -2369,6 +2731,16 @@
                             "context": "<span style=\"background: ${bgColor}; padding: 2px 6px; border-radius: 3px;\">${escapeHtml(id)}</span>"
                         },
                         {
+                            "file": "js/modules/advanced-search-filter.js",
+                            "line": 129,
+                            "context": "const infoIcon = description ? `<i class=\"fa fa-info-circle text-muted info-icon-trigger\" style=\"cursor: pointer; margin-left: 0.5rem;\" data-description=\"${escapeHtml(description)}\" data-type=\"${escapeHtml(type)}\"></i>` : '';"
+                        },
+                        {
+                            "file": "js/modules/advanced-search-filter.js",
+                            "line": 312,
+                            "context": "<h5 class=\"modal-title\">${escapeHtml(type)}</h5>"
+                        },
+                        {
                             "file": "js/modules/organism-management.js",
                             "line": 50,
                             "context": "html += '<code class=\"text-break\">' + escapeHtml(data.command) + '</code><br>';"
@@ -2395,12 +2767,12 @@
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 324,
+                            "line": 332,
                             "context": "html += '<code class=\"text-break\">' + escapeHtml(data.command) + '</code><br>';"
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 393,
+                            "line": 401,
                             "context": "html += '<code class=\"text-break\">' + escapeHtml(data.command) + '</code><br>';"
                         }
                     ],
@@ -2434,12 +2806,12 @@
                     "usages": [
                         {
                             "file": "admin/manage_organisms.php",
-                            "line": 31,
+                            "line": 35,
                             "context": "$result = fixDatabasePermissions($db_file);"
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 618,
+                            "line": 647,
                             "context": "<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, '<?= $org_safe ?>')\">"
                         }
                     ],
@@ -2470,7 +2842,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 891,
+                            "line": 924,
                             "context": "<button type=\"button\" class=\"btn btn-success\" onclick=\"saveMetadata(event, '<?= $org_safe ?>')\">"
                         }
                     ],
@@ -2483,11 +2855,13 @@
                     "name": "addMetadataImage",
                     "line": 203,
                     "comment": "",
-                    "code": "{\n    const container = document.getElementById('images-container-' + organism);\n    const newIndex = container.children.length;\n    \n    const html = `\n      <div class=\"image-item\" data-index=\"${newIndex}\" style=\"border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;\">\n        <button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataImage('${organism}', ${newIndex})\" style=\"float: right;\">Remove</button>\n        <div class=\"form-group mb-3\">\n          <label>Image File</label>\n          <input type=\"text\" class=\"form-control image-file\" value=\"\" placeholder=\"e.g., organism_image.jpg\">\n          <small class=\"text-muted\">Place images in /moop/images/ directory</small>\n        </div>\n        <div class=\"form-group\">\n          <label>Caption (HTML allowed)</label>\n          <textarea class=\"form-control image-caption\" rows=\"2\"></textarea>\n        </div>\n      </div>\n    `;\n    \n    container.insertAdjacentHTML('beforeend', html);\n}",
+                    "code": "{\n    const container = document.getElementById('images-container-' + organism);\n    const newIndex = container.children.length;\n    \n    const html = `\n      <div class=\"image-item\" data-index=\"${newIndex}\" style=\"border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;\">\n        <button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataImage('${organism}', ${newIndex})\" style=\"float: right;\">Remove</button>\n        <div class=\"form-group mb-3\">\n          <label>Image File</label>\n          <div class=\"input-group\">\n            <input type=\"text\" class=\"form-control image-file\" value=\"\" placeholder=\"e.g., organism_image.jpg\">\n            <button type=\"button\" class=\"btn btn-outline-secondary upload-image-btn\">Upload</button>\n          </div>\n          <input type=\"file\" class=\"image-upload-input\" style=\"display:none;\" accept=\"image/*\">\n          <small class=\"form-text text-muted\">Or upload a photo directly</small>\n        </div>\n        <div class=\"form-group\">\n          <label>Caption (HTML allowed)</label>\n          <textarea class=\"form-control image-caption\" rows=\"2\"></textarea>\n        </div>\n      </div>\n    `;\n    \n    container.insertAdjacentHTML('beforeend', html);\n    \n    // Attach upload handler to the new image item\n    const newItem = container.lastElementChild;\n    attachImageUploadHandler(newItem, organism);\n}",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
-                    "internalCalls": [],
+                    "internalCalls": [
+                        "attachImageUploadHandler"
+                    ],
                     "category": "admin",
                     "tags": [
                         "dom-manipulation",
@@ -2499,7 +2873,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 851,
+                            "line": 884,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-primary mb-4\" onclick=\"addMetadataImage('<?= $org_safe ?>')\">"
                         }
                     ],
@@ -2510,7 +2884,7 @@
                 },
                 {
                     "name": "removeMetadataImage",
-                    "line": 225,
+                    "line": 233,
                     "comment": "",
                     "code": "{\n    const container = document.getElementById('images-container-' + organism);\n    const items = container.querySelectorAll('.image-item');\n    if (items.length > 1) {\n        items[index].remove();\n    } else {\n        alert('At least one image entry must remain (it can be empty).');\n    }\n}",
                     "parameters": [],
@@ -2533,7 +2907,7 @@
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 838,
+                            "line": 867,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataImage('<?= $org_safe ?>', <?= $idx ?>)\" style=\"float: right;\">Remove</button>"
                         }
                     ],
@@ -2544,7 +2918,7 @@
                 },
                 {
                     "name": "addMetadataParagraph",
-                    "line": 235,
+                    "line": 243,
                     "comment": "",
                     "code": "{\n    const container = document.getElementById('paragraphs-container-' + organism);\n    const newIndex = container.children.length;\n    \n    const html = `\n      <div class=\"paragraph-item\" data-index=\"${newIndex}\" style=\"border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;\">\n        <button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataParagraph('${organism}', ${newIndex})\" style=\"float: right;\">Remove</button>\n        <div class=\"form-group mb-3\">\n          <label>Text (HTML allowed)</label>\n          <textarea class=\"form-control para-text\" rows=\"4\"></textarea>\n        </div>\n        <div class=\"row\">\n          <div class=\"col-md-6\">\n            <div class=\"form-group\">\n              <label>CSS Style</label>\n              <input type=\"text\" class=\"form-control para-style\" value=\"\" placeholder=\"e.g., color: red;\">\n            </div>\n          </div>\n          <div class=\"col-md-6\">\n            <div class=\"form-group\">\n              <label>CSS Class</label>\n              <input type=\"text\" class=\"form-control para-class\" value=\"\" placeholder=\"e.g., lead\">\n            </div>\n          </div>\n        </div>\n      </div>\n    `;\n    \n    container.insertAdjacentHTML('beforeend', html);\n}",
                     "parameters": [],
@@ -2562,7 +2936,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 885,
+                            "line": 918,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-primary mb-4\" onclick=\"addMetadataParagraph('<?= $org_safe ?>')\">"
                         }
                     ],
@@ -2573,7 +2947,7 @@
                 },
                 {
                     "name": "removeMetadataParagraph",
-                    "line": 266,
+                    "line": 274,
                     "comment": "",
                     "code": "{\n    const container = document.getElementById('paragraphs-container-' + organism);\n    const items = container.querySelectorAll('.paragraph-item');\n    if (items.length > 1) {\n        items[index].remove();\n    } else {\n        alert('At least one paragraph entry must remain (it can be empty).');\n    }\n}",
                     "parameters": [],
@@ -2591,12 +2965,12 @@
                     "usages": [
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 242,
+                            "line": 250,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataParagraph('${organism}', ${newIndex})\" style=\"float: right;\">Remove</button>"
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 863,
+                            "line": 896,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataParagraph('<?= $org_safe ?>', <?= $idx ?>)\" style=\"float: right;\">Remove</button>"
                         }
                     ],
@@ -2607,7 +2981,7 @@
                 },
                 {
                     "name": "renameAssemblyDirectory",
-                    "line": 276,
+                    "line": 284,
                     "comment": "",
                     "code": "{\n    event.preventDefault();\n    \n    const elementId = safeAsmId || organism;\n    \n    const oldDir = document.getElementById('oldDirName' + elementId).value;\n    const newDir = document.getElementById('newDirName' + elementId).value;\n    const resultDiv = document.getElementById('renameResult' + elementId);\n    const button = event.target;\n    \n    if (!oldDir || !newDir) {\n        resultDiv.innerHTML = '<div class=\"alert alert-warning\">Please select both current and new directory names</div>';\n        resultDiv.classList.remove('d-none');\n        return;\n    }\n    \n    if (oldDir === newDir) {\n        resultDiv.innerHTML = '<div class=\"alert alert-warning\">Current and new names are the same</div>';\n        resultDiv.classList.remove('d-none');\n        return;\n    }\n    \n    button.disabled = true;\n    button.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Renaming...';\n    resultDiv.classList.add('d-none');\n    \n    fetch('manage_organisms.php', {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/x-www-form-urlencoded'\n        },\n        body: 'action=rename_assembly&organism=' + encodeURIComponent(organism) + \n              '&old_name=' + encodeURIComponent(oldDir) + \n              '&new_name=' + encodeURIComponent(newDir)\n    })\n    .then(response => response.json())\n    .then(data => {\n        button.disabled = false;\n        \n        let alertClass = data.success ? 'alert-success' : 'alert-danger';\n        let html = '<div class=\"alert ' + alertClass + '\">';\n        html += '<strong>' + (data.success ? '\u2713 Success!' : '\u2717 Failed!') + '</strong><br>';\n        html += '<p>' + data.message + '</p>';\n        \n        if (data.command) {\n            html += '<div class=\"alert alert-info mt-2 small\">';\n            html += '<strong>Run this command on the server:</strong><br>';\n            html += '<code class=\"text-break\">' + escapeHtml(data.command) + '</code><br>';\n            html += '<small class=\"mt-2 d-block text-muted\"",
                     "parameters": [],
@@ -2628,12 +3002,12 @@
                     "usages": [
                         {
                             "file": "admin/manage_organisms.php",
-                            "line": 51,
+                            "line": 55,
                             "context": "$result = renameAssemblyDirectory($organism_dir, $old_name, $new_name);"
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 1059,
+                            "line": 1092,
                             "context": "<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, '<?= htmlspecialchars($organism) ?>', '<?= htmlspecialchars($safe_asm_id) ?>')\">"
                         }
                     ],
@@ -2644,7 +3018,7 @@
                 },
                 {
                     "name": "deleteAssemblyDirectory",
-                    "line": 351,
+                    "line": 359,
                     "comment": "",
                     "code": "{\n    event.preventDefault();\n    \n    const dirToDelete = document.getElementById('dirToDelete' + safeAsmId).value;\n    const resultDiv = document.getElementById('deleteResult' + safeAsmId);\n    const button = event.target;\n    \n    if (!dirToDelete) {\n        resultDiv.innerHTML = '<div class=\"alert alert-warning\">Please select a directory to delete</div>';\n        resultDiv.classList.remove('d-none');\n        return;\n    }\n    \n    if (!confirm('\u26a0\ufe0f  CAUTION: You are about to permanently delete the directory \"' + dirToDelete + '\". This action CANNOT be undone!\\n\\nAre you absolutely sure you want to continue?')) {\n        return;\n    }\n    \n    button.disabled = true;\n    button.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Deleting...';\n    resultDiv.classList.add('d-none');\n    \n    fetch('manage_organisms.php', {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/x-www-form-urlencoded'\n        },\n        body: 'action=delete_assembly&organism=' + encodeURIComponent(organism) + \n              '&dir_name=' + encodeURIComponent(dirToDelete)\n    })\n    .then(response => response.json())\n    .then(data => {\n        button.disabled = false;\n        \n        let alertClass = data.success ? 'alert-success' : 'alert-danger';\n        let html = '<div class=\"alert ' + alertClass + '\">';\n        html += '<strong>' + (data.success ? '\u2713 Deleted!' : '\u2717 Failed!') + '</strong><br>';\n        html += '<p>' + data.message + '</p>';\n        \n        if (data.command) {\n            html += '<div class=\"alert alert-info mt-2 small\">';\n            html += '<strong>Web server lacks permissions. Run this command on the server:</strong><br>';\n            html += '<code class=\"text-break\">' + escapeHtml(data.command) + '</code><br>';\n            html += '<small class=\"mt-2 d-block text-muted\">After running the command, refresh this page to verify the deletion.</small>';\n            html += '</div>';\n        }\n        \n        html += '</div>';",
                     "parameters": [],
@@ -2666,12 +3040,12 @@
                     "usages": [
                         {
                             "file": "admin/manage_organisms.php",
-                            "line": 70,
+                            "line": 74,
                             "context": "$result = deleteAssemblyDirectory($organism_dir, $dir_name);"
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 1092,
+                            "line": 1125,
                             "context": "<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, '<?= htmlspecialchars($organism) ?>', '<?= htmlspecialchars($safe_asm_id) ?>')\">"
                         }
                     ],
@@ -2682,7 +3056,7 @@
                 },
                 {
                     "name": "deleteCurrentAssemblyDirectory",
-                    "line": 419,
+                    "line": 427,
                     "comment": "",
                     "code": "{\n    event.preventDefault();\n    \n    // Get the current assembly name from the modal title or data attribute\n    const modalElement = document.getElementById('asmModal' + safeAsmId);\n    const assemblyName = modalElement ? modalElement.getAttribute('data-assembly-name') : null;\n    \n    if (!assemblyName) {\n        alert('Unable to determine assembly directory name');\n        return;\n    }\n    \n    if (!confirm('\u26a0\ufe0f  CAUTION: You are about to permanently delete the assembly directory \"' + assemblyName + '\" for organism \"' + organism + '\".\\n\\nThis action CANNOT be undone!\\n\\nAre you absolutely sure you want to continue?')) {\n        return;\n    }\n    \n    const button = event.target.closest('button');\n    button.disabled = true;\n    button.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Deleting...';\n    \n    fetch('manage_organisms.php', {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/x-www-form-urlencoded'\n        },\n        body: 'action=delete_assembly&organism=' + encodeURIComponent(organism) + \n              '&dir_name=' + encodeURIComponent(assemblyName)\n    })\n    .then(response => response.json())\n    .then(data => {\n        if (data.success) {\n            alert('Assembly directory deleted successfully! The modal will close.');\n            const modal = bootstrap.Modal.getInstance(modalElement);\n            if (modal) {\n                modal.hide();\n            }\n            // Refresh the page after a short delay to show updated list\n            setTimeout(() => location.reload(), 500);\n        } else {\n            button.disabled = false;\n            button.innerHTML = '<i class=\"fa fa-trash-alt\"></i> Delete Assembly Directory';\n            \n            let message = data.message || 'Unknown error';\n            if (data.command) {\n                message += '\\n\\nWeb server lacks permissions. Run this command on the server:\\n' + data.command;\n            }\n            alert('\u274c Deletion failed!\\n\\n' + message);",
                     "parameters": [],
@@ -2702,7 +3076,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 1201,
+                            "line": 1249,
                             "context": "<button type=\"button\" class=\"btn btn-danger\" onclick=\"deleteCurrentAssemblyDirectory(event, '<?= htmlspecialchars($organism) ?>', '<?= htmlspecialchars($safe_asm_id) ?>')\">"
                         }
                     ],
@@ -2713,7 +3087,7 @@
                 },
                 {
                     "name": "addFeatureTag",
-                    "line": 475,
+                    "line": 483,
                     "comment": "",
                     "code": "{\n    const inputId = type + '-feature-input-' + organism;\n    const containerId = type + '-features-' + organism;\n    const input = document.getElementById(inputId);\n    const container = document.getElementById(containerId);\n    \n    const feature = input.value.trim();\n    if (!feature) {\n        alert('Please enter a feature type');\n        return;\n    }\n    \n    // Check if already exists\n    const existing = Array.from(container.querySelectorAll('.feature-tag')).map(t => t.getAttribute('data-feature'));\n    if (existing.includes(feature)) {\n        alert('This feature type is already added');\n        return;\n    }\n    \n    const badge = document.createElement('span');\n    badge.className = 'badge me-2 mb-2 feature-tag';\n    badge.className += type === 'parent' ? ' bg-primary' : ' bg-info';\n    badge.setAttribute('data-feature', feature);\n    badge.innerHTML = `${feature} <i class=\"fa fa-times\" style=\"cursor: pointer;\" onclick=\"removeFeatureTag(this, '${organism}')\"></i>`;\n    \n    container.appendChild(badge);\n    input.value = '';\n}",
                     "parameters": [],
@@ -2732,12 +3106,12 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 798,
+                            "line": 827,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-outline-primary mt-2\" onclick=\"addFeatureTag('<?= $org_safe ?>', 'parent')\">"
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 815,
+                            "line": 844,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-outline-info mt-2\" onclick=\"addFeatureTag('<?= $org_safe ?>', 'child')\">"
                         }
                     ],
@@ -2748,7 +3122,7 @@
                 },
                 {
                     "name": "removeFeatureTag",
-                    "line": 504,
+                    "line": 512,
                     "comment": "",
                     "code": "{\n    element.closest('.feature-tag').remove();\n}",
                     "parameters": [],
@@ -2761,17 +3135,17 @@
                     "usages": [
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 499,
+                            "line": 507,
                             "context": "badge.innerHTML = `${feature} <i class=\"fa fa-times\" style=\"cursor: pointer;\" onclick=\"removeFeatureTag(this, '${organism}')\"></i>`;"
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 793,
+                            "line": 822,
                             "context": "<?= htmlspecialchars($feature) ?> <i class=\"fa fa-times\" style=\"cursor: pointer;\" onclick=\"removeFeatureTag(this, '<?= $org_safe ?>')\"></i>"
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 810,
+                            "line": 839,
                             "context": "<?= htmlspecialchars($feature) ?> <i class=\"fa fa-times\" style=\"cursor: pointer;\" onclick=\"removeFeatureTag(this, '<?= $org_safe ?>')\"></i>"
                         }
                     ],
@@ -2782,7 +3156,7 @@
                 },
                 {
                     "name": "togglePath",
-                    "line": 577,
+                    "line": 585,
                     "comment": "/**\n * Toggle Path Display\n * Shows/hides the organism directory path\n */",
                     "code": "{\n    const pathId = 'path-' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n    let pathDiv = document.getElementById(pathId);\n    \n    if (pathDiv) {\n        // Already exists, toggle visibility\n        if (pathDiv.style.display === 'none') {\n            pathDiv.style.display = 'block';\n            button.innerHTML = '<i class=\"fa fa-folder-open\"></i> Hide Path';\n        } else {\n            pathDiv.style.display = 'none';\n            button.innerHTML = '<i class=\"fa fa-folder\"></i> View Path';\n        }\n    } else {\n        // Create the path display\n        pathDiv = document.createElement('div');\n        pathDiv.id = pathId;\n        pathDiv.className = 'mt-2';\n        pathDiv.innerHTML = '<small class=\"font-monospace text-muted\" style=\"user-select: all; cursor: text;\">' + organism_path + '</small>';\n        button.parentNode.insertBefore(pathDiv, button.nextSibling);\n        button.innerHTML = '<i class=\"fa fa-folder-open\"></i> Hide Path';\n    }\n}",
                     "parameters": [],
@@ -2799,8 +3173,54 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 226,
+                            "line": 239,
                             "context": "<br><button class=\"btn btn-sm btn-outline-secondary\" type=\"button\" onclick=\"togglePath(this, '<?= htmlspecialchars($data['path']) ?>', '<?= htmlspecialchars($organism) ?>')\">"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_organisms.php"
+                    ]
+                },
+                {
+                    "name": "attachImageUploadHandler",
+                    "line": 609,
+                    "comment": "",
+                    "code": "{\n  const uploadBtn = imageItemElement.querySelector('.upload-image-btn');\n  const fileInput = imageItemElement.querySelector('.image-upload-input');\n  const fileNameInput = imageItemElement.querySelector('.image-file');\n  \n  uploadBtn.addEventListener('click', function() {\n    fileInput.click();\n  });\n  \n  fileInput.addEventListener('change', function(e) {\n    if (this.files.length > 0) {\n      const file = this.files[0];\n      const formData = new FormData();\n      formData.append('upload_image', true);\n      formData.append('image_file', file);\n      \n      // Show loading state\n      uploadBtn.disabled = true;\n      uploadBtn.textContent = 'Uploading...';\n      \n      fetch('manage_organisms.php', {\n        method: 'POST',\n        body: formData\n      })\n      .then(response => response.json())\n      .then(data => {\n        uploadBtn.disabled = false;\n        uploadBtn.textContent = 'Upload';\n        \n        if (data.success) {\n          fileNameInput.value = data.filename;\n          alert('Image uploaded successfully!');\n        } else {\n          alert('Upload failed: ' + (data.error || 'Unknown error'));\n        }\n      })\n      .catch(error => {\n        uploadBtn.disabled = false;\n        uploadBtn.textContent = 'Upload';\n        alert('Upload error: ' + error.message);\n      });\n    }\n  });\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "event-handling",
+                    "tags": [
+                        "dom-manipulation",
+                        "asynchronous",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "error-handling"
+                    ],
+                    "usageCount": 4,
+                    "usages": [
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 46,
+                            "context": "attachImageUploadHandler(container.lastElementChild);"
+                        },
+                        {
+                            "file": "js/modules/manage-groups.js",
+                            "line": 189,
+                            "context": "attachImageUploadHandler(imageItem);"
+                        },
+                        {
+                            "file": "js/modules/organism-management.js",
+                            "line": 231,
+                            "context": "attachImageUploadHandler(newItem, organism);"
+                        },
+                        {
+                            "file": "js/modules/organism-management.js",
+                            "line": 661,
+                            "context": "attachImageUploadHandler(item, organism);"
                         }
                     ],
                     "phpFilesCount": 1,
@@ -2811,14 +3231,170 @@
             ]
         },
         {
+            "name": "js/modules/organism-utils.js",
+            "count": 1,
+            "functions": [
+                {
+                    "name": "initializeOrganismSelection",
+                    "line": 12,
+                    "comment": "/**\n * Initialize organism selection checkboxes\n * @param {array} allOrganisms - Complete array of organisms available\n * @param {function} updateCallback - Callback function to call when selection changes\n * @returns {array} The initially selected organisms\n */",
+                    "code": "{\n    // Track which organisms are selected (default: all selected)\n    let selectedOrganisms = [...allOrganisms];\n    \n\n    // Handle individual organism checkboxes\n    $(document).on('change', '.organism-checkbox', function() {\n        const organism = $(this).data('organism');\n        const isChecked = $(this).is(':checked');\n        const $card = $(this).closest('.organism-selector-card');\n        \n        // Update visual state\n        if (isChecked) {\n            $card.addClass('selected');\n        } else {\n            $card.removeClass('selected');\n        }\n        \n        if (isChecked && !selectedOrganisms.includes(organism)) {\n            selectedOrganisms.push(organism);\n        } else if (!isChecked && selectedOrganisms.includes(organism)) {\n            selectedOrganisms = selectedOrganisms.filter(o => o !== organism);\n        }\n        \n        // Call update callback\n        if (updateCallback) {\n            updateCallback(selectedOrganisms);\n        }\n    });\n    \n    // Handle \"Select All\" button\n    $(document).on('click', '.selectAllOrganisms', function() {\n        selectedOrganisms = [...allOrganisms];\n        $('.organism-checkbox').prop('checked', true);\n        $('.organism-selector-card').addClass('selected');\n        if (updateCallback) {\n            updateCallback(selectedOrganisms);\n        }\n    });\n    \n    // Handle \"Deselect All\" button\n    $(document).on('click', '.deselectAllOrganisms', function() {\n        selectedOrganisms = [];\n        $('.organism-checkbox').prop('checked', false);\n        $('.organism-selector-card').removeClass('selected');\n        if (updateCallback) {\n            updateCallback(selectedOrganisms);\n        }\n    });\n    \n    // Initialize visual state for already-checked boxes\n    $('.organism-checkbox:checked').each(function() {\n        $(this).closest('.organism-selector-card').addClass('selected');\n    });\n    \n    return selectedOrganisms;\n}",
+                    "parameters": [
+                        {
+                            "name": "allOrganisms",
+                            "type": "array",
+                            "description": "Complete array of organisms available"
+                        },
+                        {
+                            "name": "updateCallback",
+                            "type": "function",
+                            "description": "Callback function to call when selection changes"
+                        }
+                    ],
+                    "returnType": "array",
+                    "returnDescription": "The initially selected organisms",
+                    "internalCalls": [],
+                    "category": "general",
+                    "tags": [
+                        "event-listener",
+                        "state-modifying",
+                        "validation"
+                    ],
+                    "usageCount": 2,
+                    "usages": [
+                        {
+                            "file": "js/groups-display.js",
+                            "line": 26,
+                            "context": "const initialSelected = initializeOrganismSelection(groupOrganisms, updateGroupSearchManager);"
+                        },
+                        {
+                            "file": "js/multi-organism-search.js",
+                            "line": 32,
+                            "context": "selectedOrganisms = initializeOrganismSelection(allOrganisms, updateMultiSearchManager);"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "tools/groups.php",
+                        "tools/multi_organism.php"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "js/modules/search-utils.js",
+            "count": 2,
+            "functions": [
+                {
+                    "name": "initializeSearchInstructionsHandler",
+                    "line": 9,
+                    "comment": "/**\n * Initialize search instructions info icon handler\n * Call this on pages that have .search-instructions-trigger elements\n */",
+                    "code": "{\n    $(document).on('click', '.search-instructions-trigger', function(e) {\n        e.stopPropagation();\n        const helpType = $(this).data('help-type') || 'basic';\n        const instruction = SEARCH_HELP[helpType] || $(this).data('instruction');\n        showSearchInstructionModal(instruction, 'Search Tips');\n    });\n    \n    // Handle search results help trigger\n    $(document).on('click', '.search-results-help-trigger', function(e) {\n        e.stopPropagation();\n        const helpType = $(this).data('help-type') || 'results';\n        const instruction = SEARCH_HELP[helpType] || $(this).data('instruction');\n        showSearchInstructionModal(instruction, 'Search Results Help');\n    });\n    \n    // Also handle search hints trigger (in results section)\n    $(document).on('click', '.search-hints-trigger', function(e) {\n        e.stopPropagation();\n        const helpType = $(this).data('help-type') || 'results';\n        const instruction = SEARCH_HELP[helpType] || $(this).data('instruction');\n        showSearchInstructionModal(instruction, 'Search Results Help');\n    });\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "showSearchInstructionModal"
+                    ],
+                    "category": "event-handling",
+                    "tags": [
+                        "event-listener",
+                        "state-modifying"
+                    ],
+                    "usageCount": 4,
+                    "usages": [
+                        {
+                            "file": "js/assembly-display.js",
+                            "line": 12,
+                            "context": "initializeSearchInstructionsHandler();"
+                        },
+                        {
+                            "file": "js/groups-display.js",
+                            "line": 50,
+                            "context": "initializeSearchInstructionsHandler();"
+                        },
+                        {
+                            "file": "js/multi-organism-search.js",
+                            "line": 42,
+                            "context": "initializeSearchInstructionsHandler();"
+                        },
+                        {
+                            "file": "js/organism-display.js",
+                            "line": 11,
+                            "context": "initializeSearchInstructionsHandler();"
+                        }
+                    ],
+                    "phpFilesCount": 4,
+                    "phpFiles": [
+                        "tools/assembly.php",
+                        "tools/groups.php",
+                        "tools/multi_organism.php",
+                        "tools/organism.php"
+                    ]
+                },
+                {
+                    "name": "showSearchInstructionModal",
+                    "line": 39,
+                    "comment": "/**\n * Show search instruction modal\n * @param {string} instruction - HTML content to display in modal\n * @param {string} title - Modal title\n */",
+                    "code": "{\n    const modalHtml = `\n        <div class=\"modal fade\" id=\"searchInstructionModal\" tabindex=\"-1\">\n            <div class=\"modal-dialog modal-dialog-centered modal-lg\">\n                <div class=\"modal-content\">\n                    <div class=\"modal-header\">\n                        <h5 class=\"modal-title\">${title}</h5>\n                        <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>\n                    </div>\n                    <div class=\"modal-body\" style=\"max-height: 70vh; overflow-y: auto;\">\n                        ${instruction}\n                    </div>\n                    <div class=\"modal-footer\">\n                        <button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    `;\n    \n    // Remove existing modal if present\n    $('#searchInstructionModal').remove();\n    \n    // Add and show modal\n    $('body').append(modalHtml);\n    const modal = new bootstrap.Modal(document.getElementById('searchInstructionModal'));\n    modal.show();\n}",
+                    "parameters": [
+                        {
+                            "name": "instruction",
+                            "type": "string",
+                            "description": "HTML content to display in modal"
+                        },
+                        {
+                            "name": "title",
+                            "type": "string",
+                            "description": "Modal title"
+                        }
+                    ],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "ui-dom",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "state-modifying"
+                    ],
+                    "usageCount": 3,
+                    "usages": [
+                        {
+                            "file": "js/modules/search-utils.js",
+                            "line": 15,
+                            "context": "showSearchInstructionModal(instruction, 'Search Tips');"
+                        },
+                        {
+                            "file": "js/modules/search-utils.js",
+                            "line": 23,
+                            "context": "showSearchInstructionModal(instruction, 'Search Results Help');"
+                        },
+                        {
+                            "file": "js/modules/search-utils.js",
+                            "line": 31,
+                            "context": "showSearchInstructionModal(instruction, 'Search Results Help');"
+                        }
+                    ],
+                    "phpFilesCount": 4,
+                    "phpFiles": [
+                        "tools/assembly.php",
+                        "tools/groups.php",
+                        "tools/multi_organism.php",
+                        "tools/organism.php"
+                    ]
+                }
+            ]
+        },
+        {
             "name": "js/modules/shared-results-table.js",
-            "count": 3,
+            "count": 8,
             "functions": [
                 {
                     "name": "createOrganismResultsTable",
                     "line": 18,
                     "comment": "/**\n * Creates an organism results table HTML structure\n * \n * @param {string} organism - The organism identifier\n * @param {Array} results - Array of result objects\n * @param {string} sitePath - The site base path\n * @param {string} linkBasePath - Base path for feature links (e.g., 'tools/parent.php' or 'tools/parent.php')\n * @param {string} imageUrl - Optional URL to organism image thumbnail\n * @returns {string} HTML string for the table\n */",
-                    "code": "{\n    const tableId = '#resultsTable_' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n    const selectId = organism.replace(/[^a-zA-Z0-9]/g, '_');\n    const genus = results[0]?.genus || '';\n    const species = results[0]?.species || '';\n    const commonName = results[0]?.common_name || '';\n    \n    const organismDisplay = `<em>${genus} ${species}</em>`;\n    const commonNameDisplay = commonName ? ` (${commonName})` : '';\n    \n    const fallbackId = 'icon-' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n    \n    // Helper function to highlight search terms in text\n    const highlightSearchTerms = (text, keywords) => {\n        if (!keywords || !text) return text;\n        \n        // Split keywords into individual terms (min 3 chars)\n        const terms = keywords.trim().split(/\\s+/).filter(t => t.length >= 3);\n        if (terms.length === 0) return text;\n        \n        // Create regex to match any term (case insensitive, including partial matches like HDAC in HDAC6)\n        let highlighted = text;\n        terms.forEach(term => {\n            const regex = new RegExp(`${term}`, 'gi');\n            highlighted = highlighted.replace(regex, `<strong style=\"background-color: #fff3cd; font-weight: bold;\">$&</strong>`);\n        });\n        return highlighted;\n    };\n    \n    let imageHtml = '';\n    if (imageUrl) {\n        imageHtml = `<img src=\"${imageUrl}\" class=\"organism-thumbnail\" style=\"height: 24px; width: 24px; margin-right: 8px; border-radius: 3px;\" onerror=\"this.style.display='none'; document.getElementById('${fallbackId}').style.display='inline';\" onload=\"document.getElementById('${fallbackId}').style.display='none';\">\n                     <i class=\"fa fa-dna\" id=\"${fallbackId}\" style=\"margin-right: 8px; display: none;\"></i>`;\n    } else {\n        imageHtml = `<i class=\"fa fa-dna\" style=\"margin-right: 8px;\"></i>`;\n    }\n    \n    const anchorId = 'results-' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n    \n    // Check if this is a uniquename search (no annotation columns)\n    //",
+                    "code": "{\n    const tableId = '#resultsTable_' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n    const selectId = organism.replace(/[^a-zA-Z0-9]/g, '_');\n    const genus = results[0]?.genus || '';\n    const species = results[0]?.species || '';\n    const commonName = results[0]?.common_name || '';\n    \n    const organismDisplay = `<a href=\"${sitePath}/tools/organism.php?organism=${encodeURIComponent(organism)}\" style=\"text-decoration: none; color: #0f766e;\"><em>${genus} ${species}</em> <i class=\"fa fa-external-link-alt\" style=\"font-size: 0.8em; margin-left: 0.25rem;\"></i></a>`;\n    const commonNameDisplay = commonName ? ` (${commonName})` : '';\n    \n    const fallbackId = 'icon-' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n    \n    // Helper function to highlight search terms in text\n    const highlightSearchTerms = (text, keywords) => {\n        if (!keywords || !text) return text;\n        \n        // Split keywords into individual terms (min 3 chars)\n        const terms = keywords.trim().split(/\\s+/).filter(t => t.length >= 3);\n        if (terms.length === 0) return text;\n        \n        // Create regex to match any term (case insensitive, including partial matches like HDAC in HDAC6)\n        let highlighted = text;\n        terms.forEach(term => {\n            const regex = new RegExp(`${term}`, 'gi');\n            highlighted = highlighted.replace(regex, `<strong style=\"background-color: #fff3cd; font-weight: bold;\">$&</strong>`);\n        });\n        return highlighted;\n    };\n    \n    let imageHtml = '';\n    if (imageUrl) {\n        imageHtml = `<img src=\"${imageUrl}\" class=\"organism-thumbnail\" style=\"height: 24px; width: 24px; margin-right: 8px; border-radius: 3px;\" onerror=\"this.style.display='none'; document.getElementById('${fallbackId}').style.display='inline';\" onload=\"document.getElementById('${fallbackId}').style.display='none';\">\n                     <i class=\"fa fa-dna\" id=\"${fallbackId}\" style=\"margin-right: 8px; display: none;\"></i>`;\n    } else {\n        imageHtml =",
                     "parameters": [
                         {
                             "name": "organism",
@@ -2856,15 +3432,14 @@
                         "event-listener",
                         "state-modifying",
                         "loops",
-                        "error-handling",
-                        "validation"
+                        "error-handling"
                     ],
                     "usageCount": 1,
                     "usages": [
                         {
                             "file": "js/modules/annotation-search.js",
-                            "line": 292,
-                            "context": "let tableHtml = createOrganismResultsTable(organism, results, this.config.sitePath, 'tools/parent.php', imageUrl, this.currentKeywords);"
+                            "line": 300,
+                            "context": "tableHtml = createOrganismResultsTable(organism, results, this.config.sitePath, 'tools/parent.php', imageUrl, this.currentKeywords);"
                         }
                     ],
                     "phpFilesCount": 0,
@@ -2874,7 +3449,7 @@
                     "name": "initializeResultsTable",
                     "line": 165,
                     "comment": "/**\n * Initializes a DataTable with export functionality and column filtering\n * \n * @param {string} tableId - jQuery selector for the table (e.g., '#resultsTable_organism')\n * @param {string} selectId - Unique identifier for the select all button\n * @param {boolean} isUniquenameSearch - Whether this is a uniquename-only search (no annotation columns)\n */",
-                    "code": "{\n    // Populate filter containers with filter inputs and Select All button\n    $(tableId + ' .column-filter-container').each(function(i) {\n        const columnIndex = $(this).data('column-index');\n        if (columnIndex === 0) {\n            // Select All button for first column\n            $(this).html('<button style=\"width:110px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0;\" class=\"btn btn_select_all\" id=\"toggle-select-btn' + selectId + '\"><span>Select All</span></button>');\n        } else {\n            $(this).html('<input style=\"text-align:left; border: solid 1px #808080; border-radius: 4px; width: 100%;\" type=\"text\" placeholder=\"Filter...\" class=\"column-search\">');\n        }\n    });\n    \n    // Initialize DataTable\n    const table = $(tableId).DataTable({\n        dom: 'Brtlpi',\n        pageLength: 25,\n        stateSave: false,\n        orderCellsTop: false,\n        buttons: DataTableExportConfig.getSearchResultsButtons(),\n        scrollX: false,\n        scrollCollapse: false,\n        autoWidth: false,\n        fixedHeader: false,\n        columnDefs: isUniquenameSearch ? [\n            { targets: 0, orderable: false, className: \"export-exclude\" },  // Select - not sortable, exclude from export\n            { targets: 1, visible: false, className: \"export-only\" }, // Species - hidden but included in exports\n            { targets: 2 },  // Type\n            { targets: 3 }, // Feature ID\n            { targets: 4 }, // Name\n            { targets: 5, className: \"wrap-text\" }  // Description (with wrapping)\n        ] : [\n            { targets: 0, orderable: false, className: \"export-exclude\" },  // Select - not sortable, exclude from export\n            { targets: 1, visible: false, className: \"export-only\" }, // Species - hidden but included in exports\n            { targets: 2 },  // Type\n            { targets: 3 }, // Feature ID\n            { targets: 4 }, // Name\n            { targets: 5, className: \"wrap-text\" }, // Description (with",
+                    "code": "{\n    // Populate filter containers with filter inputs and Select All button\n    $(tableId + ' .column-filter-container').each(function(i) {\n        const columnIndex = $(this).data('column-index');\n        if (columnIndex === 0) {\n            // Select All button for first column\n            $(this).html('<button style=\"width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;\" class=\"btn btn_select_all\" id=\"toggle-select-btn' + selectId + '\"><span>Select All</span></button>');\n        } else {\n            $(this).html('<input style=\"text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #e8e8e8;\" type=\"text\" placeholder=\"Filter...\" class=\"column-search\">');\n        }\n    });\n    \n    // Initialize DataTable\n    const table = $(tableId).DataTable({\n        dom: 'Brtlpi',\n        pageLength: 25,\n        stateSave: false,\n        orderCellsTop: false,\n        buttons: DataTableExportConfig.getSearchResultsButtons(),\n        scrollX: false,\n        scrollCollapse: false,\n        autoWidth: false,\n        fixedHeader: false,\n        columnDefs: isUniquenameSearch ? [\n            { targets: 0, orderable: false, className: \"export-exclude\" },  // Select - not sortable, exclude from export\n            { targets: 1, visible: false, className: \"export-only\" }, // Species - hidden but included in exports\n            { targets: 2 },  // Type\n            { targets: 3 }, // Feature ID\n            { targets: 4 }, // Name\n            { targets: 5, className: \"wrap-text\" }  // Description (with wrapping)\n        ] : [\n            { targets: 0, orderable: false, className: \"export-exclude\" },  // Select - not sortable, exclude from export\n            { targets: 1, visible: false, className: \"export-only\" }, // Species - hidden but included in exports\n            { targets: 2 },  // Type\n            { target",
                     "parameters": [
                         {
                             "name": "tableId",
@@ -2900,17 +3475,167 @@
                         "ajax",
                         "state-modifying"
                     ],
-                    "usageCount": 2,
+                    "usageCount": 3,
                     "usages": [
                         {
                             "file": "js/modules/annotation-search.js",
-                            "line": 308,
+                            "line": 309,
                             "context": "initializeResultsTable(tableId, selectId, true);"
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
                             "line": 154,
                             "context": "setTimeout(() => initializeResultsTable(tableId, selectId, isUniquenameSearch), 100);"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 655,
+                            "context": "initializeResultsTable('#' + tableId, selectIdClean, false);"
+                        }
+                    ],
+                    "phpFilesCount": 0,
+                    "phpFiles": []
+                },
+                {
+                    "name": "groupResultsByFeature",
+                    "line": 273,
+                    "comment": "/**\n * Groups search results by feature_uniquename, preserving database sort order\n * \n * @param {Array} results - Array of result objects\n * @returns {Array} Array of [uniquename, data] pairs in database sort order\n */",
+                    "code": "{\n    const grouped = {};\n    const order = [];\n    \n    results.forEach(result => {\n        const key = result.feature_uniquename;\n        if (!grouped[key]) {\n            grouped[key] = {\n                feature: result,\n                annotations: []\n            };\n            order.push(key);\n        }\n        grouped[key].annotations.push(result);\n    });\n    \n    // Return as array of entries in the order they first appeared\n    return order.map(key => [key, grouped[key]]);\n}",
+                    "parameters": [
+                        {
+                            "name": "results",
+                            "type": "Array",
+                            "description": "Array of result objects"
+                        }
+                    ],
+                    "returnType": "Array",
+                    "returnDescription": "Array of [uniquename, data] pairs in database sort order",
+                    "internalCalls": [],
+                    "category": "datatable",
+                    "tags": [
+                        "state-modifying",
+                        "loops"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 329,
+                            "context": "const grouped = groupResultsByFeature(results);"
+                        }
+                    ],
+                    "phpFilesCount": 0,
+                    "phpFiles": []
+                },
+                {
+                    "name": "createSimpleResultsTable",
+                    "line": 305,
+                    "comment": "/**\n * Creates a simple results table showing unique features only\n * Similar to uniquename search view but with match counts\n * \n * @param {string} organism - The organism identifier\n * @param {Array} results - Array of result objects\n * @param {string} sitePath - The site base path\n * @param {string} linkBasePath - Base path for feature links\n * @param {string} imageUrl - Optional URL to organism image thumbnail\n * @param {string} searchKeywords - Search keywords for highlighting in expanded view\n * @returns {string} HTML string for the simple table\n */",
+                    "code": "{\n    const tableId = 'simple_resultsTable_' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n    const selectId = organism.replace(/[^a-zA-Z0-9]/g, '_');\n    const genus = results[0]?.genus || '';\n    const species = results[0]?.species || '';\n    const commonName = results[0]?.common_name || '';\n    \n    const organismDisplay = `<a href=\"${sitePath}/tools/organism.php?organism=${encodeURIComponent(organism)}\" style=\"text-decoration: none; color: #0f766e;\"><em>${genus} ${species}</em> <i class=\"fa fa-external-link-alt\" style=\"font-size: 0.8em; margin-left: 0.25rem;\"></i></a>`;\n    const commonNameDisplay = commonName ? ` (${commonName})` : '';\n    \n    const fallbackId = 'icon-' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n    \n    let imageHtml = '';\n    if (imageUrl) {\n        imageHtml = `<img src=\"${imageUrl}\" class=\"organism-thumbnail\" style=\"height: 24px; width: 24px; margin-right: 8px; border-radius: 3px;\" onerror=\"this.style.display='none'; document.getElementById('${fallbackId}').style.display='inline';\" onload=\"document.getElementById('${fallbackId}').style.display='none';\">\n                     <i class=\"fa fa-dna\" id=\"${fallbackId}\" style=\"margin-right: 8px; display: none;\"></i>`;\n    } else {\n        imageHtml = `<i class=\"fa fa-dna\" style=\"margin-right: 8px;\"></i>`;\n    }\n    \n    const anchorId = 'results-' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n    \n    // Group results by feature to get unique features and match counts\n    const grouped = groupResultsByFeature(results);\n    const uniqueFeatureCount = grouped.length;\n    \n    let html = `\n        <div class=\"organism-results\" id=\"${anchorId}\">\n            <h5 style=\"display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;\">\n                <span style=\"display: flex; align-items: center; gap: 0.5rem;\">\n                    ${imageHtml}${organismDisplay}${commonNameDisplay}\n                </span>\n                <span class=\"badge results_feature_count\">${uniqueFeatureCount} feature${uniqueFeatureC",
+                    "parameters": [
+                        {
+                            "name": "organism",
+                            "type": "string",
+                            "description": "The organism identifier"
+                        },
+                        {
+                            "name": "results",
+                            "type": "Array",
+                            "description": "Array of result objects"
+                        },
+                        {
+                            "name": "sitePath",
+                            "type": "string",
+                            "description": "The site base path"
+                        },
+                        {
+                            "name": "linkBasePath",
+                            "type": "string",
+                            "description": "Base path for feature links"
+                        },
+                        {
+                            "name": "imageUrl",
+                            "type": "string",
+                            "description": "Optional URL to organism image thumbnail"
+                        },
+                        {
+                            "name": "searchKeywords",
+                            "type": "string",
+                            "description": "Search keywords for highlighting in expanded view"
+                        }
+                    ],
+                    "returnType": "string",
+                    "returnDescription": "HTML string for the simple table",
+                    "internalCalls": [
+                        "groupResultsByFeature"
+                    ],
+                    "category": "datatable",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "error-handling"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/modules/annotation-search.js",
+                            "line": 298,
+                            "context": "tableHtml = createSimpleResultsTable(organism, results, this.config.sitePath, 'tools/parent.php', imageUrl, this.currentKeywords);"
+                        }
+                    ],
+                    "phpFilesCount": 0,
+                    "phpFiles": []
+                },
+                {
+                    "name": "initializeSimpleResultsTable",
+                    "line": 433,
+                    "comment": "/**\n * Initialize simple results table with DataTables and toggle functionality\n */",
+                    "code": "{\n    // Populate filter containers\n    $('#' + tableId + ' .column-filter-container').each(function(i) {\n        const columnIndex = $(this).data('column-index');\n        if (columnIndex === 0) {\n            $(this).html('<button style=\"width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;\" class=\"btn btn_select_all\" id=\"toggle-select-btn' + selectId + '\"><span>Select All</span></button>');\n        } else {\n            $(this).html('<input style=\"text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #e8e8e8;\" type=\"text\" placeholder=\"Filter...\" class=\"column-search\">');\n        }\n    });\n    \n    // Initialize DataTable\n    const table = $('#' + tableId).DataTable({\n        dom: 'Brtlpi',\n        pageLength: 25,\n        stateSave: false,\n        orderCellsTop: false,\n        buttons: DataTableExportConfig.getSearchResultsButtons(),\n        scrollX: false,\n        scrollCollapse: false,\n        autoWidth: false,\n        fixedHeader: false,\n        columnDefs: [\n            { targets: 0, orderable: false, className: \"export-exclude\" },\n            { targets: 1, visible: false, className: \"export-only\" },\n            { targets: 2 },\n            { targets: 3 },\n            { targets: 4 },\n            { targets: 5, className: \"wrap-text\" },\n            { targets: 6 }\n        ],\n        colReorder: true,\n        retrieve: true,\n        initComplete: function() {\n            const selectHeader = $('#' + tableId + ' thead th:first-child');\n            selectHeader.removeClass('sorting sorting_asc sorting_desc');\n            \n            $('#' + tableId + ' .column-filter-container').each(function() {\n                const columnIndex = $(this).data('column-index');\n                if (columnIndex !== undefined && columnIndex !== 0) {\n                    $('input.column-search', this).on('keyup",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "datatable",
+                    "tags": [
+                        "ajax",
+                        "event-listener",
+                        "state-modifying"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 425,
+                            "context": "initializeSimpleResultsTable(tableId, selectId, organism, results, sitePath, searchKeywords);"
+                        }
+                    ],
+                    "phpFilesCount": 0,
+                    "phpFiles": []
+                },
+                {
+                    "name": "initializeViewToggle",
+                    "line": 530,
+                    "comment": "/**\n * Toggle between simple and expanded views\n */",
+                    "code": "{\n    \n    // Find the parent organism results div\n    const containers = document.querySelectorAll(`[data-organism=\"${selectId}\"]`);\n    if (containers.length === 0) {\n        return;\n    }\n    \n    const parentDiv = containers[0].closest('.organism-results');\n    if (!parentDiv) {\n        return;\n    }\n    \n    const toggleBtn = parentDiv.querySelector('.toggle-view-btn');\n    const simpleContainer = parentDiv.querySelector(`.simple-view-container[data-organism=\"${selectId}\"]`);\n    const expandedContainer = parentDiv.querySelector(`.expanded-view-container[data-organism=\"${selectId}\"]`);\n    \n    \n    if (!toggleBtn || !simpleContainer || !expandedContainer) {\n        return;\n    }\n    \n    toggleBtn.addEventListener('click', (e) => {\n        e.preventDefault();\n        \n        \n        if (expandedContainer.style.display === 'none') {\n            // Switch to expanded view\n            // Check if table already exists (by looking for actual table element)\n            if (expandedContainer.querySelector('table') === null) {\n                const tableId = 'resultsTable_' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n                const selectIdClean = organism.replace(/[^a-zA-Z0-9]/g, '_');\n                const genus = results[0]?.genus || '';\n                const species = results[0]?.species || '';\n                const commonName = results[0]?.common_name || '';\n                \n                const organismDisplay = `<em>${genus} ${species}</em>`;\n                const commonNameDisplay = commonName ? ` (${commonName})` : '';\n                \n                let html = `\n                    <div class=\"table-responsive\" style=\"overflow-x: auto; width: 100%;\">\n                        <table id=\"${tableId}\" class=\"table table-sm table-striped table-hover results-table\">\n                            <thead>\n                                <tr>\n                                    <th style=\"width: 120px;\">\n                                        <div class=\"colum",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "datatable",
+                    "tags": [
+                        "dom-manipulation",
+                        "event-listener",
+                        "state-modifying",
+                        "validation"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 525,
+                            "context": "initializeViewToggle(organism, results, sitePath, selectId, searchKeywords);"
                         }
                     ],
                     "phpFilesCount": 0,
@@ -2930,7 +3655,7 @@
                         "state-modifying",
                         "loops"
                     ],
-                    "usageCount": 3,
+                    "usageCount": 6,
                     "usages": [
                         {
                             "file": "js/modules/shared-results-table.js",
@@ -2946,6 +3671,71 @@
                             "file": "js/modules/shared-results-table.js",
                             "line": 140,
                             "context": "<td>${highlightSearchTerms(result.annotation_description, searchKeywords)}</td>`;"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 637,
+                            "context": "<td>${highlightSearchTerms(result.feature_name || '', searchKeywords)}</td>"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 638,
+                            "context": "<td>${highlightSearchTerms(result.feature_description || '', searchKeywords)}</td>"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 641,
+                            "context": "<td>${highlightSearchTerms(result.annotation_description || '', searchKeywords)}</td>"
+                        }
+                    ],
+                    "phpFilesCount": 0,
+                    "phpFiles": []
+                },
+                {
+                    "name": "highlightSearchTerms",
+                    "line": 618,
+                    "comment": "",
+                    "code": "{\n                        if (!keywords || !text) return text;\n                        \n                        const terms = keywords.trim().split(/\\s+/).filter(t => t.length >= 3);\n                        if (terms.length === 0) return text;\n                        \n                        let highlighted = text;\n                        terms.forEach(term => {\n                            const regex = new RegExp(`${term}`, 'gi');\n                            highlighted = highlighted.replace(regex, `<strong style=\"background-color: #fff3cd; font-weight: bold;\">$&</strong>`);\n                        });\n                        return highlighted;\n                    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "data-processing",
+                    "tags": [
+                        "state-modifying",
+                        "loops"
+                    ],
+                    "usageCount": 6,
+                    "usages": [
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 133,
+                            "context": "<td>${highlightSearchTerms(result.feature_name, searchKeywords)}</td>"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 134,
+                            "context": "<td>${highlightSearchTerms(result.feature_description, searchKeywords)}</td>`;"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 140,
+                            "context": "<td>${highlightSearchTerms(result.annotation_description, searchKeywords)}</td>`;"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 637,
+                            "context": "<td>${highlightSearchTerms(result.feature_name || '', searchKeywords)}</td>"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 638,
+                            "context": "<td>${highlightSearchTerms(result.feature_description || '', searchKeywords)}</td>"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 641,
+                            "context": "<td>${highlightSearchTerms(result.annotation_description || '', searchKeywords)}</td>"
                         }
                     ],
                     "phpFilesCount": 0,
@@ -3661,6 +4451,101 @@
             ]
         },
         {
+            "name": "js/multi-organism-search.js",
+            "count": 2,
+            "functions": [
+                {
+                    "name": "updateMultiSearchManager",
+                    "line": 12,
+                    "comment": "",
+                    "code": "{\n    selectedOrganisms = newSelectedOrganisms;\n    searchManager.config.organismsVar = selectedOrganisms;\n    searchManager.config.totalVar = selectedOrganisms.length;\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "data-processing",
+                    "tags": [
+                        "state-modifying"
+                    ],
+                    "usageCount": 0,
+                    "usages": [],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "tools/multi_organism.php"
+                    ]
+                },
+                {
+                    "name": "showInstructionModal",
+                    "line": 47,
+                    "comment": "/**\n * Show instruction modal (for organism selection tips)\n */",
+                    "code": "{\n    const modalHtml = `\n        <div class=\"modal fade\" id=\"instructionModal\" tabindex=\"-1\">\n            <div class=\"modal-dialog modal-dialog-centered\">\n                <div class=\"modal-content\">\n                    <div class=\"modal-header\">\n                        <h5 class=\"modal-title\">Instructions</h5>\n                        <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>\n                    </div>\n                    <div class=\"modal-body\">\n                        ${instruction}\n                    </div>\n                    <div class=\"modal-footer\">\n                        <button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    `;\n    \n    // Remove existing modal if present\n    $('#instructionModal').remove();\n    \n    // Add and show modal\n    $('body').append(modalHtml);\n    const modal = new bootstrap.Modal(document.getElementById('instructionModal'));\n    modal.show();\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "ui-dom",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "state-modifying"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/multi-organism-search.js",
+                            "line": 38,
+                            "context": "showInstructionModal(instruction);"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "tools/multi_organism.php"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "js/organism-display.js",
+            "count": 1,
+            "functions": [
+                {
+                    "name": "showOrganismInstructionModal",
+                    "line": 43,
+                    "comment": "/**\n * Show instruction modal for organism page info icons\n */",
+                    "code": "{\n    const modalHtml = `\n        <div class=\"modal fade\" id=\"organismInstructionModal\" tabindex=\"-1\">\n            <div class=\"modal-dialog modal-dialog-centered\">\n                <div class=\"modal-content\">\n                    <div class=\"modal-header\">\n                        <h5 class=\"modal-title\">Information</h5>\n                        <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>\n                    </div>\n                    <div class=\"modal-body\">\n                        ${instruction}\n                    </div>\n                </div>\n            </div>\n        </div>\n    `;\n    \n    // Remove any existing modal\n    $('#organismInstructionModal').remove();\n    \n    // Add and show new modal\n    $('body').append(modalHtml);\n    const modal = new bootstrap.Modal(document.getElementById('organismInstructionModal'));\n    modal.show();\n    \n    // Clean up modal after it's hidden\n    $('#organismInstructionModal').on('hidden.bs.modal', function() {\n        $(this).remove();\n    });\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "ui-dom",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying"
+                    ],
+                    "usageCount": 2,
+                    "usages": [
+                        {
+                            "file": "js/organism-display.js",
+                            "line": 19,
+                            "context": "showOrganismInstructionModal(instruction);"
+                        },
+                        {
+                            "file": "js/organism-display.js",
+                            "line": 26,
+                            "context": "showOrganismInstructionModal(instruction);"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "tools/display-template.php",
+                        "tools/organism.php"
+                    ]
+                }
+            ]
+        },
+        {
             "name": "js/permission-manager.js",
             "count": 2,
             "functions": [
@@ -3762,13 +4647,12 @@
                             "context": "loadRegistry();"
                         }
                     ],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -3799,13 +4683,12 @@
                             "context": "updateStats();"
                         }
                     ],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -3833,12 +4716,12 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 58,
+                            "line": 65,
                             "context": "<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"js\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 37,
+                            "line": 44,
                             "context": "<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"php\">"
                         },
                         {
@@ -3852,13 +4735,12 @@
                             "context": "<button class=\"btn btn-warning btn-sm\" onclick=\"generateRegistry()\"><i class=\"fa fa-refresh\"></i> Regenerate</button>"
                         }
                     ],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -3889,13 +4771,12 @@
                             "context": "filterFunctions();"
                         }
                     ],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -3919,7 +4800,7 @@
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
-                            "line": 278,
+                            "line": 281,
                             "context": "toggleFile(this);"
                         },
                         {
@@ -3928,13 +4809,12 @@
                             "context": "toggleFile(this);"
                         }
                     ],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -3958,7 +4838,7 @@
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
-                            "line": 374,
+                            "line": 377,
                             "context": "toggleAll();"
                         },
                         {
@@ -3967,13 +4847,12 @@
                             "context": "toggleAll();"
                         }
                     ],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -3993,13 +4872,12 @@
                     "tags": [],
                     "usageCount": 0,
                     "usages": [],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -4032,13 +4910,12 @@
                             "context": "<button class=\"btn btn-primary btn-sm\" onclick=\"expandAllFiles()\"><i class=\"fa fa-expand\"></i> Expand All</button>"
                         }
                     ],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -4071,13 +4948,12 @@
                             "context": "<button class=\"btn btn-primary btn-sm\" onclick=\"collapseAllFiles()\"><i class=\"fa fa-compress\"></i> Collapse All</button>"
                         }
                     ],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -4105,13 +4981,12 @@
                             "context": "toggleCode(header);"
                         }
                     ],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -4133,17 +5008,16 @@
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
-                            "line": 75,
+                            "line": 76,
                             "context": "funcHeader.onclick = function() { toggleFunctionCode(this); };"
                         }
                     ],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -4168,12 +5042,12 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 63,
+                            "line": 70,
                             "context": "<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 42,
+                            "line": 49,
                             "context": "<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">"
                         },
                         {
@@ -4187,13 +5061,12 @@
                             "context": "<button class=\"btn btn-info btn-sm\" onclick=\"downloadRegistry()\"><i class=\"fa fa-download\"></i> Download JSON</button>"
                         }
                     ],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -4215,13 +5088,12 @@
                     ],
                     "usageCount": 0,
                     "usages": [],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -4247,12 +5119,12 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 193,
+                            "line": 200,
                             "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">"
                         },
                         {
                             "file": "admin/pages/manage_registry.php",
-                            "line": 179,
+                            "line": 187,
                             "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">"
                         },
                         {
@@ -4266,13 +5138,12 @@
                             "context": "<button class=\"btn btn-secondary btn-sm\" onclick=\"clearSearch()\"><i class=\"fa fa-times\"></i> Clear</button>"
                         }
                     ],
-                    "phpFilesCount": 7,
+                    "phpFilesCount": 6,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
                         "admin/pages/manage_js_registry.php",
-                        "admin/tools/generate_registry_json.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -4572,6 +5443,11 @@
             "line": 52
         },
         {
+            "name": "updateGroupSearchManager",
+            "file": "js/groups-display.js",
+            "line": 15
+        },
+        {
             "name": "handleToolClick",
             "file": "js/index.js",
             "line": 2
@@ -4579,7 +5455,12 @@
         {
             "name": "toggleAllFiles",
             "file": "js/manage-registry.js",
-            "line": 372
+            "line": 375
+        },
+        {
+            "name": "updateMultiSearchManager",
+            "file": "js/multi-organism-search.js",
+            "line": 12
         },
         {
             "name": "fixFilePermissions",
