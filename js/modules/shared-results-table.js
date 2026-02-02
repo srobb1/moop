@@ -171,7 +171,7 @@ function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
             // Select All button for first column
             $(this).html('<button style="width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;" class="btn btn_select_all" id="toggle-select-btn' + selectId + '"><span>Select All</span></button>');
         } else {
-            $(this).html('<input style="text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #e8e8e8;" type="text" placeholder="Filter..." class="column-search">');
+            $(this).html('<input style="text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #212529;" type="text" placeholder="Filter..." class="column-search">');
         }
     });
     
@@ -438,7 +438,7 @@ function initializeSimpleResultsTable(tableId, selectId, organism, results, site
         if (columnIndex === 0) {
             $(this).html('<button style="width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;" class="btn btn_select_all" id="toggle-select-btn' + selectId + '"><span>Select All</span></button>');
         } else {
-            $(this).html('<input style="text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #e8e8e8;" type="text" placeholder="Filter..." class="column-search">');
+            $(this).html('<input style="text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #212529;" type="text" placeholder="Filter..." class="column-search">');
         }
     });
     
