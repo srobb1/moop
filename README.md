@@ -78,12 +78,43 @@ All changes are saved to `config/config_editable.json` and take effect immediate
 
 ### Adding Your First Organism
 
-For detailed instructions on:
-- Setting up organism directory structure
-- Creating SQLite databases
-- Configuring organism metadata
+**Quick Start:**
+1. Visit: `http://localhost:8000/moop/admin/organism_checklist.php`
+2. Follow the step-by-step checklist
+3. Each step links to detailed management tools for fine-grained configuration
 
-See: [docs/CONFIG_ADMIN_GUIDE.md](docs/CONFIG_ADMIN_GUIDE.md) and [docs/MOOP_COMPREHENSIVE_OVERVIEW.md](docs/MOOP_COMPREHENSIVE_OVERVIEW.md) 
+**Main Steps:**
+
+1. **Prepare organism data files:**
+   - FASTA sequence files (genome, proteins, etc.)
+   - SQLite database (one per organism) containing features, annotations, etc.
+   
+2. **Copy to the web server** with proper directory structure:
+   ```
+   /var/www/html/moop/organisms/
+   └── Genus_species/
+       ├── organism.json              (organism metadata)
+       ├── organism.sqlite            (organism database)
+       └── assembly_name/             (assembly subdirectory)
+           ├── genome.fa              (FASTA file)
+           ├── cds.nt.fa              (CDS sequences)
+           ├── protein.aa.fa          (Protein sequences)
+           └── transcript.nt.fa       (Transcript sequences)
+   ```
+
+3. **Create SQLite database** with your genomic data:
+   - See [moop-dbtools](https://github.com/MOOPGDB/moop-dbtools) for detailed instructions
+   - Includes guides for data analysis, feature loading, and database schema
+
+4. **Configure organism metadata** through the admin interface:
+   - Organism name, taxonomy, images
+   - Feature types and annotation settings
+   - Group assignments
+
+**Detailed Guides:**
+- [Organism Setup & Searches](tools/pages/help/organism-setup-and-searches.php) - comprehensive organism configuration
+- [Data Organization](tools/pages/help/organism-data-organization.php) - directory structure and file formats
+- [moop-dbtools](https://github.com/MOOPGDB/moop-dbtools) - creating and loading SQLite databases 
 
 
 
