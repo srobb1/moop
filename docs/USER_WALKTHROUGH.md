@@ -268,6 +268,223 @@ Once complete, you'll see:
 
 ---
 
+## Organism Page
+
+When you click on a specific organism, you arrive at the Organism Page which displays comprehensive information about that organism and allows you to search within it.
+
+### Organism Information
+
+### Organism Information
+
+**Basic Information:**
+- **Common name** - the organism's familiar name (e.g., "Bat", "Fruit Fly")
+- **Scientific name** - the formal species name (e.g., *Anoura caudifer*)
+- **Description** - overview of the organism and its significance
+- **Taxonomy ID** - the NCBI Taxonomy identifier
+
+All this information is stored in the organism's configuration file (`organism.json`), which administrators set up during organism installation.
+
+**Assemblies:**
+- Below the organism information is a list of all available **assemblies** for this organism
+- Each assembly is displayed as a clickable link
+- Click any assembly to view detailed information about that genome build
+
+### Taxonomy Lineage
+
+Below the organism information, you'll see the **full taxonomy lineage**:
+
+```
+Kingdom → Phylum → Class → Order → Family → Genus → Species
+```
+
+**Where this comes from:**
+- The taxonomy lineage is pulled from the **taxonomy tree database** (downloaded/managed via the Manage Taxonomy Tree admin page)
+- It reflects the current scientific classification of the organism
+
+**Interactive taxonomy navigation:**
+- **Each taxonomic level is a clickable link**
+- Clicking any level (e.g., "Order: Chiroptera") takes you to an **auto-generated Group Page** for that taxonomy level
+- These dynamically generated pages show all organisms in MOOP that belong to that taxonomic group
+
+### Taxonomy Group Pages (Dynamic)
+
+When you click a taxonomy level link, MOOP generates a Group Page showing all organisms at that level.
+
+**What you see on these auto-generated pages:**
+
+- **Taxon information from Wikipedia:**
+  - Images (e.g., representative photos of all bats if you clicked "Order: Chiroptera")
+  - Descriptive text about the taxon
+  - Scientific background and characteristics
+
+- **All organisms in that taxon:**
+  - Listed like a standard group page
+  - Shows all organisms in MOOP that belong to that taxonomy level
+  - Can be used to perform multi-organism searches, BLAST searches, or retrieve sequences across the entire taxonomic group
+
+**Example workflow:**
+1. View *Anoura caudifer* organism page
+2. Click on "Order: Chiroptera" in the lineage
+3. See all bat species in MOOP with Wikipedia information about bats
+4. Perform a BLAST search or gene search across all bats
+
+---
+
+## Assembly Page
+
+When you click on an assembly link from the Organism Page, you arrive at the Assembly Page with detailed information about that specific genome build.
+
+### Assembly Information
+
+**Assembly Details:**
+- **Assembly name** - the name of this genome version (e.g., "GCA_004027475.1")
+- **Assembly accession** - the unique identifier for this genome build
+
+Both the assembly name and accession are stored in the `organism.sqlite` database file.
+
+### Feature Type Summary
+
+MOOP automatically queries the assembly database to count all main feature types present in this genome:
+
+**Feature Type List:**
+- Shows each main genomic feature type (e.g., gene, mRNA, protein)
+- Displays the count of how many features of each type are in this assembly
+- Provides a quick overview of the genomic data available
+- Note: MOOP stores only main features; subfeatures like exons and CDS are discouraged to keep the database focused and performant
+
+Example:
+```
+- gene: 18,502
+- mRNA: 19,847
+- protein: 18,234
+```
+
+### Download Sequences
+
+All FASTA sequence files included with this assembly are available for download:
+
+**Available FASTA files:**
+- **Genome** - the complete genome sequence
+- **CDS** - coding sequences (exons only, no introns)
+- **Protein** - translated protein sequences
+- **Transcript** - full transcript sequences (with introns)
+- Any other custom sequence types configured for this organism
+
+**Color coding:**
+- Each sequence type is displayed with a specific color for easy identification
+- Colors are configured by administrators through the **Manage Site Configuration** page
+- Example: Genome files might be blue, CDS files might be green, Proteins might be red
+
+**Download options:**
+- Click any sequence type to download the FASTA file
+- Files can be used for:
+  - BLAST database creation
+  - Sequence analysis
+  - Comparative genomics studies
+  - Custom bioinformatics pipelines
+
+### Access Search Tools from Assembly Page
+
+From the Assembly Page, you can access search and analysis tools with this assembly **pre-selected**:
+
+**Available Tools:**
+- **BLAST Search** - Click to open BLAST with this organism and assembly already selected as your search target
+  - Submit your sequence and search against this specific assembly
+  
+- **Retrieve Sequences** - Click to open the Retrieve Sequences tool with this assembly pre-selected
+  - Download specific sequences from this assembly by gene ID, region, or feature type
+
+This pre-seeding saves you time by automatically setting up the context - you don't need to manually select the organism and assembly again.
+
+---
+
+## Parent Page
+
+When you click on a feature's unique name from search results, you arrive at the **Parent Page** - a detailed view of that specific genomic feature and all its associated data.
+
+### What is a Parent Feature?
+
+Parent types are defined by administrators in the organism configuration file and edited through the **Manage Organism** tool.
+
+**Common parent-child relationships:**
+- Most organisms define **gene** as the parent type
+- Child types typically include: **mRNA**, **transcript**, **protein**
+- When you view a gene on the Parent Page, all its associated mRNA, transcript, and protein sequences are displayed as children
+
+The parent-child structure allows you to view a feature and all its related biological variants in one place.
+
+### Feature Information
+
+The Parent Page displays comprehensive information about your feature:
+
+**Basic Details:**
+- Feature name and unique identifier
+- Feature sequence and context
+- Assembly and organism information
+- *Future: Feature location (chromosome/contig and coordinates) - coming with GFF file integration*
+- *Future: Feature length (base pairs or amino acids) - configuration coming*
+
+### Child Features
+
+**Related sequences:**
+- All child features (e.g., all mRNA variants of a gene, all protein products) are listed
+- Click any child to view its details
+- Download individual sequences from the child feature
+
+### Annotations Organized by Type
+
+All annotations associated with this feature are automatically retrieved from the database and organized by **annotation type**:
+
+**Annotation Type Groups** (configured in Manage Annotations):
+- **Homologs** - sequence similarity matches from other organisms/databases
+- **Domains** - conserved protein domains and motifs (e.g., Pfam)
+- **Gene Ontology** - GO terms for biological process, molecular function, cellular component
+- **Pathways** - biological pathway assignments
+- Any other custom annotation types your administrator has configured
+
+**For each annotation group:**
+- **Display order** - groups appear in the order configured by administrators
+- **Color coding** - each annotation type has a specific color for visual identification
+- **Descriptions** - full descriptions are shown for each annotation
+
+All configuration is managed through the **Manage Annotations** tool which edits the annotation configuration file.
+
+### Working with Annotations
+
+**Filter annotations:**
+- Click on specific annotation type groups to focus on just those results
+- Example: Show only Gene Ontology annotations, hide others
+- Useful when you want to see a specific type of information
+
+**Download annotations:**
+- Select specific annotation groups or individual annotations
+- Download in Excel, CSV, or other formats
+- Example workflow: Download all Gene Ontology terms associated with this gene for analysis
+
+**Copy sequences:**
+- Copy the feature sequence to your clipboard (paste into text editor or tool)
+- Copy child feature sequences individually
+
+**Share or cite:**
+- The unique identifier makes this feature easily referenceable
+- Share links to specific features with colleagues
+
+### Access Search Tools from Parent Page
+
+From the Parent Page, you can access additional analysis tools:
+
+**BLAST Search:**
+- Click to open BLAST with this feature's sequence pre-loaded
+- Search this sequence against any available organism and assembly
+- Find similar genes in other organisms
+
+**Retrieve Sequences:**
+- Click to download this feature and its child sequences
+- Export in FASTA format or other formats
+- Useful for downloading the entire gene including all variants
+
+---
+
 ### Organisms vs. Assemblies
 
 - **Organism** = A species (e.g., *Anoura caudifer*)
