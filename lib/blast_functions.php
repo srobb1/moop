@@ -461,6 +461,11 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
         @unlink($temp_file);
         
         // Filter out blastdbcmd error messages (lines starting with "Error:")
+        // BUT keep track of them for better error reporting
+        $error_lines = array_filter($output, function($line) {
+            return strpos(trim($line), 'Error:') === 0;
+        });
+        
         $output = array_filter($output, function($line) {
             return strpos(trim($line), 'Error:') !== 0;
         });
@@ -473,7 +478,12 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
         
         // Check if we got any output
         if (empty($output)) {
-            $result['error'] = 'No sequences found for the requested IDs and ranges';
+            // If there were error messages about entries not found, it's likely an out-of-range coordinate
+            if (!empty($error_lines)) {
+                $result['error'] = 'One or more requested sequences or ranges were not found. This may be due to: (1) invalid sequence ID, (2) out-of-range coordinates, or (3) incorrectly formatted FASTA database. Please verify your input.';
+            } else {
+                $result['error'] = 'No sequences found for the requested IDs and ranges';
+            }
             return $result;
         }
     } else {
