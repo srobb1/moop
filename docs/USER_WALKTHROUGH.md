@@ -25,11 +25,8 @@ The organisms you see depends on your access level:
 
 You have **two main ways** to select organisms for your searches:
 
----
 
-#### Option 1: Group Cards
-
-__Browse Pre-defined Organism Groups__
+#### Option 1: Group Cards: Browse Pre-defined Organism Groups
 
 Click on any **GROUP CARD** to view organisms organized by:
 - **Research Project** - organisms grouped by collaborative project
@@ -42,11 +39,8 @@ Click on any **GROUP CARD** to view organisms organized by:
 2. You can perform searches across the entire group
 3. Or dive into individual organism details
 
----
 
-#### Option 2: Taxonomy Tree Browser
-
-__Browse by Taxonomic Classification__
+#### Option 2: Taxonomy Tree Browser: Browse by Taxonomic Classification
 
 Click on the **TREE SELECT** to view a taxonomy tree to explore organisms hierarchically:
 
@@ -97,9 +91,8 @@ Click on the **TREE SELECT** to view a taxonomy tree to explore organisms hierar
    **Option C: Retrieve Sequences**
    - Download specific sequences from this organism
    - Export by gene ID, region, or feature type
-   - Available formats: FASTA, GenBank, GFF3
+   - Available formats: FASTA
 
----
 
 ### Workflow 2: Compare Genes Across Multiple Organisms
 
@@ -135,7 +128,6 @@ Click on the **TREE SELECT** to view a taxonomy tree to explore organisms hierar
    - Download matching sequences from all selected organisms
    - Useful for collecting orthologs or conserved regions
 
----
 
 ### Workflow 3: Search a Custom Organism Selection
 
@@ -166,7 +158,6 @@ Click on the **TREE SELECT** to view a taxonomy tree to explore organisms hierar
    - Click the retrieve sequences link
    - Download from your custom organism set
 
----
 
 ## The Search Feature
 
@@ -257,7 +248,6 @@ Once complete, you'll see:
 - Pager shows current page and total number of pages
 - Each page displays up to 25 results
 
----
 
 ### Search Examples
 
@@ -270,13 +260,11 @@ Once complete, you'll see:
 | Find genes by GO ID | `GO:0004407` |
 | Find homologs to human protein | Search in organism, use Homologs filter |
 
----
 
 ## Organism Page
 
 When you click on a specific organism, you arrive at the Organism Page which displays comprehensive information about that organism and allows you to search within it.
 
-### Organism Information
 
 ### Organism Information
 
@@ -292,17 +280,18 @@ All this information is stored in the organism's configuration file (`organism.j
 - Below the organism information is a list of all available **assemblies** for this organism
 - Each assembly is displayed as a clickable link
 - Click any assembly to view detailed information about that genome build
+- This information is stored in the organism database (`organism.sqlite`)
 
 ### Taxonomy Lineage
 
 Below the organism information, you'll see the **full taxonomy lineage**:
 
 ```
-Kingdom → Phylum → Class → Order → Family → Genus → Species
+Kingdom → Phylum → Class → Order → Family → Genus
 ```
 
 **Where this comes from:**
-- The taxonomy lineage is pulled from the **taxonomy tree database** (downloaded/managed via the Manage Taxonomy Tree admin page)
+- The taxonomy lineage is pulled from the NCBI **taxonomy api** (downloaded/managed via the Manage Taxonomy Tree admin page)
 - It reflects the current scientific classification of the organism
 
 **Interactive taxonomy navigation:**
@@ -332,7 +321,6 @@ When you click a taxonomy level link, MOOP generates a Group Page showing all or
 3. See all bat species in MOOP with Wikipedia information about bats
 4. Perform a BLAST search or gene search across all bats
 
----
 
 ## Assembly Page
 
@@ -348,7 +336,7 @@ Both the assembly name and accession are stored in the `organism.sqlite` databas
 
 ### Feature Type Summary
 
-MOOP automatically queries the assembly database to count all main feature types present in this genome:
+MOOP queries the assembly database to count all main feature types present in this genome:
 
 **Feature Type List:**
 - Shows each main genomic feature type (e.g., gene, mRNA, protein)
@@ -360,7 +348,6 @@ Example:
 ```
 - gene: 18,502
 - mRNA: 19,847
-- protein: 18,234
 ```
 
 ### Download Sequences
@@ -379,14 +366,6 @@ All FASTA sequence files included with this assembly are available for download:
 - Colors are configured by administrators through the **Manage Site Configuration** page
 - Example: Genome files might be blue, CDS files might be green, Proteins might be red
 
-**Download options:**
-- Click any sequence type to download the FASTA file
-- Files can be used for:
-  - BLAST database creation
-  - Sequence analysis
-  - Comparative genomics studies
-  - Custom bioinformatics pipelines
-
 ### Access Search Tools from Assembly Page
 
 From the Assembly Page, you can access search and analysis tools with this assembly **pre-selected**:
@@ -400,7 +379,6 @@ From the Assembly Page, you can access search and analysis tools with this assem
 
 This pre-seeding saves you time by automatically setting up the context - you don't need to manually select the organism and assembly again.
 
----
 
 ## Parent Page
 
@@ -456,22 +434,23 @@ All configuration is managed through the **Manage Annotations** tool which edits
 ### Working with Annotations
 
 **Filter annotations:**
-- Click on specific annotation type groups to focus on just those results
-- Example: Show only Gene Ontology annotations, hide others
+- Click on annotation type cards to jump to the specific annotation type groups to focus on just those results
+- Example: Jump to Gene Ontology annotations, then filter on PATHER2GO to only view those annoations
 - Useful when you want to see a specific type of information
 
 **Download annotations:**
-- Select specific annotation groups or individual annotations
+- Download all annotations of a type or filter to view only specific annotations of a group
 - Download in Excel, CSV, or other formats
-- Example workflow: Download all Gene Ontology terms associated with this gene for analysis
+- Example workflow: Download all Gene Ontology terms of type PATHER2GO associated with this gene for analysis
 
 **Copy sequences:**
 - Copy the feature sequence to your clipboard (paste into text editor or tool)
 - Copy child feature sequences individually
 
-**Share or cite:**
+**Share or cite:** 
 - The unique identifier makes this feature easily referenceable
 - Share links to specific features with colleagues
+- Will implement rewrites for nicer URLs
 
 ### Access Search Tools from Parent Page
 
@@ -487,9 +466,8 @@ From the Parent Page, you can access additional analysis tools:
 - Export in FASTA format or other formats
 - Useful for downloading the entire gene including all variants
 
----
 
-### Organisms vs. Assemblies
+## Organisms vs. Assemblies
 
 - **Organism** = A species (e.g., *Anoura caudifer*)
   - Can have multiple assemblies (different genome versions)
@@ -500,7 +478,7 @@ From the Parent Page, you can access additional analysis tools:
   - Contains actual sequence files (genome.fa, cds.nt.fa, etc.)
   - Each assembly can have different features and quality
 
-### Groups
+## Groups
 
 Groups are administrator-defined collections of organisms. Examples:
 - **"Bat Research Project"** - all bat species in the system
@@ -512,38 +490,13 @@ Your administrator controls:
 - Which users can see which groups
 - Whether groups are public or private
 
-### Taxonomy Tree
+## Taxonomy Tree
 
 The taxonomy tree is a hierarchical browser showing evolutionary relationships:
 - **Based on NCBI Taxonomy** - standardized, consistent across databases
 - **Updated when you add organisms** - new taxa automatically appear
 - **Visual cues** - images and assembly counts at each level
 
----
-
-## Common Searches
-
-Once you've selected an organism or group, here are typical searches you might do:
-
-### BLAST Search
-Find genes in your organism that match a sequence you provide
-- Upload your own sequence
-- Or paste a sequence directly
-- Get back matching genes sorted by similarity
-
-### Annotation Search
-Find all genes matching certain criteria:
-- By gene name (e.g., "insulin")
-- By feature type (e.g., "exon", "promoter")
-- By sequence properties (length, GC content, etc.)
-
-### Feature Explorer
-Browse and explore all features in the genome:
-- View genes, proteins, regulatory regions
-- Click for detailed information
-- Export subsets for analysis
-
----
 
 ## Help & Documentation
 
@@ -556,7 +509,6 @@ Throughout SIMRbase, you'll see links to detailed help:
 - **[Data Export](data-export.php)** - downloading data in various formats
 - **[BLAST Tutorial](blast-tutorial.php)** - step-by-step BLAST search guide
 
----
 
 ## Security & Privacy
 
@@ -570,7 +522,6 @@ Your data and searches are protected:
 
 See [Security Implementation](SECURITY_IMPLEMENTATION.md) for technical details.
 
----
 
 ## Questions or Issues?
 
