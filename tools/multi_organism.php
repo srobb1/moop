@@ -91,6 +91,10 @@ $data = [
     'absolute_images_path' => $absolute_images_path,
     'inline_scripts' => $display_config['inline_scripts'],
     'page_styles' => [
+        "/$site/css/display.css",
+        "/$site/css/parent.css",
+        "/$site/css/advanced-search-filter.css",
+        "/$site/css/search-controls.css",
         "/$site/css/groups.css"
     ]
 ];
