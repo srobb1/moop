@@ -1191,7 +1191,7 @@
                                 $is_protein = strpos($db['fasta'], 'protein') !== false;
                                 $db_type = $is_protein ? 'prot' : 'nucl';
                                 $cd_cmd = "cd " . htmlspecialchars($assembly_fullpath);
-                                $makeblastdb_cmd = "makeblastdb -in " . htmlspecialchars($db['fasta']) . " -dbtype " . htmlspecialchars($db_type) ;
+                                $makeblastdb_cmd = "makeblastdb -in " . htmlspecialchars($db['fasta']) . " -dbtype " . htmlspecialchars($db_type) . " -parse_seqids";
                               ?>
                               <code class="d-block" style="word-break: break-all; white-space: normal;">
                                 <?= $cd_cmd ?> && \<br><?= $makeblastdb_cmd ?>
