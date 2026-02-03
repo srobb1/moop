@@ -103,10 +103,13 @@
   line-height: 1.2;
   height: 32px;
   box-sizing: border-box;
+  color: #212529; /* Dark text for user-entered content */
 }
 
 .results-table thead tr:first-child input[type="text"]::placeholder {
   text-align: center;
+  color: #999; /* Light gray for placeholder text */
+  opacity: 1;
 }
 
 .results-table thead tr:first-child th {
