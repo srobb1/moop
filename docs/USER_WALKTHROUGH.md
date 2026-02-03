@@ -8,7 +8,11 @@ When you first visit SIMRbase, you'll see the home landing page. Here's what you
 
 The organisms you see depends on your access level:
 
-- **Anonymous (no login):** 
+- **Anonymous not logged in Users** (no login)(not in All Access IP Range):
+  - See all **Public** organisms
+  - Read-only access to public data
+
+- **Anonymous Logged in Users** (no login)(in All Access IP Range):
   - See all organisms available to your IP address (if your IP is within the configurable allowed range)
   - Read-only access to public data
   
