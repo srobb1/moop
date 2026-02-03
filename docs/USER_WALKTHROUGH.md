@@ -27,9 +27,9 @@ You have **two main ways** to select organisms for your searches:
 
 ---
 
-## Option 1: Group Cards
+#### Option 1: Group Cards
 
-### Browse Pre-defined Organism Groups
+__Browse Pre-defined Organism Groups__
 
 Click on any **GROUP CARD** to view organisms organized by:
 - **Research Project** - organisms grouped by collaborative project
@@ -44,11 +44,11 @@ Click on any **GROUP CARD** to view organisms organized by:
 
 ---
 
-## Option 2: Taxonomy Tree Browser
+#### Option 2: Taxonomy Tree Browser
 
-### Browse by Taxonomic Classification
+__Browse by Taxonomic Classification__
 
-Click on the **TAXONOMY TREE** to explore organisms hierarchically:
+Click on the **TREE SELECT** to view a taxonomy tree to explore organisms hierarchically:
 
 **The tree is built from NCBI Taxonomy data** included in each organism's configuration file (`organism.json`):
 - Expand/collapse nodes by clicking
