@@ -162,14 +162,17 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
  * @param {string} tableId - jQuery selector for the table (e.g., '#resultsTable_organism')
  * @param {string} selectId - Unique identifier for the select all button
  * @param {boolean} isUniquenameSearch - Whether this is a uniquename-only search (no annotation columns)
+ * @param {string} viewType - Optional view type identifier ('simple' or 'expanded') to create unique button IDs
  */
-function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
+function initializeResultsTable(tableId, selectId, isUniquenameSearch, viewType = '') {
+    const buttonId = 'toggle-select-btn' + selectId + (viewType ? '-' + viewType : '');
+    
     // Populate filter containers with filter inputs and Select All button
     $(tableId + ' .column-filter-container').each(function(i) {
         const columnIndex = $(this).data('column-index');
         if (columnIndex === 0) {
             // Select All button for first column
-            $(this).html('<button style="width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;" class="btn btn_select_all" id="toggle-select-btn' + selectId + '"><span>Select All</span></button>');
+            $(this).html('<button style="width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;" class="btn btn_select_all" id="' + buttonId + '"><span>Select All</span></button>');
         } else {
             $(this).html('<input style="text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #212529;" type="text" placeholder="Filter..." class="column-search">');
         }
@@ -227,7 +230,7 @@ function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
     });
     
     // Select/Deselect all handler - works across ALL pages
-    $('#toggle-select-btn' + selectId).on('click', function (e) {
+    $('#' + buttonId).off('click').on('click', function (e) {
         e.preventDefault();
         const $btn = $(this);
         const allRows = table.rows().nodes();
@@ -249,7 +252,7 @@ function initializeResultsTable(tableId, selectId, isUniquenameSearch) {
         const allRows = table.rows().nodes();
         const totalCheckboxes = $(allRows).find('input.row-select').length;
         const checkedCheckboxes = $(allRows).find('input.row-select:checked').length;
-        const $btn = $('#toggle-select-btn' + selectId);
+        const $btn = $('#' + buttonId);
         
         if (checkedCheckboxes === totalCheckboxes) {
             $btn.find('span').text('Deselect All');
@@ -432,11 +435,13 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
  * Initialize simple results table with DataTables and toggle functionality
  */
 function initializeSimpleResultsTable(tableId, selectId, organism, results, sitePath, searchKeywords = '') {
+    const buttonId = 'toggle-select-btn' + selectId + '-simple';
+    
     // Populate filter containers
     $('#' + tableId + ' .column-filter-container').each(function(i) {
         const columnIndex = $(this).data('column-index');
         if (columnIndex === 0) {
-            $(this).html('<button style="width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;" class="btn btn_select_all" id="toggle-select-btn' + selectId + '"><span>Select All</span></button>');
+            $(this).html('<button style="width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;" class="btn btn_select_all" id="' + buttonId + '"><span>Select All</span></button>');
         } else {
             $(this).html('<input style="text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #212529;" type="text" placeholder="Filter..." class="column-search">');
         }
@@ -483,7 +488,7 @@ function initializeSimpleResultsTable(tableId, selectId, organism, results, site
     });
     
     // Select/Deselect all handler
-    $('#toggle-select-btn' + selectId).on('click', function (e) {
+    $('#' + buttonId).off('click').on('click', function (e) {
         e.preventDefault();
         const $btn = $(this);
         const allRows = table.rows().nodes();
@@ -505,7 +510,7 @@ function initializeSimpleResultsTable(tableId, selectId, organism, results, site
         const allRows = table.rows().nodes();
         const totalCheckboxes = $(allRows).find('input.row-select').length;
         const checkedCheckboxes = $(allRows).find('input.row-select:checked').length;
-        const $btn = $('#toggle-select-btn' + selectId);
+        const $btn = $('#' + buttonId);
         
         if (checkedCheckboxes === totalCheckboxes) {
             $btn.find('span').text('Deselect All');
@@ -652,7 +657,7 @@ function initializeViewToggle(organism, results, sitePath, selectId, searchKeywo
                 // Now initialize the table after DOM insertion
                 setTimeout(() => {
                     const $table = $('#' + tableId);
-                    initializeResultsTable('#' + tableId, selectIdClean, false);
+                    initializeResultsTable('#' + tableId, selectIdClean, false, 'expanded');
                 }, 50);
             }
             simpleContainer.style.display = 'none';
