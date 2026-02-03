@@ -158,6 +158,7 @@ Click on the **TREE SELECT** to view a taxonomy tree to explore organisms hierar
    - Click the retrieve sequences link
    - Download from your custom organism set
 
+---
 
 ## The Search Feature
 
@@ -260,6 +261,7 @@ Once complete, you'll see:
 | Find genes by GO ID | `GO:0004407` |
 | Find homologs to human protein | Search in organism, use Homologs filter |
 
+---
 
 ## Organism Page
 
@@ -321,6 +323,7 @@ When you click a taxonomy level link, MOOP generates a Group Page showing all or
 3. See all bat species in MOOP with Wikipedia information about bats
 4. Perform a BLAST search or gene search across all bats
 
+---
 
 ## Assembly Page
 
@@ -379,6 +382,7 @@ From the Assembly Page, you can access search and analysis tools with this assem
 
 This pre-seeding saves you time by automatically setting up the context - you don't need to manually select the organism and assembly again.
 
+---
 
 ## Parent Page
 
@@ -466,6 +470,7 @@ From the Parent Page, you can access additional analysis tools:
 - Export in FASTA format or other formats
 - Useful for downloading the entire gene including all variants
 
+---
 
 ## Organisms vs. Assemblies
 
@@ -477,6 +482,8 @@ From the Parent Page, you can access additional analysis tools:
 - **Assembly** = A specific genome build/version (e.g., GCA_004027475.1)
   - Contains actual sequence files (genome.fa, cds.nt.fa, etc.)
   - Each assembly can have different features and quality
+
+---
 
 ## Groups
 
@@ -490,6 +497,8 @@ Your administrator controls:
 - Which users can see which groups
 - Whether groups are public or private
 
+---
+
 ## Taxonomy Tree
 
 The taxonomy tree is a hierarchical browser showing evolutionary relationships:
@@ -497,6 +506,7 @@ The taxonomy tree is a hierarchical browser showing evolutionary relationships:
 - **Updated when you add organisms** - new taxa automatically appear
 - **Visual cues** - images and assembly counts at each level
 
+---
 
 ## Help & Documentation
 
@@ -509,6 +519,7 @@ Throughout SIMRbase, you'll see links to detailed help:
 - **[Data Export](data-export.php)** - downloading data in various formats
 - **[BLAST Tutorial](blast-tutorial.php)** - step-by-step BLAST search guide
 
+---
 
 ## Security & Privacy
 
@@ -522,6 +533,7 @@ Your data and searches are protected:
 
 See [Security Implementation](SECURITY_IMPLEMENTATION.md) for technical details.
 
+---
 
 ## Questions or Issues?
 
