@@ -611,7 +611,14 @@ function validateBlastIndexFiles($assembly_path, $sequence_types = []) {
             }
             
             $result['total_count']++;
-            $type_info = $type_mapping[$seq_type] ?? ['name' => ucfirst($seq_type), 'extensions' => ['nhr', 'nin', 'nsq']];
+            $type_info = $type_mapping[$seq_type] ?? null;
+            
+            // If not in mapping, detect from pattern
+            if (!$type_info) {
+                $is_protein = strpos($pattern, 'protein') !== false;
+                $extensions = $is_protein ? ['phr', 'pin', 'psq'] : ['nhr', 'nin', 'nsq'];
+                $type_info = ['name' => ucfirst($seq_type), 'extensions' => $extensions];
+            }
             
             $db_entry = [
                 'type' => $seq_type,
@@ -637,6 +644,205 @@ function validateBlastIndexFiles($assembly_path, $sequence_types = []) {
             
             $result['databases'][] = $db_entry;
         }
+    }
+    
+    return $result;
+}
+
+/**
+ * Check if assembly directory and FASTA files are readable/writable by web server
+ * This is more comprehensive than checkAssemblyWritableForBlast
+ * 
+ * @param string $assembly_path Path to assembly directory
+ * @param array $fasta_files Array of FASTA filenames to check readability
+ * @return array Array with 'writable' boolean and 'message' string
+ */
+function checkAssemblyCanGenerateBlast($assembly_path, $fasta_files = []) {
+    $result = [
+        'writable' => false,
+        'message' => '',
+        'can_execute' => false
+    ];
+    
+    if (!is_dir($assembly_path)) {
+        $result['message'] = 'Assembly directory does not exist';
+        return $result;
+    }
+    
+    // Check if directory is readable and writable
+    if (!is_readable($assembly_path)) {
+        $result['message'] = 'Assembly directory is not readable by web server';
+        return $result;
+    }
+    
+    if (!is_writable($assembly_path)) {
+        $result['message'] = 'Assembly directory is not writable by web server (FASTA index files cannot be created)';
+        return $result;
+    }
+    
+    // Check if FASTA files are readable by web server
+    foreach ($fasta_files as $fasta_file) {
+        $fasta_path = $assembly_path . '/' . $fasta_file;
+        if (file_exists($fasta_path) && !is_readable($fasta_path)) {
+            $result['message'] = 'FASTA file is not readable by web server: ' . htmlspecialchars($fasta_file);
+            return $result;
+        }
+    }
+    
+    // Check if we can execute commands (shell_exec or exec available)
+    if (!function_exists('shell_exec') && !function_exists('exec')) {
+        $result['message'] = 'PHP shell execution functions are disabled on this server';
+        return $result;
+    }
+    
+    $result['writable'] = true;
+    $result['can_execute'] = true;
+    $result['message'] = 'Ready to generate BLAST indexes';
+    
+    return $result;
+}
+
+/**
+ * Check if assembly directory is writable by web server for running makeblastdb
+ * 
+ * @param string $assembly_path Path to assembly directory
+ * @return array Array with 'writable' boolean and 'message' string
+ */
+function checkAssemblyWritableForBlast($assembly_path) {
+    $result = [
+        'writable' => false,
+        'message' => '',
+        'can_execute' => false
+    ];
+    
+    if (!is_dir($assembly_path)) {
+        $result['message'] = 'Assembly directory does not exist';
+        return $result;
+    }
+    
+    // Check if directory is readable and writable
+    if (!is_readable($assembly_path)) {
+        $result['message'] = 'Assembly directory is not readable by web server';
+        return $result;
+    }
+    
+    if (!is_writable($assembly_path)) {
+        $result['message'] = 'Assembly directory is not writable by web server (FASTA index files cannot be created)';
+        return $result;
+    }
+    
+    // Check if we can execute commands (shell_exec or exec available)
+    if (!function_exists('shell_exec') && !function_exists('exec')) {
+        $result['message'] = 'PHP shell execution functions are disabled on this server';
+        return $result;
+    }
+    
+    $result['writable'] = true;
+    $result['can_execute'] = true;
+    $result['message'] = 'Ready to generate BLAST indexes';
+    
+    return $result;
+}
+
+/**
+ * Generate BLAST indexes for a FASTA file
+ * 
+ * @param string $organism Organism name
+ * @param string $assembly Assembly name
+ * @param string $fasta_filename FASTA filename
+ * @param string $organism_data_path Path to organism data directory
+ * @return array Array with 'success' boolean, 'message', and 'output'
+ */
+function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_data_path) {
+    $result = [
+        'success' => false,
+        'message' => '',
+        'output' => '',
+        'errors' => ''
+    ];
+    
+    // Validate inputs
+    if (empty($organism) || empty($assembly) || empty($fasta_filename)) {
+        $result['message'] = 'Missing required parameters';
+        return $result;
+    }
+    
+    // Prevent directory traversal attacks
+    if (strpos($organism, '/') !== false || strpos($assembly, '/') !== false || strpos($fasta_filename, '/') !== false) {
+        $result['message'] = 'Invalid characters in parameters';
+        return $result;
+    }
+    
+    $assembly_path = $organism_data_path . '/' . $organism . '/' . $assembly;
+    $fasta_path = $assembly_path . '/' . $fasta_filename;
+    
+    // Verify paths exist
+    if (!is_dir($assembly_path)) {
+        $result['message'] = 'Assembly directory does not exist';
+        return $result;
+    }
+    
+    if (!file_exists($fasta_path)) {
+        $result['message'] = 'FASTA file does not exist';
+        return $result;
+    }
+    
+    // Check permissions
+    $perm_check = checkAssemblyWritableForBlast($assembly_path);
+    if (!$perm_check['writable']) {
+        $result['message'] = $perm_check['message'];
+        return $result;
+    }
+    
+    // Determine database type
+    $is_protein = strpos($fasta_filename, 'protein') !== false;
+    $db_type = $is_protein ? 'prot' : 'nucl';
+    
+    // Build command with full path to makeblastdb
+    $cd_cmd = 'cd ' . escapeshellarg($assembly_path);
+    $makeblastdb_path = '/usr/bin/makeblastdb';
+    // Don't use escapeshellarg for the filename since we're already in the directory
+    $makeblastdb_cmd = $makeblastdb_path . ' -in ' . $fasta_filename . ' -dbtype ' . $db_type . ' -parse_seqids 2>&1';
+    $full_cmd = $cd_cmd . ' && ' . $makeblastdb_cmd;
+    
+    // Execute command
+    try {
+        if (function_exists('shell_exec')) {
+            $output = shell_exec($full_cmd);
+            $result['output'] = $output;
+            
+            // Give filesystem a moment to catch up
+            sleep(2);
+            
+            // Debug: log what we're checking for
+            $debug_info = [];
+            
+            // Check if indexes were created
+            $index_ext = $is_protein ? ['phr', 'pin', 'psq'] : ['nhr', 'nin', 'nsq'];
+            $all_created = true;
+            $missing = [];
+            foreach ($index_ext as $ext) {
+                $index_file = $fasta_path . '.' . $ext;
+                $exists = file_exists($index_file);
+                $debug_info[] = $ext . ': ' . ($exists ? 'EXISTS' : 'MISSING') . ' (' . $index_file . ')';
+                if (!$exists) {
+                    $all_created = false;
+                    $missing[] = $ext;
+                }
+            }
+            
+            if ($all_created) {
+                $result['success'] = true;
+                $result['message'] = 'BLAST indexes created successfully';
+            } else {
+                $result['message'] = 'Missing index files: ' . implode(', ', $missing) . '. Debug: ' . implode(' | ', $debug_info) . ' Command: ' . $full_cmd . ' Output: ' . $output;
+                $result['errors'] = $output;
+            }
+        } else {
+            $result['message'] = 'Shell execution not available';
+        }
+    } catch (Exception $e) {
+        $result['message'] = 'Error executing command: ' . $e->getMessage();
     }
     
     return $result;
