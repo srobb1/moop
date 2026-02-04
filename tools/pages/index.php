@@ -30,7 +30,7 @@
           </ul>
           
           <p class="text-muted mb-0">
-            <strong>New to SIMRbase?</strong> <a href="help.php?page=getting-started" class="text-info text-decoration-none">Read the Getting Started guide</a> or explore other <a href="help.php" class="text-info text-decoration-none">tutorials and documentation</a> for detailed help.
+            <strong>New to SIMRbase?</strong> <a href="help.php?topic=getting-started" class="text-info text-decoration-none">Read the Getting Started guide</a> or explore other <a href="help.php" class="text-info text-decoration-none">tutorials and documentation</a> for detailed help.
           </p>
         </div>
       </div>
