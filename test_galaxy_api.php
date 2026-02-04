@@ -1,20 +1,35 @@
 <?php
 /**
- * Simple Galaxy MAFFT API Test
+ * Galaxy MAFFT API Test with Stored Configuration
  * 
  * Tests the Galaxy integration by:
- * 1. Sending sequences to /api/galaxy/mafft.php
- * 2. Polling /api/galaxy/results.php for job status
- * 3. Retrieving and displaying results
+ * 1. Loading Galaxy configuration from site_config
+ * 2. Sending sequences to /api/galaxy/mafft.php
+ * 3. Polling /api/galaxy/results.php for job status
+ * 4. Retrieving and displaying results
  */
 
-// Disable SSL verification for testing (not for production!)
-$context = stream_context_create([
-    'ssl' => [
-        'verify_peer' => false,
-        'verify_peer_name' => false,
-    ]
-]);
+// Load configuration
+require_once __DIR__ . '/config/site_config.php';
+require_once __DIR__ . '/includes/ConfigManager.php';
+
+$config = ConfigManager::getInstance();
+$galaxyConfig = $config->get('galaxy');
+
+// Validate Galaxy configuration
+if (!$galaxyConfig || !$galaxyConfig['enabled']) {
+    echo "❌ Galaxy integration is not enabled in configuration\n";
+    exit(1);
+}
+
+if (!$galaxyConfig['api_key']) {
+    echo "❌ Galaxy API key is not configured\n";
+    exit(1);
+}
+
+echo "✓ Galaxy configuration loaded\n";
+echo "  - Instance: " . $galaxyConfig['instance_url'] . "\n";
+echo "  - API Key: " . substr($galaxyConfig['api_key'], 0, 8) . "...\n\n";
 
 // Test sequences (NTNG1 protein from search results)
 $sequences = [
