@@ -58,7 +58,7 @@
     </div>
     <div class="card-body">
         <?php 
-        $all_checks = array_merge($checks, $assembly_subdir_issues);
+        $all_checks = array_merge($checks, $assembly_subdir_issues, $fasta_file_issues);
         $total = count($all_checks);
         $ok = count(array_filter($all_checks, fn($c) => empty($c['issues'])));
         $warning = $total - $ok;
@@ -280,8 +280,41 @@ foreach ($grouped as $group_name => $items):
             sudo chmod -R 2775 <?= htmlspecialchars($organism_data) ?><br>
             sudo chgrp -R www-data <?= htmlspecialchars($organism_data) ?>
         </div>
-        <?php else: ?>
-        <p class="mb-0 text-success"><strong><i class="fa fa-check-circle"></i> ✓ All assembly subdirectories have correct permissions (2775) for rename/move operations.</strong></p>
+        <?php endif; ?>
+
+        <?php if (!empty($fasta_file_issues)): ?>
+        <h6 class="mb-3"><i class="fa fa-dna"></i> FASTA Files</h6>
+        <p class="text-danger mb-3"><strong>⚠️ Some FASTA files have permission issues:</strong></p>
+        <div class="mb-3">
+            <?php foreach ($fasta_file_issues as $issue): ?>
+            <div class="alert alert-warning mb-2">
+                <strong><?= htmlspecialchars($issue['path']) ?></strong><br>
+                <small>Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>) | Required: 644 (group: www-data)</small>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <p class="mb-2"><strong>To fix all FASTA files, run:</strong></p>
+        <div class="fix-command">
+            <?php 
+            $sequence_types = $config->getSequenceTypes();
+            $patterns = [];
+            foreach ($sequence_types as $seq_config) {
+                $pattern = $seq_config['pattern'] ?? '';
+                if (!empty($pattern)) {
+                    $basename = basename($pattern);
+                    // Extract the filename pattern (e.g., "*.fa" from "protein.aa.fa")
+                    $patterns[] = '-name "' . $basename . '"';
+                }
+            }
+            $find_patterns = implode(' -o ', $patterns);
+            ?>
+            sudo find <?= htmlspecialchars($organism_data) ?> <?= $find_patterns ?> | xargs sudo chmod 644<br>
+            sudo find <?= htmlspecialchars($organism_data) ?> <?= $find_patterns ?> | xargs sudo chgrp www-data
+        </div>
+        <?php endif; ?>
+
+        <?php if (empty($assembly_subdir_issues) && empty($fasta_file_issues)): ?>
+        <p class="mb-0 text-success"><strong><i class="fa fa-check-circle"></i> ✓ All assembly subdirectories and FASTA files have correct permissions.</strong></p>
         <?php endif; ?>
     </div>
     <?php endif; ?>

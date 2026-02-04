@@ -235,14 +235,17 @@ foreach ($permission_items as $item) {
     }
 }
 
-// Check assembly subdirectories for rename/move permission issues
+// Check assembly subdirectories and FASTA files
 $assembly_subdir_issues = [];
+$fasta_file_issues = [];
 if (is_dir($organism_data)) {
     foreach (scandir($organism_data) as $organism) {
         if ($organism !== '.' && $organism !== '..' && is_dir($organism_data . '/' . $organism)) {
-            $subdir_path = $organism_data . '/' . $organism;
-            $check = performPermissionCheck($subdir_path, [
-                'name' => 'Assembly Subdirectory',
+            $org_path = $organism_data . '/' . $organism;
+            
+            // Check organism subdirectory itself
+            $check = performPermissionCheck($org_path, [
+                'name' => 'Organism Directory',
                 'type' => 'directory',
                 'required_perms' => '2775',
                 'required_group' => 'www-data',
@@ -250,9 +253,63 @@ if (is_dir($organism_data)) {
                 'why_write' => 'Web server needs to rename/move assembly subdirectories',
             ]);
             
-            // Only include in report if there are issues
             if (!empty($check['issues'])) {
                 $assembly_subdir_issues[] = $check;
+            }
+            
+            // Check assembly subdirectories and FASTA files
+            foreach (scandir($org_path) as $item) {
+                $item_path = $org_path . '/' . $item;
+                
+                // Skip dots and files
+                if ($item === '.' || $item === '..') {
+                    continue;
+                }
+                
+                if (is_dir($item_path)) {
+                    // Check assembly subdirectory
+                    $check = performPermissionCheck($item_path, [
+                        'name' => 'Assembly Subdirectory: ' . $organism . '/' . $item,
+                        'type' => 'directory',
+                        'required_perms' => '2775',
+                        'required_group' => 'www-data',
+                        'reason' => 'Web server needs to write BLAST index files here',
+                        'why_write' => 'BLAST indexes (.nhr, .nin, .nsq, .phr, .pin, .psq) must be writable by web server',
+                    ]);
+                    
+                    if (!empty($check['issues'])) {
+                        $assembly_subdir_issues[] = $check;
+                    }
+                    
+                    // Check FASTA files in assembly directory based on configured patterns
+                    $sequence_types = $config->getSequenceTypes();
+                    foreach ($sequence_types as $seq_type => $seq_config) {
+                        $pattern = $seq_config['pattern'] ?? '';
+                        if (empty($pattern)) {
+                            continue;
+                        }
+                        
+                        // Build the expected filename from the pattern
+                        $expected_file = basename($pattern);
+                        $fasta_path = $item_path . '/' . $expected_file;
+                        
+                        // Only check if file exists
+                        if (file_exists($fasta_path)) {
+                            $check = performPermissionCheck($fasta_path, [
+                                'name' => 'FASTA File: ' . $organism . '/' . $item . '/' . $expected_file,
+                                'type' => 'file',
+                                'required_perms' => '644',
+                                'required_group' => 'www-data',
+                                'reason' => ucfirst($seq_type) . ' file must be readable by web server for BLAST',
+                                'why_write' => 'Web server reads ' . $seq_type . ' files to run BLAST searches',
+                            ]);
+                            
+                            if (!empty($check['issues'])) {
+                                $fasta_file_issues[] = $check;
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -309,6 +366,7 @@ $data = [
     'site' => $site,
     'checks' => $checks,
     'assembly_subdir_issues' => $assembly_subdir_issues,
+    'fasta_file_issues' => $fasta_file_issues,
     'organism_data' => $organism_data,
     'moop_owner' => $moop_owner,
     'web_user' => $web_user,
