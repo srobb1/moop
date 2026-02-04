@@ -15,6 +15,7 @@ include_once __DIR__ . '/../includes/layout.php';
 // Get config
 $site = $config->getString('site');
 $organism_data = $config->getPath('organism_data');
+$sequence_types = $config->getSequenceTypes();
 
 // Configure display
 $display_config = [
@@ -27,6 +28,7 @@ $data = [
     'config' => $config,
     'site' => $site,
     'organism_data' => $organism_data,
+    'sequence_types' => $sequence_types,
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
     ],

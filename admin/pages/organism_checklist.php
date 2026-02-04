@@ -179,20 +179,26 @@
 
         <!-- organism.sqlite Status Check -->
         <div class="mt-4">
+          <?php
+          // Check for missing SQLite databases
+          $missing_sqlite = [];
+          foreach ($organisms_in_system as $org) {
+              $sqlite_path = "$organism_data/$org/organism.sqlite";
+              if (!file_exists($sqlite_path)) {
+                  $missing_sqlite[] = $org;
+              }
+          }
+          ?>
           <h6 class="fw-bold mb-3" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#sqliteStatusStep1" role="button" tabindex="0">
-            <i class="fa fa-database"></i> Database File Status <i class="fa fa-chevron-down float-end"></i>
+            <i class="fa fa-database"></i> Database File Status 
+            <?php if (!empty($missing_sqlite)): ?>
+              <span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> <?= count($missing_sqlite) ?> Missing</span>
+            <?php else: ?>
+              <span class="badge bg-success"><i class="fa fa-check"></i> OK</span>
+            <?php endif; ?>
+            <i class="fa fa-chevron-down float-end"></i>
           </h6>
           <div class="collapse show" id="sqliteStatusStep1">
-            <?php
-            // Check for missing SQLite databases
-            $missing_sqlite = [];
-            foreach ($organisms_in_system as $org) {
-                $sqlite_path = "$organism_data/$org/organism.sqlite";
-                if (!file_exists($sqlite_path)) {
-                    $missing_sqlite[] = $org;
-                }
-            }
-            ?>
 
             <?php if (!empty($missing_sqlite)): ?>
               <div class="alert alert-warning">
@@ -213,9 +219,152 @@
                   <li>See the <a href="/moop/help.php?topic=organism-data-organization#database-schema" target="_blank"><strong>Database Schema section</strong></a> in the organism data organization help for detailed information on file format and structure</li>
                 </ul>
               </div>
+            <?php endif; ?>
+          </div>
+        </div>
+
+        <!-- organism.json Status Check -->
+        <div class="mt-4">
+          <?php
+          // Check for missing organism.json files
+          $missing_json = [];
+          foreach ($organisms_in_system as $org) {
+              $json_path = "$organism_data/$org/organism.json";
+              if (!file_exists($json_path)) {
+                  $missing_json[] = $org;
+              }
+          }
+          ?>
+          <h6 class="fw-bold mb-3" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#jsonStatusStep1" role="button" tabindex="0">
+            <i class="fa fa-file-code"></i> organism.json File Status 
+            <?php if (!empty($missing_json)): ?>
+              <span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> <?= count($missing_json) ?> Missing</span>
             <?php else: ?>
-              <div class="alert alert-success">
-                <i class="fa fa-check-circle"></i> All organisms have <code>organism.sqlite</code> files!
+              <span class="badge bg-success"><i class="fa fa-check"></i> OK</span>
+            <?php endif; ?>
+            <i class="fa fa-chevron-down float-end"></i>
+          </h6>
+          <div class="collapse" id="jsonStatusStep1">
+
+            <?php if (!empty($missing_json)): ?>
+              <div class="alert alert-warning">
+                <i class="fa fa-exclamation-triangle"></i> <strong>Missing organism.json files:</strong>
+                <p class="mb-3 mt-2">The following organisms don't have an <code>organism.json</code> metadata file:</p>
+                <div class="bg-light p-2 rounded mb-3" style="max-height: 150px; overflow-y: auto;">
+                  <ul class="mb-0">
+                    <?php foreach ($missing_json as $org): ?>
+                      <li><code><?= htmlspecialchars($org) ?>/organism.json</code></li>
+                    <?php endforeach; ?>
+                  </ul>
+                </div>
+                
+                <p class="mb-2"><strong>What to do:</strong></p>
+                <ul class="mb-2">
+                  <li>Create an <code>organism.json</code> file with basic metadata</li>
+                  <li>Use the auto-generate function in Step 3 to fetch NCBI data automatically</li>
+                  <li>Or manually create the file with the format shown above</li>
+                </ul>
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
+
+        <!-- BLAST Index Status Check -->
+        <div class="mt-4">
+          <?php
+          include_once __DIR__ . '/../../lib/blast_functions.php';
+          
+          // Check for missing BLAST indexes
+          $blast_issues = [];
+          foreach ($organisms_in_system as $org) {
+              $org_dir = "$organism_data/$org";
+              
+              // Scan for assembly directories
+              if (is_dir($org_dir)) {
+                  foreach (scandir($org_dir) as $item) {
+                      if ($item !== '.' && $item !== '..' && is_dir("$org_dir/$item")) {
+                          $assembly_path = "$org_dir/$item";
+                          $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
+                          
+                          // Check if there are FASTA files missing indexes
+                          if (!empty($blast_validation['databases'])) {
+                              foreach ($blast_validation['databases'] as $db) {
+                                  if (!$db['has_indexes']) {
+                                      $blast_issues[] = [
+                                          'organism' => $org,
+                                          'assembly' => $item,
+                                          'fasta' => $db['fasta'],
+                                          'missing' => $db['missing_indexes']
+                                      ];
+                                  }
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+          ?>
+          <h6 class="fw-bold mb-3" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#blastIndexStatusStep1" role="button" tabindex="0">
+            <i class="fa fa-rocket"></i> BLAST Index Files Status 
+            <?php if (!empty($blast_issues)): ?>
+              <span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> <?= count($blast_issues) ?> Missing</span>
+            <?php else: ?>
+              <span class="badge bg-success"><i class="fa fa-check"></i> OK</span>
+            <?php endif; ?>
+            <i class="fa fa-chevron-down float-end"></i>
+          </h6>
+          <div class="collapse" id="blastIndexStatusStep1">
+
+            <?php if (!empty($blast_issues)): ?>
+              <div class="alert alert-warning">
+                <i class="fa fa-exclamation-triangle"></i> <strong>Missing BLAST Index Files:</strong>
+                <p class="mb-3 mt-2">BLAST index files are required for FASTA files to be searchable. The following need indexes:</p>
+                <div class="bg-light p-3 rounded mb-3" style="max-height: 400px; overflow-y: auto;">
+                  <ul class="mb-0 small">
+                    <?php foreach ($blast_issues as $issue): ?>
+                      <?php 
+                        $organism_data_base = $config->getPath('organism_data');
+                        //$organism_data_base = realpath($organism_data_base) ?: $organism_data_base;
+                        $assembly_fullpath = $organism_data_base . '/' . $issue['organism'] . '/' . $issue['assembly'];
+                        $perm_check = checkAssemblyCanGenerateBlast($assembly_fullpath, [$issue['fasta']]);
+                        $can_generate = $perm_check['writable'];
+                        
+                        // Calculate commands upfront so they're available everywhere
+                        $is_protein = strpos($issue['fasta'], 'protein') !== false;
+                        $db_type = $is_protein ? 'prot' : 'nucl';
+                        $cd_cmd = "cd " . htmlspecialchars($assembly_fullpath);
+                        $makeblastdb_cmd = "makeblastdb -in " . htmlspecialchars($issue['fasta']) . " -dbtype " . htmlspecialchars($db_type) . " -parse_seqids";
+                      ?>
+                      <li class="mb-3 pb-3 border-bottom">
+                        <strong><?= htmlspecialchars($issue['organism']) ?>/<?= htmlspecialchars($issue['assembly']) ?>/<?= htmlspecialchars($issue['fasta']) ?></strong><br>
+                        <small class="text-danger">Missing: <?= htmlspecialchars(implode(', ', $issue['missing'])) ?></small>
+                        <?php if (!$can_generate): ?>
+                          <div class="alert alert-danger mt-2 mb-0 py-1 px-2 small">
+                            <i class="fa fa-lock"></i> <strong>Cannot generate:</strong> <?= htmlspecialchars($perm_check['message']) ?>
+                          </div>
+                        <?php endif; ?>
+                        <div class="mt-2 p-2 bg-white border rounded small">
+                          <div class="d-flex justify-content-between align-items-start mb-2">
+                            <strong>To generate BLAST indexes, run on the server:</strong>
+                            <div class="btn-group btn-group-sm" role="group">
+                              <button type="button" class="btn btn-outline-primary copy-cmd-btn" data-cmd-text="<?= htmlspecialchars($cd_cmd . ' && ' . $makeblastdb_cmd) ?>" title="Copy command">
+                                <i class="fa fa-copy"></i> Copy
+                              </button>
+                              <?php if ($can_generate): ?>
+                                <button type="button" class="btn btn-outline-success generate-blast-btn" data-organism="<?= htmlspecialchars($issue['organism']) ?>" data-assembly="<?= htmlspecialchars($issue['assembly']) ?>" data-fasta="<?= htmlspecialchars($issue['fasta']) ?>" title="Generate now">
+                                  <i class="fa fa-play"></i> Generate
+                                </button>
+                              <?php endif; ?>
+                            </div>
+                          </div>
+                          <code class="d-block" style="word-break: break-all; white-space: normal;">
+                            <?= $cd_cmd ?> && \<br><?= $makeblastdb_cmd ?>
+                          </code>
+                        </div>
+                      </li>
+                    <?php endforeach; ?>
+                  </ul>
+                </div>
               </div>
             <?php endif; ?>
           </div>
@@ -237,11 +386,14 @@
         <ul>
           <li>Verify the web server can read all organism files and databases</li>
           <li>Check that directories have execute permissions for traversal</li>
-          <li>Ensure databases are readable by the web server user</li>
+          <li>Ensure all FASTA files are readable by the www-data user</li>
+          <li>Verify assembly directories are writable (needed for BLAST index generation)</li>
         </ul>
 
+        <p class="mb-3"><em><i class="fa fa-info-circle"></i> This step performs a quick check of organism directories. For a comprehensive check including assembly subdirectories and all FASTA files, use the <strong>Manage Filesystem Permissions</strong> page below.</em></p>
+
         <?php
-        // Quick permission check on organism directories using same logic as manage_filesystem_permissions.php
+        // Quick permission check on organism directories
         $permission_issues = [];
         
         foreach ($organisms_in_system as $org) {
@@ -284,15 +436,11 @@
                 ];
             }
         }
-        
-        // DEBUG: Show what we're checking
-        // echo "<!-- Debug: organisms_in_system = " . implode(', ', $organisms_in_system) . " -->";
-        // echo "<!-- Debug: permission_issues count = " . count($permission_issues) . " -->";
         ?>
         
         <?php if (!empty($permission_issues)): ?>
           <div class="alert alert-warning mt-3">
-            <i class="fa fa-exclamation-triangle"></i> <strong>Permission Issues Found:</strong>
+            <i class="fa fa-exclamation-triangle"></i> <strong>Permission Issues Found in Organism Directories:</strong>
             <ul class="mb-0 mt-2">
               <?php foreach ($permission_issues as $item): ?>
                 <li>
@@ -314,13 +462,14 @@
               sudo chgrp -R www-data <?= htmlspecialchars($organism_data) ?>
             </div>
           </div>
-          <p class="mt-3"><strong>Full Management:</strong> <a href="manage_filesystem_permissions.php" class="btn btn-primary"><i class="fa fa-lock"></i> Manage Filesystem Permissions</a></p>
         <?php else: ?>
           <div class="alert alert-success mt-3">
-            <i class="fa fa-check-circle"></i> All organism directories have proper permissions (2775, www-data group)!
+            <i class="fa fa-check-circle"></i> Organism directories have proper permissions (2775, www-data group)!
           </div>
-          <p class="mt-3"><strong>Full Management:</strong> <a href="manage_filesystem_permissions.php" class="btn btn-primary"><i class="fa fa-lock"></i> Manage Filesystem Permissions</a></p>
         <?php endif; ?>
+
+        <p class="mt-3"><strong>Full Detailed Check:</strong> <a href="manage_filesystem_permissions.php" class="btn btn-primary"><i class="fa fa-lock"></i> Manage Filesystem Permissions</a></p>
+        <small class="text-muted d-block mt-2"><i class="fa fa-info-circle"></i> The full page checks organism directories, assembly subdirectories, FASTA files, and other critical paths</small>
       </div>
     </div>
 
@@ -714,6 +863,97 @@ async function assignOrganismsToNewGroup() {
     btn.disabled = false;
   }
 }
+
+// Copy BLAST command to clipboard
+document.addEventListener('DOMContentLoaded', function() {
+  const copyBtns = document.querySelectorAll('.copy-cmd-btn');
+  copyBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const cmdText = this.getAttribute('data-cmd-text');
+      
+      navigator.clipboard.writeText(cmdText).then(() => {
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="fa fa-check"></i> Copied!';
+        this.classList.remove('btn-outline-primary');
+        this.classList.add('btn-success');
+        
+        setTimeout(() => {
+          this.innerHTML = originalText;
+          this.classList.remove('btn-success');
+          this.classList.add('btn-outline-primary');
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy command. Please copy manually.');
+      });
+    });
+  });
+
+  // Generate BLAST indexes
+  const generateBtns = document.querySelectorAll('.generate-blast-btn');
+  generateBtns.forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const organism = this.getAttribute('data-organism');
+      const assembly = this.getAttribute('data-assembly');
+      const fasta = this.getAttribute('data-fasta');
+      
+      if (!confirm(`Generate BLAST indexes for ${organism}/${assembly}/${fasta}?\n\nThis may take a few minutes.`)) {
+        return;
+      }
+      
+      const originalText = this.innerHTML;
+      this.disabled = true;
+      this.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating...';
+      
+      fetch('api/generate_blast_indexes.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          organism: organism,
+          assembly: assembly,
+          fasta_file: fasta
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          this.innerHTML = '<i class="fa fa-check"></i> Success!';
+          this.classList.remove('btn-outline-success');
+          this.classList.add('btn-success');
+          
+          // Show success message
+          const successDiv = document.createElement('div');
+          successDiv.className = 'alert alert-success mt-2';
+          successDiv.innerHTML = '<i class="fa fa-check-circle"></i> BLAST indexes generated successfully! Reloading...';
+          this.closest('li').appendChild(successDiv);
+          
+          // Reload page after 3 seconds
+          setTimeout(() => {
+            location.reload();
+          }, 3000);
+        } else {
+          this.disabled = false;
+          this.innerHTML = originalText;
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'alert alert-danger mt-2';
+          errorDiv.innerHTML = '<i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + (data.message || 'Failed to generate indexes');
+          this.closest('li').appendChild(errorDiv);
+        }
+      })
+      .catch(err => {
+        this.disabled = false;
+        this.innerHTML = originalText;
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger mt-2';
+        errorDiv.innerHTML = '<i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + err.message;
+        this.closest('li').appendChild(errorDiv);
+      });
+    });
+  });
+});
 </script>
 
   <!-- Back to Admin Dashboard Link (Bottom) -->
