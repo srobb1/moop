@@ -3,7 +3,7 @@
  * MAFFT (Multiple Sequence Alignment) Tool Wrapper for Galaxy
  */
 
-require_once __DIR__ . '/galaxy_client.php';
+require_once __DIR__ . '/client.php'; // Loads GalaxyClient class
 
 class MAFFTTool {
     private $galaxy;

@@ -30,10 +30,9 @@ class GalaxyClient {
         try {
             $response = $this->get('/api/users/current');
             
-            if ($response && isset($response['email'])) {
+            if ($response && isset($response['quota_percent'])) {
                 return [
                     'success' => true,
-                    'email' => $response['email'],
                     'message' => 'Connected to Galaxy'
                 ];
             } else {

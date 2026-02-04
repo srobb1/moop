@@ -31,6 +31,13 @@ $site = 'moop';  // CHANGE THIS to deploy for a different site directory
 $site_path = "$root_path/$site";
 $images_dir = 'images';
 
+// Load secrets (API keys, credentials)
+$secrets = [];
+$secrets_file = __DIR__ . '/secrets.php';
+if (file_exists($secrets_file)) {
+    $secrets = require $secrets_file;
+}
+
 return [
     // ======== REQUIRED: Server Paths ========
     // These must exist on your server, or the app won't function
@@ -146,7 +153,7 @@ AATGCGTCCACAACAGTTATCAATCAA',
     'galaxy_settings' => [
         'enabled' => true,
         'url' => 'https://usegalaxy.org',
-        'api_key' => getenv('GALAXY_API_KEY'),  // Load from environment variable
+        'api_key' => $secrets['galaxy']['api_key'] ?? null,  // Load from secrets.php
         'mode' => 'shared',  // 'shared' or 'per_user' (per_user support planned for future)
         
         'tools' => [

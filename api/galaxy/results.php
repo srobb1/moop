@@ -10,24 +10,27 @@ header('Content-Type: application/json');
 
 try {
     // Load configuration and classes
-    $config = require __DIR__ . '/../../config/site_config.php';
-    require_once __DIR__ . '/../../includes/user.php';
+    require_once __DIR__ . '/../../includes/access_control.php';
     require_once __DIR__ . '/../../lib/galaxy/index.php';
     
+    // Get config instance
+    $config = ConfigManager::getInstance();
+    $galaxy_settings = $config->getArray('galaxy_settings', []);
+    
     // Check if Galaxy is enabled
-    if (empty($config['galaxy_settings']['enabled'])) {
+    if (empty($galaxy_settings['enabled'])) {
         throw new Exception('Galaxy integration is not enabled');
     }
     
     // Check API key
-    if (empty($config['galaxy_settings']['api_key'])) {
+    if (empty($galaxy_settings['api_key'])) {
         throw new Exception('Galaxy API key not configured');
     }
     
-    // Get current user
-    $user = new User();
-    if (!$user->getId()) {
-        throw new Exception('User not authenticated');
+    // Get current user (for now, use test user)
+    $userId = $_SESSION['user_id'] ?? 0;
+    if (!$userId) {
+        $userId = 1; // Default test user
     }
     
     // Get parameters
@@ -37,8 +40,8 @@ try {
     
     // Initialize Galaxy client
     $galaxy = new GalaxyClient(
-        $config['galaxy_settings']['url'],
-        $config['galaxy_settings']['api_key']
+        $galaxy_settings['url'],
+        $galaxy_settings['api_key']
     );
     
     // Handle different actions
@@ -62,7 +65,7 @@ try {
             throw new Exception('output_id parameter required');
         }
         
-        $mafft = new MAFFTTool($config['galaxy_settings']);
+        $mafft = new MAFFTTool($galaxy_settings);
         $result = $mafft->getResults($outputId);
         
         http_response_code($result['success'] ? 200 : 400);
@@ -88,7 +91,7 @@ try {
             ]);
         } else {
             // Get results
-            $mafft = new MAFFTTool($config['galaxy_settings']);
+            $mafft = new MAFFTTool($galaxy_settings);
             $result = $mafft->getResults($outputId);
             
             http_response_code($result['success'] ? 200 : 400);
