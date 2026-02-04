@@ -106,7 +106,7 @@ class GalaxyClient {
     }
     
     /**
-     * Upload file content directly
+     * Upload file content directly (using tool API like shell script)
      * @param string $historyId History ID
      * @param string $filename Filename
      * @param string $content File content
@@ -114,49 +114,42 @@ class GalaxyClient {
      * @return array Response with dataset ID
      */
     private function uploadFileContent($historyId, $filename, $content, $fileType) {
-        // Write to temporary file
-        $tmpFile = tempnam(sys_get_temp_dir(), 'galaxy_');
-        file_put_contents($tmpFile, $content);
+        // Use the same approach as the working shell script: POST to /api/tools with upload1 tool
+        $payload = [
+            'history_id' => $historyId,
+            'tool_id' => 'upload1',
+            'inputs' => [
+                'files_0|url_paste' => $content,
+                'files_0|type' => 'upload_dataset',
+                'files_0|NAME' => $filename,
+                'dbkey' => '?',
+                'file_type' => $fileType
+            ]
+        ];
         
         try {
-            // Post with file upload
-            $ch = curl_init($this->url . '/api/histories/' . urlencode($historyId) . '/contents');
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'x-api-key: ' . $this->apiKey
-            ]);
-            
-            $postData = [
-                'files_0|file_data' => new CURLFile($tmpFile),
-                'files_0|NAME' => $filename,
-                'file_type' => $fileType,
-            ];
-            
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-            
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-            
-            @unlink($tmpFile);
-            
-            if ($httpCode >= 200 && $httpCode < 300) {
-                $data = json_decode($response, true);
-                // Response might be array or single object
-                if (is_array($data) && count($data) > 0) {
-                    return $data[0];
-                } else if (isset($data['id'])) {
-                    return $data;
-                }
-            }
-            
-            return null;
+            $response = $this->post('/api/tools', $payload);
         } catch (Exception $e) {
-            @unlink($tmpFile);
-            throw $e;
+            error_log("Upload failed: " . $e->getMessage());
+            throw new Exception("Upload API error: " . $e->getMessage());
         }
+        
+        if (!$response) {
+            error_log("Upload response is empty");
+            return null;
+        }
+        
+        // Galaxy returns: { outputs: [ { id: ... } ], ... }
+        if (isset($response['outputs']) && is_array($response['outputs']) && count($response['outputs']) > 0) {
+            return ['id' => $response['outputs'][0]['id']];
+        }
+        
+        // Fallback: direct ID response
+        if (isset($response['id'])) {
+            return $response;
+        }
+        
+        return null;
     }
     
     /**

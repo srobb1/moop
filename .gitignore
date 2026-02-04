@@ -27,5 +27,14 @@ Thumbs.db
 # Secrets and credentials (NEVER COMMIT)
 config/secrets.php
 run_mafft.sh
-galaxy_testing/test_galaxy_direct.php
 galaxy_testing/run_mafft.sh
+*_api_key*
+*.key
+*.pem
+test_*.php
+test_*.sh
+test_*.json
+galaxy_testing/*.fasta
+galaxy_testing/*.sh
+galaxy_testing/*.php
+galaxy_testing/*.json

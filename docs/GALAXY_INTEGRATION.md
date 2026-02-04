@@ -73,27 +73,31 @@ This was our first successful test and demonstrates:
 
 **Output**: `mafft_alignment_TIMESTAMP.fasta`
 
-### Test 2: PHP with Config Variables
+### Test 2: PHP with Config Variables ✅ WORKING
 
 A PHP test that uses stored config variables and simulated search result sequences:
 
 ```bash
 cd /data/moop
-php test_galaxy_with_config.php
+php galaxy_testing/test_mafft_with_config.php
 ```
 
+**Successfully tested on 2026-02-04**
+
 This test demonstrates:
-- Loading Galaxy config from `site_config.php`
-- Loading API key from `secrets.php`
-- Simulating sequences from search results (array of objects)
-- Full end-to-end workflow from config to results
+- ✅ Loading Galaxy config from `site_config.php`
+- ✅ Connecting to UseGalaxy.org API
+- ✅ Creating a history
+- ✅ Uploading FASTA sequences
+- ✅ Submitting MAFFT alignment job
+- ✅ Retrieving job ID and output dataset ID
+- ✅ Providing Galaxy URL to view results
 
 **Features**:
 - ✅ Uses stored configuration (not hardcoded)
 - ✅ Simulates real search result format
-- ✅ Monitors job progress
-- ✅ Downloads results
-- ✅ Provides visualization links
+- ✅ Full end-to-end workflow from config to job submission
+- ✅ Provides Galaxy history and result links
 
 ## Available Tools
 
