@@ -408,6 +408,259 @@ return [
 5. Add UI components to search result pages
 6. Test end-to-end workflow
 
+## Phase 5: Integration with Existing Tools
+
+### Reuse Existing Sequence Retrieval Logic
+
+The tool must integrate with the existing **retrieve_selected_sequences.php** workflow:
+
+**Current Flow**:
+```
+Search Results Page (with checkboxes)
+  ↓
+User selects sequences + clicks "Download FASTA"
+  ↓
+tools/retrieve_selected_sequences.php receives:
+  - POST['organism']
+  - POST['assembly']
+  - POST['uniquenames'] (comma-separated IDs)
+  - POST['sequence_type'] (protein, cds, transcript, genome)
+  - POST['download_file'] = 1
+  ↓
+Uses lib/extract_search_helpers.php::extractSequencesForAllTypes()
+  ↓
+Returns FASTA content with proper headers
+  ↓
+Sends file to browser via sendFile()
+```
+
+**Integration Strategy**:
+
+1. **Reuse extractSequencesForAllTypes()** function
+   - Already validates organism/assembly access
+   - Already fetches sequences from FASTA files
+   - Returns organized content by sequence type
+   - Location: `/data/moop/lib/extract_search_helpers.php`
+
+2. **New Galaxy Align Flow**:
+```
+Search Results Page (with checkboxes)
+  ↓
+User selects 2+ sequences + clicks "Align Protein Sequences"
+  ↓
+Opens modal with tool options
+  ↓
+User confirms alignment request
+  ↓
+api/galaxy/align.php receives:
+  - POST['organism']
+  - POST['assembly'] 
+  - POST['uniquenames'] (comma-separated IDs)
+  - POST['sequence_type'] (protein, cds, or mrna)
+  - POST['tool'] (mafft or clustalw)
+  - POST['mode'] (optional: advanced parameters)
+  ↓
+Calls extractSequencesForAllTypes() to fetch sequences
+  (SAME as download flow!)
+  ↓
+Builds FASTA content and uploads to Galaxy
+  ↓
+Returns job_id + galaxy_history_id
+  ↓
+Frontend monitors progress and displays results
+```
+
+3. **Code Reuse Pattern**:
+```php
+// Both download.php and api/galaxy/align.php will:
+1. Validate user access: has_assembly_access($organism, $assembly)
+2. Parse feature IDs: parseFeatureIds($uniquenames_string)
+3. Extract sequences: extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types)
+4. Then diverge:
+   - Download: sendFile() to browser
+   - Align: uploadToGalaxy() and return job tracking info
+```
+
+### File Dependencies
+
+**Must reuse**:
+- `/data/moop/lib/extract_search_helpers.php` - Sequence extraction
+- `/data/moop/lib/blast_functions.php` - Access validation
+- `/data/moop/tools/retrieve_selected_sequences.php` - Reference implementation
+
+**Must NOT duplicate**:
+- Sequence extraction logic
+- Access control checks
+- Feature ID parsing
+
+### Implementation: api/galaxy/align.php
+
+```php
+<?php
+// /api/galaxy/align.php
+// NEW endpoint that integrates with existing sequence retrieval
+
+include_once __DIR__ . '/../tools/tool_init.php';
+include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/extract_search_helpers.php';
+include_once __DIR__ . '/../lib/galaxy/GalaxyClient.php';
+
+// Set JSON response header
+header('Content-Type: application/json');
+
+try {
+    // 1. VALIDATE REQUEST
+    $organism = trim($_POST['organism'] ?? '');
+    $assembly = trim($_POST['assembly'] ?? '');
+    $uniquenames = trim($_POST['uniquenames'] ?? '');
+    $sequence_type = trim($_POST['sequence_type'] ?? 'protein'); // protein, cds, mrna
+    $tool = trim($_POST['tool'] ?? 'mafft'); // mafft or clustalw
+    
+    if (empty($assembly)) {
+        throw new Exception('Assembly required');
+    }
+    
+    // 2. CHECK ACCESS (reuse existing function)
+    if (!has_assembly_access($organism, $assembly)) {
+        throw new Exception('Access denied');
+    }
+    
+    // 3. PARSE AND VALIDATE IDs (reuse existing function)
+    $id_parse = parseFeatureIds($uniquenames);
+    if (!$id_parse['valid']) {
+        throw new Exception($id_parse['error']);
+    }
+    
+    // 4. EXTRACT SEQUENCES (reuse existing function)
+    $config = ConfigManager::getInstance();
+    $organism_data = $config->getPath('organism_data');
+    $organism_dir = "$organism_data/$organism";
+    
+    // Find assembly directory
+    $dirs = array_diff(scandir($organism_dir), ['.', '..']);
+    $assembly_dir = null;
+    foreach ($dirs as $item) {
+        if (is_dir("$organism_dir/$item") && !in_array($item, ['fasta_files'])) {
+            $assembly_dir = "$organism_dir/$item";
+            break;
+        }
+    }
+    
+    if (!$assembly_dir) {
+        throw new Exception('Assembly directory not found');
+    }
+    
+    $extract_result = extractSequencesForAllTypes(
+        $assembly_dir,
+        $id_parse['uniquenames'],
+        $config->getSequenceTypes()
+    );
+    
+    // 5. BUILD FASTA CONTENT
+    $fasta_content = '';
+    if (isset($extract_result['content'][$sequence_type])) {
+        foreach ($extract_result['content'][$sequence_type] as $seq_name => $seq_data) {
+            $fasta_content .= ">$seq_name\n" . $seq_data . "\n";
+        }
+    }
+    
+    if (empty($fasta_content)) {
+        throw new Exception("No sequences found for type: $sequence_type");
+    }
+    
+    // 6. SUBMIT TO GALAXY
+    $galaxy = new GalaxyClient(
+        $config->getString('galaxy_url'),
+        $config->getString('galaxy_api_key')
+    );
+    
+    // Create history
+    $history_id = $galaxy->createHistory(
+        $_SESSION['user_id'] ?? 0,
+        'Sequence Aligner'
+    );
+    
+    // Upload FASTA content
+    $temp_file = tempnam('/tmp', 'moop_seqs_');
+    file_put_contents($temp_file, $fasta_content);
+    $dataset_id = $galaxy->uploadFile($history_id, $temp_file, 'fasta');
+    unlink($temp_file);
+    
+    // Wait for upload to complete
+    $upload_status = $galaxy->waitForCompletion($dataset_id, 60);
+    if (!$upload_status['success']) {
+        throw new Exception('Upload failed: ' . $upload_status['error']);
+    }
+    
+    // Run alignment tool
+    $tool_id = $config->getPath('galaxy_tools.' . $tool);
+    $job = $galaxy->runTool($history_id, $tool_id, [
+        'inputSequences' => ['src' => 'hda', 'id' => $dataset_id],
+        'outputFormat' => 'fasta',
+        'flavour' => 'mafft-fftns'
+    ]);
+    
+    // 7. STORE JOB TRACKING (new table: galaxy_jobs)
+    $db = Database::getInstance();
+    $db->query(
+        'INSERT INTO galaxy_jobs (moop_job_id, galaxy_history_id, galaxy_dataset_id, tool_name, status, sequence_ids, created_at) 
+         VALUES (?, ?, ?, ?, ?, ?, NOW())',
+        [
+            uniqid('moopjob_'),
+            $history_id,
+            $job['output_id'],
+            $tool,
+            'queued',
+            json_encode($id_parse['uniquenames'])
+        ]
+    );
+    
+    // 8. RETURN SUCCESS RESPONSE
+    echo json_encode([
+        'success' => true,
+        'job_id' => $job['job_id'],
+        'history_id' => $history_id,
+        'dataset_id' => $job['output_id'],
+        'status' => 'queued',
+        'message' => 'Alignment submitted to Galaxy',
+        'galaxy_url' => $config->getString('galaxy_url') . "/histories/view?id=$history_id"
+    ]);
+    
+} catch (Exception $e) {
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage()
+    ]);
+}
+?>
+```
+
+## Database Schema Addition
+
+```sql
+CREATE TABLE galaxy_jobs (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    moop_job_id VARCHAR(255) UNIQUE NOT NULL,
+    galaxy_history_id VARCHAR(255) NOT NULL,
+    galaxy_dataset_id VARCHAR(255),
+    tool_name VARCHAR(50),
+    status ENUM('queued', 'running', 'ok', 'error') DEFAULT 'queued',
+    sequence_ids JSON,
+    organism VARCHAR(255),
+    assembly VARCHAR(255),
+    sequence_type VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    error_message TEXT,
+    results_fasta LONGTEXT,
+    INDEX (status),
+    INDEX (moop_job_id),
+    INDEX (created_at),
+    INDEX (galaxy_history_id)
+);
+```
+
 ## Notes
 
 - **Shared Galaxy Account**: All users will use the same Galaxy account for simplicity
