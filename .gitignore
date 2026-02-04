@@ -23,3 +23,6 @@ organisms/*log
 .php-cs-fixer.cache
 .DS_Store
 Thumbs.db
+
+# Secrets and credentials (NEVER COMMIT)
+config/secrets.php
