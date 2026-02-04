@@ -124,12 +124,14 @@ class GalaxyClient {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'x-api-key: ' . $this->apiKey
+            ]);
             
             $postData = [
                 'files_0|file_data' => new CURLFile($tmpFile),
                 'files_0|NAME' => $filename,
                 'file_type' => $fileType,
-                'api_key' => $this->apiKey
             ];
             
             curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
@@ -208,12 +210,15 @@ class GalaxyClient {
      */
     public function getDatasetContent($datasetId) {
         // Download dataset
-        $url = $this->url . '/api/datasets/' . urlencode($datasetId) . '/download?api_key=' . urlencode($this->apiKey);
+        $url = $this->url . '/api/datasets/' . urlencode($datasetId) . '/download';
         
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'x-api-key: ' . $this->apiKey
+        ]);
         
         $content = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -322,7 +327,8 @@ class GalaxyClient {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json'
+            'Content-Type: application/json',
+            'x-api-key: ' . $this->apiKey
         ]);
         
         $response = curl_exec($ch);
@@ -345,14 +351,15 @@ class GalaxyClient {
      * Make POST request to Galaxy API
      */
     private function post($endpoint, $data) {
-        $url = $this->url . $endpoint . '?api_key=' . urlencode($this->apiKey);
+        $url = $this->url . $endpoint;
         
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json'
+            'Content-Type: application/json',
+            'x-api-key: ' . $this->apiKey
         ]);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         
@@ -376,12 +383,15 @@ class GalaxyClient {
      * Make DELETE request to Galaxy API
      */
     private function delete($endpoint) {
-        $url = $this->url . $endpoint . '?api_key=' . urlencode($this->apiKey);
+        $url = $this->url . $endpoint;
         
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'x-api-key: ' . $this->apiKey
+        ]);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

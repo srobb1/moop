@@ -17,8 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
-    // Load configuration and access control
-    require_once __DIR__ . '/../../includes/access_control.php';
+    // Load configuration
+    require_once __DIR__ . '/../../includes/config_init.php';
     require_once __DIR__ . '/../../lib/galaxy/index.php';
     
     // Get config instance
@@ -32,7 +32,7 @@ try {
     
     // Check API key is configured
     if (empty($galaxy_settings['api_key'])) {
-        throw new Exception('Galaxy API key not configured. Set GALAXY_API_KEY environment variable.');
+        throw new Exception('Galaxy API key not configured');
     }
     
     // Parse request
@@ -51,10 +51,6 @@ try {
         throw new Exception('Sequences must be an array');
     }
     
-    // Get current user (for now, use test user)
-    // TODO: Implement proper authentication when User class is available
-    $userId = $_SESSION['user_id'] ?? 1;  // Default to user 1 if not in session
-    
     // Initialize MAFFT tool
     $mafft = new MAFFTTool($galaxy_settings);
     
@@ -62,7 +58,7 @@ try {
     $options = isset($input['options']) && is_array($input['options']) ? $input['options'] : [];
     
     // Run alignment
-    $result = $mafft->align($userId, $input['sequences'], $options);
+    $result = $mafft->align($input['sequences'], $options);
     
     // Return result
     http_response_code($result['success'] ? 200 : 400);

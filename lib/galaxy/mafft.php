@@ -24,12 +24,11 @@ class MAFFTTool {
     
     /**
      * Run MAFFT alignment
-     * @param int $userId User ID
      * @param array $sequences Sequence data [['id' => int, 'fasta' => string], ...]
      * @param array $options MAFFT options (algorithm, gap penalty, etc.)
      * @return array ['success' => bool, 'history_id' => string, 'job_id' => string, 'message' => string]
      */
-    public function align($userId, $sequences, $options = []) {
+    public function align($sequences, $options = []) {
         try {
             // Validate input
             if (empty($sequences)) {
@@ -38,6 +37,9 @@ class MAFFTTool {
                     'message' => 'No sequences provided'
                 ];
             }
+            
+            // Use a default user ID (0) for API calls
+            $userId = 0;
             
             // Create history
             $historyId = $this->galaxy->createHistory($userId, 'MAFFT');
