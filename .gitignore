@@ -26,3 +26,4 @@ Thumbs.db
 
 # Secrets and credentials (NEVER COMMIT)
 config/secrets.php
+run_mafft.sh
