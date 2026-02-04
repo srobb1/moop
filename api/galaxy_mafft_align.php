@@ -27,7 +27,7 @@
 header('Content-Type: application/json');
 
 // Include configuration
-require_once '../config/config.php';
+require_once __DIR__ . '/../config/config.php';
 
 // Check if we have Galaxy configured
 if (empty($site_config['galaxy_api_key']) || empty($site_config['galaxy_url'])) {
