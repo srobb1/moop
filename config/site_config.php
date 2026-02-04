@@ -140,5 +140,43 @@ AATGCGTCCACAACAGTTATCAATCAA',
         'ACA1_PVKU01000001.1_000001.1',
         'ACA1_PVKU01005411.1_000003.1',
     ],
+    
+    // ======== GALAXY INTEGRATION ========
+    // Configuration for UseGalaxy.org integration
+    'galaxy_settings' => [
+        'enabled' => true,
+        'url' => 'https://usegalaxy.org',
+        'api_key' => getenv('GALAXY_API_KEY'),  // Load from environment variable
+        'mode' => 'shared',  // 'shared' or 'per_user' (per_user support planned for future)
+        
+        'tools' => [
+            'mafft' => [
+                'id' => 'toolshed.g2.bx.psu.edu/repos/rnateam/mafft/rbc_mafft/7.221.1',
+                'name' => 'MAFFT',
+                'description' => 'Fast multiple sequence alignment',
+                'category' => 'alignment',
+                'default_options' => [
+                    'method' => 'auto',
+                    'flavour' => 'nofft',
+                    'maxiterate' => '0',
+                ]
+            ],
+            'clustalw' => [
+                'id' => 'toolshed.g2.bx.psu.edu/repos/devteam/clustalw/clustalw/2.1+galaxy1',
+                'name' => 'ClustalW',
+                'description' => 'Classic multiple sequence alignment',
+                'category' => 'alignment',
+                'default_options' => [
+                    'output_format' => 'fasta',
+                ]
+            ],
+            'raxml' => [
+                'id' => 'toolshed.g2.bx.psu.edu/repos/iuc/raxml/raxml/8.2.12+galaxy0',
+                'name' => 'RAxML',
+                'description' => 'Phylogenetic inference',
+                'category' => 'phylogenetics',
+            ],
+        ]
+    ],
 ];
 
