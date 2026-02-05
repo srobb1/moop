@@ -30,7 +30,7 @@ $user_info = [
 $jbrowse_index = file_get_contents(__DIR__ . '/jbrowse2/index.html');
 
 // Create proper base href from site configuration
-$base_href = "/<{$site}>/jbrowse2/";
+$base_href = "/" . $site . "/jbrowse2/";
 
 // Inject configuration, user info and assembly name into the HTML before </body>
 $user_info_script = '<script>
