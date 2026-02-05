@@ -36,6 +36,10 @@ GENOMES_DIR="$MOOP_ROOT/data/genomes"
 METADATA_DIR="$MOOP_ROOT/metadata/jbrowse2-configs/assemblies"
 ORGANISMS_DIR="/data/moop/organisms"
 
+# Default FASTA URI base path (web-accessible path)
+# Can be overridden with --fasta-uri-base parameter
+FASTA_URI_BASE="/moop/data/genomes"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -75,10 +79,11 @@ ARGUMENTS:
   assembly_id   Assembly identifier (e.g., GCA_004027475.1)
 
 OPTIONS:
-  --display-name NAME   Display name for JBrowse2 UI
-  --alias NAME          Assembly alias (can be used multiple times)
-  --access-level LEVEL  Default access level (Public, Collaborator, ALL)
-  --help                Show this help message
+  --display-name NAME       Display name for JBrowse2 UI
+  --alias NAME              Assembly alias (can be used multiple times)
+  --access-level LEVEL      Default access level (Public, Collaborator, ALL)
+  --fasta-uri-base URI      Base URI for FASTA files (default: /moop/data/genomes)
+  --help                    Show this help message
 
 EXAMPLES:
   # Auto-detect genome_name from organism.sqlite
@@ -91,6 +96,10 @@ EXAMPLES:
   # With explicit aliases (overrides auto-detection)
   $(basename $0) Anoura_caudifer GCA_004027475.1 \\
     --alias "ACA1" --alias "GCA_004027475.1"
+
+  # With custom FASTA URI base (for different deployments)
+  $(basename $0) Anoura_caudifer GCA_004027475.1 \\
+    --fasta-uri-base "/genomes"
 
 WHAT IT DOES:
   1. Validates genome files exist in /data/genomes/{organism}/{assembly_id}/
@@ -184,7 +193,8 @@ register_assembly() {
     local assembly_id="$2"
     local display_name="$3"
     local access_level="$4"
-    shift 4
+    local fasta_uri_base="$5"
+    shift 5
     local aliases=("$@")
 
     log_info "Creating assembly definition file..."
@@ -219,11 +229,11 @@ register_assembly() {
     "adapter": {
       "type": "IndexedFastaAdapter",
       "fastaLocation": {
-        "uri": "/data/moop/data/genomes/$organism/$assembly_id/reference.fasta",
+        "uri": "$fasta_uri_base/$organism/$assembly_id/reference.fasta",
         "locationType": "UriLocation"
       },
       "faiLocation": {
-        "uri": "/data/moop/data/genomes/$organism/$assembly_id/reference.fasta.fai",
+        "uri": "$fasta_uri_base/$organism/$assembly_id/reference.fasta.fai",
         "locationType": "UriLocation"
       }
     }
@@ -337,6 +347,7 @@ main() {
     local assembly_id=""
     local display_name=""
     local access_level="Public"
+    local fasta_uri_base="$FASTA_URI_BASE"
     local aliases=()
 
     while [[ $# -gt 0 ]]; do
@@ -355,6 +366,10 @@ main() {
                 ;;
             --access-level)
                 access_level="$2"
+                shift 2
+                ;;
+            --fasta-uri-base)
+                fasta_uri_base="$2"
                 shift 2
                 ;;
             *)
@@ -409,7 +424,7 @@ main() {
 
     # Create assembly definition file
     local def_file="$METADATA_DIR/${organism}_${assembly_id}.json"
-    register_assembly "$organism" "$assembly_id" "$display_name" "$access_level" "${aliases[@]}" || exit 1
+    register_assembly "$organism" "$assembly_id" "$display_name" "$access_level" "$fasta_uri_base" "${aliases[@]}" || exit 1
     echo ""
 
     # Verify definition

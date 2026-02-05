@@ -94,7 +94,7 @@
             <div class="test-group">
                 <h3>Test 4: View JBrowse2</h3>
                 <p>Open the JBrowse2 genome browser</p>
-                <button onclick="window.open('/jbrowse2/', '_blank')">Open JBrowse2 →</button>
+                <button onclick="window.open('/moop/jbrowse2/', '_blank')">Open JBrowse2 →</button>
             </div>
         </div>
         
