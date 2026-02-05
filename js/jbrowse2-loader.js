@@ -125,7 +125,7 @@
                     <button class="btn btn-sm btn-primary" 
                             data-assembly-id="${escapeHtml(assembly.name)}"
                             data-assembly-name="${escapeHtml(assembly.displayName)}">
-                        View Genome →
+                        Open Genome Browser ↗
                     </button>
                 </div>
             </div>
@@ -185,13 +185,14 @@
     }
 
     /**
-     * Open assembly in JBrowse2
+     * Open assembly in JBrowse2 (in new window for maximum screen space)
      */
     function openAssembly(assembly) {
-        console.log('Opening assembly:', assembly);
+        console.log('Opening assembly in new window:', assembly);
         
-        // Navigate to JBrowse2 viewer with assembly parameter
-        window.location.href = `/moop/jbrowse2.php?assembly=${encodeURIComponent(assembly.name)}`;
+        // Open JBrowse2 viewer in new tab with assembly parameter
+        const url = `/moop/jbrowse2-view.php?assembly=${encodeURIComponent(assembly.name)}`;
+        window.open(url, `jbrowse2_${assembly.name}`, 'width=1400,height=900');
     }
 
     /**
