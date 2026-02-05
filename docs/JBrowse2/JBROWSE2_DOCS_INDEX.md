@@ -26,6 +26,35 @@ Complete planning documentation for integrating JBrowse2 genome browser with MOO
 
 ## Complete Documentation
 
+### 🆕 [`ASSEMBLY_BULK_LOAD_GUIDE.md`](ASSEMBLY_BULK_LOAD_GUIDE.md) (16 KB)
+
+**Automated setup and bulk loading of genome assemblies for JBrowse2.**
+
+Topics:
+- Three-phase assembly loading process
+- Quick start for single and multiple assemblies
+- Bulk loading with manifest files
+- Auto-discovery of organisms
+- Advanced usage (custom filenames, names, aliases)
+- Complete script reference with all parameters
+- Troubleshooting guide
+- Production pipeline example
+
+**Tools included:**
+- `tools/jbrowse/setup_jbrowse_assembly.sh` - Phase 1: File preparation
+- `tools/jbrowse/add_assembly_to_jbrowse.sh` - Phase 2: JBrowse2 registration
+- `tools/jbrowse/bulk_load_assemblies.sh` - Phase 3: Orchestration & bulk loading
+- `tools/jbrowse/README.md` - Quick reference for all tools
+
+**Read this for:**
+- Automating genome assembly setup
+- Bulk loading multiple organisms at once
+- Reproducible, documented workflows
+- Production deployment of assemblies
+- Managing genome metadata and aliases
+
+---
+
 ### [`jbrowse2_integration_plan.md`](jbrowse2_integration_plan.md) (26 KB)
 
 **Full architectural overview and implementation plan.**
