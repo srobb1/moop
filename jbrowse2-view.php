@@ -2,8 +2,8 @@
 /**
  * JBrowse2 Viewer - Fullscreen Genome Browser
  * 
- * Displays JBrowse2 in fullscreen mode for maximum viewing area
- * Serves the JBrowse2 application with injected user authentication
+ * Displays JBrowse2 in fullscreen mode with dynamic config injection
+ * Loads JBrowse2 index.html and injects user authentication + assembly config
  */
 
 include_once __DIR__ . '/includes/access_control.php';
@@ -26,45 +26,26 @@ $user_info = [
     'is_admin' => ($_SESSION['is_admin'] ?? false),
 ];
 
-// Read the JBrowse2 index.html
+// Load JBrowse2 index.html as base
 $jbrowse_index = file_get_contents(__DIR__ . '/jbrowse2/index.html');
 
-// Create proper base href from site configuration
-$base_href = "/" . $site . "/jbrowse2/";
-$loader_path = "/" . $site . "/js/jbrowse2-view-loader.js";
+// Inject user info script before closing head tag
+$injection = sprintf(
+    '<script>window.moopUserInfo = %s; window.moopAssemblyName = %s; window.moopSite = %s;</script>',
+    json_encode($user_info),
+    json_encode($assembly_name ?? ''),
+    json_encode($site)
+);
 
-// Inject configuration, user info and assembly name into the HTML before </body>
-$loader_script = '<script>
-    window.moopUserInfo = ' . json_encode($user_info) . ';
-    window.moopAssemblyName = ' . json_encode($assembly_name ?? '') . ';
-    window.moopSite = ' . json_encode($site) . ';
-    window.moopConfig = ' . json_encode($jbrowse_config) . ';
-    console.log("JBrowse2 Viewer - Assembly:", window.moopAssemblyName);
-    console.log("User Info:", window.moopUserInfo);
-    console.log("Site:", window.moopSite);
-    console.log("Loading config from API...");
-</script>
-<script src="' . htmlspecialchars($loader_path) . '"></script>';
+$jbrowse_index = str_replace('</head>', $injection . '</head>', $jbrowse_index);
 
-// Add or replace base href in HTML to use site from configuration
-if (strpos($jbrowse_index, '<base') !== false) {
-    // Replace existing base tag
-    $jbrowse_index = preg_replace(
-        '/<base href="[^"]*"/',
-        '<base href="' . htmlspecialchars($base_href) . '"',
-        $jbrowse_index
-    );
-} else {
-    // Insert base tag in head if it doesn't exist
-    $jbrowse_index = str_replace(
-        '</head>',
-        '<base href="' . htmlspecialchars($base_href) . '"/></head>',
-        $jbrowse_index
-    );
-}
+// Inject loader script before closing body tag
+$jbrowse_index = str_replace(
+    '</body>',
+    '<script src="/' . $site . '/js/jbrowse2-view-loader.js"></script></body>',
+    $jbrowse_index
+);
 
-$jbrowse_index = str_replace('</body>', $loader_script . "\n</body>", $jbrowse_index);
-
-// Output the modified HTML with proper base path context
+// Output with proper headers
+header('Content-Type: text/html; charset=utf-8');
 echo $jbrowse_index;
-?>
