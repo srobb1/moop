@@ -1,26 +1,5 @@
 {
-  "assemblies": [
-    {
-      "name": "Anoura_caudifer_GCA_004027475.1",
-      "displayName": "Anoura_caudifer (GCA_004027475.1)",
-      "aliases": ["ACA1", "GCA_004027475.1"],
-      "sequence": {
-        "type": "ReferenceSequenceTrack",
-        "trackId": "Anoura_caudifer_GCA_004027475.1-ReferenceSequenceTrack",
-        "adapter": {
-          "type": "IndexedFastaAdapter",
-          "fastaLocation": {
-            "uri": "/moop/data/genomes/Anoura_caudifer/GCA_004027475.1/reference.fasta",
-            "locationType": "UriLocation"
-          },
-          "faiLocation": {
-            "uri": "/moop/data/genomes/Anoura_caudifer/GCA_004027475.1/reference.fasta.fai",
-            "locationType": "UriLocation"
-          }
-        }
-      }
-    }
-  ],
+  "assemblies": [],
   "configuration": {},
   "connections": [],
   "defaultSession": {

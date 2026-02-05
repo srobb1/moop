@@ -190,7 +190,7 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // JBrowse2 genome browser integration
     'jbrowse2' => [
         'enabled' => true,
-        'base_url' => 'http://127.0.0.1:8888/jbrowse2/',           // Update for production
+        'base_url' => "/$site/jbrowse2/",           // Relative to web root - works with any deployment
         'api_endpoint' => '/api/jbrowse2/assembly.php',
         'config_file' => "$site_path/jbrowse2/config.json",
         'data_directory' => "$site_path/data/genomes/",

@@ -59,7 +59,9 @@
      */
     async function fetchAssemblyConfig(assemblyName) {
         try {
-            const response = await fetch('/moop/api/jbrowse2/get-config.php');
+            const site = window.moopSite || 'moop';
+            const apiUrl = `/${site}/api/jbrowse2/get-config.php`;
+            const response = await fetch(apiUrl);
             if (!response.ok) {
                 throw new Error(`API error: ${response.status}`);
             }
