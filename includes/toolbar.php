@@ -21,6 +21,7 @@
     <ul class="navbar-nav">
       <?php
       echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/index.php"><i class="fa fa-home"></i>'. $title.'</a></li>';
+      echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/jbrowse2.php"><i class="fa fa-dna"></i> Genome Browser</a></li>';
 
           echo '<li class="nav-item"><a class="nav-link" href="/' . $site . '/about.php">About</a></li>';
 
