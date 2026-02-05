@@ -4,6 +4,7 @@
  * 
  * Test version of assembly API without full MOOP session dependency
  * Generates complete JBrowse2 config for an organism-assembly
+ * Reads modular assembly definitions from /metadata/jbrowse2-configs/assemblies/
  * Dynamically filters tracks based on access level
  * 
  * GET /api/jbrowse2/test-assembly.php?organism={organism}&assembly={assembly}&access_level={level}
@@ -27,31 +28,28 @@ if (empty($organism) || empty($assembly)) {
     exit;
 }
 
-// Validate organism-assembly exists
+// Validate organism-assembly by checking assembly definition exists
 $metadata_path = __DIR__ . '/../../metadata';
-$groups_file = "$metadata_path/organism_assembly_groups.json";
-if (!file_exists($groups_file)) {
+$assemblies_dir = "$metadata_path/jbrowse2-configs/assemblies";
+$assembly_def_file = "$assemblies_dir/{$organism}_{$assembly}.json";
+
+if (!file_exists($assembly_def_file)) {
+    http_response_code(404);
+    echo json_encode(['error' => "Assembly not found or not configured: $organism / $assembly"]);
+    exit;
+}
+
+// Load assembly definition
+$assembly_def_content = file_get_contents($assembly_def_file);
+$assembly_definition = json_decode($assembly_def_content, true);
+
+if (!$assembly_definition) {
     http_response_code(500);
-    echo json_encode(['error' => "Groups file not found: $groups_file"]);
+    echo json_encode(['error' => "Invalid assembly definition JSON: $assembly_def_file"]);
     exit;
 }
 
-$groups_data = json_decode(file_get_contents($groups_file), true) ?: [];
-$assembly_exists = false;
-foreach ($groups_data as $group) {
-    if ($group['organism'] === $organism && $group['assembly'] === $assembly) {
-        $assembly_exists = true;
-        break;
-    }
-}
-
-if (!$assembly_exists) {
-    http_response_code(403);
-    echo json_encode(['error' => "Assembly not found: $organism / $assembly"]);
-    exit;
-}
-
-// 2. BUILD BASE ASSEMBLY CONFIG
+// 2. BUILD BASE ASSEMBLY CONFIG FROM DEFINITION
 $assembly_config = [
     'organism' => $organism,
     'assembly' => $assembly,
@@ -59,20 +57,10 @@ $assembly_config = [
     'test_mode' => true,
     'assemblies' => [
         [
-            'name' => $assembly,
-            'sequence' => [
-                'type' => 'ReferenceSequenceTrack',
-                'trackId' => 'reference',
-                'adapter' => [
-                    'type' => 'IndexedFastaAdapter',
-                    'fastaLocation' => [
-                        'uri' => "/jbrowse2/data/{$organism}/{$assembly}/reference.fasta"
-                    ],
-                    'faiLocation' => [
-                        'uri' => "/jbrowse2/data/{$organism}/{$assembly}/reference.fasta.fai"
-                    ]
-                ]
-            ]
+            'name' => $assembly_definition['name'],
+            'displayName' => $assembly_definition['displayName'] ?? "{$organism} ({$assembly})",
+            'aliases' => $assembly_definition['aliases'] ?? [$assembly],
+            'sequence' => $assembly_definition['sequence']
         ]
     ],
     'tracks' => [],

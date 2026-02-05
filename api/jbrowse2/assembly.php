@@ -3,9 +3,18 @@
  * /api/jbrowse2/assembly.php
  * 
  * Generates complete JBrowse2 config for an organism-assembly
+ * Reads modular assembly definitions from /metadata/jbrowse2-configs/assemblies/
  * Dynamically filters tracks based on user access level
  * 
  * GET /api/jbrowse2/assembly?organism={organism}&assembly={assembly}
+ * 
+ * Flow:
+ * 1. Validate permissions via getAccessibleAssemblies()
+ * 2. Load assembly definition from metadata/{organism}_{assembly}.json
+ * 3. Load all available track definitions from metadata/tracks/
+ * 4. Filter tracks by user access level
+ * 5. Generate JWT tokens for tracks (if needed)
+ * 6. Return complete JBrowse2 config
  */
 
 require_once '../../includes/access_control.php';
@@ -41,26 +50,59 @@ if (!isset($_SESSION['access_level'])) {
     $user_access_level = isset($_SESSION['username']) && has_access('ALL') ? 'ALL' : 'Public';
 }
 
-// 2. BUILD BASE ASSEMBLY CONFIG
+// 2. LOAD ASSEMBLY DEFINITION FROM METADATA
+$metadata_path = __DIR__ . '/../../metadata';
+$assemblies_dir = "$metadata_path/jbrowse2-configs/assemblies";
+$assembly_def_file = "$assemblies_dir/{$organism}_{$assembly}.json";
+
+$assembly_definition = null;
+if (file_exists($assembly_def_file)) {
+    $assembly_def_content = file_get_contents($assembly_def_file);
+    $assembly_definition = json_decode($assembly_def_content, true);
+    
+    if (!$assembly_definition) {
+        http_response_code(500);
+        echo json_encode(['error' => "Invalid assembly definition JSON: $assembly_def_file"]);
+        exit;
+    }
+} else {
+    // Fallback: generate basic config if definition not found
+    error_log("Assembly definition not found: $assembly_def_file - using fallback");
+    $assembly_definition = [
+        'name' => "{$organism}_{$assembly}",
+        'displayName' => "{$organism} ({$assembly})",
+        'organism' => $organism,
+        'assemblyId' => $assembly,
+        'aliases' => [$assembly],
+        'defaultAccessLevel' => 'Public',
+        'sequence' => [
+            'type' => 'ReferenceSequenceTrack',
+            'trackId' => "{$organism}_{$assembly}-ReferenceSequenceTrack",
+            'adapter' => [
+                'type' => 'IndexedFastaAdapter',
+                'fastaLocation' => [
+                    'uri' => "/data/moop/data/genomes/{$organism}/{$assembly}/reference.fasta",
+                    'locationType' => 'UriLocation'
+                ],
+                'faiLocation' => [
+                    'uri' => "/data/moop/data/genomes/{$organism}/{$assembly}/reference.fasta.fai",
+                    'locationType' => 'UriLocation'
+                ]
+            ]
+        ]
+    ];
+}
+
+// 2B. BUILD BASE ASSEMBLY CONFIG FROM DEFINITION
 $assembly_config = [
     'organism' => $organism,
     'assembly' => $assembly,
     'assemblies' => [
         [
-            'name' => $assembly,
-            'sequence' => [
-                'type' => 'ReferenceSequenceTrack',
-                'trackId' => 'reference',
-                'adapter' => [
-                    'type' => 'IndexedFastaAdapter',
-                    'fastaLocation' => [
-                        'uri' => "/jbrowse2/data/{$organism}/{$assembly}/reference.fasta"
-                    ],
-                    'faiLocation' => [
-                        'uri' => "/jbrowse2/data/{$organism}/{$assembly}/reference.fasta.fai"
-                    ]
-                ]
-            ]
+            'name' => $assembly_definition['name'],
+            'displayName' => $assembly_definition['displayName'] ?? "{$organism} ({$assembly})",
+            'aliases' => $assembly_definition['aliases'] ?? [$assembly],
+            'sequence' => $assembly_definition['sequence']
         ]
     ],
     'tracks' => [],
