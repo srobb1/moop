@@ -5,7 +5,8 @@
  * Returns JBrowse2 configuration dynamically based on user authentication
  * Filters assemblies by user's access level
  *
- * GET /api/jbrowse2/get-config.php
+ * GET /api/jbrowse2/get-config.php                  - Returns all user-accessible assemblies
+ * GET /api/jbrowse2/get-config.php?assembly=NAME   - Returns config for specific assembly
  *
  * Returns JSON config with only assemblies the user can access:
  * - Anonymous users: Public assemblies only
@@ -32,6 +33,9 @@ if (isset($_SESSION['user_id'])) {
         $user_access_level = 'ALL';
     }
 }
+
+// Get optional assembly filter parameter
+$requested_assembly = $_GET['assembly'] ?? null;
 
 // Base configuration
 $config = [
@@ -60,6 +64,11 @@ foreach ($assembly_files as $file) {
     $assembly_def = json_decode(file_get_contents($file), true);
     
     if (!$assembly_def) {
+        continue;
+    }
+    
+    // If a specific assembly was requested, skip others
+    if ($requested_assembly && $assembly_def['name'] !== $requested_assembly) {
         continue;
     }
     
@@ -96,6 +105,11 @@ foreach ($assembly_files as $file) {
         'accessLevel' => $assembly_def['defaultAccessLevel'],
         'sequence' => $assembly_def['sequence'] ?? null
     ];
+}
+
+// If a specific assembly was requested, return just that assembly's full config
+if ($requested_assembly && !empty($config['assemblies'])) {
+    $config = $config['assemblies'][0];
 }
 
 echo json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

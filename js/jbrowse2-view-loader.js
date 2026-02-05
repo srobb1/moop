@@ -14,13 +14,12 @@
     async function fetchAssemblyConfig(assemblyName) {
         try {
             const site = window.moopSite || 'moop';
-            const userInfo = window.moopUserInfo || { logged_in: false };
-            
-            const accessLevel = userInfo.access_level || 'Public';
-            const url = `/${site}/api/jbrowse2/get-config.php?assembly=${encodeURIComponent(assemblyName)}&access_level=${encodeURIComponent(accessLevel)}`;
+            const url = `/${site}/api/jbrowse2/get-config.php?assembly=${encodeURIComponent(assemblyName)}`;
             
             console.log('Fetching from:', url);
-            const response = await fetch(url);
+            const response = await fetch(url, {
+                credentials: 'include'
+            });
             
             if (!response.ok) {
                 console.error('API response:', response.status, response.statusText);
@@ -28,10 +27,8 @@
             }
             
             const data = await response.json();
-            if (data.success) {
-                return data.config;
-            }
-            return null;
+            console.log('Config response:', data);
+            return data;
         } catch (error) {
             console.error('Error fetching assembly config:', error);
             return null;
@@ -39,45 +36,24 @@
     }
 
     /**
-     * Wait for JBrowse2 to be ready
+     * Intercept fetch for config.json to return our dynamic config
      */
-    function waitForJBrowse2Ready(callback, maxAttempts = 30) {
-        let attempts = 0;
-        
-        function check() {
-            attempts++;
-            
-            // Check if JBrowse2 API is available
-            if (window.JBrowse && window.JBrowse2) {
-                console.log('JBrowse2 is ready');
-                callback();
-                return;
+    function interceptConfigFetch(configData) {
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            // If fetching config.json, return our dynamic config
+            if (typeof url === 'string' && url.includes('config.json')) {
+                console.log('Intercepting config.json request, returning dynamic config');
+                return Promise.resolve(
+                    new Response(JSON.stringify(configData), {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                );
             }
-            
-            if (attempts < maxAttempts) {
-                setTimeout(check, 100);
-            } else {
-                console.warn('JBrowse2 did not load in time');
-            }
-        }
-        
-        check();
-    }
-
-    /**
-     * Configure JBrowse2 with the assembly
-     */
-    async function configureJBrowse2(config, assemblyName) {
-        try {
-            console.log('Configuring JBrowse2 with assembly config:', config);
-            
-            // JBrowse2 should pick up the config from sessionStorage or configURL
-            // We'll store it for the app to find
-            sessionStorage.setItem('moopAssemblyConfig', JSON.stringify(config));
-            
-        } catch (error) {
-            console.error('Error configuring JBrowse2:', error);
-        }
+            // For all other requests, use original fetch
+            return originalFetch.apply(this, arguments);
+        };
     }
 
     /**
@@ -108,23 +84,26 @@
 
             console.log('Config loaded:', config);
 
-            // Store config for JBrowse2 to use
-            await configureJBrowse2(config, assemblyName);
-            
-            // Wait for JBrowse2 to initialize, then inject the assembly
-            waitForJBrowse2Ready(async () => {
-                console.log('JBrowse2 ready, injecting assembly config');
-                
-                // Use JBrowse2 API to add assembly if available
-                if (window.JBrowse2 && window.JBrowse2.app) {
-                    try {
-                        // Try to open the assembly
-                        window.JBrowse2.app.showModal(config.displayName || assemblyName);
-                    } catch (e) {
-                        console.warn('Could not use JBrowse2 API:', e);
+            // Build the full JBrowse2 config from assembly definition
+            const jbrowse2Config = {
+                assemblies: [config],
+                defaultSession: {
+                    name: 'Default',
+                    view: {
+                        id: 'linear-genome-view',
+                        type: 'LinearGenomeView',
+                        offsetPx: 0,
+                        bpPerPx: 1,
+                        minimumBlockWidth: 1,
+                        tracks: []
                     }
                 }
-            });
+            };
+
+            // Intercept JBrowse2's config.json fetch to return our dynamic config
+            interceptConfigFetch(jbrowse2Config);
+            
+            console.log('JBrowse2 View Loader: Ready');
 
         } catch (error) {
             console.error('Error initializing JBrowse2 View:', error);
