@@ -189,24 +189,9 @@
      */
     function openAssembly(assembly) {
         console.log('Opening assembly:', assembly);
-
-        // Create a basic genome view session
-        const session = {
-            name: `${assembly.displayName} - View`,
-            view: {
-                type: 'LinearGenomeView',
-                assemblies: [assembly.name],
-                tracks: []
-            }
-        };
-
-        // For now, show the assembly details
-        // In a full implementation, this would:
-        // 1. Initialize JBrowse2 LinearGenomeView
-        // 2. Pass the assembly configuration
-        // 3. Load available tracks for the user
         
-        alert(`Opening ${assembly.displayName}\n\nFull JBrowse2 view coming soon.\n\nAssembly: ${assembly.name}\nAliases: ${assembly.aliases.join(', ')}`);
+        // Navigate to JBrowse2 viewer with assembly parameter
+        window.location.href = `/moop/jbrowse2.php?assembly=${encodeURIComponent(assembly.name)}`;
     }
 
     /**
@@ -220,11 +205,107 @@
     }
 
     /**
+     * Load a specific assembly and display JBrowse2 viewer
+     */
+    async function loadSpecificAssembly(assemblyName) {
+        try {
+            updateUserStatus();
+            
+            const container = document.getElementById('assembly-list-container');
+            if (!container) {
+                console.error('Container not found');
+                return;
+            }
+            
+            // Show loading state
+            container.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3">Loading JBrowse2 viewer for ${escapeHtml(assemblyName)}...</p>
+                </div>
+            `;
+            
+            // Load configuration from API
+            const userInfo = window.moopUserInfo;
+            const response = await fetch('/moop/api/jbrowse2/get-config.php');
+            
+            if (!response.ok) {
+                throw new Error(`Failed to load config: ${response.status}`);
+            }
+            
+            const config = await response.json();
+            
+            // Find the requested assembly
+            const assembly = (config.assemblies || []).find(a => a.name === assemblyName);
+            
+            if (!assembly) {
+                container.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <strong>Assembly not found:</strong> ${escapeHtml(assemblyName)}
+                    </div>
+                `;
+                return;
+            }
+            
+            // Check access level
+            if (assembly.accessLevel === 'Admin' && userInfo.access_level !== 'Admin') {
+                container.innerHTML = `
+                    <div class="alert alert-warning" role="alert">
+                        <strong>Access Denied:</strong> This assembly requires admin access.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Display JBrowse2 viewer in an iframe
+            const iframeUrl = `/moop/jbrowse2/index.html?config=/moop/api/jbrowse2/get-config.php&assembly=${encodeURIComponent(assembly.name)}`;
+            
+            container.innerHTML = `
+                <div style="height: 800px; width: 100%; border: 1px solid #ddd;">
+                    <iframe 
+                        src="${escapeHtml(iframeUrl)}" 
+                        style="width: 100%; height: 100%; border: none;"
+                        title="JBrowse2 Viewer for ${escapeHtml(assembly.displayName)}"
+                    ></iframe>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <a href="/moop/jbrowse2.php" class="btn btn-sm btn-secondary">
+                        ← Back to Assembly List
+                    </a>
+                </div>
+            `;
+        } catch (error) {
+            console.error('Error loading specific assembly:', error);
+            const container = document.getElementById('assembly-list-container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <strong>Error loading assembly:</strong> ${escapeHtml(error.message)}
+                    </div>
+                `;
+            }
+        }
+    }
+
+    /**
      * Initialize on page load
      */
     function init() {
         console.log('Initializing JBrowse2 loader');
-        loadAssemblies();
+        
+        // Check if an assembly is specified in the URL
+        const params = new URLSearchParams(window.location.search);
+        const assemblyName = params.get('assembly');
+        
+        if (assemblyName) {
+            console.log('Loading specific assembly:', assemblyName);
+            loadSpecificAssembly(assemblyName);
+        } else {
+            console.log('Loading assembly list');
+            loadAssemblies();
+        }
     }
 
     // Load when DOM is ready

@@ -1,0 +1,243 @@
+/* eslint-disable no-restricted-globals */
+// we put the code in a function to avoid variable name collisions with the
+// global scope
+;(function () {
+  class Plugin {
+    name = 'UMDLocPlugin'
+    version = '1.0'
+
+    install(pluginManager) {
+      const React = pluginManager.jbrequire('react')
+      // const { GlyphType } = pluginManager.jbrequire(
+      //   '@jbrowse/core/pluggableElementTypes',
+      // )
+      //
+      // // Example pluggable glyph: draws SNV features as purple diamonds
+      // pluginManager.addGlyphType(
+      //   () =>
+      //     new GlyphType({
+      //       name: 'SNVGlyph',
+      //       displayName: 'SNV Diamond',
+      //       draw: ctx => {
+      //         const { ctx: context, featureLayout } = ctx
+      //         const { x, y, width, height } = featureLayout
+      //
+      //         const centerX = x + width / 2
+      //         const centerY = y + height / 2
+      //         const halfWidth = Math.max(width / 2, 4)
+      //         const halfHeight = height / 2
+      //
+      //         // Purple diamond fill
+      //         context.fillStyle = '#800080'
+      //         context.beginPath()
+      //         context.moveTo(centerX, centerY - halfHeight) // top
+      //         context.lineTo(centerX + halfWidth, centerY) // right
+      //         context.lineTo(centerX, centerY + halfHeight) // bottom
+      //         context.lineTo(centerX - halfWidth, centerY) // left
+      //         context.closePath()
+      //         context.fill()
+      //
+      //         // Indigo stroke
+      //         context.strokeStyle = '#4B0082'
+      //         context.lineWidth = 1
+      //         context.stroke()
+      //       },
+      //       match: feature => feature.get('type') === 'SNV',
+      //     }),
+      // )
+
+      pluginManager.addToExtensionPoint(
+        'Core-handleUnrecognizedAssembly',
+        (_defaultResult, { assemblyName, session }) => {
+          const jb2asm = `jb2hub-${assemblyName}`
+          if (
+            assemblyName &&
+            !session.connections.find(f => f.connectionId === jb2asm)
+          ) {
+            console.log('getUnrecognizedAssembly', { assemblyName })
+            const conf = {
+              type: 'JB2TrackHubConnection',
+              uri: 'http://localhost:3000/test_data/volvox/config2.json',
+              name: 'my conn',
+              assemblyNames: [assemblyName],
+              connectionId: jb2asm,
+            }
+            session.addConnectionConf(conf)
+            session.makeConnection(conf)
+          }
+        },
+      )
+
+      function NewAboutComponent() {
+        return React.createElement(
+          'div',
+          null,
+          'This is a replaced about dialog',
+        )
+      }
+      function ExtraAboutPanel() {
+        return React.createElement('div', null, 'This is a custom about dialog')
+      }
+      function ExtraFeaturePanel() {
+        return React.createElement(
+          'div',
+          null,
+          'This is a custom feature panel',
+        )
+      }
+      function ReplaceFeatureWidget() {
+        return React.createElement(
+          'div',
+          null,
+          'This is a replaced feature panel',
+        )
+      }
+      pluginManager.addToExtensionPoint(
+        'Core-replaceAbout',
+        (DefaultAboutComponent, { /*session,*/ config }) => {
+          return config.trackId === 'volvox.inv.vcf'
+            ? NewAboutComponent
+            : DefaultAboutComponent
+        },
+      )
+
+      pluginManager.addToExtensionPoint(
+        'Core-extraAboutPanel',
+        (DefaultAboutExtra, { /*session,*/ config }) => {
+          return config.trackId === 'volvox_sv_test'
+            ? { name: 'More info', Component: ExtraAboutPanel }
+            : DefaultAboutExtra
+        },
+      )
+
+      pluginManager.addToExtensionPoint(
+        'Core-extraFeaturePanel',
+        (DefaultFeatureExtra, { model }) => {
+          return model.trackId === 'volvox_filtered_vcf'
+            ? { name: 'Extra info', Component: ExtraFeaturePanel }
+            : DefaultFeatureExtra
+        },
+      )
+
+      pluginManager.addToExtensionPoint('Core-extendSession', session => {
+        return session.extend(self => {
+          const superThemes = self.allThemes
+          return {
+            views: {
+              allThemes() {
+                return {
+                  ...superThemes(),
+                  custom: {
+                    name: 'Custom theme from plugin',
+                    palette: {
+                      primary: { main: '#0f0' },
+                      secondary: { main: '#f00' },
+                    },
+                  },
+                }
+              },
+            },
+          }
+        })
+      })
+
+      // extend session twice, just to ensure both work
+      pluginManager.addToExtensionPoint('Core-extendSession', session => {
+        return session.extend(self => {
+          const superThemes = self.allThemes
+          return {
+            views: {
+              allThemes() {
+                const s = superThemes()
+                return {
+                  ...s,
+                  // modify the default theme
+                  default: {
+                    ...s.default,
+                    palette: {
+                      ...s.default.palette,
+                      quaternary: { main: '#090' },
+                    },
+                  },
+                  custom2: {
+                    name: 'Custom theme from plugin 2',
+                    palette: {
+                      primary: { main: '#00f' },
+                      secondary: { main: '#0ff' },
+                    },
+                  },
+                }
+              },
+            },
+          }
+        })
+      })
+
+      pluginManager.addToExtensionPoint(
+        'Core-replaceWidget',
+        (DefaultWidget, { model }) => {
+          return model.trackId === 'volvox_sv_test_renamed'
+            ? ReplaceFeatureWidget
+            : DefaultWidget
+        },
+      )
+      pluginManager.addToExtensionPoint('Core-preProcessTrackConfig', snap => {
+        snap.metadata = {
+          ...snap.metadata,
+          'metadata from plugin':
+            'added by umd_plugin.js using Core-preProcessTrackConfig',
+        }
+        return snap
+      })
+
+      // Example: Add LinearReadCloudDisplay as the first display for AlignmentsTracks
+      // that have "_sv" in their trackId (e.g. structural variant tracks)
+      // This now works because showTrackGeneric calls Core-preProcessTrackConfig
+      // and spreads display config properties into the display state
+      pluginManager.addToExtensionPoint('Core-preProcessTrackConfig', snap => {
+        if (snap.type === 'AlignmentsTrack' && snap.trackId?.includes('_sv')) {
+          const displays = snap.displays || []
+          const hasReadCloud = displays.some(
+            d => d.type === 'LinearReadCloudDisplay',
+          )
+          if (!hasReadCloud) {
+            console.log(
+              'Adding LinearReadCloudDisplay with drawCloud:true for',
+              snap.trackId,
+            )
+            return {
+              ...snap,
+              displays: [
+                {
+                  type: 'LinearReadCloudDisplay',
+                  displayId: `${snap.trackId}-LinearReadCloudDisplay`,
+                  drawCloud: true,
+                },
+                ...displays,
+              ],
+            }
+          }
+        }
+        return snap
+      })
+    }
+
+    configure(pluginManager) {
+      pluginManager.jexl.addFunction('repeatColor', feature => {
+        let type = feature.get('repeatClass')
+        return {
+          R: '#00A000',
+          RC: '#FF7F00',
+          F: '#8b0000',
+          C: '#0000FF',
+        }[type]
+      })
+    }
+  }
+
+  // the plugin will be included in both the main thread and web worker, so
+  // install plugin to either window or self (webworker global scope)
+  ;(typeof self !== 'undefined' ? self : window).JBrowsePluginUMDLocPlugin = {
+    default: Plugin,
+  }
+})()

@@ -33,8 +33,8 @@ echo render_display_page(
         'page_script' => '/moop/js/jbrowse2-loader.js',
         'page_styles' => ['/moop/css/jbrowse2.css'],
         'inline_scripts' => [
-            "const moopUserInfo = " . json_encode($user_info) . ";",
-            "console.log('JBrowse2 loaded for user:', moopUserInfo.username || 'anonymous');"
+            "window.moopUserInfo = " . json_encode($user_info) . ";",
+            "console.log('JBrowse2 loaded for user:', window.moopUserInfo.username || 'anonymous');"
         ]
     ],
     'JBrowse2 - Genome Browser'

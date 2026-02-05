@@ -36,8 +36,10 @@ GENOMES_DIR="$MOOP_ROOT/data/genomes"
 METADATA_DIR="$MOOP_ROOT/metadata/jbrowse2-configs/assemblies"
 ORGANISMS_DIR="/data/moop/organisms"
 
-# Default FASTA URI base path (web-accessible path)
+# Default FASTA URI base path (web-accessible path from browser)
 # Can be overridden with --fasta-uri-base parameter
+# When accessed via: http://localhost:8000/moop/... → FASTA_URI_BASE="/moop/data/genomes"
+# The browser will request: /moop/data/genomes/{organism}/{assembly}/reference.fasta
 FASTA_URI_BASE="/moop/data/genomes"
 
 # Colors for output
