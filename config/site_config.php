@@ -185,5 +185,41 @@ AATGCGTCCACAACAGTTATCAATCAA',
             ],
         ]
     ],
+    
+    // ======== JBROWSE2 CONFIGURATION ========
+    // JBrowse2 genome browser integration
+    'jbrowse2' => [
+        'enabled' => true,
+        'base_url' => 'http://127.0.0.1:8888/jbrowse2/',           // Update for production
+        'api_endpoint' => '/api/jbrowse2/assembly.php',
+        'config_file' => "$site_path/jbrowse2/config.json",
+        'data_directory' => "$site_path/data/genomes/",
+        'genomes_directory' => "$site_path/data/genomes/",
+        'tracks_directory' => "$site_path/data/tracks/",
+        'certs_directory' => "$site_path/certs/",
+        'jwt_private_key' => "$site_path/certs/jwt_private_key.pem",
+        'jwt_public_key' => "$site_path/certs/jwt_public_key.pem",
+        'token_expiration' => 3600,  // 1 hour in seconds
+        'default_assembly' => 'GCA_004027475.1',
+        'default_organism' => 'Anoura_caudifer',
+    ],
+    
+    // ======== JBROWSE2 REMOTE TRACKS SERVER ========
+    // Configuration for separate tracks server (future deployment)
+    // When deploying to remote server:
+    // 1. Set 'enabled' => true
+    // 2. Set 'url' to remote server hostname
+    // 3. Copy jwt_public_key.pem to remote server
+    // 4. Copy track data to remote server
+    // 5. Configure nginx/Apache on remote server
+    'tracks_server' => [
+        'enabled' => false,                                        // Set to true when remote server deployed
+        'url' => '',                                               // e.g., 'https://tracks.example.com/'
+        'validate_jwt' => true,                                    // Require JWT tokens for track access
+        'sync_method' => 'manual',                                 // 'manual', 'rsync', 'nfs'
+        'sync_schedule' => '',                                     // e.g., 'daily', 'weekly'
+        'notes' => 'Reference genomes (/data/genomes/) always stay on MOOP server. 
+                    Track data (/data/tracks/) can be synced to remote server for performance.',
+    ],
 ];
 

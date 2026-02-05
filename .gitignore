@@ -38,3 +38,11 @@ galaxy_testing/*.fasta
 galaxy_testing/*.sh
 galaxy_testing/*.php
 galaxy_testing/*.json
+
+# JBrowse2 frontend (track config separately, ignore dependencies)
+/jbrowse2/node_modules/
+/jbrowse2/dist/
+/jbrowse2/.env
+
+# Track data (too large, installation-specific)
+/data/tracks/
