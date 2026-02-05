@@ -61,7 +61,7 @@
      */
     async function init() {
         try {
-            const assemblyName = window.moopAssemblyName;
+            const assemblyName = window.moopAssembly;
             const userInfo = window.moopUserInfo || { logged_in: false };
             
             console.log('JBrowse2 View Loader: Initializing');

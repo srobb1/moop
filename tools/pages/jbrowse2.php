@@ -1,17 +1,17 @@
 <div class="row">
     <div class="col-12">
-        <h1>Genome Browser</h1>
-        <p class="lead">Explore and analyze genome sequences from our collection using JBrowse2</p>
+        <h1>JBrowse2 - Genome Browser</h1>
+        <p class="lead">Explore and analyze genome sequences from our collection</p>
     </div>
 </div>
 
 <div class="row mt-4">
-    <div class="col-md-8">
-        <!-- Assembly List -->
-        <div class="card">
+    <div class="col-md-9">
+        <!-- JBrowse2 Content Area -->
+        <div id="jbrowse2-container" class="card">
             <div class="card-header">
                 <h5 class="mb-0">
-                    Available Assemblies
+                    <span id="user-status"></span>
                     <span id="assembly-count" class="float-end badge bg-primary"></span>
                 </h5>
             </div>
@@ -24,11 +24,19 @@
                         <p class="mt-3">Loading available assemblies...</p>
                     </div>
                 </div>
+                <div id="assembly-viewer-container" style="display: none;">
+                    <div style="margin-bottom: 1rem;">
+                        <button id="back-to-list" class="btn btn-sm btn-secondary">← Back to Assembly List</button>
+                    </div>
+                    <div style="height: 800px; width: 100%; border: 1px solid #ddd;">
+                        <iframe id="jbrowse2-iframe" style="width: 100%; height: 100%; border: none;" title="JBrowse2 Genome Browser"></iframe>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
+    <div class="col-md-3">
         <!-- Info Panel -->
         <div class="card mb-4">
             <div class="card-header">
@@ -60,13 +68,13 @@
             </div>
             <div class="list-group list-group-flush">
                 <a href="/moop/help.php#jbrowse2" class="list-group-item list-group-item-action">
-                    <small>How to use Genome Browser</small>
+                    How to use JBrowse2
                 </a>
-                <a href="/moop/docs/JBrowse2/" class="list-group-item list-group-item-action">
-                    <small>Assembly Documentation</small>
+                <a href="/moop/docs/JBrowse2/JBROWSE2_DYNAMIC_CONFIG.md" class="list-group-item list-group-item-action">
+                    Assembly Documentation
                 </a>
                 <a href="/moop/about.php" class="list-group-item list-group-item-action">
-                    <small>About MOOP</small>
+                    About this browser
                 </a>
             </div>
         </div>
@@ -121,26 +129,36 @@
 </style>
 
 <script>
-// This script runs after jbrowse2-loader.js loads the actual content
-document.addEventListener('DOMContentLoaded', function() {
-    // Display user session info
-    const userInfo = window.moopUserInfo;
-    
-    // Update session display
-    document.getElementById('username-display').textContent = userInfo.username || 'Anonymous';
-    document.getElementById('session-status').textContent = userInfo.logged_in ? 'Logged In' : 'Guest';
-    document.getElementById('session-status').className = userInfo.logged_in ? 'badge bg-success' : 'badge bg-warning';
-    
-    // Update access level badge
-    const accessLevelMap = {
-        'Public': { text: 'Public', class: 'badge-public' },
-        'Collaborator': { text: 'Collaborator', class: 'badge-collaborator' },
-        'ALL': { text: 'Administrator', class: 'badge-admin' }
-    };
-    
-    const accessInfo = accessLevelMap[userInfo.access_level] || accessLevelMap['Public'];
-    const accessBadge = document.getElementById('access-badge');
-    accessBadge.textContent = accessInfo.text;
-    accessBadge.className = 'badge ' + accessInfo.class;
-});
+    // This script runs after jbrowse2-loader.js loads the actual content
+    document.addEventListener('DOMContentLoaded', function() {
+        // Display user session info
+        const userInfo = window.moopUserInfo;
+        
+        // Update session display
+        document.getElementById('username-display').textContent = userInfo.username || 'Anonymous';
+        document.getElementById('session-status').textContent = userInfo.logged_in ? 'Logged In' : 'Guest';
+        document.getElementById('session-status').className = userInfo.logged_in ? 'badge bg-success' : 'badge bg-warning';
+        
+        // Update access level badge
+        const accessLevelMap = {
+            'Public': { text: 'Public', class: 'badge-public' },
+            'Collaborator': { text: 'Collaborator', class: 'badge-collaborator' },
+            'ALL': { text: 'Administrator', class: 'badge-admin' }
+        };
+        
+        const accessInfo = accessLevelMap[userInfo.access_level] || accessLevelMap['Public'];
+        const accessBadge = document.getElementById('access-badge');
+        accessBadge.textContent = accessInfo.text;
+        accessBadge.className = 'badge ' + accessInfo.class;
+        
+        // Handle back button from viewer
+        const backBtn = document.getElementById('back-to-list');
+        if (backBtn) {
+            backBtn.addEventListener('click', function() {
+                document.getElementById('assembly-list-container').style.display = 'block';
+                document.getElementById('assembly-viewer-container').style.display = 'none';
+                document.getElementById('jbrowse2-iframe').src = '';
+            });
+        }
+    });
 </script>

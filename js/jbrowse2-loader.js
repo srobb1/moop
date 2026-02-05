@@ -125,7 +125,7 @@
                     <button class="btn btn-sm btn-primary" 
                             data-assembly-id="${escapeHtml(assembly.name)}"
                             data-assembly-name="${escapeHtml(assembly.displayName)}">
-                        Open Genome Browser ↗
+                        View Genome →
                     </button>
                 </div>
             </div>
@@ -185,14 +185,21 @@
     }
 
     /**
-     * Open assembly in JBrowse2 (in new window for maximum screen space)
+     * Open assembly in JBrowse2
      */
     function openAssembly(assembly) {
-        console.log('Opening assembly in new window:', assembly);
+        console.log('Opening assembly in iframe:', assembly);
         
-        // Open JBrowse2 viewer in new tab with assembly parameter
-        const url = `/moop/jbrowse2-view.php?assembly=${encodeURIComponent(assembly.name)}`;
-        window.open(url, `jbrowse2_${assembly.name}`, 'width=1400,height=900');
+        // Hide assembly list and show viewer
+        document.getElementById('assembly-list-container').style.display = 'none';
+        document.getElementById('assembly-viewer-container').style.display = 'block';
+        
+        // Set iframe source to load JBrowse2 with pre-generated config file
+        // This avoids passing large amounts of data in URL params
+        const iframe = document.getElementById('jbrowse2-iframe');
+        const configPath = `/moop/jbrowse2/configs/${encodeURIComponent(assembly.name)}/config.json`;
+        iframe.src = `/moop/jbrowse2/index.html?config=${encodeURIComponent(configPath)}`;
+        iframe.title = `JBrowse2 Viewer for ${assembly.displayName}`;
     }
 
     /**
@@ -261,7 +268,7 @@
             }
             
             // Display JBrowse2 viewer in an iframe
-            const iframeUrl = `/moop/jbrowse2/index.html?config=/moop/api/jbrowse2/get-config.php&assembly=${encodeURIComponent(assembly.name)}`;
+            const iframeUrl = `/moop/jbrowse2-view.php?assembly=${encodeURIComponent(assembly.name)}`;
             
             container.innerHTML = `
                 <div style="height: 800px; width: 100%; border: 1px solid #ddd;">
