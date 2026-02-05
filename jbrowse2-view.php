@@ -29,16 +29,15 @@ $user_info = [
 // Load JBrowse2 index.html as base
 $jbrowse_index = file_get_contents(__DIR__ . '/jbrowse2/index.html');
 
-// Inject base tag and user info script before </head> tag
-$head_injection = sprintf(
-    '<base href="/%s/jbrowse2/" /><script>window.moopUserInfo = %s; window.moopAssemblyName = %s; window.moopSite = %s;</script>',
-    $site,
+// Inject user info script before closing head tag
+$injection = sprintf(
+    '<script>window.moopUserInfo = %s; window.moopAssemblyName = %s; window.moopSite = %s;</script>',
     json_encode($user_info),
     json_encode($assembly_name ?? ''),
     json_encode($site)
 );
 
-$jbrowse_index = str_replace('</head>', $head_injection . '</head>', $jbrowse_index);
+$jbrowse_index = str_replace('</head>', $injection . '</head>', $jbrowse_index);
 
 // Inject loader script before closing body tag
 $jbrowse_index = str_replace(

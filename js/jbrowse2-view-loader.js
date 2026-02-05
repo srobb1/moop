@@ -87,7 +87,6 @@
             // Build the full JBrowse2 config from assembly definition
             const jbrowse2Config = {
                 assemblies: [config],
-                disableSessionStorage: true,
                 defaultSession: {
                     name: 'Default',
                     view: {
