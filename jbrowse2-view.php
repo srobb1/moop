@@ -31,9 +31,10 @@ $jbrowse_index = file_get_contents(__DIR__ . '/jbrowse2/index.html');
 
 // Create proper base href from site configuration
 $base_href = "/" . $site . "/jbrowse2/";
+$loader_path = "/" . $site . "/js/jbrowse2-view-loader.js";
 
 // Inject configuration, user info and assembly name into the HTML before </body>
-$user_info_script = '<script>
+$loader_script = '<script>
     window.moopUserInfo = ' . json_encode($user_info) . ';
     window.moopAssemblyName = ' . json_encode($assembly_name ?? '') . ';
     window.moopSite = ' . json_encode($site) . ';
@@ -41,16 +42,28 @@ $user_info_script = '<script>
     console.log("JBrowse2 Viewer - Assembly:", window.moopAssemblyName);
     console.log("User Info:", window.moopUserInfo);
     console.log("Site:", window.moopSite);
-</script>';
+    console.log("Loading config from API...");
+</script>
+<script src="' . htmlspecialchars($loader_path) . '"></script>';
 
-// Replace base href in HTML to use site from configuration
-$jbrowse_index = preg_replace(
-    '/<base href="[^"]*"/',
-    '<base href="' . htmlspecialchars($base_href) . '"',
-    $jbrowse_index
-);
+// Add or replace base href in HTML to use site from configuration
+if (strpos($jbrowse_index, '<base') !== false) {
+    // Replace existing base tag
+    $jbrowse_index = preg_replace(
+        '/<base href="[^"]*"/',
+        '<base href="' . htmlspecialchars($base_href) . '"',
+        $jbrowse_index
+    );
+} else {
+    // Insert base tag in head if it doesn't exist
+    $jbrowse_index = str_replace(
+        '</head>',
+        '<base href="' . htmlspecialchars($base_href) . '"/></head>',
+        $jbrowse_index
+    );
+}
 
-$jbrowse_index = str_replace('</body>', $user_info_script . "\n</body>", $jbrowse_index);
+$jbrowse_index = str_replace('</body>', $loader_script . "\n</body>", $jbrowse_index);
 
 // Output the modified HTML with proper base path context
 echo $jbrowse_index;
