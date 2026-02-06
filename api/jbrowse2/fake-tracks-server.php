@@ -56,6 +56,28 @@ if (!$is_local && !$token_valid) {
     exit;
 }
 
+// Validate token claims against requested file (if token exists)
+if ($token_valid && $token_data) {
+    // Extract organism/assembly from filename
+    // Expected format: {organism}_{assembly}_{trackname}.bw
+    $filename_basename = basename($file);
+    $filename_parts = explode('_', $filename_basename, 3);
+    
+    if (count($filename_parts) >= 2) {
+        $file_organism = $filename_parts[0];
+        $file_assembly = $filename_parts[1];
+        
+        // Verify token matches file being requested
+        if ($token_data->organism !== $file_organism || 
+            $token_data->assembly !== $file_assembly) {
+            http_response_code(403);
+            error_log("Token mismatch: token({$token_data->organism}/{$token_data->assembly}) vs file($file_organism/$file_assembly) for user {$token_data->user_id}");
+            echo "Token organism/assembly mismatch";
+            exit;
+        }
+    }
+}
+
 // 2. RESOLVE FILE PATH
 // Tracks are organized by format: /api/jbrowse2/fake-tracks-server.php?file=bigwig/organism_assembly_track.bw
 $test_data_dir = __DIR__ . '/../../data/tracks';

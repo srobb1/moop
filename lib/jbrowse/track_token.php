@@ -39,7 +39,7 @@ function generateTrackToken($organism, $assembly, $access_level) {
     ];
     
     try {
-        $jwt = JWT::encode($token_data, $private_key, 'HS256');
+        $jwt = JWT::encode($token_data, $private_key, 'RS256');
         return $jwt;
     } catch (Exception $e) {
         throw new Exception("Failed to generate JWT: " . $e->getMessage());
@@ -63,7 +63,7 @@ function verifyTrackToken($token) {
     $public_key = file_get_contents($public_key_path);
     
     try {
-        $decoded = JWT::decode($token, new Key($public_key, 'HS256'));
+        $decoded = JWT::decode($token, new Key($public_key, 'RS256'));
         
         // Verify token hasn't expired
         if ($decoded->exp < time()) {
