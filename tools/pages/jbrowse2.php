@@ -25,10 +25,18 @@
                     </div>
                 </div>
                 <div id="assembly-viewer-container" style="display: none;">
-                    <div style="margin-bottom: 1rem;">
+                    <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; justify-content: space-between;">
                         <button id="back-to-list" class="btn btn-sm btn-secondary">← Back to Assembly List</button>
+                        <div>
+                            <button id="toggle-fullscreen" class="btn btn-sm btn-primary" title="Toggle fullscreen mode">
+                                <i class="fas fa-expand"></i> Fullscreen
+                            </button>
+                            <button id="open-new-window" class="btn btn-sm btn-outline-primary" title="Open in new window">
+                                <i class="fas fa-external-link-alt"></i> New Window
+                            </button>
+                        </div>
                     </div>
-                    <div style="height: 800px; width: 100%; border: 1px solid #ddd;">
+                    <div id="jbrowse-iframe-container" style="height: 800px; width: 100%; border: 1px solid #ddd;">
                         <iframe id="jbrowse2-iframe" style="width: 100%; height: 100%; border: none;" title="JBrowse2 Genome Browser"></iframe>
                     </div>
                 </div>
@@ -84,6 +92,49 @@
 <style>
     #jbrowse2-container {
         min-height: 600px;
+    }
+    
+    /* Fullscreen mode styles */
+    #jbrowse-iframe-container.fullscreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 9999;
+        border: none !important;
+        background: white;
+    }
+    
+    #jbrowse-iframe-container.fullscreen #jbrowse2-iframe {
+        width: 100%;
+        height: 100%;
+    }
+    
+    /* Hide MOOP layout when in fullscreen */
+    body.jbrowse-fullscreen .navbar,
+    body.jbrowse-fullscreen .footer,
+    body.jbrowse-fullscreen #back-to-list,
+    body.jbrowse-fullscreen .col-md-3 {
+        display: none !important;
+    }
+    
+    body.jbrowse-fullscreen #assembly-viewer-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        margin: 0;
+        padding: 0;
+        background: white;
+        z-index: 9998;
+    }
+    
+    body.jbrowse-fullscreen .row {
+        margin: 0;
     }
 
     .assembly-card {
@@ -158,6 +209,83 @@
                 document.getElementById('assembly-list-container').style.display = 'block';
                 document.getElementById('assembly-viewer-container').style.display = 'none';
                 document.getElementById('jbrowse2-iframe').src = '';
+                
+                // Exit fullscreen if active
+                if (document.body.classList.contains('jbrowse-fullscreen')) {
+                    exitFullscreen();
+                }
+            });
+        }
+        
+        // Fullscreen toggle functionality
+        const toggleFullscreenBtn = document.getElementById('toggle-fullscreen');
+        const iframeContainer = document.getElementById('jbrowse-iframe-container');
+        
+        function enterFullscreen() {
+            document.body.classList.add('jbrowse-fullscreen');
+            iframeContainer.classList.add('fullscreen');
+            toggleFullscreenBtn.innerHTML = '<i class="fas fa-compress"></i> Exit Fullscreen';
+            toggleFullscreenBtn.classList.remove('btn-primary');
+            toggleFullscreenBtn.classList.add('btn-warning');
+            
+            // Position toggle button in fullscreen mode
+            toggleFullscreenBtn.style.position = 'fixed';
+            toggleFullscreenBtn.style.top = '10px';
+            toggleFullscreenBtn.style.right = '10px';
+            toggleFullscreenBtn.style.zIndex = '10000';
+        }
+        
+        function exitFullscreen() {
+            document.body.classList.remove('jbrowse-fullscreen');
+            iframeContainer.classList.remove('fullscreen');
+            toggleFullscreenBtn.innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
+            toggleFullscreenBtn.classList.remove('btn-warning');
+            toggleFullscreenBtn.classList.add('btn-primary');
+            
+            // Reset button positioning
+            toggleFullscreenBtn.style.position = '';
+            toggleFullscreenBtn.style.top = '';
+            toggleFullscreenBtn.style.right = '';
+            toggleFullscreenBtn.style.zIndex = '';
+        }
+        
+        if (toggleFullscreenBtn) {
+            toggleFullscreenBtn.addEventListener('click', function() {
+                if (document.body.classList.contains('jbrowse-fullscreen')) {
+                    exitFullscreen();
+                } else {
+                    enterFullscreen();
+                }
+            });
+        }
+        
+        // ESC key to exit fullscreen
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.body.classList.contains('jbrowse-fullscreen')) {
+                exitFullscreen();
+            }
+        });
+        
+        // Open in new window functionality
+        const openNewWindowBtn = document.getElementById('open-new-window');
+        if (openNewWindowBtn) {
+            openNewWindowBtn.addEventListener('click', function() {
+                const iframe = document.getElementById('jbrowse2-iframe');
+                const currentUrl = iframe.src;
+                
+                if (currentUrl) {
+                    // Open in new window with optimal size
+                    const width = screen.width * 0.9;
+                    const height = screen.height * 0.9;
+                    const left = (screen.width - width) / 2;
+                    const top = (screen.height - height) / 2;
+                    
+                    window.open(
+                        currentUrl,
+                        'JBrowse2_' + Date.now(),
+                        `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+                    );
+                }
             });
         }
     });

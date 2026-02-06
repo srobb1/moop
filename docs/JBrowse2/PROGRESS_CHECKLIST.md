@@ -29,11 +29,12 @@
 
 ### 🟡 Important (Do Soon)
 
-- [ ] **Add fullscreen toggle** ⏸️ DEFERRED
-  - Options documented in `IMPLEMENTATION_REVIEW.md` (lines 542-721)
-  - Three approaches provided (toggle button, new window, minimal header)
-  - **Reason for deferral:** Current embedded view working, not urgent
-  - **When to do:** When screen space becomes a bigger issue
+- [x] **Add fullscreen toggle** ✅ COMPLETE
+  - Implemented fullscreen button with toggle
+  - ESC key to exit fullscreen
+  - "Open in New Window" option for multi-window workflow
+  - Hides MOOP navbar/sidebar/footer in fullscreen mode
+  - **Status:** Production ready
 
 - [x] **Consolidate documentation** ✅ COMPLETE
   - 22+ files → 7 organized guides
@@ -134,7 +135,7 @@
 
 ## Summary
 
-### Completed (9 items)
+### Completed (10 items)
 ✅ Switch JWT to RS256  
 ✅ Add token claim validation  
 ✅ Document key rotation  
@@ -144,9 +145,9 @@
 ✅ Create validation script  
 ✅ Create Nginx configuration  
 ✅ Archive old documentation  
+✅ Add fullscreen toggle  
 
-### Deferred (2 items)
-⏸️ Add fullscreen toggle - Options documented, implement when needed  
+### Deferred (1 item)
 ⏸️ Add assembly removal script - Example provided, implement if needed  
 
 ### Optional (2 items)
