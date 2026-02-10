@@ -40,11 +40,13 @@ $organism_data = $config->getPath('organism_data');
 
 // Validate parameters
 $organism_name = validateOrganismParam($_GET['organism'] ?? '');
-$assembly_param = validateAssemblyParam($_GET['assembly'] ?? '');
 
 // Setup organism context (loads info, checks access)
 $organism_context = setupOrganismDisplayContext($organism_name, $organism_data, true);
 $organism_info = $organism_context['info'];
+
+// Now validate assembly parameter (after access check)
+$assembly_param = validateAssemblyParam($_GET['assembly'] ?? '', "/$site/access_denied.php");
 
 // Verify database exists
 $db_path = verifyOrganismDatabase($organism_name, $organism_data);
