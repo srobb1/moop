@@ -244,8 +244,18 @@ function getTaxonomyTreeUserAccess($group_data) {
             }
         }
     } elseif (is_logged_in()) {
-        // Logged-in users get their specific access
+        // Logged-in users get their specific access PLUS public organisms
         $taxonomy_user_access = get_user_access();
+        
+        // Add public organisms
+        foreach ($group_data as $data) {
+            if (in_array('PUBLIC', $data['groups'])) {
+                $organism = $data['organism'];
+                if (!isset($taxonomy_user_access[$organism])) {
+                    $taxonomy_user_access[$organism] = true;
+                }
+            }
+        }
     } else {
         // Public users: get organisms in PUBLIC group
         foreach ($group_data as $data) {
