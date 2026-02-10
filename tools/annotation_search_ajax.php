@@ -44,9 +44,9 @@ if (empty($search_keywords) || empty($organism)) {
 
 // Check access: Admin has access to everything
 $is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
-$user_has_group_access = has_access('Collaborator', $group);
+$user_has_group_access = has_access('COLLABORATOR', $group);
 $organism_is_public = is_public_organism($organism);
-$user_has_organism_access = has_access('Collaborator', $organism);
+$user_has_organism_access = has_access('COLLABORATOR', $organism);
 
 if (!$is_admin && !$user_has_group_access && !$organism_is_public && !$user_has_organism_access) {
     echo json_encode(['error' => 'Access denied', 'results' => [], 'debug' => [
