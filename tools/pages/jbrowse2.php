@@ -192,12 +192,13 @@
         
         // Update access level badge
         const accessLevelMap = {
-            'Public': { text: 'Public', class: 'badge-public' },
-            'Collaborator': { text: 'Collaborator', class: 'badge-collaborator' },
-            'ALL': { text: 'Administrator', class: 'badge-admin' }
+            'PUBLIC': { text: 'Public', class: 'badge-public' },
+            'COLLABORATOR': { text: 'Collaborator', class: 'badge-collaborator' },
+            'IP_IN_RANGE': { text: 'Trusted Network', class: 'badge-info' },
+            'ADMIN': { text: 'Administrator', class: 'badge-admin' }
         };
         
-        const accessInfo = accessLevelMap[userInfo.access_level] || accessLevelMap['Public'];
+        const accessInfo = accessLevelMap[userInfo.access_level] || accessLevelMap['PUBLIC'];
         const accessBadge = document.getElementById('access-badge');
         accessBadge.textContent = accessInfo.text;
         accessBadge.className = 'badge ' + accessInfo.class;

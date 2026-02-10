@@ -4,7 +4,7 @@ $assembly = htmlspecialchars($_GET['assembly'] ?? '', ENT_QUOTES);
 $user_info = array(
     'logged_in' => isset($_SESSION['username']),
     'username' => $_SESSION['username'] ?? 'anonymous',
-    'access_level' => $_SESSION['access_level'] ?? 'Public',
+    'access_level' => $_SESSION['access_level'] ?? 'PUBLIC',
     'is_admin' => isset($_SESSION['is_admin']) && $_SESSION['is_admin']
 );
 ?>

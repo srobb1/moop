@@ -24,9 +24,10 @@ if (is_dir($config_dir)) {
         $assembly_config = json_decode(file_get_contents($file), true);
         if ($assembly_config && isset($assembly_config['accessLevel'])) {
             // Include assembly if user has access
-            if ($assembly_config['accessLevel'] === 'Public' || 
-                $access_level === 'Admin' || 
-                $access_level === 'Registered') {
+            if ($assembly_config['accessLevel'] === 'PUBLIC' || 
+                $access_level === 'ADMIN' || 
+                $access_level === 'IP_IN_RANGE' ||
+                $access_level === 'COLLABORATOR') {
                 $assemblies[] = $assembly_config;
             }
         }

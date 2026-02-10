@@ -19,7 +19,7 @@ header('Cache-Control: max-age=300, private');
 // Get parameters
 $organism = $_GET['organism'] ?? '';
 $assembly = $_GET['assembly'] ?? '';
-$access_level = $_GET['access_level'] ?? 'Public';
+$access_level = $_GET['access_level'] ?? 'PUBLIC';
 
 // Validate input
 if (empty($organism) || empty($assembly)) {
@@ -95,7 +95,7 @@ foreach ($track_files as $track_file) {
 // 4. FILTER TRACKS BY USER ACCESS LEVEL
 foreach ($available_tracks as $track) {
     // Get track access levels
-    $track_access_levels = $track['access_levels'] ?? ['Public'];
+    $track_access_levels = $track['access_levels'] ?? ['PUBLIC'];
     
     // Determine if user can access this track
     $user_can_access = false;

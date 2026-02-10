@@ -64,7 +64,7 @@ foreach ($assembly_files as $file) {
     }
     
     // Check if user can access this assembly
-    $assembly_access_level = $assembly_def['defaultAccessLevel'] ?? 'Public';
+    $assembly_access_level = $assembly_def['defaultAccessLevel'] ?? 'PUBLIC';
     
     // Determine if user can access this assembly
     $user_can_access = false;

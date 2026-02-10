@@ -70,7 +70,7 @@ if (file_exists($assembly_def_file)) {
         'organism' => $organism,
         'assemblyId' => $assembly,
         'aliases' => [$assembly],
-        'defaultAccessLevel' => 'Public',
+        'defaultAccessLevel' => 'PUBLIC',
         'sequence' => [
             'type' => 'ReferenceSequenceTrack',
             'trackId' => "{$organism}_{$assembly}-ReferenceSequenceTrack",
