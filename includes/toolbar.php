@@ -67,7 +67,7 @@ if (is_logged_in() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin')
     // Show username badge only for logged-in users
     if (is_logged_in()) {
         $username = htmlspecialchars(get_username());
-        echo '<span class="badge bg-light mr-2"><i class="fa fa-user"></i> ' . $username . '</span>';
+        echo '<span class="badge bg-dark text-white mr-2"><i class="fa fa-user"></i> ' . $username . '</span>';
     }
     
     // Always show access level badge
