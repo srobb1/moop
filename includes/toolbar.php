@@ -41,7 +41,10 @@ if (is_logged_in() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin')
 
   <ul class="navbar-nav ml-auto">
     <?php
-    if (is_logged_in()) {
+    // IP_IN_RANGE users should see "Login" to allow admin login over IP auth
+    if (get_access_level() === 'IP_IN_RANGE') {
+        echo'<li class="nav-item"><a id="login_link" class="nav-link" href="/' . $site . '/login.php">Log In <i class="fa fa-sign-in-alt"></i></a></li>';
+    } elseif (is_logged_in()) {
         echo'<li class="nav-item"><a id="logout_link" class="nav-link" href="/' . $site . '/logout.php">Log Out <i class="fa fa-sign-out-alt"></i></a></li>';
     } else {
         echo'<li class="nav-item"><a id="login_link" class="nav-link" href="/' . $site . '/login.php">Log In <i class="fa fa-sign-in-alt"></i></a></li>';
