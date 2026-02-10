@@ -329,7 +329,7 @@ function getTaxonomyLineageWithCounts($lineage, $tree_node, $user_access) {
 /**
  * Require user to have specific access level or redirect to access denied
  * 
- * @param string $level Required access level (e.g., 'Collaborator', 'Admin')
+ * @param string $level Required access level (e.g., 'COLLABORATOR', 'ADMIN')
  * @param string $resource Resource name (e.g., group name or organism name)
  * @param array $options Options array with keys:
  *   - redirect_on_deny (bool, default: true) - Redirect to deny page if no access
