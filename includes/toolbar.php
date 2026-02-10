@@ -41,6 +41,35 @@ if (is_logged_in() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin')
 
   <ul class="navbar-nav ml-auto">
     <?php
+    // Show username and access level badges for logged-in users
+    if (is_logged_in()) {
+        $username = htmlspecialchars(get_username());
+        $access_level = get_access_level();
+        
+        // Map access levels to display text
+        $access_display = [
+            'PUBLIC' => 'Public',
+            'COLLABORATOR' => 'Collaborator',
+            'IP_IN_RANGE' => 'Trusted Network',
+            'ADMIN' => 'Administrator'
+        ];
+        $access_text = $access_display[$access_level] ?? ucfirst(strtolower($access_level));
+        
+        // Map access levels to badge classes
+        $access_class = [
+            'PUBLIC' => 'badge-secondary',
+            'COLLABORATOR' => 'badge-info',
+            'IP_IN_RANGE' => 'badge-warning',
+            'ADMIN' => 'badge-danger'
+        ];
+        $badge_class = $access_class[$access_level] ?? 'badge-secondary';
+        
+        echo '<li class="nav-item d-flex align-items-center mr-3">';
+        echo '<span class="badge badge-light mr-2"><i class="fa fa-user"></i> ' . $username . '</span>';
+        echo '<span class="badge ' . $badge_class . '">' . $access_text . '</span>';
+        echo '</li>';
+    }
+    
     // IP_IN_RANGE users should see "Login" to allow admin login over IP auth
     if (get_access_level() === 'IP_IN_RANGE') {
         echo'<li class="nav-item"><a id="login_link" class="nav-link" href="/' . $site . '/login.php">Log In <i class="fa fa-sign-in-alt"></i></a></li>';
