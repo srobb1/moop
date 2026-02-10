@@ -100,13 +100,13 @@ foreach ($available_tracks as $track) {
     // Determine if user can access this track
     $user_can_access = false;
     
-    if ($access_level === 'ALL') {
-        // Admin sees everything
+    if ($access_level === 'ADMIN' || $access_level === 'IP_IN_RANGE') {
+        // Admin and IP_IN_RANGE see everything
         $user_can_access = true;
-    } elseif (in_array('Public', $track_access_levels)) {
+    } elseif (in_array('PUBLIC', $track_access_levels)) {
         // Public tracks visible to everyone
         $user_can_access = true;
-    } elseif ($access_level === 'Collaborator' && in_array('Collaborator', $track_access_levels)) {
+    } elseif ($access_level === 'COLLABORATOR' && in_array('COLLABORATOR', $track_access_levels)) {
         // Collaborators see collaborator tracks (simplified for test)
         $user_can_access = true;
     }

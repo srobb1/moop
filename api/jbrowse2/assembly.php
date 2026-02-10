@@ -44,11 +44,7 @@ if (empty($accessible)) {
 }
 
 // Get user access level
-$user_access_level = $_SESSION['access_level'] ?? 'Public';
-if (!isset($_SESSION['access_level'])) {
-    // Auto-detect based on session
-    $user_access_level = isset($_SESSION['username']) && has_access('ALL') ? 'ALL' : 'Public';
-}
+$user_access_level = get_access_level();
 
 // 2. LOAD ASSEMBLY DEFINITION FROM METADATA
 $metadata_path = __DIR__ . '/../../metadata';
@@ -138,23 +134,49 @@ foreach ($track_files as $track_file) {
 // 4. FILTER TRACKS BY USER ACCESS LEVEL
 $is_whitelisted = isWhitelistedIP();
 
+// Define access hierarchy
+$access_hierarchy = [
+    'ADMIN' => 4,
+    'IP_IN_RANGE' => 3,
+    'COLLABORATOR' => 2,
+    'PUBLIC' => 1
+];
+
+$user_level_value = $access_hierarchy[$user_access_level] ?? 0;
+
 foreach ($available_tracks as $track) {
     // Get track access levels
-    $track_access_levels = $track['access_levels'] ?? ['Public'];
+    $track_access_levels = $track['access_levels'] ?? ['PUBLIC'];
     
-    // Determine if user can access this track
+    // Determine minimum required level for this track
+    $min_required_level = 0;
+    foreach ($track_access_levels as $level) {
+        $level_value = $access_hierarchy[$level] ?? 0;
+        if ($level_value > $min_required_level) {
+            $min_required_level = $level_value;
+        }
+    }
+    
+    // Check if user meets minimum requirement
     $user_can_access = false;
     
-    if ($user_access_level === 'ALL') {
-        // Admin sees everything
-        $user_can_access = true;
-    } elseif (in_array('Public', $track_access_levels)) {
-        // Public tracks visible to everyone
-        $user_can_access = true;
-    } elseif ($user_access_level === 'Collaborator' && in_array('Collaborator', $track_access_levels)) {
-        // Check if collaborator has access to this specific assembly
-        $user_access = $_SESSION['access'] ?? [];
-        if (isset($user_access[$organism]) && in_array($assembly, (array)$user_access[$organism])) {
+    if ($user_level_value >= $min_required_level) {
+        // User has sufficient access level
+        
+        // Special check for Collaborator: must have access to THIS assembly
+        if ($user_access_level === 'COLLABORATOR' && $min_required_level >= $access_hierarchy['COLLABORATOR']) {
+            $user_access = $_SESSION['access'] ?? [];
+            if (isset($user_access[$organism]) && in_array($assembly, (array)$user_access[$organism])) {
+                // Check for required_groups if specified
+                if (!empty($track['required_groups'])) {
+                    $user_groups = $_SESSION['groups'] ?? [];
+                    $user_can_access = !empty(array_intersect($track['required_groups'], $user_groups));
+                } else {
+                    $user_can_access = true;
+                }
+            }
+        } else {
+            // ADMIN, IP_IN_RANGE, or PUBLIC access - no assembly check needed
             $user_can_access = true;
         }
     }

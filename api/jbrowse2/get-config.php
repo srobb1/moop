@@ -21,18 +21,9 @@ header('Cache-Control: no-cache, no-store, must-revalidate');
 // This integrates with your existing auth system
 session_start();
 
-// Determine user access level
-$user_access_level = 'Public'; // Default for anonymous
-
-if (isset($_SESSION['user_id'])) {
-    // User is logged in - get their access level from session or database
-    $user_access_level = $_SESSION['access_level'] ?? 'Collaborator';
-    
-    // If user is admin, they see everything
-    if ($_SESSION['is_admin'] ?? false) {
-        $user_access_level = 'ALL';
-    }
-}
+// Determine user access level from session
+require_once __DIR__ . '/../../includes/access_control.php';
+$user_access_level = get_access_level();
 
 // Get optional assembly filter parameter
 $requested_assembly = $_GET['assembly'] ?? null;
@@ -78,16 +69,16 @@ foreach ($assembly_files as $file) {
     // Determine if user can access this assembly
     $user_can_access = false;
     
-    if ($user_access_level === 'ALL') {
-        // Admin sees everything
+    if ($user_access_level === 'ADMIN' || $user_access_level === 'IP_IN_RANGE') {
+        // Admin and IP_IN_RANGE see everything
         $user_can_access = true;
-    } elseif ($assembly_access_level === 'Public') {
+    } elseif ($assembly_access_level === 'PUBLIC') {
         // Anyone can see public
         $user_can_access = true;
-    } elseif ($user_access_level === 'Collaborator' && $assembly_access_level === 'Collaborator') {
+    } elseif ($user_access_level === 'COLLABORATOR' && $assembly_access_level === 'COLLABORATOR') {
         // Collaborators can see collaborator assemblies
         $user_can_access = true;
-    } elseif ($user_access_level === 'Collaborator' && $assembly_access_level === 'Public') {
+    } elseif ($user_access_level === 'COLLABORATOR' && $assembly_access_level === 'PUBLIC') {
         // Collaborators can see public too
         $user_can_access = true;
     }

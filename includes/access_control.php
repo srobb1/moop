@@ -31,10 +31,10 @@ foreach ($ip_ranges as $range) {
         $end_long = ip2long($range_end);
         
         if ($visitor_ip_long !== false && $visitor_ip_long >= $start_long && $visitor_ip_long <= $end_long) {
-            if (!isset($_SESSION["logged_in"]) || $_SESSION["access_level"] !== 'ALL') {
+            if (!isset($_SESSION["logged_in"]) || $_SESSION["access_level"] !== 'IP_IN_RANGE') {
                 $_SESSION["logged_in"] = true;
                 $_SESSION["username"] = "IP_USER_" . $visitor_ip;
-                $_SESSION["access_level"] = 'ALL';
+                $_SESSION["access_level"] = 'IP_IN_RANGE';
                 $_SESSION["access"] = [];
             }
             break;
@@ -47,7 +47,7 @@ foreach ($ip_ranges as $range) {
  * These functions always read from $_SESSION (single source of truth)
  */
 function get_access_level() {
-    return $_SESSION["access_level"] ?? 'Public';
+    return $_SESSION["access_level"] ?? 'PUBLIC';
 }
 
 function get_user_access() {
@@ -119,7 +119,7 @@ function is_public_assembly($organism_name, $assembly_name) {
     
     foreach ($groups_data as $entry) {
         if ($entry['organism'] === $organism_name && $entry['assembly'] === $assembly_name) {
-            if (isset($entry['groups']) && in_array('Public', $entry['groups'])) {
+            if (isset($entry['groups']) && in_array('PUBLIC', $entry['groups'])) {
                 return true;
             }
         }
@@ -151,7 +151,7 @@ function is_public_group($group_name) {
     }
     
     foreach ($groups_data as $entry) {
-        if (in_array($group_name, $entry['groups']) && in_array('Public', $entry['groups'])) {
+        if (in_array($group_name, $entry['groups']) && in_array('PUBLIC', $entry['groups'])) {
             return true;
         }
     }
@@ -172,18 +172,18 @@ function has_access($required_level = 'Public', $resource_name = null) {
     $access_level = get_access_level();
     $user_access = get_user_access();
     
-    // ALL and Admin have access to everything
-    if ($access_level === 'ALL' || $access_level === 'Admin') {
+    // ADMIN and IP_IN_RANGE have access to everything
+    if ($access_level === 'ADMIN' || $access_level === 'IP_IN_RANGE') {
         return true;
     }
     
     // Public access is always allowed
-    if ($required_level === 'Public') {
+    if ($required_level === 'PUBLIC') {
         return true;
     }
     
     // Collaborator access check
-    if ($required_level === 'Collaborator' && $access_level === 'Collaborator') {
+    if ($required_level === 'COLLABORATOR' && $access_level === 'COLLABORATOR') {
         // If no specific resource is requested, grant access
         if ($resource_name === null) {
             return true;

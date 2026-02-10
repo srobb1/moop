@@ -5,7 +5,7 @@
         "groups": [
             "Bats",
             "Cute",
-            "Public"
+            "PUBLIC"
         ]
     },
     {
@@ -21,7 +21,7 @@
         "assembly": "HIv3",
         "groups": [
             "Corals",
-            "Public"
+            "PUBLIC"
         ]
     },
     {
@@ -45,6 +45,13 @@
         "assembly": "BraPum1",
         "groups": [
             "Reptiles",
+            "New"
+        ]
+    },
+    {
+        "organism": "Nematostella_vectensis",
+        "assembly": "GCA_033964005.1",
+        "groups": [
             "New"
         ]
     }

@@ -55,7 +55,7 @@ function getPublicGroupCards($group_data) {
     
     // Find all groups that contain at least one public assembly
     foreach ($group_data as $data) {
-        if (in_array('Public', $data['groups'])) {
+        if (in_array('PUBLIC', $data['groups'])) {
             foreach ($data['groups'] as $group) {
                 if (!isset($public_groups[$group])) {
                     $public_groups[$group] = [
@@ -283,7 +283,7 @@ function getIndexDisplayCards($group_data) {
     $cards_to_display = [];
     $all_cards = getAllGroupCards($group_data);
     
-    if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {
+    if (get_access_level() === 'ADMIN' || get_access_level() === 'IP_IN_RANGE') {
         $cards_to_display = $all_cards;
     } elseif (is_logged_in()) {
         // Logged-in users see: public groups + their permitted organisms

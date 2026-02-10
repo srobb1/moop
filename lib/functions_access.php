@@ -210,10 +210,10 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
         }
     }
     
-    // Sort groups (Public first, then alphabetically)
+    // Sort groups (PUBLIC first, then alphabetically)
     uksort($organized, function($a, $b) {
-        if ($a === 'Public') return -1;
-        if ($b === 'Public') return 1;
+        if ($a === 'PUBLIC') return -1;
+        if ($b === 'PUBLIC') return 1;
         return strcasecmp($a, $b);
     });
     
@@ -235,7 +235,7 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
 function getTaxonomyTreeUserAccess($group_data) {
     $taxonomy_user_access = [];
     
-    if (get_access_level() === 'ALL' || get_access_level() === 'Admin') {
+    if (get_access_level() === 'ADMIN' || get_access_level() === 'IP_IN_RANGE') {
         // Admin gets access to all organisms
         foreach ($group_data as $data) {
             $organism = $data['organism'];
@@ -247,9 +247,9 @@ function getTaxonomyTreeUserAccess($group_data) {
         // Logged-in users get their specific access
         $taxonomy_user_access = get_user_access();
     } else {
-        // Public users: get organisms in Public group
+        // Public users: get organisms in PUBLIC group
         foreach ($group_data as $data) {
-            if (in_array('Public', $data['groups'])) {
+            if (in_array('PUBLIC', $data['groups'])) {
                 $organism = $data['organism'];
                 if (!isset($taxonomy_user_access[$organism])) {
                     $taxonomy_user_access[$organism] = true;

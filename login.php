@@ -32,9 +32,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $_SESSION["role"]     = $users[$username]["role"] ?? null;
         // Set access level based on role
         if (isset($users[$username]["role"]) && $users[$username]["role"] === 'admin') {
-            $_SESSION["access_level"] = 'Admin';
+            $_SESSION["access_level"] = 'ADMIN';
         } else {
-            $_SESSION["access_level"] = 'Collaborator';
+            $_SESSION["access_level"] = 'COLLABORATOR';
         }
 
         // Redirect to index.php

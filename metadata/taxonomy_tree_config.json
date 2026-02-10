@@ -83,7 +83,7 @@
                                                                     {
                                                                         "name": "Bradypodion pumilum",
                                                                         "organism": "Bradypodion_pumilum",
-                                                                        "common_name": "Cape dwarf chameleon",
+                                                                        "common_name": "Cape Dwarf Chameleon",
                                                                         "image": "images/ncbi_taxonomy/179887.jpg"
                                                                     }
                                                                 ]
@@ -127,6 +127,27 @@
                                                                         "organism": "Montipora_capitata",
                                                                         "common_name": "Rice Coral",
                                                                         "image": "images/ncbi_taxonomy/46704.jpg"
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "name": "Actiniaria",
+                                                "children": [
+                                                    {
+                                                        "name": "Edwardsiidae",
+                                                        "children": [
+                                                            {
+                                                                "name": "Nematostella",
+                                                                "children": [
+                                                                    {
+                                                                        "name": "Nematostella vectensis",
+                                                                        "organism": "Nematostella_vectensis",
+                                                                        "common_name": "Starlet sea anemone",
+                                                                        "image": "images/ncbi_taxonomy/45351.jpg"
                                                                     }
                                                                 ]
                                                             }
