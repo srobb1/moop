@@ -55,23 +55,23 @@ if (is_logged_in() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin')
     
     // Map access levels to badge classes
     $access_class = [
-        'PUBLIC' => 'badge-secondary',
-        'COLLABORATOR' => 'badge-info',
-        'IP_IN_RANGE' => 'badge-warning',
-        'ADMIN' => 'badge-danger'
+        'PUBLIC' => 'badge bg-secondary',
+        'COLLABORATOR' => 'badge bg-info',
+        'IP_IN_RANGE' => 'badge bg-warning',
+        'ADMIN' => 'badge bg-danger'
     ];
-    $badge_class = $access_class[$access_level] ?? 'badge-secondary';
+    $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
     
     echo '<li class="nav-item d-flex align-items-center mr-3">';
     
     // Show username badge only for logged-in users
     if (is_logged_in()) {
         $username = htmlspecialchars(get_username());
-        echo '<span class="badge badge-light mr-2"><i class="fa fa-user"></i> ' . $username . '</span>';
+        echo '<span class="badge bg-light mr-2"><i class="fa fa-user"></i> ' . $username . '</span>';
     }
     
     // Always show access level badge
-    echo '<span class="badge ' . $badge_class . '">' . $access_text . '</span>';
+    echo '<span class="' . $badge_class . '">' . $access_text . '</span>';
     echo '</li>';
     
     // IP_IN_RANGE users should see "Login" to allow admin login over IP auth
