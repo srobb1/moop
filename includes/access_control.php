@@ -85,7 +85,7 @@ function is_public_organism($organism_name) {
     
     foreach ($groups_data as $entry) {
         if ($entry['organism'] === $organism_name) {
-            if (isset($entry['groups']) && in_array('Public', $entry['groups'])) {
+            if (isset($entry['groups']) && in_array('PUBLIC', $entry['groups'])) {
                 return true;
             }
         }
@@ -163,12 +163,12 @@ function is_public_group($group_name) {
 /**
  * Check if user has access to a specific resource
  * 
- * @param string $required_level Required access level: 'Public', 'Collaborator', 'Admin', or 'ALL'
+ * @param string $required_level Required access level: 'PUBLIC', 'COLLABORATOR', 'ADMIN', or 'IP_IN_RANGE'
  * @param string $resource_name Optional: specific organism or resource name to check against user_access
  * @return bool True if user has access, false otherwise
  */
 if (!function_exists('has_access')) {
-function has_access($required_level = 'Public', $resource_name = null) {
+function has_access($required_level = 'PUBLIC', $resource_name = null) {
     $access_level = get_access_level();
     $user_access = get_user_access();
     
@@ -205,7 +205,7 @@ function has_access($required_level = 'Public', $resource_name = null) {
  * @param string $resource_name Optional: specific resource name
  */
 if (!function_exists('require_access')) {
-function require_access($required_level = 'Collaborator', $resource_name = null) {
+function require_access($required_level = 'COLLABORATOR', $resource_name = null) {
     if (!has_access($required_level, $resource_name)) {
         $config = ConfigManager::getInstance();
         $site = $config->getString('site');
@@ -224,8 +224,8 @@ function require_access($required_level = 'Collaborator', $resource_name = null)
  */
 if (!function_exists('has_assembly_access')) {
 function has_assembly_access($organism_name, $assembly_name) {
-    // ALL and Admin have access to everything
-    if (has_access('ALL')) {
+    // ADMIN and IP_IN_RANGE have access to everything
+    if (has_access('ADMIN') || has_access('IP_IN_RANGE')) {
         return true;
     }
     
@@ -235,7 +235,7 @@ function has_assembly_access($organism_name, $assembly_name) {
     }
     
     // Collaborators check their specific access list
-    if (has_access('Collaborator')) {
+    if (has_access('COLLABORATOR')) {
         $user_access = get_user_access();
         if (isset($user_access[$organism_name]) && is_array($user_access[$organism_name]) && in_array($assembly_name, $user_access[$organism_name])) {
             return true;

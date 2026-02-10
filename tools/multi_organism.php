@@ -54,7 +54,7 @@ if (empty($organisms)) {
 // Validate access for all organisms
 foreach ($organisms as $organism) {
     $is_public = is_public_organism($organism);
-    $has_organism_access = has_access('Collaborator', $organism);
+    $has_organism_access = has_access('COLLABORATOR', $organism);
     
     if (!$has_organism_access && !$is_public) {
         header("Location: /$site/access_denied.php");
