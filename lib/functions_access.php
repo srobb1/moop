@@ -130,11 +130,11 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
         // 3. Collaborators can access assemblies in their $_SESSION['access'] list
         $access_granted = false;
         
-        if (has_access('ALL')) {
+        if (has_access('ADMIN') || has_access('IP_IN_RANGE')) {
             $access_granted = true;
         } elseif (is_public_assembly($org, $assembly)) {
             $access_granted = true;
-        } elseif (has_access('Collaborator')) {
+        } elseif (has_access('COLLABORATOR')) {
             // Check if user has access to this specific assembly
             $user_access = get_user_access();
             if (isset($user_access[$org]) && is_array($user_access[$org]) && in_array($assembly, $user_access[$org])) {

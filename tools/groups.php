@@ -109,7 +109,7 @@ if ($is_taxonomy_group) {
 
 // Access control: Only check manual groups (taxonomy groups are based on tree data)
 if (!$is_taxonomy_group && !is_public_group($group_name)) {
-    requireAccess('Collaborator', $group_name);
+    requireAccess('COLLABORATOR', $group_name);
 }
 
 // Configure display template

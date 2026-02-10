@@ -279,7 +279,7 @@ function setupOrganismDisplayContext($organism_name, $organism_data_dir, $check_
     if ($check_access) {
         $is_public = is_public_organism($organism_name);
         if (!$is_public) {
-            require_access('Collaborator', $organism_name);
+            require_access('COLLABORATOR', $organism_name);
         }
     }
     
