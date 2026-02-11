@@ -46,3 +46,17 @@ galaxy_testing/*.json
 
 # Track data (too large, installation-specific)
 /data/tracks/
+
+# JBrowse2 cached configs (generated dynamically per access level)
+jbrowse2/configs/*/PUBLIC.json
+jbrowse2/configs/*/COLLABORATOR.json
+jbrowse2/configs/*/IP_IN_RANGE.json
+jbrowse2/configs/*/ADMIN.json
+jbrowse2/configs/*/config.json
+
+# Processed genome files (generated from source data)
+data/genomes/
+
+# JBrowse2 metadata (generated from source data)
+metadata/jbrowse2-configs/assemblies/
+metadata/jbrowse2-configs/tracks/

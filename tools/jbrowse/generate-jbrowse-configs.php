@@ -4,6 +4,12 @@
  * 
  * Creates web-accessible config.json files for each assembly
  * that JBrowse2 can load without URL parameters
+ * 
+ * Also generates cached configs per access level:
+ * - PUBLIC.json (public tracks only)
+ * - COLLABORATOR.json (public + collaborator tracks)
+ * - ADMIN.json (all tracks)
+ * - IP_IN_RANGE.json (all tracks)
  */
 
 // Define paths (from tools/jbrowse/ to project root)
@@ -42,16 +48,90 @@ function generateAssemblyConfig($assemblyDef, $jbrowseTracksDir) {
         'tracks' => []
     ];
     
-    // Load tracks for this assembly if they exist
-    $tracksFile = $jbrowseTracksDir . '/' . $assemblyName . '.json';
-    if (file_exists($tracksFile)) {
-        $tracksData = json_decode(file_get_contents($tracksFile), true);
-        if ($tracksData && isset($tracksData['tracks'])) {
-            $config['tracks'] = $tracksData['tracks'];
+    // Load all individual track files for this assembly
+    $trackFiles = glob($jbrowseTracksDir . '/*.json');
+    foreach ($trackFiles as $trackFile) {
+        $trackData = json_decode(file_get_contents($trackFile), true);
+        if ($trackData && isset($trackData['assemblyNames'])) {
+            // Check if this track belongs to this assembly
+            if (in_array($assemblyName, $trackData['assemblyNames'])) {
+                $config['tracks'][] = $trackData;
+            }
         }
     }
     
     return $config;
+}
+
+/**
+ * Generate cached configs per access level
+ * Filters tracks based on access_level metadata
+ */
+function generateCachedConfigs($assemblyDef, $jbrowseTracksDir, $assemblyDir) {
+    $assemblyName = $assemblyDef['name'];
+    
+    // Define access hierarchy
+    // ADMIN is highest (can see test/unreleased tracks)
+    // IP_IN_RANGE is below ADMIN but above COLLABORATOR
+    $accessLevels = ['PUBLIC', 'COLLABORATOR', 'IP_IN_RANGE', 'ADMIN'];
+    $accessHierarchy = [
+        'PUBLIC' => 1,
+        'COLLABORATOR' => 2,
+        'IP_IN_RANGE' => 3,
+        'ADMIN' => 4
+    ];
+    
+    // Base config structure
+    $baseConfig = [
+        'assemblies' => [$assemblyDef],
+        'configuration' => [],
+        'connections' => [],
+        'defaultSession' => [
+            'name' => 'New Session',
+            'view' => [
+                'id' => 'linearGenomeView',
+                'type' => 'LinearGenomeView',
+                'offsetPx' => 0,
+                'bpPerPx' => 1,
+                'displayedRegions' => []
+            ]
+        ],
+        'tracks' => []
+    ];
+    
+    // Load all tracks
+    $allTracks = [];
+    $trackFiles = glob($jbrowseTracksDir . '/*.json');
+    foreach ($trackFiles as $trackFile) {
+        $trackData = json_decode(file_get_contents($trackFile), true);
+        if ($trackData && isset($trackData['assemblyNames']) && in_array($assemblyName, $trackData['assemblyNames'])) {
+            $allTracks[] = $trackData;
+        }
+    }
+    
+    // Generate config for each access level
+    foreach ($accessLevels as $level) {
+        $config = $baseConfig;
+        $userLevel = $accessHierarchy[$level];
+        
+        // Filter tracks based on access level
+        foreach ($allTracks as $track) {
+            $trackAccessLevel = $track['metadata']['access_level'] ?? 'PUBLIC';
+            $requiredLevel = $accessHierarchy[$trackAccessLevel] ?? 1;
+            
+            // User can see track if their level >= required level
+            if ($userLevel >= $requiredLevel) {
+                $config['tracks'][] = $track;
+            }
+        }
+        
+        // Write cached config
+        $cacheFile = $assemblyDir . '/' . $level . '.json';
+        file_put_contents($cacheFile, json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        chmod($cacheFile, 0664);
+        
+        echo "  ✓ Generated {$level}.json (" . count($config['tracks']) . " tracks)\n";
+    }
 }
 
 /**
@@ -94,6 +174,10 @@ function processAssemblies($metadataDir, $jbrowseDir, $tracksDir) {
             chmod($configFile, 0664);
             
             echo "✓ Generated config for: $assemblyName\n";
+            
+            // Generate cached configs per access level
+            generateCachedConfigs($assemblyDef, $tracksDir, $assemblyDir);
+            
             $count++;
             
         } catch (Exception $e) {

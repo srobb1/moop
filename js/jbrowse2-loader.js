@@ -194,11 +194,31 @@
         document.getElementById('assembly-list-container').style.display = 'none';
         document.getElementById('assembly-viewer-container').style.display = 'block';
         
-        // Set iframe source to load JBrowse2 with pre-generated config file
-        // This avoids passing large amounts of data in URL params
+        // Extract organism and assembly ID from assembly.name (format: Organism_Assembly)
+        const nameParts = assembly.name.split('_');
+        let organism, assemblyId;
+        
+        if (nameParts.length >= 2) {
+            // Find the assembly ID part (starts with GCA or GCF)
+            const gcaIndex = nameParts.findIndex(part => part.startsWith('GCA') || part.startsWith('GCF'));
+            if (gcaIndex !== -1) {
+                organism = nameParts.slice(0, gcaIndex).join('_');
+                assemblyId = nameParts.slice(gcaIndex).join('_');
+            } else {
+                // Fallback: last part is assembly ID
+                organism = nameParts.slice(0, -1).join('_');
+                assemblyId = nameParts[nameParts.length - 1];
+            }
+        } else {
+            organism = assembly.name;
+            assemblyId = 'default';
+        }
+        
+        // Use cached config endpoint for better performance
+        // This caches configs per access level and validates permissions
         const iframe = document.getElementById('jbrowse2-iframe');
-        const configPath = `/moop/jbrowse2/configs/${encodeURIComponent(assembly.name)}/config.json`;
-        iframe.src = `/moop/jbrowse2/index.html?config=${encodeURIComponent(configPath)}`;
+        const configUrl = `/moop/api/jbrowse2/assembly-cached.php?organism=${encodeURIComponent(organism)}&assembly=${encodeURIComponent(assemblyId)}`;
+        iframe.src = `/moop/jbrowse2/index.html?config=${encodeURIComponent(configUrl)}`;
         iframe.title = `JBrowse2 Viewer for ${assembly.displayName}`;
     }
 

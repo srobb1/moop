@@ -145,8 +145,15 @@ $access_hierarchy = [
 $user_level_value = $access_hierarchy[$user_access_level] ?? 0;
 
 foreach ($available_tracks as $track) {
-    // Get track access levels
-    $track_access_levels = $track['access_levels'] ?? ['PUBLIC'];
+    // Get track access levels - check both top level and metadata
+    $track_access_levels = $track['access_levels'] ?? null;
+    if (!$track_access_levels && isset($track['metadata']['access_level'])) {
+        // Convert single access_level from metadata to array
+        $track_access_levels = [$track['metadata']['access_level']];
+    }
+    if (!$track_access_levels) {
+        $track_access_levels = ['PUBLIC']; // Default to PUBLIC
+    }
     
     // Determine minimum required level for this track
     $min_required_level = 0;

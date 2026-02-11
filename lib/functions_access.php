@@ -4,6 +4,9 @@
  * User access checking, assembly accessibility, and permission-based filtering
  */
 
+// Include filesystem functions for assembly validation
+require_once __DIR__ . '/functions_filesystem.php';
+
 /**
  * Get assembly information from database
  * Queries the organism.sqlite database to get genome_id and genome_name for an assembly
