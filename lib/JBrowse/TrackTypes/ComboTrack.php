@@ -204,8 +204,8 @@ class ComboTrack implements TrackTypeInterface
             ],
             'displays' => [
                 [
-                    'type' => 'LinearMultiWiggleDisplay',
-                    'displayId' => $trackData['track_id'] . '-LinearMultiWiggleDisplay'
+                    'type' => 'MultiLinearWiggleDisplay',
+                    'displayId' => $trackData['track_id'] . '-MultiLinearWiggleDisplay'
                 ]
             ]
         ];
