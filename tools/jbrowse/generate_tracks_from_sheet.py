@@ -700,6 +700,68 @@ def verify_track_exists(track_path, is_remote):
         return Path(track_path).exists()
 
 
+def clean_orphaned_tracks(organism, assembly, track_ids_in_sheet, moop_root, dry_run=False):
+    """
+    Remove track JSON files that are not in the Google Sheet.
+    
+    Args:
+        organism: Organism name
+        assembly: Assembly ID  
+        track_ids_in_sheet: Set of track IDs from Google Sheet
+        moop_root: MOOP root directory
+        dry_run: If True, only show what would be removed
+        
+    Returns:
+        Number of tracks removed
+    """
+    metadata_dir = Path(moop_root) / 'metadata' / 'jbrowse2-configs' / 'tracks'
+    
+    if not metadata_dir.exists():
+        return 0
+    
+    # Pattern to match: tracks containing organism and assembly in their metadata
+    # We need to read each JSON to check if it belongs to this organism/assembly
+    removed_count = 0
+    checked_count = 0
+    
+    print()
+    print("=" * 70)
+    print(f"Checking for orphaned tracks: {organism} / {assembly}")
+    print("=" * 70)
+    
+    for json_file in metadata_dir.glob('*.json'):
+        checked_count += 1
+        try:
+            with open(json_file) as f:
+                metadata = json.load(f)
+                
+            # Check if this track belongs to our organism/assembly
+            assembly_names = metadata.get('assemblyNames', [])
+            expected_assembly = f"{organism}_{assembly}"
+            
+            if expected_assembly in assembly_names:
+                track_id = metadata.get('trackId', '')
+                
+                # Check if this track is in our sheet
+                if track_id and track_id not in track_ids_in_sheet:
+                    if dry_run:
+                        print(f"  [DRY RUN] Would remove: {track_id} ({json_file.name})")
+                    else:
+                        print(f"  Removing orphaned track: {track_id}")
+                        json_file.unlink()
+                    removed_count += 1
+                    
+        except Exception as e:
+            print(f"  ⚠ Error reading {json_file.name}: {e}")
+            continue
+    
+    print(f"Checked {checked_count} track files, removed {removed_count} orphaned tracks")
+    print("=" * 70)
+    print()
+    
+    return removed_count
+
+
 def validate_track_file(track_path, track_type, organism=None, assembly=None):
     """
     Enhanced validation for track files with helpful error messages.
@@ -826,8 +888,12 @@ def parse_maf_samples(maf_path):
         return None
 
 
-def generate_single_track(row, organism, assembly, moop_root, default_color='DodgerBlue', dry_run=False):
-    """Generate a single track using appropriate script"""
+def generate_single_track(row, organism, assembly, moop_root, default_color='DodgerBlue', dry_run=False, force_track_ids=None):
+    """Generate a single track using appropriate script
+    
+    Args:
+        force_track_ids: None (check exists), [] (force all), or ['id1', 'id2'] (force specific)
+    """
     track_id = row.get('track_id', '')
     name = row.get('name', '')
     track_path = row.get('TRACK_PATH', '')
@@ -872,11 +938,23 @@ def generate_single_track(row, organism, assembly, moop_root, default_color='Dod
         print(f"→ Creating {track_type} track (local): {name}")
         print(f"  ✓ File validated: {resolved_path}")
     
-    # Check if track exists
+    # Check if track exists and if we should skip
     metadata_dir = Path(moop_root) / 'metadata' / 'jbrowse2-configs' / 'tracks'
+    
+    # Determine if we should force regenerate
+    should_force = False
+    if force_track_ids is not None:  # --force was used
+        if len(force_track_ids) == 0:  # --force with no args = force all
+            should_force = True
+        elif track_id in force_track_ids:  # --force TRACK_ID
+            should_force = True
+    
     if track_exists(track_id, metadata_dir):
-        print(f"✓ Track exists: {track_id}")
-        return True
+        if should_force:
+            print(f"→ Regenerating existing track: {track_id}")
+        else:
+            print(f"✓ Track exists: {track_id}")
+            return True
     
     if dry_run:
         print(f"  [DRY RUN] Would create: {track_type} track '{name}' from {resolved_path}")
@@ -1288,6 +1366,10 @@ def main():
     parser.add_argument('--moop-root', default='/data/moop', help='MOOP root directory')
     parser.add_argument('--dry-run', action='store_true', help='Show what would be created without doing it')
     parser.add_argument('--regenerate', action='store_true', help='Regenerate configs after adding tracks')
+    parser.add_argument('--force', nargs='*', metavar='TRACK_ID', 
+                       help='Force regenerate tracks. No args = all tracks, or specify track IDs')
+    parser.add_argument('--clean', action='store_true', 
+                       help='Remove track JSONs not in sheet (for this organism/assembly)')
     parser.add_argument('--list-colors', action='store_true', help='List all available color groups and exit')
     parser.add_argument('--suggest-colors', type=int, metavar='N', help='Suggest color groups for N files')
     
@@ -1431,10 +1513,27 @@ def main():
     failed_tracks = []
     skipped_tracks = []
     
+    # Prepare force track IDs list
+    force_track_ids = None
+    if args.force is not None:  # --force flag was used
+        if len(args.force) == 0:  # --force with no args
+            force_track_ids = []  # Empty list means force all
+            print(f"→ Forcing regeneration of ALL tracks")
+        else:  # --force TRACK_ID1 TRACK_ID2
+            force_track_ids = args.force
+            print(f"→ Forcing regeneration of specific tracks: {', '.join(force_track_ids)}")
+        print()
+    
+    # Collect all track IDs from sheet (for cleanup)
+    sheet_track_ids = set()
+    
     for track in regular_tracks_only:
         track_id = track.get('track_id', 'unknown')
         name = track.get('name', 'unknown')
-        result = generate_single_track(track, args.organism, args.assembly, args.moop_root, dry_run=args.dry_run)
+        sheet_track_ids.add(track_id)
+        
+        result = generate_single_track(track, args.organism, args.assembly, args.moop_root, 
+                                       dry_run=args.dry_run, force_track_ids=force_track_ids)
         
         if result == 'skipped':
             skipped_tracks.append({'track_id': track_id, 'name': name, 'reason': result})
@@ -1488,6 +1587,19 @@ def main():
     if failed_combos:
         print(f"  ✗ Failed: {len(failed_combos)}")
     print()
+    
+    # Clean orphaned tracks if requested
+    if args.clean:
+        # Add combo track IDs to the set
+        for combo_name in combo_tracks.keys():
+            combo_track_id = combo_name.lower().replace(' ', '_').replace(',', '')
+            sheet_track_ids.add(combo_track_id)
+        
+        removed_count = clean_orphaned_tracks(args.organism, args.assembly, sheet_track_ids, 
+                                               args.moop_root, dry_run=args.dry_run)
+        if removed_count > 0:
+            print(f"✓ Cleaned {removed_count} orphaned track(s)")
+            print()
     
     # Regenerate configs
     if args.regenerate and not args.dry_run:
