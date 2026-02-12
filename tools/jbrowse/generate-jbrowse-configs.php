@@ -34,6 +34,10 @@ if (!is_dir($JBROWSE_CONFIGS_DIR)) {
 function generateAssemblyConfig($assemblyDef, $jbrowseTracksDir) {
     $assemblyName = $assemblyDef['name'];
     
+    // Extract organism and assembly from assemblyDef
+    $organism = $assemblyDef['organism'];
+    $assembly = $assemblyDef['assemblyId'];
+    
     // Start with base config structure
     $config = [
         'assemblies' => [$assemblyDef],
@@ -53,7 +57,19 @@ function generateAssemblyConfig($assemblyDef, $jbrowseTracksDir) {
     ];
     
     // Load all individual track files for this assembly
-    $trackFiles = glob($jbrowseTracksDir . '/*.json');
+    // Support both hierarchical and flat structures
+    $trackFiles = [];
+    
+    // Try hierarchical structure first: tracks/organism/assembly/*/*.json
+    $hierarchicalPattern = $jbrowseTracksDir . '/' . $organism . '/' . $assembly . '/*/*.json';
+    $hierarchicalFiles = glob($hierarchicalPattern);
+    if ($hierarchicalFiles) {
+        $trackFiles = $hierarchicalFiles;
+    } else {
+        // Fall back to flat structure
+        $trackFiles = glob($jbrowseTracksDir . '/*.json');
+    }
+    
     foreach ($trackFiles as $trackFile) {
         $trackData = json_decode(file_get_contents($trackFile), true);
         if ($trackData && isset($trackData['assemblyNames'])) {
@@ -73,6 +89,10 @@ function generateAssemblyConfig($assemblyDef, $jbrowseTracksDir) {
  */
 function generateCachedConfigs($assemblyDef, $jbrowseTracksDir, $assemblyDir, $genomesDir) {
     $assemblyName = $assemblyDef['name'];
+    
+    // Extract organism and assembly from assemblyDef
+    $organism = $assemblyDef['organism'];
+    $assembly = $assemblyDef['assemblyId'];
     
     // Define access hierarchy
     // ADMIN is highest (can see test/unreleased tracks)
@@ -105,7 +125,18 @@ function generateCachedConfigs($assemblyDef, $jbrowseTracksDir, $assemblyDir, $g
     
     // Load all tracks
     $allTracks = [];
-    $trackFiles = glob($jbrowseTracksDir . '/*.json');
+    
+    // Support both hierarchical and flat structures
+    $trackFiles = [];
+    $hierarchicalPattern = $jbrowseTracksDir . '/' . $organism . '/' . $assembly . '/*/*.json';
+    $hierarchicalFiles = glob($hierarchicalPattern);
+    if ($hierarchicalFiles) {
+        $trackFiles = $hierarchicalFiles;
+    } else {
+        // Fall back to flat structure
+        $trackFiles = glob($jbrowseTracksDir . '/*.json');
+    }
+    
     foreach ($trackFiles as $trackFile) {
         $trackData = json_decode(file_get_contents($trackFile), true);
         if ($trackData && isset($trackData['assemblyNames']) && in_array($assemblyName, $trackData['assemblyNames'])) {
