@@ -1825,7 +1825,11 @@ def main():
             print(f"\n⚠ SKIPPED TRACKS ({len(skipped_tracks)}):")
             for track in skipped_tracks:
                 print(f"  - {track['track_id']}: {track['name']}")
-                print(f"    Reason: Missing required fields")
+                reason = track.get('reason', 'Unknown reason')
+                if reason == 'skipped':
+                    print(f"    Reason: AUTO track (configured by assembly setup)")
+                else:
+                    print(f"    Reason: {reason}")
         
         if failed_tracks:
             print(f"\n✗ FAILED TRACKS ({len(failed_tracks)}):")
