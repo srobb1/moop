@@ -260,6 +260,10 @@ foreach ($available_tracks as $track) {
 }
 
 // 7. ADD REFERENCE ANNOTATIONS IF AVAILABLE
+// DISABLED 2026-02-12: Now using metadata-driven track system via Google Sheets
+// Tracks are loaded from metadata/jbrowse2-configs/tracks/ instead
+// This prevents duplicate GFF tracks from appearing
+/*
 $annotations_file = __DIR__ . "/../../data/genomes/{$organism}/{$assembly}/annotations.gff3.gz";
 if (file_exists($annotations_file)) {
     $assembly_name = "{$organism}_{$assembly}";
@@ -285,6 +289,7 @@ if (file_exists($annotations_file)) {
         ]
     ];
 }
+*/
 
 // 8. RETURN CONFIG
 echo json_encode($assembly_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
