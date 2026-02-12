@@ -52,7 +52,8 @@
         "organism": "Nematostella_vectensis",
         "assembly": "GCA_033964005.1",
         "groups": [
-            "New"
+            "PUBLIC",
+            "Cute"
         ]
     }
 ]

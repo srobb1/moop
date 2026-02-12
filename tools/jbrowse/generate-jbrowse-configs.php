@@ -12,12 +12,16 @@
  * - IP_IN_RANGE.json (all tracks)
  */
 
-// Define paths (from tools/jbrowse/ to project root)
-$PROJECT_ROOT = __DIR__ . '/../../';
+// Load ConfigManager
+require_once __DIR__ . '/../../includes/config_init.php';
+$config = ConfigManager::getInstance();
 
-$METADATA_ASSEMBLIES_DIR = $PROJECT_ROOT . 'metadata/jbrowse2-configs/assemblies';
-$JBROWSE_CONFIGS_DIR = $PROJECT_ROOT . 'jbrowse2/configs';
-$JBROWSE_TRACKS_DIR = $PROJECT_ROOT . 'metadata/jbrowse2-configs/tracks';
+// Get paths from config
+$SITE_PATH = $config->getPath('site_path');
+$METADATA_ASSEMBLIES_DIR = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
+$JBROWSE_CONFIGS_DIR = $SITE_PATH . '/jbrowse2/configs';
+$JBROWSE_TRACKS_DIR = $config->getPath('metadata_path') . '/jbrowse2-configs/tracks';
+$GENOMES_DIR = $SITE_PATH . '/data/genomes';
 
 // Create configs directory if it doesn't exist
 if (!is_dir($JBROWSE_CONFIGS_DIR)) {
@@ -67,7 +71,7 @@ function generateAssemblyConfig($assemblyDef, $jbrowseTracksDir) {
  * Generate cached configs per access level
  * Filters tracks based on access_level metadata
  */
-function generateCachedConfigs($assemblyDef, $jbrowseTracksDir, $assemblyDir) {
+function generateCachedConfigs($assemblyDef, $jbrowseTracksDir, $assemblyDir, $genomesDir) {
     $assemblyName = $assemblyDef['name'];
     
     // Define access hierarchy
@@ -114,6 +118,70 @@ function generateCachedConfigs($assemblyDef, $jbrowseTracksDir, $assemblyDir) {
         $config = $baseConfig;
         $userLevel = $accessHierarchy[$level];
         
+        // Add annotations track if GFF file exists (PUBLIC access for all)
+        // Extract organism and assembly from assembly definition, not from name parsing
+        $organism = $assemblyDef['organism'] ?? null;
+        $assemblyId = $assemblyDef['assemblyId'] ?? null;
+        
+        if ($organism && $assemblyId) {
+            $annotationsFile = $genomesDir . "/{$organism}/{$assemblyId}/annotations.gff3.gz";
+            if (file_exists($annotationsFile)) {
+                $trackId = "{$assemblyName}-genes";
+                
+                // Build base track config
+                $annotationTrack = [
+                    'type' => 'FeatureTrack',
+                    'trackId' => $trackId,
+                    'name' => 'Gene Annotations',
+                    'assemblyNames' => [$assemblyName],
+                    'category' => ['Annotation'],
+                    'adapter' => [
+                        'type' => 'Gff3TabixAdapter',
+                        'gffGzLocation' => [
+                            'uri' => "/moop/data/genomes/{$organism}/{$assemblyId}/annotations.gff3.gz",
+                            'locationType' => 'UriLocation'
+                        ],
+                        'index' => [
+                            'location' => [
+                                'uri' => "/moop/data/genomes/{$organism}/{$assemblyId}/annotations.gff3.gz.tbi",
+                                'locationType' => 'UriLocation'
+                            ],
+                            'indexType' => 'TBI'
+                        ]
+                    ]
+                ];
+                
+                // Check if text search index exists
+                $trixBaseDir = dirname($genomesDir) . '/tracks/trix';  // Use dirname for proper path
+                $ixFile = "{$trixBaseDir}/{$trackId}.ix";
+                
+                if (file_exists($ixFile)) {
+                    // Add text search configuration
+                    $annotationTrack['textSearching'] = [
+                        'textSearchAdapter' => [
+                            'type' => 'TrixTextSearchAdapter',
+                            'textSearchAdapterId' => "{$trackId}-index",
+                            'ixFilePath' => [
+                                'uri' => "/moop/data/tracks/trix/{$trackId}.ix",
+                                'locationType' => 'UriLocation'
+                            ],
+                            'ixxFilePath' => [
+                                'uri' => "/moop/data/tracks/trix/{$trackId}.ixx",
+                                'locationType' => 'UriLocation'
+                            ],
+                            'metaFilePath' => [
+                                'uri' => "/moop/data/tracks/trix/{$trackId}_meta.json",
+                                'locationType' => 'UriLocation'
+                            ],
+                            'assemblyNames' => [$assemblyName]
+                        ]
+                    ];
+                }
+                
+                $config['tracks'][] = $annotationTrack;
+            }
+        }
+        
         // Filter tracks based on access level
         foreach ($allTracks as $track) {
             $trackAccessLevel = $track['metadata']['access_level'] ?? 'PUBLIC';
@@ -137,7 +205,7 @@ function generateCachedConfigs($assemblyDef, $jbrowseTracksDir, $assemblyDir) {
 /**
  * Process all assemblies and generate config files
  */
-function processAssemblies($metadataDir, $jbrowseDir, $tracksDir) {
+function processAssemblies($metadataDir, $jbrowseDir, $tracksDir, $genomesDir) {
     $count = 0;
     $errors = [];
     
@@ -175,8 +243,8 @@ function processAssemblies($metadataDir, $jbrowseDir, $tracksDir) {
             
             echo "✓ Generated config for: $assemblyName\n";
             
-            // Generate cached configs per access level
-            generateCachedConfigs($assemblyDef, $tracksDir, $assemblyDir);
+            // Generate cached configs per access level (with genomes dir)
+            generateCachedConfigs($assemblyDef, $tracksDir, $assemblyDir, $genomesDir);
             
             $count++;
             
@@ -194,7 +262,7 @@ echo "Metadata dir: $METADATA_ASSEMBLIES_DIR\n";
 echo "Output dir: $JBROWSE_CONFIGS_DIR\n";
 echo "---\n";
 
-$result = processAssemblies($METADATA_ASSEMBLIES_DIR, $JBROWSE_CONFIGS_DIR, $JBROWSE_TRACKS_DIR);
+$result = processAssemblies($METADATA_ASSEMBLIES_DIR, $JBROWSE_CONFIGS_DIR, $JBROWSE_TRACKS_DIR, $GENOMES_DIR);
 
 echo "---\n";
 echo "Generated {$result['count']} config files\n";

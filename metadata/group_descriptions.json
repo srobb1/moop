@@ -78,7 +78,7 @@
         "in_use": true
     },
     {
-        "group_name": "Public",
+        "group_name": "PUBLIC",
         "images": [
             {
                 "file": "",
@@ -87,7 +87,7 @@
         ],
         "html_p": [
             {
-                "text": "Stowers Researchers have published articles on a wide variety of organisms. Here are some.",
+                "text": "",
                 "style": "",
                 "class": ""
             }
@@ -130,6 +130,23 @@
             }
         ],
         "in_use": true
+    },
+    {
+        "group_name": "Public",
+        "images": [
+            {
+                "file": "",
+                "caption": ""
+            }
+        ],
+        "html_p": [
+            {
+                "text": "Stowers Researchers have published articles on a wide variety of organisms. Here are some.",
+                "style": "",
+                "class": ""
+            }
+        ],
+        "in_use": false
     },
     {
         "group_name": "No Data",
