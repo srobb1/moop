@@ -970,7 +970,6 @@ def generate_single_track(row, organism, assembly, moop_root, default_color='Dod
     for key, value in row.items():
         if key not in required_fields and value and value.strip():
             metadata[key] = value.strip()
-        return 'skipped'
     
     # Determine track type first (needed for AUTO path resolution)
     track_type = determine_track_type(row)
