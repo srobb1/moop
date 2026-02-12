@@ -85,6 +85,7 @@ class TrackGenerator
             'combo' => 'ComboTrack',
             'auto' => 'AutoTrack',
             'vcf' => 'VCFTrack',
+            'bed' => 'BEDTrack',
             // Add more as implemented:
             // 'gff' => 'GFFTrack',
             // 'gtf' => 'GTFTrack',
@@ -419,7 +420,7 @@ class TrackGenerator
         }
         
         // Scan each track type directory
-        $trackTypeDirs = ['bigwig', 'bam', 'vcf', 'gff', 'gtf', 'cram', 'paf', 'maf', 'combo'];
+        $trackTypeDirs = ['bigwig', 'bam', 'vcf', 'bed', 'gff', 'gtf', 'cram', 'paf', 'maf', 'combo'];
         
         foreach ($trackTypeDirs as $typeDir) {
             $fullPath = "$baseDir/$typeDir";
