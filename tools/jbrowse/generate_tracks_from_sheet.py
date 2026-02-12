@@ -629,8 +629,21 @@ def setup_assembly(organism, assembly, moop_root, dry_run=False):
     return True
 
 
-def track_exists(track_id, metadata_dir):
-    """Check if track already exists"""
+def track_exists(track_id, metadata_dir, organism, assembly):
+    """
+    Check if track already exists in hierarchical structure.
+    
+    Checks all possible track type directories for the track ID.
+    Falls back to flat structure for backwards compatibility.
+    """
+    # Try hierarchical structure first
+    track_types = ['bigwig', 'bam', 'vcf', 'gff', 'gtf', 'bed', 'cram', 'paf', 'maf', 'combo', 'mcscan', 'synteny']
+    for track_type in track_types:
+        track_file = Path(metadata_dir) / organism / assembly / track_type / f"{track_id}.json"
+        if track_file.exists():
+            return True
+    
+    # Fall back to flat structure
     track_file = Path(metadata_dir) / f"{track_id}.json"
     return track_file.exists()
 
@@ -719,8 +732,6 @@ def clean_orphaned_tracks(organism, assembly, track_ids_in_sheet, moop_root, dry
     if not metadata_dir.exists():
         return 0
     
-    # Pattern to match: tracks containing organism and assembly in their metadata
-    # We need to read each JSON to check if it belongs to this organism/assembly
     removed_count = 0
     checked_count = 0
     
@@ -729,17 +740,16 @@ def clean_orphaned_tracks(organism, assembly, track_ids_in_sheet, moop_root, dry
     print(f"Checking for orphaned tracks: {organism} / {assembly}")
     print("=" * 70)
     
-    for json_file in metadata_dir.glob('*.json'):
-        checked_count += 1
-        try:
-            with open(json_file) as f:
-                metadata = json.load(f)
+    # Check hierarchical structure first
+    hierarchical_path = metadata_dir / organism / assembly
+    if hierarchical_path.exists():
+        # Scan hierarchical structure
+        for json_file in hierarchical_path.glob('*/*.json'):
+            checked_count += 1
+            try:
+                with open(json_file) as f:
+                    metadata = json.load(f)
                 
-            # Check if this track belongs to our organism/assembly
-            assembly_names = metadata.get('assemblyNames', [])
-            expected_assembly = f"{organism}_{assembly}"
-            
-            if expected_assembly in assembly_names:
                 track_id = metadata.get('trackId', '')
                 
                 # Check if this track is in our sheet
@@ -750,10 +760,37 @@ def clean_orphaned_tracks(organism, assembly, track_ids_in_sheet, moop_root, dry
                         print(f"  Removing orphaned track: {track_id}")
                         json_file.unlink()
                     removed_count += 1
+                        
+            except Exception as e:
+                print(f"  ⚠ Error reading {json_file.name}: {e}")
+                continue
+    else:
+        # Fall back to flat structure
+        expected_assembly = f"{organism}_{assembly}"
+        for json_file in metadata_dir.glob('*.json'):
+            checked_count += 1
+            try:
+                with open(json_file) as f:
+                    metadata = json.load(f)
                     
-        except Exception as e:
-            print(f"  ⚠ Error reading {json_file.name}: {e}")
-            continue
+                # Check if this track belongs to our organism/assembly
+                assembly_names = metadata.get('assemblyNames', [])
+                
+                if expected_assembly in assembly_names:
+                    track_id = metadata.get('trackId', '')
+                    
+                    # Check if this track is in our sheet
+                    if track_id and track_id not in track_ids_in_sheet:
+                        if dry_run:
+                            print(f"  [DRY RUN] Would remove: {track_id} ({json_file.name})")
+                        else:
+                            print(f"  Removing orphaned track: {track_id}")
+                            json_file.unlink()
+                        removed_count += 1
+                        
+            except Exception as e:
+                print(f"  ⚠ Error reading {json_file.name}: {e}")
+                continue
     
     print(f"Checked {checked_count} track files, removed {removed_count} orphaned tracks")
     print("=" * 70)
@@ -975,7 +1012,7 @@ def generate_single_track(row, organism, assembly, moop_root, default_color='Dod
         elif track_id in force_track_ids:  # --force TRACK_ID
             should_force = True
     
-    if track_exists(track_id, metadata_dir):
+    if track_exists(track_id, metadata_dir, organism, assembly):
         if should_force:
             print(f"→ Regenerating existing track: {track_id}")
         else:
@@ -1230,7 +1267,7 @@ def generate_synteny_track(row, moop_root, dry_run=False):
     
     # Check if track exists
     metadata_dir = Path(moop_root) / 'metadata' / 'jbrowse2-configs' / 'tracks'
-    if track_exists(track_id, metadata_dir):
+    if track_exists(track_id, metadata_dir, organism, assembly):
         print(f"✓ Synteny track exists: {track_id}")
         return True
     
@@ -1321,7 +1358,7 @@ def generate_combo_track(combo_name, combo_data, organism, assembly, moop_root, 
     
     # Check if track exists
     metadata_dir = Path(moop_root) / 'metadata' / 'jbrowse2-configs' / 'tracks'
-    if track_exists(track_id, metadata_dir):
+    if track_exists(track_id, metadata_dir, organism, assembly):
         print(f"✓ Combo track exists: {combo_name}")
         return True
     
@@ -1479,13 +1516,14 @@ def main():
         expected_assembly = f"{args.organism}_{args.assembly}"
         tracks = []
         
-        for json_file in sorted(metadata_dir.glob('*.json')):
-            try:
-                with open(json_file) as f:
-                    metadata = json.load(f)
-                
-                assembly_names = metadata.get('assemblyNames', [])
-                if expected_assembly in assembly_names:
+        # Try hierarchical structure first
+        hierarchical_path = metadata_dir / args.organism / args.assembly
+        if hierarchical_path.exists():
+            for json_file in sorted(hierarchical_path.glob('*/*.json')):
+                try:
+                    with open(json_file) as f:
+                        metadata = json.load(f)
+                    
                     track_id = metadata.get('trackId', '')
                     track_name = metadata.get('name', '')
                     track_type = metadata.get('type', '')
@@ -1495,8 +1533,28 @@ def main():
                         'type': track_type,
                         'file': json_file.name
                     })
-            except Exception as e:
-                continue
+                except Exception as e:
+                    continue
+        else:
+            # Fall back to flat structure
+            for json_file in sorted(metadata_dir.glob('*.json')):
+                try:
+                    with open(json_file) as f:
+                        metadata = json.load(f)
+                    
+                    assembly_names = metadata.get('assemblyNames', [])
+                    if expected_assembly in assembly_names:
+                        track_id = metadata.get('trackId', '')
+                        track_name = metadata.get('name', '')
+                        track_type = metadata.get('type', '')
+                        tracks.append({
+                            'id': track_id,
+                            'name': track_name,
+                            'type': track_type,
+                            'file': json_file.name
+                        })
+                except Exception as e:
+                    continue
         
         if not tracks:
             print(f"No tracks found for {args.organism} / {args.assembly}")

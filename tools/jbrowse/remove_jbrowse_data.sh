@@ -154,8 +154,15 @@ case $SCOPE in
         
     assembly)
         # Track metadata for this assembly
-        if [ -d "$METADATA_TRACKS_DIR" ]; then
-            # Currently flat structure - find tracks belonging to this assembly
+        if [ -d "$METADATA_TRACKS_DIR/$ORGANISM/$ASSEMBLY" ]; then
+            # Hierarchical structure
+            for json in "$METADATA_TRACKS_DIR/$ORGANISM/$ASSEMBLY"/*/*.json; do
+                [ -f "$json" ] || continue
+                items_to_remove+=("$json")
+                echo "  - Track: $(basename "$json")"
+            done
+        elif [ -d "$METADATA_TRACKS_DIR" ]; then
+            # Fall back to flat structure
             for json in "$METADATA_TRACKS_DIR"/*.json; do
                 [ -f "$json" ] || continue
                 # Check if track belongs to this organism/assembly

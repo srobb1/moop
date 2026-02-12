@@ -189,8 +189,11 @@ fi
 
 log_info "  URI: $FILE_URI"
 
-# Create track metadata JSON
-METADATA_FILE="$METADATA_DIR/${TRACK_ID}.json"
+# Create track metadata JSON with hierarchical structure
+TRACK_TYPE="bigwig"
+TRACK_DIR="$METADATA_DIR/${ORGANISM}/${ASSEMBLY}/${TRACK_TYPE}"
+mkdir -p "$TRACK_DIR"
+METADATA_FILE="$TRACK_DIR/${TRACK_ID}.json"
 
 log_info "Creating track metadata: $METADATA_FILE"
 

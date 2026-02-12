@@ -114,7 +114,21 @@ $assembly_config = [
 // 3. LOAD ALL AVAILABLE TRACK CONFIGS
 $metadata_path = __DIR__ . '/../../metadata';
 $tracks_dir = "$metadata_path/jbrowse2-configs/tracks";
-$track_files = glob("$tracks_dir/*.json");
+
+// Load tracks from hierarchical structure: tracks/organism/assembly/type/*.json
+// Falls back to flat structure for backwards compatibility
+$track_files = [];
+if (is_dir($tracks_dir)) {
+    // Try hierarchical structure first
+    $hierarchical_files = glob("$tracks_dir/$organism/$assembly/*/*.json");
+    if (!empty($hierarchical_files)) {
+        $track_files = $hierarchical_files;
+    } else {
+        // Fall back to flat structure
+        $track_files = glob("$tracks_dir/*.json");
+    }
+}
+
 $available_tracks = [];
 
 if (!is_dir($tracks_dir)) {

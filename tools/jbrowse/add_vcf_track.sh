@@ -220,8 +220,11 @@ log_info "Gathering VCF statistics..."
 VARIANT_COUNT=$(zcat "$TARGET_PATH" | grep -v "^#" | wc -l | tr -d ' ')
 SAMPLE_COUNT=$(zcat "$TARGET_PATH" | grep "^#CHROM" | head -1 | awk '{print NF-9}')
 
-# Create track metadata JSON
-METADATA_FILE="$METADATA_DIR/${TRACK_ID}.json"
+# Create track metadata JSON with hierarchical structure
+TRACK_TYPE="vcf"
+TRACK_DIR="$METADATA_DIR/${ORGANISM}/${ASSEMBLY}/${TRACK_TYPE}"
+mkdir -p "$TRACK_DIR"
+METADATA_FILE="$TRACK_DIR/${TRACK_ID}.json"
 
 log_info "Creating track metadata: $METADATA_FILE"
 
