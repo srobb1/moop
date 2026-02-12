@@ -1,28 +1,56 @@
 # JBrowse2 Documentation Archive
 
-**Date Archived:** February 6, 2026  
-**Reason:** Documentation consolidation
+**Date Archived:** February 6, 2026 (Initial)  
+**Updated:** February 12, 2026 (Reorganization)  
+**Reason:** Documentation consolidation and organization
 
 ---
 
 ## What Happened
 
-The JBrowse2 documentation was reorganized for better maintainability:
+The JBrowse2 documentation has been reorganized multiple times for better maintainability:
 
-- **Before:** 22+ separate documentation files
-- **After:** 7 consolidated guides
+- **Before (Feb 6):** 22+ separate documentation files
+- **After (Feb 6):** 7 consolidated guides  
+- **Current (Feb 12):** Organized into directories: reference/, technical/, workflows/, archive/
 
-## New Documentation Structure
+## New Documentation Structure (Feb 12, 2026)
 
-See the parent directory for the new documentation:
+See the parent directory for current documentation:
 
+### Core Guides (Top Level)
 - `README.md` - Overview and quick start
 - `USER_GUIDE.md` - For end users
 - `ADMIN_GUIDE.md` - For administrators
 - `DEVELOPER_GUIDE.md` - For developers
-- `API_REFERENCE.md` - API documentation
-- `SECURITY.md` - Security architecture
-- `IMPLEMENTATION_REVIEW.md` - Code review and recommendations
+- `SETUP_NEW_ORGANISM.md` - Setup workflow
+
+### Organized by Category
+- **reference/** - Track type references and API docs
+- **technical/** - Security, no-copy policy, infrastructure  
+- **workflows/** - Google Sheets integration and examples
+- **archive/** - Historical docs (you are here)
+
+## Archive Contents
+
+### examples/
+Current implementations and walkthroughs:
+- Nematostella vectensis complete example
+- Google Sheets integration variations
+- Fresh setup test results
+
+### reviews/
+Code reviews and analysis:
+- generate_tracks_from_sheet.py code review
+- JBrowse CLI comparison
+- Implementation reviews
+
+### sessions/
+Development session notes and planning:
+- Cached config system design discussions
+- TODO lists (completed)
+- Progress checklists
+- Track scripts planning
 
 ## Archived Files
 

@@ -2,7 +2,7 @@
 
 **Version:** 1.0  
 **Status:** Production Ready  
-**Last Updated:** February 6, 2026
+**Last Updated:** February 12, 2026
 
 ---
 
@@ -12,11 +12,12 @@ JBrowse2 is integrated into MOOP to provide dynamic, permission-based genome bro
 
 ### Key Features
 
-- ✅ **Dynamic Configuration** - Assemblies loaded based on user permissions
-- ✅ **JWT Authentication** - Secure track access with token validation
+- ✅ **Google Sheets Integration** - Manage tracks via spreadsheet
+- ✅ **Zero-Copy Policy** - No file duplication (50% storage savings)
+- ✅ **Dynamic Configuration** - Assemblies loaded based on permissions
+- ✅ **JWT Authentication** - Secure track access
 - ✅ **Access Levels** - Public, Collaborator, and Admin tiers
-- ✅ **Modular Metadata** - Easy to add/remove assemblies
-- ✅ **Bulk Loading** - Scripts to process multiple genomes at once
+- ✅ **Multiple Track Types** - BigWig, BAM, VCF, GFF, synteny, and more
 
 ### Access URL
 
@@ -52,6 +53,44 @@ See [ADMIN_GUIDE.md](ADMIN_GUIDE.md) for complete setup instructions.
 4. JWT tokens secure track file access
 
 See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for architecture details.
+
+---
+
+## Documentation Structure
+
+This documentation is organized into the following sections:
+
+### Core Guides (This Directory)
+- **[README.md](README.md)** - This file (overview and quick start)
+- **[USER_GUIDE.md](USER_GUIDE.md)** - For end users browsing genomes
+- **[ADMIN_GUIDE.md](ADMIN_GUIDE.md)** - For administrators managing assemblies
+- **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** - For developers and integrators
+- **[SETUP_NEW_ORGANISM.md](SETUP_NEW_ORGANISM.md)** - Complete workflow for adding organisms
+
+### Reference Documentation
+📁 **[reference/](reference/)** - Track types, formats, and API reference
+- Supported formats and track types
+- Multi-BigWig combo tracks
+- Synteny tracks (PAF, MAF, MCScan)
+- Color groups and API reference
+
+### Technical Documentation
+📁 **[technical/](technical/)** - Implementation details and infrastructure
+- **NO_COPY_FILE_HANDLING.md** ⭐ Zero-copy policy
+- Security and access control
+- Config generation and caching
+- Remote tracks server setup
+
+### Workflows
+📁 **[workflows/](workflows/)** - Step-by-step workflows
+- **GOOGLE_SHEETS_WORKFLOW.md** ⭐ Google Sheets integration
+- Example Google Sheet template
+
+### Archive
+📁 **[archive/](archive/)** - Historical docs and examples
+- Nematostella vectensis example
+- Session notes and code reviews
+- Legacy documentation
 
 ---
 
