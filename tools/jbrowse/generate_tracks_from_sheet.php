@@ -24,6 +24,12 @@ require_once __DIR__ . '/../../lib/JBrowse/TrackGenerator.php';
 // Parse command line arguments
 $options = parseArguments($argv);
 
+// Handle --list-colors flag
+if (!empty($options['list_colors'])) {
+    listColorSchemes();
+    exit(0);
+}
+
 // Validate required arguments
 if (empty($options['sheet_id'])) {
     showUsage();
@@ -227,6 +233,10 @@ function parseArguments($argv)
                 $options['clean'] = true;
                 break;
                 
+            case '--list-colors':
+                $options['list_colors'] = true;
+                break;
+                
             case '--help':
             case '-h':
                 showUsage();
@@ -254,6 +264,7 @@ function showUsage()
     echo "  --force [TRACK_IDS...]    Force regenerate tracks (all if no IDs given)\n";
     echo "  --dry-run                 Show what would be done without making changes\n";
     echo "  --clean                   Remove tracks not in sheet\n";
+    echo "  --list-colors             List available color schemes for combo tracks\n";
     echo "  --help, -h                Show this help message\n\n";
     echo "EXAMPLES:\n";
     echo "  # Generate all new tracks\n";
