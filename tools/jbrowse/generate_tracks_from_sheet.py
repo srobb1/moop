@@ -888,38 +888,22 @@ def parse_maf_samples(maf_path):
         return None
 
 
-def add_metadata_to_cmd(cmd, description='', technique='', institute='', source='', 
-                        experiment='', developmental_stage='', tissue='', condition='',
-                        summary='', citation='', project='', accession='', date='', analyst=''):
-    """Helper to add all metadata fields to a command"""
-    if description:
-        cmd.extend(['--description', description])
-    if technique:
-        cmd.extend(['--technique', technique])
-    if institute:
-        cmd.extend(['--institute', institute])
-    if source:
-        cmd.extend(['--source', source])
-    if experiment:
-        cmd.extend(['--experiment', experiment])
-    if developmental_stage:
-        cmd.extend(['--developmental-stage', developmental_stage])
-    if tissue:
-        cmd.extend(['--tissue', tissue])
-    if condition:
-        cmd.extend(['--condition', condition])
-    if summary:
-        cmd.extend(['--summary', summary])
-    if citation:
-        cmd.extend(['--citation', citation])
-    if project:
-        cmd.extend(['--project', project])
-    if accession:
-        cmd.extend(['--accession', accession])
-    if date:
-        cmd.extend(['--date', date])
-    if analyst:
-        cmd.extend(['--analyst', analyst])
+def add_metadata_to_cmd(cmd, metadata):
+    """
+    Helper to add all metadata fields to a command dynamically.
+    
+    Args:
+        cmd: Command list to extend
+        metadata: Dictionary of metadata key-value pairs
+        
+    Returns:
+        Updated cmd list
+    """
+    for key, value in metadata.items():
+        if value:  # Only add non-empty values
+            # Convert underscores to hyphens for command-line args
+            arg_name = key.replace('_', '-')
+            cmd.extend([f'--{arg_name}', value])
     return cmd
 
 
@@ -929,30 +913,23 @@ def generate_single_track(row, organism, assembly, moop_root, default_color='Dod
     Args:
         force_track_ids: None (check exists), [] (force all), or ['id1', 'id2'] (force specific)
     """
+    # Required fields
     track_id = row.get('track_id', '')
     name = row.get('name', '')
     track_path = row.get('TRACK_PATH', '')
     category = row.get('category', 'Uncategorized')
     access = row.get('access_level', 'PUBLIC')
     
-    # Extract all metadata fields from Google Sheet
-    description = row.get('description', '')
-    technique = row.get('technique', '')
-    institute = row.get('institute', '')
-    source = row.get('source', '')
-    experiment = row.get('experiment', '')
-    developmental_stage = row.get('developmental_stage', '')
-    tissue = row.get('tissue', '')
-    condition = row.get('condition', '')
-    summary = row.get('summary', '')
-    citation = row.get('citation', '')
-    project = row.get('project', '')
-    accession = row.get('accession', '')
-    date = row.get('date', '')
-    analyst = row.get('analyst', '')
-    
     if not track_id or not name or not track_path:
         print(f"⚠ Skipping incomplete row: track_id={track_id}, name={name}, TRACK_PATH={track_path}")
+        return 'skipped'
+    
+    # Extract ALL metadata fields dynamically (skip required fields and empty values)
+    required_fields = {'track_id', 'name', 'TRACK_PATH', 'category', 'access_level', 'color_group'}
+    metadata = {}
+    for key, value in row.items():
+        if key not in required_fields and value and value.strip():
+            metadata[key] = value.strip()
         return 'skipped'
     
     # Determine track type first (needed for AUTO path resolution)
@@ -1024,9 +1001,7 @@ def generate_single_track(row, organism, assembly, moop_root, default_color='Dod
             '--color', default_color,
             '--force'  # Skip overwrite prompts
         ]
-        add_metadata_to_cmd(cmd, description, technique, institute, source, experiment,
-                           developmental_stage, tissue, condition, summary, citation,
-                           project, accession, date, analyst)
+        add_metadata_to_cmd(cmd, metadata)
     
     elif track_type == 'bam':
         cmd = [
@@ -1038,9 +1013,7 @@ def generate_single_track(row, organism, assembly, moop_root, default_color='Dod
             '--access', access,
             '--force'
         ]
-        add_metadata_to_cmd(cmd, description, technique, institute, source, experiment,
-                           developmental_stage, tissue, condition, summary, citation,
-                           project, accession, date, analyst)
+        add_metadata_to_cmd(cmd, metadata)
     
     elif track_type == 'vcf':
         cmd = [
@@ -1052,9 +1025,7 @@ def generate_single_track(row, organism, assembly, moop_root, default_color='Dod
             '--access', access,
             '--force'
         ]
-        add_metadata_to_cmd(cmd, description, technique, institute, source, experiment,
-                           developmental_stage, tissue, condition, summary, citation,
-                           project, accession, date, analyst)
+        add_metadata_to_cmd(cmd, metadata)
     
     elif track_type == 'gff':
         cmd = [
