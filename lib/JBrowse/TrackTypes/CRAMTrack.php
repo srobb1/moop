@@ -71,8 +71,8 @@ class CramTrack implements TrackTypeInterface
         
         // Check for CRAI index
         if ($this->requiresIndex()) {
-            $baiPath = $this->findBaiIndex($filePath);
-            if (!$baiPath) {
+            $craiPath = $this->findCraiIndex($filePath);
+            if (!$craiPath) {
                 $errors[] = "CRAI index not found. Create with: samtools index $filePath";
             }
         }
@@ -152,18 +152,18 @@ class CramTrack implements TrackTypeInterface
     /**
      * Find CRAI index file
      */
-    private function findBaiIndex(string $cramPath): ?string
+    private function findCraiIndex(string $cramPath): ?string
     {
         // Try .cram.crai
-        $baiPath = $cramPath . '.crai';
-        if (file_exists($baiPath)) {
-            return $baiPath;
+        $craiPath = $cramPath . '.crai';
+        if (file_exists($craiPath)) {
+            return $craiPath;
         }
         
         // Try .crai (replace .cram)
-        $baiPath = preg_replace('/\.cram$/i', '.crai', $cramPath);
-        if (file_exists($baiPath)) {
-            return $baiPath;
+        $craiPath = preg_replace('/\.cram$/i', '.crai', $cramPath);
+        if (file_exists($craiPath)) {
+            return $craiPath;
         }
         
         return null;
@@ -223,8 +223,8 @@ class CramTrack implements TrackTypeInterface
         $skipStats = $options['skip_stats'] ?? false;
         
         // Find CRAI index
-        $baiPath = $this->findBaiIndex($filePath);
-        if (!$baiPath) {
+        $craiPath = $this->findCraiIndex($filePath);
+        if (!$craiPath) {
             throw new Exception("CRAI index not found for $filePath");
         }
         
@@ -234,10 +234,10 @@ class CramTrack implements TrackTypeInterface
         // Get URIs for web access
         if ($isRemote) {
             $cramUri = $filePath;
-            $baiUri = $filePath . '.crai';
+            $craiUri = $filePath . '.crai';
         } else {
             $cramUri = $this->pathResolver->toWebUri($filePath);
-            $baiUri = $this->pathResolver->toWebUri($baiPath);
+            $craiUri = $this->pathResolver->toWebUri($craiPath);
         }
         
         // Get CRAM statistics
@@ -256,11 +256,9 @@ class CramTrack implements TrackTypeInterface
                     'uri' => $cramUri,
                     'locationType' => 'UriLocation'
                 ],
-                'index' => [
-                    'location' => [
-                        'uri' => $baiUri,
-                        'locationType' => 'UriLocation'
-                    ]
+                'craiLocation' => [
+                    'uri' => $craiUri,
+                    'locationType' => 'UriLocation'
                 ]
             ],
             'displays' => [
