@@ -957,6 +957,7 @@ def generate_single_track(row, organism, assembly, moop_root, default_color='Dod
             return True
     
     if dry_run:
+        print(f"  Track ID: {track_id}")
         print(f"  [DRY RUN] Would create: {track_type} track '{name}' from {resolved_path}")
         return True
     
@@ -1370,6 +1371,10 @@ def main():
                        help='Force regenerate tracks. No args = all tracks, or specify track IDs')
     parser.add_argument('--clean', action='store_true', 
                        help='Remove track JSONs not in sheet (for this organism/assembly)')
+    parser.add_argument('--list-track-ids', action='store_true', 
+                       help='List track IDs that would be created from sheet and exit')
+    parser.add_argument('--list-existing', action='store_true',
+                       help='List existing track IDs for organism/assembly and exit')
     parser.add_argument('--list-colors', action='store_true', help='List all available color groups and exit')
     parser.add_argument('--suggest-colors', type=int, metavar='N', help='Suggest color groups for N files')
     
@@ -1433,6 +1438,78 @@ def main():
         print("=" * 80)
         return
     
+    # Handle --list-existing (show existing tracks)
+    if args.list_existing:
+        if not args.organism or not args.assembly:
+            parser.error('--list-existing requires --organism and --assembly')
+        
+        print("=" * 80)
+        print(f"EXISTING TRACKS: {args.organism} / {args.assembly}")
+        print("=" * 80)
+        print()
+        
+        metadata_dir = Path(args.moop_root) / 'metadata' / 'jbrowse2-configs' / 'tracks'
+        
+        if not metadata_dir.exists():
+            print("No tracks directory found")
+            return
+        
+        # Find all tracks for this organism/assembly
+        expected_assembly = f"{args.organism}_{args.assembly}"
+        tracks = []
+        
+        for json_file in sorted(metadata_dir.glob('*.json')):
+            try:
+                with open(json_file) as f:
+                    metadata = json.load(f)
+                
+                assembly_names = metadata.get('assemblyNames', [])
+                if expected_assembly in assembly_names:
+                    track_id = metadata.get('trackId', '')
+                    track_name = metadata.get('name', '')
+                    track_type = metadata.get('type', '')
+                    tracks.append({
+                        'id': track_id,
+                        'name': track_name,
+                        'type': track_type,
+                        'file': json_file.name
+                    })
+            except Exception as e:
+                continue
+        
+        if not tracks:
+            print(f"No tracks found for {args.organism} / {args.assembly}")
+        else:
+            print(f"Found {len(tracks)} tracks:\n")
+            
+            # Group by type
+            by_type = {}
+            for track in tracks:
+                ttype = track['type']
+                if ttype not in by_type:
+                    by_type[ttype] = []
+                by_type[ttype].append(track)
+            
+            for ttype in sorted(by_type.keys()):
+                print(f"{ttype} ({len(by_type[ttype])} tracks):")
+                print("-" * 80)
+                for track in by_type[ttype]:
+                    print(f"  {track['id']}")
+                    print(f"    → \"{track['name']}\"")
+                print()
+        
+        print("=" * 80)
+        print("USAGE:")
+        print(f"  # Remove single track:")
+        print(f"  ./tools/jbrowse/remove_jbrowse_data.sh --track TRACK_ID \\")
+        print(f"    --organism {args.organism} --assembly {args.assembly}")
+        print()
+        print(f"  # Regenerate single track:")
+        print(f"  python3 {sys.argv[0]} SHEET_ID --force TRACK_ID \\")
+        print(f"    --organism {args.organism} --assembly {args.assembly}")
+        print("=" * 80)
+        return
+    
     # Require sheet_id, organism, and assembly for track generation
     if not args.sheet_id or not args.organism or not args.assembly:
         parser.error('sheet_id, --organism, and --assembly are required (unless using --list-colors or --suggest-colors)')
@@ -1469,6 +1546,45 @@ def main():
     print(f"Found {len(regular_tracks)} regular tracks")
     print(f"Found {len(combo_tracks)} combo tracks")
     print()
+    
+    # Handle --list-track-ids (show what would be created from sheet)
+    if args.list_track_ids:
+        print("=" * 80)
+        print("TRACK IDs FROM GOOGLE SHEET")
+        print("=" * 80)
+        print()
+        
+        if regular_tracks:
+            print(f"Regular Tracks ({len(regular_tracks)}):")
+            print("-" * 80)
+            for track in regular_tracks:
+                track_id = track.get('track_id', '')
+                name = track.get('name', '')
+                track_type = determine_track_type(track)
+                print(f"  {track_id}")
+                print(f"    → \"{name}\" ({track_type})")
+            print()
+        
+        if combo_tracks:
+            print(f"Combo Tracks ({len(combo_tracks)}):")
+            print("-" * 80)
+            for combo_name in combo_tracks.keys():
+                combo_track_id = combo_name.lower().replace(' ', '_').replace(',', '')
+                print(f"  {combo_track_id}")
+                print(f"    → \"{combo_name}\" (multi-bigwig)")
+            print()
+        
+        print("=" * 80)
+        print("USAGE:")
+        print(f"  # Create all tracks:")
+        print(f"  python3 {sys.argv[0]} SHEET_ID \\")
+        print(f"    --organism {args.organism} --assembly {args.assembly}")
+        print()
+        print(f"  # Force regenerate specific track:")
+        print(f"  python3 {sys.argv[0]} SHEET_ID --force TRACK_ID \\")
+        print(f"    --organism {args.organism} --assembly {args.assembly}")
+        print("=" * 80)
+        return
     
     # Check for duplicate track_ids
     track_id_map = {}
