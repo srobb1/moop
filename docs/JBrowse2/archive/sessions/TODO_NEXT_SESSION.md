@@ -447,3 +447,346 @@ curl -s "http://localhost:8888/api/jbrowse2/test-assembly.php?organism=Nematoste
 ---
 
 **Status:** Ready for final fixes and production deployment! 🚀
+
+---
+
+## 🎯 NEW PRIORITIES - February 12, 2026
+
+**Date Added:** 2026-02-12 00:41 UTC  
+**Status:** Planning Phase
+
+### Overview of Needed Improvements
+
+Based on production use, we've identified 5 key improvements needed:
+
+1. **Hierarchical Track Metadata** - Scale to hundreds of tracks
+2. **Complete Metadata Fields** - Capture all Google Sheet data
+3. **Track ID Display Helper** - See generated IDs before creation
+4. **Removal Scripts** - Clean up tracks/assemblies easily
+5. **Fresh Test Cleanup** - Reset Nematostella for testing
+
+---
+
+## 🔧 TASK 1: Hierarchical Track Metadata Structure (PRIORITY: HIGH)
+
+**Problem:** All 27+ track JSONs in one flat directory will become unmanageable
+
+**Current Structure:**
+```
+metadata/jbrowse2-configs/tracks/
+├── MOLNG-2707_S1-body-wall.pos.bw.json
+├── MOLNG-2707_S1-body-wall.neg.bw.json
+├── Anoura_caudifer_coverage.bw.json
+└── ... (all tracks mixed together)
+```
+
+**Proposed Structure:**
+```
+metadata/jbrowse2-configs/tracks/
+├── Nematostella_vectensis/
+│   └── GCA_033964005.1/
+│       ├── bigwig/
+│       │   ├── MOLNG-2707_S1-body-wall.pos.bw.json
+│       │   └── MOLNG-2707_S1-body-wall.neg.bw.json
+│       ├── bam/
+│       │   └── MOLNG-2707_S3-body-wall.bam.json
+│       ├── combo/
+│       │   └── simr:four_adult_tissues_molng-2707.json
+│       └── vcf/
+├── Anoura_caudifer/
+│   └── GCA_004027475.1/
+│       ├── bigwig/
+│       └── bam/
+```
+
+**Benefits:**
+- Scales to hundreds/thousands of tracks
+- Easy to see what tracks belong to which assembly
+- Easier cleanup (delete entire organism/assembly)
+- Matches data file structure in `data/tracks/`
+
+**Files to Update:**
+1. All `tools/jbrowse/add_*_track.sh` scripts
+   - Update `METADATA_DIR` path to include organism/assembly/type
+   - Create subdirectories if needed
+2. `tools/jbrowse/generate_tracks_from_sheet.py`
+   - Update `track_exists()` function
+   - Update metadata directory construction
+3. API endpoints:
+   - `api/jbrowse2/assembly.php` - reads track JSONs
+   - `api/jbrowse2/get-config.php` - if it reads tracks
+4. Create migration script:
+   - `tools/jbrowse/migrate_track_metadata.sh`
+   - Reads existing JSONs, determines organism/assembly from metadata
+   - Moves to hierarchical structure
+
+**Estimated Time:** 2-3 hours
+
+**Test Plan:**
+1. Run migration on existing tracks
+2. Verify all tracks still load in JBrowse2
+3. Create new track, confirm hierarchical placement
+4. Test --clean with hierarchical structure
+
+---
+
+## 🔧 TASK 2: Complete Metadata from Google Sheet (PRIORITY: MEDIUM)
+
+**Problem:** Not all Google Sheet columns are captured in track JSONs
+
+**Google Sheet Columns:**
+- technique, institute, source, experiment
+- developmental_stage, tissue, condition  
+- summary, citation, project, accession
+- date, analyst
+
+**Current JSON (partial):**
+```json
+{
+  "metadata": {
+    "google_sheets_metadata": {
+      "technique": "RNA-seq",
+      "institute": "",  // ← often empty
+      // ... some fields missing entirely
+    }
+  }
+}
+```
+
+**Fix:**
+1. Check which fields are being passed from Python to shell scripts
+2. Update all `add_*_track.sh` scripts to accept all fields:
+   ```bash
+   --technique, --institute, --source, --experiment
+   --developmental-stage, --tissue, --condition
+   --summary, --citation, --project, --accession
+   --date, --analyst
+   ```
+3. Ensure all fields are included in JSON output
+
+**Files to Update:**
+- All `tools/jbrowse/add_*_track.sh` scripts
+- `tools/jbrowse/generate_tracks_from_sheet.py` (verify all fields passed)
+
+**Estimated Time:** 30 minutes
+
+**Test:**
+1. Fill all metadata columns in Google Sheet
+2. Generate track
+3. Verify all fields in JSON
+
+---
+
+## 🔧 TASK 3: Track ID Display Helper (PRIORITY: LOW)
+
+**Problem:** Users don't know what track_id will be generated from display name
+
+**Example Issue:**
+- Sheet row: `name: "## simr: Four Adult Tissues"`
+- Generated ID: `simr:four_adult_tissues_molng-2707` ← user doesn't know this
+
+**Solution 1: Add `--list-track-ids` option**
+```bash
+python3 generate_tracks_from_sheet.py SHEET_ID --list-track-ids
+
+Output:
+═══════════════════════════════════════════════
+Track IDs from Google Sheet
+═══════════════════════════════════════════════
+
+Regular Tracks (24):
+  MOLNG-2707_S1-body-wall.pos.bw
+    → "MOLNG-2707 S1 Body Wall Positive"
+  
+  MOLNG-2707_S1-body-wall.neg.bw
+    → "MOLNG-2707 S1 Body Wall Negative"
+  
+  ...
+
+Combo Tracks (1):
+  simr:four_adult_tissues_molng-2707
+    → "## simr: Four Adult Tissues MOLNG-2707"
+
+═══════════════════════════════════════════════
+```
+
+**Solution 2: Enhance `--dry-run`**
+```bash
+python3 generate_tracks_from_sheet.py SHEET_ID --dry-run
+
+Output:
+→ Creating bigwig track: MOLNG-2707 S1 Body Wall Positive
+  Track ID: MOLNG-2707_S1-body-wall.pos.bw
+  [DRY RUN] Would create...
+```
+
+**Files to Update:**
+- `tools/jbrowse/generate_tracks_from_sheet.py` only
+
+**Estimated Time:** 15 minutes
+
+---
+
+## 🔧 TASK 4: Removal Scripts (PRIORITY: MEDIUM)
+
+**Problem:** No easy way to remove tracks, assemblies, or organisms
+
+**Needed Scripts:**
+
+### 4a. `remove_track.sh`
+```bash
+#!/bin/bash
+# Remove a single track
+
+./remove_track.sh TRACK_ID --organism Org --assembly Asm
+
+# Removes:
+# - metadata/jbrowse2-configs/tracks/Org/Asm/type/TRACK_ID.json
+
+# Options:
+#   --dry-run    Show what would be removed
+#   --keep-data  Only remove JSON, keep data files
+```
+
+### 4b. `remove_assembly_tracks.sh`
+```bash
+#!/bin/bash
+# Remove all tracks for an assembly
+
+./remove_assembly_tracks.sh Nematostella_vectensis GCA_033964005.1
+
+# Removes:
+# - metadata/jbrowse2-configs/tracks/Nematostella_vectensis/GCA_033964005.1/
+# - metadata/jbrowse2-configs/assemblies/Nematostella_vectensis_GCA_033964005.1.json
+# - jbrowse2/configs/Nematostella_vectensis_GCA_033964005.1/
+
+# Preserves (unless --remove-data):
+# - data/genomes/Nematostella_vectensis/GCA_033964005.1/
+# - data/tracks/Nematostella_vectensis/GCA_033964005.1/
+
+# Options:
+#   --dry-run      Show what would be removed
+#   --remove-data  Also delete genome and track data files
+```
+
+### 4c. `remove_organism_tracks.sh`
+```bash
+#!/bin/bash
+# Remove all tracks for all assemblies of an organism
+
+./remove_organism_tracks.sh Nematostella_vectensis
+
+# Removes all assemblies of the organism
+
+# Options:
+#   --dry-run      Show what would be removed  
+#   --remove-data  Also delete all data files
+```
+
+**Files to Create:**
+- `tools/jbrowse/remove_track.sh`
+- `tools/jbrowse/remove_assembly_tracks.sh`
+- `tools/jbrowse/remove_organism_tracks.sh`
+
+**Estimated Time:** 30 minutes (all three scripts)
+
+**Safety Features:**
+- Require confirmation unless `--yes` flag
+- Show what will be removed
+- Support `--dry-run`
+- Don't remove data files by default
+
+---
+
+## 🔧 TASK 5: Fresh Nematostella Test Cleanup (PRIORITY: HIGH)
+
+**Problem:** Need to clean up Nematostella to do fresh from-scratch test
+
+**Create:** `tools/jbrowse/cleanup_test_organism.sh`
+
+```bash
+#!/bin/bash
+# Cleanup script for fresh testing
+
+ORGANISM="Nematostella_vectensis"
+ASSEMBLY="GCA_033964005.1"
+
+echo "Cleaning ${ORGANISM} / ${ASSEMBLY} for fresh test..."
+
+# Remove track metadata
+echo "→ Removing track metadata..."
+rm -rf metadata/jbrowse2-configs/tracks/${ORGANISM}/
+
+# Remove assembly metadata
+echo "→ Removing assembly metadata..."
+rm -f metadata/jbrowse2-configs/assemblies/${ORGANISM}_${ASSEMBLY}.json
+
+# Remove cached configs
+echo "→ Removing cached configs..."
+rm -rf jbrowse2/configs/${ORGANISM}_${ASSEMBLY}/
+
+# PRESERVE data files (genome and tracks)
+# These stay in:
+#   data/genomes/${ORGANISM}/${ASSEMBLY}/
+#   data/tracks/${ORGANISM}/${ASSEMBLY}/
+
+echo ""
+echo "✓ Cleaned ${ORGANISM} metadata"
+echo "✓ Genome and track data files preserved"
+echo "✓ Ready for fresh test!"
+echo ""
+echo "Next steps:"
+echo "  1. python3 tools/jbrowse/generate_tracks_from_sheet.py SHEET_ID \\"
+echo "       --organism ${ORGANISM} --assembly ${ASSEMBLY}"
+echo "  2. php tools/jbrowse/generate-jbrowse-configs.php"
+```
+
+**File to Create:**
+- `tools/jbrowse/cleanup_test_organism.sh`
+
+**Estimated Time:** 10 minutes
+
+---
+
+## 📋 Implementation Order
+
+**Recommended sequence:**
+
+1. **TASK 5** - Cleanup script (10 min)
+   - Unblocks fresh testing
+   - Quick win
+
+2. **TASK 3** - Track ID display (15 min)  
+   - Helps users immediately
+   - No breaking changes
+
+3. **TASK 2** - Complete metadata (30 min)
+   - Fills in missing data
+   - Simple change
+
+4. **TASK 4** - Removal scripts (30 min)
+   - Useful for cleanup/maintenance
+   - Independent feature
+
+5. **TASK 1** - Hierarchical structure (2-3 hours)
+   - Biggest change
+   - Requires migration
+   - Save for last, do carefully
+
+**Total Time:** ~4 hours
+
+---
+
+## 🎯 SUCCESS CRITERIA
+
+After completing all tasks:
+
+- ✅ Track metadata organized hierarchically
+- ✅ All Google Sheet fields captured
+- ✅ Users can see generated track IDs
+- ✅ Easy removal of tracks/assemblies/organisms
+- ✅ Nematostella cleaned for fresh test
+
+---
+
+**Next Session Start Here!** ⬆️
