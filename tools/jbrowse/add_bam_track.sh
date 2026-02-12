@@ -21,6 +21,7 @@
 #   --category     Track category/group
 #   --access       Access level (Public, Collaborator, ALL)
 #   --description  Track description
+#   --force        Overwrite existing track without prompting
 #
 # Metadata fields (for Google Sheets integration):
 #   --technique, --institute, --source, --experiment
@@ -49,6 +50,7 @@ MOOP_ROOT="/data/moop"
 TRACKS_DIR="$MOOP_ROOT/data/tracks"
 METADATA_DIR="$MOOP_ROOT/metadata/jbrowse2-configs/tracks"
 ACCESS_LEVEL="Public"
+FORCE=0
 
 # Check for samtools
 if ! command -v samtools &> /dev/null; then
@@ -111,6 +113,7 @@ while [[ $# -gt 0 ]]; do
         --accession) ACCESSION="$2"; shift 2 ;;
         --date) DATE="$2"; shift 2 ;;
         --analyst) ANALYST="$2"; shift 2 ;;
+        --force) FORCE=1; shift ;;
         *) log_error "Unknown option: $1"; exit 1 ;;
     esac
 done
@@ -151,36 +154,28 @@ if [ -z "$CATEGORY" ]; then
     CATEGORY="Alignments"
 fi
 
-# Determine target filename
-TARGET_FILENAME="${ORGANISM}_${ASSEMBLY}_$(basename "$BAM_FILE")"
-TARGET_PATH="$TRACKS_DIR/bam/$TARGET_FILENAME"
-INDEX_PATH="${TARGET_PATH}.bai"
-
+# Use the original file path directly (no copying)
+# For web access, convert absolute path to URI
 log_info "Processing BAM file..."
 log_info "  Source: $BAM_FILE"
-log_info "  Target: $TARGET_PATH"
 log_info "  Organism: $ORGANISM"
 log_info "  Assembly: $ASSEMBLY"
 log_info "  Track ID: $TRACK_ID"
 
-# Create tracks directory if needed
-mkdir -p "$TRACKS_DIR/bam"
-
-# Copy BAM file
-if [ -f "$TARGET_PATH" ]; then
-    log_warn "Target file already exists: $TARGET_PATH"
-    read -p "Overwrite? (y/n) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        log_error "Aborted"
-        exit 1
-    fi
+# Verify source file exists
+if [ ! -f "$BAM_FILE" ]; then
+    log_error "BAM file not found: $BAM_FILE"
+    exit 1
 fi
 
-log_info "Copying BAM file to tracks directory..."
-cp "$BAM_FILE" "$TARGET_PATH"
-chmod 644 "$TARGET_PATH"
-log_success "BAM file copied"
+# Verify BAM file
+log_info "Validating BAM file..."
+if samtools quickcheck "$BAM_FILE" 2>/dev/null; then
+    log_success "Valid BAM file"
+else
+    log_error "Invalid BAM file"
+    exit 1
+fi
 
 # Check for BAI index
 BAI_SOURCE="${BAM_FILE}.bai"
@@ -189,31 +184,34 @@ if [ ! -f "$BAI_SOURCE" ]; then
     BAI_SOURCE="${BAM_FILE%.bam}.bai"
 fi
 
-if [ -f "$BAI_SOURCE" ]; then
-    log_info "Found existing BAI index, copying..."
-    cp "$BAI_SOURCE" "$INDEX_PATH"
-    chmod 644 "$INDEX_PATH"
-    log_success "BAI index copied"
-else
-    log_warn "BAI index not found, creating..."
-    samtools index "$TARGET_PATH"
-    log_success "BAI index created: $INDEX_PATH"
-fi
-
-# Verify BAM file
-log_info "Validating BAM file..."
-if samtools quickcheck "$TARGET_PATH" 2>/dev/null; then
-    log_success "Valid BAM file"
-else
-    log_error "Invalid BAM file"
-    rm -f "$TARGET_PATH" "$INDEX_PATH"
+if [ ! -f "$BAI_SOURCE" ]; then
+    log_error "BAI index not found. Please create index with: samtools index $BAM_FILE"
     exit 1
 fi
 
+log_success "BAI index found: $BAI_SOURCE"
+
+# Determine URIs for web access
+# If path starts with http:// or https://, use as-is
+# Otherwise, convert /data/moop/... to /moop/... for web access
+if [[ "$BAM_FILE" =~ ^https?:// ]]; then
+    FILE_URI="$BAM_FILE"
+    INDEX_URI="${BAM_FILE}.bai"
+    IS_REMOTE=true
+else
+    # Convert absolute paths to web-accessible URIs
+    FILE_URI="${BAM_FILE#/data}"
+    INDEX_URI="${BAI_SOURCE#/data}"
+    IS_REMOTE=false
+fi
+
+log_info "  BAM URI: $FILE_URI"
+log_info "  BAI URI: $INDEX_URI"
+
 # Get BAM statistics
 log_info "Gathering BAM statistics..."
-TOTAL_READS=$(samtools view -c "$TARGET_PATH" 2>/dev/null || echo "unknown")
-MAPPED_READS=$(samtools view -c -F 4 "$TARGET_PATH" 2>/dev/null || echo "unknown")
+TOTAL_READS=$(samtools view -c "$BAM_FILE" 2>/dev/null || echo "unknown")
+MAPPED_READS=$(samtools view -c -F 4 "$BAM_FILE" 2>/dev/null || echo "unknown")
 
 # Create track metadata JSON
 METADATA_FILE="$METADATA_DIR/${TRACK_ID}.json"
@@ -231,12 +229,12 @@ cat > "$METADATA_FILE" << EOF
   "adapter": {
     "type": "BamAdapter",
     "bamLocation": {
-      "uri": "/moop/data/tracks/bam/$TARGET_FILENAME",
+      "uri": "$FILE_URI",
       "locationType": "UriLocation"
     },
     "index": {
       "location": {
-        "uri": "/moop/data/tracks/bam/${TARGET_FILENAME}.bai",
+        "uri": "$INDEX_URI",
         "locationType": "UriLocation"
       }
     }
@@ -254,10 +252,11 @@ cat > "$METADATA_FILE" << EOF
   "metadata": {
     "description": "$DESCRIPTION",
     "access_level": "$ACCESS_LEVEL",
-    "file_path": "$TARGET_PATH",
-    "file_size": $(stat -f%z "$TARGET_PATH" 2>/dev/null || stat -c%s "$TARGET_PATH"),
+    "file_path": "$BAM_FILE",
+    "file_size": $(stat -f%z "$BAM_FILE" 2>/dev/null || stat -c%s "$BAM_FILE"),
     "total_reads": "$TOTAL_READS",
     "mapped_reads": "$MAPPED_READS",
+    "is_remote": $IS_REMOTE,
     "added_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
     "google_sheets_metadata": {
       "technique": "$TECHNIQUE",
@@ -313,4 +312,15 @@ echo "Next steps:"
 echo "  1. Track will appear in assembly: ${ORGANISM}_${ASSEMBLY}"
 echo "  2. Refresh JBrowse2 page to see the track"
 echo "  3. Edit metadata file to add/update Google Sheets data"
+echo ""
+
+# Regenerate JBrowse2 config
+log_info "Regenerating JBrowse2 configs..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if php "$SCRIPT_DIR/generate-jbrowse-configs.php" > /dev/null 2>&1; then
+    log_success "Configs regenerated - track is now visible"
+else
+    log_warn "Could not regenerate configs automatically"
+    log_warn "Run manually: php $SCRIPT_DIR/generate-jbrowse-configs.php"
+fi
 echo ""

@@ -49,6 +49,7 @@ TRACKS_DIR="$MOOP_ROOT/data/tracks"
 METADATA_DIR="$MOOP_ROOT/metadata/jbrowse2-configs/tracks"
 ACCESS_LEVEL="Public"
 COLOR="#1f77b4"
+FORCE=0
 
 # Parse arguments
 if [ $# -lt 3 ]; then
@@ -106,6 +107,7 @@ while [[ $# -gt 0 ]]; do
         --accession) ACCESSION="$2"; shift 2 ;;
         --date) DATE="$2"; shift 2 ;;
         --analyst) ANALYST="$2"; shift 2 ;;
+        --force) FORCE=1; shift ;;
         *) log_error "Unknown option: $1"; exit 1 ;;
     esac
 done
@@ -146,49 +148,46 @@ if [ -z "$CATEGORY" ]; then
     CATEGORY="Quantitative"
 fi
 
-# Determine target filename
-TARGET_FILENAME="${ORGANISM}_${ASSEMBLY}_$(basename "$BIGWIG_FILE")"
-TARGET_PATH="$TRACKS_DIR/bigwig/$TARGET_FILENAME"
-
+# Use the original file path directly (no copying)
+# For web access, convert absolute path to URI
 log_info "Processing BigWig file..."
 log_info "  Source: $BIGWIG_FILE"
-log_info "  Target: $TARGET_PATH"
 log_info "  Organism: $ORGANISM"
 log_info "  Assembly: $ASSEMBLY"
 log_info "  Track ID: $TRACK_ID"
 
-# Create tracks directory if needed
-mkdir -p "$TRACKS_DIR/bigwig"
-
-# Copy or symlink file
-if [ -f "$TARGET_PATH" ]; then
-    log_warn "Target file already exists: $TARGET_PATH"
-    read -p "Overwrite? (y/n) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        log_error "Aborted"
-        exit 1
-    fi
+# Verify source file exists
+if [ ! -f "$BIGWIG_FILE" ]; then
+    log_error "BigWig file not found: $BIGWIG_FILE"
+    exit 1
 fi
-
-log_info "Copying BigWig file to tracks directory..."
-cp "$BIGWIG_FILE" "$TARGET_PATH"
-chmod 644 "$TARGET_PATH"
-log_success "File copied"
 
 # Verify it's a valid BigWig file (optional, requires bigWigInfo)
 if command -v bigWigInfo &> /dev/null; then
     log_info "Validating BigWig format..."
-    if bigWigInfo "$TARGET_PATH" > /dev/null 2>&1; then
+    if bigWigInfo "$BIGWIG_FILE" > /dev/null 2>&1; then
         log_success "Valid BigWig file"
     else
         log_error "Invalid BigWig file format"
-        rm "$TARGET_PATH"
         exit 1
     fi
 else
     log_warn "bigWigInfo not found, skipping format validation"
 fi
+
+# Determine URI for web access
+# If path starts with http:// or https://, use as-is
+# Otherwise, convert /data/moop/... to /moop/... for web access
+if [[ "$BIGWIG_FILE" =~ ^https?:// ]]; then
+    FILE_URI="$BIGWIG_FILE"
+    IS_REMOTE=true
+else
+    # Convert absolute path to web-accessible URI
+    FILE_URI="${BIGWIG_FILE#/data}"
+    IS_REMOTE=false
+fi
+
+log_info "  URI: $FILE_URI"
 
 # Create track metadata JSON
 METADATA_FILE="$METADATA_DIR/${TRACK_ID}.json"
@@ -206,7 +205,7 @@ cat > "$METADATA_FILE" << EOF
   "adapter": {
     "type": "BigWigAdapter",
     "bigWigLocation": {
-      "uri": "/moop/data/tracks/bigwig/$TARGET_FILENAME",
+      "uri": "$FILE_URI",
       "locationType": "UriLocation"
     }
   },
@@ -223,8 +222,9 @@ cat > "$METADATA_FILE" << EOF
   "metadata": {
     "description": "$DESCRIPTION",
     "access_level": "$ACCESS_LEVEL",
-    "file_path": "$TARGET_PATH",
-    "file_size": $(stat -f%z "$TARGET_PATH" 2>/dev/null || stat -c%s "$TARGET_PATH"),
+    "file_path": "$BIGWIG_FILE",
+    "file_size": $(stat -f%z "$BIGWIG_FILE" 2>/dev/null || stat -c%s "$BIGWIG_FILE"),
+    "is_remote": $IS_REMOTE,
     "added_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
     "google_sheets_metadata": {
       "technique": "$TECHNIQUE",
@@ -282,4 +282,15 @@ echo "To add Google Sheets metadata:"
 echo "  1. Edit: $METADATA_FILE"
 echo "  2. Update the 'google_sheets_metadata' section"
 echo "  3. Or use: fetch_metadata_from_sheets.sh (when available)"
+echo ""
+
+# Regenerate JBrowse2 config
+log_info "Regenerating JBrowse2 configs..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if php "$SCRIPT_DIR/generate-jbrowse-configs.php" > /dev/null 2>&1; then
+    log_success "Configs regenerated - track is now visible"
+else
+    log_warn "Could not regenerate configs automatically"
+    log_warn "Run manually: php $SCRIPT_DIR/generate-jbrowse-configs.php"
+fi
 echo ""
