@@ -1355,15 +1355,27 @@ def generate_synteny_track(row, moop_root, dry_run=False):
         return False
 
 
-def generate_combo_track(combo_name, combo_data, organism, assembly, moop_root, dry_run=False):
+def generate_combo_track(combo_name, combo_data, organism, assembly, moop_root, dry_run=False, force_track_ids=None):
     """Generate a multi-BigWig combo track"""
     track_id = combo_name.lower().replace(' ', '_').replace(',', '')
     
     # Check if track exists
     metadata_dir = Path(moop_root) / 'metadata' / 'jbrowse2-configs' / 'tracks'
+    
+    # Determine if we should force regenerate
+    should_force = False
+    if force_track_ids is not None:  # --force was used
+        if len(force_track_ids) == 0:  # --force with no args = force all
+            should_force = True
+        elif track_id in force_track_ids:  # --force TRACK_ID
+            should_force = True
+    
     if track_exists(track_id, metadata_dir, organism, assembly):
-        print(f"✓ Combo track exists: {combo_name}")
-        return True
+        if should_force:
+            print(f"→ Regenerating combo track: {combo_name}")
+        else:
+            print(f"✓ Combo track exists: {combo_name}")
+            return True
     
     print(f"→ Creating multi-BigWig track: {combo_name}")
     
@@ -1776,7 +1788,7 @@ def main():
     failed_combos = []
     
     for combo_name, combo_data in combo_tracks.items():
-        if generate_combo_track(combo_name, combo_data, args.organism, args.assembly, args.moop_root, dry_run=args.dry_run):
+        if generate_combo_track(combo_name, combo_data, args.organism, args.assembly, args.moop_root, dry_run=args.dry_run, force_track_ids=force_track_ids):
             combo_success += 1
         else:
             failed_combos.append(combo_name)
