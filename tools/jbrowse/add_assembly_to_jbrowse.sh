@@ -435,6 +435,19 @@ main() {
 
     # Print summary
     print_summary "$organism" "$assembly_id" "$display_name" "$def_file"
+    
+    # Generate JBrowse2 static config file
+    echo ""
+    log_info "Generating JBrowse2 config file..."
+    
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if php "$SCRIPT_DIR/generate-jbrowse-configs.php" > /dev/null 2>&1; then
+        log_success "JBrowse2 config generated"
+        log_success "Assembly ready to view at: http://localhost:8000/moop/jbrowse2.php"
+    else
+        log_warn "Failed to generate JBrowse2 config - run manually:"
+        log_warn "  php $SCRIPT_DIR/generate-jbrowse-configs.php"
+    fi
 
     return 0
 }

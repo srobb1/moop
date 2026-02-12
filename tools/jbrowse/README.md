@@ -4,7 +4,37 @@ This directory contains scripts for automating the setup and bulk loading of gen
 
 ## Quick Start
 
-Load a single assembly:
+### Fastest: Google Sheets Integration (NEW!)
+
+Load organism, assembly, and all tracks from a Google Sheet in one command:
+
+```bash
+cd /data/moop
+
+# Complete setup from Google Sheet (auto-detects new organisms)
+python3 tools/jbrowse/generate_tracks_from_sheet.py "SHEET_ID" \
+    --gid 0 \
+    --organism Organism_name \
+    --assembly Assembly_ID
+
+# Generate configs
+php tools/jbrowse/generate-jbrowse-configs.php
+```
+
+**What it does:**
+- ✅ Auto-detects if organism is new
+- ✅ Runs assembly setup if needed
+- ✅ Configures reference genome automatically
+- ✅ Configures annotations automatically
+- ✅ Loads all tracks from sheet
+- ✅ Handles combo tracks
+
+See: [GOOGLE_SHEETS_COMPLETE_WORKFLOW.md](../../docs/JBrowse2/GOOGLE_SHEETS_COMPLETE_WORKFLOW.md)
+
+---
+
+### Manual: Load a Single Assembly
+
 ```bash
 cd /data/moop
 
@@ -19,7 +49,8 @@ cd jbrowse2 && npm run build
 cd .. && php -S 127.0.0.1:8888 &
 ```
 
-Load multiple assemblies automatically:
+### Bulk: Load Multiple Assemblies
+
 ```bash
 cd /data/moop
 
@@ -28,6 +59,58 @@ cd /data/moop
 ```
 
 ## Scripts
+
+### 0. generate_tracks_from_sheet.py (RECOMMENDED)
+
+**Purpose:** Complete automated setup from Google Sheets  
+**Phase:** All phases (orchestrator with auto-setup)  
+**When to use:** New organisms OR adding tracks to existing organisms
+
+**What it does:**
+- Checks if assembly exists in JBrowse2
+- **If new:** Automatically runs setup_jbrowse_assembly.sh + add_assembly_to_jbrowse.sh
+- Configures reference genome (AUTO)
+- Configures annotations (AUTO)
+- Loads all tracks from Google Sheet
+- Creates combo tracks (multi-BigWig)
+
+**Usage:**
+```bash
+python3 tools/jbrowse/generate_tracks_from_sheet.py <sheet_id> [OPTIONS]
+
+# Example: New organism (auto-setup + load tracks)
+python3 tools/jbrowse/generate_tracks_from_sheet.py \
+    "1Md23wIYo08cjtsOZMBy5UIsNaaxTxT8ijG-QLC3CjIo" \
+    --gid 1977809640 \
+    --organism Nematostella_vectensis \
+    --assembly GCA_033964005.1
+
+# Then generate configs
+php tools/jbrowse/generate-jbrowse-configs.php
+```
+
+**Options:**
+- `--gid GID` - Google Sheet GID (tab number, default: 0)
+- `--organism NAME` - Organism name (required)
+- `--assembly ID` - Assembly ID (required)
+- `--dry-run` - Show what would be done without doing it
+- `--regenerate` - Regenerate configs after loading tracks
+- `--list-colors` - List available color groups
+- `--suggest-colors N` - Suggest color groups for N tracks
+
+**Google Sheet Format:**
+```
+track_id          name                 category           TRACK_PATH
+reference_seq     Reference sequence   Genome Assembly    AUTO
+annotations       Gene annotations     Gene Models        AUTO
+sample1_pos       Sample 1 (+)         Gene Expression    /data/tracks/sample1.pos.bw
+```
+
+**Time:** 5-10 min (first time with assembly setup), 1-2 min (updates)
+
+**Documentation:** See [GOOGLE_SHEETS_COMPLETE_WORKFLOW.md](../../docs/JBrowse2/GOOGLE_SHEETS_COMPLETE_WORKFLOW.md)
+
+---
 
 ### 1. setup_jbrowse_assembly.sh
 

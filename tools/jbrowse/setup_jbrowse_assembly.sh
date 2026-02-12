@@ -445,6 +445,16 @@ main() {
         exit 1
     fi
     
+    # Convert relative path to absolute path
+    if [[ "$ORGANISM_PATH" != /* ]]; then
+        ORGANISM_PATH="$(cd "$(dirname "$ORGANISM_PATH")" 2>/dev/null && pwd)/$(basename "$ORGANISM_PATH")"
+        if [ $? -ne 0 ]; then
+            log_error "Could not resolve path: $ORGANISM_PATH"
+            exit 1
+        fi
+        log_info "Resolved to absolute path: $ORGANISM_PATH"
+    fi
+    
     # Run checks and setup
     check_dependencies || exit 1
     echo ""
