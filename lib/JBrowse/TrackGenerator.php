@@ -88,8 +88,8 @@ class TrackGenerator
             'bed' => 'BEDTrack',
             'gtf' => 'GTFTrack',
             'gff' => 'GFFTrack',
+            'cram' => 'CRAMTrack',
             // Add more as implemented:
-            // 'cram' => 'CRAMTrack',
             // 'paf' => 'PAFTrack',
             // 'maf' => 'MAFTrack',
         ];
