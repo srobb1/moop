@@ -117,6 +117,12 @@ return [
         ]
     ],
     
+    // ======== ASSEMBLY ANNOTATION FILE ========
+    // Primary annotation GFF file pattern in organism directories
+    // Located in: /organisms/{organism}/{assembly}/
+    // The JBrowse setup script creates symlink and compressed version
+    'annotation_file' => 'genomic.gff',
+    
     // ======== BLAST TOOL SAMPLE SEQUENCES ========
     // Sample sequences for users to test BLAST functionality
     'blast_sample_sequences' => [
