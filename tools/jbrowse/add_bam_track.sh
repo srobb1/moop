@@ -93,6 +93,7 @@ ACCESSION=""
 DATE=""
 ANALYST=""
 CUSTOM_METADATA_JSON=""
+SKIP_STATS=0
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -115,6 +116,7 @@ while [[ $# -gt 0 ]]; do
         --date) DATE="$2"; shift 2 ;;
         --analyst) ANALYST="$2"; shift 2 ;;
         --custom-metadata) CUSTOM_METADATA_JSON="$2"; shift 2 ;;
+        --skip-stats) SKIP_STATS=1; shift ;;
         --force) FORCE=1; shift ;;
         *) log_error "Unknown option: $1"; exit 1 ;;
     esac
@@ -210,10 +212,16 @@ fi
 log_info "  BAM URI: $FILE_URI"
 log_info "  BAI URI: $INDEX_URI"
 
-# Get BAM statistics
-log_info "Gathering BAM statistics..."
-TOTAL_READS=$(samtools view -c "$BAM_FILE" 2>/dev/null || echo "unknown")
-MAPPED_READS=$(samtools view -c -F 4 "$BAM_FILE" 2>/dev/null || echo "unknown")
+# Get BAM statistics (optional - can be slow for large files)
+if [ $SKIP_STATS -eq 0 ]; then
+    log_info "Gathering BAM statistics..."
+    TOTAL_READS=$(samtools view -c "$BAM_FILE" 2>/dev/null || echo "unknown")
+    MAPPED_READS=$(samtools view -c -F 4 "$BAM_FILE" 2>/dev/null || echo "unknown")
+else
+    log_info "Skipping BAM statistics (--skip-stats enabled)"
+    TOTAL_READS="not_calculated"
+    MAPPED_READS="not_calculated"
+fi
 
 # Create track metadata JSON with hierarchical structure
 TRACK_TYPE="bam"

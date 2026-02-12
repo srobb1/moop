@@ -1050,6 +1050,7 @@ def generate_single_track(row, organism, assembly, moop_root, default_color='Dod
             '--track-id', track_id,
             '--category', category,
             '--access', access,
+            '--skip-stats',  # Skip slow BAM statistics
             '--force'
         ]
         add_metadata_to_cmd(cmd, metadata)
