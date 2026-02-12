@@ -367,6 +367,9 @@ def parse_sheet(tsv_content):
     header_line = lines[0]
     all_columns = header_line.split('\t')
     
+    # Clean column names (remove carriage returns and extra whitespace)
+    all_columns = [col.strip().replace('\r', '') for col in all_columns]
+    
     # Keep only columns that don't start with #
     valid_columns = [col for col in all_columns if not col.startswith('#')]
     valid_column_indices = [i for i, col in enumerate(all_columns) if not col.startswith('#')]
