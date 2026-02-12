@@ -131,9 +131,35 @@ class ColorSchemes
     
     /**
      * Get a specific color scheme
+     * 
+     * Supports special formats:
+     * - "blues" - returns full array
+     * - "exact=OrangeRed" - returns single color in array
+     * - "blues3" - returns 4th color from blues (0-indexed) in array
      */
     public static function getScheme($name)
     {
+        // Handle exact color: exact=ColorName
+        if (strpos($name, 'exact=') === 0) {
+            $color = substr($name, 6); // Remove "exact="
+            return [$color]; // Return as single-element array
+        }
+        
+        // Handle specific index: blues3 (0-indexed)
+        if (preg_match('/^([a-z]+)(\d+)$/', $name, $matches)) {
+            $schemeName = $matches[1];
+            $index = intval($matches[2]);
+            
+            if (isset(self::$schemes[$schemeName])) {
+                $scheme = self::$schemes[$schemeName];
+                if ($index < count($scheme)) {
+                    return [$scheme[$index]]; // Return single color as array
+                }
+            }
+            return null; // Invalid scheme or index
+        }
+        
+        // Regular scheme name
         return self::$schemes[$name] ?? null;
     }
     

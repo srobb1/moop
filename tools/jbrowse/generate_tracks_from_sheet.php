@@ -451,8 +451,8 @@ function listExistingTracks($generator, $organism, $assembly)
         echo str_repeat('-', 80) . "\n";
         foreach ($typeTracks as $track) {
             $category = is_array($track['category']) ? implode(', ', $track['category']) : $track['category'];
-            echo "  {$track['track_id']}\n";
-            echo "    → \"{$track['name']}\" ($category)\n";
+            // Single line format for easy grepping
+            echo "  {$track['track_id']} → \"{$track['name']}\" ($category)\n";
         }
         echo "\n";
     }
