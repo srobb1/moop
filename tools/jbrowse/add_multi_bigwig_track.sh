@@ -241,6 +241,13 @@ METADATA_FILE="$TRACK_DIR/${TRACK_ID}.json"
 log_info "Creating track metadata: $METADATA_FILE"
 
 # Build metadata JSON
+# If custom metadata JSON exists, merge it in
+if [ -n "$CUSTOM_METADATA_JSON" ] && command -v jq &> /dev/null; then
+    CUSTOM_FIELDS=$(echo "$CUSTOM_METADATA_JSON" | jq -c '.')
+else
+    CUSTOM_FIELDS="{}"
+fi
+
 cat > "$METADATA_FILE" << EOF
 {
   "trackId": "$TRACK_ID",

@@ -930,7 +930,7 @@ def parse_maf_samples(maf_path):
 
 def add_metadata_to_cmd(cmd, metadata):
     """
-    Helper to add all metadata fields to a command dynamically.
+    Helper to add metadata as JSON to command.
     
     Args:
         cmd: Command list to extend
@@ -939,11 +939,11 @@ def add_metadata_to_cmd(cmd, metadata):
     Returns:
         Updated cmd list
     """
-    for key, value in metadata.items():
-        if value:  # Only add non-empty values
-            # Convert underscores to hyphens for command-line args
-            arg_name = key.replace('_', '-')
-            cmd.extend([f'--{arg_name}', value])
+    if metadata:
+        # Pass all metadata as a single JSON argument
+        import json
+        metadata_json = json.dumps(metadata)
+        cmd.extend(['--custom-metadata', metadata_json])
     return cmd
 
 

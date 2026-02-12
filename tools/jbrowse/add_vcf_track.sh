@@ -101,6 +101,7 @@ PROJECT=""
 ACCESSION=""
 DATE=""
 ANALYST=""
+CUSTOM_METADATA_JSON=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -122,6 +123,7 @@ while [[ $# -gt 0 ]]; do
         --accession) ACCESSION="$2"; shift 2 ;;
         --date) DATE="$2"; shift 2 ;;
         --analyst) ANALYST="$2"; shift 2 ;;
+        --custom-metadata) CUSTOM_METADATA_JSON="$2"; shift 2 ;;
         --force) FORCE=1; shift ;;
         *) log_error "Unknown option: $1"; exit 1 ;;
     esac
@@ -229,6 +231,13 @@ METADATA_FILE="$TRACK_DIR/${TRACK_ID}.json"
 log_info "Creating track metadata: $METADATA_FILE"
 
 # Build metadata JSON
+# If custom metadata JSON exists, merge it in
+if [ -n "$CUSTOM_METADATA_JSON" ] && command -v jq &> /dev/null; then
+    CUSTOM_FIELDS=$(echo "$CUSTOM_METADATA_JSON" | jq -c '.')
+else
+    CUSTOM_FIELDS="{}"
+fi
+
 cat > "$METADATA_FILE" << EOF
 {
   "trackId": "$TRACK_ID",
@@ -281,6 +290,8 @@ cat > "$METADATA_FILE" << EOF
       "date": "$DATE",
       "analyst": "$ANALYST"
     }
+    },
+    "custom_fields": $CUSTOM_FIELDS
   }
 }
 EOF
