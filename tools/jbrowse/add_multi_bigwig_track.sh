@@ -48,6 +48,14 @@ METADATA_DIR="$MOOP_ROOT/metadata/jbrowse2-configs/tracks"
 ACCESS_LEVEL="PUBLIC"
 CATEGORY="Multi-BigWig"
 
+# Determine web root by finding where MOOP_ROOT is served from
+# This makes the script portable across different deployments
+# Examples:
+#   /data/moop -> web root is /moop
+#   /var/www/html/moop -> web root is /moop
+#   /var/www/html/simrbase -> web root is /simrbase
+WEB_ROOT="/$(basename "$MOOP_ROOT")"
+
 # Parse arguments
 if [ $# -lt 2 ]; then
     cat << 'EOF'
@@ -190,11 +198,18 @@ for i in "${!BIGWIG_FILES[@]}"; do
     name="${BIGWIG_NAMES[$i]}"
     color="${BIGWIG_COLORS[$i]}"
     
-    # Get just filename if absolute path
+    # Determine correct path based on whether file is absolute or relative
     if [[ "$file" == /* ]]; then
-        filename=$(basename "$file")
+        # Absolute path - convert filesystem path to web URI
+        # Remove everything up to the last occurrence of the site directory name
+        # E.g., /data/moop/data/tracks/... -> /moop/data/tracks/...
+        # E.g., /var/www/html/moop/data/tracks/... -> /moop/data/tracks/...
+        SITE_DIR="$(basename "$MOOP_ROOT")"
+        FILE_URI="/${SITE_DIR}${file#*/${SITE_DIR}}"
     else
+        # Relative path - assume it follows organism/assembly structure
         filename="$file"
+        FILE_URI="${WEB_ROOT}/data/tracks/${ORGANISM}/${ASSEMBLY}/bigwig/$filename"
     fi
     
     # Add comma for all but first
@@ -211,7 +226,7 @@ for i in "${!BIGWIG_FILES[@]}"; do
       "adapter": {
         "type": "BigWigAdapter",
         "bigWigLocation": {
-          "uri": "/moop/data/tracks/bigwig/$filename",
+          "uri": "$FILE_URI",
           "locationType": "UriLocation"
         }
       },
