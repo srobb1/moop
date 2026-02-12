@@ -245,7 +245,7 @@ function generateCachedConfigs($assemblyDef, $jbrowseTracksDir, $assemblyDir, $g
         
         // Filter tracks based on access level
         foreach ($allTracks as $track) {
-            $trackAccessLevel = $track['metadata']['access_level'] ?? 'PUBLIC';
+            $trackAccessLevel = strtoupper($track['metadata']['access_level'] ?? 'PUBLIC');
             $requiredLevel = $accessHierarchy[$trackAccessLevel] ?? 1;
             
             // User can see track if their level >= required level

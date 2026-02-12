@@ -296,11 +296,14 @@ class GoogleSheetsParser
             // Use first row for track metadata
             $firstRow = $rows[0];
             
+            // Map ACCESS column to access_level
+            $accessLevel = trim($firstRow['ACCESS'] ?? $firstRow['access_level'] ?? 'PUBLIC');
+            
             $comboTrack = [
                 'track_id' => $comboId,
                 'name' => $firstRow['COMBO_NAME'] ?? $comboId,
                 'category' => $firstRow['category'] ?? 'Combo',
-                'access_level' => $firstRow['access_level'] ?? 'PUBLIC',
+                'access_level' => $accessLevel,
                 'organism' => $firstRow['organism'],
                 'assembly' => $firstRow['assembly'],
                 'files' => [],
@@ -334,12 +337,15 @@ class GoogleSheetsParser
      */
     private function cleanTrackData($row)
     {
+        // Map ACCESS column to access_level
+        $accessLevel = trim($row['ACCESS'] ?? $row['access_level'] ?? 'PUBLIC');
+        
         return [
             'track_id' => trim($row['track_id']),
             'name' => trim($row['name']),
             'TRACK_PATH' => trim($row['TRACK_PATH']),
             'category' => trim($row['category'] ?? 'Uncategorized'),
-            'access_level' => trim($row['access_level'] ?? 'PUBLIC'),
+            'access_level' => $accessLevel,
             'color' => trim($row['color'] ?? ''),
             'description' => trim($row['description'] ?? ''),
             'organism' => $row['organism'],
