@@ -144,11 +144,40 @@ function generateCachedConfigs($assemblyDef, $jbrowseTracksDir, $assemblyDir, $g
         }
     }
     
+    // Sort tracks to prioritize GFF/annotation tracks first
+    // This ensures proper display order in JBrowse2 track selector
+    usort($allTracks, function($a, $b) {
+        // Extract track type from trackId or adapter type
+        $aType = '';
+        $bType = '';
+        
+        // Check adapter type
+        if (isset($a['adapter']['type'])) {
+            if (strpos($a['adapter']['type'], 'Gff3') !== false) $aType = 'gff';
+            elseif (strpos($a['adapter']['type'], 'Gtf') !== false) $aType = 'gtf';
+        }
+        if (isset($b['adapter']['type'])) {
+            if (strpos($b['adapter']['type'], 'Gff3') !== false) $bType = 'gff';
+            elseif (strpos($b['adapter']['type'], 'Gtf') !== false) $bType = 'gtf';
+        }
+        
+        // Priority: gff/gtf first, then everything else
+        $priority = ['gff' => 0, 'gtf' => 1];
+        $aPriority = $priority[$aType] ?? 999;
+        $bPriority = $priority[$bType] ?? 999;
+        
+        return $aPriority - $bPriority;
+    });
+    
     // Generate config for each access level
     foreach ($accessLevels as $level) {
         $config = $baseConfig;
         $userLevel = $accessHierarchy[$level];
         
+        // DISABLED 2026-02-12: Now using metadata-driven track system via Google Sheets
+        // Tracks are loaded from metadata/jbrowse2-configs/tracks/ instead
+        // This prevents duplicate GFF tracks and ensures proper track ordering
+        /*
         // Add annotations track if GFF file exists (PUBLIC access for all)
         // Extract organism and assembly from assembly definition, not from name parsing
         $organism = $assemblyDef['organism'] ?? null;
@@ -212,6 +241,7 @@ function generateCachedConfigs($assemblyDef, $jbrowseTracksDir, $assemblyDir, $g
                 $config['tracks'][] = $annotationTrack;
             }
         }
+        */
         
         // Filter tracks based on access level
         foreach ($allTracks as $track) {
