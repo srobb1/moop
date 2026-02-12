@@ -152,10 +152,15 @@ class AutoTrack implements TrackTypeInterface
         // Get genome name from organism database
         $genomeName = $this->getGenomeName($organism);
         
+        // Format display name: replace underscores with spaces
+        $displayOrganism = str_replace('_', ' ', $organism);
+        
         // Build assembly definition
         $definition = [
             'name' => "{$organism}_{$assembly}",
-            'displayName' => $genomeName ?: "{$organism} ({$assembly})",
+            'displayName' => "{$displayOrganism} ({$assembly})",  // Use genus species format
+            'organism' => $organism,  // Required for config generation
+            'assemblyId' => $assembly,  // Required for config generation
             'aliases' => [$assembly, $genomeName],
             'sequence' => [
                 'type' => 'ReferenceSequenceTrack',
