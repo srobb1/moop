@@ -7,36 +7,45 @@
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| ✅ Replaced | 3 | PHP replacement exists and tested |
+| ✅ Replaced | 5 | PHP replacement exists and tested |
 | 🔄 Partial | 1 | Combo track has PHP replacement |
-| ⏳ Needed | 8 | Need PHP replacements |
-| 📦 Archived | 3 | In archived_shell_scripts/ |
+| ⏳ Needed | 6 | Need PHP replacements |
+| 📦 Archived | 5 | In archived_shell_scripts/ |
 | ℹ️ Utility | 5 | Admin/setup scripts (lower priority) |
 
 **Total:** 20 shell scripts
 
+**Last Updated:** 2026-02-12 22:30 UTC
+
 ---
 
-## ✅ Replaced - PHP Exists (3)
+## ✅ Replaced - PHP Exists (5)
 
 ### add_bigwig_track.sh → BigWigTrack.php
 - **Status:** ✅ COMPLETE
 - **PHP Class:** `lib/JBrowse/TrackTypes/BigWigTrack.php`
-- **Location:** `archived_shell_scripts/add_bigwig_track.sh`
+- **Location:** `tools/jbrowse/archived_shell_scripts/add_bigwig_track.sh`
 - **Tested:** Yes (28 test tracks)
 
 ### add_bam_track.sh → BamTrack.php
 - **Status:** ✅ COMPLETE
 - **PHP Class:** `lib/JBrowse/TrackTypes/BamTrack.php`
-- **Location:** `archived_shell_scripts/add_bam_track.sh`
+- **Location:** `tools/jbrowse/archived_shell_scripts/add_bam_track.sh`
 - **Tested:** Yes (1 test track)
 
 ### add_vcf_track.sh → VCFTrack.php
 - **Status:** ✅ COMPLETE (2026-02-12)
 - **PHP Class:** `lib/JBrowse/TrackTypes/VCFTrack.php`
-- **Shell Script:** `tools/jbrowse/add_vcf_track.sh` (can be archived)
+- **Location:** `tools/jbrowse/archived_shell_scripts/add_vcf_track.sh`
 - **Tested:** Yes (test_variants track)
 - **Features:** Validates VCF.gz + .tbi, extracts variant/sample counts, supports remote files
+
+### add_bed_track.sh → BEDTrack.php
+- **Status:** ✅ COMPLETE (2026-02-12)
+- **PHP Class:** `lib/JBrowse/TrackTypes/BEDTrack.php`
+- **Location:** `tools/jbrowse/archived_shell_scripts/add_bed_track.sh`
+- **Tested:** Yes (test_features track)
+- **Features:** Validates BED.gz + .tbi, extracts feature counts, supports remote files
 
 ---
 
@@ -51,9 +60,9 @@
 
 ---
 
-## ⏳ PHP Replacement Needed (8)
+## ⏳ PHP Replacement Needed (6)
 
-### Track Type Scripts (7)
+### Track Type Scripts (5)
 
 1. **add_gff_track.sh**
    - **Priority:** Medium (already have AutoTrack for AUTO GFF)
@@ -85,18 +94,6 @@
    - **Users:** Multiple alignment format
    - **Effort:** 1-2 hours
    - **PHP Class:** MAFTrack.php (to be created)
-
-6. **add_bed_track.sh**
-   - **Priority:** Medium
-   - **Users:** Feature annotations
-   - **Effort:** 1 hour
-   - **PHP Class:** BEDTrack.php (to be created)
-
-7. **add_synteny_track.sh**
-   - **Priority:** Low
-   - **Users:** Comparative genomics
-   - **Effort:** 2-3 hours (complex format)
-   - **PHP Class:** SyntenyTrack.php (to be created)
 
 ### Generic Script (1)
 
