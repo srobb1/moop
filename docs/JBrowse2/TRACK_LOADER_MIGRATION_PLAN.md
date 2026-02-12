@@ -1,11 +1,62 @@
 # JBrowse Track Loader - Python to PHP Migration Plan
 
 **Date Created:** February 12, 2026  
-**Status:** ✅ Phase 2B Complete - 100% Python Feature Parity Achieved!  
-**Priority:** High - Admin Dashboard Integration Ready
+**Status:** ✅ Phase 2C In Progress - 7/11 Track Types Complete (64%)  
+**Priority:** High - Track Type Implementation + Access Control Fix
 
-**Last Updated:** February 12, 2026 21:21 UTC  
-**Progress:** ✅ Phase 1 Complete | ✅ Phase 2A Complete | ✅ Phase 2B Complete | 🎯 Ready for Phase 2C or Phase 3
+**Last Updated:** February 12, 2026 23:21 UTC  
+**Progress:** ✅ Phase 1 Complete | ✅ Phase 2A Complete | ✅ Phase 2B Complete | 🔄 Phase 2C 64% Complete
+
+---
+
+## Session Update: February 12, 2026 (Phase 2C - Track Types)
+
+**Massive Progress: 18% → 64% completion in one session!**
+
+### Implemented Today (5 new track types):
+1. ✅ **VCFTrack.php** - Variant tracks (SNPs, indels) with VcfTabixAdapter
+2. ✅ **BEDTrack.php** - Genomic features with BedTabixAdapter  
+3. ✅ **GTFTrack.php** - Transcript annotations with GtfAdapter (no tabix needed)
+4. ✅ **GFFTrack.php** - Explicit GFF annotations with Gff3TabixAdapter
+5. ✅ **CRAMTrack.php** - Compressed alignments with CramAdapter
+
+### Track Types Progress: 7/11 Complete (64%)
+- ✅ BigWigTrack.php (signal/coverage)
+- ✅ BamTrack.php (alignments)
+- ✅ VCFTrack.php (variants) ← NEW
+- ✅ BEDTrack.php (features) ← NEW
+- ✅ GTFTrack.php (transcripts) ← NEW
+- ✅ GFFTrack.php (annotations) ← NEW
+- ✅ CRAMTrack.php (compressed alignments) ← NEW
+- ⏳ PAFTrack.php (pairwise alignments)
+- ⏳ MAFTrack.php (multiple alignments)
+- ⏳ SyntenyTrack.php (comparative genomics)
+- ⏳ [Others as needed]
+
+### Bug Fixes:
+- ✅ Fixed duplicate "Gene Annotations" track (2 locations)
+- ✅ Fixed track ordering (GFF tracks now appear first)
+- ✅ Fixed --list-existing to show BED/GTF/GFF tracks
+- ✅ Fixed CRAM adapter config (craiLocation vs nested index)
+
+### Shell Scripts Archived:
+- ✅ add_vcf_track.sh
+- ✅ add_bed_track.sh
+
+### Commits: 8 clean commits
+- All tested and working
+- Ready to push to origin
+
+### Known Issues Discovered:
+1. 🐛 **Access control not filtering** - ADMIN tracks visible when logged out (CRITICAL)
+2. ⚠️ AUTO track slow (>10 seconds) - Likely fine, needs investigation
+
+### Key Learnings:
+- GTF uses GtfAdapter (no tabix index)
+- GFF uses Gff3TabixAdapter (with tabix)
+- CRAM uses craiLocation (not nested index)
+- Track ordering is config file order, not alphabetical
+- JBrowse CLI useful for verifying adapter structures
 
 ---
 
@@ -1713,3 +1764,43 @@ tree lib/JBrowse/ -L 2
 
 *Last Updated: 2026-02-12 21:21 UTC*  
 *Next Review: When Phase 2C/3 begins or when new requirements emerge*
+
+#### Option 4: Fix Access Control Bug (CRITICAL)
+**Priority:** HIGH - Security issue discovered
+
+**Issue:** Tracks with ADMIN access level are visible to non-logged-in users
+
+**Symptoms:**
+- BAM track marked as ADMIN visible without login
+- Metadata shows correct access_level
+- Filtering not working in assembly.php or cached configs
+
+**To Investigate:**
+1. Check access control logic in `api/jbrowse2/assembly.php` (lines 148-195)
+2. Verify cached config generation in `tools/jbrowse/generate-jbrowse-configs.php`
+3. Test with different access levels (PUBLIC, COLLABORATOR, ADMIN)
+4. Check case sensitivity (metadata has "Public" vs hierarchy has "PUBLIC")
+
+**Files to Review:**
+```bash
+api/jbrowse2/assembly.php          # Main access control logic
+tools/jbrowse/generate-jbrowse-configs.php  # Cached config filtering
+lib/functions_access.php            # Access level functions
+```
+
+**Test Steps:**
+1. Create test tracks with different access levels
+2. Browse as logged-out user (should see PUBLIC only)
+3. Browse as COLLABORATOR (should see PUBLIC + COLLABORATOR)
+4. Browse as ADMIN (should see all tracks)
+5. Verify cached configs (PUBLIC.json, ADMIN.json, etc.)
+
+**Possible Causes:**
+- Case sensitivity mismatch ("Public" vs "PUBLIC")
+- Cached config not respecting access_level filtering
+- Assembly.php not loading from correct cached config
+- Browser loading wrong config file
+
+**Time:** 1-2 hours
+
+**Impact:** CRITICAL if sharing with collaborators or public users
