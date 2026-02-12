@@ -10,7 +10,7 @@
  * - Auto-detects track types from file extensions and categories
  * - Supports multi-BigWig tracks (combo tracks)
  * - 28 color schemes with cycling (blues, reds, purples, rainbow, etc.)
- * - Access level control (PUBLIC, COLLABORATOR, ADMIN)
+ * - Access level control (PUBLIC, COLLABORATOR, IP_IN_RANGE, ADMIN)
  * - Checks for existing tracks to avoid duplicates
  * - AUTO track resolution for reference sequences and annotations
  * 
@@ -39,7 +39,9 @@
  *     * Annotations: {genomes_dir}/{organism}/{assembly}/genomic.gff
  * 
  * Optional Columns:
- *   - access_level: PUBLIC, COLLABORATOR, or ADMIN (default: PUBLIC)
+ *   - access_level: PUBLIC, COLLABORATOR, IP_IN_RANGE, or ADMIN (default: PUBLIC)
+ *       Hierarchy: PUBLIC < COLLABORATOR < IP_IN_RANGE < ADMIN
+ *       Higher levels inherit tracks from lower levels
  *   - description: Track description
  *   - technique: Technique used (e.g., RNA-seq, ChIP-seq)
  *   - condition: Experimental condition
