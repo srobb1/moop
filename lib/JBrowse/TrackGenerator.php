@@ -83,6 +83,7 @@ class TrackGenerator
             'bigwig' => 'BigWigTrack',
             'bam' => 'BamTrack',
             'combo' => 'ComboTrack',
+            'auto' => 'AutoTrack',
             // Add more as implemented:
             // 'vcf' => 'VCFTrack',
             // 'gff' => 'GFFTrack',
@@ -139,6 +140,12 @@ class TrackGenerator
      */
     public function determineTrackType($path)
     {
+        // Check for AUTO keyword - reference sequences and annotations
+        // These are handled by assembly setup, not as separate tracks
+        if (strtoupper(trim($path)) === 'AUTO') {
+            return 'auto';
+        }
+        
         // Check against each registered track type
         foreach ($this->trackTypes as $type => $handler) {
             foreach ($handler->getValidExtensions() as $ext) {
@@ -324,7 +331,7 @@ class TrackGenerator
      * 
      * @param array $trackData Track data
      * @param array $options Options: force, dry_run
-     * @return bool True if successful
+     * @return bool|string True if successful, 'skipped' if skipped, false if failed
      */
     private function generateSingleTrack($trackData, $options = [])
     {
