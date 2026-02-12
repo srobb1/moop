@@ -53,6 +53,7 @@ MOOP_ROOT="/data/moop"
 TRACKS_DIR="$MOOP_ROOT/data/tracks"
 METADATA_DIR="$MOOP_ROOT/metadata/jbrowse2-configs/tracks"
 ACCESS_LEVEL="PUBLIC"
+FORCE=0
 CATEGORY="Annotation"
 SKIP_SORT=false
 SKIP_TEXT_INDEX=false

@@ -700,6 +700,78 @@ def verify_track_exists(track_path, is_remote):
         return Path(track_path).exists()
 
 
+def validate_track_file(track_path, track_type, organism=None, assembly=None):
+    """
+    Enhanced validation for track files with helpful error messages.
+    
+    Args:
+        track_path: Path to track file (absolute path or URL)
+        track_type: Type of track (bigwig, bam, vcf, gff, etc.)
+        organism: Organism name (for error messages)
+        assembly: Assembly ID (for error messages)
+        
+    Returns:
+        Tuple of (success: bool, error_message: str or None)
+    """
+    # Skip AUTO tracks
+    if track_path.upper() == 'AUTO':
+        return (True, None)
+    
+    # Remote URLs - can't fully validate
+    if track_path.startswith('http://') or track_path.startswith('https://'):
+        return (True, None)
+    
+    # Check file exists
+    if not os.path.exists(track_path):
+        return (False, f"File not found: {track_path}")
+    
+    # Check file extension matches type
+    ext = os.path.splitext(track_path)[1].lower()
+    expected_exts = {
+        'bigwig': ['.bw', '.bigwig'],
+        'bam': ['.bam'],
+        'cram': ['.cram'],
+        'vcf': ['.vcf', '.vcf.gz'],
+        'gff': ['.gff', '.gff3', '.gff.gz', '.gff3.gz'],
+        'gtf': ['.gtf', '.gtf.gz'],
+        'bed': ['.bed', '.bed.gz'],
+        'paf': ['.paf', '.paf.gz'],
+        'maf': ['.maf', '.maf.gz']
+    }
+    
+    if track_type in expected_exts:
+        if ext not in expected_exts[track_type]:
+            expected = ', '.join(expected_exts[track_type])
+            return (False, f"File extension {ext} doesn't match type {track_type}. Expected: {expected}")
+    
+    # Check for required index files
+    if track_type == 'bam':
+        bai_path = track_path + '.bai'
+        if not os.path.exists(bai_path):
+            # Try alternate .bai location
+            alt_bai = track_path.replace('.bam', '.bai')
+            if not os.path.exists(alt_bai):
+                return (False, f"BAI index missing: {bai_path}\n  Run: samtools index {track_path}")
+    
+    if track_type == 'cram':
+        crai_path = track_path + '.crai'
+        if not os.path.exists(crai_path):
+            return (False, f"CRAI index missing: {crai_path}\n  Run: samtools index {track_path}")
+    
+    if track_type == 'vcf' and track_path.endswith('.gz'):
+        tbi_path = track_path + '.tbi'
+        if not os.path.exists(tbi_path):
+            return (False, f"TBI index missing: {tbi_path}\n  Run: tabix -p vcf {track_path}")
+    
+    if track_type == 'gff' and track_path.endswith('.gz'):
+        tbi_path = track_path + '.tbi'
+        if not os.path.exists(tbi_path):
+            return (False, f"TBI index missing: {tbi_path}\n  Run: tabix -p gff {track_path}")
+    
+    # File is valid
+    return (True, None)
+
+
 def parse_maf_samples(maf_path):
     """
     Extract unique sample/species names from a MAF file.
@@ -785,10 +857,12 @@ def generate_single_track(row, organism, assembly, moop_root, default_color='Dod
     # Resolve path (absolute, relative, URL, or AUTO)
     resolved_path, is_remote = resolve_track_path(track_path, moop_root, organism, assembly, track_type)
     
-    # Verify local files exist
-    if not is_remote and not verify_track_exists(resolved_path, is_remote):
-        print(f"✗ File not found: {resolved_path}")
-        return False
+    # Enhanced validation for local files
+    if not is_remote:
+        success, error_msg = validate_track_file(resolved_path, track_type, organism, assembly)
+        if not success:
+            print(f"✗ Validation failed for {track_id}: {error_msg}")
+            return False
     
     # Log remote vs local
     if is_remote:
@@ -796,8 +870,7 @@ def generate_single_track(row, organism, assembly, moop_root, default_color='Dod
         print(f"  URL: {resolved_path}")
     else:
         print(f"→ Creating {track_type} track (local): {name}")
-        if not Path(resolved_path).exists():
-            print(f"  ⚠ Warning: File not accessible: {resolved_path}")
+        print(f"  ✓ File validated: {resolved_path}")
     
     # Check if track exists
     metadata_dir = Path(moop_root) / 'metadata' / 'jbrowse2-configs' / 'tracks'

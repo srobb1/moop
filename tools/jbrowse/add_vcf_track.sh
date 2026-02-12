@@ -50,6 +50,7 @@ MOOP_ROOT="/data/moop"
 TRACKS_DIR="$MOOP_ROOT/data/tracks"
 METADATA_DIR="$MOOP_ROOT/metadata/jbrowse2-configs/tracks"
 ACCESS_LEVEL="Public"
+FORCE=0
 
 # Check for required tools
 if ! command -v bgzip &> /dev/null; then
@@ -121,6 +122,7 @@ while [[ $# -gt 0 ]]; do
         --accession) ACCESSION="$2"; shift 2 ;;
         --date) DATE="$2"; shift 2 ;;
         --analyst) ANALYST="$2"; shift 2 ;;
+        --force) FORCE=1; shift ;;
         *) log_error "Unknown option: $1"; exit 1 ;;
     esac
 done
