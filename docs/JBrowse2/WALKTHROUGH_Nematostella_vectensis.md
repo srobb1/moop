@@ -12,9 +12,11 @@
 This document walks through the complete process of integrating a new organism (Nematostella vectensis) into the MOOP JBrowse2 system, including:
 
 1. ✅ Genome reference track (FASTA)
-2. ✅ Gene annotations track (GFF)
+2. ✅ Gene annotations track (GFF) - **automatically added**
 3. ✅ BAM alignment tracks
 4. ✅ BigWig coverage tracks
+
+**Note:** The gene annotations track (GFF3) is automatically added when you run `generate-jbrowse-configs.php` after setting up the assembly. No separate script is needed!
 
 ### Files Available
 
@@ -125,7 +127,14 @@ cd /data/moop
   File: /data/moop/metadata/jbrowse2-configs/assemblies/Nematostella_vectensis_GCA_033964005.1.json
 ```
 
-**Result:** Assembly with genome reference and annotations will now appear in JBrowse2!
+**Result:** Assembly with genome reference and **gene annotations** will now appear in JBrowse2!
+
+**What gets created:**
+- Assembly definition JSON
+- Reference sequence track (FASTA)
+- **Gene annotations track (GFF3) - automatically included!**
+
+The gene annotations are automatically added from `annotations.gff3.gz` when you generate configs in the next step.
 
 ---
 
@@ -486,19 +495,20 @@ curl -s "http://localhost:8888/api/jbrowse2/test-assembly.php?organism=Nematoste
 
 After completing this walkthrough:
 
-1. **Generate cached configs** - Run this after adding all tracks:
+1. **Generate cached configs** - **This step adds the gene annotations track!** Run this after adding all tracks:
    ```bash
    cd /data/moop
    php tools/jbrowse/generate-jbrowse-configs.php
    ```
-   This creates the cached config files (PUBLIC.json, COLLABORATOR.json, ADMIN.json, IP_IN_RANGE.json) for optimal performance.
+   This creates the cached config files (PUBLIC.json, COLLABORATOR.json, ADMIN.json, IP_IN_RANGE.json) and **automatically includes the gene annotations track** from the GFF3 file.
 
 2. ✅ Verify assembly appears in JBrowse2 UI
-3. ✅ Test genome browsing functionality
-4. ✅ Verify all tracks load correctly
-5. ✅ Test with different user access levels
-6. 📋 Document any additional tracks to add
-7. 📋 Add more assemblies using same pattern
+3. ✅ Verify gene annotations track loads correctly
+4. ✅ Test genome browsing functionality
+5. ✅ Verify all tracks load correctly (BAM, BigWig, GFF)
+6. ✅ Test with different user access levels
+7. 📋 Document any additional tracks to add
+8. 📋 Add more assemblies using same pattern
 
 **Important:** Run `php tools/jbrowse/generate-jbrowse-configs.php` whenever you:
 - Add new tracks
