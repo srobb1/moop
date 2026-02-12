@@ -347,18 +347,20 @@ class BamTrack implements TrackTypeInterface
         $trackId = $metadata['trackId'];
         $trackType = $this->getType();
         
-        // Get metadata directory
-        $metadataDir = $this->pathResolver->getMetadataDir($organism, $assembly, $trackType);
+        // Get metadata directory from ConfigManager
+        // NOTE: Metadata is ALWAYS local, even if track files (BAM) are remote
+        $metadataBase = $this->config->getPath('metadata_path');
+        $trackDir = "$metadataBase/jbrowse2-configs/tracks/$organism/$assembly/$trackType";
         
         // Create directory if needed
-        if (!is_dir($metadataDir)) {
-            if (!mkdir($metadataDir, 0755, true)) {
-                throw new Exception("Failed to create metadata directory: $metadataDir");
+        if (!is_dir($trackDir)) {
+            if (!mkdir($trackDir, 0755, true)) {
+                throw new Exception("Failed to create metadata directory: $trackDir");
             }
         }
         
         // Write JSON file
-        $metadataFile = $metadataDir . '/' . $trackId . '.json';
+        $metadataFile = $trackDir . '/' . $trackId . '.json';
         $json = json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         
         if (file_put_contents($metadataFile, $json) === false) {

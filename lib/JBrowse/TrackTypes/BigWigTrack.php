@@ -250,20 +250,20 @@ class BigWigTrack implements TrackTypeInterface
      */
     private function writeMetadata($metadata, $organism, $assembly, $trackId)
     {
-        // Get metadata directory from config
-        $sitePath = $this->config->getPath('site_path');
-        $metadataDir = $sitePath . '/metadata/jbrowse2-configs/tracks';
-        
-        // Create hierarchical directory structure: organism/assembly/bigwig/
-        $trackDir = "{$metadataDir}/{$organism}/{$assembly}/bigwig";
+        // Get metadata directory from ConfigManager
+        // NOTE: Metadata is ALWAYS local, even if track files are remote
+        $metadataBase = $this->config->getPath('metadata_path');
+        $trackDir = "$metadataBase/jbrowse2-configs/tracks/$organism/$assembly/bigwig";
         
         // Ensure directory exists
-        if (!$this->pathResolver->ensureDirectoryExists($trackDir)) {
-            throw new Exception("Failed to create directory: {$trackDir}");
+        if (!is_dir($trackDir)) {
+            if (!mkdir($trackDir, 0755, true)) {
+                throw new Exception("Failed to create directory: $trackDir");
+            }
         }
         
         // Build file path
-        $metadataFile = "{$trackDir}/{$trackId}.json";
+        $metadataFile = "$trackDir/$trackId.json";
         
         // Write JSON with pretty print
         $json = json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
