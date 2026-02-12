@@ -1,20 +1,91 @@
 #!/usr/bin/env php
 <?php
 /**
- * JBrowse Track Generator - CLI Interface
+ * Google Sheets to JBrowse2 Track Generator (PHP Implementation)
  * 
- * Generate JBrowse tracks from Google Sheets metadata.
+ * This script reads track metadata from a Google Sheet and automatically generates
+ * JBrowse2 track configurations.
+ * 
+ * Features:
+ * - Auto-detects track types from file extensions and categories
+ * - Supports multi-BigWig tracks (combo tracks)
+ * - 27 color schemes with cycling (blues, reds, purples, rainbow, etc.)
+ * - Access level control (PUBLIC, COLLABORATOR, ADMIN)
+ * - Checks for existing tracks to avoid duplicates
+ * - AUTO track resolution for reference sequences and annotations
  * 
  * Usage:
- *   php generate_tracks_from_sheet.php SHEET_ID \
- *     --gid 1234567 \
+ *   php generate_tracks_from_sheet.php SHEET_ID [OPTIONS]
+ * 
+ * Example:
+ *   php generate_tracks_from_sheet.php \
+ *     1Md23wIYo08cjtsOZMBy5UIsNaaxTxT8ijG-QLC3CjIo \
+ *     --gid 1977809640 \
  *     --organism Nematostella_vectensis \
- *     --assembly GCA_033964005.1 \
- *     [--force TRACK_ID...] \
- *     [--dry-run] \
- *     [--clean]
+ *     --assembly GCA_033964005.1
+ * 
+ * Required Columns in Google Sheet:
+ *   - track_id: [REQUIRED] Unique track identifier (used as trackId in JBrowse2)
+ *   - name: [REQUIRED] Display name (shown in JBrowse2 UI)
+ *   - category: [REQUIRED] Track category (organizational, e.g., "Gene Expression")
+ *   - TRACK_PATH: [REQUIRED] File path or URL to track file
+ * 
+ * TRACK_PATH Format:
+ *   - Absolute path: /data/moop/data/tracks/sample.bw
+ *   - Relative path: data/tracks/sample.bw (resolved via ConfigManager)
+ *   - HTTP/HTTPS URL: https://server.edu/tracks/sample.bw (used as-is)
+ *   - AUTO (for reference/annotations): Script auto-resolves to:
+ *     * Reference: {genomes_dir}/{organism}/{assembly}/reference.fasta
+ *     * Annotations: {genomes_dir}/{organism}/{assembly}/genomic.gff
+ * 
+ * Optional Columns:
+ *   - access_level: PUBLIC, COLLABORATOR, or ADMIN (default: PUBLIC)
+ *   - description: Track description
+ *   - technique: Technique used (e.g., RNA-seq, ChIP-seq)
+ *   - condition: Experimental condition
+ *   - tissue: Tissue/organ type
+ *   - #any_column: Columns starting with # are ignored
+ *   - ...any other columns for your own metadata
+ * 
+ * Combo Tracks (Multi-BigWig):
+ *   Denoted by special markers in the sheet:
+ *   # Combo Track Name
+ *   ## colorscheme: group name
+ *   track1 data
+ *   track2 data
+ *   ## colorscheme: another group
+ *   track3 data
+ *   ### end
+ * 
+ * Color Schemes:
+ *   - Regular: ## blues: Sample Group (cycles through 11 blues)
+ *   - Exact: ## exact=OrangeRed: Group (all tracks use OrangeRed)
+ *   - Indexed: ## reds3: Group (all tracks use 4th red, 0-indexed: Crimson)
+ *   - See --list-colors for all 27 available schemes
+ * 
+ * Information Flags:
+ *   --list-colors           List all available color schemes
+ *   --suggest-colors N      Suggest best color schemes for N files
+ *   --list-track-ids        List track IDs that would be created from sheet
+ *   --list-existing         List existing tracks for organism/assembly
+ * 
+ * Track Generation Flags:
+ *   --force [TRACK_IDS...]  Force regenerate tracks (all if no IDs given)
+ *   --dry-run               Show what would be done without making changes
+ *   --clean                 Remove tracks not in sheet
+ * 
+ * Exit Codes:
+ *   0 - Success
+ *   1 - Error (missing args, parsing failure, etc.)
+ * 
+ * Output:
+ *   - Track metadata JSON files in: metadata/jbrowse2-configs/tracks/{organism}/{assembly}/{type}/
+ *   - Assembly definition in: metadata/jbrowse2-configs/assemblies/{organism}_{assembly}.json
+ *   - Browser config files in: jbrowse2/configs/{organism}_{assembly}/
  * 
  * @package MOOP\JBrowse
+ * @author JBrowse Track Generator
+ * @version 2.0 (PHP implementation)
  */
 
 // Bootstrap
@@ -449,6 +520,7 @@ function listExistingTracks($generator, $organism, $assembly)
     foreach ($byType as $type => $typeTracks) {
         echo ucfirst($type) . " Tracks (" . count($typeTracks) . "):\n";
         echo str_repeat('-', 80) . "\n";
+        echo "  track_id → track display name (category)\n\n";
         foreach ($typeTracks as $track) {
             $category = is_array($track['category']) ? implode(', ', $track['category']) : $track['category'];
             // Single line format for easy grepping
