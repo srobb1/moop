@@ -87,8 +87,8 @@ class TrackGenerator
             'vcf' => 'VCFTrack',
             'bed' => 'BEDTrack',
             'gtf' => 'GTFTrack',
+            'gff' => 'GFFTrack',
             // Add more as implemented:
-            // 'gff' => 'GFFTrack',
             // 'cram' => 'CRAMTrack',
             // 'paf' => 'PAFTrack',
             // 'maf' => 'MAFTrack',
