@@ -284,7 +284,6 @@ cat > "$METADATA_FILE" << EOF
       "accession": "$ACCESSION",
       "date": "$DATE",
       "analyst": "$ANALYST"
-    }
     },
     "custom_fields": $CUSTOM_FIELDS
   }
