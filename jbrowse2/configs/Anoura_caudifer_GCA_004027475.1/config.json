@@ -9,7 +9,7 @@
                 "ACA1",
                 "GCA_004027475.1"
             ],
-            "defaultAccessLevel": "Public",
+            "defaultAccessLevel": "PUBLIC",
             "sequence": {
                 "type": "ReferenceSequenceTrack",
                 "trackId": "Anoura_caudifer_GCA_004027475.1-ReferenceSequenceTrack",

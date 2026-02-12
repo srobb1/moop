@@ -248,20 +248,25 @@ foreach ($available_tracks as $track) {
 // 7. ADD REFERENCE ANNOTATIONS IF AVAILABLE
 $annotations_file = __DIR__ . "/../../data/genomes/{$organism}/{$assembly}/annotations.gff3.gz";
 if (file_exists($annotations_file)) {
+    $assembly_name = "{$organism}_{$assembly}";
     $assembly_config['tracks'][] = [
-        'name' => 'Annotations',
-        'trackId' => 'annotations',
-        'assemblyNames' => [$assembly],
         'type' => 'FeatureTrack',
+        'trackId' => "{$assembly_name}-genes",
+        'name' => 'Gene Annotations',
+        'assemblyNames' => [$assembly_name],
+        'category' => ['Annotation'],
         'adapter' => [
-            'type' => 'GffAdapter',
-            'gffLocation' => [
-                'uri' => "/jbrowse2/data/{$organism}/{$assembly}/annotations.gff3.gz"
+            'type' => 'Gff3TabixAdapter',
+            'gffGzLocation' => [
+                'uri' => "/moop/data/genomes/{$organism}/{$assembly}/annotations.gff3.gz",
+                'locationType' => 'UriLocation'
             ],
             'index' => [
                 'location' => [
-                    'uri' => "/jbrowse2/data/{$organism}/{$assembly}/annotations.gff3.gz.tbi"
-                ]
+                    'uri' => "/moop/data/genomes/{$organism}/{$assembly}/annotations.gff3.gz.tbi",
+                    'locationType' => 'UriLocation'
+                ],
+                'indexType' => 'TBI'
             ]
         ]
     ];
