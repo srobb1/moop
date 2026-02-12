@@ -9,7 +9,7 @@
  * Features:
  * - Auto-detects track types from file extensions and categories
  * - Supports multi-BigWig tracks (combo tracks)
- * - 27 color schemes with cycling (blues, reds, purples, rainbow, etc.)
+ * - 28 color schemes with cycling (blues, reds, purples, rainbow, etc.)
  * - Access level control (PUBLIC, COLLABORATOR, ADMIN)
  * - Checks for existing tracks to avoid duplicates
  * - AUTO track resolution for reference sequences and annotations
@@ -61,7 +61,7 @@
  *   - Regular: ## blues: Sample Group (cycles through 11 blues)
  *   - Exact: ## exact=OrangeRed: Group (all tracks use OrangeRed)
  *   - Indexed: ## reds3: Group (all tracks use 4th red, 0-indexed: Crimson)
- *   - See --list-colors for all 27 available schemes
+ *   - See --list-colors for all 28 available schemes
  * 
  * Information Flags:
  *   --list-colors           List all available color schemes
