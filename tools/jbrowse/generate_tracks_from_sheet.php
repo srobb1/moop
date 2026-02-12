@@ -20,13 +20,25 @@
 // Bootstrap
 require_once __DIR__ . '/../../includes/config_init.php';
 require_once __DIR__ . '/../../lib/JBrowse/TrackGenerator.php';
+require_once __DIR__ . '/../../lib/JBrowse/ColorSchemes.php';
 
 // Parse command line arguments
 $options = parseArguments($argv);
 
 // Handle --list-colors flag
 if (!empty($options['list_colors'])) {
-    listColorSchemes();
+    ColorSchemes::listSchemes();
+    exit(0);
+}
+
+// Handle --suggest-colors flag
+if (!empty($options['suggest_colors'])) {
+    $numFiles = intval($options['suggest_colors']);
+    if ($numFiles < 1) {
+        echo "Error: --suggest-colors requires a positive number\n";
+        exit(1);
+    }
+    ColorSchemes::displaySuggestions($numFiles);
     exit(0);
 }
 
@@ -190,7 +202,9 @@ function parseArguments($argv)
         'force' => false,
         'force_ids' => [],
         'dry_run' => false,
-        'clean' => false
+        'clean' => false,
+        'list_colors' => false,
+        'suggest_colors' => null
     ];
     
     // First argument is sheet ID
@@ -237,6 +251,10 @@ function parseArguments($argv)
                 $options['list_colors'] = true;
                 break;
                 
+            case '--suggest-colors':
+                $options['suggest_colors'] = $argv[++$i] ?? null;
+                break;
+                
             case '--help':
             case '-h':
                 showUsage();
@@ -265,6 +283,7 @@ function showUsage()
     echo "  --dry-run                 Show what would be done without making changes\n";
     echo "  --clean                   Remove tracks not in sheet\n";
     echo "  --list-colors             List available color schemes for combo tracks\n";
+    echo "  --suggest-colors N        Suggest best color schemes for N files\n";
     echo "  --help, -h                Show this help message\n\n";
     echo "EXAMPLES:\n";
     echo "  # Generate all new tracks\n";
