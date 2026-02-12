@@ -60,3 +60,14 @@ data/genomes/
 # JBrowse2 metadata (generated from source data)
 metadata/jbrowse2-configs/assemblies/
 metadata/jbrowse2-configs/tracks/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Temp directories
+tmp/
+temp/
+
+# Test files
+test-*.php
