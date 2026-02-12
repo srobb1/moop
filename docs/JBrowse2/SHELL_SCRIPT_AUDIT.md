@@ -7,9 +7,9 @@
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| ✅ Replaced | 2 | PHP replacement exists and tested |
+| ✅ Replaced | 3 | PHP replacement exists and tested |
 | 🔄 Partial | 1 | Combo track has PHP replacement |
-| ⏳ Needed | 9 | Need PHP replacements |
+| ⏳ Needed | 8 | Need PHP replacements |
 | 📦 Archived | 3 | In archived_shell_scripts/ |
 | ℹ️ Utility | 5 | Admin/setup scripts (lower priority) |
 
@@ -17,7 +17,7 @@
 
 ---
 
-## ✅ Replaced - PHP Exists (2)
+## ✅ Replaced - PHP Exists (3)
 
 ### add_bigwig_track.sh → BigWigTrack.php
 - **Status:** ✅ COMPLETE
@@ -30,6 +30,13 @@
 - **PHP Class:** `lib/JBrowse/TrackTypes/BamTrack.php`
 - **Location:** `archived_shell_scripts/add_bam_track.sh`
 - **Tested:** Yes (1 test track)
+
+### add_vcf_track.sh → VCFTrack.php
+- **Status:** ✅ COMPLETE (2026-02-12)
+- **PHP Class:** `lib/JBrowse/TrackTypes/VCFTrack.php`
+- **Shell Script:** `tools/jbrowse/add_vcf_track.sh` (can be archived)
+- **Tested:** Yes (test_variants track)
+- **Features:** Validates VCF.gz + .tbi, extracts variant/sample counts, supports remote files
 
 ---
 
@@ -44,54 +51,48 @@
 
 ---
 
-## ⏳ PHP Replacement Needed (9)
+## ⏳ PHP Replacement Needed (8)
 
-### Track Type Scripts (8)
+### Track Type Scripts (7)
 
-1. **add_vcf_track.sh**
-   - **Priority:** Medium
-   - **Users:** Anyone with variant call data
-   - **Effort:** 1 hour (similar to BAM)
-   - **PHP Class:** VCFTrack.php (to be created)
-
-2. **add_gff_track.sh**
+1. **add_gff_track.sh**
    - **Priority:** Medium (already have AutoTrack for AUTO GFF)
    - **Users:** Custom annotations
    - **Effort:** 1 hour
    - **PHP Class:** GFFTrack.php (to be created)
    - **Note:** AutoTrack.php handles AUTO case
 
-3. **add_gtf_track.sh**
+2. **add_gtf_track.sh**
    - **Priority:** Low-Medium
    - **Users:** Transcriptome annotations
    - **Effort:** 1 hour (similar to GFF)
    - **PHP Class:** GTFTrack.php (to be created)
 
-4. **add_cram_track.sh**
+3. **add_cram_track.sh**
    - **Priority:** Low
    - **Users:** Compressed alignment data
    - **Effort:** 1 hour (similar to BAM)
    - **PHP Class:** CRAMTrack.php (to be created)
 
-5. **add_paf_track.sh**
+4. **add_paf_track.sh**
    - **Priority:** Low
    - **Users:** Pairwise alignment format
    - **Effort:** 1-2 hours
    - **PHP Class:** PAFTrack.php (to be created)
 
-6. **add_maf_track.sh**
+5. **add_maf_track.sh**
    - **Priority:** Low
    - **Users:** Multiple alignment format
    - **Effort:** 1-2 hours
    - **PHP Class:** MAFTrack.php (to be created)
 
-7. **add_bed_track.sh**
+6. **add_bed_track.sh**
    - **Priority:** Medium
    - **Users:** Feature annotations
    - **Effort:** 1 hour
    - **PHP Class:** BEDTrack.php (to be created)
 
-8. **add_synteny_track.sh**
+7. **add_synteny_track.sh**
    - **Priority:** Low
    - **Users:** Comparative genomics
    - **Effort:** 2-3 hours (complex format)

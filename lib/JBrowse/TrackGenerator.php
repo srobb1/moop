@@ -84,8 +84,8 @@ class TrackGenerator
             'bam' => 'BamTrack',
             'combo' => 'ComboTrack',
             'auto' => 'AutoTrack',
+            'vcf' => 'VCFTrack',
             // Add more as implemented:
-            // 'vcf' => 'VCFTrack',
             // 'gff' => 'GFFTrack',
             // 'gtf' => 'GTFTrack',
             // 'cram' => 'CRAMTrack',
