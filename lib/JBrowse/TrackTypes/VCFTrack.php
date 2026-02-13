@@ -220,7 +220,9 @@ class VCFTrack implements TrackTypeInterface
         $trackName = $options['name'] ?? $this->generateTrackName($filePath);
         $category = $options['category'] ?? 'Variants';
         $description = $options['description'] ?? '';
-        $accessLevel = $options['access'] ?? 'Public';
+        $accessLevel = isset($options['access_level']) && !empty($options['access_level'])
+            ? $options['access_level']
+            : 'Public';
         $skipStats = $options['skip_stats'] ?? false;
         
         // Find TBI index

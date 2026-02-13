@@ -1778,7 +1778,7 @@ tree lib/JBrowse/ -L 2
 **To Investigate:**
 1. Check access control logic in `api/jbrowse2/assembly.php` (lines 148-195)
 2. Verify cached config generation in `tools/jbrowse/generate-jbrowse-configs.php`
-3. Test with different access levels (PUBLIC, COLLABORATOR, ADMIN)
+3. Test with different access levels (PUBLIC, COLLABORATOR, IP_IN_RANGE, ADMIN)
 4. Check case sensitivity (metadata has "Public" vs hierarchy has "PUBLIC")
 
 **Files to Review:**

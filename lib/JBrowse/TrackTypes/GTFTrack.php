@@ -178,7 +178,9 @@ class GTFTrack implements TrackTypeInterface
         $trackName = $options['name'] ?? $this->generateTrackName($filePath);
         $category = $options['category'] ?? 'Annotations';
         $description = $options['description'] ?? '';
-        $accessLevel = $options['access'] ?? 'Public';
+        $accessLevel = isset($options['access_level']) && !empty($options['access_level'])
+            ? $options['access_level']
+            : 'Public';
         
         $tbiPath = $this->findTbiIndex($filePath);
         if (!$tbiPath) {

@@ -21,7 +21,7 @@ class GoogleSheetsParser
     /**
      * Required columns for regular tracks
      */
-    private $requiredColumns = ['track_id', 'name', 'TRACK_PATH'];
+    private $requiredColumns = ['track_id', 'name', 'track_path'];
     
     /**
      * Download Google Sheet as TSV
@@ -71,6 +71,9 @@ class GoogleSheetsParser
         // Parse header
         $header = str_getcsv(trim($lines[0]), "\t");
         $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]); // Remove BOM
+        
+        // Normalize column names to lowercase for consistency
+        $header = array_map('strtolower', $header);
         
         // Filter out columns starting with #
         $validColumns = [];
@@ -154,7 +157,7 @@ class GoogleSheetsParser
             }
             
             // Skip if missing required fields
-            if (empty($row['track_id']) || empty($row['name']) || empty($row['TRACK_PATH'])) {
+            if (empty($row['track_id']) || empty($row['name']) || empty($row['track_path'])) {
                 continue;
             }
             
@@ -205,6 +208,9 @@ class GoogleSheetsParser
         // Remove BOM if present
         $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
         
+        // Normalize column names to lowercase for consistency
+        $header = array_map('strtolower', $header);
+        
         $rows = [];
         
         // Parse data rows
@@ -249,12 +255,12 @@ class GoogleSheetsParser
             }
             
             // Skip if no TRACK_PATH (might be combo track definition)
-            if (empty($row['TRACK_PATH'])) {
+            if (empty($row['track_path'])) {
                 continue;
             }
             
             // Skip if TRACK_PATH is "AUTO" but this is a combo track row
-            if (strtoupper($row['TRACK_PATH']) === 'AUTO' && !empty($row['COMBO_TRACK_ID'])) {
+            if (strtoupper($row['track_path']) === 'AUTO' && !empty($row['combo_track_id'])) {
                 continue;
             }
             
@@ -282,8 +288,8 @@ class GoogleSheetsParser
         // Group rows by COMBO_TRACK_ID
         $comboGroups = [];
         foreach ($parsed as $row) {
-            if (!empty($row['COMBO_TRACK_ID'])) {
-                $comboId = $row['COMBO_TRACK_ID'];
+            if (!empty($row['combo_track_id'])) {
+                $comboId = $row['combo_track_id'];
                 if (!isset($comboGroups[$comboId])) {
                     $comboGroups[$comboId] = [];
                 }
@@ -297,11 +303,11 @@ class GoogleSheetsParser
             $firstRow = $rows[0];
             
             // Map ACCESS column to access_level
-            $accessLevel = trim($firstRow['ACCESS'] ?? $firstRow['access_level'] ?? 'PUBLIC');
+            $accessLevel = trim($firstRow['access'] ?? $firstRow['access_level'] ?? 'PUBLIC');
             
             $comboTrack = [
                 'track_id' => $comboId,
-                'name' => $firstRow['COMBO_NAME'] ?? $comboId,
+                'name' => $firstRow['combo_name'] ?? $comboId,
                 'category' => $firstRow['category'] ?? 'Combo',
                 'access_level' => $accessLevel,
                 'organism' => $firstRow['organism'],
@@ -313,9 +319,9 @@ class GoogleSheetsParser
             
             // Extract file paths, names, and colors
             foreach ($rows as $row) {
-                if (!empty($row['TRACK_PATH'])) {
-                    $comboTrack['files'][] = $row['TRACK_PATH'];
-                    $comboTrack['names'][] = $row['name'] ?? basename($row['TRACK_PATH']);
+                if (!empty($row['track_path'])) {
+                    $comboTrack['files'][] = $row['track_path'];
+                    $comboTrack['names'][] = $row['name'] ?? basename($row['track_path']);
                     $comboTrack['colors'][] = $row['color'] ?? '';
                 }
             }
@@ -338,12 +344,12 @@ class GoogleSheetsParser
     private function cleanTrackData($row)
     {
         // Map ACCESS column to access_level
-        $accessLevel = trim($row['ACCESS'] ?? $row['access_level'] ?? 'PUBLIC');
+        $accessLevel = trim($row['access'] ?? $row['access_level'] ?? 'PUBLIC');
         
         return [
             'track_id' => trim($row['track_id']),
             'name' => trim($row['name']),
-            'TRACK_PATH' => trim($row['TRACK_PATH']),
+            'TRACK_PATH' => trim($row['track_path']),
             'category' => trim($row['category'] ?? 'Uncategorized'),
             'access_level' => $accessLevel,
             'color' => trim($row['color'] ?? ''),

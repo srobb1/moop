@@ -219,7 +219,9 @@ class BamTrack implements TrackTypeInterface
         $trackName = $options['name'] ?? $this->generateTrackName($filePath);
         $category = $options['category'] ?? 'Alignments';
         $description = $options['description'] ?? '';
-        $accessLevel = $options['access'] ?? 'Public';
+        $accessLevel = isset($options['access_level']) && !empty($options['access_level'])
+            ? $options['access_level']
+            : 'Public';
         $skipStats = $options['skip_stats'] ?? false;
         
         // Find BAI index
