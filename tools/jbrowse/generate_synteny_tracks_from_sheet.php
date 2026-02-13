@@ -45,7 +45,7 @@
 
 require_once __DIR__ . '/../../includes/config_init.php';
 require_once __DIR__ . '/../../lib/JBrowse/SyntenyGoogleSheetsParser.php';
-require_once __DIR__ . '/../../lib/JBrowse/TrackGenerator.php';
+require_once __DIR__ . '/../../lib/JBrowse/SyntenyTrackGenerator.php';
 
 // Parse arguments
 $options = parseArguments($argv);
@@ -71,7 +71,7 @@ if (empty($options['gid'])) {
 // Initialize
 $config = ConfigManager::getInstance();
 $parser = new SyntenyGoogleSheetsParser();
-$generator = new TrackGenerator($config);
+$generator = new SyntenyTrackGenerator($config);
 
 // Print configuration
 if (!$options['quiet']) {
