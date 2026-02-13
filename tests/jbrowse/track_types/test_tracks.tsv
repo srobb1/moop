@@ -1,0 +1,5 @@
+track_idnamecategorytrack_pathaccess_levelassembly1assembly2bed1_pathbed2_path
+test_pafTest PAF AlignmentLong-read/data/moop/tests/jbrowse/track_types/test.pafPUBLIC
+test_mafTest MAF AlignmentConservation/data/moop/tests/jbrowse/track_types/test.maf.gzPUBLIC
+test_pifTest PIF SyntenySynteny/data/moop/tests/jbrowse/track_types/test.pif.gzPUBLICGCA_000001GCA_000002
+test_mcscanTest MCScanSynteny/data/moop/tests/jbrowse/track_types/test.anchorsPUBLICGCA_000001GCA_000002/data/moop/tests/jbrowse/track_types/asm1.bed/data/moop/tests/jbrowse/track_types/asm2.bed

@@ -1,0 +1,5 @@
+track_idnamecategorytrack_pathaccess_levelorganismassemblyassembly1assembly2bed1_pathbed2_path
+test_paf_nvecTest PAF NematostellaLong-read/data/moop/tests/jbrowse/track_types/test.pafPUBLICNematostella_vectensisGCA_033964005.1
+test_maf_nvecTest MAF NematostellaConservation/data/moop/tests/jbrowse/track_types/test.maf.gzPUBLICNematostella_vectensisGCA_033964005.1
+test_pif_syntenyTest Nvec-Anoura SyntenySynteny/data/moop/tests/jbrowse/track_types/test.pif.gzPUBLICNematostella_vectensisGCA_033964005.1GCA_004027475.1GCA_033964005.1
+test_mcscan_syntenyTest MCScan SyntenySynteny/data/moop/tests/jbrowse/track_types/test.anchorsPUBLICNematostella_vectensisGCA_033964005.1GCA_004027475.1GCA_033964005.1/data/moop/tests/jbrowse/track_types/anoura.bed/data/moop/tests/jbrowse/track_types/nvec.bed
