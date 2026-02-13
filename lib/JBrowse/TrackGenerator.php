@@ -89,9 +89,10 @@ class TrackGenerator
             'gtf' => 'GTFTrack',
             'gff' => 'GFFTrack',
             'cram' => 'CRAMTrack',
-            // Add more as implemented:
-            // 'paf' => 'PAFTrack',
-            // 'maf' => 'MAFTrack',
+            'paf' => 'PAFTrack',      // Single assembly PAF alignments
+            'maf' => 'MAFTrack',      // Multiple alignment format
+            'pif' => 'PIFTrack',      // Pairwise Indexed PAF (whole genome synteny)
+            'mcscan' => 'MCScanTrack', // MCScan anchors (ortholog synteny)
         ];
         
         // Load and instantiate each track type
