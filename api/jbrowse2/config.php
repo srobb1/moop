@@ -85,16 +85,22 @@ session_start();
 require_once __DIR__ . '/../../includes/access_control.php';
 require_once __DIR__ . '/../../lib/functions_access.php';
 require_once __DIR__ . '/../../lib/jbrowse/track_token.php';
+require_once __DIR__ . '/../../lib/jbrowse/config_functions.php';
 require_once __DIR__ . '/../../lib/JBrowse/PluginLoader.php';
 
 // Get user's access level
 $user_access_level = get_access_level();
 $organism = $_GET['organism'] ?? null;
 $assembly = $_GET['assembly'] ?? null;
+$assembly1 = $_GET['assembly1'] ?? null;
+$assembly2 = $_GET['assembly2'] ?? null;
 
 // Route to appropriate handler
-if ($organism && $assembly) {
-    // Full assembly config with tracks
+if ($assembly1 && $assembly2) {
+    // Dual-assembly config with synteny tracks
+    generateDualAssemblyConfig($assembly1, $assembly2, $user_access_level);
+} elseif ($organism && $assembly) {
+    // Single assembly config with tracks
     generateAssemblyConfig($organism, $assembly, $user_access_level);
 } else {
     // Assembly list only
