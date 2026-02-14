@@ -25,6 +25,7 @@ Synteny tracks fundamentally differ from regular tracks:
 - BED (`.bed.gz`) - Features
 - GFF (`.gff.gz`, `.gff3.gz`) - Annotations
 - GTF (`.gtf`) - Transcripts
+- MAF (`.maf.gz`) - Multiple alignments (with BigBed index)
 - Combo - Multi-track groups
 - Auto - Reference sequences
 
@@ -54,14 +55,13 @@ metadata/jbrowse2-configs/tracks/
 
 ### Config Generator
 - Uses: `lib/JBrowse/TrackGenerator.php`
-- Registered types: 9 types (bigwig, bam, cram, vcf, bed, gff, gtf, combo, auto)
+- Registered types: 10 types (bigwig, bam, cram, vcf, bed, gff, gtf, maf, combo, auto)
 
 ## Dual-Assembly Synteny Tracks
 
 ### Track Types
 - PAF (`.paf`, `.paf.gz`) - Pairwise alignments
 - PIF (`.pif.gz`) - Whole genome synteny (minimap2)
-- MAF (`.maf.gz`) - Multiple alignments (with BigBed index)
 - MCScan (`.anchors`) - Ortholog synteny (with BED files)
 
 ### Google Sheet Format
@@ -93,14 +93,14 @@ Assembly pair names are alphabetically sorted for consistency.
 
 ### Config Generator
 - Uses: `lib/JBrowse/SyntenyTrackGenerator.php`
-- Registered types: 4 types (paf, pif, maf, mcscan)
+- Registered types: 3 types (paf, pif, mcscan)
 
 ## Comparison Table
 
 | Aspect | Single-Assembly | Dual-Assembly |
 |--------|----------------|---------------|
 | **Sheet Columns** | organism, assembly | organism1, assembly1, organism2, assembly2 |
-| **Track Types** | 9 types | 4 types |
+| **Track Types** | 10 types | 3 types |
 | **Generator Class** | TrackGenerator.php | SyntenyTrackGenerator.php |
 | **CLI Script** | generate_tracks_from_sheet.php | generate_synteny_tracks_from_sheet.php |
 | **Storage** | tracks/Org/Asm/type/ | tracks/synteny/Asm1_Asm2/type/ |
@@ -152,8 +152,8 @@ jbrowse2/configs/
 ## Important Rules
 
 ### ❌ Don't Mix Track Types
-- **Never** put PAF/PIF/MAF/MCScan in single-assembly sheet
-- **Never** put BigWig/BAM/VCF in dual-assembly sheet
+- **Never** put PAF/PIF/MCScan in single-assembly sheet
+- **Never** put BigWig/BAM/VCF/MAF in dual-assembly sheet
 
 ### ✅ Use Correct Script
 - Single assembly → `generate_tracks_from_sheet.php`

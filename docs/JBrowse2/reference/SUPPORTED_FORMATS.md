@@ -65,7 +65,7 @@ This document lists all file formats supported by JBrowse2, based on the install
 | **GTF** | `GtfAdapter` | `.gtf` | Gene annotations (Ensembl format) |
 | **BED** | `BedAdapter` | `.bed` | Unindexed BED files |
 | **BED Tabix** | `BedTabixAdapter` | `.bed.gz` + `.tbi` | Indexed BED files |
-| **BigBed** | `BigBedAdapter` | `.bb`, `.bigbed` | Binary indexed BED |
+| **BigBed** | `BigBedAdapter` | `.bb`, `.bigbed` | Binary indexed BED (can also store MAF as BigMaf) |
 | **NCList** | `NCListAdapter` | (JBrowse 1 format) | Legacy format |
 
 ### Quantitative/Signal Formats
@@ -83,10 +83,12 @@ This document lists all file formats supported by JBrowse2, based on the install
 | **HiC** | `HicAdapter` | `.hic` | Chromatin interaction data |
 | **BedPE** | `BedpeAdapter` | `.bedpe` | Paired-end genomic regions |
 
-### Comparative Genomics
+### Comparative Genomics / Multiple Alignments
 
 | Format | Adapter | Extensions | Notes |
 |--------|---------|------------|-------|
+| **MAF** | `MafAdapter` | `.maf.gz` + `.gzi` | ✅ Implemented - Multiple sequence alignments (Cactus) |
+| **BigMaf** | `BigBedAdapter` | `.bb`, `.bigbed` | Binary MAF format (convert from MAF) |
 | **Chain** | `ChainAdapter` | `.chain` | UCSC liftover chains |
 | **Delta** | `DeltaAdapter` | `.delta` | MUMmer alignment format |
 | **MCScan** | `MCScanAnchorsAdapter` | `.anchors` | Synteny anchors |
