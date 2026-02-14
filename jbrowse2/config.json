@@ -1,6 +1,11 @@
 {
   "assemblies": [],
-  "configuration": {},
+  "configuration": {
+    "plugins": [{
+      "name": "MafViewer",
+      "url": "https://jbrowse.org/plugins/jbrowse-plugin-mafviewer/dist/jbrowse-plugin-mafviewer.umd.production.min.js"
+    }]
+  },
   "connections": [],
   "defaultSession": {
     "name": "New Session"
