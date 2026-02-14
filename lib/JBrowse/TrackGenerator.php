@@ -79,7 +79,7 @@ class TrackGenerator
     private function registerTrackTypes()
     {
         // Map track type identifier to class name
-        // NOTE: PAF, PIF, MAF, and MCScan are dual-assembly synteny tracks
+        // NOTE: PAF, PIF, and MCScan are dual-assembly synteny tracks
         // and should be generated using generate_synteny_tracks_from_sheet.php
         $trackTypeClasses = [
             'bigwig' => 'BigWigTrack',
@@ -91,8 +91,10 @@ class TrackGenerator
             'gtf' => 'GTFTrack',
             'gff' => 'GFFTrack',
             'cram' => 'CRAMTrack',
+            'maf' => 'MAFTrack',  // Multiple alignment format (single-assembly)
+            // Optional: 'bigbed' => 'BigBedTrack',  // For BigMaf conversion
             // Dual-assembly synteny tracks (NOT registered here):
-            // - paf, pif, maf, mcscan
+            // - paf, pif, mcscan
             // Use: generate_synteny_tracks_from_sheet.php
         ];
         

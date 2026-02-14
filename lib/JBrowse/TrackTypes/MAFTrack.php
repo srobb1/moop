@@ -9,6 +9,7 @@
 
 require_once __DIR__ . '/TrackTypeInterface.php';
 require_once __DIR__ . '/../PathResolver.php';
+require_once __DIR__ . '/../ColorSchemes.php';
 
 class MAFTrack implements TrackTypeInterface
 {
@@ -34,7 +35,7 @@ class MAFTrack implements TrackTypeInterface
      */
     public function getValidExtensions()
     {
-        return ['.maf', '.maf.gz'];
+        return ['.maf', '.maf.gz', '.bed.gz', '.taf.gz', '.bb'];
     }
     
     /**
@@ -42,7 +43,7 @@ class MAFTrack implements TrackTypeInterface
      */
     public function requiresIndex()
     {
-        return true; // Compressed MAF files require .gzi index
+        return true; // Compressed MAF files require index
     }
     
     /**
@@ -50,7 +51,7 @@ class MAFTrack implements TrackTypeInterface
      */
     public function getIndexExtensions()
     {
-        return ['.gzi']; // GZI index for compressed MAF
+        return ['.tbi', '.csi', '.tai']; // Tabix index (.tbi/.csi) or TAF index (.tai)
     }
     
     /**
@@ -58,7 +59,7 @@ class MAFTrack implements TrackTypeInterface
      */
     public function getRequiredFields()
     {
-        return ['track_id', 'name', 'track_path'];
+        return ['track_id', 'name', 'TRACK_PATH'];
     }
     
     /**
@@ -80,7 +81,7 @@ class MAFTrack implements TrackTypeInterface
         }
         
         // Validate file extension
-        $path = $trackData['track_path'];
+        $path = $trackData['TRACK_PATH'];
         $validExt = false;
         foreach ($this->getValidExtensions() as $ext) {
             if (preg_match('/' . preg_quote($ext, '/') . '$/i', $path)) {
@@ -99,13 +100,22 @@ class MAFTrack implements TrackTypeInterface
                 $errors[] = "File not found: $path";
             }
             
-            // Check for .gzi index if compressed
-            if (preg_match('/\.gz$/i', $path)) {
-                $gziPath = $path . '.gzi';
-                if (!file_exists($gziPath)) {
-                    $errors[] = "GZI index not found: $gziPath (required for compressed MAF files)";
+            // Check for index files if compressed or BigBed
+            if (preg_match('/\.(bed\.gz|maf\.gz)$/i', $path)) {
+                // BED/MAF tabix format - needs .tbi or .csi
+                $tbiPath = $path . '.tbi';
+                $csiPath = $path . '.csi';
+                if (!file_exists($tbiPath) && !file_exists($csiPath)) {
+                    $errors[] = "Tabix index not found: Need either $tbiPath or $csiPath";
+                }
+            } elseif (preg_match('/\.taf\.gz$/i', $path)) {
+                // TAF format - needs .tai
+                $taiPath = $path . '.tai';
+                if (!file_exists($taiPath)) {
+                    $errors[] = "TAF index not found: $taiPath";
                 }
             }
+            // BigBed (.bb) files don't need separate index
         }
         
         return [
@@ -121,7 +131,7 @@ class MAFTrack implements TrackTypeInterface
     {
         try {
             // Build metadata
-            $metadata = $this->buildMetadata($trackData['track_path'], array_merge([
+            $metadata = $this->buildMetadata($trackData['TRACK_PATH'], array_merge([
                 'organism' => $organism,
                 'assembly' => $assembly,
             ], $trackData, $options));
@@ -153,29 +163,11 @@ class MAFTrack implements TrackTypeInterface
             ? $options['access_level']
             : 'Public';
         
-        // Parse samples if provided (JSON string or array)
-        $samples = [];
-        if (isset($options['samples'])) {
-            if (is_string($options['samples'])) {
-                $samples = json_decode($options['samples'], true) ?? [];
-            } elseif (is_array($options['samples'])) {
-                $samples = $options['samples'];
-            }
-        }
-        
         // Determine if remote or local
         $isRemote = preg_match('/^https?:\/\//i', $filePath);
-        $isCompressed = preg_match('/\.gz$/i', $filePath);
         
-        // Get URIs for web access
-        if ($isRemote) {
-            $mafUri = $filePath;
-            $gziUri = $filePath . '.gzi';
-        } else {
-            // Convert absolute path to web URI
-            $mafUri = $this->pathResolver->toWebUri($filePath);
-            $gziUri = $this->pathResolver->toWebUri($filePath . '.gzi');
-        }
+        // Determine adapter type and configuration based on file extension
+        $adapterConfig = $this->buildAdapterConfig($filePath, $options, $isRemote);
         
         // Build metadata structure
         $metadata = [
@@ -190,8 +182,7 @@ class MAFTrack implements TrackTypeInterface
                 'track_type' => 'maf',
                 'file_path' => $filePath,
                 'is_remote' => $isRemote,
-                'is_compressed' => $isCompressed,
-                'samples' => $samples,
+                'adapter_type' => $adapterConfig['type'],
                 'date_created' => date('Y-m-d H:i:s'),
             ]
         ];
@@ -211,35 +202,12 @@ class MAFTrack implements TrackTypeInterface
         }
         
         // Build JBrowse2 track configuration
-        $adapterConfig = [
-            'type' => 'MafAdapter',
-            'mafLocation' => [
-                'uri' => $mafUri,
-                'locationType' => 'UriLocation'
-            ]
-        ];
-        
-        // Add index for compressed files
-        if ($isCompressed) {
-            $adapterConfig['index'] = [
-                'location' => [
-                    'uri' => $gziUri,
-                    'locationType' => 'UriLocation'
-                ]
-            ];
-        }
-        
-        // Add samples if provided
-        if (!empty($samples)) {
-            $adapterConfig['samples'] = $samples;
-        }
-        
         $metadata['config'] = [
             'type' => 'MafTrack',
             'trackId' => $trackId,
             'name' => $trackName,
             'category' => [$category],
-            'assemblyNames' => [$assembly],
+            'assemblyNames' => ["{$organism}_{$assembly}"],
             'adapter' => $adapterConfig,
             'metadata' => [
                 'access_level' => $accessLevel,
@@ -254,6 +222,167 @@ class MAFTrack implements TrackTypeInterface
         }
         
         return $metadata;
+    }
+    
+    /**
+     * Build adapter configuration based on file type
+     */
+    private function buildAdapterConfig(string $filePath, array $options, bool $isRemote): array
+    {
+        // Get URIs for web access
+        if ($isRemote) {
+            $fileUri = $filePath;
+        } else {
+            $fileUri = $this->pathResolver->toWebUri($filePath);
+        }
+        
+        // Detect adapter type based on file extension and available indices
+        if (preg_match('/\.bb$/i', $filePath)) {
+            // BigBed format (BigMaf)
+            return $this->buildBigMafAdapter($fileUri, $options);
+            
+        } elseif (preg_match('/\.taf\.gz$/i', $filePath)) {
+            // TAF format (BgzipTaffy)
+            return $this->buildBgzipTaffyAdapter($filePath, $fileUri, $options, $isRemote);
+            
+        } elseif (preg_match('/\.(bed\.gz|maf\.gz)$/i', $filePath)) {
+            // BED or MAF with tabix (MafTabix)
+            return $this->buildMafTabixAdapter($filePath, $fileUri, $options, $isRemote);
+            
+        } else {
+            // Uncompressed MAF (not commonly used, but fall back to MafTabix)
+            return $this->buildMafTabixAdapter($filePath, $fileUri, $options, $isRemote);
+        }
+    }
+    
+    /**
+     * Build BigMafAdapter configuration
+     */
+    private function buildBigMafAdapter(string $fileUri, array $options): array
+    {
+        $config = [
+            'type' => 'BigMafAdapter',
+            'bigBedLocation' => [
+                'uri' => $fileUri,
+                'locationType' => 'UriLocation'
+            ]
+        ];
+        
+        // Add samples if provided
+        $samples = $this->getSamples($options);
+        if (!empty($samples)) {
+            $config['samples'] = $samples;
+        }
+        
+        return $config;
+    }
+    
+    /**
+     * Build MafTabixAdapter configuration
+     */
+    private function buildMafTabixAdapter(string $filePath, string $fileUri, array $options, bool $isRemote): array
+    {
+        $config = [
+            'type' => 'MafTabixAdapter',
+            'bedGzLocation' => [
+                'uri' => $fileUri,
+                'locationType' => 'UriLocation'
+            ]
+        ];
+        
+        // Determine index type and location
+        $indexType = 'TBI'; // Default
+        $indexUri = null;
+        
+        if ($isRemote) {
+            // Try .tbi first, then .csi
+            $indexUri = $fileUri . '.tbi';
+            // Could check if .csi exists, but default to .tbi for remote
+        } else {
+            // Check local filesystem
+            $tbiPath = $filePath . '.tbi';
+            $csiPath = $filePath . '.csi';
+            
+            if (file_exists($csiPath)) {
+                $indexType = 'CSI';
+                $indexUri = $this->pathResolver->toWebUri($csiPath);
+            } elseif (file_exists($tbiPath)) {
+                $indexType = 'TBI';
+                $indexUri = $this->pathResolver->toWebUri($tbiPath);
+            } else {
+                // Default to .tbi even if not found (will error later)
+                $indexUri = $this->pathResolver->toWebUri($tbiPath);
+            }
+        }
+        
+        $config['index'] = [
+            'indexType' => $indexType,
+            'location' => [
+                'uri' => $indexUri,
+                'locationType' => 'UriLocation'
+            ]
+        ];
+        
+        // Add samples if provided
+        $samples = $this->getSamples($options);
+        if (!empty($samples)) {
+            $config['samples'] = $samples;
+        }
+        
+        return $config;
+    }
+    
+    /**
+     * Build BgzipTaffyAdapter configuration
+     */
+    private function buildBgzipTaffyAdapter(string $filePath, string $fileUri, array $options, bool $isRemote): array
+    {
+        $config = [
+            'type' => 'BgzipTaffyAdapter',
+            'tafGzLocation' => [
+                'uri' => $fileUri,
+                'locationType' => 'UriLocation'
+            ]
+        ];
+        
+        // Add .tai index
+        if ($isRemote) {
+            $taiUri = $fileUri . '.tai';
+        } else {
+            $taiPath = $filePath . '.tai';
+            $taiUri = $this->pathResolver->toWebUri($taiPath);
+        }
+        
+        $config['taiLocation'] = [
+            'uri' => $taiUri,
+            'locationType' => 'UriLocation'
+        ];
+        
+        // Add samples if provided
+        $samples = $this->getSamples($options);
+        if (!empty($samples)) {
+            $config['samples'] = $samples;
+        }
+        
+        return $config;
+    }
+    
+    /**
+     * Get samples array from options
+     */
+    private function getSamples(array $options): array
+    {
+        // Parse samples from 'maf' column if provided
+        if (isset($options['maf']) && !empty($options['maf'])) {
+            return $this->parseMafColumn($options['maf']);
+        }
+        
+        // Auto-detect from local MAF file if not remote
+        if (isset($options['file_path']) && !preg_match('/^https?:\/\//i', $options['file_path'])) {
+            return $this->parseSamplesFromMAF($options['file_path']);
+        }
+        
+        return [];
     }
     
     /**
@@ -304,5 +433,130 @@ class MAFTrack implements TrackTypeInterface
         $name = preg_replace('/\.(maf|maf\.gz)$/i', '', $filename);
         $name = str_replace(['_', '-'], ' ', $name);
         return ucwords($name);
+    }
+    
+    /**
+     * Parse MAF column format: id,label[,color];id,label[,color];...
+     * 
+     * Examples:
+     *   hg38,Human;panTro6,Chimp;gorGor6,Gorilla
+     *   hg38,Human,rgba(255,255,255,0.7);panTro6,Chimp,rgba(255,200,200,0.7)
+     *   hg38,Human,rgba(255,255,255,0.7);panTro6,Chimp
+     */
+    private function parseMafColumn(string $mafColumn): array
+    {
+        $samples = [];
+        $entries = explode(';', trim($mafColumn));
+        
+        foreach ($entries as $i => $entry) {
+            $parts = array_map('trim', explode(',', $entry));
+            
+            if (count($parts) < 2) {
+                continue; // Skip invalid entries
+            }
+            
+            $sample = [
+                'id' => $parts[0],
+                'label' => $parts[1],
+                'color' => isset($parts[2]) && !empty($parts[2]) 
+                    ? $parts[2] 
+                    : $this->getDefaultColor($i)
+            ];
+            
+            $samples[] = $sample;
+        }
+        
+        return $samples;
+    }
+    
+    /**
+     * Parse MAF file to extract sample IDs and build default samples array
+     */
+    private function parseSamplesFromMAF(string $filePath): array
+    {
+        $sampleIds = [];
+        
+        try {
+            if (!file_exists($filePath)) {
+                error_log("MAF file not found for sample parsing: $filePath");
+                return [];
+            }
+            
+            $handle = gzopen($filePath, 'r');
+            if (!$handle) {
+                error_log("Failed to open MAF file: $filePath");
+                return [];
+            }
+            
+            // Parse first 10000 lines to find sample IDs
+            $lineCount = 0;
+            while (!gzeof($handle) && $lineCount < 10000) {
+                $line = gzgets($handle);
+                // MAF sequence lines: "s <genome>.<chr> ..."
+                // Example: "s hg38.chr1 1000 100 + 248956422 ATCG..."
+                if (preg_match('/^s\s+(\S+?)\./', $line, $matches)) {
+                    $sampleIds[$matches[1]] = true;
+                }
+                $lineCount++;
+            }
+            gzclose($handle);
+            
+            // Build samples array with id as label and default colors
+            $samples = [];
+            $i = 0;
+            foreach (array_keys($sampleIds) as $id) {
+                $samples[] = [
+                    'id' => $id,
+                    'label' => $id,
+                    'color' => $this->getDefaultColor($i++)
+                ];
+            }
+            
+            return $samples;
+            
+        } catch (Exception $e) {
+            error_log("Failed to parse MAF samples: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get default color from rainbow palette for given index
+     * Uses the ColorSchemes 'rainbow' palette for maximum variety
+     */
+    private function getDefaultColor(int $index): string
+    {
+        // Get rainbow palette from ColorSchemes
+        $palette = ColorSchemes::getScheme('rainbow');
+        
+        if (!$palette) {
+            // Fallback palette if ColorSchemes fails
+            $palette = [
+                '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4',
+                '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff',
+                '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1',
+                '#000075', '#808080'
+            ];
+        }
+        
+        // Convert hex to rgba with 0.7 opacity
+        $color = $palette[$index % count($palette)];
+        
+        // If already in rgba format, return as-is
+        if (strpos($color, 'rgba') === 0) {
+            return $color;
+        }
+        
+        // Convert hex to rgba
+        if (strpos($color, '#') === 0) {
+            $hex = ltrim($color, '#');
+            $r = hexdec(substr($hex, 0, 2));
+            $g = hexdec(substr($hex, 2, 2));
+            $b = hexdec(substr($hex, 4, 2));
+            return "rgba($r,$g,$b,0.7)";
+        }
+        
+        // Named color - return with opacity note (JBrowse may handle differently)
+        return $color;
     }
 }

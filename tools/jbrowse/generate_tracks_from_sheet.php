@@ -260,18 +260,7 @@ try {
         echo "DRY RUN MODE - No changes were made\n";
     } else {
         echo "Done!\n";
-        
-        // Generate JBrowse browser config files
-        echo "\nGenerating JBrowse browser configs...\n";
-        $configScript = __DIR__ . '/generate-jbrowse-configs.php';
-        exec("php " . escapeshellarg($configScript) . " 2>&1", $configOutput, $configReturn);
-        
-        if ($configReturn === 0) {
-            echo "✓ Browser configs generated successfully\n";
-        } else {
-            echo "⚠ Warning: Config generation had issues:\n";
-            echo implode("\n", $configOutput) . "\n";
-        }
+        echo "Note: Using dynamic permission-based configs via api/jbrowse2/config.php\n";
     }
     
     exit(0);
