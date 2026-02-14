@@ -1,0 +1,1638 @@
+{
+    "assemblies": [
+        {
+            "name": "Nematostella_vectensis_GCA_033964005.1",
+            "displayName": "Nematostella vectensis (GCA_033964005.1)",
+            "organism": "Nematostella_vectensis",
+            "assemblyId": "GCA_033964005.1",
+            "aliases": [
+                "GCA_033964005.1",
+                "Nvec200"
+            ],
+            "sequence": {
+                "type": "ReferenceSequenceTrack",
+                "trackId": "Nematostella_vectensis_GCA_033964005.1-ReferenceSequenceTrack",
+                "adapter": {
+                    "type": "IndexedFastaAdapter",
+                    "fastaLocation": {
+                        "uri": "/moop/data/genomes//Nematostella_vectensis/GCA_033964005.1/reference.fasta",
+                        "locationType": "UriLocation"
+                    },
+                    "faiLocation": {
+                        "uri": "/moop/data/genomes//Nematostella_vectensis/GCA_033964005.1/reference.fasta.fai",
+                        "locationType": "UriLocation"
+                    }
+                }
+            },
+            "metadata": {
+                "createdAt": "2026-02-14T00:17:31Z",
+                "source": "PHP track generator",
+                "description": "Assembly definition for Nematostella_vectensis GCA_033964005.1"
+            }
+        }
+    ],
+    "configuration": [
+        {
+            "name": "MafViewer",
+            "url": "https://jbrowse.org/plugins/jbrowse-plugin-mafviewer/dist/jbrowse-plugin-mafviewer.umd.production.min.js"
+        }
+    ],
+    "connections": [],
+    "defaultSession": {
+        "name": "New Session",
+        "view": {
+            "id": "linearGenomeView",
+            "type": "LinearGenomeView",
+            "offsetPx": 0,
+            "bpPerPx": 1,
+            "displayedRegions": []
+        }
+    },
+    "tracks": [
+        {
+            "trackId": "NV2g_genes",
+            "name": "NV2g_genes",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Models"
+            ],
+            "type": "FeatureTrack",
+            "adapter": {
+                "type": "Gff3TabixAdapter",
+                "gffGzLocation": {
+                    "uri": "/moop/data/genomes//Nematostella_vectensis/GCA_033964005.1/annotations.gff3.gz",
+                    "locationType": "UriLocation"
+                },
+                "index": {
+                    "location": {
+                        "uri": "/moop/data/genomes//Nematostella_vectensis/GCA_033964005.1/annotations.gff3.gz.tbi",
+                        "locationType": "UriLocation"
+                    }
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearBasicDisplay",
+                    "displayId": "NV2g_genes-LinearBasicDisplay"
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/var/www/html/moop/data/genomes//Nematostella_vectensis/GCA_033964005.1/annotations.gff3.gz",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:17:31Z",
+                "google_sheets_metadata": {
+                    "technique": "Sequence",
+                    "institute": "Vienna",
+                    "source": "TCS_v2",
+                    "experiment": "Versioned 20240221 Improved Gene Names",
+                    "summary": "Versioned Improved Gene Models by Bob Zimmerman and Juan Montenegro"
+                }
+            }
+        },
+        {
+            "trackId": "test_gff_explicit",
+            "name": "Test GFF Track",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Features"
+            ],
+            "type": "FeatureTrack",
+            "adapter": {
+                "type": "Gff3TabixAdapter",
+                "gffGzLocation": {
+                    "uri": "/moop/data/genomes/Nematostella_vectensis/GCA_033964005.1/annotations.gff3.gz",
+                    "locationType": "UriLocation"
+                },
+                "index": {
+                    "location": {
+                        "uri": "/moop/data/genomes/Nematostella_vectensis/GCA_033964005.1/annotations.gff3.gz.tbi",
+                        "locationType": "UriLocation"
+                    },
+                    "indexType": "TBI"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearBasicDisplay",
+                    "displayId": "test_gff_explicit-LinearBasicDisplay"
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "Public",
+                "file_path": "/data/moop/data/genomes/Nematostella_vectensis/GCA_033964005.1/annotations.gff3.gz",
+                "file_size": 5844331,
+                "is_remote": 0,
+                "added_date": "2026-02-14T00:17:31Z",
+                "google_sheets_metadata": {
+                    "technique": "Sequence",
+                    "summary": "Test explicit GFF track (same file as AUTO NV2g_genes)"
+                }
+            }
+        },
+        {
+            "trackId": "test_annotations_gtf",
+            "name": "Test GTF Annotations",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Features"
+            ],
+            "type": "FeatureTrack",
+            "adapter": {
+                "type": "GtfAdapter",
+                "gtfLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/gtf/test_annotations.gtf.gz",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearBasicDisplay",
+                    "displayId": "test_annotations_gtf-LinearBasicDisplay"
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "Public",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/gtf/test_annotations.gtf.gz",
+                "file_size": 172,
+                "is_remote": 0,
+                "added_date": "2026-02-14T00:17:31Z",
+                "google_sheets_metadata": {
+                    "technique": "Sequence",
+                    "summary": "Test GTF track with gene, transcript, and exon features"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S3-body-wall.bam",
+            "name": "S3 body_wall",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Aligned Reads"
+            ],
+            "type": "AlignmentsTrack",
+            "adapter": {
+                "type": "BamAdapter",
+                "bamLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bam/MOLNG-2707_S3-body-wall.bam",
+                    "locationType": "UriLocation"
+                },
+                "index": {
+                    "location": {
+                        "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bam/MOLNG-2707_S3-body-wall.bam.bai",
+                        "locationType": "UriLocation"
+                    }
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearAlignmentsDisplay",
+                    "displayId": "MOLNG-2707_S3-body-wall.bam-LinearAlignmentsDisplay"
+                },
+                {
+                    "type": "LinearPileupDisplay",
+                    "displayId": "MOLNG-2707_S3-body-wall.bam-LinearPileupDisplay"
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "ADMIN",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bam/MOLNG-2707_S3-body-wall.bam",
+                "file_size": 1110556249,
+                "total_reads": 36752616,
+                "mapped_reads": 36752616,
+                "is_remote": 0,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "body_wall"
+                }
+            }
+        },
+        {
+            "trackId": "test_features_bed",
+            "name": "Test BED Features",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Features"
+            ],
+            "type": "FeatureTrack",
+            "adapter": {
+                "type": "BedTabixAdapter",
+                "bedGzLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bed/test_features.bed.gz",
+                    "locationType": "UriLocation"
+                },
+                "index": {
+                    "location": {
+                        "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bed/test_features.bed.gz.tbi",
+                        "locationType": "UriLocation"
+                    },
+                    "indexType": "TBI"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearBasicDisplay",
+                    "displayId": "test_features_bed-LinearBasicDisplay"
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "Public",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bed/test_features.bed.gz",
+                "file_size": 106,
+                "feature_count": 3,
+                "is_remote": 0,
+                "added_date": "2026-02-14T00:17:31Z",
+                "google_sheets_metadata": {
+                    "technique": "Sequence",
+                    "summary": "Test BED track with 3 genomic features"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S1-body-wall.neg.bw",
+            "name": "S1 body_wall -",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-body-wall.neg.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S1-body-wall.neg.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-body-wall.neg.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "body_wall"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S1-body-wall.pos.bw",
+            "name": "S1 body_wall +",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-body-wall.pos.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S1-body-wall.pos.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-body-wall.pos.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "body_wall"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S1-oral-disk.neg.bw",
+            "name": "S1 oral_disk -",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-oral-disk.neg.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S1-oral-disk.neg.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-oral-disk.neg.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "oral_disk"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S1-oral-disk.pos.bw",
+            "name": "S1 oral_disk +",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-oral-disk.pos.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S1-oral-disk.pos.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-oral-disk.pos.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "oral_disk"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S1-pharynx.neg.bw",
+            "name": "S1 pharynx -",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-pharynx.neg.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S1-pharynx.neg.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-pharynx.neg.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "pharynx"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S1-pharynx.pos.bw",
+            "name": "S1 pharynx +",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-pharynx.pos.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S1-pharynx.pos.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-pharynx.pos.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "pharynx"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S1-tentacle.neg.bw",
+            "name": "S1 tentancle -",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-tentacle.neg.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S1-tentacle.neg.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-tentacle.neg.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "tentacle"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S1-tentacle.pos.bw",
+            "name": "S1 tentancle +",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-tentacle.pos.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S1-tentacle.pos.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-tentacle.pos.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "tentacle"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S2-body-wall.neg.bw",
+            "name": "S2 body_wall -",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-body-wall.neg.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S2-body-wall.neg.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-body-wall.neg.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "body_wall"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S2-body-wall.pos.bw",
+            "name": "S2 body_wall +",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-body-wall.pos.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S2-body-wall.pos.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-body-wall.pos.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "body_wall"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S2-oral-disk.neg.bw",
+            "name": "S2 oral_disk -",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-oral-disk.neg.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S2-oral-disk.neg.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-oral-disk.neg.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "oral_disk"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S2-oral-disk.pos.bw",
+            "name": "S2 oral_disk +",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-oral-disk.pos.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S2-oral-disk.pos.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-oral-disk.pos.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "oral_disk"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S2-pharynx.neg.bw",
+            "name": "S2 pharynx -",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-pharynx.neg.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S2-pharynx.neg.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-pharynx.neg.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "pharynx"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S2-pharynx.pos.bw",
+            "name": "S2 pharynx +",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-pharynx.pos.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S2-pharynx.pos.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-pharynx.pos.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "pharynx"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S2-tentacle.neg.bw",
+            "name": "S2 tentancle -",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-tentacle.neg.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S2-tentacle.neg.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-tentacle.neg.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "tentacle"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S2-tentacle.pos.bw",
+            "name": "S2 tentancle +",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-tentacle.pos.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S2-tentacle.pos.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-tentacle.pos.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "tentacle"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S3-body-wall.neg.bw",
+            "name": "S3 body_wall -",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-body-wall.neg.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S3-body-wall.neg.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-body-wall.neg.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "body_wall"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S3-body-wall.pos.bw",
+            "name": "S3 body_wall +",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-body-wall.pos.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S3-body-wall.pos.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-body-wall.pos.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "body_wall"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S3-oral-disk.neg.bw",
+            "name": "S3 oral_disk -",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-oral-disk.neg.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S3-oral-disk.neg.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-oral-disk.neg.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "oral_disk"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S3-oral-disk.pos.bw",
+            "name": "S3 oral_disk +",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-oral-disk.pos.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S3-oral-disk.pos.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-oral-disk.pos.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "oral_disk"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S3-pharynx.neg.bw",
+            "name": "S3 pharynx -",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-pharynx.neg.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S3-pharynx.neg.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-pharynx.neg.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "pharynx"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S3-pharynx.pos.bw",
+            "name": "S3 pharynx +",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-pharynx.pos.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S3-pharynx.pos.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-pharynx.pos.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "pharynx"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S3-tentacle.neg.bw",
+            "name": "S3 tentancle -",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-tentacle.neg.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S3-tentacle.neg.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-tentacle.neg.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "tentacle"
+                }
+            }
+        },
+        {
+            "trackId": "MOLNG-2707_S3-tentacle.pos.bw",
+            "name": "S3 tentancle +",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Gene Expression"
+            ],
+            "type": "QuantitativeTrack",
+            "adapter": {
+                "type": "BigWigAdapter",
+                "bigWigLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-tentacle.pos.bw",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearWiggleDisplay",
+                    "displayId": "MOLNG-2707_S3-tentacle.pos.bw-LinearWiggleDisplay",
+                    "renderer": {
+                        "type": "XYPlotRenderer",
+                        "color": "#1f77b4"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "PUBLIC",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-tentacle.pos.bw",
+                "is_remote": false,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "institute": "SIMR",
+                    "source": "GibsonLab RZ1989",
+                    "experiment": "To analyze the transcriptome profile in each tissue type. To identify tissue-specific genes in the oral disk region.",
+                    "tissue": "tentacle"
+                }
+            }
+        },
+        {
+            "type": "MultiQuantitativeTrack",
+            "trackId": "simr_four_adult_tissues_molng-2707",
+            "name": "SIMR:Four_Adult_Tissues_MOLNG-2707",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Combo Tracks"
+            ],
+            "adapter": {
+                "type": "MultiWiggleAdapter",
+                "subadapters": [
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-body-wall.pos.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S1 body_wall +",
+                        "color": "DarkGreen"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-body-wall.pos.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S2 body_wall +",
+                        "color": "DarkOliveGreen"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-body-wall.pos.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S3 body_wall +",
+                        "color": "ForestGreen"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-body-wall.neg.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S1 body_wall -",
+                        "color": "DarkGreen"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-body-wall.neg.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S2 body_wall -",
+                        "color": "DarkOliveGreen"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-body-wall.neg.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S3 body_wall -",
+                        "color": "ForestGreen"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-oral-disk.pos.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S1 oral_disk +",
+                        "color": "OrangeRed"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-oral-disk.pos.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S2 oral_disk +",
+                        "color": "Tomato"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-oral-disk.pos.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S3 oral_disk +",
+                        "color": "DarkOrange"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-oral-disk.neg.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S1 oral_disk -",
+                        "color": "OrangeRed"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-oral-disk.neg.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S2 oral_disk -",
+                        "color": "Tomato"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-oral-disk.neg.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S3 oral_disk -",
+                        "color": "DarkOrange"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-pharynx.pos.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S1 pharynx +",
+                        "color": "Indigo"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-pharynx.pos.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S2 pharynx +",
+                        "color": "Purple"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-pharynx.pos.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S3 pharynx +",
+                        "color": "DarkViolet"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-pharynx.neg.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S1 pharynx -",
+                        "color": "Indigo"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-pharynx.neg.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S2 pharynx -",
+                        "color": "Purple"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-pharynx.neg.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S3 pharynx -",
+                        "color": "DarkViolet"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-tentacle.pos.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S1 tentancle +",
+                        "color": "DarkKhaki"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-tentacle.pos.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S2 tentancle +",
+                        "color": "Gold"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-tentacle.pos.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S3 tentancle +",
+                        "color": "Khaki"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S1-tentacle.neg.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S1 tentancle -",
+                        "color": "DarkKhaki"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S2-tentacle.neg.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S2 tentancle -",
+                        "color": "Gold"
+                    },
+                    {
+                        "type": "BigWigAdapter",
+                        "bigWigLocation": {
+                            "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/bigwig/MOLNG-2707_S3-tentacle.neg.bw",
+                            "locationType": "UriLocation"
+                        },
+                        "name": "S3 tentancle -",
+                        "color": "Khaki"
+                    }
+                ]
+            },
+            "displays": [
+                {
+                    "type": "MultiLinearWiggleDisplay",
+                    "displayId": "simr_four_adult_tissues_molng-2707-MultiLinearWiggleDisplay"
+                }
+            ]
+        },
+        {
+            "trackId": "MOLNG-2707_S3-body-wall.cram",
+            "name": "Test CRAM",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Aligned Reads"
+            ],
+            "type": "AlignmentsTrack",
+            "adapter": {
+                "type": "CramAdapter",
+                "cramLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/cram/MOLNG-2707_S3-body-wall.cram",
+                    "locationType": "UriLocation"
+                },
+                "craiLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/cram/MOLNG-2707_S3-body-wall.cram.crai",
+                    "locationType": "UriLocation"
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearAlignmentsDisplay",
+                    "displayId": "MOLNG-2707_S3-body-wall.cram-LinearAlignmentsDisplay"
+                },
+                {
+                    "type": "LinearPileupDisplay",
+                    "displayId": "MOLNG-2707_S3-body-wall.cram-LinearPileupDisplay"
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "ADMIN",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/cram/MOLNG-2707_S3-body-wall.cram",
+                "file_size": 694850791,
+                "total_reads": 36752616,
+                "mapped_reads": 36752616,
+                "is_remote": 0,
+                "added_date": "2026-02-14T00:17:47Z",
+                "google_sheets_metadata": {
+                    "technique": "RNASeq",
+                    "summary": "CRAM compressed alignments (40% smaller than the bam)"
+                }
+            }
+        },
+        {
+            "type": "MafTrack",
+            "trackId": "test_maf",
+            "name": "Test MAF Alignment",
+            "category": [
+                "Conservation"
+            ],
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "adapter": {
+                "type": "MafTabixAdapter",
+                "bedGzLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/maf/test.maf.gz",
+                    "locationType": "UriLocation"
+                },
+                "index": {
+                    "indexType": "TBI",
+                    "location": {
+                        "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/maf/test.maf.gz.tbi",
+                        "locationType": "UriLocation"
+                    }
+                }
+            },
+            "metadata": {
+                "access_level": "PUBLIC"
+            }
+        },
+        {
+            "trackId": "test_variants",
+            "name": "Test SNPs and Indels",
+            "assemblyNames": [
+                "Nematostella_vectensis_GCA_033964005.1"
+            ],
+            "category": [
+                "Variants"
+            ],
+            "type": "VariantTrack",
+            "adapter": {
+                "type": "VcfTabixAdapter",
+                "vcfGzLocation": {
+                    "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/vcf/test_variants.vcf.gz",
+                    "locationType": "UriLocation"
+                },
+                "index": {
+                    "location": {
+                        "uri": "/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/vcf/test_variants.vcf.gz.tbi",
+                        "locationType": "UriLocation"
+                    }
+                }
+            },
+            "displays": [
+                {
+                    "type": "LinearVariantDisplay",
+                    "displayId": "test_variants-LinearVariantDisplay",
+                    "renderer": {
+                        "type": "SvgFeatureRenderer"
+                    }
+                }
+            ],
+            "metadata": {
+                "description": "",
+                "access_level": "Public",
+                "file_path": "/data/moop/data/tracks/Nematostella_vectensis/GCA_033964005.1/vcf/test_variants.vcf.gz",
+                "file_size": 373,
+                "variant_count": 3,
+                "sample_count": 1,
+                "is_remote": 0,
+                "added_date": "2026-02-14T00:18:06Z",
+                "google_sheets_metadata": {
+                    "technique": "SNPS",
+                    "summary": "Test VCF track with 3 variants (SNPs and indels)"
+                }
+            }
+        }
+    ]
+}

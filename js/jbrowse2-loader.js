@@ -10,7 +10,7 @@
 
     // Configuration
     const CONFIG = {
-        apiUrl: '/moop/api/jbrowse2/get-config.php',
+        apiUrl: '/moop/api/jbrowse2/config.php',
         containerSelector: '#assembly-list-container',
         countSelector: '#assembly-count',
         userStatusSelector: '#user-status'
@@ -214,10 +214,10 @@
             assemblyId = 'default';
         }
         
-        // Use cached config endpoint for better performance
-        // This caches configs per access level and validates permissions
+        // Use single secure config endpoint
+        // This endpoint validates permissions and includes JWT tokens for all tracks
         const iframe = document.getElementById('jbrowse2-iframe');
-        const configUrl = `/moop/api/jbrowse2/assembly-cached.php?organism=${encodeURIComponent(organism)}&assembly=${encodeURIComponent(assemblyId)}`;
+        const configUrl = `/moop/api/jbrowse2/config.php?organism=${encodeURIComponent(organism)}&assembly=${encodeURIComponent(assemblyId)}`;
         iframe.src = `/moop/jbrowse2/index.html?config=${encodeURIComponent(configUrl)}`;
         iframe.title = `JBrowse2 Viewer for ${assembly.displayName}`;
     }
