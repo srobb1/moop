@@ -14,6 +14,8 @@
 
 // Load ConfigManager
 require_once __DIR__ . '/../../includes/config_init.php';
+require_once __DIR__ . '/../../lib/JBrowse/PluginLoader.php';
+
 $config = ConfigManager::getInstance();
 
 // Get paths from config
@@ -41,7 +43,7 @@ function generateAssemblyConfig($assemblyDef, $jbrowseTracksDir) {
     // Start with base config structure
     $config = [
         'assemblies' => [$assemblyDef],
-        'configuration' => [],
+        'configuration' => getJBrowse2PluginConfiguration(),
         'connections' => [],
         'defaultSession' => [
             'name' => 'New Session',
@@ -108,7 +110,7 @@ function generateCachedConfigs($assemblyDef, $jbrowseTracksDir, $assemblyDir, $g
     // Base config structure
     $baseConfig = [
         'assemblies' => [$assemblyDef],
-        'configuration' => [],
+        'configuration' => getJBrowse2PluginConfiguration(),
         'connections' => [],
         'defaultSession' => [
             'name' => 'New Session',
@@ -297,10 +299,8 @@ function processAssemblies($metadataDir, $jbrowseDir, $tracksDir, $genomesDir) {
                 mkdir($assemblyDir, 0775, true);
             }
             
-            // Write config.json
-            $configFile = $assemblyDir . '/config.json';
-            file_put_contents($configFile, json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-            chmod($configFile, 0664);
+            // NOTE: We do NOT write a config.json here - only per-access-level files
+            // config.json with all tracks would bypass our permissions model
             
             echo "✓ Generated config for: $assemblyName\n";
             
