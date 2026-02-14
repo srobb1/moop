@@ -377,9 +377,11 @@ class MAFTrack implements TrackTypeInterface
             return $this->parseMafColumn($options['maf']);
         }
         
-        // Auto-detect from local MAF file if not remote
-        if (isset($options['file_path']) && !preg_match('/^https?:\/\//i', $options['file_path'])) {
-            return $this->parseSamplesFromMAF($options['file_path']);
+        // Auto-detect from local file if not remote
+        // Use TRACK_PATH (the actual key from Google Sheets)
+        $filePath = $options['TRACK_PATH'] ?? null;
+        if ($filePath && !preg_match('/^https?:\/\//i', $filePath)) {
+            return $this->parseSamplesFromFile($filePath);
         }
         
         return [];
@@ -470,18 +472,122 @@ class MAFTrack implements TrackTypeInterface
     }
     
     /**
-     * Parse MAF file to extract sample IDs and build default samples array
+     * Auto-detect file format and parse samples accordingly
+     * Supports both true MAF format and BED format with encoded MAF data
+     */
+    private function parseSamplesFromFile(string $filePath): array
+    {
+        try {
+            if (!file_exists($filePath)) {
+                error_log("File not found for sample parsing: $filePath");
+                return [];
+            }
+            
+            $handle = gzopen($filePath, 'r');
+            if (!$handle) {
+                error_log("Failed to open file: $filePath");
+                return [];
+            }
+            
+            // Read first non-comment line to detect format
+            $firstLine = '';
+            while (!gzeof($handle)) {
+                $line = trim(gzgets($handle));
+                if (!empty($line) && $line[0] !== '#') {
+                    $firstLine = $line;
+                    break;
+                }
+            }
+            gzclose($handle);
+            
+            // Detect format
+            if (preg_match('/^s\s+/', $firstLine)) {
+                // True MAF format (starts with 's' for sequence)
+                return $this->parseSamplesFromMAF($filePath);
+            } else {
+                // BED format with encoded MAF data
+                return $this->parseSamplesFromBedMAF($filePath);
+            }
+            
+        } catch (Exception $e) {
+            error_log("Failed to detect and parse file format: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Parse samples from BED format MAF file
+     * BED12+13 format: chrom, start, end, name, score, strand, ...encoded_alignments...
+     * Column 7 format: genome.scaffold:start:len:strand:size:seq,genome2.scaffold:...
+     */
+    private function parseSamplesFromBedMAF(string $filePath): array
+    {
+        $sampleIds = [];
+        
+        try {
+            $handle = gzopen($filePath, 'r');
+            if (!$handle) {
+                error_log("Failed to open BED MAF file: $filePath");
+                return [];
+            }
+            
+            // Parse first 100 lines to find all sample IDs
+            $lineCount = 0;
+            while (!gzeof($handle) && $lineCount < 100) {
+                $line = trim(gzgets($handle));
+                if (empty($line) || $line[0] === '#') {
+                    continue;
+                }
+                
+                $fields = explode("\t", $line);
+                if (count($fields) < 7) {
+                    continue;
+                }
+                
+                // Column 7 (index 6) contains alignment data
+                // Format: genome1.scaffold:start:len:strand:size:seq,genome2.scaffold:...
+                $alignmentData = $fields[6];
+                $blocks = explode(',', $alignmentData);
+                
+                foreach ($blocks as $block) {
+                    // Extract genome ID (text before first dot)
+                    if (preg_match('/^([^\.]+)\./', $block, $matches)) {
+                        $sampleIds[$matches[1]] = true;
+                    }
+                }
+                
+                $lineCount++;
+            }
+            gzclose($handle);
+            
+            // Build samples array with default colors
+            $samples = [];
+            $i = 0;
+            foreach (array_keys($sampleIds) as $id) {
+                $samples[] = [
+                    'id' => $id,
+                    'label' => str_replace('_', ' ', $id), // Make readable
+                    'color' => $this->getDefaultColor($i++)
+                ];
+            }
+            
+            return $samples;
+            
+        } catch (Exception $e) {
+            error_log("Failed to parse BED MAF samples: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Parse true MAF file to extract sample IDs and build default samples array
+     * True MAF format has lines starting with 's' for sequence records
      */
     private function parseSamplesFromMAF(string $filePath): array
     {
         $sampleIds = [];
         
         try {
-            if (!file_exists($filePath)) {
-                error_log("MAF file not found for sample parsing: $filePath");
-                return [];
-            }
-            
             $handle = gzopen($filePath, 'r');
             if (!$handle) {
                 error_log("Failed to open MAF file: $filePath");
@@ -507,7 +613,7 @@ class MAFTrack implements TrackTypeInterface
             foreach (array_keys($sampleIds) as $id) {
                 $samples[] = [
                     'id' => $id,
-                    'label' => $id,
+                    'label' => str_replace('_', ' ', $id), // Make readable
                     'color' => $this->getDefaultColor($i++)
                 ];
             }
