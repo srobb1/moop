@@ -234,10 +234,41 @@ try {
     echo "RESULTS\n";
     echo str_repeat('=', 60) . "\n\n";
     
+    // Count regenerated vs new tracks
+    $regeneratedCount = 0;
+    $newCount = 0;
+    if (!empty($results['success'])) {
+        foreach ($results['success'] as $success) {
+            if (is_array($success) && !empty($success['regenerated'])) {
+                $regeneratedCount++;
+            } else {
+                $newCount++;
+            }
+        }
+    }
+    
     echo "Total tracks processed: " . $results['stats']['total'] . "\n";
-    echo "  ✓ Created: " . $results['stats']['created'] . "\n";
+    if ($regeneratedCount > 0 && $newCount > 0) {
+        echo "  ✓ Created: " . $results['stats']['created'] . " (" . $newCount . " new, " . $regeneratedCount . " regenerated)\n";
+    } elseif ($regeneratedCount > 0) {
+        echo "  ♻ Regenerated: " . $regeneratedCount . "\n";
+    } elseif ($newCount > 0) {
+        echo "  ✓ Created: " . $newCount . "\n";
+    } else {
+        echo "  ✓ Created: " . $results['stats']['created'] . "\n";
+    }
     echo "  ⊘ Skipped: " . $results['stats']['skipped'] . "\n";
     echo "  ✗ Failed: " . $results['stats']['failed'] . "\n";
+    
+    // Show which tracks were regenerated
+    if ($regeneratedCount > 0 && !empty($results['success'])) {
+        echo "\nRegenerated Tracks:\n";
+        foreach ($results['success'] as $success) {
+            if (is_array($success) && !empty($success['regenerated'])) {
+                echo "  ♻ " . $success['track_id'] . " (" . $success['name'] . ")\n";
+            }
+        }
+    }
     
     if (!empty($results['failed'])) {
         echo "\nFailed Tracks:\n";

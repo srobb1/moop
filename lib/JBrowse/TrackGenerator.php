@@ -248,19 +248,49 @@ class TrackGenerator
                 continue;
             }
             
-            // Generate track
-            $success = $this->generateSingleTrack($track, ['force' => $shouldForce, 'dry_run' => $dryRun]);
+            // Output what we're doing
+            if ($shouldForce && $trackExists) {
+                echo "  ♻ Regenerating: " . $track['track_id'] . " (" . $track['name'] . ")\n";
+            }
             
-            if ($success) {
-                $results['success'][] = $track['track_id'];
+            // Generate track
+            $result = $this->generateSingleTrack($track, ['force' => $shouldForce, 'dry_run' => $dryRun]);
+            
+            if ($result === 'skipped') {
+                // Track generation was skipped (e.g., assembly already exists)
+                $results['skipped'][] = $track['track_id'];
+                $results['stats']['skipped']++;
+                echo "  ⊘ Skipped: " . $track['track_id'] . " (already exists)\n";
+            } elseif ($result === true) {
+                $results['success'][] = [
+                    'track_id' => $track['track_id'],
+                    'name' => $track['name'],
+                    'regenerated' => ($shouldForce && $trackExists)
+                ];
                 $results['stats']['created']++;
+                
+                // Show what was created/regenerated
+                if ($shouldForce && $trackExists) {
+                    echo "    ✓ Regenerated successfully\n";
+                } else {
+                    echo "  ✓ Created: " . $track['track_id'] . " (" . $track['name'] . ")\n";
+                }
             } else {
+                // Check why it failed
+                $trackType = $this->determineTrackType($track['TRACK_PATH']);
+                $errorMsg = 'Generation failed';
+                
+                if (!$trackType) {
+                    $errorMsg = 'Unknown track type: ' . basename($track['TRACK_PATH']);
+                }
+                
                 $results['failed'][] = [
                     'track_id' => $track['track_id'],
                     'name' => $track['name'],
-                    'error' => 'Generation failed'
+                    'error' => $errorMsg
                 ];
                 $results['stats']['failed']++;
+                echo "  ✗ Failed: " . $track['track_id'] . " (" . $errorMsg . ")\n";
             }
         }
         
@@ -344,7 +374,7 @@ class TrackGenerator
         $trackType = $this->determineTrackType($trackData['TRACK_PATH']);
         
         if (!$trackType) {
-            error_log("Unknown track type for: " . $trackData['TRACK_PATH']);
+            // Don't output error here - let the calling function handle it
             return false;
         }
         
@@ -352,14 +382,14 @@ class TrackGenerator
         $handler = $this->getTrackTypeHandler($trackType);
         
         if (!$handler) {
-            error_log("No handler for track type: $trackType");
+            // Don't output error here - let the calling function handle it
             return false;
         }
         
         // Validate track
         $validation = $handler->validate($trackData);
         if (!$validation['valid']) {
-            error_log("Validation failed for " . $trackData['track_id'] . ": " . implode(', ', $validation['errors']));
+            // Don't output error here - let the calling function handle it
             return false;
         }
         
@@ -391,7 +421,7 @@ class TrackGenerator
         }
         
         // Check each track type directory
-        $trackTypeDirs = ['bigwig', 'bam', 'vcf', 'gff', 'gtf', 'cram', 'paf', 'maf', 'combo'];
+        $trackTypeDirs = ['bigwig', 'bam', 'vcf', 'gff', 'gtf', 'bed', 'cram', 'paf', 'maf', 'combo', 'auto'];
         
         foreach ($trackTypeDirs as $typeDir) {
             $trackFile = "$baseDir/$typeDir/$trackId.json";

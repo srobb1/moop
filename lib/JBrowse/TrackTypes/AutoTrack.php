@@ -131,8 +131,9 @@ class AutoTrack implements TrackTypeInterface
         
         // Check if already exists
         if (file_exists($defFile) && empty($options['force'])) {
-            echo "  → Assembly definition already exists (use --force to regenerate)\n";
-            return true;
+            // Don't output here - let the main loop handle it
+            // Return 'skipped' to indicate it wasn't actually created
+            return 'skipped';
         }
         
         if (!empty($options['dry_run'])) {
