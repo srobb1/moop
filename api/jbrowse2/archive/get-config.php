@@ -23,6 +23,8 @@ session_start();
 
 // Determine user access level from session
 require_once __DIR__ . '/../../includes/access_control.php';
+require_once __DIR__ . '/../../lib/JBrowse/PluginLoader.php';
+
 $user_access_level = get_access_level();
 
 // Get optional assembly filter parameter
@@ -31,7 +33,7 @@ $requested_assembly = $_GET['assembly'] ?? null;
 // Base configuration
 $config = [
     'assemblies' => [],
-    'configuration' => [],
+    'configuration' => getJBrowse2PluginConfiguration(),
     'connections' => [],
     'defaultSession' => [
         'name' => 'New Session'
