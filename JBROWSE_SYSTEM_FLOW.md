@@ -99,23 +99,27 @@ jbrowse2/index.html (embedded React app)
 
 ## 5. Track Data Loading
 
-### Direct File Access
+### Secure File Serving via tracks.php
 ```
 When JBrowse2 needs track data:
 
 Track config has URL:
-  /moop/data/tracks/ORGANISM/ASSEMBLY/TRACK_TYPE/file.bw?jwt=TOKEN
+  /moop/api/jbrowse2/tracks.php?file=ORGANISM/ASSEMBLY/TRACK_TYPE/file.bw&token=JWT
 
-User's browser fetches directly:
-  ├── Apache serves file from filesystem
-  ├── JWT token validates access
-  └── File data returned to browser
+User's browser requests track file:
+  ├── tracks.php validates JWT token
+  ├── Checks token grants access to organism/assembly
+  ├── Prevents directory traversal attacks
+  ├── Reads file from /moop/data/tracks/
+  ├── Supports HTTP range requests (efficient streaming)
+  └── Returns file data to browser
 
-NO PHP API INVOLVED IN DATA SERVING
+tracks.php acts as SECURE PROXY for track data
 ```
 
-**Files**: Served directly from `/moop/data/tracks/`
-**Security**: JWT tokens in URLs, validated by Apache
+**File**: `/moop/api/jbrowse2/tracks.php` (file server with JWT validation)
+**Data Location**: `/moop/data/tracks/` (BigWig, BAM, GFF, BED, etc.)
+**Security**: JWT validation per request, organism/assembly access control
 
 ---
 
@@ -223,12 +227,21 @@ metadata/jbrowse2-configs/
 - `jbrowse2-dynamic.html` - **OBSOLETE** (references archived get-config.php)
 
 ### API Endpoints
+
+**Config Generation (Dynamic):**
 - `api/jbrowse2/config.php` - **PRIMARY ENDPOINT** (currently used)
   - Assembly list (no params)
   - Full config (with organism + assembly params)
 - `api/jbrowse2/config-optimized.php` - **AVAILABLE FOR FUTURE USE**
   - For assemblies with > 1000 tracks
   - Lazy-loading via track URIs
+
+**File Serving (Secure Proxy):**
+- `api/jbrowse2/tracks.php` - **FILE SERVER** (critical infrastructure)
+  - Serves actual track data files (BigWig, BAM, GFF, BED, etc.)
+  - JWT token validation per request
+  - Organism/assembly access control
+  - HTTP range request support for efficient streaming
 
 ### JavaScript
 - `js/jbrowse2-loader.js` - Assembly list display
@@ -306,11 +319,14 @@ php tools/jbrowse/generate_tracks_from_sheet.php --list-colors
 
 ## Key Design Principles
 
-1. **Single Config Endpoint**: Only `config.php` serves JBrowse2 configs
+1. **Dynamic Config Generation**: `config.php` generates configs from metadata (no pre-generated files)
 2. **Permission Filtering**: All filtering happens at config generation time
-3. **Direct File Serving**: Track data served directly by Apache (not through PHP)
-4. **JWT Security**: Tokens protect track file URLs
+3. **Secure File Serving**: Track data served through `tracks.php` with JWT validation
+4. **JWT Security**: Tokens validate access per request, tied to organism/assembly
 5. **Metadata-Driven**: All configs generated from JSON metadata files
+6. **Two-Part Architecture**:
+   - Config APIs: Generate JBrowse2 configuration JSON
+   - File Server: Serve actual track data files securely
 
 ---
 

@@ -3,15 +3,19 @@
 ## Overview
 This is a **permission-based, dynamic JBrowse2 configuration system** that generates configs on-the-fly based on user access levels.
 
-## Active Files
+## Active Endpoints
 
-### 1. `config.php` - THE SINGLE ENDPOINT ⭐
-**This is the ONLY active API endpoint** for JBrowse2 configurations.
+### Config Generation (Dynamic)
+
+**1. config.php** - PRIMARY CONFIG GENERATOR ⭐
+- **Status**: Currently used by all assemblies
+- **Purpose**: Generates JBrowse2 configs dynamically from metadata files
+- **Best for**: < 1000 tracks per assembly
+- **Performance**: ~500ms for 500 tracks, 200KB gzipped
 
 **Endpoints:**
 - `GET /api/jbrowse2/config.php` 
   - Returns assembly list (filtered by user permissions)
-  
 - `GET /api/jbrowse2/config.php?organism=X&assembly=Y`
   - Returns full JBrowse2 config with tracks (filtered by user permissions)
 
@@ -20,7 +24,37 @@ This is a **permission-based, dynamic JBrowse2 configuration system** that gener
 - ✅ Filters assemblies/tracks by user access level (PUBLIC, IP_IN_RANGE, COLLABORATOR, ADMIN)
 - ✅ Adds JWT tokens to track URLs for secure access
 - ✅ Supports gzip compression for 500+ tracks
-- ✅ Caches configs per access level
+
+**2. config-optimized.php** - OPTIMIZED CONFIG GENERATOR (AVAILABLE)
+- **Status**: Available for future use when needed
+- **Purpose**: Lazy-loading via track URIs for large track sets
+- **Best for**: > 1000 tracks per assembly
+- **Performance**: ~200ms regardless of track count, < 50KB
+- **Usage**: Same as config.php, plus individual track endpoint
+
+### File Serving (Secure Proxy)
+
+**3. tracks.php** - TRACK FILE SERVER 🔒
+- **Status**: **CRITICAL INFRASTRUCTURE** - Required for JBrowse2 to function
+- **Purpose**: Serves actual track data files with security validation
+- **Files Served**: BigWig, BAM, GFF, BED, CRAM, MAF, etc.
+
+**Endpoint:**
+- `GET /api/jbrowse2/tracks.php?file=path/to/file.bw&token=JWT`
+
+**Security Features:**
+- ✅ JWT token validation per request
+- ✅ Organism/assembly access control
+- ✅ Directory traversal protection
+- ✅ Whitelisted IP bypass
+
+**Technical Features:**
+- ✅ HTTP range request support (efficient streaming)
+- ✅ Works on remote track servers
+- ✅ No MOOP session database required
+- ✅ Can log file access
+
+**Data Location**: `/data/tracks/`
 
 ---
 
