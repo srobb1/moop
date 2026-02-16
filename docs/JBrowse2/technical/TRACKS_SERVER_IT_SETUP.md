@@ -1,8 +1,77 @@
 # Remote Tracks Server Setup Guide for IT
 
-**Document Version:** 2.0  
-**Last Updated:** February 14, 2026  
+**Document Version:** 2.1  
+**Last Updated:** February 15, 2026  
 **For:** IT Team - Remote Tracks Server Deployment
+
+---
+
+## Quick Checklist for AWS Instance Setup
+
+Use this checklist when delegating setup to IT staff or third-party administrators:
+
+### AWS Instance Prerequisites Checklist:
+
+**1. Instance Specs:**
+- OS: Ubuntu 20.04+ (or similar Debian-based)
+- Ensure NTP is available for time synchronization (critical for JWT validation)
+
+**2. Software to Install:**
+```bash
+sudo apt-get update
+sudo apt-get install -y apache2 libapache2-mod-php8.1 php8.1-cli \
+    php8.1-json php8.1-mbstring composer ntp
+```
+
+**3. Directory Structure to Create:**
+```bash
+sudo mkdir -p /var/www/tracks-server/{api,lib,certs}
+sudo mkdir -p /var/tracks-data
+sudo chown -R www-data:www-data /var/www/tracks-server /var/tracks-data
+```
+
+**4. Composer Dependency:**
+```bash
+cd /var/www/tracks-server
+sudo composer require firebase/php-jwt
+```
+
+**5. SSL Certificate:**
+- Obtain SSL certificate for HTTPS (required)
+- Can use AWS Certificate Manager or Let's Encrypt
+- Configure for your domain (e.g., `tracks.yourdomain.com`)
+
+**6. Network Configuration:**
+- Open port 443 (HTTPS) in security group
+- Configure DNS for tracks server domain
+- Ensure CORS allows origin from main MOOP server domain
+
+**7. Storage:**
+- Size depends on track data volume
+- `/var/tracks-data` for genome browser files
+- Consider mounting EBS volume for track data
+- Track files must follow structure: `/var/tracks-data/Organism_name/Assembly_ID/type/filename`
+
+**8. Files from MOOP Team (required before launch):**
+
+Place these files in the specified locations:
+- `/var/www/tracks-server/api/tracks.php`
+- `/var/www/tracks-server/lib/track_token.php`
+- `/var/www/tracks-server/lib/functions_access.php`
+- `/var/www/tracks-server/certs/jwt_public_key.pem` (public key for JWT validation)
+
+**Important:** The JWT public key must match the private key on the main MOOP server.
+
+**9. Apache Configuration:**
+- See "Configure Apache" section below for complete virtual host configuration
+- Includes required CORS headers for JBrowse2
+
+**10. Testing:**
+- Use curl commands in "Testing" section to verify setup
+- Test both token validation and range requests
+
+**11. Optional:**
+- Whitelisted IP addresses if bypassing JWT for internal network
 
 ---
 
