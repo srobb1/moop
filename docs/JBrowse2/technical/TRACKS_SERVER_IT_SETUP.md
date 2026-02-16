@@ -50,7 +50,10 @@ sudo composer require firebase/php-jwt
 - Size depends on track data volume
 - `/var/tracks-data` for genome browser files
 - Consider mounting EBS volume for track data
-- Track files must follow structure: `/var/tracks-data/Organism_name/Assembly_ID/type/filename`
+- Track files should follow structure: `/var/tracks-data/Organism_name/Assembly_ID/type/filename`
+  - **Required:** First two path components (Organism_name/Assembly_ID) must match JWT token permissions
+  - **Flexible:** Any subdirectory structure after Assembly_ID is allowed (e.g., `experiment2/sample.bam`)
+  - **Recommended:** Use type directories (bigwig, bam, vcf, etc.) for organization
 
 **8. Files from MOOP Team (required before launch):**
 
@@ -207,7 +210,7 @@ Place them in:
 
 ### 5. Upload Track Files
 
-Maintain hierarchical structure:
+Maintain hierarchical structure (recommended organization):
 ```
 /var/tracks-data/
 └── Organism_name/
@@ -218,10 +221,21 @@ Maintain hierarchical structure:
         └── bed/
 ```
 
-Example:
+Examples:
 ```bash
+# Standard organization (recommended)
 /var/tracks-data/Nematostella_vectensis/GCA_033964005.1/bigwig/test.bw
+/var/tracks-data/Nematostella_vectensis/GCA_033964005.1/bam/sample.bam
+
+# Custom subdirectories (also supported)
+/var/tracks-data/Nematostella_vectensis/GCA_033964005.1/experiment2/test.bw
+/var/tracks-data/Nematostella_vectensis/GCA_033964005.1/project/subfolder/sample.bam
 ```
+
+**Path Requirements:**
+- ✅ Must start with: `Organism_name/Assembly_ID/`
+- ✅ Can have any subdirectory structure after Assembly_ID
+- ✅ Organism/Assembly must match JWT token permissions
 
 ---
 
@@ -276,12 +290,22 @@ grep "403\|401" /var/log/apache2/tracks-access.log
 
 ## Security
 
-✅ JWT tokens signed with RS256  
-✅ 1-hour token expiry  
-✅ Organism/assembly validation  
-✅ Directory traversal protection  
-✅ HTTPS required  
-✅ Whitelisted IP bypass available
+✅ **Current Implementation:**
+- JWT tokens signed with RS256 (2048-bit RSA asymmetric keys)
+- 1-hour token expiry  
+- Organism/assembly claim validation against file paths
+- Directory traversal protection  
+- HTTPS required  
+- Whitelisted IP bypass available for internal networks
+- Stateless token verification (no database needed on tracks server)
+
+**Security Properties:**
+- Private key stays on MOOP server (signs tokens)
+- Public key deployed to tracks servers (verifies tokens)
+- Compromised tracks server cannot forge tokens
+- Each token locked to specific organism/assembly pair
+- Path validation: Only first two components (organism/assembly) are enforced
+- Flexible subdirectory structure after assembly (e.g., `experiment2/sample.bam`)
 
 ---
 

@@ -53,13 +53,20 @@ The `/api/jbrowse2/assembly.php` endpoint implements the following pipeline:
 
 A cryptographically signed token containing user claims (identity, permissions, expiration). It's stateless—the tracks server doesn't need to query a database.
 
-### Asymmetric Cryptography (RS256)
+### Asymmetric Cryptography (RS256) ✅
 
-Uses RSA public/private key pair:
+**Current Implementation:** Uses RSA public/private key pair (2048-bit)
+
 - **Private Key** (`/certs/jwt_private_key.pem`): Kept secret on the MOOP server, used to *sign* tokens
 - **Public Key** (`/certs/jwt_public_key.pem`): Can be shared with the tracks server, used to *verify* tokens
 
-### Token Generation
+**Security Benefits:**
+- ✅ Tracks server cannot forge tokens (needs private key to sign)
+- ✅ Safe to deploy public key to multiple tracks servers
+- ✅ Compromised tracks server cannot create valid tokens
+- ✅ Private key never leaves MOOP server
+
+### Token Generation (Current Implementation)
 
 The `generateTrackToken()` function in `/lib/jbrowse/track_token.php` creates tokens:
 
@@ -90,46 +97,67 @@ When building track URLs in `assembly.php`, tokens are appended:
 http://127.0.0.1:8888/tracks/bigwig/organism_assembly_track.bw?token={JWT}
 ```
 
-### Token Verification
+### Token Verification (Current Implementation)
 
-The `/api/jbrowse2/fake-tracks-server.php` (simulating a separate tracks server) performs:
+The `/api/jbrowse2/tracks.php` endpoint performs:
 
 1. **Extract Token**: Reads `?token=` query parameter from track request
 
-2. **Cryptographic Validation**: Uses public key to verify the signature—only tokens signed by the matching private key are valid
+2. **Cryptographic Validation**: Uses public key (RS256) to verify the signature—only tokens signed by the matching private key are valid
 
 3. **Expiration Check**: Ensures current time < `exp` timestamp (prevents replay attacks with old tokens)
 
-4. **Claim Validation**: Verifies the token's `organism`/`assembly` matches the requested file (prevents token reuse for unauthorized data)
+4. **Claim Validation**: Verifies the token's `organism`/`assembly` matches the requested file path (prevents token reuse for unauthorized data)
 
 5. **Range Request Support**: Serves file with HTTP range headers for efficient seeking in large genomic files
+
+**Path Validation:**
+```php
+// File path format: organism/assembly/type/filename (or any structure after assembly)
+$file_parts = explode('/', $file);
+
+if (count($file_parts) < 2) {
+    http_response_code(400);
+    exit;
+}
+
+$file_organism = $file_parts[0];
+$file_assembly = $file_parts[1];
+
+// Verify token organism/assembly matches file path
+if ($token_data->organism !== $file_organism || 
+    $token_data->assembly !== $file_assembly) {
+    http_response_code(403);
+    exit;
+}
+```
 
 ---
 
 ## 3. Security Properties
 
-### 🔐 Authentication
-JWTs prove the user was authenticated at token generation time—forged tokens fail signature verification.
+### 🔐 Authentication ✅
+JWTs prove the user was authenticated at token generation time—forged tokens fail RS256 signature verification.
 
-### 🕐 Time-Limited Access
+### 🕐 Time-Limited Access ✅
 1-hour expiration (`exp` claim) limits exposure if a token is compromised. Users must re-authenticate to get new tokens.
 
-### 🎯 Scope Restriction
-Tokens are bound to specific `organism`/`assembly` pairs—can't use a token for one genome to access another.
+### 🎯 Scope Restriction ✅
+Tokens are bound to specific `organism`/`assembly` pairs and validated against file paths—can't use a token for one genome to access another.
 
-### 🔒 Cryptographic Integrity
-RS256 signature ensures tokens can't be tampered with. Changing any claim (like upgrading `access_level`) invalidates the signature.
+### 🔒 Cryptographic Integrity ✅
+RS256 asymmetric signature ensures tokens can't be tampered with or forged. Changing any claim (like upgrading `access_level`) invalidates the signature. Only the private key holder (MOOP server) can create valid tokens.
 
-### 🌐 Distributed Architecture
+### 🌐 Distributed Architecture ✅
 The tracks server doesn't need direct database access or shared sessions—it only needs the public key to verify tokens independently.
 
-### 🛡️ Path Traversal Protection
-The tracks server validates file paths (`strpos($file, '..')`) and uses `realpath()` to prevent directory traversal attacks.
+### 🛡️ Path Traversal Protection ✅
+The tracks server validates file paths to prevent `../` directory traversal attacks and ensures paths start with valid organism/assembly.
 
-### 📍 IP Whitelisting
+### 📍 IP Whitelisting ✅
 Internal IPs (10.x.x.x, 192.168.x.x, 127.x.x.x) bypass token requirements—useful for trusted networks while enforcing security for external collaborators.
 
-### 🚫 Stateless Verification
+### 🚫 Stateless Verification ✅
 The tracks server doesn't maintain sessions or connection to the auth database—it verifies requests purely from the cryptographic token, making it horizontally scalable.
 
 ---
@@ -178,8 +206,8 @@ User Browser                 MOOP Server              Tracks Server
 - `/certs/jwt_private_key.pem` - RSA private key (secret, for signing)
 - `/certs/jwt_public_key.pem` - RSA public key (for verification)
 
-### Track Server
-- `/api/jbrowse2/fake-tracks-server.php` - Simulated separate tracks server with JWT verification
+### Track Server (Current Implementation)
+- `/api/jbrowse2/tracks.php` - Production tracks server endpoint with RS256 JWT verification and claim validation
 
 ### Metadata
 - `/metadata/jbrowse2-configs/assemblies/*.json` - Assembly definitions
@@ -259,4 +287,12 @@ In production, the tracks server should run on separate infrastructure:
 
 ---
 
-**Last Updated**: 2026-02-10
+**Last Updated**: 2026-02-16
+
+**Current Status:**
+- ✅ RS256 asymmetric JWT implementation
+- ✅ Token claims validation (organism/assembly matching)
+- ✅ IP whitelisting for internal networks
+- ✅ HTTP range request support
+- ✅ Directory traversal protection
+- ✅ 1-hour token expiry
