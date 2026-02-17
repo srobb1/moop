@@ -28,7 +28,7 @@ Assembly and track definitions are stored as JSON files in `/metadata/jbrowse2-c
 
 ### Access Filtering Pipeline
 
-The `/api/jbrowse2/assembly.php` endpoint implements the following pipeline:
+The `/api/jbrowse2/config.php` endpoint implements the following pipeline:
 
 1. **Permission Validation**: Calls `getAccessibleAssemblies()` to verify you can view the requested organism/assembly
 
@@ -91,7 +91,7 @@ $jwt = JWT::encode($token_data, $private_key, 'RS256');
 
 ### Track URL Construction
 
-When building track URLs in `assembly.php`, tokens are appended:
+When building track URLs in `config.php`, tokens are appended:
 
 ```
 http://127.0.0.1:8888/tracks/bigwig/organism_assembly_track.bw?token={JWT}
@@ -171,7 +171,7 @@ User Browser                 MOOP Server              Tracks Server
      |                           |                          |
      |<--(2) HTML + JS ----------|                          |
      |                           |                          |
-     |---(3) GET /api/jbrowse2/assembly.php?organism=X&assembly=Y
+     |---(3) GET /api/jbrowse2/config.php?organism=X&assembly=Y
      |                           |                          |
      |                      [Check session]                 |
      |                      [Load metadata]                 |
@@ -181,7 +181,7 @@ User Browser                 MOOP Server              Tracks Server
      |<--(4) JSON config with----|                          |
      |       track URLs + tokens |                          |
      |                           |                          |
-     |---(5) GET track.bw?token=JWT------------------->     |
+     |---(5) GET tracks.php?file=track.bw&token=JWT---->    |
      |                           |                          |
      |                           |                   [Verify JWT]
      |                           |                   [Validate claims]
@@ -197,8 +197,8 @@ User Browser                 MOOP Server              Tracks Server
 
 ### Configuration Generation
 - `/jbrowse2.php` - Main entry point with MOOP layout
-- `/api/jbrowse2/get-config.php` - Returns filtered assembly list
-- `/api/jbrowse2/assembly.php` - Generates complete JBrowse2 config with tokens
+- `/api/jbrowse2/config.php` - Primary endpoint: Returns filtered assembly list OR complete JBrowse2 config with tokens
+- `/api/jbrowse2/config-optimized.php` - Optimized endpoint for >1000 tracks (available but not currently used)
 - `/js/jbrowse2-loader.js` - Client-side assembly list and loader
 
 ### JWT System
@@ -207,7 +207,7 @@ User Browser                 MOOP Server              Tracks Server
 - `/certs/jwt_public_key.pem` - RSA public key (for verification)
 
 ### Track Server (Current Implementation)
-- `/api/jbrowse2/tracks.php` - Production tracks server endpoint with RS256 JWT verification and claim validation
+- `/api/jbrowse2/tracks.php` - Track file server with RS256 JWT verification and claim validation (critical infrastructure)
 
 ### Metadata
 - `/metadata/jbrowse2-configs/assemblies/*.json` - Assembly definitions
@@ -222,7 +222,7 @@ User Browser                 MOOP Server              Tracks Server
 In production, the tracks server should run on separate infrastructure:
 
 1. **Copy public key** to tracks server: `/path/to/jwt_public_key.pem`
-2. **Update track URLs** in assembly.php to point to external server
+2. **Update track URLs** in config.php to point to external server
 3. **Configure CORS** headers on tracks server for JBrowse2 access
 4. **Enable HTTPS** for secure token transmission
 5. **Monitor token verification logs** for security auditing
@@ -287,7 +287,31 @@ In production, the tracks server should run on separate infrastructure:
 
 ---
 
-**Last Updated**: 2026-02-16
+## 9. System Architecture Notes
+
+### Current Implementation (as of 2026-02-17)
+
+The system uses **`config.php`** as the primary configuration endpoint (consolidated on 2026-02-14):
+
+**Single Endpoint Pattern:**
+- `GET /api/jbrowse2/config.php` - Returns filtered assembly list
+- `GET /api/jbrowse2/config.php?organism=X&assembly=Y` - Returns complete JBrowse2 config with tracks
+
+**Benefits:**
+- Single security implementation point
+- Consistent permission filtering
+- Simplified maintenance
+- Clear API contract
+
+**Available Alternative:**
+- `config-optimized.php` - Ready for assemblies with >1000 tracks using lazy-loading pattern
+
+**Historical Note:**
+The original `assembly.php` endpoint was consolidated into `config.php` on 2026-02-14 to streamline the API architecture. All functionality remains the same - only the endpoint name changed.
+
+---
+
+**Last Updated**: 2026-02-17
 
 **Current Status:**
 - ✅ RS256 asymmetric JWT implementation
