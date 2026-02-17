@@ -37,9 +37,10 @@ The `/api/jbrowse2/config.php` endpoint implements the following pipeline:
 3. **Track Discovery**: Scans all available track definitions
 
 4. **Access Control Logic**: Filters tracks based on hierarchical permissions:
-   - `ALL` (admin): Sees everything
-   - `Collaborator`: Sees Public + specific assemblies they're granted access to
-   - `Public`: Sees only public tracks
+   - `ADMIN`: Sees everything
+   - `IP_IN_RANGE`: Sees everything (whitelisted IPs)
+   - `COLLABORATOR`: Sees PUBLIC + specific assemblies they're granted access to
+   - `PUBLIC`: Sees only public tracks
 
 5. **Token Generation**: Generates JWT tokens for non-whitelisted IPs
 
