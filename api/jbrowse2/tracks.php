@@ -24,6 +24,10 @@
  */
 
 require_once __DIR__ . '/../../lib/jbrowse/track_token.php';
+require_once __DIR__ . '/../../vendor/autoload.php';
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 
 // Configuration
 $TRACKS_BASE_DIR = __DIR__ . '/../../data/tracks';
@@ -71,15 +75,13 @@ if (!$token_data) {
         // Internal users don't need to worry about 1-hour expiry
         // But token must still be structurally valid and have correct claims
         try {
-            require_once __DIR__ . '/../../vendor/autoload.php';
-            use Firebase\JWT\JWT;
-            use Firebase\JWT\Key;
-            
             $public_key_path = dirname(__DIR__, 2) . '/certs/jwt_public_key.pem';
             $public_key = file_get_contents($public_key_path);
             
-            // Decode without expiry check
+            // Decode without expiry check (by not using leeway or exp verification)
+            JWT::$leeway = 60 * 60 * 24 * 365; // Effectively disable expiry check
             $token_data = JWT::decode($token, new Key($public_key, 'RS256'));
+            JWT::$leeway = 0; // Reset
             
             // Log for monitoring
             error_log("Tracks server: Whitelisted IP {$_SERVER['REMOTE_ADDR']} using expired token for {$token_data->organism}/{$token_data->assembly} (user: {$token_data->user_id})");

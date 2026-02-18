@@ -432,19 +432,6 @@ function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC')
     }
     return $adapter;
 }
-                // These are served directly by web server - may need token
-                // depending on your web server configuration
-                // For now, skip token addition (assumes direct file serving)
-                
-            } else {
-                // Recurse into nested arrays
-                $value = addTokenToAdapterUrls($value, $token);
-            }
-        }
-    }
-    
-    return $adapter;
-}
 
 /**
  * Check if user can access assembly
