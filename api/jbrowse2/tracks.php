@@ -48,52 +48,85 @@ if (strpos($file, '..') !== false || strpos($file, '//') !== false) {
     exit;
 }
 
-// 2. CHECK IF IP IS WHITELISTED (skip token check for internal network)
+// 2. CHECK IF IP IS WHITELISTED (for relaxed validation, not bypass)
 $is_whitelisted = isWhitelistedIP();
 
-$token_data = null;
-if (!$is_whitelisted) {
-    // 3. VALIDATE JWT TOKEN
-    if (empty($token)) {
-        http_response_code(401);
-        header('Content-Type: application/json');
-        echo json_encode(['error' => 'Authentication required']);
-        exit;
-    }
-    
-    $token_data = verifyTrackToken($token);
-    
-    if (!$token_data) {
+// 3. ALWAYS REQUIRE JWT TOKEN (even for whitelisted IPs)
+// This provides defense-in-depth security
+if (empty($token)) {
+    http_response_code(401);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Authentication required']);
+    error_log("Tracks server: No token provided from IP: {$_SERVER['REMOTE_ADDR']}");
+    exit;
+}
+
+// 4. VALIDATE JWT TOKEN
+$token_data = verifyTrackToken($token);
+
+if (!$token_data) {
+    // Token is invalid or expired
+    if ($is_whitelisted) {
+        // WHITELISTED IP RELAXATION: Allow expired tokens
+        // Internal users don't need to worry about 1-hour expiry
+        // But token must still be structurally valid and have correct claims
+        try {
+            require_once __DIR__ . '/../../vendor/autoload.php';
+            use Firebase\JWT\JWT;
+            use Firebase\JWT\Key;
+            
+            $public_key_path = dirname(__DIR__, 2) . '/certs/jwt_public_key.pem';
+            $public_key = file_get_contents($public_key_path);
+            
+            // Decode without expiry check
+            $token_data = JWT::decode($token, new Key($public_key, 'RS256'));
+            
+            // Log for monitoring
+            error_log("Tracks server: Whitelisted IP {$_SERVER['REMOTE_ADDR']} using expired token for {$token_data->organism}/{$token_data->assembly} (user: {$token_data->user_id})");
+        } catch (Exception $e) {
+            // Even whitelisted IPs need structurally valid tokens
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Invalid token structure']);
+            error_log("Tracks server: Invalid token from whitelisted IP {$_SERVER['REMOTE_ADDR']}: " . $e->getMessage());
+            exit;
+        }
+    } else {
+        // NON-WHITELISTED IPs: Strict enforcement
         http_response_code(403);
         header('Content-Type: application/json');
         echo json_encode(['error' => 'Invalid or expired token']);
         exit;
     }
-    
-    // 4. VALIDATE FILE MATCHES TOKEN PERMISSIONS
-    // File path format: organism/assembly/type/filename
-    $file_parts = explode('/', $file);
-    
-    if (count($file_parts) < 2) {
-        http_response_code(400);
-        header('Content-Type: application/json');
-        echo json_encode(['error' => 'Invalid file path format']);
-        exit;
-    }
-    
-    $file_organism = $file_parts[0];
-    $file_assembly = $file_parts[1];
-    
-    // Check if token grants access to this organism/assembly
-    if ($token_data->organism !== $file_organism || $token_data->assembly !== $file_assembly) {
-        http_response_code(403);
-        header('Content-Type: application/json');
-        echo json_encode([
-            'error' => 'Access denied',
-            'message' => 'Token does not grant access to this file'
-        ]);
-        exit;
-    }
+}
+
+// 5. ALWAYS VALIDATE FILE PATH MATCHES TOKEN PERMISSIONS
+// This prevents access by path guessing, even for whitelisted IPs
+// File path format: organism/assembly/type/filename
+$file_parts = explode('/', $file);
+
+if (count($file_parts) < 2) {
+    http_response_code(400);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Invalid file path format']);
+    exit;
+}
+
+$file_organism = $file_parts[0];
+$file_assembly = $file_parts[1];
+
+// Token must grant access to THIS specific organism/assembly
+if ($token_data->organism !== $file_organism || $token_data->assembly !== $file_assembly) {
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode([
+        'error' => 'Access denied',
+        'message' => 'Token does not grant access to this file',
+        'token_scope' => "{$token_data->organism}/{$token_data->assembly}",
+        'requested_file' => "$file_organism/$file_assembly"
+    ]);
+    error_log("Tracks server: Token scope mismatch - user {$token_data->user_id} tried to access $file_organism/$file_assembly with token for {$token_data->organism}/{$token_data->assembly}");
+    exit;
 }
 
 // 5. BUILD FILE PATH

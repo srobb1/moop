@@ -358,14 +358,12 @@ function addTokensToTrack($track_def, $organism, $assembly, $user_access_level, 
 }
 
 /**
- * Recursively add token parameter to all URIs in adapter config
- * 
- * Traverses adapter configuration recursively to find all URIs and adds JWT tokens.
- * Handles special routing for /moop/data/tracks/ paths through tracks.php.
+ * Recursively add token parameter to MOOP-hosted URIs only
+ * External URLs (http://, https://) are left unchanged
  * 
  * @param array $adapter - Adapter configuration (may contain nested arrays)
  * @param string|null $token - JWT token to add (null for whitelisted IPs)
- * @return array - Adapter config with tokens added to all URIs
+ * @return array - Adapter config with tokens added to MOOP URIs only
  */
 function addTokenToAdapterUrls($adapter, $token) {
     foreach ($adapter as $key => &$value) {
@@ -373,20 +371,36 @@ function addTokenToAdapterUrls($adapter, $token) {
             if (isset($value['uri']) && !empty($value['uri'])) {
                 $uri = $value['uri'];
                 
-                // Convert /moop/data/tracks/ paths to go through tracks.php
+                // CASE 1: External URLs (http://, https://, ftp://)
+                // These are publicly accessible - DO NOT add tokens
+                if (preg_match('#^(https?|ftp)://#i', $uri)) {
+                    // Leave external URLs unchanged
+                    // Example: https://public-data.org/tracks/sample.bw
+                    continue;
+                }
+                
+                // CASE 2: MOOP-hosted tracks (/moop/data/tracks/...)
+                // Convert to tracks.php endpoint and add JWT token
                 if (preg_match('#^/moop/data/tracks/(.+)$#', $uri, $matches)) {
-                    $file_path = $matches[1]; // e.g., "Nematostella_vectensis/GCA_033964005.1/maf/test.maf.gz"
+                    $file_path = $matches[1];
                     $value['uri'] = '/moop/api/jbrowse2/tracks.php?file=' . urlencode($file_path);
                     
-                    // Add token only if provided (whitelisted IPs don't need tokens)
-                    if ($token) {
-                        $value['uri'] .= '&token=' . urlencode($token);
-                    }
-                } elseif ($token) {
-                    // For other URIs, just add token if provided
+                    // Add token (always present now, even for whitelisted IPs)
+                    $value['uri'] .= '&token=' . urlencode($token);
+                }
+                
+                // CASE 3: Other MOOP-relative paths (/moop/data/genomes/...)
+                // These go through MOOP server - add token
+                elseif (preg_match('#^/moop/#', $uri)) {
                     $separator = strpos($uri, '?') !== false ? '&' : '?';
                     $value['uri'] .= $separator . 'token=' . urlencode($token);
                 }
+                
+                // CASE 4: Absolute local paths (/data/...) or relative paths
+                // These are served directly by web server - may need token
+                // depending on your web server configuration
+                // For now, skip token addition (assumes direct file serving)
+                
             } else {
                 // Recurse into nested arrays
                 $value = addTokenToAdapterUrls($value, $token);
