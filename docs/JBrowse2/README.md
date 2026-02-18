@@ -1,28 +1,39 @@
 # JBrowse2 Genome Browser - MOOP Integration
 
-**Version:** 1.0  
+**Version:** 3.0  
 **Status:** Production Ready  
-**Last Updated:** February 12, 2026
+**Last Updated:** February 18, 2026
 
 ---
 
 ## Overview
 
-JBrowse2 is integrated into MOOP to provide dynamic, permission-based genome browsing. Users see different assemblies and tracks based on their authentication level.
+JBrowse2 is integrated into MOOP to provide dynamic, permission-based genome browsing with secure track access. The system generates configurations dynamically based on user authentication, enabling fine-grained access control while using standard JBrowse2 components.
 
 ### Key Features
 
+- ✅ **Dynamic Configuration** - Per-user configs generated with permission filtering
+- ✅ **JWT Security** - RS256 tokens for track authentication (updated Feb 2026)
+- ✅ **Access Levels** - PUBLIC, COLLABORATOR, IP_IN_RANGE, ADMIN
 - ✅ **Google Sheets Integration** - Manage tracks via spreadsheet
 - ✅ **Zero-Copy Policy** - No file duplication (50% storage savings)
-- ✅ **Dynamic Configuration** - Assemblies loaded based on permissions
-- ✅ **JWT Authentication** - Secure track access
-- ✅ **Access Levels** - Public, Collaborator, and Admin tiers
-- ✅ **Multiple Track Types** - BigWig, BAM, VCF, GFF, synteny, and more
+- ✅ **External URLs** - Support for UCSC, Ensembl public data (no token leakage)
+- ✅ **Remote Tracks Servers** - Scalable, stateless JWT validation
+- ✅ **Multiple Track Types** - BigWig, BAM, VCF, GFF, CRAM, synteny, and more
+
+### Recent Updates (Feb 2026)
+
+**Security Improvements:**
+1. All users now receive JWT tokens (including IP-whitelisted)
+2. External + PUBLIC URLs skip tokens (prevents leakage to UCSC, etc.)
+3. Whitelisted IPs can use expired tokens (convenience without compromising security)
+4. Enhanced logging and audit trail for all track access
 
 ### Access URL
 
-- **Main Interface:** http://localhost:8000/moop/jbrowse2.php
-- **API Endpoint:** http://localhost:8000/moop/api/jbrowse2/get-config.php
+- **Main Interface:** `/moop/jbrowse2.php`
+- **Config API:** `/moop/api/jbrowse2/config.php`
+- **Tracks Server:** `/moop/api/jbrowse2/tracks.php`
 
 ---
 
@@ -32,27 +43,38 @@ JBrowse2 is integrated into MOOP to provide dynamic, permission-based genome bro
 
 1. Navigate to JBrowse2 in MOOP
 2. Browse available assemblies (filtered by your access level)
-3. Click "View Genome" to open assembly
-4. Pan, zoom, and explore genome features
+3. Click an assembly to open genome viewer
+4. Pan, zoom, search, and explore genome features
+5. Enable/disable tracks, adjust visibility
 
-See [USER_GUIDE.md](USER_GUIDE.md) for detailed instructions.
+**→ See [USER_GUIDE.md](USER_GUIDE.md) for detailed instructions.**
 
 ### For Administrators
 
 1. Prepare genome files with `setup_jbrowse_assembly.sh`
-2. Register assembly with `add_assembly_to_jbrowse.sh`
-3. Assembly automatically appears for users with appropriate access
+2. Add tracks via Google Sheets or manual metadata
+3. Set access levels (PUBLIC, COLLABORATOR, ADMIN)
+4. Assembly automatically appears for users with access
 
-See [ADMIN_GUIDE.md](ADMIN_GUIDE.md) for complete setup instructions.
+**→ See [ADMIN_GUIDE.md](ADMIN_GUIDE.md) for complete setup instructions.**
 
 ### For Developers
 
-1. Assembly definitions in `/metadata/jbrowse2-configs/assemblies/`
-2. Track definitions in `/metadata/jbrowse2-configs/tracks/`
-3. API reads metadata and filters by user session
-4. JWT tokens secure track file access
+1. Study architecture in [technical/](technical/) docs
+2. Understand metadata-driven configuration
+3. Review JWT token generation and validation
+4. Learn permission filtering logic
 
-See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for architecture details.
+**→ See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for architecture details.**
+
+### For IT/DevOps
+
+1. Deploy remote tracks servers
+2. Configure JWT keys and CORS
+3. Set up monitoring and alerts
+4. Handle key rotation
+
+**→ See [technical/TRACKS_SERVER_IT_SETUP.md](technical/TRACKS_SERVER_IT_SETUP.md) for deployment guide.**
 
 ---
 
@@ -74,35 +96,55 @@ This documentation is organized into the following sections:
 - Synteny tracks (PAF, MAF, MCScan)
 - Color groups and API reference
 
-### Technical Documentation
-📁 **[technical/](technical/)** - Implementation details and infrastructure
-- **NO_COPY_FILE_HANDLING.md** ⭐ Zero-copy policy
-- Security and access control
-- Config generation and caching
-- Remote tracks server setup
+### Technical Documentation ⭐
+📁 **[technical/](technical/)** - Security, architecture, and deployment
+
+**Start here for JBrowse2 developers:**
+- **[SECURITY.md](technical/SECURITY.md)** ⭐ Complete security architecture (RS256 JWT, access control)
+- **[dynamic-config-and-jwt-security.md](technical/dynamic-config-and-jwt-security.md)** ⭐ How configs are generated
+- **[TRACKS_SERVER_IT_SETUP.md](technical/TRACKS_SERVER_IT_SETUP.md)** ⭐ Deploy remote tracks servers
+- **[README.md](technical/README.md)** - Technical docs overview
+
+**Additional technical docs:**
+- NO_COPY_FILE_HANDLING.md - Zero-copy policy
+- AUTO_CONFIG_GENERATION.md - Config generation system
+- TEXT_SEARCH_INDEXING.md - Search implementation
 
 ### Workflows
-📁 **[workflows/](workflows/)** - Step-by-step workflows
-- **GOOGLE_SHEETS_WORKFLOW.md** ⭐ Google Sheets integration
-- Example Google Sheet template
+📁 **[workflows/](workflows/)** - Step-by-step procedures
+- **GOOGLE_SHEETS_WORKFLOW.md** ⭐ Manage tracks via spreadsheet
+- Example templates and automation
 
 ### Archive
 📁 **[archive/](archive/)** - Historical docs and examples
-- Nematostella vectensis example
-- Session notes and code reviews
 - Legacy documentation
+- Session notes and code reviews
+- Examples (Nematostella vectensis)
 
 ---
 
 ## Access Control
 
-### User Types
+### Access Level Hierarchy
 
-| User Type | Access Level | Sees |
-|-----------|-------------|------|
-| Anonymous | Public | Public assemblies only |
-| Logged In | Collaborator | Public + Collaborator assemblies |
-| Admin | ALL | All assemblies |
+```
+ADMIN (4)           → Sees everything, manages all content
+    ↓
+IP_IN_RANGE (3)     → Internal network users, can use expired tokens
+    ↓
+COLLABORATOR (2)    → Logged-in users with explicit assembly access
+    ↓
+PUBLIC (1)          → Anonymous users, see only PUBLIC assemblies/tracks
+```
+
+### How It Works
+
+1. **Session Authentication** - PHP session determines user access level
+2. **Assembly Filtering** - Config API filters assemblies by `defaultAccessLevel`
+3. **Track Filtering** - Tracks filtered by `access_level` metadata
+4. **JWT Validation** - Tracks server validates tokens with organism/assembly claims
+
+**Updated Feb 2026:** All users now get JWT tokens. IP whitelisted users can use expired tokens for convenience.
 
 ### Assembly Access Levels
 
@@ -110,7 +152,7 @@ Set in assembly definition JSON:
 
 ```json
 {
-  "defaultAccessLevel": "Public"  // or "Collaborator" or "ALL"
+  "defaultAccessLevel": "PUBLIC"  // PUBLIC, COLLABORATOR, ADMIN
 }
 ```
 
