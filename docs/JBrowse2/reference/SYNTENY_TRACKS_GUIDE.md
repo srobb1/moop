@@ -311,7 +311,7 @@ jbrowse add-track $PAFPATH \
 2. **Add row to Google Sheet** with both assembly names
 3. **Run automation script:**
    ```bash
-   python3 /data/moop/tools/jbrowse/generate_tracks_from_sheet.py \
+   php /data/moop/tools/jbrowse/generate_tracks_from_sheet.php \
      --sheet-url "https://docs.google.com/spreadsheets/d/YOUR_ID/edit"
    ```
 

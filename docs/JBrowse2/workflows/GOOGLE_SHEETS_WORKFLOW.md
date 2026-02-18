@@ -113,7 +113,7 @@ cp *.bw /data/moop/data/tracks/New_organism/Assembly1/bigwig/
 
 # 4. Run script - it will setup assembly AND load tracks
 cd /data/moop
-python3 tools/jbrowse/generate_tracks_from_sheet.py \
+php tools/jbrowse/generate_tracks_from_sheet.php \
     "SHEET_ID" \
     --gid 0 \
     --organism New_organism \
@@ -152,7 +152,7 @@ Processing regular tracks...
 
 ```bash
 # Assembly already exists, just load new tracks
-python3 tools/jbrowse/generate_tracks_from_sheet.py \
+php tools/jbrowse/generate_tracks_from_sheet.php \
     "SHEET_ID" \
     --gid 0 \
     --organism Nematostella_vectensis \
@@ -437,7 +437,7 @@ cp ~/downloads/*.bw data/tracks/Amphimedon_queenslandica/Aqu1/bigwig/
 #    - All BigWig tracks
 
 # 3. Run integrated workflow
-python3 tools/jbrowse/generate_tracks_from_sheet.py \
+php tools/jbrowse/generate_tracks_from_sheet.php \
     "YOUR_SHEET_ID" \
     --gid 0 \
     --organism Amphimedon_queenslandica \
@@ -484,7 +484,7 @@ php tools/jbrowse/generate-jbrowse-configs.php
 ### Now (Automated)
 ```bash
 # One command does everything!
-python3 tools/jbrowse/generate_tracks_from_sheet.py SHEET_ID \
+php tools/jbrowse/generate_tracks_from_sheet.php SHEET_ID \
     --organism Org --assembly Asm
 
 php tools/jbrowse/generate-jbrowse-configs.php

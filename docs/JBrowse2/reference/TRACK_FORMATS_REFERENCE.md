@@ -375,7 +375,7 @@ TRACK_PATH=https://server.edu/tracks/sample.bw
 ### Bulk Import from Google Sheet
 
 ```bash
-python3 /data/moop/tools/jbrowse/generate_tracks_from_sheet.py \
+php /data/moop/tools/jbrowse/generate_tracks_from_sheet.php \
   --sheet-url "https://docs.google.com/spreadsheets/d/YOUR_ID/edit" \
   --organism Organism_name \
   --assembly AssemblyID
@@ -406,11 +406,11 @@ elif track_path.endswith('.newformat'):
 
 ```bash
 # Dry run
-python3 tools/jbrowse/generate_tracks_from_sheet.py \
+php tools/jbrowse/generate_tracks_from_sheet.php \
   --sheet-url URL --organism ORG --assembly ASM --dry-run
 
 # Real run
-python3 tools/jbrowse/generate_tracks_from_sheet.py \
+php tools/jbrowse/generate_tracks_from_sheet.php \
   --sheet-url URL --organism ORG --assembly ASM
 ```
 
