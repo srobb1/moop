@@ -11,19 +11,18 @@
  */
 
 require_once __DIR__ . '/TrackTypeInterface.php';
+require_once __DIR__ . '/BaseTrack.php';
 require_once __DIR__ . '/../PathResolver.php';
 
-class BigWigTrack implements TrackTypeInterface
+class BigWigTrack extends BaseTrack implements TrackTypeInterface
 {
     /**
      * @var PathResolver
      */
-    private $pathResolver;
     
     /**
      * @var ConfigManager
      */
-    private $config;
     
     /**
      * Constructor
@@ -116,8 +115,8 @@ class BigWigTrack implements TrackTypeInterface
                 return true;
             }
             
-            // Write metadata to file
-            $this->writeMetadata($metadata, $organism, $assembly, $trackId);
+            // Write metadata to file (BaseTrack signature: organism, assembly, metadata)
+            $this->writeMetadata($organism, $assembly, $metadata);
             
             return true;
             
@@ -138,6 +137,7 @@ class BigWigTrack implements TrackTypeInterface
     private function buildMetadata($trackData, $organism, $assembly)
     {
         $trackId = $trackData['track_id'];
+        $browserTrackId = $trackData['browser_track_id'] ?? $trackId;
         $name = $trackData['name'];
         $filePath = $trackData['TRACK_PATH'];
         
@@ -176,7 +176,7 @@ class BigWigTrack implements TrackTypeInterface
         
         // Build metadata structure matching shell script output
         $metadata = [
-            'trackId' => $trackId,
+            'trackId' => $browserTrackId,
             'name' => $name,
             'assemblyNames' => ["{$organism}_{$assembly}"],
             'category' => $categories,
@@ -191,7 +191,7 @@ class BigWigTrack implements TrackTypeInterface
             'displays' => [
                 [
                     'type' => 'LinearWiggleDisplay',
-                    'displayId' => "{$trackId}-LinearWiggleDisplay",
+                    'displayId' => "{$browserTrackId}-LinearWiggleDisplay",
                     'renderer' => [
                         'type' => 'XYPlotRenderer',
                         'color' => $color
@@ -199,6 +199,7 @@ class BigWigTrack implements TrackTypeInterface
                 ]
             ],
             'metadata' => [
+                'management_track_id' => $trackId,
                 'description' => isset($trackData['description']) ? $trackData['description'] : '',
                 'access_level' => $accessLevel,
                 'file_path' => $filePath,
@@ -248,33 +249,6 @@ class BigWigTrack implements TrackTypeInterface
      * @param string $trackId Track identifier
      * @throws Exception If write fails
      */
-    private function writeMetadata($metadata, $organism, $assembly, $trackId)
-    {
-        // Get metadata directory from ConfigManager
-        // NOTE: Metadata is ALWAYS local, even if track files are remote
-        $metadataBase = $this->config->getPath('metadata_path');
-        $trackDir = "$metadataBase/jbrowse2-configs/tracks/$organism/$assembly/bigwig";
-        
-        // Ensure directory exists
-        if (!is_dir($trackDir)) {
-            if (!mkdir($trackDir, 0755, true)) {
-                throw new Exception("Failed to create directory: $trackDir");
-            }
-        }
-        
-        // Build file path
-        $metadataFile = "$trackDir/$trackId.json";
-        
-        // Write JSON with pretty print
-        $json = json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        if ($json === false) {
-            throw new Exception("Failed to encode JSON: " . json_last_error_msg());
-        }
-        
-        if (file_put_contents($metadataFile, $json) === false) {
-            throw new Exception("Failed to write metadata file: {$metadataFile}");
-        }
-    }
     
     /**
      * Get required fields for BigWig tracks
@@ -295,7 +269,7 @@ class BigWigTrack implements TrackTypeInterface
      * 
      * @return string Track type identifier
      */
-    public function getType()
+    public function getType(): string
     {
         return 'bigwig';
     }

@@ -186,10 +186,13 @@ class ComboTrack implements TrackTypeInterface
             return false;
         }
         
+        // Use browser_track_id for JBrowse2 config, keep track_id for management
+        $browserTrackId = $trackData['browser_track_id'] ?? $trackData['track_id'];
+        
         // Build track configuration
         $trackConfig = [
             'type' => 'MultiQuantitativeTrack',
-            'trackId' => $trackData['track_id'],
+            'trackId' => $browserTrackId,
             'name' => $trackData['name'],
             'assemblyNames' => [$organism . '_' . $assembly],
             'category' => ['Combo Tracks'],
@@ -200,8 +203,11 @@ class ComboTrack implements TrackTypeInterface
             'displays' => [
                 [
                     'type' => 'MultiLinearWiggleDisplay',
-                    'displayId' => $trackData['track_id'] . '-MultiLinearWiggleDisplay'
+                    'displayId' => $browserTrackId . '-MultiLinearWiggleDisplay'
                 ]
+            ],
+            'metadata' => [
+                'management_track_id' => $trackData['track_id']
             ]
         ];
         

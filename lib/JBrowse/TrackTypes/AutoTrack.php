@@ -224,9 +224,12 @@ class AutoTrack implements TrackTypeInterface
         $gffPath = $this->getAnnotationPath($organism, $assembly);
         $gffUri = $this->pathResolver->toWebUri($gffPath);
         
+        // Use browser_track_id for JBrowse2 config, keep track_id for management
+        $browserTrackId = $trackData['browser_track_id'] ?? $trackData['track_id'];
+        
         // Build track metadata
         $metadata = [
-            'trackId' => $trackData['track_id'],
+            'trackId' => $browserTrackId,
             'name' => $trackData['name'],
             'assemblyNames' => ["{$organism}_{$assembly}"],
             'category' => [$trackData['category']],
@@ -247,10 +250,11 @@ class AutoTrack implements TrackTypeInterface
             'displays' => [
                 [
                     'type' => 'LinearBasicDisplay',
-                    'displayId' => "{$trackData['track_id']}-LinearBasicDisplay"
+                    'displayId' => "{$browserTrackId}-LinearBasicDisplay"
                 ]
             ],
             'metadata' => [
+                'management_track_id' => $trackData['track_id'],
                 'description' => $trackData['description'] ?? '',
                 'access_level' => $trackData['access_level'] ?? 'PUBLIC',
                 'file_path' => $gffPath,

@@ -8,12 +8,11 @@
  */
 
 require_once __DIR__ . '/TrackTypeInterface.php';
+require_once __DIR__ . '/BaseTrack.php';
 require_once __DIR__ . '/../PathResolver.php';
 
-class PAFTrack implements TrackTypeInterface
+class PAFTrack extends BaseTrack implements TrackTypeInterface
 {
-    private $pathResolver;
-    private $config;
     
     public function __construct(PathResolver $pathResolver, $config)
     {
@@ -24,7 +23,7 @@ class PAFTrack implements TrackTypeInterface
     /**
      * Get track type identifier
      */
-    public function getType()
+    public function getType(): string
     {
         return 'paf';
     }
@@ -138,6 +137,7 @@ class PAFTrack implements TrackTypeInterface
         $organism = $options['organism'];
         $assembly = $options['assembly'];
         $trackId = $options['track_id'] ?? $this->generateTrackId($filePath, $organism, $assembly);
+        $browserTrackId = $options['browser_track_id'] ?? $trackId;
         $trackName = $options['name'] ?? $this->generateTrackName($filePath);
         $category = $options['category'] ?? 'Long-read Alignments';
         $description = $options['description'] ?? '';
@@ -158,13 +158,14 @@ class PAFTrack implements TrackTypeInterface
         
         // Build metadata structure
         $metadata = [
-            'trackId' => $trackId,
+            'trackId' => $browserTrackId,
             'name' => $trackName,
             'organism' => $organism,
             'assembly' => $assembly,
             'category' => [$category],
             'description' => $description,
             'metadata' => [
+                'management_track_id' => $trackId,
                 'access_level' => $accessLevel,
                 'track_type' => 'paf',
                 'file_path' => $filePath,
@@ -203,6 +204,7 @@ class PAFTrack implements TrackTypeInterface
                 'assemblyNames' => [$assembly]
             ],
             'metadata' => [
+                'management_track_id' => $trackId,
                 'access_level' => $accessLevel,
             ]
         ];
@@ -220,29 +222,6 @@ class PAFTrack implements TrackTypeInterface
     /**
      * Write metadata to file
      */
-    private function writeMetadata(string $organism, string $assembly, array $metadata): void
-    {
-        $metadataDir = $this->config->getPath('metadata_path') . '/jbrowse2-configs/tracks';
-        $trackDir = "$metadataDir/$organism/$assembly/paf";
-        
-        if (!is_dir($trackDir)) {
-            mkdir($trackDir, 0775, true);
-        }
-        
-        $outputFile = "$trackDir/{$metadata['trackId']}.json";
-        
-        // Write JBrowse2 config only
-        $success = file_put_contents(
-            $outputFile,
-            json_encode($metadata['config'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-        );
-        
-        if ($success === false) {
-            throw new Exception("Failed to write metadata file: $outputFile");
-        }
-        
-        chmod($outputFile, 0664);
-    }
     
     /**
      * Generate track ID from filename

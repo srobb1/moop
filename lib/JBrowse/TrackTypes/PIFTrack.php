@@ -8,12 +8,11 @@
  */
 
 require_once __DIR__ . '/TrackTypeInterface.php';
+require_once __DIR__ . '/BaseTrack.php';
 require_once __DIR__ . '/../PathResolver.php';
 
-class PIFTrack implements TrackTypeInterface
+class PIFTrack extends BaseTrack implements TrackTypeInterface
 {
-    private $pathResolver;
-    private $config;
     
     public function __construct(PathResolver $pathResolver, $config)
     {
@@ -21,7 +20,7 @@ class PIFTrack implements TrackTypeInterface
         $this->config = $config;
     }
     
-    public function getType()
+    public function getType(): string
     {
         return 'pif';
     }
@@ -111,6 +110,7 @@ class PIFTrack implements TrackTypeInterface
         $assembly1 = $options['assembly1'];
         $assembly2 = $options['assembly2'];
         $trackId = $options['track_id'] ?? basename($filePath, '.pif.gz');
+        $browserTrackId = $options['browser_track_id'] ?? $trackId;
         $trackName = $options['name'] ?? str_replace(['_', '-'], ' ', basename($filePath, '.pif.gz'));
         $category = $options['category'] ?? 'Synteny';
         $accessLevel = isset($options['access_level']) && !empty($options['access_level'])
@@ -128,7 +128,7 @@ class PIFTrack implements TrackTypeInterface
         }
         
         $metadata = [
-            'trackId' => $trackId,
+            'trackId' => $browserTrackId,
             'name' => $trackName,
             'organism' => $organism,
             'assembly1' => $assembly1,
@@ -155,6 +155,7 @@ class PIFTrack implements TrackTypeInterface
                     ]
                 ],
                 'metadata' => [
+                'management_track_id' => $trackId,
                     'access_level' => $accessLevel,
                 ]
             ]
@@ -163,22 +164,4 @@ class PIFTrack implements TrackTypeInterface
         return $metadata;
     }
     
-    private function writeMetadata(string $organism, string $assembly, array $metadata): void
-    {
-        $metadataDir = $this->config->getPath('metadata_path') . '/jbrowse2-configs/tracks';
-        $trackDir = "$metadataDir/$organism/$assembly/pif";
-        
-        if (!is_dir($trackDir)) {
-            mkdir($trackDir, 0775, true);
-        }
-        
-        $outputFile = "$trackDir/{$metadata['trackId']}.json";
-        
-        file_put_contents(
-            $outputFile,
-            json_encode($metadata['config'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-        );
-        
-        chmod($outputFile, 0664);
-    }
 }

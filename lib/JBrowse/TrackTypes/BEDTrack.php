@@ -10,19 +10,12 @@
  */
 
 require_once __DIR__ . '/TrackTypeInterface.php';
+require_once __DIR__ . '/BaseTrack.php';
 
-class BEDTrack implements TrackTypeInterface
+class BEDTrack extends BaseTrack implements TrackTypeInterface
 {
-    private $pathResolver;
-    private $config;
     
-    public function __construct($pathResolver)
-    {
-        $this->pathResolver = $pathResolver;
-        $this->config = ConfigManager::getInstance();
-    }
-    
-    /**
+/**
      * Get the track type identifier
      */
     public function getType(): string
@@ -214,6 +207,7 @@ class BEDTrack implements TrackTypeInterface
         $organism = $options['organism'];
         $assembly = $options['assembly'];
         $trackId = $options['track_id'] ?? $this->generateTrackId($filePath, $organism, $assembly);
+        $browserTrackId = $options['browser_track_id'] ?? $trackId;
         $trackName = $options['name'] ?? $this->generateTrackName($filePath);
         $category = $options['category'] ?? 'Features';
         $description = $options['description'] ?? '';
@@ -245,7 +239,7 @@ class BEDTrack implements TrackTypeInterface
         
         // Build metadata structure
         $metadata = [
-            'trackId' => $trackId,
+            'trackId' => $browserTrackId,
             'name' => $trackName,
             'assemblyNames' => ["{$organism}_{$assembly}"],
             'category' => [$category],
@@ -267,10 +261,11 @@ class BEDTrack implements TrackTypeInterface
             'displays' => [
                 [
                     'type' => 'LinearBasicDisplay',
-                    'displayId' => "{$trackId}-LinearBasicDisplay"
+                    'displayId' => "{$browserTrackId}-LinearBasicDisplay"
                 ]
             ],
             'metadata' => [
+                'management_track_id' => $trackId,
                 'description' => $description,
                 'access_level' => $accessLevel,
                 'file_path' => $filePath,
@@ -340,31 +335,4 @@ class BEDTrack implements TrackTypeInterface
     /**
      * Write track metadata to JSON file
      */
-    public function writeMetadata(string $organism, string $assembly, array $metadata): string
-    {
-        $trackId = $metadata['trackId'];
-        $trackType = $this->getType();
-        
-        // Get metadata directory from ConfigManager
-        // NOTE: Metadata is ALWAYS local, even if track files (VCF) are remote
-        $metadataBase = $this->config->getPath('metadata_path');
-        $trackDir = "$metadataBase/jbrowse2-configs/tracks/$organism/$assembly/$trackType";
-        
-        // Create directory if needed
-        if (!is_dir($trackDir)) {
-            if (!mkdir($trackDir, 0755, true)) {
-                throw new Exception("Failed to create metadata directory: $trackDir");
-            }
-        }
-        
-        // Write JSON file
-        $metadataFile = $trackDir . '/' . $trackId . '.json';
-        $json = json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        
-        if (file_put_contents($metadataFile, $json) === false) {
-            throw new Exception("Failed to write metadata file: $metadataFile");
-        }
-        
-        return $metadataFile;
-    }
 }
