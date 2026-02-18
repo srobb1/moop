@@ -162,42 +162,195 @@ Set in track definition JSON:
 
 ```json
 {
-  "access_levels": ["Public", "Collaborator", "ALL"]
+  "metadata": {
+    "access_level": "PUBLIC"  // PUBLIC, COLLABORATOR, ADMIN
+  }
 }
 ```
+
+**Example: External Public Track (UCSC)**
+```json
+{
+  "name": "UCSC Conservation",
+  "metadata": {
+    "access_level": "PUBLIC"  ← Mark external public data as PUBLIC
+  },
+  "adapter": {
+    "bigWigLocation": {
+      "uri": "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/data.bw"
+    }
+  }
+}
+```
+**Result:** No JWT token added (prevents leakage to UCSC)
+
+**Example: Your Lab's Protected Data**
+```json
+{
+  "name": "Unpublished Data",
+  "metadata": {
+    "access_level": "COLLABORATOR"  ← Requires authentication
+  },
+  "adapter": {
+    "bigWigLocation": {
+      "uri": "/moop/data/tracks/Organism/Assembly/restricted.bw"
+    }
+  }
+}
+```
+**Result:** JWT token added, validated before serving
 
 ---
 
 ## Architecture
 
-### Components
+### System Overview
 
 ```
-┌─────────────────┐
-│   User Browser  │
-└────────┬────────┘
-         │
-         ↓
-┌─────────────────┐
-│  jbrowse2.php   │  ← Main UI (checks session)
-└────────┬────────┘
-         │
-         ↓
-┌─────────────────┐
-│  get-config.php │  ← API (filters assemblies)
-└────────┬────────┘
-         │
-         ↓
-┌─────────────────┐
-│  Metadata JSON  │  ← Assembly/track definitions
-└────────┬────────┘
-         │
-         ↓
-┌─────────────────┐
-│  JBrowse2 Core  │  ← Renders genome view
-└────────┬────────┘
-         │
-         ↓
+┌─────────────────────────────────────────────────────────┐
+│                    User Browser                         │
+│             (JBrowse2 React App)                        │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     │ 1. GET /jbrowse2.php
+                     ↓
+┌─────────────────────────────────────────────────────────┐
+│                  MOOP Web Server                        │
+│  ┌──────────────────────────────────────────────┐      │
+│  │ jbrowse2.php - Check session, embed React    │      │
+│  └──────────────────────────────────────────────┘      │
+│                     │                                    │
+│                     │ 2. GET /api/jbrowse2/config.php   │
+│                     ↓                                    │
+│  ┌──────────────────────────────────────────────┐      │
+│  │ config.php - Generate config with filtering  │      │
+│  │  • Load metadata from JSON                    │      │
+│  │  • Filter by user access level               │      │
+│  │  • Generate JWT tokens                        │      │
+│  │  • Inject tokens into track URLs             │      │
+│  └──────────────────────────────────────────────┘      │
+│                     │                                    │
+│                     ↓                                    │
+│  ┌──────────────────────────────────────────────┐      │
+│  │ Metadata JSON (assemblies + tracks)          │      │
+│  │  metadata/jbrowse2-configs/                  │      │
+│  └──────────────────────────────────────────────┘      │
+└─────────────────────────────────────────────────────────┘
+                     │
+                     │ 3. Track data requests (with JWT)
+                     ↓
+┌─────────────────────────────────────────────────────────┐
+│              Tracks Server (Local or Remote)            │
+│  ┌──────────────────────────────────────────────┐      │
+│  │ tracks.php - Validate JWT, serve files       │      │
+│  │  • Verify RS256 signature                     │      │
+│  │  • Check organism/assembly claims            │      │
+│  │  • Serve with HTTP range support             │      │
+│  └──────────────────────────────────────────────┘      │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Key Principles
+
+1. **Metadata-Driven** - All assemblies/tracks defined in JSON (no hard-coded configs)
+2. **Server-Side Filtering** - Permissions enforced before config sent to browser
+3. **Stateless Tracks Server** - JWT validation only, no database required
+4. **Standard JBrowse2** - Uses unmodified `@jbrowse/react-linear-genome-view`
+
+---
+
+## File Organization
+
+### Metadata Directory Structure
+
+```
+metadata/jbrowse2-configs/
+├── assemblies/
+│   └── Organism_Assembly.json          # Assembly definitions
+└── tracks/
+    └── Organism/Assembly/type/
+        └── track_name.json              # Track definitions
+```
+
+### Track Data Structure
+
+```
+data/
+├── genomes/                              # Reference genomes
+│   └── Organism/Assembly/
+│       ├── reference.fasta
+│       └── annotations.gff3.gz
+└── tracks/                               # Track data files
+    └── Organism/Assembly/
+        ├── bigwig/                       # Coverage tracks
+        ├── bam/                          # Alignments
+        ├── vcf/                          # Variants
+        └── gff/                          # Features
+```
+
+---
+
+## Key Technologies
+
+- **JBrowse2** - React Linear Genome View (standard, unmodified)
+- **JWT** - RS256 asymmetric signatures (2048-bit RSA keys)
+- **PHP** - Server-side config generation and token signing
+- **Apache/Nginx** - Web server with CORS and range request support
+- **JSON** - Metadata storage (assemblies and tracks)
+
+---
+
+## Common Tasks
+
+### View a Genome
+1. Navigate to `/moop/jbrowse2.php`
+2. Click an assembly
+3. Browse genome with pan/zoom
+4. Enable tracks from left panel
+
+### Add a New Track
+1. Upload track file to appropriate directory
+2. Create JSON metadata file or use Google Sheets
+3. Track appears automatically for users with access
+
+### Grant User Access to Assembly
+1. Edit user's access list in database
+2. Add organism/assembly to `$_SESSION['access']`
+3. User sees assembly on next page load
+
+### Deploy Remote Tracks Server
+1. Follow [technical/TRACKS_SERVER_IT_SETUP.md](technical/TRACKS_SERVER_IT_SETUP.md)
+2. Deploy `tracks.php` + JWT public key
+3. Configure CORS and SSL
+4. Update track URLs in metadata
+
+---
+
+## Support & Resources
+
+### For Problems
+- Check logs: `/var/log/apache2/` or `/var/log/moop/`
+- Verify JWT tokens not expired (1 hour limit for external users)
+- Check file permissions and paths
+- Review CORS headers if tracks fail to load
+
+### For Questions
+- Technical: See [technical/](technical/) documentation
+- Security: See [technical/SECURITY.md](technical/SECURITY.md)
+- Setup: See [SETUP_NEW_ORGANISM.md](SETUP_NEW_ORGANISM.md)
+- Deployment: See [technical/TRACKS_SERVER_IT_SETUP.md](technical/TRACKS_SERVER_IT_SETUP.md)
+
+### External Resources
+- [JBrowse2 Documentation](https://jbrowse.org/jb2/)
+- [JBrowse2 GitHub](https://github.com/GMOD/jbrowse-components)
+- [JWT Introduction](https://jwt.io/introduction)
+
+---
+
+**Documentation Version:** 3.0  
+**MOOP JBrowse2 Integration:** Production Ready  
+**Last Major Update:** February 18, 2026  
+**Security Updates:** Feb 2026 (JWT improvements, external URL handling)
 ┌─────────────────┐
 │  Tracks Server  │  ← Serves BigWig/BAM (JWT validated)
 └─────────────────┘

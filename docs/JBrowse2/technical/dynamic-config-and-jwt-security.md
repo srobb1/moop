@@ -715,25 +715,224 @@ function addTokenToAdapterUrls($adapter, $token) {
 }
 ```
 
-### IP Whitelisting (Token Bypass)
+### IP Whitelisting (Relaxed Expiry)
 
-Internal network IPs skip JWT tokens entirely:
+**Updated 2026-02-18:** Internal network IPs now receive JWT tokens but with relaxed expiry checking.
 
 ```php
 $is_whitelisted = isWhitelistedIP();  // Checks against 10.x, 192.168.x, 127.x ranges
 
-if ($is_whitelisted) {
-    $token = null;  // No token generated
-}
+// ALWAYS generate tokens (even for whitelisted IPs)
+$token = generateTrackToken($organism, $assembly, $user_access_level);
+
+// Get track access level for token injection strategy
+$track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
 
 $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly, 
                                       $user_access_level, $is_whitelisted);
 ```
 
 **Benefits:**
-- ✅ No token generation overhead for local users
-- ✅ Slightly faster config generation
-- ✅ Tracks server still validates IP whitelist independently
+- ✅ Defense-in-depth: All users need valid organism/assembly tokens
+- ✅ Audit trail: All requests logged with user_id
+- ✅ Prevents unauthorized access by path guessing
+- ✅ Whitelisted IPs still get convenience: Can use expired tokens
+- ✅ No 1-hour expiry limit for internal researchers
+
+**On tracks server:**
+- Whitelisted IPs: Token structure validated, expiry check skipped
+- Non-whitelisted IPs: Full validation including expiry
+- All IPs: Organism/assembly claims must match requested file
+
+---
+
+## External URL Handling
+
+**Added 2026-02-18:** Support for public reference data from external servers.
+
+### Token Strategy Based on access_level
+
+MOOP uses the track's `access_level` metadata to determine whether to add JWT tokens to external URLs:
+
+**Rule:** External URL + `access_level="PUBLIC"` → No token (prevents leakage)
+
+```php
+function addTokenToAdapterUrls($adapter, $token, $track_access_level) {
+    // CASE 1: External URL + PUBLIC → Skip token
+    if (preg_match('#^(https?|ftp)://#i', $uri) && $track_access_level === 'PUBLIC') {
+        continue; // Leave unchanged - external public resource
+    }
+    
+    // CASE 2: External URL + NOT PUBLIC → Add token
+    elseif (preg_match('#^(https?|ftp)://#i', $uri)) {
+        // Your remote tracks server with protected data
+        $value['uri'] .= '?token=' . urlencode($token);
+    }
+    
+    // CASE 3: MOOP tracks → Always add token
+    if (preg_match('#^/moop/data/tracks/(.+)$#', $uri)) {
+        $value['uri'] = '/moop/api/jbrowse2/tracks.php?file=' . urlencode($file_path);
+        $value['uri'] .= '&token=' . urlencode($token);
+    }
+}
+```
+
+### Example Scenarios
+
+#### Scenario 1: UCSC Public Conservation Track
+
+**Track Metadata:**
+```json
+{
+    "name": "UCSC Conservation",
+    "metadata": {
+        "access_level": "PUBLIC",
+        "is_remote": true,
+        "remote_url": "https://hgdownload.soe.ucsc.edu/"
+    },
+    "adapter": {
+        "bigWigLocation": {
+            "uri": "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/phyloP100way.bw"
+        }
+    }
+}
+```
+
+**After config generation:**
+```json
+{
+    "adapter": {
+        "bigWigLocation": {
+            "uri": "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/phyloP100way.bw"
+        }
+    }
+}
+```
+✅ **Unchanged** - External + PUBLIC = No token
+
+---
+
+#### Scenario 2: Your Lab's Data (Local Server)
+
+**Track Metadata:**
+```json
+{
+    "name": "Lab RNA-Seq",
+    "metadata": {
+        "access_level": "PUBLIC"
+    },
+    "adapter": {
+        "bigWigLocation": {
+            "uri": "/moop/data/tracks/Organism/Assembly/bigwig/rnaseq.bw"
+        }
+    }
+}
+```
+
+**After config generation:**
+```json
+{
+    "adapter": {
+        "bigWigLocation": {
+            "uri": "/moop/api/jbrowse2/tracks.php?file=Organism%2FAssembly%2Fbigwig%2Frnaseq.bw&token=eyJhbGc..."
+        }
+    }
+}
+```
+✅ **Token added** - Your data, even if PUBLIC (audit trail)
+
+---
+
+#### Scenario 3: Collaborator Data on Remote Tracks Server
+
+**Track Metadata:**
+```json
+{
+    "name": "Collaboration Project",
+    "metadata": {
+        "access_level": "COLLABORATOR"
+    },
+    "adapter": {
+        "bigWigLocation": {
+            "uri": "https://tracks.yourlab.edu/data/Organism/Assembly/restricted.bw"
+        }
+    }
+}
+```
+
+**After config generation:**
+```json
+{
+    "adapter": {
+        "bigWigLocation": {
+            "uri": "https://tracks.yourlab.edu/data/Organism/Assembly/restricted.bw?token=eyJhbGc..."
+        }
+    }
+}
+```
+✅ **Token added** - Your remote tracks server with protected data
+
+---
+
+#### Scenario 4: Mixed Tracks (Local + External)
+
+**Track Metadata:**
+```json
+{
+    "tracks": [
+        {
+            "name": "Our Data",
+            "metadata": {"access_level": "COLLABORATOR"},
+            "adapter": {
+                "uri": "/moop/data/tracks/Org/Asm/sample.bw"
+            }
+        },
+        {
+            "name": "UCSC Reference",
+            "metadata": {"access_level": "PUBLIC"},
+            "adapter": {
+                "uri": "https://hgdownload.soe.ucsc.edu/data.bw"
+            }
+        }
+    ]
+}
+```
+
+**After config generation:**
+```json
+{
+    "tracks": [
+        {
+            "name": "Our Data",
+            "adapter": {
+                "uri": "/moop/api/jbrowse2/tracks.php?file=Org%2FAsm%2Fsample.bw&token=JWT"
+            }
+        },
+        {
+            "name": "UCSC Reference",
+            "adapter": {
+                "uri": "https://hgdownload.soe.ucsc.edu/data.bw"
+            }
+        }
+    ]
+}
+```
+✅ **Local gets token, external unchanged**
+
+### Security Benefits
+
+**Prevents Token Leakage:**
+- ❌ Old behavior: All URIs got tokens → JWT tokens in UCSC logs
+- ✅ New behavior: External PUBLIC URIs unchanged → No leakage
+
+**Secures Your Remote Tracks Servers:**
+- ❌ Old behavior: All external URLs skipped tokens → Can't secure your remote server
+- ✅ New behavior: External COLLABORATOR+ gets tokens → Your remote servers secured
+
+**Consistent Audit Trail:**
+- ✅ All YOUR data (local or remote) has tokens with user_id
+- ✅ Can track who accessed what, when
+- ✅ Even PUBLIC tracks on your server get tokens
 
 ---
 
@@ -914,7 +1113,7 @@ A: Yes! We use unmodified `@jbrowse/react-linear-genome-view`. The config format
 A: They can try, but track requests still require valid JWT tokens. Modifying client-side config doesn't bypass server validation.
 
 **Q: What if user's session expires during viewing?**  
-A: JBrowse2 continues working with existing tokens for up to 1 hour. After that, tracks fail to load. User must refresh page to re-authenticate.
+A: JBrowse2 continues working. External users: tokens expire in 1 hour. Whitelisted users: expired tokens still work. After expiry, external users must refresh page.
 
 **Q: How do you handle multiple assemblies for one user?**  
 A: Each assembly gets its own JWT token scoped to that organism/assembly pair. Tokens cannot be reused across assemblies.
@@ -924,6 +1123,18 @@ A: Not recommended - configs are permission-dependent and user-specific. Caching
 
 **Q: How do you add new tracks?**  
 A: Add JSON metadata file to `metadata/jbrowse2-configs/tracks/Organism/Assembly/type/`. Next config request automatically includes it (if user has access).
+
+**Q: Can I use external URLs for tracks (UCSC, Ensembl)?**  
+A: Yes! Mark them `access_level: "PUBLIC"` and use `https://` URLs. No JWT tokens added - works perfectly for public reference data.
+
+**Q: What about my own remote tracks server with protected data?**  
+A: Mark tracks `access_level: "COLLABORATOR"` or higher. Tokens will be added automatically. Your remote tracks server validates tokens before serving files.
+
+**Q: Do whitelisted IPs still need JWT tokens?**  
+A: Yes (as of 2026-02-18). All users get tokens with organism/assembly claims. Whitelisted IPs benefit: can use expired tokens (no 1-hour limit).
+
+**Q: What happens if I mark a UCSC track as COLLABORATOR by mistake?**  
+A: Token gets added to UCSC URL. UCSC ignores it and track still loads. Minor information leakage to UCSC logs. Fix: Mark external public tracks as PUBLIC.
 
 ---
 
