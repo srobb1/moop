@@ -137,6 +137,18 @@
           </div>
         </div>
       </div>
+      
+      <div class="col-md-6 mb-3">
+        <div class="card h-100 border-primary">
+          <div class="card-header bg-primary bg-opacity-10">
+            <h5 class="card-title mb-0"><i class="fa fa-dna"></i> JBrowse Track Management</h5>
+          </div>
+          <div class="card-body">
+            <p class="card-text">Manage JBrowse tracks and configurations. Register Google Sheets, sync tracks, validate URLs, and monitor track access.</p>
+            <a href="manage_jbrowse.php" class="btn btn-primary">Go to JBrowse Management</a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
