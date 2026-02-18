@@ -1,9 +1,11 @@
 <?php
 /**
- * JBROWSE MANAGEMENT - Wrapper
+ * MANAGE JBROWSE - Admin Controller
  * 
- * Admin interface for managing JBrowse assemblies, tracks, and configurations.
- * Provides Google Sheets registration, track listing, URL validation, and config generation.
+ * Manages JBrowse2 track configurations and Google Sheets integration.
+ * Provides two views:
+ * 1. Setup View - If JBrowse2 not installed, guides user to installation
+ * 2. Dashboard View - If installed, shows full management interface
  */
 
 // Load admin initialization (handles auth, config, includes)
@@ -14,7 +16,56 @@ include_once __DIR__ . '/../includes/layout.php';
 
 // Get config
 $site = $config->getString('site');
+$site_path = $config->getPath('site_path');
 
+// Check if JBrowse2 is installed
+function isJBrowse2Installed($site_path) {
+    $jbrowse_dir = $site_path . '/jbrowse2';
+    
+    // Check for key JBrowse2 files that indicate a working installation
+    $required_items = [
+        $jbrowse_dir . '/index.html',
+        // Either @jbrowse directory (dev build) OR static directory (production build)
+        // Check for at least one of these
+    ];
+    
+    // Must have index.html
+    if (!file_exists($jbrowse_dir . '/index.html')) {
+        return false;
+    }
+    
+    // Must have either @jbrowse (dev) or static (production)
+    if (!is_dir($jbrowse_dir . '/@jbrowse') && !is_dir($jbrowse_dir . '/static')) {
+        return false;
+    }
+    
+    return true;
+}
+
+$jbrowse_installed = isJBrowse2Installed($site_path);
+
+// If JBrowse is not installed, show setup view
+if (!$jbrowse_installed) {
+    $display_config = [
+        'title' => 'JBrowse2 Setup Required - ' . $config->getString('siteTitle'),
+        'content_file' => __DIR__ . '/pages/jbrowse_setup.php',
+    ];
+    
+    $data = [
+        'config' => $config,
+        'site' => $site,
+        'site_path' => $site_path,
+    ];
+    
+    echo render_display_page(
+        $display_config['content_file'],
+        $data,
+        $display_config['title']
+    );
+    exit;
+}
+
+// JBrowse is installed - continue with dashboard view
 // Configure display
 $display_config = [
     'title' => 'JBrowse Management - ' . $config->getString('siteTitle'),
