@@ -165,6 +165,9 @@ class GoogleSheetsParser
             $row['organism'] = $organism;
             $row['assembly'] = $assembly;
             
+            // Generate browser track ID from file path (for JBrowse2 config)
+            $row['browser_track_id'] = $this->generateBrowserTrackId($row['track_path']);
+            
             // Clean track data
             $track = $this->cleanTrackData($row);
             
@@ -348,6 +351,7 @@ class GoogleSheetsParser
         
         return [
             'track_id' => trim($row['track_id']),
+            'browser_track_id' => trim($row['browser_track_id'] ?? ''),
             'name' => trim($row['name']),
             'TRACK_PATH' => trim($row['track_path']),
             'category' => trim($row['category'] ?? 'Uncategorized'),
@@ -413,5 +417,30 @@ class GoogleSheetsParser
             'combo_tracks' => count($tracks['combo']),
             'total' => count($tracks['regular']) + count($tracks['combo'])
         ];
+    }
+    
+    /**
+     * Generate a reproducible browser track ID from file path using MD5 hash
+     * 
+     * This creates hash-based track IDs for use in JBrowse2 configs to prevent
+     * information disclosure in shared sessions. The ID is deterministic and 
+     * reproducible, but reveals nothing about the original filename.
+     * 
+     * This is separate from the human-readable track_id used for management.
+     * 
+     * @param string $filePath Full file path to generate ID from
+     * @return string Browser track ID like "track_a7f3d2e942"
+     */
+    public function generateBrowserTrackId($filePath)
+    {
+        if (empty($filePath)) {
+            return '';
+        }
+        
+        // Create MD5 hash of the file path
+        $hash = md5($filePath);
+        
+        // Take first 10 characters for a compact ID
+        return "track_" . substr($hash, 0, 10);
     }
 }
