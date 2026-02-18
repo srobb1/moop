@@ -384,13 +384,31 @@ Or:
 
 ### Worst-Case Impact
 
-**If Scenario C is possible:**
+**Actual Impact (Based on Testing):**
 
-1. **Data Leakage:** COLLABORATOR tracks accessible to unauthorized users
-2. **Time Window:** 1-hour window from share generation to token expiry
-3. **Scope:** Limited to organism/assembly in token (cannot be reused for other data)
-4. **Auditability:** Tracks server logs show requests, but with valid token
-5. **Revocation:** No way to revoke tokens before 1-hour expiry
+1. **Data Leakage:** ✅ **NO** - Tracks do not load data for unauthorized users
+2. **Information Disclosure:** 🟡 **YES** - Track names and configurations visible in session JSON
+3. **Token Leakage:** ✅ **NO** - JWT tokens are not embedded in session URLs
+4. **Authorization Bypass:** ✅ **NO** - Config is re-fetched with current user permissions
+
+**Risk Level: 🟡 MODERATE (Information Disclosure)**
+
+**What is leaked:**
+- Track IDs (e.g., "MOLNG-2707_S3-body-wall.bam")
+- Track types (AlignmentsTrack, QuantitativeTrack, etc.)
+- Display configurations
+- Track existence (users learn restricted tracks exist)
+
+**What is NOT leaked:**
+- Actual track data
+- JWT tokens
+- File paths (not directly visible in session)
+- User credentials
+
+**Impact Assessment:**
+- **Confidentiality:** Low to Moderate - Track names may reveal research details
+- **Integrity:** None - No data modification possible
+- **Availability:** None - No denial of service risk
 
 ---
 
@@ -403,9 +421,30 @@ Or:
 3. **Inspect generated session URLs** for token presence
 4. **Review JBrowse2 configuration options** for session security
 
-### If Tokens Leak Through Sessions
+## Recommended Security Measures
 
-**Option 1: Disable Session Sharing (Safest)**
+### Current Status: Information Disclosure Only
+
+Based on testing, the system correctly prevents unauthorized data access, but does leak metadata about restricted tracks.
+
+### Risk-Based Decision Matrix
+
+#### Option 1: Accept Current Risk (Recommended for Most Cases)
+**Rationale:**
+- No actual data breach occurs
+- Track names alone provide limited information
+- Users still cannot access the data
+- System correctly enforces authorization
+
+**When to choose:**
+- Track names are not highly sensitive
+- Research is not confidential
+- Users understand naming conventions may be visible in shared links
+
+---
+
+#### Option 2: Disable Session Sharing (Most Secure)
+**Implementation:**
 ```json
 {
   "configuration": {
@@ -415,26 +454,80 @@ Or:
 }
 ```
 
-**Option 2: Server-Side Session Storage**
+**When to choose:**
+- Track names contain sensitive/confidential information
+- Any information disclosure is unacceptable
+- Compliance requirements prohibit metadata leakage
+
+**Trade-offs:**
+- Users lose ability to share views
+- Collaboration becomes harder
+- Screenshots become primary sharing method
+
+---
+
+#### Option 3: User Education (Lightweight Mitigation)
+**Implementation:**
+- Add warning in UI: "Shared links may reveal track names"
+- Documentation for users about session sharing
+- Training for ADMIN users about information disclosure
+
+**When to choose:**
+- Low-risk environment
+- Trusted user community
+- Need to maintain sharing functionality
+
+---
+
+#### Option 4: Server-Side Session Storage (Advanced)
+**Implementation:**
 - Store sessions server-side with UUIDs
 - Validate user permissions on session load
+- Filter session tracks based on current user access
 - Regenerate tokens for current user
 
-**Option 3: Shorten Token Expiry**
-- Reduce from 1 hour to 5-10 minutes
-- Implement token refresh endpoint
-- Trade-off: More requests, better security
+**Complexity:** High
+**Maintenance:** Requires database/storage for sessions
 
-**Option 4: Session Sanitization**
-- Strip tokens from session exports
-- Force re-fetch of config on session load
-- Requires JBrowse2 plugin or fork
+**When to choose:**
+- Need full security + sharing functionality
+- Have development resources
+- Want fine-grained control
 
-**Option 5: Track-Specific Tokens**
-- Generate per-track tokens instead of per-assembly
-- Include track ID in JWT claims
-- Tracks server validates track access
-- More complex but more granular
+---
+
+#### Option 5: Client-Side Session Sanitization (Advanced)
+**Implementation:**
+- Create JBrowse2 plugin to strip track IDs from exports
+- Replace track IDs with position/view state only
+- Force config re-fetch on session load
+
+**Complexity:** Moderate to High
+**Maintenance:** Requires JBrowse2 plugin development
+
+**When to choose:**
+- Want to reduce information disclosure
+- Maintain most sharing functionality
+- Have JavaScript development resources
+
+---
+
+### Recommended Action Plan
+
+**For MOOP (Current Assessment):**
+
+1. ✅ **Accept current risk** with documentation
+2. ✅ **Add user warning** about track name visibility
+3. ✅ **Document in user guide** how session sharing works
+4. 📋 **Review track naming conventions** (avoid sensitive names)
+5. 📋 **Periodic audits** of shared sessions if needed
+
+**Reasoning:**
+- Authorization is correctly enforced (no data breach)
+- JWT tokens are not leaked (good security)
+- Information disclosure is limited to track metadata
+- Sharing functionality is valuable for collaboration
+- Track names in current system appear non-sensitive
 
 ---
 
