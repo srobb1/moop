@@ -68,7 +68,6 @@
  * Information Flags:
  *   --list-colors           List all available color schemes
  *   --suggest-colors N      Suggest best color schemes for N files
- *   --list-track-ids        List track IDs that would be created from sheet
  *   --list-existing         List existing tracks for organism/assembly
  * 
  * Track Generation Flags:
@@ -143,12 +142,6 @@ if (empty($options['gid']) || empty($options['organism']) || empty($options['ass
 // Initialize
 $config = ConfigManager::getInstance();
 $generator = new TrackGenerator($config);
-
-// Handle --list-track-ids flag (requires sheet to be loaded)
-if (!empty($options['list_track_ids'])) {
-    listTrackIdsFromSheet($generator, $options);
-    exit(0);
-}
 
 echo "JBrowse Track Generator\n";
 echo "=======================\n\n";
@@ -260,6 +253,14 @@ try {
     echo "  ⊘ Skipped: " . $results['stats']['skipped'] . "\n";
     echo "  ✗ Failed: " . $results['stats']['failed'] . "\n";
     
+    // In dry-run mode, show detailed list of what would happen
+    if ($options['dry_run'] && !empty($results['skipped'])) {
+        echo "\nExisting Tracks (would be skipped):\n";
+        foreach ($results['skipped'] as $trackId) {
+            echo "  ⊘ $trackId\n";
+        }
+    }
+    
     // Show which tracks were regenerated
     if ($regeneratedCount > 0 && !empty($results['success'])) {
         echo "\nRegenerated Tracks:\n";
@@ -317,7 +318,6 @@ function parseArguments($argv)
         'clean' => false,
         'list_colors' => false,
         'suggest_colors' => null,
-        'list_track_ids' => false,
         'list_existing' => false
     ];
     
@@ -367,10 +367,6 @@ function parseArguments($argv)
                 
             case '--suggest-colors':
                 $options['suggest_colors'] = $argv[++$i] ?? null;
-                break;
-                
-            case '--list-track-ids':
-                $options['list_track_ids'] = true;
                 break;
                 
             case '--list-existing':
@@ -444,71 +440,6 @@ function showUsage()
 /**
  * List track IDs that would be created from Google Sheet
  */
-function listTrackIdsFromSheet($generator, $options)
-{
-    try {
-        // Load tracks from sheet
-        $tracks = $generator->loadFromSheet(
-            $options['sheet_id'],
-            $options['gid'],
-            $options['organism'],
-            $options['assembly']
-        );
-        
-        echo str_repeat('=', 80) . "\n";
-        echo "TRACK IDs FROM GOOGLE SHEET\n";
-        echo str_repeat('=', 80) . "\n\n";
-        
-        if (!empty($tracks['regular'])) {
-            echo "Regular Tracks (" . count($tracks['regular']) . "):\n";
-            echo str_repeat('-', 80) . "\n";
-            foreach ($tracks['regular'] as $track) {
-                $trackId = $track['track_id'];
-                $name = $track['name'];
-                // Determine type from path
-                $trackType = $generator->determineTrackType($track['TRACK_PATH']);
-                echo "  $trackId\n";
-                echo "    → \"$name\" ($trackType)\n";
-            }
-            echo "\n";
-        }
-        
-        if (!empty($tracks['combo'])) {
-            echo "Combo Tracks (" . count($tracks['combo']) . "):\n";
-            echo str_repeat('-', 80) . "\n";
-            foreach ($tracks['combo'] as $comboTrack) {
-                $trackId = $comboTrack['track_id'];
-                $name = $comboTrack['name'];
-                $subtrackCount = 0;
-                foreach ($comboTrack['groups'] as $group) {
-                    $subtrackCount += count($group['tracks']);
-                }
-                echo "  $trackId\n";
-                echo "    → \"$name\" (multi-bigwig, $subtrackCount subtracks)\n";
-            }
-            echo "\n";
-        }
-        
-        echo str_repeat('=', 80) . "\n";
-        echo "USAGE:\n";
-        echo "  # Create all tracks:\n";
-        echo "  php generate_tracks_from_sheet.php {$options['sheet_id']} \\\n";
-        echo "    --gid {$options['gid']} \\\n";
-        echo "    --organism {$options['organism']} \\\n";
-        echo "    --assembly {$options['assembly']}\n\n";
-        echo "  # Force regenerate specific track:\n";
-        echo "  php generate_tracks_from_sheet.php {$options['sheet_id']} --force TRACK_ID \\\n";
-        echo "    --gid {$options['gid']} \\\n";
-        echo "    --organism {$options['organism']} \\\n";
-        echo "    --assembly {$options['assembly']}\n";
-        echo str_repeat('=', 80) . "\n";
-        
-    } catch (Exception $e) {
-        echo "Error: " . $e->getMessage() . "\n";
-        exit(1);
-    }
-}
-
 /**
  * List existing tracks for organism/assembly
  */
@@ -539,10 +470,11 @@ function listExistingTracks($generator, $organism, $assembly)
     
     echo "Total: " . count($tracks) . " tracks\n\n";
     
+    echo "  track_id → track display name (category)\n";
+    echo str_repeat('-', 80) . "\n\n";
+    
     foreach ($byType as $type => $typeTracks) {
         echo ucfirst($type) . " Tracks (" . count($typeTracks) . "):\n";
-        echo str_repeat('-', 80) . "\n";
-        echo "  track_id → track display name (category)\n\n";
         foreach ($typeTracks as $track) {
             $category = is_array($track['category']) ? implode(', ', $track['category']) : $track['category'];
             // Single line format for easy grepping
