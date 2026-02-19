@@ -150,8 +150,13 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     }
     
     // Build BLAST command with outfmt 11 (ASN.1)
+    // Get configured BLAST tool path
+    $config = ConfigManager::getInstance();
+    $blast_tools = $config->getArray('blast_tools', []);
+    $program_path = $blast_tools[$program] ?? $program;
+    
     $cmd = [];
-    $cmd[] = $program;
+    $cmd[] = $program_path;
     // Use absolute path for database
     // For BLAST databases, we pass the base name and BLAST appends the extensions
     $db_dir = dirname($blast_db);
@@ -217,7 +222,8 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     
     // Convert ASN.1 archive to outfmt 5 (XML) using blast_formatter
     $xml_file = tempnam($temp_dir, 'blast_xml_');
-    $formatter_cmd = 'blast_formatter -archive ' . escapeshellarg($archive_file) . 
+    $blast_formatter_path = $blast_tools['blast_formatter'] ?? 'blast_formatter';
+    $formatter_cmd = $blast_formatter_path . ' -archive ' . escapeshellarg($archive_file) . 
                      ' -outfmt 5 -out ' . escapeshellarg($xml_file);
     
     $process = proc_open($formatter_cmd, $descriptors, $pipes);
@@ -244,7 +250,7 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     
     // Now convert ASN.1 archive to outfmt 0 (Pairwise text) for download
     $pairwise_file = tempnam($temp_dir, 'blast_pairwise_');
-    $formatter_cmd = 'blast_formatter -archive ' . escapeshellarg($archive_file) . 
+    $formatter_cmd = $blast_formatter_path . ' -archive ' . escapeshellarg($archive_file) . 
                      ' -outfmt 0 -out ' . escapeshellarg($pairwise_file);
     
     $process = proc_open($formatter_cmd, $descriptors, $pipes);
@@ -451,7 +457,10 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
         }
         
         // Execute: blastdbcmd -db ... -entry_batch temp_file
-        $cmd = "blastdbcmd -db " . escapeshellarg($blast_db) . " -entry_batch " . escapeshellarg($temp_file) . " 2>&1";
+        $config = ConfigManager::getInstance();
+        $blast_tools = $config->getArray('blast_tools', []);
+        $blastdbcmd_path = $blast_tools['blastdbcmd'] ?? 'blastdbcmd';
+        $cmd = $blastdbcmd_path . " -db " . escapeshellarg($blast_db) . " -entry_batch " . escapeshellarg($temp_file) . " 2>&1";
         
         $output = [];
         $return_var = 0;
@@ -488,8 +497,11 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
         }
     } else {
         // No ranges - use current logic: Execute: blastdbcmd -db ... -entry IDs
+        $config = ConfigManager::getInstance();
+        $blast_tools = $config->getArray('blast_tools', []);
+        $blastdbcmd_path = $blast_tools['blastdbcmd'] ?? 'blastdbcmd';
         $ids_string = implode(',', $sequence_ids);
-        $cmd = "blastdbcmd -db " . escapeshellarg($blast_db) . " -entry " . escapeshellarg($ids_string) . " 2>/dev/null";
+        $cmd = $blastdbcmd_path . " -db " . escapeshellarg($blast_db) . " -entry " . escapeshellarg($ids_string) . " 2>/dev/null";
         $output = [];
         $return_var = 0;
         @exec($cmd, $output, $return_var);
@@ -798,9 +810,11 @@ function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_d
     $is_protein = strpos($fasta_filename, 'protein') !== false;
     $db_type = $is_protein ? 'prot' : 'nucl';
     
-    // Build command with full path to makeblastdb
+    // Build command with configurable path to makeblastdb
+    $config = ConfigManager::getInstance();
+    $blast_tools = $config->getArray('blast_tools', []);
+    $makeblastdb_path = $blast_tools['makeblastdb'] ?? 'makeblastdb';
     $cd_cmd = 'cd ' . escapeshellarg($assembly_path);
-    $makeblastdb_path = '/usr/bin/makeblastdb';
     // Don't use escapeshellarg for the filename since we're already in the directory
     $makeblastdb_cmd = $makeblastdb_path . ' -in ' . $fasta_filename . ' -dbtype ' . $db_type . ' -parse_seqids 2>&1';
     $full_cmd = $cd_cmd . ' && ' . $makeblastdb_cmd;

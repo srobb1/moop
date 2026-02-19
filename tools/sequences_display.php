@@ -309,8 +309,11 @@ function extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, &$error
     }
     
     // Use blastdbcmd to extract sequences - it accepts comma-separated IDs
+    $config = ConfigManager::getInstance();
+    $blast_tools = $config->getArray('blast_tools', []);
+    $blastdbcmd_path = $blast_tools['blastdbcmd'] ?? 'blastdbcmd';
     $ids_string = implode(',', $search_ids);
-    $cmd = "blastdbcmd -db " . escapeshellarg($fasta_file) . " -entry " . escapeshellarg($ids_string) . " 2>/dev/null";
+    $cmd = $blastdbcmd_path . " -db " . escapeshellarg($fasta_file) . " -entry " . escapeshellarg($ids_string) . " 2>/dev/null";
     $output = [];
     $return_var = 0;
     @exec($cmd, $output, $return_var);

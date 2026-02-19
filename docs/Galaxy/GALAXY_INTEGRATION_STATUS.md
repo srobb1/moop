@@ -1,8 +1,9 @@
-# Galaxy Integration Status - February 4, 2026
+# Galaxy Integration Status - February 19, 2026
 
 ## Executive Summary
 
-✅ **GALAXY INTEGRATION WORKING AND TESTED**
+✅ **GALAXY INTEGRATION WORKING AND TESTED**  
+⏸️ **UI INTEGRATION PAUSED - READY TO RESUME**
 
 We have successfully:
 1. Created a UseGalaxy.org account
@@ -10,6 +11,7 @@ We have successfully:
 3. Tested MAFFT alignment with 5 protein sequences
 4. Received results with visualization capabilities
 5. Documented the complete workflow
+6. **Verified checkboxes exist in search results tables**
 
 ## What We've Accomplished
 
@@ -18,6 +20,8 @@ We have successfully:
 - [x] Configuration manager integration (`config/site_config.php`)
 - [x] API key storage in secrets.php (NOT COMMITTED - for security)
 - [x] Working shell script reference (`docs/GALAXY_INTEGRATION_WORKING_TEST.sh`)
+- [x] API endpoints created (`/api/galaxy/mafft.php`, `/api/galaxy/results.php`)
+- [x] MAFFT wrapper class (`lib/galaxy/mafft.php`)
 
 ### Phase 2: Successful Test Run ✅
 **Date**: February 4, 2026  
@@ -105,14 +109,30 @@ lib/blast_functions.php::parseFeatureIds()
 - Same organism/assembly directory structure
 - Same FASTA formatting
 
-**Two Paths from Same Source**:
-```
-Download Path:
-  extract sequences → format FASTA → send to browser
+**Two Implementation Options**:
 
-Galaxy Align Path:
-  extract sequences → format FASTA → upload to Galaxy → run job → monitor
+**Option A: JavaScript extracts sequences first (Recommended for MVP)**
 ```
+1. JS gets selected feature IDs from checkboxes
+2. JS calls backend endpoint to extract sequences (like download tool does)
+3. Backend returns sequences as JSON
+4. JS sends sequences to /api/galaxy_mafft_align.php
+5. Galaxy runs alignment
+```
+
+**Option B: Backend extracts sequences (Cleaner but needs new endpoint)**
+```
+1. JS gets selected feature IDs from checkboxes
+2. JS sends IDs + organism + assembly to NEW /api/galaxy/align_selected.php
+3. Backend extracts sequences using extract_search_helpers.php
+4. Backend formats and sends to Galaxy
+5. Galaxy runs alignment
+```
+
+**For Tomorrow: Use Option A** (reuse existing download pattern)
+- Copy logic from `js/modules/datatable-config.js` (lines 93-155)
+- Already extracts sequences for download
+- Just change destination from download → Galaxy API
 
 ## Current Configuration
 
@@ -155,25 +175,103 @@ Each tool:
 - Shows progress indicator during alignment
 - Provides embedded visualization of results
 
+## Current Status Assessment (Feb 19, 2026)
+
+### ✅ What's Already Done
+1. **Backend API**: Fully working and tested
+   - `/api/galaxy_mafft_align.php` - Main alignment endpoint
+   - `/api/galaxy/mafft.php` - MAFFT wrapper
+   - `/api/galaxy/results.php` - Results endpoint
+   - `lib/galaxy/client.php` - Galaxy API client
+   - `lib/galaxy/mafft.php` - MAFFT tool class
+
+2. **UI Infrastructure**: Checkboxes already exist!
+   - Search results tables have checkboxes (`js/modules/shared-results-table.js`)
+   - "Select All" functionality working
+   - Download tool already uses selected rows (`js/modules/datatable-config.js`)
+   - Works in: organism search, multi-organism search, group search
+
+3. **Sequence Extraction**: Already implemented
+   - `lib/extract_search_helpers.php` - Extracts sequences from BLAST databases
+   - `tools/retrieve_selected_sequences.php` - Controller that handles selected sequences
+   - Access control via `has_assembly_access()`
+
+### ❌ What's Missing (Phase 2 - UI Integration)
+
+1. [ ] **Add alignment tool to `lib/tool_config.php`**
+   - Define 3 tools: Align Proteins, Align CDS, Align mRNA
+   - Set visibility rules (show on search results pages)
+   - Configure button appearance
+
+2. [ ] **Create `js/sequence-aligner.js`** (NEW FILE)
+   - Monitor checkbox selections
+   - Detect sequence types from selected rows
+   - Enable/disable alignment buttons based on selection
+   - Gather selected feature IDs and submit to Galaxy API
+   - Show modal for tool selection (MAFFT vs ClustalW)
+   - Poll job status every 5 seconds
+   - Display results
+
+3. [ ] **Create alignment modal** (Bootstrap modal in HTML/JS)
+   - Tool selection (MAFFT/ClustalW)
+   - Progress indicator
+   - Results display with visualization link
+   - Download options
+
+4. [ ] **Optional: Add status polling endpoint** `/api/galaxy/status.php`
+   - Currently could poll Galaxy directly via GalaxyClient
+   - Or add dedicated endpoint for cleaner separation
+
+5. [ ] **Optional: Database tracking** (for history/audit)
+   - Table: `galaxy_jobs` 
+   - Track: user, job_id, history_id, status, timestamp
+   - Not required for MVP
+
 ## Next Steps (Implementation Roadmap)
 
-### Immediate (Ready to implement)
-1. [ ] Create `/api/galaxy/` directory structure
-2. [ ] Implement `align.php` endpoint
-3. [ ] Add database tracking table: `galaxy_jobs`
-4. [ ] Create `SequenceRepository` class for database queries
+### **IMMEDIATE - Start Here Tomorrow** 🚀
 
-### Short-term (1-2 weeks)
-5. [ ] Add UI checkboxes to search results pages
-6. [ ] Create `sequence-aligner.js` for selection tracking
-7. [ ] Build modal for tool options
-8. [ ] Add alignment button to toolbox
+**Goal**: Get basic alignment working from search results page
 
-### Medium-term (2-4 weeks)
-9. [ ] Implement status polling (`status.php`)
-10. [ ] Add results display modal
-11. [ ] Integrate alignment viewer
-12. [ ] Test end-to-end workflow
+1. [ ] Add alignment tool to `lib/tool_config.php`
+   ```php
+   'align_proteins' => [
+       'id' => 'align_proteins',
+       'name' => 'Align Proteins',
+       'icon' => 'fa-align-center',
+       'description' => 'Align selected protein sequences using Galaxy MAFFT',
+       'btn_class' => 'btn-primary',
+       'requires_selection' => true,  // NEW: indicate this needs checkboxes
+       'sequence_type' => 'protein',  // NEW: filter by type
+       'min_sequences' => 2,          // NEW: minimum selection
+       'pages' => ['organism', 'multi_organism_search', 'groups', 'assembly']
+   ]
+   ```
+
+2. [ ] Create `/data/moop/js/sequence-aligner.js`
+   - Use existing checkbox selection from DataTables
+   - Copy pattern from `datatable-config.js` (lines 93-155) for getting selected rows
+   - Submit to `/api/galaxy_mafft_align.php` (already working!)
+   - Show simple alert for now (modal comes later)
+
+3. [ ] Test with 2-3 protein sequences from search results
+   - Select rows with checkboxes
+   - Click "Align Proteins" button
+   - Verify Galaxy job submission
+   - Check results in Galaxy web interface
+
+### **SHORT-TERM** (After basic version works)
+4. [ ] Build proper modal UI for progress and results
+5. [ ] Add CDS and mRNA alignment tools (same pattern)
+6. [ ] Add sequence type validation
+7. [ ] Implement status polling for in-page progress
+
+### **MEDIUM-TERM** (Polish)
+8. [ ] Add database tracking for audit trail
+9. [ ] Integrate alignment viewer iframe
+10. [ ] Add result caching
+11. [ ] Error handling improvements
+12. [ ] User documentation
 
 ### Testing Checklist
 - [ ] API endpoint receives POST correctly
@@ -194,20 +292,39 @@ Each tool:
 /data/moop/
 ├── lib/
 │   └── galaxy/
-│       ├── client.php          ✅ (exists)
-│       └── index.php
+│       ├── client.php          ✅ EXISTS - Galaxy API client
+│       ├── mafft.php           ✅ EXISTS - MAFFT wrapper class
+│       └── index.php           ✅ EXISTS
 ├── api/
-│   └── galaxy/                 📋 (to create)
-│       ├── align.php           📋 (main endpoint)
-│       ├── status.php          📋 (job polling)
-│       ├── results.php         📋 (get results)
-│       └── download.php        📋 (download FASTA)
+│   ├── galaxy_mafft_align.php  ✅ EXISTS - Main alignment endpoint (working!)
+│   └── galaxy/
+│       ├── mafft.php           ✅ EXISTS - MAFFT API wrapper
+│       ├── results.php         ✅ EXISTS - Results endpoint
+│       ├── status.php          📋 TO CREATE (optional - can use GalaxyClient directly)
+│       └── align.php           📋 TO CREATE (or reuse galaxy_mafft_align.php)
 ├── js/
-│   └── sequence-aligner.js     📋 (UI logic)
+│   ├── modules/
+│   │   ├── shared-results-table.js  ✅ EXISTS - Has checkboxes already!
+│   │   └── datatable-config.js      ✅ EXISTS - Download uses checkboxes
+│   └── sequence-aligner.js     📋 TO CREATE - NEW FILE for alignment UI
+├── lib/
+│   ├── tool_config.php         ✅ EXISTS - Need to add alignment tools here
+│   ├── tool_section.php        ✅ EXISTS - Already renders tools
+│   └── extract_search_helpers.php ✅ EXISTS - Extracts sequences
+├── tools/
+│   └── retrieve_selected_sequences.php ✅ EXISTS - Pattern to follow
 └── config/
-    ├── site_config.php         ✅ (has galaxy settings)
-    └── secrets.php             ⚠️  (not committed)
+    ├── site_config.php         ✅ EXISTS - Has galaxy settings
+    └── secrets.php             ⚠️  NOT COMMITTED - Has API key
 ```
+
+### Key Discovery: Most Infrastructure Already Exists!
+- ✅ Backend API: `/api/galaxy_mafft_align.php` is working
+- ✅ Checkboxes: Already in search results tables
+- ✅ Selection logic: Already works for download tool
+- ✅ Sequence extraction: `lib/extract_search_helpers.php`
+- ✅ Tool rendering: `lib/tool_section.php` renders tool buttons
+- 📋 Missing: Only need to wire up the UI (add tool config + JS module)
 
 ### Documentation
 ```
@@ -303,6 +420,60 @@ MOOP Documentation: `/data/moop/docs/`
 
 ---
 
-**Status**: ✅ READY FOR PHASE 2 IMPLEMENTATION  
-**Last Updated**: February 4, 2026  
-**Next Review**: After API endpoints complete
+**Status**: ✅ BACKEND COMPLETE | ⏸️ UI PAUSED - READY TO RESUME  
+**Last Updated**: February 19, 2026  
+**Next Action**: Add alignment tool to `lib/tool_config.php` + create `js/sequence-aligner.js`  
+**Estimated Time to MVP**: 2-4 hours (most infrastructure exists!)
+
+---
+
+## Quick Start Guide for Tomorrow
+
+### What You Have
+1. Working Galaxy API at `/api/galaxy_mafft_align.php`
+2. Checkboxes already in all search results tables
+3. Tool rendering system (`lib/tool_section.php`)
+4. Sequence extraction functions ready to use
+
+### What You Need to Do
+1. **Add tool config** (15 min)
+   - Edit `lib/tool_config.php`
+   - Add alignment tool definition
+
+2. **Create JS module** (2-3 hours)
+   - Create `js/sequence-aligner.js`
+   - Copy checkbox selection pattern from `datatable-config.js`
+   - Submit to `/api/galaxy_mafft_align.php`
+   - Show results
+
+3. **Test** (30 min)
+   - Select 2-3 proteins from search
+   - Click "Align Proteins" button
+   - Verify Galaxy job runs
+
+### Code Snippets to Reference
+- **Checkbox selection**: `js/modules/datatable-config.js` lines 93-155
+- **Tool rendering**: `lib/tool_section.php`
+- **Sequence extraction**: `tools/retrieve_selected_sequences.php`
+- **API endpoint**: `/api/galaxy_mafft_align.php`
+
+### Expected Input Format for API
+```json
+{
+  "sequences": [
+    {"id": "feature_id_1", "header": "Description", "seq": "MKHIL..."},
+    {"id": "feature_id_2", "header": "Description", "seq": "MKHIL..."}
+  ]
+}
+```
+
+### Expected Output
+```json
+{
+  "success": true,
+  "history_id": "abc123",
+  "dataset_id": "xyz789",
+  "history_url": "https://usegalaxy.org/histories/view?id=abc123",
+  "visualization_url": "https://usegalaxy.org/visualizations/..."
+}
+```

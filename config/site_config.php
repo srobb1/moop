@@ -154,6 +154,22 @@ AATGCGTCCACAACAGTTATCAATCAA',
         'ACA1_PVKU01005411.1_000003.1',
     ],
     
+    // ======== BLAST+ TOOL PATHS ========
+    // Paths to BLAST+ binaries
+    // Default: Use tool name only (assumes binaries are in system PATH)
+    // For custom installations: Use full path (e.g., '/opt/blast/bin/blastn')
+    // For conda environments: Ensure conda env is activated before running web server
+    'blast_tools' => [
+        'blastn' => 'blastn',
+        'blastp' => 'blastp',
+        'blastx' => 'blastx',
+        'tblastn' => 'tblastn',
+        'tblastx' => 'tblastx',
+        'makeblastdb' => 'makeblastdb',
+        'blastdbcmd' => 'blastdbcmd',
+        'blast_formatter' => 'blast_formatter',
+    ],
+    
     // ======== GALAXY INTEGRATION ========
     // Configuration for UseGalaxy.org integration
     'galaxy_settings' => [

@@ -139,9 +139,9 @@ class ComboTrack implements TrackTypeInterface
                 
                 // If it's just a filename (no path separators), construct organism/assembly path
                 if (basename($trackPath) === $trackPath) {
-                    // Build full filesystem path
+                    // Build full filesystem path, then convert to web URI
                     $filesystemPath = $this->config->getPath('site_path') . '/data/tracks/' . $organism . '/' . $assembly . '/bigwig/' . $trackPath;
-                    $webUri = '/moop/data/tracks/' . $organism . '/' . $assembly . '/bigwig/' . $trackPath;
+                    $webUri = $this->pathResolver->toWebUri($filesystemPath);
                 } else {
                     // Full or relative path provided
                     $isRemote = $this->pathResolver->isRemote($trackPath);

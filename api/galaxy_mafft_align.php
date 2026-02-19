@@ -27,14 +27,18 @@
 header('Content-Type: application/json');
 
 // Include configuration
-require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../includes/config_init.php';
+
+// Get Galaxy configuration
+$config = ConfigManager::getInstance();
+$galaxy_settings = $config->get('galaxy_settings', []);
 
 // Check if we have Galaxy configured
-if (empty($site_config['galaxy_api_key']) || empty($site_config['galaxy_url'])) {
+if (empty($galaxy_settings['enabled']) || empty($galaxy_settings['api_key']) || empty($galaxy_settings['url'])) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Galaxy not configured. Please set galaxy_api_key and galaxy_url in site config.'
+        'error' => 'Galaxy not configured. Please enable Galaxy integration and set API key in site config.'
     ]);
     exit;
 }
@@ -69,15 +73,19 @@ foreach ($input['sequences'] as $seq) {
 }
 
 try {
+    // Get Galaxy URL and API key from config
+    $galaxy_url = $galaxy_settings['url'];
+    $galaxy_api_key = $galaxy_settings['api_key'];
+    
     // Step 1: Create a new history
     $historyName = 'MAFFT_alignment_' . date('YmdHis');
     $historyData = json_encode(['name' => $historyName]);
     
     $ch = curl_init();
     curl_setopt_array($ch, [
-        CURLOPT_URL => $site_config['galaxy_url'] . '/api/histories',
+        CURLOPT_URL => $galaxy_url . '/api/histories',
         CURLOPT_HTTPHEADER => [
-            'x-api-key: ' . $site_config['galaxy_api_key'],
+            'x-api-key: ' . $galaxy_api_key,
             'Content-Type: application/json'
         ],
         CURLOPT_POST => true,
@@ -116,9 +124,9 @@ try {
     
     $ch = curl_init();
     curl_setopt_array($ch, [
-        CURLOPT_URL => $site_config['galaxy_url'] . '/api/tools',
+        CURLOPT_URL => $galaxy_url . '/api/tools',
         CURLOPT_HTTPHEADER => [
-            'x-api-key: ' . $site_config['galaxy_api_key'],
+            'x-api-key: ' . $galaxy_api_key,
             'Content-Type: application/json'
         ],
         CURLOPT_POST => true,
@@ -151,8 +159,8 @@ try {
         
         $ch = curl_init();
         curl_setopt_array($ch, [
-            CURLOPT_URL => $site_config['galaxy_url'] . '/api/datasets/' . $datasetId,
-            CURLOPT_HTTPHEADER => ['x-api-key: ' . $site_config['galaxy_api_key']],
+            CURLOPT_URL => $galaxy_url . '/api/datasets/' . $datasetId,
+            CURLOPT_HTTPHEADER => ['x-api-key: ' . $galaxy_api_key],
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 10
         ]);
@@ -187,9 +195,9 @@ try {
     
     $ch = curl_init();
     curl_setopt_array($ch, [
-        CURLOPT_URL => $site_config['galaxy_url'] . '/api/tools',
+        CURLOPT_URL => $galaxy_url . '/api/tools',
         CURLOPT_HTTPHEADER => [
-            'x-api-key: ' . $site_config['galaxy_api_key'],
+            'x-api-key: ' . $galaxy_api_key,
             'Content-Type: application/json'
         ],
         CURLOPT_POST => true,
@@ -218,9 +226,9 @@ try {
         'success' => true,
         'history_id' => $historyId,
         'dataset_id' => $alignmentId,
-        'galaxy_url' => $site_config['galaxy_url'],
-        'history_url' => $site_config['galaxy_url'] . '/histories/view?id=' . $historyId,
-        'visualization_url' => $site_config['galaxy_url'] . '/visualizations/display?visualization=alignmentviewer&dataset_id=' . $alignmentId
+        'galaxy_url' => $galaxy_url,
+        'history_url' => $galaxy_url . '/histories/view?id=' . $historyId,
+        'visualization_url' => $galaxy_url . '/visualizations/display?visualization=alignmentviewer&dataset_id=' . $alignmentId
     ]);
     
 } catch (Exception $e) {
