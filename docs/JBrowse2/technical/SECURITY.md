@@ -1,29 +1,45 @@
 # MOOP JBrowse2 Security Architecture
 
-**Version:** 3.1  
-**Last Updated:** February 18, 2026  
+**Version:** 3.2  
+**Last Updated:** February 25, 2026  
 **Status:** Production - RS256 JWT Authentication
 
 **For:** JBrowse2 Community & Security Auditors
 
 ---
 
-## Recent Security Updates (2026-02-18)
+## 🚨 CRITICAL: Web Server Configuration Required
 
-**Critical improvements implemented:**
+**IMMEDIATE ACTION REQUIRED:** The `/data/tracks` directory MUST be blocked from direct web access.
 
-1. **Enhanced IP Whitelist Security**
+Without proper web server configuration, track files can be accessed directly, bypassing JWT authentication entirely.
+
+**Required:** See [Web Server Configuration](#web-server-configuration-required) section below.
+
+---
+
+## Recent Security Updates (2026-02-25)
+
+**Critical security fix implemented:**
+
+1. **Block Direct File Access (CRITICAL)**
+   - Track files MUST NOT be directly accessible via web
+   - All requests must go through `tracks.php` with JWT validation
+   - Apache/.htaccess or nginx configuration REQUIRED
+   - **Without this:** JWT authentication is completely bypassed
+
+2. **Enhanced IP Whitelist Security (2026-02-18)**
    - All users (including whitelisted IPs) now require JWT tokens
    - Whitelisted IPs: Relaxed expiry checking (can use expired tokens)
    - All IPs: Organism/assembly claims always validated
    - Prevents unauthorized access by file path guessing
 
-2. **External URL Token Protection**
+3. **External URL Token Protection (2026-02-18)**
    - External URLs (`https://`, `http://`, `ftp://`) never get tokens added
    - Prevents JWT token leakage to external servers
    - Enables safe use of public reference data (UCSC, Ensembl, NCBI)
 
-**Security benefits:** Defense-in-depth for all users, audit trail preserved, no token leakage.
+**Security benefits:** Defense-in-depth for all users, audit trail preserved, no token leakage, direct access blocked.
 
 ---
 
@@ -45,12 +61,13 @@ MOOP implements a multi-layered security architecture for JBrowse2 that provides
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
-2. [Authentication System](#authentication-system)
-3. [Dynamic Configuration Generation](#dynamic-configuration-generation)
-4. [JWT Token System](#jwt-token-system)
-5. [Track File Server](#track-file-server)
-6. [Security Model](#security-model)
-7. [Deployment Guide](#deployment-guide)
+2. [Web Server Configuration (REQUIRED)](#web-server-configuration-required)
+3. [Authentication System](#authentication-system)
+4. [Dynamic Configuration Generation](#dynamic-configuration-generation)
+5. [JWT Token System](#jwt-token-system)
+6. [Track File Server](#track-file-server)
+7. [Security Model](#security-model)
+8. [Deployment Guide](#deployment-guide)
 
 ---
 
@@ -118,6 +135,331 @@ The system implements defense-in-depth with four security layers:
 - Tokens scoped to specific organism/assembly pair
 - Tracks server validates token before serving any file
 - 1-hour expiration enforces re-authentication
+
+---
+
+## Web Server Configuration (REQUIRED)
+
+### 🚨 Critical Security Requirement
+
+**Problem:** Track files in `/data/tracks/` are served by the web server (Apache/nginx) by default. If not blocked, users can bypass JWT authentication by accessing files directly.
+
+**Attack Vector:**
+```
+❌ INSECURE: http://moop.example.com/moop/data/tracks/Organism/Assembly/file.bw
+   → File served directly, no authentication!
+   → tracks.php never executed
+   → JWT system completely bypassed
+
+✅ SECURE: http://moop.example.com/moop/api/jbrowse2/tracks.php?file=Organism/Assembly/file.bw&token=eyJ...
+   → Request goes through tracks.php
+   → JWT validated
+   → Organism/assembly checked
+   → File served only if authorized
+```
+
+**This is why ALL tracks (even PUBLIC) need JWT tokens:**
+- Not for access control (that's done by config filtering)
+- To prevent bypassing tracks.php entirely
+- To maintain audit trail
+- To enforce web server blocking
+
+---
+
+### Apache Configuration
+
+#### Option 1: .htaccess File (Recommended)
+
+**File:** `/data/moop/data/tracks/.htaccess`
+
+```apache
+# SECURITY: Block direct access to track files
+# All track requests MUST go through /api/jbrowse2/tracks.php
+# which validates JWT tokens before serving files
+#
+# WHY THIS IS CRITICAL:
+# Without this protection, anyone can bypass JWT authentication by
+# accessing files directly if they know the file path:
+#   BAD:  /moop/data/tracks/Organism/Assembly/file.bw (no auth!)
+#   GOOD: /moop/api/jbrowse2/tracks.php?file=...&token=... (validated)
+#
+# This is why even "public" tracks need JWT tokens - not for access control,
+# but to prevent bypassing tracks.php entirely.
+
+# Apache 2.2 style
+<IfVersion < 2.4>
+    Order Deny,Allow
+    Deny from all
+</IfVersion>
+
+# Apache 2.4+ style
+<IfVersion >= 2.4>
+    Require all denied
+</IfVersion>
+
+# Additional protection: Return clear error message
+ErrorDocument 403 "Access denied. Track files must be accessed through the API endpoint with valid JWT token."
+```
+
+**IMPORTANT:** You MUST enable `.htaccess` support in Apache config:
+
+**File:** `/etc/apache2/sites-available/moop.conf` (or your site config)
+
+```apache
+<VirtualHost *:80>
+    ServerName moop.example.com
+    DocumentRoot /var/www/html/moop
+    
+    <Directory /var/www/html/moop>
+        Options Indexes FollowSymLinks
+        AllowOverride All  # ← REQUIRED for .htaccess to work
+        Require all granted
+    </Directory>
+    
+    # Explicit block at server level (defense-in-depth)
+    <Directory /var/www/html/moop/data/tracks>
+        AllowOverride All
+        Require all denied
+        
+        # Override for tracks.php API endpoint (NOT needed, but shows structure)
+        # tracks.php is in different directory, so not affected by this block
+    </Directory>
+</VirtualHost>
+```
+
+**After creating/updating:**
+```bash
+# Test configuration
+sudo apache2ctl configtest
+
+# Restart Apache
+sudo systemctl restart apache2
+
+# Test that direct access is blocked
+curl -I http://localhost/moop/data/tracks/test.bw
+# Expected: HTTP 403 Forbidden
+
+# Test that API access still works (with valid token)
+curl "http://localhost/moop/api/jbrowse2/tracks.php?file=test.bw&token=valid_token"
+# Expected: File served (or 401 if token invalid)
+```
+
+---
+
+#### Option 2: Server Configuration Only (Alternative)
+
+If you can't use `.htaccess`, configure directly in Apache site config:
+
+**File:** `/etc/apache2/sites-available/moop.conf`
+
+```apache
+<VirtualHost *:80>
+    ServerName moop.example.com
+    DocumentRoot /var/www/html/moop
+    
+    # Main directory permissions
+    <Directory /var/www/html/moop>
+        Options Indexes FollowSymLinks
+        AllowOverride None
+        Require all granted
+    </Directory>
+    
+    # CRITICAL: Block direct access to track files
+    <Directory /var/www/html/moop/data/tracks>
+        Require all denied
+    </Directory>
+    
+    # Also block data/genomes if you have reference sequences
+    <Directory /var/www/html/moop/data/genomes>
+        Require all denied
+    </Directory>
+    
+    # API endpoints remain accessible
+    <Directory /var/www/html/moop/api>
+        Require all granted
+    </Directory>
+</VirtualHost>
+```
+
+**Apply changes:**
+```bash
+sudo apache2ctl configtest
+sudo systemctl restart apache2
+```
+
+---
+
+### Nginx Configuration
+
+**File:** `/etc/nginx/sites-available/moop`
+
+```nginx
+server {
+    listen 80;
+    server_name moop.example.com;
+    root /var/www/html/moop;
+    index index.php index.html;
+    
+    # Block direct access to track files
+    location ~ ^/moop/data/tracks/ {
+        deny all;
+        return 403 "Access denied. Track files must be accessed through the API endpoint with valid JWT token.";
+    }
+    
+    # Block direct access to genome files
+    location ~ ^/moop/data/genomes/ {
+        deny all;
+        return 403 "Access denied. Genome files must be accessed through the API endpoint with valid JWT token.";
+    }
+    
+    # Allow API endpoints
+    location ~ ^/moop/api/ {
+        try_files $uri $uri/ /index.php?$query_string;
+        
+        # PHP processing
+        location ~ \.php$ {
+            fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
+            fastcgi_index index.php;
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        }
+    }
+    
+    # Allow other PHP files
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+}
+```
+
+**Apply changes:**
+```bash
+# Test configuration
+sudo nginx -t
+
+# Reload nginx
+sudo systemctl reload nginx
+
+# Test blocking
+curl -I http://localhost/moop/data/tracks/test.bw
+# Expected: HTTP 403 Forbidden
+```
+
+---
+
+### Testing Your Configuration
+
+#### Test 1: Direct Access Should Be BLOCKED
+
+```bash
+# This should return 403 Forbidden
+curl -I http://localhost/moop/data/tracks/any/file/path.bw
+
+# Expected output:
+# HTTP/1.1 403 Forbidden
+```
+
+#### Test 2: API Access Should Work (with token)
+
+```bash
+# This should work if token is valid
+curl "http://localhost/moop/api/jbrowse2/tracks.php?file=Organism/Assembly/file.bw&token=YOUR_TOKEN"
+
+# Expected: 401 if no token, 403 if invalid token, 200 if valid token
+```
+
+#### Test 3: Verify in Browser
+
+1. Try to access: `http://moop.example.com/moop/data/tracks/test.bw`
+   - Should see: **403 Forbidden** or error message
+   - Should NOT download file
+
+2. Load JBrowse2 normally
+   - Tracks should load correctly through API
+   - JWT tokens automatically attached by config.php
+
+---
+
+### Migration for Existing Deployments
+
+If you're already in production and need to add this protection:
+
+```bash
+# 1. Create .htaccess file
+cat > /var/www/html/moop/data/tracks/.htaccess << 'EOF'
+<IfVersion >= 2.4>
+    Require all denied
+</IfVersion>
+<IfVersion < 2.4>
+    Order Deny,Allow
+    Deny from all
+</IfVersion>
+ErrorDocument 403 "Access denied. Track files must be accessed through the API endpoint with valid JWT token."
+EOF
+
+# 2. Enable .htaccess support (if not already)
+sudo nano /etc/apache2/sites-available/moop.conf
+# Change: AllowOverride None → AllowOverride All
+
+# 3. Test configuration
+sudo apache2ctl configtest
+
+# 4. Restart Apache
+sudo systemctl restart apache2
+
+# 5. Verify blocking works
+curl -I http://localhost/moop/data/tracks/test.bw
+# Should see: HTTP/1.1 403 Forbidden
+
+# 6. Test JBrowse2 still loads tracks
+# Open browser, load a genome, verify tracks display correctly
+```
+
+---
+
+### Alternative: Move Files Outside Web Root (Best Practice)
+
+Instead of blocking with web server config, move files outside the web-accessible directory:
+
+**Current Structure (Vulnerable):**
+```
+/var/www/html/moop/          ← Web root (DocumentRoot)
+├── index.php
+├── api/
+└── data/
+    └── tracks/              ← DANGEROUS: Web accessible!
+```
+
+**Secure Structure:**
+```
+/var/www/html/moop/          ← Web root (DocumentRoot)
+├── index.php
+└── api/
+
+/var/www/moop-data/          ← Outside web root
+└── tracks/                  ← NOT web accessible
+```
+
+**Update tracks.php:**
+```php
+// OLD
+$TRACKS_BASE_DIR = __DIR__ . '/../../data/tracks';
+
+// NEW
+$TRACKS_BASE_DIR = '/var/www/moop-data/tracks';
+```
+
+**Update site_config.php:**
+```php
+'jbrowse2' => [
+    'tracks_directory' => '/var/www/moop-data/tracks/',
+]
+```
+
+This is the most secure approach but requires moving files and updating paths.
 
 ---
 
@@ -868,6 +1210,12 @@ Header always set Access-Control-Expose-Headers "Content-Range, Content-Length, 
 ### Security Checklist
 
 **MOOP Server:**
+- [ ] **Web server blocks direct track access** (CRITICAL - New 2026-02-25)
+  - [ ] Apache: `.htaccess` created in `/data/tracks/`
+  - [ ] Apache: `AllowOverride All` enabled in site config
+  - [ ] OR nginx: `location` block denies `/data/tracks/`
+  - [ ] Tested: Direct file URLs return 403 Forbidden
+  - [ ] Verified: API endpoint still works with valid token
 - [ ] Private key permissions: `chmod 600 jwt_private_key.pem`
 - [ ] Keys stored outside web root
 - [ ] HTTPS enabled with valid certificate
@@ -879,6 +1227,9 @@ Header always set Access-Control-Expose-Headers "Content-Range, Content-Length, 
 - [ ] `firebase/php-jwt` library installed via Composer
 
 **Tracks Servers:**
+- [ ] **Web server blocks direct track access** (CRITICAL - New 2026-02-25)
+  - [ ] Same configuration as MOOP server
+  - [ ] Test direct access returns 403
 - [ ] Public key deployed: `/etc/tracks-server/jwt_public_key.pem`
 - [ ] Public key permissions: `chmod 644`
 - [ ] `tracks.php` endpoint deployed
@@ -894,6 +1245,14 @@ Header always set Access-Control-Expose-Headers "Content-Range, Content-Length, 
 - [ ] Firewall rules: MOOP + tracks servers on port 443
 - [ ] Internal network IP ranges defined
 - [ ] DNS configured for tracks servers
+
+**Testing (After Configuration):**
+- [ ] Direct file access blocked (403 Forbidden)
+- [ ] API access with valid token works (200 OK)
+- [ ] API access without token blocked (401 Unauthorized)
+- [ ] API access with wrong organism/assembly token blocked (403 Forbidden)
+- [ ] JBrowse2 loads tracks normally
+- [ ] No console errors in browser
 
 ---
 
@@ -963,6 +1322,18 @@ grep -E "$(date -d '7 days ago' +%Y-%m-%d)" /var/log/apache2/tracks-access.log |
 
 ## FAQ
 
+**Q: Why do I need to block direct access to /data/tracks/?**  
+A: Without blocking, anyone can bypass JWT authentication entirely by accessing files directly if they guess the path. The JWT system only works if ALL requests go through `tracks.php`. This is the most critical security configuration.
+
+**Q: I configured .htaccess but direct access still works. Why?**  
+A: Apache must have `AllowOverride All` enabled for the directory. Check your site configuration file (`/etc/apache2/sites-available/moop.conf`) and ensure it's not set to `AllowOverride None`. Restart Apache after changing.
+
+**Q: Why do even "public" tracks need JWT tokens?**  
+A: Two reasons:
+1. **Security**: Tokens force all requests through `tracks.php`, preventing direct file access bypass
+2. **Audit trail**: Every file access is logged with user information
+The `access_level` metadata controls WHO sees the track in config, not whether it needs a token.
+
 **Q: Can users share JBrowse2 URLs with others?**  
 A: URLs contain JWT tokens that expire in 1 hour. External users: shared links stop working after expiry. Internal (whitelisted) users: links work beyond 1 hour. For persistent sharing, create a PUBLIC assembly.
 
@@ -982,10 +1353,10 @@ A: Yes (as of 2026-02-18). All users get tokens with organism/assembly claims. W
 A: Yes! External URLs (`https://`, `http://`, `ftp://`) are left unchanged. No JWT tokens added. Perfect for public reference data.
 
 **Q: How do I add a new tracks server?**  
-A: Copy public key to new server, deploy `tracks.php`, configure CORS, update track URIs in metadata. No MOOP server changes needed.
+A: Copy public key to new server, deploy `tracks.php`, configure CORS, configure web server to block direct access, update track URIs in metadata. No MOOP server changes needed.
 
 **Q: Do reference sequences (FASTA) need JWT tokens?**  
-A: Yes, unless on IP whitelist. All URIs in config get tokens added (except whitelisted IPs).
+A: Yes. All URIs in config get tokens added. Also block `/data/genomes/` directory from direct web access using the same method as `/data/tracks/`.
 
 **Q: What if a user's session expires mid-session?**  
 A: JBrowse2 will continue working with existing tokens until they expire (1 hour). After that, tracks will fail to load. User must refresh page to re-authenticate.
@@ -993,11 +1364,23 @@ A: JBrowse2 will continue working with existing tokens until they expire (1 hour
 **Q: Can I use HS256 instead of RS256?**  
 A: Not recommended. HS256 uses symmetric keys - same secret on MOOP + tracks servers. If tracks server compromised, attacker can forge tokens. RS256 prevents this.
 
+**Q: How do I test if direct access is properly blocked?**  
+A: ```bash
+# This should return 403 Forbidden
+curl -I http://your-server.com/moop/data/tracks/any/file.bw
+
+# This should return 401 (no token) or 200 (with valid token)
+curl "http://your-server.com/moop/api/jbrowse2/tracks.php?file=test.bw&token=..."
+```
+
+**Q: What happens if I forget to block direct access?**  
+A: Anyone who discovers or guesses file paths can download your data without authentication. JWT system is completely bypassed. This is a critical security vulnerability.
+
 ---
 
-**Document Version:** 3.0  
-**Last Security Audit:** February 18, 2026  
-**Next Review:** August 18, 2026
+**Document Version:** 3.2  
+**Last Security Audit:** February 25, 2026  
+**Next Review:** August 25, 2026
 
 **Contact:**  
 For security issues, contact MOOP administrator immediately.
