@@ -221,7 +221,7 @@ foreach ($available_tracks as $track) {
     if (!$is_whitelisted) {
         // Generate JWT token for external/collaborator access
         try {
-            $token = generateTrackToken($organism, $assembly, $user_access_level);
+            $token = generateTrackToken($organism, $assembly);
             $track_url .= "?token=" . urlencode($token);
         } catch (Exception $e) {
             error_log("Failed to generate token for track: " . $e->getMessage());

@@ -224,6 +224,35 @@ AATGCGTCCACAACAGTTATCAATCAA',
         'token_expiration' => 3600,  // 1 hour in seconds
         'default_assembly' => 'GCA_004027475.1',
         'default_organism' => 'Anoura_caudifer',
+        
+        /**
+         * Trusted Tracks Servers (URL Whitelist)
+         * 
+         * URLs in this list will ALWAYS have JWT tokens attached.
+         * Do NOT include external public servers (UCSC, Ensembl, NCBI).
+         * 
+         * These should be servers YOU control and manage that:
+         * - Validate JWT tokens using your public key
+         * - Run tracks.php or equivalent authentication
+         * - Are part of your infrastructure
+         * 
+         * Examples:
+         * - 'https://moop.example.com'      (your main MOOP server)
+         * - 'https://tracks.yourlab.edu'    (your remote tracks server)
+         * - 'http://localhost'              (for development)
+         */
+        'trusted_tracks_servers' => [
+            // Add your trusted servers here
+            // 'https://tracks.yourlab.edu',
+        ],
+        
+        /**
+         * Log warnings for misconfigured tracks
+         * 
+         * If true, logs warnings when external URLs have access_level != PUBLIC
+         * Helps identify tracks that might be misconfigured
+         */
+        'warn_on_external_private_tracks' => true,
     ],
     
     // ======== JBROWSE2 REMOTE TRACKS SERVER ========

@@ -201,47 +201,76 @@ The system implements defense-in-depth with four security layers:
 ErrorDocument 403 "Access denied. Track files must be accessed through the API endpoint with valid JWT token."
 ```
 
-**IMPORTANT:** You MUST enable `.htaccess` support in Apache config:
+**IMPORTANT:** You MUST enable `.htaccess` support in Apache config.
 
 **File:** `/etc/apache2/sites-available/moop.conf` (or your site config)
+
+Add this `<Directory>` block to your VirtualHost:
 
 ```apache
 <VirtualHost *:80>
     ServerName moop.example.com
-    DocumentRoot /var/www/html/moop
+    DocumentRoot /var/www/html
     
-    <Directory /var/www/html/moop>
-        Options Indexes FollowSymLinks
-        AllowOverride All  # ← REQUIRED for .htaccess to work
-        Require all granted
-    </Directory>
+    # ... other configuration ...
     
-    # Explicit block at server level (defense-in-depth)
-    <Directory /var/www/html/moop/data/tracks>
+    # ========================================================================
+    # SECURITY: Block direct access to JBrowse2 track files
+    # ========================================================================
+    # Track files MUST be accessed through /api/jbrowse2/tracks.php with JWT
+    # This prevents bypassing authentication by direct file access
+    # Added: 2026-02-25
+    <Directory "/var/www/html/moop/data/tracks">
+        # Enable .htaccess files for security
         AllowOverride All
-        Require all denied
         
-        # Override for tracks.php API endpoint (NOT needed, but shows structure)
-        # tracks.php is in different directory, so not affected by this block
+        # Fallback: Deny all if .htaccess fails to load
+        Require all denied
     </Directory>
+    
+    # Optional: Also block genome reference files if needed
+    # <Directory "/var/www/html/moop/data/genomes">
+    #     AllowOverride All
+    #     Require all denied
+    # </Directory>
+    
 </VirtualHost>
 ```
 
+**Key Points:**
+- `AllowOverride All` - Enables `.htaccess` file processing
+- `Require all denied` - Fallback protection if `.htaccess` fails
+- Both protections work together (defense-in-depth)
+
 **After creating/updating:**
 ```bash
-# Test configuration
+# 1. Backup current config
+sudo cp /etc/apache2/sites-available/moop.conf \
+       /etc/apache2/sites-available/moop.conf.backup.$(date +%Y%m%d)
+
+# 2. Edit the config (add <Directory> block above)
+sudo nano /etc/apache2/sites-available/moop.conf
+
+# 3. Test configuration syntax
 sudo apache2ctl configtest
+# Expected: Syntax OK
 
-# Restart Apache
-sudo systemctl restart apache2
+# 4. Reload Apache (reload is safer than restart)
+sudo systemctl reload apache2
 
-# Test that direct access is blocked
+# 5. Test that direct access is BLOCKED
 curl -I http://localhost/moop/data/tracks/test.bw
-# Expected: HTTP 403 Forbidden
+# Expected: HTTP/1.1 403 Forbidden
 
-# Test that API access still works (with valid token)
-curl "http://localhost/moop/api/jbrowse2/tracks.php?file=test.bw&token=valid_token"
-# Expected: File served (or 401 if token invalid)
+# 6. Test that API access still works (with valid token)
+# Generate a token first:
+cd /var/www/html/moop
+php -r 'require_once "lib/jbrowse/track_token.php"; 
+        echo generateTrackToken("YourOrganism", "YourAssembly");'
+
+# Use the token:
+curl -I "http://localhost/moop/api/jbrowse2/tracks.php?file=YourOrganism/YourAssembly/bigwig/test.bw&token=YOUR_TOKEN_HERE"
+# Expected: HTTP/1.1 200 OK (or 403 if token/file mismatch)
 ```
 
 ---
@@ -297,56 +326,108 @@ sudo systemctl restart apache2
 server {
     listen 80;
     server_name moop.example.com;
-    root /var/www/html/moop;
+    root /var/www/html;
     index index.php index.html;
     
-    # Block direct access to track files
+    # ========================================================================
+    # SECURITY: Block direct access to track files (CRITICAL)
+    # ========================================================================
+    # All track requests MUST go through /api/jbrowse2/tracks.php with JWT
+    # Direct access would bypass authentication entirely
+    # Added: 2026-02-25
+    
     location ~ ^/moop/data/tracks/ {
         deny all;
         return 403 "Access denied. Track files must be accessed through the API endpoint with valid JWT token.";
     }
     
-    # Block direct access to genome files
+    # Optional: Also block direct access to genome reference files
     location ~ ^/moop/data/genomes/ {
         deny all;
         return 403 "Access denied. Genome files must be accessed through the API endpoint with valid JWT token.";
     }
     
-    # Allow API endpoints
+    # ========================================================================
+    # Allow API endpoints (these handle authentication)
+    # ========================================================================
+    
     location ~ ^/moop/api/ {
-        try_files $uri $uri/ /index.php?$query_string;
-        
-        # PHP processing
+        # PHP processing for API endpoints
         location ~ \.php$ {
+            # Security: Validate that file exists before passing to PHP
+            try_files $uri =404;
+            
             fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
             fastcgi_index index.php;
             include fastcgi_params;
             fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            
+            # Increase timeout for large track files
+            fastcgi_read_timeout 300;
+            fastcgi_send_timeout 300;
         }
     }
     
-    # Allow other PHP files
+    # ========================================================================
+    # Main application PHP processing
+    # ========================================================================
+    
     location ~ \.php$ {
+        try_files $uri =404;
         fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
         fastcgi_index index.php;
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
     }
+    
+    # Static files
+    location / {
+        try_files $uri $uri/ =404;
+    }
 }
 ```
 
-**Apply changes:**
-```bash
-# Test configuration
-sudo nginx -t
+**Key Points:**
+- `location ~ ^/moop/data/tracks/` - Regex match for tracks directory
+- `deny all` - Block all access attempts
+- `return 403` - Return clear error message
+- API endpoints remain accessible for JWT validation
+- PHP-FPM configured with increased timeouts for large files
 
-# Reload nginx
+**After creating/updating:**
+```bash
+# 1. Backup current config
+sudo cp /etc/nginx/sites-available/moop \
+       /etc/nginx/sites-available/moop.backup.$(date +%Y%m%d)
+
+# 2. Edit the config (add location blocks above)
+sudo nano /etc/nginx/sites-available/moop
+
+# 3. Test configuration syntax
+sudo nginx -t
+# Expected: syntax is ok
+
+# 4. Reload nginx
 sudo systemctl reload nginx
 
-# Test blocking
+# 5. Test that direct access is BLOCKED
 curl -I http://localhost/moop/data/tracks/test.bw
-# Expected: HTTP 403 Forbidden
+# Expected: HTTP/1.1 403 Forbidden
+
+# 6. Test that API access still works (with valid token)
+cd /var/www/html/moop
+php -r 'require_once "lib/jbrowse/track_token.php"; 
+        echo generateTrackToken("YourOrganism", "YourAssembly");'
+        
+curl -I "http://localhost/moop/api/jbrowse2/tracks.php?file=YourOrganism/YourAssembly/bigwig/test.bw&token=YOUR_TOKEN_HERE"
+# Expected: HTTP/1.1 200 OK (or 403 if token/file mismatch)
 ```
+
+**Nginx vs Apache:**
+- Nginx uses `location` blocks instead of `.htaccess`
+- All configuration must be in server config (no per-directory files)
+- Nginx is slightly faster but requires restart/reload for changes
+- Both approaches are equally secure when properly configured
 
 ---
 
@@ -724,15 +805,13 @@ JWT tokens authenticate individual track file requests to the tracks server. Thi
 - ✅ Limited blast radius if tracks server hacked
 - ✅ Industry best practice for distributed systems
 
-### Token Structure
+### Token Structure (Updated 2026-02-25)
 
-**Claims (payload):**
+**Simplified Claims (payload):**
 ```json
 {
-    "user_id": "researcher123",
     "organism": "Nematostella_vectensis",
     "assembly": "GCA_033964005.1",
-    "access_level": "COLLABORATOR",
     "iat": 1708280000,
     "exp": 1708283600
 }
@@ -740,27 +819,34 @@ JWT tokens authenticate individual track file requests to the tracks server. Thi
 
 | Claim | Purpose |
 |-------|---------|
-| `user_id` | Username for audit logging |
 | `organism` | Restricts token to specific organism |
 | `assembly` | Restricts token to specific assembly |
-| `access_level` | User's permission tier |
 | `iat` | Issued At timestamp (debugging/logging) |
 | `exp` | Expiration timestamp (1 hour from issue) |
 
-### Token Generation
+**Security Note:** Tokens contain **minimal information** (only organism/assembly scope):
+- ✅ No `user_id` - prevents username leakage if token intercepted
+- ✅ No `access_level` - tracks server doesn't need it (config handles filtering)
+- ✅ Reduced attack surface
+- ✅ Better for HTTPS leak scenarios
+
+**Why these claims only?**
+- Tracks server only needs to validate: "Is this token valid for THIS organism/assembly?"
+- User filtering happens at config generation time (before token is created)
+- Principle of least privilege: Token contains minimum data needed
+
+### Token Generation (Updated 2026-02-25)
 
 **File:** `lib/jbrowse/track_token.php` - Function: `generateTrackToken()`
 
 ```php
-function generateTrackToken($organism, $assembly, $access_level) {
+function generateTrackToken($organism, $assembly) {
     $private_key_path = '/data/moop/certs/jwt_private_key.pem';
     $private_key = file_get_contents($private_key_path);
     
     $token_data = [
-        'user_id' => $_SESSION['username'] ?? 'anonymous',
         'organism' => $organism,
         'assembly' => $assembly,
-        'access_level' => $access_level,
         'iat' => time(),
         'exp' => time() + 3600  // 1 hour
     ];
@@ -860,6 +946,187 @@ function verifyTrackToken($token) {
 1. ✅ Cryptographic signature verification (RS256 with public key)
 2. ✅ Expiration check (`exp` < current time)
 3. ✅ Claims validation (organism/assembly match requested file)
+
+---
+
+## URL Whitelist Token Strategy
+
+### Overview (Updated 2026-02-25)
+
+MOOP uses a **URL whitelist** to determine which servers receive JWT tokens. This prevents token leakage to external servers while ensuring all YOUR data (including public tracks) is properly authenticated.
+
+**Key Principle:** With .htaccess blocking direct file access, **ALL** requests to your tracks servers require JWT tokens, even for PUBLIC tracks.
+
+### The Problem We Solved
+
+**Old Strategy (access_level based):**
+- External URL + `access_level="PUBLIC"` → No token
+- External URL + `access_level="COLLABORATOR"` → Add token
+
+**Problem:** Can't distinguish YOUR tracks server from UCSC!
+- Public track on YOUR server → No token → 403 Forbidden (blocked by .htaccess)
+- Public track on UCSC → No token → Works (external server)
+
+**New Strategy (URL whitelist based):**
+- Trusted server (in whitelist) → **ALWAYS** add token
+- External server (not in whitelist) → **NEVER** add token
+
+### Configuration
+
+**File:** `config/site_config.php`
+
+```php
+'jbrowse2' => [
+    /**
+     * Trusted Tracks Servers - URLs that receive JWT tokens
+     * 
+     * Add servers YOU control that validate JWT tokens:
+     * - Your main MOOP server
+     * - Your remote tracks servers  
+     * - Development/staging servers
+     * 
+     * Do NOT add external public servers (UCSC, Ensembl, NCBI)
+     */
+    'trusted_tracks_servers' => [
+        'https://moop.example.com',           // Main MOOP server
+        'https://tracks.yourlab.edu',         // Your remote tracks server
+        'https://tracks2.yourlab.edu',        // Additional tracks server
+        'http://localhost',                   // Development
+    ],
+    
+    /**
+     * Log warnings for misconfigured tracks
+     * Warns when external URL has access_level != PUBLIC
+     */
+    'warn_on_external_private_tracks' => true,
+],
+```
+
+### How It Works
+
+#### Scenario 1: Public Track on Your Server
+```php
+Track: https://tracks.yourlab.edu/data/genome.bw
+Config: Server in trusted_tracks_servers
+access_level: PUBLIC
+
+Result: Token added (even though track is PUBLIC)
+Reason: Your server has .htaccess blocking direct access
+```
+
+#### Scenario 2: Private Track on Your Server
+```php
+Track: https://tracks.yourlab.edu/data/sensitive.bw
+Config: Server in trusted_tracks_servers
+access_level: COLLABORATOR
+
+Result: Token added
+Reason: Your server validates JWT and enforces access control
+```
+
+#### Scenario 3: UCSC Reference Genome
+```php
+Track: https://hgdownload.soe.ucsc.edu/hg38/data.bw
+Config: Server NOT in trusted_tracks_servers
+access_level: PUBLIC
+
+Result: No token added
+Reason: External public server, doesn't validate our JWTs
+```
+
+#### Scenario 4: Misconfigured Track (Warning)
+```php
+Track: https://someserver.com/data.bw
+Config: Server NOT in trusted_tracks_servers
+access_level: COLLABORATOR
+
+Result: No token added + WARNING logged
+Reason: Can't enforce authentication on external server
+```
+
+Warning message:
+```
+WARNING: Track has external URL with access_level='COLLABORATOR' 
+but server is not in trusted_tracks_servers list. 
+Cannot enforce authentication. URL: https://someserver.com/data.bw
+```
+
+### Implementation
+
+**Function:** `addTokenToAdapterUrls()` in `api/jbrowse2/config.php`
+
+```php
+function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC') {
+    $config = ConfigManager::getInstance();
+    $site = $config->getString('site', 'moop');
+    
+    foreach ($adapter as $key => &$value) {
+        if (isset($value['uri'])) {
+            $uri = $value['uri'];
+            
+            // External URL?
+            if (preg_match('#^(https?|ftp)://#i', $uri)) {
+                // Trusted server?
+                if ($config->isTrustedTracksServer($uri)) {
+                    // ALWAYS add token (your server)
+                    $value['uri'] .= '?token=' . urlencode($token);
+                } else {
+                    // NEVER add token (external server)
+                    // Warn if misconfigured
+                    if ($track_access_level !== 'PUBLIC') {
+                        error_log("WARNING: External URL with non-PUBLIC access_level");
+                    }
+                }
+            } else {
+                // Internal MOOP path
+                if (preg_match("#^/{$site}/data/tracks/(.+)$#", $uri)) {
+                    // Route through tracks.php with token
+                    $value['uri'] = "/{$site}/api/jbrowse2/tracks.php?file=$1&token=$token";
+                }
+            }
+        }
+    }
+    return $adapter;
+}
+```
+
+### Key Benefits
+
+1. **Security**: Tokens only go to servers you control
+2. **Flexibility**: Can host PUBLIC tracks on your server with .htaccess protection
+3. **No Token Leakage**: External servers never see your JWTs
+4. **Portability**: Works with any site name (uses `$site` variable, not hardcoded)
+5. **Warning System**: Logs misconfigured tracks for easy debugging
+
+### Separation of Concerns
+
+| Aspect | Purpose | Controls |
+|--------|---------|----------|
+| **access_level** | Filtering | Who SEES the track in config |
+| **URL whitelist** | Token attachment | Which servers GET tokens |
+
+These are **independent**:
+- `access_level="PUBLIC"` means everyone sees the track
+- `access_level="COLLABORATOR"` means only authorized users see the track
+- URL whitelist determines if the track URL gets a JWT token
+
+**Example combinations:**
+- PUBLIC + trusted server → Everyone sees it, token added for .htaccess
+- PUBLIC + external server → Everyone sees it, no token (UCSC)
+- COLLABORATOR + trusted server → Only collabs see it, token added
+- COLLABORATOR + external server → Only collabs see it, no token + WARNING
+
+### Testing
+
+See `tests/integration_url_whitelist_test.php` for comprehensive test suite.
+
+**Quick validation:**
+```bash
+cd /data/moop
+php tests/integration_url_whitelist_test.php
+```
+
+Expected: All 4 scenarios pass
 
 ---
 

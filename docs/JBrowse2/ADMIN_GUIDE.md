@@ -474,7 +474,7 @@ php -r "require 'lib/jbrowse/track_token.php'; echo generateTrackToken('test', '
 
 ### Overview
 
-For production, track data should be served from a separate server.
+For production, track data should be served from a separate server. With the URL whitelist security strategy (2026-02-25), you can now host PUBLIC tracks on your remote server with proper authentication.
 
 **Current Setup:**
 ```
@@ -488,13 +488,55 @@ MOOP Server (localhost:8888)
 ```
 MOOP Server (moop.example.com)
   ├── JBrowse2 UI
-  └── Config API (generates JWT tokens)
+  ├── Config API (generates JWT tokens)
+  └── trusted_tracks_servers config
 
 Tracks Server (tracks.example.com)
-  ├── BigWig files
+  ├── BigWig files (PUBLIC + COLLABORATOR)
   ├── BAM files
-  └── JWT validation
+  ├── JWT validation
+  └── .htaccess (blocks direct access)
 ```
+
+### Configuration: URL Whitelist (New 2026-02-25)
+
+To use a remote tracks server, add it to the trusted servers list:
+
+**File:** `config/site_config.php`
+
+```php
+'jbrowse2' => [
+    // ... existing config ...
+    
+    /**
+     * Trusted Tracks Servers (URL Whitelist)
+     * 
+     * Servers in this list will ALWAYS receive JWT tokens.
+     * This enables hosting PUBLIC tracks on your servers with .htaccess protection.
+     */
+    'trusted_tracks_servers' => [
+        'https://moop.example.com',           // Main MOOP server (self)
+        'https://tracks.yourlab.edu',         // Your remote tracks server
+        'https://tracks2.yourlab.edu',        // Additional tracks server (optional)
+        'http://localhost',                   // Development server
+    ],
+],
+```
+
+**Key Points:**
+- ✅ Add ALL your tracks servers (servers YOU control)
+- ✅ Include the main MOOP server URL (for self-hosted tracks)
+- ❌ Do NOT add external public servers (UCSC, Ensembl, NCBI)
+
+### Why This Matters
+
+**With URL whitelist:**
+- PUBLIC track on YOUR server → Gets JWT token (for .htaccess bypass)
+- PUBLIC track on UCSC → No token (external public resource)
+- COLLABORATOR track on YOUR server → Gets JWT token (authenticated access)
+
+**Without URL whitelist (old behavior):**
+- PUBLIC track on YOUR server → No token → 403 Forbidden (broken!)
 
 ### JWT Key Distribution
 
@@ -508,22 +550,100 @@ On tracks server(s):
 ```bash
 # Copy public key (validates tokens)
 scp /data/moop/certs/jwt_public_key.pem tracks-admin@tracks.example.com:/etc/tracks-server/
+
+# Set permissions
+chmod 644 /etc/tracks-server/jwt_public_key.pem
 ```
 
 ### Tracks Server Setup
 
-See [SECURITY.md](SECURITY.md) for detailed tracks server configuration with:
+See [technical/SECURITY.md](technical/SECURITY.md) for detailed tracks server configuration with:
+- .htaccess configuration (blocks direct file access)
 - Apache mod_rewrite
-- Nginx auth_request
+- Nginx configuration
 - JWT validation script
 - HTTP range request support
 
 **Quick start for tracks server:**
 
-1. Copy public key to tracks server
-2. Install JWT validation (PHP or Python)
-3. Configure web server (Apache/Nginx)
-4. Test: `curl -H "Range: bytes=0-1000" "https://tracks.example.com/bigwig/test.bw?token=JWT"`
+1. **Copy public key to tracks server**
+   ```bash
+   scp /data/moop/certs/jwt_public_key.pem admin@tracks.yourlab.edu:/var/tracks/certs/
+   ```
+
+2. **Deploy tracks.php validation endpoint**
+   ```bash
+   scp /data/moop/api/jbrowse2/tracks.php admin@tracks.yourlab.edu:/var/www/tracks/api/
+   ```
+
+3. **Configure .htaccess** (CRITICAL)
+   ```apache
+   # /var/www/tracks/data/.htaccess
+   <IfVersion >= 2.4>
+       Require all denied
+   </IfVersion>
+   ErrorDocument 403 "Access denied. Use API with JWT token."
+   ```
+
+4. **Add to trusted servers** (see above)
+
+5. **Test**
+   ```bash
+   # Direct access should be blocked
+   curl -I https://tracks.yourlab.edu/data/test.bw
+   # Expected: HTTP 403 Forbidden
+   
+   # API access with token should work
+   curl -I "https://tracks.yourlab.edu/api/tracks.php?file=test.bw&token=YOUR_JWT"
+   # Expected: HTTP 200 OK
+   ```
+
+### Hosting Public Tracks on Your Server
+
+**Scenario:** You want to host a reference genome (PUBLIC) on your tracks server.
+
+**Old problem:** PUBLIC tracks didn't get tokens → 403 Forbidden
+
+**New solution:** URL whitelist adds tokens to ALL tracks on trusted servers!
+
+**Example track metadata:**
+```json
+{
+  "trackId": "reference_genome",
+  "name": "Reference Genome (hg38)",
+  "adapter": {
+    "type": "BigWigAdapter",
+    "bigWigLocation": {
+      "uri": "https://tracks.yourlab.edu/reference/hg38.phyloP.bw",
+      "locationType": "UriLocation"
+    }
+  },
+  "metadata": {
+    "access_level": "PUBLIC"
+  }
+}
+```
+
+**Result:**
+1. Everyone sees the track (access_level = PUBLIC)
+2. URL gets JWT token (server in trusted_tracks_servers)
+3. Tracks server validates token and serves file
+4. .htaccess prevents direct access bypass
+
+### Testing Your Setup
+
+```bash
+cd /data/moop
+
+# Run integration tests
+php tests/integration_url_whitelist_test.php
+
+# Expected output:
+# ✓ SCENARIO 1 PASSED (Public track on your server)
+# ✓ SCENARIO 2 PASSED (Private track on your server)
+# ✓ SCENARIO 3 PASSED (UCSC external track)
+# ✓ SCENARIO 4 PASSED (Misconfigured track warning)
+```
 
 ---
 

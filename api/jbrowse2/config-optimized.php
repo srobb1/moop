@@ -418,34 +418,87 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
 }
 
 // Include helper functions from config.php
+/**
+ * Add JWT tokens to track adapter configuration
+ * 
+ * SECURITY UPDATE (2026-02-25):
+ * - Uses URL whitelist from trusted_tracks_servers config
+ * - Trusted servers ALWAYS get tokens (even for PUBLIC tracks)
+ * - External servers NEVER get tokens (prevents token leakage)
+ * - Logs warnings for misconfigured tracks
+ * 
+ * With .htaccess blocking direct file access, even PUBLIC tracks
+ * on your servers need JWT tokens.
+ */
 function addTokensToTrack($track_def, $organism, $assembly, $user_access_level, $is_whitelisted) {
-    $token = null;
-    if (!$is_whitelisted) {
-        try {
-            $token = generateTrackToken($organism, $assembly, $user_access_level);
-        } catch (Exception $e) {
-            error_log("Failed to generate token for track {$track_def['trackId']}: " . $e->getMessage());
-            return null;
-        }
+    // ALWAYS generate JWT tokens for all users
+    try {
+        $token = generateTrackToken($organism, $assembly);
+    } catch (Exception $e) {
+        error_log("Failed to generate token for track {$track_def['trackId']}: " . $e->getMessage());
+        return null;
     }
     
+    // Get track access level for validation warnings
+    $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
+    
     if (isset($track_def['adapter'])) {
-        $track_def['adapter'] = addTokenToAdapterUrls($track_def['adapter'], $token);
+        $track_def['adapter'] = addTokenToAdapterUrls($track_def['adapter'], $token, $track_access_level);
     }
     
     return $track_def;
 }
 
-function addTokenToAdapterUrls($adapter, $token) {
-    if (!$token) return $adapter;
+/**
+ * Recursively add token parameter to adapter URIs
+ * 
+ * TOKEN STRATEGY (2026-02-25 - URL Whitelist):
+ * - Trusted servers (in whitelist) → ALWAYS add token
+ * - External servers (not in whitelist) → NEVER add token
+ * - MOOP internal paths → ALWAYS add token
+ */
+function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC') {
+    $config = ConfigManager::getInstance();
+    $warn_on_external_private = $config->getBoolean('jbrowse2.warn_on_external_private_tracks', true);
+    $site = $config->getString('site', 'moop');
     
     foreach ($adapter as $key => &$value) {
         if (is_array($value)) {
             if (isset($value['uri']) && !empty($value['uri'])) {
-                $separator = strpos($value['uri'], '?') !== false ? '&' : '?';
-                $value['uri'] .= $separator . 'token=' . urlencode($token);
+                $uri = $value['uri'];
+                
+                // Detect external URLs
+                $is_external = preg_match('#^(https?|ftp)://#i', $uri);
+                
+                if ($is_external) {
+                    // Check if this is a trusted server
+                    if ($config->isTrustedTracksServer($uri)) {
+                        // Trusted server → Add token
+                        $separator = strpos($uri, '?') !== false ? '&' : '?';
+                        $value['uri'] .= $separator . 'token=' . urlencode($token);
+                    } else {
+                        // External server → No token + validate
+                        if ($warn_on_external_private && $track_access_level !== 'PUBLIC') {
+                            error_log(
+                                "WARNING: Track has external URL with access_level='{$track_access_level}' " .
+                                "but server is not in trusted_tracks_servers list. URL: $uri"
+                            );
+                        }
+                        continue;
+                    }
+                } else {
+                    // Internal paths → Add token (use site variable from config)
+                    if (preg_match("#^/{$site}/data/tracks/(.+)$#", $uri, $matches)) {
+                        $file_path = $matches[1];
+                        $value['uri'] = "/{$site}/api/jbrowse2/tracks.php?file=" . urlencode($file_path);
+                        $value['uri'] .= '&token=' . urlencode($token);
+                    } elseif (preg_match("#^/{$site}/#", $uri)) {
+                        $separator = strpos($uri, '?') !== false ? '&' : '?';
+                        $value['uri'] .= $separator . 'token=' . urlencode($token);
+                    }
+                }
             } else {
-                $value = addTokenToAdapterUrls($value, $token);
+                $value = addTokenToAdapterUrls($value, $token, $track_access_level);
             }
         }
     }

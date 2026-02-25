@@ -1,6 +1,6 @@
 # Setting Up a New Organism in JBrowse2
 
-**Last Updated:** February 10, 2026  
+**Last Updated:** February 25, 2026  
 **Purpose:** Complete guide for adding a new organism/assembly to the MOOP JBrowse2 system
 
 ---
@@ -226,6 +226,120 @@ bgzip --version
 tabix --version
 jq --version
 ```
+
+---
+
+## 🚨 CRITICAL: Web Server Security Setup
+
+**FIRST TIME SETUP ONLY** - Do this BEFORE adding any organisms!
+
+Track files MUST be blocked from direct web access. Without this protection, anyone can bypass JWT authentication by accessing files directly.
+
+### Quick Check: Is Your Server Secure?
+
+```bash
+# Test if direct access is blocked (should return 403)
+curl -I http://localhost/moop/data/tracks/test.bw
+
+# ✅ Secure:   HTTP/1.1 403 Forbidden
+# ❌ INSECURE: HTTP/1.1 404 Not Found (or 200 OK)
+```
+
+If you see **403 Forbidden**, you're secure! Skip to [Step 1](#step-1-prepare-source-files).
+
+If you see anything else, **STOP** and configure your web server now:
+
+### Option A: Apache with .htaccess (Recommended)
+
+**Step 1:** Create `.htaccess` file in tracks directory:
+
+```bash
+cat > /var/www/html/moop/data/tracks/.htaccess << 'EOF'
+# SECURITY: Block direct access to track files
+# All track requests MUST go through /api/jbrowse2/tracks.php
+
+# Apache 2.2 style
+<IfVersion < 2.4>
+    Order Deny,Allow
+    Deny from all
+</IfVersion>
+
+# Apache 2.4+ style
+<IfVersion >= 2.4>
+    Require all denied
+</IfVersion>
+
+ErrorDocument 403 "Access denied. Track files must be accessed through the API endpoint with valid JWT token."
+EOF
+```
+
+**Step 2:** Enable `.htaccess` in Apache config:
+
+Edit your Apache site config (e.g., `/etc/apache2/sites-available/moop.conf`):
+
+```apache
+<VirtualHost *:80>
+    ServerName moop.example.com
+    DocumentRoot /var/www/html
+    
+    # Add this block:
+    <Directory "/var/www/html/moop/data/tracks">
+        AllowOverride All
+        Require all denied
+    </Directory>
+</VirtualHost>
+```
+
+**Step 3:** Reload Apache:
+
+```bash
+sudo apache2ctl configtest
+sudo systemctl reload apache2
+```
+
+### Option B: Nginx
+
+Edit your nginx site config (e.g., `/etc/nginx/sites-available/moop`):
+
+```nginx
+server {
+    listen 80;
+    server_name moop.example.com;
+    root /var/www/html;
+    
+    # Add this block:
+    location ~ ^/moop/data/tracks/ {
+        deny all;
+        return 403 "Access denied. Track files must be accessed through the API endpoint with valid JWT token.";
+    }
+    
+    # ... rest of config ...
+}
+```
+
+**Reload nginx:**
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### Verify Security
+
+```bash
+# Test 1: Direct access should be BLOCKED
+curl -I http://localhost/moop/data/tracks/test.bw
+# Expected: HTTP/1.1 403 Forbidden ✅
+
+# Test 2: API access should work (after adding tracks)
+# This will be tested later after you add your first track
+```
+
+**✅ Once you see "403 Forbidden", proceed with organism setup below.**
+
+For detailed security documentation, see: [docs/JBrowse2/technical/SECURITY.md](technical/SECURITY.md)
+
+---
 
 ### Step 1: Prepare Source Files
 

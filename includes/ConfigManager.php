@@ -737,6 +737,61 @@ class ConfigManager
             ],
         ];
     }
+
+    /**
+     * Check if URL matches any trusted tracks server
+     * 
+     * Used for URL whitelist token strategy - determines which external servers
+     * should receive JWT tokens for track authentication.
+     * 
+     * @param string $url URL to check
+     * @return bool True if URL matches a trusted server
+     */
+    public function isTrustedTracksServer($url)
+    {
+        $trusted_servers = $this->getArray('jbrowse2.trusted_tracks_servers', []);
+        
+        foreach ($trusted_servers as $server) {
+            // Match if URL starts with trusted server
+            if (strpos($url, $server) === 0) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Get boolean configuration value
+     * 
+     * @param string $key Configuration key (supports dot notation)
+     * @param bool $default Default value
+     * @return bool Boolean value
+     */
+    public function getBoolean($key, $default = false)
+    {
+        // Support dot notation for nested config
+        $keys = explode('.', $key);
+        $value = $this->config;
+        
+        foreach ($keys as $k) {
+            if (!isset($value[$k])) {
+                return $default;
+            }
+            $value = $value[$k];
+        }
+        
+        // Convert to boolean
+        if (is_bool($value)) {
+            return $value;
+        }
+        
+        if (is_string($value)) {
+            return in_array(strtolower($value), ['true', '1', 'yes', 'on'], true);
+        }
+        
+        return (bool)$value;
+    }
 }
 
 ?>

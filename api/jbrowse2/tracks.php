@@ -84,7 +84,7 @@ if (!$token_data) {
             JWT::$leeway = 0; // Reset
             
             // Log for monitoring
-            error_log("Tracks server: Whitelisted IP {$_SERVER['REMOTE_ADDR']} using expired token for {$token_data->organism}/{$token_data->assembly} (user: {$token_data->user_id})");
+            error_log("Tracks server: Whitelisted IP {$_SERVER['REMOTE_ADDR']} using expired token for {$token_data->organism}/{$token_data->assembly}");
         } catch (Exception $e) {
             // Even whitelisted IPs need structurally valid tokens
             http_response_code(403);
@@ -127,7 +127,7 @@ if ($token_data->organism !== $file_organism || $token_data->assembly !== $file_
         'token_scope' => "{$token_data->organism}/{$token_data->assembly}",
         'requested_file' => "$file_organism/$file_assembly"
     ]);
-    error_log("Tracks server: Token scope mismatch - user {$token_data->user_id} tried to access $file_organism/$file_assembly with token for {$token_data->organism}/{$token_data->assembly}");
+    error_log("Tracks server: Token scope mismatch - IP {$_SERVER['REMOTE_ADDR']} tried to access $file_organism/$file_assembly with token for {$token_data->organism}/{$token_data->assembly}");
     exit;
 }
 

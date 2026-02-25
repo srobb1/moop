@@ -71,7 +71,7 @@ if ($token_valid && $token_data) {
         if ($token_data->organism !== $file_organism || 
             $token_data->assembly !== $file_assembly) {
             http_response_code(403);
-            error_log("Token mismatch: token({$token_data->organism}/{$token_data->assembly}) vs file($file_organism/$file_assembly) for user {$token_data->user_id}");
+            error_log("Token mismatch: token({$token_data->organism}/{$token_data->assembly}) vs file($file_organism/$file_assembly)");
             echo "Token organism/assembly mismatch";
             exit;
         }

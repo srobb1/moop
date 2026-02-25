@@ -1,7 +1,7 @@
 # Remote Tracks Server Setup Guide
 
-**Version:** 3.0  
-**Last Updated:** February 18, 2026  
+**Version:** 3.1  
+**Last Updated:** February 25, 2026  
 **Audience:** IT Administrators, DevOps Engineers, System Architects
 
 **Purpose:** Step-by-step guide for deploying a secure, stateless tracks server that serves genomic data files with JWT authentication for MOOP's JBrowse2 integration.
@@ -220,6 +220,8 @@ openssl rsa -pubin -in /var/www/tracks-server/certs/jwt_public_key.pem -text -no
 
 ### Step 5: Configure Apache Virtual Host
 
+**IMPORTANT:** This configuration includes CRITICAL security directives to block direct file access.
+
 **For domain:** tracks.example.com
 
 ```bash
@@ -273,7 +275,20 @@ sudo nano /etc/apache2/sites-available/tracks.example.com.conf
         php_value error_log /var/log/apache2/tracks-php-error.log
     </Directory>
     
-    # Block direct access to libraries
+    # ========================================================================
+    # CRITICAL SECURITY: Block direct access to track data files
+    # ========================================================================
+    # All track requests MUST go through tracks.php with JWT validation
+    # Direct file access would bypass authentication entirely
+    <Directory /var/tracks-data>
+        # Block all direct access
+        Require all denied
+        
+        # Note: tracks.php will still have filesystem access via PHP
+        # This only blocks HTTP requests
+    </Directory>
+    
+    # Block direct access to libraries and certificates
     <DirectoryMatch "^/var/www/tracks-server/(lib|certs|vendor)">
         Require all denied
     </DirectoryMatch>
@@ -285,6 +300,12 @@ sudo nano /etc/apache2/sites-available/tracks.example.com.conf
 </VirtualHost>
 ```
 
+**Security Notes:**
+- The `<Directory /var/tracks-data>` block is **CRITICAL**
+- Without this, anyone can access files directly via HTTP
+- tracks.php has filesystem access and serves files after validating JWT
+- This prevents bypassing authentication
+
 **Enable site:**
 ```bash
 # Enable virtual host
@@ -292,9 +313,79 @@ sudo a2ensite tracks.example.com.conf
 
 # Test configuration
 sudo apache2ctl configtest
+# Expected: Syntax OK
 
 # Reload Apache
 sudo systemctl reload apache2
+```
+
+### Step 5b: Alternative - Nginx Configuration
+
+If using nginx instead of Apache:
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name tracks.example.com;
+    
+    # SSL Configuration
+    ssl_certificate /etc/letsencrypt/live/tracks.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tracks.example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    
+    root /var/www/tracks-server;
+    index index.php;
+    
+    # CORS Headers
+    add_header 'Access-Control-Allow-Origin' 'https://moop.example.com' always;
+    add_header 'Access-Control-Allow-Methods' 'GET, HEAD, OPTIONS' always;
+    add_header 'Access-Control-Allow-Headers' 'Range, Authorization' always;
+    add_header 'Access-Control-Expose-Headers' 'Content-Range, Content-Length, Accept-Ranges' always;
+    
+    # ========================================================================
+    # CRITICAL SECURITY: Block direct access to track data
+    # ========================================================================
+    location ~ ^/tracks-data/ {
+        deny all;
+        return 403 "Access denied. Files must be accessed through API with JWT token.";
+    }
+    
+    # Block direct access to sensitive directories
+    location ~ ^/(lib|certs|vendor)/ {
+        deny all;
+    }
+    
+    # API endpoint (tracks.php)
+    location ~ ^/api/tracks\.php$ {
+        try_files $uri =404;
+        fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        
+        # Increase timeout for large files
+        fastcgi_read_timeout 300;
+        fastcgi_send_timeout 300;
+    }
+    
+    # Handle OPTIONS preflight
+    if ($request_method = 'OPTIONS') {
+        return 204;
+    }
+}
+
+# HTTP redirect to HTTPS
+server {
+    listen 80;
+    server_name tracks.example.com;
+    return 301 https://$server_name$request_uri;
+}
+```
+
+**Apply nginx config:**
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
 ### Step 6: Obtain SSL Certificate

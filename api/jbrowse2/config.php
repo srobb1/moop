@@ -352,20 +352,42 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
  * @param bool $is_whitelisted - Whether user's IP is whitelisted
  * @return array|null - Track config with tokens, or null if token generation fails
  */
+/**
+ * Add JWT tokens to track adapter configuration
+ * 
+ * SECURITY UPDATE (2026-02-25):
+ * - Uses URL whitelist from trusted_tracks_servers config
+ * - Trusted servers ALWAYS get tokens (even for PUBLIC tracks)
+ * - External servers NEVER get tokens (prevents token leakage)
+ * - Logs warnings for misconfigured tracks
+ * 
+ * Key Point: access_level controls who SEES the track (filtering)
+ *            URL whitelist controls which servers GET tokens
+ * 
+ * With .htaccess blocking direct file access, even PUBLIC tracks
+ * on your servers need JWT tokens to bypass the .htaccess protection.
+ * 
+ * @param array $track_def - Track definition from metadata
+ * @param string $organism - Organism name
+ * @param string $assembly - Assembly ID
+ * @param string $user_access_level - User's access level (unused, kept for compatibility)
+ * @param bool $is_whitelisted - Whether user's IP is whitelisted (unused, kept for compatibility)
+ * @return array|null - Track config with tokens, or null if token generation fails
+ */
 function addTokensToTrack($track_def, $organism, $assembly, $user_access_level, $is_whitelisted) {
     // ALWAYS generate JWT tokens for all users
     // Defense-in-depth: Even internal users need valid organism/assembly tokens
     try {
-        $token = generateTrackToken($organism, $assembly, $user_access_level);
+        $token = generateTrackToken($organism, $assembly);
     } catch (Exception $e) {
         error_log("Failed to generate token for track {$track_def['trackId']}: " . $e->getMessage());
         return null;
     }
     
-    // Get track access level to determine token injection strategy
+    // Get track access level for validation warnings
     $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
     
-    // Add token to adapter URLs (skips external PUBLIC URLs automatically)
+    // Add token to adapter URLs using URL whitelist strategy
     if (isset($track_def['adapter'])) {
         $track_def['adapter'] = addTokenToAdapterUrls($track_def['adapter'], $token, $track_access_level);
     }
@@ -376,53 +398,95 @@ function addTokensToTrack($track_def, $organism, $assembly, $user_access_level, 
 /**
  * Recursively add token parameter to adapter URIs
  * 
- * TOKEN STRATEGY (Updated 2026-02-18):
- * - External URL + access_level="PUBLIC" → No token (UCSC, Ensembl, etc.)
- * - All other cases → Add token (your data, whether local or remote)
+ * TOKEN STRATEGY (Updated 2026-02-25 - URL Whitelist):
  * 
- * This prevents token leakage to external public servers while ensuring
- * all YOUR data (including on remote tracks servers) is properly secured.
+ * IMPORTANT: With .htaccess blocking direct file access, ALL requests to
+ * our tracks servers MUST have JWT tokens, regardless of access_level.
+ * 
+ * Strategy:
+ * 1. Trusted servers (in trusted_tracks_servers config)
+ *    → ALWAYS add token (your servers that validate JWTs)
+ *    → This includes PUBLIC tracks on your servers!
+ * 
+ * 2. External servers (not in whitelist, e.g., UCSC, Ensembl)
+ *    → NEVER add token (they don't validate our JWTs)
+ * 
+ * 3. MOOP internal paths
+ *    → ALWAYS add token (routed through tracks.php)
+ * 
+ * Key Point: access_level controls FILTERING (who sees track in config)
+ *            URL whitelist controls TOKENS (which servers get tokens)
+ * 
+ * Examples:
+ * - PUBLIC track on your server → Token added (for .htaccess bypass)
+ * - PUBLIC track on UCSC → No token (external public server)
+ * - COLLABORATOR track on your server → Token added (authenticated access)
+ * - COLLABORATOR track on UCSC → No token + warning logged (misconfigured)
  * 
  * @param array $adapter - Adapter configuration (may contain nested arrays)
  * @param string $token - JWT token to add
- * @param string $track_access_level - Track's access level (PUBLIC, COLLABORATOR, etc.)
+ * @param string $track_access_level - Track's access level (for validation warnings)
  * @return array - Adapter config with tokens added appropriately
  */
 function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC') {
+    $config = ConfigManager::getInstance();
+    $warn_on_external_private = $config->getBoolean('jbrowse2.warn_on_external_private_tracks', true);
+    $site = $config->getString('site', 'moop');
+    
     foreach ($adapter as $key => &$value) {
         if (is_array($value)) {
             if (isset($value['uri']) && !empty($value['uri'])) {
                 $uri = $value['uri'];
                 
-                // CASE 1: External URL + PUBLIC access → No token
-                // This is for truly public external resources (UCSC, Ensembl, NCBI)
-                if (preg_match('#^(https?|ftp)://#i', $uri) && $track_access_level === 'PUBLIC') {
-                    // Leave external public URLs unchanged (no token leakage)
-                    continue;
-                }
+                // Detect external URLs (http://, https://, ftp://)
+                $is_external = preg_match('#^(https?|ftp)://#i', $uri);
                 
-                // CASE 2: External URL + NOT PUBLIC → Add token
-                // This handles YOUR remote tracks server with protected data
-                elseif (preg_match('#^(https?|ftp)://#i', $uri)) {
-                    $separator = strpos($uri, '?') !== false ? '&' : '?';
-                    $value['uri'] .= $separator . 'token=' . urlencode($token);
+                if ($is_external) {
+                    // Check if this is a trusted server
+                    if ($config->isTrustedTracksServer($uri)) {
+                        // CASE 1: Trusted external server → ALWAYS add token
+                        // This is YOUR tracks server that:
+                        // - Validates JWT tokens
+                        // - Has .htaccess blocking direct access
+                        // - Requires tokens even for PUBLIC tracks
+                        $separator = strpos($uri, '?') !== false ? '&' : '?';
+                        $value['uri'] .= $separator . 'token=' . urlencode($token);
+                        
+                    } else {
+                        // CASE 2: Untrusted external server → NEVER add token
+                        // This is a public resource (UCSC, Ensembl, NCBI) that:
+                        // - Doesn't validate our JWT tokens
+                        // - Is truly public (open access)
+                        // - Not protected by our .htaccess
+                        
+                        // Validation: Warn if marked as private (can't enforce auth)
+                        if ($warn_on_external_private && $track_access_level !== 'PUBLIC') {
+                            error_log(
+                                "WARNING: Track has external URL with access_level='{$track_access_level}' " .
+                                "but server is not in trusted_tracks_servers list. " .
+                                "Cannot enforce authentication. URL: $uri"
+                            );
+                        }
+                        
+                        // Leave URL unchanged (no token leakage to external servers)
+                        continue;
+                    }
+                    
+                } else {
+                    // CASE 3: MOOP internal paths → Route through tracks.php with token
+                    // Match paths like: /{site}/data/tracks/... or /data/tracks/...
+                    if (preg_match("#^/{$site}/data/tracks/(.+)$#", $uri, $matches)) {
+                        $file_path = $matches[1];
+                        $value['uri'] = "/{$site}/api/jbrowse2/tracks.php?file=" . urlencode($file_path);
+                        $value['uri'] .= '&token=' . urlencode($token);
+                        
+                    } elseif (preg_match("#^/{$site}/#", $uri)) {
+                        // CASE 4: Other MOOP paths → Add token
+                        $separator = strpos($uri, '?') !== false ? '&' : '?';
+                        $value['uri'] .= $separator . 'token=' . urlencode($token);
+                    }
+                    // CASE 5: Other paths (relative, absolute) → Leave unchanged
                 }
-                
-                // CASE 3: MOOP tracks → Route through tracks.php with token
-                elseif (preg_match('#^/moop/data/tracks/(.+)$#', $uri, $matches)) {
-                    $file_path = $matches[1];
-                    $value['uri'] = '/moop/api/jbrowse2/tracks.php?file=' . urlencode($file_path);
-                    $value['uri'] .= '&token=' . urlencode($token);
-                }
-                
-                // CASE 4: Other MOOP paths → Add token
-                elseif (preg_match('#^/moop/#', $uri)) {
-                    $separator = strpos($uri, '?') !== false ? '&' : '?';
-                    $value['uri'] .= $separator . 'token=' . urlencode($token);
-                }
-                
-                // CASE 5: Absolute local paths or relative paths
-                // Left unchanged (assumes direct web server access)
                 
             } else {
                 // Recurse into nested adapter structures

@@ -14,12 +14,16 @@ use Firebase\JWT\Key;
 /**
  * Generate JWT token for track access
  * 
+ * Security: Minimal token design (2026-02-25)
+ * - Only includes organism/assembly scope (required for validation)
+ * - No user_id (prevents username leakage to external sites)
+ * - No access_level (never used by tracks server)
+ * 
  * @param string $organism
  * @param string $assembly
- * @param string $access_level
  * @return string JWT token
  */
-function generateTrackToken($organism, $assembly, $access_level) {
+function generateTrackToken($organism, $assembly) {
     $config_dir = dirname(__DIR__, 2) . '/certs';
     $private_key_path = $config_dir . '/jwt_private_key.pem';
     
@@ -30,10 +34,8 @@ function generateTrackToken($organism, $assembly, $access_level) {
     $private_key = file_get_contents($private_key_path);
     
     $token_data = [
-        'user_id' => $_SESSION['username'] ?? 'anonymous',
         'organism' => $organism,
         'assembly' => $assembly,
-        'access_level' => $access_level,
         'iat' => time(),
         'exp' => time() + 3600  // 1 hour expiry
     ];
