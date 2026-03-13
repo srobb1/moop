@@ -1,8 +1,8 @@
 {
     "metadata": {
-        "generated": "2026-03-10 18:13:48",
-        "totalFunctions": 169,
-        "totalFiles": 22,
+        "generated": "2026-03-13 17:28:06",
+        "totalFunctions": 170,
+        "totalFiles": 23,
         "duplicates": 0
     },
     "files": [
@@ -94,7 +94,7 @@
                     "name": "getBlastDatabases",
                     "line": 23,
                     "comment": "/**\n* Get list of available BLAST databases for an assembly\n* Looks for FASTA files matching configured sequence type patterns\n* (protein.aa.fa, cds.nt.fa, transcript.nt.fa)\n*\n* @param string $assembly_path Path to assembly directory\n* @return array Array of BLAST databases with type and path\n*   Format: [\n*     ['name' => 'protein', 'path' => '/path/to/protein.aa.fa', 'type' => 'protein'],\n*     ['name' => 'cds', 'path' => '/path/to/cds.nt.fa', 'type' => 'nucleotide']\n*   ]\n*/",
-                    "code": "function getBlastDatabases($assembly_path) {\n    global $sequence_types;\n    $databases = [];\n    \n    if (!is_dir($assembly_path)) {\n        return $databases;\n    }\n    \n    // Map sequence types to database info\n    $type_mapping = [\n        'protein' => ['name' => 'Protein', 'blast_type' => 'protein'],\n        'cds' => ['name' => 'CDS', 'blast_type' => 'nucleotide'],\n        'transcript' => ['name' => 'Transcript', 'blast_type' => 'nucleotide'],\n    ];\n    \n    // Check for each configured sequence type\n    if (!empty($sequence_types)) {\n        foreach ($sequence_types as $seq_type => $config) {\n            $pattern = $config['pattern'] ?? '';\n            if (empty($pattern)) {\n                continue;\n            }\n            \n            $file_path = \"$assembly_path/$pattern\";\n            \n            // Check if file exists\n            if (file_exists($file_path)) {\n                $type_info = $type_mapping[$seq_type] ?? ['name' => ucfirst($seq_type), 'blast_type' => 'nucleotide'];\n                \n                $databases[] = [\n                    'name' => $type_info['name'],\n                    'path' => $file_path,\n                    'type' => $type_info['blast_type']\n                ];\n            }\n        }\n    }\n    \n    return $databases;\n}",
+                    "code": "function getBlastDatabases($assembly_path) {\n    $databases = [];\n\n    if (!is_dir($assembly_path)) {\n        return $databases;\n    }\n\n    $sequence_types = ConfigManager::getInstance()->getArray('sequence_types');\n\n    // Map sequence types to database info\n    $type_mapping = [\n        'protein' => ['name' => 'Protein', 'blast_type' => 'protein'],\n        'cds' => ['name' => 'CDS', 'blast_type' => 'nucleotide'],\n        'transcript' => ['name' => 'Transcript', 'blast_type' => 'nucleotide'],\n    ];\n\n    // Check for each configured sequence type\n    if (!empty($sequence_types)) {\n        foreach ($sequence_types as $seq_type => $config) {\n            $pattern = $config['pattern'] ?? '';\n            if (empty($pattern)) {\n                continue;\n            }\n            \n            $file_path = \"$assembly_path/$pattern\";\n            \n            // Check if file exists\n            if (file_exists($file_path)) {\n                $type_info = $type_mapping[$seq_type] ?? ['name' => ucfirst($seq_type), 'blast_type' => 'nucleotide'];\n                \n                $databases[] = [\n                    'name' => $type_info['name'],\n                    'path' => $file_path,\n                    'type' => $type_info['blast_type']\n                ];\n            }\n        }\n    }\n    \n    return $databases;\n}",
                     "parameters": [
                         {
                             "name": "assembly_path",
@@ -130,7 +130,7 @@
                 },
                 {
                     "name": "filterDatabasesByProgram",
-                    "line": 72,
+                    "line": 73,
                     "comment": "/**\n* Filter BLAST databases by program type\n* Returns only databases compatible with the selected BLAST program\n*\n* @param array $databases Array of databases from getBlastDatabases()\n* @param string $blast_program BLAST program: blastn, blastp, blastx, tblastn, tblastx\n* @return array Filtered array of compatible databases\n*/",
                     "code": "function filterDatabasesByProgram($databases, $blast_program) {\n    $filtered = [];\n    \n    // Determine which database types are compatible with the program\n    $compatible_types = [];\n    switch ($blast_program) {\n        case 'blastn':\n        case 'tblastn':\n        case 'tblastx':\n            $compatible_types = ['nucleotide'];\n            break;\n        case 'blastp':\n        case 'blastx':\n            $compatible_types = ['protein'];\n            break;\n        default:\n            return $databases; // Unknown program, return all\n    }\n    \n    foreach ($databases as $db) {\n        if (in_array($db['type'], $compatible_types)) {\n            $filtered[] = $db;\n        }\n    }\n    \n    return $filtered;\n}",
                     "parameters": [
@@ -162,7 +162,7 @@
                 },
                 {
                     "name": "executeBlastSearch",
-                    "line": 110,
+                    "line": 111,
                     "comment": "/**\n* Execute BLAST search\n* Runs BLAST command with outfmt 11 (ASN.1), then converts using blast_formatter\n*\n* @param string $query_seq FASTA sequence to search\n* @param string $blast_db Path to BLAST database (without extension)\n* @param string $program BLAST program (blastn, blastp, blastx, etc.)\n* @param array $options Additional BLAST options (evalue, max_hits, matrix, etc.)\n* @return array Result array with 'success', 'output', 'error', and 'stderr' keys\n*/",
                     "code": "function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {\n    $result = [\n        'success' => false,\n        'output' => '',\n        'error' => '',\n        'stderr' => ''\n    ];\n    \n    // Validate inputs\n    if (empty($query_seq) || empty($blast_db) || empty($program)) {\n        $result['error'] = 'Missing required parameters for BLAST search';\n        return $result;\n    }\n    \n    // Verify database exists - check for any of the BLAST index files\n    $has_index = false;\n    if (file_exists(\"$blast_db.nhr\") || file_exists(\"$blast_db.phr\") || \n        file_exists(\"$blast_db.ndb\") || file_exists(\"$blast_db.pdb\")) {\n        $has_index = true;\n    }\n    \n    if (!$has_index) {\n        $result['error'] = 'BLAST database not found: ' . basename($blast_db);\n        return $result;\n    }\n    \n    // Set default options\n    $evalue = $options['evalue'] ?? '1e-3';\n    $max_hits = (int)($options['max_hits'] ?? 10);\n    $matrix = $options['matrix'] ?? 'BLOSUM62';\n    $filter = $options['filter'] ? 'yes' : 'no';\n    $task = $options['task'] ?? '';\n    \n    // Create temporary directory for ASN.1 archive output\n    $temp_dir = sys_get_temp_dir();\n    $archive_file = tempnam($temp_dir, 'blast_');\n    \n    if ($archive_file === false) {\n        $result['error'] = 'Failed to create temporary file for BLAST output';\n        return $result;\n    }\n    \n    // Build BLAST command with outfmt 11 (ASN.1)\n    // Get configured BLAST tool path\n    $config = ConfigManager::getInstance();\n    $blast_tools = $config->getArray('blast_tools', []);\n    $program_path = $blast_tools[$program] ?? $program;\n    \n    $cmd = [];\n    $cmd[] = $program_path;\n    // Use absolute path for database\n    // For BLAST databases, we pass the base name and BLAST appends the extensions\n    $db_dir = dirname($blast_db);\n    $db_base = basename($blast_db);\n    $db_path = realpath($db_dir);\n    if (!$db_path) {\n        unlink($archive_file);\n        $result['error'] = 'Cannot resolve database path: ' . $blast_db;\n        return $result;\n    }\n    $full_db_path = $db_path . '/' . $db_base;\n    $cmd[] = '-db ' . escapeshellarg($full_db_path);\n    $cmd[] = '-evalue ' . escapeshellarg($evalue);\n    $cmd[] = '-num_descriptions ' . escapeshellarg($max_hits);\n    $cmd[] = '-num_alignments ' . escapeshellarg($max_hits);\n    $cmd[] = '-outfmt 11';\n    $cmd[] = '-out ' . escapeshellarg($archive_file);\n    \n    // Add program-specific options\n    if ($program === 'blastn') {\n        $cmd[] = '-dust ' . escapeshellarg($filter);\n    } elseif ($program === 'tblastn') {\n        $cmd[] = '-seg ' . escapeshellarg($filter);\n    } elseif (in_array($program, ['blastp', 'blastx', 'tblastx'])) {\n        $cmd[] = '-seg ' . escapeshellarg($filter);\n        $cmd[] = '-matrix ' . escapeshellarg($matrix);\n    }\n    \n    // Add task if specified\n    if (!empty($task)) {\n        $cmd[] = '-task ' . escapeshellarg($task);\n    }\n    \n    $command = 'printf ' . escapeshellarg($query_seq) . ' | ' . implode(' ', $cmd);\n    \n    // Execute BLAST with proc_open for better control\n    $descriptors = [\n        0 => [\"pipe\", \"r\"],\n        1 => [\"pipe\", \"w\"],\n        2 => [\"pipe\", \"w\"],\n    ];\n    \n    $process = proc_open($command, $descriptors, $pipes);\n    if (!is_resource($process)) {\n        unlink($archive_file);\n        $result['error'] = 'Failed to execute BLAST command';\n        return $result;\n    }\n    \n    fclose($pipes[0]);\n    $blast_stdout = stream_get_contents($pipes[1]);\n    fclose($pipes[1]);\n    $blast_stderr = stream_get_contents($pipes[2]);\n    fclose($pipes[2]);\n    $return_code = proc_close($process);\n    \n    if ($return_code !== 0) {\n        unlink($archive_file);\n        $result['error'] = 'BLAST execution failed with code ' . $return_code;\n        $result['stderr'] = $blast_stderr;\n        return $result;\n    }\n    \n    // Convert ASN.1 archive to outfmt 5 (XML) using blast_formatter\n    $xml_file = tempnam($temp_dir, 'blast_xml_');\n    $blast_formatter_path = $blast_tools['blast_formatter'] ?? 'blast_formatter';\n    $formatter_cmd = $blast_formatter_path . ' -archive ' . escapeshellarg($archive_file) . \n                     ' -outfmt 5 -out ' . escapeshellarg($xml_file);\n    \n    $process = proc_open($formatter_cmd, $descriptors, $pipes);\n    if (!is_resource($process)) {\n        unlink($archive_file);\n        $result['error'] = 'Failed to execute blast_formatter for XML';\n        return $result;\n    }\n    \n    fclose($pipes[0]);\n    fclose($pipes[1]);\n    fclose($pipes[2]);\n    $return_code = proc_close($process);\n    \n    if ($return_code !== 0) {\n        unlink($archive_file);\n        unlink($xml_file);\n        $result['error'] = 'blast_formatter XML conversion failed with code ' . $return_code;\n        return $result;\n    }\n    \n    // Read the XML output\n    $output = file_get_contents($xml_file);\n    \n    // Now convert ASN.1 archive to outfmt 0 (Pairwise text) for download\n    $pairwise_file = tempnam($temp_dir, 'blast_pairwise_');\n    $formatter_cmd = $blast_formatter_path . ' -archive ' . escapeshellarg($archive_file) . \n                     ' -outfmt 0 -out ' . escapeshellarg($pairwise_file);\n    \n    $process = proc_open($formatter_cmd, $descriptors, $pipes);\n    if (!is_resource($process)) {\n        unlink($archive_file);\n        unlink($xml_file);\n        unlink($pairwise_file);\n        $result['error'] = 'Failed to execute blast_formatter for pairwise';\n        return $result;\n    }\n    \n    fclose($pipes[0]);\n    fclose($pipes[1]);\n    fclose($pipes[2]);\n    $return_code = proc_close($process);\n    \n    if ($return_code !== 0) {\n        unlink($archive_file);\n        unlink($xml_file);\n        unlink($pairwise_file);\n        $result['error'] = 'blast_formatter pairwise conversion failed with code ' . $return_code;\n        return $result;\n    }\n    \n    // Read the pairwise output\n    $pairwise_output = file_get_contents($pairwise_file);\n    \n    // Clean up temporary files\n    unlink($archive_file);\n    unlink($xml_file);\n    unlink($pairwise_file);\n    \n    $result['success'] = true;\n    $result['output'] = $output;\n    $result['pairwise'] = $pairwise_output;\n    $result['stderr'] = $blast_stderr;\n    \n    return $result;\n}",
                     "parameters": [
@@ -211,7 +211,7 @@
                 },
                 {
                     "name": "extractSequencesFromBlastDb",
-                    "line": 305,
+                    "line": 306,
                     "comment": "/**\n* Extract sequences from BLAST database using blastdbcmd\n* Used by fasta extract and download tools\n* Supports parent->child lookup from database\n*\n* @param string $blast_db Path to BLAST database (without extension)\n* @param array $sequence_ids Array of sequence IDs to extract\n* @param string $organism Optional organism name for parent/child lookup\n* @param string $assembly Optional assembly name for parent/child lookup\n* @return array Result array with 'success', 'content', and 'error' keys\n*/",
                     "code": "function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $assembly = '', $ranges = [], $original_input_ids = [], $parent_to_children = []) {\n    $result = [\n        'success' => false,\n        'content' => '',\n        'error' => ''\n    ];\n    \n    if (empty($sequence_ids) || !is_array($sequence_ids)) {\n        $result['error'] = 'No sequence IDs provided';\n        return $result;\n    }\n    \n    if (!file_exists($blast_db . '.nhr') && !file_exists($blast_db . '.phr')) {\n        $result['error'] = 'BLAST database not found';\n        return $result;\n    }\n    \n    // Check if $ranges is provided and not empty\n    if (!empty($ranges)) {\n        // Use batch mode with range file\n        // Convert ranges from \"ID:start-end\" format to \"ID start-end\" format for blastdbcmd\n        $batch_ranges = array_map(function($range) {\n            // Convert \"ID:start-end\" or \"ID:start-end\" to \"ID start-end\"\n            return preg_replace('/^([^:]+):(\\d+-\\d+)$/', '$1 $2', $range);\n        }, $ranges);\n        \n        // Build batch entries: converted ranges + regular IDs as full sequences\n        // Ranges apply to parent AND all children\n        $ids_with_ranges = array_map(function($range) {\n            return explode(':', $range)[0];\n        }, $ranges);\n        \n        // For each ranged ID, find and add all its children with the same range\n        $expanded_ranges = [];\n        foreach ($batch_ranges as $range_entry) {\n            $expanded_ranges[] = $range_entry; // Add the original range\n            \n            // Extract the ID and range portion from \"ID start-end\"\n            if (preg_match('/^(.+?)\\s+(\\d+-\\d+)$/', $range_entry, $matches)) {\n                $parent_id = $matches[1];\n                $range_portion = $matches[2];\n                \n                // Find all children of this parent in sequence_ids and add with same range\n                foreach ($sequence_ids as $id) {\n                    // Check if this ID is a child of parent_id (e.g., \"ID.1\", \"ID.2\")\n                    if (preg_match('/^' . preg_quote($parent_id) . '\\.\\d+$/', $id)) {\n                        $expanded_ranges[] = \"$id $range_portion\";\n                    }\n                }\n            }\n        }\n        \n        // Build batch file following the 4-step plan:\n        // 1. Add all no-range input IDs (as full sequences)\n        // 2. Add all children of input IDs with no ranges (as full sequences)\n        // 3. Add all input IDs with ranges (with range formatting)\n        // 4. Add all children of input IDs with ranges (with same ranges as parent)\n        \n        $batch_entries = [];\n        \n        // Separate original input IDs into those with and without ranges\n        $input_ids_with_ranges = [];\n        $input_ids_no_ranges = [];\n        \n        foreach ($original_input_ids as $id) {\n            $has_range = false;\n            foreach ($ranges as $range_entry) {\n                $range_id = explode(':', $range_entry)[0];\n                $range_id = explode(' ', $range_id)[0];\n                if ($range_id === $id) {\n                    $has_range = true;\n                    break;\n                }\n            }\n            if ($has_range) {\n                $input_ids_with_ranges[] = $id;\n            } else {\n                $input_ids_no_ranges[] = $id;\n            }\n        }\n        \n        // Step 1: Add all no-range input IDs (full sequences)\n        foreach ($input_ids_no_ranges as $id) {\n            if (in_array($id, $sequence_ids)) {\n                $batch_entries[] = $id;\n            }\n        }\n        \n        // Step 2: Add all children of input IDs with no ranges (full sequences)\n        foreach ($input_ids_no_ranges as $parent_id) {\n            if (isset($parent_to_children[$parent_id])) {\n                foreach ($parent_to_children[$parent_id] as $child_id) {\n                    if (in_array($child_id, $sequence_ids)) {\n                        $batch_entries[] = $child_id;\n                    }\n                }\n            }\n        }\n        \n        // Step 3: Add all input IDs with ranges (formatted as \"ID range\")\n        foreach ($input_ids_with_ranges as $id) {\n            // Find the corresponding converted range in $batch_ranges\n            foreach (array_keys($ranges) as $idx) {\n                $range_id = explode(':', $ranges[$idx])[0];\n                $range_id = explode(' ', $range_id)[0];\n                if ($range_id === $id) {\n                    // Use the converted batch_ranges entry (with space, not colon)\n                    $batch_entries[] = $batch_ranges[$idx];\n                    break;\n                }\n            }\n        }\n        \n        // Step 4: Add all children of input IDs with ranges (with same ranges as parent)\n        foreach ($input_ids_with_ranges as $parent_id) {\n            if (isset($parent_to_children[$parent_id])) {\n                // Find the range for this parent\n                $parent_range = '';\n                foreach ($ranges as $range_entry) {\n                    $range_id = explode(':', $range_entry)[0];\n                    $range_id = explode(' ', $range_id)[0];\n                    if ($range_id === $parent_id) {\n                        // Extract range portion\n                        $parent_range = strpos($range_entry, ':') !== false ? \n                            explode(':', $range_entry)[1] : \n                            explode(' ', $range_entry)[1];\n                        break;\n                    }\n                }\n                \n                // Add each child with same range\n                if (!empty($parent_range)) {\n                    foreach ($parent_to_children[$parent_id] as $child_id) {\n                        if (in_array($child_id, $sequence_ids)) {\n                            $batch_entries[] = \"$child_id $parent_range\";\n                        }\n                    }\n                }\n            }\n        }\n        \n        $temp_file = tempnam(sys_get_temp_dir(), 'blastdb_');\n        if ($temp_file === false) {\n            $result['error'] = 'Failed to create temporary file for batch processing';\n            return $result;\n        }\n        \n        // Write batch entries to temporary file\n        if (file_put_contents($temp_file, implode(\"\\n\", $batch_entries)) === false) {\n            @unlink($temp_file);\n            $result['error'] = 'Failed to write batch file for range extraction';\n            return $result;\n        }\n        \n        // Execute: blastdbcmd -db ... -entry_batch temp_file\n        $config = ConfigManager::getInstance();\n        $blast_tools = $config->getArray('blast_tools', []);\n        $blastdbcmd_path = $blast_tools['blastdbcmd'] ?? 'blastdbcmd';\n        $cmd = $blastdbcmd_path . \" -db \" . escapeshellarg($blast_db) . \" -entry_batch \" . escapeshellarg($temp_file) . \" 2>&1\";\n        \n        $output = [];\n        $return_var = 0;\n        @exec($cmd, $output, $return_var);\n        \n        // Delete temp file after execution\n        @unlink($temp_file);\n        \n        // Filter out blastdbcmd error messages (lines starting with \"Error:\")\n        // BUT keep track of them for better error reporting\n        $error_lines = array_filter($output, function($line) {\n            return strpos(trim($line), 'Error:') === 0;\n        });\n        \n        $output = array_filter($output, function($line) {\n            return strpos(trim($line), 'Error:') !== 0;\n        });\n        \n        // Check if blastdbcmd executed\n        if ($return_var > 1) {\n            $result['error'] = \"Error extracting sequences (exit code: $return_var). Ensure blastdbcmd is installed and FASTA files are formatted correctly.\";\n            return $result;\n        }\n        \n        // Check if we got any output\n        if (empty($output)) {\n            // If there were error messages about entries not found, it's likely an out-of-range coordinate\n            if (!empty($error_lines)) {\n                $result['error'] = 'One or more requested sequences or ranges were not found. This may be due to: (1) invalid sequence ID, (2) out-of-range coordinates, or (3) incorrectly formatted FASTA database. Please verify your input.';\n            } else {\n                $result['error'] = 'No sequences found for the requested IDs and ranges';\n            }\n            return $result;\n        }\n    } else {\n        // No ranges - use current logic: Execute: blastdbcmd -db ... -entry IDs\n        $config = ConfigManager::getInstance();\n        $blast_tools = $config->getArray('blast_tools', []);\n        $blastdbcmd_path = $blast_tools['blastdbcmd'] ?? 'blastdbcmd';\n        $ids_string = implode(',', $sequence_ids);\n        $cmd = $blastdbcmd_path . \" -db \" . escapeshellarg($blast_db) . \" -entry \" . escapeshellarg($ids_string) . \" 2>/dev/null\";\n        $output = [];\n        $return_var = 0;\n        @exec($cmd, $output, $return_var);\n        \n        // Filter out blastdbcmd error messages (lines starting with \"Error:\")\n        $output = array_filter($output, function($line) {\n            return strpos(trim($line), 'Error:') !== 0;\n        });\n        \n        // Check if blastdbcmd executed\n        if ($return_var > 1) {\n            // Return code 1 is expected when some IDs don't exist, but >1 is an error\n            $result['error'] = \"Error extracting sequences (exit code: $return_var). Ensure blastdbcmd is installed and FASTA files are formatted correctly.\";\n            return $result;\n        }\n        \n        // Check if we got any output\n        if (empty($output)) {\n            $result['error'] = 'No sequences found for the requested IDs';\n            return $result;\n        }\n    }\n    \n    $result['success'] = true;\n    $result['content'] = implode(\"\\n\", $output);\n    \n    return $result;\n}",
                     "parameters": [
@@ -266,7 +266,7 @@
                 },
                 {
                     "name": "validateBlastSequence",
-                    "line": 541,
+                    "line": 542,
                     "comment": "/**\n* Validate BLAST sequence input\n* Checks if input is valid FASTA format\n*\n* @param string $sequence Raw sequence input (may or may not have FASTA header)\n* @return array Array with 'valid' bool and 'error' string\n*/",
                     "code": "function validateBlastSequence($sequence) {\n    $sequence = trim($sequence);\n    \n    if (empty($sequence)) {\n        return ['valid' => false, 'error' => 'Sequence is empty'];\n    }\n    \n    // If sequence doesn't start with >, add a header\n    if ($sequence[0] !== '>') {\n        $sequence = \">query_sequence\\n\" . $sequence;\n    }\n    \n    // Basic FASTA format validation\n    $lines = explode(\"\\n\", $sequence);\n    $in_header = true;\n    $seq_count = 0;\n    \n    foreach ($lines as $line) {\n        $line = trim($line);\n        if (empty($line)) {\n            continue;\n        }\n        \n        if ($line[0] === '>') {\n            if (!$in_header && $seq_count === 0) {\n                return ['valid' => false, 'error' => 'Invalid FASTA format: sequence expected before header'];\n            }\n            $in_header = true;\n            $seq_count = 0;\n        } else {\n            if ($in_header) {\n                $in_header = false;\n            }\n            $seq_count += strlen($line);\n        }\n    }\n    \n    if ($seq_count === 0) {\n        return ['valid' => false, 'error' => 'No sequence data found'];\n    }\n    \n    return ['valid' => true, 'error' => ''];\n}",
                     "parameters": [
@@ -300,7 +300,7 @@
                 },
                 {
                     "name": "validateBlastIndexFiles",
-                    "line": 592,
+                    "line": 593,
                     "comment": "/**\n* Validate BLAST index files for FASTA sequences\n* Checks if BLAST databases have their index files (.nhr, .nin, .nsq for nucleotide, .phr, .pin, .psq for protein)\n* @param string $assembly_path Path to assembly directory\n* @param array $sequence_types Configured sequence types\n* @return array Array with 'databases' containing status of each FASTA file\n*/",
                     "code": "function validateBlastIndexFiles($assembly_path, $sequence_types = []) {\n    $result = [\n        'databases' => [],\n        'missing_count' => 0,\n        'total_count' => 0\n    ];\n    \n    if (!is_dir($assembly_path)) {\n        return $result;\n    }\n    \n    // Map sequence types to BLAST index extensions\n    $type_mapping = [\n        'protein' => ['name' => 'Protein', 'extensions' => ['phr', 'pin', 'psq']],\n        'cds' => ['name' => 'CDS', 'extensions' => ['nhr', 'nin', 'nsq']],\n        'transcript' => ['name' => 'Transcript', 'extensions' => ['nhr', 'nin', 'nsq']],\n    ];\n    \n    // Check for each configured sequence type\n    if (!empty($sequence_types)) {\n        foreach ($sequence_types as $seq_type => $config) {\n            $pattern = $config['pattern'] ?? '';\n            if (empty($pattern)) {\n                continue;\n            }\n            \n            $file_path = \"$assembly_path/$pattern\";\n            \n            // Only check if FASTA file exists\n            if (!file_exists($file_path)) {\n                continue;\n            }\n            \n            $result['total_count']++;\n            $type_info = $type_mapping[$seq_type] ?? null;\n            \n            // If not in mapping, detect from pattern\n            if (!$type_info) {\n                $is_protein = strpos($pattern, 'protein') !== false;\n                $extensions = $is_protein ? ['phr', 'pin', 'psq'] : ['nhr', 'nin', 'nsq'];\n                $type_info = ['name' => ucfirst($seq_type), 'extensions' => $extensions];\n            }\n            \n            $db_entry = [\n                'type' => $seq_type,\n                'name' => $type_info['name'],\n                'fasta' => basename($file_path),\n                'fasta_path' => $file_path,\n                'has_indexes' => true,\n                'missing_indexes' => []\n            ];\n            \n            // Check for all required index files\n            foreach ($type_info['extensions'] as $ext) {\n                $index_file = \"$file_path.$ext\";\n                if (!file_exists($index_file)) {\n                    $db_entry['has_indexes'] = false;\n                    $db_entry['missing_indexes'][] = $ext;\n                }\n            }\n            \n            if (!$db_entry['has_indexes']) {\n                $result['missing_count']++;\n            }\n            \n            $result['databases'][] = $db_entry;\n        }\n    }\n    \n    return $result;\n}",
                     "parameters": [
@@ -354,7 +354,7 @@
                 },
                 {
                     "name": "checkAssemblyCanGenerateBlast",
-                    "line": 672,
+                    "line": 673,
                     "comment": "/**\n* Check if assembly directory and FASTA files are readable/writable by web server\n* This is more comprehensive than checkAssemblyWritableForBlast\n*\n* @param string $assembly_path Path to assembly directory\n* @param array $fasta_files Array of FASTA filenames to check readability\n* @return array Array with 'writable' boolean and 'message' string\n*/",
                     "code": "function checkAssemblyCanGenerateBlast($assembly_path, $fasta_files = []) {\n    $result = [\n        'writable' => false,\n        'message' => '',\n        'can_execute' => false\n    ];\n    \n    if (!is_dir($assembly_path)) {\n        $result['message'] = 'Assembly directory does not exist';\n        return $result;\n    }\n    \n    // Check if directory is readable and writable\n    if (!is_readable($assembly_path)) {\n        $result['message'] = 'Assembly directory is not readable by web server';\n        return $result;\n    }\n    \n    if (!is_writable($assembly_path)) {\n        $result['message'] = 'Assembly directory is not writable by web server (FASTA index files cannot be created)';\n        return $result;\n    }\n    \n    // Check if FASTA files are readable by web server\n    foreach ($fasta_files as $fasta_file) {\n        $fasta_path = $assembly_path . '/' . $fasta_file;\n        if (file_exists($fasta_path) && !is_readable($fasta_path)) {\n            $result['message'] = 'FASTA file is not readable by web server: ' . htmlspecialchars($fasta_file);\n            return $result;\n        }\n    }\n    \n    // Check if we can execute commands (shell_exec or exec available)\n    if (!function_exists('shell_exec') && !function_exists('exec')) {\n        $result['message'] = 'PHP shell execution functions are disabled on this server';\n        return $result;\n    }\n    \n    $result['writable'] = true;\n    $result['can_execute'] = true;\n    $result['message'] = 'Ready to generate BLAST indexes';\n    \n    return $result;\n}",
                     "parameters": [
@@ -393,7 +393,7 @@
                 },
                 {
                     "name": "checkAssemblyWritableForBlast",
-                    "line": 666,
+                    "line": 667,
                     "comment": "/**\n* Check if assembly directory is writable by web server for running makeblastdb\n*\n* @param string $assembly_path Path to assembly directory\n* @return array Array with 'writable' boolean and 'message' string\n*/",
                     "code": "function checkAssemblyWritableForBlast($assembly_path) {\n    $result = [\n        'writable' => false,\n        'message' => '',\n        'can_execute' => false\n    ];\n    \n    if (!is_dir($assembly_path)) {\n        $result['message'] = 'Assembly directory does not exist';\n        return $result;\n    }\n    \n    // Check if directory is readable and writable\n    if (!is_readable($assembly_path)) {\n        $result['message'] = 'Assembly directory is not readable by web server';\n        return $result;\n    }\n    \n    if (!is_writable($assembly_path)) {\n        $result['message'] = 'Assembly directory is not writable by web server (FASTA index files cannot be created)';\n        return $result;\n    }\n    \n    // Check if we can execute commands (shell_exec or exec available)\n    if (!function_exists('shell_exec') && !function_exists('exec')) {\n        $result['message'] = 'PHP shell execution functions are disabled on this server';\n        return $result;\n    }\n    \n    $result['writable'] = true;\n    $result['can_execute'] = true;\n    $result['message'] = 'Ready to generate BLAST indexes';\n    \n    return $result;\n}",
                     "parameters": [
@@ -419,14 +419,14 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/blast_functions.php",
-                            "line": 803,
+                            "line": 804,
                             "context": "$perm_check = checkAssemblyWritableForBlast($assembly_path);"
                         }
                     ]
                 },
                 {
                     "name": "generateBlastIndexes",
-                    "line": 768,
+                    "line": 769,
                     "comment": "/**\n* Generate BLAST indexes for a FASTA file\n*\n* @param string $organism Organism name\n* @param string $assembly Assembly name\n* @param string $fasta_filename FASTA filename\n* @param string $organism_data_path Path to organism data directory\n* @return array Array with 'success' boolean, 'message', and 'output'\n*/",
                     "code": "function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_data_path) {\n    $result = [\n        'success' => false,\n        'message' => '',\n        'output' => '',\n        'errors' => ''\n    ];\n    \n    // Validate inputs\n    if (empty($organism) || empty($assembly) || empty($fasta_filename)) {\n        $result['message'] = 'Missing required parameters';\n        return $result;\n    }\n    \n    // Prevent directory traversal attacks\n    if (strpos($organism, '/') !== false || strpos($assembly, '/') !== false || strpos($fasta_filename, '/') !== false) {\n        $result['message'] = 'Invalid characters in parameters';\n        return $result;\n    }\n    \n    $assembly_path = $organism_data_path . '/' . $organism . '/' . $assembly;\n    $fasta_path = $assembly_path . '/' . $fasta_filename;\n    \n    // Verify paths exist\n    if (!is_dir($assembly_path)) {\n        $result['message'] = 'Assembly directory does not exist';\n        return $result;\n    }\n    \n    if (!file_exists($fasta_path)) {\n        $result['message'] = 'FASTA file does not exist';\n        return $result;\n    }\n    \n    // Check permissions\n    $perm_check = checkAssemblyWritableForBlast($assembly_path);\n    if (!$perm_check['writable']) {\n        $result['message'] = $perm_check['message'];\n        return $result;\n    }\n    \n    // Determine database type\n    $is_protein = strpos($fasta_filename, 'protein') !== false;\n    $db_type = $is_protein ? 'prot' : 'nucl';\n    \n    // Build command with configurable path to makeblastdb\n    $config = ConfigManager::getInstance();\n    $blast_tools = $config->getArray('blast_tools', []);\n    $makeblastdb_path = $blast_tools['makeblastdb'] ?? 'makeblastdb';\n    $cd_cmd = 'cd ' . escapeshellarg($assembly_path);\n    // Don't use escapeshellarg for the filename since we're already in the directory\n    $makeblastdb_cmd = $makeblastdb_path . ' -in ' . $fasta_filename . ' -dbtype ' . $db_type . ' -parse_seqids 2>&1';\n    $full_cmd = $cd_cmd . ' && ' . $makeblastdb_cmd;\n    \n    // Execute command\n    try {\n        if (function_exists('shell_exec')) {\n            $output = shell_exec($full_cmd);\n            $result['output'] = $output;\n            \n            // Give filesystem a moment to catch up\n            sleep(2);\n            \n            // Debug: log what we're checking for\n            $debug_info = [];\n            \n            // Check if indexes were created\n            $index_ext = $is_protein ? ['phr', 'pin', 'psq'] : ['nhr', 'nin', 'nsq'];\n            $all_created = true;\n            $missing = [];\n            foreach ($index_ext as $ext) {\n                $index_file = $fasta_path . '.' . $ext;\n                $exists = file_exists($index_file);\n                $debug_info[] = $ext . ': ' . ($exists ? 'EXISTS' : 'MISSING') . ' (' . $index_file . ')';\n                if (!$exists) {\n                    $all_created = false;\n                    $missing[] = $ext;\n                }\n            }\n            \n            if ($all_created) {\n                $result['success'] = true;\n                $result['message'] = 'BLAST indexes created successfully';\n            } else {\n                $result['message'] = 'Missing index files: ' . implode(', ', $missing) . '. Debug: ' . implode(' | ', $debug_info) . ' Command: ' . $full_cmd . ' Output: ' . $output;\n                $result['errors'] = $output;\n            }\n        } else {\n            $result['message'] = 'Shell execution not available';\n        }\n    } catch (Exception $e) {\n        $result['message'] = 'Error executing command: ' . $e->getMessage();\n    }\n    \n    return $result;\n}",
                     "parameters": [
@@ -6280,36 +6280,11 @@
         },
         {
             "name": "lib/functions_validation.php",
-            "count": 7,
+            "count": 6,
             "functions": [
                 {
-                    "name": "test_input",
-                    "line": 23,
-                    "comment": "/**\n* Sanitize user input - remove dangerous characters\n*\n* DEPRECATED: Use context-specific sanitization instead:\n* - For database queries: Use prepared statements with parameter binding\n* - For HTML output: Use htmlspecialchars() at the point of output\n* - For URL parameters: Use urlencode()/urldecode() as needed\n*\n* This function is kept for backwards compatibility but combines multiple\n* concerns and is typically misused. It applies both raw character removal\n* and HTML escaping, which should be handled separately based on context.\n*\n* @param string $data - Raw user input\n* @return string - Sanitized string with < > removed and HTML entities escaped\n* @deprecated Use prepared statements and context-specific escaping\n*/",
-                    "code": "function test_input($data) {\n    $data = stripslashes($data);\n    $data = preg_replace('/[\\<\\>]+/', '', $data);\n    $data = htmlspecialchars($data);\n    return $data;\n}",
-                    "parameters": [
-                        {
-                            "name": "data",
-                            "type": "string",
-                            "description": "Raw user input"
-                        }
-                    ],
-                    "returnType": "string",
-                    "returnDescription": "Sanitized string with < > removed and HTML entities escaped",
-                    "internalCalls": [
-                        "test_input"
-                    ],
-                    "category": "utility",
-                    "tags": [
-                        "readonly",
-                        "recursive"
-                    ],
-                    "usageCount": 0,
-                    "usages": []
-                },
-                {
                     "name": "sanitize_search_input",
-                    "line": 40,
+                    "line": 17,
                     "comment": "/**\n* Sanitize search input specifically for use in database search queries\n*\n* This function handles search-specific sanitization that removes or escapes\n* characters that could interfere with search functionality while preserving\n* useful search characters like spaces, quotes, and basic punctuation.\n*\n* @param string $input - Raw search input from user\n* @return string - Sanitized search string safe for database queries\n*/",
                     "code": "function sanitize_search_input($input, $quoted_search = false) {\n    // Remove null bytes and control characters\n    $input = preg_replace('/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/', '', $input);\n    \n    // Trim whitespace\n    $input = trim($input);\n    \n    // Remove quotes if this is a quoted search - they will be removed before passing to database\n    if ($quoted_search) {\n        $input = trim($input, '\"');\n    }\n    \n    // Remove excessive whitespace (multiple spaces become single space)\n    $input = preg_replace('/\\s+/', ' ', $input);\n    \n    return $input;\n}",
                     "parameters": [
@@ -6333,7 +6308,7 @@
                     "usages": [
                         {
                             "file": "/data/moop/lib/functions_validation.php",
-                            "line": 69,
+                            "line": 46,
                             "context": "$term = sanitize_search_input($term);"
                         },
                         {
@@ -6345,7 +6320,7 @@
                 },
                 {
                     "name": "validate_search_term",
-                    "line": 68,
+                    "line": 45,
                     "comment": "/**\n* Validate a search term for safety and usability\n*\n* Checks that a search term meets minimum requirements and doesn't contain\n* problematic patterns that could cause issues with database queries or\n* return meaningless results.\n*\n* @param string $term - Search term to validate\n* @return array - Validation result with 'valid' boolean and 'error' message\n*/",
                     "code": "function validate_search_term($term) {\n    $term = sanitize_search_input($term);\n    \n    if (empty($term)) {\n        return ['valid' => false, 'error' => 'Search term cannot be empty'];\n    }\n    \n    if (strlen($term) < 2) {\n        return ['valid' => false, 'error' => 'Search term must be at least 2 characters long'];\n    }\n    \n    if (strlen($term) > 100) {\n        return ['valid' => false, 'error' => 'Search term too long (maximum 100 characters)'];\n    }\n    \n    // Check for patterns that might cause performance issues\n    if (preg_match('/^[%_*]+$/', $term)) {\n        return ['valid' => false, 'error' => 'Search term cannot consist only of wildcards'];\n    }\n    \n    return ['valid' => true, 'term' => $term];\n}",
                     "parameters": [
@@ -6372,7 +6347,7 @@
                 },
                 {
                     "name": "is_quoted_search",
-                    "line": 97,
+                    "line": 74,
                     "comment": "/**\n* Check if a search term is quoted (surrounded by quotes)\n*\n* @param string $term - Search term to check\n* @return bool - True if term is quoted, false otherwise\n*/",
                     "code": "function is_quoted_search($term) {\n    $term = trim($term);\n    return (strlen($term) >= 2 && \n            (($term[0] === '\"' && $term[-1] === '\"') ||\n             ($term[0] === \"'\" && $term[-1] === \"'\")));\n}",
                     "parameters": [
@@ -6397,9 +6372,9 @@
                 },
                 {
                     "name": "validateOrganismParam",
-                    "line": 112,
+                    "line": 89,
                     "comment": "/**\n* Validate and extract organism parameter from GET/POST\n* Redirects to home if missing/empty\n*\n* @param string $organism_name Organism name to validate\n* @param string $redirect_on_empty URL to redirect to if empty (default: /moop/index.php)\n* @return string Validated organism name\n*/",
-                    "code": "function validateOrganismParam($organism_name, $redirect_on_empty = '/moop/index.php') {\n    if (empty($organism_name)) {\n        header(\"Location: $redirect_on_empty\");\n        exit;\n    }\n    return $organism_name;\n}",
+                    "code": "function validateOrganismParam($organism_name, $redirect_on_empty = null) {\n    if (empty($organism_name)) {\n        if ($redirect_on_empty === null) {\n            $site = ConfigManager::getInstance()->getString('site');\n            $redirect_on_empty = \"/$site/index.php\";\n        }\n        header(\"Location: $redirect_on_empty\");\n        exit;\n    }\n    return $organism_name;\n}",
                     "parameters": [
                         {
                             "name": "organism_name",
@@ -6438,9 +6413,9 @@
                 },
                 {
                     "name": "validateAssemblyParam",
-                    "line": 128,
-                    "comment": "/**\n* Validate and extract assembly parameter from GET/POST\n* Redirects to home if missing/empty\n*\n* @param string $assembly Assembly accession to validate\n* @param string $redirect_on_empty URL to redirect to if empty\n* @return string Validated assembly name\n*/",
-                    "code": "function validateAssemblyParam($assembly, $redirect_on_empty = '/moop/index.php') {\n    if (empty($assembly)) {\n        header(\"Location: $redirect_on_empty\");\n        exit;\n    }\n    return $assembly;\n}",
+                    "line": 109,
+                    "comment": "/**\n* Validate and extract assembly parameter from GET/POST\n* Redirects to home if missing/empty\n*\n* @param string $assembly Assembly accession to validate\n* @param string|null $redirect_on_empty URL to redirect to if empty (default: /{site}/index.php)\n* @return string Validated assembly name\n*/",
+                    "code": "function validateAssemblyParam($assembly, $redirect_on_empty = null) {\n    if (empty($assembly)) {\n        if ($redirect_on_empty === null) {\n            $site = ConfigManager::getInstance()->getString('site');\n            $redirect_on_empty = \"/$site/index.php\";\n        }\n        header(\"Location: $redirect_on_empty\");\n        exit;\n    }\n    return $assembly;\n}",
                     "parameters": [
                         {
                             "name": "assembly",
@@ -6449,8 +6424,8 @@
                         },
                         {
                             "name": "redirect_on_empty",
-                            "type": "string",
-                            "description": "URL to redirect to if empty"
+                            "type": "string|null",
+                            "description": "URL to redirect to if empty (default: /{site}/index.php)"
                         }
                     ],
                     "returnType": "string",
@@ -6474,7 +6449,7 @@
                 },
                 {
                     "name": "decodeAnnotationText",
-                    "line": 145,
+                    "line": 130,
                     "comment": "/**\n* Decode URL-encoded annotation/description text for display\n* Converts %3D back to =, %3B back to ;, etc.\n*\n* Used when displaying descriptions/annotations from database that were\n* URL-encoded for GFF file storage.\n*\n* @param string $text - URL-encoded text from database\n* @return string - Decoded, readable text\n*/",
                     "code": "function decodeAnnotationText($text) {\n    if (empty($text)) {\n        return $text;\n    }\n    // Decode URL-encoded characters: %XX -> character\n    return preg_replace_callback('/%([0-9A-F]{2})/i', function($matches) {\n        return chr(hexdec($matches[1]));\n    }, $text);\n}",
                     "parameters": [
@@ -6504,14 +6479,69 @@
                         {
                             "file": "/data/moop/tools/annotation_search_ajax.php",
                             "line": 131,
-                            "context": "'feature_description' => decodeAnnotationText($row['feature_description'] ?? ''),"
+                            "context": "'feature_description' => htmlspecialchars(decodeAnnotationText($row['feature_description'] ?? ''), ENT_QUOTES, 'UTF-8'),"
                         },
                         {
                             "file": "/data/moop/tools/annotation_search_ajax.php",
                             "line": 135,
-                            "context": "'annotation_description' => decodeAnnotationText($row['annotation_description'] ?? ''),"
+                            "context": "'annotation_description' => htmlspecialchars(decodeAnnotationText($row['annotation_description'] ?? ''), ENT_QUOTES, 'UTF-8'),"
                         }
                     ]
+                }
+            ]
+        },
+        {
+            "name": "lib/housekeeping.php",
+            "count": 2,
+            "functions": [
+                {
+                    "name": "run_housekeeping",
+                    "line": 6,
+                    "comment": "/**\n* Run all housekeeping tasks (once per session).\n*/",
+                    "code": "function run_housekeeping() {\n    if (!empty($_SESSION['housekeeping_done'])) {\n        return;\n    }\n    $_SESSION['housekeeping_done'] = true;\n\n    // \u2500\u2500 Task registry \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n    // Each entry: ['name' => string, 'fn' => callable]\n    // Tasks should be fast and safe to skip on failure.\n    $tasks = [\n        ['name' => 'clean_temp_files',  'fn' => 'housekeeping_clean_temp_files'],\n    ];\n\n    foreach ($tasks as $task) {\n        try {\n            call_user_func($task['fn']);\n        } catch (\\Throwable $e) {\n            error_log('MOOP housekeeping task \"' . $task['name'] . '\" failed: ' . $e->getMessage());\n        }\n    }\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "run_housekeeping"
+                    ],
+                    "category": "utility",
+                    "tags": [
+                        "readonly",
+                        "error-handling",
+                        "loops",
+                        "recursive"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "/data/moop/admin/admin_init.php",
+                            "line": 61,
+                            "context": "run_housekeeping();"
+                        }
+                    ]
+                },
+                {
+                    "name": "housekeeping_clean_temp_files",
+                    "line": 29,
+                    "comment": "/**\n* Delete stale temp files created by BLAST, MAFFT, and other tools.\n*\n* Targets files older than 24 hours with known prefixes in the system\n* temp directory. These accumulate when PHP processes crash mid-run.\n*/",
+                    "code": "function housekeeping_clean_temp_files() {\n    $tmp_dir = sys_get_temp_dir();\n    $max_age = 86400; // 24 hours in seconds\n    $now     = time();\n    $deleted = 0;\n\n    // Prefixes used by tempnam() calls throughout the codebase\n    $prefixes = [\n        'blast_',         // blast_functions.php \u2014 archive output\n        'blast_xml_',     // blast_functions.php \u2014 XML conversion\n        'blast_pairwise_',// blast_functions.php \u2014 pairwise conversion\n        'blastdb_',       // blast_functions.php \u2014 batch sequence extraction\n        'mafft_',         // galaxy/mafft.php    \u2014 MAFFT alignment input\n        'galaxy_seqs_',   // galaxy testing\n    ];\n\n    foreach ($prefixes as $prefix) {\n        $pattern = $tmp_dir . '/' . $prefix . '*';\n        $files = glob($pattern);\n        if (!is_array($files)) {\n            continue;\n        }\n        foreach ($files as $file) {\n            if (!is_file($file)) {\n                continue;\n            }\n            $age = $now - filemtime($file);\n            if ($age > $max_age) {\n                @unlink($file);\n                $deleted++;\n            }\n        }\n    }\n\n    if ($deleted > 0) {\n        error_log(\"MOOP housekeeping: cleaned up $deleted stale temp file(s)\");\n    }\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "housekeeping_clean_temp_files"
+                    ],
+                    "category": "filesystem",
+                    "tags": [
+                        "mutation",
+                        "error-handling",
+                        "file-io",
+                        "loops",
+                        "recursive"
+                    ],
+                    "usageCount": 0,
+                    "usages": []
                 }
             ]
         },
@@ -7345,7 +7375,7 @@
         {
             "name": "filterDatabasesByProgram",
             "file": "lib/blast_functions.php",
-            "line": 72
+            "line": 73
         },
         {
             "name": "generateBlastGraphicalView",
@@ -7423,19 +7453,19 @@
             "line": 299
         },
         {
-            "name": "test_input",
-            "file": "lib/functions_validation.php",
-            "line": 23
-        },
-        {
             "name": "validate_search_term",
             "file": "lib/functions_validation.php",
-            "line": 68
+            "line": 45
         },
         {
             "name": "is_quoted_search",
             "file": "lib/functions_validation.php",
-            "line": 97
+            "line": 74
+        },
+        {
+            "name": "housekeeping_clean_temp_files",
+            "file": "lib/housekeeping.php",
+            "line": 29
         },
         {
             "name": "getAllTools",

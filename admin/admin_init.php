@@ -45,6 +45,7 @@ $site = $config->getString('site');
 include_once __DIR__ . '/../lib/moop_functions.php';
 include_once __DIR__ . '/../lib/functions_display.php';
 include_once __DIR__ . '/../lib/functions_filesystem.php';
+include_once __DIR__ . '/../lib/housekeeping.php';
 
 // CSRF protection - verify token on every POST request.
 // This covers all admin pages and admin API endpoints in one place.
@@ -55,5 +56,8 @@ include_once __DIR__ . '/../lib/functions_filesystem.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_protect(/* json_response: */ isset($_SERVER['HTTP_X_CSRF_TOKEN']) || isset($_SERVER['HTTP_X_REQUESTED_WITH']));
 }
+
+// Run lightweight maintenance tasks (once per session, non-blocking)
+run_housekeeping();
 
 ?>

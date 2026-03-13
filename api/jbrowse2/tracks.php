@@ -34,6 +34,12 @@ $TRACKS_BASE_DIR = __DIR__ . '/../../data/tracks';
 
 // Get parameters
 $file = $_GET['file'] ?? '';
+// SECURITY NOTE: JWT token is passed as a URL query parameter because JBrowse2
+// initiates track data requests internally and does not support custom
+// Authorization headers on those requests. This means tokens appear in server
+// access logs and browser history. This is a known JBrowse2 architectural
+// constraint. Tokens are short-lived to limit exposure. If a future JBrowse2
+// version supports custom headers for track requests, migrate to that approach.
 $token = $_GET['token'] ?? '';
 
 // 1. VALIDATE FILE PARAMETER

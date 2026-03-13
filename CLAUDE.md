@@ -52,6 +52,7 @@ moop/
 │   ├── functions_validation.php Input validation helpers
 │   ├── functions_login_protection.php  Brute-force login protection
 │   ├── functions_system.php    handleAdminAjax(), file permission helpers
+│   ├── housekeeping.php        Maintenance tasks that run once per admin session
 │   └── JBrowse/            JBrowse track management classes
 ├── tools/              Public/authenticated user-facing pages (controllers)
 │   ├── tool_init.php       Bootstrap for all tool pages (ONE include at top)
@@ -201,6 +202,18 @@ $stmt->execute([$feature_id]);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ```
 Never use `$dbh->query()` with user-supplied values interpolated in.
+
+### 9. Housekeeping — Automatic Maintenance Tasks
+
+`lib/housekeeping.php` runs lightweight maintenance tasks once per admin session
+(called from `admin_init.php`). No cron jobs or external setup required.
+
+**Adding a new housekeeping task:**
+1. Write a function in `lib/housekeeping.php` (keep it fast — no network calls)
+2. Add it to the `$tasks` array in `run_housekeeping()`
+
+Current tasks:
+- `housekeeping_clean_temp_files` — deletes stale BLAST/MAFFT temp files (>24h old)
 
 ---
 
