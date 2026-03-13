@@ -32,6 +32,7 @@ $organisms = loadAllOrganismsMetadata($organism_data_dir);
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_protect();
     if (isset($_POST['action'])) {
         if ($file_write_error) {
             $error = "File is not writable. Please fix permissions first.";

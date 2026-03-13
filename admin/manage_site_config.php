@@ -8,10 +8,16 @@
 
 // Handle banner operations via AJAX BEFORE including admin_init (which includes navbar/HTML)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // These handlers run before admin_init.php to avoid HTML output contamination.
+    // We bootstrap the minimum needed for CSRF + auth verification manually.
+    if (session_status() === PHP_SESSION_NONE) { session_start(); }
+    include_once __DIR__ . '/../includes/config_init.php';
+    include_once __DIR__ . '/admin_access_check.php';  // redirects if not admin
+    csrf_protect(true);                                // exits with JSON on failure
+
     // Handle banner deletion
     if (isset($_POST['action']) && $_POST['action'] === 'delete_banner') {
-        // Minimal init just for config
-        include_once __DIR__ . '/../includes/ConfigManager.php';
+        // Config already loaded above
         $config = ConfigManager::getInstance();
         $config->initialize(__DIR__ . '/../config/site_config.php', __DIR__ . '/../config/tools_config.php');
         
@@ -38,11 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Handle banner upload via AJAX
     if (isset($_POST['action']) && $_POST['action'] === 'upload_banner') {
-        // Minimal init just for config
-        include_once __DIR__ . '/../includes/ConfigManager.php';
+        // Config already loaded above
         $config = ConfigManager::getInstance();
-        $config->initialize(__DIR__ . '/../config/site_config.php', __DIR__ . '/../config/tools_config.php');
-        
         $banners_path = $config->getPath('absolute_images_path') . '/banners';
         
         // Create banners directory if it doesn't exist

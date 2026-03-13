@@ -7,8 +7,8 @@
             "description": "Homologous genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called <strong>orthologs<\/strong>. Genes separated by gene duplication events are called paralogs.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 367018,
-            "feature_count": 142613,
+            "annotation_count": 398748,
+            "feature_count": 186942,
             "synonyms": [
                 "Orthology"
             ],
@@ -21,8 +21,8 @@
             "description": "<strong>Homologous<\/strong> genes become separated in evolution in two different ways: separation of two populations with the ancestral gene into two species or gene duplication of the ancestral gene within a lineage. Genes separated by speciation are called orthologs. Genes separated by gene duplication events are called paralogs.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 1009358,
-            "feature_count": 138934
+            "annotation_count": 1349771,
+            "feature_count": 182433
         },
         "AI Annotations": {
             "display_name": "AI Annotations",
@@ -31,8 +31,8 @@
             "description": "AI-based protein function prediction uses computational techniques, such as machine learning and protein sequence language models to infer the biological roles of proteins from their sequences. So far Sofia doesn't love these.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 62184,
-            "feature_count": 129986,
+            "annotation_count": 80610,
+            "feature_count": 168901,
             "synonyms": [
                 "ProtNLM"
             ],
@@ -45,8 +45,8 @@
             "description": "Protein domains are conserved structural and functional units that can evolve, function, and exist independently. Domain annotations identify these conserved regions using databases like InterPro, Pfam, and SMART.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 82071,
-            "feature_count": 157316,
+            "annotation_count": 111710,
+            "feature_count": 207376,
             "synonyms": [
                 "Protein Domains"
             ]
@@ -58,8 +58,8 @@
             "description": "Gene Ontology (GO) provides a controlled vocabulary to describe gene products in terms of their biological processes, cellular components, and molecular functions in a species-independent manner.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 143045,
-            "feature_count": 129142
+            "annotation_count": 184169,
+            "feature_count": 170648
         },
         "Gene Families": {
             "display_name": "Gene Families",
@@ -68,8 +68,8 @@
             "description": "Gene families are groups of genes that share similar sequences and often similar functions, typically arising from gene duplication events. Examples include PANTHER, TreeFam, and other classification systems.",
             "enabled": true,
             "in_database": true,
-            "annotation_count": 97072,
-            "feature_count": 140554
+            "annotation_count": 130866,
+            "feature_count": 185188
         },
         "Mapping": {
             "display_name": "Mapping",
@@ -110,8 +110,8 @@
             "enabled": true,
             "synonyms": [],
             "in_database": true,
-            "annotation_count": 54082,
-            "feature_count": 17141,
+            "annotation_count": 134632,
+            "feature_count": 61535,
             "new": true
         }
     },
@@ -209,5 +209,5 @@
         "Aliases",
         "Publications"
     ],
-    "sqlite_mod_time": 1769118845
+    "sqlite_mod_time": 1770749504
 }

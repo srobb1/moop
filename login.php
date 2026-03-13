@@ -11,6 +11,7 @@ session_start();
 include_once __DIR__ . '/includes/config_init.php';
 include_once __DIR__ . '/includes/access_control.php';
 include_once __DIR__ . '/includes/layout.php';
+include_once __DIR__ . '/lib/functions_login_protection.php';
 
 $config = ConfigManager::getInstance();
 $usersFile = $config->getPath('users_file');
@@ -21,10 +22,20 @@ $error = "";
 
 // Process login form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $username = $_POST["username"] ?? '';
-    $password = $_POST["password"] ?? '';
+    csrf_protect();
 
-    if (isset($users[$username]) && password_verify($password, $users[$username]["password"])) {
+    $username   = $_POST["username"] ?? '';
+    $password   = $_POST["password"] ?? '';
+    $visitor_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+
+    // Check for lockout / rate-limiting before touching the password
+    $lockout = check_login_lockout($username, $visitor_ip);
+    if ($lockout['locked']) {
+        $error = $lockout['message'];
+    } elseif (isset($users[$username]) && password_verify($password, $users[$username]["password"])) {
+        // Successful login: clear failure counters and regenerate session
+        reset_login_failures($username, $visitor_ip);
+        session_regenerate_id(true);
         // Store login info in session
         $_SESSION["logged_in"] = true;
         $_SESSION["username"] = $username;
@@ -41,6 +52,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         header("Location: index.php");
         exit;
     } else {
+        record_login_failure($username, $visitor_ip);
         $error = "Invalid username or password.";
     }
 }

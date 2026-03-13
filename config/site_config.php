@@ -64,7 +64,8 @@ return [
     'header_img' => 'header_img.png',
     'banners_path' => "$site_path/images/banners",
     'favicon_filename' => 'favicon.ico',  // Changed in config_editable.json if customized
-    'custom_css_path' => "$site_path/css/custom.css",
+    'custom_css_path' => "$site_path/css/custom.css",  // Filesystem path (for file_exists check)
+    'custom_css_url'  => "/$site/css/custom.css",      // Web URL (for <link href>)
     
     // ======== OPTIONAL: Contact ========
     // EDITABLE in Admin Dashboard: Use "Manage Site Configuration" to change these
@@ -75,10 +76,21 @@ return [
     'error_log_file' => "$site_path/logs/error.log",
     
     // ======== OPTIONAL: IP-Based Auto-Login ========
-    // IP ranges for automatic login with full access (development/local testing)
-    // Format: Array of ranges with 'start' and 'end' IP addresses
-    // Leave empty array to disable IP-based auto-login
-    // Example: ['127.0.0.0', '127.0.0.255'] for localhost range
+    // IP ranges for automatic login with full access (e.g., institutional/campus networks)
+    // Format: Array of ranges, each with 'start' and 'end' IP addresses (IPv4 only)
+    // Leave empty array [] to disable IP-based auto-login
+    //
+    // ⚠️  SECURITY REQUIREMENTS - read before enabling:
+    // 1. Only safe when this server is NOT behind a reverse proxy (nginx, Apache proxy,
+    //    AWS load balancer, Cloudflare, etc.). Behind a proxy, REMOTE_ADDR will be the
+    //    proxy's IP, not the real visitor's IP - auto-login may grant access to everyone.
+    // 2. Never configure this to include broad public IP ranges.
+    // 3. These IPs get full COLLABORATOR access to ALL assemblies (not admin panel).
+    // 4. The server error log will warn if HTTP_X_FORWARDED_FOR is detected while this
+    //    is enabled - check your logs after deployment to confirm correct behavior.
+    //
+    // Example: campus network 10.0.0.0 - 10.0.255.255
+    //   ['start' => '10.0.0.0', 'end' => '10.0.255.255']
     'auto_login_ip_ranges' => [
         [
             'start' => '127.0.0.11',

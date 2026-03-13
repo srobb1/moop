@@ -61,6 +61,18 @@ if (!empty($genome_directory)) {
     $assembly_dir = "$organism_data/$organism/$genome_directory";
 }
 
+// Prevent path traversal: resolve the real path and confirm it stays within organism_data.
+// realpath() works on filesystem paths (not web URLs) and resolves any ../ sequences.
+$real_organism_data = realpath($organism_data);
+$real_assembly_dir  = realpath($assembly_dir);
+
+if ($real_organism_data === false || $real_assembly_dir === false ||
+    strpos($real_assembly_dir, $real_organism_data . DIRECTORY_SEPARATOR) !== 0) {
+    http_response_code(400);
+    die('Error: Invalid assembly path.');
+}
+$assembly_dir = $real_assembly_dir;
+
 if (!is_dir($assembly_dir)) {
     http_response_code(404);
     die('Error: Assembly directory not found.');
@@ -89,7 +101,7 @@ $file_size = filesize($fasta_file);
 
 // Send download headers
 header('Content-Type: application/octet-stream');
-header("Content-Disposition: attachment; filename={$filename}");
+header("Content-Disposition: attachment; filename=\"" . addcslashes($filename, '"\\') . "\"");
 header('Content-Length: ' . $file_size);
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');

@@ -78,6 +78,7 @@
 
             <!-- Configuration Cards -->
             <form method="post" id="configForm" enctype="multipart/form-data">
+                <?= csrf_input_field() ?>
                 <input type="hidden" name="action" value="save_config">
                 
                 <!-- Site Title Card -->

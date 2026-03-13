@@ -5,29 +5,6 @@
  */
 
 /**
- * Sanitize user input - remove dangerous characters
- * 
- * DEPRECATED: Use context-specific sanitization instead:
- * - For database queries: Use prepared statements with parameter binding
- * - For HTML output: Use htmlspecialchars() at the point of output
- * - For URL parameters: Use urlencode()/urldecode() as needed
- * 
- * This function is kept for backwards compatibility but combines multiple
- * concerns and is typically misused. It applies both raw character removal
- * and HTML escaping, which should be handled separately based on context.
- * 
- * @param string $data - Raw user input
- * @return string - Sanitized string with < > removed and HTML entities escaped
- * @deprecated Use prepared statements and context-specific escaping
- */
-function test_input($data) {
-    $data = stripslashes($data);
-    $data = preg_replace('/[\<\>]+/', '', $data);
-    $data = htmlspecialchars($data);
-    return $data;
-}
-
-/**
  * Sanitize search input specifically for use in database search queries
  * 
  * This function handles search-specific sanitization that removes or escapes
@@ -109,8 +86,12 @@ function is_quoted_search($term) {
  * @param string $redirect_on_empty URL to redirect to if empty (default: /moop/index.php)
  * @return string Validated organism name
  */
-function validateOrganismParam($organism_name, $redirect_on_empty = '/moop/index.php') {
+function validateOrganismParam($organism_name, $redirect_on_empty = null) {
     if (empty($organism_name)) {
+        if ($redirect_on_empty === null) {
+            $site = ConfigManager::getInstance()->getString('site');
+            $redirect_on_empty = "/$site/index.php";
+        }
         header("Location: $redirect_on_empty");
         exit;
     }
@@ -120,13 +101,17 @@ function validateOrganismParam($organism_name, $redirect_on_empty = '/moop/index
 /**
  * Validate and extract assembly parameter from GET/POST
  * Redirects to home if missing/empty
- * 
+ *
  * @param string $assembly Assembly accession to validate
- * @param string $redirect_on_empty URL to redirect to if empty
+ * @param string|null $redirect_on_empty URL to redirect to if empty (default: /{site}/index.php)
  * @return string Validated assembly name
  */
-function validateAssemblyParam($assembly, $redirect_on_empty = '/moop/index.php') {
+function validateAssemblyParam($assembly, $redirect_on_empty = null) {
     if (empty($assembly)) {
+        if ($redirect_on_empty === null) {
+            $site = ConfigManager::getInstance()->getString('site');
+            $redirect_on_empty = "/$site/index.php";
+        }
         header("Location: $redirect_on_empty");
         exit;
     }

@@ -128,11 +128,11 @@ foreach ($results as $row) {
         'feature_type' => $row['feature_type'],
         'feature_uniquename' => $row['feature_uniquename'],
         'feature_name' => $row['feature_name'] ?? '',
-        'feature_description' => decodeAnnotationText($row['feature_description'] ?? ''),
+        'feature_description' => htmlspecialchars(decodeAnnotationText($row['feature_description'] ?? ''), ENT_QUOTES, 'UTF-8'),
         'score' => $row['score'] ?? '',
         'annotation_source_name' => $row['annotation_source_name'] ?? '',
         'annotation_accession' => $row['annotation_accession'] ?? '',
-        'annotation_description' => decodeAnnotationText($row['annotation_description'] ?? ''),
+        'annotation_description' => htmlspecialchars(decodeAnnotationText($row['annotation_description'] ?? ''), ENT_QUOTES, 'UTF-8'),
         'genome_accession' => $row['genome_accession'] ?? '',
         'uniquename_search' => $uniquename_search
     ];

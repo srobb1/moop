@@ -752,8 +752,10 @@ class ConfigManager
         $trusted_servers = $this->getArray('jbrowse2.trusted_tracks_servers', []);
         
         foreach ($trusted_servers as $server) {
-            // Match if URL starts with trusted server
-            if (strpos($url, $server) === 0) {
+            // Normalize: strip trailing slash so comparison is consistent
+            $normalized = rtrim($server, '/');
+            // Match if URL IS the server, or starts with server/ (prevents https://trusted.com.evil.com bypass)
+            if ($url === $normalized || strpos($url, $normalized . '/') === 0) {
                 return true;
             }
         }

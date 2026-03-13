@@ -79,6 +79,7 @@ foreach ($groups_data as $data) {
 
 // Handle POST requests for updates, additions, and deletions
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    csrf_protect();
     $log_file = $metadata_path . '/change_log/manage_groups.log';
     $timestamp = date('Y-m-d H:i:s');
     $username = $_SESSION['username'] ?? 'unknown';

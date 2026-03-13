@@ -21,20 +21,21 @@ require_once __DIR__ . '/parent_functions.php';
  *   ]
  */
 function getBlastDatabases($assembly_path) {
-    global $sequence_types;
     $databases = [];
-    
+
     if (!is_dir($assembly_path)) {
         return $databases;
     }
-    
+
+    $sequence_types = ConfigManager::getInstance()->getArray('sequence_types');
+
     // Map sequence types to database info
     $type_mapping = [
         'protein' => ['name' => 'Protein', 'blast_type' => 'protein'],
         'cds' => ['name' => 'CDS', 'blast_type' => 'nucleotide'],
         'transcript' => ['name' => 'Transcript', 'blast_type' => 'nucleotide'],
     ];
-    
+
     // Check for each configured sequence type
     if (!empty($sequence_types)) {
         foreach ($sequence_types as $seq_type => $config) {

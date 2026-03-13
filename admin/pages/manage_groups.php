@@ -324,6 +324,7 @@
         </div>
         <div class="group-content" id="content-<?= htmlspecialchars($desc['group_name']) ?>" style="padding: 20px; display: none;">
           <form method="post" id="form-<?= htmlspecialchars($desc['group_name']) ?>">
+            <?= csrf_input_field() ?>
             <input type="hidden" name="save_description" value="1">
             <input type="hidden" name="group_name" value="<?= htmlspecialchars($desc['group_name']) ?>">
             <input type="hidden" name="images_json" id="images-json-<?= htmlspecialchars($desc['group_name']) ?>">

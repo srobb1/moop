@@ -3,22 +3,26 @@
 <?php
 /**
  * PAGE SETUP - Full Page Opening
- * 
+ *
+ * ⚠️  DEPRECATED — Do not use this file for new pages.
+ *    Use render_display_page() from includes/layout.php instead.
+ *    See CLAUDE.md § "The Template System" for the pattern.
+ *
+ *    Pages still using this file:
+ *      - tools/blast.php
+ *      - (add page name here when you find others)
+ *
+ * -------------------------------------------------------
  * Sets up the complete opening of an HTML page:
  * - Includes <!DOCTYPE html>
  * - Opens <html>, <head>, <body> tags
  * - Includes head-resources.php for CSS/JS/meta tags
  * - Includes navbar.php for navigation
  * - Starts PHP session and loads config
- * 
+ *
  * PAIRED WITH: footer.php (which closes the page)
- * 
+ *
  * DO NOT include this file alone - always pair with footer.php
- * 
- * USAGE:
- *   <?php include_once __DIR__ . '/includes/page-setup.php'; ?>
- *   <!-- Your page content here -->
- *   <?php include_once __DIR__ . '/includes/footer.php'; ?>
  */
 
 session_start();
@@ -43,7 +47,8 @@ include_once __DIR__ . '/access_control.php';
     <?php
       $custom_css_path = $config->getPath('custom_css_path');
       if ($custom_css_path && file_exists($custom_css_path)) {
-        echo "<link rel=\"stylesheet\" href=\"$custom_css_path\">";
+        $custom_css_url = $config->getString('custom_css_url');
+        echo '<link rel="stylesheet" href="' . htmlspecialchars($custom_css_url, ENT_QUOTES) . '">';
       }
     ?>
 
@@ -125,6 +130,8 @@ include_once __DIR__ . '/toolbar.php';
 
   </div>
 </div>
+
+<script src="/<?= $config->getString('site') ?>/js/modules/csrf.js"></script>
 
 <script>
   jQuery(document).ready(function() {

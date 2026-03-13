@@ -1,8 +1,8 @@
 {
     "metadata": {
-        "generated": "2026-02-02 19:01:06",
-        "totalFunctions": 135,
-        "totalFiles": 28,
+        "generated": "2026-03-10 18:12:48",
+        "totalFunctions": 164,
+        "totalFiles": 32,
         "duplicates": 0
     },
     "files": [
@@ -35,12 +35,13 @@
                             "context": "initGenerateTreeButton();"
                         }
                     ],
-                    "phpFilesCount": 12,
+                    "phpFilesCount": 13,
                     "phpFiles": [
                         "admin/manage_annotations.php",
                         "admin/manage_error_log.php",
                         "admin/manage_filesystem_permissions.php",
                         "admin/manage_groups.php",
+                        "admin/manage_jbrowse.php",
                         "admin/manage_js_registry.php",
                         "admin/manage_organisms.php",
                         "admin/manage_registry.php",
@@ -76,16 +77,17 @@
                     "usages": [
                         {
                             "file": "admin/pages/organism_checklist.php",
-                            "line": 628,
+                            "line": 777,
                             "context": "async function generateTreeFromChecklist() {"
                         }
                     ],
-                    "phpFilesCount": 12,
+                    "phpFilesCount": 13,
                     "phpFiles": [
                         "admin/manage_annotations.php",
                         "admin/manage_error_log.php",
                         "admin/manage_filesystem_permissions.php",
                         "admin/manage_groups.php",
+                        "admin/manage_jbrowse.php",
                         "admin/manage_js_registry.php",
                         "admin/manage_organisms.php",
                         "admin/manage_registry.php",
@@ -557,6 +559,1088 @@
             ]
         },
         {
+            "name": "js/jbrowse-admin.js",
+            "count": 14,
+            "functions": [
+                {
+                    "name": "initJBrowseAdmin",
+                    "line": 18,
+                    "comment": "/**\n * Initialize JBrowse admin dashboard\n */",
+                    "code": "{\n    organismsData = organisms || window.jbrowseOrganisms || {};\n    siteUrl = site || window.sitePath || '';\n    \n    console.log('Initializing JBrowse Admin with', Object.keys(organismsData).length, 'organisms');\n    \n    // Setup organism dropdowns\n    setupOrganismDropdowns();\n    \n    // Initialize DataTable\n    initTracksTable();\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "setupOrganismDropdowns",
+                        "initTracksTable"
+                    ],
+                    "category": "admin",
+                    "tags": [
+                        "state-modifying"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse-admin.js",
+                            "line": 356,
+                            "context": "initJBrowseAdmin(jbrowseOrganisms, sitePath);"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "setupOrganismDropdowns",
+                    "line": 34,
+                    "comment": "/**\n * Setup organism dropdown change handlers\n */",
+                    "code": "{\n    // Sheet registration dropdown\n    const regOrganism = document.getElementById('organism');\n    if (regOrganism) {\n        regOrganism.addEventListener('change', function() {\n            updateAssemblyDropdown(this.value, 'assembly');\n        });\n    }\n    \n    // Sheet registration assembly - load existing sheet when selected\n    const regAssembly = document.getElementById('assembly');\n    if (regAssembly) {\n        regAssembly.addEventListener('change', function() {\n            const organism = document.getElementById('organism').value;\n            const assembly = this.value;\n            if (organism && assembly) {\n                loadExistingSheetConfig(organism, assembly);\n            }\n        });\n    }\n    \n    // Track sync dropdown\n    const syncOrganism = document.getElementById('syncOrganism');\n    if (syncOrganism) {\n        syncOrganism.addEventListener('change', function() {\n            updateAssemblyDropdown(this.value, 'syncAssembly');\n        });\n    }\n    \n    // Filter dropdown\n    const filterOrganism = document.getElementById('filterOrganism');\n    if (filterOrganism) {\n        filterOrganism.addEventListener('change', function() {\n            updateAssemblyDropdown(this.value, 'filterAssembly');\n            filterTracks();\n        });\n    }\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "updateAssemblyDropdown",
+                        "loadExistingSheetConfig",
+                        "filterTracks"
+                    ],
+                    "category": "admin",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse-admin.js",
+                            "line": 26,
+                            "context": "setupOrganismDropdowns();"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "updateAssemblyDropdown",
+                    "line": 76,
+                    "comment": "/**\n * Update assembly dropdown based on selected organism\n */",
+                    "code": "{\n    const assemblySelect = document.getElementById(assemblySelectId);\n    if (!assemblySelect) return;\n    \n    const defaultText = assemblySelectId.startsWith('filter') ? 'All' : 'Select assembly...';\n    assemblySelect.innerHTML = `<option value=\"\">${defaultText}</option>`;\n    \n    if (organism && organismsData[organism]) {\n        organismsData[organism].forEach(asm => {\n            const option = document.createElement('option');\n            option.value = asm;\n            option.textContent = asm;\n            assemblySelect.appendChild(option);\n        });\n        assemblySelect.disabled = false;\n    } else {\n        assemblySelect.disabled = true;\n    }\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "loops"
+                    ],
+                    "usageCount": 3,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse-admin.js",
+                            "line": 40,
+                            "context": "updateAssemblyDropdown(this.value, 'assembly');"
+                        },
+                        {
+                            "file": "js/jbrowse-admin.js",
+                            "line": 60,
+                            "context": "updateAssemblyDropdown(this.value, 'syncAssembly');"
+                        },
+                        {
+                            "file": "js/jbrowse-admin.js",
+                            "line": 68,
+                            "context": "updateAssemblyDropdown(this.value, 'filterAssembly');"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "initTracksTable",
+                    "line": 99,
+                    "comment": "/**\n * Initialize tracks DataTable\n */",
+                    "code": "{\n    tracksTable = $('#tracksTable').DataTable({\n        processing: true,\n        serverSide: true,\n        ajax: {\n            url: `/${siteUrl}/api/jbrowse2/admin_list_tracks.php`,\n            type: 'POST',\n            data: function(d) {\n                d.organism = $('#filterOrganism').val();\n                d.assembly = $('#filterAssembly').val();\n                d.type = $('#filterType').val();\n                d.access = $('#filterAccess').val();\n            }\n        },\n        columns: [\n            { data: 'checkbox', orderable: false, searchable: false },\n            { data: 'name' },\n            { data: 'organism' },\n            { data: 'assembly' },\n            { data: 'type' },\n            { data: 'access' },\n            { data: 'status' },\n            { data: 'actions', orderable: false, searchable: false }\n        ],\n        pageLength: 20,\n        order: [[1, 'asc']]\n    });\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [
+                        "state-modifying",
+                        "validation"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse-admin.js",
+                            "line": 29,
+                            "context": "initTracksTable();"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "filterTracks",
+                    "line": 131,
+                    "comment": "/**\n * Reload tracks table with current filters\n */",
+                    "code": "{\n    if (tracksTable) {\n        tracksTable.ajax.reload();\n    }\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "data-processing",
+                    "tags": [
+                        "ajax"
+                    ],
+                    "usageCount": 5,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse-admin.js",
+                            "line": 69,
+                            "context": "filterTracks();"
+                        },
+                        {
+                            "file": "admin/pages/manage_jbrowse.php",
+                            "line": 287,
+                            "context": "<select class=\"form-select\" id=\"filterOrganism\" onchange=\"filterTracks()\">"
+                        },
+                        {
+                            "file": "admin/pages/manage_jbrowse.php",
+                            "line": 296,
+                            "context": "<select class=\"form-select\" id=\"filterAssembly\" onchange=\"filterTracks()\" disabled>"
+                        },
+                        {
+                            "file": "admin/pages/manage_jbrowse.php",
+                            "line": 302,
+                            "context": "<select class=\"form-select\" id=\"filterType\" onchange=\"filterTracks()\">"
+                        },
+                        {
+                            "file": "admin/pages/manage_jbrowse.php",
+                            "line": 311,
+                            "context": "<select class=\"form-select\" id=\"filterAccess\" onchange=\"filterTracks()\">"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "toggleSelectAll",
+                    "line": 140,
+                    "comment": "/**\n * Toggle select all checkboxes\n */",
+                    "code": "{\n    const checked = document.getElementById('selectAll').checked;\n    document.querySelectorAll('input[name=\"trackSelect\"]').forEach(cb => {\n        cb.checked = checked;\n    });\n    updateBulkButtons();\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "updateBulkButtons"
+                    ],
+                    "category": "admin",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "state-modifying",
+                        "loops",
+                        "validation"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "admin/pages/manage_jbrowse.php",
+                            "line": 325,
+                            "context": "<th><input type=\"checkbox\" id=\"selectAll\" onchange=\"toggleSelectAll()\"></th>"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "updateBulkButtons",
+                    "line": 151,
+                    "comment": "/**\n * Update bulk action buttons state\n */",
+                    "code": "{\n    const selected = document.querySelectorAll('input[name=\"trackSelect\"]:checked').length;\n    document.getElementById('selectedCount').textContent = `${selected} selected`;\n    document.getElementById('bulkGenerateBtn').disabled = selected === 0;\n    document.getElementById('bulkDeleteBtn').disabled = selected === 0;\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "validation"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse-admin.js",
+                            "line": 146,
+                            "context": "updateBulkButtons();"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "loadExistingSheetConfig",
+                    "line": 161,
+                    "comment": "/**\n * Load existing sheet configuration for selected organism/assembly\n */",
+                    "code": "{\n    fetch(`/${siteUrl}/api/jbrowse2/admin_get_sheet_config.php?organism=${encodeURIComponent(organism)}&assembly=${encodeURIComponent(assembly)}`)\n        .then(response => response.json())\n        .then(data => {\n            if (data.success && data.config) {\n                // Populate form with existing data\n                const sheetId = data.config.SHEET_ID || '';\n                const gid = data.config.GID || '0';\n                const autoSync = data.config.AUTO_SYNC === 'true';\n                \n                document.getElementById('sheetUrl').value = sheetId;\n                document.getElementById('gid').value = gid;\n                document.getElementById('autoSync').checked = autoSync;\n                \n                // Show info message\n                const resultDiv = document.getElementById('sheetValidationResult');\n                resultDiv.innerHTML = `\n                    <div class=\"alert alert-info\">\n                        <i class=\"fa fa-info-circle\"></i> <strong>Existing sheet found</strong>\n                        <p class=\"mb-0 mt-2\">Registered: ${data.config.REGISTERED_DATE || 'Unknown'}</p>\n                        <p class=\"mb-0\">You can update the sheet URL or test the current configuration.</p>\n                    </div>\n                `;\n                resultDiv.style.display = 'block';\n            } else {\n                // No existing sheet\n                document.getElementById('sheetUrl').value = '';\n                document.getElementById('gid').value = '0';\n                document.getElementById('autoSync').checked = true;\n                document.getElementById('sheetValidationResult').style.display = 'none';\n            }\n        })\n        .catch(error => {\n            console.log('No existing sheet config found or error:', error);\n        });\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [
+                        "dom-manipulation",
+                        "asynchronous",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "error-handling",
+                        "validation"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse-admin.js",
+                            "line": 51,
+                            "context": "loadExistingSheetConfig(organism, assembly);"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "testSheet",
+                    "line": 201,
+                    "comment": "/**\n * Test Google Sheet connection\n */",
+                    "code": "{\n    const form = document.getElementById('registerSheetForm');\n    const formData = new FormData(form);\n    formData.append('action', 'test');\n    \n    const resultDiv = document.getElementById('sheetValidationResult');\n    resultDiv.innerHTML = '<div class=\"alert alert-info\"><i class=\"fa fa-spinner fa-spin\"></i> Testing connection...</div>';\n    resultDiv.style.display = 'block';\n    \n    fetch(`/${siteUrl}/api/jbrowse2/admin_register_sheet.php`, {\n        method: 'POST',\n        body: formData\n    })\n    .then(response => response.json())\n    .then(data => {\n        if (data.success) {\n            resultDiv.innerHTML = `\n                <div class=\"alert alert-success\">\n                    <h6><i class=\"fa fa-check-circle\"></i> Sheet Validated Successfully</h6>\n                    <ul class=\"mb-0\">\n                        <li>\u2713 Sheet accessible</li>\n                        <li>\u2713 Required columns found: ${data.columns.join(', ')}</li>\n                        <li>\u2713 ${data.trackCount} tracks detected</li>\n                    </ul>\n                </div>\n            `;\n        } else {\n            resultDiv.innerHTML = `\n                <div class=\"alert alert-danger\">\n                    <h6><i class=\"fa fa-times-circle\"></i> Validation Failed</h6>\n                    <p class=\"mb-0\">${data.error}</p>\n                </div>\n            `;\n        }\n    })\n    .catch(error => {\n        resultDiv.innerHTML = `\n            <div class=\"alert alert-danger\">\n                <h6><i class=\"fa fa-times-circle\"></i> Error</h6>\n                <p class=\"mb-0\">${error.message}</p>\n            </div>\n        `;\n    });\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [
+                        "dom-manipulation",
+                        "asynchronous",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "error-handling",
+                        "validation"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "admin/pages/manage_jbrowse.php",
+                            "line": 260,
+                            "context": "<button type=\"button\" class=\"btn btn-outline-primary\" onclick=\"testSheet()\">"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "clearSheetForm",
+                    "line": 249,
+                    "comment": "/**\n * Clear sheet registration form\n */",
+                    "code": "{\n    document.getElementById('registerSheetForm').reset();\n    document.getElementById('sheetValidationResult').style.display = 'none';\n    document.getElementById('assembly').disabled = true;\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "state-modifying"
+                    ],
+                    "usageCount": 2,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse-admin.js",
+                            "line": 384,
+                            "context": "clearSheetForm();"
+                        },
+                        {
+                            "file": "admin/pages/manage_jbrowse.php",
+                            "line": 266,
+                            "context": "<button type=\"button\" class=\"btn btn-outline-secondary\" onclick=\"clearSheetForm()\">"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "viewTrack",
+                    "line": 258,
+                    "comment": "/**\n * View track details\n */",
+                    "code": "{\n    alert(`View track details:\\nTrack: ${trackId}\\nOrganism: ${organism}\\nAssembly: ${assembly}\\n\\n[Feature coming soon]`);\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [],
+                    "usageCount": 0,
+                    "usages": [],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "deleteTrack",
+                    "line": 265,
+                    "comment": "/**\n * Delete single track\n */",
+                    "code": "{\n    if (!confirm(`Delete track \"${trackId}\"?\\n\\nThis will remove the track metadata file. The track will no longer be visible in JBrowse.`)) {\n        return;\n    }\n    \n    const formData = new FormData();\n    formData.append('trackId', trackId);\n    formData.append('organism', organism);\n    formData.append('assembly', assembly);\n    \n    fetch(`/${siteUrl}/api/jbrowse2/admin_delete_tracks.php`, {\n        method: 'POST',\n        body: formData\n    })\n    .then(response => response.json())\n    .then(data => {\n        if (data.success) {\n            alert('Track deleted successfully!');\n            if (tracksTable) {\n                tracksTable.ajax.reload();\n            }\n        } else {\n            alert('Error: ' + data.error);\n        }\n    })\n    .catch(error => {\n        alert('Error: ' + error.message);\n    });\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [
+                        "asynchronous",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "error-handling"
+                    ],
+                    "usageCount": 0,
+                    "usages": [],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "deleteSelected",
+                    "line": 298,
+                    "comment": "/**\n * Delete selected tracks\n */",
+                    "code": "{\n    const selected = document.querySelectorAll('input[name=\"trackSelect\"]:checked');\n    if (selected.length === 0) return;\n    \n    if (!confirm(`Delete ${selected.length} selected track(s)?`)) {\n        return;\n    }\n    \n    let deleted = 0;\n    let errors = 0;\n    \n    selected.forEach((checkbox, index) => {\n        const trackId = checkbox.value;\n        const organism = checkbox.dataset.organism;\n        const assembly = checkbox.dataset.assembly;\n        \n        const formData = new FormData();\n        formData.append('trackId', trackId);\n        formData.append('organism', organism);\n        formData.append('assembly', assembly);\n        \n        fetch(`/${siteUrl}/api/jbrowse2/admin_delete_tracks.php`, {\n            method: 'POST',\n            body: formData\n        })\n        .then(response => response.json())\n        .then(data => {\n            if (data.success) {\n                deleted++;\n            } else {\n                errors++;\n            }\n            \n            // After last one, show results\n            if (deleted + errors === selected.length) {\n                alert(`Deleted ${deleted} track(s). Errors: ${errors}`);\n                if (tracksTable) {\n                    tracksTable.ajax.reload();\n                }\n            }\n        });\n    });\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [
+                        "dom-manipulation",
+                        "asynchronous",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "loops",
+                        "error-handling",
+                        "validation"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "admin/pages/manage_jbrowse.php",
+                            "line": 346,
+                            "context": "<button class=\"btn btn-sm btn-outline-danger\" onclick=\"deleteSelected()\" disabled id=\"bulkDeleteBtn\">"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "generateSelectedConfigs",
+                    "line": 345,
+                    "comment": "/**\n * Generate configs for selected assemblies\n */",
+                    "code": "{\n    alert('Feature coming soon: Generate configs for selected assemblies');\n}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "admin/pages/manage_jbrowse.php",
+                            "line": 343,
+                            "context": "<button class=\"btn btn-sm btn-outline-primary\" onclick=\"generateSelectedConfigs()\" disabled id=\"bulkGenerateBtn\">"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "js/jbrowse2-loader.js",
+            "count": 11,
+            "functions": [
+                {
+                    "name": "loadAssemblies",
+                    "line": 22,
+                    "comment": "",
+                    "code": "{\n        try {\n            console.log('Loading assemblies from:', CONFIG.apiUrl);\n            console.log('User info:', window.moopUserInfo);\n\n            const response = await fetch(CONFIG.apiUrl);\n            if (!response.ok) {\n                throw new Error(`API error: ${response.status}`);\n            }\n\n            const config = await response.json();\n\n            // Update user status\n            updateUserStatus(config.userAccessLevel);\n\n            // Display assemblies\n            if (!config.assemblies || config.assemblies.length === 0) {\n                displayNoAssemblies();\n                return;\n            }\n\n            // Display assembly list\n            displayAssemblies(config.assemblies);\n\n            // Update count\n            document.querySelector(CONFIG.countSelector).textContent = \n                `${config.assemblies.length} Available`;\n\n        } catch (error) {\n            console.error('Error loading assemblies:', error);\n            displayError(error.message);\n        }\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "updateUserStatus",
+                        "displayNoAssemblies",
+                        "displayAssemblies",
+                        "displayError"
+                    ],
+                    "category": "general",
+                    "tags": [
+                        "dom-manipulation",
+                        "asynchronous",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "error-handling"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 335,
+                            "context": "loadAssemblies();"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "jbrowse2.php",
+                        "tools/pages/jbrowse2.php"
+                    ]
+                },
+                {
+                    "name": "updateUserStatus",
+                    "line": 59,
+                    "comment": "/**\n     * Update user status display\n     */\n   ",
+                    "code": "{\n        const statusEl = document.querySelector(CONFIG.userStatusSelector);\n        if (!statusEl) return;\n\n        const userInfo = window.moopUserInfo;\n        let statusText = '';\n\n        if (userInfo.logged_in) {\n            statusText = `Logged in as <strong>${userInfo.username}</strong> (${accessLevel})`;\n        } else {\n            statusText = `Guest user viewing <strong>${accessLevel}</strong> content`;\n        }\n\n        statusEl.innerHTML = statusText;\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "general",
+                    "tags": [
+                        "dom-manipulation",
+                        "state-modifying"
+                    ],
+                    "usageCount": 2,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 35,
+                            "context": "updateUserStatus(config.userAccessLevel);"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 240,
+                            "context": "updateUserStatus();"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "jbrowse2.php",
+                        "tools/pages/jbrowse2.php"
+                    ]
+                },
+                {
+                    "name": "displayAssemblies",
+                    "line": 78,
+                    "comment": "/**\n     * Display list of assemblies\n     */\n   ",
+                    "code": "{\n        const container = document.querySelector(CONFIG.containerSelector);\n        \n        let html = '<div class=\"list-group\">';\n\n        assemblies.forEach(assembly => {\n            html += createAssemblyCard(assembly);\n        });\n\n        html += '</div>';\n        container.innerHTML = html;\n\n        // Attach click handlers\n        assemblies.forEach(assembly => {\n            const btn = container.querySelector(`[data-assembly-id=\"${assembly.name}\"]`);\n            if (btn) {\n                btn.addEventListener('click', () => openAssembly(assembly));\n            }\n        });\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "createAssemblyCard",
+                        "openAssembly"
+                    ],
+                    "category": "ui-dom",
+                    "tags": [
+                        "dom-manipulation",
+                        "event-listener",
+                        "state-modifying",
+                        "loops"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 44,
+                            "context": "displayAssemblies(config.assemblies);"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "jbrowse2.php",
+                        "tools/pages/jbrowse2.php"
+                    ]
+                },
+                {
+                    "name": "createAssemblyCard",
+                    "line": 102,
+                    "comment": "/**\n     * Create HTML card for an assembly\n     */\n   ",
+                    "code": "{\n        const accessLevelClass = {\n            'Public': 'badge-light border-success',\n            'Collaborator': 'badge-warning',\n            'ALL': 'badge-danger'\n        }[assembly.accessLevel] || 'badge-secondary';\n\n        const accessLevelText = {\n            'Public': 'Public',\n            'Collaborator': 'Collaborator',\n            'ALL': 'Admin'\n        }[assembly.accessLevel] || assembly.accessLevel;\n\n        return `\n            <div class=\"list-group-item assembly-card\">\n                <div class=\"d-flex w-100 justify-content-between align-items-start\">\n                    <div>\n                        <h5 class=\"mb-1\">${escapeHtml(assembly.displayName)}</h5>\n                        <p class=\"mb-2 text-muted small\">\n                            <strong>Aliases:</strong> ${escapeHtml(assembly.aliases.join(', '))}\n                        </p>\n                        <span class=\"badge ${accessLevelClass}\">${accessLevelText}</span>\n                    </div>\n                    <button class=\"btn btn-sm btn-primary\" \n                            data-assembly-id=\"${escapeHtml(assembly.name)}\"\n                            data-assembly-name=\"${escapeHtml(assembly.displayName)}\">\n                        View Genome \u2192\n                    </button>\n                </div>\n            </div>\n        `;\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "general",
+                    "tags": [
+                        "state-modifying"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 84,
+                            "context": "html += createAssemblyCard(assembly);"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "jbrowse2.php",
+                        "tools/pages/jbrowse2.php"
+                    ]
+                },
+                {
+                    "name": "displayNoAssemblies",
+                    "line": 138,
+                    "comment": "/**\n     * Display when no assemblies are available\n     */\n   ",
+                    "code": "{\n        const container = document.querySelector(CONFIG.containerSelector);\n        \n        const userInfo = window.moopUserInfo;\n        let message = '';\n\n        if (userInfo.logged_in) {\n            message = `\n                <div class=\"access-denied\">\n                    <h4>No Assemblies Available</h4>\n                    <p>Your account doesn't have access to any assemblies yet.</p>\n                    <p class=\"text-muted\">Contact an administrator for access.</p>\n                </div>\n            `;\n        } else {\n            message = `\n                <div class=\"access-denied\">\n                    <h4>Public Assemblies Not Available</h4>\n                    <p>There are currently no public assemblies available for browsing.</p>\n                    <p class=\"text-muted\">\n                        <a href=\"/moop/login.php\">Log in</a> to access additional data.\n                    </p>\n                </div>\n            `;\n        }\n\n        container.innerHTML = message;\n        document.querySelector(CONFIG.countSelector).textContent = '0 Available';\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "ui-dom",
+                    "tags": [
+                        "dom-manipulation",
+                        "event-listener",
+                        "state-modifying"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 39,
+                            "context": "displayNoAssemblies();"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "jbrowse2.php",
+                        "tools/pages/jbrowse2.php"
+                    ]
+                },
+                {
+                    "name": "displayError",
+                    "line": 171,
+                    "comment": "/**\n     * Display error message\n     */\n   ",
+                    "code": "{\n        const container = document.querySelector(CONFIG.containerSelector);\n        \n        const html = `\n            <div class=\"alert alert-danger\">\n                <h4>Error Loading Assemblies</h4>\n                <p>${escapeHtml(message)}</p>\n                <p class=\"text-muted small mb-0\">\n                    Check the browser console (F12) for more details.\n                </p>\n            </div>\n        `;\n\n        container.innerHTML = html;\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "ui-dom",
+                    "tags": [
+                        "dom-manipulation",
+                        "event-listener",
+                        "state-modifying",
+                        "error-handling",
+                        "validation"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 52,
+                            "context": "displayError(error.message);"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "jbrowse2.php",
+                        "tools/pages/jbrowse2.php"
+                    ]
+                },
+                {
+                    "name": "openAssembly",
+                    "line": 190,
+                    "comment": "/**\n     * Open assembly in JBrowse2\n     */\n   ",
+                    "code": "{\n        console.log('Opening assembly in iframe:', assembly);\n        \n        // Hide assembly list and show viewer\n        document.getElementById('assembly-list-container').style.display = 'none';\n        document.getElementById('assembly-viewer-container').style.display = 'block';\n        \n        // Extract organism and assembly ID from assembly.name (format: Organism_Assembly)\n        const nameParts = assembly.name.split('_');\n        let organism, assemblyId;\n        \n        if (nameParts.length >= 2) {\n            // Find the assembly ID part (starts with GCA or GCF)\n            const gcaIndex = nameParts.findIndex(part => part.startsWith('GCA') || part.startsWith('GCF'));\n            if (gcaIndex !== -1) {\n                organism = nameParts.slice(0, gcaIndex).join('_');\n                assemblyId = nameParts.slice(gcaIndex).join('_');\n            } else {\n                // Fallback: last part is assembly ID\n                organism = nameParts.slice(0, -1).join('_');\n                assemblyId = nameParts[nameParts.length - 1];\n            }\n        } else {\n            organism = assembly.name;\n            assemblyId = 'default';\n        }\n        \n        // Use single secure config endpoint\n        // This endpoint validates permissions and includes JWT tokens for all tracks\n        const iframe = document.getElementById('jbrowse2-iframe');\n        const configUrl = `/moop/api/jbrowse2/config.php?organism=${encodeURIComponent(organism)}&assembly=${encodeURIComponent(assemblyId)}`;\n        iframe.src = `/moop/jbrowse2/index.html?config=${encodeURIComponent(configUrl)}`;\n        iframe.title = `JBrowse2 Viewer for ${assembly.displayName}`;\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "general",
+                    "tags": [
+                        "dom-manipulation",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "validation"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 94,
+                            "context": "btn.addEventListener('click', () => openAssembly(assembly));"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "jbrowse2.php",
+                        "tools/pages/jbrowse2.php"
+                    ]
+                },
+                {
+                    "name": "escapeHtml",
+                    "line": 228,
+                    "comment": "/**\n     * Escape HTML special characters\n     */\n   ",
+                    "code": "{\n        if (!text) return '';\n        const div = document.createElement('div');\n        div.textContent = text;\n        return div.innerHTML;\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "utilities",
+                    "tags": [
+                        "dom-manipulation",
+                        "event-listener",
+                        "state-modifying"
+                    ],
+                    "usageCount": 25,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 119,
+                            "context": "<h5 class=\"mb-1\">${escapeHtml(assembly.displayName)}</h5>"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 121,
+                            "context": "<strong>Aliases:</strong> ${escapeHtml(assembly.aliases.join(', '))}"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 126,
+                            "context": "data-assembly-id=\"${escapeHtml(assembly.name)}\""
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 127,
+                            "context": "data-assembly-name=\"${escapeHtml(assembly.displayName)}\">"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 177,
+                            "context": "<p>${escapeHtml(message)}</p>"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 254,
+                            "context": "<p class=\"mt-3\">Loading JBrowse2 viewer for ${escapeHtml(assemblyName)}...</p>"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 274,
+                            "context": "<strong>Assembly not found:</strong> ${escapeHtml(assemblyName)}"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 296,
+                            "context": "src=\"${escapeHtml(iframeUrl)}\""
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 298,
+                            "context": "title=\"JBrowse2 Viewer for ${escapeHtml(assembly.displayName)}\""
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 313,
+                            "context": "<strong>Error loading assembly:</strong> ${escapeHtml(error.message)}"
+                        },
+                        {
+                            "file": "js/permission-manager.js",
+                            "line": 52,
+                            "context": "'<i class=\"fa fa-check-circle\"></i> ' + escapeHtml(json.message) + ' ' +"
+                        },
+                        {
+                            "file": "js/permission-manager.js",
+                            "line": 61,
+                            "context": "'<i class=\"fa fa-times-circle\"></i> <strong>Failed:</strong> ' + escapeHtml(json.message) + '</div>';"
+                        },
+                        {
+                            "file": "js/permission-manager.js",
+                            "line": 69,
+                            "context": "'<i class=\"fa fa-exclamation-triangle\"></i> <strong>Error:</strong> ' + escapeHtml(error.message) + '</div>';"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 174,
+                            "context": "<span style=\"background: ${bgColor}; padding: 2px 6px; border-radius: 3px; font-weight: bold;\">${escapeHtml(id)}</span>`;"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 187,
+                            "context": "<span style=\"background: ${childBgColor}; padding: 2px 6px; border-radius: 3px;\">${escapeHtml(childId)}</span>"
+                        },
+                        {
+                            "file": "js/sequence-retrieval.js",
+                            "line": 205,
+                            "context": "<span style=\"background: ${bgColor}; padding: 2px 6px; border-radius: 3px;\">${escapeHtml(id)}</span>"
+                        },
+                        {
+                            "file": "js/modules/advanced-search-filter.js",
+                            "line": 129,
+                            "context": "const infoIcon = description ? `<i class=\"fa fa-info-circle text-muted info-icon-trigger\" style=\"cursor: pointer; margin-left: 0.5rem;\" data-description=\"${escapeHtml(description)}\" data-type=\"${escapeHtml(type)}\"></i>` : '';"
+                        },
+                        {
+                            "file": "js/modules/advanced-search-filter.js",
+                            "line": 312,
+                            "context": "<h5 class=\"modal-title\">${escapeHtml(type)}</h5>"
+                        },
+                        {
+                            "file": "js/modules/organism-management.js",
+                            "line": 50,
+                            "context": "html += '<code class=\"text-break\">' + escapeHtml(data.command) + '</code><br>';"
+                        },
+                        {
+                            "file": "js/modules/organism-management.js",
+                            "line": 165,
+                            "context": "html += '<li>File owner: <code>' + escapeHtml(response.error.owner) + '</code></li>';"
+                        },
+                        {
+                            "file": "js/modules/organism-management.js",
+                            "line": 167,
+                            "context": "html += '<li>Web server user: <code>' + escapeHtml(response.error.web_user) + '</code></li>';"
+                        },
+                        {
+                            "file": "js/modules/organism-management.js",
+                            "line": 169,
+                            "context": "html += '<li>Web server group: <code>' + escapeHtml(response.error.web_group) + '</code></li>';"
+                        },
+                        {
+                            "file": "js/modules/organism-management.js",
+                            "line": 175,
+                            "context": "html += '<code class=\"text-break\">' + escapeHtml(response.error.command) + '</code>';"
+                        },
+                        {
+                            "file": "js/modules/organism-management.js",
+                            "line": 332,
+                            "context": "html += '<code class=\"text-break\">' + escapeHtml(data.command) + '</code><br>';"
+                        },
+                        {
+                            "file": "js/modules/organism-management.js",
+                            "line": 401,
+                            "context": "html += '<code class=\"text-break\">' + escapeHtml(data.command) + '</code><br>';"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "jbrowse2.php",
+                        "tools/pages/jbrowse2.php"
+                    ]
+                },
+                {
+                    "name": "loadSpecificAssembly",
+                    "line": 238,
+                    "comment": "",
+                    "code": "{\n        try {\n            updateUserStatus();\n            \n            const container = document.getElementById('assembly-list-container');\n            if (!container) {\n                console.error('Container not found');\n                return;\n            }\n            \n            // Show loading state\n            container.innerHTML = `\n                <div class=\"text-center\">\n                    <div class=\"spinner-border\" role=\"status\">\n                        <span class=\"visually-hidden\">Loading...</span>\n                    </div>\n                    <p class=\"mt-3\">Loading JBrowse2 viewer for ${escapeHtml(assemblyName)}...</p>\n                </div>\n            `;\n            \n            // Load configuration from API\n            const userInfo = window.moopUserInfo;\n            const response = await fetch('/moop/api/jbrowse2/get-config.php');\n            \n            if (!response.ok) {\n                throw new Error(`Failed to load config: ${response.status}`);\n            }\n            \n            const config = await response.json();\n            \n            // Find the requested assembly\n            const assembly = (config.assemblies || []).find(a => a.name === assemblyName);\n            \n            if (!assembly) {\n                container.innerHTML = `\n                    <div class=\"alert alert-danger\" role=\"alert\">\n                        <strong>Assembly not found:</strong> ${escapeHtml(assemblyName)}\n                    </div>\n                `;\n                return;\n            }\n            \n            // Check access level\n            if (assembly.accessLevel === 'Admin' && userInfo.access_level !== 'Admin') {\n                container.innerHTML = `\n                    <div class=\"alert alert-warning\" role=\"alert\">\n                        <strong>Access Denied:</strong> This assembly requires admin access.\n                    </div>\n                `;\n                return;\n            }\n            \n            // Display JB",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "updateUserStatus"
+                    ],
+                    "category": "general",
+                    "tags": [
+                        "dom-manipulation",
+                        "asynchronous",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "error-handling",
+                        "validation"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 332,
+                            "context": "loadSpecificAssembly(assemblyName);"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "jbrowse2.php",
+                        "tools/pages/jbrowse2.php"
+                    ]
+                },
+                {
+                    "name": "init",
+                    "line": 323,
+                    "comment": "/**\n     * Initialize on page load\n     */\n   ",
+                    "code": "{\n        console.log('Initializing JBrowse2 loader');\n        \n        // Check if an assembly is specified in the URL\n        const params = new URLSearchParams(window.location.search);\n        const assemblyName = params.get('assembly');\n        \n        if (assemblyName) {\n            console.log('Loading specific assembly:', assemblyName);\n            loadSpecificAssembly(assemblyName);\n        } else {\n            console.log('Loading assembly list');\n            loadAssemblies();\n        }\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "loadSpecificAssembly",
+                        "loadAssemblies"
+                    ],
+                    "category": "general",
+                    "tags": [
+                        "ajax",
+                        "state-modifying",
+                        "validation"
+                    ],
+                    "usageCount": 7,
+                    "usages": [
+                        {
+                            "file": "js/assembly-display.js",
+                            "line": 24,
+                            "context": "searchManager.init();"
+                        },
+                        {
+                            "file": "js/groups-display.js",
+                            "line": 40,
+                            "context": "searchManager.init();"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 343,
+                            "context": "init();"
+                        },
+                        {
+                            "file": "js/jbrowse2-view-loader.js",
+                            "line": 117,
+                            "context": "init();"
+                        },
+                        {
+                            "file": "js/multi-organism-search.js",
+                            "line": 27,
+                            "context": "searchManager.init();"
+                        },
+                        {
+                            "file": "js/organism-display.js",
+                            "line": 38,
+                            "context": "searchManager.init();"
+                        },
+                        {
+                            "file": "js/modules/annotation-search.js",
+                            "line": 37,
+                            "context": "init() {"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "jbrowse2.php",
+                        "tools/pages/jbrowse2.php"
+                    ]
+                },
+                {
+                    "name": "assembly",
+                    "line": 269,
+                    "comment": "",
+                    "code": "{\n                container.innerHTML = `\n                    <div class=\"alert alert-danger\" role=\"alert\">\n                        <strong>Assembly not found:</strong> ${escapeHtml(assemblyName)}\n                    </div>\n                `;\n                return;\n            }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "general",
+                    "tags": [
+                        "dom-manipulation",
+                        "state-modifying"
+                    ],
+                    "usageCount": 4,
+                    "usages": [
+                        {
+                            "file": "js/modules/manage-users.js",
+                            "line": 332,
+                            "context": "alert('Please select at least one assembly (or check Admin for full access)');"
+                        },
+                        {
+                            "file": "admin/manage_users.php",
+                            "line": 75,
+                            "context": "$message = \"Must select at least one assembly (or check Admin for full access).\";"
+                        },
+                        {
+                            "file": "admin/pages/manage_organisms.php",
+                            "line": 1289,
+                            "context": "<li><code>*.genome.nt.fa</code> - Genome assembly (optional)</li>"
+                        },
+                        {
+                            "file": "tools/jbrowse/remove_tracks.php",
+                            "line": 323,
+                            "context": "echo \"  # Remove assembly (metadata only)\\n\";"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "jbrowse2.php",
+                        "tools/pages/jbrowse2.php"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "js/jbrowse2-view-loader.js",
+            "count": 3,
+            "functions": [
+                {
+                    "name": "fetchAssemblyConfig",
+                    "line": 14,
+                    "comment": "",
+                    "code": "{\n        try {\n            const site = window.moopSite || 'moop';\n            const url = `/${site}/api/jbrowse2/get-config.php?assembly=${encodeURIComponent(assemblyName)}`;\n            \n            console.log('Fetching from:', url);\n            const response = await fetch(url, {\n                credentials: 'include'\n            });\n            \n            if (!response.ok) {\n                console.error('API response:', response.status, response.statusText);\n                return null;\n            }\n            \n            const data = await response.json();\n            console.log('Config response:', data);\n            return data;\n        } catch (error) {\n            console.error('Error fetching assembly config:', error);\n            return null;\n        }\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "general",
+                    "tags": [
+                        "asynchronous",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "error-handling"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse2-view-loader.js",
+                            "line": 78,
+                            "context": "const config = await fetchAssemblyConfig(assemblyName);"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "tools/pages/jbrowse2-view.php"
+                    ]
+                },
+                {
+                    "name": "interceptConfigFetch",
+                    "line": 41,
+                    "comment": "/**\n     * Intercept fetch for config.json to return our dynamic config\n     */\n   ",
+                    "code": "{\n        const originalFetch = window.fetch;\n        window.fetch = function(url, options) {\n            // If fetching config.json, return our dynamic config\n            if (typeof url === 'string' && url.includes('config.json')) {\n                console.log('Intercepting config.json request, returning dynamic config');\n                return Promise.resolve(\n                    new Response(JSON.stringify(configData), {\n                        status: 200,\n                        headers: { 'Content-Type': 'application/json' }\n                    })\n                );\n            }\n            // For all other requests, use original fetch\n            return originalFetch.apply(this, arguments);\n        };\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "general",
+                    "tags": [
+                        "asynchronous",
+                        "ajax",
+                        "state-modifying"
+                    ],
+                    "usageCount": 1,
+                    "usages": [
+                        {
+                            "file": "js/jbrowse2-view-loader.js",
+                            "line": 104,
+                            "context": "interceptConfigFetch(jbrowse2Config);"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "tools/pages/jbrowse2-view.php"
+                    ]
+                },
+                {
+                    "name": "init",
+                    "line": 62,
+                    "comment": "",
+                    "code": "{\n        try {\n            const assemblyName = window.moopAssembly;\n            const userInfo = window.moopUserInfo || { logged_in: false };\n            \n            console.log('JBrowse2 View Loader: Initializing');\n            console.log('Assembly:', assemblyName);\n            console.log('User:', userInfo.username || 'Guest');\n\n            if (!assemblyName) {\n                console.error('No assembly specified');\n                return;\n            }\n\n            // Fetch assembly configuration from API\n            console.log('Fetching JBrowse2 config for assembly:', assemblyName);\n            const config = await fetchAssemblyConfig(assemblyName);\n            \n            if (!config) {\n                console.error('Assembly not found or access denied');\n                return;\n            }\n\n            console.log('Config loaded:', config);\n\n            // Build the full JBrowse2 config from assembly definition\n            const jbrowse2Config = {\n                assemblies: [config],\n                defaultSession: {\n                    name: 'Default',\n                    view: {\n                        id: 'linear-genome-view',\n                        type: 'LinearGenomeView',\n                        offsetPx: 0,\n                        bpPerPx: 1,\n                        minimumBlockWidth: 1,\n                        tracks: []\n                    }\n                }\n            };\n\n            // Intercept JBrowse2's config.json fetch to return our dynamic config\n            interceptConfigFetch(jbrowse2Config);\n            \n            console.log('JBrowse2 View Loader: Ready');\n\n        } catch (error) {\n            console.error('Error initializing JBrowse2 View:', error);\n        }\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "fetchAssemblyConfig",
+                        "interceptConfigFetch"
+                    ],
+                    "category": "general",
+                    "tags": [
+                        "asynchronous",
+                        "ajax",
+                        "event-listener",
+                        "state-modifying",
+                        "error-handling"
+                    ],
+                    "usageCount": 7,
+                    "usages": [
+                        {
+                            "file": "js/assembly-display.js",
+                            "line": 24,
+                            "context": "searchManager.init();"
+                        },
+                        {
+                            "file": "js/groups-display.js",
+                            "line": 40,
+                            "context": "searchManager.init();"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 343,
+                            "context": "init();"
+                        },
+                        {
+                            "file": "js/jbrowse2-view-loader.js",
+                            "line": 117,
+                            "context": "init();"
+                        },
+                        {
+                            "file": "js/multi-organism-search.js",
+                            "line": 27,
+                            "context": "searchManager.init();"
+                        },
+                        {
+                            "file": "js/organism-display.js",
+                            "line": 38,
+                            "context": "searchManager.init();"
+                        },
+                        {
+                            "file": "js/modules/annotation-search.js",
+                            "line": 37,
+                            "context": "init() {"
+                        }
+                    ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "tools/pages/jbrowse2-view.php"
+                    ]
+                }
+            ]
+        },
+        {
             "name": "js/loading-indicator.js",
             "count": 2,
             "functions": [
@@ -651,12 +1735,12 @@
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 666,
+                            "line": 668,
                             "context": "renderRegistry();"
                         },
                         {
                             "file": "js/manage-registry.js",
-                            "line": 677,
+                            "line": 679,
                             "context": "renderRegistry();"
                         },
                         {
@@ -1098,7 +2182,7 @@
                     "name": "generateRegistry",
                     "line": 588,
                     "comment": "/**\n * Generate registry by calling backend API\n */",
-                    "code": "{\n    const btn = document.getElementById('generateBtn');\n    const msg = document.getElementById('registryMessage');\n    \n    if (!btn) return;\n    \n    // Get registry type from button data attribute (default to 'php')\n    const registryType = btn.getAttribute('data-registry-type') || 'php';\n    \n    btn.disabled = true;\n    btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Generating...';\n    \n    // Call the backend API to generate registry\n    fetch('/moop/admin/api/generate_registry.php', {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/json'\n        },\n        body: JSON.stringify({ type: registryType })\n    })\n    .then(response => response.json())\n    .then(data => {\n        btn.disabled = false;\n        btn.innerHTML = '<i class=\"fa fa-refresh\"></i> Generate/Update Registry';\n        \n        if (data.success) {\n            // Show success message\n            if (msg) {\n                msg.innerHTML = '<div class=\"alert alert-success alert-dismissible fade show\" role=\"alert\">' +\n                    '<i class=\"fa fa-check-circle\"></i> ' + data.message +\n                    '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' +\n                    '</div>';\n            }\n            \n            // Reload page after 2 seconds to show updated status\n            setTimeout(() => {\n                location.reload();\n            }, 2000);\n        } else {\n            // Show error message\n            if (msg) {\n                msg.innerHTML = '<div class=\"alert alert-danger alert-dismissible fade show\" role=\"alert\">' +\n                    '<i class=\"fa fa-exclamation-circle\"></i> ' + data.message +\n                    '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' +\n                    '</div>';\n            }\n        }\n    })\n    .catch(error => {\n        btn.disabled = false;\n        btn.innerHTML = '<i class=\"fa fa-refresh\"></i> Generate/Update Registry';",
+                    "code": "{\n    const btn = document.getElementById('generateBtn');\n    const msg = document.getElementById('registryMessage');\n    \n    if (!btn) return;\n    \n    // Get registry type from button data attribute (default to 'php')\n    const registryType = btn.getAttribute('data-registry-type') || 'php';\n    \n    btn.disabled = true;\n    btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Generating...';\n    \n    // Call the backend API to generate registry\n    const csrfToken = document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || '';\n    fetch('/moop/admin/api/generate_registry.php', {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/json',\n            'X-CSRF-Token': csrfToken\n        },\n        body: JSON.stringify({ type: registryType })\n    })\n    .then(response => response.json())\n    .then(data => {\n        btn.disabled = false;\n        btn.innerHTML = '<i class=\"fa fa-refresh\"></i> Generate/Update Registry';\n        \n        if (data.success) {\n            // Show success message\n            if (msg) {\n                msg.innerHTML = '<div class=\"alert alert-success alert-dismissible fade show\" role=\"alert\">' +\n                    '<i class=\"fa fa-check-circle\"></i> ' + data.message +\n                    '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' +\n                    '</div>';\n            }\n            \n            // Reload page after 2 seconds to show updated status\n            setTimeout(() => {\n                location.reload();\n            }, 2000);\n        } else {\n            // Show error message\n            if (msg) {\n                msg.innerHTML = '<div class=\"alert alert-danger alert-dismissible fade show\" role=\"alert\">' +\n                    '<i class=\"fa fa-exclamation-circle\"></i> ' + data.message +\n                    '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' +\n                    '</div>';\n            }\n        }\n    })",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -1144,7 +2228,7 @@
                 },
                 {
                     "name": "htmlEscape",
-                    "line": 652,
+                    "line": 654,
                     "comment": "/**\n * HTML escape utility\n */",
                     "code": "{\n    const div = document.createElement('div');\n    div.textContent = text;\n    return div.innerHTML;\n}",
                     "parameters": [],
@@ -1438,6 +2522,30 @@
             ]
         },
         {
+            "name": "js/modules/csrf.js",
+            "count": 1,
+            "functions": [
+                {
+                    "name": "method",
+                    "line": 33,
+                    "comment": "",
+                    "code": "{\n                xhr.setRequestHeader('X-CSRF-Token', token);\n            }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "general",
+                    "tags": [],
+                    "usageCount": 0,
+                    "usages": [],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/admin_init.php"
+                    ]
+                }
+            ]
+        },
+        {
             "name": "js/modules/datatable-config.js",
             "count": 1,
             "functions": [
@@ -1489,47 +2597,47 @@
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 240,
-                            "context": "$btn.find('span').text('Select All');"
-                        },
-                        {
-                            "file": "js/modules/shared-results-table.js",
                             "line": 243,
-                            "context": "$btn.find('span').text('Deselect All');"
-                        },
-                        {
-                            "file": "js/modules/shared-results-table.js",
-                            "line": 255,
-                            "context": "$btn.find('span').text('Deselect All');"
-                        },
-                        {
-                            "file": "js/modules/shared-results-table.js",
-                            "line": 257,
                             "context": "$btn.find('span').text('Select All');"
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 496,
+                            "line": 246,
+                            "context": "$btn.find('span').text('Deselect All');"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 258,
+                            "context": "$btn.find('span').text('Deselect All');"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 260,
                             "context": "$btn.find('span').text('Select All');"
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 499,
+                            "line": 501,
+                            "context": "$btn.find('span').text('Select All');"
+                        },
+                        {
+                            "file": "js/modules/shared-results-table.js",
+                            "line": 504,
                             "context": "$btn.find('span').text('Deselect All');"
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 511,
+                            "line": 516,
                             "context": "$btn.find('span').text('Deselect All');"
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 513,
+                            "line": 518,
                             "context": "$btn.find('span').text('Select All');"
                         },
                         {
                             "file": "admin/pages/organism_checklist.php",
-                            "line": 617,
+                            "line": 766,
                             "context": "const errorText = await response.text();"
                         }
                     ],
@@ -1564,12 +2672,17 @@
                         "loops",
                         "error-handling"
                     ],
-                    "usageCount": 1,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "js/modules/download-handler.js",
                             "line": 131,
                             "context": "} /* end download() */"
+                        },
+                        {
+                            "file": "tools/jbrowse/generate_synteny_tracks_from_sheet.php",
+                            "line": 99,
+                            "context": "$content = $parser->download($options['sheet_id'], $options['gid']);"
                         }
                     ],
                     "phpFilesCount": 0,
@@ -1675,57 +2788,57 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 210,
+                            "line": 211,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_primary_<?= htmlspecialchars($type_name) ?>\" value=\"primary\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'primary' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 213,
+                            "line": 214,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_secondary_<?= htmlspecialchars($type_name) ?>\" value=\"secondary\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'secondary' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 216,
+                            "line": 217,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_success_<?= htmlspecialchars($type_name) ?>\" value=\"success\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'success' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 219,
+                            "line": 220,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_danger_<?= htmlspecialchars($type_name) ?>\" value=\"danger\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'danger' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 222,
+                            "line": 223,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_warning_<?= htmlspecialchars($type_name) ?>\" value=\"warning\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'warning' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 225,
+                            "line": 226,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_info_<?= htmlspecialchars($type_name) ?>\" value=\"info\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'info' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 228,
+                            "line": 229,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_light_<?= htmlspecialchars($type_name) ?>\" value=\"light\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'light' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 231,
+                            "line": 232,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_dark_<?= htmlspecialchars($type_name) ?>\" value=\"dark\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'dark' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 234,
+                            "line": 235,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_indigo_<?= htmlspecialchars($type_name) ?>\" value=\"indigo\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'indigo' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 237,
+                            "line": 238,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_purple_<?= htmlspecialchars($type_name) ?>\" value=\"purple\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'purple' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 240,
+                            "line": 241,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_pink_<?= htmlspecialchars($type_name) ?>\" value=\"pink\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'pink' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         }
                     ],
@@ -1849,7 +2962,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 196,
+                            "line": 197,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger mt-2\" onclick=\"deleteType('<?= htmlspecialchars($type_name) ?>')\">"
                         }
                     ],
@@ -1916,7 +3029,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 353,
+                            "line": 354,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-primary mb-3\" onclick=\"addImage('<?= htmlspecialchars($desc['group_name']) ?>')\" <?= $desc_file_write_error ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : '' ?>>+ Add Image</button>"
                         }
                     ],
@@ -1950,7 +3063,7 @@
                         },
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 336,
+                            "line": 337,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeImage('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)\" style=\"float: right;\" <?= $desc_file_write_error ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : '' ?>>Remove</button>"
                         }
                     ],
@@ -2026,7 +3139,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 377,
+                            "line": 378,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-primary mb-3\" onclick=\"addParagraph('<?= htmlspecialchars($desc['group_name']) ?>')\" <?= $desc_file_write_error ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : '' ?>>+ Add Paragraph</button>"
                         }
                     ],
@@ -2060,7 +3173,7 @@
                         },
                         {
                             "file": "admin/pages/manage_groups.php",
-                            "line": 359,
+                            "line": 360,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeParagraph('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)\" style=\"float: right;\" <?= $desc_file_write_error ? 'disabled data-bs-toggle=\"modal\" data-bs-target=\"#permissionModal\"' : '' ?>>Remove</button>"
                         }
                     ],
@@ -2474,7 +3587,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 159,
+                            "line": 160,
                             "context": "<button type=\"button\" class=\"btn btn-secondary\" id=\"cancel-btn\" onclick=\"resetForm()\">"
                         }
                     ],
@@ -2658,7 +3771,9 @@
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
-                    "internalCalls": [],
+                    "internalCalls": [
+                        "assembly"
+                    ],
                     "category": "admin",
                     "tags": [
                         "dom-manipulation",
@@ -2698,8 +3813,58 @@
                     "tags": [
                         "state-modifying"
                     ],
-                    "usageCount": 15,
+                    "usageCount": 25,
                     "usages": [
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 119,
+                            "context": "<h5 class=\"mb-1\">${escapeHtml(assembly.displayName)}</h5>"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 121,
+                            "context": "<strong>Aliases:</strong> ${escapeHtml(assembly.aliases.join(', '))}"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 126,
+                            "context": "data-assembly-id=\"${escapeHtml(assembly.name)}\""
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 127,
+                            "context": "data-assembly-name=\"${escapeHtml(assembly.displayName)}\">"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 177,
+                            "context": "<p>${escapeHtml(message)}</p>"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 254,
+                            "context": "<p class=\"mt-3\">Loading JBrowse2 viewer for ${escapeHtml(assemblyName)}...</p>"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 274,
+                            "context": "<strong>Assembly not found:</strong> ${escapeHtml(assemblyName)}"
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 296,
+                            "context": "src=\"${escapeHtml(iframeUrl)}\""
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 298,
+                            "context": "title=\"JBrowse2 Viewer for ${escapeHtml(assembly.displayName)}\""
+                        },
+                        {
+                            "file": "js/jbrowse2-loader.js",
+                            "line": 313,
+                            "context": "<strong>Error loading assembly:</strong> ${escapeHtml(error.message)}"
+                        },
                         {
                             "file": "js/permission-manager.js",
                             "line": 52,
@@ -3447,9 +4612,9 @@
                 },
                 {
                     "name": "initializeResultsTable",
-                    "line": 165,
-                    "comment": "/**\n * Initializes a DataTable with export functionality and column filtering\n * \n * @param {string} tableId - jQuery selector for the table (e.g., '#resultsTable_organism')\n * @param {string} selectId - Unique identifier for the select all button\n * @param {boolean} isUniquenameSearch - Whether this is a uniquename-only search (no annotation columns)\n */",
-                    "code": "{\n    // Populate filter containers with filter inputs and Select All button\n    $(tableId + ' .column-filter-container').each(function(i) {\n        const columnIndex = $(this).data('column-index');\n        if (columnIndex === 0) {\n            // Select All button for first column\n            $(this).html('<button style=\"width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;\" class=\"btn btn_select_all\" id=\"toggle-select-btn' + selectId + '\"><span>Select All</span></button>');\n        } else {\n            $(this).html('<input style=\"text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #e8e8e8;\" type=\"text\" placeholder=\"Filter...\" class=\"column-search\">');\n        }\n    });\n    \n    // Initialize DataTable\n    const table = $(tableId).DataTable({\n        dom: 'Brtlpi',\n        pageLength: 25,\n        stateSave: false,\n        orderCellsTop: false,\n        buttons: DataTableExportConfig.getSearchResultsButtons(),\n        scrollX: false,\n        scrollCollapse: false,\n        autoWidth: false,\n        fixedHeader: false,\n        columnDefs: isUniquenameSearch ? [\n            { targets: 0, orderable: false, className: \"export-exclude\" },  // Select - not sortable, exclude from export\n            { targets: 1, visible: false, className: \"export-only\" }, // Species - hidden but included in exports\n            { targets: 2 },  // Type\n            { targets: 3 }, // Feature ID\n            { targets: 4 }, // Name\n            { targets: 5, className: \"wrap-text\" }  // Description (with wrapping)\n        ] : [\n            { targets: 0, orderable: false, className: \"export-exclude\" },  // Select - not sortable, exclude from export\n            { targets: 1, visible: false, className: \"export-only\" }, // Species - hidden but included in exports\n            { targets: 2 },  // Type\n            { target",
+                    "line": 166,
+                    "comment": "/**\n * Initializes a DataTable with export functionality and column filtering\n * \n * @param {string} tableId - jQuery selector for the table (e.g., '#resultsTable_organism')\n * @param {string} selectId - Unique identifier for the select all button\n * @param {boolean} isUniquenameSearch - Whether this is a uniquename-only search (no annotation columns)\n * @param {string} viewType - Optional view type identifier ('simple' or 'expanded') to create unique button IDs\n */",
+                    "code": "{\n    const buttonId = 'toggle-select-btn' + selectId + (viewType ? '-' + viewType : '');\n    \n    // Populate filter containers with filter inputs and Select All button\n    $(tableId + ' .column-filter-container').each(function(i) {\n        const columnIndex = $(this).data('column-index');\n        if (columnIndex === 0) {\n            // Select All button for first column\n            $(this).html('<button style=\"width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;\" class=\"btn btn_select_all\" id=\"' + buttonId + '\"><span>Select All</span></button>');\n        } else {\n            $(this).html('<input style=\"text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #212529;\" type=\"text\" placeholder=\"Filter...\" class=\"column-search\">');\n        }\n    });\n    \n    // Initialize DataTable\n    const table = $(tableId).DataTable({\n        dom: 'Brtlpi',\n        pageLength: 25,\n        stateSave: false,\n        orderCellsTop: false,\n        buttons: DataTableExportConfig.getSearchResultsButtons(),\n        scrollX: false,\n        scrollCollapse: false,\n        autoWidth: false,\n        fixedHeader: false,\n        columnDefs: isUniquenameSearch ? [\n            { targets: 0, orderable: false, className: \"export-exclude\" },  // Select - not sortable, exclude from export\n            { targets: 1, visible: false, className: \"export-only\" }, // Species - hidden but included in exports\n            { targets: 2 },  // Type\n            { targets: 3 }, // Feature ID\n            { targets: 4 }, // Name\n            { targets: 5, className: \"wrap-text\" }  // Description (with wrapping)\n        ] : [\n            { targets: 0, orderable: false, className: \"export-exclude\" },  // Select - not sortable, exclude from export\n            { targets: 1, visible: false, className: \"export-only\" }, // Species - hidden but i",
                     "parameters": [
                         {
                             "name": "tableId",
@@ -3465,6 +4630,11 @@
                             "name": "isUniquenameSearch",
                             "type": "boolean",
                             "description": "Whether this is a uniquename-only search (no annotation columns)"
+                        },
+                        {
+                            "name": "viewType",
+                            "type": "string",
+                            "description": "Optional view type identifier ('simple' or 'expanded') to create unique button IDs"
                         }
                     ],
                     "returnType": "void",
@@ -3473,6 +4643,7 @@
                     "category": "datatable",
                     "tags": [
                         "ajax",
+                        "event-listener",
                         "state-modifying"
                     ],
                     "usageCount": 3,
@@ -3489,8 +4660,8 @@
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 655,
-                            "context": "initializeResultsTable('#' + tableId, selectIdClean, false);"
+                            "line": 660,
+                            "context": "initializeResultsTable('#' + tableId, selectIdClean, false, 'expanded');"
                         }
                     ],
                     "phpFilesCount": 0,
@@ -3498,7 +4669,7 @@
                 },
                 {
                     "name": "groupResultsByFeature",
-                    "line": 273,
+                    "line": 276,
                     "comment": "/**\n * Groups search results by feature_uniquename, preserving database sort order\n * \n * @param {Array} results - Array of result objects\n * @returns {Array} Array of [uniquename, data] pairs in database sort order\n */",
                     "code": "{\n    const grouped = {};\n    const order = [];\n    \n    results.forEach(result => {\n        const key = result.feature_uniquename;\n        if (!grouped[key]) {\n            grouped[key] = {\n                feature: result,\n                annotations: []\n            };\n            order.push(key);\n        }\n        grouped[key].annotations.push(result);\n    });\n    \n    // Return as array of entries in the order they first appeared\n    return order.map(key => [key, grouped[key]]);\n}",
                     "parameters": [
@@ -3520,7 +4691,7 @@
                     "usages": [
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 329,
+                            "line": 332,
                             "context": "const grouped = groupResultsByFeature(results);"
                         }
                     ],
@@ -3529,7 +4700,7 @@
                 },
                 {
                     "name": "createSimpleResultsTable",
-                    "line": 305,
+                    "line": 308,
                     "comment": "/**\n * Creates a simple results table showing unique features only\n * Similar to uniquename search view but with match counts\n * \n * @param {string} organism - The organism identifier\n * @param {Array} results - Array of result objects\n * @param {string} sitePath - The site base path\n * @param {string} linkBasePath - Base path for feature links\n * @param {string} imageUrl - Optional URL to organism image thumbnail\n * @param {string} searchKeywords - Search keywords for highlighting in expanded view\n * @returns {string} HTML string for the simple table\n */",
                     "code": "{\n    const tableId = 'simple_resultsTable_' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n    const selectId = organism.replace(/[^a-zA-Z0-9]/g, '_');\n    const genus = results[0]?.genus || '';\n    const species = results[0]?.species || '';\n    const commonName = results[0]?.common_name || '';\n    \n    const organismDisplay = `<a href=\"${sitePath}/tools/organism.php?organism=${encodeURIComponent(organism)}\" style=\"text-decoration: none; color: #0f766e;\"><em>${genus} ${species}</em> <i class=\"fa fa-external-link-alt\" style=\"font-size: 0.8em; margin-left: 0.25rem;\"></i></a>`;\n    const commonNameDisplay = commonName ? ` (${commonName})` : '';\n    \n    const fallbackId = 'icon-' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n    \n    let imageHtml = '';\n    if (imageUrl) {\n        imageHtml = `<img src=\"${imageUrl}\" class=\"organism-thumbnail\" style=\"height: 24px; width: 24px; margin-right: 8px; border-radius: 3px;\" onerror=\"this.style.display='none'; document.getElementById('${fallbackId}').style.display='inline';\" onload=\"document.getElementById('${fallbackId}').style.display='none';\">\n                     <i class=\"fa fa-dna\" id=\"${fallbackId}\" style=\"margin-right: 8px; display: none;\"></i>`;\n    } else {\n        imageHtml = `<i class=\"fa fa-dna\" style=\"margin-right: 8px;\"></i>`;\n    }\n    \n    const anchorId = 'results-' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n    \n    // Group results by feature to get unique features and match counts\n    const grouped = groupResultsByFeature(results);\n    const uniqueFeatureCount = grouped.length;\n    \n    let html = `\n        <div class=\"organism-results\" id=\"${anchorId}\">\n            <h5 style=\"display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;\">\n                <span style=\"display: flex; align-items: center; gap: 0.5rem;\">\n                    ${imageHtml}${organismDisplay}${commonNameDisplay}\n                </span>\n                <span class=\"badge results_feature_count\">${uniqueFeatureCount} feature${uniqueFeatureC",
                     "parameters": [
@@ -3590,9 +4761,9 @@
                 },
                 {
                     "name": "initializeSimpleResultsTable",
-                    "line": 433,
+                    "line": 436,
                     "comment": "/**\n * Initialize simple results table with DataTables and toggle functionality\n */",
-                    "code": "{\n    // Populate filter containers\n    $('#' + tableId + ' .column-filter-container').each(function(i) {\n        const columnIndex = $(this).data('column-index');\n        if (columnIndex === 0) {\n            $(this).html('<button style=\"width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;\" class=\"btn btn_select_all\" id=\"toggle-select-btn' + selectId + '\"><span>Select All</span></button>');\n        } else {\n            $(this).html('<input style=\"text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #e8e8e8;\" type=\"text\" placeholder=\"Filter...\" class=\"column-search\">');\n        }\n    });\n    \n    // Initialize DataTable\n    const table = $('#' + tableId).DataTable({\n        dom: 'Brtlpi',\n        pageLength: 25,\n        stateSave: false,\n        orderCellsTop: false,\n        buttons: DataTableExportConfig.getSearchResultsButtons(),\n        scrollX: false,\n        scrollCollapse: false,\n        autoWidth: false,\n        fixedHeader: false,\n        columnDefs: [\n            { targets: 0, orderable: false, className: \"export-exclude\" },\n            { targets: 1, visible: false, className: \"export-only\" },\n            { targets: 2 },\n            { targets: 3 },\n            { targets: 4 },\n            { targets: 5, className: \"wrap-text\" },\n            { targets: 6 }\n        ],\n        colReorder: true,\n        retrieve: true,\n        initComplete: function() {\n            const selectHeader = $('#' + tableId + ' thead th:first-child');\n            selectHeader.removeClass('sorting sorting_asc sorting_desc');\n            \n            $('#' + tableId + ' .column-filter-container').each(function() {\n                const columnIndex = $(this).data('column-index');\n                if (columnIndex !== undefined && columnIndex !== 0) {\n                    $('input.column-search', this).on('keyup",
+                    "code": "{\n    const buttonId = 'toggle-select-btn' + selectId + '-simple';\n    \n    // Populate filter containers\n    $('#' + tableId + ' .column-filter-container').each(function(i) {\n        const columnIndex = $(this).data('column-index');\n        if (columnIndex === 0) {\n            $(this).html('<button style=\"width:110px; height: 32px; border-radius: 4px; white-space: nowrap; border: solid 1px #808080; padding: 0; text-align: left; padding-left: 8px; display: flex; align-items: center;\" class=\"btn btn_select_all\" id=\"' + buttonId + '\"><span>Select All</span></button>');\n        } else {\n            $(this).html('<input style=\"text-align:left; border: solid 1px #f0f0f0; border-radius: 4px; width: 100%; background-color: #ffffff; color: #212529;\" type=\"text\" placeholder=\"Filter...\" class=\"column-search\">');\n        }\n    });\n    \n    // Initialize DataTable\n    const table = $('#' + tableId).DataTable({\n        dom: 'Brtlpi',\n        pageLength: 25,\n        stateSave: false,\n        orderCellsTop: false,\n        buttons: DataTableExportConfig.getSearchResultsButtons(),\n        scrollX: false,\n        scrollCollapse: false,\n        autoWidth: false,\n        fixedHeader: false,\n        columnDefs: [\n            { targets: 0, orderable: false, className: \"export-exclude\" },\n            { targets: 1, visible: false, className: \"export-only\" },\n            { targets: 2 },\n            { targets: 3 },\n            { targets: 4 },\n            { targets: 5, className: \"wrap-text\" },\n            { targets: 6 }\n        ],\n        colReorder: true,\n        retrieve: true,\n        initComplete: function() {\n            const selectHeader = $('#' + tableId + ' thead th:first-child');\n            selectHeader.removeClass('sorting sorting_asc sorting_desc');\n            \n            $('#' + tableId + ' .column-filter-container').each(function() {\n                const columnIndex = $(this).data('column-index');\n                if (columnIndex !== undefined && columnIndex !== 0) {",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -3607,7 +4778,7 @@
                     "usages": [
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 425,
+                            "line": 428,
                             "context": "initializeSimpleResultsTable(tableId, selectId, organism, results, sitePath, searchKeywords);"
                         }
                     ],
@@ -3616,7 +4787,7 @@
                 },
                 {
                     "name": "initializeViewToggle",
-                    "line": 530,
+                    "line": 535,
                     "comment": "/**\n * Toggle between simple and expanded views\n */",
                     "code": "{\n    \n    // Find the parent organism results div\n    const containers = document.querySelectorAll(`[data-organism=\"${selectId}\"]`);\n    if (containers.length === 0) {\n        return;\n    }\n    \n    const parentDiv = containers[0].closest('.organism-results');\n    if (!parentDiv) {\n        return;\n    }\n    \n    const toggleBtn = parentDiv.querySelector('.toggle-view-btn');\n    const simpleContainer = parentDiv.querySelector(`.simple-view-container[data-organism=\"${selectId}\"]`);\n    const expandedContainer = parentDiv.querySelector(`.expanded-view-container[data-organism=\"${selectId}\"]`);\n    \n    \n    if (!toggleBtn || !simpleContainer || !expandedContainer) {\n        return;\n    }\n    \n    toggleBtn.addEventListener('click', (e) => {\n        e.preventDefault();\n        \n        \n        if (expandedContainer.style.display === 'none') {\n            // Switch to expanded view\n            // Check if table already exists (by looking for actual table element)\n            if (expandedContainer.querySelector('table') === null) {\n                const tableId = 'resultsTable_' + organism.replace(/[^a-zA-Z0-9]/g, '_');\n                const selectIdClean = organism.replace(/[^a-zA-Z0-9]/g, '_');\n                const genus = results[0]?.genus || '';\n                const species = results[0]?.species || '';\n                const commonName = results[0]?.common_name || '';\n                \n                const organismDisplay = `<em>${genus} ${species}</em>`;\n                const commonNameDisplay = commonName ? ` (${commonName})` : '';\n                \n                let html = `\n                    <div class=\"table-responsive\" style=\"overflow-x: auto; width: 100%;\">\n                        <table id=\"${tableId}\" class=\"table table-sm table-striped table-hover results-table\">\n                            <thead>\n                                <tr>\n                                    <th style=\"width: 120px;\">\n                                        <div class=\"colum",
                     "parameters": [],
@@ -3634,7 +4805,7 @@
                     "usages": [
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 525,
+                            "line": 530,
                             "context": "initializeViewToggle(organism, results, sitePath, selectId, searchKeywords);"
                         }
                     ],
@@ -3674,17 +4845,17 @@
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 637,
+                            "line": 642,
                             "context": "<td>${highlightSearchTerms(result.feature_name || '', searchKeywords)}</td>"
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 638,
+                            "line": 643,
                             "context": "<td>${highlightSearchTerms(result.feature_description || '', searchKeywords)}</td>"
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 641,
+                            "line": 646,
                             "context": "<td>${highlightSearchTerms(result.annotation_description || '', searchKeywords)}</td>"
                         }
                     ],
@@ -3693,7 +4864,7 @@
                 },
                 {
                     "name": "highlightSearchTerms",
-                    "line": 618,
+                    "line": 623,
                     "comment": "",
                     "code": "{\n                        if (!keywords || !text) return text;\n                        \n                        const terms = keywords.trim().split(/\\s+/).filter(t => t.length >= 3);\n                        if (terms.length === 0) return text;\n                        \n                        let highlighted = text;\n                        terms.forEach(term => {\n                            const regex = new RegExp(`${term}`, 'gi');\n                            highlighted = highlighted.replace(regex, `<strong style=\"background-color: #fff3cd; font-weight: bold;\">$&</strong>`);\n                        });\n                        return highlighted;\n                    }",
                     "parameters": [],
@@ -3724,17 +4895,17 @@
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 637,
+                            "line": 642,
                             "context": "<td>${highlightSearchTerms(result.feature_name || '', searchKeywords)}</td>"
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 638,
+                            "line": 643,
                             "context": "<td>${highlightSearchTerms(result.feature_description || '', searchKeywords)}</td>"
                         },
                         {
                             "file": "js/modules/shared-results-table.js",
-                            "line": 641,
+                            "line": 646,
                             "context": "<td>${highlightSearchTerms(result.annotation_description || '', searchKeywords)}</td>"
                         }
                     ],
@@ -5453,6 +6624,16 @@
             "line": 2
         },
         {
+            "name": "viewTrack",
+            "file": "js/jbrowse-admin.js",
+            "line": 258
+        },
+        {
+            "name": "deleteTrack",
+            "file": "js/jbrowse-admin.js",
+            "line": 265
+        },
+        {
             "name": "toggleAllFiles",
             "file": "js/manage-registry.js",
             "line": 375
@@ -5501,6 +6682,11 @@
             "name": "track_height",
             "file": "js/modules/blast-canvas-graph.js",
             "line": 413
+        },
+        {
+            "name": "method",
+            "file": "js/modules/csrf.js",
+            "line": 33
         },
         {
             "name": "updateRegistry",

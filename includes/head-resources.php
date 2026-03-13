@@ -35,6 +35,9 @@ $site = $config->getString('site');
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="<?php echo "/$images_path/favicon.ico"; ?>">
+    <?php if (function_exists('generate_csrf_token')): ?>
+    <meta name="csrf-token" content="<?= htmlspecialchars(generate_csrf_token(), ENT_QUOTES) ?>">
+    <?php endif; ?>
 
     <!-- Bootstrap 5.3.2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -59,7 +62,8 @@ $site = $config->getString('site');
       $custom_css_path = $config->getPath('custom_css_path', '');
       if (!empty($custom_css_path)) {
           if (file_exists($custom_css_path)) {
-              echo "<link rel=\"stylesheet\" href=\"$custom_css_path\">";
+              $custom_css_url = $config->getString('custom_css_url');
+              echo '<link rel="stylesheet" href="' . htmlspecialchars($custom_css_url, ENT_QUOTES) . '">';
           } else {
               // Log warning if custom CSS path is configured but file doesn't exist
               error_log("Warning: custom_css_path configured in site_config.php but file not found: $custom_css_path");

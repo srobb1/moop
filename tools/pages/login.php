@@ -33,6 +33,7 @@
           <?php endif; ?>
 
           <form method="post">
+            <?= csrf_input_field() ?>
             <div class="mb-4">
               <label for="username" class="form-label fw-semibold text-dark">Username</label>
               <input type="text" class="form-control form-control-lg" id="username" name="username" required>

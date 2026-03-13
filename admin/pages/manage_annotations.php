@@ -166,6 +166,7 @@
               <div class="col-md-6">
                 <h6>Display Label</h6>
                 <form method="post" action="manage_annotations.php" class="d-flex gap-2 mb-2" onsubmit="event.stopPropagation(); this.querySelector('input[name=\'_form_action\']').value = 'update_display_label';">
+                  <?= csrf_input_field() ?>
                   <input type="hidden" name="_form_action" value="">
                   <input type="hidden" name="type_name" value="<?= htmlspecialchars($type_name) ?>">
                   <select class="form-select form-select-sm" name="display_label" required>
@@ -241,6 +242,7 @@
                   <label class="btn btn-sm" for="color_pink_<?= htmlspecialchars($type_name) ?>" style="background-color: #ec4899; color: white; border: none; padding: 0.375rem 0.75rem; flex: 0 0 calc(25% - 0.2rem);">Pink</label>
                 </div>
                 <form method="post" action="manage_annotations.php" class="d-none" id="colorForm_<?= htmlspecialchars($type_name) ?>" onsubmit="event.stopPropagation(); this.querySelector('input[name=\'_form_action\']').value = 'update_color';">
+                  <?= csrf_input_field() ?>
                   <input type="hidden" name="_form_action" value="">
                   <input type="hidden" name="type_name" value="<?= htmlspecialchars($type_name) ?>">
                   <input type="hidden" name="color" id="colorValue_<?= htmlspecialchars($type_name) ?>" value="">
@@ -256,6 +258,7 @@
               <div class="col-md-6">
                 <h6>Add Synonym</h6>
                 <form method="post" action="manage_annotations.php" class="d-flex gap-2 mb-2" onsubmit="event.stopPropagation(); this.querySelector('input[name=\'_form_action\']').value = 'add_synonym';">
+                  <?= csrf_input_field() ?>
                   <input type="hidden" name="_form_action" value="">
                   <input type="hidden" name="type_name" value="<?= htmlspecialchars($type_name) ?>">
                   <input type="text" class="form-control form-control-sm" name="new_synonym" placeholder="Synonym name" required>
@@ -274,6 +277,7 @@
                   <div class="list-group-item d-flex justify-content-between align-items-center">
                     <code><?= htmlspecialchars($synonym) ?></code>
                     <form method="post" action="manage_annotations.php" style="display: inline;" onsubmit="event.stopPropagation(); this.querySelector('input[name=\'_form_action\']').value = 'remove_synonym';">
+                      <?= csrf_input_field() ?>
                       <input type="hidden" name="_form_action" value="">
                       <input type="hidden" name="type_name" value="<?= htmlspecialchars($type_name) ?>">
                       <input type="hidden" name="synonym_to_remove" value="<?= htmlspecialchars($synonym) ?>">
@@ -315,6 +319,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="post" id="editTypeDescForm">
+        <?= csrf_input_field() ?>
         <input type="hidden" name="_form_action" value="update_type_description">
         <input type="hidden" name="type_name" id="editTypeName">
         <div class="modal-body">
@@ -342,6 +347,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="post" id="editDescForm">
+        <?= csrf_input_field() ?>
         <input type="hidden" name="update_description" value="1">
         <input type="hidden" name="section" id="editSection">
         <div class="modal-body">

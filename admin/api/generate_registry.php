@@ -4,7 +4,8 @@
  * Handles requests to generate or update function registries
  */
 
-require_once __DIR__ . '/../../includes/config_init.php';
+// Admin auth required - must come before any other includes
+require_once __DIR__ . '/../admin_init.php';
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

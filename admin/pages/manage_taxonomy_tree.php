@@ -152,6 +152,7 @@
                     </div>
                     
                     <form method="post" id="generateForm">
+                        <?= csrf_input_field() ?>
                         <input type="hidden" name="action" value="generate">
                         <button type="submit" class="btn btn-primary" id="generateBtn" <?= $file_write_error ? 'disabled' : '' ?>>
                             <i class="fa fa-sync-alt"></i> Generate Tree from NCBI
@@ -178,6 +179,7 @@
                     </ul>
                     
                     <form method="post" id="manualForm">
+                        <?= csrf_input_field() ?>
                         <input type="hidden" name="action" value="save_manual">
                         <div class="mb-3">
                             <label for="tree_json" class="form-label">Tree JSON:</label>

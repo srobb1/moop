@@ -46,6 +46,7 @@ $edit_username = null;
 
 // Handle form submission (create or update)
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    csrf_protect();
     if ($file_write_error) {
         $message = "Users file is not writable. Please fix permissions first.";
         $messageType = "danger";

@@ -70,6 +70,7 @@
     </div>
     <div class="card-body">
       <form method="post" id="userForm">
+        <?= csrf_input_field() ?>
         <input type="hidden" name="create_or_update_user" value="1">
         <input type="hidden" name="is_create" id="is_create" value="1">
         <input type="hidden" name="original_username" id="original_username" value="">
@@ -268,6 +269,7 @@
                     </td>
                     <td>
                       <form method="post" style="display: inline;">
+                        <?= csrf_input_field() ?>
                         <input type="hidden" name="remove_stale_assembly" value="1">
                         <input type="hidden" name="username" value="<?= htmlspecialchars($stale['username']) ?>">
                         <input type="hidden" name="organism" value="<?= htmlspecialchars($stale['organism']) ?>">
@@ -275,6 +277,7 @@
                         <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
                       </form>
                       <form method="post" style="display: inline;" onclick="return confirm('Remove this stale assembly from ALL users?');">
+                        <?= csrf_input_field() ?>
                         <input type="hidden" name="remove_stale_from_all" value="1">
                         <input type="hidden" name="organism" value="<?= htmlspecialchars($stale['organism']) ?>">
                         <input type="hidden" name="assembly" value="<?= htmlspecialchars($stale['assembly']) ?>">
