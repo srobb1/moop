@@ -47,7 +47,7 @@ $permission_items = [
         ],
         'required_perms' => '664',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
+        'required_group' => $web_group,
         'reason' => 'Site configuration is edited by admins through the web interface',
         'why_write' => 'Admin interface needs to save changed site settings (title, email, etc.)',
     ],
@@ -65,7 +65,7 @@ $permission_items = [
         ],
         'required_perms' => '664',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
+        'required_group' => $web_group,
         'reason' => 'Configuration files are edited by admins and read by the web server',
         'why_write' => 'Admin interface needs to modify these files when you change settings',
     ],
@@ -78,9 +78,9 @@ $permission_items = [
         'paths' => [$metadata_path],
         'required_perms' => '2775',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
-        'reason' => 'SGID (Set-Group-ID) bit (shown as \'s\' in permissions) ensures new files automatically get www-data as group',
-        'why_write' => 'Web server needs to create/write files here. SGID ensures group is always www-data without manual fixes',
+        'required_group' => $web_group,
+        'reason' => 'SGID (Set-Group-ID) bit (shown as \'s\' in permissions) ensures new files automatically get ' . $web_group . ' as group',
+        'why_write' => 'Web server needs to create/write files here. SGID ensures group is always ' . $web_group . ' without manual fixes',
         'sgid_bit' => true,
     ],
     
@@ -94,8 +94,8 @@ $permission_items = [
         ],
         'required_perms' => '2775',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
-        'reason' => 'SGID (Set-Group-ID) bit ensures new files automatically get www-data as group',
+        'required_group' => $web_group,
+        'reason' => 'SGID (Set-Group-ID) bit ensures new files automatically get ' . $web_group . ' as group',
         'why_write' => 'Web server needs to read databases, organism.json files, and RENAME/MOVE assembly subdirectories during admin operations',
         'sgid_bit' => true,
     ],
@@ -108,7 +108,7 @@ $permission_items = [
         'pattern' => 'organisms/*/organism.json',
         'required_perms' => '664',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
+        'required_group' => $web_group,
         'reason' => 'Edited by admin interface, read by web server',
         'why_write' => 'Admin can update organism metadata (descriptions, images, feature types)',
     ],
@@ -121,7 +121,7 @@ $permission_items = [
         'pattern' => 'organisms/*/organism.sqlite',
         'required_perms' => '644',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
+        'required_group' => $web_group,
         'reason' => 'Web server reads data; files are pre-built and not modified',
         'why_write' => 'Database files must be readable by web server but typically not written to',
     ],
@@ -134,8 +134,8 @@ $permission_items = [
         'paths' => [$site_path . '/logs'],
         'required_perms' => '2775',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
-        'reason' => 'SGID (Set-Group-ID) bit ensures new log files automatically get www-data as group',
+        'required_group' => $web_group,
+        'reason' => 'SGID (Set-Group-ID) bit ensures new log files automatically get ' . $web_group . ' as group',
         'why_write' => 'Web server writes error and debug logs here',
         'sgid_bit' => true,
     ],
@@ -148,8 +148,8 @@ $permission_items = [
         'paths' => [$absolute_images_path],
         'required_perms' => '2775',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
-        'reason' => 'SGID (Set-Group-ID) bit ensures new image files automatically get www-data as group',
+        'required_group' => $web_group,
+        'reason' => 'SGID (Set-Group-ID) bit ensures new image files automatically get ' . $web_group . ' as group',
         'why_write' => 'Admin may upload new organism images via web interface',
         'sgid_bit' => true,
     ],
@@ -162,8 +162,8 @@ $permission_items = [
         'paths' => [$absolute_images_path . '/ncbi_taxonomy'],
         'required_perms' => '2775',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
-        'reason' => 'SGID (Set-Group-ID) bit ensures downloaded taxonomy images automatically get www-data as group',
+        'required_group' => $web_group,
+        'reason' => 'SGID (Set-Group-ID) bit ensures downloaded taxonomy images automatically get ' . $web_group . ' as group',
         'why_write' => 'Web server downloads and caches organism images from NCBI when generating taxonomy tree',
         'sgid_bit' => true,
     ],
@@ -176,12 +176,69 @@ $permission_items = [
         'paths' => [$absolute_images_path . '/banners'],
         'required_perms' => '2775',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
-        'reason' => 'SGID (Set-Group-ID) bit ensures new banner files automatically get www-data as group',
+        'required_group' => $web_group,
+        'reason' => 'SGID (Set-Group-ID) bit ensures new banner files automatically get ' . $web_group . ' as group',
         'why_write' => 'Web server uploads new banners and deletes old ones through admin interface. Existing files also need 664 permissions.',
         'sgid_bit' => true,
     ],
     
+    // Genome Data Directory
+    [
+        'name' => 'Genome Data Directory',
+        'description' => 'Reference genomes and annotations per organism/assembly',
+        'type' => 'directory',
+        'paths' => [$config->getPath('genomes_directory')],
+        'required_perms' => '2775',
+        'required_owner' => $moop_owner,
+        'required_group' => $web_group,
+        'reason' => 'SGID (Set-Group-ID) bit ensures new genome files automatically get ' . $web_group . ' as group',
+        'why_write' => 'Web server reads genome files for JBrowse2 and BLAST; admin may upload new assemblies',
+        'sgid_bit' => true,
+    ],
+
+    // Track Data Directory
+    [
+        'name' => 'Track Data Directory',
+        'description' => 'Additional track files (BigWig, BAM, VCF, etc.) served via JWT authentication',
+        'type' => 'directory',
+        'paths' => [$config->getPath('tracks_directory')],
+        'required_perms' => '2775',
+        'required_owner' => $moop_owner,
+        'required_group' => $web_group,
+        'reason' => 'SGID (Set-Group-ID) bit ensures new track files automatically get ' . $web_group . ' as group',
+        'why_write' => 'Web server reads track files through api/jbrowse2/tracks.php; admin may add new tracks',
+        'sgid_bit' => true,
+    ],
+
+    // JWT Certificates Directory
+    [
+        'name' => 'JWT Certificates Directory',
+        'description' => 'Private and public keys for JBrowse2 track authentication',
+        'type' => 'directory',
+        'paths' => [$config->getPath('certs_directory')],
+        'required_perms' => '750',
+        'required_owner' => $moop_owner,
+        'required_group' => $web_group,
+        'reason' => 'JWT keys must be readable by web server but not world-readable',
+        'why_write' => 'Web server reads keys to sign/verify JWT tokens for track access',
+    ],
+
+    // JWT Key Files
+    [
+        'name' => 'JWT Key Files',
+        'description' => 'RSA private and public keys used to sign JBrowse2 track tokens',
+        'type' => 'file',
+        'paths' => [
+            $config->getPath('jwt_private_key'),
+            $config->getPath('jwt_public_key'),
+        ],
+        'required_perms' => '640',
+        'required_owner' => $moop_owner,
+        'required_group' => $web_group,
+        'reason' => 'Private key must never be world-readable; web server needs read access to sign tokens',
+        'why_write' => 'Keys are generated once during setup and only read thereafter',
+    ],
+
     // Documentation Directory
     [
         'name' => 'Documentation Directory',
@@ -190,8 +247,8 @@ $permission_items = [
         'paths' => [$docs_path],
         'required_perms' => '2775',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
-        'reason' => 'SGID (Set-Group-ID) bit ensures new documentation files automatically get www-data as group',
+        'required_group' => $web_group,
+        'reason' => 'SGID (Set-Group-ID) bit ensures new documentation files automatically get ' . $web_group . ' as group',
         'why_write' => 'Docs may be updated through admin interface',
         'sgid_bit' => true,
     ],
@@ -204,8 +261,8 @@ $permission_items = [
         'paths' => [$metadata_path . '/backups'],
         'required_perms' => '2775',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
-        'reason' => 'SGID (Set-Group-ID) bit ensures backup files automatically get www-data as group',
+        'required_group' => $web_group,
+        'reason' => 'SGID (Set-Group-ID) bit ensures backup files automatically get ' . $web_group . ' as group',
         'why_write' => 'Web server creates backup files when configs are updated',
         'sgid_bit' => true,
     ],
@@ -218,8 +275,8 @@ $permission_items = [
         'paths' => [$metadata_path . '/change_log'],
         'required_perms' => '2775',
         'required_owner' => $moop_owner,
-        'required_group' => 'www-data',
-        'reason' => 'SGID (Set-Group-ID) bit ensures change log files automatically get www-data as group',
+        'required_group' => $web_group,
+        'reason' => 'SGID (Set-Group-ID) bit ensures change log files automatically get ' . $web_group . ' as group',
         'why_write' => 'Web server logs all admin actions for auditing',
         'sgid_bit' => true,
     ],
@@ -230,7 +287,7 @@ $checks = [];
 foreach ($permission_items as $item) {
     if ($item['type'] === 'directory' || ($item['type'] === 'file' && !isset($item['pattern']))) {
         foreach ($item['paths'] ?? [] as $path) {
-            $checks[] = performPermissionCheck($path, $item);
+            $checks[] = performPermissionCheck($path, $item, $web_group);
         }
     }
 }
@@ -248,10 +305,10 @@ if (is_dir($organism_data)) {
                 'name' => 'Organism Directory',
                 'type' => 'directory',
                 'required_perms' => '2775',
-                'required_group' => 'www-data',
+                'required_group' => $web_group,
                 'reason' => 'SGID required for assembly rename operations',
                 'why_write' => 'Web server needs to rename/move assembly subdirectories',
-            ]);
+            ], $web_group);
             
             if (!empty($check['issues'])) {
                 $assembly_subdir_issues[] = $check;
@@ -272,10 +329,10 @@ if (is_dir($organism_data)) {
                         'name' => 'Assembly Subdirectory: ' . $organism . '/' . $item,
                         'type' => 'directory',
                         'required_perms' => '2775',
-                        'required_group' => 'www-data',
+                        'required_group' => $web_group,
                         'reason' => 'Web server needs to write BLAST index files here',
                         'why_write' => 'BLAST indexes (.nhr, .nin, .nsq, .phr, .pin, .psq) must be writable by web server',
-                    ]);
+                    ], $web_group);
                     
                     if (!empty($check['issues'])) {
                         $assembly_subdir_issues[] = $check;
@@ -299,10 +356,10 @@ if (is_dir($organism_data)) {
                                 'name' => 'FASTA File: ' . $organism . '/' . $item . '/' . $expected_file,
                                 'type' => 'file',
                                 'required_perms' => '644',
-                                'required_group' => 'www-data',
+                                'required_group' => $web_group,
                                 'reason' => ucfirst($seq_type) . ' file must be readable by web server for BLAST',
                                 'why_write' => 'Web server reads ' . $seq_type . ' files to run BLAST searches',
-                            ]);
+                            ], $web_group);
                             
                             if (!empty($check['issues'])) {
                                 $fasta_file_issues[] = $check;
@@ -315,14 +372,14 @@ if (is_dir($organism_data)) {
     }
 }
 
-function performPermissionCheck($path, $item) {
+function performPermissionCheck($path, $item, $web_group = 'www-data') {
     $result = [
         'name' => $item['name'],
         'path' => $path,
         'exists' => file_exists($path),
         'type' => $item['type'],
         'required_perms' => $item['required_perms'],
-        'required_group' => $item['required_group'] ?? 'www-data',
+        'required_group' => $item['required_group'] ?? $web_group,
         'reason' => $item['reason'] ?? '',
         'why_write' => $item['why_write'] ?? '',
         'sticky_bit' => $item['sticky_bit'] ?? false,
