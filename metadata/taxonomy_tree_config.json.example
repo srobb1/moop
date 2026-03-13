@@ -1,0 +1,11 @@
+{
+    "tree": {
+        "name": "Life",
+        "children": [
+            {
+                "name": "Eukaryota",
+                "children": []
+            }
+        ]
+    }
+}

@@ -256,6 +256,37 @@ Admin Dashboard → Manage Users. User data is stored in `/data/users.json`.
 
 ---
 
+## Repo Structure: App vs. Site Data
+
+The moop git repo contains only application code — everything needed to set up
+a new MOOP site from scratch. Site-specific data is versioned separately.
+
+**App repo** (`/data/moop/`):
+- PHP source, JS, CSS, templates, docs
+- `.example` template files for config and metadata
+- `composer.json` (but not `vendor/` or `composer.phar` — run `composer install`)
+
+**Site-data repo** (`site_data_path` in `site_config.php`, default `/data/moop-site-data/`):
+- `config/config_editable.json` — admin-edited settings
+- `config/secrets.php` — API keys
+- `metadata/*.json` — groups, annotations, taxonomy tree
+- `users.json` — user accounts (bcrypt-hashed passwords)
+- **Keep this repo private** — it contains credentials
+
+**How snapshots work:**
+- `lib/housekeeping.php` → `housekeeping_snapshot_site_data()` runs once per admin session
+- Copies changed files to the site-data repo and auto-commits
+- If the site-data directory doesn't exist, the admin dashboard shows setup instructions
+- Setup commands use the detected web server user/group for correct ownership
+
+**Setting up a new deployment:**
+1. Clone the app repo
+2. Copy `.example` files → remove `.example` suffix, edit values
+3. Run `composer install`
+4. Create the site-data repo (see admin dashboard prompt for commands)
+
+---
+
 ## Known Issues / TODO (from March 2026 review)
 
 See `notes/IMPROVEMENT_ROADMAP.md` for the full list. Top remaining items:

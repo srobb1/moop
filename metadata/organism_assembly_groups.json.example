@@ -1,0 +1,10 @@
+[
+    {
+        "organism": "Example_organism",
+        "assembly": "GCA_000000000.1",
+        "groups": [
+            "Example Group",
+            "PUBLIC"
+        ]
+    }
+]

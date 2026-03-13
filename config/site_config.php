@@ -74,6 +74,13 @@ return [
     // ======== OPTIONAL: Files ========
     'users_file' => "$root_path/users.json",
     'error_log_file' => "$site_path/logs/error.log",
+
+    // ======== SITE DATA BACKUP ========
+    // Directory where site-specific files (config, metadata, users) are
+    // snapshotted for version history. This should be a git repo separate
+    // from the app repo. Set to empty string to disable auto-snapshots.
+    // The housekeeping system copies changed files here on admin login.
+    'site_data_path' => "$root_path/moop-site-data",
     
     // ======== OPTIONAL: IP-Based Auto-Login ========
     // IP ranges for automatic login with full access (e.g., institutional/campus networks)

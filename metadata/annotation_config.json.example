@@ -1,0 +1,25 @@
+{
+    "annotation_types": {
+        "Orthologs": {
+            "display_name": "Orthologs",
+            "color": "primary",
+            "order": 1,
+            "description": "Genes in different species that evolved from a common ancestor by speciation.",
+            "enabled": true
+        },
+        "GO": {
+            "display_name": "Gene Ontology",
+            "color": "success",
+            "order": 2,
+            "description": "Gene Ontology functional annotations.",
+            "enabled": true
+        },
+        "InterPro": {
+            "display_name": "InterPro Domains",
+            "color": "warning",
+            "order": 3,
+            "description": "Protein domain and family classifications from InterPro.",
+            "enabled": true
+        }
+    }
+}

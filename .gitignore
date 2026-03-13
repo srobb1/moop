@@ -1,73 +1,94 @@
-# Documentation/Reference files (not part of core codebase)
+# ============================================================
+# MOOP App Repo .gitignore
+#
+# This repo contains only the application code needed to set up
+# a new MOOP site. Site-specific data (config overrides, metadata,
+# user accounts) is versioned separately — see lib/housekeeping.php
+# and config/site_config.php -> site_data_path.
+# ============================================================
 
+# ── Genome data (too large for git) ──────────────────────────
+*.fa
+*.fasta
+*.fai
+*.fa.gz
+*.fasta.gz
+*.gff3
+*.gff3.gz
+*.gff3.gz.tbi
+data/genomes/
+data/tracks/
+
+# ── Database files ───────────────────────────────────────────
+*.sqlite
+*.sqlite3
+
+# ── Site-specific config (managed by admin UI) ───────────────
+config/config_editable.json
+config/secrets.php
+
+# ── Site-specific metadata (managed by admin UI) ─────────────
+# Keep .example templates and README, ignore actual data files
+metadata/*.json
+!metadata/*.json.example
+metadata/backups/
+metadata/jbrowse2-configs/
+
+# ── Logs and runtime state ───────────────────────────────────
+logs/
+
+# ── Backup files ─────────────────────────────────────────────
 *bak
 *BAK
 *.bak.*
+*.backup
+admin/backups/
 
-*sqlite
+# ── Archive / old configs ────────────────────────────────────
+api/archive/
+
+# ── Dependencies (installed via composer install) ────────────
+vendor/
+composer.phar
+
+# ── Organisms (site data, managed outside app repo) ─────────
 organisms/*
+!organisms/README.md
+!organisms/ORGANISM_DISPLAY_README.md
 
+# ── Images (site-specific uploads) ───────────────────────────
 images/*
+!images/.gitkeep
 
-# Directories
-tools/not_using/
-not_used/
-metadata/*
+# ── JBrowse2 generated configs ──────────────────────────────
+jbrowse2/configs/
 
-# Logs
-organisms/*log
-*.log
-
-
-# OS files
-.php-cs-fixer.cache
-.DS_Store
-Thumbs.db
-
-# Secrets and credentials (NEVER COMMIT)
-config/secrets.php
-run_mafft.sh
-galaxy_testing/run_mafft.sh
+# ── Secrets and credentials (NEVER COMMIT) ───────────────────
 *_api_key*
 *.key
 *.pem
+
+# ── Test files ───────────────────────────────────────────────
 test_*.php
 test_*.sh
 test_*.json
-galaxy_testing/*.fasta
-galaxy_testing/*.sh
-galaxy_testing/*.php
-galaxy_testing/*.json
+test-*.php
+galaxy_testing/
 
-# JBrowse2 frontend (track config separately, ignore dependencies)
+# ── Build/cache artifacts ────────────────────────────────────
+__pycache__/
+*.pyc
+.php-cs-fixer.cache
+tmp/
+temp/
+tools/not_using/
+not_used/
+
+# ── OS files ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── JBrowse2 dev artifacts ──────────────────────────────────
 /jbrowse2/node_modules/
 /jbrowse2/dist/
 /jbrowse2/.env
-
-# Track data (too large, installation-specific)
-/data/tracks/
-
-# JBrowse2 cached configs (generated dynamically per access level)
-jbrowse2/configs/*/PUBLIC.json
-jbrowse2/configs/*/COLLABORATOR.json
-jbrowse2/configs/*/IP_IN_RANGE.json
-jbrowse2/configs/*/ADMIN.json
-jbrowse2/configs/*/config.json
-
-# Processed genome files (generated from source data)
-data/genomes/
-
-# JBrowse2 metadata (generated from source data)
-metadata/jbrowse2-configs/assemblies/
-metadata/jbrowse2-configs/tracks/
-
-# Python cache
-__pycache__/
-*.pyc
-
-# Temp directories
-tmp/
-temp/
-
-# Test files
-test-*.php

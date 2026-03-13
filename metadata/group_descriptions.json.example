@@ -1,0 +1,13 @@
+[
+    {
+        "group_name": "Example Group",
+        "images": [],
+        "html_p": [
+            {
+                "text": "Description of this organism group.",
+                "style": "",
+                "class": "fs-5"
+            }
+        ]
+    }
+]

@@ -121,7 +121,19 @@ cd /var/www/html/moop
 composer install
 ```
 
-**3. Create the users file with your admin account:**
+**3. Set up initial configuration files:**
+```bash
+# Copy example configs (then edit with your site-specific values)
+cp config/config_editable.json.example config/config_editable.json
+cp metadata/annotation_config.json.example metadata/annotation_config.json
+cp metadata/group_descriptions.json.example metadata/group_descriptions.json
+cp metadata/organism_assembly_groups.json.example metadata/organism_assembly_groups.json
+cp metadata/taxonomy_tree_config.json.example metadata/taxonomy_tree_config.json
+```
+
+These files will be customized through the Admin Dashboard after you log in.
+
+**4. Create the users file with your admin account:**
 ```bash
 # Run the interactive setup script
 sudo php setup-admin.php
@@ -135,7 +147,7 @@ This script will:
 
 ⚠️ **Your password is NOT public** - it's only stored in the local `users.json` file which is never committed to git.
 
-**4. Set up filesystem permissions:**
+**5. Set up filesystem permissions:**
 ```bash
 # Set proper ownership and permissions for web server access
 sudo chown -R www-data:www-data /var/www/html/moop
@@ -145,7 +157,7 @@ sudo chmod 2775 /var/www/html/moop/logs
 # See docs/CONFIG_ADMIN_GUIDE.md for complete permission setup
 ```
 
-**5. Verify BLAST+ installation (optional but recommended):**
+**6. Verify BLAST+ installation (optional but recommended):**
 ```bash
 # Test BLAST binaries are accessible
 which blastn blastp blastx tblastn tblastx
@@ -153,7 +165,7 @@ which blastn blastp blastx tblastn tblastx
 
 If BLAST+ is installed in a custom location, update paths in `config/site_config.php` (see BLAST+ TOOL PATHS section).
 
-**6. Access the site:**
+**7. Access the site:**
 - Visit: `http://localhost/moop/` (or your server URL)
 - Login with username `admin` and your chosen password
 - You'll be redirected to the main dashboard
