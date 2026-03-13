@@ -17,7 +17,8 @@
 *.gff3.gz
 *.gff3.gz.tbi
 data/genomes/
-data/tracks/
+data/tracks/*
+!data/tracks/.htaccess
 
 # ── Database files ───────────────────────────────────────────
 *.sqlite
