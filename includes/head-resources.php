@@ -9,10 +9,8 @@
  * 
  * This file does NOT:
  * - Output <!DOCTYPE>, <html>, or <head> tags (page provides these)
- * - Include page-setup.php (that's for full page structure)
- * 
- * INCLUDED BY: page-setup.php (which sets up full page)
- * PAIRED WITH: footer.php (via page-setup.php)
+ *
+ * INCLUDED BY: layout.php (render_display_page)
  * 
  * USAGE:
  *   <head>

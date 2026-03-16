@@ -43,7 +43,6 @@ moop/
 │   ├── layout.php          render_display_page() — main template function
 │   ├── head-resources.php  CSS/JS <head> content (used by both template systems)
 │   ├── navbar.php          Top navigation bar
-│   └── page-setup.php      LEGACY template system (for older pages)
 ├── lib/                Shared PHP function libraries
 │   ├── moop_functions.php      Organism/assembly listing helpers
 │   ├── blast_functions.php     BLAST execution and result parsing
@@ -291,10 +290,7 @@ a new MOOP site from scratch. Site-specific data is versioned separately.
 
 See `notes/IMPROVEMENT_ROADMAP.md` for the full list. Top remaining items:
 
-- **Medium:** Absolute filesystem path used as CSS URL in `includes/page-setup.php:46`
-  (`$custom_css_path` is a server path, not a web URL — custom CSS never loads)
-- **Medium:** Dual DataTables loading — `page-setup.php` loads both v1.13.4 and v1.10.24;
-  migrate remaining pages to `render_display_page()` and remove `page-setup.php`
+- **RESOLVED:** `page-setup.php` deleted — removed broken CSS URL bug and dual DataTables loading
 - **Medium:** HTTP security headers (`X-Frame-Options`, `X-Content-Type-Options`,
   `Content-Security-Policy`) not set — add to nginx/Apache config
 - **Medium:** JWT tokens passed as URL query parameter in JBrowse track requests
