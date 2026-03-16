@@ -1,25 +1,25 @@
-# SIMRbase MOOP Edition - User Walkthrough
+# MOOP MOOP Edition - User Walkthrough
 
 ## Getting Started: Home Landing Page
 
-When you first visit SIMRbase, you'll see the home landing page. Here's what you can do:
+When you first visit MOOP, you'll see the home landing page. Here's what you can do:
 
 ### Access Control
 
 The organisms you see depends on your access level:
 
-- **Anonymous not logged in Users** (no login)(not in All Access IP Range):
+- **Public Visitors** (no login, not in auto-login IP range):
   - See all **Public** organisms
   - Read-only access to public data
 
-- **Anonymous Logged in Users** (no login)(in All Access IP Range):
-  - See all organisms available to your IP address (if your IP is within the configurable allowed range)
-  - Read-only access to public data
+- **IP_IN_RANGE Users** (no login, IP in configured auto-login range):
+  - See all organisms and assemblies automatically
+  - No admin panel access
   
 - **Logged-in Users:** 
   - See all **Public** organisms
   - See any private organisms you've been specifically configured to access
-  - Your credentials are secure: passwords are hashed with bcrypt, authentication is session-based, and access is validated on every protected page (see [Security & Encryption](SECURITY_IMPLEMENTATION.md) for details)
+  - Your credentials are secure: passwords are hashed with bcrypt, authentication is session-based, and access is validated on every protected page
 
 ### Selecting Organisms to Analyze
 
@@ -510,14 +510,14 @@ The taxonomy tree is a hierarchical browser showing evolutionary relationships:
 
 ## Help & Documentation
 
-Throughout SIMRbase, you'll see links to detailed help:
+Throughout MOOP, you'll see links to detailed help:
 
-- **[Organism Selection](organism-selection.php)** - choosing organisms and groups
-- **[Multi-Organism Analysis](multi-organism-analysis.php)** - comparing across organisms
-- **[Taxonomy Tree Management](taxonomy-tree-management.php)** - working with the taxonomy browser
-- **[Search and Filter](search-and-filter.php)** - detailed search syntax and options
-- **[Data Export](data-export.php)** - downloading data in various formats
-- **[BLAST Tutorial](blast-tutorial.php)** - step-by-step BLAST search guide
+- **[Organism Selection](../../../help.php?topic=organism-selection)** — choosing organisms and groups
+- **[Multi-Organism Analysis](../../../help.php?topic=multi-organism-analysis)** — comparing across organisms
+- **[Taxonomy Tree](../../../help.php?topic=taxonomy-tree-management)** — working with the taxonomy browser
+- **[Search & Filter](../../../help.php?topic=search-and-filter)** — detailed search syntax and options
+- **[Exporting Data](../../../help.php?topic=data-export)** — downloading data in various formats
+- **[BLAST Tutorial](../../../help.php?topic=blast-tutorial)** — step-by-step BLAST search guide
 
 ---
 
@@ -525,18 +525,17 @@ Throughout SIMRbase, you'll see links to detailed help:
 
 Your data and searches are protected:
 
-- **Encrypted credentials** - usernames/passwords are securely hashed
-- **Role-based access control** - see only organisms you're authorized for
-- **IP-based access** - can restrict access by network location
-- **Activity logging** - administrators can audit user actions
-- **Per-organism permissions** - fine-grained control over who sees what
-
-See [Security Implementation](SECURITY_IMPLEMENTATION.md) for technical details.
+- **Encrypted credentials** — passwords are bcrypt-hashed, never stored in plain text
+- **Role-based access control** — four levels: PUBLIC, IP_IN_RANGE, COLLABORATOR, ADMIN
+- **IP-based auto-login** — configurable IP ranges for automatic access
+- **Per-assembly permissions** — fine-grained control over who sees which assemblies
+- **CSRF protection** — all form submissions are protected against cross-site request forgery
+- **Session security** — session IDs are regenerated on login to prevent fixation attacks
 
 ---
 
 ## Questions or Issues?
 
 - Click the **Help** menu in the top navigation
-- Check the **[Getting Started Guide](getting-started.php)**
+- Check the **[Getting Started Guide](../../../help.php?topic=getting-started)**
 - Contact your system administrator for access issues or feature requests

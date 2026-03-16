@@ -10,12 +10,12 @@ This system uses **assembly-based permissions** with clear separation between:
 
 The system recognizes four types of users:
 
-### 1. ALL Users (IP-Based)
-- **Criteria**: IP address matches allowed range (configured in access_control.php)
+### 1. IP_IN_RANGE Users (IP-Based)
+- **Criteria**: IP address matches allowed range (configured in Admin Dashboard → Site Configuration, stored in `config_editable.json` as `auto_login_ip_ranges`)
 - **Authentication**: Automatic (no login required)
 - **Access to Data**: Everything - all organisms, all assemblies, all tools
 - **Access to Admin Tools**: NO - Admin tools are restricted to logged-in admins only
-- **Storage**: Session variable `$_SESSION['access_level'] = 'ALL'`
+- **Storage**: Session variable `$_SESSION['access_level'] = 'IP_IN_RANGE'`
 
 ### 2. Admin Users (Logged-In)
 - **Criteria**: User account with `"role": "admin"` in users.json
@@ -23,7 +23,7 @@ The system recognizes four types of users:
 - **Access to Data**: Everything - all organisms, all assemblies, all tools
 - **Access to Admin Tools**: YES - Full access to admin panel and admin functions
 - **Storage**: Session variables:
-  - `$_SESSION['access_level'] = 'Admin'`
+  - `$_SESSION['access_level'] = 'ADMIN'`
   - `$_SESSION['role'] = 'admin'`
   - `$_SESSION['access'] = []` (empty, not needed)
 
@@ -35,7 +35,7 @@ The system recognizes four types of users:
   - Plus: All assemblies in "Public" group (as a bonus)
 - **Access to Admin Tools**: NO - Cannot access admin panel
 - **Storage**: Session variables:
-  - `$_SESSION['access_level'] = 'Collaborator'`
+  - `$_SESSION['access_level'] = 'COLLABORATOR'`
   - `$_SESSION['access'] = { "Organism": ["assembly1", "assembly2"], ... }`
 
 ### 4. Visitors (Not Logged-In)
@@ -50,10 +50,10 @@ The system recognizes four types of users:
 **Admin tools are accessible ONLY to logged-in admin users:**
 
 ```
-IP-Based Users (ALL)     → Can access all data, but NOT admin tools
-Collaborators            → Can access only their data, NOT admin tools
-Visitors                 → Can access only public data, NOT admin tools
-Admin Users (logged-in)  → Can access everything including admin tools
+IP_IN_RANGE Users (IP)   → Can access all data, but NOT admin tools
+COLLABORATOR Users       → Can access only their data, NOT admin tools
+PUBLIC Visitors          → Can access only public data, NOT admin tools
+ADMIN Users (logged-in)  → Can access everything including admin tools
 ```
 
 When a non-admin user (including IP-based users) tries to access `/admin/`:
@@ -129,10 +129,10 @@ This prevents IP-based users from bypassing the login requirement for admin func
 When a user tries to access an assembly, the system checks (in order):
 
 ```
-1. Is user ALL (IP-based)?           → YES = ALLOW
+1. Is user IP_IN_RANGE (IP-based)?    → YES = ALLOW
                                       → NO = continue to 2
 
-2. Is user Admin (role: admin)?       → YES = ALLOW
+2. Is user ADMIN (role: admin)?       → YES = ALLOW
                                       → NO = continue to 3
 
 3. Is assembly in "Public" group?     → YES = ALLOW
@@ -154,7 +154,7 @@ Is user logged-in AND $_SESSION['role'] === 'admin'?
                                       → NO = DENY (redirect to access_denied.php)
 ```
 
-**NOTE:** IP-based users (ALL access level) cannot access admin tools even though they have universal data access. They must be logged in as an admin account.
+**NOTE:** IP-based users (IP_IN_RANGE access level) cannot access admin tools even though they have universal data access. They must be logged in as an admin account.
 
 ### Permission Check Functions
 
@@ -195,7 +195,7 @@ When a user logs in, the session is populated:
 ```php
 $_SESSION['logged_in'] = true;
 $_SESSION['username'] = 'username';
-$_SESSION['access_level'] = 'Admin' or 'Collaborator';
+$_SESSION['access_level'] = 'ADMIN' or 'COLLABORATOR';
 $_SESSION['access'] = array of organisms and assemblies;
 $_SESSION['role'] = 'admin' or null;  // 'admin' for admin users, null for collaborators
 ```
@@ -272,7 +272,7 @@ $_SESSION['role'] = 'admin' or null;  // 'admin' for admin users, null for colla
 ```
 1. Admin logs in (role: admin)
    ↓
-2. $_SESSION['access_level'] = 'Admin'
+2. $_SESSION['access_level'] = 'ADMIN'
    $_SESSION['role'] = 'admin'
    ↓
 3. Can visit /admin/ and access admin tools
@@ -280,7 +280,7 @@ $_SESSION['role'] = 'admin' or null;  // 'admin' for admin users, null for colla
 4. Visits download_fasta.php
    ↓
 5. getAccessibleAssemblies() is called
-   - For EVERY assembly: has_access('ALL') → TRUE
+   - For EVERY assembly: has_access('ADMIN') → TRUE
    - All assemblies included (regardless of Public group or users.json)
    ↓
 6. Admin sees ALL assemblies
@@ -288,13 +288,13 @@ $_SESSION['role'] = 'admin' or null;  // 'admin' for admin users, null for colla
 7. Admin can download from ANY assembly
 ```
 
-### Workflow 4: IP-Based User (ALL Access)
+### Workflow 4: IP-Based User (IP_IN_RANGE Access)
 
 ```
 1. User from allowed IP range accesses the site
    ↓
 2. Auto-authenticated by access_control.php
-   $_SESSION['access_level'] = 'ALL'
+   $_SESSION['access_level'] = 'IP_IN_RANGE'
    $_SESSION['logged_in'] = true
    $_SESSION['role'] = null  (NOT admin)
    ↓
@@ -506,7 +506,7 @@ Check: `$_SESSION['role'] === 'admin'` before allowing access
 2. Verify it's spelled exactly as "admin" (lowercase)
 3. Clear browser cookies and log in again
 
-### Issue: IP-Based User (ALL) Can't Access Admin Tools
+### Issue: IP-Based User (IP_IN_RANGE) Can't Access Admin Tools
 
 **This is correct behavior.** IP-based users have universal data access but cannot access admin tools.
 
@@ -516,7 +516,7 @@ Check: `$_SESSION['role'] === 'admin'` before allowing access
 
 | User Type | How to Create | Data Access | Admin Tools | Notes |
 |-----------|---------------|-------------|-------------|-------|
-| ALL (IP) | Configure IP range in access_control.php | Everything | NO | Auto-authenticated, no login |
+| IP_IN_RANGE | Configure IP range in Admin Dashboard → Site Configuration | Everything | NO | Auto-authenticated, no login |
 | Admin | Add to users.json with `"role": "admin"` | Everything | YES | Must login |
 | Collaborator | Add to users.json with `access` object | Specific + Public | NO | Must login |
 | Visitor | No action needed | "Public" only | NO | No login |
@@ -524,8 +524,8 @@ Check: `$_SESSION['role'] === 'admin'` before allowing access
 ## Files Involved
 
 - **Login/Auth**: `login.php`, `access_control.php`
-- **Permissions**: `includes/access_control.php`, `tools/moop_functions.php`
+- **Permissions**: `includes/access_control.php`, `lib/moop_functions.php`
 - **Download Tools**: `tools/extract/download_fasta.php`, `tools/extract/fasta_extract.php`
 - **Admin Tools**: `admin/index.php` (checks for `$_SESSION['role'] === 'admin'`)
 - **Configuration**: `/var/www/html/users.json`, `metadata/organism_assembly_groups.json`
-- **Documentation**: `notes/PERMISSIONS_WORKFLOW.md` (this file)
+- **Documentation**: `docs/current/admin/PERMISSIONS_GUIDE.md` (this file)

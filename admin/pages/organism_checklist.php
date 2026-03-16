@@ -113,6 +113,10 @@
                     <code>└─ genome.fa</code> (optional: full genome)<br/>
                   </div>
                 </div>
+                <div class="mt-2">
+                  <code><strong>data/genomes/</strong></code> (JBrowse2 genome FASTA files)<br/>
+                  <code><strong>data/tracks/</strong></code> (JBrowse2 track data files — protected by JWT auth)<br/>
+                </div>
               </div>
             </div>
 
@@ -386,7 +390,7 @@
         <ul>
           <li>Verify the web server can read all organism files and databases</li>
           <li>Check that directories have execute permissions for traversal</li>
-          <li>Ensure all FASTA files are readable by the www-data user</li>
+          <li>Ensure all FASTA files are readable by the web server user</li>
           <li>Verify assembly directories are writable (needed for BLAST index generation)</li>
         </ul>
 
@@ -395,10 +399,12 @@
         <?php
         // Quick permission check on organism directories
         $permission_issues = [];
-        
+        $web_server_info = getWebServerUser();
+        $expected_group = $web_server_info['group'];
+
         foreach ($organisms_in_system as $org) {
             $org_dir = "$organism_data/$org";
-            
+
             if (!file_exists($org_dir)) {
                 $permission_issues[] = [
                     'organism' => $org,
@@ -407,25 +413,25 @@
                 ];
                 continue;
             }
-            
+
             // Get full permission with leading digits (e.g., 2775, 0755)
             $perms_full = substr(sprintf('%o', fileperms($org_dir)), -4);
             $perms = ltrim($perms_full, '0') ?: '0';
-            
+
             $group = posix_getgrgid(filegroup($org_dir))['name'] ?? 'unknown';
-            
+
             $issues = [];
-            
+
             // Check permissions - should be 2775 (with SGID bit)
             if ($perms !== '2775') {
                 $issues[] = "Permissions are $perms, should be 2775";
             }
-            
-            // Check group - should be www-data
-            if ($group !== 'www-data') {
-                $issues[] = "Group is $group, should be www-data";
+
+            // Check group matches the web server group
+            if ($group !== $expected_group) {
+                $issues[] = "Group is $group, should be $expected_group";
             }
-            
+
             if (!empty($issues)) {
                 $permission_issues[] = [
                     'organism' => $org,
@@ -445,7 +451,7 @@
               <?php foreach ($permission_issues as $item): ?>
                 <li>
                   <strong><?= htmlspecialchars($item['organism']) ?></strong><br>
-                  Current: <?= $item['perms'] ?? 'unknown' ?> (group: <?= htmlspecialchars($item['group'] ?? 'unknown') ?>) | Required: 2775 (group: www-data)
+                  Current: <?= $item['perms'] ?? 'unknown' ?> (group: <?= htmlspecialchars($item['group'] ?? 'unknown') ?>) | Required: 2775 (group: <?= htmlspecialchars($expected_group) ?>)
                   <?php if (!empty($item['issues'])): ?>
                     <ul class="mt-1 mb-0">
                       <?php foreach ($item['issues'] as $issue): ?>
@@ -459,12 +465,12 @@
             <div class="mt-3 p-2 bg-dark text-light rounded" style="font-family: monospace; font-size: 0.85em;">
               <strong>To fix all organism directories, run:</strong><br>
               sudo chmod -R 2775 <?= htmlspecialchars($organism_data) ?><br>
-              sudo chgrp -R www-data <?= htmlspecialchars($organism_data) ?>
+              sudo chgrp -R <?= htmlspecialchars($expected_group) ?> <?= htmlspecialchars($organism_data) ?>
             </div>
           </div>
         <?php else: ?>
           <div class="alert alert-success mt-3">
-            <i class="fa fa-check-circle"></i> Organism directories have proper permissions (2775, www-data group)!
+            <i class="fa fa-check-circle"></i> Organism directories have proper permissions (2775, <?= htmlspecialchars($expected_group) ?> group)!
           </div>
         <?php endif; ?>
 

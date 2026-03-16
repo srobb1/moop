@@ -75,7 +75,7 @@
             <li><strong>Problem Description:</strong> What permission is missing</li>
             <li><strong>File Information:</strong> Current owner, group, and permissions (e.g., <code>644</code>)</li>
             <li><strong>Current Status:</strong> Whether the file is readable/writable</li>
-            <li><strong>Web Server User:</strong> Which user runs your web server (usually <code>www-data</code> or <code>apache</code>)</li>
+            <li><strong>Web Server User:</strong> Which user runs your web server (e.g., <code>www-data</code> on Debian/Ubuntu, <code>apache</code> on RHEL/CentOS, <code>nginx</code> for Nginx)</li>
           </ul>
 
           <h5 class="fw-semibold text-dark mb-2">Two Types of Fixes:</h5>
@@ -140,6 +140,21 @@
                   <td>Admin panel files and caches</td>
                   <td>Read + Write</td>
                 </tr>
+                <tr>
+                  <td><code>data/tracks/</code></td>
+                  <td>JBrowse2 track data files</td>
+                  <td>Read</td>
+                </tr>
+                <tr>
+                  <td><code>data/genomes/</code></td>
+                  <td>Genome FASTA files</td>
+                  <td>Read</td>
+                </tr>
+                <tr>
+                  <td><code>certs/</code></td>
+                  <td>JWT keys for track authentication</td>
+                  <td>Read</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -157,48 +172,46 @@
 
           <h5 class="fw-semibold text-dark mb-3">Setup Strategy: SGID (Set-Group-ID) + Group Write Permissions</h5>
           <p class="text-muted mb-3">
-            This approach allows the web server user (<code>www-data</code>) to modify files while the owner (<code>ubuntu</code>) retains control:
+            This approach allows the web server user to modify files while the deploy user retains control. The examples below use <code>www-data</code> — substitute the correct web server user/group for your system.
           </p>
           <ul class="text-muted mb-3">
-            <li><strong>Owner:</strong> Retains file control (usually <code>ubuntu</code>)</li>
-            <li><strong>Group:</strong> Set to web server user (<code>www-data</code>) for shared access</li>
-            <li><strong>Directory Permissions:</strong> <code>775</code> (rwxrwxr-x)</li>
+            <li><strong>Owner:</strong> Retains file control (your deploy user)</li>
+            <li><strong>Group:</strong> Set to web server group for shared access</li>
+            <li><strong>Directory Permissions:</strong> <code>2775</code> (rwxrwsr-x) — the leading <code>2</code> sets the SGID bit</li>
             <li><strong>File Permissions:</strong> <code>664</code> (rw-rw-r--)</li>
-            <li><strong>SGID Bit:</strong> Set on directories with <code>chmod g+s</code> to auto-assign group to new files</li>
+            <li><strong>SGID Bit:</strong> Automatically set by <code>2775</code> — new files inherit the directory's group</li>
           </ul>
 
           <h5 class="fw-semibold text-dark mb-2">Directories to Configure:</h5>
           <ul class="text-muted mb-3">
-            <li><code>/data/moop/metadata/</code> - Organism metadata and configuration files</li>
-            <li><code>/data/moop/logs/</code> - Application and error logs</li>
-            <li><code>/data/moop/organisms/</code> - Organism databases and data files</li>
-            <li><code>/data/moop/images/ncbi_taxonomy/</code> - NCBI taxonomy images cache</li>
-            <li><code>/data/moop/admin/</code> - Admin panel uploads and caches</li>
+            <li><code>metadata/</code> - Organism metadata and configuration files</li>
+            <li><code>logs/</code> - Application and error logs</li>
+            <li><code>organisms/</code> - Organism databases and data files</li>
+            <li><code>data/tracks/</code> - JBrowse2 track data files</li>
+            <li><code>data/genomes/</code> - Genome FASTA files</li>
+            <li><code>certs/</code> - JWT keys for track authentication</li>
+            <li><code>images/ncbi_taxonomy/</code> - NCBI taxonomy images cache</li>
+            <li><code>admin/</code> - Admin panel uploads and caches</li>
           </ul>
 
           <h5 class="fw-semibold text-dark mb-2">Setup Commands:</h5>
-          <p class="text-muted mb-2">Run these commands for each directory (example shown for metadata):</p>
+          <p class="text-muted mb-2">Run these commands for each directory listed above. Replace <code>WEBGROUP</code> with your web server group and <code>/var/www/html/moop</code> with your install path. Example for metadata:</p>
           <div class="bg-light p-3 rounded border-left border-secondary mb-3">
-            <code class="text-dark d-block mb-2">sudo chmod g+s /data/moop/metadata</code>
-            <code class="text-dark d-block mb-2">sudo chmod 775 /data/moop/metadata</code>
-            <code class="text-dark d-block mb-2">sudo find /data/moop/metadata -type f -exec chmod 664 {} \;</code>
-            <code class="text-dark d-block">sudo find /data/moop/metadata -type d -exec chmod 775 {} \;</code>
+            <code class="text-dark d-block mb-2">sudo chgrp -R WEBGROUP /var/www/html/moop/metadata</code>
+            <code class="text-dark d-block mb-2">sudo find /var/www/html/moop/metadata -type d -exec chmod 2775 {} \;</code>
+            <code class="text-dark d-block">sudo find /var/www/html/moop/metadata -type f -exec chmod 664 {} \;</code>
           </div>
-
-          <p class="text-muted mb-2">
-            Repeat for other directories by replacing <code>/data/moop/metadata</code> with the appropriate path.
-          </p>
 
           <h5 class="fw-semibold text-dark mb-2">Verification:</h5>
           <p class="text-muted mb-2">After running the commands, verify with:</p>
           <div class="bg-light p-3 rounded border-left border-secondary mb-3">
-            <code class="text-dark d-block">ls -ld /data/moop/metadata /data/moop/logs /data/moop/organisms</code>
+            <code class="text-dark d-block">ls -ld /var/www/html/moop/metadata /var/www/html/moop/logs /var/www/html/moop/organisms</code>
           </div>
           <p class="text-muted mb-2">
             You should see an <code>s</code> in the group permission position (e.g., <code>drwxrwsr-x</code>):
           </p>
           <div class="bg-light p-3 rounded border-left border-secondary">
-            <code class="text-dark d-block">drwxrwsr-x  ubuntu www-data  /data/moop/metadata</code>
+            <code class="text-dark d-block">drwxrwsr-x  deploy_user www-data  /var/www/html/moop/metadata</code>
           </div>
         </div>
       </div>
@@ -218,13 +231,13 @@
           <h5 class="fw-semibold text-dark mb-2">2. File Permissions:</h5>
           <ul class="text-muted mb-3">
             <li><strong>Configuration files:</strong> <code>644</code> (rw-r--r--) or <code>664</code> (rw-rw-r--)</li>
-            <li><strong>Directories:</strong> <code>755</code> (rwxr-xr-x) or <code>775</code> (rwxrwxr-x)</li>
-            <li><strong>Database files:</strong> <code>664</code> (rw-rw-r--) for group access</li>
+            <li><strong>Directories:</strong> <code>2775</code> (rwxrwsr-x) — SGID ensures new files inherit group</li>
+            <li><strong>Database files:</strong> <code>644</code> (rw-r--r--) — web server reads via group</li>
           </ul>
 
           <h5 class="fw-semibold text-dark mb-2">3. Regular Monitoring:</h5>
           <ul class="text-muted mb-3">
-            <li>Check the Organism Management page regularly for permission alerts</li>
+            <li>Check the Filesystem Permissions page regularly for permission alerts</li>
             <li>Fix issues promptly - don't ignore yellow alerts</li>
             <li>Test file operations after fixing permissions</li>
           </ul>
@@ -258,8 +271,8 @@
                   <p><strong>Solution:</strong></p>
                   <ol>
                     <li>Use the manual commands provided in the alert</li>
-                    <li>Or enable the SGID bit and group permissions on the parent directory</li>
-                    <li>Run: <code>sudo chmod g+s /path/to/parent && sudo chmod 775 /path/to/parent</code></li>
+                    <li>Or enable SGID and group write permissions on the parent directory</li>
+                    <li>Run: <code>sudo chmod 2775 /path/to/parent</code></li>
                   </ol>
                 </div>
               </div>
@@ -278,7 +291,7 @@
                   <p><strong>Solution:</strong></p>
                   <ol>
                     <li>Check current ownership: <code>ls -la /path/to/file</code></li>
-                    <li>Ensure web server user owns the file: <code>sudo chown www-data:www-data /path/to/file</code></li>
+                    <li>Ensure web server group has access: <code>sudo chgrp WEBGROUP /path/to/file</code></li>
                     <li>Set permissions: <code>sudo chmod 664 /path/to/file</code></li>
                     <li>Check if another process is resetting permissions</li>
                   </ol>
@@ -301,7 +314,7 @@
                     <li>Ensure you use <code>sudo</code> for the command</li>
                     <li>Verify the path exists: <code>ls /path/to/file</code></li>
                     <li>Check your user is in the sudoers group: <code>sudo -l</code></li>
-                    <li>If path contains spaces, quote it: <code>sudo chown www-data "/path with spaces/file"</code></li>
+                    <li>If path contains spaces, quote it: <code>sudo chgrp WEBGROUP "/path with spaces/file"</code></li>
                   </ol>
                 </div>
               </div>
@@ -319,7 +332,7 @@
                   <p><strong>Cause:</strong> The web server doesn't have write permissions to the database or logs directory.</p>
                   <p><strong>Solution:</strong></p>
                   <ol>
-                    <li>Check the permission alert on the Organism Management page</li>
+                    <li>Check the permission alert on the Filesystem Permissions page</li>
                     <li>Look for alerts on database or logs directories</li>
                     <li>Use the automated fix or follow the manual commands provided</li>
                     <li>Test the operation again after fixing</li>
@@ -340,9 +353,9 @@
                   <p><strong>Cause:</strong> The metadata directory or configuration files don't have write permissions.</p>
                   <p><strong>Solution:</strong></p>
                   <ol>
-                    <li>Check Organism Management page for permission alerts on <code>metadata/</code></li>
+                    <li>Check Filesystem Permissions page for permission alerts on <code>metadata/</code></li>
                     <li>Ensure both the directory and individual metadata files are writable</li>
-                    <li>Use automated fix or run: <code>sudo chown -R www-data:www-data /path/to/metadata && sudo chmod -R 775 /path/to/metadata</code></li>
+                    <li>Use automated fix or run: <code>sudo chgrp -R WEBGROUP /path/to/metadata && sudo find /path/to/metadata -type d -exec chmod 2775 {} \;</code></li>
                   </ol>
                 </div>
               </div>

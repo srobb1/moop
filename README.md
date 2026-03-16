@@ -210,8 +210,14 @@ This script will:
 Your password is only stored as a bcrypt hash in `users.json` — it is never committed to git.
 
 **8. Set up filesystem permissions:**
+
+> **Note:** The examples below use `www-data`, which is the default web server
+> user/group on Debian/Ubuntu with Apache. Substitute the correct user for your
+> system: `nginx` for Nginx on RHEL/CentOS, `apache` for Apache on RHEL/CentOS,
+> or check with `ps aux | grep -E 'apache|nginx|httpd' | head -1`.
+
 ```bash
-# Set ownership to web server user
+# Set ownership to web server user (www-data for Apache on Debian/Ubuntu)
 sudo chown -R www-data:www-data /var/www/html/moop
 
 # Directories the web server needs to write to

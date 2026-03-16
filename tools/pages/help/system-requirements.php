@@ -13,7 +13,7 @@
 
 <div class="container mt-5">
   <h2><i class="fa fa-server"></i> System Requirements & Resource Planning</h2>
-  <p class="lead text-muted">Hardware specifications and capacity planning guide for MOOP deployments.</p>
+  <p class="lead text-muted">Software prerequisites, hardware specifications, and capacity planning guide for MOOP deployments.</p>
 
   <!-- Back to Help Link -->
   <div class="mb-4">
@@ -26,6 +26,7 @@
   <div class="alert alert-light border">
     <strong>On this page:</strong>
     <ul class="mb-0">
+      <li><a href="#software-requirements">Software Requirements</a></li>
       <li><a href="#current-analysis">Current System Analysis</a></li>
       <li><a href="#scaling-projections">Scaling Projections</a></li>
       <li><a href="#configurations">Complete System Configurations</a></li>
@@ -36,6 +37,128 @@
       <li><a href="#cost-estimation">Cost Estimation</a></li>
     </ul>
   </div>
+
+  <!-- Section 0: Software Requirements -->
+  <section id="software-requirements" class="mt-4">
+    <h3><i class="fa fa-cogs"></i> Software Requirements</h3>
+
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="fw-bold">Required Software</h5>
+        <table class="table table-sm">
+          <thead class="table-light">
+            <tr>
+              <th>Software</th>
+              <th>Minimum Version</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>PHP</strong></td>
+              <td>8.1+</td>
+              <td>Application runtime</td>
+            </tr>
+            <tr>
+              <td><strong>Apache</strong> or <strong>Nginx</strong></td>
+              <td>Apache 2.4+ / Nginx 1.18+</td>
+              <td>Web server</td>
+            </tr>
+            <tr>
+              <td><strong>Composer</strong></td>
+              <td>2.x</td>
+              <td>PHP dependency manager (installs JWT library)</td>
+            </tr>
+            <tr>
+              <td><strong>Node.js</strong></td>
+              <td>18+</td>
+              <td>Required for JBrowse2 CLI (<code>@jbrowse/cli</code>)</td>
+            </tr>
+            <tr>
+              <td><strong>NCBI BLAST+</strong></td>
+              <td>2.12+</td>
+              <td>Sequence search (blastn, blastp, blastx, tblastn, tblastx, makeblastdb, blastdbcmd)</td>
+            </tr>
+            <tr>
+              <td><strong>samtools</strong></td>
+              <td>1.15+</td>
+              <td>Genome indexing (faidx) for sequence retrieval</td>
+            </tr>
+            <tr>
+              <td><strong>MAFFT</strong></td>
+              <td>7.x</td>
+              <td>Multiple sequence alignment tool</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="fw-bold">Required PHP Extensions</h5>
+        <div class="row">
+          <div class="col-md-6">
+            <ul class="mb-0">
+              <li><code>pdo_sqlite</code> — SQLite database access</li>
+              <li><code>openssl</code> — JWT key generation and verification</li>
+              <li><code>json</code> — JSON parsing (built-in since PHP 8.0)</li>
+              <li><code>mbstring</code> — Multi-byte string handling</li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <ul class="mb-0">
+              <li><code>curl</code> — External API calls (Wikipedia images, Galaxy)</li>
+              <li><code>posix</code> — File ownership detection</li>
+              <li><code>fileinfo</code> — MIME type detection for downloads</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="fw-bold">Directory Structure</h5>
+        <p class="text-muted mb-2">MOOP expects these directories to exist with web server group write access (see <a href="help.php?topic=permission-management">Permission Management</a>):</p>
+        <div class="row">
+          <div class="col-md-6">
+            <ul class="mb-0">
+              <li><code>metadata/</code> — organism and group metadata</li>
+              <li><code>organisms/</code> — organism data and SQLite databases</li>
+              <li><code>logs/</code> — application and error logs</li>
+              <li><code>config/</code> — configuration files</li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <ul class="mb-0">
+              <li><code>data/tracks/</code> — JBrowse2 track files</li>
+              <li><code>data/genomes/</code> — genome FASTA files</li>
+              <li><code>certs/</code> — JWT RSA keys (private + public)</li>
+              <li><code>images/ncbi_taxonomy/</code> — cached taxonomy images</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="fw-bold">JWT Keys (Required for JBrowse2)</h5>
+        <p class="text-muted mb-2">JBrowse2 track access is authenticated via JWT tokens signed with RSA keys. These must exist in <code>certs/</code>:</p>
+        <ul class="text-muted mb-2">
+          <li><code>certs/jwt_private.pem</code> — RSA 2048-bit private key (signs tokens)</li>
+          <li><code>certs/jwt_public.pem</code> — corresponding public key (verifies tokens)</li>
+        </ul>
+        <p class="text-muted mb-0">The <code>setup.php</code> installer generates these automatically. To generate manually: <code>openssl genrsa -out certs/jwt_private.pem 2048 && openssl rsa -in certs/jwt_private.pem -pubout -out certs/jwt_public.pem</code></p>
+      </div>
+    </div>
+
+    <div class="alert alert-success">
+      <strong><i class="fa fa-check-circle"></i> Preflight Check:</strong>
+      Run <code>php setup-check.php</code> from the MOOP directory to verify all software requirements, PHP extensions, file permissions, and JWT keys are correctly configured.
+    </div>
+  </section>
 
   <!-- Alert Box -->
   <div class="alert alert-info">
