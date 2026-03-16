@@ -28,6 +28,7 @@ function run_housekeeping() {
     $tasks = [
         ['name' => 'clean_temp_files',    'fn' => 'housekeeping_clean_temp_files'],
         ['name' => 'snapshot_site_data',  'fn' => 'housekeeping_snapshot_site_data'],
+        ['name' => 'environment_check',   'fn' => 'housekeeping_environment_check'],
     ];
 
     foreach ($tasks as $task) {
@@ -223,4 +224,103 @@ README;
         error_log("MOOP housekeeping: site data snapshot committed ($message)");
     }
     chdir($cwd);
+}
+
+/**
+ * Check environment health and store warnings in session.
+ *
+ * Detects degraded requirements that could cause silent failures:
+ * missing PHP extensions, missing JWT keys, unwritable directories,
+ * missing CLI tools, missing composer dependencies.
+ *
+ * Results are stored in $_SESSION['env_warnings'] as an array of
+ * ['level' => 'danger'|'warning', 'message' => string] entries.
+ * The admin dashboard reads this to display alerts.
+ */
+function housekeeping_environment_check() {
+    $warnings = [];
+    $config = ConfigManager::getInstance();
+    $site_path = $config->getPath('site_path');
+
+    // 1. Required PHP extensions
+    $required_extensions = [
+        'pdo_sqlite' => 'SQLite database access',
+        'openssl'    => 'JWT key generation and verification',
+        'mbstring'   => 'Multi-byte string handling',
+        'curl'       => 'External API calls (Wikipedia, Galaxy)',
+    ];
+    foreach ($required_extensions as $ext => $purpose) {
+        if (!extension_loaded($ext)) {
+            $warnings[] = [
+                'level' => 'danger',
+                'message' => "PHP extension <code>$ext</code> is not loaded ($purpose). Install it: <code>sudo apt install php-$ext && sudo systemctl restart apache2</code>",
+            ];
+        }
+    }
+
+    // 2. JWT keys exist and readable
+    $certs_dir = $site_path . '/certs';
+    $private_key = $certs_dir . '/jwt_private.pem';
+    $public_key = $certs_dir . '/jwt_public.pem';
+    if (!file_exists($private_key) || !file_exists($public_key)) {
+        $warnings[] = [
+            'level' => 'danger',
+            'message' => 'JWT keys missing in <code>certs/</code> — JBrowse2 track authentication will not work. Generate with: <code>openssl genrsa -out certs/jwt_private.pem 2048 && openssl rsa -in certs/jwt_private.pem -pubout -out certs/jwt_public.pem</code>',
+        ];
+    } elseif (!is_readable($private_key) || !is_readable($public_key)) {
+        $warnings[] = [
+            'level' => 'warning',
+            'message' => 'JWT keys in <code>certs/</code> are not readable by the web server — JBrowse2 track authentication will fail. Check file permissions.',
+        ];
+    }
+
+    // 3. Critical directories writable
+    $writable_dirs = [
+        'logs'     => $site_path . '/logs',
+        'metadata' => $config->getPath('metadata_path'),
+        'config'   => $site_path . '/config',
+    ];
+    foreach ($writable_dirs as $label => $dir) {
+        if (is_dir($dir) && !is_writable($dir)) {
+            $warnings[] = [
+                'level' => 'warning',
+                'message' => "Directory <code>$label/</code> is not writable — admin changes may not save. See <a href=\"manage_filesystem_permissions.php\">Filesystem Permissions</a>.",
+            ];
+        }
+    }
+
+    // 4. CLI tools available
+    $cli_tools = [
+        'blastn'     => 'BLAST searches will not work',
+        'samtools'   => 'Sequence retrieval will not work',
+        'makeblastdb'=> 'BLAST index building will not work',
+    ];
+    foreach ($cli_tools as $tool => $impact) {
+        $path = trim(shell_exec("which $tool 2>/dev/null") ?? '');
+        if (empty($path)) {
+            $warnings[] = [
+                'level' => 'warning',
+                'message' => "CLI tool <code>$tool</code> not found in PATH — $impact.",
+            ];
+        }
+    }
+
+    // 5. Composer dependencies installed
+    if (!is_dir($site_path . '/vendor')) {
+        $warnings[] = [
+            'level' => 'danger',
+            'message' => 'Composer dependencies not installed (<code>vendor/</code> missing). Run: <code>cd ' . htmlspecialchars($site_path) . ' && composer install --no-dev</code>',
+        ];
+    }
+
+    // 6. .htaccess for track protection
+    $tracks_htaccess = $site_path . '/data/tracks/.htaccess';
+    if (is_dir($site_path . '/data/tracks') && !file_exists($tracks_htaccess)) {
+        $warnings[] = [
+            'level' => 'danger',
+            'message' => 'Missing <code>data/tracks/.htaccess</code> — track files may be accessible without authentication.',
+        ];
+    }
+
+    $_SESSION['env_warnings'] = $warnings;
 }

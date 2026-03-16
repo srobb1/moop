@@ -86,6 +86,29 @@ sudo -u <?= htmlspecialchars($web_user) ?> git commit --allow-empty -m "Initial 
   </div>
   <?php endif; ?>
 
+  <!-- Environment Warnings -->
+  <?php if (!empty($_SESSION['env_warnings'])): ?>
+  <div class="card mb-4 border-warning">
+    <div class="card-header bg-warning bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#envWarnings">
+      <h5 class="mb-0">
+        <i class="fa fa-exclamation-triangle text-warning"></i>
+        Environment Issues (<?= count($_SESSION['env_warnings']) ?>)
+        <i class="fa fa-chevron-down float-end"></i>
+      </h5>
+    </div>
+    <div class="collapse show" id="envWarnings">
+      <div class="card-body p-0">
+        <?php foreach ($_SESSION['env_warnings'] as $warning): ?>
+        <div class="alert alert-<?= $warning['level'] ?> mb-0 border-0 rounded-0 border-bottom">
+          <i class="fa fa-<?= $warning['level'] === 'danger' ? 'times-circle' : 'exclamation-circle' ?> me-2"></i>
+          <?= $warning['message'] ?>
+        </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <!-- System Configuration -->
   <div class="mt-5">
     <h3 class="mb-3"><i class="fa fa-cog"></i> System Configuration</h3>

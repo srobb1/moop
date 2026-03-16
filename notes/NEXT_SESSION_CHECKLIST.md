@@ -11,11 +11,10 @@ Remaining cleanup and fixes identified during March 2026 audit sessions.
 
 ## Environment Validation on Admin Login
 
-- [ ] **Show warnings if requirements degrade** — Beyond the setup script, the admin
-  dashboard could show warnings if requirements degrade over time (e.g., an extension
-  gets disabled after a PHP upgrade, permissions drift, JWT keys deleted). The
-  filesystem permissions page already does some of this — extend it or link to it
-  prominently.
+- [x] **Show warnings if requirements degrade** — Added `housekeeping_environment_check()`
+  to `lib/housekeeping.php`. Runs once per admin session and checks: PHP extensions,
+  JWT keys, directory writability, CLI tools (blastn, samtools, makeblastdb), composer
+  deps, tracks .htaccess. Warnings display as a collapsible card on the admin dashboard.
 
 ## Help Pages — New Pages Needed
 
