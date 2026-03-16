@@ -1,10 +1,16 @@
 <?php
 /**
  * MOOP Homepage
- * 
+ *
  * Main entry point for the application.
  * Displays organism cards and taxonomy tree for browsing/selecting organisms.
  */
+
+// Redirect to setup wizard if not yet configured
+if (!file_exists(__DIR__ . '/config/config_editable.json')) {
+    header('Location: setup.php');
+    exit;
+}
 
 include_once __DIR__ . '/includes/access_control.php';
 include_once __DIR__ . '/includes/layout.php';
