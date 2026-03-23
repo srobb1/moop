@@ -64,11 +64,7 @@
       <strong>Site Data Backup Not Set Up</strong>
       <p class="mb-2">Your site configuration, metadata, and user data are not being version-controlled. Set up the backup repository to track changes automatically.</p>
       <p class="mb-1">Run these commands on the server:</p>
-      <pre class="bg-light p-2 rounded mb-0"><code>sudo mkdir -p <?= htmlspecialchars($site_data_path) ?>
-sudo chown <?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?> <?= htmlspecialchars($site_data_path) ?>
-cd <?= htmlspecialchars($site_data_path) ?>
-sudo -u <?= htmlspecialchars($web_user) ?> git init
-sudo -u <?= htmlspecialchars($web_user) ?> git commit --allow-empty -m "Initial site data repo"</code></pre>
+      <pre class="bg-light p-2 rounded mb-0" style="white-space: pre-wrap;"><code>sudo mkdir -p <?= htmlspecialchars($site_data_path) ?>&#10;sudo chown <?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?> <?= htmlspecialchars($site_data_path) ?>&#10;cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git init&#10;sudo -u <?= htmlspecialchars($web_user) ?> git commit --allow-empty -m "Initial site data repo"</code></pre>
       <p class="mt-2 mb-2 text-muted"><small>The directory is owned by <code><?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?></code> (the web server user) so MOOP can write snapshots automatically.</small></p>
       <p class="mb-0 text-muted"><small>Once created, MOOP will automatically snapshot config and metadata changes on each admin login. <strong>Keep this repo private</strong> — it will contain user accounts and credentials. See <code>lib/housekeeping.php</code> for details.</small></p>
     </div>
@@ -79,9 +75,7 @@ sudo -u <?= htmlspecialchars($web_user) ?> git commit --allow-empty -m "Initial 
     <div>
       <strong>Site Data Directory Exists But Is Not a Git Repo</strong>
       <p class="mb-1">Initialize it to enable version history:</p>
-      <pre class="bg-light p-2 rounded mb-0"><code>cd <?= htmlspecialchars($site_data_path) ?>
-sudo -u <?= htmlspecialchars($web_user) ?> git init
-sudo -u <?= htmlspecialchars($web_user) ?> git commit --allow-empty -m "Initial site data repo"</code></pre>
+      <pre class="bg-light p-2 rounded mb-0" style="white-space: pre-wrap;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git init&#10;sudo -u <?= htmlspecialchars($web_user) ?> git commit --allow-empty -m "Initial site data repo"</code></pre>
     </div>
   </div>
   <?php endif; ?>
