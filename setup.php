@@ -32,6 +32,39 @@ if (file_exists($config_editable_path)) {
         </body></html>');
 }
 
+// ── Token Gate ─────────────────────────────────────────────────────────────
+// Prevent unauthorized access: require a server-generated token in the URL.
+// The token file is created on first visit and must be read from the CLI.
+$tokenFile = "$base/.setup-token";
+
+if (!file_exists($tokenFile)) {
+    @file_put_contents($tokenFile, bin2hex(random_bytes(16)));
+    @chmod($tokenFile, 0600);
+}
+
+$expectedToken = trim(@file_get_contents($tokenFile) ?: '');
+$providedToken = $_GET['token'] ?? '';
+
+if ($providedToken !== $expectedToken || empty($expectedToken)) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Invalid or missing setup token.']);
+        exit;
+    }
+    http_response_code(403);
+    die('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>MOOP Setup</title>
+        <style>body{font-family:sans-serif;padding:40px;max-width:600px;margin:0 auto;}
+        pre{background:#f0f0f0;padding:12px;border-radius:4px;}</style></head>
+        <body>
+        <h2>Setup Token Required</h2>
+        <p>For security, the setup wizard requires a one-time token.</p>
+        <p>Run this command on the server to see your token:</p>
+        <pre>cat ' . htmlspecialchars($base) . '/.setup-token</pre>
+        <p>Then visit:</p>
+        <pre>setup.php?token=<em>YOUR_TOKEN</em></pre>
+        </body></html>');
+}
+
 // ── Load Configuration ──────────────────────────────────────────────────────
 
 $config_file = "$base/config/site_config.php";
@@ -43,6 +76,7 @@ $config = @require $config_file;
 if (!is_array($config)) {
     die('FATAL: config/site_config.php did not return a valid config array.');
 }
+require_once "$base/lib/distro_detect.php";
 
 // ── Helper Functions ────────────────────────────────────────────────────────
 
@@ -347,6 +381,16 @@ HTACCESS;
         }
     }
 
+    // Warn if Nginx is detected (where .htaccess has no effect)
+    $ngxOutput = [];
+    $ngxRet = 1;
+    @exec("which nginx 2>/dev/null", $ngxOutput, $ngxRet);
+    if ($ngxRet === 0 && ($steps['htaccess']['success'] ?? false)) {
+        $siteName = $config['site'] ?? 'moop';
+        $steps['htaccess']['message'] .= ". Note: Nginx detected — .htaccess has no effect on Nginx. "
+            . "Add a 'deny all' location block for /$siteName/data/tracks/ in your Nginx server config.";
+    }
+
     // ── Step 5: Create Admin User ───────────────────────────────────────
 
     $usersFile = $config['users_file'] ?? "$base/../users.json";
@@ -472,6 +516,8 @@ HTACCESS;
             'success' => true,
             'message' => 'Created config_editable.json — installer is now disabled',
         ];
+        // Clean up: remove the setup token file
+        @unlink($tokenFile);
     } else {
         $steps['config'] = [
             'success' => false,
@@ -521,6 +567,13 @@ $siteName = $config['site'] ?? 'moop';
 </head>
 <body>
 <div class="setup-container">
+    <?php if (empty($_SERVER['HTTPS']) && ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') !== 'https'
+              && ($_SERVER['SERVER_PORT'] ?? 80) != 443): ?>
+    <div class="alert alert-warning mb-4">
+        <strong>Warning:</strong> You are accessing this page over HTTP.
+        The admin password will be sent in plain text. Use HTTPS if possible.
+    </div>
+    <?php endif; ?>
     <div class="card shadow-sm mb-4">
         <div class="card-body text-center">
             <h2 class="mb-1">MOOP Setup Wizard</h2>
@@ -639,6 +692,11 @@ $siteName = $config['site'] ?? 'moop';
 </div>
 
 <script>
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
 document.getElementById('runSetup').addEventListener('click', async function() {
     const btn = this;
     const password = document.getElementById('password').value;
@@ -670,7 +728,7 @@ document.getElementById('runSetup').addEventListener('click', async function() {
     resultsBody.innerHTML = '<p class="text-muted">Working\u2026 this may take a moment if installing Composer dependencies.</p>';
 
     try {
-        const response = await fetch('setup.php', {
+        const response = await fetch(window.location.href, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -699,7 +757,7 @@ document.getElementById('runSetup').addEventListener('click', async function() {
             const label = stepLabels[key] || key;
             const cls = result.success ? 'step-ok' : 'step-err';
             const icon = result.success ? '&#10003;' : '&#10007;';
-            html += `<div class="step-result ${cls}"><strong>${icon}</strong> ${label} &mdash; ${result.message}</div>`;
+            html += `<div class="step-result ${cls}"><strong>${icon}</strong> ${escapeHtml(label)} &mdash; ${escapeHtml(result.message)}</div>`;
         }
         resultsBody.innerHTML = html;
 
@@ -711,12 +769,12 @@ document.getElementById('runSetup').addEventListener('click', async function() {
             btn.textContent = 'Retry Setup';
 
             const errorMsg = data.error
-                ? `<div class="alert alert-danger mt-3">${data.error}</div>`
+                ? `<div class="alert alert-danger mt-3">${escapeHtml(data.error)}</div>`
                 : '<div class="alert alert-warning mt-3">Some steps failed. Fix the issues and click Retry.</div>';
             resultsBody.innerHTML += errorMsg;
         }
     } catch (err) {
-        resultsBody.innerHTML = `<div class="alert alert-danger">Request failed: ${err.message}</div>`;
+        resultsBody.innerHTML = `<div class="alert alert-danger">Request failed: ${escapeHtml(err.message)}</div>`;
         btn.disabled = false;
         btn.textContent = 'Retry Setup';
     }

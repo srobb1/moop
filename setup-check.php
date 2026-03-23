@@ -116,6 +116,11 @@ function toolExists($tool) {
 
 $base = __DIR__;
 
+require_once "$base/lib/distro_detect.php";
+$distro = detectDistroFamily();
+$pkg = $distro['pkg_cmd'];
+$family = $distro['family'];
+
 echo "\n" . C_BOLD . "MOOP Setup Preflight Check" . C_RESET . "\n";
 echo str_repeat('=', 40) . "\n";
 echo "Base directory: $base\n";
@@ -139,6 +144,7 @@ $web = detectWebUser();
 $web_user  = $web['user'];
 $web_group = $web['group'];
 echo "Web server user: $web_user:$web_group\n";
+echo "Distro family: {$distro['family']} (package manager: {$distro['pkg_cmd']})\n";
 
 // ── Section 1: PHP Environment ──────────────────────────────────────────────
 
@@ -149,15 +155,17 @@ if (version_compare(PHP_VERSION, '7.4.0', '>=')) {
     pass("PHP " . PHP_VERSION . " (7.4+ required)");
 } else {
     fail("PHP " . PHP_VERSION . " — version 7.4+ required",
-         "sudo apt-get install php");
+         "sudo $pkg php");
 }
 
 // Required extensions
 $required_extensions = [
-    'sqlite3'  => 'sudo apt-get install php-sqlite3',
-    'json'     => 'sudo apt-get install php-json',
-    'openssl'  => 'sudo apt-get install php-xml (openssl is usually bundled)',
-    'curl'     => 'sudo apt-get install php-curl',
+    'sqlite3'  => "sudo $pkg " . distroPackage('php-sqlite3', 'php-pdo', $family),
+    'json'     => $family === 'rhel'
+                    ? '(bundled with php on RHEL 8+)'
+                    : "sudo $pkg php-json",
+    'openssl'  => "sudo $pkg " . distroPackage('php-xml', 'php-xml', $family) . ' (openssl is usually bundled)',
+    'curl'     => "sudo $pkg php-curl",
 ];
 
 foreach ($required_extensions as $ext => $fix) {
@@ -181,11 +189,13 @@ if (extension_loaded('posix')) {
 section("CLI Tools");
 
 $required_tools = [
-    'blastn'    => 'sudo apt-get install ncbi-blast+',
-    'samtools'  => 'sudo apt-get install samtools',
-    'tabix'     => 'sudo apt-get install tabix',
-    'bgzip'     => 'sudo apt-get install tabix',
-    'sqlite3'   => 'sudo apt-get install sqlite3',
+    'blastn'   => $family === 'rhel'
+                    ? "sudo $pkg epel-release && sudo $pkg blast+"
+                    : "sudo $pkg ncbi-blast+",
+    'samtools' => "sudo $pkg samtools",
+    'tabix'    => "sudo $pkg " . distroPackage('tabix', 'htslib', $family),
+    'bgzip'    => "sudo $pkg " . distroPackage('tabix', 'htslib', $family),
+    'sqlite3'  => "sudo $pkg " . distroPackage('sqlite3', 'sqlite', $family),
 ];
 
 foreach ($required_tools as $tool => $fix) {
@@ -200,7 +210,7 @@ foreach ($required_tools as $tool => $fix) {
 if (toolExists('jq')) {
     pass("jq");
 } else {
-    warn("jq not found in PATH", "Optional — install with: sudo apt-get install jq");
+    warn("jq not found in PATH", "Optional — install with: sudo $pkg jq");
 }
 
 // Composer — check PATH and local composer.phar
@@ -344,6 +354,10 @@ section("Tracks Security");
 $tracks_dir = rtrim($config['jbrowse2']['tracks_directory'] ?? "$base/data/tracks", '/');
 $htaccess   = "$tracks_dir/.htaccess";
 
+// Detect which web server is installed
+$has_apache = toolExists('apache2') || toolExists('httpd') || toolExists('apachectl');
+$has_nginx  = toolExists('nginx');
+
 if (file_exists($htaccess)) {
     pass(".htaccess exists in data/tracks/");
 } else {
@@ -351,11 +365,23 @@ if (file_exists($htaccess)) {
          "See README.md Step 6 \"Set up the tracks security file\" for the required content");
 }
 
+if ($has_nginx && !$has_apache) {
+    $site = $config['site'] ?? 'moop';
+    warn("Nginx detected — .htaccess files have no effect on Nginx",
+         "Add this to your Nginx server block to protect track files:\n" .
+         "         location ~ ^/$site/data/tracks/ { deny all; return 403; }");
+} elseif ($has_nginx && $has_apache) {
+    $site = $config['site'] ?? 'moop';
+    warn("Both Apache and Nginx detected — if using Nginx, .htaccess has no effect",
+         "Add this to your Nginx server block to protect track files:\n" .
+         "         location ~ ^/$site/data/tracks/ { deny all; return 403; }");
+}
+
 // ── Section 8: Users File ───────────────────────────────────────────────────
 
 section("Users File");
 
-$users_file = $config['users_file'] ?? '/var/www/html/users.json';
+$users_file = $config['users_file'] ?? "$base/../users.json";
 
 if (file_exists($users_file)) {
     if (is_readable($users_file)) {

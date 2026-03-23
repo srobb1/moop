@@ -17,7 +17,6 @@ const COLOR_RED = "\033[0;31m";
 const COLOR_RESET = "\033[0m";
 
 // Load configuration to get the correct path
-include_once __DIR__ . '/config/site_config.php';
 $config_data = require __DIR__ . '/config/site_config.php';
 $root_path = $config_data['root_path'];
 $users_file = $root_path . '/users.json';
@@ -71,7 +70,12 @@ if (!is_writable($users_dir)) {
     echo COLOR_RED . "Error: Cannot write to directory: $users_dir" . COLOR_RESET . "\n";
     echo "Please run this script as a user with write permission to that directory.\n";
     echo "Current user: " . get_current_user() . "\n";
-    echo "Directory owner: " . posix_getpwuid(fileowner($users_dir))['name'] . "\n\n";
+    if (function_exists('posix_getpwuid')) {
+        $owner_info = posix_getpwuid(fileowner($users_dir));
+        echo "Directory owner: " . ($owner_info['name'] ?? 'unknown') . "\n\n";
+    } else {
+        echo "Directory owner: (install posix extension to detect)\n\n";
+    }
     echo "Try running with sudo:\n";
     echo "  sudo php setup-admin.php\n";
     exit(1);

@@ -36,6 +36,9 @@ Install required dependencies before setting up MOOP:
 sudo apt-get update
 sudo apt-get install -y php php-cli php-sqlite3 php-json php-curl php-xml
 
+# RHEL/CentOS/Rocky
+sudo dnf install -y php php-cli php-pdo php-json php-curl php-xml
+
 # Verify PHP version (7.4 or higher required)
 php --version
 
@@ -58,12 +61,23 @@ sudo systemctl restart apache2
 # OR Nginx (with PHP-FPM)
 sudo apt-get install -y nginx php-fpm
 sudo systemctl start php-fpm nginx
+
+# RHEL/CentOS/Rocky — Apache
+sudo dnf install -y httpd php
+sudo systemctl enable --now httpd
+
+# OR RHEL/CentOS/Rocky — Nginx (with PHP-FPM)
+sudo dnf install -y nginx php-fpm
+sudo systemctl enable --now nginx php-fpm
 ```
 
 **3. Install SQLite3:**
 ```bash
 # Ubuntu/Debian
 sudo apt-get install -y sqlite3
+
+# RHEL/CentOS/Rocky
+sudo dnf install -y sqlite
 
 # Verify installation
 sqlite3 --version
@@ -86,6 +100,10 @@ Composer installs the `firebase/php-jwt` library for JBrowse2 track authenticati
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
+# RHEL/CentOS/Rocky (via NodeSource)
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+sudo dnf install -y nodejs
+
 # Verify
 node --version    # Should be 16+
 npm --version
@@ -98,6 +116,10 @@ Node.js is not needed to run MOOP day-to-day — it's only used to upgrade JBrow
 # Ubuntu/Debian
 sudo apt-get install -y ncbi-blast+
 
+# RHEL/CentOS/Rocky (requires EPEL)
+sudo dnf install -y epel-release
+sudo dnf install -y blast+
+
 # Verify installation
 blastn -version
 ```
@@ -106,6 +128,9 @@ blastn -version
 ```bash
 # Ubuntu/Debian
 sudo apt-get install -y samtools tabix
+
+# RHEL/CentOS/Rocky
+sudo dnf install -y samtools htslib
 
 # Verify installations
 samtools --version    # Should be 1.x or higher
@@ -117,6 +142,9 @@ tabix --version
 ```bash
 # JSON processor (useful for working with JSON config files)
 sudo apt-get install -y jq
+
+# RHEL/CentOS/Rocky
+sudo dnf install -y jq
 
 # Verify
 jq --version
