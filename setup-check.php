@@ -479,6 +479,11 @@ if ($fails > 0) {
     echo "  php setup-check.php\n\n";
     exit(1);
 } else {
+    $site = $config['site'] ?? 'moop';
     echo C_GREEN . "All checks passed! MOOP is ready to run." . C_RESET . "\n\n";
+    echo "Next steps:\n";
+    echo "  1. Visit " . C_CYAN . "http://your-server-hostname/$site/" . C_RESET . " in your browser\n";
+    echo "  2. Log in with your admin account\n";
+    echo "  3. Go to Admin > Manage Site Configuration to customize your site\n\n";
     exit(0);
 }
