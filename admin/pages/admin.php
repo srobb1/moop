@@ -66,7 +66,13 @@
       <p class="mb-1">Run these commands on the server:</p>
       <pre class="bg-light p-2 rounded mb-0" style="white-space: pre-wrap;"><code>sudo mkdir -p <?= htmlspecialchars($site_data_path) ?>&#10;sudo chown <?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?> <?= htmlspecialchars($site_data_path) ?>&#10;cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git init&#10;sudo -u <?= htmlspecialchars($web_user) ?> git commit --allow-empty -m "Initial site data repo"</code></pre>
       <p class="mt-2 mb-2 text-muted"><small>The directory is owned by <code><?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?></code> (the web server user) so MOOP can write snapshots automatically.</small></p>
-      <p class="mb-0 text-muted"><small>Once created, MOOP will automatically snapshot config and metadata changes on each admin login. <strong>Keep this repo private</strong> — it will contain user accounts and credentials. See <code>lib/housekeeping.php</code> for details.</small></p>
+      <p class="mb-2 text-muted"><small>Once created, MOOP will automatically snapshot config and metadata changes on each admin login. <strong>Keep this repo private</strong> — it will contain user accounts and credentials.</small></p>
+      <details class="mb-0">
+        <summary class="text-muted"><small><strong>Optional: Push backups to a remote repository</strong></small></summary>
+        <p class="mt-2 mb-1 text-muted"><small>To back up off-server, create a <strong>private</strong> repo on GitHub/GitLab and add it as a remote. Each site/machine should have its own separate repo.</small></p>
+        <pre class="bg-light p-2 rounded mb-1" style="white-space: pre-wrap;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.name "Your Name"&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.email "you@example.com"&#10;sudo -u <?= htmlspecialchars($web_user) ?> git remote add origin git@github.com:YOUR_ORG/moop-site-data-MACHINE_NAME.git&#10;sudo -u <?= htmlspecialchars($web_user) ?> git push -u origin master</code></pre>
+        <p class="mb-0 text-muted"><small><strong>Important:</strong> The repo must be <strong>private</strong> — it contains hashed passwords and API keys. The web server user (<?= htmlspecialchars($web_user) ?>) needs an SSH key for push access. See the README for details.</small></p>
+      </details>
     </div>
   </div>
   <?php elseif ($site_data_status === 'not_git'): ?>
