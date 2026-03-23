@@ -432,9 +432,19 @@ if (file_exists($users_file)) {
     } else {
         // File exists but current user can't read it — check if owned by web server user
         // (that's correct: www-data owns it with 600 so the web app can manage users)
-        $file_owner = function_exists('posix_getpwuid')
-            ? (posix_getpwuid(fileowner($users_file))['name'] ?? 'unknown')
-            : 'unknown';
+        $file_owner = 'unknown';
+        $file_uid = fileowner($users_file);
+        if (function_exists('posix_getpwuid')) {
+            $pw = posix_getpwuid($file_uid);
+            $file_owner = $pw['name'] ?? 'unknown';
+        } else {
+            // Fallback: match UID against known web server user
+            $id_output = [];
+            @exec("id -u " . escapeshellarg($web_user) . " 2>/dev/null", $id_output);
+            if (!empty($id_output[0]) && (int)$id_output[0] === $file_uid) {
+                $file_owner = $web_user;
+            }
+        }
 
         if ($file_owner === $web_user) {
             // Owned by web server — this is the expected production state
