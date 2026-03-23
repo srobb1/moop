@@ -348,36 +348,20 @@ sudo systemctl restart httpd
 - Login with username `admin` and your chosen password
 - You'll be redirected to the main dashboard
 
-**12. Set up site data backups (optional but recommended):**
+**12. Site data backups (automatic):**
 
-The Admin Dashboard will prompt you with commands to create a local site-data
-backup repository. This automatically versions your configuration, metadata,
-and user accounts on each admin login.
+MOOP automatically backs up your configuration, metadata, and user accounts
+to a separate directory on each admin login. The backup path is configured
+via `site_data_path` in `config/site_config.php` (default: `/var/www/html/moop-site-data/`).
 
-Each MOOP deployment (machine/site) should have its own separate site-data repo.
-The path is configured via `site_data_path` in `config/site_config.php`.
+The directory is created automatically on first admin login. No manual setup required.
 
-**Push backups to a remote (recommended):**
+> **Keep this directory private** — it contains user accounts and may contain API keys.
 
-Create a **private** repository on GitHub/GitLab for off-server backup, then:
+Optionally, you can initialize the backup directory as a git repo for version
+history. See the README created inside the backup directory for instructions.
 
-```bash
-# Replace WEB_USER with your web server user (www-data, apache, or nginx)
-# Replace the remote URL with your private repo
-WEB_USER=apache   # <-- change this to match your system
-
-cd /var/www/html/moop-site-data
-sudo -u $WEB_USER git config user.name "Your Name"
-sudo -u $WEB_USER git config user.email "you@example.com"
-sudo -u $WEB_USER git remote add origin git@github.com:YOUR_ORG/moop-site-data-MACHINE_NAME.git
-sudo -u $WEB_USER git push -u origin main
-```
-
-> **Important:** The site-data repo **must be private** — it contains bcrypt-hashed
-> passwords and may contain API keys. The web server user needs an SSH key for
-> push access (set up `~apache/.ssh/` or `~www-data/.ssh/` with a deploy key).
-
-See `lib/housekeeping.php` for details on what gets snapshotted.
+See `lib/housekeeping.php` for details on what gets backed up.
 
 ### Verifying Installation
 

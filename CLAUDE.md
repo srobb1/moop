@@ -265,24 +265,25 @@ a new MOOP site from scratch. Site-specific data is versioned separately.
 - `.example` template files for config and metadata
 - `composer.json` (but not `vendor/` or `composer.phar` — run `composer install`)
 
-**Site-data repo** (`site_data_path` in `site_config.php`, default `/data/moop-site-data/`):
+**Site-data backup directory** (`site_data_path` in `site_config.php`, default `/data/moop-site-data/`):
 - `config/config_editable.json` — admin-edited settings
 - `config/secrets.php` — API keys
 - `metadata/*.json` — groups, annotations, taxonomy tree
 - `users.json` — user accounts (bcrypt-hashed passwords)
-- **Keep this repo private** — it contains credentials
+- **Keep this directory private** — it contains credentials
 
 **How snapshots work:**
 - `lib/housekeeping.php` → `housekeeping_snapshot_site_data()` runs once per admin session
-- Copies changed files to the site-data repo and auto-commits
-- If the site-data directory doesn't exist, the admin dashboard shows setup instructions
-- Setup commands use the detected web server user/group for correct ownership
+- Auto-creates the backup directory if it doesn't exist
+- Copies changed files to the backup directory
+- Git is NOT required — if the directory is a git repo, changes are auto-committed as a bonus
+- Status is stored in `$_SESSION['site_data_backup']` for the admin dashboard
 
 **Setting up a new deployment:**
 1. Clone the app repo
 2. Copy `.example` files → remove `.example` suffix, edit values
 3. Run `composer install`
-4. Create the site-data repo (see admin dashboard prompt for commands)
+4. Site-data backup directory is created automatically on first admin login
 
 ---
 

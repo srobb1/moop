@@ -56,61 +56,26 @@
     </div>
   </div>
   
-  <!-- Site Data Backup Setup Prompt -->
-  <?php if ($site_data_status === 'missing_dir'): ?>
-  <div class="alert alert-warning d-flex align-items-start" role="alert">
-    <i class="fa fa-exclamation-triangle fa-lg me-3 mt-1"></i>
-    <div>
-      <strong>Site Data Backup Not Set Up</strong>
-      <p class="mb-2">Your site configuration, metadata, and user data are not being version-controlled. Set up the backup repository to track changes automatically.</p>
-      <p class="mb-1">Run these commands on the server:</p>
-      <pre class="bg-light p-2 rounded mb-0" style="white-space: pre-wrap;"><code>sudo mkdir -p <?= htmlspecialchars($site_data_path) ?>&#10;sudo chown <?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?> <?= htmlspecialchars($site_data_path) ?>&#10;cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git init -b main&#10;sudo -u <?= htmlspecialchars($web_user) ?> git commit --allow-empty -m "Initial site data repo"</code></pre>
-      <p class="mt-2 mb-2 text-muted"><small>The directory is owned by <code><?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?></code> (the web server user) so MOOP can write snapshots automatically.</small></p>
-      <p class="mb-2 text-muted"><small>Once created, MOOP will automatically snapshot config and metadata changes on each admin login. <strong>Keep this repo private</strong> — it will contain user accounts and credentials.</small></p>
-      <details class="mb-0">
-        <summary class="text-muted"><small><strong>Optional: Push backups to a remote repository</strong></small></summary>
-        <p class="mt-2 mb-1 text-muted"><small><strong>1.</strong> Set your git identity:</small></p>
-        <pre class="bg-light p-2 rounded mb-2" style="white-space: pre-wrap; font-size: 0.85em;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.name "Your Name"&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.email "you@example.com"</code></pre>
-        <p class="mb-1 text-muted"><small><strong>2.</strong> Create a <strong>private</strong> repo on GitHub (each machine needs its own):</small></p>
-        <pre class="bg-light p-2 rounded mb-2" style="white-space: pre-wrap; font-size: 0.85em;"><code>gh repo create YOUR_ORG/moop-site-data-<?= htmlspecialchars(gethostname() ?: 'MACHINE_NAME') ?> --private</code></pre>
-        <p class="mb-2 text-muted"><small>Or create it manually at <a href="https://github.com/new" target="_blank">github.com/new</a> — select <strong>Private</strong>.</small></p>
-        <p class="mb-1 text-muted"><small><strong>3.</strong> Add the remote and push:</small></p>
-        <pre class="bg-light p-2 rounded mb-2" style="white-space: pre-wrap; font-size: 0.85em;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git remote add origin git@github.com:YOUR_ORG/moop-site-data-<?= htmlspecialchars(gethostname() ?: 'MACHINE_NAME') ?>.git&#10;sudo -u <?= htmlspecialchars($web_user) ?> git push -u origin main</code></pre>
-        <p class="mb-0 text-muted"><small><strong>Note:</strong> The web server user (<code><?= htmlspecialchars($web_user) ?></code>) needs an SSH key for push access. Generate with: <code>sudo -u <?= htmlspecialchars($web_user) ?> ssh-keygen -t ed25519</code> and add the public key as a <a href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account" target="_blank">deploy key</a> on the repo (with write access).</small></p>
-      </details>
+  <!-- Site Data Backup Status -->
+  <?php if ($site_data_backup !== null): ?>
+    <?php if ($site_data_backup['status'] === 'error'): ?>
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+      <i class="fa fa-exclamation-triangle me-2"></i>
+      <div><strong>Backup issue:</strong> <?= $site_data_backup['message'] ?></div>
     </div>
-  </div>
-  <?php elseif ($site_data_status === 'not_git'): ?>
-  <div class="alert alert-warning d-flex align-items-start" role="alert">
-    <i class="fa fa-exclamation-triangle fa-lg me-3 mt-1"></i>
-    <div>
-      <strong>Site Data Directory Exists But Is Not a Git Repo</strong>
-      <p class="mb-1">Initialize it to enable version history:</p>
-      <pre class="bg-light p-2 rounded mb-0" style="white-space: pre-wrap;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git init -b main&#10;sudo -u <?= htmlspecialchars($web_user) ?> git commit --allow-empty -m "Initial site data repo"</code></pre>
+    <?php elseif ($site_data_backup['status'] === 'ok'): ?>
+    <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
+      <i class="fa fa-check-circle me-2"></i>
+      <div>
+        <strong>Site data backup active</strong> &mdash;
+        last run: <?= htmlspecialchars($site_data_backup['last_run']) ?>,
+        <?= $site_data_backup['files_copied'] ?> file(s) updated
+        <?php if ($site_data_backup['is_git']): ?>
+          <span class="badge bg-secondary ms-2">Git versioned</span>
+        <?php endif; ?>
+      </div>
     </div>
-  </div>
-  <?php endif; ?>
-
-  <?php if ($site_data_status === 'ok' && !$site_data_has_remote): ?>
-  <div class="alert alert-info d-flex align-items-start" role="alert">
-    <i class="fa fa-info-circle fa-lg me-3 mt-1"></i>
-    <div>
-      <strong>Site Data Backup: No Remote Configured</strong>
-      <p class="mb-2">Your site data is being versioned locally, but is not backed up off-server. To add off-site backup, follow these steps:</p>
-
-      <p class="mb-1"><strong>Step 1:</strong> Set your git identity for this repo:</p>
-      <pre class="bg-light p-2 rounded mb-2" style="white-space: pre-wrap;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.name "Your Name"&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.email "you@example.com"</code></pre>
-
-      <p class="mb-1"><strong>Step 2:</strong> Create a <strong>private</strong> repo on GitHub (each machine needs its own). If you have the <code>gh</code> CLI:</p>
-      <pre class="bg-light p-2 rounded mb-2" style="white-space: pre-wrap;"><code>gh repo create YOUR_ORG/moop-site-data-<?= htmlspecialchars(gethostname() ?: 'MACHINE_NAME') ?> --private</code></pre>
-      <p class="mb-2 text-muted"><small>Or create it manually at <a href="https://github.com/new" target="_blank">github.com/new</a> — make sure to select <strong>Private</strong>.</small></p>
-
-      <p class="mb-1"><strong>Step 3:</strong> Add the remote and push:</p>
-      <pre class="bg-light p-2 rounded mb-2" style="white-space: pre-wrap;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git remote add origin git@github.com:YOUR_ORG/moop-site-data-<?= htmlspecialchars(gethostname() ?: 'MACHINE_NAME') ?>.git&#10;sudo -u <?= htmlspecialchars($web_user) ?> git push -u origin main</code></pre>
-
-      <p class="mb-0 text-muted"><small><strong>Note:</strong> The repo <strong>must be private</strong> — it contains hashed passwords and may contain API keys. The web server user (<code><?= htmlspecialchars($web_user) ?></code>) needs an SSH key for push access. If you don't have one, generate it with: <code>sudo -u <?= htmlspecialchars($web_user) ?> ssh-keygen -t ed25519</code> and add the public key as a <a href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account" target="_blank">deploy key</a> on the repo (with write access).</small></p>
-    </div>
-  </div>
+    <?php endif; ?>
   <?php endif; ?>
 
   <!-- Environment Warnings -->
