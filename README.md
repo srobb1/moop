@@ -370,7 +370,7 @@ cd /var/www/html/moop-site-data
 sudo -u $WEB_USER git config user.name "Your Name"
 sudo -u $WEB_USER git config user.email "you@example.com"
 sudo -u $WEB_USER git remote add origin git@github.com:YOUR_ORG/moop-site-data-MACHINE_NAME.git
-sudo -u $WEB_USER git push -u origin master
+sudo -u $WEB_USER git push -u origin main
 ```
 
 > **Important:** The site-data repo **must be private** — it contains bcrypt-hashed
