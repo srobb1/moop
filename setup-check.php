@@ -224,9 +224,20 @@ $required_tools = [
                       . "         curl -O https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.17.0+-x64-linux.tar.gz\n"
                       . "         tar xzf ncbi-blast-*.tar.gz && sudo cp ncbi-blast-*/bin/* /usr/local/bin/"
                     : "sudo $pkg ncbi-blast+",
-    'samtools' => "sudo $pkg samtools",
-    'tabix'    => "sudo $pkg " . distroPackage('tabix', 'htslib', $family),
-    'bgzip'    => "sudo $pkg " . distroPackage('tabix', 'htslib', $family),
+    'samtools' => $family === 'rhel'
+                    ? "Not in EPEL for RHEL 9. Install from source:\n"
+                      . "         sudo dnf install -y gcc make zlib-devel bzip2-devel xz-devel curl-devel openssl-devel ncurses-devel\n"
+                      . "         curl -LO https://github.com/samtools/samtools/releases/download/1.21/samtools-1.21.tar.bz2\n"
+                      . "         tar xjf samtools-1.21.tar.bz2 && cd samtools-1.21 && ./configure && make && sudo make install"
+                    : "sudo $pkg samtools",
+    'tabix'    => $family === 'rhel'
+                    ? "Not in EPEL for RHEL 9. Install htslib from source (provides tabix and bgzip):\n"
+                      . "         curl -LO https://github.com/samtools/htslib/releases/download/1.21/htslib-1.21.tar.bz2\n"
+                      . "         tar xjf htslib-1.21.tar.bz2 && cd htslib-1.21 && ./configure && make && sudo make install"
+                    : "sudo $pkg tabix",
+    'bgzip'    => $family === 'rhel'
+                    ? "Installed with htslib (see tabix fix above)"
+                    : "sudo $pkg tabix",
     'sqlite3'  => "sudo $pkg " . distroPackage('sqlite3', 'sqlite', $family),
 ];
 

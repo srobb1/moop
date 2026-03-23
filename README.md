@@ -131,8 +131,17 @@ blastn -version
 # Ubuntu/Debian
 sudo apt-get install -y samtools tabix
 
-# RHEL/CentOS/Rocky
-sudo dnf install -y samtools htslib
+# RHEL/CentOS/Rocky — not in EPEL, install from source
+# Install build dependencies first
+sudo dnf install -y gcc make zlib-devel bzip2-devel xz-devel curl-devel openssl-devel ncurses-devel
+
+# htslib (provides tabix and bgzip)
+curl -LO https://github.com/samtools/htslib/releases/download/1.21/htslib-1.21.tar.bz2
+tar xjf htslib-1.21.tar.bz2 && cd htslib-1.21 && ./configure && make && sudo make install && cd ..
+
+# samtools
+curl -LO https://github.com/samtools/samtools/releases/download/1.21/samtools-1.21.tar.bz2
+tar xjf samtools-1.21.tar.bz2 && cd samtools-1.21 && ./configure && make && sudo make install && cd ..
 
 # Verify installations
 samtools --version    # Should be 1.x or higher
