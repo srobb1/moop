@@ -86,6 +86,19 @@
   </div>
   <?php endif; ?>
 
+  <?php if ($site_data_status === 'ok' && !$site_data_has_remote): ?>
+  <div class="alert alert-info d-flex align-items-start" role="alert">
+    <i class="fa fa-info-circle fa-lg me-3 mt-1"></i>
+    <div>
+      <strong>Site Data Backup: No Remote Configured</strong>
+      <p class="mb-2">Your site data is being versioned locally, but is not backed up off-server. Add a <strong>private</strong> remote repository for off-site backup.</p>
+      <p class="mb-1">Each MOOP deployment (machine/site) should have its own separate private repo:</p>
+      <pre class="bg-light p-2 rounded mb-1" style="white-space: pre-wrap;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.name "Your Name"&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.email "you@example.com"&#10;sudo -u <?= htmlspecialchars($web_user) ?> git remote add origin git@github.com:YOUR_ORG/moop-site-data-MACHINE_NAME.git&#10;sudo -u <?= htmlspecialchars($web_user) ?> git push -u origin master</code></pre>
+      <p class="mb-0 text-muted"><small><strong>Important:</strong> The repo must be <strong>private</strong> — it contains hashed passwords and may contain API keys. The web server user (<?= htmlspecialchars($web_user) ?>) needs an SSH key for push access.</small></p>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <!-- Environment Warnings -->
   <?php if (!empty($_SESSION['env_warnings'])): ?>
   <div class="card mb-4 border-warning">

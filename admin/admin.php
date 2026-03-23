@@ -34,6 +34,15 @@ if (!empty($site_data_path)) {
         $site_data_status = 'ok';
     }
 }
+
+// Check if the site-data repo has a remote configured
+$site_data_has_remote = false;
+if ($site_data_status === 'ok') {
+    $remote_output = [];
+    @exec("cd " . escapeshellarg($site_data_path) . " && git remote 2>/dev/null", $remote_output);
+    $site_data_has_remote = !empty(array_filter($remote_output));
+}
+
 $web_server = getWebServerUser();
 
 // Prepare data for content file
@@ -42,6 +51,7 @@ $data = [
     'site' => $site,
     'site_data_status' => $site_data_status,
     'site_data_path' => $site_data_path,
+    'site_data_has_remote' => $site_data_has_remote,
     'web_user' => $web_server['user'],
     'web_group' => $web_server['group'],
 ];
