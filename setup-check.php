@@ -205,8 +205,16 @@ if ($family === 'rhel') {
     if ($epelRet === 0) {
         pass("EPEL repository enabled");
     } else {
+        // Detect major version for the correct EPEL URL
+        $rhelVer = PHP_MAJOR_VERSION >= 8 ? '9' : '8';  // safe default
+        if (file_exists('/etc/os-release')) {
+            $osrel = file_get_contents('/etc/os-release');
+            if (preg_match('/^VERSION_ID=["\']?(\d+)/m', $osrel, $vm)) {
+                $rhelVer = $vm[1];
+            }
+        }
         fail("EPEL repository not enabled — required for BLAST+, samtools, and other tools",
-             "sudo $pkg epel-release");
+             "sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$rhelVer.noarch.rpm");
     }
 }
 

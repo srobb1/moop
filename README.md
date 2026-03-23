@@ -117,7 +117,8 @@ Node.js is not needed to run MOOP day-to-day — it's only used to upgrade JBrow
 sudo apt-get install -y ncbi-blast+
 
 # RHEL/CentOS/Rocky (requires EPEL)
-sudo dnf install -y epel-release
+# Install EPEL repo first (replace 9 with your RHEL major version if different)
+sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
 sudo dnf install -y blast+
 
 # Verify installation
