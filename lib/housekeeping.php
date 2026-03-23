@@ -296,7 +296,7 @@ function housekeeping_environment_check() {
     $web_info = getWebServerUser();
     foreach ($writable_dirs as $label => $dir) {
         if (is_dir($dir) && !is_writable($dir)) {
-            $fix_cmd = "sudo chown " . $web_info['user'] . ":" . $web_info['group'] . " " . htmlspecialchars($dir) . " && sudo chmod 2775 " . htmlspecialchars($dir);
+            $fix_cmd = "sudo chgrp " . $web_info['group'] . " " . htmlspecialchars($dir) . " && sudo chmod 2775 " . htmlspecialchars($dir);
             $warnings[] = [
                 'level' => 'warning',
                 'message' => "Directory <code>$label/</code> is not writable — admin changes may not save. Fix with: <code>$fix_cmd</code>",
