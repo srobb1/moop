@@ -152,19 +152,63 @@ jq --version
 
 #### Setup MOOP
 
-**1. Clone the repository:**
+**1. Identify your web server user/group:**
+
+Before cloning, determine the web server user so you can set permissions correctly.
+
 ```bash
-# Clone to your web server directory
-git clone https://github.com/srobb1/moop.git /var/www/html/moop
-cd /var/www/html/moop
+# Check which web server is installed
+# Ubuntu/Debian
+dpkg -l | grep -E 'apache2|nginx'
+
+# RHEL/CentOS/Rocky
+rpm -q httpd nginx
+
+# If the web server is already running, check who it runs as
+ps aux | grep -E 'httpd|nginx|apache2|php-fpm' | head -5
 ```
 
-**2. Install PHP dependencies:**
+Common web server user/group by platform:
+
+| Platform | Apache | Nginx |
+|----------|--------|-------|
+| Ubuntu/Debian | `www-data:www-data` | `www-data:www-data` |
+| RHEL/CentOS/Rocky | `apache:apache` | `nginx:nginx` |
+
+If your web server is not installed yet, install it first (see Prerequisites step 2 above),
+then come back to this step.
+
+**2. Set up the web root and clone the repository:**
+
+The deploy user (your login account) should own the files so you can run git
+and CLI scripts. The web server reads files via group membership.
+
+```bash
+# Replace WEB_GROUP with your web server group from step 1
+# (www-data, apache, or nginx)
+WEB_GROUP=apache   # <-- change this to match your system
+
+# Add your user to the web server group (log out and back in to take effect)
+sudo usermod -aG $WEB_GROUP $(whoami)
+
+# Make sure you can write to the web root
+sudo chown $(whoami):$WEB_GROUP /var/www/html
+
+# Clone the repository
+git clone https://github.com/srobb1/moop.git /var/www/html/moop
+cd /var/www/html/moop
+
+# Set group on all files so the web server can read them
+sudo chown -R $(whoami):$WEB_GROUP /var/www/html/moop
+chmod -R g+rX /var/www/html/moop
+```
+
+**3. Install PHP dependencies:**
 ```bash
 composer install
 ```
 
-**3. Set up initial configuration files:**
+**4. Set up initial configuration files:**
 ```bash
 # Copy example configs (then edit with your site-specific values)
 cp config/config_editable.json.example config/config_editable.json
@@ -176,7 +220,7 @@ cp metadata/taxonomy_tree_config.json.example metadata/taxonomy_tree_config.json
 
 These files will be customized through the Admin Dashboard after you log in.
 
-**4. Create required directories:**
+**5. Create required directories:**
 ```bash
 # Create directories that the app writes to
 mkdir -p logs
@@ -186,7 +230,7 @@ mkdir -p images
 mkdir -p metadata/change_log
 ```
 
-**5. Generate JWT keys for JBrowse2 track authentication:**
+**6. Generate JWT keys for JBrowse2 track authentication:**
 ```bash
 mkdir -p certs
 openssl genrsa -out certs/jwt_private_key.pem 2048
@@ -196,7 +240,7 @@ openssl rsa -in certs/jwt_private_key.pem -pubout -out certs/jwt_public_key.pem
 These keys sign JWT tokens that authenticate requests for genome track data.
 Without them, JBrowse2 cannot load any tracks.
 
-**6. Set up the tracks security file:**
+**7. Set up the tracks security file:**
 
 The file `data/tracks/.htaccess` blocks direct access to track files, forcing
 all requests through the JWT authentication layer. This is critical — without
@@ -223,7 +267,7 @@ ErrorDocument 403 "Access denied. Track files must be accessed through the API e
 HTACCESS
 ```
 
-**7. Create the users file with your admin account:**
+**8. Create the users file with your admin account:**
 ```bash
 # Run the interactive setup script
 sudo php setup-admin.php
@@ -237,18 +281,20 @@ This script will:
 
 Your password is only stored as a bcrypt hash in `users.json` — it is never committed to git.
 
-**8. Set up filesystem permissions:**
+**9. Set up filesystem permissions:**
 
-> **Note:** The examples below use `www-data`, which is the default web server
-> user/group on Debian/Ubuntu with Apache. Substitute the correct user for your
-> system: `nginx` for Nginx on RHEL/CentOS, `apache` for Apache on RHEL/CentOS,
-> or check with `ps aux | grep -E 'apache|nginx|httpd' | head -1`.
+Files should be owned by your deploy user with the web server group (set in step 1).
+This lets you run git and CLI tools normally while the web server reads via group access.
 
 ```bash
-# Set ownership to web server user (www-data for Apache on Debian/Ubuntu)
-sudo chown -R www-data:www-data /var/www/html/moop
+# Use the same WEB_GROUP from step 2 (www-data, apache, or nginx)
+WEB_GROUP=apache   # <-- change this to match your system
 
-# Directories the web server needs to write to
+# Ensure ownership: deploy user owns, web server group reads
+sudo chown -R $(whoami):$WEB_GROUP /var/www/html/moop
+chmod -R g+rX /var/www/html/moop
+
+# Directories the web server needs to WRITE to (setgid ensures new files inherit group)
 sudo chmod 2775 /var/www/html/moop/metadata
 sudo chmod 2775 /var/www/html/moop/metadata/change_log
 sudo chmod 2775 /var/www/html/moop/logs
@@ -263,9 +309,13 @@ sudo chmod 640 /var/www/html/moop/certs/*.pem
 
 See [docs/current/admin/PERMISSIONS_GUIDE.md](docs/current/admin/PERMISSIONS_GUIDE.md) for complete permission setup.
 
-**9. Configure HTTP security headers (recommended):**
+**10. Configure HTTP security headers (recommended):**
 
-Add these to your Apache virtual host config (e.g., `/etc/apache2/sites-enabled/000-default.conf`):
+Add these to your Apache virtual host config:
+
+- Ubuntu/Debian: `/etc/apache2/sites-enabled/000-default.conf`
+- RHEL/CentOS/Rocky: `/etc/httpd/conf.d/moop.conf` (create this file)
+
 ```apache
 Header always set X-Frame-Options "SAMEORIGIN"
 Header always set X-Content-Type-Options "nosniff"
@@ -274,16 +324,20 @@ Header always set Referrer-Policy "same-origin"
 
 Then enable the headers module and restart:
 ```bash
+# Ubuntu/Debian
 sudo a2enmod headers
 sudo systemctl restart apache2
+
+# RHEL/CentOS/Rocky (mod_headers is enabled by default)
+sudo systemctl restart httpd
 ```
 
-**10. Access the site:**
+**11. Access the site:**
 - Visit: `http://localhost/moop/` (or your server URL)
 - Login with username `admin` and your chosen password
 - You'll be redirected to the main dashboard
 
-**11. Set up site data backups (optional but recommended):**
+**12. Set up site data backups (optional but recommended):**
 
 The Admin Dashboard will prompt you with commands to create a site-data
 backup repository. This automatically versions your configuration, metadata,

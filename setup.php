@@ -93,11 +93,21 @@ function getWebUser() {
         if ($pwinfo !== false) {
             $user = $pwinfo['name'];
         }
-    }
-    if (function_exists('posix_getgid')) {
         $grinfo = posix_getgrgid(posix_getgid());
         if ($grinfo !== false) {
             $group = $grinfo['name'];
+        }
+    } else {
+        // Fallback without posix: parse `id` command output
+        $id_output = [];
+        @exec("id 2>/dev/null", $id_output);
+        if (!empty($id_output[0])) {
+            if (preg_match('/uid=\d+\(([^)]+)\)/', $id_output[0], $m)) {
+                $user = $m[1];
+            }
+            if (preg_match('/gid=\d+\(([^)]+)\)/', $id_output[0], $m)) {
+                $group = $m[1];
+            }
         }
     }
 

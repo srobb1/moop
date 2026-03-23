@@ -72,11 +72,13 @@ function detectWebUser() {
     $user  = 'www-data';
     $group = 'www-data';
 
-    // Look for non-root worker processes of common web servers
+    // Look for non-root worker processes. PHP-FPM is checked first because
+    // it's the process that actually runs PHP — its user is what matters for
+    // file permissions, even if a different user runs the nginx/httpd frontend.
     $detect_cmds = [
+        "ps -eo user,comm --no-headers | awk '\$2 ~ /php-fpm/ && \$1 != \"root\" {print \$1; exit}'",
         "ps -eo user,comm --no-headers | awk '\$2 ~ /apache2|httpd/ && \$1 != \"root\" {print \$1; exit}'",
         "ps -eo user,comm --no-headers | awk '\$2 ~ /nginx/ && \$1 != \"root\" {print \$1; exit}'",
-        "ps -eo user,comm --no-headers | awk '\$2 ~ /php-fpm/ && \$1 != \"root\" {print \$1; exit}'",
     ];
 
     foreach ($detect_cmds as $cmd) {
@@ -93,6 +95,13 @@ function detectWebUser() {
                     if ($grinfo !== false) {
                         $group = $grinfo['name'];
                     }
+                }
+            } else {
+                // Fallback without posix: parse `id` command output
+                $id_output = [];
+                @exec("id " . escapeshellarg($user) . " 2>/dev/null", $id_output);
+                if (!empty($id_output[0]) && preg_match('/gid=\d+\(([^)]+)\)/', $id_output[0], $m)) {
+                    $group = $m[1];
                 }
             }
             break;
