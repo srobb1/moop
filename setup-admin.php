@@ -7,7 +7,7 @@
  * This script creates the users.json file with an admin account.
  * Run this once during initial MOOP installation to set up your admin user.
  * 
- * Usage: php setup-admin.php
+ * Usage: sudo php setup-admin.php
  */
 
 // ANSI color codes
@@ -214,14 +214,43 @@ if (file_put_contents($users_file, $json_content) === false) {
     exit(1);
 }
 
-// Set restrictive permissions
-if (!chmod($users_file, 0600)) {
-    echo COLOR_RED . "Warning: Could not set file permissions to 600" . COLOR_RESET . "\n";
-    echo "Please run: chmod 600 $users_file\n\n";
+// Detect web server user for correct ownership
+$web_user = 'www-data';  // default
+$detect_cmds = [
+    "ps -eo user,comm --no-headers | awk '\$2 ~ /php-fpm/ && \$1 != \"root\" {print \$1; exit}'",
+    "ps -eo user,comm --no-headers | awk '\$2 ~ /apache2|httpd/ && \$1 != \"root\" {print \$1; exit}'",
+    "ps -eo user,comm --no-headers | awk '\$2 ~ /nginx/ && \$1 != \"root\" {print \$1; exit}'",
+];
+foreach ($detect_cmds as $cmd) {
+    $output = [];
+    @exec($cmd, $output);
+    $detected = trim($output[0] ?? '');
+    if (!empty($detected)) {
+        $web_user = $detected;
+        break;
+    }
 }
 
+// Set ownership to web server user and restrictive permissions
+// The web server needs to read/write this file to manage users via the admin UI
+$chown_ok = @chown($users_file, $web_user);
+$chmod_ok = @chmod($users_file, 0600);
+
 echo COLOR_GREEN . "✓ users.json created successfully" . COLOR_RESET . "\n";
-echo COLOR_GREEN . "✓ File permissions set to 600 (secure)" . COLOR_RESET . "\n\n";
+
+if ($chown_ok) {
+    echo COLOR_GREEN . "✓ Owner set to $web_user (web server user)" . COLOR_RESET . "\n";
+} else {
+    echo COLOR_RED . "Warning: Could not set owner to $web_user" . COLOR_RESET . "\n";
+    echo "  Run: sudo chown $web_user " . escapeshellarg($users_file) . "\n";
+}
+
+if ($chmod_ok) {
+    echo COLOR_GREEN . "✓ File permissions set to 600 (secure)" . COLOR_RESET . "\n\n";
+} else {
+    echo COLOR_RED . "Warning: Could not set file permissions to 600" . COLOR_RESET . "\n";
+    echo "  Run: sudo chmod 600 " . escapeshellarg($users_file) . "\n\n";
+}
 
 echo COLOR_GREEN . "========================================" . COLOR_RESET . "\n";
 echo COLOR_GREEN . "Setup Complete!" . COLOR_RESET . "\n";
@@ -232,10 +261,9 @@ echo "  Username: " . COLOR_RED . $admin_username . COLOR_RESET . "\n";
 echo "  Password: " . COLOR_RED . "(the password you just entered)" . COLOR_RESET . "\n\n";
 
 echo "Next steps:\n";
-echo "  1. Set filesystem permissions (see README.md)\n";
-echo "  2. Visit http://your-site/moop/ and login\n";
-echo "  3. Go to Admin > Manage Site Configuration\n";
-echo "  4. Update your site title, email, and other settings\n\n";
+echo "  1. Visit http://your-site/moop/ and login\n";
+echo "  2. Go to Admin > Manage Site Configuration\n";
+echo "  3. Update your site title, email, and other settings\n\n";
 
 exit(0);
 
