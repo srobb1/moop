@@ -69,9 +69,14 @@
       <p class="mb-2 text-muted"><small>Once created, MOOP will automatically snapshot config and metadata changes on each admin login. <strong>Keep this repo private</strong> — it will contain user accounts and credentials.</small></p>
       <details class="mb-0">
         <summary class="text-muted"><small><strong>Optional: Push backups to a remote repository</strong></small></summary>
-        <p class="mt-2 mb-1 text-muted"><small>To back up off-server, create a <strong>private</strong> repo on GitHub/GitLab and add it as a remote. Each site/machine should have its own separate repo.</small></p>
-        <pre class="bg-light p-2 rounded mb-1" style="white-space: pre-wrap;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.name "Your Name"&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.email "you@example.com"&#10;sudo -u <?= htmlspecialchars($web_user) ?> git remote add origin git@github.com:YOUR_ORG/moop-site-data-MACHINE_NAME.git&#10;sudo -u <?= htmlspecialchars($web_user) ?> git push -u origin master</code></pre>
-        <p class="mb-0 text-muted"><small><strong>Important:</strong> The repo must be <strong>private</strong> — it contains hashed passwords and API keys. The web server user (<?= htmlspecialchars($web_user) ?>) needs an SSH key for push access. See the README for details.</small></p>
+        <p class="mt-2 mb-1 text-muted"><small><strong>1.</strong> Set your git identity:</small></p>
+        <pre class="bg-light p-2 rounded mb-2" style="white-space: pre-wrap; font-size: 0.85em;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.name "Your Name"&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.email "you@example.com"</code></pre>
+        <p class="mb-1 text-muted"><small><strong>2.</strong> Create a <strong>private</strong> repo on GitHub (each machine needs its own):</small></p>
+        <pre class="bg-light p-2 rounded mb-2" style="white-space: pre-wrap; font-size: 0.85em;"><code>gh repo create YOUR_ORG/moop-site-data-<?= htmlspecialchars(gethostname() ?: 'MACHINE_NAME') ?> --private</code></pre>
+        <p class="mb-2 text-muted"><small>Or create it manually at <a href="https://github.com/new" target="_blank">github.com/new</a> — select <strong>Private</strong>.</small></p>
+        <p class="mb-1 text-muted"><small><strong>3.</strong> Add the remote and push:</small></p>
+        <pre class="bg-light p-2 rounded mb-2" style="white-space: pre-wrap; font-size: 0.85em;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git remote add origin git@github.com:YOUR_ORG/moop-site-data-<?= htmlspecialchars(gethostname() ?: 'MACHINE_NAME') ?>.git&#10;sudo -u <?= htmlspecialchars($web_user) ?> git push -u origin master</code></pre>
+        <p class="mb-0 text-muted"><small><strong>Note:</strong> The web server user (<code><?= htmlspecialchars($web_user) ?></code>) needs an SSH key for push access. Generate with: <code>sudo -u <?= htmlspecialchars($web_user) ?> ssh-keygen -t ed25519</code> and add the public key as a <a href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account" target="_blank">deploy key</a> on the repo (with write access).</small></p>
       </details>
     </div>
   </div>
@@ -91,10 +96,19 @@
     <i class="fa fa-info-circle fa-lg me-3 mt-1"></i>
     <div>
       <strong>Site Data Backup: No Remote Configured</strong>
-      <p class="mb-2">Your site data is being versioned locally, but is not backed up off-server. Add a <strong>private</strong> remote repository for off-site backup.</p>
-      <p class="mb-1">Each MOOP deployment (machine/site) should have its own separate private repo:</p>
-      <pre class="bg-light p-2 rounded mb-1" style="white-space: pre-wrap;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.name "Your Name"&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.email "you@example.com"&#10;sudo -u <?= htmlspecialchars($web_user) ?> git remote add origin git@github.com:YOUR_ORG/moop-site-data-MACHINE_NAME.git&#10;sudo -u <?= htmlspecialchars($web_user) ?> git push -u origin master</code></pre>
-      <p class="mb-0 text-muted"><small><strong>Important:</strong> The repo must be <strong>private</strong> — it contains hashed passwords and may contain API keys. The web server user (<?= htmlspecialchars($web_user) ?>) needs an SSH key for push access.</small></p>
+      <p class="mb-2">Your site data is being versioned locally, but is not backed up off-server. To add off-site backup, follow these steps:</p>
+
+      <p class="mb-1"><strong>Step 1:</strong> Set your git identity for this repo:</p>
+      <pre class="bg-light p-2 rounded mb-2" style="white-space: pre-wrap;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.name "Your Name"&#10;sudo -u <?= htmlspecialchars($web_user) ?> git config user.email "you@example.com"</code></pre>
+
+      <p class="mb-1"><strong>Step 2:</strong> Create a <strong>private</strong> repo on GitHub (each machine needs its own). If you have the <code>gh</code> CLI:</p>
+      <pre class="bg-light p-2 rounded mb-2" style="white-space: pre-wrap;"><code>gh repo create YOUR_ORG/moop-site-data-<?= htmlspecialchars(gethostname() ?: 'MACHINE_NAME') ?> --private</code></pre>
+      <p class="mb-2 text-muted"><small>Or create it manually at <a href="https://github.com/new" target="_blank">github.com/new</a> — make sure to select <strong>Private</strong>.</small></p>
+
+      <p class="mb-1"><strong>Step 3:</strong> Add the remote and push:</p>
+      <pre class="bg-light p-2 rounded mb-2" style="white-space: pre-wrap;"><code>cd <?= htmlspecialchars($site_data_path) ?>&#10;sudo -u <?= htmlspecialchars($web_user) ?> git remote add origin git@github.com:YOUR_ORG/moop-site-data-<?= htmlspecialchars(gethostname() ?: 'MACHINE_NAME') ?>.git&#10;sudo -u <?= htmlspecialchars($web_user) ?> git push -u origin master</code></pre>
+
+      <p class="mb-0 text-muted"><small><strong>Note:</strong> The repo <strong>must be private</strong> — it contains hashed passwords and may contain API keys. The web server user (<code><?= htmlspecialchars($web_user) ?></code>) needs an SSH key for push access. If you don't have one, generate it with: <code>sudo -u <?= htmlspecialchars($web_user) ?> ssh-keygen -t ed25519</code> and add the public key as a <a href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account" target="_blank">deploy key</a> on the repo (with write access).</small></p>
     </div>
   </div>
   <?php endif; ?>
