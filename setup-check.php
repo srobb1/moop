@@ -197,9 +197,22 @@ if (extension_loaded('posix')) {
 
 section("CLI Tools");
 
+// On RHEL, check for EPEL repository first — several tools require it
+if ($family === 'rhel') {
+    $epelOutput = [];
+    $epelRet = 1;
+    @exec("rpm -q epel-release 2>/dev/null", $epelOutput, $epelRet);
+    if ($epelRet === 0) {
+        pass("EPEL repository enabled");
+    } else {
+        fail("EPEL repository not enabled — required for BLAST+, samtools, and other tools",
+             "sudo $pkg epel-release");
+    }
+}
+
 $required_tools = [
     'blastn'   => $family === 'rhel'
-                    ? "sudo $pkg epel-release && sudo $pkg blast+"
+                    ? "sudo $pkg blast+"
                     : "sudo $pkg ncbi-blast+",
     'samtools' => "sudo $pkg samtools",
     'tabix'    => "sudo $pkg " . distroPackage('tabix', 'htslib', $family),
