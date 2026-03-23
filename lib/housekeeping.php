@@ -242,6 +242,18 @@ function housekeeping_environment_check() {
     $config = ConfigManager::getInstance();
     $site_path = $config->getPath('site_path');
 
+    // Detect distro for fix commands
+    $distro_helper = $site_path . '/lib/distro_detect.php';
+    if (file_exists($distro_helper)) {
+        require_once $distro_helper;
+        $distro = detectDistroFamily();
+        $pkg = $distro['pkg_cmd'];
+        $restart_cmd = ($distro['family'] === 'rhel') ? 'sudo systemctl restart httpd' : 'sudo systemctl restart apache2';
+    } else {
+        $pkg = 'apt-get install -y';
+        $restart_cmd = 'sudo systemctl restart apache2';
+    }
+
     // 1. Required PHP extensions
     $required_extensions = [
         'pdo_sqlite' => 'SQLite database access',
@@ -253,24 +265,25 @@ function housekeeping_environment_check() {
         if (!extension_loaded($ext)) {
             $warnings[] = [
                 'level' => 'danger',
-                'message' => "PHP extension <code>$ext</code> is not loaded ($purpose). Install it: <code>sudo apt install php-$ext && sudo systemctl restart apache2</code>",
+                'message' => "PHP extension <code>$ext</code> is not loaded ($purpose). Install it: <code>sudo $pkg php-$ext && $restart_cmd</code>",
             ];
         }
     }
 
-    // 2. JWT keys exist and readable
-    $certs_dir = $site_path . '/certs';
-    $private_key = $certs_dir . '/jwt_private.pem';
-    $public_key = $certs_dir . '/jwt_public.pem';
+    // 2. JWT keys exist and readable (use config paths, fall back to defaults)
+    $private_key = $config->getPath('jbrowse2.jwt_private_key') ?: $site_path . '/certs/jwt_private_key.pem';
+    $public_key  = $config->getPath('jbrowse2.jwt_public_key') ?: $site_path . '/certs/jwt_public_key.pem';
+    $priv_basename = basename($private_key);
+    $pub_basename  = basename($public_key);
     if (!file_exists($private_key) || !file_exists($public_key)) {
         $warnings[] = [
             'level' => 'danger',
-            'message' => 'JWT keys missing in <code>certs/</code> — JBrowse2 track authentication will not work. Generate with: <code>openssl genrsa -out certs/jwt_private.pem 2048 && openssl rsa -in certs/jwt_private.pem -pubout -out certs/jwt_public.pem</code>',
+            'message' => "JWT keys missing in <code>certs/</code> — JBrowse2 track authentication will not work. Generate with: <code>openssl genrsa -out certs/$priv_basename 2048 && openssl rsa -in certs/$priv_basename -pubout -out certs/$pub_basename</code>",
         ];
     } elseif (!is_readable($private_key) || !is_readable($public_key)) {
         $warnings[] = [
             'level' => 'warning',
-            'message' => 'JWT keys in <code>certs/</code> are not readable by the web server — JBrowse2 track authentication will fail. Check file permissions.',
+            'message' => 'JWT keys in <code>certs/</code> are not readable by the web server — JBrowse2 track authentication will fail. Fix with: <code>sudo chgrp ' . htmlspecialchars(getWebServerUser()['group']) . ' certs/*.pem && sudo chmod 640 certs/*.pem</code>',
         ];
     }
 
@@ -280,23 +293,29 @@ function housekeeping_environment_check() {
         'metadata' => $config->getPath('metadata_path'),
         'config'   => $site_path . '/config',
     ];
+    $web_info = getWebServerUser();
     foreach ($writable_dirs as $label => $dir) {
         if (is_dir($dir) && !is_writable($dir)) {
+            $fix_cmd = "sudo chown " . $web_info['user'] . ":" . $web_info['group'] . " " . htmlspecialchars($dir) . " && sudo chmod 2775 " . htmlspecialchars($dir);
             $warnings[] = [
                 'level' => 'warning',
-                'message' => "Directory <code>$label/</code> is not writable — admin changes may not save. See <a href=\"manage_filesystem_permissions.php\">Filesystem Permissions</a>.",
+                'message' => "Directory <code>$label/</code> is not writable — admin changes may not save. Fix with: <code>$fix_cmd</code>",
             ];
         }
     }
 
     // 4. CLI tools available
+    // PHP-FPM may have a restricted PATH, so also check /usr/local/bin explicitly
     $cli_tools = [
         'blastn'     => 'BLAST searches will not work',
         'samtools'   => 'Sequence retrieval will not work',
         'makeblastdb'=> 'BLAST index building will not work',
     ];
     foreach ($cli_tools as $tool => $impact) {
-        $path = trim(shell_exec("which $tool 2>/dev/null") ?? '');
+        $path = trim(shell_exec("which " . escapeshellarg($tool) . " 2>/dev/null") ?? '');
+        if (empty($path) && file_exists("/usr/local/bin/$tool")) {
+            $path = "/usr/local/bin/$tool";
+        }
         if (empty($path)) {
             $warnings[] = [
                 'level' => 'warning',

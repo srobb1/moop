@@ -14,7 +14,7 @@
 function getWebServerUser() {
     $user = 'www-data';
     $group = 'www-data';
-    
+
     // Try to get the actual user running this process
     if (function_exists('posix_getuid')) {
         $uid = posix_getuid();
@@ -22,17 +22,25 @@ function getWebServerUser() {
         if ($pwinfo !== false) {
             $user = $pwinfo['name'];
         }
-    }
-    
-    // Try to get the actual group
-    if (function_exists('posix_getgid')) {
         $gid = posix_getgid();
         $grinfo = posix_getgrgid($gid);
         if ($grinfo !== false) {
             $group = $grinfo['name'];
         }
+    } else {
+        // Fallback without posix: parse `id` command output
+        $id_output = [];
+        @exec("id 2>/dev/null", $id_output);
+        if (!empty($id_output[0])) {
+            if (preg_match('/uid=\d+\(([^)]+)\)/', $id_output[0], $m)) {
+                $user = $m[1];
+            }
+            if (preg_match('/gid=\d+\(([^)]+)\)/', $id_output[0], $m)) {
+                $group = $m[1];
+            }
+        }
     }
-    
+
     return ['user' => $user, 'group' => $group];
 }
 
