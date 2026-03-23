@@ -220,7 +220,9 @@ if ($family === 'rhel') {
 
 $required_tools = [
     'blastn'   => $family === 'rhel'
-                    ? "sudo $pkg blast+"
+                    ? "BLAST+ is not in RHEL/EPEL repos. Install manually from NCBI:\n"
+                      . "         curl -O https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.17.0+-x64-linux.tar.gz\n"
+                      . "         tar xzf ncbi-blast-*.tar.gz && sudo cp ncbi-blast-*/bin/* /usr/local/bin/"
                     : "sudo $pkg ncbi-blast+",
     'samtools' => "sudo $pkg samtools",
     'tabix'    => "sudo $pkg " . distroPackage('tabix', 'htslib', $family),
