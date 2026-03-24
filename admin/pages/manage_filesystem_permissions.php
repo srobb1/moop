@@ -271,14 +271,14 @@ foreach ($grouped as $group_name => $items):
             <?php foreach ($assembly_subdir_issues as $issue): ?>
             <div class="alert alert-warning mb-2">
                 <strong><?= htmlspecialchars($issue['path']) ?></strong><br>
-                <small>Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>) | Required: 2775 (group: www-data)</small>
+                <small>Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>) | Required: 2775 (group: <?= htmlspecialchars($web_group) ?>)</small>
             </div>
             <?php endforeach; ?>
         </div>
         <p class="mb-2"><strong>To fix all assembly directories, run:</strong></p>
         <div class="fix-command">
             sudo chmod -R 2775 <?= htmlspecialchars($organism_data) ?><br>
-            sudo chgrp -R www-data <?= htmlspecialchars($organism_data) ?>
+            sudo chgrp -R <?= htmlspecialchars($web_group) ?> <?= htmlspecialchars($organism_data) ?>
         </div>
         <?php endif; ?>
 
@@ -289,7 +289,7 @@ foreach ($grouped as $group_name => $items):
             <?php foreach ($fasta_file_issues as $issue): ?>
             <div class="alert alert-warning mb-2">
                 <strong><?= htmlspecialchars($issue['path']) ?></strong><br>
-                <small>Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>) | Required: 644 (group: www-data)</small>
+                <small>Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>) | Required: 644 (group: <?= htmlspecialchars($web_group) ?>)</small>
             </div>
             <?php endforeach; ?>
         </div>
@@ -309,7 +309,7 @@ foreach ($grouped as $group_name => $items):
             $find_patterns = implode(' -o ', $patterns);
             ?>
             sudo find <?= htmlspecialchars($organism_data) ?> <?= $find_patterns ?> | xargs sudo chmod 644<br>
-            sudo find <?= htmlspecialchars($organism_data) ?> <?= $find_patterns ?> | xargs sudo chgrp www-data
+            sudo find <?= htmlspecialchars($organism_data) ?> <?= $find_patterns ?> | xargs sudo chgrp <?= htmlspecialchars($web_group) ?>
         </div>
         <?php endif; ?>
 

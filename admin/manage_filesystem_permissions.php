@@ -384,8 +384,28 @@ function performPermissionCheck($path, $item, $web_group = 'www-data') {
     $perms_full = substr(sprintf('%o', fileperms($path)), -4);
     // Remove leading zero for comparison (0664 -> 664, 02775 -> 2775)
     $perms = ltrim($perms_full, '0') ?: '0';
-    $owner = posix_getpwuid(fileowner($path))['name'] ?? 'unknown';
-    $group = posix_getgrgid(filegroup($path))['name'] ?? 'unknown';
+    $file_uid = fileowner($path);
+    $file_gid = filegroup($path);
+    $owner = 'unknown';
+    $group = 'unknown';
+    if (function_exists('posix_getpwuid')) {
+        $pw = posix_getpwuid($file_uid);
+        if ($pw) { $owner = $pw['name']; }
+    }
+    if (function_exists('posix_getgrgid')) {
+        $gr = posix_getgrgid($file_gid);
+        if ($gr) { $group = $gr['name']; }
+    }
+    // Fallback: use stat command if posix not available
+    if ($owner === 'unknown' || $group === 'unknown') {
+        $stat_out = [];
+        @exec("stat -c '%U:%G' " . escapeshellarg($path) . " 2>/dev/null", $stat_out);
+        if (!empty($stat_out[0])) {
+            $parts = explode(':', $stat_out[0]);
+            if ($owner === 'unknown' && !empty($parts[0])) { $owner = $parts[0]; }
+            if ($group === 'unknown' && !empty($parts[1])) { $group = $parts[1]; }
+        }
+    }
     
     $result['current_perms'] = $perms;
     $result['current_owner'] = $owner;
