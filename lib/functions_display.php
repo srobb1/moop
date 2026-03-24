@@ -463,7 +463,14 @@ function generatePermissionAlert($file_path, $title = '', $problem = '', $file_t
     
     $html .= '  <p class="small text-muted mb-0">After fixing permissions, refresh this page.</p>' . "\n";
     $html .= '</div>' . "\n";
-    
+
+    // Include permission-manager.js if the quick-fix button was rendered
+    if ($can_fix) {
+        $config = ConfigManager::getInstance();
+        $site = $config->getString('site');
+        $html .= '<script src="/' . htmlspecialchars($site) . '/js/permission-manager.js"></script>' . "\n";
+    }
+
     return $html;
 }
 
