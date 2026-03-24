@@ -47,6 +47,13 @@ return [
     'site_path' => $site_path,
     'organism_data' => "$site_path/organisms",
     
+    // ======== JBROWSE2 DATA PATHS ========
+    'genomes_directory' => "$site_path/data/genomes",
+    'tracks_directory' => "$site_path/data/tracks",
+    'certs_directory' => "$site_path/certs",
+    'jwt_private_key' => "$site_path/certs/jwt_private_key.pem",
+    'jwt_public_key' => "$site_path/certs/jwt_public_key.pem",
+    
     // ======== REQUIRED: Directory Names ========
     'images_dir' => $images_dir,
     'images_path' => "$site/$images_dir",  // Web path for <img src>
