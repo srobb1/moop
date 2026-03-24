@@ -138,6 +138,18 @@ function removeParagraph(groupName, index) {
   }
 }
 
+// Helper function to add CSRF token to dynamically created forms
+function addCsrfToken(form) {
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+  if (csrfToken) {
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   const colors = [
     '#007bff', '#28a745', '#17a2b8', '#ffc107', '#dc3545', 
@@ -322,6 +334,8 @@ document.addEventListener('DOMContentLoaded', function() {
       form.appendChild(groupsInput);
       form.appendChild(addInput);
       
+      addCsrfToken(form);
+      
       document.body.appendChild(form);
       form.submit();
     });
@@ -368,6 +382,8 @@ document.addEventListener('DOMContentLoaded', function() {
         form.appendChild(orgInput);
         form.appendChild(asmInput);
         form.appendChild(deleteInput);
+        
+        addCsrfToken(form);
         
         document.body.appendChild(form);
         form.submit();
@@ -549,6 +565,8 @@ document.addEventListener('DOMContentLoaded', function() {
       form.appendChild(asmInput);
       form.appendChild(groupsInput);
       form.appendChild(updateInput);
+      
+      addCsrfToken(form);
       
       document.body.appendChild(form);
       form.submit();
