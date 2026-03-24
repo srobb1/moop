@@ -11,13 +11,36 @@ function initializeCopyToClipboard() {
         let resetColorTimeout;
         el.addEventListener("click", function () {
             const text = el.innerText.trim();
-            navigator.clipboard.writeText(text).then(() => {
-                el.classList.add("bg-success", "text-white");
-                if (resetColorTimeout) clearTimeout(resetColorTimeout);
-                resetColorTimeout = setTimeout(() => {
-                    el.classList.remove("bg-success", "text-white");
-                }, 1500);
-            }).catch(err => console.error("Copy failed:", err));
+            
+            // Check if clipboard API is available
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    el.classList.add("bg-success", "text-white");
+                    if (resetColorTimeout) clearTimeout(resetColorTimeout);
+                    resetColorTimeout = setTimeout(() => {
+                        el.classList.remove("bg-success", "text-white");
+                    }, 1500);
+                }).catch(err => console.error("Copy failed:", err));
+            } else {
+                // Fallback for older browsers or HTTP contexts
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.opacity = "0";
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    el.classList.add("bg-success", "text-white");
+                    if (resetColorTimeout) clearTimeout(resetColorTimeout);
+                    resetColorTimeout = setTimeout(() => {
+                        el.classList.remove("bg-success", "text-white");
+                    }, 1500);
+                } catch (err) {
+                    console.error("Copy fallback failed:", err);
+                }
+                document.body.removeChild(textArea);
+            }
         });
     });
 
