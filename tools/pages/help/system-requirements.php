@@ -861,7 +861,7 @@ Recommended allocation:    400 GB (with growth room)</code></pre>
         <p><strong>Location:</strong> <code>/images/wikimedia/</code></p>
         <ul>
           <li><strong>Permissions:</strong> 775 (rwxrwsr-x) for group access</li>
-          <li><strong>Owner:</strong> ubuntu:www-data (allows both manual and web server management)</li>
+          <li><strong>Owner:</strong> &lt;deploy-user&gt;:&lt;web-group&gt; (e.g., ubuntu:www-data on Debian/Ubuntu, your-user:apache on RHEL)</li>
           <li><strong>Auto-created:</strong> Directory is automatically created on first image download</li>
           <li><strong>File format:</strong> Original format from Wikipedia (PNG, JPG, etc.)</li>
         </ul>

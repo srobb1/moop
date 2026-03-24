@@ -384,17 +384,7 @@ function getDirectoryError($dirpath) {
     $webserver = getWebServerUser();
     $web_group = $webserver['group'];
     
-    // Get owner from /moop directory
-    $moop_owner = 'ubuntu';  // Default fallback
-    if (function_exists('posix_getpwuid')) {
-        $moop_info = @stat(__DIR__ . '/..');  // Get stat of /moop parent directory
-        if ($moop_info) {
-            $moop_pwd = posix_getpwuid($moop_info['uid']);
-            if ($moop_pwd) {
-                $moop_owner = $moop_pwd['name'];
-            }
-        }
-    }
+    $moop_owner = getMoopOwner();
     
     // Detect if sudo is needed
     $current_uid = function_exists('posix_getuid') ? posix_getuid() : null;

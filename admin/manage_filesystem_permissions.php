@@ -23,17 +23,7 @@ $webserver = getWebServerUser();
 $web_user = $webserver['user'];
 $web_group = $webserver['group'];
 
-// Get moop owner from /moop directory (where the actual files are owned)
-$moop_owner = 'ubuntu';  // Default fallback
-if (function_exists('posix_getpwuid')) {
-    $moop_info = @stat(__DIR__ . '/..');  // Get stat of /moop parent directory
-    if ($moop_info) {
-        $moop_pwd = posix_getpwuid($moop_info['uid']);
-        if ($moop_pwd) {
-            $moop_owner = $moop_pwd['name'];
-        }
-    }
-}
+$moop_owner = getMoopOwner();
 
 // Define all required permissions
 $permission_items = [

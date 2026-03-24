@@ -496,7 +496,14 @@ function getColorClassOrStyle($color) {
 /**
  * Ensure directory exists with proper permissions
  */
-function ensureDirectoryExists($directory, $owner = 'ubuntu', $group = 'www-data') {
+function ensureDirectoryExists($directory, $owner = null, $group = null) {
+    if ($owner === null) {
+        $owner = getMoopOwner();
+    }
+    if ($group === null) {
+        $webserver = getWebServerUser();
+        $group = $webserver['group'];
+    }
     if (is_dir($directory)) {
         return true;
     }

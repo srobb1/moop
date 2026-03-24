@@ -190,7 +190,8 @@ if (extension_loaded('posix')) {
     pass("Extension: posix");
 } else {
     warn("Extension: posix not loaded",
-         "Optional — file permission detection will use fallback defaults");
+         "Optional — install with: sudo $pkg " . distroPackage('php-process', 'php-posix', $family) .
+         "\n         Used for accurate file ownership detection in permission management");
 }
 
 // ── Section 2: CLI Tools ────────────────────────────────────────────────────

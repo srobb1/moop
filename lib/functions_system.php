@@ -45,6 +45,47 @@ function getWebServerUser() {
 }
 
 /**
+ * Get the owner of the MOOP application directory.
+ *
+ * Detects the actual filesystem owner of the moop root directory,
+ * falling back to the current process user or 'root' if detection fails.
+ *
+ * @return string Username that owns the moop directory
+ */
+function getMoopOwner() {
+    // Try to get owner from the moop root directory
+    $moop_root = realpath(__DIR__ . '/..');
+    if ($moop_root !== false && function_exists('posix_getpwuid')) {
+        $stat = @stat($moop_root);
+        if ($stat) {
+            $pwd = posix_getpwuid($stat['uid']);
+            if ($pwd) {
+                return $pwd['name'];
+            }
+        }
+    }
+
+    // Fallback: try to get owner via shell stat command
+    if ($moop_root !== false) {
+        $output = [];
+        @exec("stat -c '%U' " . escapeshellarg($moop_root) . " 2>/dev/null", $output);
+        if (!empty($output[0]) && $output[0] !== 'UNKNOWN') {
+            return $output[0];
+        }
+    }
+
+    // Last resort: current process user
+    if (function_exists('posix_getpwuid') && function_exists('posix_getuid')) {
+        $pwd = posix_getpwuid(posix_getuid());
+        if ($pwd) {
+            return $pwd['name'];
+        }
+    }
+
+    return 'root';
+}
+
+/**
  * Attempt to fix database file permissions
  * 
  * Tries to make database readable by web server user.
