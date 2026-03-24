@@ -39,7 +39,7 @@
         <div class="footer-section footer-right">
             <div class="footer-text">
                 <p>
-                    <a href="https://github.com/gboncoraglio/moop" target="_blank" rel="noopener">
+                    <a href="https://github.com/srobb1/moop" target="_blank" rel="noopener">
                         <i class="fab fa-github"></i> MOOP on GitHub
                     </a>
                 </p>
