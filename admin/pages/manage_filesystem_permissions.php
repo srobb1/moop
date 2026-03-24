@@ -227,7 +227,10 @@ foreach ($grouped as $group_name => $items):
                 <p class="mb-2"><strong>To fix, run:</strong></p>
                 <div class="fix-command">
                     <?php if ($check['type'] === 'directory'): ?>
-                    <!-- For directories, use -R to fix all existing files, then reapply directory SGID -->
+                    <!-- For directories, create if missing, then fix permissions -->
+                    <?php if (!$check['exists']): ?>
+                    sudo mkdir -p <?= escapeshellarg($check['path']) ?> && \<br>
+                    <?php endif; ?>
                     sudo chown -R <?= htmlspecialchars($moop_owner) ?>:<?= htmlspecialchars($check['required_group']) ?> <?= escapeshellarg($check['path']) ?> && \<br>
                     sudo chmod -R 775 <?= escapeshellarg($check['path']) ?> && \<br>
                     sudo chmod <?= $check['required_perms'] ?> <?= escapeshellarg($check['path']) ?>
