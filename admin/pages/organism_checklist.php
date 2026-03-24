@@ -418,7 +418,15 @@
             $perms_full = substr(sprintf('%o', fileperms($org_dir)), -4);
             $perms = ltrim($perms_full, '0') ?: '0';
 
-            $group = posix_getgrgid(filegroup($org_dir))['name'] ?? 'unknown';
+            $group = 'unknown';
+            if (function_exists('posix_getgrgid')) {
+                $gr = posix_getgrgid(filegroup($org_dir));
+                if ($gr) { $group = $gr['name']; }
+            } elseif ($org_dir) {
+                $stat_out = [];
+                @exec("stat -c '%G' " . escapeshellarg($org_dir) . " 2>/dev/null", $stat_out);
+                if (!empty($stat_out[0]) && $stat_out[0] !== 'UNKNOWN') { $group = $stat_out[0]; }
+            }
 
             $issues = [];
 

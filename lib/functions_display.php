@@ -199,9 +199,11 @@ function validateOrganismJson($json_path) {
         if ($perms !== false) {
             $validation['perms'] = substr(sprintf('%o', $perms), -3);
         }
-        $owner = @posix_getpwuid(@fileowner($json_path));
-        if ($owner !== false) {
-            $validation['owner'] = $owner['name'] ?? 'unknown';
+        if (function_exists('posix_getpwuid')) {
+            $owner = @posix_getpwuid(@fileowner($json_path));
+            if ($owner !== false) {
+                $validation['owner'] = $owner['name'] ?? 'unknown';
+            }
         }
     }
     
@@ -369,8 +371,15 @@ function generatePermissionAlert($file_path, $title = '', $problem = '', $file_t
     
     $is_dir = is_dir($file_path);
     $file_size = $is_dir ? 'directory' : filesize($file_path) . ' bytes';
-    $owner = @posix_getpwuid(fileowner($file_path));
-    $owner_name = $owner !== false ? $owner['name'] : 'unknown';
+    $owner_name = 'unknown';
+    if (function_exists('posix_getpwuid')) {
+        $owner = @posix_getpwuid(fileowner($file_path));
+        if ($owner !== false) { $owner_name = $owner['name']; }
+    } else {
+        $stat_out = [];
+        @exec("stat -c '%U' " . escapeshellarg($file_path) . " 2>/dev/null", $stat_out);
+        if (!empty($stat_out[0]) && $stat_out[0] !== 'UNKNOWN') { $owner_name = $stat_out[0]; }
+    }
     $perms = substr(sprintf('%o', fileperms($file_path)), -3);
     $webserver = getWebServerUser();
     $web_user = $webserver['user'];
