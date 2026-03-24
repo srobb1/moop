@@ -206,11 +206,12 @@ $permission_items = [
         'description' => 'Private and public keys for JBrowse2 track authentication',
         'type' => 'directory',
         'paths' => [$config->getPath('certs_directory')],
-        'required_perms' => '750',
+        'required_perms' => '2750',
         'required_owner' => $moop_owner,
         'required_group' => $web_group,
-        'reason' => 'JWT keys must be readable by web server but not world-readable',
+        'reason' => 'SGID (Set-Group-ID) bit ensures new certificate files automatically get ' . $web_group . ' as group',
         'why_write' => 'Web server reads keys to sign/verify JWT tokens for track access',
+        'sgid_bit' => true,
     ],
 
     // JWT Key Files
