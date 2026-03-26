@@ -452,6 +452,36 @@ All changes are saved to `config/config_editable.json` and take effect immediate
 
 ---
 
+## Organism Cache
+
+The **Manage Organisms** admin page validates every organism's database, FASTA
+files, BLAST indexes, and metadata. With many organisms (50+), this scan can
+take over a minute and may exceed the web server's timeout.
+
+To avoid this, scan results are cached in `organisms/.organism_cache.json`.
+The cache is automatically invalidated when organism data changes (detected via
+file modification times and directory listings).
+
+### Warming the cache
+
+After adding organisms or on a fresh deployment, run the CLI script to build
+the cache before visiting the page in the browser:
+
+```bash
+php scripts/warm_organism_cache.php
+```
+
+Use `--force` to rescan even if the cache appears up to date:
+
+```bash
+php scripts/warm_organism_cache.php --force
+```
+
+The Manage Organisms page also has a **Rescan** button for manual refresh from
+the browser (works fine for smaller sites, but may time out with 50+ organisms).
+
+---
+
 ## JBrowse2 Genome Browser
 
 JBrowse2 is the integrated genome browser. A pre-built copy (v4.1.3) is
