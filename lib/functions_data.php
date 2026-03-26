@@ -649,22 +649,38 @@ function build_tree_from_organisms($organisms) {
  * @param array $sequence_types List of valid sequence types (e.g., ['cds', 'protein', 'genome'])
  * @return array Associative array of organism_name => array with metadata, assemblies, validations
  */
-function getDetailedOrganismsInfo($organism_data_path, $sequence_types = []) {
+function getDetailedOrganismsInfo($organism_data_path, $sequence_types = [], $progress_callback = null) {
     $organisms_info = [];
-    
+
     if (!is_dir($organism_data_path)) {
         return $organisms_info;
     }
-    
+
     // Load all organisms' JSON metadata using consolidated function
     $organisms_metadata = loadAllOrganismsMetadata($organism_data_path);
-    
+
+    // Count organism directories for progress reporting
     $organisms = scandir($organism_data_path);
+    $org_count = 0;
+    $org_total = 0;
+    if ($progress_callback) {
+        foreach ($organisms as $o) {
+            if ($o[0] !== '.' && is_dir("$organism_data_path/$o")) {
+                $org_total++;
+            }
+        }
+    }
+
     foreach ($organisms as $organism) {
         if ($organism[0] === '.' || !is_dir("$organism_data_path/$organism")) {
             continue;
         }
-        
+
+        $org_count++;
+        if ($progress_callback) {
+            $progress_callback($organism, $org_count, $org_total);
+        }
+
         // Get organism.json info (already loaded from consolidated function)
         $organism_json = "$organism_data_path/$organism/organism.json";
         $json_validation = validateOrganismJson($organism_json);
@@ -960,7 +976,7 @@ function buildOrganismCacheFingerprint($organism_data_path, $taxonomy_tree_file,
  * @return array Same structure as getDetailedOrganismsInfo, plus 'blast_validation'
  *               and 'overall_status' keys per organism
  */
-function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh = false) {
+function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh = false, $progress_callback = null) {
     $cache_file = "$organism_data_path/.organism_cache.json";
     $fingerprint = buildOrganismCacheFingerprint($organism_data_path, $taxonomy_tree_file, $groups_file);
 
@@ -973,7 +989,7 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     }
 
     // Cache miss or forced refresh — do a full scan
-    $organisms = getDetailedOrganismsInfo($organism_data_path, $sequence_types);
+    $organisms = getDetailedOrganismsInfo($organism_data_path, $sequence_types, $progress_callback);
 
     // Pre-compute blast validation per assembly and overall status per organism
     // so the template doesn't need to call these expensive functions

@@ -56,10 +56,14 @@ if (!$force) {
     }
 }
 
-echo "Scanning organisms (this may take a while)...\n";
+echo "Scanning organisms...\n";
 $start = microtime(true);
 
-$organisms = getCachedOrganismsInfo($organism_data, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force);
+$progress = function($organism, $current, $total) {
+    echo "  [$current/$total] $organism\n";
+};
+
+$organisms = getCachedOrganismsInfo($organism_data, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force, $progress);
 
 $elapsed = round(microtime(true) - $start, 2);
 echo "Done! Scanned " . count($organisms) . " organisms in {$elapsed}s\n";
