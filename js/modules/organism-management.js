@@ -652,6 +652,18 @@ function attachImageUploadHandler(imageItemElement, organism) {
   });
 }
 
+// Initialize DataTables on the organisms table
+$(document).ready(function() {
+  $('#organismsTable').DataTable({
+    pageLength: 25,
+    order: [[0, 'asc']],
+    language: {
+      search: 'Filter:',
+      searchPlaceholder: 'organism, common name, assembly...'
+    }
+  });
+});
+
 // Attach handlers to all existing image items when page loads
 document.addEventListener('DOMContentLoaded', function() {
   const imageContainers = document.querySelectorAll('[id^="images-container-"]');
