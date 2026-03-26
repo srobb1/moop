@@ -11,9 +11,13 @@ $metadata_path = $config->getPath('metadata_path');
 $sequence_types = $config->getSequenceTypes();
 $groups_data = getGroupData();
 $taxonomy_tree_file = $config->getPath('metadata_path') . '/taxonomy_tree_config.json';
+$groups_file = $metadata_path . '/organism_assembly_groups.json';
 
-// Get all organisms info once (used by both AJAX handler and page display)
-$organisms = getDetailedOrganismsInfo($organism_data, $sequence_types);
+// Check if this is a rescan request (force cache refresh)
+$force_refresh = isset($_GET['rescan']) || (isset($_POST['action']) && $_POST['action'] === 'rescan_organisms');
+
+// Get all organisms info with caching (used by both AJAX handler and page display)
+$organisms = getCachedOrganismsInfo($organism_data, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh);
 
 // Handle image upload via AJAX
 include_once __DIR__ . '/api/handle_image_upload.php';
@@ -21,6 +25,13 @@ handleImageUpload($config);
 
 // Handle standard AJAX fix permissions request
 handleAdminAjax(function($action) use ($organisms) {
+    // Handle rescan request
+    if ($action === 'rescan_organisms') {
+        // Force refresh was already done above when $organisms was loaded
+        echo json_encode(['success' => true, 'message' => 'Organism data rescanned successfully', 'organism_count' => count($organisms)]);
+        return true;
+    }
+
     // Handle organism-specific actions
     if ($action === 'fix_permissions' && isset($_POST['organism'])) {
         $organism = $_POST['organism'];

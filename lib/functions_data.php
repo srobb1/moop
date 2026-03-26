@@ -807,9 +807,13 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         $has_any_fasta = false;
         
         foreach ($data['assemblies'] as $assembly) {
-            $assembly_path = $data['path'] . '/' . $assembly;
-            $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
-            
+            // Use pre-computed blast validation if available (from cache)
+            $blast_validation = $data['blast_validation'][$assembly] ?? null;
+            if (!$blast_validation) {
+                $assembly_path = $data['path'] . '/' . $assembly;
+                $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
+            }
+
             if (!empty($blast_validation['databases'])) {
                 foreach ($blast_validation['databases'] as $db) {
                     $has_any_fasta = true;
@@ -847,8 +851,8 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         $checks['assemblies_in_groups'] = $all_in_groups;
     }
     
-    // 7. Is the organism found in the tree?
-    $checks['in_taxonomy_tree'] = isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
+    // 7. Is the organism found in the tree? (use pre-computed value from cache if available)
+    $checks['in_taxonomy_tree'] = $data['in_taxonomy_tree'] ?? isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
     
     // 8. Is metadata complete?
     if (!empty($data['json_validation'])) {
@@ -870,6 +874,135 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         'pass_count' => $pass_count,
         'total_count' => $total_count
     ];
+}
+
+/**
+ * Build a lightweight fingerprint of the organisms directory for cache invalidation.
+ *
+ * Checks directory listings and file modification times (no DB opens or glob scans).
+ * The fingerprint changes when:
+ * - Organism directories are added/removed
+ * - organism.sqlite or organism.json files are modified
+ * - Assembly subdirectories are added/removed
+ * - taxonomy_tree_config.json or organism_assembly_groups.json change
+ *
+ * @param string $organism_data_path Path to organisms directory
+ * @param string $taxonomy_tree_file Path to taxonomy_tree_config.json
+ * @param string $groups_file Path to organism_assembly_groups.json
+ * @return string MD5 fingerprint
+ */
+function buildOrganismCacheFingerprint($organism_data_path, $taxonomy_tree_file, $groups_file) {
+    $parts = [];
+
+    // Include mtime of external config files
+    if (file_exists($taxonomy_tree_file)) {
+        $parts[] = 'tree:' . filemtime($taxonomy_tree_file);
+    }
+    if (file_exists($groups_file)) {
+        $parts[] = 'groups:' . filemtime($groups_file);
+    }
+
+    if (!is_dir($organism_data_path)) {
+        return md5(implode('|', $parts));
+    }
+
+    $organisms = scandir($organism_data_path);
+    sort($organisms);
+
+    foreach ($organisms as $organism) {
+        if ($organism[0] === '.' || !is_dir("$organism_data_path/$organism")) {
+            continue;
+        }
+
+        $org_path = "$organism_data_path/$organism";
+        $parts[] = "org:$organism";
+
+        // Check sqlite mtime
+        $sqlite_file = "$org_path/organism.sqlite";
+        if (file_exists($sqlite_file)) {
+            $parts[] = "db:" . filemtime($sqlite_file);
+        }
+
+        // Check organism.json mtime
+        $json_file = "$org_path/organism.json";
+        if (file_exists($json_file)) {
+            $parts[] = "json:" . filemtime($json_file);
+        }
+
+        // List assembly subdirectories (sorted)
+        $subdirs = [];
+        $files = scandir($org_path);
+        foreach ($files as $f) {
+            if ($f[0] !== '.' && is_dir("$org_path/$f")) {
+                $subdirs[] = $f;
+            }
+        }
+        sort($subdirs);
+        $parts[] = "asm:" . implode(',', $subdirs);
+    }
+
+    return md5(implode('|', $parts));
+}
+
+/**
+ * Get organism info with caching.
+ *
+ * Returns cached data from organisms/.organism_cache.json if the fingerprint
+ * matches. Otherwise performs a full scan, pre-computes blast validation and
+ * overall status for each organism, and writes the cache.
+ *
+ * @param string $organism_data_path Path to organisms directory
+ * @param array $sequence_types Sequence type config
+ * @param string $taxonomy_tree_file Path to taxonomy_tree_config.json
+ * @param array $groups_data Groups data array
+ * @param string $groups_file Path to organism_assembly_groups.json
+ * @param bool $force_refresh Force a full rescan ignoring cache
+ * @return array Same structure as getDetailedOrganismsInfo, plus 'blast_validation'
+ *               and 'overall_status' keys per organism
+ */
+function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh = false) {
+    $cache_file = "$organism_data_path/.organism_cache.json";
+    $fingerprint = buildOrganismCacheFingerprint($organism_data_path, $taxonomy_tree_file, $groups_file);
+
+    // Try to load from cache
+    if (!$force_refresh && file_exists($cache_file)) {
+        $cached = json_decode(file_get_contents($cache_file), true);
+        if ($cached && isset($cached['fingerprint']) && $cached['fingerprint'] === $fingerprint) {
+            return $cached['data'];
+        }
+    }
+
+    // Cache miss or forced refresh — do a full scan
+    $organisms = getDetailedOrganismsInfo($organism_data_path, $sequence_types);
+
+    // Pre-compute blast validation per assembly and overall status per organism
+    // so the template doesn't need to call these expensive functions
+    foreach ($organisms as $organism => &$data) {
+        // Pre-compute blast validation for each assembly
+        $blast_by_assembly = [];
+        foreach ($data['assemblies'] as $assembly) {
+            $assembly_path = $data['path'] . '/' . $assembly;
+            $blast_by_assembly[$assembly] = validateBlastIndexFiles($assembly_path, $sequence_types);
+        }
+        $data['blast_validation'] = $blast_by_assembly;
+
+        // Pre-compute taxonomy tree membership
+        $data['in_taxonomy_tree'] = isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
+
+        // Pre-compute overall status
+        $data['overall_status'] = getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree_file, $sequence_types);
+    }
+    unset($data); // break reference
+
+    // Write cache (suppress errors if directory not writable)
+    $cache_data = [
+        'fingerprint' => $fingerprint,
+        'generated' => date('Y-m-d H:i:s'),
+        'data' => $organisms,
+    ];
+    @file_put_contents($cache_file, json_encode($cache_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+    return $organisms;
 }
 
 /**

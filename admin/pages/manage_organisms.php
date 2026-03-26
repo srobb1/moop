@@ -207,8 +207,11 @@
 
   <!-- Current Organisms Table -->
   <div class="card">
-    <div class="card-header bg-primary text-white">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
       <h5 class="mb-0"><i class="fa fa-list"></i> Current Organisms (<?= count($organisms) ?>)</h5>
+      <button id="rescanBtn" class="btn btn-sm btn-light" onclick="rescanOrganisms()" title="Rescan all organism directories and refresh cached data">
+        <i class="fa fa-sync-alt"></i> Rescan
+      </button>
     </div>
     <div class="card-body">
       <table id="organismsTable" class="table table-striped table-hover">
@@ -250,8 +253,8 @@
                  ?>
                </td>
                <td>
-                 <?php 
-                   $in_taxonomy_tree = isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
+                 <?php
+                   $in_taxonomy_tree = $data['in_taxonomy_tree'] ?? isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
                  ?>
                  <?php if ($in_taxonomy_tree): ?>
                    <a href="manage_taxonomy_tree.php" target="_blank" class="btn btn-sm btn-outline-success" title="Click to manage taxonomy tree">
@@ -289,8 +292,11 @@
                          
                          // Check if BLAST indexes are missing for FASTA files
                          $has_missing_blast_indexes = false;
-                         $assembly_path = $data['path'] . '/' . $assembly;
-                         $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
+                         $blast_validation = $data['blast_validation'][$assembly] ?? null;
+                         if (!$blast_validation) {
+                           $assembly_path = $data['path'] . '/' . $assembly;
+                           $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
+                         }
                          if (!empty($blast_validation['databases'])) {
                            foreach ($blast_validation['databases'] as $db) {
                              if (!$db['has_indexes']) {
@@ -386,9 +392,9 @@
                    <?php endif; ?>
                </td>
                <td>
-                 <?php 
-                   // Get comprehensive status
-                   $status = getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree_file, $sequence_types);
+                 <?php
+                   // Get comprehensive status (pre-computed in cache, fallback to live)
+                   $status = $data['overall_status'] ?? getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree_file, $sequence_types);
                    $pass_count = $status['pass_count'];
                    $total_count = $status['total_count'];
                    $safe_org_id = preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism);
@@ -948,8 +954,8 @@
         $modal_id = 'asmModal' . $safe_asm_id;
         $assembly_path = $data['path'] . '/' . $assembly;
         
-        // Get BLAST index status
-        $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
+        // Get BLAST index status (use pre-computed from cache if available)
+        $blast_validation = $data['blast_validation'][$assembly] ?? validateBlastIndexFiles($assembly_path, $sequence_types);
         
         // Get group membership
         $assembly_groups = getAssemblyGroups($organism, $assembly, $groups_data);
