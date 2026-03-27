@@ -47,6 +47,17 @@
           <li>Metadata complete - All organism information is filled in</li>
         </ul>
         
+        <p><strong>Performance Note:</strong> This page uses an intelligent incremental cache that only rescans
+        organisms that have actually changed. The Rescan button updates only changed organisms (takes seconds), 
+        not all organisms (which would take minutes).</p>
+        
+        <p><strong>Manual Cache Update:</strong> If this page times out or you need to rebuild the cache from 
+        the command line, run:<br>
+        <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">php scripts/warm_organism_cache.php</code><br>
+        <small class="text-muted">This scans all organism directories and updates the cache. With the incremental cache, 
+        only changed organisms are rescanned, making subsequent updates very fast.</small>
+        </p>
+        
         <p class="mb-0"><strong>What You Can Do:</strong></p>
         <ul class="mb-0">
           <li>View all organisms and their status at a glance</li>
