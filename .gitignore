@@ -34,6 +34,7 @@ metadata/*.json
 !metadata/*.json.example
 metadata/backups/
 metadata/jbrowse2-configs/
+metadata/change_log/
 
 # ── Logs and runtime state ───────────────────────────────────
 logs/
@@ -43,6 +44,7 @@ logs/
 *BAK
 *.bak.*
 *.backup
+*~
 admin/backups/
 
 # ── Archive / old configs ────────────────────────────────────
