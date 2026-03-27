@@ -1057,6 +1057,14 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
         }
     }
     
+    // Check for removed organisms (in cache but not in current directory scan)
+    foreach ($cached_fingerprints as $org_name => $fingerprint) {
+        if (!isset($current_fingerprints[$org_name])) {
+            // Organism was removed from filesystem - remove from cache
+            unset($organisms_to_keep[$org_name]);
+        }
+    }
+    
     // If config changed (tree/groups), all organisms need status recalculation
     // But we can still reuse the expensive parts (assemblies, FASTA, BLAST validation)
     if ($config_changed && !empty($organisms_to_keep)) {
