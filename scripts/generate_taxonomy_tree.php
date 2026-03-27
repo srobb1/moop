@@ -100,6 +100,23 @@ if (file_put_contents($tree_config_file, $json) === false) {
 
 echo "✓ SUCCESS: Tree generated with " . count($organisms) . " organisms\n";
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+echo "\n";
+echo "Warming organism cache...\n";
+echo "(Tree change invalidated cache, rebuilding to prevent admin page timeout)\n\n";
+
+// Automatically run the cache warming script
+// No --force needed; cache is already stale due to tree file change
+$cache_script = __DIR__ . '/warm_organism_cache.php';
+passthru("php " . escapeshellarg($cache_script), $cache_exit);
+
+if ($cache_exit === 0) {
+    echo "\n✓ All done! Taxonomy tree and organism cache are ready.\n";
+} else {
+    echo "\n⚠ Warning: Cache warming failed (exit code $cache_exit)\n";
+    echo "You may want to run manually: php scripts/warm_organism_cache.php\n";
+}
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
 
 /**
  * Build tree with progress callback
