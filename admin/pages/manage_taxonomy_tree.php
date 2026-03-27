@@ -135,11 +135,37 @@
                     </div>
                     
                     <div class="mb-3">
+                        <?php
+                        // Check which organisms are in the current tree
+                        $tree_json_string = $current_tree ? json_encode($current_tree) : '';
+                        $missing_count = 0;
+                        $in_tree_count = 0;
+                        foreach ($organisms as $name => $data) {
+                            if ($tree_json_string && strpos($tree_json_string, '"organism":"' . $name . '"') !== false
+                                || strpos($tree_json_string, '"organism": "' . $name . '"') !== false) {
+                                $in_tree_count++;
+                            } else {
+                                $missing_count++;
+                            }
+                        }
+                        ?>
                         <strong>Found Organisms:</strong>
+                        <?php if ($current_tree && $missing_count > 0): ?>
+                            <span class="badge bg-success"><?= $in_tree_count ?> in tree</span>
+                            <span class="badge bg-warning text-dark"><?= $missing_count ?> missing</span>
+                        <?php elseif ($current_tree): ?>
+                            <span class="badge bg-success">All <?= $in_tree_count ?> in tree</span>
+                        <?php endif; ?>
                         <ul class="list-unstyled mt-2">
-                            <?php foreach ($organisms as $name => $data): ?>
+                            <?php foreach ($organisms as $name => $data):
+                                $in_tree = $tree_json_string && (
+                                    strpos($tree_json_string, '"organism":"' . $name . '"') !== false
+                                    || strpos($tree_json_string, '"organism": "' . $name . '"') !== false
+                                );
+                                $badge_class = !$current_tree ? 'bg-secondary' : ($in_tree ? 'bg-success' : 'bg-warning text-dark');
+                            ?>
                                 <li>
-                                    <span class="badge bg-secondary"><?= htmlspecialchars($name) ?></span>
+                                    <span class="badge <?= $badge_class ?>"><?= htmlspecialchars($name) ?></span>
                                     <small class="text-muted">
                                         Taxon ID: <?= htmlspecialchars($data['taxon_id']) ?>
                                         <?php if ($data['common_name']): ?>
