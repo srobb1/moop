@@ -1119,9 +1119,10 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
         $fasta_validation = null;
         if ($has_db) {
             $db_validation = validateDatabaseIntegrity($db_file);
-            $assembly_validation = validateAssemblyMapping($db_file, $assemblies);
-            $fasta_validation = validateFastaFileExistence($org_path, $assemblies, $sequence_types);
+            $assembly_validation = validateAssemblyDirectories($db_file, $org_path);
         }
+        // Validate FASTA files in assembly directories
+        $fasta_validation = validateAssemblyFastaFiles($org_path, $sequence_types);
         
         $org_info = [
             'path' => $org_path,
