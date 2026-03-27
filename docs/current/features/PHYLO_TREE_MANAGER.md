@@ -93,15 +93,19 @@ The system integrates with NCBI taxonomy:
 - Reads `taxon_id` from each organism's metadata file
 - Queries NCBI Taxonomy API to retrieve complete lineage (Kingdom → Phylum → Class → Order → Family → Genus → Species)
 - Builds hierarchical tree by merging organisms that share taxonomic branches
-- Images stored in `images/ncbi_taxonomy/` directory
+- Fetches organism images from NCBI taxonomy database when available
+- Falls back to Wikipedia images if NCBI image is not found
+- Images stored in `images/ncbi_taxonomy/` or `images/wikimedia/` directory
 
 ## Performance Considerations
-- Approximately 350ms per organism for NCBI queries
+- Approximately 350ms per organism for NCBI queries (plus Wikipedia fallback if needed)
+- Wikipedia fallback adds ~500-1000ms per organism if NCBI image is not found
 - Large numbers of organisms (100+) may take several seconds to generate
 - Tree generation is a one-time admin task (repeatable when organisms are added/modified)
 - Generated tree is cached and reused for all searches
 - No performance impact on searches after generation
 - NCBI has rate limits (3 requests/second without API key)
+- Wikipedia API is rate-limited to approximately 3 requests/second
 
 ## Common Issues & Solutions
 
@@ -118,7 +122,7 @@ The system integrates with NCBI taxonomy:
 - Check `metadata/` directory write permissions
 - Run "Fix Permissions" tool in Manage Permissions
 - Ensure web server process user has write access
-- Ensure `images/ncbi_taxonomy/` directory exists and is writable
+- Ensure both `images/ncbi_taxonomy/` and `images/wikimedia/` directories exist and are writable
 
 **Organisms not appearing in the tree:**
 - Verify organism metadata files have valid `taxon_id` field

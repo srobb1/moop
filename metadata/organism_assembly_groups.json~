@@ -1,0 +1,43 @@
+[
+    {
+        "organism": "Anoura_caudifer",
+        "assembly": "GCA_004027475.1",
+        "groups": [
+            "Bats",
+            "Cute",
+            "Public"
+        ]
+    },
+    {
+        "organism": "Lasiurus_cinereus",
+        "assembly": "GCA_011751095.1",
+        "groups": [
+            "Bats",
+            "Cute"
+        ]
+    },
+    {
+        "organism": "Montipora_capitata",
+        "assembly": "HIv3",
+        "groups": [
+            "Corals",
+            "Public"
+        ]
+    },
+    {
+        "organism": "Pteropus_vampyrus",
+        "assembly": "Pvam_2.0",
+        "groups": [
+            "Bats",
+            "New"
+        ]
+    },
+    {
+        "organism": "Chamaeleo_calyptratus",
+        "assembly": "CCA3",
+        "groups": [
+            "New",
+            "Reptile"
+        ]
+    }
+]

@@ -584,6 +584,26 @@ function build_tree_from_organisms($organisms) {
         
         $lineage = fetch_taxonomy_lineage($data['taxon_id']);
         $image = fetch_organism_image($data['taxon_id'], $organism_name);
+        
+        // If NCBI image not found, try Wikipedia as fallback
+        if ($image === null && !empty($data['genus']) && !empty($data['species'])) {
+            $scientific_name = $data['genus'] . ' ' . $data['species'];
+            $wiki_data = getWikipediaOrganismData($organism_name, $scientific_name);
+            
+            if (!empty($wiki_data['image_url'])) {
+                // Download and cache the Wikipedia image
+                $safe_filename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism_name) . '.jpg';
+                $downloaded_path = downloadWikimediaImage($wiki_data['image_url'], $safe_filename);
+                
+                if ($downloaded_path !== false) {
+                    // Strip leading /$site/ to get relative path matching NCBI format
+                    $config = ConfigManager::getInstance();
+                    $site = $config->getString('site');
+                    $image = preg_replace('#^/' . preg_quote($site, '#') . '/#', '', $downloaded_path);
+                }
+            }
+        }
+        
         if ($lineage) {
             $all_lineages[$organism_name] = [
                 'lineage' => $lineage,
