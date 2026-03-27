@@ -13,8 +13,9 @@ $groups_data = getGroupData();
 $taxonomy_tree_file = $config->getPath('metadata_path') . '/taxonomy_tree_config.json';
 $groups_file = $metadata_path . '/organism_assembly_groups.json';
 
-// Check if this is a rescan request (force cache refresh)
-$force_refresh = isset($_GET['rescan']) || (isset($_POST['action']) && $_POST['action'] === 'rescan_organisms');
+// Check if this is a rescan request - use incremental cache, not full rescan
+// Only force full rescan if ?force_full=1 is explicitly passed
+$force_refresh = isset($_GET['force_full']) && $_GET['force_full'] == '1';
 
 // Get all organisms info with caching (used by both AJAX handler and page display)
 $organisms = getCachedOrganismsInfo($organism_data, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh);
