@@ -56,31 +56,54 @@ function getOrganismImagePath($organism_info, $images_path = 'moop/images', $abs
         ]);
         return '';
     }
-    
-    // Check for custom image first
+
+    // 1. Check for custom image first
     if (!empty($organism_info['images']) && is_array($organism_info['images'])) {
         return "/$images_path/" . htmlspecialchars($organism_info['images'][0]['file']);
     }
-    
-    // Fall back to NCBI taxonomy image if taxon_id exists
+
+    $config = ConfigManager::getInstance();
+    $site = $config->getString('site');
+    if (empty($absolute_images_path)) {
+        $absolute_images_path = $config->getPath('absolute_images_path');
+    }
+
+    // 2. Fall back to NCBI taxonomy image if taxon_id exists
     if (!empty($organism_info['taxon_id'])) {
-        // Construct path - use absolute_images_path if provided, otherwise fall back
-        if (!empty($absolute_images_path)) {
-            $ncbi_image_file = "$absolute_images_path/ncbi_taxonomy/" . $organism_info['taxon_id'] . '.jpg';
-        } else {
-            $ncbi_image_file = __DIR__ . '/../../images/ncbi_taxonomy/' . $organism_info['taxon_id'] . '.jpg';
-        }
-        
+        $ncbi_image_file = "$absolute_images_path/ncbi_taxonomy/" . $organism_info['taxon_id'] . '.jpg';
         if (file_exists($ncbi_image_file)) {
-            return "/moop/images/ncbi_taxonomy/" . $organism_info['taxon_id'] . ".jpg";
-        } else {
-            logError('NCBI taxonomy image not found', 'organism_image', [
-                'taxon_id' => $organism_info['taxon_id'],
-                'expected_path' => $ncbi_image_file
-            ]);
+            return "/$site/images/ncbi_taxonomy/" . $organism_info['taxon_id'] . ".jpg";
         }
     }
-    
+
+    // 3. Fall back to Wikipedia image (check cache first, then fetch on demand)
+    $scientific_name = trim(($organism_info['genus'] ?? '') . ' ' . ($organism_info['species'] ?? ''));
+    if (!empty($scientific_name)) {
+        $wikimedia_dir = "$absolute_images_path/wikimedia";
+        $safe_name = basename($scientific_name);
+
+        // Check for already-cached Wikipedia image (any extension)
+        foreach (['jpg', 'jpeg', 'png', 'gif', 'webp'] as $ext) {
+            $cached_file = "$wikimedia_dir/$safe_name.$ext";
+            if (file_exists($cached_file)) {
+                return "/$site/images/wikimedia/" . rawurlencode("$safe_name.$ext");
+            }
+        }
+
+        // Fetch from Wikipedia and cache locally
+        $common_name = $organism_info['common_name'] ?? '';
+        $wiki_data = getWikipediaOrganismData($scientific_name, $common_name);
+        if (!empty($wiki_data['image_url'])) {
+            $url_path = parse_url($wiki_data['image_url'], PHP_URL_PATH);
+            $ext = pathinfo($url_path, PATHINFO_EXTENSION) ?: 'jpg';
+            $cache_filename = "$safe_name.$ext";
+            $result = downloadWikimediaImage($wiki_data['image_url'], $cache_filename, $wikimedia_dir);
+            if ($result) {
+                return $result;
+            }
+        }
+    }
+
     return '';
 }
 
@@ -100,7 +123,7 @@ function getOrganismImageCaption($organism_info, $absolute_images_path = '') {
         'caption' => '',
         'link' => ''
     ];
-    
+
     // Validate input
     if (empty($organism_info) || !is_array($organism_info)) {
         logError('getOrganismImageCaption received invalid organism_info', 'organism_image', [
@@ -109,7 +132,7 @@ function getOrganismImageCaption($organism_info, $absolute_images_path = '') {
         ]);
         return $result;
     }
-    
+
     // Custom image caption
     if (!empty($organism_info['images']) && is_array($organism_info['images'])) {
         if (!empty($organism_info['images'][0]['caption'])) {
@@ -117,22 +140,36 @@ function getOrganismImageCaption($organism_info, $absolute_images_path = '') {
         }
         return $result;
     }
-    
+
+    if (empty($absolute_images_path)) {
+        $config = ConfigManager::getInstance();
+        $absolute_images_path = $config->getPath('absolute_images_path');
+    }
+
     // NCBI taxonomy caption with link
     if (!empty($organism_info['taxon_id'])) {
-        // Construct path - use absolute_images_path if provided, otherwise fall back
-        if (!empty($absolute_images_path)) {
-            $ncbi_image_file = "$absolute_images_path/ncbi_taxonomy/" . $organism_info['taxon_id'] . '.jpg';
-        } else {
-            $ncbi_image_file = __DIR__ . '/../../images/ncbi_taxonomy/' . $organism_info['taxon_id'] . '.jpg';
-        }
-        
+        $ncbi_image_file = "$absolute_images_path/ncbi_taxonomy/" . $organism_info['taxon_id'] . '.jpg';
         if (file_exists($ncbi_image_file)) {
             $result['caption'] = 'Image from NCBI Taxonomy';
             $result['link'] = 'https://www.ncbi.nlm.nih.gov/datasets/taxonomy/' . htmlspecialchars($organism_info['taxon_id']);
+            return $result;
         }
     }
-    
+
+    // Wikipedia image caption
+    $scientific_name = trim(($organism_info['genus'] ?? '') . ' ' . ($organism_info['species'] ?? ''));
+    if (!empty($scientific_name)) {
+        $safe_name = basename($scientific_name);
+        $wikimedia_dir = "$absolute_images_path/wikimedia";
+        foreach (['jpg', 'jpeg', 'png', 'gif', 'webp'] as $ext) {
+            if (file_exists("$wikimedia_dir/$safe_name.$ext")) {
+                $result['caption'] = 'Image from Wikipedia';
+                $result['link'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $scientific_name);
+                return $result;
+            }
+        }
+    }
+
     return $result;
 }
 
