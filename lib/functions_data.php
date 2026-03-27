@@ -1078,6 +1078,9 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     $scanned_organisms = [];
     $current = 0;
     
+    // Load metadata for organisms we're about to scan
+    $organisms_metadata = loadAllOrganismsMetadata($organism_data_path);
+    
     foreach ($organisms_to_scan as $org_name) {
         $current++;
         if ($progress_callback) {
@@ -1089,8 +1092,48 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
             continue;
         }
         
-        // Scan this organism
-        $org_info = getOrganismDetailedInfo($org_name, $org_path, $sequence_types);
+        // Build organism info (inline from getDetailedOrganismsInfo logic)
+        $info = $organisms_metadata[$org_name] ?? [];
+        
+        // Get assemblies
+        $assemblies = [];
+        $files = scandir($org_path);
+        foreach ($files as $file) {
+            if ($file[0] === '.' || !is_dir("$org_path/$file")) {
+                continue;
+            }
+            $assemblies[] = $file;
+        }
+        
+        // Check for database file
+        $db_file = null;
+        if (file_exists("$org_path/organism.sqlite")) {
+            $db_file = "$org_path/organism.sqlite";
+        }
+        
+        $has_db = !is_null($db_file);
+        
+        // Validate database integrity if exists
+        $db_validation = null;
+        $assembly_validation = null;
+        $fasta_validation = null;
+        if ($has_db) {
+            $db_validation = validateDatabaseIntegrity($db_file);
+            $assembly_validation = validateAssemblyMapping($db_file, $assemblies);
+            $fasta_validation = validateFastaFileExistence($org_path, $assemblies, $sequence_types);
+        }
+        
+        $org_info = [
+            'path' => $org_path,
+            'info' => $info,
+            'assemblies' => $assemblies,
+            'has_db' => $has_db,
+            'db_file' => $db_file,
+            'db_validation' => $db_validation,
+            'assembly_validation' => $assembly_validation,
+            'fasta_validation' => $fasta_validation,
+            'json_validation' => validateOrganismJson("$org_path/organism.json")
+        ];
         
         // Pre-compute blast validation per assembly
         $blast_by_assembly = [];
