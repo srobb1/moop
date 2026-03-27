@@ -66,12 +66,16 @@
     <?php elseif ($site_data_backup['status'] === 'ok'): ?>
     <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
       <i class="fa fa-check-circle me-2"></i>
-      <div>
+      <div class="w-100">
         <strong>Site data backup active</strong> &mdash;
         last run: <?= htmlspecialchars($site_data_backup['last_run']) ?>,
         <?= $site_data_backup['files_copied'] ?> file(s) updated
         <?php if ($site_data_backup['is_git']): ?>
-          <span class="badge bg-secondary ms-2">Git versioned</span>
+          <span class="badge bg-secondary ms-2">Git available</span>
+          <br><small class="text-muted mt-1 d-block">
+            Backup directory is a git repository. To version these changes, run:<br>
+            <code style="font-size: 0.85em;">cd <?= htmlspecialchars($site_data_backup['backup_path'] ?? '/path/to/backup') ?> && git add -A && git commit -m "Site data backup" && git push</code>
+          </small>
         <?php endif; ?>
       </div>
     </div>
