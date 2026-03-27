@@ -121,11 +121,11 @@
   ?>
 
   <h3>Assemblies with Groups</h3>
-  <table class="table table-hover">
+  <table id="groupsTable" class="table table-hover">
     <thead>
       <tr>
-        <th style="cursor: pointer;" onclick="sortTable(0)">Organism <span id="sort-icon-0">⇅</span></th>
-        <th style="cursor: pointer;" onclick="sortTable(1)">Assembly <span id="sort-icon-1">⇅</span></th>
+        <th>Organism</th>
+        <th>Assembly</th>
         <th>Groups</th>
         <th>Status</th>
         <th>Action</th>
@@ -176,11 +176,11 @@
   <?php if (!empty($unrepresented_organisms)): ?>
     <h3 class="mt-4">Assemblies Without Groups</h3>
     <p class="text-muted">Add group tags to these assemblies to include them in the system.</p>
-    <table class="table table-hover">
+    <table id="ungroupedTable" class="table table-hover">
       <thead>
         <tr>
-          <th style="cursor: pointer;" onclick="sortTable(2)">Organism <span id="sort-icon-2">⇅</span></th>
-          <th style="cursor: pointer;" onclick="sortTable(3)">Assembly <span id="sort-icon-3">⇅</span></th>
+          <th>Organism</th>
+          <th>Assembly</th>
           <th>Groups</th>
           <th>Action</th>
         </tr>

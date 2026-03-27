@@ -1,8 +1,27 @@
 /**
  * Manage Groups - Page-Specific Functionality
- * 
+ *
  * Handles group description editing, image/paragraph management, and group tag editing
  */
+
+// Initialize DataTables on group tables
+$(document).ready(function() {
+  var dtOptions = {
+    pageLength: 25,
+    order: [[0, 'asc']],
+    language: {
+      search: 'Filter:',
+      searchPlaceholder: 'organism, assembly, group...'
+    }
+  };
+
+  if ($('#groupsTable').length) {
+    $('#groupsTable').DataTable(dtOptions);
+  }
+  if ($('#ungroupedTable').length) {
+    $('#ungroupedTable').DataTable(dtOptions);
+  }
+});
 
 // Group Description Functions (global scope)
 function toggleGroup(groupName) {

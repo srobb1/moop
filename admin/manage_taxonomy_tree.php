@@ -27,8 +27,22 @@ $error = '';
 $file_write_error = getFileWriteError($tree_config_file);
 $dir_error = getDirectoryError($absolute_images_path . '/ncbi_taxonomy');
 
-// Load organisms metadata
-$organisms = loadAllOrganismsMetadata($organism_data_dir);
+// Load organisms metadata — try organism cache first, fall back to scanning files
+$organisms = [];
+$cache_file = "$organism_data/.organism_cache.json";
+if (file_exists($cache_file)) {
+    $cached = json_decode(file_get_contents($cache_file), true);
+    if ($cached && isset($cached['data'])) {
+        foreach ($cached['data'] as $org_name => $org_data) {
+            if (!empty($org_data['info'])) {
+                $organisms[$org_name] = $org_data['info'];
+            }
+        }
+    }
+}
+if (empty($organisms)) {
+    $organisms = loadAllOrganismsMetadata($organism_data_dir);
+}
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -96,12 +96,25 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
     $config = ConfigManager::getInstance();
     $organism_data = $config->getPath('organism_data');
     $metadata_path = $config->getPath('metadata_path');
-    
+
     // Load groups data
     $groups_data = [];
     $groups_file = "$metadata_path/organism_assembly_groups.json";
     if (file_exists($groups_file)) {
         $groups_data = json_decode(file_get_contents($groups_file), true) ?: [];
+    }
+
+    // Session-based caching for full (unfiltered) requests
+    if ($specific_organism === null && $specific_assembly === null && session_status() === PHP_SESSION_ACTIVE) {
+        $cache_key = 'accessible_assemblies_cache';
+        $groups_mtime = file_exists($groups_file) ? filemtime($groups_file) : 0;
+        $access_level = get_access_level();
+
+        if (isset($_SESSION[$cache_key]) &&
+            $_SESSION[$cache_key]['groups_mtime'] === $groups_mtime &&
+            $_SESSION[$cache_key]['access_level'] === $access_level) {
+            return $_SESSION[$cache_key]['data'];
+        }
     }
     
     $accessible_sources = [];
@@ -224,7 +237,16 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
     foreach ($organized as &$group_data) {
         ksort($group_data);
     }
-    
+
+    // Store in session cache for subsequent requests
+    if ($specific_organism === null && $specific_assembly === null && session_status() === PHP_SESSION_ACTIVE) {
+        $_SESSION[$cache_key] = [
+            'groups_mtime' => $groups_mtime,
+            'access_level' => $access_level,
+            'data' => $organized,
+        ];
+    }
+
     return $organized;
 }
 
