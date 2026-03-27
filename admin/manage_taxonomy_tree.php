@@ -52,6 +52,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "File is not writable. Please fix permissions first.";
         } elseif ($_POST['action'] === 'generate') {
             try {
+                // Increase timeout for large organism counts
+                set_time_limit(300); // 5 minutes
+                ini_set('default_socket_timeout', 120); // 2 minutes per socket
+                
                 // $organisms was already loaded at the top of the file
                 
                 if (empty($organisms)) {

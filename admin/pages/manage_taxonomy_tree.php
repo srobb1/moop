@@ -184,7 +184,12 @@
                             <i class="fa fa-sync-alt"></i> Generate Tree from NCBI
                         </button>
                         <small class="text-muted d-block mt-2">
-                            <i class="fa fa-clock"></i> This may take ~<?= count($organisms) ?> seconds
+                            <i class="fa fa-clock"></i> This will take approximately <?php 
+                                $est_time = ceil(count($organisms) * 1.5); // 1.5 sec/organism average
+                                echo $est_time > 90 ? round($est_time / 60, 1) . ' minutes' : $est_time . ' seconds';
+                            ?>
+                            <br><strong>Note:</strong> For <?= count($organisms) ?> organisms, this is a long operation. 
+                            If the page times out, run manually: <code>php scripts/generate_taxonomy_tree.php</code>
                         </small>
                     </form>
                 </div>
