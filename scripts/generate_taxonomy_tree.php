@@ -24,6 +24,7 @@ if (php_sapi_name() !== 'cli') {
 require_once __DIR__ . '/../includes/config_init.php';
 require_once __DIR__ . '/../lib/functions_data.php';
 require_once __DIR__ . '/../lib/functions_display.php';
+require_once __DIR__ . '/../lib/functions_filesystem.php';
 
 $config = ConfigManager::getInstance();
 $organism_data = $config->getPath('organism_data');
