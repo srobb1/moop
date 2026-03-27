@@ -98,13 +98,15 @@ The system integrates with NCBI taxonomy:
 - Images stored in `images/ncbi_taxonomy/` or `images/wikimedia/` directory
 
 ## Performance Considerations
-- Approximately 350ms per organism for NCBI queries (plus Wikipedia fallback if needed)
+- Approximately 500ms per organism for NCBI queries (includes rate limiting + retry logic)
 - Wikipedia fallback adds ~500-1000ms per organism if NCBI image is not found
-- Large numbers of organisms (100+) may take several seconds to generate
+- Automatic retry on failure improves reliability (up to 3 retries for lineage, 2 for images)
+- Large numbers of organisms (100+) may take 1-2 minutes to generate
 - Tree generation is a one-time admin task (repeatable when organisms are added/modified)
 - Generated tree is cached and reused for all searches
 - No performance impact on searches after generation
 - NCBI has rate limits (3 requests/second without API key)
+- Rate limited to 2 requests/second for better reliability with NCBI
 - Wikipedia API is rate-limited to approximately 3 requests/second
 
 ## Common Issues & Solutions
@@ -132,8 +134,10 @@ The system integrates with NCBI taxonomy:
 
 **NCBI query failures during tree generation:**
 - NCBI has rate limits (3 requests/second without API key)
-- If you have many organisms, the process may time out
-- Try regenerating again after a delay
+- System now includes automatic retry logic (up to 3 attempts with exponential backoff)
+- Rate-limited to 2 requests/second for better reliability
+- If you have many organisms, the process may take 1-2 minutes
+- If queries still fail, wait a few minutes and try again
 - Verify all taxon_ids are valid on NCBI Taxonomy Browser
 
 ## File Structure

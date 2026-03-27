@@ -337,9 +337,10 @@ function setupOrganismDisplayContext($organism_name, $organism_data_dir, $check_
  * @param int $taxon_id NCBI Taxonomy ID
  * @param string|null $organism_name Optional organism name (for reference)
  * @param string $absolute_images_path Absolute filesystem path to images directory
+ * @param int $max_retries Maximum number of retry attempts (default 2)
  * @return string|null Web path to image (e.g., 'images/ncbi_taxonomy/12345.jpg'), or null if failed
  */
-function fetch_organism_image($taxon_id, $organism_name = null, $absolute_images_path = null) {
+function fetch_organism_image($taxon_id, $organism_name = null, $absolute_images_path = null, $max_retries = 2) {
     if ($absolute_images_path === null) {
         $config = ConfigManager::getInstance();
         $absolute_images_path = $config->getPath('absolute_images_path');
@@ -358,11 +359,24 @@ function fetch_organism_image($taxon_id, $organism_name = null, $absolute_images
         @mkdir($ncbi_dir, 0755, true);
     }
     
-    // Download from NCBI
+    // Download from NCBI with retry logic
     $image_url = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon/{$taxon_id}/image";
     
-    $context = stream_context_create(['http' => ['timeout' => 10, 'user_agent' => 'MOOP']]);
-    $image_data = @file_get_contents($image_url, false, $context);
+    $attempt = 0;
+    $image_data = false;
+    
+    while ($attempt < $max_retries && $image_data === false) {
+        $context = stream_context_create(['http' => ['timeout' => 10, 'user_agent' => 'MOOP']]);
+        $image_data = @file_get_contents($image_url, false, $context);
+        
+        if ($image_data === false || strlen($image_data) < 100) {
+            $attempt++;
+            if ($attempt < $max_retries) {
+                usleep(1000000); // Wait 1 second before retry
+            }
+            $image_data = false;
+        }
+    }
     
     if ($image_data === false || strlen($image_data) < 100) {
         return null;

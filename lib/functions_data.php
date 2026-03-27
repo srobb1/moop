@@ -495,9 +495,10 @@ function syncGroupDescriptions($existing_groups, $descriptions_data) {
  * and returns it as an array of rank => name pairs
  * 
  * @param int $taxon_id NCBI Taxonomy ID
+ * @param int $max_retries Maximum number of retry attempts (default 3)
  * @return array|null Array of ['rank' => x, 'name' => y] entries, or null if failed
  */
-function fetch_taxonomy_lineage($taxon_id) {
+function fetch_taxonomy_lineage($taxon_id, $max_retries = 3) {
     $url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id={$taxon_id}&retmode=xml";
     
     $context = stream_context_create([
@@ -506,9 +507,25 @@ function fetch_taxonomy_lineage($taxon_id) {
             'user_agent' => 'MOOP Taxonomy Tree Generator'
         ]
     ]);
-    $response = @file_get_contents($url, false, $context);
+    
+    $attempt = 0;
+    $response = false;
+    
+    // Retry loop with exponential backoff
+    while ($attempt < $max_retries && $response === false) {
+        $response = @file_get_contents($url, false, $context);
+        
+        if ($response === false) {
+            $attempt++;
+            if ($attempt < $max_retries) {
+                // Exponential backoff: 1s, 2s, 4s
+                usleep(1000000 * pow(2, $attempt - 1));
+            }
+        }
+    }
     
     if ($response === false) {
+        error_log("NCBI taxonomy fetch failed for taxon_id {$taxon_id} after {$max_retries} attempts");
         return null;
     }
     
@@ -612,8 +629,8 @@ function build_tree_from_organisms($organisms) {
             ];
         }
         
-        // Be nice to NCBI - rate limit
-        usleep(350000); // 350ms = ~3 requests per second
+        // Be nice to NCBI - rate limit (increase to ~2 requests per second for better reliability)
+        usleep(500000); // 500ms = 2 requests per second
     }
     
     // Build tree structure
