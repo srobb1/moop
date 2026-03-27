@@ -680,29 +680,9 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function rescanOrganisms() {
   const btn = document.getElementById('rescanBtn');
-  const origHtml = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Scanning...';
-
-  $.ajax({
-    url: window.location.pathname,
-    type: 'POST',
-    data: { action: 'rescan_organisms' },
-    dataType: 'json',
-    success: function(response) {
-      if (response.success) {
-        // Reload the page to show fresh data
-        window.location.reload();
-      } else {
-        alert('Rescan failed: ' + (response.message || 'Unknown error'));
-        btn.disabled = false;
-        btn.innerHTML = origHtml;
-      }
-    },
-    error: function() {
-      alert('Rescan request failed. Please try again.');
-      btn.disabled = false;
-      btn.innerHTML = origHtml;
-    }
-  });
+  
+  // Just reload the page - the incremental cache will detect changes automatically
+  window.location.reload();
 }
