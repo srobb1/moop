@@ -146,6 +146,24 @@
       </div>
     </div>
   </div>
+  
+  <?php if (!empty($duplicate_taxon_ids)): ?>
+    <div class="alert alert-warning alert-dismissible fade show">
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      <h5><i class="fa fa-exclamation-triangle"></i> Duplicate Taxon IDs Detected</h5>
+      <p><strong>Problem:</strong> Multiple organisms share the same NCBI Taxon ID. This causes organisms to be missing from the taxonomy tree because they have identical lineages.</p>
+      <p class="mb-2"><strong>Duplicates found:</strong></p>
+      <ul class="mb-2">
+        <?php foreach ($duplicate_taxon_ids as $taxon_id => $org_names): ?>
+          <li>
+            <strong>Taxon ID <?= htmlspecialchars($taxon_id) ?>:</strong>
+            <?= implode(', ', array_map('htmlspecialchars', $org_names)) ?>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+      <p class="mb-0"><strong>Solution:</strong> Verify the correct taxon IDs at <a href="https://www.ncbi.nlm.nih.gov/taxonomy" target="_blank" class="alert-link">NCBI Taxonomy Browser</a> and update the organism.json files using the metadata editor below.</p>
+    </div>
+  <?php endif; ?>
 
   <!-- Legend Box -->
   <div class="card mb-4">

@@ -184,6 +184,24 @@ handleAdminAjax(function($action) use ($organisms) {
 // Use same organisms data for page display
 $organisms = $organisms;
 
+// Check for duplicate taxon IDs
+$taxon_id_map = [];
+$duplicate_taxon_ids = [];
+foreach ($organisms as $org_name => $org_data) {
+    if (!empty($org_data['info']['taxon_id'])) {
+        $taxon_id = $org_data['info']['taxon_id'];
+        if (!isset($taxon_id_map[$taxon_id])) {
+            $taxon_id_map[$taxon_id] = [];
+        }
+        $taxon_id_map[$taxon_id][] = $org_name;
+    }
+}
+foreach ($taxon_id_map as $taxon_id => $org_names) {
+    if (count($org_names) > 1) {
+        $duplicate_taxon_ids[$taxon_id] = $org_names;
+    }
+}
+
 // Load layout system
 include_once __DIR__ . '/../includes/layout.php';
 
@@ -201,6 +219,7 @@ $data = [
     'config' => $config,
     'organism_data' => $organism_data,
     'taxonomy_tree_file' => $taxonomy_tree_file,
+    'duplicate_taxon_ids' => $duplicate_taxon_ids,
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
         '/' . $config->getString('site') . '/js/modules/organism-management.js'

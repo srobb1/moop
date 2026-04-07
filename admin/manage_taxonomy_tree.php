@@ -41,6 +41,24 @@ foreach ($all_organisms_data as $org_name => $org_data) {
     }
 }
 
+// Check for duplicate taxon IDs (causes organisms to be skipped in tree)
+$taxon_id_map = [];
+$duplicate_taxon_ids = [];
+foreach ($organisms as $org_name => $org_data) {
+    if (!empty($org_data['taxon_id'])) {
+        $taxon_id = $org_data['taxon_id'];
+        if (!isset($taxon_id_map[$taxon_id])) {
+            $taxon_id_map[$taxon_id] = [];
+        }
+        $taxon_id_map[$taxon_id][] = $org_name;
+    }
+}
+foreach ($taxon_id_map as $taxon_id => $org_names) {
+    if (count($org_names) > 1) {
+        $duplicate_taxon_ids[$taxon_id] = $org_names;
+    }
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_protect();
@@ -118,6 +136,7 @@ $data = [
     'organisms' => $organisms,
     'organism_data_dir' => $organism_data_dir,
     'current_tree' => $current_tree,
+    'duplicate_taxon_ids' => $duplicate_taxon_ids,
     'config' => $config,
     'site' => $site,
     'page_styles' => [

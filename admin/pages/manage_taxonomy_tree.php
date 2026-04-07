@@ -53,6 +53,24 @@
                 </div>
             <?php endif; ?>
             
+            <?php if (!empty($duplicate_taxon_ids)): ?>
+                <div class="alert alert-warning alert-dismissible fade show">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <h5><i class="fa fa-exclamation-triangle"></i> Duplicate Taxon IDs Detected</h5>
+                    <p><strong>Problem:</strong> Multiple organisms share the same NCBI Taxon ID. This causes organisms to be missing from the tree because they have identical taxonomy lineages.</p>
+                    <p class="mb-2"><strong>Duplicates found:</strong></p>
+                    <ul class="mb-2">
+                        <?php foreach ($duplicate_taxon_ids as $taxon_id => $org_names): ?>
+                            <li>
+                                <strong>Taxon ID <?= htmlspecialchars($taxon_id) ?>:</strong>
+                                <?= implode(', ', array_map('htmlspecialchars', $org_names)) ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <p class="mb-0"><strong>Solution:</strong> Check NCBI Taxonomy Browser for the correct taxon IDs and update the organism.json files in the Manage Organisms page.</p>
+                </div>
+            <?php endif; ?>
+            
             <?php if ($file_write_error): ?>
                 <div class="alert alert-warning alert-dismissible fade show">
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
