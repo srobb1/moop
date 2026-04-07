@@ -247,6 +247,99 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
         
         $_SESSION['success_message'] = "Deleted $deleted_count stale entries!";
+        
+    } elseif (isset($_POST['bulk_edit'])) {
+        // Bulk edit: add and/or remove groups from existing assemblies
+        $assemblies = json_decode($_POST['assemblies'], true);
+        $groups_to_add = array_filter(array_map('trim', explode(',', trim($_POST['groups_add'] ?? ''))));
+        $groups_to_remove = array_filter(array_map('trim', explode(',', trim($_POST['groups_remove'] ?? ''))));
+        
+        $updated_count = 0;
+        $log_entries = [];
+        
+        foreach ($assemblies as $assembly_data) {
+            $organism = $assembly_data['organism'];
+            $assembly = $assembly_data['assembly'];
+            
+            // Find the entry
+            foreach ($groups_data as &$data) {
+                if ($data['organism'] === $organism && $data['assembly'] === $assembly) {
+                    $old_groups = $data['groups'];
+                    $new_groups = $data['groups'];
+                    
+                    // Add groups
+                    foreach ($groups_to_add as $group) {
+                        if (!in_array($group, $new_groups)) {
+                            $new_groups[] = $group;
+                        }
+                    }
+                    
+                    // Remove groups
+                    $new_groups = array_values(array_filter($new_groups, function($g) use ($groups_to_remove) {
+                        return !in_array($g, $groups_to_remove);
+                    }));
+                    
+                    $data['groups'] = $new_groups;
+                    
+                    $log_entries[] = sprintf(
+                        "[%s] BULK_EDIT by %s | Organism: %s | Assembly: %s | Old: [%s] | New: [%s]",
+                        $timestamp,
+                        $username,
+                        $organism,
+                        $assembly,
+                        implode(', ', $old_groups),
+                        implode(', ', $new_groups)
+                    );
+                    $updated_count++;
+                    break;
+                }
+            }
+            unset($data);
+        }
+        
+        if (!empty($log_entries)) {
+            file_put_contents($log_file, implode("\n", $log_entries) . "\n", FILE_APPEND);
+        }
+        
+        $_SESSION['success_message'] = "Updated groups for $updated_count assemblies!";
+        
+    } elseif (isset($_POST['bulk_add'])) {
+        // Bulk add: create new entries for ungrouped assemblies
+        $assemblies = json_decode($_POST['assemblies'], true);
+        $groups = array_filter(array_map('trim', explode(',', trim($_POST['groups'] ?? ''))));
+        
+        $added_count = 0;
+        $log_entries = [];
+        
+        foreach ($assemblies as $assembly_data) {
+            $organism = $assembly_data['organism'];
+            $assembly = $assembly_data['assembly'];
+            
+            // Add new entry
+            $new_entry = [
+                'organism' => $organism,
+                'assembly' => $assembly,
+                'groups' => $groups
+            ];
+            
+            $groups_data[] = $new_entry;
+            
+            $log_entries[] = sprintf(
+                "[%s] BULK_ADD by %s | Organism: %s | Assembly: %s | Groups: [%s]",
+                $timestamp,
+                $username,
+                $organism,
+                $assembly,
+                implode(', ', $groups)
+            );
+            $added_count++;
+        }
+        
+        if (!empty($log_entries)) {
+            file_put_contents($log_file, implode("\n", $log_entries) . "\n", FILE_APPEND);
+        }
+        
+        $_SESSION['success_message'] = "Added groups to $added_count assemblies!";
     }
     
     // Save the updated groups data

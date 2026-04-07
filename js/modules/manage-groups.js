@@ -626,4 +626,271 @@ document.addEventListener('DOMContentLoaded', function() {
       selectedTags = [...originalTags];
     });
   });
+  
+  // ========================================
+  // BULK EDIT/ADD FUNCTIONALITY
+  // ========================================
+  
+  let selectedGroupedAssemblies = [];
+  let selectedUngroupedAssemblies = [];
+  
+  // Handle grouped assembly checkboxes
+  document.querySelectorAll('.grouped-assembly-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateBulkEditButton);
+  });
+  
+  // Handle ungrouped assembly checkboxes
+  document.querySelectorAll('.assembly-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateBulkAddButton);
+  });
+  
+  // Select all grouped
+  const selectAllGrouped = document.getElementById('select-all-grouped');
+  if (selectAllGrouped) {
+    selectAllGrouped.addEventListener('change', function() {
+      document.querySelectorAll('.grouped-assembly-checkbox:not(:disabled)').forEach(checkbox => {
+        checkbox.checked = selectAllGrouped.checked;
+      });
+      updateBulkEditButton();
+    });
+  }
+  
+  // Select all ungrouped
+  const selectAllUngrouped = document.getElementById('select-all-ungrouped');
+  if (selectAllUngrouped) {
+    selectAllUngrouped.addEventListener('change', function() {
+      document.querySelectorAll('.assembly-checkbox').forEach(checkbox => {
+        checkbox.checked = selectAllUngrouped.checked;
+      });
+      updateBulkAddButton();
+    });
+  }
+  
+  function updateBulkEditButton() {
+    const checked = document.querySelectorAll('.grouped-assembly-checkbox:checked');
+    const bulkBtn = document.getElementById('bulk-edit-btn');
+    const countSpan = document.getElementById('selected-count');
+    
+    if (checked.length > 0) {
+      bulkBtn.style.display = 'inline-block';
+      countSpan.textContent = checked.length;
+      
+      selectedGroupedAssemblies = [];
+      checked.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        selectedGroupedAssemblies.push({
+          organism: row.getAttribute('data-organism'),
+          assembly: row.getAttribute('data-assembly')
+        });
+      });
+    } else {
+      bulkBtn.style.display = 'none';
+      selectedGroupedAssemblies = [];
+    }
+  }
+  
+  function updateBulkAddButton() {
+    const checked = document.querySelectorAll('.assembly-checkbox:checked');
+    const bulkBtn = document.getElementById('bulk-add-btn');
+    const countSpan = document.getElementById('ungrouped-selected-count');
+    
+    if (checked.length > 0) {
+      bulkBtn.style.display = 'inline-block';
+      countSpan.textContent = checked.length;
+      
+      selectedUngroupedAssemblies = [];
+      checked.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        selectedUngroupedAssemblies.push({
+          organism: row.getAttribute('data-organism'),
+          assembly: row.getAttribute('data-assembly')
+        });
+      });
+    } else {
+      bulkBtn.style.display = 'none';
+      selectedUngroupedAssemblies = [];
+    }
+  }
+  
+  // Populate bulk edit modal
+  const bulkEditModal = document.getElementById('bulkEditModal');
+  if (bulkEditModal) {
+    bulkEditModal.addEventListener('show.bs.modal', function() {
+      document.getElementById('bulk-selected-count').textContent = selectedGroupedAssemblies.length;
+      
+      // Show list
+      const listDiv = document.getElementById('bulk-selected-list');
+      listDiv.innerHTML = selectedGroupedAssemblies.map(item => 
+        `<div><strong>${item.organism}</strong> / ${item.assembly}</div>`
+      ).join('');
+      
+      // Clear inputs
+      document.getElementById('bulk-groups-add').value = '';
+      document.getElementById('bulk-groups-remove').value = '';
+      
+      // Populate group tags for adding
+      const tagsAddDiv = document.getElementById('bulk-group-tags-add');
+      tagsAddDiv.innerHTML = existingGroups.map(group => 
+        `<span class="tag-chip bulk-group-tag-add" data-group="${group}" style="cursor: pointer; margin: 3px;">${group}</span>`
+      ).join('');
+      
+      // Populate group tags for removing
+      const tagsRemoveDiv = document.getElementById('bulk-group-tags-remove');
+      tagsRemoveDiv.innerHTML = existingGroups.map(group => 
+        `<span class="tag-chip bulk-group-tag-remove" data-group="${group}" style="cursor: pointer; margin: 3px; background: #ffcccc;">${group}</span>`
+      ).join('');
+      
+      // Handle clicking add tags
+      tagsAddDiv.querySelectorAll('.bulk-group-tag-add').forEach(tag => {
+        tag.addEventListener('click', function() {
+          const group = this.getAttribute('data-group');
+          addToInput('bulk-groups-add', group);
+        });
+      });
+      
+      // Handle clicking remove tags
+      tagsRemoveDiv.querySelectorAll('.bulk-group-tag-remove').forEach(tag => {
+        tag.addEventListener('click', function() {
+          const group = this.getAttribute('data-group');
+          addToInput('bulk-groups-remove', group);
+        });
+      });
+    });
+  }
+  
+  // Populate bulk add modal
+  const bulkAddModal = document.getElementById('bulkAddModal');
+  if (bulkAddModal) {
+    bulkAddModal.addEventListener('show.bs.modal', function() {
+      document.getElementById('bulk-add-selected-count').textContent = selectedUngroupedAssemblies.length;
+      
+      // Show list
+      const listDiv = document.getElementById('bulk-add-selected-list');
+      listDiv.innerHTML = selectedUngroupedAssemblies.map(item => 
+        `<div><strong>${item.organism}</strong> / ${item.assembly}</div>`
+      ).join('');
+      
+      // Clear input
+      document.getElementById('bulk-add-groups-input').value = '';
+      
+      // Populate group tags
+      const tagsDiv = document.getElementById('bulk-add-group-tags');
+      tagsDiv.innerHTML = existingGroups.map(group => 
+        `<span class="tag-chip bulk-add-group-tag" data-group="${group}" style="cursor: pointer; margin: 3px;">${group}</span>`
+      ).join('');
+      
+      // Handle clicking tags
+      tagsDiv.querySelectorAll('.bulk-add-group-tag').forEach(tag => {
+        tag.addEventListener('click', function() {
+          const group = this.getAttribute('data-group');
+          addToInput('bulk-add-groups-input', group);
+        });
+      });
+    });
+  }
+  
+  function addToInput(inputId, group) {
+    const input = document.getElementById(inputId);
+    const current = input.value.trim();
+    
+    if (current) {
+      const groups = current.split(',').map(g => g.trim()).filter(g => g);
+      if (!groups.includes(group)) {
+        input.value = groups.concat(group).join(', ');
+      }
+    } else {
+      input.value = group;
+    }
+  }
+  
+  // Handle bulk edit save
+  document.getElementById('bulk-edit-save')?.addEventListener('click', function() {
+    const groupsAdd = document.getElementById('bulk-groups-add').value.trim();
+    const groupsRemove = document.getElementById('bulk-groups-remove').value.trim();
+    
+    if (!groupsAdd && !groupsRemove) {
+      alert('Please enter at least one group to add or remove');
+      return;
+    }
+    
+    if (selectedGroupedAssemblies.length === 0) {
+      alert('No assemblies selected');
+      return;
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = 'manage_groups.php';
+    
+    const assembliesInput = document.createElement('input');
+    assembliesInput.type = 'hidden';
+    assembliesInput.name = 'assemblies';
+    assembliesInput.value = JSON.stringify(selectedGroupedAssemblies);
+    
+    const groupsAddInput = document.createElement('input');
+    groupsAddInput.type = 'hidden';
+    groupsAddInput.name = 'groups_add';
+    groupsAddInput.value = groupsAdd;
+    
+    const groupsRemoveInput = document.createElement('input');
+    groupsRemoveInput.type = 'hidden';
+    groupsRemoveInput.name = 'groups_remove';
+    groupsRemoveInput.value = groupsRemove;
+    
+    const bulkEditInput = document.createElement('input');
+    bulkEditInput.type = 'hidden';
+    bulkEditInput.name = 'bulk_edit';
+    bulkEditInput.value = '1';
+    
+    form.appendChild(assembliesInput);
+    form.appendChild(groupsAddInput);
+    form.appendChild(groupsRemoveInput);
+    form.appendChild(bulkEditInput);
+    addCsrfToken(form);
+    
+    document.body.appendChild(form);
+    form.submit();
+  });
+  
+  // Handle bulk add save
+  document.getElementById('bulk-add-save')?.addEventListener('click', function() {
+    const groups = document.getElementById('bulk-add-groups-input').value.trim();
+    
+    if (!groups) {
+      alert('Please enter at least one group name');
+      return;
+    }
+    
+    if (selectedUngroupedAssemblies.length === 0) {
+      alert('No assemblies selected');
+      return;
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = 'manage_groups.php';
+    
+    const assembliesInput = document.createElement('input');
+    assembliesInput.type = 'hidden';
+    assembliesInput.name = 'assemblies';
+    assembliesInput.value = JSON.stringify(selectedUngroupedAssemblies);
+    
+    const groupsInput = document.createElement('input');
+    groupsInput.type = 'hidden';
+    groupsInput.name = 'groups';
+    groupsInput.value = groups;
+    
+    const bulkAddInput = document.createElement('input');
+    bulkAddInput.type = 'hidden';
+    bulkAddInput.name = 'bulk_add';
+    bulkAddInput.value = '1';
+    
+    form.appendChild(assembliesInput);
+    form.appendChild(groupsInput);
+    form.appendChild(bulkAddInput);
+    addCsrfToken(form);
+    
+    document.body.appendChild(form);
+    form.submit();
+  });
 });

@@ -121,9 +121,15 @@
   ?>
 
   <h3>Assemblies with Groups</h3>
+  <div class="mb-3">
+    <button type="button" class="btn btn-primary btn-sm" id="bulk-edit-btn" style="display:none;" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : 'data-bs-toggle="modal" data-bs-target="#bulkEditModal"' ?>>
+      <i class="fa fa-edit"></i> Bulk Edit Groups (<span id="selected-count">0</span> selected)
+    </button>
+  </div>
   <table id="groupsTable" class="table table-hover">
     <thead>
       <tr>
+        <th><input type="checkbox" id="select-all-grouped" title="Select all"></th>
         <th>Organism</th>
         <th>Assembly</th>
         <th>Groups</th>
@@ -136,6 +142,7 @@
         <?php if (!empty($data['groups'])): ?>
         <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>" 
             style="<?= !$data['_fs_exists'] ? 'background-color: #fff3cd;' : '' ?>">
+          <td><input type="checkbox" class="grouped-assembly-checkbox" <?= !$data['_fs_exists'] ? 'disabled' : '' ?>></td>
           <td><?= htmlspecialchars($data['organism']) ?></td>
           <td><?= htmlspecialchars($data['assembly']) ?></td>
           <td>
@@ -178,11 +185,17 @@
   <?php endif; ?>
 
   <?php if (!empty($unrepresented_organisms)): ?>
-    <h3 class="mt-4">Assemblies Without Groups</h3>
-    <p class="text-muted">Add group tags to these assemblies to include them in the system.</p>
+    <h3 class="mt-4">
+      Assemblies Without Groups
+      <button type="button" class="btn btn-success btn-sm ms-3" id="bulk-add-btn" style="display:none;" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : 'data-bs-toggle="modal" data-bs-target="#bulkAddModal"' ?>>
+        <i class="fa fa-plus"></i> Bulk Add Groups (<span id="ungrouped-selected-count">0</span>)
+      </button>
+    </h3>
+    <p class="text-muted">Add group tags to these assemblies. Use checkboxes to select multiple.</p>
     <table id="ungroupedTable" class="table table-hover">
       <thead>
         <tr>
+          <th><input type="checkbox" id="select-all-ungrouped" title="Select all"></th>
           <th>Organism</th>
           <th>Assembly</th>
           <th>Groups</th>
@@ -193,6 +206,7 @@
         <?php foreach ($unrepresented_organisms as $organism => $assemblies): ?>
           <?php foreach ($assemblies as $assembly): ?>
             <tr data-organism="<?= htmlspecialchars($organism) ?>" data-assembly="<?= htmlspecialchars($assembly) ?>" class="new-assembly-row">
+              <td><input type="checkbox" class="assembly-checkbox"></td>
               <td><?= htmlspecialchars($organism) ?></td>
               <td><?= htmlspecialchars($assembly) ?></td>
               <td>
@@ -400,3 +414,72 @@
     </div>
   </div>
 </div>
+
+<!-- Bulk Edit Groups Modal -->
+<div class="modal fade" id="bulkEditModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Bulk Edit Groups</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Edit groups for <strong id="bulk-selected-count">0</strong> selected assemblies:</p>
+        <div id="bulk-selected-list" class="mb-3" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; background: #f8f9fa;">
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Add Groups:</label>
+          <input type="text" id="bulk-groups-add" class="form-control mb-2" placeholder="e.g., Bats, Mammals">
+          <div id="bulk-group-tags-add" style="max-height: 120px; overflow-y: auto; border: 1px solid #dee2e6; padding: 8px; background: #f8f9fa;">
+          </div>
+          <small class="text-muted">Click tags above or type comma-separated groups to add</small>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Remove Groups:</label>
+          <input type="text" id="bulk-groups-remove" class="form-control mb-2" placeholder="e.g., New, Testing">
+          <div id="bulk-group-tags-remove" style="max-height: 120px; overflow-y: auto; border: 1px solid #dee2e6; padding: 8px; background: #ffeded;">
+          </div>
+          <small class="text-muted">Click tags above or type comma-separated groups to remove</small>
+        </div>
+        
+        <div class="alert alert-info small mb-0">
+          <strong>How it works:</strong> For each selected assembly, groups in "Add" will be added to its existing groups, and groups in "Remove" will be removed. Existing groups not mentioned will remain unchanged.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="bulk-edit-save">Apply Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Add Groups Modal (for ungrouped assemblies) -->
+<div class="modal fade" id="bulkAddModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Bulk Add Groups</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Add groups to <strong id="bulk-add-selected-count">0</strong> selected assemblies:</p>
+        <div id="bulk-add-selected-list" class="mb-3" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; background: #f8f9fa;">
+        </div>
+        
+        <label class="form-label">Groups (comma-separated):</label>
+        <input type="text" id="bulk-add-groups-input" class="form-control mb-2" placeholder="e.g., Bats, Mammals, Public">
+        <div id="bulk-add-group-tags" style="max-height: 150px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; background: #f8f9fa; margin-top: 10px;">
+        </div>
+        <small class="text-muted">Click existing group tags above or type new group names</small>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="bulk-add-save">Add to All Selected</button>
+      </div>
+    </div>
+  </div>
+</div>
+
