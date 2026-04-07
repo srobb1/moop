@@ -1079,7 +1079,8 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     
     if ($total_scan_count === 0) {
         // Everything cached, nothing to scan
-        return $cached_data;
+        // Return organisms_to_keep (which has removed organisms filtered out)
+        return $organisms_to_keep;
     }
     
     // Scan only the organisms that need updating
