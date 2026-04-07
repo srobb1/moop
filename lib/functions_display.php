@@ -595,7 +595,7 @@ function downloadWikimediaImage($wiki_url, $cache_filename, $cache_directory = '
     $site = $config->getString('site');
     
     if (empty($cache_directory)) {
-        $images_path = $config->getPath('images_path');
+        $images_path = $config->getPath('absolute_images_path');
         $cache_directory = $images_path . '/wikimedia';
     }
     
