@@ -413,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Handle "Delete All Stale Entries" button
   document.querySelectorAll('.delete-all-stale-btn').forEach(button => {
     button.addEventListener('click', function() {
-      const staleCount = document.querySelectorAll('tr[style*="background-color: #fff3cd"]').length;
+      const staleCount = parseInt(button.getAttribute('data-stale-count')) || 0;
       
       if (confirm(`Delete all ${staleCount} stale entries? This will remove all entries where the organism directory no longer exists. This cannot be undone.`)) {
         const form = document.createElement('form');

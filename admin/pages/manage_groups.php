@@ -220,7 +220,7 @@
   <?php if (!empty($stale_entries)): ?>
     <h3 class="mt-4">
       <span class="badge bg-warning text-dark">⚠️ Stale Entries (<?= count($stale_entries) ?>)</span>
-      <button type="button" class="btn btn-danger btn-sm ms-3 delete-all-stale-btn" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
+      <button type="button" class="btn btn-danger btn-sm ms-3 delete-all-stale-btn" data-stale-count="<?= count($stale_entries) ?>" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
         <i class="fa fa-trash"></i> Delete All Stale Entries
       </button>
     </h3>
