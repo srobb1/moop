@@ -27,21 +27,18 @@ $error = '';
 $file_write_error = getFileWriteError($tree_config_file);
 $dir_error = getDirectoryError($absolute_images_path . '/ncbi_taxonomy');
 
-// Load organisms metadata — try organism cache first, fall back to scanning files
+// Load organisms using cached function (filters removed organisms)
+$sequence_types = $config->getSequenceTypes();
+$groups_data = getGroupData();
+$groups_file = $metadata_path . '/organism_assembly_groups.json';
+$all_organisms_data = getCachedOrganismsInfo($organism_data, $sequence_types, $tree_config_file, $groups_data, $groups_file, false);
+
+// Extract just the 'info' subkey for tree generation
 $organisms = [];
-$cache_file = "$organism_data/.organism_cache.json";
-if (file_exists($cache_file)) {
-    $cached = json_decode(file_get_contents($cache_file), true);
-    if ($cached && isset($cached['data'])) {
-        foreach ($cached['data'] as $org_name => $org_data) {
-            if (!empty($org_data['info'])) {
-                $organisms[$org_name] = $org_data['info'];
-            }
-        }
+foreach ($all_organisms_data as $org_name => $org_data) {
+    if (!empty($org_data['info'])) {
+        $organisms[$org_name] = $org_data['info'];
     }
-}
-if (empty($organisms)) {
-    $organisms = loadAllOrganismsMetadata($organism_data_dir);
 }
 
 // Handle form submission
