@@ -8,6 +8,7 @@
 
 include_once __DIR__ . '/admin_init.php';
 include_once __DIR__ . '/../includes/layout.php';
+include_once __DIR__ . '/../lib/functions_data.php';
 
 $siteTitle = $config->getString('siteTitle');
 $site = $config->getString('site');
