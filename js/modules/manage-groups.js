@@ -409,6 +409,30 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
+  
+  // Handle "Delete All Stale Entries" button
+  document.querySelectorAll('.delete-all-stale-btn').forEach(button => {
+    button.addEventListener('click', function() {
+      const staleCount = document.querySelectorAll('tr[style*="background-color: #fff3cd"]').length;
+      
+      if (confirm(`Delete all ${staleCount} stale entries? This will remove all entries where the organism directory no longer exists. This cannot be undone.`)) {
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = 'manage_groups.php';
+        
+        const deleteInput = document.createElement('input');
+        deleteInput.type = 'hidden';
+        deleteInput.name = 'delete_all_stale';
+        deleteInput.value = '1';
+        
+        form.appendChild(deleteInput);
+        addCsrfToken(form);
+        
+        document.body.appendChild(form);
+        form.submit();
+      }
+    });
+  });
 
   // Before submitting, collect all images and paragraphs into JSON
   document.querySelectorAll('form[id^="form-"]').forEach(form => {

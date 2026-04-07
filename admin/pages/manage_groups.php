@@ -157,9 +157,13 @@
             <?php endif; ?>
           </td>
           <td>
-            <button type="button" class="btn btn-info btn-sm edit-groups" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Edit</button>
-            <button type="button" class="btn btn-success btn-sm update-btn" style="display:none;">Save</button>
-            <button type="button" class="btn btn-secondary btn-sm cancel-btn" style="display:none;">Cancel</button>
+            <?php if (!$data['_fs_exists']): ?>
+              <button type="button" class="btn btn-danger btn-sm delete-stale-btn" data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Delete</button>
+            <?php else: ?>
+              <button type="button" class="btn btn-info btn-sm edit-groups" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Edit</button>
+              <button type="button" class="btn btn-success btn-sm update-btn" style="display:none;">Save</button>
+              <button type="button" class="btn btn-secondary btn-sm cancel-btn" style="display:none;">Cancel</button>
+            <?php endif; ?>
           </td>
         </tr>
         <?php endif; ?>
@@ -214,40 +218,13 @@
   ?>
   
   <?php if (!empty($stale_entries)): ?>
-    <h3 class="mt-4"><span class="badge bg-warning text-dark">⚠️ Stale Entries</span></h3>
-    <p class="text-muted">These entries are in the JSON file but the corresponding directories were moved or deleted. You can delete them or find the renamed directories.</p>
-    <table class="table table-hover" style="background-color: #fff3cd;">
-      <thead>
-        <tr>
-          <th>Organism</th>
-          <th>Assembly</th>
-          <th>Groups</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($stale_entries as $index => $data): ?>
-          <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>">
-            <td><?= htmlspecialchars($data['organism']) ?></td>
-            <td><?= htmlspecialchars($data['assembly']) ?></td>
-            <td>
-              <span class="groups-display">
-                <?php 
-                  $sorted_groups = $data['groups'];
-                  sort($sorted_groups);
-                  foreach ($sorted_groups as $group): 
-                ?>
-                  <span class="tag-chip selected" style="cursor: default;"><?= htmlspecialchars($group) ?></span>
-                <?php endforeach; ?>
-              </span>
-            </td>
-            <td>
-              <button type="button" class="btn btn-warning btn-sm delete-stale-btn" data-index="<?= htmlspecialchars(json_encode($data)) ?>" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Delete Entry</button>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
+    <h3 class="mt-4">
+      <span class="badge bg-warning text-dark">⚠️ Stale Entries (<?= count($stale_entries) ?>)</span>
+      <button type="button" class="btn btn-danger btn-sm ms-3 delete-all-stale-btn" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
+        <i class="fa fa-trash"></i> Delete All Stale Entries
+      </button>
+    </h3>
+    <p class="text-muted">These entries are in the JSON file but the corresponding directories were moved or deleted. Stale entries are marked in the table above with yellow background.</p>
   <?php endif; ?>
 
   <!-- Manage Group Descriptions Section -->

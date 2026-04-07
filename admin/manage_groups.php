@@ -215,6 +215,38 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             implode(', ', $old_groups)
         );
         file_put_contents($log_file, $log_entry, FILE_APPEND);
+        
+    } elseif (isset($_POST['delete_all_stale'])) {
+        // Delete all stale entries (entries where directory doesn't exist)
+        $deleted_count = 0;
+        $log_entries = [];
+        
+        foreach ($groups_data as $key => $data) {
+            $exists_in_fs = isset($all_organisms[$data['organism']]) && 
+                           in_array($data['assembly'], $all_organisms[$data['organism']]);
+            
+            if (!$exists_in_fs) {
+                $log_entries[] = sprintf(
+                    "[%s] DELETE_STALE by %s | Organism: %s | Assembly: %s | Groups: [%s]",
+                    $timestamp,
+                    $username,
+                    $data['organism'],
+                    $data['assembly'],
+                    implode(', ', $data['groups'])
+                );
+                unset($groups_data[$key]);
+                $deleted_count++;
+            }
+        }
+        
+        $groups_data = array_values($groups_data); // Reset keys
+        
+        // Log all deletions
+        if (!empty($log_entries)) {
+            file_put_contents($log_file, implode("\n", $log_entries) . "\n", FILE_APPEND);
+        }
+        
+        $_SESSION['success_message'] = "Deleted $deleted_count stale entries!";
     }
     
     // Save the updated groups data
