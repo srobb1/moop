@@ -67,23 +67,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "File is not writable. Please fix permissions first.";
         } elseif ($_POST['action'] === 'generate') {
             try {
-                // Increase timeout for large organism counts
-                set_time_limit(300); // 5 minutes
-                ini_set('default_socket_timeout', 120); // 2 minutes per socket
-                
-                // $organisms was already loaded at the top of the file
-                
                 if (empty($organisms)) {
                     $error = "No organisms found in {$organism_data_dir}";
                 } else {
-                    $tree_data = build_tree_from_organisms($organisms);
-                    
-                    // Save to file
+                    $force_refetch = !empty($_POST['force_refetch']);
+
+                    // Load (or clear) the lineage cache
+                    $lineage_cache = $force_refetch ? [] : load_lineage_cache($metadata_path);
+
+                    // Fetch from NCBI only for organisms missing from cache
+                    $lineage_cache = refresh_lineage_cache($organisms, $lineage_cache);
+                    save_lineage_cache($lineage_cache, $metadata_path);
+
+                    // Build tree (instant — no network calls)
+                    $tree_data = build_tree_from_lineage_cache($organisms, $lineage_cache);
+
                     $json = json_encode($tree_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                     if ($json === false) {
                         $error = "Failed to encode tree data as JSON: " . json_last_error_msg();
                     } elseif (file_put_contents($tree_config_file, $json) !== false) {
-                        $message = "Phylogenetic tree generated successfully! Found " . count($organisms) . " organisms.";
+                        @chmod($tree_config_file, 0664);
+                        $message = "Taxonomy tree rebuilt successfully with " . count($organisms) . " organisms.";
+                        if ($force_refetch) $message .= " (lineage re-fetched from NCBI)";
                     } else {
                         $error = "Failed to write tree config file to: " . $tree_config_file;
                         if (!is_writable($tree_config_file)) {

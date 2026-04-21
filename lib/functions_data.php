@@ -583,67 +583,112 @@ function fetch_taxonomy_lineage($taxon_id, $max_retries = 3) {
 }
 
 /**
- * Build taxonomy tree from organisms
- * 
- * Creates a hierarchical tree structure from a list of organisms by fetching
- * their taxonomic lineage from NCBI and organizing by taxonomic ranks
- * 
- * @param array $organisms Array of organism_name => ['taxon_id' => x, 'common_name' => y, ...]
- * @return array Tree structure: ['tree' => [...]]
+ * Load the taxonomy lineage cache from disk.
+ * Returns array keyed by taxon_id (string). The 'generated' metadata key is stripped.
  */
-function build_tree_from_organisms($organisms) {
-    $all_lineages = [];
-    
-    foreach ($organisms as $organism_name => $data) {
-        if (empty($data['taxon_id'])) {
-            continue;
+function load_lineage_cache($metadata_path) {
+    $cache_file = "$metadata_path/taxonomy_lineage_cache.json";
+    if (!file_exists($cache_file)) return [];
+    $data = json_decode(file_get_contents($cache_file), true);
+    if (!is_array($data)) return [];
+    unset($data['generated']);
+    return $data;
+}
+
+/**
+ * Persist the taxonomy lineage cache to disk.
+ */
+function save_lineage_cache($lineage_cache, $metadata_path) {
+    $cache_file = "$metadata_path/taxonomy_lineage_cache.json";
+    $data = $lineage_cache;
+    ksort($data);
+    $data['generated'] = date('Y-m-d H:i:s');
+    if (@file_put_contents($cache_file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) !== false) {
+        @chmod($cache_file, 0664);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Fetch NCBI lineage for any organisms whose taxon_id is absent from the cache.
+ * Existing entries are untouched. Returns the updated cache array.
+ *
+ * @param array    $organisms        organism_name => ['taxon_id', 'genus', 'species', 'common_name', ...]
+ * @param array    $lineage_cache    Current cache keyed by taxon_id
+ * @param callable $progress_cb      Optional: function($organism_name, $current, $total)
+ * @return array   Updated $lineage_cache
+ */
+function refresh_lineage_cache($organisms, $lineage_cache, $progress_cb = null) {
+    $to_fetch = [];
+    foreach ($organisms as $org_name => $data) {
+        if (empty($data['taxon_id'])) continue;
+        $tid = (string)$data['taxon_id'];
+        if (!isset($lineage_cache[$tid])) {
+            $to_fetch[$org_name] = $data;
         }
-        
-        $lineage = fetch_taxonomy_lineage($data['taxon_id']);
-        $image = fetch_organism_image($data['taxon_id'], $organism_name);
-        
-        // If NCBI image not found, try Wikipedia as fallback
+    }
+
+    $total   = count($to_fetch);
+    $current = 0;
+    foreach ($to_fetch as $org_name => $data) {
+        $current++;
+        $tid = (string)$data['taxon_id'];
+        if ($progress_cb) $progress_cb($org_name, $current, $total);
+
+        $lineage = fetch_taxonomy_lineage($tid);
+        $image   = fetch_organism_image($tid, $org_name);
+
         if ($image === null && !empty($data['genus']) && !empty($data['species'])) {
-            $scientific_name = $data['genus'] . ' ' . $data['species'];
-            $wiki_data = getWikipediaOrganismData($organism_name, $scientific_name);
-            
-            if (!empty($wiki_data['image_url'])) {
-                // Download and cache the Wikipedia image
-                $safe_filename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism_name) . '.jpg';
-                $downloaded_path = downloadWikimediaImage($wiki_data['image_url'], $safe_filename);
-                
-                if ($downloaded_path !== false) {
-                    // Strip leading /$site/ to get relative path matching NCBI format
-                    $config = ConfigManager::getInstance();
-                    $site = $config->getString('site');
-                    $image = preg_replace('#^/' . preg_quote($site, '#') . '/#', '', $downloaded_path);
+            $sci    = $data['genus'] . ' ' . $data['species'];
+            $wiki   = getWikipediaOrganismData($org_name, $sci);
+            if (!empty($wiki['image_url'])) {
+                $safe = preg_replace('/[^a-zA-Z0-9_-]/', '_', $org_name) . '.jpg';
+                $dl   = downloadWikimediaImage($wiki['image_url'], $safe);
+                if ($dl !== false) {
+                    $cfg   = ConfigManager::getInstance();
+                    $site  = $cfg->getString('site');
+                    $image = preg_replace('#^/' . preg_quote($site, '#') . '/#', '', $dl);
                 }
             }
         }
-        
+
         if ($lineage) {
-            $all_lineages[$organism_name] = [
+            $lineage_cache[$tid] = [
                 'lineage' => $lineage,
-                'common_name' => $data['common_name'],
-                'image' => $image
+                'image'   => $image,
+                'fetched' => date('Y-m-d'),
             ];
         }
-        
-        // Be nice to NCBI - rate limit (increase to ~2 requests per second for better reliability)
-        usleep(500000); // 500ms = 2 requests per second
+
+        usleep(500000); // 500 ms — 2 req/s NCBI rate limit
     }
-    
-    // Build tree structure
+
+    return $lineage_cache;
+}
+
+/**
+ * Build the taxonomy tree from the lineage cache. No network calls — pure data.
+ *
+ * @param array $organisms     organism_name => ['taxon_id', 'common_name', ...]
+ * @param array $lineage_cache Keyed by taxon_id
+ * @return array Tree structure ['tree' => [...]]
+ */
+function build_tree_from_lineage_cache($organisms, $lineage_cache) {
     $tree = ['name' => 'Life', 'children' => []];
-    
-    foreach ($all_lineages as $organism_name => $info) {
+
+    foreach ($organisms as $org_name => $data) {
+        if (empty($data['taxon_id'])) continue;
+        $tid = (string)$data['taxon_id'];
+        if (!isset($lineage_cache[$tid])) continue;
+
+        $cached  = $lineage_cache[$tid];
         $current = &$tree;
-        
-        foreach ($info['lineage'] as $level) {
+
+        foreach ($cached['lineage'] as $level) {
             $name = $level['name'];
             $rank = $level['rank'];
-            
-            // Find or create child node
+
             $found = false;
             foreach ($current['children'] as &$child) {
                 if ($child['name'] === $name) {
@@ -652,28 +697,48 @@ function build_tree_from_organisms($organisms) {
                     break;
                 }
             }
-            
+            unset($child);
+
             if (!$found) {
-                $new_node = ['name' => $name];
-                
-                // If this is the species level, add organism info
+                $node = ['name' => $name];
                 if ($rank === 'species') {
-                    $new_node['organism'] = $organism_name;
-                    $new_node['common_name'] = $info['common_name'];
-                    if ($info['image']) {
-                        $new_node['image'] = $info['image'];
-                    }
+                    $node['organism']    = $org_name;
+                    $node['common_name'] = $data['common_name'] ?? '';
+                    if (!empty($cached['image'])) $node['image'] = $cached['image'];
                 } else {
-                    $new_node['children'] = [];
+                    $node['children'] = [];
                 }
-                
-                $current['children'][] = $new_node;
+                $current['children'][] = $node;
                 $current = &$current['children'][count($current['children']) - 1];
             }
         }
+        unset($current);
     }
-    
+
     return ['tree' => $tree];
+}
+
+/**
+ * Build taxonomy tree from organisms
+ *
+ * Uses the lineage cache (metadata/taxonomy_lineage_cache.json) so only new
+ * organisms require NCBI calls. Pass $force_refetch = true to re-fetch every
+ * organism from NCBI (e.g., after a bulk taxonomy correction).
+ *
+ * @param array $organisms      organism_name => ['taxon_id', 'common_name', ...]
+ * @param bool  $force_refetch  Clear cache and re-fetch all lineages from NCBI
+ * @return array Tree structure ['tree' => [...]]
+ */
+function build_tree_from_organisms($organisms, $force_refetch = false) {
+    $config       = ConfigManager::getInstance();
+    $metadata_path = $config->getPath('metadata_path');
+
+    $lineage_cache = $force_refetch ? [] : load_lineage_cache($metadata_path);
+    $lineage_cache = refresh_lineage_cache($organisms, $lineage_cache);
+
+    save_lineage_cache($lineage_cache, $metadata_path);
+
+    return build_tree_from_lineage_cache($organisms, $lineage_cache);
 }
 
 /**
@@ -929,73 +994,6 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
     ];
 }
 
-/**
- * Build a lightweight fingerprint of the organisms directory for cache invalidation.
- *
- * Checks directory listings and file modification times (no DB opens or glob scans).
- * The fingerprint changes when:
- * - Organism directories are added/removed
- * - organism.sqlite or organism.json files are modified
- * - Assembly subdirectories are added/removed
- * - taxonomy_tree_config.json or organism_assembly_groups.json change
- *
- * @param string $organism_data_path Path to organisms directory
- * @param string $taxonomy_tree_file Path to taxonomy_tree_config.json
- * @param string $groups_file Path to organism_assembly_groups.json
- * @return string MD5 fingerprint
- */
-function buildOrganismCacheFingerprint($organism_data_path, $taxonomy_tree_file, $groups_file) {
-    $parts = [];
-
-    // Include mtime of external config files
-    if (file_exists($taxonomy_tree_file)) {
-        $parts[] = 'tree:' . filemtime($taxonomy_tree_file);
-    }
-    if (file_exists($groups_file)) {
-        $parts[] = 'groups:' . filemtime($groups_file);
-    }
-
-    if (!is_dir($organism_data_path)) {
-        return md5(implode('|', $parts));
-    }
-
-    $organisms = scandir($organism_data_path);
-    sort($organisms);
-
-    foreach ($organisms as $organism) {
-        if ($organism[0] === '.' || !is_dir("$organism_data_path/$organism")) {
-            continue;
-        }
-
-        $org_path = "$organism_data_path/$organism";
-        $parts[] = "org:$organism";
-
-        // Check sqlite mtime
-        $sqlite_file = "$org_path/organism.sqlite";
-        if (file_exists($sqlite_file)) {
-            $parts[] = "db:" . filemtime($sqlite_file);
-        }
-
-        // Check organism.json mtime
-        $json_file = "$org_path/organism.json";
-        if (file_exists($json_file)) {
-            $parts[] = "json:" . filemtime($json_file);
-        }
-
-        // List assembly subdirectories (sorted)
-        $subdirs = [];
-        $files = scandir($org_path);
-        foreach ($files as $f) {
-            if ($f[0] !== '.' && is_dir("$org_path/$f")) {
-                $subdirs[] = $f;
-            }
-        }
-        sort($subdirs);
-        $parts[] = "asm:" . implode(',', $subdirs);
-    }
-
-    return md5(implode('|', $parts));
-}
 
 /**
  * Get organism info with caching.
@@ -1188,9 +1186,8 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
  */
 function buildConfigFingerprint($taxonomy_tree_file, $groups_file) {
     $parts = [];
-    if (file_exists($taxonomy_tree_file)) {
-        $parts[] = 'tree:' . filemtime($taxonomy_tree_file);
-    }
+    // Note: taxonomy_tree_config.json is intentionally excluded — it is an output
+    // of the organism scan, so including its mtime would create a circular invalidation.
     if (file_exists($groups_file)) {
         $parts[] = 'groups:' . filemtime($groups_file);
     }
@@ -1601,27 +1598,42 @@ function getWikipediaOrganismDataFromSearch($organism_name) {
         
         $pages = array_values($data['query']['pages']);
         $page = $pages[0];
-        
+
         // Skip if no extract
         if (empty($page['extract'])) {
             continue;
         }
-        
+
+        // Reject results whose title shares no words with the organism name —
+        // prevents generic pages like "Largest and heaviest animals" from matching.
+        $result_title_lower = strtolower($page['title'] ?? '');
+        $name_words = preg_split('/[\s_]+/', strtolower(str_replace('_', ' ', $organism_name)));
+        $name_words = array_filter($name_words, fn($w) => strlen($w) > 3); // skip short words
+        $title_matches = false;
+        foreach ($name_words as $word) {
+            if (strpos($result_title_lower, $word) !== false) {
+                $title_matches = true;
+                break;
+            }
+        }
+        if (!$title_matches) {
+            continue;
+        }
+
         $description = $page['extract'];
         if (strlen($description) > 500) {
             $description = substr($description, 0, 500) . '...';
         }
         $result['description'] = trim($description);
-        
+
         if (!empty($page['thumbnail']['source'])) {
             $result['image_url'] = $page['thumbnail']['source'];
         } elseif (!empty($page['original']['source'])) {
             $result['image_url'] = $page['original']['source'];
         }
-        
+
         $result['wikipedia_url'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $page['title']);
-        
-        // Found a good result
+
         return $result;
     }
     

@@ -2,206 +2,93 @@
 <?php
 /**
  * CLI Script: Generate Taxonomy Tree
- * 
- * Generates the taxonomy tree from organism metadata by fetching
- * lineage data from NCBI. This is the recommended way to generate
- * the tree for large numbers of organisms (70+) as it avoids browser
- * timeout issues.
- * 
+ *
+ * Rebuilds taxonomy_tree_config.json using the lineage cache. Only organisms
+ * whose taxon_id is absent from the cache require a live NCBI call (~0.5s each).
+ * Subsequent runs are essentially instant.
+ *
  * Usage:
- *   php scripts/generate_taxonomy_tree.php
- * 
- * Output:
- *   Writes to metadata/taxonomy_tree_config.json
+ *   php scripts/generate_taxonomy_tree.php           # incremental (new orgs only)
+ *   php scripts/generate_taxonomy_tree.php --force   # re-fetch all from NCBI
  */
 
-// Ensure running from CLI
 if (php_sapi_name() !== 'cli') {
     die("This script must be run from the command line.\n");
 }
 
-// Bootstrap
+$force = in_array('--force', $argv);
+
 require_once __DIR__ . '/../includes/config_init.php';
 require_once __DIR__ . '/../lib/functions_data.php';
 require_once __DIR__ . '/../lib/functions_display.php';
 require_once __DIR__ . '/../lib/functions_system.php';
 require_once __DIR__ . '/../lib/functions_errorlog.php';
 
-$config = ConfigManager::getInstance();
-$organism_data = $config->getPath('organism_data');
-$metadata_path = $config->getPath('metadata_path');
+$config           = ConfigManager::getInstance();
+$organism_data    = $config->getPath('organism_data');
+$metadata_path    = $config->getPath('metadata_path');
 $tree_config_file = "$metadata_path/taxonomy_tree_config.json";
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
 echo "TAXONOMY TREE GENERATOR\n";
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
 
-// Check file is writable
 if (file_exists($tree_config_file) && !is_writable($tree_config_file)) {
     die("ERROR: Tree config file is not writable: $tree_config_file\n");
 }
 
-// Load organisms
-echo "Loading organisms from $organism_data...\n";
+// Load organisms from organism cache
+echo "Loading organisms...\n";
 $organisms = [];
-$cache_file = "$organism_data/.organism_cache.json";
-if (file_exists($cache_file)) {
-    $cached = json_decode(file_get_contents($cache_file), true);
+$org_cache = "$organism_data/.organism_cache.json";
+if (file_exists($org_cache)) {
+    $cached = json_decode(file_get_contents($org_cache), true);
     if ($cached && isset($cached['data'])) {
         foreach ($cached['data'] as $org_name => $org_data) {
-            if (!empty($org_data['info'])) {
-                $organisms[$org_name] = $org_data['info'];
-            }
+            if (!empty($org_data['info'])) $organisms[$org_name] = $org_data['info'];
         }
     }
 }
 if (empty($organisms)) {
     $organisms = loadAllOrganismsMetadata($organism_data);
 }
-
 if (empty($organisms)) {
     die("ERROR: No organisms found in $organism_data\n");
 }
-
 echo "Found " . count($organisms) . " organisms\n\n";
 
-// Estimate time
-$est_seconds = count($organisms) * 1.5;
-$est_display = $est_seconds > 90 ? round($est_seconds / 60, 1) . ' minutes' : round($est_seconds) . ' seconds';
-echo "Estimated time: $est_display\n";
-echo "Progress: Each dot = 1 organism\n\n";
+// Load (or clear) the lineage cache
+$lineage_cache = $force ? [] : load_lineage_cache($metadata_path);
 
-// Build tree with progress dots
-echo "Generating tree: ";
-$count = 0;
-$tree_data = build_tree_from_organisms_with_progress($organisms, function() use (&$count) {
-    $count++;
-    echo ".";
-    if ($count % 50 === 0) echo " $count\n             ";
-    flush();
+$need_fetch = array_filter($organisms, function($d) use ($lineage_cache) {
+    return !empty($d['taxon_id']) && !isset($lineage_cache[(string)$d['taxon_id']]);
 });
 
-echo "\n\n";
-
-if ($tree_data === false || empty($tree_data)) {
-    die("ERROR: Failed to build tree\n");
+if (!empty($need_fetch)) {
+    $n = count($need_fetch);
+    $est = $n * 0.5;
+    $est_str = $est > 90 ? round($est / 60, 1) . ' min' : round($est) . 's';
+    echo "Fetching lineage from NCBI for $n organism(s) (~$est_str)...\n";
+    $lineage_cache = refresh_lineage_cache($need_fetch, $lineage_cache, function($org, $cur, $tot) {
+        echo "  [$cur/$tot] $org\n";
+        flush();
+    });
+    save_lineage_cache($lineage_cache, $metadata_path);
+    echo "\n";
+} else {
+    echo "All lineages already cached — rebuilding tree instantly.\n\n";
 }
 
-// Save to file
-echo "Saving tree to $tree_config_file...\n";
+echo "Building tree...\n";
+$tree_data = build_tree_from_lineage_cache($organisms, $lineage_cache);
 $json = json_encode($tree_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 if ($json === false) {
-    die("ERROR: Failed to encode tree as JSON: " . json_last_error_msg() . "\n");
+    die("ERROR: Failed to encode tree: " . json_last_error_msg() . "\n");
 }
-
 if (file_put_contents($tree_config_file, $json) === false) {
-    die("ERROR: Failed to write tree config file\n");
+    die("ERROR: Failed to write $tree_config_file\n");
 }
+@chmod($tree_config_file, 0664);
 
-echo "✓ SUCCESS: Tree generated with " . count($organisms) . " organisms\n";
+echo "✓ SUCCESS: Tree written with " . count($organisms) . " organisms\n";
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
-echo "\n";
-echo "Warming organism cache...\n";
-echo "(Tree change invalidated cache, rebuilding to prevent admin page timeout)\n\n";
-
-// Automatically run the cache warming script
-// No --force needed; cache is already stale due to tree file change
-$cache_script = __DIR__ . '/warm_organism_cache.php';
-passthru("php " . escapeshellarg($cache_script), $cache_exit);
-
-if ($cache_exit === 0) {
-    echo "\n✓ All done! Taxonomy tree and organism cache are ready.\n";
-} else {
-    echo "\n⚠ Warning: Cache warming failed (exit code $cache_exit)\n";
-    echo "You may want to run manually: php scripts/warm_organism_cache.php\n";
-}
-
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
-
-/**
- * Build tree with progress callback
- */
-function build_tree_from_organisms_with_progress($organisms, $callback = null) {
-    $all_lineages = [];
-    
-    foreach ($organisms as $organism_name => $data) {
-        if (empty($data['taxon_id'])) {
-            continue;
-        }
-        
-        $lineage = fetch_taxonomy_lineage($data['taxon_id']);
-        $image = fetch_organism_image($data['taxon_id'], $organism_name);
-        
-        // Wikipedia fallback
-        if ($image === null && !empty($data['genus']) && !empty($data['species'])) {
-            $scientific_name = $data['genus'] . ' ' . $data['species'];
-            $wiki_data = getWikipediaOrganismData($organism_name, $scientific_name);
-            
-            if (!empty($wiki_data['image_url'])) {
-                $safe_filename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism_name) . '.jpg';
-                $downloaded_path = downloadWikimediaImage($wiki_data['image_url'], $safe_filename);
-                
-                if ($downloaded_path !== false) {
-                    $config = ConfigManager::getInstance();
-                    $site = $config->getString('site');
-                    $image = preg_replace('#^/' . preg_quote($site, '#') . '/#', '', $downloaded_path);
-                }
-            }
-        }
-        
-        if ($lineage) {
-            $all_lineages[$organism_name] = [
-                'lineage' => $lineage,
-                'common_name' => $data['common_name'],
-                'image' => $image
-            ];
-        }
-        
-        if ($callback) $callback();
-        
-        usleep(500000); // 500ms rate limit
-    }
-    
-    // Build tree structure (same as build_tree_from_organisms)
-    $tree = ['name' => 'Life', 'children' => []];
-    
-    foreach ($all_lineages as $organism_name => $info) {
-        $lineage = $info['lineage'];
-        $current = &$tree;
-        
-        foreach ($lineage as $level) {
-            $rank = $level['rank'];
-            $name = $level['name'];
-            
-            $found = false;
-            if (isset($current['children'])) {
-                foreach ($current['children'] as &$child) {
-                    if ($child['name'] === $name) {
-                        $current = &$child;
-                        $found = true;
-                        break;
-                    }
-                }
-            }
-            
-            if (!$found) {
-                $new_node = ['name' => $name];
-                
-                if ($rank === 'species') {
-                    $new_node['organism'] = $organism_name;
-                    $new_node['common_name'] = $info['common_name'];
-                    if ($info['image']) {
-                        $new_node['image'] = $info['image'];
-                    }
-                } else {
-                    $new_node['children'] = [];
-                }
-                
-                $current['children'][] = $new_node;
-                $current = &$current['children'][count($current['children']) - 1];
-            }
-        }
-    }
-    
-    return ['tree' => $tree];
-}

@@ -60,6 +60,21 @@ $permission_items = [
         'why_write' => 'Admin interface needs to modify these files when you change settings',
     ],
     
+    // Taxonomy Lineage Cache - Write Required
+    [
+        'name' => 'Taxonomy Lineage Cache',
+        'description' => 'Permanent per-organism NCBI lineage cache; written by cache refresh and taxonomy tree generation',
+        'type' => 'file',
+        'paths' => [
+            $metadata_path . '/taxonomy_lineage_cache.json',
+        ],
+        'required_perms' => '664',
+        'required_owner' => $moop_owner,
+        'required_group' => $web_group,
+        'reason' => 'Written by background cache refresh process (apache) and admin taxonomy tree page',
+        'why_write' => 'Cache refresh and "Rebuild Tree" store NCBI lineage data here so subsequent runs need no network calls',
+    ],
+
     // Metadata Directory - SGID for Group Assignment
     [
         'name' => 'Metadata Directory',
@@ -103,6 +118,21 @@ $permission_items = [
         'why_write' => 'Admin can update organism metadata (descriptions, images, feature types)',
     ],
     
+    // Organism Cache File - Write Required
+    [
+        'name' => 'Organism Cache File',
+        'description' => 'JSON cache of all organism metadata, written by background cache refresh process',
+        'type' => 'file',
+        'paths' => [
+            $organism_data . '/.organism_cache.json',
+        ],
+        'required_perms' => '664',
+        'required_owner' => $moop_owner,
+        'required_group' => $web_group,
+        'reason' => 'Written by background cache refresh process run as web server user',
+        'why_write' => 'The "Update Cache" background process (run as apache) must be able to overwrite this file',
+    ],
+
     // Database Files - Read Only
     [
         'name' => 'SQLite Database Files',

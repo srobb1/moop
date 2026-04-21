@@ -26,6 +26,7 @@ $base_dir = dirname(__DIR__);
 require_once "$base_dir/includes/config_init.php";
 require_once "$base_dir/lib/moop_functions.php";
 require_once "$base_dir/lib/blast_functions.php";
+require_once "$base_dir/lib/functions_display.php";
 
 $config = ConfigManager::getInstance();
 $organism_data = $config->getPath('organism_data');
@@ -44,15 +45,49 @@ $org_dirs = array_filter(scandir($organism_data), function($f) use ($organism_da
 echo "Found " . count($org_dirs) . " organisms\n";
 
 if (!$force) {
-    // Check if cache is already fresh
+    // Check if organism cache is fresh
     $cache_file = "$organism_data/.organism_cache.json";
     if (file_exists($cache_file)) {
-        $fingerprint = buildOrganismCacheFingerprint($organism_data, $taxonomy_tree_file, $groups_file);
         $cached = json_decode(file_get_contents($cache_file), true);
-        if ($cached && isset($cached['fingerprint']) && $cached['fingerprint'] === $fingerprint) {
-            echo "Cache is already up to date (generated: {$cached['generated']})\n";
-            echo "Use --force to rescan anyway.\n";
-            exit(0);
+        if ($cached && isset($cached['org_fingerprints'], $cached['config_fingerprint'], $cached['generated'])) {
+            $current_org_fps   = buildPerOrganismFingerprints($organism_data);
+            $current_config_fp = buildConfigFingerprint($taxonomy_tree_file, $groups_file);
+            if ($cached['config_fingerprint'] === $current_config_fp && $cached['org_fingerprints'] === $current_org_fps) {
+                // Organism cache is fresh — but still run taxonomy section if lineage cache is missing
+                $lineage_cache_file = "$metadata_path/taxonomy_lineage_cache.json";
+                if (file_exists($lineage_cache_file)) {
+                    echo "Cache is already up to date (generated: {$cached['generated']})\n";
+                    echo "Use --force to rescan anyway.\n";
+                    exit(0);
+                }
+                echo "Organism cache is fresh but lineage cache is missing — running taxonomy update.\n";
+                // Jump straight to taxonomy section using cached organism data
+                $organism_infos = [];
+                foreach ($cached['data'] as $org_name => $org_data) {
+                    if (!empty($org_data['info'])) $organism_infos[$org_name] = $org_data['info'];
+                }
+                $lineage_cache = load_lineage_cache($metadata_path);
+                $need_fetch = array_filter($organism_infos, function($d) use ($lineage_cache) {
+                    return !empty($d['taxon_id']) && !isset($lineage_cache[(string)$d['taxon_id']]);
+                });
+                if (!empty($need_fetch)) {
+                    echo "Fetching lineage from NCBI for " . count($need_fetch) . " organism(s)...\n";
+                    $lineage_cache = refresh_lineage_cache($need_fetch, $lineage_cache, function($org, $cur, $tot) {
+                        echo "  [$cur/$tot] $org\n";
+                    });
+                    save_lineage_cache($lineage_cache, $metadata_path);
+                }
+                $tree_config_file = "$metadata_path/taxonomy_tree_config.json";
+                if (!file_exists($tree_config_file) || is_writable($tree_config_file)) {
+                    $tree_data = build_tree_from_lineage_cache($organism_infos, $lineage_cache);
+                    $tree_json = json_encode($tree_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                    if ($tree_json !== false && @file_put_contents($tree_config_file, $tree_json) !== false) {
+                        @chmod($tree_config_file, 0664);
+                        echo "Taxonomy tree rebuilt (" . count($organism_infos) . " organisms).\n";
+                    }
+                }
+                exit(0);
+            }
         }
     }
 }
@@ -131,4 +166,51 @@ if (!$need_update && !$force) {
 
     saveJsonFile($config_file, $annotation_config);
     echo "Annotation config updated with " . count($all_db_annotation_types) . " annotation types.\n";
+}
+
+// --- Update taxonomy tree ---
+echo "\nUpdating taxonomy tree...\n";
+$tree_config_file = "$metadata_path/taxonomy_tree_config.json";
+
+// Extract organism info from the freshly-scanned cache
+$organism_infos = [];
+foreach ($organisms as $org_name => $org_data) {
+    if (!empty($org_data['info'])) {
+        $organism_infos[$org_name] = $org_data['info'];
+    }
+}
+
+$lineage_cache = $force ? [] : load_lineage_cache($metadata_path);
+
+// Determine how many need NCBI fetches
+$need_fetch = array_filter($organism_infos, function($d) use ($lineage_cache) {
+    return !empty($d['taxon_id']) && !isset($lineage_cache[(string)$d['taxon_id']]);
+});
+
+if (empty($need_fetch) && !$force) {
+    echo "Lineage cache is up to date.\n";
+} else {
+    $fetch_count = count($need_fetch);
+    if ($fetch_count > 0) {
+        echo "Fetching lineage from NCBI for $fetch_count new organism(s)...\n";
+        $lineage_cache = refresh_lineage_cache($need_fetch, $lineage_cache, function($org, $cur, $tot) {
+            echo "  [$cur/$tot] $org\n";
+        });
+        save_lineage_cache($lineage_cache, $metadata_path);
+    }
+}
+
+// Always rebuild the tree so it stays consistent with the current organism list
+if (file_exists($tree_config_file) && !is_writable($tree_config_file)) {
+    echo "WARNING: Taxonomy tree file is not writable — skipping rebuild.\n";
+    echo "         Fix permissions: chmod 664 $tree_config_file\n";
+} else {
+    $tree_data = build_tree_from_lineage_cache($organism_infos, $lineage_cache);
+    $tree_json = json_encode($tree_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    if ($tree_json !== false && @file_put_contents($tree_config_file, $tree_json) !== false) {
+        @chmod($tree_config_file, 0664);
+        echo "Taxonomy tree rebuilt (" . count($organism_infos) . " organisms).\n";
+    } else {
+        echo "WARNING: Could not write taxonomy tree to $tree_config_file\n";
+    }
 }
