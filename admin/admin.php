@@ -44,6 +44,26 @@ $data = [
     'site' => $site,
     'site_data_backup' => $_SESSION['site_data_backup'] ?? null,
     'cache_info' => $cache_info,
+    'inline_scripts' => [
+        "const sitePath = '/" . $config->getString('site') . "';",
+        // Inline refresh function for the dashboard — organism-management.js is not loaded here
+        "function refreshOrganismCache(btn,statusEl){
+          const ep=sitePath+'/admin/api/refresh_organism_cache.php';
+          const tok=document.querySelector('meta[name=\"csrf-token\"]')?.content||'';
+          if(btn){btn.disabled=true;btn.innerHTML='<i class=\"fa fa-spinner fa-spin\"></i> Refreshing…';}
+          if(statusEl){statusEl.textContent='Starting…';statusEl.style.display='';}
+          fetch(ep,{method:'POST',headers:{'X-CSRF-Token':tok}})
+            .then(r=>r.json()).then(d=>{
+              if(d.error){if(btn){btn.disabled=false;btn.innerHTML='<i class=\"fa fa-sync-alt\"></i> Update Cache';}if(statusEl)statusEl.textContent='Error: '+d.error;return;}
+              const t0=Date.now();
+              const p=setInterval(()=>{fetch(ep+'?status=1').then(r=>r.json()).then(s=>{
+                const el=Math.round((Date.now()-t0)/1000);
+                if(statusEl)statusEl.textContent='Scanning… '+el+'s';
+                if(s.status==='idle'&&el>=1){clearInterval(p);if(statusEl)statusEl.textContent='Done — reloading…';window.location.reload();}
+              }).catch(()=>clearInterval(p));},2000);
+            }).catch(e=>{if(btn){btn.disabled=false;btn.innerHTML='<i class=\"fa fa-sync-alt\"></i> Update Cache';}if(statusEl)statusEl.textContent='Failed: '+e;});
+        }"
+    ],
 ];
 
 // Render page using layout system
