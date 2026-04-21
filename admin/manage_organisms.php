@@ -13,12 +13,18 @@ $groups_data = getGroupData();
 $taxonomy_tree_file = $config->getPath('metadata_path') . '/taxonomy_tree_config.json';
 $groups_file = $metadata_path . '/organism_assembly_groups.json';
 
-// Check if this is a rescan request - use incremental cache, not full rescan
-// Only force full rescan if ?force_full=1 is explicitly passed
-$force_refresh = isset($_GET['force_full']) && $_GET['force_full'] == '1';
-
-// Get all organisms info with caching (used by both AJAX handler and page display)
-$organisms = getCachedOrganismsInfo($organism_data, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh);
+// Read the cache file directly — never scan synchronously in a web request.
+// Scanning happens via the background refresh endpoint (admin/api/refresh_organism_cache.php).
+$cache_file = "$organism_data/.organism_cache.json";
+$organisms = [];
+$cache_generated = null;
+if (file_exists($cache_file)) {
+    $raw_cache = json_decode(file_get_contents($cache_file), true);
+    if ($raw_cache && isset($raw_cache['data'])) {
+        $organisms = $raw_cache['data'];
+        $cache_generated = $raw_cache['generated'] ?? null;
+    }
+}
 
 // Handle image upload via AJAX
 include_once __DIR__ . '/api/handle_image_upload.php';
@@ -26,13 +32,6 @@ handleImageUpload($config);
 
 // Handle standard AJAX fix permissions request
 handleAdminAjax(function($action) use ($organisms) {
-    // Handle rescan request
-    if ($action === 'rescan_organisms') {
-        // Force refresh was already done above when $organisms was loaded
-        echo json_encode(['success' => true, 'message' => 'Organism data rescanned successfully', 'organism_count' => count($organisms)]);
-        return true;
-    }
-
     // Handle organism-specific actions
     if ($action === 'fix_permissions' && isset($_POST['organism'])) {
         $organism = $_POST['organism'];
@@ -220,12 +219,22 @@ $data = [
     'organism_data' => $organism_data,
     'taxonomy_tree_file' => $taxonomy_tree_file,
     'duplicate_taxon_ids' => $duplicate_taxon_ids,
+    'cache_generated' => $cache_generated,
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
         '/' . $config->getString('site') . '/js/modules/organism-management.js'
     ],
     'inline_scripts' => [
-        "const sitePath = '/" . $config->getString('site') . "';"
+        "const sitePath = '/" . $config->getString('site') . "';",
+        "(function(){
+  const el = document.getElementById('cacheAge');
+  if (!el || !el.dataset.generated) return;
+  const d = new Date(el.dataset.generated.replace(' ', 'T'));
+  const sec = Math.round((Date.now() - d) / 1000);
+  if (sec < 60) el.textContent = sec + 's ago';
+  else if (sec < 3600) el.textContent = Math.floor(sec/60) + 'm ago';
+  else el.textContent = Math.floor(sec/3600) + 'h ago';
+})();"
     ]
 ];
 

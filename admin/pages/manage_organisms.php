@@ -47,16 +47,9 @@
           <li>Metadata complete - All organism information is filled in</li>
         </ul>
         
-        <p><strong>Performance Note:</strong> This page uses an intelligent incremental cache that only rescans
-        organisms that have actually changed. The Rescan button updates only changed organisms (takes seconds), 
-        not all organisms (which would take minutes).</p>
-        
-        <p><strong>Manual Cache Update:</strong> If this page times out or you need to rebuild the cache from 
-        the command line, run:<br>
-        <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">php scripts/warm_organism_cache.php</code><br>
-        <small class="text-muted">This scans all organism directories and updates the cache. With the incremental cache, 
-        only changed organisms are rescanned, making subsequent updates very fast.</small>
-        </p>
+        <p><strong>Performance Note:</strong> This page always loads instantly from a pre-built cache.
+        Click <strong>Refresh Cache</strong> to rebuild it in the background — the page reloads automatically
+        when the scan finishes. You never need to wait for a scan during page load.</p>
         
         <p class="mb-0"><strong>What You Can Do:</strong></p>
         <ul class="mb-0">
@@ -237,10 +230,22 @@
   <!-- Current Organisms Table -->
   <div class="card">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-      <h5 class="mb-0"><i class="fa fa-list"></i> Current Organisms (<?= count($organisms) ?>)</h5>
-      <button id="rescanBtn" class="btn btn-sm btn-light" onclick="rescanOrganisms()" title="Rescan all organism directories and refresh cached data">
-        <i class="fa fa-sync-alt"></i> Rescan
-      </button>
+      <h5 class="mb-0">
+        <i class="fa fa-list"></i> Current Organisms (<span id="organismCount"><?= count($organisms) ?></span>)
+        <?php if ($cache_generated): ?>
+          <small class="fw-normal ms-2 opacity-75" style="font-size:0.75rem;">
+            cached <span id="cacheAge" data-generated="<?= htmlspecialchars($cache_generated) ?>"></span>
+          </small>
+        <?php else: ?>
+          <small class="fw-normal ms-2 opacity-75" style="font-size:0.75rem;" id="cacheAge" data-generated="">no cache</small>
+        <?php endif; ?>
+      </h5>
+      <div class="d-flex align-items-center gap-2">
+        <span id="refreshStatus" class="text-white-50 small" style="display:none;"></span>
+        <button id="rescanBtn" class="btn btn-sm btn-light" onclick="rescanOrganisms()" title="Rebuild the organism cache in the background — page reloads automatically when done">
+          <i class="fa fa-sync-alt"></i> Refresh Cache
+        </button>
+      </div>
     </div>
     <div class="card-body">
       <table id="organismsTable" class="table table-striped table-hover">
