@@ -74,11 +74,25 @@ if (!$script_path || !file_exists($script_path)) {
     exit;
 }
 
-// Write lock file then launch background process; shell removes lock when done
+// Write lock file then launch background process via proc_open so it truly
+// detaches from the web-server request (exec() + & blocks on some setups).
 file_put_contents($lock_file, time());
 
-$cmd = 'php ' . escapeshellarg($script_path)
-     . ' > /dev/null 2>&1 ; rm -f ' . escapeshellarg($lock_file);
-exec($cmd . ' &');
+$shell_cmd = 'php ' . escapeshellarg($script_path)
+           . ' > /dev/null 2>&1 ; rm -f ' . escapeshellarg($lock_file);
+
+$descriptors = [
+    0 => ['file', '/dev/null', 'r'],
+    1 => ['file', '/dev/null', 'w'],
+    2 => ['file', '/dev/null', 'w'],
+];
+$proc = proc_open(['/bin/sh', '-c', $shell_cmd], $descriptors, $pipes);
+if (!is_resource($proc)) {
+    @unlink($lock_file);
+    http_response_code(500);
+    echo json_encode(['error' => 'Failed to start background process']);
+    exit;
+}
+// Intentionally NOT calling proc_close() — the child runs independently.
 
 echo json_encode(['status' => 'started']);
