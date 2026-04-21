@@ -82,25 +82,30 @@ function getOrganismImagePath($organism_info, $images_path = 'moop/images', $abs
         $wikimedia_dir = "$absolute_images_path/wikimedia";
         $safe_name = basename($scientific_name);
 
-        // Check for already-cached Wikipedia image (any extension)
-        foreach (['jpg', 'jpeg', 'png', 'gif', 'webp'] as $ext) {
-            $cached_file = "$wikimedia_dir/$safe_name.$ext";
-            if (file_exists($cached_file)) {
-                return "/$site/images/wikimedia/" . rawurlencode("$safe_name.$ext");
+        // Check for already-cached Wikipedia image (any extension, with or without underscores)
+        $safe_name_underscore = str_replace(' ', '_', $safe_name);
+        foreach ([$safe_name, $safe_name_underscore] as $name_variant) {
+            foreach (['jpg', 'jpeg', 'png', 'gif', 'webp'] as $ext) {
+                $cached_file = "$wikimedia_dir/$name_variant.$ext";
+                if (file_exists($cached_file)) {
+                    return "/$site/images/wikimedia/" . rawurlencode("$name_variant.$ext");
+                }
             }
         }
 
-        // Fetch from Wikipedia and cache locally
+        // Fetch from Wikipedia and cache locally; pass scientific name as second arg so it is tried first
         $common_name = $organism_info['common_name'] ?? '';
-        $wiki_data = getWikipediaOrganismData($scientific_name, $common_name);
+        $wiki_data = getWikipediaOrganismData($common_name, $scientific_name);
         if (!empty($wiki_data['image_url'])) {
             $url_path = parse_url($wiki_data['image_url'], PHP_URL_PATH);
-            $ext = pathinfo($url_path, PATHINFO_EXTENSION) ?: 'jpg';
+            $ext = strtolower(pathinfo($url_path, PATHINFO_EXTENSION) ?: 'jpg');
             $cache_filename = "$safe_name.$ext";
             $result = downloadWikimediaImage($wiki_data['image_url'], $cache_filename, $wikimedia_dir);
             if ($result) {
                 return $result;
             }
+            // Download failed; return remote URL so the browser can still show the image
+            return $wiki_data['image_url'];
         }
     }
 
