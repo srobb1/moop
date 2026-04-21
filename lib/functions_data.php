@@ -1176,8 +1176,10 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
         'data' => $all_organisms
     ];
     
-    @file_put_contents($cache_file, json_encode($cache_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-    
+    if (@file_put_contents($cache_file, json_encode($cache_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) !== false) {
+        @chmod($cache_file, 0664); // ensure web server (apache group) can overwrite on next run
+    }
+
     return $all_organisms;
 }
 
