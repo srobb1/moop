@@ -679,49 +679,8 @@ document.addEventListener('DOMContentLoaded', function() {
  * Trigger a background organism cache refresh, then reload when done.
  */
 function rescanOrganisms() {
-  const btn        = document.getElementById('rescanBtn');
-  const statusEl   = document.getElementById('refreshStatus');
-  const sitePath   = window.sitePath || '/moop';
-  const endpoint   = sitePath + '/admin/api/refresh_organism_cache.php';
-
-  btn.disabled    = true;
-  btn.innerHTML   = '<i class="fa fa-spinner fa-spin"></i> Refreshing…';
-  statusEl.textContent = 'Starting…';
-  statusEl.style.display = '';
-
-  // POST to kick off the background scan
-  fetch(endpoint, {
-    method: 'POST',
-    headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || '' }
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.error) {
-      btn.disabled  = false;
-      btn.innerHTML = '<i class="fa fa-sync-alt"></i> Refresh Cache';
-      statusEl.textContent = 'Error: ' + data.error;
-      return;
-    }
-    // Poll until the status flips back to idle (scan finished)
-    const startedAt = Date.now();
-    const poll = setInterval(() => {
-      fetch(endpoint + '?status=1')
-        .then(r => r.json())
-        .then(s => {
-          const elapsed = Math.round((Date.now() - startedAt) / 1000);
-          statusEl.textContent = 'Scanning… ' + elapsed + 's';
-          if (s.status === 'idle' && elapsed > 2) {
-            clearInterval(poll);
-            statusEl.textContent = 'Done — reloading…';
-            window.location.reload();
-          }
-        })
-        .catch(() => clearInterval(poll));
-    }, 2000);
-  })
-  .catch(err => {
-    btn.disabled  = false;
-    btn.innerHTML = '<i class="fa fa-sync-alt"></i> Refresh Cache';
-    statusEl.textContent = 'Failed: ' + err;
-  });
+  refreshOrganismCache(
+    document.getElementById('rescanBtn'),
+    document.getElementById('refreshStatus')
+  );
 }

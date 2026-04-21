@@ -227,6 +227,25 @@
   </div>
 
 
+  <?php if (!empty($stale_organisms)): ?>
+  <div class="alert alert-warning d-flex align-items-center justify-content-between gap-3 mb-4" id="staleBanner">
+    <div>
+      <i class="fa fa-exclamation-triangle me-2"></i>
+      <strong><?= count($stale_organisms) === count($organisms) ? 'All organisms may be out of date' : count($stale_organisms) . ' organism' . (count($stale_organisms) > 1 ? 's' : '') . ' may be out of date' ?></strong>
+      — <?= htmlspecialchars($cache_stale_reason) ?>.
+      Rows marked <span class="badge bg-warning text-dark"><i class="fa fa-clock"></i> Stale</span> may show outdated status.
+    </div>
+    <button class="btn btn-warning btn-sm fw-bold flex-shrink-0" onclick="rescanOrganisms()" id="rescanBtnBanner">
+      <i class="fa fa-sync-alt"></i> Update Cache Now
+    </button>
+  </div>
+  <?php elseif (empty($organisms)): ?>
+  <div class="alert alert-info mb-4">
+    <i class="fa fa-info-circle me-2"></i>
+    No cache found. Click <strong>Refresh Cache</strong> to scan all organisms.
+  </div>
+  <?php endif; ?>
+
   <!-- Current Organisms Table -->
   <div class="card">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
@@ -262,7 +281,8 @@
          </thead>
          <tbody>
            <?php foreach ($organisms as $organism => $data): ?>
-             <tr>
+             <?php $is_stale = in_array($organism, $stale_organisms ?? []); ?>
+             <tr <?= $is_stale ? 'class="table-warning"' : '' ?>>
                <td>
                <strong>
                  <a href="../tools/organism.php?organism=<?= urlencode($organism) ?>" target="_blank" title="View organism page">
@@ -270,6 +290,9 @@
                    <i class="fa fa-external-link-alt" style="font-size: 0.85em; margin-left: 0.25em;"></i>
                  </a>
                </strong>
+               <?php if ($is_stale): ?>
+                 <span class="badge bg-warning text-dark ms-1" title="Files changed since last cache refresh"><i class="fa fa-clock"></i> Stale</span>
+               <?php endif; ?>
                  <?php if (isset($data['info']['genus']) && isset($data['info']['species'])): ?>
                    <br><small class="text-muted"><em><?= htmlspecialchars($data['info']['genus']) ?> <?= htmlspecialchars($data['info']['species']) ?></em></small>
                  <?php endif; ?>

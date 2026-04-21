@@ -131,9 +131,49 @@
     </div>
   </div>
 
-  <!-- Data Management -->
+  <!-- Organism Cache Status -->
   <div class="mt-5">
     <h3 class="mb-3"><i class="fa fa-database"></i> Data Management</h3>
+
+    <?php
+      $generated  = $cache_info['generated'] ?? null;
+      $org_count  = $cache_info['organism_count'] ?? 0;
+      $refreshing = $cache_info['refreshing'] ?? false;
+      $age_str    = 'never built';
+      if ($generated) {
+          $sec = time() - strtotime($generated);
+          if ($sec < 60)        $age_str = $sec . 's ago';
+          elseif ($sec < 3600)  $age_str = floor($sec/60) . 'm ago';
+          elseif ($sec < 86400) $age_str = floor($sec/3600) . 'h ago';
+          else                  $age_str = floor($sec/86400) . 'd ago';
+      }
+    ?>
+    <div class="alert <?= $generated ? 'alert-secondary' : 'alert-warning' ?> d-flex align-items-center justify-content-between gap-3 mb-4">
+      <div>
+        <i class="fa fa-sync-alt me-2"></i>
+        <strong>Organism Cache</strong> —
+        <?php if ($refreshing): ?>
+          <span class="text-primary"><i class="fa fa-spinner fa-spin"></i> Refresh in progress…</span>
+        <?php elseif ($generated): ?>
+          <?= $org_count ?> organisms, last updated <strong><?= htmlspecialchars($age_str) ?></strong>
+        <?php else: ?>
+          Cache not built yet — organism data may not be visible
+        <?php endif; ?>
+      </div>
+      <div class="d-flex align-items-center gap-2 flex-shrink-0">
+        <span id="dashCacheStatus" class="text-muted small" style="display:none;"></span>
+        <button id="dashRefreshBtn"
+                class="btn btn-sm <?= $generated ? 'btn-outline-secondary' : 'btn-warning' ?>"
+                onclick="refreshOrganismCache(this, document.getElementById('dashCacheStatus'))"
+                <?= $refreshing ? 'disabled' : '' ?>>
+          <i class="fa fa-sync-alt"></i> <?= $refreshing ? 'Refreshing…' : 'Update Cache' ?>
+        </button>
+        <a href="manage_organisms.php" class="btn btn-sm btn-outline-primary">
+          <i class="fa fa-list"></i> View Organisms
+        </a>
+      </div>
+    </div>
+
     <div class="row">
       <div class="col-md-6 mb-3">
         <div class="card h-100 border-success">

@@ -18,11 +18,38 @@ $groups_file = $metadata_path . '/organism_assembly_groups.json';
 $cache_file = "$organism_data/.organism_cache.json";
 $organisms = [];
 $cache_generated = null;
+$raw_cache = null;
 if (file_exists($cache_file)) {
     $raw_cache = json_decode(file_get_contents($cache_file), true);
     if ($raw_cache && isset($raw_cache['data'])) {
         $organisms = $raw_cache['data'];
         $cache_generated = $raw_cache['generated'] ?? null;
+    }
+}
+
+// Quick staleness check — only filemtime + scandir calls, no full scan (~50ms for 60 organisms).
+$stale_organisms = [];
+$cache_stale_reason = null;
+if ($raw_cache) {
+    $cached_config_fp = $raw_cache['config_fingerprint'] ?? null;
+    $current_config_fp = buildConfigFingerprint($taxonomy_tree_file, $groups_file);
+    if ($cached_config_fp !== $current_config_fp) {
+        // Groups or taxonomy tree changed — all organisms need a rescan
+        $stale_organisms = array_keys($organisms);
+        $cache_stale_reason = 'groups or taxonomy config changed';
+    } else {
+        $cached_org_fps = $raw_cache['org_fingerprints'] ?? [];
+        $current_org_fps = buildPerOrganismFingerprints($organism_data);
+        foreach ($current_org_fps as $org_name => $fp) {
+            if (($cached_org_fps[$org_name] ?? null) !== $fp) {
+                $stale_organisms[] = $org_name;
+            }
+        }
+        // Also flag organisms in cache that no longer exist on disk
+        // (they'll just disappear after refresh — no warning needed)
+        if (!empty($stale_organisms)) {
+            $cache_stale_reason = count($stale_organisms) . ' organism(s) changed on disk';
+        }
     }
 }
 
@@ -220,6 +247,8 @@ $data = [
     'taxonomy_tree_file' => $taxonomy_tree_file,
     'duplicate_taxon_ids' => $duplicate_taxon_ids,
     'cache_generated' => $cache_generated,
+    'stale_organisms' => $stale_organisms,
+    'cache_stale_reason' => $cache_stale_reason,
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
         '/' . $config->getString('site') . '/js/modules/organism-management.js'
