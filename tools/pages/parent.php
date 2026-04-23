@@ -133,9 +133,15 @@
                     <i class="fas fa-info-circle"></i>
                 </button>
             </div>
-            <a href="#" class="btn btn-sm btn-outline-secondary" title="Back to top">
-                <i class="fas fa-arrow-up"></i> Back to Top
-            </a>
+            <div class="d-flex gap-2">
+                <a href="/<?= htmlspecialchars($config->getString('site', 'moop')) ?>/api/download_annotations.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($feature_uniquename) ?>"
+                   class="btn btn-sm btn-outline-success" title="Download all annotations as CSV">
+                    <i class="fas fa-download"></i> Download All
+                </a>
+                <a href="#" class="btn btn-sm btn-outline-secondary" title="Back to top">
+                    <i class="fas fa-arrow-up"></i> Back to Top
+                </a>
+            </div>
         </div>
         <div id="annotationsSection" class="collapse show">
             <div class="card-body">
