@@ -313,11 +313,9 @@ function getTrackReferences($organism, $assembly, $user_access_level) {
  */
 function loadFullTrackConfigs($track_refs, $organism, $assembly, $user_access_level) {
     $tracks = [];
-    $is_whitelisted = isWhitelistedIP();
-    
     foreach ($track_refs as $ref) {
         $track_def = json_decode(file_get_contents($ref['file']), true);
-        $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly, $user_access_level, $is_whitelisted);
+        $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly);
         
         if ($track_with_tokens) {
             $tracks[] = $track_with_tokens;
@@ -404,9 +402,7 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
             $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
             // ... access check logic ...
             
-            // Add tokens
-            $is_whitelisted = isWhitelistedIP();
-            $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly, $user_access_level, $is_whitelisted);
+            $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly);
             
             echo json_encode($track_with_tokens, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             exit;
@@ -417,20 +413,7 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
     echo json_encode(['error' => 'Track not found']);
 }
 
-// Include helper functions from config.php
-/**
- * Add JWT tokens to track adapter configuration
- * 
- * SECURITY UPDATE (2026-02-25):
- * - Uses URL whitelist from trusted_tracks_servers config
- * - Trusted servers ALWAYS get tokens (even for PUBLIC tracks)
- * - External servers NEVER get tokens (prevents token leakage)
- * - Logs warnings for misconfigured tracks
- * 
- * With .htaccess blocking direct file access, even PUBLIC tracks
- * on your servers need JWT tokens.
- */
-function addTokensToTrack($track_def, $organism, $assembly, $user_access_level, $is_whitelisted) {
+function addTokensToTrack($track_def, $organism, $assembly) {
     // ALWAYS generate JWT tokens for all users
     try {
         $token = generateTrackToken($organism, $assembly);

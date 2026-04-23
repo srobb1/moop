@@ -20,6 +20,18 @@ $siteTitle = $config->getString('siteTitle');
 
 $error = "";
 
+// Read and validate optional return URL (used by auth_gateway.php after session expiry)
+$raw_return = $_GET['return'] ?? $_POST['return_url'] ?? '';
+$return_url = '';
+if ($raw_return !== '') {
+    $parsed = parse_url($raw_return);
+    $same_host = isset($parsed['host']) && $parsed['host'] === $_SERVER['HTTP_HOST'];
+    $relative  = !isset($parsed['host']) && str_starts_with($raw_return, '/');
+    if ($same_host || $relative) {
+        $return_url = $raw_return;
+    }
+}
+
 // Process login form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     csrf_protect();
@@ -48,8 +60,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION["access_level"] = 'COLLABORATOR';
         }
 
-        // Redirect to index.php
-        header("Location: index.php");
+        header("Location: " . ($return_url ?: "index.php"));
         exit;
     } else {
         record_login_failure($username, $visitor_ip);
@@ -61,8 +72,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 echo render_display_page(
     __DIR__ . '/tools/pages/login.php',
     [
-        'siteTitle' => $siteTitle,
-        'error' => $error,
+        'siteTitle'  => $siteTitle,
+        'error'      => $error,
+        'return_url' => $return_url,
     ],
     'Login - ' . $siteTitle
 );

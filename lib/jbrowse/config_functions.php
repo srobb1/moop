@@ -81,8 +81,7 @@ function loadSyntenyTracks($assembly1, $assembly2, $user_access_level)
     }
     
     $filtered_tracks = [];
-    $is_whitelisted = isWhitelistedIP();
-    
+
     $access_hierarchy = [
         'ADMIN' => 4,
         'IP_IN_RANGE' => 3,
@@ -131,8 +130,7 @@ function loadSyntenyTracks($assembly1, $assembly2, $user_access_level)
             }
         }
         
-        // Add JWT tokens to track URLs
-        $track_with_tokens = addTokensToTrack($track_def, null, null, $user_access_level, $is_whitelisted);
+        $track_with_tokens = addTokensToTrack($track_def, null, null);
         
         if ($track_with_tokens) {
             $filtered_tracks[] = $track_with_tokens;

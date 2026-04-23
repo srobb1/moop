@@ -11,8 +11,8 @@
  * - Serve files based on validated permissions
  * 
  * Security:
- * - JWT token REQUIRED for all requests (except whitelisted IPs)
- * - Token contains: user_id, organism, assembly, access_level, expiry
+ * - JWT token REQUIRED for all requests
+ * - Token contains: organism, assembly, expiry
  * - File paths are validated to prevent directory traversal
  * - Files are only served if token grants access to that organism/assembly
  * 
@@ -24,10 +24,6 @@
  */
 
 require_once __DIR__ . '/../../lib/jbrowse/track_token.php';
-require_once __DIR__ . '/../../vendor/autoload.php';
-
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
 
 // Configuration
 $TRACKS_BASE_DIR = __DIR__ . '/../../data/tracks';
@@ -58,11 +54,7 @@ if (strpos($file, '..') !== false || strpos($file, '//') !== false) {
     exit;
 }
 
-// 2. CHECK IF IP IS WHITELISTED (for relaxed validation, not bypass)
-$is_whitelisted = isWhitelistedIP();
-
-// 3. ALWAYS REQUIRE JWT TOKEN (even for whitelisted IPs)
-// This provides defense-in-depth security
+// 2. REQUIRE JWT TOKEN
 if (empty($token)) {
     http_response_code(401);
     header('Content-Type: application/json');
@@ -71,45 +63,17 @@ if (empty($token)) {
     exit;
 }
 
-// 4. VALIDATE JWT TOKEN
+// 3. VALIDATE JWT TOKEN
 $token_data = verifyTrackToken($token);
 
 if (!$token_data) {
-    // Token is invalid or expired
-    if ($is_whitelisted) {
-        // WHITELISTED IP RELAXATION: Allow expired tokens
-        // Internal users don't need to worry about 1-hour expiry
-        // But token must still be structurally valid and have correct claims
-        try {
-            $public_key_path = dirname(__DIR__, 2) . '/certs/jwt_public_key.pem';
-            $public_key = file_get_contents($public_key_path);
-            
-            // Decode without expiry check (by not using leeway or exp verification)
-            JWT::$leeway = 60 * 60 * 24 * 365; // Effectively disable expiry check
-            $token_data = JWT::decode($token, new Key($public_key, 'RS256'));
-            JWT::$leeway = 0; // Reset
-            
-            // Log for monitoring
-            error_log("Tracks server: Whitelisted IP {$_SERVER['REMOTE_ADDR']} using expired token for {$token_data->organism}/{$token_data->assembly}");
-        } catch (Exception $e) {
-            // Even whitelisted IPs need structurally valid tokens
-            http_response_code(403);
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'Invalid token structure']);
-            error_log("Tracks server: Invalid token from whitelisted IP {$_SERVER['REMOTE_ADDR']}: " . $e->getMessage());
-            exit;
-        }
-    } else {
-        // NON-WHITELISTED IPs: Strict enforcement
-        http_response_code(403);
-        header('Content-Type: application/json');
-        echo json_encode(['error' => 'Invalid or expired token']);
-        exit;
-    }
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Invalid or expired token']);
+    exit;
 }
 
-// 5. ALWAYS VALIDATE FILE PATH MATCHES TOKEN PERMISSIONS
-// This prevents access by path guessing, even for whitelisted IPs
+// 4. VALIDATE FILE PATH MATCHES TOKEN PERMISSIONS
 // File path format: organism/assembly/type/filename
 $file_parts = explode('/', $file);
 
@@ -137,7 +101,7 @@ if ($token_data->organism !== $file_organism || $token_data->assembly !== $file_
     exit;
 }
 
-// 5. BUILD FILE PATH
+// 5. BUILD AND SERVE FILE
 $file_path = $TRACKS_BASE_DIR . '/' . $file;
 
 if (!file_exists($file_path)) {

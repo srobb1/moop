@@ -697,6 +697,18 @@ $siteName = $config['site'] ?? 'moop';
             <p>Log in with your admin account to start configuring your site.</p>
             <a href="/<?= htmlspecialchars($siteName) ?>/" class="btn btn-success btn-lg">Go to MOOP</a>
         </div>
+        <div class="card-body border-top">
+            <h6 class="fw-bold">One manual step required — web server config</h6>
+            <p class="mb-2 text-muted small">The installer cannot modify your web server config. Add the following to enable JBrowse2 session authentication (redirects users to login when their session expires):</p>
+            <strong>Apache</strong> — inside <code>&lt;VirtualHost&gt;</code>:
+            <pre class="bg-light p-2 rounded small mt-1">RewriteEngine On
+RewriteRule ^/<?= htmlspecialchars($siteName) ?>/jbrowse2/index\.html$ /<?= htmlspecialchars($siteName) ?>/auth_gateway.php [L,QSA]</pre>
+            <strong>Nginx</strong> — inside <code>server {}</code>:
+            <pre class="bg-light p-2 rounded small mt-1">location = /<?= htmlspecialchars($siteName) ?>/jbrowse2/index.html {
+    rewrite ^ /<?= htmlspecialchars($siteName) ?>/auth_gateway.php last;
+}</pre>
+            <p class="mb-0 text-muted small">See the <a href="/<?= htmlspecialchars($siteName) ?>/README.md" target="_blank">README</a> step 10 for full details including security headers.</p>
+        </div>
     </div>
 
 </div>

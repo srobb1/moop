@@ -34,6 +34,9 @@
 
           <form method="post">
             <?= csrf_input_field() ?>
+            <?php if ($return_url): ?>
+              <input type="hidden" name="return_url" value="<?= htmlspecialchars($return_url) ?>">
+            <?php endif; ?>
             <div class="mb-4">
               <label for="username" class="form-label fw-semibold text-dark">Username</label>
               <input type="text" class="form-control form-control-lg" id="username" name="username" required>

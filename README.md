@@ -320,28 +320,55 @@ sudo chmod 640 /var/www/html/moop/certs/*.pem
 
 See [docs/current/admin/PERMISSIONS_GUIDE.md](docs/current/admin/PERMISSIONS_GUIDE.md) for complete permission setup.
 
-**10. Configure HTTP security headers (recommended):**
+**10. Configure web server (required for JBrowse2 auth + recommended security headers):**
 
-Add these to your Apache virtual host config:
+Edit your virtual host / server block config:
 
-- Ubuntu/Debian: `/etc/apache2/sites-enabled/000-default.conf`
-- RHEL/CentOS/Rocky: `/etc/httpd/conf.d/moop.conf` (create this file)
+- Apache Ubuntu/Debian: `/etc/apache2/sites-enabled/000-default.conf`
+- Apache RHEL/CentOS/Rocky: `/etc/httpd/conf.d/moop.conf` (create this file)
+- Nginx: your server block config file
 
+**Apache** — add inside `<VirtualHost>`:
 ```apache
+# JBrowse2 session auth gateway (required)
+RewriteEngine On
+RewriteRule ^/moop/jbrowse2/index\.html$ /moop/auth_gateway.php [L,QSA]
+
+# Security headers (recommended)
 Header always set X-Frame-Options "SAMEORIGIN"
 Header always set X-Content-Type-Options "nosniff"
 Header always set Referrer-Policy "same-origin"
 ```
 
-Then enable the headers module and restart:
+Enable required modules and restart:
 ```bash
 # Ubuntu/Debian
-sudo a2enmod headers
+sudo a2enmod rewrite headers
 sudo systemctl restart apache2
 
-# RHEL/CentOS/Rocky (mod_headers is enabled by default)
+# RHEL/CentOS/Rocky (both modules enabled by default)
 sudo systemctl restart httpd
 ```
+
+**Nginx** — add inside `server {}`:
+```nginx
+# JBrowse2 session auth gateway (required)
+location = /moop/jbrowse2/index.html {
+    rewrite ^ /moop/auth_gateway.php last;
+}
+
+# Security headers (recommended)
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "same-origin" always;
+```
+
+Reload after editing:
+```bash
+sudo systemctl reload nginx
+```
+
+See [JBrowse2 Session Authentication](#jbrowse2-session-authentication-web-server-config) for details on what the rewrite rule does.
 
 **11. Access the site:**
 - Visit: `http://localhost/moop/` (or your server URL)
@@ -386,6 +413,10 @@ ls -la /var/www/html/moop/certs/*.pem
 # Verify tracks security
 curl -s -o /dev/null -w "%{http_code}" http://localhost/moop/data/tracks/
 # Should return 403 (access denied)
+
+# Verify JBrowse2 auth gateway redirects unauthenticated users to login
+curl -s -o /dev/null -w "%{http_code}" http://localhost/moop/jbrowse2/index.html
+# Should return 302 (redirect to login); 200 means the rewrite rule is not active
 
 # Check web server is running
 # For Apache:
@@ -504,6 +535,52 @@ generates JBrowse2 configurations and authenticates track access via JWT tokens.
 2. JBrowse2 requests track data via `api/jbrowse2/tracks.php?file=...&token=JWT`
 3. `tracks.php` validates the JWT and serves the file if authorized
 4. Direct access to `data/tracks/` is blocked by `.htaccess` (returns 403)
+
+### JBrowse2 Session Authentication (Web Server Config)
+
+When users open JBrowse2 in a new window and share or bookmark the URL, MOOP
+must check their session before JBrowse2 loads. Without this, an expired session
+shows a cryptic load error instead of a login prompt.
+
+Add the following to your web server config to route `jbrowse2/index.html`
+through MOOP's auth gateway (`auth_gateway.php`):
+
+**Apache** — add inside your `<VirtualHost>` block:
+
+- Ubuntu/Debian: `/etc/apache2/sites-enabled/000-default.conf`
+- RHEL/CentOS/Rocky: `/etc/httpd/conf.d/moop.conf`
+
+```apache
+RewriteEngine On
+RewriteRule ^/moop/jbrowse2/index\.html$ /moop/auth_gateway.php [L,QSA]
+```
+
+Enable `mod_rewrite` if not already active, then restart:
+```bash
+# Ubuntu/Debian
+sudo a2enmod rewrite
+sudo systemctl restart apache2
+
+# RHEL/CentOS/Rocky (mod_rewrite is enabled by default)
+sudo systemctl restart httpd
+```
+
+**Nginx** — add inside your `server {}` block:
+
+```nginx
+location = /moop/jbrowse2/index.html {
+    rewrite ^ /moop/auth_gateway.php last;
+}
+```
+
+Reload after editing:
+```bash
+sudo systemctl reload nginx
+```
+
+After this is in place: unauthenticated users who follow a saved JBrowse2 URL
+are redirected to the MOOP login page and returned to their original JBrowse2
+URL (with session state intact) after logging in.
 
 ### Upgrading JBrowse2
 

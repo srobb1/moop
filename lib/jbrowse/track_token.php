@@ -79,35 +79,4 @@ function verifyTrackToken($token) {
     }
 }
 
-/**
- * Check if user IP is whitelisted (internal network)
- * 
- * @return bool
- */
-function isWhitelistedIP() {
-    $trusted_ranges = [
-        ['10.0.0.0', '10.255.255.255'],
-        ['172.16.0.0', '172.31.255.255'],
-        ['192.168.0.0', '192.168.255.255'],
-        ['127.0.0.1', '127.255.255.255']  // localhost
-    ];
-    
-    $visitor_ip = $_SERVER['REMOTE_ADDR'] ?? '';
-    $visitor_ip_long = ip2long($visitor_ip);
-    
-    if ($visitor_ip_long === false) {
-        return false;
-    }
-    
-    foreach ($trusted_ranges as $range) {
-        $start_long = ip2long($range[0]);
-        $end_long = ip2long($range[1]);
-        
-        if ($visitor_ip_long >= $start_long && $visitor_ip_long <= $end_long) {
-            return true;
-        }
-    }
-    
-    return false;
-}
 ?>
