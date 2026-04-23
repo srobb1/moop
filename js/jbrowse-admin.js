@@ -33,11 +33,11 @@ function initJBrowseAdmin(organisms, site) {
  * Setup organism dropdown change handlers
  */
 function setupOrganismDropdowns() {
-    // Sheet registration dropdown
+    // Sheet registration dropdown — only registered assemblies
     const regOrganism = document.getElementById('organism');
     if (regOrganism) {
         regOrganism.addEventListener('change', function() {
-            updateAssemblyDropdown(this.value, 'assembly');
+            updateAssemblyDropdown(this.value, 'assembly', window.registeredOrganisms);
         });
     }
     
@@ -53,11 +53,11 @@ function setupOrganismDropdowns() {
         });
     }
     
-    // Track sync dropdown
+    // Track sync dropdown — only registered assemblies
     const syncOrganism = document.getElementById('syncOrganism');
     if (syncOrganism) {
         syncOrganism.addEventListener('change', function() {
-            updateAssemblyDropdown(this.value, 'syncAssembly');
+            updateAssemblyDropdown(this.value, 'syncAssembly', window.registeredOrganisms);
         });
     }
     
@@ -74,15 +74,16 @@ function setupOrganismDropdowns() {
 /**
  * Update assembly dropdown based on selected organism
  */
-function updateAssemblyDropdown(organism, assemblySelectId) {
+function updateAssemblyDropdown(organism, assemblySelectId, dataSource) {
     const assemblySelect = document.getElementById(assemblySelectId);
     if (!assemblySelect) return;
-    
+
+    const source = dataSource || organismsData;
     const defaultText = assemblySelectId.startsWith('filter') ? 'All' : 'Select assembly...';
     assemblySelect.innerHTML = `<option value="">${defaultText}</option>`;
-    
-    if (organism && organismsData[organism]) {
-        organismsData[organism].forEach(asm => {
+
+    if (organism && source[organism]) {
+        source[organism].forEach(asm => {
             const option = document.createElement('option');
             option.value = asm;
             option.textContent = asm;
@@ -348,6 +349,160 @@ function generateSelectedConfigs() {
 }
 
 /**
+ * Register an unregistered assembly in JBrowse.
+ * Preps genome files and creates the assembly metadata JSON.
+ */
+function registerAssembly(organism, assembly, buttonEl) {
+    const rowId = 'unregistered-row-' + organism + '_' + assembly;
+    const logDiv = document.getElementById('registerLog');
+    const logOutput = document.getElementById('registerLogOutput');
+
+    buttonEl.disabled = true;
+    buttonEl.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Registering...';
+
+    logDiv.style.display = 'block';
+    logOutput.textContent += `\n=== Registering ${organism} / ${assembly} ===\n`;
+
+    const formData = new FormData();
+    formData.append('organism', organism);
+    formData.append('assembly', assembly);
+
+    fetch(`/${siteUrl}/api/jbrowse2/admin_register_assembly.php`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            logOutput.textContent += data.output + '\n✓ Done\n';
+            logOutput.scrollTop = logOutput.scrollHeight;
+
+            // Remove the row and reload after a short delay so the user sees the log
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.style.opacity = '0.4';
+                row.cells[row.cells.length - 1].innerHTML =
+                    '<span class="text-success"><i class="fa fa-check"></i> Registered</span>';
+            }
+            setTimeout(() => window.location.reload(), 2000);
+        } else {
+            logOutput.textContent += '✗ Error: ' + data.error + '\n';
+            logOutput.scrollTop = logOutput.scrollHeight;
+            buttonEl.disabled = false;
+            buttonEl.innerHTML = '<i class="fa fa-plus"></i> Register';
+        }
+    })
+    .catch(error => {
+        logOutput.textContent += '✗ ' + error.message + '\n';
+        buttonEl.disabled = false;
+        buttonEl.innerHTML = '<i class="fa fa-plus"></i> Register';
+    });
+}
+
+// ============================================================
+// Tracks Server Configuration
+// ============================================================
+
+let _jwtPublicKey = null;
+
+/**
+ * Load current tracks server config from server and populate form
+ */
+function loadTracksServerConfig() {
+    const formData = new FormData();
+    formData.append('action', 'get_config');
+
+    fetch(`/${siteUrl}/api/jbrowse2/admin_tracks_server.php`, { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) { console.error('get_config failed:', data.error); return; }
+
+            const cfg = data.tracks_server;
+            document.getElementById('tracksServerEnabled').checked = cfg.enabled;
+            document.getElementById('tracksServerUrl').value = cfg.url || '';
+
+            _jwtPublicKey = data.jwt_public_key;
+
+            const badge = document.getElementById('tracksServerBadge');
+            if (cfg.enabled && cfg.url) {
+                badge.textContent = 'Remote: ' + cfg.url;
+                badge.className = 'badge bg-primary ms-2';
+            } else {
+                badge.textContent = 'Local';
+                badge.className = 'badge bg-success ms-2';
+            }
+
+            if (data.jwt_key_exists) {
+                document.getElementById('jwtStatusDisplay').innerHTML =
+                    '<span class="text-success"><i class="fa fa-check-circle"></i> JWT key pair found</span>';
+            } else {
+                document.getElementById('jwtStatusDisplay').innerHTML =
+                    '<span class="text-danger"><i class="fa fa-times-circle"></i> JWT keys missing — run: <code>openssl genrsa -out certs/jwt_private_key.pem 2048 && openssl rsa -in certs/jwt_private_key.pem -pubout -out certs/jwt_public_key.pem</code></span>';
+            }
+        })
+        .catch(err => console.error('loadTracksServerConfig error:', err));
+}
+
+/**
+ * Test JWT key pair
+ */
+function testJWT() {
+    const formData = new FormData();
+    formData.append('action', 'test_jwt');
+
+    const statusDiv = document.getElementById('jwtStatusDisplay');
+    statusDiv.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Testing...';
+
+    fetch(`/${siteUrl}/api/jbrowse2/admin_tracks_server.php`, { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                statusDiv.innerHTML = `
+                    <span class="text-success"><i class="fa fa-check-circle"></i> ${data.message}</span>
+                    <br><small class="text-muted">Scope: ${data.token_scope} | Expires: ${data.expires_in}</small>
+                `;
+            } else {
+                statusDiv.innerHTML = `<span class="text-danger"><i class="fa fa-times-circle"></i> ${data.error}</span>`;
+            }
+        });
+}
+
+/**
+ * Show JWT public key in the page
+ */
+function showJWTPublicKey() {
+    const pre = document.getElementById('jwtPublicKeyDisplay');
+    if (pre.style.display === 'none') {
+        pre.style.display = 'block';
+        pre.textContent = _jwtPublicKey || '(public key not loaded yet — click Reset to reload)';
+    } else {
+        pre.style.display = 'none';
+    }
+}
+
+/**
+ * Copy JWT public key to clipboard
+ */
+function copyJWTPublicKey() {
+    if (!_jwtPublicKey) {
+        alert('Public key not loaded. Click Reset to reload.');
+        return;
+    }
+    navigator.clipboard.writeText(_jwtPublicKey).then(() => {
+        alert('Public key copied to clipboard.');
+    }).catch(() => {
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = _jwtPublicKey;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        alert('Public key copied to clipboard.');
+    });
+}
+
+/**
  * Setup form submission handlers
  */
 $(document).ready(function() {
@@ -355,6 +510,38 @@ $(document).ready(function() {
     if (typeof jbrowseOrganisms !== 'undefined' && typeof sitePath !== 'undefined') {
         initJBrowseAdmin(jbrowseOrganisms, sitePath);
     }
+
+    // Load tracks server config when the card is expanded
+    document.getElementById('tracksServerConfig')?.addEventListener('shown.bs.collapse', loadTracksServerConfig);
+    // Also load on page ready so badge is correct
+    if (typeof siteUrl !== 'undefined') { loadTracksServerConfig(); }
+
+    // Tracks server form
+    $('#tracksServerForm').on('submit', function(e) {
+        e.preventDefault();
+        const enabled = document.getElementById('tracksServerEnabled').checked;
+        const url     = document.getElementById('tracksServerUrl').value.trim();
+
+        const formData = new FormData();
+        formData.append('action', 'save_config');
+        formData.append('enabled', enabled ? '1' : '0');
+        formData.append('url', url);
+
+        const resultDiv = document.getElementById('tracksServerResult');
+        resultDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Saving...</div>';
+        resultDiv.style.display = 'block';
+
+        fetch(`/${siteUrl}/api/jbrowse2/admin_tracks_server.php`, { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.innerHTML = `<div class="alert alert-success"><i class="fa fa-check-circle"></i> ${data.message}</div>`;
+                    loadTracksServerConfig();
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger"><i class="fa fa-times-circle"></i> ${data.error}</div>`;
+                }
+            });
+    });
     
     // Sheet registration form
     $('#registerSheetForm').on('submit', function(e) {

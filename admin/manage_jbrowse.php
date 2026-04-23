@@ -94,6 +94,36 @@ if (is_dir($organisms_dir)) {
     }
 }
 
+// Get registered assemblies (those with JSON in metadata/jbrowse2-configs/assemblies/)
+$assemblies_meta_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
+$registered_assemblies = [];
+if (is_dir($assemblies_meta_dir)) {
+    foreach (glob($assemblies_meta_dir . '/*.json') as $file) {
+        $asm_data = json_decode(file_get_contents($file), true);
+        if ($asm_data && isset($asm_data['organism'], $asm_data['assemblyId'])) {
+            $registered_assemblies[$asm_data['organism']][] = $asm_data['assemblyId'];
+        }
+    }
+}
+
+// Compute assemblies that exist on disk but aren't registered yet
+$unregistered_assemblies = [];
+foreach ($organisms as $org => $assemblies) {
+    foreach ($assemblies as $asm) {
+        $registered = isset($registered_assemblies[$org]) && in_array($asm, $registered_assemblies[$org]);
+        if (!$registered) {
+            $has_genome = file_exists($config->getPath('organism_data') . "/$org/$asm/genome.fa");
+            $unregistered_assemblies[] = [
+                'organism' => $org,
+                'assembly' => $asm,
+                'has_genome' => $has_genome,
+            ];
+        }
+    }
+}
+
+$registered_count = array_sum(array_map('count', $registered_assemblies));
+
 // Get track statistics
 $tracks_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/tracks';
 $track_stats = [
@@ -146,9 +176,14 @@ $data = [
     'site' => $site,
     'organisms' => $organisms,
     'track_stats' => $track_stats,
+    'registered_assemblies' => $registered_assemblies,
+    'registered_count' => $registered_count,
+    'unregistered_assemblies' => $unregistered_assemblies,
     'inline_scripts' => [
         'const jbrowseOrganisms = ' . json_encode($organisms) . ';',
-        'const sitePath = "' . $site . '";'
+        'const registeredOrganisms = ' . json_encode($registered_assemblies) . ';',
+        'const sitePath = "' . $site . '";',
+        'const unregisteredAssemblies = ' . json_encode($unregistered_assemblies) . ';',
     ],
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
