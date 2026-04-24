@@ -344,6 +344,19 @@ class GoogleSheetsParser
      * @param array $row Raw row data
      * @return array Cleaned track data
      */
+    private function normalizeTrackPath(string $path): string
+    {
+        // Collapse accidental double (or more) slashes in the path portion of a URL
+        // without touching the :// in the scheme (https://, http://)
+        if (preg_match('/^https?:\/\//i', $path)) {
+            // Split on :// so we only normalize the part after the scheme
+            [$scheme, $rest] = explode('://', $path, 2);
+            $rest = preg_replace('#/{2,}#', '/', $rest);
+            return $scheme . '://' . $rest;
+        }
+        return $path;
+    }
+
     private function cleanTrackData($row)
     {
         // Map ACCESS column to access_level
@@ -353,7 +366,7 @@ class GoogleSheetsParser
             'track_id' => trim($row['track_id']),
             'browser_track_id' => trim($row['browser_track_id'] ?? ''),
             'name' => trim($row['name']),
-            'TRACK_PATH' => trim($row['track_path']),
+            'TRACK_PATH' => $this->normalizeTrackPath(trim($row['track_path'])),
             'category' => trim($row['category'] ?? 'Uncategorized'),
             'access_level' => $accessLevel,
             'color' => trim($row['color'] ?? ''),

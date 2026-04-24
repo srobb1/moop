@@ -70,7 +70,12 @@ class PathResolver
         if (empty($filesystemPath)) {
             throw new InvalidArgumentException("Filesystem path cannot be empty");
         }
-        
+
+        // If already a URL, return as-is — don't strip the host
+        if ($this->isRemote($filesystemPath)) {
+            return $filesystemPath;
+        }
+
         // Check if this is a reference genome (always local)
         $isReferenceGenome = strpos($filesystemPath, '/data/genomes/') !== false || 
                             strpos($filesystemPath, '/genomes/') !== false;

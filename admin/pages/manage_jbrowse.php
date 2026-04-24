@@ -347,8 +347,9 @@
             <div class="mb-3">
               <label for="tracksServerUrl" class="form-label">Remote Server URL</label>
               <input type="url" class="form-control" id="tracksServerUrl" name="url"
-                     placeholder="https://tracks.yourlab.edu">
+                     placeholder="https://tracks.yourlab.edu/moop">
               <small class="text-muted">
+                Include the full path prefix if the server is deployed under a subdirectory (e.g. <code>https://tracks.yourlab.edu/moop</code>, not just <code>https://tracks.yourlab.edu</code>).
                 The remote server must have <code>api/jbrowse2/tracks.php</code> deployed with your JWT public key.
                 Track data files go in <code>data/tracks/{organism}/{assembly}/{type}/</code>.
               </small>

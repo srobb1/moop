@@ -162,6 +162,25 @@
             <li>You'll see confirmation with the number of organisms processed</li>
           </ol>
 
+          <h5 class="fw-semibold text-dark mt-4 mb-2">Lineage Cache (Faster Rebuilds):</h5>
+          <p class="text-muted mb-3">
+            MOOP caches NCBI lineage responses locally. The first tree build fetches each organism's
+            full taxonomic lineage from NCBI; subsequent rebuilds use the cached results and skip
+            organisms already in the cache. This means:
+          </p>
+          <ul class="text-muted mb-3">
+            <li>Adding one new organism to an existing database rebuilds the tree in seconds rather than minutes</li>
+            <li>The tree is <strong>automatically rebuilt</strong> whenever the lineage cache is updated with new entries</li>
+            <li>Cached lineage data is stored per taxon_id and does not expire automatically — force a fresh NCBI fetch by clearing the cache entry from the admin interface if taxonomy has changed</li>
+          </ul>
+
+          <h5 class="fw-semibold text-dark mt-4 mb-2">Duplicate Taxon ID Detection:</h5>
+          <p class="text-muted mb-3">
+            If two organisms share the same <code>taxon_id</code>, MOOP will display a warning during
+            tree generation. This is almost always a configuration error — each organism should have a
+            unique taxon_id. Check your <code>organism.json</code> files if you see this warning.
+          </p>
+
           <h5 class="fw-semibold text-dark mt-3 mb-2">Manual Tree Customization:</h5>
           <p class="text-muted mb-3">
             Advanced administrators can manually edit the tree JSON for custom organization:
@@ -322,9 +341,16 @@
           </p>
 
           <h5 class="fw-semibold text-dark mt-3 mb-2">NCBI query failed during tree generation?</h5>
-          <p class="text-muted mb-0">
-            NCBI has rate limits (3 requests/second without an API key). If you have many organisms, the process may time out. Try regenerating again, or contact your system administrator if issues persist. Verify that all taxon_ids are valid by checking them on <a href="https://www.ncbi.nlm.nih.gov/taxonomy" target="_blank">NCBI Taxonomy Browser</a>.
+          <p class="text-muted mb-3">
+            NCBI has rate limits (3 requests/second without an API key). MOOP automatically retries
+            failed requests with a short delay, and caches successful results so that previously
+            fetched lineages don't need to be re-fetched. If a query still fails:
           </p>
+          <ul class="text-muted mb-0">
+            <li>Try regenerating again — the cache means only the failed organisms will be re-queried</li>
+            <li>Verify the taxon_id is valid at <a href="https://www.ncbi.nlm.nih.gov/taxonomy" target="_blank">NCBI Taxonomy Browser</a></li>
+            <li>Contact your system administrator if NCBI is unreachable from the server</li>
+          </ul>
         </div>
       </div>
 

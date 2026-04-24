@@ -69,6 +69,30 @@
             <li>You can filter which annotations to include before export</li>
           </ul>
 
+          <h4 class="fw-semibold text-dark mt-4 mb-2">Download All Annotations (Feature Page)</h4>
+          <p class="text-muted mb-3">
+            On any feature (gene) detail page, the <strong>Annotations</strong> section has a
+            <strong><i class="fas fa-download"></i> Download All</strong> button in the header.
+            This downloads a single CSV file containing every annotation for the gene and all of its
+            children (mRNAs, CDS, proteins, etc.) — so you don't need to export each annotation type
+            separately.
+          </p>
+          <p class="text-muted mb-3">The CSV includes these columns:</p>
+          <ul class="text-muted">
+            <li><strong>Feature Uniquename</strong> — which gene or child feature the annotation belongs to</li>
+            <li><strong>Feature Type</strong> — gene, mRNA, protein, etc.</li>
+            <li><strong>Annotation Type</strong> — e.g., Homologs, Orthologs, Protein Domains</li>
+            <li><strong>Annotation ID</strong> — the accession or identifier of the hit</li>
+            <li><strong>Description</strong> — text description of the annotation</li>
+            <li><strong>Score</strong> — e-value, bit score, or similarity score depending on type</li>
+            <li><strong>Source</strong> — the database or tool that produced the annotation</li>
+          </ul>
+          <div class="alert alert-info mt-3">
+            <strong><i class="fas fa-info-circle"></i> Tip:</strong> If you later want to download
+            annotations for a specific feature by ID (without visiting the page), the same data is
+            available via the API endpoint <code>/api/download_annotations.php?organism=…&uniquename=…</code>.
+          </div>
+
           <h4 class="fw-semibold text-dark mt-4 mb-2">Export Tips</h4>
           <ul class="text-muted">
             <li>Start with small exports to test the format before downloading large datasets</li>

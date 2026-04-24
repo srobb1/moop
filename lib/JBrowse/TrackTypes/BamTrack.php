@@ -41,13 +41,14 @@ class BamTrack extends BaseTrack implements TrackTypeInterface
         }
         
         $filePath = $trackData['TRACK_PATH'];
-        
-        // Check file exists
-        if (!file_exists($filePath)) {
+        $isRemote = (bool) preg_match('/^https?:\/\//i', $filePath);
+
+        // Check file exists (local only — remote URLs can't be stat'd)
+        if (!$isRemote && !file_exists($filePath)) {
             $errors[] = "BAM file not found: $filePath";
             return ['valid' => false, 'errors' => $errors];
         }
-        
+
         // Check extension
         $validExtensions = $this->getValidExtensions();
         $hasValidExt = false;
@@ -60,17 +61,17 @@ class BamTrack extends BaseTrack implements TrackTypeInterface
         if (!$hasValidExt) {
             $errors[] = "Invalid file extension. Expected: " . implode(', ', $validExtensions);
         }
-        
-        // Check for BAI index
-        if ($this->requiresIndex()) {
+
+        // Check for BAI index (local only — remote index is assumed to exist at {url}.bai)
+        if (!$isRemote && $this->requiresIndex()) {
             $baiPath = $this->findBaiIndex($filePath);
             if (!$baiPath) {
                 $errors[] = "BAI index not found. Create with: samtools index $filePath";
             }
         }
-        
-        // Validate BAM file with samtools if available
-        if (empty($errors) && $this->isSamtoolsAvailable()) {
+
+        // Validate BAM file with samtools (local only)
+        if (!$isRemote && empty($errors) && $this->isSamtoolsAvailable()) {
             $output = [];
             $returnCode = 0;
             exec("samtools quickcheck " . escapeshellarg($filePath) . " 2>&1", $output, $returnCode);
@@ -217,20 +218,18 @@ class BamTrack extends BaseTrack implements TrackTypeInterface
             : 'Public';
         $skipStats = $options['skip_stats'] ?? false;
         
-        // Find BAI index
-        $baiPath = $this->findBaiIndex($filePath);
-        if (!$baiPath) {
-            throw new Exception("BAI index not found for $filePath");
-        }
-        
         // Determine if remote or local
-        $isRemote = preg_match('/^https?:\/\//i', $filePath);
-        
+        $isRemote = (bool) preg_match('/^https?:\/\//i', $filePath);
+
         // Get URIs for web access
         if ($isRemote) {
             $bamUri = $filePath;
             $baiUri = $filePath . '.bai';
         } else {
+            $baiPath = $this->findBaiIndex($filePath);
+            if (!$baiPath) {
+                throw new Exception("BAI index not found for $filePath");
+            }
             $bamUri = $this->pathResolver->toWebUri($filePath);
             $baiUri = $this->pathResolver->toWebUri($baiPath);
         }
@@ -273,7 +272,7 @@ class BamTrack extends BaseTrack implements TrackTypeInterface
                 'description' => $description,
                 'access_level' => $accessLevel,
                 'file_path' => $filePath,
-                'file_size' => filesize($filePath),
+                'file_size' => $isRemote ? 0 : filesize($filePath),
                 'total_reads' => $stats['total_reads'],
                 'mapped_reads' => $stats['mapped_reads'],
                 'is_remote' => $isRemote,

@@ -31,6 +31,8 @@
       <li><a href="#search-mechanics">Search Mechanics</a></li>
       <li><a href="#parent-page">Feature Detail Page (Parent Page)</a></li>
       <li><a href="#hierarchical-queries">Querying Hierarchies</a></li>
+      <li><a href="#jbrowse-auth">JBrowse2 Authentication</a></li>
+      <li><a href="#organism-cache">Organism Data Cache</a></li>
     </ul>
   </div>
 
@@ -835,7 +837,9 @@ $children = getChildren($feature_id, $db, $genome_ids);</code></pre>
           <li>One section per annotation type (Homologs, Domains, GO Terms, etc.)</li>
           <li>Badge showing annotation count</li>
           <li>Sortable, searchable table</li>
-          <li>Export buttons (CSV, Excel, PDF)</li>
+          <li>Export buttons (CSV, Excel, PDF) per annotation table</li>
+          <li><strong>Download All</strong> button in the Annotations header — downloads a single CSV
+              with every annotation for the gene and all its children (see the Data Export help page)</li>
           <li>Linked annotation IDs (click to external resource)</li>
         </ul>
 
@@ -1007,6 +1011,114 @@ ORDER BY feature_name;</code></pre>
     </div>
   </section>
 
+  <!-- Section: JBrowse2 Auth Gateway -->
+  <section id="jbrowse-auth" class="mt-5">
+    <h3><i class="fa fa-lock"></i> JBrowse2 Authentication</h3>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <p><strong>Overview:</strong> JBrowse2 is embedded in MOOP and used to visualize genome
+        assemblies. Access to the genome browser is protected by the same authentication that
+        protects the rest of the site.</p>
+
+        <h6 class="mt-3">How the Auth Gateway Works:</h6>
+        <p>Requests to <code>/moop/jbrowse2/index.html</code> are intercepted by the web server and
+        routed through <code>auth_gateway.php</code> before JBrowse2 is served. The gateway:</p>
+        <ol>
+          <li>Checks your MOOP session (are you logged in?)</li>
+          <li>If the assembly is public, serves JBrowse2 without requiring a login</li>
+          <li>If the assembly is private and you are not logged in, redirects you to the login page
+              with a <code>?return=</code> URL so you land back at your JBrowse2 view after logging in</li>
+        </ol>
+
+        <h6 class="mt-3">Saved / Shared JBrowse2 URLs:</h6>
+        <p>JBrowse2 share URLs embed the genome browser configuration (organism, assembly, tracks,
+        coordinates). These URLs remain valid across sessions because:</p>
+        <ul>
+          <li>The <code>config=</code> parameter points to <code>config.php</code>, which generates
+              a fresh JWT token every time it is loaded</li>
+          <li>If your MOOP session has expired, the gateway redirects you to login and returns you
+              to your saved URL automatically</li>
+        </ul>
+
+        <div class="alert alert-info mt-3">
+          <strong><i class="fa fa-info-circle"></i> Administrator note:</strong> The auth gateway
+          requires a web server rewrite rule. See the <code>README.md</code> installation
+          instructions (Step 10) for the nginx and Apache config snippets.
+        </div>
+
+        <h6 class="mt-3">Track Authentication (JWT Tokens):</h6>
+        <p>Track files served from a remote tracks server are protected by JWT tokens. MOOP
+        automatically injects tokens into track URLs when the genome browser config is generated.
+        Tokens expire after 1 hour; JBrowse2 fetches a fresh config (and new tokens) each time
+        the page loads, so in practice tokens are always current during a session.</p>
+
+        <p>Track URL handling by source:</p>
+        <table class="table table-sm mt-2">
+          <thead class="table-light">
+            <tr><th>Track path in Google Sheet</th><th>How it's served</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Local filesystem path (no <code>http</code>)</td>
+              <td>Served by MOOP directly; JWT attached automatically</td>
+            </tr>
+            <tr>
+              <td>URL matching a registered trusted tracks server</td>
+              <td>Remote URL used; JWT attached automatically</td>
+            </tr>
+            <tr>
+              <td>Any other URL (external CDN, public databases)</td>
+              <td>Remote URL used; <strong>no JWT attached</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p class="mt-3"><small>Register trusted remote tracks servers under <strong>Admin → Manage JBrowse</strong>.</small></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Organism Data Cache -->
+  <section id="organism-cache" class="mt-5">
+    <h3><i class="fa fa-database"></i> Organism Data Cache</h3>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <p><strong>Purpose:</strong> MOOP caches metadata about organisms and assemblies
+        (file counts, BLAST index status, feature counts) so that the admin dashboard and organism
+        list pages load quickly even with many organisms.</p>
+
+        <h6 class="mt-3">Cache Staleness Warnings:</h6>
+        <p>If the cache is older than a configurable threshold, the Manage Organisms page shows a
+        <strong class="text-warning">stale data</strong> warning on the affected organism rows.
+        The Admin Dashboard also shows a cache status indicator with a button to refresh.</p>
+
+        <h6 class="mt-3">How to Refresh the Cache:</h6>
+        <ul>
+          <li><strong>Admin Dashboard:</strong> Click the "Update Cache" button in the organism
+              status panel — refreshes in the background so the page doesn't hang</li>
+          <li><strong>Manage Organisms page:</strong> Click the refresh icon next to any organism
+              with a stale warning</li>
+          <li><strong>Automatic:</strong> The cache is rebuilt automatically when you add or modify
+              an organism through the admin interface</li>
+        </ul>
+
+        <h6 class="mt-3">Background Refresh:</h6>
+        <p>Cache rebuilds run as background processes (using <code>proc_open</code>) so that admin
+        pages remain responsive during the update. A spinner or indicator shows when a refresh is
+        in progress.</p>
+
+        <div class="alert alert-warning mt-3">
+          <strong><i class="fa fa-triangle-exclamation"></i> Note:</strong> If the web server user
+          (<code>apache</code> or <code>www-data</code>) does not have write permission to the
+          cache file location, cache updates will silently fail and data will always appear stale.
+          Verify filesystem permissions with <strong>Admin → Manage Filesystem Permissions</strong>.
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Summary -->
   <section id="summary" class="mt-5 mb-5">
     <div class="alert alert-success">
@@ -1016,7 +1128,10 @@ ORDER BY feature_name;</code></pre>
         <li><strong>Metadata files control:</strong> organism_assembly_groups.json (what's public), group_descriptions.json (group info), taxonomy_tree_config.json (discovery)</li>
         <li><strong>Searches are SQL queries:</strong> Using LIKE wildcards, filtered by user permissions, aggregated across organisms</li>
         <li><strong>Parent page uses hierarchy:</strong> parent_feature_id column enables tree traversal of gene → mRNA → exon structure</li>
+        <li><strong>Download All annotations:</strong> One button downloads every annotation for a gene and all its children as a single CSV</li>
+        <li><strong>JBrowse2 is auth-gated:</strong> An auth gateway protects the genome browser; saved URLs redirect to login if your session has expired</li>
         <li><strong>Permissions everywhere:</strong> Every query filters by accessible genomes to respect user access levels</li>
+        <li><strong>Cache freshness matters:</strong> The organism data cache can go stale — refresh it from the Admin Dashboard when you add organisms</li>
       </ul>
     </div>
 

@@ -453,12 +453,30 @@ function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC')
                 // Detect external URLs
                 $is_external = preg_match('#^(https?|ftp)://#i', $uri);
                 
+                $tracks_server_cfg     = $config->get('tracks_server', []);
+                $tracks_server_enabled = !empty($tracks_server_cfg['enabled']);
+                $tracks_server_url     = isset($tracks_server_cfg['url']) ? rtrim($tracks_server_cfg['url'], '/') : '';
+
                 if ($is_external) {
-                    // Check if this is a trusted server
-                    if ($config->isTrustedTracksServer($uri)) {
-                        // Trusted server → Add token
-                        $separator = strpos($uri, '?') !== false ? '&' : '?';
-                        $value['uri'] .= $separator . 'token=' . urlencode($token);
+                    $is_trusted = $config->isTrustedTracksServer($uri) ||
+                                  ($tracks_server_enabled && $tracks_server_url &&
+                                   ($uri === $tracks_server_url || strpos($uri, $tracks_server_url . '/') === 0));
+
+                    if ($is_trusted) {
+                        // Trusted server → route through tracks.php if URL contains /data/tracks/
+                        $tracks_marker = '/data/tracks/';
+                        $marker_pos = strpos($uri, $tracks_marker);
+                        if ($marker_pos !== false) {
+                            $remote_base = substr($uri, 0, $marker_pos);
+                            $file_path   = substr($uri, $marker_pos + strlen($tracks_marker));
+                            if (($q = strpos($file_path, '?')) !== false) {
+                                $file_path = substr($file_path, 0, $q);
+                            }
+                            $value['uri'] = $remote_base . '/api/jbrowse2/tracks.php?file=' . urlencode($file_path) . '&token=' . urlencode($token);
+                        } else {
+                            $separator = strpos($uri, '?') !== false ? '&' : '?';
+                            $value['uri'] .= $separator . 'token=' . urlencode($token);
+                        }
                     } else {
                         // External server → No token + validate
                         if ($warn_on_external_private && $track_access_level !== 'PUBLIC') {
@@ -470,10 +488,14 @@ function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC')
                         continue;
                     }
                 } else {
-                    // Internal paths → Add token (use site variable from config)
+                    // Internal paths → Add token, redirect through remote tracks server if enabled
                     if (preg_match("#^/{$site}/data/tracks/(.+)$#", $uri, $matches)) {
                         $file_path = $matches[1];
-                        $value['uri'] = "/{$site}/api/jbrowse2/tracks.php?file=" . urlencode($file_path);
+                        if ($tracks_server_enabled && $tracks_server_url) {
+                            $value['uri'] = $tracks_server_url . '/api/jbrowse2/tracks.php?file=' . urlencode($file_path);
+                        } else {
+                            $value['uri'] = "/{$site}/api/jbrowse2/tracks.php?file=" . urlencode($file_path);
+                        }
                         $value['uri'] .= '&token=' . urlencode($token);
                     } elseif (preg_match("#^/{$site}/#", $uri)) {
                         $separator = strpos($uri, '?') !== false ? '&' : '?';

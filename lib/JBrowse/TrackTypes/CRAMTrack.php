@@ -42,13 +42,14 @@ class CramTrack extends BaseTrack implements TrackTypeInterface
         }
         
         $filePath = $trackData['TRACK_PATH'];
-        
-        // Check file exists
-        if (!file_exists($filePath)) {
+        $isRemote = (bool) preg_match('/^https?:\/\//i', $filePath);
+
+        // Check file exists (local only — remote URLs can't be stat'd)
+        if (!$isRemote && !file_exists($filePath)) {
             $errors[] = "CRAM file not found: $filePath";
             return ['valid' => false, 'errors' => $errors];
         }
-        
+
         // Check extension
         $validExtensions = $this->getValidExtensions();
         $hasValidExt = false;
@@ -61,17 +62,17 @@ class CramTrack extends BaseTrack implements TrackTypeInterface
         if (!$hasValidExt) {
             $errors[] = "Invalid file extension. Expected: " . implode(', ', $validExtensions);
         }
-        
-        // Check for CRAI index
-        if ($this->requiresIndex()) {
+
+        // Check for CRAI index (local only — remote index is assumed to exist at {url}.crai)
+        if (!$isRemote && $this->requiresIndex()) {
             $craiPath = $this->findCraiIndex($filePath);
             if (!$craiPath) {
                 $errors[] = "CRAI index not found. Create with: samtools index $filePath";
             }
         }
-        
-        // Validate CRAM file with samtools if available
-        if (empty($errors) && $this->isSamtoolsAvailable()) {
+
+        // Validate CRAM file with samtools (local only)
+        if (!$isRemote && empty($errors) && $this->isSamtoolsAvailable()) {
             $output = [];
             $returnCode = 0;
             exec("samtools quickcheck " . escapeshellarg($filePath) . " 2>&1", $output, $returnCode);
@@ -218,20 +219,18 @@ class CramTrack extends BaseTrack implements TrackTypeInterface
             : 'Public';
         $skipStats = $options['skip_stats'] ?? false;
         
-        // Find CRAI index
-        $craiPath = $this->findCraiIndex($filePath);
-        if (!$craiPath) {
-            throw new Exception("CRAI index not found for $filePath");
-        }
-        
         // Determine if remote or local
-        $isRemote = preg_match('/^https?:\/\//i', $filePath);
-        
+        $isRemote = (bool) preg_match('/^https?:\/\//i', $filePath);
+
         // Get URIs for web access
         if ($isRemote) {
             $cramUri = $filePath;
             $craiUri = $filePath . '.crai';
         } else {
+            $craiPath = $this->findCraiIndex($filePath);
+            if (!$craiPath) {
+                throw new Exception("CRAI index not found for $filePath");
+            }
             $cramUri = $this->pathResolver->toWebUri($filePath);
             $craiUri = $this->pathResolver->toWebUri($craiPath);
         }
@@ -272,7 +271,7 @@ class CramTrack extends BaseTrack implements TrackTypeInterface
                 'description' => $description,
                 'access_level' => $accessLevel,
                 'file_path' => $filePath,
-                'file_size' => filesize($filePath),
+                'file_size' => $isRemote ? 0 : filesize($filePath),
                 'total_reads' => $stats['total_reads'],
                 'mapped_reads' => $stats['mapped_reads'],
                 'is_remote' => $isRemote,

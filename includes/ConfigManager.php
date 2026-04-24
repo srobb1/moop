@@ -64,7 +64,7 @@ class ConfigManager
      * Editable configuration keys - whitelisted keys that can be edited via admin UI
      * Used in both initialize() and saveEditableConfig() to ensure consistency
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'tracks_server', 'jbrowse2'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -119,13 +119,12 @@ class ConfigManager
                     // Only override if value is set AND non-empty (preserve site_config defaults for empty values)
                     if (isset($editable_config[$key]) && ($editable_config[$key] !== '' && $editable_config[$key] !== null)) {
                         // Special handling for nested arrays - deep merge to preserve defaults
-                        if ($key === 'sequence_types' && is_array($editable_config[$key]) && is_array($this->config[$key] ?? [])) {
-                            foreach ($editable_config[$key] as $seq_type => $seq_config) {
-                                // Merge with defaults for this sequence type
-                                if (isset($this->config[$key][$seq_type])) {
-                                    $this->config[$key][$seq_type] = array_merge($this->config[$key][$seq_type], $seq_config);
+                        if (in_array($key, ['sequence_types', 'jbrowse2']) && is_array($editable_config[$key]) && is_array($this->config[$key] ?? [])) {
+                            foreach ($editable_config[$key] as $sub_key => $sub_value) {
+                                if ($key === 'sequence_types' && isset($this->config[$key][$sub_key])) {
+                                    $this->config[$key][$sub_key] = array_merge($this->config[$key][$sub_key], $sub_value);
                                 } else {
-                                    $this->config[$key][$seq_type] = $seq_config;
+                                    $this->config[$key][$sub_key] = $sub_value;
                                 }
                             }
                         } else {

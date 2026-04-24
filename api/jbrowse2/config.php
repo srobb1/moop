@@ -406,15 +406,19 @@ function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC')
 
                     if ($is_trusted) {
                         // CASE 1: Trusted external server → ALWAYS add token and route through tracks.php
-                        // If this is a data/tracks/ URL on the remote server, rewrite to tracks.php endpoint
-                        if ($tracks_server_url && strpos($uri, $tracks_server_url . '/data/tracks/') === 0) {
-                            $file_path = substr($uri, strlen($tracks_server_url . '/data/tracks/'));
-                            // Strip any existing query string
+                        // If the URL contains /data/tracks/, extract the base and rewrite to tracks.php.
+                        // This works even if tracks_server.url is not configured — the base is derived
+                        // from the URL itself (e.g. https://tracks.example.com/moop/data/tracks/org/asm/f.bw
+                        // becomes https://tracks.example.com/moop/api/jbrowse2/tracks.php?file=org/asm/f.bw).
+                        $tracks_marker = '/data/tracks/';
+                        $marker_pos = strpos($uri, $tracks_marker);
+                        if ($marker_pos !== false) {
+                            $remote_base = substr($uri, 0, $marker_pos);
+                            $file_path   = substr($uri, $marker_pos + strlen($tracks_marker));
                             if (($q = strpos($file_path, '?')) !== false) {
                                 $file_path = substr($file_path, 0, $q);
                             }
-                            $value['uri'] = $tracks_server_url . '/api/jbrowse2/tracks.php?file=' . urlencode($file_path);
-                            $value['uri'] .= '&token=' . urlencode($token);
+                            $value['uri'] = $remote_base . '/api/jbrowse2/tracks.php?file=' . urlencode($file_path) . '&token=' . urlencode($token);
                         } else {
                             $separator = strpos($uri, '?') !== false ? '&' : '?';
                             $value['uri'] .= $separator . 'token=' . urlencode($token);
