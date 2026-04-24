@@ -44,6 +44,11 @@ class GTFTrack extends BaseTrack implements TrackTypeInterface
         
         $filePath = $trackData['TRACK_PATH'];
         
+        // Remote URLs cannot be validated with file_exists — skip local checks
+        if (preg_match('/^https?:\/\//i', $filePath)) {
+            return ['valid' => true, 'errors' => []];
+        }
+        
         // Check file exists
         if (!file_exists($filePath)) {
             $errors[] = "GTF file not found: $filePath";
@@ -120,7 +125,7 @@ class GTFTrack extends BaseTrack implements TrackTypeInterface
      */
     public function requiresIndex()
     {
-        return true;
+        return false;
     }
     
     /**
@@ -176,19 +181,12 @@ class GTFTrack extends BaseTrack implements TrackTypeInterface
             ? $options['access_level']
             : 'Public';
         
-        $tbiPath = $this->findTbiIndex($filePath);
-        if (!$tbiPath) {
-            throw new Exception("TBI index not found for $filePath");
-        }
-        
-        $isRemote = preg_match('/^https?:\/\//i', $filePath);
+        $isRemote = (bool) preg_match('/^https?:\/\//i', $filePath);
         
         if ($isRemote) {
             $gtfUri = $filePath;
-            $tbiUri = $filePath . '.tbi';
         } else {
             $gtfUri = $this->pathResolver->toWebUri($filePath);
-            $tbiUri = $this->pathResolver->toWebUri($tbiPath);
         }
         
         $metadata = [

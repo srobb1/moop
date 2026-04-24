@@ -18,7 +18,8 @@ Code to build a genome db that can work with multiple organisms
 **Required:**
 - **PHP** 7.4+ with extensions: `posix`, `json`, `sqlite3`, `openssl`, `curl`
 - **Web Server**: Apache (with `mod_rewrite` and `mod_headers`) or Nginx
-- **Node.js** 16+ and npm (for JBrowse2 upgrades)
+- **Node.js** 18+ and npm (for JBrowse CLI / text-index feature)
+- **samtools** + **bgzip** + **tabix** (htslib) — for genome and GFF indexing
 - **Disk Space**: Minimum 50GB for organism data (scales with number of organisms)
 - **Operating System**: Linux/Unix (for POSIX functions)
 
@@ -104,12 +105,36 @@ sudo apt-get install -y nodejs
 curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
 sudo dnf install -y nodejs
 
-# Verify
-node --version    # Should be 16+
+# Without root — use nvm (works for any user, Node 20+):
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+source ~/.nvm/nvm.sh
+nvm install 20 && nvm use 20
+
+# Verify — must be 18+ for @jbrowse/cli
+node --version    # Should be v18+ (v20 recommended)
 npm --version
 ```
 
-Node.js is not needed to run MOOP day-to-day — it's only used to upgrade JBrowse2 (see [Upgrading JBrowse2](#upgrading-jbrowse2) below).
+Node.js **v18 or newer** is required by `@jbrowse/cli`. Node.js is used to:
+- Run **`jbrowse text-index`** for feature name search in the admin UI
+- Upgrade JBrowse2 (see [Upgrading JBrowse2](#upgrading-jbrowse2) below)
+
+Install the JBrowse CLI to the project-local directory so the web server can find it:
+```bash
+# From the MOOP root:
+mkdir -p tools/jbrowse-cli
+npm install -g @jbrowse/cli --prefix tools/jbrowse-cli
+
+# Create a wrapper so the correct Node version is always used:
+cat > tools/jbrowse-cli/jbrowse-run.sh << 'EOF'
+#!/bin/bash
+exec "$(which node)" tools/jbrowse-cli/lib/node_modules/@jbrowse/cli/dist/bin.js "$@"
+EOF
+chmod 755 tools/jbrowse-cli/jbrowse-run.sh
+tools/jbrowse-cli/jbrowse-run.sh --version   # verify
+```
+
+The admin UI (Admin → JBrowse → Track Listing) will automatically use this installation.
 
 **6. Install BLAST+ suite:**
 ```bash

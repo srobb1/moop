@@ -44,6 +44,11 @@ class BEDTrack extends BaseTrack implements TrackTypeInterface
         
         $filePath = $trackData['TRACK_PATH'];
         
+        // Remote URLs cannot be validated with file_exists — skip local checks
+        if (preg_match('/^https?:\/\//i', $filePath)) {
+            return ['valid' => true, 'errors' => []];
+        }
+        
         // Check file exists
         if (!file_exists($filePath)) {
             $errors[] = "BED file not found: $filePath";
@@ -216,26 +221,22 @@ class BEDTrack extends BaseTrack implements TrackTypeInterface
             : 'Public';
         $skipStats = $options['skip_stats'] ?? false;
         
-        // Find TBI index
-        $tbiPath = $this->findTbiIndex($filePath);
-        if (!$tbiPath) {
-            throw new Exception("TBI index not found for $filePath");
-        }
+        $isRemote = (bool) preg_match('/^https?:\/\//i', $filePath);
         
-        // Determine if remote or local
-        $isRemote = preg_match('/^https?:\/\//i', $filePath);
-        
-        // Get URIs for web access
         if ($isRemote) {
             $bedUri = $filePath;
             $tbiUri = $filePath . '.tbi';
         } else {
+            $tbiPath = $this->findTbiIndex($filePath);
+            if (!$tbiPath) {
+                throw new Exception("TBI index not found for $filePath");
+            }
             $bedUri = $this->pathResolver->toWebUri($filePath);
             $tbiUri = $this->pathResolver->toWebUri($tbiPath);
         }
         
-        // Get BED statistics
-        $stats = $this->getBedStats($filePath, $skipStats);
+        // Get BED statistics (local only)
+        $stats = $isRemote ? ['feature_count' => 'remote'] : $this->getBedStats($filePath, $skipStats);
         
         // Build metadata structure
         $metadata = [
@@ -269,7 +270,7 @@ class BEDTrack extends BaseTrack implements TrackTypeInterface
                 'description' => $description,
                 'access_level' => $accessLevel,
                 'file_path' => $filePath,
-                'file_size' => filesize($filePath),
+                'file_size' => $isRemote ? 'remote' : filesize($filePath),
                 'feature_count' => $stats['feature_count'],
                 'is_remote' => $isRemote,
                 'added_date' => gmdate('Y-m-d\TH:i:s\Z')

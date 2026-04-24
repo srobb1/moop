@@ -24,11 +24,12 @@ function resetForm() {
   document.getElementById('submit-text').textContent = 'Create User';
   document.getElementById('password_label').innerHTML = 'Password <span class="text-danger">*</span>';
   document.getElementById('password_help').style.display = 'none';
+  document.getElementById('confirm-required').style.display = '';
+  document.getElementById('password-match-msg').style.display = 'none';
   document.getElementById('stale-alert').style.display = 'none';
   document.getElementById('stale-items').innerHTML = '';
   isEditMode = false;
   selectedAccess = {};
-  // Don't call renderAssemblySelector here - it will be called after DOM is ready
 }
 
 function renderAssemblySelector() {
@@ -204,13 +205,16 @@ function populateForm(username) {
   document.getElementById('first_name').value = userData.first_name || '';
   document.getElementById('last_name').value = userData.last_name || '';
   document.getElementById('account_host').value = userData.account_host || '';
-  document.getElementById('password').value = '';
-  
+  document.getElementById('new_password').value = '';
+  document.getElementById('new_password_confirm').value = '';
+
   // Update labels
   document.getElementById('form-title').textContent = `Edit User: ${username}`;
   document.getElementById('submit-text').textContent = 'Update User';
-  document.getElementById('password_label').innerHTML = 'New Password (leave blank to keep current)';
+  document.getElementById('password_label').innerHTML = 'New Password';
   document.getElementById('password_help').style.display = 'block';
+  document.getElementById('confirm-required').style.display = 'none';
+  document.getElementById('password-match-msg').style.display = 'none';
   
   // Admin status
   const isAdmin = userData.role === 'admin';
@@ -324,15 +328,29 @@ function toggleAccessSection() {
 
 function validateForm() {
   const isAdmin = document.getElementById('isAdmin').checked;
-  const hasAssemblies = Object.keys(selectedAccess).some(org => 
+  const hasAssemblies = Object.keys(selectedAccess).some(org =>
     selectedAccess[org] && selectedAccess[org].length > 0
   );
-  
+  const pw  = document.getElementById('new_password').value;
+  const pw2 = document.getElementById('new_password_confirm').value;
+
+  if (!isEditMode && !pw) {
+    alert('Password is required for new users.');
+    document.getElementById('new_password').focus();
+    return false;
+  }
+
+  if (pw && pw !== pw2) {
+    alert('Passwords do not match.');
+    document.getElementById('new_password_confirm').focus();
+    return false;
+  }
+
   if (!isAdmin && !hasAssemblies) {
     alert('Please select at least one assembly (or check Admin for full access)');
     return false;
   }
-  
+
   return true;
 }
 
@@ -371,9 +389,11 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.addEventListener('click', function() {
       const username = this.getAttribute('data-username');
       if (confirm(`Delete user "${username}"? This cannot be undone.`)) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const form = document.createElement('form');
         form.method = 'POST';
         form.innerHTML = `
+          <input type="hidden" name="csrf_token" value="${csrfToken}">
           <input type="hidden" name="delete_user" value="1">
           <input type="hidden" name="username" value="${username}">
         `;
@@ -382,6 +402,26 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
+
+  // Real-time password match feedback
+  function checkPasswordMatch() {
+    const pw  = document.getElementById('new_password').value;
+    const pw2 = document.getElementById('new_password_confirm').value;
+    const msg = document.getElementById('password-match-msg');
+    if (!pw && !pw2) { msg.style.display = 'none'; return; }
+    if (!pw2) { msg.style.display = 'none'; return; }
+    if (pw === pw2) {
+      msg.textContent = '✓ Passwords match';
+      msg.style.display = '';
+      msg.style.color = '#198754';
+    } else {
+      msg.textContent = '✗ Passwords do not match';
+      msg.style.display = '';
+      msg.style.color = '#dc3545';
+    }
+  }
+  document.getElementById('new_password').addEventListener('input', checkPasswordMatch);
+  document.getElementById('new_password_confirm').addEventListener('input', checkPasswordMatch);
   
   // Form filter
   const filterInput = document.getElementById('organism-filter');

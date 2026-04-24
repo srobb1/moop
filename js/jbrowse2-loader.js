@@ -322,14 +322,16 @@
      */
     function init() {
         console.log('Initializing JBrowse2 loader');
-        
-        // Check if an assembly is specified in the URL
+
         const params = new URLSearchParams(window.location.search);
-        const assemblyName = params.get('assembly');
-        
-        if (assemblyName) {
-            console.log('Loading specific assembly:', assemblyName);
-            loadSpecificAssembly(assemblyName);
+        const organism = params.get('organism');
+        const assembly = params.get('assembly');
+
+        if (organism && assembly) {
+            // Deep-link from parent/assembly page: open viewer directly
+            const assemblyName = organism + '_' + assembly;
+            console.log('Deep-linking to assembly:', assemblyName);
+            openAssembly({ name: assemblyName, displayName: assembly });
         } else {
             console.log('Loading assembly list');
             loadAssemblies();

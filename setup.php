@@ -221,15 +221,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dirFailed = false;
 
     $dirs = [
-        'logs'                => "$base/logs",
-        'data/genomes'        => rtrim($config['jbrowse2']['genomes_directory'] ?? "$base/data/genomes", '/'),
-        'data/tracks'         => rtrim($config['jbrowse2']['tracks_directory'] ?? "$base/data/tracks", '/'),
-        'images'              => "$base/images",
-        'metadata'            => rtrim($config['metadata_path'] ?? "$base/metadata", '/'),
-        'metadata/change_log' => rtrim(($config['metadata_path'] ?? "$base/metadata") . '/change_log', '/'),
-        'config'              => "$base/config",
-        'certs'               => rtrim($config['jbrowse2']['certs_directory'] ?? "$base/certs", '/'),
-        'organisms'           => rtrim($config['organism_data'] ?? "$base/organisms", '/'),
+        'logs'                      => "$base/logs",
+        'data/genomes'              => rtrim($config['jbrowse2']['genomes_directory'] ?? "$base/data/genomes", '/'),
+        'data/tracks'               => rtrim($config['jbrowse2']['tracks_directory'] ?? "$base/data/tracks", '/'),
+        'images'                    => "$base/images",
+        'metadata'                  => rtrim($config['metadata_path'] ?? "$base/metadata", '/'),
+        'metadata/change_log'       => rtrim(($config['metadata_path'] ?? "$base/metadata") . '/change_log', '/'),
+        'metadata/jbrowse2-configs' => rtrim(($config['metadata_path'] ?? "$base/metadata") . '/jbrowse2-configs', '/'),
+        'config'                    => "$base/config",
+        'certs'                     => rtrim($config['jbrowse2']['certs_directory'] ?? "$base/certs", '/'),
+        'organisms'                 => rtrim($config['organism_data'] ?? "$base/organisms", '/'),
+        'jbrowse2/trix (legacy)'    => "$base/jbrowse2/trix",
     ];
 
     foreach ($dirs as $label => $path) {

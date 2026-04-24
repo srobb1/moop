@@ -84,20 +84,10 @@ class PathResolver
         $sitePath = $this->config->getPath('site_path');
         $site = $this->config->getString('site');
         
-        // Determine if we should use remote tracks server
-        $useRemoteServer = !$isReferenceGenome && 
-                          !empty($this->tracksServerConfig['enabled']) &&
-                          !empty($this->tracksServerConfig['url']);
-        
-        if ($useRemoteServer) {
-            // Remote tracks server
-            // Extract the path relative to site_path
-            $relativePath = str_replace($sitePath, '', $filesystemPath);
-            
-            // Build remote URL
-            $remoteUrl = rtrim($this->tracksServerConfig['url'], '/');
-            return $remoteUrl . $relativePath;
-            
+        // Local filesystem paths always serve locally — if you want remote serving,
+        // register the file with its remote https:// URL directly in the sheet.
+        if (false) {
+            // (remote routing block disabled — kept for reference)
         } else {
             // Local server
             // Extract the path after the site directory name

@@ -53,8 +53,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
     elseif (isset($_POST['create_or_update_user'])) {
         $username = trim($_POST['username'] ?? '');
-        $password = $_POST['password'] ?? '';
-        $new_password = $_POST['new_password'] ?? '';
+        $new_password = trim($_POST['new_password'] ?? '');
+        $new_password_confirm = trim($_POST['new_password_confirm'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $first_name = trim($_POST['first_name'] ?? '');
         $last_name = trim($_POST['last_name'] ?? '');
@@ -82,11 +82,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             if ($is_create) {
                 // Create new user
-                if (empty($password)) {
+                if (empty($new_password)) {
                     $message = "Password is required for new users.";
                     $messageType = "danger";
+                } elseif ($new_password !== $new_password_confirm) {
+                    $message = "Passwords do not match.";
+                    $messageType = "danger";
                 } else {
-                    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                    $hashedPassword = password_hash($new_password, PASSWORD_DEFAULT);
                     $users[$username] = [
                         'password' => $hashedPassword,
                         'email' => $email,
@@ -108,24 +111,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             } else {
                 // Update existing user
                 if (isset($users[$original_username])) {
-                    $users[$original_username]['email'] = $email;
-                    $users[$original_username]['first_name'] = $first_name;
-                    $users[$original_username]['last_name'] = $last_name;
-                    $users[$original_username]['account_host'] = $account_host;
-                    $users[$original_username]['access'] = $access;
-                    $users[$original_username]['role'] = $is_admin ? 'admin' : 'user';
-
-                    // Update password only if provided
-                    if (!empty($new_password)) {
-                        $users[$original_username]['password'] = password_hash($new_password, PASSWORD_DEFAULT);
-                    }
-
-                    if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
-                        $message = "User $original_username updated successfully!";
-                        $messageType = "success";
-                    } else {
-                        $message = "Error saving user changes. Check file permissions.";
+                    // Validate new password if provided
+                    if (!empty($new_password) && $new_password !== $new_password_confirm) {
+                        $message = "Passwords do not match.";
                         $messageType = "danger";
+                    } else {
+                        $users[$original_username]['email'] = $email;
+                        $users[$original_username]['first_name'] = $first_name;
+                        $users[$original_username]['last_name'] = $last_name;
+                        $users[$original_username]['account_host'] = $account_host;
+                        $users[$original_username]['access'] = $access;
+                        $users[$original_username]['role'] = $is_admin ? 'admin' : 'user';
+
+                        if (!empty($new_password)) {
+                            $users[$original_username]['password'] = password_hash($new_password, PASSWORD_DEFAULT);
+                        }
+
+                        if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
+                            $message = "User $original_username updated successfully!";
+                            $messageType = "success";
+                        } else {
+                            $message = "Error saving user changes. Check file permissions.";
+                            $messageType = "danger";
+                        }
                     }
                 }
             }
@@ -227,21 +235,10 @@ $data = [
     ],
     'page_script' => [
         '/' . $site . '/js/admin-utilities.js',
-        '/' . $site . '/js/modules/manage-users.js'
     ],
     'inline_scripts' => [
         "const allOrganisms = " . json_encode($organisms) . ";",
-        "const allUsers = " . json_encode($users) . ";",
-        "const colors = ['#007bff', '#28a745', '#17a2b8', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#20c997', '#e83e8c', '#6610f2'];",
-        "const organismColorMap = {};",
-        "let nextColorIndex = 0;",
-        "function getColorForOrganism(organism) {",
-        "  if (!organismColorMap[organism]) {",
-        "    organismColorMap[organism] = colors[nextColorIndex % colors.length];",
-        "    nextColorIndex++;",
-        "  }",
-        "  return organismColorMap[organism];",
-        "}"
+        "const allUsers = " . json_encode(array_map(function($u) { unset($u['password']); return $u; }, $users)) . ";",
     ]
 ];
 

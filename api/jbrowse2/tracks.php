@@ -130,8 +130,8 @@ if (!empty($range_header)) {
     // Parse range header: "bytes=0-1000"
     if (preg_match('/bytes=(\d+)-(\d*)/', $range_header, $matches)) {
         $start = (int)$matches[1];
-        $end = !empty($matches[2]) ? (int)$matches[2] : $file_size - 1;
-        
+        $end = !empty($matches[2]) ? min((int)$matches[2], $file_size - 1) : $file_size - 1;
+
         // Validate range
         if ($start > $end || $start >= $file_size) {
             http_response_code(416); // Range Not Satisfiable

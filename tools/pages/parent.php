@@ -71,14 +71,30 @@
 
       <!-- Tools Column -->
       <div class="col-lg-4">
-        <?php 
+        <?php
         $context = createToolContext('parent', [
             'organism' => $organism_name,
             'assembly' => $genome_accession,
             'display_name' => $feature_uniquename
         ]);
         include_once TOOL_SECTION_PATH;
+
+        $jbrowse_assembly_file = $config->getPath('metadata_path')
+            . '/jbrowse2-configs/assemblies/'
+            . $organism_name . '_' . $genome_accession . '.json';
+        if (file_exists($jbrowse_assembly_file)):
+            $jbrowse_url = '/' . $site . '/jbrowse2.php'
+                . '?organism=' . urlencode($organism_name)
+                . '&assembly=' . urlencode($genome_accession);
         ?>
+        <div class="mt-2">
+            <a href="<?= htmlspecialchars($jbrowse_url) ?>" target="_blank"
+               class="btn btn-primary btn-sm w-100"
+               title="View this assembly in the genome browser">
+                <i class="fas fa-dna"></i> Genome Browser
+            </a>
+        </div>
+        <?php endif; ?>
       </div>
     </div>
 

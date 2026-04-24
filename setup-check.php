@@ -313,15 +313,18 @@ foreach ($example_files as $target) {
 section("Directory Structure & Permissions");
 
 $writable_dirs = [
-    'logs'              => "$base/logs",
-    'data/genomes'      => $config['jbrowse2']['genomes_directory'] ?? "$base/data/genomes",
-    'data/tracks'       => $config['jbrowse2']['tracks_directory'] ?? "$base/data/tracks",
-    'images'            => "$base/images",
-    'metadata'          => $config['metadata_path'] ?? "$base/metadata",
-    'metadata/change_log' => ($config['metadata_path'] ?? "$base/metadata") . '/change_log',
-    'config'            => "$base/config",
-    'certs'             => $config['jbrowse2']['certs_directory'] ?? "$base/certs",
-    'organisms'         => $config['organism_data'] ?? "$base/organisms",
+    'logs'                      => "$base/logs",
+    'data/genomes'              => $config['jbrowse2']['genomes_directory'] ?? "$base/data/genomes",
+    'data/tracks'               => $config['jbrowse2']['tracks_directory'] ?? "$base/data/tracks",
+    'images'                    => "$base/images",
+    'metadata'                  => $config['metadata_path'] ?? "$base/metadata",
+    'metadata/change_log'       => ($config['metadata_path'] ?? "$base/metadata") . '/change_log',
+    'metadata/jbrowse2-configs' => ($config['metadata_path'] ?? "$base/metadata") . '/jbrowse2-configs',
+    'config'                    => "$base/config",
+    'certs'                     => $config['jbrowse2']['certs_directory'] ?? "$base/certs",
+    'organisms'                 => $config['organism_data'] ?? "$base/organisms",
+    'jbrowse2/trix (legacy)'    => "$base/jbrowse2/trix",
+    'jbrowse2 (app dir)'        => "$base/jbrowse2",
 ];
 
 // Normalize trailing slashes from config values

@@ -114,12 +114,32 @@ if (file_exists($source_gff)) {
     }
 
     if (!file_exists($gz_file)) {
-        $cmd = 'bgzip -c ' . escapeshellarg($target_gff) . ' > ' . escapeshellarg($gz_file) . ' 2>&1';
-        exec($cmd, $out, $rc);
+        // Sort before compressing — tabix requires sorted positions.
+        // POSIX sort (original approach). Fallback to jbrowse sort-gff if needed.
+        $rc = 1; $out = [];
+        $sort_cmd = '(grep "^#" ' . escapeshellarg($target_gff)
+                  . '; grep -v "^#" ' . escapeshellarg($target_gff)
+                  . ' | sort -t"$(printf \'\\t\')" -k1,1 -k4,4n) | bgzip > ' . escapeshellarg($gz_file);
+        exec('/bin/bash -c ' . escapeshellarg($sort_cmd), $out, $rc);
         if ($rc !== 0 || !file_exists($gz_file)) {
-            $log[] = 'Warning: bgzip failed — annotations will not be available: ' . implode(' ', $out);
+            $jb_candidates = [
+                __DIR__ . '/../../tools/jbrowse-cli/jbrowse-run.sh',
+                __DIR__ . '/../../tools/jbrowse-cli/bin/jbrowse',
+                '/usr/local/bin/jbrowse', '/usr/bin/jbrowse',
+            ];
+            foreach ($jb_candidates as $p) {
+                if ($p && is_executable($p)) {
+                    $sort_cmd = escapeshellarg($p) . ' sort-gff ' . escapeshellarg($target_gff)
+                              . ' | bgzip > ' . escapeshellarg($gz_file);
+                    exec('/bin/bash -c ' . escapeshellarg($sort_cmd), $out, $rc);
+                    if ($rc === 0) break;
+                }
+            }
+        }
+        if ($rc !== 0 || !file_exists($gz_file)) {
+            $log[] = 'Warning: sort+bgzip failed — annotations will not be available: ' . implode(' ', $out);
         } else {
-            $log[] = 'Compressed GFF (bgzip)';
+            $log[] = 'Sorted and compressed GFF (bgzip)';
         }
     } else {
         $log[] = 'Compressed GFF already exists';

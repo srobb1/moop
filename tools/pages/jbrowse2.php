@@ -6,7 +6,7 @@
 </div>
 
 <div class="row mt-4">
-    <div class="col-md-9">
+    <div id="jbrowse-main-col" class="col-md-12">
         <!-- JBrowse2 Content Area -->
         <div id="jbrowse2-container" class="card">
             <div class="card-header">
@@ -44,7 +44,13 @@
         </div>
     </div>
 
-    <div class="col-md-3">
+    <div id="jbrowse-sidebar" class="col-md-3 collapsed">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small fw-semibold">Info Panels</span>
+            <button id="sidebar-collapse-btn" class="btn btn-sm btn-outline-secondary" title="Collapse sidebar">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
         <!-- Info Panel -->
         <div class="card mb-4">
             <div class="card-header">
@@ -88,6 +94,11 @@
         </div>
     </div>
 </div>
+
+<!-- Sidebar expand tab (visible when sidebar is collapsed) -->
+<button id="sidebar-expand-btn" title="Show info panels">
+    <i class="fas fa-chevron-left"></i><span>Info</span>
+</button>
 
 <style>
     #jbrowse2-container {
@@ -176,6 +187,48 @@
         height: 80px;
         margin-bottom: 1rem;
         opacity: 0.5;
+    }
+
+    /* Sidebar collapse */
+    #jbrowse-sidebar.collapsed {
+        display: none !important;
+    }
+
+    /* Expand side-tab */
+    #sidebar-expand-btn {
+        position: fixed;
+        top: 50%;
+        right: 0;
+        transform: translateY(-50%);
+        z-index: 1050;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 6px;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-right: none;
+        border-radius: 6px 0 0 6px;
+        box-shadow: -2px 2px 6px rgba(0,0,0,0.12);
+        color: #495057;
+        cursor: pointer;
+        font-size: 0.75rem;
+        line-height: 1;
+    }
+    #sidebar-expand-btn:hover {
+        background: #f8f9fa;
+        color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    #sidebar-expand-btn span {
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        letter-spacing: 0.05em;
+        font-weight: 500;
+    }
+    #sidebar-expand-btn.hidden {
+        display: none !important;
     }
 </style>
 
@@ -266,6 +319,29 @@
                 exitFullscreen();
             }
         });
+
+        // Sidebar collapse/expand — always starts closed
+        const sidebar     = document.getElementById('jbrowse-sidebar');
+        const mainCol     = document.getElementById('jbrowse-main-col');
+        const collapseBtn = document.getElementById('sidebar-collapse-btn');
+        const expandBtn   = document.getElementById('sidebar-expand-btn');
+
+        function collapseSidebar() {
+            sidebar.classList.add('collapsed');
+            mainCol.classList.remove('col-md-9');
+            mainCol.classList.add('col-md-12');
+            expandBtn.classList.remove('hidden');
+        }
+
+        function expandSidebar() {
+            sidebar.classList.remove('collapsed');
+            mainCol.classList.remove('col-md-12');
+            mainCol.classList.add('col-md-9');
+            expandBtn.classList.add('hidden');
+        }
+
+        collapseBtn.addEventListener('click', collapseSidebar);
+        expandBtn.addEventListener('click', expandSidebar);
         
         // Open in new window functionality
         const openNewWindowBtn = document.getElementById('open-new-window');

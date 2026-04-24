@@ -98,3 +98,21 @@ Thumbs.db
 /jbrowse2/node_modules/
 /jbrowse2/dist/
 /jbrowse2/.env
+
+# ── JBrowse2 per-organism trix index output (generated at runtime) ──
+# jbrowse text-index writes trix files to jbrowse2/{organism}/{assembly}/trix/
+# The top-level trix/ dir is also generated.  The JBrowse2 app files
+# (index.html, static/, etc.) are tracked above and are unaffected.
+/jbrowse2/trix/
+/jbrowse2/[A-Z]*/
+
+# ── JBrowse CLI local install (project-local npm install, not in repo) ──
+/tools/jbrowse-cli/
+
+# ── Third-party tool archives and installations ──────────────
+ncbi-blast-*
+samtools-*
+
+# ── Site-specific data directories ──────────────────────────
+organisms_missing_data/
+/moop/

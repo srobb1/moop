@@ -261,6 +261,172 @@ function viewTrack(trackId, organism, assembly) {
     alert(`View track details:\nTrack: ${trackId}\nOrganism: ${organism}\nAssembly: ${assembly}\n\n[Feature coming soon]`);
 }
 
+// State for the shared GFF action modal
+let _gffActionState = null;
+
+/**
+ * Open the shared modal to rebuild bgzip + tabix (+ optional text-index)
+ * for a local GFF track.
+ */
+function rebuildGff(organism, assembly, buttonEl) {
+    _openGffModal({
+        title:       `Rebuild GFF — ${organism} / ${assembly}`,
+        desc:        'Re-runs bgzip and tabix on the source genomic.gff. ' +
+                     'Leave the attributes field blank to skip text-indexing.',
+        btnLabel:    'Rebuild',
+        btnClass:    'btn btn-warning',
+        showAttrs:   true,
+        triggerEl:   buttonEl,
+        buildRequest: (attrs) => {
+            const fd = new FormData();
+            fd.append('organism', organism);
+            fd.append('assembly', assembly);
+            if (attrs) {
+                fd.append('text_index', '1');
+                fd.append('attributes', attrs);
+            }
+            return { url: `/${siteUrl}/api/jbrowse2/admin_reprep_gff.php`, formData: fd };
+        },
+        formatResult: (data) => {
+            let log = data.output || '';
+            if (data.text_index_result) {
+                if (data.text_index_result.success) {
+                    log += '\n\n✓ Text search index built.';
+                } else if (data.text_index_result.no_cli) {
+                    log += '\n\n⚠ Text index skipped: jbrowse CLI not installed.';
+                } else {
+                    log += '\n\n⚠ Text index: ' + data.text_index_result.error;
+                }
+            }
+            return log;
+        },
+    });
+}
+
+/**
+ * Open the shared modal to build (or rebuild) a jbrowse text-index
+ * for a local GFF or BED track.
+ */
+function indexTrackNames(trackId, organism, assembly, buttonEl) {
+    _openGffModal({
+        title:       `Index Feature Names — ${trackId}`,
+        desc:        'Builds a text search index so users can search by feature name, gene ID, etc. in JBrowse.',
+        btnLabel:    'Build Index',
+        btnClass:    'btn btn-primary',
+        showAttrs:   true,
+        requireAttrs: true,
+        triggerEl:   buttonEl,
+        buildRequest: (attrs) => {
+            const fd = new FormData();
+            fd.append('track_id',   trackId);
+            fd.append('organism',   organism);
+            fd.append('assembly',   assembly);
+            fd.append('attributes', attrs);
+            return { url: `/${siteUrl}/api/jbrowse2/admin_text_index.php`, formData: fd };
+        },
+        formatResult: (data) => {
+            let log = `Attributes: ${data.attributes || ''}\n\n` + (data.output || '');
+            if (data.no_cli) {
+                log = 'jbrowse CLI not installed.\n\nInstall Node.js ≥18, then run:\n  npm install -g @jbrowse/cli';
+            }
+            return log;
+        },
+    });
+}
+
+/**
+ * Internal: configure and show the #gffActionModal.
+ * @param {object} opts
+ *   title, desc, btnLabel, btnClass, showAttrs, requireAttrs,
+ *   triggerEl, buildRequest(attrs), formatResult(data)
+ */
+function _openGffModal(opts) {
+    _gffActionState = opts;
+
+    document.getElementById('gffActionModalTitle').textContent = opts.title;
+    document.getElementById('gffActionModalDesc').textContent  = opts.desc;
+    document.getElementById('gffActionAttrsGroup').style.display = opts.showAttrs ? '' : 'none';
+    document.getElementById('gffActionAttrs').value = 'Name,ID';
+    document.getElementById('gffActionResult').style.display = 'none';
+    document.getElementById('gffActionLog').textContent = '';
+
+    const btn = document.getElementById('gffActionBtn');
+    btn.textContent = opts.btnLabel;
+    btn.className   = opts.btnClass;
+    btn.disabled    = false;
+
+    document.getElementById('gffActionCancelBtn').textContent = 'Cancel';
+
+    const modalEl = document.getElementById('gffActionModal');
+    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
+/**
+ * Called when the action button inside #gffActionModal is clicked.
+ * Wired up once in $(document).ready().
+ */
+function _gffActionSubmit() {
+    if (!_gffActionState) return;
+    const opts  = _gffActionState;
+    const attrs = document.getElementById('gffActionAttrs').value.trim();
+
+    if (opts.requireAttrs && !attrs) {
+        document.getElementById('gffActionAttrs').classList.add('is-invalid');
+        return;
+    }
+    document.getElementById('gffActionAttrs').classList.remove('is-invalid');
+
+    const { url, formData } = opts.buildRequest(attrs);
+
+    // Update UI to running state
+    const btn = document.getElementById('gffActionBtn');
+    btn.disabled  = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Running…';
+    document.getElementById('gffActionCancelBtn').textContent = 'Close';
+
+    const resultDiv = document.getElementById('gffActionResult');
+    const logPre    = document.getElementById('gffActionLog');
+    resultDiv.style.display = 'none';
+    logPre.textContent = '';
+
+    // Disable trigger button in the table row while running
+    if (opts.triggerEl) {
+        opts.triggerEl.disabled = true;
+        opts._origHtml = opts.triggerEl.innerHTML;
+        opts.triggerEl.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+    }
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    fetch(url, { method: 'POST', body: formData, headers: { 'X-CSRF-Token': csrfToken } })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                logPre.textContent = '✓ ' + opts.title + '\n\n' + opts.formatResult(data);
+                logPre.className   = 'bg-success bg-opacity-10 border border-success rounded p-3 small mb-0';
+            } else {
+                const errMsg = data.error || 'Unknown error';
+                const logLines = Array.isArray(data.log) ? data.log.join('\n') : (data.log || '');
+                logPre.textContent = '✗ Error: ' + errMsg + (logLines ? '\n\n' + logLines : '');
+                logPre.className   = 'bg-danger bg-opacity-10 border border-danger rounded p-3 small mb-0';
+            }
+            resultDiv.style.display = 'block';
+        })
+        .catch(err => {
+            logPre.textContent = '✗ Network error: ' + err.message;
+            logPre.className   = 'bg-danger bg-opacity-10 border border-danger rounded p-3 small mb-0';
+            resultDiv.style.display = 'block';
+        })
+        .finally(() => {
+            btn.disabled  = false;
+            btn.textContent = opts.btnLabel;
+            if (opts.triggerEl) {
+                opts.triggerEl.disabled = false;
+                opts.triggerEl.innerHTML = opts._origHtml;
+            }
+        });
+}
+
 /**
  * Delete single track
  */
@@ -510,6 +676,9 @@ $(document).ready(function() {
     if (typeof jbrowseOrganisms !== 'undefined' && typeof sitePath !== 'undefined') {
         initJBrowseAdmin(jbrowseOrganisms, sitePath);
     }
+
+    // Wire up the GFF action modal submit button (shared by Rebuild + Index Names)
+    document.getElementById('gffActionBtn')?.addEventListener('click', _gffActionSubmit);
 
     // Load tracks server config when the card is expanded
     document.getElementById('tracksServerConfig')?.addEventListener('shown.bs.collapse', loadTracksServerConfig);

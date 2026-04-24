@@ -44,6 +44,11 @@ class GFFTrack extends BaseTrack implements TrackTypeInterface
         
         $filePath = $trackData['TRACK_PATH'];
         
+        // Remote URLs cannot be validated with file_exists — skip local checks
+        if (preg_match('/^https?:\/\//i', $filePath)) {
+            return ['valid' => true, 'errors' => []];
+        }
+        
         // Check file exists
         if (!file_exists($filePath)) {
             $errors[] = "GFF file not found: $filePath";
@@ -176,17 +181,16 @@ class GFFTrack extends BaseTrack implements TrackTypeInterface
             ? $options['access_level']
             : 'Public';
         
-        $tbiPath = $this->findTbiIndex($filePath);
-        if (!$tbiPath) {
-            throw new Exception("TBI index not found for $filePath");
-        }
-        
-        $isRemote = preg_match('/^https?:\/\//i', $filePath);
+        $isRemote = (bool) preg_match('/^https?:\/\//i', $filePath);
         
         if ($isRemote) {
             $gffUri = $filePath;
             $tbiUri = $filePath . '.tbi';
         } else {
+            $tbiPath = $this->findTbiIndex($filePath);
+            if (!$tbiPath) {
+                throw new Exception("TBI index not found for $filePath");
+            }
             $gffUri = $this->pathResolver->toWebUri($filePath);
             $tbiUri = $this->pathResolver->toWebUri($tbiPath);
         }

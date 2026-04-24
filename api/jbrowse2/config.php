@@ -445,17 +445,12 @@ function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC')
                     }
 
                 } else {
-                    // CASE 3: MOOP internal paths → Route through tracks.php with token
-                    // Match paths like: /{site}/data/tracks/... or /data/tracks/...
+                    // CASE 3: MOOP internal paths → Route through local tracks.php with token
+                    // Local filesystem paths always stay local — remote files are registered
+                    // with their https:// URL directly and are handled by CASE 1.
                     if (preg_match("#^/{$site}/data/tracks/(.+)$#", $uri, $matches)) {
                         $file_path = $matches[1];
-                        // If remote tracks server is enabled, redirect through it instead
-                        if ($tracks_server_enabled && $tracks_server_url) {
-                            $value['uri'] = $tracks_server_url . '/api/jbrowse2/tracks.php?file=' . urlencode($file_path);
-                        } else {
-                            $value['uri'] = "/{$site}/api/jbrowse2/tracks.php?file=" . urlencode($file_path);
-                        }
-                        $value['uri'] .= '&token=' . urlencode($token);
+                        $value['uri'] = "/{$site}/api/jbrowse2/tracks.php?file=" . urlencode($file_path) . '&token=' . urlencode($token);
 
                     } elseif (preg_match("#^/{$site}/#", $uri)) {
                         // CASE 4: Other MOOP paths → Add token

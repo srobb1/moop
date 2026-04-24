@@ -312,11 +312,11 @@ class AutoTrack implements TrackTypeInterface
      */
     private function getReferencePath($organism, $assembly)
     {
-        // Get genomes directory from config (portable!)
-        $genomesDir = $this->config->get('jbrowse2')['genomes_directory'] ?? 
-                      $this->config->getPath('site_path') . '/data/genomes';
-        
-        // Standard reference file name (could be made configurable)
+        $genomesDir = rtrim(
+            $this->config->get('jbrowse2')['genomes_directory'] ?? 
+            $this->config->getPath('site_path') . '/data/genomes',
+            '/'
+        );
         return "$genomesDir/$organism/$assembly/reference.fasta";
     }
     
@@ -327,11 +327,11 @@ class AutoTrack implements TrackTypeInterface
      */
     private function getAnnotationPath($organism, $assembly)
     {
-        // Get genomes directory from config (portable!)
-        $genomesDir = $this->config->get('jbrowse2')['genomes_directory'] ?? 
-                      $this->config->getPath('site_path') . '/data/genomes';
-        
-        // Standard annotation file name (could be made configurable)
+        $genomesDir = rtrim(
+            $this->config->get('jbrowse2')['genomes_directory'] ?? 
+            $this->config->getPath('site_path') . '/data/genomes',
+            '/'
+        );
         return "$genomesDir/$organism/$assembly/annotations.gff3.gz";
     }
     

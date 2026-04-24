@@ -462,3 +462,39 @@
   </div>
 
 </div>
+
+<!-- GFF Action Modal (Rebuild / Index Names) -->
+<div class="modal fade" id="gffActionModal" tabindex="-1" aria-labelledby="gffActionModalTitle" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="gffActionModalTitle">GFF Action</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p id="gffActionModalDesc" class="text-muted mb-3"></p>
+
+        <div id="gffActionAttrsGroup">
+          <label for="gffActionAttrs" class="form-label fw-semibold">
+            Text-index attributes
+            <small class="text-muted fw-normal">(leave blank to skip indexing)</small>
+          </label>
+          <input type="text" class="form-control" id="gffActionAttrs"
+                 value="Name,ID" placeholder="e.g. Name,ID,gene_id">
+          <div class="form-text">Comma-separated GFF attribute names to index for feature name search.</div>
+        </div>
+
+        <div id="gffActionResult" class="mt-3" style="display:none;">
+          <hr class="my-2">
+          <pre id="gffActionLog"
+               class="bg-light border rounded p-3 small mb-0"
+               style="max-height:220px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;"></pre>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="gffActionCancelBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="gffActionBtn">Run</button>
+      </div>
+    </div>
+  </div>
+</div>

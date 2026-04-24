@@ -97,6 +97,8 @@ foreach ($paginatedTracks as $item) {
     $uri = null;
     if (isset($track['adapter']['gffGzLocation']['uri'])) {
         $uri = $track['adapter']['gffGzLocation']['uri'];
+    } elseif (isset($track['adapter']['bedGzLocation']['uri'])) {
+        $uri = $track['adapter']['bedGzLocation']['uri'];
     } elseif (isset($track['adapter']['bigWigLocation']['uri'])) {
         $uri = $track['adapter']['bigWigLocation']['uri'];
     } elseif (isset($track['adapter']['bamLocation']['uri'])) {
@@ -135,6 +137,18 @@ foreach ($paginatedTracks as $item) {
     ];
     $accessColor = $accessColors[$access] ?? 'secondary';
     
+    $isLocalGff = ($source === 'Local') && (($track['adapter']['type'] ?? '') === 'Gff3TabixAdapter');
+    $isLocalBed = ($source === 'Local') && (($track['adapter']['type'] ?? '') === 'BedTabixAdapter');
+    $canIndex   = $isLocalGff || $isLocalBed;
+
+    $rebuildBtn = $isLocalGff
+        ? '<button class="btn btn-outline-warning btn-sm" onclick="rebuildGff(\'' . htmlspecialchars($organism, ENT_QUOTES) . '\', \'' . htmlspecialchars($assembly, ENT_QUOTES) . '\', this)" title="Rebuild bgzip + tabix index"><i class="fa fa-wrench"></i></button>'
+        : '';
+
+    $indexBtn = $canIndex
+        ? '<button class="btn btn-outline-info btn-sm" onclick="indexTrackNames(\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\', \'' . htmlspecialchars($organism, ENT_QUOTES) . '\', \'' . htmlspecialchars($assembly, ENT_QUOTES) . '\', this)" title="Build text search index (jbrowse text-index)"><i class="fa fa-search-plus"></i></button>'
+        : '';
+
     $data[] = [
         'checkbox' => '<input type="checkbox" name="trackSelect" value="' . htmlspecialchars($trackId) . '" data-organism="' . htmlspecialchars($organism) . '" data-assembly="' . htmlspecialchars($assembly) . '" onchange="updateBulkButtons()">',
         'name' => '<strong>' . htmlspecialchars($name) . '</strong><br><small class="text-muted">' . htmlspecialchars($trackId) . '</small>',
@@ -148,6 +162,8 @@ foreach ($paginatedTracks as $item) {
                 <button class="btn btn-outline-primary btn-sm" onclick="viewTrack(\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\', \'' . htmlspecialchars($organism, ENT_QUOTES) . '\', \'' . htmlspecialchars($assembly, ENT_QUOTES) . '\')" title="View Details">
                     <i class="fa fa-eye"></i>
                 </button>
+                ' . $rebuildBtn . '
+                ' . $indexBtn . '
                 <button class="btn btn-outline-danger btn-sm" onclick="deleteTrack(\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\', \'' . htmlspecialchars($organism, ENT_QUOTES) . '\', \'' . htmlspecialchars($assembly, ENT_QUOTES) . '\')" title="Delete">
                     <i class="fa fa-trash"></i>
                 </button>
