@@ -167,9 +167,9 @@
                 <td>annotation_source_id, type, description</td>
               </tr>
               <tr>
-                <td><code>assembly</code></td>
+                <td><code>genome</code></td>
                 <td>Genome assembly information</td>
-                <td>assembly_id, name, accession</td>
+                <td>genome_id, genome_name, genome_accession</td>
               </tr>
             </tbody>
           </table>

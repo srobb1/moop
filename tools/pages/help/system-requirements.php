@@ -71,8 +71,8 @@
             </tr>
             <tr>
               <td><strong>Node.js</strong></td>
-              <td>18+</td>
-              <td>Required for JBrowse2 CLI (<code>@jbrowse/cli</code>)</td>
+              <td>18+ <em>(build-time only)</em></td>
+              <td>Needed once to build the JBrowse2 static bundle — not required to run MOOP</td>
             </tr>
             <tr>
               <td><strong>NCBI BLAST+</strong></td>
@@ -1382,7 +1382,7 @@ TOTAL                  ~44 GB
     <div class="alert alert-success">
       <h5><i class="fa fa-lightbulb"></i> Key Takeaways</h5>
       <ul class="mb-0">
-        <li><strong>Complete dataset baseline:</strong> 3.2 GB average per organism (with genome.fa), 132 MB database, 102 MB FASTA, 17 MB BLAST</li>
+        <li><strong>Complete dataset baseline:</strong> 3.2 GB average per organism (with genome.fa), 132 MB database, 3.0 GB FASTA, 17 MB BLAST</li>
         <li><strong>Disk growth formula:</strong> (3.2 GB × organisms) × 1.2 for overhead</li>
         <li><strong>RAM formula:</strong> (organisms × 0.1 GB) + 4 GB base; peak = recommended × 1.25</li>
         <li><strong>CPU formula:</strong> (organisms ÷ 10) + 4 cores; double for optimal BLAST performance</li>
