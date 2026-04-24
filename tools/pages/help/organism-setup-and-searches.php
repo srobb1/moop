@@ -1075,6 +1075,32 @@ ORDER BY feature_name;</code></pre>
         </table>
 
         <p class="mt-3"><small>Register trusted remote tracks servers under <strong>Admin → Manage JBrowse</strong>.</small></p>
+
+        <h6 class="mt-4">Remote Tracks Server Setup:</h6>
+        <p>When configuring a remote tracks server, enter the <strong>full URL including any path prefix</strong>. If your server is deployed under a subdirectory, that path must be included:</p>
+        <table class="table table-sm mt-2 mb-3">
+          <thead class="table-light">
+            <tr><th>Correct</th><th>Incorrect</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>https://tracks.yourlab.edu/moop</code></td>
+              <td><code>https://tracks.yourlab.edu</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h6 class="mt-3">Remote File Organization:</h6>
+        <p>Track files on the remote server must live under <code>data/tracks/{Organism}/{Assembly}/</code> but the directory structure below the assembly level is completely flexible. You can organize by experiment, tissue, file type, or any scheme that suits your workflow — the server only validates the organism and assembly path segments.</p>
+        <pre class="bg-light p-2 rounded border" style="font-size:12px;"><code>data/tracks/Nematostella_vectensis/GCA_033964005.1/
+├── MOLNG-2707/          ← organize by experiment
+│   ├── body-wall.bam
+│   ├── body-wall.bam.bai
+│   ├── body-wall.bw
+│   └── annotations.gff.gz
+└── published/           ← or mix with other groupings
+    └── some-public.bw</code></pre>
+        <p class="mt-2 mb-0"><small>Supported remote track types: BigWig, BAM, CRAM, VCF, GFF, BED, GTF, MAF. Index files (<code>.bai</code>, <code>.crai</code>, <code>.tbi</code>) are assumed to be at <code>{trackfile}.{index_ext}</code>.</small></p>
       </div>
     </div>
   </section>
