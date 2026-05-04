@@ -2,6 +2,10 @@
  * Gene Model Viewer
  * Renders an SVG gene structure diagram (isoforms, exons, CDS, intron direction)
  * Data comes from window.geneModelData injected inline by parent.php
+ *
+ * Display is always 5′→3′ left-to-right:
+ *   - Forward (+) strand: genomic left = 5′
+ *   - Reverse (−) strand: coordinates are flipped so 5′ (high coord) appears on the left
  */
 (function () {
     'use strict';
@@ -11,16 +15,15 @@
     const ROW_HEIGHT    = 34;
     const LABEL_HEIGHT  = 16;
     const PAD_TOP       = 4;
-    const PAD_BOTTOM    = 8;
+    const PAD_BOTTOM    = 18;   // room for strand label
     const PAD_LEFT      = 14;
     const PAD_RIGHT     = 14;
     const EXON_H        = 10;
     const CDS_H         = 16;
 
     const COLOR_BACKBONE = '#aaa';
-    const COLOR_EXON     = '#90b8d8';   // UTR / exon background
-    const COLOR_CDS      = '#2171b5';   // CDS fill
-    const COLOR_CHEVRON  = '#888';
+    const COLOR_EXON     = '#e8833a';   // warm orange — UTR / exon background
+    const COLOR_CDS      = '#2171b5';   // dark blue — CDS
     const COLOR_LABEL    = '#555';
 
     function init() {
@@ -34,14 +37,20 @@
         const { gene, isoforms } = data;
         if (!isoforms || isoforms.length === 0) return;
 
-        const trackW  = VIRTUAL_WIDTH - PAD_LEFT - PAD_RIGHT;
-        const totalH  = PAD_TOP + isoforms.length * (ROW_HEIGHT + LABEL_HEIGHT) + PAD_BOTTOM;
+        const trackW = VIRTUAL_WIDTH - PAD_LEFT - PAD_RIGHT;
+        const totalH = PAD_TOP + isoforms.length * (ROW_HEIGHT + LABEL_HEIGHT) + PAD_BOTTOM;
+        const flip   = gene.strand === '-';
 
         svg.setAttribute('viewBox', `0 0 ${VIRTUAL_WIDTH} ${totalH}`);
         svg.setAttribute('height', totalH);
 
+        // Map a genomic position to a screen x, always placing 5′ on the left.
+        // For minus-strand genes, high genomic coords (5′ end) map to the left.
         function toX(pos) {
-            return PAD_LEFT + ((pos - gene.start) / (gene.end - gene.start)) * trackW;
+            const frac = flip
+                ? (gene.end - pos) / (gene.end - gene.start)
+                : (pos - gene.start) / (gene.end - gene.start);
+            return PAD_LEFT + frac * trackW;
         }
 
         isoforms.forEach((iso, i) => {
@@ -59,32 +68,27 @@
             label.textContent = iso.id;
             g.appendChild(label);
 
-            // Backbone line across the full isoform span
-            g.appendChild(makeLine(toX(iso.start), toX(iso.end), cy, cy, COLOR_BACKBONE, 1.5));
+            // Backbone — full isoform span (min/max toX to stay correct after flip)
+            const xL = Math.min(toX(iso.start), toX(iso.end));
+            const xR = Math.max(toX(iso.start), toX(iso.end));
+            g.appendChild(makeLine(xL, xR, cy, cy, COLOR_BACKBONE, 1.5));
 
-            // Sort exons by coordinate
-            const exons = [...iso.exons].sort((a, b) => a.start - b.start);
-            const cdsList = [...iso.cds].sort((a, b) => a.start - b.start);
+            // Sort exons/CDS by visual (screen) position
+            const exons   = [...iso.exons].sort((a, b) => toX(a.start) - toX(b.start));
+            const cdsList = [...iso.cds  ].sort((a, b) => toX(a.start) - toX(b.start));
 
-            // Strand chevrons in intron gaps (between consecutive exons)
-            for (let e = 0; e < exons.length - 1; e++) {
-                drawChevrons(g, toX(exons[e].end), toX(exons[e + 1].start), cy, gene.strand);
-            }
-            // Arrowhead at 3′ end for single-exon genes (no intron to put chevrons on)
-            if (exons.length === 1) {
-                drawArrowhead(g, toX(iso.start), toX(iso.end), cy, gene.strand);
-            }
-
-            // Exon boxes (lighter — shows UTR region)
+            // Exon boxes (orange — UTR / exon background)
             exons.forEach(ex => {
-                const w = Math.max(2, toX(ex.end) - toX(ex.start));
-                g.appendChild(makeRect(toX(ex.start), cy - EXON_H / 2, w, EXON_H, COLOR_EXON, 2));
+                const x1 = Math.min(toX(ex.start), toX(ex.end));
+                const w  = Math.max(2, Math.abs(toX(ex.end) - toX(ex.start)));
+                g.appendChild(makeRect(x1, cy - EXON_H / 2, w, EXON_H, COLOR_EXON, 2));
             });
 
-            // CDS boxes (taller, darker — drawn on top)
+            // CDS boxes (blue, taller — drawn on top of exon boxes)
             cdsList.forEach(cds => {
-                const w = Math.max(2, toX(cds.end) - toX(cds.start));
-                g.appendChild(makeRect(toX(cds.start), cy - CDS_H / 2, w, CDS_H, COLOR_CDS, 2));
+                const x1 = Math.min(toX(cds.start), toX(cds.end));
+                const w  = Math.max(2, Math.abs(toX(cds.end) - toX(cds.start)));
+                g.appendChild(makeRect(x1, cy - CDS_H / 2, w, CDS_H, COLOR_CDS, 2));
             });
 
             // Tooltip
@@ -95,57 +99,22 @@
             svg.appendChild(g);
         });
 
-        // Strand indicator bottom-right
+        // Strand label bottom-right
         const strandText = makeSvgEl('text');
         strandText.setAttribute('x', VIRTUAL_WIDTH - PAD_RIGHT);
-        strandText.setAttribute('y', totalH - 2);
+        strandText.setAttribute('y', totalH - 4);
         strandText.setAttribute('text-anchor', 'end');
         strandText.setAttribute('font-size', '11');
         strandText.setAttribute('fill', COLOR_LABEL);
-        strandText.textContent = gene.strand === '+' ? '→ forward strand' : '← reverse strand';
+        strandText.textContent = flip
+            ? '→ 5′ to 3′  (reverse strand, flipped)'
+            : '→ 5′ to 3′  (forward strand)';
         svg.appendChild(strandText);
     }
 
-    // Draw small direction chevrons spaced across an intron region
-    function drawChevrons(g, x1, x2, cy, strand) {
-        const span = x2 - x1;
-        if (span < 10) return;
-        const size = 5;
-        // Place one chevron at midpoint; add more for long introns
-        const count = Math.max(1, Math.min(5, Math.floor(span / 60)));
-        for (let i = 0; i < count; i++) {
-            const cx = x1 + (span / (count + 1)) * (i + 1);
-            const poly = makeSvgEl('polyline');
-            if (strand === '+') {
-                poly.setAttribute('points',
-                    `${cx - size},${cy - size} ${cx},${cy} ${cx - size},${cy + size}`);
-            } else {
-                poly.setAttribute('points',
-                    `${cx + size},${cy - size} ${cx},${cy} ${cx + size},${cy + size}`);
-            }
-            poly.setAttribute('fill', 'none');
-            poly.setAttribute('stroke', COLOR_CHEVRON);
-            poly.setAttribute('stroke-width', '1.5');
-            g.appendChild(poly);
-        }
-    }
+    // SVG element helpers
+    function makeSvgEl(tag) { return document.createElementNS(NS, tag); }
 
-    // Small filled arrowhead at the 3′ tip (for single-exon genes)
-    function drawArrowhead(g, x1, x2, cy, strand) {
-        const size = 6;
-        const ax   = strand === '+' ? x2 : x1;
-        const dir  = strand === '+' ? 1 : -1;
-        const poly = makeSvgEl('polygon');
-        poly.setAttribute('points',
-            `${ax},${cy} ${ax - dir * size},${cy - size / 2} ${ax - dir * size},${cy + size / 2}`);
-        poly.setAttribute('fill', COLOR_CHEVRON);
-        g.appendChild(poly);
-    }
-
-    // SVG helpers
-    function makeSvgEl(tag) {
-        return document.createElementNS(NS, tag);
-    }
     function makeLine(x1, x2, y1, y2, stroke, sw) {
         const el = makeSvgEl('line');
         el.setAttribute('x1', x1); el.setAttribute('x2', x2);
@@ -154,10 +123,11 @@
         el.setAttribute('stroke-width', sw);
         return el;
     }
+
     function makeRect(x, y, w, h, fill, rx) {
         const el = makeSvgEl('rect');
-        el.setAttribute('x', x);    el.setAttribute('y', y);
-        el.setAttribute('width', w); el.setAttribute('height', h);
+        el.setAttribute('x', x);     el.setAttribute('y', y);
+        el.setAttribute('width', w);  el.setAttribute('height', h);
         el.setAttribute('fill', fill);
         if (rx) el.setAttribute('rx', rx);
         return el;
