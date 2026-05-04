@@ -354,7 +354,8 @@ class AnnotationSearch {
                 uniqueFeatures.add(r.feature_uniquename);
             });
 
-            let jumpToHtml = '<div class="alert alert-info mb-3">';
+            let jumpToHtml = '<div class="alert alert-info mb-3 d-flex justify-content-between align-items-start gap-3">';
+            jumpToHtml += '<div>';
             jumpToHtml += `<strong>Found ${this.allResults.length} matching annotation${this.allResults.length !== 1 ? 's' : ''} across ${uniqueFeatures.size} feature${uniqueFeatures.size !== 1 ? 's' : ''}:</strong> `;
 
             Object.keys(organismCounts).forEach((org, idx) => {
@@ -370,17 +371,93 @@ class AnnotationSearch {
             });
 
             jumpToHtml += '</div>';
+            jumpToHtml += `<div class="btn-group flex-shrink-0">
+                <button class="btn btn-sm btn-outline-success download-all-results" title="Download all annotation results as CSV"><i class="fa fa-table"></i> Table CSV</button>
+                <button class="btn btn-sm btn-outline-primary download-fasta-results" title="Download FASTA sequences for all features found"><i class="fa fa-dna"></i> FASTA</button>
+            </div>`;
+            jumpToHtml += '</div>';
 
             $('#searchProgress').html(`
                 ${capMessageHtml}
                 ${warningsHtml}
                 ${jumpToHtml}
             `);
+            $('#searchProgress').find('.download-all-results').on('click', () => this.downloadResults());
+            $('#searchProgress').find('.download-fasta-results').on('click', () => this.downloadFasta());
         }
 
         if (this.config.scrollToResults) {
             $('html, body').animate({ scrollTop: $('#searchResults').offset().top - 100 }, 'smooth');
         }
+    }
+
+    downloadResults() {
+        const decodeHtml = (html) => {
+            const txt = document.createElement('textarea');
+            txt.innerHTML = html;
+            return txt.value;
+        };
+        const escape = (val) => {
+            const s = decodeHtml(String(val ?? ''));
+            return (s.includes(',') || s.includes('"') || s.includes('\n'))
+                ? '"' + s.replace(/"/g, '""') + '"'
+                : s;
+        };
+
+        const headers = ['Organism', 'Genus', 'Species', 'Feature ID', 'Feature Type', 'Feature Name', 'Feature Description', 'Annotation Source', 'Annotation ID', 'Annotation Description', 'Score'];
+        const rows = [headers.join(',')];
+        this.allResults.forEach(r => {
+            rows.push([
+                r.organism, r.genus, r.species,
+                r.feature_uniquename, r.feature_type, r.feature_name, r.feature_description,
+                r.annotation_source_name, r.annotation_accession, r.annotation_description, r.score
+            ].map(escape).join(','));
+        });
+
+        const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'annotation_search_results.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    downloadFasta() {
+        // Group unique feature IDs by organism
+        const byOrganism = {};
+        this.allResults.forEach(r => {
+            if (!byOrganism[r.organism]) byOrganism[r.organism] = new Set();
+            byOrganism[r.organism].add(r.feature_uniquename);
+        });
+
+        const features = {};
+        Object.keys(byOrganism).forEach(org => {
+            features[org] = [...byOrganism[org]];
+        });
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = this.config.sitePath + '/api/download_search_fasta.php';
+        form.style.display = 'none';
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+
+        const featuresInput = document.createElement('input');
+        featuresInput.type = 'hidden';
+        featuresInput.name = 'features';
+        featuresInput.value = JSON.stringify(features);
+        form.appendChild(featuresInput);
+
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
     }
 }
 
