@@ -65,13 +65,33 @@
                 <div class="feature-info-item">
                     <strong>Assembly:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars($genome_name) ?> (<?= htmlspecialchars($genome_accession) ?>)</a></span>
                 </div>
+                <?php
+                $jbrowse_assembly_file = $config->getPath('metadata_path')
+                    . '/jbrowse2-configs/assemblies/'
+                    . $organism_name . '_' . $genome_accession . '.json';
+                $jbrowse_loc = file_exists($jbrowse_assembly_file)
+                    ? (!empty($feature_loc) ? $feature_loc['loc_string'] : $feature_uniquename)
+                    : null;
+                ?>
                 <?php if (!empty($feature_loc)): ?>
                 <div class="feature-info-item">
                     <strong>Location:</strong> <span class="feature-value">
-                        <?= htmlspecialchars($feature_loc['seqname']) ?>:<?= number_format($feature_loc['start']) ?>-<?= number_format($feature_loc['end']) ?>
-                        <?php if ($feature_loc['strand'] === '+' || $feature_loc['strand'] === '-'): ?>
-                            (<?= $feature_loc['strand'] === '+' ? 'forward' : 'reverse' ?> strand)
-                        <?php endif; ?>
+                        <?php
+                        $loc_text = htmlspecialchars($feature_loc['seqname'])
+                            . ':' . number_format($feature_loc['start'])
+                            . '-' . number_format($feature_loc['end']);
+                        if ($feature_loc['strand'] === '+' || $feature_loc['strand'] === '-') {
+                            $loc_text .= ' (' . ($feature_loc['strand'] === '+' ? 'forward' : 'reverse') . ' strand)';
+                        }
+                        if ($jbrowse_loc) {
+                            $browser_url = '/' . $site . '/jbrowse2.php?organism=' . urlencode($organism_name)
+                                . '&assembly=' . urlencode($genome_accession)
+                                . '&loc=' . urlencode($feature_loc['loc_string']);
+                            echo '<a href="' . $browser_url . '" target="_blank" class="link-light-bordered">' . $loc_text . '</a>';
+                        } else {
+                            echo $loc_text;
+                        }
+                        ?>
                     </span>
                 </div>
                 <?php endif; ?>
@@ -82,13 +102,6 @@
       <!-- Tools Column -->
       <div class="col-lg-4">
         <?php
-        $jbrowse_assembly_file = $config->getPath('metadata_path')
-            . '/jbrowse2-configs/assemblies/'
-            . $organism_name . '_' . $genome_accession . '.json';
-        $jbrowse_loc = file_exists($jbrowse_assembly_file)
-            ? (!empty($feature_loc) ? $feature_loc['loc_string'] : $feature_uniquename)
-            : null;
-
         $context = createToolContext('parent', [
             'organism'     => $organism_name,
             'assembly'     => $genome_accession,
