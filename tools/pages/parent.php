@@ -65,6 +65,16 @@
                 <div class="feature-info-item">
                     <strong>Assembly:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars($genome_name) ?> (<?= htmlspecialchars($genome_accession) ?>)</a></span>
                 </div>
+                <?php if (!empty($feature_loc)): ?>
+                <div class="feature-info-item">
+                    <strong>Location:</strong> <span class="feature-value">
+                        <?= htmlspecialchars($feature_loc['seqname']) ?>:<?= number_format($feature_loc['start']) ?>-<?= number_format($feature_loc['end']) ?>
+                        <?php if ($feature_loc['strand'] === '+' || $feature_loc['strand'] === '-'): ?>
+                            (<?= $feature_loc['strand'] === '+' ? 'forward' : 'reverse' ?> strand)
+                        <?php endif; ?>
+                    </span>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
       </div>
@@ -72,29 +82,21 @@
       <!-- Tools Column -->
       <div class="col-lg-4">
         <?php
-        $context = createToolContext('parent', [
-            'organism' => $organism_name,
-            'assembly' => $genome_accession,
-            'display_name' => $feature_uniquename
-        ]);
-        include_once TOOL_SECTION_PATH;
-
         $jbrowse_assembly_file = $config->getPath('metadata_path')
             . '/jbrowse2-configs/assemblies/'
             . $organism_name . '_' . $genome_accession . '.json';
-        if (file_exists($jbrowse_assembly_file)):
-            $jbrowse_url = '/' . $site . '/jbrowse2.php'
-                . '?organism=' . urlencode($organism_name)
-                . '&assembly=' . urlencode($genome_accession);
+        $jbrowse_loc = file_exists($jbrowse_assembly_file)
+            ? (!empty($feature_loc) ? $feature_loc['loc_string'] : $feature_uniquename)
+            : null;
+
+        $context = createToolContext('parent', [
+            'organism'     => $organism_name,
+            'assembly'     => $genome_accession,
+            'display_name' => $feature_uniquename,
+            'loc'          => $jbrowse_loc,
+        ]);
+        include_once TOOL_SECTION_PATH;
         ?>
-        <div class="mt-2">
-            <a href="<?= htmlspecialchars($jbrowse_url) ?>" target="_blank"
-               class="btn btn-primary btn-sm w-100"
-               title="View this assembly in the genome browser">
-                <i class="fas fa-dna"></i> Genome Browser
-            </a>
-        </div>
-        <?php endif; ?>
       </div>
     </div>
 

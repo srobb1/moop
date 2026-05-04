@@ -171,6 +171,11 @@ $assembly_name = "{$organism}_{$assembly}";
 $display_name  = str_replace('_', ' ', $organism) . ' (' . $assembly . ')';
 $uri_base      = '/' . $site . '/data/genomes/' . $organism . '/' . $assembly;
 
+// Determine if we have a GFF-based gene track to register
+$gz_file        = "$genomes_dir/annotations.gff3.gz";
+$genes_track_id = $assembly_name . '_genes';
+$primary_gene_tracks = file_exists($gz_file) ? [$genes_track_id] : [];
+
 $assembly_data = [
     'name'               => $assembly_name,
     'displayName'        => $display_name,
@@ -178,6 +183,7 @@ $assembly_data = [
     'assemblyId'         => $assembly,
     'aliases'            => [$assembly],
     'defaultAccessLevel' => 'PUBLIC',
+    'primaryGeneTracks'  => $primary_gene_tracks,
     'sequence'           => [
         'type'    => 'ReferenceSequenceTrack',
         'trackId' => $assembly_name . '-ReferenceSequenceTrack',
@@ -205,6 +211,62 @@ if (file_put_contents($assembly_json, json_encode($assembly_data, JSON_PRETTY_PR
     exit;
 }
 $log[] = "Created assembly definition: {$organism}_{$assembly}.json";
+
+// ── Step 6: Create primary Genes track JSON ──────────────────────────────────
+
+if (!empty($primary_gene_tracks)) {
+    $tracks_dir = "$metadata_path/jbrowse2-configs/tracks/$organism/$assembly/gff";
+    if (!is_dir($tracks_dir)) {
+        mkdir($tracks_dir, 0755, true);
+    }
+
+    $genes_track_file = "$tracks_dir/genes.json";
+    if (!file_exists($genes_track_file)) {
+        $genes_track = [
+            'trackId'       => $genes_track_id,
+            'name'          => 'Genes',
+            'assemblyNames' => [$assembly_name],
+            'category'      => ['Gene Models'],
+            'type'          => 'FeatureTrack',
+            'adapter'       => [
+                'type'           => 'Gff3TabixAdapter',
+                'gffGzLocation'  => [
+                    'uri'          => $uri_base . '/annotations.gff3.gz',
+                    'locationType' => 'UriLocation',
+                ],
+                'index'          => [
+                    'location' => [
+                        'uri'          => $uri_base . '/annotations.gff3.gz.tbi',
+                        'locationType' => 'UriLocation',
+                    ],
+                ],
+            ],
+            'displays' => [
+                [
+                    'type'      => 'LinearBasicDisplay',
+                    'displayId' => $genes_track_id . '-LinearBasicDisplay',
+                ],
+            ],
+            'metadata' => [
+                'management_track_id' => $genes_track_id,
+                'description'         => 'Primary gene models',
+                'access_level'        => 'PUBLIC',
+                'is_primary_gene_track' => true,
+                'file_path'           => "$genomes_dir/annotations.gff3.gz",
+                'is_remote'           => false,
+                'added_date'          => date('c'),
+            ],
+        ];
+
+        if (file_put_contents($genes_track_file, json_encode($genes_track, JSON_PRETTY_PRINT)) !== false) {
+            $log[] = "Created primary Genes track: $genes_track_id";
+        } else {
+            $log[] = 'Warning: Failed to write Genes track JSON';
+        }
+    } else {
+        $log[] = 'Genes track already exists';
+    }
+}
 
 echo json_encode([
     'success'       => true,

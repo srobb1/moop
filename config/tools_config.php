@@ -51,6 +51,18 @@ return [
         'context_params'  => ['organisms', 'display_name'],
         'pages'           => ['index'],
     ],
+
+    'genome_browser' => [
+        'id'              => 'genome_browser',
+        'name'            => 'View in Genome Browser',
+        'icon'            => 'fa-dna',
+        'description'     => 'Open this feature in JBrowse2 genome browser',
+        'btn_class'       => 'btn-primary',
+        'url_path'        => '/jbrowse2.php',
+        'context_params'  => ['organism', 'assembly', 'loc'],
+        'pages'           => ['parent'],
+        'target'          => '_blank',
+    ],
     
     // HOW TO ADD A NEW TOOL:
     // 1. Choose a unique 'id' (use snake_case, like 'my_new_tool')

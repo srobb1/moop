@@ -36,6 +36,17 @@ $available_tools = [
         'context_params' => ['organisms', 'display_name'],
         'pages' => ['index'],  // Show only on index page
     ],
+    'genome_browser' => [
+        'id'              => 'genome_browser',
+        'name'            => 'View in Genome Browser',
+        'icon'            => 'fa-dna',
+        'description'     => 'Open this feature in JBrowse2 genome browser',
+        'btn_class'       => 'btn-primary',
+        'url_path'        => '/jbrowse2.php',
+        'context_params'  => ['organism', 'assembly', 'loc'],
+        'required_params' => ['loc'],
+        'pages'           => ['parent'],
+    ],
     // Future tools can be added here
     // Pages can be:
     //   'all' - Show on all pages
@@ -77,7 +88,16 @@ function buildToolUrl($tool_id, $context, $site) {
     if (!$tool) {
         return null;
     }
-    
+
+    // If tool declares required_params, all must be present and non-empty in context
+    if (!empty($tool['required_params'])) {
+        foreach ($tool['required_params'] as $req) {
+            if (empty($context[$req])) {
+                return null;
+            }
+        }
+    }
+
     $url = "/$site" . $tool['url_path'];
     $params = [];
     $organisms = [];

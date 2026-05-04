@@ -171,6 +171,28 @@ $common_name = $row['common_name'];
 $genome_accession = $row['genome_accession'];
 $genome_name = $row['genome_name'];
 
+// Look up feature coordinates from GFF for genome browser deep-linking and display
+$feature_loc = null;
+$gff_file = $config->getPath('organism_data') . '/' . $organism_name . '/' . $genome_accession . '/genomic.gff';
+if (file_exists($gff_file)) {
+    exec('grep -m1 -F ' . escapeshellarg('ID=' . $feature_uniquename . ';') . ' ' . escapeshellarg($gff_file), $gff_lines);
+    if (empty($gff_lines)) {
+        exec('grep -m1 -F ' . escapeshellarg('ID=' . $feature_uniquename) . ' ' . escapeshellarg($gff_file), $gff_lines);
+    }
+    if (!empty($gff_lines[0])) {
+        $gff_parts = explode("\t", $gff_lines[0]);
+        if (count($gff_parts) >= 7) {
+            $feature_loc = [
+                'seqname' => $gff_parts[0],
+                'start'   => (int)$gff_parts[3],
+                'end'     => (int)$gff_parts[4],
+                'strand'  => $gff_parts[6],
+                'loc_string' => $gff_parts[0] . ':' . $gff_parts[3] . '-' . $gff_parts[4],
+            ];
+        }
+    }
+}
+
 $family_feature_ids = [$feature_id];
 $retrieve_these_seqs = [$feature_uniquename];
 
@@ -254,6 +276,7 @@ echo render_display_page(
         'assembly_name' => $genome_accession,
         'site' => $site,
 	'siteTitle' => $siteTitle,
+        'feature_loc' => $feature_loc,
         'page_styles' => ["/moop/css/parent.css"],
         'page_script' => [
             "/moop/js/modules/collapse-handler.js",

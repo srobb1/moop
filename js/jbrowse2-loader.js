@@ -186,8 +186,10 @@
 
     /**
      * Open assembly in JBrowse2
+     * @param {object} assembly - Assembly object with name and displayName
+     * @param {string} [loc]    - Optional feature name or region to navigate to on load
      */
-    function openAssembly(assembly) {
+    function openAssembly(assembly, loc) {
         console.log('Opening assembly in iframe:', assembly);
         
         // Hide assembly list and show viewer
@@ -218,7 +220,18 @@
         // This endpoint validates permissions and includes JWT tokens for all tracks
         const iframe = document.getElementById('jbrowse2-iframe');
         const configUrl = `/moop/api/jbrowse2/config.php?organism=${encodeURIComponent(organism)}&assembly=${encodeURIComponent(assemblyId)}`;
-        iframe.src = `/moop/jbrowse2/index.html?config=${encodeURIComponent(configUrl)}`;
+        let iframeSrc = `/moop/jbrowse2/index.html?config=${encodeURIComponent(configUrl)}`;
+        if (loc) {
+            const geneTracks = (Array.isArray(window.moopGeneTracks) && window.moopGeneTracks.length)
+                ? window.moopGeneTracks : [];
+            iframeSrc += `&assembly=${encodeURIComponent(assembly.name)}`;
+            iframeSrc += `&loc=${encodeURIComponent(loc)}`;
+            if (geneTracks.length) {
+                iframeSrc += `&tracks=${encodeURIComponent(geneTracks.join(','))}`;
+            }
+            console.log('Deep-linking to feature location:', loc, 'tracks:', geneTracks);
+        }
+        iframe.src = iframeSrc;
         iframe.title = `JBrowse2 Viewer for ${assembly.displayName}`;
     }
 
@@ -326,12 +339,13 @@
         const params = new URLSearchParams(window.location.search);
         const organism = params.get('organism');
         const assembly = params.get('assembly');
+        const loc = (typeof window.moopLoc === 'string' && window.moopLoc) ? window.moopLoc : null;
 
         if (organism && assembly) {
             // Deep-link from parent/assembly page: open viewer directly
             const assemblyName = organism + '_' + assembly;
             console.log('Deep-linking to assembly:', assemblyName);
-            openAssembly({ name: assemblyName, displayName: assembly });
+            openAssembly({ name: assemblyName, displayName: assembly }, loc);
         } else {
             console.log('Loading assembly list');
             loadAssemblies();

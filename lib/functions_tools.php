@@ -63,7 +63,7 @@ function createToolContext($page, $params = []) {
     $context = ['page' => $page];
     
     // Add optional parameters if provided and not null/empty
-    $optional_keys = ['organism', 'assembly', 'group', 'organisms', 'display_name', 'use_onclick_handler'];
+    $optional_keys = ['organism', 'assembly', 'group', 'organisms', 'display_name', 'use_onclick_handler', 'loc'];
     foreach ($optional_keys as $key) {
         if (!empty($params[$key])) {
             $context[$key] = $params[$key];
