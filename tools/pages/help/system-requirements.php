@@ -994,11 +994,18 @@ Optimal with BLAST = Cores × 2 (hyperthreading helps)</code></pre>
 
         <h6 class="mt-3">CPU Optimization Tips</h6>
         <ul>
-          <li>BLAST uses all available cores automatically</li>
-          <li>For 100 organisms, 16 cores (8 physical) is good baseline</li>
-          <li>More cores = faster BLAST searches</li>
-          <li>More cores improves concurrency for multiple users</li>
+          <li>BLAST thread count is controlled by the <strong>BLAST CPU Threads</strong> setting in Admin → Site Configuration — set it to match your server's core count</li>
+          <li>Without this limit, a single BLAST job would consume all cores, starving concurrent users</li>
+          <li>For 100 organisms, 16 cores is a good baseline — set <code>blast_num_threads</code> to 8 and allow 2 concurrent searches</li>
+          <li>More cores improves concurrency; more RAM is often the more critical bottleneck (see RAM section)</li>
         </ul>
+
+        <div class="alert alert-info mt-3 mb-0">
+          <strong><i class="fa fa-info-circle"></i> RAM vs. CPU at Scale:</strong>
+          For annotation searches across many organisms, RAM is typically the binding constraint — each concurrent multi-organism search pulls SQLite working sets into the OS page cache.
+          At 50 organisms (~100 MB databases each), a full-group search can load ~5 GB of data; if two users do this simultaneously on a 16 GB server, disk thrashing will slow both searches regardless of core count.
+          <strong>Prioritize RAM over cores when upgrading.</strong>
+        </div>
       </div>
     </div>
 
@@ -1387,7 +1394,8 @@ TOTAL                  ~44 GB
         <li><strong>RAM formula:</strong> (organisms × 0.1 GB) + 4 GB base; peak = recommended × 1.25</li>
         <li><strong>CPU formula:</strong> (organisms ÷ 10) + 4 cores; double for optimal BLAST performance</li>
         <li><strong>Important:</strong> Not all organisms have complete data. Verify genome.fa availability when adding new organisms.</li>
-        <li><strong>BLAST is resource-intensive:</strong> Limit concurrent BLAST searches; uses all available cores</li>
+        <li><strong>BLAST is resource-intensive:</strong> Thread count is capped via Admin → Site Configuration → <em>BLAST CPU Threads</em> (default: server core count) — set this before going live to prevent a single search from starving other users</li>
+        <li><strong>RAM is often the real bottleneck:</strong> Concurrent multi-organism searches load SQLite databases into the OS page cache — prioritize RAM over cores when upgrading</li>
         <li><strong>Scale incrementally:</strong> Plan for 6-month growth cycles, upgrade components as needed</li>
       </ul>
     </div>
