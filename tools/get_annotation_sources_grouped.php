@@ -44,14 +44,22 @@ $annotation_config = loadJsonFile($config_file, []);
 
 foreach ($organisms as $organism) {
     $db = "$organism_data/$organism/organism.sqlite";
-    
+
     if (!file_exists($db)) {
         continue; // Skip organisms without database
     }
-    
-    // Get grouped sources for this organism
-    $source_types = getAnnotationSourcesByType($db);
-    
+
+    // Use per-organism cache to avoid re-running the expensive COUNT aggregate query.
+    // Cache is invalidated automatically when organism.sqlite is newer than the cache file.
+    $cache_file = "$organism_data/$organism/annotation_sources_cache.json";
+    if (file_exists($cache_file) && filemtime($cache_file) >= filemtime($db)) {
+        $cached = json_decode(file_get_contents($cache_file), true);
+        $source_types = is_array($cached) ? $cached : [];
+    } else {
+        $source_types = getAnnotationSourcesByType($db);
+        file_put_contents($cache_file, json_encode($source_types));
+    }
+
     // Aggregate counts
     foreach ($source_types as $type => $sources) {
         if (!isset($aggregated_sources[$type])) {

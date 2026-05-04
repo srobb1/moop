@@ -195,6 +195,11 @@ AATGCGTCCACAACAGTTATCAATCAA',
         'blastdbcmd' => 'blastdbcmd',
         'blast_formatter' => 'blast_formatter',
     ],
+
+    // Max CPU threads per BLAST search. Set to total cores on the server — BLAST
+    // will use all available cores if this is not set, starving concurrent users.
+    // Raise this value when moving to a larger server.
+    'blast_num_threads' => 2,
     
     // ======== GALAXY INTEGRATION ========
     // Configuration for UseGalaxy.org integration

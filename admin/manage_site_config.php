@@ -193,6 +193,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
+        // Parse BLAST thread count
+        if (isset($_POST['blast_num_threads'])) {
+            $threads = (int)$_POST['blast_num_threads'];
+            if ($threads >= 1 && $threads <= 256) {
+                $data['blast_num_threads'] = $threads;
+            }
+        }
+
         // Parse BLAST sample sequences from form
         if (isset($_POST['blast_sample_sequences']) && is_array($_POST['blast_sample_sequences'])) {
             $sample_sequences = [];

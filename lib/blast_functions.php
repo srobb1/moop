@@ -155,7 +155,9 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     $config = ConfigManager::getInstance();
     $blast_tools = $config->getArray('blast_tools', []);
     $program_path = $blast_tools[$program] ?? $program;
-    
+    $num_threads = (int)$config->getString('blast_num_threads', '2');
+    if ($num_threads < 1) $num_threads = 1;
+
     $cmd = [];
     $cmd[] = $program_path;
     // Use absolute path for database
@@ -173,6 +175,7 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     $cmd[] = '-evalue ' . escapeshellarg($evalue);
     $cmd[] = '-num_descriptions ' . escapeshellarg($max_hits);
     $cmd[] = '-num_alignments ' . escapeshellarg($max_hits);
+    $cmd[] = '-num_threads ' . $num_threads;
     $cmd[] = '-outfmt 11';
     $cmd[] = '-out ' . escapeshellarg($archive_file);
     

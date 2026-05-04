@@ -413,6 +413,26 @@
                     </div>
                 </div>
 
+                <!-- BLAST CPU Threads -->
+                <div class="card card-config">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fa fa-microchip"></i> <?= htmlspecialchars($editable_config['blast_num_threads']['label']) ?></h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small"><?= htmlspecialchars($editable_config['blast_num_threads']['description']) ?></p>
+                        <div style="max-width: 160px;">
+                            <input type="number"
+                                   id="blast_num_threads"
+                                   name="blast_num_threads"
+                                   class="form-control"
+                                   value="<?= (int)$editable_config['blast_num_threads']['current_value'] ?>"
+                                   min="<?= (int)$editable_config['blast_num_threads']['min'] ?>"
+                                   max="<?= (int)$editable_config['blast_num_threads']['max'] ?>">
+                        </div>
+                        <small class="form-text text-muted">Set to the number of CPU cores on this server. Run <code>nproc</code> in a terminal to check.</small>
+                    </div>
+                </div>
+
                 <!-- BLAST Sample Sequences -->
                 <div class="card card-config">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">

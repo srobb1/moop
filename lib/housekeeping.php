@@ -26,9 +26,10 @@ function run_housekeeping() {
     // Each entry: ['name' => string, 'fn' => callable]
     // Tasks should be fast and safe to skip on failure.
     $tasks = [
-        ['name' => 'clean_temp_files',    'fn' => 'housekeeping_clean_temp_files'],
-        ['name' => 'snapshot_site_data',  'fn' => 'housekeeping_snapshot_site_data'],
-        ['name' => 'environment_check',   'fn' => 'housekeeping_environment_check'],
+        ['name' => 'clean_temp_files',           'fn' => 'housekeeping_clean_temp_files'],
+        ['name' => 'snapshot_site_data',         'fn' => 'housekeeping_snapshot_site_data'],
+        ['name' => 'environment_check',          'fn' => 'housekeeping_environment_check'],
+        ['name' => 'refresh_annotation_caches',  'fn' => 'housekeeping_refresh_annotation_caches'],
     ];
 
     foreach ($tasks as $task) {
@@ -355,4 +356,60 @@ function housekeeping_environment_check() {
     }
 
     $_SESSION['env_warnings'] = $warnings;
+}
+
+/**
+ * Refresh per-organism annotation source caches.
+ *
+ * For each organism that has a SQLite database, checks whether
+ * annotation_sources_cache.json is missing or older than organism.sqlite.
+ * Regenerates only the stale entries so get_annotation_sources_grouped.php
+ * can serve the advanced search filter modal from flat files instead of
+ * running COUNT aggregate queries against every database on each open.
+ *
+ * In steady state (no databases rebuilt) this is a no-op — just stat() calls.
+ */
+function housekeeping_refresh_annotation_caches() {
+    $config = ConfigManager::getInstance();
+    $organism_data = $config->getPath('organism_data');
+
+    if (empty($organism_data) || !is_dir($organism_data)) {
+        return;
+    }
+
+    // database_queries.php is not loaded by admin_init — include lazily
+    $db_queries = dirname(__DIR__) . '/lib/database_queries.php';
+    if (file_exists($db_queries)) {
+        include_once $db_queries;
+    }
+    if (!function_exists('getAnnotationSourcesByType')) {
+        return;
+    }
+
+    $refreshed = 0;
+    $entries = scandir($organism_data);
+    foreach ($entries as $entry) {
+        if ($entry === '.' || $entry === '..') {
+            continue;
+        }
+        $db         = "$organism_data/$entry/organism.sqlite";
+        $cache_file = "$organism_data/$entry/annotation_sources_cache.json";
+
+        if (!file_exists($db)) {
+            continue;
+        }
+
+        // Skip if cache is current
+        if (file_exists($cache_file) && filemtime($cache_file) >= filemtime($db)) {
+            continue;
+        }
+
+        $source_types = getAnnotationSourcesByType($db);
+        file_put_contents($cache_file, json_encode($source_types));
+        $refreshed++;
+    }
+
+    if ($refreshed > 0) {
+        error_log("MOOP housekeeping: refreshed annotation source caches for $refreshed organism(s)");
+    }
 }

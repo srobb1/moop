@@ -64,7 +64,7 @@ class ConfigManager
      * Editable configuration keys - whitelisted keys that can be edited via admin UI
      * Used in both initialize() and saveEditableConfig() to ensure consistency
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'tracks_server', 'jbrowse2'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'tracks_server', 'jbrowse2'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -716,6 +716,14 @@ class ConfigManager
                 'type' => 'ip_ranges',
                 'current_value' => $this->getArray('auto_login_ip_ranges', []),
                 'note' => 'WARNING: Use for institutional access to all assemblies. Provides full access to all assemblies without login.',
+            ],
+            'blast_num_threads' => [
+                'label' => 'BLAST CPU Threads',
+                'description' => 'Maximum CPU threads per BLAST search. Should match the number of cores on this server. Each concurrent BLAST job uses this many threads.',
+                'type' => 'number',
+                'current_value' => (int)$this->getString('blast_num_threads', '2'),
+                'min' => 1,
+                'max' => 256,
             ],
             'blast_sample_sequences' => [
                 'label' => 'BLAST Sample Sequences',
