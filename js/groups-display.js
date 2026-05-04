@@ -17,6 +17,7 @@ function updateGroupSearchManager(newSelectedOrganisms) {
     selectedOrganisms = newSelectedOrganisms;
     searchManager.config.organismsVar = selectedOrganisms;
     searchManager.config.totalVar = selectedOrganisms.length;
+    searchManager.updateOrganismNote();
 }
 
 // Initialize organism selection after page loads

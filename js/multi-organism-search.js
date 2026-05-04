@@ -14,6 +14,7 @@ function updateMultiSearchManager(newSelectedOrganisms) {
     selectedOrganisms = newSelectedOrganisms;
     searchManager.config.organismsVar = selectedOrganisms;
     searchManager.config.totalVar = selectedOrganisms.length;
+    searchManager.updateOrganismNote();
 }
 
 const searchManager = new AnnotationSearch({

@@ -51,7 +51,7 @@
   </div>
 
   <!-- Organisms Section -->
-  <div class="row mb-5">
+  <div class="row mb-5" id="organismsSection">
     <div class="col-12">
       <div class="card shadow-sm">
         <div class="card-body">

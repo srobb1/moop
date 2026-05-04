@@ -31,9 +31,6 @@ $source_names = $_GET['source_names'] ?? '';  // Comma-separated source names
 $source_filter = [];
 if (!empty($source_names)) {
     $source_filter = array_map('trim', explode(',', $source_names));
-    error_log('DEBUG: Source filter applied: ' . implode(', ', $source_filter));
-} else {
-    error_log('DEBUG: No source filter provided');
 }
 
 // Validate inputs
@@ -153,6 +150,8 @@ $is_capped = $result_count >= 2500;
 
 echo json_encode([
     'organism' => $organism,
+    'genus' => $organism_data_result['organism_info']['genus'] ?? '',
+    'species' => $organism_data_result['organism_info']['species'] ?? '',
     'organism_image_path' => $organism_image_path,
     'results' => $formatted_results,
     'count' => $result_count,
