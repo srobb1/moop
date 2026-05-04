@@ -193,6 +193,50 @@ if (file_exists($gff_file)) {
     }
 }
 
+// Build full gene model (isoforms + exon/CDS) for the gene structure SVG viewer
+$gene_model = null;
+if (!empty($feature_loc) && file_exists($gff_file)) {
+    $mrna_raw = [];
+    exec('grep -F ' . escapeshellarg('Parent=' . $feature_uniquename . ';') . ' ' . escapeshellarg($gff_file), $mrna_raw);
+    if (empty($mrna_raw)) {
+        exec('grep -F ' . escapeshellarg('Parent=' . $feature_uniquename) . ' ' . escapeshellarg($gff_file), $mrna_raw);
+    }
+    $isoforms = [];
+    foreach ($mrna_raw as $mrna_line) {
+        $parts = explode("\t", $mrna_line);
+        if (count($parts) < 9) continue;
+        if (!preg_match('/ID=([^;]+)/', $parts[8], $id_m)) continue;
+        $mrna_id = $id_m[1];
+        $isoform = [
+            'id'     => $mrna_id,
+            'start'  => (int)$parts[3],
+            'end'    => (int)$parts[4],
+            'strand' => $parts[6],
+            'exons'  => [],
+            'cds'    => [],
+        ];
+        $child_raw = [];
+        exec('grep -F ' . escapeshellarg('Parent=' . $mrna_id . ';') . ' ' . escapeshellarg($gff_file), $child_raw);
+        if (empty($child_raw)) {
+            exec('grep -F ' . escapeshellarg('Parent=' . $mrna_id) . ' ' . escapeshellarg($gff_file), $child_raw);
+        }
+        foreach ($child_raw as $child_line) {
+            $cp = explode("\t", $child_line);
+            if (count($cp) < 7) continue;
+            $ft = strtolower($cp[2]);
+            $coord = ['start' => (int)$cp[3], 'end' => (int)$cp[4]];
+            if ($ft === 'exon') $isoform['exons'][] = $coord;
+            elseif ($ft === 'cds') $isoform['cds'][] = $coord;
+        }
+        if (!empty($isoform['exons']) || !empty($isoform['cds'])) {
+            $isoforms[] = $isoform;
+        }
+    }
+    if (!empty($isoforms)) {
+        $gene_model = ['gene' => $feature_loc, 'isoforms' => $isoforms];
+    }
+}
+
 $family_feature_ids = [$feature_id];
 $retrieve_these_seqs = [$feature_uniquename];
 
@@ -276,13 +320,16 @@ echo render_display_page(
         'assembly_name' => $genome_accession,
         'site' => $site,
 	'siteTitle' => $siteTitle,
+        'gene_model' => $gene_model,
         'feature_loc' => $feature_loc,
         'page_styles' => ["/moop/css/parent.css"],
         'page_script' => [
             "/moop/js/modules/collapse-handler.js",
-            "/moop/js/modules/parent-tools.js"
+            "/moop/js/modules/parent-tools.js",
+            "/moop/js/modules/gene-model-viewer.js"
         ],
         'inline_scripts' => [
+            "const geneModelData = " . json_encode($gene_model) . ";",
             "const siteTitle = '" . addslashes($siteTitle) . "';"
         ]
     ],

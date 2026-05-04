@@ -114,6 +114,26 @@
     </div>
 
 
+    <?php if (!empty($gene_model)): ?>
+    <!-- Gene Structure Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header d-flex align-items-center">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#geneModelSection" aria-expanded="true" role="button">
+                <i class="fas fa-minus toggle-icon text-primary"></i>
+            </span>
+            <strong class="ms-2">Gene Structure</strong>
+            <span class="ms-2 text-muted small">
+                <?= count($gene_model['isoforms']) ?> isoform<?= count($gene_model['isoforms']) !== 1 ? 's' : '' ?>
+            </span>
+        </div>
+        <div id="geneModelSection" class="collapse show">
+            <div class="card-body p-3">
+                <svg id="gene-model-svg" width="100%" style="display:block; overflow:visible;"></svg>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Feature Hierarchy Section -->
     <div class="card shadow-sm mb-4">
         <div class="card-header d-flex align-items-center">
