@@ -125,9 +125,19 @@
             <span class="ms-2 text-muted small">
                 <?= count($gene_model['isoforms']) ?> isoform<?= count($gene_model['isoforms']) !== 1 ? 's' : '' ?>
             </span>
+            <button class="btn btn-sm btn-link p-0 ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#geneModelInfo" aria-expanded="false" title="Diagram legend">
+                <i class="fas fa-info-circle"></i>
+            </button>
         </div>
         <div id="geneModelSection" class="collapse show">
             <div class="card-body p-3">
+                <div class="collapse mb-3" id="geneModelInfo">
+                    <div class="alert alert-info mb-0 font-size-xsmall">
+                        <span style="display:inline-block;width:12px;height:12px;background:#2171b5;border-radius:2px;vertical-align:middle;"></span> <strong>CDS</strong> &mdash; protein-coding sequence &nbsp;&nbsp;
+                        <span style="display:inline-block;width:12px;height:12px;background:#e8833a;border-radius:2px;vertical-align:middle;"></span> <strong>UTR / exon</strong> &mdash; untranslated or non-coding exon region<br>
+                        <small class="text-muted">The diagram is always drawn 5&prime;&rarr;3&prime; left to right. Reverse-strand genes are flipped accordingly.</small>
+                    </div>
+                </div>
                 <svg id="gene-model-svg" width="100%" style="display:block; overflow:visible;"></svg>
             </div>
         </div>
