@@ -189,8 +189,15 @@
           </label>
           <p class="text-muted small mb-2">Select at least one assembly. Not required for admin users.</p>
 
+          <div class="mb-2 d-flex align-items-center gap-2">
+            <label class="form-label mb-0 text-muted small fw-semibold text-nowrap">Copy from user:</label>
+            <select id="create-copy-from-user" class="form-select form-select-sm" style="max-width:260px;">
+              <option value="">— select user —</option>
+            </select>
+          </div>
+
           <div class="d-flex gap-2 mb-2 flex-wrap">
-            <input type="text" id="create-organism-filter" class="form-control form-control-sm" placeholder="Filter organisms…" style="max-width:280px;">
+            <input type="text" id="create-organism-filter" class="form-control form-control-sm" placeholder="Filter organisms or groups…" style="max-width:280px;">
             <button type="button" class="btn btn-sm btn-outline-secondary" id="create-toggle-all-btn">
               <i class="fa fa-plus"></i> Expand All
             </button>
@@ -393,8 +400,15 @@
             </label>
             <p class="text-muted small mb-2">Select assemblies this user can access. Not required for admins.</p>
 
+            <div class="mb-2 d-flex align-items-center gap-2">
+              <label class="form-label mb-0 text-muted small fw-semibold text-nowrap">Copy from user:</label>
+              <select id="modal-copy-from-user" class="form-select form-select-sm" style="max-width:260px;">
+                <option value="">— select user —</option>
+              </select>
+            </div>
+
             <div class="d-flex gap-2 mb-2 flex-wrap">
-              <input type="text" id="modal-organism-filter" class="form-control form-control-sm" placeholder="Filter organisms…" style="max-width:280px;">
+              <input type="text" id="modal-organism-filter" class="form-control form-control-sm" placeholder="Filter organisms or groups…" style="max-width:280px;">
               <button type="button" class="btn btn-sm btn-outline-secondary" id="modal-toggle-all-btn">
                 <i class="fa fa-plus"></i> Expand All
               </button>
@@ -438,130 +452,286 @@
 
 
 <style>
-  /* Tighten up the organism list */
-  .organism-group { border-bottom: 1px solid #dee2e6; padding: 6px 10px; }
-  .organism-toggle { font-weight: 600; font-size: 12px; cursor: pointer; user-select: none; }
-  .organism-toggle:hover { color: #0d6efd; }
+  /* Group-level rows */
+  .group-section { border-bottom: 1px solid #dee2e6; }
+  .group-header   { padding: 6px 10px; background: #e9ecef; cursor: pointer; user-select: none; }
+  .group-header:hover { background: #dde1e7; }
+
+  /* Organism-level rows */
+  .org-section  { border-top: 1px solid #f0f0f0; }
+  .org-header   { padding: 4px 10px 4px 28px; cursor: pointer; user-select: none; }
+  .org-header:hover { background: #f8f9fa; }
 
   /* Dim the access section when admin is checked */
   .access-disabled { opacity: 0.45; pointer-events: none; }
 </style>
 
 <script>
-(function() {
+(function () {
   'use strict';
 
-  // ── State ──────────────────────────────────────────────────────────────
+  // ── State ─────────────────────────────────────────────────────────────
   let createSelectedAccess = {};
   let editSelectedAccess   = {};
-  let createAllExpanded    = false;
-  let modalAllExpanded     = false;
 
-  // ── Colour helpers ─────────────────────────────────────────────────────
+  // ── Colour helpers ────────────────────────────────────────────────────
   const COLORS = ['#007bff','#28a745','#17a2b8','#ffc107','#dc3545','#6f42c1','#fd7e14','#20c997','#e83e8c','#6610f2'];
   const colorMap = {};
   let colorIdx = 0;
   function orgColor(org) {
-    if (!colorMap[org]) { colorMap[org] = COLORS[colorIdx++ % COLORS.length]; }
+    if (!colorMap[org]) colorMap[org] = COLORS[colorIdx++ % COLORS.length];
     return colorMap[org];
   }
 
-  // ── Assembly selector (shared, parameterised) ──────────────────────────
-  /**
-   * Render the organism/assembly chip list into `containerEl`.
-   * `selectedAccess` is the state object to read from and write to.
-   * `onUpdate` is called after any selection change.
-   */
+  // ── Build one org row (chips + per-organism checkbox + count) ─────────
+  function buildOrgSection(organism, assemblies, selectedAccess, onGroupRefresh, onUpdate) {
+    const orgSection = document.createElement('div');
+    orgSection.className = 'org-section';
+    orgSection.dataset.org = organism;
+
+    const orgHeader = document.createElement('div');
+    orgHeader.className = 'org-header d-flex align-items-center gap-2';
+
+    const orgCb = document.createElement('input');
+    orgCb.type = 'checkbox';
+    orgCb.className = 'form-check-input flex-shrink-0';
+    orgCb.style.cursor = 'pointer';
+
+    const orgChevron = document.createElement('i');
+    orgChevron.className = 'fa fa-chevron-right fa-fw text-muted';
+
+    const orgLabel = document.createElement('span');
+    orgLabel.className = 'flex-grow-1 fst-italic';
+    orgLabel.style.fontSize = '12px';
+    orgLabel.textContent = organism;
+
+    const orgCount = document.createElement('span');
+    orgCount.style.fontSize = '11px';
+
+    const assemblyWrap = document.createElement('div');
+    assemblyWrap.className = 'assembly-wrap pb-1';
+    assemblyWrap.style.cssText = 'display:none; padding-left:44px;';
+
+    function refreshOrg() {
+      const sel   = assemblies.filter(a => selectedAccess[organism]?.includes(a)).length;
+      const total = assemblies.length;
+      orgCount.textContent = `${sel}/${total}`;
+      orgCount.className = sel === 0     ? 'badge bg-secondary'
+                         : sel === total ? 'badge bg-success'
+                         :                 'badge bg-warning text-dark';
+      orgCb.checked       = sel === total && total > 0;
+      orgCb.indeterminate = sel > 0 && sel < total;
+    }
+
+    assemblies.forEach(assembly => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip-selector';
+      chip.dataset.organism = organism;
+      chip.dataset.assembly = assembly;
+      chip.style.cssText = 'font-size:11px; padding:2px 8px; margin:2px;';
+      chip.style.background  = orgColor(organism);
+      chip.style.borderColor = orgColor(organism);
+      chip.style.color       = 'white';
+      chip.style.border      = '2px solid ' + orgColor(organism);
+      chip.textContent = assembly;
+
+      const isSel = selectedAccess[organism]?.includes(assembly);
+      chip.style.opacity = isSel ? '1' : '0.35';
+      if (isSel) chip.classList.add('selected');
+
+      chip.addEventListener('click', function () {
+        const sel = this.classList.toggle('selected');
+        this.style.opacity = sel ? '1' : '0.35';
+        if (sel) {
+          if (!selectedAccess[organism]) selectedAccess[organism] = [];
+          if (!selectedAccess[organism].includes(assembly)) selectedAccess[organism].push(assembly);
+        } else {
+          selectedAccess[organism] = (selectedAccess[organism] || []).filter(a => a !== assembly);
+          if (!selectedAccess[organism].length) delete selectedAccess[organism];
+        }
+        refreshOrg();
+        onGroupRefresh();
+        onUpdate();
+      });
+
+      assemblyWrap.appendChild(chip);
+    });
+
+    orgCb.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (this.checked) {
+        selectedAccess[organism] = [...assemblies];
+      } else {
+        delete selectedAccess[organism];
+      }
+      if (this.checked && assemblyWrap.style.display === 'none') {
+        assemblyWrap.style.display = 'block';
+        orgChevron.className = 'fa fa-chevron-down fa-fw text-muted';
+      }
+      assemblyWrap.querySelectorAll('.tag-chip-selector').forEach(chip => {
+        const isSel = selectedAccess[organism]?.includes(chip.dataset.assembly);
+        chip.classList.toggle('selected', !!isSel);
+        chip.style.opacity = isSel ? '1' : '0.35';
+      });
+      refreshOrg();
+      onGroupRefresh();
+      onUpdate();
+    });
+
+    orgHeader.addEventListener('click', function (e) {
+      if (e.target === orgCb) return;
+      const hidden = assemblyWrap.style.display === 'none';
+      assemblyWrap.style.display = hidden ? 'block' : 'none';
+      orgChevron.className = hidden ? 'fa fa-chevron-down fa-fw text-muted' : 'fa fa-chevron-right fa-fw text-muted';
+    });
+
+    orgHeader.appendChild(orgCb);
+    orgHeader.appendChild(orgChevron);
+    orgHeader.appendChild(orgLabel);
+    orgHeader.appendChild(orgCount);
+    orgSection.appendChild(orgHeader);
+    orgSection.appendChild(assemblyWrap);
+
+    refreshOrg();
+    return orgSection;
+  }
+
+  // ── Render full selector grouped by group ─────────────────────────────
   function renderAssemblySelector(containerEl, selectedAccess, onUpdate) {
     containerEl.innerHTML = '';
-    Object.keys(allOrganisms).sort().forEach(organism => {
-      const orgDiv = document.createElement('div');
-      orgDiv.className = 'organism-group';
 
-      const header = document.createElement('div');
-      header.className = 'organism-toggle d-flex align-items-center gap-1';
-      const chevron = document.createElement('i');
-      chevron.className = 'fa fa-chevron-right';
-      header.appendChild(chevron);
-      header.appendChild(document.createTextNode(' ' + organism));
+    Object.keys(allOrganismsByGroup).sort().forEach(group => {
+      const groupOrgs = allOrganismsByGroup[group];
 
-      const assemblyWrap = document.createElement('div');
-      assemblyWrap.style.display = 'none';
-      assemblyWrap.className = 'assembly-wrap pt-1';
+      const groupSection = document.createElement('div');
+      groupSection.className = 'group-section';
+      groupSection.dataset.group = group;
 
-      allOrganisms[organism].forEach(assembly => {
-        const chip = document.createElement('span');
-        chip.className = 'tag-chip-selector';
-        chip.setAttribute('data-organism', organism);
-        chip.setAttribute('data-assembly', assembly);
-        chip.style.fontSize = '11px';
-        chip.style.padding = '2px 8px';
-        chip.style.margin = '2px';
-        chip.style.background = orgColor(organism);
-        chip.style.borderColor = orgColor(organism);
-        chip.style.color = 'white';
-        chip.style.border = '2px solid ' + orgColor(organism);
-        chip.textContent = assembly;
+      const groupHeader = document.createElement('div');
+      groupHeader.className = 'group-header d-flex align-items-center gap-2';
 
-        const isSelected = selectedAccess[organism] && selectedAccess[organism].includes(assembly);
-        chip.style.opacity = isSelected ? '1' : '0.35';
-        if (isSelected) chip.classList.add('selected');
+      const groupCb = document.createElement('input');
+      groupCb.type = 'checkbox';
+      groupCb.className = 'form-check-input flex-shrink-0';
+      groupCb.style.cursor = 'pointer';
 
-        chip.addEventListener('click', function () {
-          const sel = this.classList.toggle('selected');
-          this.style.opacity = sel ? '1' : '0.35';
-          if (sel) {
-            if (!selectedAccess[organism]) selectedAccess[organism] = [];
-            if (!selectedAccess[organism].includes(assembly)) selectedAccess[organism].push(assembly);
+      const groupChevron = document.createElement('i');
+      groupChevron.className = 'fa fa-chevron-right fa-fw';
+
+      const groupLabel = document.createElement('span');
+      groupLabel.className = 'fw-bold flex-grow-1';
+      groupLabel.textContent = group;
+
+      const groupCount = document.createElement('span');
+
+      const groupBody = document.createElement('div');
+      groupBody.className = 'group-body';
+      groupBody.style.display = 'none';
+
+      function refreshGroup() {
+        let total = 0, sel = 0;
+        Object.entries(groupOrgs).forEach(([org, asms]) => {
+          asms.forEach(a => {
+            total++;
+            if (selectedAccess[org]?.includes(a)) sel++;
+          });
+        });
+        groupCount.textContent = `${sel}/${total}`;
+        groupCount.className = sel === 0     ? 'badge bg-secondary ms-1'
+                             : sel === total ? 'badge bg-success ms-1'
+                             :                 'badge bg-warning text-dark ms-1';
+        groupCb.checked       = sel === total && total > 0;
+        groupCb.indeterminate = sel > 0 && sel < total;
+      }
+
+      groupCb.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const selectAll = this.checked;
+        Object.entries(groupOrgs).forEach(([org, asms]) => {
+          if (selectAll) {
+            const existing = new Set(selectedAccess[org] || []);
+            asms.forEach(a => existing.add(a));
+            selectedAccess[org] = [...existing];
           } else {
-            if (selectedAccess[organism]) {
-              selectedAccess[organism] = selectedAccess[organism].filter(a => a !== assembly);
-              if (!selectedAccess[organism].length) delete selectedAccess[organism];
+            if (selectedAccess[org]) {
+              selectedAccess[org] = selectedAccess[org].filter(a => !asms.includes(a));
+              if (!selectedAccess[org].length) delete selectedAccess[org];
             }
           }
-          onUpdate();
         });
-
-        assemblyWrap.appendChild(chip);
+        if (selectAll && groupBody.style.display === 'none') {
+          groupBody.style.display = 'block';
+          groupChevron.className = 'fa fa-chevron-down fa-fw';
+        }
+        // Update org rows without full re-render
+        groupBody.querySelectorAll('.org-section').forEach(orgSection => {
+          const org  = orgSection.dataset.org;
+          const asms = groupOrgs[org] || [];
+          const orgCb    = orgSection.querySelector('input[type=checkbox]');
+          const orgCount = orgSection.querySelector('.badge');
+          const sel   = asms.filter(a => selectedAccess[org]?.includes(a)).length;
+          const total = asms.length;
+          if (orgCount) {
+            orgCount.textContent = `${sel}/${total}`;
+            orgCount.className = sel === 0     ? 'badge bg-secondary'
+                               : sel === total ? 'badge bg-success'
+                               :                 'badge bg-warning text-dark';
+          }
+          if (orgCb) { orgCb.checked = sel === total && total > 0; orgCb.indeterminate = sel > 0 && sel < total; }
+          orgSection.querySelectorAll('.tag-chip-selector').forEach(chip => {
+            const isSel = selectedAccess[org]?.includes(chip.dataset.assembly);
+            chip.classList.toggle('selected', !!isSel);
+            chip.style.opacity = isSel ? '1' : '0.35';
+          });
+        });
+        refreshGroup();
+        onUpdate();
       });
 
-      header.addEventListener('click', function () {
-        const hidden = assemblyWrap.style.display === 'none';
-        assemblyWrap.style.display = hidden ? 'block' : 'none';
-        chevron.className = hidden ? 'fa fa-chevron-down' : 'fa fa-chevron-right';
+      groupHeader.addEventListener('click', function (e) {
+        if (e.target === groupCb) return;
+        const hidden = groupBody.style.display === 'none';
+        groupBody.style.display = hidden ? 'block' : 'none';
+        groupChevron.className = hidden ? 'fa fa-chevron-down fa-fw' : 'fa fa-chevron-right fa-fw';
       });
 
-      orgDiv.appendChild(header);
-      orgDiv.appendChild(assemblyWrap);
-      containerEl.appendChild(orgDiv);
+      Object.keys(groupOrgs).sort().forEach(org => {
+        groupBody.appendChild(buildOrgSection(org, groupOrgs[org], selectedAccess, refreshGroup, onUpdate));
+      });
+
+      groupHeader.appendChild(groupCb);
+      groupHeader.appendChild(groupChevron);
+      groupHeader.appendChild(groupLabel);
+      groupHeader.appendChild(groupCount);
+      groupSection.appendChild(groupHeader);
+      groupSection.appendChild(groupBody);
+      containerEl.appendChild(groupSection);
+
+      refreshGroup();
     });
   }
 
-  /**
-   * Sync the hidden inputs and preview badges from `selectedAccess`.
-   */
-  function syncSelection(hiddenContainerId, previewContainerId, selectedAccess) {
-    const hiddenEl  = document.getElementById(hiddenContainerId);
-    const previewEl = document.getElementById(previewContainerId);
+  // ── Sync hidden inputs + preview badges ───────────────────────────────
+  function syncSelection(hiddenId, previewId, selectedAccess) {
+    const hiddenEl  = document.getElementById(hiddenId);
+    const previewEl = document.getElementById(previewId);
     if (!hiddenEl || !previewEl) return;
 
     hiddenEl.innerHTML  = '';
     previewEl.innerHTML = '';
-
     let total = 0;
+
     Object.keys(selectedAccess).sort().forEach(org => {
-      selectedAccess[org].forEach(asm => {
+      (selectedAccess[org] || []).forEach(asm => {
         total++;
         const inp = document.createElement('input');
-        inp.type  = 'hidden';
-        inp.name  = `access[${org}][]`;
-        inp.value = asm;
+        inp.type = 'hidden'; inp.name = `access[${org}][]`; inp.value = asm;
         hiddenEl.appendChild(inp);
 
         const badge = document.createElement('span');
         badge.className = 'tag-chip me-1 mb-1';
-        badge.style.background   = orgColor(org);
-        badge.style.borderColor  = orgColor(org);
+        badge.style.background  = orgColor(org);
+        badge.style.borderColor = orgColor(org);
         badge.textContent = `${org}: ${asm}`;
 
         const rm = document.createElement('i');
@@ -569,67 +739,44 @@
         rm.style.cssText = 'cursor:pointer;opacity:0.8;';
         rm.addEventListener('click', function (e) {
           e.stopPropagation();
-          selectedAccess[org] = selectedAccess[org].filter(a => a !== asm);
+          selectedAccess[org] = (selectedAccess[org] || []).filter(a => a !== asm);
           if (!selectedAccess[org].length) delete selectedAccess[org];
-          syncSelection(hiddenContainerId, previewContainerId, selectedAccess);
-          // Re-render the selector that owns this state
+          syncSelection(hiddenId, previewId, selectedAccess);
           const containerEl = document.getElementById(
-            hiddenContainerId === 'create-selected-assemblies-hidden' ? 'create-access-container' : 'modal-access-container'
+            hiddenId === 'create-selected-assemblies-hidden' ? 'create-access-container' : 'modal-access-container'
           );
-          if (containerEl) renderAssemblySelector(containerEl, selectedAccess, function () {
-            syncSelection(hiddenContainerId, previewContainerId, selectedAccess);
-          });
+          if (containerEl) renderAssemblySelector(containerEl, selectedAccess, () => syncSelection(hiddenId, previewId, selectedAccess));
         });
         badge.appendChild(rm);
         previewEl.appendChild(badge);
       });
     });
 
-    if (total === 0) {
-      previewEl.innerHTML = '<span class="text-muted small">No assemblies selected</span>';
-    }
+    if (total === 0) previewEl.innerHTML = '<span class="text-muted small">No assemblies selected</span>';
   }
 
-  // ── Password match feedback ────────────────────────────────────────────
+  // ── Password match ────────────────────────────────────────────────────
   function watchPasswordMatch(pwId, confirmId, msgId) {
-    const pw  = document.getElementById(pwId);
-    const pw2 = document.getElementById(confirmId);
-    const msg = document.getElementById(msgId);
+    const pw = document.getElementById(pwId), pw2 = document.getElementById(confirmId), msg = document.getElementById(msgId);
     if (!pw || !pw2 || !msg) return;
     function check() {
-      const v1 = pw.value, v2 = pw2.value;
-      if (!v1 && !v2) { msg.style.display = 'none'; return; }
-      if (!v2)        { msg.style.display = 'none'; return; }
-      if (v1 === v2) {
-        msg.textContent    = '✓ Passwords match';
-        msg.style.color    = '#198754';
-        msg.style.display  = '';
-      } else {
-        msg.textContent    = '✗ Passwords do not match';
-        msg.style.color    = '#dc3545';
-        msg.style.display  = '';
-      }
+      if (!pw.value || !pw2.value) { msg.style.display = 'none'; return; }
+      if (pw.value === pw2.value) { msg.textContent = '✓ Passwords match'; msg.style.color = '#198754'; msg.style.display = ''; }
+      else { msg.textContent = '✗ Passwords do not match'; msg.style.color = '#dc3545'; msg.style.display = ''; }
     }
     pw.addEventListener('input', check);
     pw2.addEventListener('input', check);
   }
 
-  // ── Admin toggle (show/hide access section) ────────────────────────────
+  // ── Admin toggle ──────────────────────────────────────────────────────
   function toggleAccess(checkboxId, sectionId, requiredId) {
-    const cb  = document.getElementById(checkboxId);
-    const sec = document.getElementById(sectionId);
-    const req = document.getElementById(requiredId);
+    const cb = document.getElementById(checkboxId), sec = document.getElementById(sectionId), req = document.getElementById(requiredId);
     if (!cb || !sec) return;
-    if (cb.checked) {
-      sec.classList.add('access-disabled');
-      if (req) req.style.display = 'none';
-    } else {
-      sec.classList.remove('access-disabled');
-      if (req) req.style.display = '';
-    }
+    sec.classList.toggle('access-disabled', cb.checked);
+    if (req) req.style.display = cb.checked ? 'none' : '';
   }
 
-  // ── Expand/Collapse All ────────────────────────────────────────────────
+  // ── Expand / Collapse All ─────────────────────────────────────────────
   function setupExpandAll(btnId, containerId, stateRef) {
     const btn = document.getElementById(btnId);
     if (!btn) return;
@@ -637,19 +784,17 @@
       stateRef.expanded = !stateRef.expanded;
       const wrap = document.getElementById(containerId);
       if (!wrap) return;
-      wrap.querySelectorAll('.assembly-wrap').forEach(el => {
+      wrap.querySelectorAll('.group-body, .assembly-wrap').forEach(el => {
         el.style.display = stateRef.expanded ? 'block' : 'none';
       });
-      wrap.querySelectorAll('.organism-toggle i').forEach(i => {
-        i.className = stateRef.expanded ? 'fa fa-chevron-down' : 'fa fa-chevron-right';
+      wrap.querySelectorAll('.group-header i.fa, .org-header i.fa').forEach(i => {
+        i.className = i.className.replace('chevron-right', 'chevron-down').replace('chevron-down', stateRef.expanded ? 'chevron-down' : 'chevron-right');
       });
-      btn.innerHTML = stateRef.expanded
-        ? '<i class="fa fa-minus"></i> Collapse All'
-        : '<i class="fa fa-plus"></i> Expand All';
+      btn.innerHTML = stateRef.expanded ? '<i class="fa fa-minus"></i> Collapse All' : '<i class="fa fa-plus"></i> Expand All';
     });
   }
 
-  // ── Select All / Clear All ─────────────────────────────────────────────
+  // ── Select All / Clear All ────────────────────────────────────────────
   function setupSelectAll(selectBtnId, clearBtnId, getAccess, containerEl, onUpdate) {
     document.getElementById(selectBtnId)?.addEventListener('click', function () {
       const acc = getAccess();
@@ -659,41 +804,77 @@
     });
     document.getElementById(clearBtnId)?.addEventListener('click', function () {
       const acc = getAccess();
-      Object.keys(acc).forEach(org => delete acc[org]);
+      Object.keys(acc).forEach(k => delete acc[k]);
       renderAssemblySelector(containerEl, acc, onUpdate);
       onUpdate();
     });
   }
 
-  // ── Organism filter ────────────────────────────────────────────────────
+  // ── Filter (groups + organisms) ───────────────────────────────────────
   function setupFilter(filterId, containerId) {
     const inp = document.getElementById(filterId);
     if (!inp) return;
     inp.addEventListener('input', function () {
-      const q = this.value.toLowerCase();
-      document.getElementById(containerId)?.querySelectorAll('.organism-group').forEach(g => {
-        const match = !q || g.textContent.toLowerCase().includes(q);
-        g.style.display = match ? '' : 'none';
-        if (match && q) {
-          const wrap = g.querySelector('.assembly-wrap');
-          if (wrap) {
-            wrap.style.display = 'block';
-            const ic = g.querySelector('.organism-toggle i');
-            if (ic) ic.className = 'fa fa-chevron-down';
-          }
+      const q = this.value.toLowerCase().trim();
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.querySelectorAll('.group-section').forEach(groupSection => {
+        const groupName = (groupSection.dataset.group || '').toLowerCase();
+        const groupMatchesQuery = !q || groupName.includes(q);
+        let anyOrgVisible = false;
+
+        groupSection.querySelectorAll('.org-section').forEach(orgSection => {
+          const orgName = (orgSection.dataset.org || '').toLowerCase();
+          const show = groupMatchesQuery || orgName.includes(q);
+          orgSection.style.display = show ? '' : 'none';
+          if (show) anyOrgVisible = true;
+        });
+
+        groupSection.style.display = anyOrgVisible ? '' : 'none';
+        if (anyOrgVisible && q) {
+          const body = groupSection.querySelector('.group-body');
+          const chev = groupSection.querySelector('.group-header i.fa');
+          if (body) body.style.display = 'block';
+          if (chev) chev.className = chev.className.replace('chevron-right', 'chevron-down');
         }
       });
     });
   }
 
-  // ── CREATE FORM ────────────────────────────────────────────────────────
+  // ── Copy from user ────────────────────────────────────────────────────
+  function setupCopyFromUser(selectId, excludeUser, getAccess, containerEl, onUpdate) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    Object.keys(allUsers).sort().forEach(uname => {
+      if (uname === excludeUser) return;
+      const u = allUsers[uname];
+      if (!u.access || !Object.keys(u.access).length) return;
+      const opt = document.createElement('option');
+      opt.value = uname;
+      opt.textContent = uname + (u.email ? ` (${u.email})` : '');
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', function () {
+      if (!this.value) return;
+      const src = allUsers[this.value];
+      if (!src?.access) return;
+      const acc = getAccess();
+      Object.keys(acc).forEach(k => delete acc[k]);
+      Object.keys(src.access).forEach(org => {
+        if (Array.isArray(src.access[org])) acc[org] = [...src.access[org]];
+      });
+      renderAssemblySelector(containerEl, acc, onUpdate);
+      onUpdate();
+      this.value = '';
+    });
+  }
+
+  // ── CREATE FORM ───────────────────────────────────────────────────────
   function initCreateForm() {
     const containerEl = document.getElementById('create-access-container');
     if (!containerEl) return;
 
-    function onUpdate() {
-      syncSelection('create-selected-assemblies-hidden', 'create-selected-preview', createSelectedAccess);
-    }
+    function onUpdate() { syncSelection('create-selected-assemblies-hidden', 'create-selected-preview', createSelectedAccess); }
     renderAssemblySelector(containerEl, createSelectedAccess, onUpdate);
 
     watchPasswordMatch('create-password', 'create-password-confirm', 'create-pw-match');
@@ -709,42 +890,28 @@
 
     setupExpandAll('create-toggle-all-btn', 'create-access-container', { expanded: false });
     setupFilter('create-organism-filter', 'create-access-container');
-    setupSelectAll('create-select-all-btn', 'create-clear-all-btn',
-                   () => createSelectedAccess, containerEl, onUpdate);
+    setupSelectAll('create-select-all-btn', 'create-clear-all-btn', () => createSelectedAccess, containerEl, onUpdate);
+    setupCopyFromUser('create-copy-from-user', null, () => createSelectedAccess, containerEl, onUpdate);
 
     document.getElementById('createUserForm')?.addEventListener('submit', function (e) {
-      const pw  = document.getElementById('create-password').value;
+      const pw = document.getElementById('create-password').value;
       const pw2 = document.getElementById('create-password-confirm').value;
       const adm = document.getElementById('create-isAdmin').checked;
       const hasAsm = Object.values(createSelectedAccess).some(a => a.length > 0);
-
-      if (!pw) {
-        e.preventDefault();
-        alert('Password is required for new users.');
-        document.getElementById('create-password').focus();
-        return;
-      }
-      if (pw !== pw2) {
-        e.preventDefault();
-        alert('Passwords do not match.');
-        document.getElementById('create-password-confirm').focus();
-        return;
-      }
-      if (!adm && !hasAsm) {
-        e.preventDefault();
-        alert('Select at least one assembly, or check Admin for full access.');
-      }
+      if (!pw) { e.preventDefault(); alert('Password is required for new users.'); document.getElementById('create-password').focus(); return; }
+      if (pw !== pw2) { e.preventDefault(); alert('Passwords do not match.'); document.getElementById('create-password-confirm').focus(); return; }
+      if (!adm && !hasAsm) { e.preventDefault(); alert('Select at least one assembly, or check Admin for full access.'); }
     });
   }
 
-  // ── EDIT MODAL ─────────────────────────────────────────────────────────
+  // ── EDIT MODAL ────────────────────────────────────────────────────────
   function initEditModal() {
     const containerEl = document.getElementById('modal-access-container');
     if (!containerEl) return;
 
-    function onUpdate() {
-      syncSelection('modal-selected-assemblies-hidden', 'modal-selected-preview', editSelectedAccess);
-    }
+    let currentEditUser = null;
+
+    function onUpdate() { syncSelection('modal-selected-assemblies-hidden', 'modal-selected-preview', editSelectedAccess); }
 
     watchPasswordMatch('modal-password', 'modal-password-confirm', 'modal-pw-match');
 
@@ -759,13 +926,11 @@
 
     setupExpandAll('modal-toggle-all-btn', 'modal-access-container', { expanded: false });
     setupFilter('modal-organism-filter', 'modal-access-container');
-    setupSelectAll('modal-select-all-btn', 'modal-clear-all-btn',
-                   () => editSelectedAccess, containerEl, onUpdate);
+    setupSelectAll('modal-select-all-btn', 'modal-clear-all-btn', () => editSelectedAccess, containerEl, onUpdate);
 
-    // Populate modal on click via document delegation.
-    // Delegated so it works after DataTables reorders rows, and fires
-    // synchronously before Bootstrap animates the modal open — so fields
-    // are set before the user ever sees the modal.
+    // Copy-from-user is re-populated each time the modal opens to exclude the current user
+    const copyFromSel = document.getElementById('modal-copy-from-user');
+
     document.addEventListener('click', function (event) {
       const btn = event.target.closest('.edit-user-btn');
       if (!btn) return;
@@ -774,11 +939,10 @@
       const userData = allUsers[username];
       if (!userData) return;
 
-      // Header
+      currentEditUser = username;
+
       document.getElementById('modal-username-display').textContent = username;
       document.getElementById('modal-original-username').value = username;
-
-      // Fields
       document.getElementById('modal-username').value      = username;
       document.getElementById('modal-email').value         = userData.email        || '';
       document.getElementById('modal-first-name').value   = userData.first_name   || '';
@@ -788,24 +952,33 @@
       document.getElementById('modal-password-confirm').value = '';
       document.getElementById('modal-pw-match').style.display = 'none';
 
-      // Admin checkbox — set BEFORE calling toggleAccess so it reads the correct state
       const isAdmin = (userData.role === 'admin');
       document.getElementById('modal-isAdmin').checked = isAdmin;
       toggleAccess('modal-isAdmin', 'modal-access-section', 'modal-access-required');
 
-      // Build selected access
       editSelectedAccess = {};
       if (userData.access && typeof userData.access === 'object') {
         Object.keys(userData.access).forEach(org => {
-          if (Array.isArray(userData.access[org])) {
-            editSelectedAccess[org] = [...userData.access[org]];
-          }
+          if (Array.isArray(userData.access[org])) editSelectedAccess[org] = [...userData.access[org]];
         });
       }
 
-      // Render assembly selector and sync hidden inputs
       renderAssemblySelector(containerEl, editSelectedAccess, onUpdate);
       syncSelection('modal-selected-assemblies-hidden', 'modal-selected-preview', editSelectedAccess);
+
+      // Rebuild copy-from-user options excluding this user
+      if (copyFromSel) {
+        copyFromSel.innerHTML = '<option value="">— select user —</option>';
+        Object.keys(allUsers).sort().forEach(uname => {
+          if (uname === username) return;
+          const u = allUsers[uname];
+          if (!u.access || !Object.keys(u.access).length) return;
+          const opt = document.createElement('option');
+          opt.value = uname;
+          opt.textContent = uname + (u.email ? ` (${u.email})` : '');
+          copyFromSel.appendChild(opt);
+        });
+      }
 
       // Stale assemblies
       const staleAlert = document.getElementById('modal-stale-alert');
@@ -813,12 +986,10 @@
       staleItems.innerHTML = '';
       const staleList = [];
       Object.keys(userData.access || {}).forEach(org => {
-        const available = allOrganisms[org] || [];
         (userData.access[org] || []).forEach(asm => {
-          if (!available.includes(asm)) staleList.push({ org, asm });
+          if (!(allOrganisms[org] || []).includes(asm)) staleList.push({ org, asm });
         });
       });
-
       if (staleList.length > 0) {
         staleAlert.classList.remove('d-none');
         staleList.forEach(({ org, asm }) => {
@@ -826,13 +997,10 @@
           chip.className = 'tag-chip tag-chip-stale me-1';
           chip.textContent = `${org}: ${asm}`;
           const rm = document.createElement('i');
-          rm.className = 'fa fa-times ms-1';
-          rm.style.cursor = 'pointer';
+          rm.className = 'fa fa-times ms-1'; rm.style.cursor = 'pointer';
           rm.addEventListener('click', function () {
-            if (editSelectedAccess[org]) {
-              editSelectedAccess[org] = editSelectedAccess[org].filter(a => a !== asm);
-              if (!editSelectedAccess[org].length) delete editSelectedAccess[org];
-            }
+            editSelectedAccess[org] = (editSelectedAccess[org] || []).filter(a => a !== asm);
+            if (!editSelectedAccess[org].length) delete editSelectedAccess[org];
             chip.remove();
             if (!staleItems.children.length) staleAlert.classList.add('d-none');
             renderAssemblySelector(containerEl, editSelectedAccess, onUpdate);
@@ -844,29 +1012,34 @@
       } else {
         staleAlert.classList.add('d-none');
       }
-    }); // end delegated click → populate modal
+    });
 
-    // Validate edit form on submit
+    if (copyFromSel) {
+      copyFromSel.addEventListener('change', function () {
+        if (!this.value) return;
+        const src = allUsers[this.value];
+        if (!src?.access) return;
+        Object.keys(editSelectedAccess).forEach(k => delete editSelectedAccess[k]);
+        Object.keys(src.access).forEach(org => {
+          if (Array.isArray(src.access[org])) editSelectedAccess[org] = [...src.access[org]];
+        });
+        renderAssemblySelector(containerEl, editSelectedAccess, onUpdate);
+        onUpdate();
+        this.value = '';
+      });
+    }
+
     document.getElementById('editUserForm')?.addEventListener('submit', function (e) {
-      const pw  = document.getElementById('modal-password').value;
+      const pw = document.getElementById('modal-password').value;
       const pw2 = document.getElementById('modal-password-confirm').value;
       const adm = document.getElementById('modal-isAdmin').checked;
       const hasAsm = Object.values(editSelectedAccess).some(a => a.length > 0);
-
-      if (pw && pw !== pw2) {
-        e.preventDefault();
-        alert('Passwords do not match.');
-        document.getElementById('modal-password-confirm').focus();
-        return;
-      }
-      if (!adm && !hasAsm) {
-        e.preventDefault();
-        alert('Select at least one assembly, or check Admin for full access.');
-      }
+      if (pw && pw !== pw2) { e.preventDefault(); alert('Passwords do not match.'); document.getElementById('modal-password-confirm').focus(); return; }
+      if (!adm && !hasAsm) { e.preventDefault(); alert('Select at least one assembly, or check Admin for full access.'); }
     });
   }
 
-  // ── DELETE ─────────────────────────────────────────────────────────────
+  // ── DELETE ────────────────────────────────────────────────────────────
   function initDeleteButtons() {
     document.querySelectorAll('.delete-user-btn').forEach(btn => {
       btn.addEventListener('click', function () {
@@ -875,37 +1048,30 @@
         const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const form = document.createElement('form');
         form.method = 'POST';
-        form.innerHTML =
-          `<input type="hidden" name="csrf_token"  value="${token}">` +
-          `<input type="hidden" name="delete_user" value="1">` +
-          `<input type="hidden" name="username"    value="${username}">`;
+        form.innerHTML = `<input type="hidden" name="csrf_token" value="${token}"><input type="hidden" name="delete_user" value="1"><input type="hidden" name="username" value="${username}">`;
         document.body.appendChild(form);
         form.submit();
       });
     });
   }
 
-  // ── RESET CREATE FORM ──────────────────────────────────────────────────
+  // ── RESET CREATE FORM ─────────────────────────────────────────────────
   window.resetCreateForm = function () {
     createSelectedAccess = {};
     const containerEl = document.getElementById('create-access-container');
-    if (containerEl) {
-      renderAssemblySelector(containerEl, createSelectedAccess, function () {
-        syncSelection('create-selected-assemblies-hidden', 'create-selected-preview', createSelectedAccess);
-      });
-    }
+    if (containerEl) renderAssemblySelector(containerEl, createSelectedAccess, () => syncSelection('create-selected-assemblies-hidden', 'create-selected-preview', createSelectedAccess));
     syncSelection('create-selected-assemblies-hidden', 'create-selected-preview', createSelectedAccess);
     document.getElementById('create-pw-match').style.display = 'none';
     document.getElementById('create-access-section')?.classList.remove('access-disabled');
-    document.getElementById('create-access-required').style.display = '';
+    const req = document.getElementById('create-access-required');
+    if (req) req.style.display = '';
   };
 
-  // ── STALE AUDIT TOGGLE ─────────────────────────────────────────────────
+  // ── STALE AUDIT TOGGLE ────────────────────────────────────────────────
   function initStaleAudit() {
     const header = document.getElementById('stale-audit-header');
     const panel  = document.getElementById('stale-audit');
     if (!header || !panel) return;
-    header.style.cursor = 'pointer';
     header.addEventListener('click', function () {
       const hidden = panel.style.display === 'none' || !panel.style.display;
       panel.style.display = hidden ? 'block' : 'none';
@@ -914,21 +1080,14 @@
     });
   }
 
-  // ── DataTable ──────────────────────────────────────────────────────────
+  // ── DataTable ─────────────────────────────────────────────────────────
   function initDataTable() {
-    if (typeof $ !== 'undefined' && $.fn && $.fn.DataTable) {
-      $('#usersTable').DataTable({
-        pageLength: 25,
-        order: [[0, 'asc']],
-        columnDefs: [{ targets: 6, orderable: false }]
-      });
+    if (typeof $ !== 'undefined' && $.fn?.DataTable) {
+      $('#usersTable').DataTable({ pageLength: 25, order: [[0, 'asc']], columnDefs: [{ targets: 6, orderable: false }] });
     }
   }
 
-  // ── Boot ───────────────────────────────────────────────────────────────
-  // allOrganisms/allUsers are defined by inline_scripts which layout.php
-  // outputs AFTER this content file, so they're only safe to access inside
-  // DOMContentLoaded (by which point all scripts have been parsed).
+  // ── Boot ──────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     Object.keys(allOrganisms).forEach(org => orgColor(org));
     initCreateForm();

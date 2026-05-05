@@ -26,6 +26,29 @@ handleAdminAjax();
 // Load organisms for access control
 $organisms = getOrganismsWithAssemblies($organism_data_path);
 
+// Build group → organism → [assemblies] map for the JS selector
+$group_data = getGroupData();
+$organisms_by_group = [];
+$grouped_orgs = [];
+foreach ($group_data as $entry) {
+    $org  = $entry['organism'];
+    $asm  = $entry['assembly'];
+    $grps = $entry['groups'] ?? [];
+    if (!isset($organisms[$org]) || !in_array($asm, $organisms[$org])) continue;
+    foreach ($grps as $g) {
+        if ($g === 'Public') continue;
+        $organisms_by_group[$g][$org][] = $asm;
+        $grouped_orgs[$org] = true;
+    }
+}
+// Organisms not in any named group → "Other"
+foreach ($organisms as $org => $assemblies) {
+    if (!isset($grouped_orgs[$org])) {
+        $organisms_by_group['Other'][$org] = $assemblies;
+    }
+}
+ksort($organisms_by_group);
+
 $users = [];
 $file_write_error = null;
 
@@ -238,6 +261,7 @@ $data = [
     ],
     'inline_scripts' => [
         "const allOrganisms = " . json_encode($organisms) . ";",
+        "const allOrganismsByGroup = " . json_encode($organisms_by_group) . ";",
         "const allUsers = " . json_encode(array_map(function($u) { unset($u['password']); return $u; }, $users)) . ";",
     ]
 ];
