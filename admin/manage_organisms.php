@@ -258,7 +258,7 @@ $data = [
         "(function(){
   const el = document.getElementById('cacheAge');
   if (!el || !el.dataset.generated) return;
-  const d = new Date(el.dataset.generated.replace(' ', 'T'));
+  const d = new Date(el.dataset.generated.replace(' ', 'T') + 'Z');
   const sec = Math.round((Date.now() - d) / 1000);
   if (sec < 60) el.textContent = sec + 's ago';
   else if (sec < 3600) el.textContent = Math.floor(sec/60) + 'm ago';
