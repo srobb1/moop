@@ -53,3 +53,19 @@
   cursor: pointer;
   user-select: none;
 }
+
+/* Bootstrap modal-dialog-scrollable expects .modal-body to be a direct child of
+   .modal-content, but our <form> wraps both .modal-body and .modal-footer.
+   Make the form a flex passthrough so Bootstrap's scrollable logic still works. */
+#editUserModal .modal-content > form {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  max-height: 100%;
+  flex: 1 1 auto;
+}
+#editUserModal .modal-body {
+  overflow-y: auto;
+  min-height: 0;
+}
