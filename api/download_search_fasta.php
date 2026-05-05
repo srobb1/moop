@@ -11,10 +11,14 @@
  *   csrf_token - CSRF token (or X-CSRF-Token header)
  */
 
+
 ob_start();
 include_once __DIR__ . '/../tools/tool_init.php';
+include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 ob_end_clean();
+
+set_time_limit(300);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -38,15 +42,40 @@ if (!is_array($features_by_organism)) {
 $organism_data  = $config->getPath('organism_data');
 $sequence_types = $config->getSequenceTypes();
 
-$all_fasta = '';
-
+// First pass: verify at least one organism directory exists, to catch empty results early
+$valid_organisms = [];
 foreach ($features_by_organism as $organism => $uniquenames) {
     if (empty($organism) || empty($uniquenames)) continue;
-
     $organism_dir = "$organism_data/$organism";
-    if (!is_dir($organism_dir)) continue;
+    if (is_dir($organism_dir)) {
+        $valid_organisms[$organism] = $uniquenames;
+    }
+}
 
-    // Scan all assembly subdirectories
+if (empty($valid_organisms)) {
+    http_response_code(404);
+    die('No sequences found. BLAST databases may not be built for these organisms.');
+}
+
+// Build filename from search label and date
+$label = trim($_POST['label'] ?? '');
+$label = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $label);
+$label = preg_replace('/_+/', '_', trim($label, '_'));
+$date  = date('Y-m-d');
+$filename = $label !== ''
+    ? "annotation_search_{$label}_{$date}.fasta"
+    : "annotation_search_{$date}.fasta";
+
+// Stream output directly to avoid buffering large FASTA payloads in memory
+header('Content-Type: application/x-fasta');
+header('Content-Disposition: attachment; filename="' . $filename . '"');
+header('Cache-Control: no-cache');
+
+$found_any = false;
+
+foreach ($valid_organisms as $organism => $uniquenames) {
+    $organism_dir = "$organism_data/$organism";
+
     $entries = array_diff(scandir($organism_dir), ['.', '..']);
     foreach ($entries as $entry) {
         $assembly_dir = "$organism_dir/$entry";
@@ -56,18 +85,17 @@ foreach ($features_by_organism as $organism => $uniquenames) {
         $result = extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types, $organism, $entry);
         if ($result['success']) {
             foreach ($result['content'] as $content) {
-                $all_fasta .= rtrim($content) . "\n";
+                $chunk = rtrim($content) . "\n";
+                echo $chunk;
+                $found_any = true;
             }
+            if (ob_get_level() > 0) ob_flush();
+            flush();
         }
     }
 }
 
-if (empty(trim($all_fasta))) {
-    http_response_code(404);
-    die('No sequences found. BLAST databases may not be built for these organisms.');
+if (!$found_any) {
+    // Headers already sent — log the failure so it's visible in the app log
+    logError('No sequences found for any organism in FASTA download', 'download_fasta', ['organisms' => array_keys($valid_organisms)]);
 }
-
-header('Content-Type: application/x-fasta');
-header('Content-Disposition: attachment; filename="annotation_search_results.fasta"');
-header('Cache-Control: no-cache');
-echo $all_fasta;

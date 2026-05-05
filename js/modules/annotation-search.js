@@ -455,6 +455,12 @@ class AnnotationSearch {
         featuresInput.value = JSON.stringify(features);
         form.appendChild(featuresInput);
 
+        const labelInput = document.createElement('input');
+        labelInput.type = 'hidden';
+        labelInput.name = 'label';
+        labelInput.value = this.currentKeywords;
+        form.appendChild(labelInput);
+
         document.body.appendChild(form);
         form.submit();
         document.body.removeChild(form);
