@@ -209,6 +209,7 @@ if (!empty($feature_loc) && file_exists($gff_file)) {
         $mrna_id = $id_m[1];
         $isoform = [
             'id'     => $mrna_id,
+            'anchor' => 'annot_section_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $mrna_id . '_' . ($analysis_order[0] ?? 'annotation')),
             'start'  => (int)$parts[3],
             'end'    => (int)$parts[4],
             'strand' => $parts[6],
@@ -330,6 +331,9 @@ echo render_display_page(
         ],
         'inline_scripts' => [
             "const geneModelData = " . json_encode($gene_model) . ";",
+            "const moopOrganism = '" . addslashes($organism_name) . "';",
+            "const moopAssembly = '" . addslashes($genome_accession) . "';",
+            "const moopSite = '/" . addslashes($site) . "';",
             "const siteTitle = '" . addslashes($siteTitle) . "';"
         ]
     ],

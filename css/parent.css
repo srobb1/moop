@@ -259,6 +259,33 @@ td.export-only {
     display: none;
 }
 
+/* Gene model SVG — clickable isoform rows */
+#gene-model-svg .iso-row-bg {
+    fill: transparent;
+    transition: fill 0.15s ease;
+}
+#gene-model-svg .iso-row:hover .iso-row-bg {
+    fill: rgba(113, 123, 200, 0.07);
+}
+/* Highlight clickable regions on hover */
+#gene-model-svg .region-exon:hover   { filter: brightness(1.15); }
+#gene-model-svg .region-cds:hover    { filter: brightness(1.2); }
+#gene-model-svg .region-intron:hover { fill: rgba(0,0,0,0.08) !important; }
+
+/* Sequence modal pre block */
+.seq-region-pre {
+    font-size: 0.82em;
+    line-height: 1.5;
+    background: #f8f9fa;
+    padding: 0.85rem 1rem;
+    border-radius: 4px;
+    white-space: pre;
+    overflow-x: auto;
+    max-height: 420px;
+    overflow-y: auto;
+    font-family: 'Courier New', Courier, monospace;
+}
+
 /* Smooth scrolling for anchor links */
 html {
     scroll-behavior: smooth;
