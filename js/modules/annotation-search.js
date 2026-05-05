@@ -418,7 +418,9 @@ class AnnotationSearch {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'annotation_search_results.csv';
+        const csvLabel = this.currentKeywords.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        const csvDate = new Date().toISOString().slice(0, 10);
+        a.download = csvLabel ? `annotation_search_${csvLabel}_${csvDate}.csv` : `annotation_search_${csvDate}.csv`;
         a.click();
         URL.revokeObjectURL(url);
     }
