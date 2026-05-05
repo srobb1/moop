@@ -1106,6 +1106,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+</script>
 
   <!-- Back to Admin Dashboard Link (Bottom) -->
   <div class="mt-5 mb-4">
