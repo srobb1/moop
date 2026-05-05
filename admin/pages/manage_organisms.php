@@ -35,11 +35,12 @@
           <li>Inclusion in the taxonomy tree for homepage discovery</li>
         </ul>
         
-        <p><strong>Status Checklist (8 Requirements):</strong> The system tracks 8 dimensions of organism readiness:</p>
+        <p><strong>Status Checklist (9 Requirements):</strong> The system tracks 9 dimensions of organism readiness:</p>
         <ul>
           <li>Has assemblies - At least one genome version exists</li>
           <li>Has FASTA files - Required sequence files are present</li>
           <li>Has BLAST indexes - Files are searchable via BLAST</li>
+          <li>Has FAI index - <code>genome.fa.fai</code> present for SVG sequence viewer</li>
           <li>Has database file - SQLite database exists</li>
           <li>Database is readable - Web server can access it</li>
           <li>In organism groups - Assembly is assigned to user groups</li>
@@ -58,8 +59,9 @@
           <li>Manage metadata (images, descriptions)</li>
           <li>Handle assembly directories and FASTA files</li>
           <li>Verify BLAST indexes are present</li>
+          <li>Verify genome FAI index is present</li>
           <li>See which groups each organism belongs to</li>
-          <li>Track overall setup completion with the 8-point checklist</li>
+          <li>Track overall setup completion with the 9-point checklist</li>
         </ul>
       </div>
     </div>
@@ -180,6 +182,7 @@
             <span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete</span> - Assembly directory exists with valid FASTA files
             <br><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Name Mismatch</span> - Directory name doesn't match database genome name
             <br><span class="badge bg-secondary"><i class="fa fa-rocket"></i> Missing BLAST Indexes</span> - FASTA files present but BLAST indexes need to be generated
+            <br><span class="badge bg-secondary"><i class="fa fa-dna"></i> Missing FAI Index</span> - <code>genome.fa.fai</code> missing; SVG sequence viewer unavailable
             <br><span class="badge bg-info"><i class="fa fa-times-circle"></i> Missing Files</span> - Assembly missing required FASTA files
           </p>
           <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click an assembly button for detailed information and available tools.</p>
@@ -215,12 +218,12 @@
         <div class="mb-0">
           <h6 class="fw-bold mb-2"><i class="fa fa-star"></i> Overall Status</h6>
           <p class="mb-2">
-            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">8</span></button> - All 8 checks passed
-            <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-success">X</span></button> - Some checks passed (see modal for details)
+            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">9</span></button> - All 9 checks passed
+            <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-warning text-dark">X</span></button> - Some checks passed (see modal for details)
             <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Critical <span class="badge bg-danger">0</span></button> - No checks passed (no database or no assemblies)
           </p>
-          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the status button to see the detailed checklist of all 8 setup requirements.</p>
-          <p class="small text-muted"><strong>Checklist includes:</strong> Assemblies • FASTA files • BLAST indexes • Database file • Database readable • Assemblies in groups • Organism in tree • Metadata complete</p>
+          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the status button to see the detailed checklist of all 9 setup requirements.</p>
+          <p class="small text-muted"><strong>Checklist includes:</strong> Assemblies • FASTA files • BLAST indexes • FAI index • Database file • Database readable • Assemblies in groups • Organism in tree • Metadata complete</p>
         </div>
       </div>
     </div>
@@ -362,13 +365,30 @@
                              }
                            }
                          }
+
+                         // Check if FAI index is missing
+                         $has_missing_fai = false;
+                         $fai_info_badge  = $data['fai_validation'][$assembly] ?? null;
+                         if (!$fai_info_badge) {
+                           $asm_path_b    = $data['path'] . '/' . $assembly;
+                           $genome_fa_b   = $asm_path_b . '/genome.fa';
+                           $fai_info_badge = [
+                             'genome_fa_exists' => file_exists($genome_fa_b),
+                             'fai_exists'       => file_exists($genome_fa_b . '.fai'),
+                           ];
+                         }
+                         if ($fai_info_badge['genome_fa_exists'] && !$fai_info_badge['fai_exists']) {
+                           $has_missing_fai = true;
+                         }
                          
                          // Determine badge style
-                         // Priority: name mismatch > missing blast indexes > missing fasta files
+                         // Priority: name mismatch > missing blast indexes > missing fai > missing fasta files
                          $badge_class = 'bg-success';
                          if ($has_name_mismatch) {
                              $badge_class = 'bg-warning';
                          } elseif ($has_missing_blast_indexes) {
+                             $badge_class = 'bg-secondary';
+                         } elseif ($has_missing_fai) {
                              $badge_class = 'bg-secondary';
                          } elseif ($is_missing) {
                              $badge_class = 'bg-info';
@@ -458,11 +478,11 @@
                  ?>
                  <?php if ($status['all_pass']): ?>
                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#statusModal<?= $safe_org_id ?>">
-                     <i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">8</span>
+                     <i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">9</span>
                    </button>
                  <?php elseif ($pass_count > 0): ?>
                    <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#statusModal<?= $safe_org_id ?>">
-                     <i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-success"><?= $pass_count ?></span>
+                     <i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-warning text-dark"><?= $pass_count ?></span>
                    </button>
                  <?php else: ?>
                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#statusModal<?= $safe_org_id ?>">
@@ -1013,9 +1033,25 @@
         
         // Get BLAST index status (use pre-computed from cache if available)
         $blast_validation = $data['blast_validation'][$assembly] ?? validateBlastIndexFiles($assembly_path, $sequence_types);
+
+        // Get FAI index status (use pre-computed from cache if available)
+        $genome_fa_path = $assembly_path . '/genome.fa';
+        $fai_info = $data['fai_validation'][$assembly] ?? [
+            'genome_fa_exists' => file_exists($genome_fa_path),
+            'fai_exists'       => file_exists($genome_fa_path . '.fai'),
+        ];
         
         // Get group membership
         $assembly_groups = getAssemblyGroups($organism, $assembly, $groups_data);
+        
+        // Compute modal-level missing flags (used in Overall Status and Status Summary)
+        $modal_has_missing_blast = false;
+        if (!empty($blast_validation['databases'])) {
+            foreach ($blast_validation['databases'] as $db) {
+                if (!$db['has_indexes']) { $modal_has_missing_blast = true; break; }
+            }
+        }
+        $modal_has_missing_fai = ($fai_info['genome_fa_exists'] && !$fai_info['fai_exists']);
         
         // Find if this assembly has database validation info
         $has_db_mismatch = false;
@@ -1050,7 +1086,7 @@
               <h6 class="fw-bold mb-2"><i class="fa fa-star"></i> Overall Status</h6>
               <div class="card mb-3">
                 <div class="card-body">
-                  <?php if (!$has_db_mismatch && !$is_missing): ?>
+                  <?php if (!$has_db_mismatch && !$is_missing && !$modal_has_missing_blast && !$modal_has_missing_fai): ?>
                     <span class="badge bg-success h6"><i class="fa fa-check-circle"></i> Assembly is Complete</span>
                   <?php else: ?>
                     <span class="badge bg-danger h6"><i class="fa fa-times-circle"></i> Assembly has Issues</span>
@@ -1270,6 +1306,42 @@
                 </div>
               </div>
 
+              <!-- Genome FAI Index Status -->
+              <h6 class="fw-bold mb-2"><i class="fa fa-dna"></i> Genome FAI Index</h6>
+              <div class="alert alert-info small mb-3">
+                <strong>Required:</strong> A <code>genome.fa.fai</code> samtools index is needed for the SVG gene model sequence viewer to fetch region sequences.
+              </div>
+              <?php
+                $fai_border = (!$fai_info['genome_fa_exists'] || $fai_info['fai_exists']) ? 'border-success' : 'border-warning border-2';
+              ?>
+              <div class="card mb-3 <?= $fai_border ?>">
+                <div class="card-body small">
+                  <?php if (!$fai_info['genome_fa_exists']): ?>
+                    <div class="alert alert-secondary mb-0">
+                      <i class="fa fa-info-circle"></i> No <code>genome.fa</code> found in this assembly — FAI index not applicable.
+                    </div>
+                  <?php elseif ($fai_info['fai_exists']): ?>
+                    <span class="badge bg-success"><i class="fa fa-check"></i></span>
+                    <strong>genome.fa.fai:</strong> Present
+                  <?php else: ?>
+                    <span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i></span>
+                    <strong>genome.fa.fai:</strong>
+                    <small class="text-danger"> Missing — SVG sequence viewer will be unavailable for this assembly.</small>
+                    <div class="mt-2 p-2 bg-light border rounded small">
+                      <strong class="d-block mb-2">To generate the FAI index, run on the server:</strong>
+                      <?php
+                        $fai_asm_path = $organism_data . '/' . $organism . '/' . $assembly;
+                        $fai_cd_cmd   = 'cd ' . htmlspecialchars($fai_asm_path);
+                        $faidx_cmd    = 'samtools faidx genome.fa';
+                      ?>
+                      <code class="d-block" style="word-break: break-all; white-space: normal;">
+                        <?= $fai_cd_cmd ?> && \<br><?= $faidx_cmd ?>
+                      </code>
+                    </div>
+                  <?php endif; ?>
+                </div>
+              </div>
+
               <!-- Groups Status -->
               <h6 class="fw-bold mb-2"><i class="fa fa-sitemap"></i> Group Membership</h6>
               <div class="card mb-3">
@@ -1292,8 +1364,8 @@
 
 
               <!-- Status Summary -->
-              <div class="alert <?= ($is_missing || $has_db_mismatch) ? 'alert-danger' : 'alert-success' ?>">
-                <?php if ($has_db_mismatch || $is_missing): ?>
+              <div class="alert <?= ($is_missing || $has_db_mismatch || $modal_has_missing_blast || $modal_has_missing_fai) ? 'alert-danger' : 'alert-success' ?>">
+                <?php if ($has_db_mismatch || $is_missing || $modal_has_missing_blast || $modal_has_missing_fai): ?>
                   <i class="fa fa-exclamation-circle"></i> <strong>Issues Found:</strong>
                   <ul class="mb-0 mt-2">
                     <?php if ($has_db_mismatch): ?>
@@ -1301,6 +1373,12 @@
                     <?php endif; ?>
                     <?php if ($is_missing): ?>
                       <li>Missing required FASTA files</li>
+                    <?php endif; ?>
+                    <?php if ($modal_has_missing_blast): ?>
+                      <li>Missing BLAST index files</li>
+                    <?php endif; ?>
+                    <?php if ($modal_has_missing_fai): ?>
+                      <li>Missing <code>genome.fa.fai</code> index (required for SVG sequence viewer)</li>
                     <?php endif; ?>
                   </ul>
                 <?php else: ?>
@@ -1341,6 +1419,11 @@
           <li><strong>Create organism.json:</strong> Add metadata about the organism</li>
           <li><strong>Create assembly directory:</strong> <code>mkdir Genus_species/assembly_name</code></li>
           <li><strong>Upload FASTA files:</strong> Add CDS, protein, transcript, and genome files to the assembly directory</li>
+          <li><strong>Generate genome FAI index:</strong> Required for the SVG gene model sequence viewer:
+            <pre class="bg-light p-2 mt-1 mb-0 rounded small">cd <?= htmlspecialchars($organism_data) ?>/Genus_species/assembly_name
+samtools faidx genome.fa</pre>
+          </li>
+          <li><strong>Build BLAST indexes:</strong> Use the Organism Checklist → BLAST step, or run <code>makeblastdb</code> manually</li>
           <li><strong>Assign to groups:</strong> Use "Manage Groups" to make the organism accessible</li>
         </ol>
         
@@ -1349,7 +1432,8 @@
           <li><code>*.cds.nt.fa</code> - Coding sequences (nucleotide)</li>
           <li><code>*.protein.aa.fa</code> - Protein sequences (amino acid)</li>
           <li><code>*.transcript.nt.fa</code> - Transcript sequences (nucleotide)</li>
-          <li><code>*.genome.nt.fa</code> - Genome assembly (optional)</li>
+          <li><code>genome.fa</code> - Reference genome assembly</li>
+          <li><code>genome.fa.fai</code> - samtools FAI index (generated via <code>samtools faidx genome.fa</code>)</li>
         </ul>
         
         <h6 class="fw-bold mt-4">Additional Notes:</h6>
@@ -1397,7 +1481,7 @@
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="mb-0"><i class="fa fa-list-check"></i> <strong>Setup Checklist</strong></h6>
-                <span class="badge bg-success fs-6"><?= $pass_count ?>/8 Complete</span>
+                <span class="badge bg-success fs-6"><?= $pass_count ?>/9 Complete</span>
               </div>
               
               <div class="list-group">
@@ -1431,6 +1515,17 @@
                       <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
                     <?php endif; ?>
                     <span><strong>Has BLAST indexes</strong></span>
+                  </div>
+                </div>
+                
+                <div class="list-group-item <?= $checks['has_fai_index'] ? '' : 'bg-light' ?>">
+                  <div class="d-flex align-items-center">
+                    <?php if ($checks['has_fai_index']): ?>
+                      <i class="fa fa-check-circle text-success me-2" style="font-size: 18px;"></i>
+                    <?php else: ?>
+                      <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
+                    <?php endif; ?>
+                    <span><strong>Has FAI index</strong> <small class="text-muted">(genome.fa.fai — required for SVG sequence viewer)</small></span>
                   </div>
                 </div>
                 

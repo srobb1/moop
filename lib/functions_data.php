@@ -895,6 +895,7 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         'has_assemblies' => false,
         'has_fasta' => false,
         'has_blast_indexes' => false,
+        'has_fai_index' => false,
         'has_database' => false,
         'database_readable' => false,
         'assemblies_in_groups' => false,
@@ -947,16 +948,41 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         // Set to true only if we found FASTA files AND all have indexes
         $checks['has_blast_indexes'] = ($has_any_fasta && $all_have_indexes);
     }
-    
-    // 4. Is there a database file?
+
+    // 4. Does genome.fa have a .fai index for every assembly that has one?
+    // Passes if no assembly has genome.fa (not applicable); fails if any genome.fa is missing .fai.
+    if ($checks['has_assemblies']) {
+        $any_genome_fa  = false;
+        $all_have_fai   = true;
+        foreach ($data['assemblies'] as $assembly) {
+            $fai_info = $data['fai_validation'][$assembly] ?? null;
+            if (!$fai_info) {
+                $genome_fa = $data['path'] . '/' . $assembly . '/genome.fa';
+                $fai_info  = [
+                    'genome_fa_exists' => file_exists($genome_fa),
+                    'fai_exists'       => file_exists($genome_fa . '.fai'),
+                ];
+            }
+            if ($fai_info['genome_fa_exists']) {
+                $any_genome_fa = true;
+                if (!$fai_info['fai_exists']) {
+                    $all_have_fai = false;
+                    break;
+                }
+            }
+        }
+        $checks['has_fai_index'] = !$any_genome_fa || $all_have_fai;
+    }
+
+    // 5. Is there a database file?
     $checks['has_database'] = $data['has_db'];
     
-    // 5. Is the database readable?
+    // 6. Is the database readable?
     if ($checks['has_database'] && !empty($data['db_validation'])) {
         $checks['database_readable'] = $data['db_validation']['readable'];
     }
     
-    // 6. Is each assembly a member of at least one group?
+    // 7. Is each assembly a member of at least one group?
     if ($checks['has_assemblies']) {
         $all_in_groups = true;
         foreach ($data['assemblies'] as $assembly) {
@@ -969,10 +995,10 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         $checks['assemblies_in_groups'] = $all_in_groups;
     }
     
-    // 7. Is the organism found in the tree? (use pre-computed value from cache if available)
+    // 8. Is the organism found in the tree? (use pre-computed value from cache if available)
     $checks['in_taxonomy_tree'] = $data['in_taxonomy_tree'] ?? isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
     
-    // 8. Is metadata complete?
+    // 9. Is metadata complete?
     if (!empty($data['json_validation'])) {
         $json_val = $data['json_validation'];
         $checks['metadata_complete'] = ($json_val['exists'] && $json_val['readable'] && $json_val['valid_json'] && $json_val['has_required_fields'] && $json_val['writable']);
@@ -1011,6 +1037,9 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
  * @return array Same structure as getDetailedOrganismsInfo, plus 'blast_validation'
  *               and 'overall_status' keys per organism
  */
+// Increment this when the cache structure or computed fields change, to force a full rescan.
+define('ORGANISM_CACHE_SCHEMA_VERSION', 2);
+
 function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh = false, $progress_callback = null) {
     $cache_file = "$organism_data_path/.organism_cache.json";
     
@@ -1028,7 +1057,8 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     
     if (!$force_refresh && file_exists($cache_file)) {
         $cached = json_decode(file_get_contents($cache_file), true);
-        if ($cached && isset($cached['org_fingerprints']) && isset($cached['config_fingerprint']) && isset($cached['data'])) {
+        if ($cached && isset($cached['org_fingerprints']) && isset($cached['config_fingerprint']) && isset($cached['data'])
+            && ($cached['schema_version'] ?? 0) === ORGANISM_CACHE_SCHEMA_VERSION) {
             $cached_fingerprints = $cached['org_fingerprints'];
             $cached_config = $cached['config_fingerprint'];
             $cached_data = $cached['data'];
@@ -1150,6 +1180,17 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
             $blast_by_assembly[$assembly] = validateBlastIndexFiles($assembly_path, $sequence_types);
         }
         $org_info['blast_validation'] = $blast_by_assembly;
+
+        // Pre-compute FAI validation per assembly
+        $fai_by_assembly = [];
+        foreach ($org_info['assemblies'] as $assembly) {
+            $genome_fa = $org_path . '/' . $assembly . '/genome.fa';
+            $fai_by_assembly[$assembly] = [
+                'genome_fa_exists' => file_exists($genome_fa),
+                'fai_exists'       => file_exists($genome_fa . '.fai'),
+            ];
+        }
+        $org_info['fai_validation'] = $fai_by_assembly;
         
         // Pre-compute taxonomy tree membership
         $org_info['in_taxonomy_tree'] = isAssemblyInTaxonomyTree($org_name, '', $taxonomy_tree_file);
@@ -1169,6 +1210,7 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     // Save to cache
     $cache_data = [
         'generated' => date('Y-m-d H:i:s'),
+        'schema_version' => ORGANISM_CACHE_SCHEMA_VERSION,
         'config_fingerprint' => $config_fingerprint,
         'org_fingerprints' => $current_fingerprints,
         'data' => $all_organisms

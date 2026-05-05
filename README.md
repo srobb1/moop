@@ -486,13 +486,21 @@ All changes are saved to `config/config_editable.json` and take effect immediate
        ├── organism.json              (organism metadata)
        ├── organism.sqlite            (organism database)
        └── assembly_name/             (assembly subdirectory)
-           ├── genome.fa              (FASTA file)
+           ├── genome.fa              (reference genome FASTA)
+           ├── genome.fa.fai          (FASTA index — see step 3)
            ├── cds.nt.fa              (CDS sequences)
            ├── protein.aa.fa          (Protein sequences)
            └── transcript.nt.fa       (Transcript sequences)
    ```
 
-3. **Create SQLite database** with your genomic data:
+3. **Index the genome FASTA** — required for the SVG gene model sequence viewer:
+   ```bash
+   cd /var/www/html/moop/organisms/Genus_species/assembly_name
+   samtools faidx genome.fa
+   ```
+   This creates `genome.fa.fai` alongside `genome.fa`. Run once per assembly.
+
+4. **Create SQLite database** with your genomic data:
    - See [moop-dbtools](https://github.com/MOOPGDB/moop-dbtools) for detailed instructions
    - Includes guides for data analysis, feature loading, and database schema
 
