@@ -374,6 +374,94 @@
           </div>
         </div>
 
+        <!-- FAI Index Status Check -->
+        <div class="mt-4">
+          <?php
+          // Check for missing genome.fa.fai indexes
+          $fai_issues = [];
+          foreach ($organisms_in_system as $org) {
+              $org_dir = "$organism_data/$org";
+              if (is_dir($org_dir)) {
+                  foreach (scandir($org_dir) as $item) {
+                      if ($item === '.' || $item === '..') continue;
+                      $asm_dir = "$org_dir/$item";
+                      if (!is_dir($asm_dir)) continue;
+                      $fasta   = "$asm_dir/genome.fa";
+                      $fai     = "$fasta.fai";
+                      if (file_exists($fasta) && !file_exists($fai)) {
+                          $fai_issues[] = [
+                              'organism' => $org,
+                              'assembly' => $item,
+                              'fasta'    => $fasta,
+                              'writable' => is_writable($asm_dir),
+                          ];
+                      }
+                  }
+              }
+          }
+          ?>
+          <h6 class="fw-bold mb-3" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#faiIndexStatusStep1" role="button" tabindex="0">
+            <i class="fa fa-dna"></i> Genome FAI Index Status
+            <?php if (!empty($fai_issues)): ?>
+              <span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> <?= count($fai_issues) ?> Missing</span>
+            <?php else: ?>
+              <span class="badge bg-success"><i class="fa fa-check"></i> OK</span>
+            <?php endif; ?>
+            <i class="fa fa-chevron-down float-end"></i>
+          </h6>
+          <div class="collapse" id="faiIndexStatusStep1">
+            <?php if (!empty($fai_issues)): ?>
+              <div class="alert alert-warning">
+                <i class="fa fa-exclamation-triangle"></i> <strong>Missing FAI Index Files:</strong>
+                <p class="mb-3 mt-2">A <code>genome.fa.fai</code> index is required for the SVG gene model sequence viewer. The following assemblies need one:</p>
+                <div class="bg-light p-3 rounded mb-3" style="max-height: 400px; overflow-y: auto;">
+                  <ul class="mb-0 small">
+                    <?php foreach ($fai_issues as $issue): ?>
+                      <?php
+                        $faidx_cmd = 'samtools faidx ' . escapeshellarg($issue['fasta']);
+                        $cd_cmd    = 'cd ' . escapeshellarg(dirname($issue['fasta']));
+                      ?>
+                      <li class="mb-3 pb-3 border-bottom">
+                        <strong><?= htmlspecialchars($issue['organism']) ?>/<?= htmlspecialchars($issue['assembly']) ?>/genome.fa</strong>
+                        <?php if (!$issue['writable']): ?>
+                          <div class="alert alert-danger mt-2 mb-0 py-1 px-2 small">
+                            <i class="fa fa-lock"></i> <strong>Cannot generate:</strong> assembly directory is not writable by the web server
+                          </div>
+                        <?php endif; ?>
+                        <div class="mt-2 p-2 bg-white border rounded small">
+                          <div class="d-flex justify-content-between align-items-start mb-2">
+                            <strong>To generate the FAI index, run on the server:</strong>
+                            <div class="btn-group btn-group-sm" role="group">
+                              <button type="button" class="btn btn-outline-primary copy-cmd-btn"
+                                data-cmd-text="<?= htmlspecialchars($cd_cmd . ' && ' . $faidx_cmd) ?>"
+                                title="Copy command">
+                                <i class="fa fa-copy"></i> Copy
+                              </button>
+                              <?php if ($issue['writable']): ?>
+                                <button type="button" class="btn btn-outline-success generate-fai-btn"
+                                  data-organism="<?= htmlspecialchars($issue['organism']) ?>"
+                                  data-assembly="<?= htmlspecialchars($issue['assembly']) ?>"
+                                  title="Generate now">
+                                  <i class="fa fa-play"></i> Generate
+                                </button>
+                              <?php endif; ?>
+                            </div>
+                          </div>
+                          <code class="d-block" style="word-break: break-all; white-space: normal;">
+                            <?= htmlspecialchars($cd_cmd) ?> && \<br><?= htmlspecialchars($faidx_cmd) ?>
+                          </code>
+                        </div>
+                      </li>
+                    <?php endforeach; ?>
+                  </ul>
+                </div>
+              </div>
+            <?php else: ?>
+              <p class="text-muted small">All assemblies with a <code>genome.fa</code> have a corresponding <code>genome.fa.fai</code> index.</p>
+            <?php endif; ?>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -967,8 +1055,57 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
   });
+  // Generate FAI indexes
+  document.querySelectorAll('.generate-fai-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const organism = this.getAttribute('data-organism');
+      const assembly = this.getAttribute('data-assembly');
+
+      if (!confirm(`Generate FAI index for ${organism}/${assembly}/genome.fa?\n\nThis runs: samtools faidx`)) {
+        return;
+      }
+
+      const originalText = this.innerHTML;
+      this.disabled = true;
+      this.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating...';
+
+      fetch('api/generate_fai_index.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ organism, assembly })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          this.innerHTML = '<i class="fa fa-check"></i> Success!';
+          this.classList.remove('btn-outline-success');
+          this.classList.add('btn-success');
+          const ok = document.createElement('div');
+          ok.className = 'alert alert-success mt-2';
+          ok.innerHTML = '<i class="fa fa-check-circle"></i> FAI index generated successfully! Reloading...';
+          this.closest('li').appendChild(ok);
+          setTimeout(() => location.reload(), 3000);
+        } else {
+          this.disabled = false;
+          this.innerHTML = originalText;
+          const err = document.createElement('div');
+          err.className = 'alert alert-danger mt-2';
+          err.innerHTML = '<i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + (data.message || 'Failed to generate FAI index');
+          this.closest('li').appendChild(err);
+        }
+      })
+      .catch(err => {
+        this.disabled = false;
+        this.innerHTML = originalText;
+        const errDiv = document.createElement('div');
+        errDiv.className = 'alert alert-danger mt-2';
+        errDiv.innerHTML = '<i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + err.message;
+        this.closest('li').appendChild(errDiv);
+      });
+    });
+  });
 });
-</script>
 
   <!-- Back to Admin Dashboard Link (Bottom) -->
   <div class="mt-5 mb-4">
