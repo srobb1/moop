@@ -311,7 +311,18 @@
               <?= $desc['in_use'] ? 'In Use' : 'Not In Use' ?>
             </span>
           </div>
-          <span style="font-size: 18px; color: #666;">▼</span>
+          <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
+            <?php if (!$file_write_error): ?>
+              <button type="button" class="btn btn-danger btn-sm"
+                      onclick="deleteGroup(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>)">
+                <i class="fa fa-trash"></i> Delete Group
+              </button>
+            <?php endif; ?>
+            <button type="button" class="btn btn-secondary btn-sm"
+                    onclick="toggleGroup('<?= htmlspecialchars($desc['group_name']) ?>')">
+              <i class="fa fa-edit"></i> Edit
+            </button>
+          </div>
         </div>
         <div class="group-content" id="content-<?= htmlspecialchars($desc['group_name']) ?>" style="padding: 20px; display: none;">
           <form method="post" id="form-<?= htmlspecialchars($desc['group_name']) ?>">
@@ -384,6 +395,21 @@
     </a>
   </div>
 </div>
+
+<!-- Hidden form for delete-group action -->
+<form id="deleteGroupForm" method="post" style="display:none;">
+  <?= csrf_input_field() ?>
+  <input type="hidden" name="delete_group" value="1">
+  <input type="hidden" name="group_name" id="deleteGroupName">
+</form>
+
+<script>
+function deleteGroup(groupName) {
+  if (!confirm('Delete group "' + groupName + '"?\n\nThis will remove it from ALL assembly entries and from group descriptions. This cannot be undone.')) return;
+  document.getElementById('deleteGroupName').value = groupName;
+  document.getElementById('deleteGroupForm').submit();
+}
+</script>
 
 
 

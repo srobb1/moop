@@ -303,6 +303,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         
         $_SESSION['success_message'] = "Updated groups for $updated_count assemblies!";
         
+    } elseif (isset($_POST['delete_group'])) {
+        $group_name = trim($_POST['group_name'] ?? '');
+
+        if ($group_name !== '') {
+            // Remove from all organism/assembly entries
+            foreach ($groups_data as &$entry) {
+                $entry['groups'] = array_values(array_filter($entry['groups'], fn($g) => $g !== $group_name));
+            }
+            unset($entry);
+
+            // Remove from descriptions
+            $descriptions_data = array_values(array_filter($descriptions_data, fn($d) => $d['group_name'] !== $group_name));
+            if (!$desc_file_write_error) {
+                file_put_contents($descriptions_file, json_encode($descriptions_data, JSON_PRETTY_PRINT));
+            }
+
+            $log_entry = sprintf(
+                "[%s] DELETE_GROUP by %s | Group: %s\n",
+                $timestamp, $username, $group_name
+            );
+            file_put_contents($log_file, $log_entry, FILE_APPEND);
+
+            $_SESSION['success_message'] = "Group \"" . htmlspecialchars($group_name) . "\" deleted from all assemblies and descriptions.";
+        }
+
     } elseif (isset($_POST['bulk_add'])) {
         // Bulk add: create new entries for ungrouped assemblies
         $assemblies = json_decode($_POST['assemblies'], true);
