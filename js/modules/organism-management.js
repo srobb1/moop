@@ -652,6 +652,18 @@ function attachImageUploadHandler(imageItemElement, organism) {
   });
 }
 
+// Status filter for the organisms table
+let activeStatusFilter = 'all';
+
+$.fn.dataTable.ext.search.push(function(settings, _data, _idx) {
+    if (settings.nTable.id !== 'organismsTable') return true;
+    if (activeStatusFilter === 'all') return true;
+    const tr = settings.aoData[_idx].nTr;
+    if (!tr) return true;
+    if (activeStatusFilter === 'needs-attention') return tr.dataset.status !== 'complete';
+    return (tr.dataset.issues || '').split(' ').includes(activeStatusFilter);
+});
+
 // Initialize DataTables on the organisms table
 $(document).ready(function() {
   $('#organismsTable').DataTable({
@@ -662,18 +674,89 @@ $(document).ready(function() {
       searchPlaceholder: 'organism, common name, assembly...'
     }
   });
-});
 
-// Attach handlers to all existing image items when page loads
-document.addEventListener('DOMContentLoaded', function() {
-  const imageContainers = document.querySelectorAll('[id^="images-container-"]');
-  imageContainers.forEach(container => {
-    const organism = container.id.replace('images-container-', '');
-    container.querySelectorAll('.image-item').forEach(item => {
-      attachImageUploadHandler(item, organism);
-    });
+  // Filter bar: toggle active class and re-draw DataTables
+  document.getElementById('statusFilterBar')?.addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-filter]');
+    if (!btn) return;
+    activeStatusFilter = btn.dataset.filter;
+    this.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b === btn));
+    $('#organismsTable').DataTable().draw();
   });
 });
+
+/**
+ * Open an organism modal on demand via AJAX.
+ * Fetches the modal HTML from the API, injects it into #dynamicModal, and shows it.
+ * type: 'db' | 'metadata' | 'asm' | 'status'
+ */
+async function openOrganismModal(type, organism, assembly) {
+    const modalEl = document.getElementById('dynamicModal');
+    if (!modalEl) return;
+
+    // Show loading state immediately
+    modalEl.innerHTML = `
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-body text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 mb-0 text-muted">Loading...</p>
+                </div>
+            </div>
+        </div>`;
+
+    let bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    bsModal.show();
+
+    try {
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const resp = await fetch(`${sitePath}/admin/api/get_organism_modal.php`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRF-Token': csrf
+            },
+            body: new URLSearchParams({ type, organism, assembly: assembly || '' })
+        });
+
+        if (!resp.ok) throw new Error(`Server error ${resp.status}`);
+        modalEl.innerHTML = await resp.text();
+
+        // Re-apply Bootstrap modal behaviour after innerHTML replacement
+        bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+
+        // Wire up image upload handlers for the metadata modal
+        if (type === 'metadata') {
+            const container = document.getElementById('images-container-' + organism);
+            if (container) {
+                container.querySelectorAll('.image-item').forEach(item => {
+                    attachImageUploadHandler(item, organism);
+                });
+            }
+        }
+    } catch (err) {
+        modalEl.innerHTML = `
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Error</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-danger mb-0">Failed to load modal content. Please try again.</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    // Clean up modal HTML on close to free DOM memory
+    modalEl.addEventListener('hidden.bs.modal', () => { modalEl.innerHTML = ''; }, { once: true });
+}
 
 /**
  * Background organism cache refresh — POSTs to the refresh endpoint,

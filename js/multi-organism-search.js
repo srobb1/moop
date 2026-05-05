@@ -9,6 +9,43 @@
  * - sitePath: the site path prefix
  */
 
+/**
+ * Handle tool button clicks on the multi-organism page.
+ * POSTs the live selectedOrganisms list to the tool URL in a new tab,
+ * avoiding GET URL length limits and stale baked-in organism lists.
+ */
+function handleToolClick(toolId) {
+    if (!selectedOrganisms || selectedOrganisms.length === 0) {
+        alert('Please select at least one organism');
+        return;
+    }
+
+    const toolBtn = document.getElementById(`tool-btn-${toolId}`);
+    if (!toolBtn) return;
+
+    const toolPath = toolBtn.getAttribute('data-tool-path');
+    if (!toolPath) return;
+
+    const siteName = typeof sitePath !== 'undefined' ? sitePath.replace(/^\//,'').split('/')[0] : 'moop';
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/${siteName}${toolPath}`;
+    form.target = '_blank';
+
+    selectedOrganisms.forEach(org => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'organisms[]';
+        input.value = org;
+        form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+
 // Update search manager with currently selected organisms
 function updateMultiSearchManager(newSelectedOrganisms) {
     selectedOrganisms = newSelectedOrganisms;

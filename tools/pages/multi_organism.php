@@ -30,7 +30,7 @@
     <!-- Tools Column -->
     <div class="col-lg-4">
       <?php 
-      $context = createToolContext('multi_organism_search', ['organisms' => $organisms]);
+      $context = createToolContext('multi_organism_search', ['use_onclick_handler' => true]);
       include_once TOOL_SECTION_PATH;
       ?>
     </div>
@@ -93,7 +93,7 @@
                     <span class="organism-selection-icon"></span>
                   </label>
                   <!-- Clickable card that links to organism page -->
-                  <a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?><?php foreach($organism_list as $org): ?>&multi_search[]=<?= urlencode($org) ?><?php endforeach; ?>" 
+                  <a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?>"
                      class="text-decoration-none organism-card-link">
                     <div class="card h-100 shadow-sm organism-card">
                       <div class="card-body text-center">

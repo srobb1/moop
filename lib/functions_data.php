@@ -899,7 +899,8 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         'has_database' => false,
         'database_readable' => false,
         'assemblies_in_groups' => false,
-        'in_taxonomy_tree' => false
+        'in_taxonomy_tree' => false,
+        'metadata_complete' => false,
     ];
     
     // 1. Does it have at least one assembly?

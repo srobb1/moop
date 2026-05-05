@@ -69,7 +69,7 @@ if (empty($tools)) {
 }
 
 // Determine if tools need special handling (e.g., require organism selection)
-$use_onclick_handler = $context['page'] === 'index' && !empty($context['use_onclick_handler']);
+$use_onclick_handler = !empty($context['use_onclick_handler']);
 ?>
 
 <!-- Tools Section -->
