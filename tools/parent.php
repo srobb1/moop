@@ -171,10 +171,15 @@ $common_name = $row['common_name'];
 $genome_accession = $row['genome_accession'];
 $genome_name = $row['genome_name'];
 
-// Look up feature coordinates from GFF for genome browser deep-linking and display
-$feature_loc = null;
-$gff_file = $config->getPath('organism_data') . '/' . $organism_name . '/' . $genome_accession . '/genomic.gff';
-if (file_exists($gff_file)) {
+// Look up feature coordinates and build gene model from GFF (only when file exists and is non-empty)
+$feature_loc   = null;
+$gene_model    = null;
+$gff_file      = $config->getPath('organism_data') . '/' . $organism_name . '/' . $genome_accession . '/genomic.gff';
+$gff_available = file_exists($gff_file) && filesize($gff_file) > 0;
+
+if ($gff_available) {
+    // Find the gene's own GFF record for location and strand
+    $gff_lines = [];
     exec('grep -m1 -F ' . escapeshellarg('ID=' . $feature_uniquename . ';') . ' ' . escapeshellarg($gff_file), $gff_lines);
     if (empty($gff_lines)) {
         exec('grep -m1 -F ' . escapeshellarg('ID=' . $feature_uniquename) . ' ' . escapeshellarg($gff_file), $gff_lines);
@@ -183,60 +188,77 @@ if (file_exists($gff_file)) {
         $gff_parts = explode("\t", $gff_lines[0]);
         if (count($gff_parts) >= 7) {
             $feature_loc = [
-                'seqname' => $gff_parts[0],
-                'start'   => (int)$gff_parts[3],
-                'end'     => (int)$gff_parts[4],
-                'strand'  => $gff_parts[6],
+                'seqname'    => $gff_parts[0],
+                'start'      => (int)$gff_parts[3],
+                'end'        => (int)$gff_parts[4],
+                'strand'     => $gff_parts[6],
                 'loc_string' => $gff_parts[0] . ':' . $gff_parts[3] . '-' . $gff_parts[4],
             ];
         }
     }
+
+    // Build isoform map from direct children of the gene
+    if (!empty($feature_loc)) {
+        $mrna_raw = [];
+        exec('grep -F ' . escapeshellarg('Parent=' . $feature_uniquename . ';') . ' ' . escapeshellarg($gff_file), $mrna_raw);
+        if (empty($mrna_raw)) {
+            exec('grep -F ' . escapeshellarg('Parent=' . $feature_uniquename) . ' ' . escapeshellarg($gff_file), $mrna_raw);
+        }
+
+        $isoforms = [];
+        foreach ($mrna_raw as $line) {
+            $parts = explode("\t", $line);
+            if (count($parts) < 9) continue;
+            if (!preg_match('/ID=([^;]+)/', $parts[8], $m)) continue;
+            $mid = $m[1];
+            $isoforms[$mid] = [
+                'id'     => $mid,
+                'anchor' => 'annot_section_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $mid . '_' . ($analysis_order[0] ?? 'annotation')),
+                'start'  => (int)$parts[3],
+                'end'    => (int)$parts[4],
+                'strand' => $parts[6],
+                'exons'  => [],
+                'cds'    => [],
+            ];
+        }
+
+        // Fetch all exon/CDS children in a single grep pass instead of one call per isoform
+        if (!empty($isoforms)) {
+            $patterns = array_map(fn($mid) => '-e ' . escapeshellarg('Parent=' . $mid . ';'), array_keys($isoforms));
+            $child_raw = [];
+            exec('grep -F ' . implode(' ', $patterns) . ' ' . escapeshellarg($gff_file), $child_raw);
+            if (empty($child_raw)) {
+                $patterns = array_map(fn($mid) => '-e ' . escapeshellarg('Parent=' . $mid), array_keys($isoforms));
+                exec('grep -F ' . implode(' ', $patterns) . ' ' . escapeshellarg($gff_file), $child_raw);
+            }
+
+            foreach ($child_raw as $child_line) {
+                $cp = explode("\t", $child_line);
+                if (count($cp) < 9) continue;
+                $ft = strtolower($cp[2]);
+                if ($ft !== 'exon' && $ft !== 'cds') continue;
+                if (!preg_match('/Parent=([^;,]+)/', $cp[8], $pm)) continue;
+                $parent_id = $pm[1];
+                if (!isset($isoforms[$parent_id])) continue;
+                $coord = ['start' => (int)$cp[3], 'end' => (int)$cp[4]];
+                if ($ft === 'exon') $isoforms[$parent_id]['exons'][] = $coord;
+                else                $isoforms[$parent_id]['cds'][]   = $coord;
+            }
+
+            $isoform_list = array_values(array_filter(
+                $isoforms,
+                fn($iso) => !empty($iso['exons']) || !empty($iso['cds'])
+            ));
+            if (!empty($isoform_list)) {
+                $gene_model = ['gene' => $feature_loc, 'isoforms' => $isoform_list];
+            }
+        }
+    }
 }
 
-// Build full gene model (isoforms + exon/CDS) for the gene structure SVG viewer
-$gene_model = null;
-if (!empty($feature_loc) && file_exists($gff_file)) {
-    $mrna_raw = [];
-    exec('grep -F ' . escapeshellarg('Parent=' . $feature_uniquename . ';') . ' ' . escapeshellarg($gff_file), $mrna_raw);
-    if (empty($mrna_raw)) {
-        exec('grep -F ' . escapeshellarg('Parent=' . $feature_uniquename) . ' ' . escapeshellarg($gff_file), $mrna_raw);
-    }
-    $isoforms = [];
-    foreach ($mrna_raw as $mrna_line) {
-        $parts = explode("\t", $mrna_line);
-        if (count($parts) < 9) continue;
-        if (!preg_match('/ID=([^;]+)/', $parts[8], $id_m)) continue;
-        $mrna_id = $id_m[1];
-        $isoform = [
-            'id'     => $mrna_id,
-            'anchor' => 'annot_section_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $mrna_id . '_' . ($analysis_order[0] ?? 'annotation')),
-            'start'  => (int)$parts[3],
-            'end'    => (int)$parts[4],
-            'strand' => $parts[6],
-            'exons'  => [],
-            'cds'    => [],
-        ];
-        $child_raw = [];
-        exec('grep -F ' . escapeshellarg('Parent=' . $mrna_id . ';') . ' ' . escapeshellarg($gff_file), $child_raw);
-        if (empty($child_raw)) {
-            exec('grep -F ' . escapeshellarg('Parent=' . $mrna_id) . ' ' . escapeshellarg($gff_file), $child_raw);
-        }
-        foreach ($child_raw as $child_line) {
-            $cp = explode("\t", $child_line);
-            if (count($cp) < 7) continue;
-            $ft = strtolower($cp[2]);
-            $coord = ['start' => (int)$cp[3], 'end' => (int)$cp[4]];
-            if ($ft === 'exon') $isoform['exons'][] = $coord;
-            elseif ($ft === 'cds') $isoform['cds'][] = $coord;
-        }
-        if (!empty($isoform['exons']) || !empty($isoform['cds'])) {
-            $isoforms[] = $isoform;
-        }
-    }
-    if (!empty($isoforms)) {
-        $gene_model = ['gene' => $feature_loc, 'isoforms' => $isoforms];
-    }
-}
+// Check whether genomic sequence fetch is available for the SVG click-to-sequence feature
+$assembly_dir         = $config->getPath('organism_data') . '/' . $organism_name . '/' . $genome_accession;
+$genome_seq_available = file_exists("$assembly_dir/genome.fa") && file_exists("$assembly_dir/genome.fa.fai");
 
 $family_feature_ids = [$feature_id];
 $retrieve_these_seqs = [$feature_uniquename];
@@ -260,6 +282,7 @@ foreach ($children as $child) {
     $retrieve_these_seqs[] = $child['feature_uniquename'];
 }
 $retrieve_these_seqs = array_unique($retrieve_these_seqs);
+sort($retrieve_these_seqs);
 $gene_name = implode(",", $retrieve_these_seqs);
 
 // Handle download request if present (BEFORE rendering page)
@@ -317,6 +340,7 @@ echo render_display_page(
         'annotation_labels' => $annotation_labels,
         'analysis_desc' => $analysis_desc,
         'retrieve_these_seqs' => $retrieve_these_seqs,
+        'gene_name' => $gene_name,
         'enable_downloads' => true,
         'assembly_name' => $genome_accession,
         'site' => $site,
@@ -334,7 +358,8 @@ echo render_display_page(
             "const moopOrganism = '" . addslashes($organism_name) . "';",
             "const moopAssembly = '" . addslashes($genome_accession) . "';",
             "const moopSite = '/" . addslashes($site) . "';",
-            "const siteTitle = '" . addslashes($siteTitle) . "';"
+            "const siteTitle = '" . addslashes($siteTitle) . "';",
+            "const genomeSequenceAvailable = " . ($genome_seq_available ? 'true' : 'false') . ";"
         ]
     ],
     htmlspecialchars($feature_uniquename)

@@ -48,12 +48,15 @@
         const { gene, isoforms } = data;
         if (!isoforms || isoforms.length === 0) return;
 
+        const canFetchSeq = (typeof genomeSequenceAvailable !== 'undefined') && genomeSequenceAvailable;
+
         const trackW = VIRTUAL_WIDTH - PAD_LEFT - PAD_RIGHT;
         const totalH = PAD_TOP + isoforms.length * (ROW_HEIGHT + LABEL_HEIGHT) + PAD_BOTTOM;
         const flip   = gene.strand === '-';
 
         svg.setAttribute('viewBox', `0 0 ${VIRTUAL_WIDTH} ${totalH}`);
         svg.setAttribute('height', totalH);
+        if (canFetchSeq) svg.classList.add('seq-enabled');
 
         // Map a genomic position to a screen x, always placing 5′ on the left.
         function toX(pos) {
@@ -102,16 +105,18 @@
                 const iw  = Math.max(4, Math.abs(toX(intronEnd) - toX(intronStart)));
                 const ir  = makeRect(ix1, cy - EXON_H / 2, iw, EXON_H, 'transparent', 0);
                 ir.setAttribute('class', 'region-intron');
-                ir.style.cursor = 'pointer';
-                addRegionTitle(ir, `Intron  ${intronStart.toLocaleString()}–${intronEnd.toLocaleString()}`);
-                ir.addEventListener('click', e => {
-                    e.stopPropagation();
-                    showSequenceModal({
-                        type: 'Intron', isoform: iso.id,
-                        start: intronStart, end: intronEnd,
-                        seqname: gene.seqname, strand: gene.strand,
+                if (canFetchSeq) {
+                    ir.style.cursor = 'pointer';
+                    addRegionTitle(ir, `Intron  ${intronStart.toLocaleString()}–${intronEnd.toLocaleString()}`);
+                    ir.addEventListener('click', e => {
+                        e.stopPropagation();
+                        showSequenceModal({
+                            type: 'Intron', isoform: iso.id,
+                            start: intronStart, end: intronEnd,
+                            seqname: gene.seqname, strand: gene.strand,
+                        });
                     });
-                });
+                }
                 g.appendChild(ir);
             }
 
@@ -122,16 +127,18 @@
                 const w    = Math.max(2, Math.abs(toX(ex.end) - toX(ex.start)));
                 const rect = makeRect(x1, cy - EXON_H / 2, w, EXON_H, COLOR_EXON, 2);
                 rect.setAttribute('class', 'region-exon');
-                rect.style.cursor = 'pointer';
-                addRegionTitle(rect, `Exon  ${ex.start.toLocaleString()}–${ex.end.toLocaleString()}`);
-                rect.addEventListener('click', e => {
-                    e.stopPropagation();
-                    showSequenceModal({
-                        type: 'Exon', isoform: iso.id,
-                        start: ex.start, end: ex.end,
-                        seqname: gene.seqname, strand: gene.strand,
+                if (canFetchSeq) {
+                    rect.style.cursor = 'pointer';
+                    addRegionTitle(rect, `Exon  ${ex.start.toLocaleString()}–${ex.end.toLocaleString()}`);
+                    rect.addEventListener('click', e => {
+                        e.stopPropagation();
+                        showSequenceModal({
+                            type: 'Exon', isoform: iso.id,
+                            start: ex.start, end: ex.end,
+                            seqname: gene.seqname, strand: gene.strand,
+                        });
                     });
-                });
+                }
                 g.appendChild(rect);
             });
 
@@ -142,16 +149,18 @@
                 const w    = Math.max(2, Math.abs(toX(cds.end) - toX(cds.start)));
                 const rect = makeRect(x1, cy - CDS_H / 2, w, CDS_H, COLOR_CDS, 2);
                 rect.setAttribute('class', 'region-cds');
-                rect.style.cursor = 'pointer';
-                addRegionTitle(rect, `CDS  ${cds.start.toLocaleString()}–${cds.end.toLocaleString()}`);
-                rect.addEventListener('click', e => {
-                    e.stopPropagation();
-                    showSequenceModal({
-                        type: 'CDS', isoform: iso.id,
-                        start: cds.start, end: cds.end,
-                        seqname: gene.seqname, strand: gene.strand,
+                if (canFetchSeq) {
+                    rect.style.cursor = 'pointer';
+                    addRegionTitle(rect, `CDS  ${cds.start.toLocaleString()}–${cds.end.toLocaleString()}`);
+                    rect.addEventListener('click', e => {
+                        e.stopPropagation();
+                        showSequenceModal({
+                            type: 'CDS', isoform: iso.id,
+                            start: cds.start, end: cds.end,
+                            seqname: gene.seqname, strand: gene.strand,
+                        });
                     });
-                });
+                }
                 g.appendChild(rect);
             });
 
@@ -226,8 +235,8 @@
 
         document.getElementById('seq-region-copy').addEventListener('click', () => {
             const raw = (document.getElementById('seq-region-sequence').textContent || '')
-                .replace(/^\s*\d+\s+/gm, '')   // strip position numbers
-                .replace(/\s/g, '');
+                .replace(/[^\S\n]+/g, '')   // strip spaces/tabs but keep newlines for FASTA format
+                .trimEnd();
             const btn = document.getElementById('seq-region-copy');
             const success = () => {
                 btn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
@@ -309,21 +318,17 @@
         // Metadata
         const strandLabel = region.strand === '-' ? '− (reverse complement shown)' : '+ (forward)';
         document.getElementById('seq-region-meta').innerHTML = `
+            <dt class="col-sm-3">Type</dt><dd class="col-sm-9"><strong>${region.type}</strong></dd>
             <dt class="col-sm-3">Isoform</dt><dd class="col-sm-9">${region.isoform}</dd>
             <dt class="col-sm-3">Region</dt><dd class="col-sm-9">${region.seqname}:${region.start.toLocaleString()}–${region.end.toLocaleString()}</dd>
             <dt class="col-sm-3">Strand</dt><dd class="col-sm-9">${strandLabel}</dd>
             <dt class="col-sm-3">Length</dt><dd class="col-sm-9">${data.length.toLocaleString()} bp</dd>`;
 
-        // Sequence formatted 60 bp per line with 1-based position labels
-        const seq     = data.sequence;
-        const lineLen = 60;
-        let formatted = '';
-        for (let i = 0; i < seq.length; i += lineLen) {
-            const pos   = region.start + i;
-            const chunk = seq.slice(i, i + lineLen);
-            formatted  += `${String(pos).padStart(9)}  ${chunk}\n`;
-        }
-        document.getElementById('seq-region-sequence').textContent = formatted.trimEnd();
+        // Sequence as FASTA — matches the downloaded file exactly
+        const seq    = data.sequence;
+        const header = `>${region.isoform} ${region.type} ${region.seqname}:${region.start}-${region.end}(${region.strand})`;
+        const body   = seq.match(/.{1,60}/g)?.join('\n') ?? seq;
+        document.getElementById('seq-region-sequence').textContent = header + '\n' + body;
 
         document.getElementById('seq-region-loading').style.display = 'none';
         document.getElementById('seq-region-content').style.display  = 'block';

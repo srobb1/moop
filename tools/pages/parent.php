@@ -264,24 +264,11 @@
 
     <!-- Sequences Section -->
     <?php
-    // Add all descendants to sequence retrieval (getChildren returns all descendants recursively)
-    foreach ($children as $child) {
-        $retrieve_these_seqs[] = $child['feature_uniquename'];
-    }
-    
-    $retrieve_these_seqs = array_unique($retrieve_these_seqs);
-    sort($retrieve_these_seqs);
-    $gene_name = implode(",", $retrieve_these_seqs);
-    
-    // Set up variables for sequences_display.php with download support
+    // $gene_name is built in the controller and passed via $data
     $enable_downloads = true;
-    $assembly_name = $genome_accession;
+    $assembly_name    = $genome_accession;
+    $organism_data    = $config->getPath('organism_data');
 
-    $organism_data = $config->getPath('organism_data');
-
-    // organism_name is already set above
-    
-    // Include sequences display component
     $sequences_file = __DIR__ . '/../sequences_display.php';
     if (file_exists($sequences_file)) {
         include_once $sequences_file;
