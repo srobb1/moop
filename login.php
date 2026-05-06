@@ -20,6 +20,11 @@ $siteTitle = $config->getString('siteTitle');
 
 $error = "";
 
+// Show a message when the admin session expired due to inactivity
+if (!empty($_GET['timeout'])) {
+    $error = "Your session expired after 8 hours of inactivity. Please log in again.";
+}
+
 // Read and validate optional return URL (used by auth_gateway.php after session expiry)
 $raw_return = $_GET['return'] ?? $_POST['return_url'] ?? '';
 $return_url = '';
