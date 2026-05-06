@@ -7,12 +7,13 @@
  *   - Forward (+) strand: genomic left = 5′
  *   - Reverse (−) strand: coordinates are flipped so 5′ (high coord) appears on the left
  *
- * Clickable regions (SVG image-map style, only when genomeSequenceAvailable === true):
- *   - Gene row [> seq] button → multi-FASTA: full gene locus + each isoform span
- *   - Exon rect   → fetch & show that exon's sequence
- *   - CDS rect    → fetch & show that CDS's sequence
- *   - Intron gap  → fetch & show that intron's sequence
+ * Gene backbone row buttons (only rendered when data is available):
+ *   - [> seq]  fetch multi-FASTA: full gene locus + each isoform span (requires genome.fa + .fai)
+ *   - [gff]    fetch GFF3 lines for gene and all descendants (always shown when SVG renders)
  *   - Row bg/label → smooth-scroll to the isoform's annotation section
+ *
+ * Clickable isoform regions (only when genomeSequenceAvailable === true):
+ *   - Exon rect / CDS rect / intron gap → fetch & show that region's sequence
  */
 (function () {
     'use strict';
@@ -37,7 +38,8 @@
     const seqCache = new Map();
     let   currentRegion   = null;
     let   currentSequence = null;
-    let   currentFasta    = null;   // ready-to-download FASTA string (single or multi)
+    let   currentFasta    = null;     // ready-to-download content (FASTA or GFF3)
+    let   currentFilename = null;     // filename for download
 
     function init() {
         if (typeof geneModelData === 'undefined' || !geneModelData) return;
@@ -53,7 +55,7 @@
         const canFetchSeq = (typeof genomeSequenceAvailable !== 'undefined') && genomeSequenceAvailable;
 
         const trackW   = VIRTUAL_WIDTH - PAD_LEFT - PAD_RIGHT;
-        const GENE_ROW = ROW_HEIGHT + LABEL_HEIGHT;   // height of the gene backbone row
+        const GENE_ROW = ROW_HEIGHT + LABEL_HEIGHT;   // height of gene backbone row
         const totalH   = PAD_TOP + GENE_ROW + isoforms.length * (ROW_HEIGHT + LABEL_HEIGHT) + PAD_BOTTOM;
         const flip     = gene.strand === '-';
 
@@ -70,7 +72,7 @@
         }
 
         // -----------------------------------------------------------------
-        // Gene backbone row — full locus span + [> seq] button
+        // Gene backbone row — full locus span + [> seq] and [gff] buttons
         // -----------------------------------------------------------------
         {
             const gRowTop = PAD_TOP;
@@ -86,22 +88,29 @@
             gLabel.textContent = gene.id || 'Gene';
             gG.appendChild(gLabel);
 
-            const BTN_W   = canFetchSeq ? 40 : 0;
-            const BTN_GAP = canFetchSeq ? 6  : 0;
-            gG.appendChild(makeLine(PAD_LEFT, VIRTUAL_WIDTH - PAD_RIGHT - BTN_W - BTN_GAP, gCy, gCy, '#999', 1.5));
+            // Button layout (right-aligned): [> seq] [gff]
+            // [gff] is always shown; [> seq] only when genome FASTA is available
+            const GFF_W   = 28;
+            const SEQ_W   = canFetchSeq ? 40 : 0;
+            const SEQ_GAP = canFetchSeq ? 4  : 0;   // gap between the two buttons
+            const BTN_H   = 14;
+            const TOTAL_W = SEQ_W + SEQ_GAP + GFF_W;
 
+            // Backbone ends just before the button area
+            gG.appendChild(makeLine(PAD_LEFT, VIRTUAL_WIDTH - PAD_RIGHT - TOTAL_W - 6, gCy, gCy, '#999', 1.5));
+
+            // [> seq] button
             if (canFetchSeq) {
-                const BTN_H = 14;
-                const bx    = VIRTUAL_WIDTH - PAD_RIGHT - BTN_W;
-                const by    = gCy - BTN_H / 2;
+                const bx = VIRTUAL_WIDTH - PAD_RIGHT - TOTAL_W;
+                const by = gCy - BTN_H / 2;
 
-                const btnRect = makeRect(bx, by, BTN_W, BTN_H, '#e8f0fe', 3);
+                const btnRect = makeRect(bx, by, SEQ_W, BTN_H, '#e8f0fe', 3);
                 btnRect.setAttribute('stroke', '#5b8dee');
                 btnRect.setAttribute('stroke-width', '1');
                 gG.appendChild(btnRect);
 
                 const btnLabel = makeSvgEl('text');
-                btnLabel.setAttribute('x', bx + BTN_W / 2);
+                btnLabel.setAttribute('x', bx + SEQ_W / 2);
                 btnLabel.setAttribute('y', gCy + 4);
                 btnLabel.setAttribute('text-anchor', 'middle');
                 btnLabel.setAttribute('font-size', '10');
@@ -110,12 +119,44 @@
                 btnLabel.textContent = '> seq';
                 gG.appendChild(btnLabel);
 
-                const gTitle = document.createElementNS(NS, 'title');
-                gTitle.textContent = 'Fetch full genomic sequence — gene locus + each isoform span';
-                gG.appendChild(gTitle);
+                const seqTitle = document.createElementNS(NS, 'title');
+                seqTitle.textContent = 'Fetch full genomic sequence — gene locus + each isoform span';
+                btnRect.appendChild(seqTitle);
 
-                gG.style.cursor = 'pointer';
-                gG.addEventListener('click', () => showGenomicModal(gene, isoforms));
+                btnRect.style.cursor = 'pointer';
+                btnLabel.style.cursor = 'pointer';
+                btnRect.addEventListener('click',  e => { e.stopPropagation(); showGenomicModal(gene, isoforms); });
+                btnLabel.addEventListener('click', e => { e.stopPropagation(); showGenomicModal(gene, isoforms); });
+            }
+
+            // [gff] button
+            {
+                const bx = VIRTUAL_WIDTH - PAD_RIGHT - GFF_W;
+                const by = gCy - BTN_H / 2;
+
+                const btnRect = makeRect(bx, by, GFF_W, BTN_H, '#edf7ee', 3);
+                btnRect.setAttribute('stroke', '#5b8d6e');
+                btnRect.setAttribute('stroke-width', '1');
+                gG.appendChild(btnRect);
+
+                const btnLabel = makeSvgEl('text');
+                btnLabel.setAttribute('x', bx + GFF_W / 2);
+                btnLabel.setAttribute('y', gCy + 4);
+                btnLabel.setAttribute('text-anchor', 'middle');
+                btnLabel.setAttribute('font-size', '10');
+                btnLabel.setAttribute('fill', '#2c5c40');
+                btnLabel.setAttribute('font-weight', 'bold');
+                btnLabel.textContent = 'gff';
+                gG.appendChild(btnLabel);
+
+                const gffTitle = document.createElementNS(NS, 'title');
+                gffTitle.textContent = 'Fetch GFF3 — gene, mRNA, exon, CDS, UTR and all sub-features';
+                btnRect.appendChild(gffTitle);
+
+                btnRect.style.cursor = 'pointer';
+                btnLabel.style.cursor = 'pointer';
+                btnRect.addEventListener('click',  e => { e.stopPropagation(); showGffModal(gene); });
+                btnLabel.addEventListener('click', e => { e.stopPropagation(); showGffModal(gene); });
             }
 
             svg.appendChild(gG);
@@ -273,7 +314,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // Sequence modal
+    // Modal
     // -------------------------------------------------------------------------
 
     function ensureModal() {
@@ -298,7 +339,7 @@
               <i class="fas fa-copy me-1"></i>Copy
             </button>
             <button class="btn btn-sm btn-outline-success" id="seq-region-download">
-              <i class="fas fa-download me-1"></i>Download FASTA
+              <i class="fas fa-download me-1"></i>Download
             </button>
           </div>
         </div>
@@ -311,7 +352,7 @@
 
         document.getElementById('seq-region-copy').addEventListener('click', () => {
             const raw = (document.getElementById('seq-region-sequence').textContent || '')
-                .replace(/[^\S\n]+/g, '')   // strip spaces/tabs, keep newlines for FASTA format
+                .replace(/[^\S\n]+/g, '')   // strip spaces/tabs, keep newlines
                 .trimEnd();
             const btn = document.getElementById('seq-region-copy');
             const success = () => {
@@ -326,15 +367,11 @@
         });
 
         document.getElementById('seq-region-download').addEventListener('click', () => {
-            if (!currentFasta || !currentRegion) return;
-            const r        = currentRegion;
-            const filename = r.type === 'Genomic'
-                ? `${r.id || r.seqname}_${r.start}-${r.end}_genomic.fa`
-                : `${r.isoform}_${r.type}_${r.seqname}-${r.start}-${r.end}.fa`;
+            if (!currentFasta || !currentFilename) return;
             const blob = new Blob([currentFasta + '\n'], { type: 'text/plain' });
             const url  = URL.createObjectURL(blob);
             const a    = document.createElement('a');
-            a.href = url; a.download = filename; a.click();
+            a.href = url; a.download = currentFilename; a.click();
             URL.revokeObjectURL(url);
         });
     }
@@ -405,6 +442,7 @@
                 currentRegion   = { type: 'Genomic', id: gene.id, seqname: gene.seqname, start: gene.start, end: gene.end, strand: gene.strand };
                 currentSequence = null;
                 currentFasta    = fasta;
+                currentFilename = `${gene.id || gene.seqname}_${gene.start}-${gene.end}_genomic.fa`;
 
                 document.getElementById('seq-region-loading').style.display = 'none';
                 document.getElementById('seq-region-content').style.display  = 'block';
@@ -413,6 +451,54 @@
                 document.getElementById('seq-region-loading').style.display = 'none';
                 const el = document.getElementById('seq-region-error');
                 el.textContent = err.message;
+                el.style.display = 'block';
+            });
+    }
+
+    function showGffModal(gene) {
+        ensureModal();
+
+        const modalEl = document.getElementById('seq-region-modal');
+        const modal   = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        document.getElementById('seq-region-modal-label').textContent = 'Gene GFF3';
+        document.getElementById('seq-region-loading').style.display = 'block';
+        document.getElementById('seq-region-content').style.display  = 'none';
+        document.getElementById('seq-region-error').style.display    = 'none';
+
+        modal.show();
+
+        const site   = (typeof moopSite !== 'undefined') ? moopSite : '/moop';
+        const params = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, uniquename: gene.id });
+
+        fetch(`${site}/api/get_gff.php?${params}`)
+            .then(r => {
+                if (!r.ok) return r.text().then(t => { throw new Error(t.replace(/^#\s*Error:\s*/m, '').trim()); });
+                return r.text();
+            })
+            .then(gffText => {
+                const featureCount = gffText.split('\n').filter(l => l && !l.startsWith('#')).length;
+
+                document.getElementById('seq-region-meta').innerHTML = `
+                    <dt class="col-sm-3">Type</dt><dd class="col-sm-9"><strong>GFF3</strong></dd>
+                    <dt class="col-sm-3">Gene</dt><dd class="col-sm-9">${gene.id || gene.seqname}</dd>
+                    <dt class="col-sm-3">Locus</dt><dd class="col-sm-9">${gene.seqname}:${gene.start.toLocaleString()}–${gene.end.toLocaleString()}</dd>
+                    <dt class="col-sm-3">Features</dt><dd class="col-sm-9">${featureCount} lines</dd>`;
+
+                document.getElementById('seq-region-sequence').textContent = gffText;
+
+                currentRegion   = { type: 'GFF', id: gene.id, seqname: gene.seqname, start: gene.start, end: gene.end, strand: gene.strand };
+                currentSequence = null;
+                currentFasta    = gffText;
+                currentFilename = `${gene.id || gene.seqname}_gene.gff3`;
+
+                document.getElementById('seq-region-loading').style.display = 'none';
+                document.getElementById('seq-region-content').style.display  = 'block';
+            })
+            .catch(err => {
+                document.getElementById('seq-region-loading').style.display = 'none';
+                const el = document.getElementById('seq-region-error');
+                el.textContent = 'Could not load GFF: ' + err.message;
                 el.style.display = 'block';
             });
     }
@@ -433,7 +519,8 @@
         const seq    = data.sequence;
         const header = `>${region.isoform} ${region.type} ${region.seqname}:${region.start}-${region.end}(${region.strand})`;
         const body   = seq.match(/.{1,60}/g)?.join('\n') ?? seq;
-        currentFasta = header + '\n' + body;
+        currentFasta    = header + '\n' + body;
+        currentFilename = `${region.isoform}_${region.type}_${region.seqname}-${region.start}-${region.end}.fa`;
         document.getElementById('seq-region-sequence').textContent = currentFasta;
 
         document.getElementById('seq-region-loading').style.display = 'none';
