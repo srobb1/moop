@@ -250,7 +250,10 @@ if ($gff_available) {
                 fn($iso) => !empty($iso['exons']) || !empty($iso['cds'])
             ));
             if (!empty($isoform_list)) {
-                $gene_model = ['gene' => $feature_loc, 'isoforms' => $isoform_list];
+                $gene_model = [
+                    'gene'     => array_merge($feature_loc, ['id' => $feature_uniquename]),
+                    'isoforms' => $isoform_list,
+                ];
             }
         }
     }

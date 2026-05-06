@@ -7,10 +7,11 @@
  *   - Forward (+) strand: genomic left = 5′
  *   - Reverse (−) strand: coordinates are flipped so 5′ (high coord) appears on the left
  *
- * Clickable regions (SVG image-map style):
- *   - Exon rect   → fetch & show that exon's DNA sequence
- *   - CDS rect    → fetch & show that CDS's DNA sequence
- *   - Intron gap  → fetch & show that intron's DNA sequence
+ * Clickable regions (SVG image-map style, only when genomeSequenceAvailable === true):
+ *   - Gene row [> seq] button → multi-FASTA: full gene locus + each isoform span
+ *   - Exon rect   → fetch & show that exon's sequence
+ *   - CDS rect    → fetch & show that CDS's sequence
+ *   - Intron gap  → fetch & show that intron's sequence
  *   - Row bg/label → smooth-scroll to the isoform's annotation section
  */
 (function () {
@@ -32,10 +33,11 @@
     const COLOR_CDS      = '#2171b5';   // dark blue — CDS
     const COLOR_LABEL    = '#555';
 
-    // Simple fetch cache: key = "seqname:start:end:strand" → sequence string
+    // Fetch cache: key = "seqname:start:end:strand" → API response object
     const seqCache = new Map();
     let   currentRegion   = null;
     let   currentSequence = null;
+    let   currentFasta    = null;   // ready-to-download FASTA string (single or multi)
 
     function init() {
         if (typeof geneModelData === 'undefined' || !geneModelData) return;
@@ -50,9 +52,10 @@
 
         const canFetchSeq = (typeof genomeSequenceAvailable !== 'undefined') && genomeSequenceAvailable;
 
-        const trackW = VIRTUAL_WIDTH - PAD_LEFT - PAD_RIGHT;
-        const totalH = PAD_TOP + isoforms.length * (ROW_HEIGHT + LABEL_HEIGHT) + PAD_BOTTOM;
-        const flip   = gene.strand === '-';
+        const trackW   = VIRTUAL_WIDTH - PAD_LEFT - PAD_RIGHT;
+        const GENE_ROW = ROW_HEIGHT + LABEL_HEIGHT;   // height of the gene backbone row
+        const totalH   = PAD_TOP + GENE_ROW + isoforms.length * (ROW_HEIGHT + LABEL_HEIGHT) + PAD_BOTTOM;
+        const flip     = gene.strand === '-';
 
         svg.setAttribute('viewBox', `0 0 ${VIRTUAL_WIDTH} ${totalH}`);
         svg.setAttribute('height', totalH);
@@ -66,8 +69,63 @@
             return PAD_LEFT + frac * trackW;
         }
 
+        // -----------------------------------------------------------------
+        // Gene backbone row — full locus span + [> seq] button
+        // -----------------------------------------------------------------
+        {
+            const gRowTop = PAD_TOP;
+            const gCy     = gRowTop + LABEL_HEIGHT + ROW_HEIGHT / 2;
+            const gG      = makeSvgEl('g');
+
+            const gLabel = makeSvgEl('text');
+            gLabel.setAttribute('x', PAD_LEFT);
+            gLabel.setAttribute('y', gRowTop + LABEL_HEIGHT - 2);
+            gLabel.setAttribute('font-size', '11');
+            gLabel.setAttribute('fill', COLOR_LABEL);
+            gLabel.setAttribute('font-weight', 'bold');
+            gLabel.textContent = gene.id || 'Gene';
+            gG.appendChild(gLabel);
+
+            const BTN_W   = canFetchSeq ? 40 : 0;
+            const BTN_GAP = canFetchSeq ? 6  : 0;
+            gG.appendChild(makeLine(PAD_LEFT, VIRTUAL_WIDTH - PAD_RIGHT - BTN_W - BTN_GAP, gCy, gCy, '#999', 1.5));
+
+            if (canFetchSeq) {
+                const BTN_H = 14;
+                const bx    = VIRTUAL_WIDTH - PAD_RIGHT - BTN_W;
+                const by    = gCy - BTN_H / 2;
+
+                const btnRect = makeRect(bx, by, BTN_W, BTN_H, '#e8f0fe', 3);
+                btnRect.setAttribute('stroke', '#5b8dee');
+                btnRect.setAttribute('stroke-width', '1');
+                gG.appendChild(btnRect);
+
+                const btnLabel = makeSvgEl('text');
+                btnLabel.setAttribute('x', bx + BTN_W / 2);
+                btnLabel.setAttribute('y', gCy + 4);
+                btnLabel.setAttribute('text-anchor', 'middle');
+                btnLabel.setAttribute('font-size', '10');
+                btnLabel.setAttribute('fill', '#2c5cc5');
+                btnLabel.setAttribute('font-weight', 'bold');
+                btnLabel.textContent = '> seq';
+                gG.appendChild(btnLabel);
+
+                const gTitle = document.createElementNS(NS, 'title');
+                gTitle.textContent = 'Fetch full genomic sequence — gene locus + each isoform span';
+                gG.appendChild(gTitle);
+
+                gG.style.cursor = 'pointer';
+                gG.addEventListener('click', () => showGenomicModal(gene, isoforms));
+            }
+
+            svg.appendChild(gG);
+        }
+
+        // -----------------------------------------------------------------
+        // Isoform rows
+        // -----------------------------------------------------------------
         isoforms.forEach((iso, i) => {
-            const rowTop = PAD_TOP + i * (ROW_HEIGHT + LABEL_HEIGHT);
+            const rowTop = PAD_TOP + GENE_ROW + i * (ROW_HEIGHT + LABEL_HEIGHT);
             const cy     = rowTop + LABEL_HEIGHT + ROW_HEIGHT / 2;
 
             const g = makeSvgEl('g');
@@ -197,6 +255,24 @@
     }
 
     // -------------------------------------------------------------------------
+    // Sequence fetch helper (shared by single-region and genomic modals)
+    // -------------------------------------------------------------------------
+
+    function fetchCachedSeq(seqname, start, end, strand) {
+        const cacheKey = `${seqname}:${start}:${end}:${strand}`;
+        if (seqCache.has(cacheKey)) return Promise.resolve(seqCache.get(cacheKey));
+        const site   = (typeof moopSite !== 'undefined') ? moopSite : '/moop';
+        const params = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, seqname, start, end, strand });
+        return fetch(`${site}/api/get_sequence.php?${params}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                seqCache.set(cacheKey, data);
+                return data;
+            });
+    }
+
+    // -------------------------------------------------------------------------
     // Sequence modal
     // -------------------------------------------------------------------------
 
@@ -219,7 +295,7 @@
           <pre id="seq-region-sequence" class="seq-region-pre"></pre>
           <div class="d-flex gap-2 mt-2">
             <button class="btn btn-sm btn-outline-secondary" id="seq-region-copy">
-              <i class="fas fa-copy me-1"></i>Copy sequence
+              <i class="fas fa-copy me-1"></i>Copy
             </button>
             <button class="btn btn-sm btn-outline-success" id="seq-region-download">
               <i class="fas fa-download me-1"></i>Download FASTA
@@ -235,12 +311,12 @@
 
         document.getElementById('seq-region-copy').addEventListener('click', () => {
             const raw = (document.getElementById('seq-region-sequence').textContent || '')
-                .replace(/[^\S\n]+/g, '')   // strip spaces/tabs but keep newlines for FASTA format
+                .replace(/[^\S\n]+/g, '')   // strip spaces/tabs, keep newlines for FASTA format
                 .trimEnd();
             const btn = document.getElementById('seq-region-copy');
             const success = () => {
                 btn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
-                setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy me-1"></i>Copy sequence'; }, 2000);
+                setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy me-1"></i>Copy'; }, 2000);
             };
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(raw).then(success).catch(() => execCopy(raw, success));
@@ -250,17 +326,15 @@
         });
 
         document.getElementById('seq-region-download').addEventListener('click', () => {
-            if (!currentSequence || !currentRegion) return;
-            const r   = currentRegion;
-            const seq = currentSequence.replace(/\s/g, '');
-            const header = `>${r.isoform} ${r.type} ${r.seqname}:${r.start}-${r.end}(${r.strand})`;
-            const body   = seq.match(/.{1,60}/g).join('\n');
-            const blob   = new Blob([header + '\n' + body + '\n'], { type: 'text/plain' });
-            const url    = URL.createObjectURL(blob);
-            const a      = document.createElement('a');
-            a.href       = url;
-            a.download   = `${r.isoform}_${r.type}_${r.seqname}-${r.start}-${r.end}.fa`;
-            a.click();
+            if (!currentFasta || !currentRegion) return;
+            const r        = currentRegion;
+            const filename = r.type === 'Genomic'
+                ? `${r.id || r.seqname}_${r.start}-${r.end}_genomic.fa`
+                : `${r.isoform}_${r.type}_${r.seqname}-${r.start}-${r.end}.fa`;
+            const blob = new Blob([currentFasta + '\n'], { type: 'text/plain' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url; a.download = filename; a.click();
             URL.revokeObjectURL(url);
         });
     }
@@ -271,7 +345,6 @@
         const modalEl = document.getElementById('seq-region-modal');
         const modal   = bootstrap.Modal.getOrCreateInstance(modalEl);
 
-        // Reset UI
         document.getElementById('seq-region-loading').style.display = 'block';
         document.getElementById('seq-region-content').style.display  = 'none';
         document.getElementById('seq-region-error').style.display    = 'none';
@@ -280,28 +353,61 @@
 
         modal.show();
 
-        const cacheKey = `${region.seqname}:${region.start}:${region.end}:${region.strand}`;
-        if (seqCache.has(cacheKey)) {
-            renderSequenceResult(seqCache.get(cacheKey), region);
-            return;
-        }
+        fetchCachedSeq(region.seqname, region.start, region.end, region.strand)
+            .then(data => renderSequenceResult(data, region))
+            .catch(err => {
+                document.getElementById('seq-region-loading').style.display = 'none';
+                const el = document.getElementById('seq-region-error');
+                el.textContent = err.message;
+                el.style.display = 'block';
+            });
+    }
 
-        const site = (typeof moopSite !== 'undefined') ? moopSite : '/moop';
-        const params = new URLSearchParams({
-            organism: moopOrganism,
-            assembly: moopAssembly,
-            seqname:  region.seqname,
-            start:    region.start,
-            end:      region.end,
-            strand:   region.strand,
-        });
+    function showGenomicModal(gene, isoforms) {
+        ensureModal();
 
-        fetch(`${site}/api/get_sequence.php?${params}`)
-            .then(r => r.json())
-            .then(data => {
-                if (data.error) throw new Error(data.error);
-                seqCache.set(cacheKey, data);
-                renderSequenceResult(data, region);
+        const modalEl = document.getElementById('seq-region-modal');
+        const modal   = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        document.getElementById('seq-region-modal-label').textContent = 'Genomic Sequences';
+        document.getElementById('seq-region-loading').style.display = 'block';
+        document.getElementById('seq-region-content').style.display  = 'none';
+        document.getElementById('seq-region-error').style.display    = 'none';
+
+        modal.show();
+
+        // One entry for the full gene locus, then one per isoform span (includes introns)
+        const regions = [
+            { label: gene.id || gene.seqname, type: 'Gene',    start: gene.start, end: gene.end },
+            ...isoforms.map(iso => ({ label: iso.id,           type: 'Isoform',   start: iso.start, end: iso.end })),
+        ];
+
+        Promise.all(regions.map(r => fetchCachedSeq(gene.seqname, r.start, r.end, gene.strand)))
+            .then(results => {
+                let fasta = '';
+                results.forEach((data, idx) => {
+                    const r    = regions[idx];
+                    const hdr  = `>${r.label} ${r.type} genomic ${gene.seqname}:${r.start}-${r.end}(${gene.strand})`;
+                    const body = data.sequence.match(/.{1,60}/g)?.join('\n') ?? data.sequence;
+                    fasta += hdr + '\n' + body + '\n\n';
+                });
+                fasta = fasta.trimEnd();
+
+                const strandLabel = gene.strand === '-' ? '− (reverse complement shown)' : '+ (forward)';
+                document.getElementById('seq-region-meta').innerHTML = `
+                    <dt class="col-sm-3">Type</dt><dd class="col-sm-9"><strong>Genomic</strong></dd>
+                    <dt class="col-sm-3">Gene locus</dt><dd class="col-sm-9">${gene.seqname}:${gene.start.toLocaleString()}–${gene.end.toLocaleString()}</dd>
+                    <dt class="col-sm-3">Strand</dt><dd class="col-sm-9">${strandLabel}</dd>
+                    <dt class="col-sm-3">Sequences</dt><dd class="col-sm-9">${results.length} (gene locus + ${isoforms.length} isoform${isoforms.length !== 1 ? 's' : ''})</dd>`;
+
+                document.getElementById('seq-region-sequence').textContent = fasta;
+
+                currentRegion   = { type: 'Genomic', id: gene.id, seqname: gene.seqname, start: gene.start, end: gene.end, strand: gene.strand };
+                currentSequence = null;
+                currentFasta    = fasta;
+
+                document.getElementById('seq-region-loading').style.display = 'none';
+                document.getElementById('seq-region-content').style.display  = 'block';
             })
             .catch(err => {
                 document.getElementById('seq-region-loading').style.display = 'none';
@@ -315,7 +421,6 @@
         currentRegion   = region;
         currentSequence = data.sequence;
 
-        // Metadata
         const strandLabel = region.strand === '-' ? '− (reverse complement shown)' : '+ (forward)';
         document.getElementById('seq-region-meta').innerHTML = `
             <dt class="col-sm-3">Type</dt><dd class="col-sm-9"><strong>${region.type}</strong></dd>
@@ -328,7 +433,8 @@
         const seq    = data.sequence;
         const header = `>${region.isoform} ${region.type} ${region.seqname}:${region.start}-${region.end}(${region.strand})`;
         const body   = seq.match(/.{1,60}/g)?.join('\n') ?? seq;
-        document.getElementById('seq-region-sequence').textContent = header + '\n' + body;
+        currentFasta = header + '\n' + body;
+        document.getElementById('seq-region-sequence').textContent = currentFasta;
 
         document.getElementById('seq-region-loading').style.display = 'none';
         document.getElementById('seq-region-content').style.display  = 'block';
@@ -384,4 +490,3 @@
 
     document.addEventListener('DOMContentLoaded', init);
 })();
-
