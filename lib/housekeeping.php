@@ -137,6 +137,15 @@ function housekeeping_snapshot_site_data() {
         $users_file                                             => 'users.json',
     ];
 
+    // Dynamically add all organism.json files from the organisms directory
+    $organisms_dir = $config->getPath('organism_data');
+    if (!empty($organisms_dir) && is_dir($organisms_dir)) {
+        foreach (glob($organisms_dir . '/*/organism.json') as $organism_json) {
+            $organism_name = basename(dirname($organism_json));
+            $files[$organism_json] = 'organisms/' . $organism_name . '/organism.json';
+        }
+    }
+
     // Create README on first run
     $readme_path = $site_data_path . '/README.md';
     if (!file_exists($readme_path)) {
@@ -161,6 +170,7 @@ access control configuration.
 | `metadata/organism_assembly_groups.json` | Which organisms belong to which groups |
 | `metadata/taxonomy_tree_config.json` | Taxonomy tree structure |
 | `users.json` | User accounts and access levels |
+| `organisms/{name}/organism.json` | Per-organism metadata (one file per organism) |
 
 ## What is NOT backed up here
 
@@ -172,12 +182,16 @@ access control configuration.
 
 ## Optional: Git version history
 
-If you initialize this directory as a git repo, MOOP will automatically
-commit changes on each admin login, giving you full version history:
+If you initialize this directory as a git repo, MOOP will detect it and show
+a "Git available" badge on the Admin Dashboard. Run git commands manually to
+commit and push changes:
 
     cd /path/to/this/directory
     git init -b main
     git add -A && git commit -m "Initial snapshot"
+
+After each admin login MOOP copies changed files here. Run the commands above
+(or a push) whenever you want to version the snapshot.
 README;
         @file_put_contents($readme_path, $readme);
     }
@@ -208,23 +222,7 @@ README;
         }
     }
 
-    // Git commit if this happens to be a git repo (bonus, not required)
     $is_git = is_dir($site_data_path . '/.git');
-    if ($is_git && $changed) {
-        $username = $_SESSION['username'] ?? 'unknown';
-        $timestamp = date('Y-m-d H:i:s');
-        $message = "Auto-snapshot by $username at $timestamp";
-
-        $cwd = getcwd();
-        chdir($site_data_path);
-        exec('git add -A 2>&1');
-        exec('git diff --cached --quiet 2>&1', $output, $has_staged_changes);
-        if ($has_staged_changes !== 0) {
-            exec('git commit -m ' . escapeshellarg($message) . ' 2>&1');
-            error_log("MOOP housekeeping: site data snapshot committed ($message)");
-        }
-        chdir($cwd);
-    }
 
     if ($changed) {
         error_log("MOOP housekeeping: backed up $copied_count file(s) to $site_data_path");
@@ -307,6 +305,10 @@ function housekeeping_environment_check() {
         'metadata' => $config->getPath('metadata_path'),
         'config'   => $site_path . '/config',
     ];
+    $site_data_path = $config->getPath('site_data_path');
+    if (!empty($site_data_path)) {
+        $writable_dirs['site data backup'] = $site_data_path;
+    }
     $web_info = getWebServerUser();
     foreach ($writable_dirs as $label => $dir) {
         if (is_dir($dir) && !is_writable($dir)) {

@@ -522,6 +522,31 @@
                     </div>
                 </div>
 
+                <!-- Site Data Backup Path -->
+                <div class="card card-config">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fa fa-save"></i> <?= htmlspecialchars($editable_config['site_data_path']['label']) ?></h5>
+                    </div>
+                    <div class="card-body">
+                        <?php if ($editable_config['site_data_path']['note']): ?>
+                            <div class="alert alert-warning mb-3">
+                                <i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($editable_config['site_data_path']['note']) ?>
+                            </div>
+                        <?php endif; ?>
+                        <p class="text-muted small"><?= htmlspecialchars($editable_config['site_data_path']['description']) ?></p>
+                        <input type="text"
+                               id="site_data_path"
+                               name="site_data_path"
+                               class="form-control font-monospace"
+                               value="<?= htmlspecialchars($editable_config['site_data_path']['current_value']) ?>"
+                               placeholder="/var/www/html/moop-site-data">
+                        <small class="form-text text-muted mt-1">
+                            Must be an absolute path. Leave empty to disable backups.
+                            To enable git version history: <code>cd /path/to/dir && git init -b main && git add -A && git commit -m "Initial snapshot"</code>
+                        </small>
+                    </div>
+                </div>
+
                 <!-- Submit Buttons -->
                 <div class="d-flex gap-2 mb-4">
                     <button type="submit" class="btn btn-primary btn-lg" id="saveBtn" <?= !$file_writable ? 'disabled' : '' ?>>

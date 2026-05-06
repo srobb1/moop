@@ -115,6 +115,14 @@ $tutorials = [
         'color' => 'dark',
         'category' => 'technical',
     ],
+    [
+        'id' => 'site-data-backup',
+        'title' => 'Site Data Backup (Technical)',
+        'description' => 'How the automatic site data backup works, what files are included, backup location, and how to enable git version history.',
+        'icon' => 'fa-save',
+        'color' => 'dark',
+        'category' => 'technical',
+    ],
 ];
 ?>
 

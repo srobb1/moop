@@ -73,8 +73,8 @@
         <?php if ($site_data_backup['is_git']): ?>
           <span class="badge bg-secondary ms-2">Git available</span>
           <br><small class="text-muted mt-1 d-block">
-            Backup directory is a git repository. To version these changes, run:<br>
-            <code style="font-size: 0.85em;">cd <?= htmlspecialchars($site_data_backup['backup_path'] ?? '/path/to/backup') ?> && git add -A && git commit -m "Site data backup" && git push</code>
+            Backup directory is a git repo — run these commands to commit and push:<br>
+            <code style="font-size: 0.85em;">cd <?= htmlspecialchars($site_data_backup['path'] ?? '/path/to/backup') ?> && git add -A && git commit -m "Site data backup" && git push</code>
           </small>
         <?php endif; ?>
       </div>

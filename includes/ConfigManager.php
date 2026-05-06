@@ -64,7 +64,7 @@ class ConfigManager
      * Editable configuration keys - whitelisted keys that can be edited via admin UI
      * Used in both initialize() and saveEditableConfig() to ensure consistency
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'tracks_server', 'jbrowse2'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'tracks_server', 'jbrowse2', 'site_data_path'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -563,6 +563,17 @@ class ConfigManager
                     }
                 }
                 
+                // Validate site_data_path
+                if ($key === 'site_data_path') {
+                    $path = trim($data[$key]);
+                    if ($path !== '' && !str_starts_with($path, '/')) {
+                        return [
+                            'success' => false,
+                            'message' => 'Site data backup path must be an absolute path (starting with /).'
+                        ];
+                    }
+                }
+
                 if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'blast_sample_sequences') {
                     $editable_data[$key] = $data[$key];
                 } else {
@@ -741,6 +752,13 @@ class ConfigManager
                 'type' => 'sample_ids',
                 'current_value' => $this->getArray('sample_feature_ids', []),
                 'note' => 'Example IDs that users can paste into retrieve sequences tool. Enter one per line. Cannot be empty.',
+            ],
+            'site_data_path' => [
+                'label' => 'Site Data Backup Path',
+                'description' => 'Absolute filesystem path where config, metadata, and organism.json files are snapshotted on each admin login. Set to empty to disable. Initialize as a git repo for automatic version history.',
+                'type' => 'text',
+                'current_value' => $this->getPath('site_data_path', ''),
+                'note' => 'Keep this directory outside the web root and private — it contains API keys and user account data.',
             ],
         ];
     }

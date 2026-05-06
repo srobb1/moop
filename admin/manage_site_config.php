@@ -334,6 +334,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
+        // Parse site data backup path
+        if (isset($_POST['site_data_path'])) {
+            $data['site_data_path'] = trim($_POST['site_data_path']);
+        }
+
         // Save if no upload error
         if (empty($error)) {
             $result = $config->saveEditableConfig($data, $config_dir);
