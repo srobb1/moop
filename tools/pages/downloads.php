@@ -6,7 +6,7 @@
  *                      $context_organism, $context_assembly, $context_group, $display_name
  */
 ?>
-<div class="container-fluid mt-4">
+<div class="container mt-5">
   <div class="row mb-3">
     <div class="col-12">
       <h2 class="mb-1"><i class="fas fa-download me-2"></i><?= htmlspecialchars($page_title) ?></h2>
