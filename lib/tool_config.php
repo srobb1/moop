@@ -47,6 +47,16 @@ $available_tools = [
         'required_params' => ['loc'],
         'pages'           => ['parent'],
     ],
+    'downloads' => [
+        'id'             => 'downloads',
+        'name'           => 'Downloads',
+        'icon'           => 'fa-download',
+        'description'    => 'Download genome files (FASTA, GFF, and more)',
+        'btn_class'      => 'btn-secondary',
+        'url_path'       => '/tools/downloads.php',
+        'context_params' => ['organism', 'assembly', 'group', 'display_name'],
+        'pages'          => ['organism', 'assembly', 'group'],
+    ],
     // Future tools can be added here
     // Pages can be:
     //   'all' - Show on all pages

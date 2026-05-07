@@ -28,6 +28,7 @@
          . '<div class="dropdown-menu" aria-labelledby="toolsDropdown">'
          . '<a class="dropdown-item" href="/' . $site . '/tools/blast.php">BLAST Search</a>'
          . '<a class="dropdown-item" href="/' . $site . '/tools/retrieve_sequences.php">Retrieve Sequences</a>'
+         . '<a class="dropdown-item" href="/' . $site . '/tools/downloads.php">Downloads</a>'
          . '</div>'
          . '</li>';
 
