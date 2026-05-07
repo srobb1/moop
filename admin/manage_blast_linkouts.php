@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-render_display_page(__DIR__ . '/pages/manage_blast_linkouts.php', [
+echo render_display_page(__DIR__ . '/pages/manage_blast_linkouts.php', [
     'linkout_config' => $linkout_config,
     'message'        => $message,
     'messageType'    => $messageType,
