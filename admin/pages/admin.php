@@ -239,6 +239,18 @@
           </div>
         </div>
       </div>
+
+      <div class="col-md-6 mb-3">
+        <div class="card h-100 border-primary">
+          <div class="card-header bg-primary bg-opacity-10">
+            <h5 class="card-title mb-0"><i class="fa fa-external-link-alt"></i> BLAST Linkouts</h5>
+          </div>
+          <div class="card-body">
+            <p class="card-text">Configure which linkout buttons appear on BLAST results: gene page, JBrowse, and custom external URLs with placeholder support.</p>
+            <a href="manage_blast_linkouts.php" class="btn btn-primary">Manage Linkouts</a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

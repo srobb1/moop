@@ -384,22 +384,26 @@ function loadAllOrganismsMetadata($organism_data_dir) {
  * @return array Associative array of organism_name => array of assembly names
  */
 function getOrganismsWithAssemblies($organism_data_path) {
-    $orgs = [];
-    
     if (!is_dir($organism_data_path)) {
-        return $orgs;
+        return [];
     }
-    
-    $organisms = scandir($organism_data_path);
-    foreach ($organisms as $organism) {
+
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        $cache_key = 'organisms_with_assemblies_cache';
+        $dir_mtime = filemtime($organism_data_path);
+        if (isset($_SESSION[$cache_key]) && $_SESSION[$cache_key]['mtime'] === $dir_mtime) {
+            return $_SESSION[$cache_key]['data'];
+        }
+    }
+
+    $orgs = [];
+    foreach (scandir($organism_data_path) as $organism) {
         if ($organism[0] === '.' || !is_dir("$organism_data_path/$organism")) {
             continue;
         }
-        
         $assemblies = [];
         $assemblyPath = "$organism_data_path/$organism";
-        $files = scandir($assemblyPath);
-        foreach ($files as $file) {
+        foreach (scandir($assemblyPath) as $file) {
             if ($file[0] === '.' || !is_dir("$assemblyPath/$file")) {
                 continue;
             }
@@ -407,6 +411,11 @@ function getOrganismsWithAssemblies($organism_data_path) {
         }
         $orgs[$organism] = $assemblies;
     }
+
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        $_SESSION[$cache_key] = ['mtime' => $dir_mtime, 'data' => $orgs];
+    }
+
     return $orgs;
 }
 

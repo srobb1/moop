@@ -200,7 +200,18 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // will use all available cores if this is not set, starving concurrent users.
     // Raise this value when moving to a larger server.
     'blast_num_threads' => 2,
-    
+
+    // ======== BLAST RESULT LINKOUTS ========
+    // Controls which linkout buttons appear on BLAST hit results.
+    // gene_page: link to parent.php if organism.sqlite exists for the assembly
+    // jbrowse:   link to JBrowse2 if assembly is registered (requires feature_coords.tsv)
+    // external:  user-defined URL templates; placeholders: {fasta_id}, {organism}, {assembly}
+    'blast_linkouts' => [
+        'gene_page' => true,
+        'jbrowse'   => true,
+        'external'  => [],
+    ],
+
     // ======== GALAXY INTEGRATION ========
     // Configuration for UseGalaxy.org integration
     'galaxy_settings' => [

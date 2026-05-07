@@ -51,9 +51,10 @@ function getBlastDatabases($assembly_path) {
                 $type_info = $type_mapping[$seq_type] ?? ['name' => ucfirst($seq_type), 'blast_type' => 'nucleotide'];
                 
                 $databases[] = [
-                    'name' => $type_info['name'],
-                    'path' => $file_path,
-                    'type' => $type_info['blast_type']
+                    'name'     => $type_info['name'],
+                    'path'     => $file_path,
+                    'type'     => $type_info['blast_type'],
+                    'seq_type' => $seq_type,
                 ];
             }
         }
@@ -864,6 +865,113 @@ function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_d
     }
     
     return $result;
+}
+
+/**
+ * Generate feature_coords.tsv for an assembly from its genomic.gff.
+ * Maps every feature uniquename (gene, mRNA, CDS, polypeptide, etc.) to its
+ * gene ancestor's coordinates so BLAST hits can link to the correct locus.
+ *
+ * @param string $assembly_path  Absolute path to the assembly directory
+ * @return bool  True on success, false if GFF missing or write fails
+ */
+function generateFeatureCoordsIndex($assembly_path) {
+    $gff_file = $assembly_path . '/genomic.gff';
+    $tsv_file = $assembly_path . '/feature_coords.tsv';
+
+    if (!file_exists($gff_file) || filesize($gff_file) === 0) {
+        return false;
+    }
+
+    // First pass — collect all features keyed by ID
+    $features = [];
+    $fh = fopen($gff_file, 'r');
+    if (!$fh) return false;
+
+    while (($line = fgets($fh)) !== false) {
+        if ($line[0] === '#') continue;
+        $parts = explode("\t", rtrim($line));
+        if (count($parts) < 9) continue;
+
+        // Parse ID and Parent from attributes column
+        $id = null; $parent = null;
+        foreach (explode(';', $parts[8]) as $attr) {
+            $kv = explode('=', $attr, 2);
+            if (count($kv) !== 2) continue;
+            $k = trim($kv[0]); $v = trim($kv[1]);
+            if ($k === 'ID')     $id     = $v;
+            if ($k === 'Parent') $parent = $v;
+        }
+        if (!$id) continue;
+
+        $features[$id] = [
+            'chr'    => $parts[0],
+            'start'  => $parts[3],
+            'end'    => $parts[4],
+            'strand' => $parts[6],
+            'type'   => strtolower($parts[2]),
+            'parent' => $parent,
+        ];
+    }
+    fclose($fh);
+
+    if (empty($features)) return false;
+
+    // Second pass — resolve gene ancestor, write TSV
+    $skip_types = ['region', 'chromosome', 'contig', 'scaffold', 'supercontig', 'biological_region'];
+    $out = fopen($tsv_file, 'w');
+    if (!$out) return false;
+
+    foreach ($features as $id => $f) {
+        if (in_array($f['type'], $skip_types)) continue;
+
+        // Walk parent chain to find gene-level ancestor
+        $gene_id = $id;
+        $seen = [];
+        while (true) {
+            if (isset($seen[$gene_id])) break;
+            $seen[$gene_id] = true;
+            $cur = $features[$gene_id] ?? null;
+            if (!$cur || !$cur['parent'] || !isset($features[$cur['parent']])) break;
+            $gene_id = $cur['parent'];
+        }
+
+        $gene = $features[$gene_id];
+        fwrite($out, implode("\t", [
+            $id, $gene_id, $gene['chr'], $gene['start'], $gene['end'], $gene['strand'],
+        ]) . "\n");
+    }
+    fclose($out);
+    return true;
+}
+
+/**
+ * Load feature_coords.tsv into a lookup array keyed by feature uniquename.
+ *
+ * @param string $assembly_path  Absolute path to the assembly directory
+ * @return array  ['uniquename' => ['gene_id','chr','start','end','strand'], ...]
+ */
+function loadFeatureCoords($assembly_path) {
+    $tsv_file = $assembly_path . '/feature_coords.tsv';
+    if (!file_exists($tsv_file)) return [];
+
+    $coords = [];
+    $fh = fopen($tsv_file, 'r');
+    if (!$fh) return [];
+
+    while (($line = fgets($fh)) !== false) {
+        $p = explode("\t", rtrim($line));
+        if (count($p) < 6) continue;
+        $coords[$p[0]] = [
+            'gene_id' => $p[1],
+            'chr'     => $p[2],
+            'start'   => (int)$p[3],
+            'end'     => (int)$p[4],
+            'strand'  => $p[5],
+        ];
+    }
+    fclose($fh);
+    return $coords;
 }
 
 ?>

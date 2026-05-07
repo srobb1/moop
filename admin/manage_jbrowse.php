@@ -10,6 +10,7 @@
 
 // Load admin initialization (handles auth, config, includes)
 include_once __DIR__ . '/admin_init.php';
+require_once __DIR__ . '/../lib/functions_data.php';
 
 // Load layout system
 include_once __DIR__ . '/../includes/layout.php';
@@ -74,25 +75,7 @@ $display_config = [
 
 // Get all organisms for dropdowns
 $organisms_dir = $config->getPath('organism_data');
-$organisms = [];
-if (is_dir($organisms_dir)) {
-    foreach (scandir($organisms_dir) as $org) {
-        if ($org === '.' || $org === '..') continue;
-        $org_path = $organisms_dir . '/' . $org;
-        if (is_dir($org_path)) {
-            $assemblies = [];
-            foreach (scandir($org_path) as $asm) {
-                if ($asm === '.' || $asm === '..' || $asm === 'organism.sqlite') continue;
-                if (is_dir($org_path . '/' . $asm)) {
-                    $assemblies[] = $asm;
-                }
-            }
-            if (!empty($assemblies)) {
-                $organisms[$org] = $assemblies;
-            }
-        }
-    }
-}
+$organisms = getOrganismsWithAssemblies($organisms_dir);
 
 // Get registered assemblies (those with JSON in metadata/jbrowse2-configs/assemblies/)
 $assemblies_meta_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';

@@ -289,7 +289,7 @@
                     </div>
                     
                     <?= getToggleQuerySectionScript() ?>
-                    <?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? []) ?>
+                    <?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? [], $blast_linkout_context ?? []) ?>
                     
                     <?php if (isset($blast_result['pairwise'])): ?>
                         <div id="pairwiseOutput" style="display: none;">

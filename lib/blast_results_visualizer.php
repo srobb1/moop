@@ -567,6 +567,12 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
         $html .= '<strong>Query Coverage:</strong> ' . $hit['query_coverage_percent'] . '% | ';
         $html .= '<strong>Subject Coverage:</strong> ' . $hit['subject_cumulative_coverage_percent'] . '%';
         $html .= '</small>';
+        if (!empty($context)) {
+            $linkout_html = buildBlastHitLinkouts($hit, $context);
+            if ($linkout_html) {
+                $html .= '<div style="margin-top:8px;">' . $linkout_html . '</div>';
+            }
+        }
         $html .= '</div>';
         
         // HSPs for this hit
@@ -729,7 +735,91 @@ function generateBlastStatisticsSummary($results, $query_seq, $blast_program) {
  * @param string $blast_program The BLAST program used
  * @return string Complete HTML visualization
  */
-function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_program, $blast_options = []) {
+/**
+ * Build linkout buttons for a single BLAST hit based on admin-configured rules.
+ *
+ * @param array $hit      Parsed hit array (subject, id, hsps, ...)
+ * @param array $context  Linkout context built in tools/blast.php
+ * @return string         HTML button string, empty if no linkouts apply
+ */
+function buildBlastHitLinkouts($hit, $context) {
+    if (empty($context)) return '';
+
+    $site           = $context['site']           ?? '';
+    $organism       = $context['organism']       ?? '';
+    $assembly       = $context['assembly']       ?? '';
+    $is_genome_db   = $context['is_genome_db']   ?? false;
+    $has_sqlite     = $context['has_sqlite']     ?? false;
+    $has_jbrowse    = $context['has_jbrowse']    ?? false;
+    $coords         = $context['coords']         ?? [];
+    $linkout_config = $context['linkout_config'] ?? [];
+
+    // Strip BLAST sequence-source prefixes (lcl|, gb|, ref|, etc.)
+    $hit_id = preg_replace('/^[a-z]{2,3}\|/', '', $hit['id'] ?? '');
+    // Also handle pipe-delimited formats like "gb|AAB12345.1|"
+    if (strpos($hit_id, '|') !== false) {
+        $parts = explode('|', $hit_id);
+        $hit_id = $parts[0] !== '' ? $parts[0] : ($parts[1] ?? $hit_id);
+    }
+
+    $html = '';
+
+    if ($is_genome_db) {
+        // Genome BLAST: hit subject is a chromosome/scaffold; HSP coords are genomic
+        if (($linkout_config['jbrowse'] ?? false) && $has_jbrowse && !empty($hit['hsps'])) {
+            $best = $hit['hsps'][0];
+            $loc  = $hit['subject'] . ':' . $best['hit_from'] . '-' . $best['hit_to'];
+            $url  = "/$site/jbrowse2.php?organism=" . urlencode($organism)
+                  . '&assembly=' . urlencode($assembly)
+                  . '&loc=' . urlencode($loc);
+            $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
+                   . 'class="btn btn-sm btn-outline-success me-1">'
+                   . '<i class="fa fa-dna"></i> View in JBrowse</a>';
+        }
+    } else {
+        // Feature BLAST (mRNA / CDS / protein): hit ID is a feature uniquename
+        $entry   = $coords[$hit_id] ?? null;
+        $gene_id = $entry ? $entry['gene_id'] : $hit_id;
+
+        if (($linkout_config['gene_page'] ?? false) && $has_sqlite) {
+            $url  = "/$site/tools/parent.php?uniquename=" . urlencode($gene_id)
+                  . '&organism=' . urlencode($organism)
+                  . '&assembly=' . urlencode($assembly);
+            $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
+                   . 'class="btn btn-sm btn-outline-primary me-1">'
+                   . '<i class="fa fa-dna"></i> Gene Page</a>';
+        }
+
+        if (($linkout_config['jbrowse'] ?? false) && $has_jbrowse && $entry) {
+            $loc  = $entry['chr'] . ':' . $entry['start'] . '-' . $entry['end'];
+            $url  = "/$site/jbrowse2.php?organism=" . urlencode($organism)
+                  . '&assembly=' . urlencode($assembly)
+                  . '&loc=' . urlencode($loc);
+            $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
+                   . 'class="btn btn-sm btn-outline-success me-1">'
+                   . '<i class="fa fa-microscope"></i> View in JBrowse</a>';
+        }
+    }
+
+    // External linkouts — apply to all DB types
+    foreach (($linkout_config['external'] ?? []) as $ext) {
+        $template = $ext['url_template'] ?? '';
+        $label    = htmlspecialchars($ext['label'] ?? 'Link');
+        if (empty($template)) continue;
+        $url = str_replace(
+            ['{fasta_id}', '{organism}', '{assembly}'],
+            [urlencode($hit_id), urlencode($organism), urlencode($assembly)],
+            $template
+        );
+        $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
+               . 'class="btn btn-sm btn-outline-secondary me-1">'
+               . '<i class="fa fa-external-link-alt"></i> ' . $label . '</a>';
+    }
+
+    return $html;
+}
+
+function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_program, $blast_options = [], $context = []) {
     if (!$blast_result['success']) {
         return '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> No results to visualize</div>';
     }

@@ -212,6 +212,14 @@ if (file_put_contents($assembly_json, json_encode($assembly_data, JSON_PRETTY_PR
 }
 $log[] = "Created assembly definition: {$organism}_{$assembly}.json";
 
+// ── Step 5b: Generate feature coordinate index for BLAST linkouts ────────────
+require_once __DIR__ . '/../../lib/blast_functions.php';
+if (generateFeatureCoordsIndex($source_dir)) {
+    $log[] = "Generated feature coordinate index (feature_coords.tsv)";
+} else {
+    $log[] = "Note: feature_coords.tsv not generated (genomic.gff may be absent)";
+}
+
 // ── Step 6: Create primary Genes track JSON ──────────────────────────────────
 
 if (!empty($primary_gene_tracks)) {

@@ -189,7 +189,7 @@ if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
                 ];
                 
                 $blast_result = executeBlastSearch($query_with_header, $blast_db, $blast_program, $blast_options);
-                
+
                 if (!$blast_result['success']) {
                     $search_error = $blast_result['error'];
                     if (!empty($blast_result['stderr'])) {
@@ -199,6 +199,46 @@ if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
             }
         }
     }
+}
+
+// Build linkout context for BLAST results visualization
+$blast_linkout_context = [];
+if (!empty($selected_source_obj) && !empty($selected_db_obj)) {
+    $assembly_path  = $selected_source_obj['path'];
+    $is_genome_db   = ($selected_db_obj['seq_type'] ?? '') === 'genome';
+    $linkout_config = $config->getArray('blast_linkouts', [
+        'gene_page' => true, 'jbrowse' => true, 'external' => [],
+    ]);
+
+    $has_sqlite = file_exists($assembly_path . '/organism.sqlite');
+
+    $has_jbrowse = false;
+    $assemblies_meta = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
+    if (is_dir($assemblies_meta)) {
+        foreach (glob($assemblies_meta . '/*.json') ?: [] as $jf) {
+            $jd = json_decode(file_get_contents($jf), true);
+            if (($jd['organism'] ?? '') === $selected_organism
+                && ($jd['assemblyId'] ?? '') === $selected_assembly) {
+                $has_jbrowse = true;
+                break;
+            }
+        }
+    }
+
+    $coords = (!$is_genome_db && ($linkout_config['jbrowse'] ?? false))
+        ? loadFeatureCoords($assembly_path)
+        : [];
+
+    $blast_linkout_context = [
+        'site'           => $site,
+        'organism'       => $selected_organism,
+        'assembly'       => $selected_assembly,
+        'is_genome_db'   => $is_genome_db,
+        'has_sqlite'     => $has_sqlite,
+        'has_jbrowse'    => $has_jbrowse,
+        'coords'         => $coords,
+        'linkout_config' => $linkout_config,
+    ];
 }
 
 // Build databasesByAssembly array
@@ -250,7 +290,8 @@ $data = [
     'selected_assembly_accession' => $selected_assembly_accession,
     'blast_db' => $blast_db,
     'search_error' => $search_error,
-    'blast_result' => $blast_result,
+    'blast_result'          => $blast_result,
+    'blast_linkout_context' => $blast_linkout_context,
     'evalue' => $evalue,
     'evalue_custom' => $evalue_custom,
     'max_results' => $max_results,
