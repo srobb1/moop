@@ -89,7 +89,6 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
                        data-tool-path="<?= htmlspecialchars($tool['url_path']) ?>"
                        data-context-params="<?= htmlspecialchars(json_encode($tool['context_params'])) ?>"
                        onclick="handleToolClick('<?= htmlspecialchars($tool_id) ?>')">
-                      <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
                       <span><?= htmlspecialchars($tool['name']) ?></span>
                     </button>
                 <?php else: ?>
@@ -97,7 +96,6 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
                        target="_blank"
                        class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
                        title="<?= htmlspecialchars($tool['description']) ?>">
-                        <i class="fa <?= htmlspecialchars($tool['icon']) ?>"></i>
                         <span><?= htmlspecialchars($tool['name']) ?></span>
                     </a>
                 <?php endif; ?>
