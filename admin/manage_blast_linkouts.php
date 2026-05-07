@@ -33,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $linkout_config['jbrowse']               = isset($_POST['jbrowse']);
     $linkout_config['jbrowse_label']         = trim($_POST['jbrowse_label'] ?? '') ?: 'Genome Browser';
     $linkout_config['jbrowse_hsp_min_score'] = max(0, (int)($_POST['jbrowse_hsp_min_score'] ?? 0));
+    $linkout_config['jbrowse_hsp_max_span']  = max(1, (int)($_POST['jbrowse_hsp_max_span']  ?? 500000));
 
     // Global external linkouts
     $labels    = $_POST['ext_label']    ?? [];

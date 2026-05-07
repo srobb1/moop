@@ -45,11 +45,11 @@ function getBlastDatabases($assembly_path) {
             }
             
             $file_path = "$assembly_path/$pattern";
-            
-            // Check if file exists
-            if (file_exists($file_path)) {
-                $type_info = $type_mapping[$seq_type] ?? ['name' => ucfirst($seq_type), 'blast_type' => 'nucleotide'];
-                
+            $type_info = $type_mapping[$seq_type] ?? ['name' => ucfirst($seq_type), 'blast_type' => 'nucleotide'];
+
+            // Accept if FASTA exists OR if a BLAST index exists (FASTA may have been removed after indexing)
+            $idx_ext = $type_info['blast_type'] === 'protein' ? '.pin' : '.nin';
+            if (file_exists($file_path) || file_exists($file_path . $idx_ext)) {
                 $databases[] = [
                     'name'     => $type_info['name'],
                     'path'     => $file_path,

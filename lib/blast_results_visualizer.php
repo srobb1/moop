@@ -539,12 +539,22 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
     $html = '<div class="blast-alignment-viewer mt-4">';
     $html .= '<h6><i class="fa fa-align-justify"></i> Detailed Alignments (HSPs)</h6>';
     $html .= '<small class="text-muted d-block mb-3">Each Hit section contains one or more High-Scoring Segment Pairs (HSPs)</small>';
-    
+
     if (empty($results['hits'])) {
         $html .= '<div class="alert alert-info"><small>No alignments to display</small></div>';
         return $html . '</div>';
     }
-    
+
+    // Extract context for per-HSP JBrowse buttons (genome BLAST only)
+    $ctx_site         = $context['site']          ?? '';
+    $ctx_organism     = $context['organism']      ?? '';
+    $ctx_assembly     = $context['assembly']      ?? '';
+    $ctx_is_genome    = $context['is_genome_db']  ?? false;
+    $ctx_has_jbrowse  = $context['has_jbrowse']   ?? false;
+    $ctx_jb2_asm      = $ctx_organism . '_' . $ctx_assembly;
+    $ctx_lc           = $context['linkout_config'] ?? [];
+    $ctx_jb_enabled   = (bool)($ctx_lc['jbrowse'] ?? false);
+
     // Determine correct unit based on program
     $unit = 'bp';
     if (strpos($blast_program, 'blastp') !== false || strpos($blast_program, 'tblastn') !== false) {
@@ -603,7 +613,41 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
             $html .= '<strong>Subject Coverage (This HSP):</strong> ';
             $html .= $hsp['subject_coverage_percent'] . '% (' . abs($hsp['hit_to'] - $hsp['hit_from']) + 1 . '/' . $results['hits'][$hit_idx]['length'] . ')';
             $html .= '</small>';
-            
+
+            // Per-HSP JBrowse button (genome BLAST only)
+            if ($ctx_is_genome && $ctx_has_jbrowse && $ctx_jb_enabled && $ctx_site !== '') {
+                $hsp_subject = $hit['subject'] ?? $hit['id'] ?? '';
+                $s = min((int)$hsp['hit_from'], (int)$hsp['hit_to']) - 1;
+                $e = max((int)$hsp['hit_from'], (int)$hsp['hit_to']);
+                $hsp_track_id = 'blast_hsp_' . substr(md5($hit['id'] . '_' . $hsp_idx), 0, 10);
+                $hsp_features = [[
+                    'uniqueId' => $hsp_track_id . '_f',
+                    'refName'  => $hsp_subject,
+                    'start'    => $s,
+                    'end'      => $e,
+                    'name'     => 'HSP ' . $hsp_num . ' (evalue=' . ($hsp['evalue'] ?? '?') . ')',
+                    'type'     => 'match_part',
+                ]];
+                $hsp_tracks = [[
+                    'type'          => 'FeatureTrack',
+                    'trackId'       => $hsp_track_id,
+                    'name'          => 'BLAST HSP ' . $hsp_num . ': ' . ($hit['id'] ?? ''),
+                    'assemblyNames' => [$ctx_jb2_asm],
+                    'adapter'       => ['type' => 'FromConfigAdapter', 'features' => $hsp_features],
+                ]];
+                $hsp_loc = $hsp_subject . ':' . ($s + 1) . '-' . $e;
+                $hsp_url = '/' . $ctx_site . '/jbrowse2.php?organism=' . urlencode($ctx_organism)
+                         . '&assembly='      . urlencode($ctx_assembly)
+                         . '&loc='           . urlencode($hsp_loc)
+                         . '&sessionTracks=' . urlencode(json_encode($hsp_tracks))
+                         . '&sessionTrackId='. urlencode($hsp_track_id);
+                $html .= '<div style="margin-bottom:8px;">'
+                       . '<a href="' . htmlspecialchars($hsp_url) . '" target="_blank" '
+                       . 'class="btn btn-sm btn-outline-success">'
+                       . '<i class="fa fa-microscope"></i> View HSP ' . $hsp_num . ' in Browser</a>'
+                       . '</div>';
+            }
+
             // Display alignment in monospace with frame-aware formatting
             $html .= '<pre style="background: white; border: 1px solid #dee2e6; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 11px; margin: 0; font-family: \'Courier New\', monospace;">';
             
@@ -771,12 +815,13 @@ function buildBlastHitLinkouts($hit, $context) {
     $gene_page_label  = htmlspecialchars($linkout_config['gene_page_label']       ?? 'Gene Page');
     $jbrowse_label    = htmlspecialchars($linkout_config['jbrowse_label']         ?? 'Genome Browser');
     $hsp_min_score    = (float)($linkout_config['jbrowse_hsp_min_score']          ?? 0);
+    $hsp_max_span     = (int)($linkout_config['jbrowse_hsp_max_span']             ?? 500000);
     $jb2_assembly_id  = $organism . '_' . $assembly; // JBrowse2 assembly name format
 
     if ($is_genome_db) {
         // Genome BLAST: hit subject is a chromosome/scaffold; HSP coords are genomic.
         // Build a sessionTracks payload so JBrowse2 shows each HSP as a colored block.
-        // HSPs >= hsp_min_score are subfeatures of a parent (drawn connected); others standalone.
+        // Connect HSPs only if total span <= hsp_max_span AND score >= hsp_min_score.
         if (($linkout_config['jbrowse'] ?? false) && $has_jbrowse && !empty($hit['hsps'])) {
             $subject    = $hit['subject'] ?? '';
             $subfeats   = [];
@@ -790,6 +835,16 @@ function buildBlastHitLinkouts($hit, $context) {
                 $e = max((int)$hsp['hit_from'], (int)$hsp['hit_to']);
                 $all_starts[] = $s;
                 $all_ends[]   = $e;
+            }
+
+            $parent_start = min($all_starts);
+            $parent_end   = max($all_ends);
+            $total_span   = $parent_end - $parent_start;
+            $connect      = ($total_span <= $hsp_max_span);
+
+            foreach ($hit['hsps'] as $i => $hsp) {
+                $s = min((int)$hsp['hit_from'], (int)$hsp['hit_to']) - 1;
+                $e = max((int)$hsp['hit_from'], (int)$hsp['hit_to']);
                 $score = (float)($hsp['bit_score'] ?? 0);
                 $feat = [
                     'uniqueId' => $hit_id . '_hsp_' . $i,
@@ -797,20 +852,19 @@ function buildBlastHitLinkouts($hit, $context) {
                     'start'    => $s,
                     'end'      => $e,
                     'score'    => (int)$score,
-                    'name'     => 'HSP ' . ($i + 1) . ' (score=' . (int)$score . ')',
+                    'name'     => 'HSP ' . ($i + 1) . ' (evalue=' . ($hsp['evalue'] ?? '?') . ')',
                     'type'     => 'match_part',
                 ];
-                if ($score >= $hsp_min_score) {
+                if ($connect && $score >= $hsp_min_score) {
                     $subfeats[] = $feat;
                 } else {
-                    $feat['name'] .= ' — below threshold';
+                    if (!$connect) $feat['name'] .= ' — span too large';
+                    elseif ($score < $hsp_min_score) $feat['name'] .= ' — below score threshold';
                     $standalone[] = $feat;
                 }
             }
 
-            $parent_start = min($all_starts);
-            $parent_end   = max($all_ends);
-            $track_id     = 'blast_' . substr(md5($hit_id), 0, 10);
+            $track_id = 'blast_' . substr(md5($hit_id), 0, 10);
 
             $features = [];
             if (!empty($subfeats)) {
