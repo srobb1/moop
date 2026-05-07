@@ -3,9 +3,12 @@
  * DOWNLOADS - Display Page
  * Rendered by tools/downloads.php via display-template.php.
  * Variables available: $download_tree, $site, $siteTitle, $page_title,
- *                      $context_organism, $context_assembly, $context_group, $display_name
+ *                      $context_organism, $context_assembly, $context_group,
+ *                      $display_name, $filter_organisms
  */
-$has_context = !empty($context_organism) || !empty($context_assembly) || !empty($context_group);
+$filter_organisms = $filter_organisms ?? [];
+$has_context = !empty($context_organism) || !empty($context_assembly)
+            || !empty($context_group)    || !empty($filter_organisms);
 $clear_url   = '/' . $site . '/tools/downloads.php';
 ?>
 <div class="container mt-5">
@@ -23,10 +26,17 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
       Filtered to:
       <?php
         $parts = [];
-        if (!empty($display_name))     $parts[] = '<strong>' . htmlspecialchars($display_name) . '</strong>';
-        elseif (!empty($context_organism)) $parts[] = '<strong><em>' . htmlspecialchars(str_replace('_', ' ', $context_organism)) . '</em></strong>';
+        if (!empty($display_name)) {
+            $parts[] = '<strong>' . htmlspecialchars($display_name) . '</strong>';
+        } elseif (!empty($context_group)) {
+            $parts[] = 'group <strong>' . htmlspecialchars($context_group) . '</strong>';
+        } elseif (!empty($filter_organisms)) {
+            $names = array_map(fn($o) => '<em>' . htmlspecialchars(str_replace('_', ' ', $o)) . '</em>', $filter_organisms);
+            $parts[] = implode(', ', $names);
+        } elseif (!empty($context_organism)) {
+            $parts[] = '<strong><em>' . htmlspecialchars(str_replace('_', ' ', $context_organism)) . '</em></strong>';
+        }
         if (!empty($context_assembly)) $parts[] = 'assembly <strong>' . htmlspecialchars($context_assembly) . '</strong>';
-        if (!empty($context_group))    $parts[] = 'group <strong>' . htmlspecialchars($context_group) . '</strong>';
         echo implode(', ', $parts);
       ?>
     </span>

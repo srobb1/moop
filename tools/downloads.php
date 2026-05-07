@@ -43,8 +43,17 @@ function _downloads_format_size(int $bytes): string {
 $sources_by_group   = getAccessibleAssemblies();
 $accessible_sources = flattenSourcesList($sources_by_group);
 
-// Apply context filters
-if (!empty($context_organism)) {
+// Handle organisms[] POSTed from groups page (same pattern as retrieve_sequences/blast)
+$organisms_param   = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
+$organism_result   = parseOrganismParameter($organisms_param, $context_organism);
+$filter_organisms  = $organism_result['organisms']; // array, may be empty
+
+// Apply context filters — organisms list takes priority, then individual context params
+if (!empty($filter_organisms)) {
+    $accessible_sources = array_values(array_filter(
+        $accessible_sources, fn($s) => in_array($s['organism'], $filter_organisms)
+    ));
+} elseif (!empty($context_organism)) {
     $accessible_sources = array_values(array_filter(
         $accessible_sources, fn($s) => $s['organism'] === $context_organism
     ));
@@ -151,6 +160,7 @@ $data = [
     'context_assembly' => $context_assembly,
     'context_group'    => $context_group,
     'display_name'     => $display_name,
+    'filter_organisms' => $filter_organisms,
     'page_title'       => $page_title,
 ];
 
