@@ -5,47 +5,38 @@ function handleToolClick(toolId) {
     alert('Please select at least one organism');
     return;
   }
-  
-  // Get tool button and its configuration
+
   const toolBtn = document.getElementById(`tool-btn-${toolId}`);
   if (!toolBtn) {
     console.error(`Tool button not found: tool-btn-${toolId}`);
     return;
   }
-  
+
   const toolPath = toolBtn.getAttribute('data-tool-path');
-  const contextParamsJson = toolBtn.getAttribute('data-context-params');
-  
-  if (!toolPath || !contextParamsJson) {
-    console.error('Tool configuration missing from button');
+  if (!toolPath) {
+    console.error('Tool path missing from button');
     return;
   }
-  
-  const contextParams = JSON.parse(contextParamsJson);
+
   const organisms = Array.from(phyloTree.selectedOrganisms);
-  
-  // Get site name from global scope (set in index.php via PHP variable)
-  // Fallback to 'moop' if not available
   const siteName = typeof sitePath !== 'undefined' ? sitePath.replace(/^\//,'').split('/')[0] : 'moop';
-  
-  // Build query parameters based on tool's context_params
-  const params = new URLSearchParams();
-  
-  // Always add organisms if the tool supports them
-  if (contextParams.includes('organisms')) {
-    organisms.forEach(org => {
-      params.append('organisms[]', org);
-    });
-  }
-  
-  // Add display_name
-  if (contextParams.includes('display_name')) {
-    params.append('display_name', 'Multi-Organism Search');
-  }
-  
-  // Build URL: /{site}{toolPath}?params
-  const url = `/${siteName}${toolPath}${params.toString() ? '?' + params.toString() : ''}`;
-  window.open(url, '_blank');
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = `/${siteName}${toolPath}`;
+  form.target = '_blank';
+
+  organisms.forEach(org => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'organisms[]';
+    input.value = org;
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
 }
 
 function switchView(view) {

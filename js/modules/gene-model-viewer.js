@@ -7,9 +7,12 @@
  *   - Forward (+) strand: genomic left = 5′
  *   - Reverse (−) strand: coordinates are flipped so 5′ (high coord) appears on the left
  *
- * Gene backbone row buttons (only rendered when data is available):
+ * Card header buttons (wired in init()):
  *   - [> seq]  fetch multi-FASTA: full gene locus + each isoform span (requires genome.fa + .fai)
- *   - [gff]    fetch GFF3 lines for gene and all descendants (always shown when SVG renders)
+ *   - [gff]    fetch GFF3 lines for gene and all descendants
+ *
+ * Isoform row interactions:
+ *   - Upstream/downstream flanking blocks → bp picker → fetch flanking FASTA
  *   - Row bg/label → smooth-scroll to the isoform's annotation section
  *
  * Clickable isoform regions (only when genomeSequenceAvailable === true):
@@ -24,15 +27,21 @@
     const LABEL_HEIGHT  = 16;
     const PAD_TOP       = 4;
     const PAD_BOTTOM    = 18;   // room for strand label
-    const PAD_LEFT      = 14;
-    const PAD_RIGHT     = 14;
+    const PAD_LEFT      = 30;  // wider to accommodate upstream/downstream blocks
+    const PAD_RIGHT     = 30;
     const EXON_H        = 10;
     const CDS_H         = 16;
+    const FLANK_W       = 12;  // upstream/downstream block width
+    const FLANK_GAP     = 4;   // gap between block and track edge
 
-    const COLOR_BACKBONE = '#aaa';
-    const COLOR_EXON     = '#e8833a';   // warm orange — UTR / exon background
-    const COLOR_CDS      = '#2171b5';   // dark blue — CDS
-    const COLOR_LABEL    = '#555';
+    const COLOR_BACKBONE   = '#aaa';
+    const COLOR_EXON       = '#e8833a';   // warm orange — UTR / exon background
+    const COLOR_CDS        = '#2171b5';   // dark blue — CDS
+    const COLOR_LABEL      = '#555';
+    const COLOR_UPSTREAM   = '#a1d99b';   // light green
+    const COLOR_UPSTREAM_S = '#31a354';
+    const COLOR_DOWNSTREAM   = '#bcbddc'; // light purple
+    const COLOR_DOWNSTREAM_S = '#756bb1';
 
     // Fetch cache: key = "seqname:start:end:strand" → API response object
     const seqCache = new Map();
@@ -46,7 +55,12 @@
         const svg = document.getElementById('gene-model-svg');
         if (!svg) return;
         render(geneModelData, svg);
-        initFlankButtons(geneModelData.gene);
+
+        const seqBtn = document.getElementById('gene-model-seq-btn');
+        if (seqBtn) seqBtn.addEventListener('click', () => showGenomicModal(geneModelData.gene, geneModelData.isoforms));
+
+        const gffBtn = document.getElementById('gene-model-gff-btn');
+        if (gffBtn) gffBtn.addEventListener('click', () => showGffModal(geneModelData.gene));
     }
 
     function render(data, svg) {
@@ -73,7 +87,7 @@
         }
 
         // -----------------------------------------------------------------
-        // Gene backbone row — full locus span + [> seq] and [gff] buttons
+        // Gene backbone row — full locus span
         // -----------------------------------------------------------------
         {
             const gRowTop = PAD_TOP;
@@ -89,76 +103,7 @@
             gLabel.textContent = gene.id || 'Gene';
             gG.appendChild(gLabel);
 
-            // Button layout (right-aligned): [> seq] [gff]
-            // [gff] is always shown; [> seq] only when genome FASTA is available
-            const GFF_W   = 28;
-            const SEQ_W   = canFetchSeq ? 40 : 0;
-            const SEQ_GAP = canFetchSeq ? 4  : 0;   // gap between the two buttons
-            const BTN_H   = 14;
-            const TOTAL_W = SEQ_W + SEQ_GAP + GFF_W;
-
-            // Backbone ends just before the button area
-            gG.appendChild(makeLine(PAD_LEFT, VIRTUAL_WIDTH - PAD_RIGHT - TOTAL_W - 6, gCy, gCy, '#999', 1.5));
-
-            // [> seq] button
-            if (canFetchSeq) {
-                const bx = VIRTUAL_WIDTH - PAD_RIGHT - TOTAL_W;
-                const by = gCy - BTN_H / 2;
-
-                const btnRect = makeRect(bx, by, SEQ_W, BTN_H, '#e8f0fe', 3);
-                btnRect.setAttribute('stroke', '#5b8dee');
-                btnRect.setAttribute('stroke-width', '1');
-                gG.appendChild(btnRect);
-
-                const btnLabel = makeSvgEl('text');
-                btnLabel.setAttribute('x', bx + SEQ_W / 2);
-                btnLabel.setAttribute('y', gCy + 4);
-                btnLabel.setAttribute('text-anchor', 'middle');
-                btnLabel.setAttribute('font-size', '10');
-                btnLabel.setAttribute('fill', '#2c5cc5');
-                btnLabel.setAttribute('font-weight', 'bold');
-                btnLabel.textContent = '> seq';
-                gG.appendChild(btnLabel);
-
-                const seqTitle = document.createElementNS(NS, 'title');
-                seqTitle.textContent = 'Fetch full genomic sequence — gene locus + each isoform span';
-                btnRect.appendChild(seqTitle);
-
-                btnRect.style.cursor = 'pointer';
-                btnLabel.style.cursor = 'pointer';
-                btnRect.addEventListener('click',  e => { e.stopPropagation(); showGenomicModal(gene, isoforms); });
-                btnLabel.addEventListener('click', e => { e.stopPropagation(); showGenomicModal(gene, isoforms); });
-            }
-
-            // [gff] button
-            {
-                const bx = VIRTUAL_WIDTH - PAD_RIGHT - GFF_W;
-                const by = gCy - BTN_H / 2;
-
-                const btnRect = makeRect(bx, by, GFF_W, BTN_H, '#edf7ee', 3);
-                btnRect.setAttribute('stroke', '#5b8d6e');
-                btnRect.setAttribute('stroke-width', '1');
-                gG.appendChild(btnRect);
-
-                const btnLabel = makeSvgEl('text');
-                btnLabel.setAttribute('x', bx + GFF_W / 2);
-                btnLabel.setAttribute('y', gCy + 4);
-                btnLabel.setAttribute('text-anchor', 'middle');
-                btnLabel.setAttribute('font-size', '10');
-                btnLabel.setAttribute('fill', '#2c5c40');
-                btnLabel.setAttribute('font-weight', 'bold');
-                btnLabel.textContent = 'gff';
-                gG.appendChild(btnLabel);
-
-                const gffTitle = document.createElementNS(NS, 'title');
-                gffTitle.textContent = 'Fetch GFF3 — gene, mRNA, exon, CDS, UTR and all sub-features';
-                btnRect.appendChild(gffTitle);
-
-                btnRect.style.cursor = 'pointer';
-                btnLabel.style.cursor = 'pointer';
-                btnRect.addEventListener('click',  e => { e.stopPropagation(); showGffModal(gene); });
-                btnLabel.addEventListener('click', e => { e.stopPropagation(); showGffModal(gene); });
-            }
+            gG.appendChild(makeLine(PAD_LEFT, VIRTUAL_WIDTH - PAD_RIGHT, gCy, gCy, '#999', 1.5));
 
             svg.appendChild(gG);
         }
@@ -265,6 +210,30 @@
                 g.appendChild(rect);
             });
 
+            // Upstream / downstream flanking blocks in left/right margins
+            if (canFetchSeq) {
+                const feat = Object.assign({ seqname: gene.seqname }, iso);
+                const by   = cy - EXON_H / 2;
+
+                // Upstream block — fixed gap from isoform's leftmost feature
+                const upRect = makeRect(xL - FLANK_GAP - FLANK_W, by, FLANK_W, EXON_H, COLOR_UPSTREAM, 2);
+                upRect.setAttribute('stroke', COLOR_UPSTREAM_S);
+                upRect.setAttribute('stroke-width', '1');
+                upRect.style.cursor = 'pointer';
+                addRegionTitle(upRect, `Upstream flanking — ${iso.id}`);
+                upRect.addEventListener('click', e => { e.stopPropagation(); fetchFlank(feat, 'upstream', 1000); });
+                g.appendChild(upRect);
+
+                // Downstream block — fixed gap from isoform's rightmost feature
+                const dnRect = makeRect(xR + FLANK_GAP, by, FLANK_W, EXON_H, COLOR_DOWNSTREAM, 2);
+                dnRect.setAttribute('stroke', COLOR_DOWNSTREAM_S);
+                dnRect.setAttribute('stroke-width', '1');
+                dnRect.style.cursor = 'pointer';
+                addRegionTitle(dnRect, `Downstream flanking — ${iso.id}`);
+                dnRect.addEventListener('click', e => { e.stopPropagation(); fetchFlank(feat, 'downstream', 1000); });
+                g.appendChild(dnRect);
+            }
+
             // Tooltip on the row background (navigate hint)
             const title = document.createElementNS(NS, 'title');
             title.textContent = iso.anchor ? iso.id + ' — click to view annotations' : iso.id;
@@ -330,6 +299,21 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <div id="seq-flank-controls" style="display:none;" class="mb-3 pb-2 border-bottom">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="text-muted small">Size:</span>
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-sm btn-outline-success flank-modal-preset" data-bp="500">500 bp</button>
+              <button class="btn btn-sm btn-outline-success flank-modal-preset" data-bp="1000">1 kb</button>
+              <button class="btn btn-sm btn-outline-success flank-modal-preset" data-bp="5000">5 kb</button>
+              <button class="btn btn-sm btn-outline-success flank-modal-preset" data-bp="10000">10 kb</button>
+            </div>
+            <div class="input-group input-group-sm" style="width:auto;">
+              <input type="number" class="form-control" id="flank-modal-custom-input" placeholder="bp" min="1" max="500000" style="width:80px;">
+              <button class="btn btn-outline-success" id="flank-modal-go">Go</button>
+            </div>
+          </div>
+        </div>
         <div id="seq-region-loading" class="text-center py-4">
           <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading…</span></div>
         </div>
@@ -376,6 +360,25 @@
             a.href = url; a.download = currentFilename; a.click();
             URL.revokeObjectURL(url);
         });
+
+        document.querySelectorAll('.flank-modal-preset').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const m = document.getElementById('seq-region-modal');
+                if (!m._flankContext) return;
+                fetchFlank(m._flankContext.feature, m._flankContext.direction, parseInt(btn.dataset.bp, 10));
+            });
+        });
+
+        document.getElementById('flank-modal-go').addEventListener('click', () => {
+            const m  = document.getElementById('seq-region-modal');
+            const bp = parseInt(document.getElementById('flank-modal-custom-input').value, 10);
+            if (!m._flankContext || !bp || bp < 1) return;
+            fetchFlank(m._flankContext.feature, m._flankContext.direction, bp);
+        });
+
+        document.getElementById('flank-modal-custom-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('flank-modal-go').click();
+        });
     }
 
     function showSequenceModal(region) {
@@ -389,6 +392,18 @@
         document.getElementById('seq-region-error').style.display    = 'none';
         document.getElementById('seq-region-modal-label').textContent =
             `${region.type} — ${region.isoform}`;
+
+        // Flank controls: show for upstream/downstream regions, hide for others
+        const flankCtx = region._flankContext || null;
+        modalEl._flankContext = flankCtx;
+        const flankControls = document.getElementById('seq-flank-controls');
+        flankControls.style.display = flankCtx ? '' : 'none';
+        if (flankCtx) {
+            document.querySelectorAll('.flank-modal-preset').forEach(btn => {
+                btn.classList.toggle('active', parseInt(btn.dataset.bp, 10) === flankCtx.bp);
+            });
+            document.getElementById('flank-modal-custom-input').value = '';
+        }
 
         modal.show();
 
@@ -409,9 +424,11 @@
         const modal   = bootstrap.Modal.getOrCreateInstance(modalEl);
 
         document.getElementById('seq-region-modal-label').textContent = 'Genomic Sequences';
-        document.getElementById('seq-region-loading').style.display = 'block';
+        document.getElementById('seq-region-loading').style.display  = 'block';
         document.getElementById('seq-region-content').style.display  = 'none';
         document.getElementById('seq-region-error').style.display    = 'none';
+        document.getElementById('seq-flank-controls').style.display  = 'none';
+        modalEl._flankContext = null;
 
         modal.show();
 
@@ -529,36 +546,6 @@
         document.getElementById('seq-region-content').style.display  = 'block';
     }
 
-    // -------------------------------------------------------------------------
-    // Upstream / downstream flank buttons
-    // -------------------------------------------------------------------------
-
-    function initFlankButtons(gene) {
-        if (!gene) return;
-
-        document.querySelectorAll('.flank-item').forEach(el => {
-            el.addEventListener('click', e => {
-                e.preventDefault();
-                fetchFlank(gene, el.dataset.direction, parseInt(el.dataset.bp, 10));
-            });
-        });
-
-        document.querySelectorAll('.flank-custom-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const input = btn.closest('.d-flex').querySelector('.flank-custom-input');
-                const bp = parseInt(input.value, 10);
-                if (!bp || bp < 1) return;
-                fetchFlank(gene, btn.dataset.direction, bp);
-            });
-        });
-
-        document.querySelectorAll('.flank-custom-input').forEach(input => {
-            input.addEventListener('keydown', e => {
-                if (e.key === 'Enter') input.closest('.d-flex').querySelector('.flank-custom-btn').click();
-            });
-        });
-    }
-
     function fetchFlank(gene, direction, bp) {
         const label = direction === 'upstream' ? 'Upstream' : 'Downstream';
         const bpLabel = bp >= 1000 ? (bp / 1000) + ' kb' : bp + ' bp';
@@ -592,6 +579,7 @@
             start, end,
             seqname: gene.seqname,
             strand,
+            _flankContext: { feature: gene, direction, bp },
         });
     }
 

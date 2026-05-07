@@ -128,61 +128,30 @@
             <button class="btn btn-sm btn-link p-0 ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#geneModelInfo" aria-expanded="false" title="Diagram legend">
                 <i class="fas fa-info-circle"></i>
             </button>
+            <div class="ms-auto d-flex gap-1">
+                <?php if (!empty($genome_seq_available)): ?>
+                <button class="btn btn-sm btn-outline-primary" id="gene-model-seq-btn" title="Fetch full genomic sequence — gene locus + each isoform span">Download Genomic Sequence</button>
+                <?php endif; ?>
+                <button class="btn btn-sm btn-outline-success" id="gene-model-gff-btn" title="Fetch GFF3 — gene, mRNA, exon, CDS, UTR and all sub-features">Download GFF</button>
+            </div>
         </div>
         <div id="geneModelSection" class="collapse show">
             <div class="card-body p-3">
                 <div class="collapse mb-3" id="geneModelInfo">
                     <div class="alert alert-info mb-0 font-size-xsmall">
                         <span style="display:inline-block;width:12px;height:12px;background:#2171b5;border-radius:2px;vertical-align:middle;"></span> <strong>CDS</strong> &mdash; protein-coding sequence &nbsp;&nbsp;
-                        <span style="display:inline-block;width:12px;height:12px;background:#e8833a;border-radius:2px;vertical-align:middle;"></span> <strong>UTR / exon</strong> &mdash; untranslated or non-coding exon region<br>
+                        <span style="display:inline-block;width:12px;height:12px;background:#e8833a;border-radius:2px;vertical-align:middle;"></span> <strong>UTR / exon</strong> &mdash; untranslated or non-coding exon region<?php if (!empty($genome_seq_available)): ?> &nbsp;&nbsp;
+                        <span style="display:inline-block;width:12px;height:12px;background:#a1d99b;border-radius:2px;vertical-align:middle;"></span> <strong>Upstream</strong> &mdash; 5&prime; flanking sequence &nbsp;&nbsp;
+                        <span style="display:inline-block;width:12px;height:12px;background:#bcbddc;border-radius:2px;vertical-align:middle;"></span> <strong>Downstream</strong> &mdash; 3&prime; flanking sequence<?php endif; ?><br>
                         <small class="text-muted">The diagram is always drawn 5&prime;&rarr;3&prime; left to right. Reverse-strand genes are flipped accordingly.</small>
+                        <?php if (!empty($genome_seq_available)): ?>
+                        <br><small class="text-muted">Click the colored flanking blocks on either side of an isoform to fetch sequence. Adjust the size inside the modal.</small>
+                        <?php endif; ?>
                     </div>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <?php if (!empty($genome_seq_available)): ?>
-                    <div class="dropdown flex-shrink-0">
-                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-arrow-left me-1"></i>Upstream
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item flank-item" href="#" data-direction="upstream" data-bp="500">500 bp</a></li>
-                            <li><a class="dropdown-item flank-item" href="#" data-direction="upstream" data-bp="1000">1 kb</a></li>
-                            <li><a class="dropdown-item flank-item" href="#" data-direction="upstream" data-bp="5000">5 kb</a></li>
-                            <li><a class="dropdown-item flank-item" href="#" data-direction="upstream" data-bp="10000">10 kb</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <div class="px-3 py-1 d-flex gap-1 align-items-center">
-                                    <input type="number" class="form-control form-control-sm flank-custom-input" placeholder="bp" min="1" max="500000" style="width:75px" data-direction="upstream">
-                                    <button class="btn btn-sm btn-outline-primary flank-custom-btn" data-direction="upstream">Go</button>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                    <?php endif; ?>
 
-                    <svg id="gene-model-svg" width="100%" style="display:block; overflow:visible; flex:1; min-width:0;"></svg>
+                <svg id="gene-model-svg" width="100%" style="display:block; overflow:visible;"></svg>
 
-                    <?php if (!empty($genome_seq_available)): ?>
-                    <div class="dropdown flex-shrink-0">
-                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Downstream<i class="fas fa-arrow-right ms-1"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item flank-item" href="#" data-direction="downstream" data-bp="500">500 bp</a></li>
-                            <li><a class="dropdown-item flank-item" href="#" data-direction="downstream" data-bp="1000">1 kb</a></li>
-                            <li><a class="dropdown-item flank-item" href="#" data-direction="downstream" data-bp="5000">5 kb</a></li>
-                            <li><a class="dropdown-item flank-item" href="#" data-direction="downstream" data-bp="10000">10 kb</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <div class="px-3 py-1 d-flex gap-1 align-items-center">
-                                    <input type="number" class="form-control form-control-sm flank-custom-input" placeholder="bp" min="1" max="500000" style="width:75px" data-direction="downstream">
-                                    <button class="btn btn-sm btn-outline-primary flank-custom-btn" data-direction="downstream">Go</button>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                    <?php endif; ?>
-                </div>
             </div>
         </div>
     </div>
@@ -241,7 +210,7 @@
             <div class="d-flex gap-2">
                 <a href="/<?= htmlspecialchars($config->getString('site', 'moop')) ?>/api/download_annotations.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($feature_uniquename) ?>"
                    class="btn btn-sm btn-outline-success" title="Download all annotations as CSV">
-                    <i class="fas fa-download"></i> Download All
+                    <i class="fas fa-download"></i> Download All Annotations
                 </a>
                 <a href="#" class="btn btn-sm btn-outline-secondary" title="Back to top">
                     <i class="fas fa-arrow-up"></i> Back to Top
@@ -259,6 +228,7 @@
                             <li><strong>Protein Domains:</strong> Conserved structural domains identified using InterProScan or similar tools</li>
                         </ul>
                         <p class="mb-0 mt-2"><small><strong>Note:</strong> Annotation sections are only displayed if the sequence has results for that type. If a sequence has no annotations of a specific type, that section will not appear.</small></p>
+                        <p class="mb-0 mt-2"><strong>Download buttons:</strong> <strong>Download All Annotations</strong> exports every annotation for this feature as a single CSV file. Individual annotation tables also have their own <i class="fas fa-download fa-xs"></i> download button to export just that result set.</p>
                     </div>
                 </div>
                 <?php

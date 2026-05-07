@@ -31,8 +31,15 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
         } elseif (!empty($context_group)) {
             $parts[] = 'group <strong>' . htmlspecialchars($context_group) . '</strong>';
         } elseif (!empty($filter_organisms)) {
-            $names = array_map(fn($o) => '<em>' . htmlspecialchars(str_replace('_', ' ', $o)) . '</em>', $filter_organisms);
-            $parts[] = implode(', ', $names);
+            $n = count($filter_organisms);
+            if ($n === 1) {
+                $parts[] = '<strong><em>' . htmlspecialchars(str_replace('_', ' ', $filter_organisms[0])) . '</em></strong>';
+            } elseif ($n <= 3) {
+                $names = array_map(fn($o) => '<em>' . htmlspecialchars(str_replace('_', ' ', $o)) . '</em>', $filter_organisms);
+                $parts[] = implode(', ', $names);
+            } else {
+                $parts[] = '<strong>' . $n . ' organisms</strong>';
+            }
         } elseif (!empty($context_organism)) {
             $parts[] = '<strong><em>' . htmlspecialchars(str_replace('_', ' ', $context_organism)) . '</em></strong>';
         }

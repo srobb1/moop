@@ -135,8 +135,8 @@
   </div>
 </div>
 
-<script src="js/modules/taxonomy-tree.js"></script>
-<script src="js/index.js"></script>
+<script src="js/modules/taxonomy-tree.js?v=<?= filemtime(__DIR__ . '/../../js/modules/taxonomy-tree.js') ?>"></script>
+<script src="js/index.js?v=<?= filemtime(__DIR__ . '/../../js/index.js') ?>"></script>
 <script>
 const userAccess = <?= $user_access_json ?>;
 const treeData = <?= json_encode($taxonomy_tree_data) ?>;
