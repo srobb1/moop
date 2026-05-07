@@ -5,14 +5,36 @@
  * Variables available: $download_tree, $site, $siteTitle, $page_title,
  *                      $context_organism, $context_assembly, $context_group, $display_name
  */
+$has_context = !empty($context_organism) || !empty($context_assembly) || !empty($context_group);
+$clear_url   = '/' . $site . '/tools/downloads.php';
 ?>
 <div class="container mt-5">
   <div class="row mb-3">
     <div class="col-12">
-      <h2 class="mb-1"><i class="fas fa-download me-2"></i><?= htmlspecialchars($page_title) ?></h2>
+      <h2 class="mb-1"><i class="fas fa-download me-2"></i>Downloads</h2>
       <p class="text-muted mb-0">Browse and download genome files for organisms you have access to.</p>
     </div>
   </div>
+
+  <?php if ($has_context): ?>
+  <div class="alert alert-info d-flex align-items-center py-2 mb-3">
+    <i class="fas fa-filter me-2 flex-shrink-0"></i>
+    <span class="me-3">
+      Filtered to:
+      <?php
+        $parts = [];
+        if (!empty($display_name))     $parts[] = '<strong>' . htmlspecialchars($display_name) . '</strong>';
+        elseif (!empty($context_organism)) $parts[] = '<strong><em>' . htmlspecialchars(str_replace('_', ' ', $context_organism)) . '</em></strong>';
+        if (!empty($context_assembly)) $parts[] = 'assembly <strong>' . htmlspecialchars($context_assembly) . '</strong>';
+        if (!empty($context_group))    $parts[] = 'group <strong>' . htmlspecialchars($context_group) . '</strong>';
+        echo implode(', ', $parts);
+      ?>
+    </span>
+    <a href="<?= htmlspecialchars($clear_url) ?>" class="btn btn-sm btn-outline-secondary ms-auto flex-shrink-0">
+      <i class="fas fa-times me-1"></i>Clear filter
+    </a>
+  </div>
+  <?php endif; ?>
 
   <?php if (empty($download_tree)): ?>
     <div class="alert alert-info">
