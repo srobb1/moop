@@ -195,31 +195,25 @@
                         </ul>
                     </div>
                     
-                    <form method="post" id="generateForm">
-                        <?= csrf_input_field() ?>
-                        <input type="hidden" name="action" value="generate">
-                        <button type="submit" class="btn btn-primary" id="generateBtn" <?= $file_write_error ? 'disabled' : '' ?>>
-                            <i class="fa fa-sync-alt"></i> Rebuild Tree
-                        </button>
-                        <small class="text-muted d-block mt-2">
-                            Rebuilds the tree from the lineage cache — fast for existing organisms.
-                            New organisms require one NCBI call each (~0.5s).
-                        </small>
-                    </form>
+                    <button class="btn btn-primary" id="rebuildTreeBtn" onclick="rebuildTaxonomyTree(false)" <?= $file_write_error ? 'disabled' : '' ?>>
+                        <i class="fa fa-sync-alt"></i> Rebuild Tree
+                    </button>
+                    <span id="rebuildTreeStatus" class="ms-2 text-muted small" style="display:none;"></span>
+                    <small class="text-muted d-block mt-2">
+                        Rebuilds the tree from the lineage cache — fast for existing organisms.
+                        New organisms require one NCBI call each (~0.5s). Runs in the background.
+                    </small>
 
                     <hr class="my-3">
 
-                    <form method="post" id="forceRefetchForm" onsubmit="return confirm('This will re-fetch lineage data from NCBI for all <?= count($organisms) ?> organisms (~<?= ceil(count($organisms) * 0.5) ?>s). Continue?')">
-                        <?= csrf_input_field() ?>
-                        <input type="hidden" name="action" value="generate">
-                        <input type="hidden" name="force_refetch" value="1">
-                        <button type="submit" class="btn btn-outline-secondary btn-sm" <?= $file_write_error ? 'disabled' : '' ?>>
-                            <i class="fa fa-cloud-download-alt"></i> Force Re-fetch from NCBI
-                        </button>
-                        <small class="text-muted d-block mt-1">
-                            Use this only if NCBI taxonomy has changed for existing organisms.
-                        </small>
-                    </form>
+                    <button class="btn btn-outline-secondary btn-sm" id="forceRefetchBtn" <?= $file_write_error ? 'disabled' : '' ?>
+                        onclick="if(confirm('Re-fetch lineage from NCBI for all <?= count($organisms) ?> organisms. Continue?')) rebuildTaxonomyTree(true)">
+                        <i class="fa fa-cloud-download-alt"></i> Force Re-fetch from NCBI
+                    </button>
+                    <span id="forceRefetchStatus" class="ms-2 text-muted small" style="display:none;"></span>
+                    <small class="text-muted d-block mt-1">
+                        Use this only if NCBI taxonomy has changed for existing organisms.
+                    </small>
                 </div>
             </div>
         </div>

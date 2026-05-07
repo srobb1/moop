@@ -78,7 +78,9 @@ if (!$script_path || !file_exists($script_path)) {
 // detaches from the web-server request (exec() + & blocks on some setups).
 file_put_contents($lock_file, time());
 
+$force = !empty($_POST['force']) && $_POST['force'] === '1';
 $shell_cmd = 'php ' . escapeshellarg($script_path)
+           . ($force ? ' --force' : '')
            . ' > /dev/null 2>&1 ; rm -f ' . escapeshellarg($lock_file);
 
 $descriptors = [

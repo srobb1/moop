@@ -27,18 +27,19 @@ $error = '';
 $file_write_error = getFileWriteError($tree_config_file);
 $dir_error = getDirectoryError($absolute_images_path . '/ncbi_taxonomy');
 
-// Load organisms using cached function (filters removed organisms)
-$sequence_types = $config->getSequenceTypes();
-$groups_data = getGroupData();
-$groups_file = $metadata_path . '/organism_assembly_groups.json';
-$all_organisms_data = getCachedOrganismsInfo($organism_data, $sequence_types, $tree_config_file, $groups_data, $groups_file, false);
-
-// Extract just the 'info' subkey for tree generation
+// Scan all organism directories — same source of truth as manage_organisms.
+// loadAllOrganismsMetadata skips dirs without organism.json, which would hide
+// organisms from the missing-count and make it disagree with manage_organisms.
 $organisms = [];
-foreach ($all_organisms_data as $org_name => $org_data) {
-    if (!empty($org_data['info'])) {
-        $organisms[$org_name] = $org_data['info'];
-    }
+foreach (scandir($organism_data) as $name) {
+    if ($name[0] === '.' || !is_dir("$organism_data/$name")) continue;
+    $info = loadJsonFile("$organism_data/$name/organism.json") ?: [];
+    $organisms[$name] = [
+        'taxon_id'    => $info['taxon_id']    ?? '',
+        'common_name' => $info['common_name'] ?? '',
+        'genus'       => $info['genus']       ?? '',
+        'species'     => $info['species']     ?? '',
+    ];
 }
 
 // Check for duplicate taxon IDs (causes organisms to be skipped in tree)

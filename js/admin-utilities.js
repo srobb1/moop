@@ -56,51 +56,68 @@
 })();
 
 /**
- * Generate taxonomy tree from NCBI without leaving current page
- * Used in organism_checklist.php
+ * Background organism cache refresh — POSTs to the refresh endpoint,
+ * polls until the background scan finishes, then reloads the page.
+ *
+ * @param {HTMLElement|null} btn      - Button to disable/update while running
+ * @param {HTMLElement|null} statusEl - Element to show elapsed-time status text
+ * @param {boolean}          force    - Pass true to force NCBI re-fetch (--force flag)
+ * @param {string}           label    - Idle label restored on the button after failure
+ */
+function refreshOrganismCache(btn, statusEl, force = false, label = '<i class="fa fa-sync-alt"></i> Refresh Cache') {
+  const sitePath = window.sitePath || '/moop';
+  const endpoint = sitePath + '/admin/api/refresh_organism_cache.php';
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Starting…'; }
+  if (statusEl) { statusEl.textContent = 'Starting…'; statusEl.style.display = ''; }
+
+  const body = new URLSearchParams({ ...(force ? { force: '1' } : {}) });
+  fetch(endpoint, { method: 'POST', headers: { 'X-CSRF-Token': csrfToken }, body })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        if (btn) { btn.disabled = false; btn.innerHTML = label; }
+        if (statusEl) statusEl.textContent = 'Error: ' + data.error;
+        return;
+      }
+      if (btn) btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Running…';
+      const startedAt = Date.now();
+      const poll = setInterval(() => {
+        fetch(endpoint + '?status=1')
+          .then(r => r.json())
+          .then(s => {
+            const elapsed = Math.round((Date.now() - startedAt) / 1000);
+            if (statusEl) statusEl.textContent = 'Running… ' + elapsed + 's';
+            if (s.status === 'idle' && elapsed >= 1) {
+              clearInterval(poll);
+              if (statusEl) statusEl.textContent = 'Done — reloading…';
+              window.location.reload();
+            }
+          })
+          .catch(() => clearInterval(poll));
+      }, 2000);
+    })
+    .catch(err => {
+      if (btn) { btn.disabled = false; btn.innerHTML = label; }
+      if (statusEl) statusEl.textContent = 'Failed: ' + err;
+    });
+}
+
+/**
+ * Generate taxonomy tree button used in organism_checklist.php
  */
 function initGenerateTreeButton() {
   const btn = document.getElementById('generateTreeBtn');
   if (!btn) return;
-  
-  btn.addEventListener('click', generateTreeFromChecklist);
-}
-
-async function generateTreeFromChecklist() {
-  const btn = document.getElementById('generateTreeBtn');
-  const statusDiv = document.getElementById('generateTreeStatus');
-  
-  // Disable button and show loading
-  btn.disabled = true;
-  statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Generating taxonomy tree from NCBI (this may take a minute)...</div>';
-  statusDiv.style.display = 'block';
-  
-  try {
-    const response = await fetch('manage_taxonomy_tree.php', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'action=generate'
-    });
-    
-    const text = await response.text();
-    
-    if (response.ok) {
-      statusDiv.innerHTML = '<div class="alert alert-success"><i class="fa fa-check-circle"></i> <strong>Success!</strong> Taxonomy tree has been generated. Reloading...</div>';
-      
-      // Reload the page after a short delay
-      setTimeout(() => {
-        location.reload();
-      }, 2000);
-    } else {
-      statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> Failed to generate tree. Please try again or use the full management page.</div>';
-      btn.disabled = false;
-    }
-  } catch (error) {
-    statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + error.message + '</div>';
-    btn.disabled = false;
-  }
+  btn.addEventListener('click', () => {
+    refreshOrganismCache(
+      btn,
+      document.getElementById('generateTreeStatus'),
+      false,
+      btn.innerHTML
+    );
+  });
 }
 
 // Initialize when DOM is ready

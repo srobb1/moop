@@ -45,8 +45,20 @@ if ($raw_cache) {
                 $stale_organisms[] = $org_name;
             }
         }
-        // Also flag organisms in cache that no longer exist on disk
-        // (they'll just disappear after refresh — no warning needed)
+        // Remove organisms that no longer exist on disk — update cache immediately
+        // so they disappear on page reload without needing a full background refresh.
+        $deleted = array_diff(array_keys($cached_org_fps), array_keys($current_org_fps));
+        if (!empty($deleted)) {
+            foreach ($deleted as $org_name) {
+                unset($organisms[$org_name]);
+            }
+            $raw_cache['data']             = $organisms;
+            $raw_cache['org_fingerprints'] = $current_org_fps;
+            $raw_cache['generated']        = date('Y-m-d H:i:s');
+            @file_put_contents($cache_file, json_encode($raw_cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            @chmod($cache_file, 0664);
+        }
+
         if (!empty($stale_organisms)) {
             $cache_stale_reason = count($stale_organisms) . ' organism(s) changed on disk';
         }

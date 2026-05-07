@@ -1105,10 +1105,22 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     }
     
     $total_scan_count = count($organisms_to_scan);
-    
+    $removed_count = count($cached_fingerprints) - count($current_fingerprints);
+
     if ($total_scan_count === 0) {
-        // Everything cached, nothing to scan
-        // Return organisms_to_keep (which has removed organisms filtered out)
+        // Nothing to scan, but if organisms were deleted the on-disk cache is stale —
+        // rewrite it now so the deleted entries don't persist across future loads.
+        if ($removed_count > 0) {
+            $cache_data = [
+                'generated'        => date('Y-m-d H:i:s'),
+                'schema_version'   => ORGANISM_CACHE_SCHEMA_VERSION,
+                'config_fingerprint' => $config_fingerprint,
+                'org_fingerprints' => $current_fingerprints,
+                'data'             => $organisms_to_keep,
+            ];
+            @file_put_contents($cache_file, json_encode($cache_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            @chmod($cache_file, 0664);
+        }
         return $organisms_to_keep;
     }
     

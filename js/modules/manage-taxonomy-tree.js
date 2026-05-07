@@ -61,3 +61,10 @@
     }
 })();
 
+function rebuildTaxonomyTree(force) {
+    const btn      = force ? document.getElementById('forceRefetchBtn')  : document.getElementById('rebuildTreeBtn');
+    const statusEl = force ? document.getElementById('forceRefetchStatus') : document.getElementById('rebuildTreeStatus');
+    const label    = btn?.innerHTML;
+    refreshOrganismCache(btn, statusEl, force, label);
+}
+

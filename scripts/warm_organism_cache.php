@@ -210,6 +210,32 @@ if (file_exists($tree_config_file) && !is_writable($tree_config_file)) {
     if ($tree_json !== false && @file_put_contents($tree_config_file, $tree_json) !== false) {
         @chmod($tree_config_file, 0664);
         echo "Taxonomy tree rebuilt (" . count($organism_infos) . " organisms).\n";
+
+        // Patch the organism cache in-place so in_taxonomy_tree reflects the new tree.
+        // The cache was written before the tree update, so without this patch the
+        // manage_organisms page would show stale tree-membership until the next full rescan.
+        $org_cache_file = "$organism_data/.organism_cache.json";
+        $org_cache = @json_decode(@file_get_contents($org_cache_file), true);
+        if ($org_cache && isset($org_cache['data'])) {
+            $tree_content = $tree_json;
+            $changed = false;
+            foreach ($org_cache['data'] as $org_name => &$org_entry) {
+                $in_tree = strpos($tree_content, '"organism": "' . $org_name . '"') !== false;
+                if (($org_entry['in_taxonomy_tree'] ?? null) !== $in_tree) {
+                    $org_entry['in_taxonomy_tree'] = $in_tree;
+                    // overall_status also embeds in_taxonomy_tree — update it too
+                    if (isset($org_entry['overall_status']['checks']['in_taxonomy_tree'])) {
+                        $org_entry['overall_status']['checks']['in_taxonomy_tree'] = $in_tree;
+                    }
+                    $changed = true;
+                }
+            }
+            unset($org_entry);
+            if ($changed) {
+                @file_put_contents($org_cache_file, json_encode($org_cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                echo "Organism cache patched with updated in_taxonomy_tree values.\n";
+            }
+        }
     } else {
         echo "WARNING: Could not write taxonomy tree to $tree_config_file\n";
     }
