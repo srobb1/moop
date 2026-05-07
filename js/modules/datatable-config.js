@@ -167,9 +167,13 @@ const DataTableExportConfig = {
     // Create button with export options
     createButton: function(buttonType, selectedRowsOnly = false) {
         const exportOptions = {
-            columns: function(idx, node) {
-                // Exclude column 0 (Select), include all others that are visible or marked for export
-                return idx !== 0;
+            columns: function(idx, data, node) {
+                // Exclude column 0 (Select)
+                if (idx === 0) return false;
+                // For print, only include visible columns so header and data stay aligned
+                // (copy/csv/excel can include hidden columns like Species from the data model)
+                if (buttonType === 'print') return $(node).is(':visible');
+                return true;
             }
         };
         
