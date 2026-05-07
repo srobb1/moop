@@ -210,7 +210,7 @@ if (!empty($selected_source_obj) && !empty($selected_db_obj)) {
         'gene_page' => true, 'jbrowse' => true, 'external' => [],
     ]);
 
-    $has_sqlite = file_exists($assembly_path . '/organism.sqlite');
+    $has_sqlite = file_exists($config->getPath('organism_data') . '/' . $selected_organism . '/organism.sqlite');
 
     $has_jbrowse = false;
     $assemblies_meta = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
