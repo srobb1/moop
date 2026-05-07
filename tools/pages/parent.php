@@ -138,7 +138,51 @@
                         <small class="text-muted">The diagram is always drawn 5&prime;&rarr;3&prime; left to right. Reverse-strand genes are flipped accordingly.</small>
                     </div>
                 </div>
-                <svg id="gene-model-svg" width="100%" style="display:block; overflow:visible;"></svg>
+                <div class="d-flex align-items-center gap-2">
+                    <?php if (!empty($genome_seq_available)): ?>
+                    <div class="dropdown flex-shrink-0">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-arrow-left me-1"></i>Upstream
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item flank-item" href="#" data-direction="upstream" data-bp="500">500 bp</a></li>
+                            <li><a class="dropdown-item flank-item" href="#" data-direction="upstream" data-bp="1000">1 kb</a></li>
+                            <li><a class="dropdown-item flank-item" href="#" data-direction="upstream" data-bp="5000">5 kb</a></li>
+                            <li><a class="dropdown-item flank-item" href="#" data-direction="upstream" data-bp="10000">10 kb</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <div class="px-3 py-1 d-flex gap-1 align-items-center">
+                                    <input type="number" class="form-control form-control-sm flank-custom-input" placeholder="bp" min="1" max="500000" style="width:75px" data-direction="upstream">
+                                    <button class="btn btn-sm btn-outline-primary flank-custom-btn" data-direction="upstream">Go</button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    <?php endif; ?>
+
+                    <svg id="gene-model-svg" width="100%" style="display:block; overflow:visible; flex:1; min-width:0;"></svg>
+
+                    <?php if (!empty($genome_seq_available)): ?>
+                    <div class="dropdown flex-shrink-0">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Downstream<i class="fas fa-arrow-right ms-1"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item flank-item" href="#" data-direction="downstream" data-bp="500">500 bp</a></li>
+                            <li><a class="dropdown-item flank-item" href="#" data-direction="downstream" data-bp="1000">1 kb</a></li>
+                            <li><a class="dropdown-item flank-item" href="#" data-direction="downstream" data-bp="5000">5 kb</a></li>
+                            <li><a class="dropdown-item flank-item" href="#" data-direction="downstream" data-bp="10000">10 kb</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <div class="px-3 py-1 d-flex gap-1 align-items-center">
+                                    <input type="number" class="form-control form-control-sm flank-custom-input" placeholder="bp" min="1" max="500000" style="width:75px" data-direction="downstream">
+                                    <button class="btn btn-sm btn-outline-primary flank-custom-btn" data-direction="downstream">Go</button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>

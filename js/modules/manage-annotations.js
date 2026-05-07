@@ -38,21 +38,24 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Make annotation types sortable - auto-save on stop
   if ($('#sortable-annotation-types').length) {
-      
       $('#sortable-annotation-types').sortable({
           handle: '.fa-grip-vertical',
           items: '.card',
-          start: function(event, ui) {
-          },
-          change: function(event, ui) {
-          },
-          stop: function(event, ui) {
-              saveTypeOrder();
-          }
+          stop: function() { saveTypeOrder(); }
       });
-  } else {
   }
-  
+
+  // Move-up / move-down buttons
+  $('#sortable-annotation-types').on('click', '.move-up-btn', function() {
+      const card = $(this).closest('.card');
+      const prev = card.prev('.card');
+      if (prev.length) { card.insertBefore(prev); saveTypeOrder(); }
+  }).on('click', '.move-down-btn', function() {
+      const card = $(this).closest('.card');
+      const next = card.next('.card');
+      if (next.length) { card.insertAfter(next); saveTypeOrder(); }
+  });
+
   // Preserve open state of customize sections across page reloads
   const customizeForms = document.querySelectorAll('.type-details form');
   customizeForms.forEach(form => {
@@ -128,11 +131,12 @@ function saveTypeOrder() {
         return;
     }
     
-    // Use fetch API for more reliable form submission
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
     fetch('manage_annotations.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRF-Token': csrfToken,
         },
         body: new URLSearchParams({
             'update_type_order': '1',

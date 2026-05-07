@@ -149,6 +149,12 @@
                 </p>
               </div>
               <div class="btn-group" role="group">
+                <button class="btn btn-sm btn-outline-secondary reorder-btn move-up-btn" title="Move up">
+                  <i class="fa fa-arrow-up"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary reorder-btn move-down-btn" title="Move down">
+                  <i class="fa fa-arrow-down"></i>
+                </button>
                 <button class="btn btn-sm btn-outline-primary edit-type-desc-btn" data-type="<?= htmlspecialchars($type_name) ?>" title="Edit description" <?= $file_write_error ? 'disabled' : '' ?>>
                   <i class="fa fa-edit"></i> Edit description
                 </button>

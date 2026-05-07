@@ -70,6 +70,7 @@
         <strong>Site data backup active</strong> &mdash;
         last run: <?= htmlspecialchars($site_data_backup['last_run']) ?>,
         <?= $site_data_backup['files_copied'] ?> file(s) updated
+        <br><small class="text-muted">Config, metadata, and organism files are checked for changes on every admin login and copied to <code><?= htmlspecialchars($site_data_backup['path']) ?></code>.</small>
         <?php if ($site_data_backup['is_git']): ?>
           <span class="badge bg-secondary ms-2">Git available</span>
           <br><small class="text-muted mt-1 d-block">

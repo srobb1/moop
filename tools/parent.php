@@ -232,17 +232,24 @@ if ($gff_available) {
                 exec('grep -F ' . implode(' ', $patterns) . ' ' . escapeshellarg($gff_file), $child_raw);
             }
 
+            // Feature types treated as exon-equivalent for drawing (UTRs drawn orange like exons)
+            $exon_like = ['exon', 'five_prime_utr', 'three_prime_utr', 'utr'];
+
             foreach ($child_raw as $child_line) {
                 $cp = explode("\t", $child_line);
                 if (count($cp) < 9) continue;
                 $ft = strtolower($cp[2]);
-                if ($ft !== 'exon' && $ft !== 'cds') continue;
+                if ($ft !== 'cds' && !in_array($ft, $exon_like)) continue;
                 if (!preg_match('/Parent=([^;,]+)/', $cp[8], $pm)) continue;
                 $parent_id = $pm[1];
                 if (!isset($isoforms[$parent_id])) continue;
                 $coord = ['start' => (int)$cp[3], 'end' => (int)$cp[4]];
-                if ($ft === 'exon') $isoforms[$parent_id]['exons'][] = $coord;
-                else                $isoforms[$parent_id]['cds'][]   = $coord;
+                if ($ft === 'cds') {
+                    $isoforms[$parent_id]['cds'][] = $coord;
+                } else {
+                    // Preserve original case from GFF (e.g. "five_prime_UTR") for modal display
+                    $isoforms[$parent_id]['exons'][] = array_merge($coord, ['type' => $cp[2]]);
+                }
             }
 
             $isoform_list = array_values(array_filter(
@@ -350,6 +357,7 @@ echo render_display_page(
 	'siteTitle' => $siteTitle,
         'gene_model' => $gene_model,
         'feature_loc' => $feature_loc,
+        'genome_seq_available' => $genome_seq_available,
         'page_styles' => ["/moop/css/parent.css"],
         'page_script' => [
             "/moop/js/modules/collapse-handler.js",

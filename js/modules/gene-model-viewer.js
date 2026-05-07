@@ -46,6 +46,7 @@
         const svg = document.getElementById('gene-model-svg');
         if (!svg) return;
         render(geneModelData, svg);
+        initFlankButtons(geneModelData.gene);
     }
 
     function render(data, svg) {
@@ -227,12 +228,13 @@
                 const rect = makeRect(x1, cy - EXON_H / 2, w, EXON_H, COLOR_EXON, 2);
                 rect.setAttribute('class', 'region-exon');
                 if (canFetchSeq) {
+                    const exonType = ex.type || 'Exon';
                     rect.style.cursor = 'pointer';
-                    addRegionTitle(rect, `Exon  ${ex.start.toLocaleString()}–${ex.end.toLocaleString()}`);
+                    addRegionTitle(rect, `${exonType}  ${ex.start.toLocaleString()}–${ex.end.toLocaleString()}`);
                     rect.addEventListener('click', e => {
                         e.stopPropagation();
                         showSequenceModal({
-                            type: 'Exon', isoform: iso.id,
+                            type: exonType, isoform: iso.id,
                             start: ex.start, end: ex.end,
                             seqname: gene.seqname, strand: gene.strand,
                         });
@@ -525,6 +527,72 @@
 
         document.getElementById('seq-region-loading').style.display = 'none';
         document.getElementById('seq-region-content').style.display  = 'block';
+    }
+
+    // -------------------------------------------------------------------------
+    // Upstream / downstream flank buttons
+    // -------------------------------------------------------------------------
+
+    function initFlankButtons(gene) {
+        if (!gene) return;
+
+        document.querySelectorAll('.flank-item').forEach(el => {
+            el.addEventListener('click', e => {
+                e.preventDefault();
+                fetchFlank(gene, el.dataset.direction, parseInt(el.dataset.bp, 10));
+            });
+        });
+
+        document.querySelectorAll('.flank-custom-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const input = btn.closest('.d-flex').querySelector('.flank-custom-input');
+                const bp = parseInt(input.value, 10);
+                if (!bp || bp < 1) return;
+                fetchFlank(gene, btn.dataset.direction, bp);
+            });
+        });
+
+        document.querySelectorAll('.flank-custom-input').forEach(input => {
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') input.closest('.d-flex').querySelector('.flank-custom-btn').click();
+            });
+        });
+    }
+
+    function fetchFlank(gene, direction, bp) {
+        const label = direction === 'upstream' ? 'Upstream' : 'Downstream';
+        const bpLabel = bp >= 1000 ? (bp / 1000) + ' kb' : bp + ' bp';
+        let start, end, strand;
+
+        if (gene.strand === '+') {
+            if (direction === 'upstream') {
+                start = Math.max(1, gene.start - bp);
+                end   = gene.start - 1;
+            } else {
+                start = gene.end + 1;
+                end   = gene.end + bp;
+            }
+            strand = '+';
+        } else {
+            if (direction === 'upstream') {
+                start = gene.end + 1;
+                end   = gene.end + bp;
+            } else {
+                start = Math.max(1, gene.start - bp);
+                end   = gene.start - 1;
+            }
+            strand = '-';
+        }
+
+        if (end < start) return;
+
+        showSequenceModal({
+            type: `${label} ${bpLabel}`,
+            isoform: gene.id || gene.seqname,
+            start, end,
+            seqname: gene.seqname,
+            strand,
+        });
     }
 
     // -------------------------------------------------------------------------
