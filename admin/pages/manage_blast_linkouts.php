@@ -184,7 +184,65 @@
     <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Save Settings</button>
     <a href="admin.php" class="btn btn-outline-secondary ms-2">Cancel</a>
   </form>
+
+  <!-- Feature coordinate index status (outside the form — buttons trigger AJAX) -->
+  <div class="card mt-4 mb-4">
+    <div class="card-header">
+      <strong>Feature Coordinate Index</strong>
+      <span class="text-muted ms-2 small">— Required for JBrowse linkouts on protein / mRNA / CDS BLAST hits. Stored in each assembly directory as <code>feature_coords.tsv</code>. Generated automatically on future JBrowse assembly registrations.</span>
+    </div>
+    <div class="card-body p-0">
+      <?php if (empty($feature_coord_status)): ?>
+        <p class="text-muted small p-3 mb-0">No JBrowse-registered assemblies found.</p>
+      <?php else: ?>
+      <table class="table table-sm mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Organism</th>
+            <th>Assembly</th>
+            <th>Status</th>
+            <th>Features</th>
+            <th>Last generated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($feature_coord_status as $row): ?>
+          <tr id="fcs-<?= htmlspecialchars($row['organism'] . '_' . $row['assembly']) ?>">
+            <td class="small"><?= htmlspecialchars($row['organism']) ?></td>
+            <td class="small"><?= htmlspecialchars($row['assembly']) ?></td>
+            <td>
+              <?php if ($row['has_tsv']): ?>
+                <span class="badge bg-success">Ready</span>
+              <?php elseif ($row['has_gff']): ?>
+                <span class="badge bg-warning text-dark">Not generated</span>
+              <?php else: ?>
+                <span class="badge bg-secondary">No genomic.gff</span>
+              <?php endif; ?>
+            </td>
+            <td class="small"><?= $row['has_tsv'] ? number_format($row['tsv_lines']) : '—' ?></td>
+            <td class="small text-muted"><?= htmlspecialchars($row['tsv_modified'] ?? '—') ?></td>
+            <td>
+              <?php if ($row['has_gff']): ?>
+              <button type="button"
+                      class="btn btn-sm btn-outline-primary gen-feature-coords-btn"
+                      data-organism="<?= htmlspecialchars($row['organism']) ?>"
+                      data-assembly="<?= htmlspecialchars($row['assembly']) ?>">
+                <i class="fa fa-sync-alt"></i> <?= $row['has_tsv'] ? 'Regenerate' : 'Generate' ?>
+              </button>
+              <?php endif; ?>
+            </td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+      <?php endif; ?>
+    </div>
+  </div>
 </div>
+
+<script>
+// --- Global external linkouts ---
 
 <script>
 // --- Global external linkouts ---
@@ -251,5 +309,43 @@ document.getElementById('perDbBody')?.addEventListener('click', e => {
     e.target.closest('tr').remove();
     refreshNoPerDbMsg();
   }
+});
+
+// --- Feature coords generation ---
+document.querySelectorAll('.gen-feature-coords-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const organism = btn.dataset.organism;
+    const assembly = btn.dataset.assembly;
+    const row = document.getElementById('fcs-' + organism + '_' + assembly);
+    const origText = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating…';
+
+    try {
+      const fd = new FormData();
+      fd.append('organism', organism);
+      fd.append('assembly', assembly);
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      if (csrfMeta) fd.append('csrf_token', csrfMeta.content);
+
+      const res = await fetch('/moop/admin/api/generate_feature_coords.php', { method: 'POST', body: fd });
+      const data = await res.json();
+
+      if (data.success) {
+        row.cells[2].innerHTML = '<span class="badge bg-success">Ready</span>';
+        row.cells[3].textContent = Number(data.features).toLocaleString();
+        row.cells[4].textContent = data.modified;
+        btn.innerHTML = '<i class="fa fa-sync-alt"></i> Regenerate';
+      } else {
+        alert('Error: ' + data.message);
+        btn.innerHTML = origText;
+      }
+    } catch (e) {
+      alert('Request failed: ' + e.message);
+      btn.innerHTML = origText;
+    }
+    btn.disabled = false;
+  });
 });
 </script>

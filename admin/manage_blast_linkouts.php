@@ -99,6 +99,30 @@ foreach ($all_orgs as $org_name => $assemblies) {
     }
 }
 
+// Build feature_coords.tsv status for each JBrowse-registered assembly
+$feature_coord_status = [];
+$assemblies_meta_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
+if (is_dir($assemblies_meta_dir)) {
+    foreach (glob($assemblies_meta_dir . '/*.json') ?: [] as $jf) {
+        $jd = json_decode(file_get_contents($jf), true);
+        if (empty($jd)) continue;
+        $org = $jd['organism'] ?? '';
+        $asm = $jd['assemblyId'] ?? '';
+        if ($org === '' || $asm === '') continue;
+        $asm_path = $organisms_dir . '/' . $org . '/' . $asm;
+        $tsv      = $asm_path . '/feature_coords.tsv';
+        $gff      = $asm_path . '/genomic.gff';
+        $feature_coord_status[] = [
+            'organism'     => $org,
+            'assembly'     => $asm,
+            'has_tsv'      => file_exists($tsv),
+            'has_gff'      => file_exists($gff),
+            'tsv_modified' => file_exists($tsv) ? date('Y-m-d H:i', filemtime($tsv)) : null,
+            'tsv_lines'    => file_exists($tsv) ? count(file($tsv, FILE_SKIP_EMPTY_LINES)) : 0,
+        ];
+    }
+}
+
 // Flatten per_db_external into rows for the table
 $per_db_rows = [];
 foreach ($linkout_config['per_db_external'] ?? [] as $key => $linkouts) {
@@ -112,9 +136,10 @@ foreach ($linkout_config['per_db_external'] ?? [] as $key => $linkouts) {
 }
 
 echo render_display_page(__DIR__ . '/pages/manage_blast_linkouts.php', [
-    'linkout_config' => $linkout_config,
-    'db_options'     => $db_options,
-    'per_db_rows'    => $per_db_rows,
-    'message'        => $message,
-    'messageType'    => $messageType,
+    'linkout_config'       => $linkout_config,
+    'db_options'           => $db_options,
+    'per_db_rows'          => $per_db_rows,
+    'feature_coord_status' => $feature_coord_status,
+    'message'              => $message,
+    'messageType'          => $messageType,
 ], 'Manage BLAST Linkouts');
