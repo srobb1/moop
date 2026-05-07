@@ -31,6 +31,19 @@ if (!empty($_GET['loc']) && preg_match('/^[\w.\-:]+$/', $_GET['loc'])) {
     $loc = $_GET['loc'];
 }
 
+// Optional BLAST sessionTracks payload (JSON array of FeatureTrack configs)
+$session_tracks_json = '';
+$session_track_id    = '';
+if (!empty($_GET['sessionTracks'])) {
+    $decoded = json_decode($_GET['sessionTracks'], true);
+    if (is_array($decoded)) {
+        $session_tracks_json = json_encode($decoded); // re-encode to sanitize
+    }
+}
+if (!empty($_GET['sessionTrackId']) && preg_match('/^[a-zA-Z0-9_]+$/', $_GET['sessionTrackId'])) {
+    $session_track_id = $_GET['sessionTrackId'];
+}
+
 // Primary gene track IDs for this assembly (used for deep-link track pre-selection)
 $primary_gene_tracks = [];
 $dl_organism = $_GET['organism'] ?? '';
@@ -55,9 +68,11 @@ echo render_display_page(
         'page_script' => '/moop/js/jbrowse2-loader.js',
         'page_styles' => ['/moop/css/jbrowse2.css'],
         'inline_scripts' => [
-            "window.moopUserInfo = " . json_encode($user_info) . ";",
-            "window.moopLoc = " . json_encode($loc) . ";",
-            "window.moopGeneTracks = " . json_encode(array_values($primary_gene_tracks)) . ";",
+            "window.moopUserInfo = "      . json_encode($user_info) . ";",
+            "window.moopLoc = "           . json_encode($loc) . ";",
+            "window.moopGeneTracks = "    . json_encode(array_values($primary_gene_tracks)) . ";",
+            "window.moopSessionTracks = " . json_encode($session_tracks_json) . ";",
+            "window.moopSessionTrackId = ". json_encode($session_track_id) . ";",
             "console.log('JBrowse2 loaded for user:', window.moopUserInfo.username || 'anonymous');"
         ]
     ],

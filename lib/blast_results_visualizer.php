@@ -764,17 +764,84 @@ function buildBlastHitLinkouts($hit, $context) {
 
     $html = '';
 
-    $gene_page_label = htmlspecialchars($linkout_config['gene_page_label'] ?? 'Gene Page');
-    $jbrowse_label   = htmlspecialchars($linkout_config['jbrowse_label']   ?? 'Genome Browser');
+    $gene_page_label  = htmlspecialchars($linkout_config['gene_page_label']       ?? 'Gene Page');
+    $jbrowse_label    = htmlspecialchars($linkout_config['jbrowse_label']         ?? 'Genome Browser');
+    $hsp_min_score    = (float)($linkout_config['jbrowse_hsp_min_score']          ?? 0);
+    $jb2_assembly_id  = $organism . '_' . $assembly; // JBrowse2 assembly name format
 
     if ($is_genome_db) {
-        // Genome BLAST: hit subject is a chromosome/scaffold; HSP coords are genomic
+        // Genome BLAST: hit subject is a chromosome/scaffold; HSP coords are genomic.
+        // Build a sessionTracks payload so JBrowse2 shows each HSP as a colored block.
+        // HSPs >= hsp_min_score are subfeatures of a parent (drawn connected); others standalone.
         if (($linkout_config['jbrowse'] ?? false) && $has_jbrowse && !empty($hit['hsps'])) {
-            $best = $hit['hsps'][0];
-            $loc  = $hit['subject'] . ':' . $best['hit_from'] . '-' . $best['hit_to'];
-            $url  = "/$site/jbrowse2.php?organism=" . urlencode($organism)
-                  . '&assembly=' . urlencode($assembly)
-                  . '&loc=' . urlencode($loc);
+            $subject    = $hit['subject'] ?? '';
+            $subfeats   = [];
+            $standalone = [];
+            $all_starts = [];
+            $all_ends   = [];
+
+            foreach ($hit['hsps'] as $i => $hsp) {
+                // BLAST coords are 1-based inclusive; JBrowse2 needs 0-based half-open
+                $s = min((int)$hsp['hit_from'], (int)$hsp['hit_to']) - 1;
+                $e = max((int)$hsp['hit_from'], (int)$hsp['hit_to']);
+                $all_starts[] = $s;
+                $all_ends[]   = $e;
+                $score = (float)($hsp['bit_score'] ?? 0);
+                $feat = [
+                    'uniqueId' => $hit_id . '_hsp_' . $i,
+                    'refName'  => $subject,
+                    'start'    => $s,
+                    'end'      => $e,
+                    'score'    => (int)$score,
+                    'name'     => 'HSP ' . ($i + 1) . ' (score=' . (int)$score . ')',
+                    'type'     => 'match_part',
+                ];
+                if ($score >= $hsp_min_score) {
+                    $subfeats[] = $feat;
+                } else {
+                    $feat['name'] .= ' — below threshold';
+                    $standalone[] = $feat;
+                }
+            }
+
+            $parent_start = min($all_starts);
+            $parent_end   = max($all_ends);
+            $track_id     = 'blast_' . substr(md5($hit_id), 0, 10);
+
+            $features = [];
+            if (!empty($subfeats)) {
+                $features[] = [
+                    'uniqueId'    => $hit_id . '_match',
+                    'refName'     => $subject,
+                    'start'       => $parent_start,
+                    'end'         => $parent_end,
+                    'name'        => $hit_id,
+                    'type'        => 'match',
+                    'subfeatures' => $subfeats,
+                ];
+            }
+            foreach ($standalone as $sf) {
+                $features[] = $sf;
+            }
+
+            $session_tracks = [[
+                'type'          => 'FeatureTrack',
+                'trackId'       => $track_id,
+                'name'          => 'BLAST: ' . $hit_id,
+                'assemblyNames' => [$jb2_assembly_id],
+                'adapter'       => [
+                    'type'     => 'FromConfigAdapter',
+                    'features' => $features,
+                ],
+            ]];
+
+            // loc uses 1-based coords (JBrowse2 URL convention)
+            $loc = $subject . ':' . ($parent_start + 1) . '-' . $parent_end;
+            $url = "/$site/jbrowse2.php?organism=" . urlencode($organism)
+                 . '&assembly='      . urlencode($assembly)
+                 . '&loc='           . urlencode($loc)
+                 . '&sessionTracks=' . urlencode(json_encode($session_tracks))
+                 . '&sessionTrackId='. urlencode($track_id);
             $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
                    . 'class="btn btn-sm btn-outline-success me-1">'
                    . '<i class="fa fa-dna"></i> ' . $jbrowse_label . '</a>';

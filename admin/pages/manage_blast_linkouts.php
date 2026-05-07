@@ -50,12 +50,23 @@
           </div>
           <div class="flex-grow-1">
             <label class="form-check-label fw-semibold" for="jbrowse">Genome Browser</label>
-            <span class="text-muted ms-2 small">— Links to JBrowse2 at the gene locus when the assembly is registered. For genome BLAST, links directly to the HSP coordinates. Requires <code>feature_coords.tsv</code> (auto-generated when registering an assembly in JBrowse).</span>
-            <div class="mt-1">
-              <input type="text" class="form-control form-control-sm" style="max-width:220px;"
-                     name="jbrowse_label" placeholder="Button label"
-                     value="<?= htmlspecialchars($linkout_config['jbrowse_label'] ?? 'Genome Browser') ?>">
-              <small class="text-muted">Button label shown on BLAST results</small>
+            <span class="text-muted ms-2 small">— Links to JBrowse2 with HSPs visualized as colored blocks. For genome BLAST, HSPs are drawn connected as a match track. For feature BLAST, navigates to the gene locus. Requires <code>feature_coords.tsv</code> (auto-generated when registering an assembly in JBrowse).</span>
+            <div class="mt-1 d-flex gap-3 flex-wrap">
+              <div>
+                <input type="text" class="form-control form-control-sm" style="max-width:220px;"
+                       name="jbrowse_label" placeholder="Button label"
+                       value="<?= htmlspecialchars($linkout_config['jbrowse_label'] ?? 'Genome Browser') ?>">
+                <small class="text-muted">Button label</small>
+              </div>
+              <div>
+                <div class="input-group input-group-sm" style="max-width:200px;">
+                  <input type="number" class="form-control form-control-sm" name="jbrowse_hsp_min_score"
+                         min="0" step="1"
+                         value="<?= (int)($linkout_config['jbrowse_hsp_min_score'] ?? 0) ?>">
+                  <span class="input-group-text">min bit-score</span>
+                </div>
+                <small class="text-muted">HSPs at or above this score are drawn connected; below shown standalone. 0 = all connected.</small>
+              </div>
             </div>
           </div>
         </div>

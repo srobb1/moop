@@ -222,14 +222,21 @@
         const configUrl = `/moop/api/jbrowse2/config.php?organism=${encodeURIComponent(organism)}&assembly=${encodeURIComponent(assemblyId)}`;
         let iframeSrc = `/moop/jbrowse2/index.html?config=${encodeURIComponent(configUrl)}`;
         if (loc) {
-            const geneTracks = (Array.isArray(window.moopGeneTracks) && window.moopGeneTracks.length)
+            const geneTracks     = (Array.isArray(window.moopGeneTracks) && window.moopGeneTracks.length)
                 ? window.moopGeneTracks : [];
+            const sessionTrackId = (typeof window.moopSessionTrackId === 'string' && window.moopSessionTrackId)
+                ? window.moopSessionTrackId : '';
+            const allTracks = [...geneTracks, ...(sessionTrackId ? [sessionTrackId] : [])];
+
             iframeSrc += `&assembly=${encodeURIComponent(assembly.name)}`;
             iframeSrc += `&loc=${encodeURIComponent(loc)}`;
-            if (geneTracks.length) {
-                iframeSrc += `&tracks=${encodeURIComponent(geneTracks.join(','))}`;
+            if (allTracks.length) {
+                iframeSrc += `&tracks=${encodeURIComponent(allTracks.join(','))}`;
             }
-            console.log('Deep-linking to feature location:', loc, 'tracks:', geneTracks);
+            if (typeof window.moopSessionTracks === 'string' && window.moopSessionTracks) {
+                iframeSrc += `&sessionTracks=${encodeURIComponent(window.moopSessionTracks)}`;
+            }
+            console.log('Deep-linking to feature location:', loc, 'tracks:', allTracks);
         }
         iframe.src = iframeSrc;
         iframe.title = `JBrowse2 Viewer for ${assembly.displayName}`;
