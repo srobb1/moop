@@ -5,11 +5,13 @@
  * Configures which linkout buttons appear on BLAST hit results:
  *   - Gene Page (parent.php, if organism.sqlite present)
  *   - JBrowse (jbrowse2.php at gene locus, if assembly registered)
- *   - External URLs (user-defined templates with {fasta_id}, {organism}, {assembly})
+ *   - External URLs — global (all DBs) and per-DB (organism|assembly|seq_type)
  */
 
 include_once __DIR__ . '/admin_init.php';
 include_once __DIR__ . '/../includes/layout.php';
+include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/functions_data.php';
 
 $editable_config_file = __DIR__ . '/../config/config_editable.json';
 $message     = '';
@@ -22,6 +24,7 @@ $linkout_config = $config->getArray('blast_linkouts', [
     'jbrowse_label'         => 'Genome Browser',
     'jbrowse_hsp_min_score' => 0,
     'external'              => [],
+    'per_db_external'       => [],
 ]);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -31,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $linkout_config['jbrowse_label']         = trim($_POST['jbrowse_label'] ?? '') ?: 'Genome Browser';
     $linkout_config['jbrowse_hsp_min_score'] = max(0, (int)($_POST['jbrowse_hsp_min_score'] ?? 0));
 
+    // Global external linkouts
     $labels    = $_POST['ext_label']    ?? [];
     $templates = $_POST['ext_template'] ?? [];
     $linkout_config['external'] = [];
@@ -39,11 +43,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $template = trim($templates[$i] ?? '');
         if ($label === '' || $template === '') continue;
         if (!str_starts_with($template, 'http')) continue;
-        $linkout_config['external'][] = [
-            'label'        => $label,
-            'url_template' => $template,
-        ];
+        $linkout_config['external'][] = ['label' => $label, 'url_template' => $template];
     }
+
+    // Per-DB external linkouts
+    $pdb_keys   = $_POST['pdb_key']   ?? [];
+    $pdb_labels = $_POST['pdb_label'] ?? [];
+    $pdb_urls   = $_POST['pdb_url']   ?? [];
+    $per_db = [];
+    foreach ($pdb_keys as $i => $key) {
+        $key      = trim($key);
+        $label    = trim($pdb_labels[$i] ?? '');
+        $template = trim($pdb_urls[$i]   ?? '');
+        if ($key === '' || $label === '' || $template === '') continue;
+        if (!str_starts_with($template, 'http')) continue;
+        // Validate key: exactly two pipe separators → organism|assembly|seq_type
+        if (substr_count($key, '|') !== 2) continue;
+        $per_db[$key][] = ['label' => $label, 'url_template' => $template];
+    }
+    $linkout_config['per_db_external'] = $per_db;
 
     $current = [];
     if (file_exists($editable_config_file)) {
@@ -60,8 +78,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Build list of all available BLAST databases for the per-DB dropdown
+$organisms_dir = $config->getPath('organism_data');
+$all_orgs      = getOrganismsWithAssemblies($organisms_dir);
+$db_options    = [];
+foreach ($all_orgs as $org_name => $assemblies) {
+    foreach ($assemblies as $asm_id) {
+        $asm_path = $organisms_dir . '/' . $org_name . '/' . $asm_id;
+        foreach (getBlastDatabases($asm_path) as $db) {
+            $key = $org_name . '|' . $asm_id . '|' . $db['seq_type'];
+            $db_options[$key] = [
+                'key'      => $key,
+                'display'  => $org_name . ' / ' . $asm_id . ' / ' . $db['name'],
+                'organism' => $org_name,
+                'assembly' => $asm_id,
+                'db_type'  => $db['seq_type'],
+                'db_name'  => $db['name'],
+            ];
+        }
+    }
+}
+
+// Flatten per_db_external into rows for the table
+$per_db_rows = [];
+foreach ($linkout_config['per_db_external'] ?? [] as $key => $linkouts) {
+    foreach ($linkouts as $lo) {
+        $per_db_rows[] = [
+            'key'          => $key,
+            'label'        => $lo['label']        ?? '',
+            'url_template' => $lo['url_template'] ?? '',
+        ];
+    }
+}
+
 echo render_display_page(__DIR__ . '/pages/manage_blast_linkouts.php', [
     'linkout_config' => $linkout_config,
+    'db_options'     => $db_options,
+    'per_db_rows'    => $per_db_rows,
     'message'        => $message,
     'messageType'    => $messageType,
 ], 'Manage BLAST Linkouts');

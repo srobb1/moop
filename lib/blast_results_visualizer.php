@@ -753,6 +753,7 @@ function buildBlastHitLinkouts($hit, $context) {
     $has_jbrowse    = $context['has_jbrowse']    ?? false;
     $coords         = $context['coords']         ?? [];
     $linkout_config = $context['linkout_config'] ?? [];
+    $db_seq_type    = $context['db_seq_type']    ?? '';
 
     // Strip BLAST sequence-source prefixes (lcl|, gb|, ref|, etc.)
     $hit_id = preg_replace('/^[a-z]{2,3}\|/', '', $hit['id'] ?? '');
@@ -871,7 +872,7 @@ function buildBlastHitLinkouts($hit, $context) {
         }
     }
 
-    // External linkouts — apply to all DB types
+    // Global external linkouts — apply to all DB types
     foreach (($linkout_config['external'] ?? []) as $ext) {
         $template = $ext['url_template'] ?? '';
         $label    = htmlspecialchars($ext['label'] ?? 'Link');
@@ -884,6 +885,24 @@ function buildBlastHitLinkouts($hit, $context) {
         $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
                . 'class="btn btn-sm btn-outline-secondary me-1">'
                . '<i class="fa fa-external-link-alt"></i> ' . $label . '</a>';
+    }
+
+    // Per-DB external linkouts — only for the active organism|assembly|seq_type
+    if ($db_seq_type !== '') {
+        $per_db_key = $organism . '|' . $assembly . '|' . $db_seq_type;
+        foreach (($linkout_config['per_db_external'][$per_db_key] ?? []) as $ext) {
+            $template = $ext['url_template'] ?? '';
+            $label    = htmlspecialchars($ext['label'] ?? 'Link');
+            if (empty($template)) continue;
+            $url = str_replace(
+                ['{fasta_id}', '{organism}', '{assembly}'],
+                [urlencode($hit_id), urlencode($organism), urlencode($assembly)],
+                $template
+            );
+            $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
+                   . 'class="btn btn-sm btn-outline-info me-1">'
+                   . '<i class="fa fa-external-link-alt"></i> ' . $label . '</a>';
+        }
     }
 
     return $html;

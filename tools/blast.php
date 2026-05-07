@@ -238,6 +238,7 @@ if (!empty($selected_source_obj) && !empty($selected_db_obj)) {
         'has_jbrowse'    => $has_jbrowse,
         'coords'         => $coords,
         'linkout_config' => $linkout_config,
+        'db_seq_type'    => $selected_db_obj['seq_type'] ?? '',
     ];
 }
 

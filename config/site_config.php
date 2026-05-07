@@ -213,6 +213,7 @@ AATGCGTCCACAACAGTTATCAATCAA',
         'jbrowse_label'         => 'Genome Browser',
         'jbrowse_hsp_min_score' => 0,   // min bit-score for HSPs to be drawn connected; 0 = all connected
         'external'              => [],
+        'per_db_external'       => [], // keyed by "organism|assembly|seq_type"; each value = [{label, url_template}, ...]
     ],
 
     // ======== GALAXY INTEGRATION ========

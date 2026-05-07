@@ -3,7 +3,9 @@
  * MANAGE BLAST LINKOUTS - Content Page
  *
  * Variables injected by manage_blast_linkouts.php:
- *   $linkout_config  ['gene_page'=>bool, 'jbrowse'=>bool, 'external'=>[...]]
+ *   $linkout_config  Full blast_linkouts config array
+ *   $db_options      ['org|asm|seq_type' => ['key','display','organism','assembly','db_type','db_name'], ...]
+ *   $per_db_rows     Flat list: [['key','label','url_template'], ...]
  *   $message         Flash message string
  *   $messageType     Bootstrap contextual type (success / danger)
  */
@@ -59,13 +61,13 @@
                 <small class="text-muted">Button label</small>
               </div>
               <div>
-                <div class="input-group input-group-sm" style="max-width:200px;">
+                <div class="input-group input-group-sm" style="max-width:220px;">
                   <input type="number" class="form-control form-control-sm" name="jbrowse_hsp_min_score"
                          min="0" step="1"
                          value="<?= (int)($linkout_config['jbrowse_hsp_min_score'] ?? 0) ?>">
                   <span class="input-group-text">min bit-score</span>
                 </div>
-                <small class="text-muted">HSPs at or above this score are drawn connected; below shown standalone. 0 = all connected.</small>
+                <small class="text-muted">HSPs at or above this score drawn connected; below shown standalone. 0 = all connected.</small>
               </div>
             </div>
           </div>
@@ -73,55 +75,109 @@
       </div>
     </div>
 
-    <!-- External linkouts -->
+    <!-- Global external linkouts (apply to all DBs) -->
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <strong>External Linkouts</strong>
+        <div>
+          <strong>Global External Linkouts</strong>
+          <span class="text-muted ms-2 small">— Apply to every BLAST hit regardless of database</span>
+        </div>
         <button type="button" class="btn btn-sm btn-outline-primary" id="addLinkoutBtn">
           <i class="fa fa-plus"></i> Add Linkout
         </button>
       </div>
       <div class="card-body">
         <p class="text-muted small mb-3">
-          URL templates support these placeholders:
-          <code>{fasta_id}</code> — BLAST hit sequence ID &nbsp;|&nbsp;
+          Placeholders: <code>{fasta_id}</code> — hit sequence ID &nbsp;|&nbsp;
           <code>{organism}</code> — organism directory name &nbsp;|&nbsp;
           <code>{assembly}</code> — assembly accession
         </p>
 
-        <table class="table table-sm" id="externalLinksTable">
+        <table class="table table-sm">
           <thead class="table-light">
             <tr>
-              <th style="width:20%">Label</th>
+              <th style="width:22%">Label</th>
               <th>URL Template</th>
-              <th style="width:60px"></th>
+              <th style="width:50px"></th>
             </tr>
           </thead>
           <tbody id="externalLinksBody">
             <?php foreach (($linkout_config['external'] ?? []) as $ext): ?>
             <tr class="linkout-row">
-              <td>
-                <input type="text" class="form-control form-control-sm" name="ext_label[]"
-                       value="<?= htmlspecialchars($ext['label'] ?? '') ?>" placeholder="Label" required>
-              </td>
-              <td>
-                <input type="url" class="form-control form-control-sm" name="ext_template[]"
-                       value="<?= htmlspecialchars($ext['url_template'] ?? '') ?>"
-                       placeholder="https://example.com/gene/{fasta_id}" required>
-              </td>
-              <td>
-                <button type="button" class="btn btn-sm btn-outline-danger remove-linkout-btn">
-                  <i class="fa fa-trash"></i>
-                </button>
-              </td>
+              <td><input type="text" class="form-control form-control-sm" name="ext_label[]"
+                         value="<?= htmlspecialchars($ext['label'] ?? '') ?>" placeholder="Label" required></td>
+              <td><input type="url" class="form-control form-control-sm" name="ext_template[]"
+                         value="<?= htmlspecialchars($ext['url_template'] ?? '') ?>"
+                         placeholder="https://example.com/gene/{fasta_id}" required></td>
+              <td><button type="button" class="btn btn-sm btn-outline-danger remove-linkout-btn">
+                <i class="fa fa-trash"></i></button></td>
             </tr>
             <?php endforeach; ?>
           </tbody>
         </table>
-
         <p id="noLinksMsg" class="text-muted small <?= empty($linkout_config['external']) ? '' : 'd-none' ?>">
-          No external linkouts configured. Click <strong>Add Linkout</strong> to add one.
+          No global linkouts configured.
         </p>
+      </div>
+    </div>
+
+    <!-- Per-database external linkouts -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+          <strong>Per-Database External Linkouts</strong>
+          <span class="text-muted ms-2 small">— Apply only to a specific organism / assembly / database combination</span>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="addPerDbBtn"
+                <?= empty($db_options) ? 'disabled title="No BLAST databases found"' : '' ?>>
+          <i class="fa fa-plus"></i> Add Linkout
+        </button>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Use when different databases have different ID formats or link to different external sites.
+          You can add multiple linkouts for the same database.
+          Same placeholders: <code>{fasta_id}</code>, <code>{organism}</code>, <code>{assembly}</code>
+        </p>
+
+        <?php if (empty($db_options)): ?>
+          <p class="text-muted small">No BLAST databases found in the organisms directory.</p>
+        <?php else: ?>
+
+        <table class="table table-sm" id="perDbTable">
+          <thead class="table-light">
+            <tr>
+              <th style="width:35%">Database</th>
+              <th style="width:20%">Label</th>
+              <th>URL Template</th>
+              <th style="width:50px"></th>
+            </tr>
+          </thead>
+          <tbody id="perDbBody">
+            <?php foreach ($per_db_rows as $row):
+                $display = $db_options[$row['key']]['display'] ?? $row['key'];
+            ?>
+            <tr class="pdb-row">
+              <td>
+                <small class="text-break"><?= htmlspecialchars($display) ?></small>
+                <input type="hidden" name="pdb_key[]" value="<?= htmlspecialchars($row['key']) ?>">
+              </td>
+              <td><input type="text" class="form-control form-control-sm" name="pdb_label[]"
+                         value="<?= htmlspecialchars($row['label']) ?>" placeholder="Label" required></td>
+              <td><input type="url" class="form-control form-control-sm" name="pdb_url[]"
+                         value="<?= htmlspecialchars($row['url_template']) ?>"
+                         placeholder="https://example.com/{fasta_id}" required></td>
+              <td><button type="button" class="btn btn-sm btn-outline-danger remove-pdb-btn">
+                <i class="fa fa-trash"></i></button></td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+        <p id="noPerDbMsg" class="text-muted small <?= empty($per_db_rows) ? '' : 'd-none' ?>">
+          No per-database linkouts configured.
+        </p>
+
+        <?php endif; ?>
       </div>
     </div>
 
@@ -131,6 +187,7 @@
 </div>
 
 <script>
+// --- Global external linkouts ---
 const newRowTemplate = `
   <tr class="linkout-row">
     <td><input type="text" class="form-control form-control-sm" name="ext_label[]" placeholder="Label" required></td>
@@ -139,8 +196,8 @@ const newRowTemplate = `
   </tr>`;
 
 function refreshNoLinksMsg() {
-  const rows = document.querySelectorAll('.linkout-row');
-  document.getElementById('noLinksMsg').classList.toggle('d-none', rows.length > 0);
+  document.getElementById('noLinksMsg').classList.toggle('d-none',
+    document.querySelectorAll('.linkout-row').length > 0);
 }
 
 document.getElementById('addLinkoutBtn').addEventListener('click', () => {
@@ -152,6 +209,47 @@ document.getElementById('externalLinksBody').addEventListener('click', e => {
   if (e.target.closest('.remove-linkout-btn')) {
     e.target.closest('tr').remove();
     refreshNoLinksMsg();
+  }
+});
+
+// --- Per-database linkouts ---
+const perDbOptions = <?= json_encode(array_values($db_options ?? [])) ?>;
+
+function escH(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function makeDbSelect() {
+  const opts = perDbOptions.map(o =>
+    `<option value="${escH(o.key)}">${escH(o.display)}</option>`
+  ).join('');
+  return `<select class="form-select form-select-sm" name="pdb_key[]" required>
+    <option value="">— select database —</option>
+    ${opts}
+  </select>`;
+}
+
+function refreshNoPerDbMsg() {
+  const msg = document.getElementById('noPerDbMsg');
+  if (msg) msg.classList.toggle('d-none', document.querySelectorAll('.pdb-row').length > 0);
+}
+
+document.getElementById('addPerDbBtn')?.addEventListener('click', () => {
+  const tr = document.createElement('tr');
+  tr.className = 'pdb-row';
+  tr.innerHTML = `
+    <td>${makeDbSelect()}</td>
+    <td><input type="text" class="form-control form-control-sm" name="pdb_label[]" placeholder="Label" required></td>
+    <td><input type="url" class="form-control form-control-sm" name="pdb_url[]" placeholder="https://example.com/{fasta_id}" required></td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger remove-pdb-btn"><i class="fa fa-trash"></i></button></td>`;
+  document.getElementById('perDbBody').appendChild(tr);
+  refreshNoPerDbMsg();
+});
+
+document.getElementById('perDbBody')?.addEventListener('click', e => {
+  if (e.target.closest('.remove-pdb-btn')) {
+    e.target.closest('tr').remove();
+    refreshNoPerDbMsg();
   }
 });
 </script>
