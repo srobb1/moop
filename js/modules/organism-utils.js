@@ -40,24 +40,39 @@ function initializeOrganismSelection(allOrganisms, updateCallback) {
         }
     });
     
-    // Handle "Select All" button
+    // Handle "Select All" button — respects active filter
     $(document).on('click', '.selectAllOrganisms', function() {
-        selectedOrganisms = [...allOrganisms];
-        $('.organism-checkbox').prop('checked', true);
-        $('.organism-selector-card').addClass('selected');
-        if (updateCallback) {
-            updateCallback(selectedOrganisms);
+        const filterActive = ($('#organismFilter').val() || '').trim().length > 0;
+        if (filterActive) {
+            $('.organism-card-col:visible .organism-checkbox').prop('checked', true);
+            $('.organism-card-col:visible .organism-selector-card').addClass('selected');
+            $('.organism-card-col:visible .organism-checkbox').each(function() {
+                const org = $(this).data('organism');
+                if (!selectedOrganisms.includes(org)) selectedOrganisms.push(org);
+            });
+        } else {
+            selectedOrganisms = [...allOrganisms];
+            $('.organism-checkbox').prop('checked', true);
+            $('.organism-selector-card').addClass('selected');
         }
+        if (updateCallback) updateCallback(selectedOrganisms);
     });
-    
-    // Handle "Deselect All" button
+
+    // Handle "Deselect All" button — always clears everything
     $(document).on('click', '.deselectAllOrganisms', function() {
         selectedOrganisms = [];
         $('.organism-checkbox').prop('checked', false);
         $('.organism-selector-card').removeClass('selected');
-        if (updateCallback) {
-            updateCallback(selectedOrganisms);
-        }
+        if (updateCallback) updateCallback(selectedOrganisms);
+    });
+
+    // Handle organism filter input
+    $(document).on('input', '#organismFilter', function() {
+        const q = $(this).val().toLowerCase().trim();
+        $('.organism-card-col').each(function() {
+            const text = $(this).data('filter-text') || '';
+            $(this).toggle(q === '' || text.includes(q));
+        });
     });
     
     // Initialize visual state for already-checked boxes

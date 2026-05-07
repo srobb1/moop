@@ -197,6 +197,7 @@ class AnnotationSearch {
         this.zeroResultOrganisms = [];
         this.warnings = [];
         this.cappedOrganisms = [];
+        this.pendingTableInits = [];
         $('#searchResults').show();
         $('#resultsContainer').html('');
 
@@ -314,7 +315,7 @@ class AnnotationSearch {
         if (isUniquenameSearch) {
             const tableId = '#resultsTable-' + organism.replace(/\s+/g, '-');
             const selectId = '#selectCheckbox-' + organism.replace(/\s+/g, '-');
-            initializeResultsTable(tableId, selectId, true);
+            this.pendingTableInits.push({ tableId, selectId });
         }
     }
 
@@ -385,6 +386,11 @@ class AnnotationSearch {
             $('#searchProgress').find('.download-all-results').on('click', () => this.downloadResults());
             $('#searchProgress').find('.download-fasta-results').on('click', () => this.downloadFasta());
         }
+
+        this.pendingTableInits.forEach(({ tableId, selectId }) => {
+            initializeResultsTable(tableId, selectId, true);
+        });
+        this.pendingTableInits = [];
 
         if (this.config.scrollToResults) {
             $('html, body').animate({ scrollTop: $('#searchResults').offset().top - 100 }, 'smooth');

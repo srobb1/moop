@@ -56,20 +56,23 @@
       <div class="card shadow-sm">
         <div class="card-body">
           <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-start gap-3">
+            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
               <div>
                 <h3 class="card-title mb-0">
                   Selected Organisms
                   <i class="fa fa-info-circle organism-instructions-trigger info-icon" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-instruction="Check/uncheck organisms to modify which are included in the search. Click an organism card to visit its page for organism-specific information and single-organism searches."></i>
                 </h3>
               </div>
-              <div class="btn-group" role="group">
-                <button type="button" class="btn btn-sm btn-outline-secondary selectAllOrganisms">
-                  Select All
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary deselectAllOrganisms">
-                  Deselect All
-                </button>
+              <div class="d-flex gap-2 align-items-center flex-wrap">
+                <input type="text" id="organismFilter" class="form-control form-control-sm" placeholder="Filter organisms..." style="width: 180px;">
+                <div class="btn-group" role="group">
+                  <button type="button" class="btn btn-sm btn-outline-secondary selectAllOrganisms">
+                    Select All
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary deselectAllOrganisms">
+                    Deselect All
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -85,7 +88,7 @@
                 $species = $organism_info['species'] ?? '';
                 $common_name = $organism_info['common_name'] ?? '';
             ?>
-              <div class="col-md-6 col-lg-4">
+              <div class="col-md-6 col-lg-4 organism-card-col" data-filter-text="<?= htmlspecialchars(strtolower($organism . ' ' . $genus . ' ' . $species . ' ' . $common_name)) ?>">
                 <div class="organism-selector-card position-relative" data-organism="<?= htmlspecialchars($organism) ?>">
                   <!-- Selection bar with checkbox -->
                   <label class="organism-selection-bar">
@@ -99,9 +102,10 @@
                       <div class="card-body text-center">
                         <div class="organism-image-container mb-3">
                           <?php if ($show_image): ?>
-                            <img src="<?= $image_src ?>" 
+                            <img src="<?= $image_src ?>"
                                  alt="<?= htmlspecialchars($organism) ?>"
                                  class="organism-card-image"
+                                 loading="lazy"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                           <?php endif; ?>
                           <div class="organism-card-icon <?= $show_image ? 'display-none' : '' ?>" style="display: <?= $show_image ? 'none' : 'flex' ?>;">

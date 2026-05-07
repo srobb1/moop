@@ -135,38 +135,43 @@ $track_stats = [
 ];
 
 if (is_dir($tracks_dir)) {
-    $track_files = glob($tracks_dir . '/*/*/*/*json');
+    $track_files = glob($tracks_dir . '/*/*/*/*json') ?: [];
     $track_stats['total'] = count($track_files);
-    
-    foreach ($track_files as $file) {
-        $track = json_decode(file_get_contents($file), true);
-        if (!$track) continue;
-        
-        // Track type
-        $type = $track['type'] ?? 'Unknown';
-        $track_stats['by_type'][$type] = ($track_stats['by_type'][$type] ?? 0) + 1;
-        
-        // Access level
-        $access = $track['metadata']['access_level'] ?? 'PUBLIC';
-        $track_stats['by_access'][$access] = ($track_stats['by_access'][$access] ?? 0) + 1;
-        
-        // Check for warnings (public sources with non-public access)
-        if (isset($track['adapter']['gffGzLocation']['uri']) || 
-            isset($track['adapter']['bigWigLocation']['uri']) ||
-            isset($track['adapter']['bamLocation']['uri'])) {
-            
-            $uri = $track['adapter']['gffGzLocation']['uri'] ?? 
-                   $track['adapter']['bigWigLocation']['uri'] ?? 
-                   $track['adapter']['bamLocation']['uri'] ?? '';
-            
-            $publicBases = ['ucsc.edu', 'ensembl.org', 'ncbi.nlm.nih.gov'];
-            foreach ($publicBases as $base) {
-                if (strpos($uri, $base) !== false && $access !== 'PUBLIC') {
-                    $track_stats['warnings']++;
-                    break;
+
+    $stats_cache_file = dirname($tracks_dir) . '/track_stats_cache.json';
+    $newest_mtime = $track_files ? max(array_map('filemtime', $track_files)) : 0;
+    $cached = is_file($stats_cache_file) ? json_decode(file_get_contents($stats_cache_file), true) : null;
+
+    if ($cached && ($cached['mtime'] ?? 0) === $newest_mtime && ($cached['total'] ?? -1) === $track_stats['total']) {
+        $track_stats = $cached['stats'];
+        $track_stats['total'] = count($track_files);
+    } else {
+        foreach ($track_files as $file) {
+            $track = json_decode(file_get_contents($file), true);
+            if (!$track) continue;
+
+            $type = $track['type'] ?? 'Unknown';
+            $track_stats['by_type'][$type] = ($track_stats['by_type'][$type] ?? 0) + 1;
+
+            $access = $track['metadata']['access_level'] ?? 'PUBLIC';
+            $track_stats['by_access'][$access] = ($track_stats['by_access'][$access] ?? 0) + 1;
+
+            if (isset($track['adapter']['gffGzLocation']['uri']) ||
+                isset($track['adapter']['bigWigLocation']['uri']) ||
+                isset($track['adapter']['bamLocation']['uri'])) {
+                $uri = $track['adapter']['gffGzLocation']['uri'] ??
+                       $track['adapter']['bigWigLocation']['uri'] ??
+                       $track['adapter']['bamLocation']['uri'] ?? '';
+                $publicBases = ['ucsc.edu', 'ensembl.org', 'ncbi.nlm.nih.gov'];
+                foreach ($publicBases as $base) {
+                    if (strpos($uri, $base) !== false && $access !== 'PUBLIC') {
+                        $track_stats['warnings']++;
+                        break;
+                    }
                 }
             }
         }
+        file_put_contents($stats_cache_file, json_encode(['mtime' => $newest_mtime, 'total' => $track_stats['total'], 'stats' => $track_stats]));
     }
 }
 

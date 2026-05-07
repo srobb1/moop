@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../includes/config_init.php';
 require_once __DIR__ . '/../../admin/admin_access_check.php';
 
 header('Content-Type: application/json');
+set_time_limit(0);
 
 // Only allow POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

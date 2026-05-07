@@ -63,6 +63,15 @@ CREATE TABLE feature (
 CREATE UNIQUE INDEX feature_unqiuename_idx
 ON feature (feature_uniquename);
 
+CREATE INDEX feature_genome_id_idx
+ON feature (genome_id);
+
+CREATE INDEX feature_parent_feature_id_idx
+ON feature (parent_feature_id);
+
+CREATE INDEX feature_type_idx
+ON feature (feature_type);
+
 
 CREATE TABLE annotation_source (
     annotation_source_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,4 +105,10 @@ CREATE TABLE feature_annotation (
     FOREIGN KEY (annotation_id) REFERENCES annotation(annotation_id) ON DELETE CASCADE,
     FOREIGN KEY (feature_id) REFERENCES feature(feature_id) ON DELETE CASCADE
 );
+
+CREATE INDEX feature_annotation_feature_id_idx
+ON feature_annotation (feature_id);
+
+CREATE INDEX feature_annotation_annotation_id_idx
+ON feature_annotation (annotation_id);
 
