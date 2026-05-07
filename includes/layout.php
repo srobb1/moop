@@ -273,7 +273,11 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
             // Handle both string and array
             $scripts = is_array($page_script) ? $page_script : [$page_script];
             foreach ($scripts as $script) {
-                echo '<script src="' . htmlspecialchars($script) . '"></script>' . "\n";
+                // Append filemtime as ?v= for cache-busting on file changes
+                $abs = $_SERVER['DOCUMENT_ROOT'] . $script;
+                $ver = file_exists($abs) ? filemtime($abs) : 0;
+                $versioned = htmlspecialchars($script) . ($ver ? '?v=' . $ver : '');
+                echo '<script src="' . $versioned . '"></script>' . "\n";
             }
         }
         ?>

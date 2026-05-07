@@ -282,17 +282,37 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     
     // Read the pairwise output
     $pairwise_output = file_get_contents($pairwise_file);
-    
+    unlink($pairwise_file);
+
+    // Convert ASN.1 archive to outfmt 6 (tabular) with stitle for TSV download
+    $tabular_output = '';
+    $tabular_file = tempnam($temp_dir, 'blast_tabular_');
+    $tabular_fmt = '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle';
+    $formatter_cmd = $blast_formatter_path . ' -archive ' . escapeshellarg($archive_file) .
+                     ' -outfmt ' . escapeshellarg($tabular_fmt) . ' -out ' . escapeshellarg($tabular_file);
+    $process = proc_open($formatter_cmd, $descriptors, $pipes);
+    if (is_resource($process)) {
+        fclose($pipes[0]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $return_code = proc_close($process);
+        if ($return_code === 0) {
+            $header = "# qseqid\tsseqid\tpident\tlength\tmismatch\tgapopen\tqstart\tqend\tsstart\tsend\tevalue\tbitscore\tstitle\n";
+            $tabular_output = $header . file_get_contents($tabular_file);
+        }
+    }
+    unlink($tabular_file);
+
     // Clean up temporary files
     unlink($archive_file);
     unlink($xml_file);
-    unlink($pairwise_file);
-    
+
     $result['success'] = true;
-    $result['output'] = $output;
+    $result['output']   = $output;
     $result['pairwise'] = $pairwise_output;
-    $result['stderr'] = $blast_stderr;
-    
+    $result['tabular']  = $tabular_output;
+    $result['stderr']   = $blast_stderr;
+
     return $result;
 }
 

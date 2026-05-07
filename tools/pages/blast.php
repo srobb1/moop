@@ -282,19 +282,35 @@
                     <h5 class="mb-0"><i class="fa fa-chart-bar"></i> BLAST Results</h5>
                 </div>
                 <div class="card-body">
-                    <div class="mb-4">
+                    <div class="mb-4 d-flex gap-2 flex-wrap">
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadResultsText();">
-                            <i class="fa fa-download"></i> Download Results as TXT
+                            <i class="fa fa-download"></i> Download as TXT
                         </button>
+                        <?php if (!empty($blast_result['tabular'])): ?>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadResultsTabular();">
+                            <i class="fa fa-table"></i> Download as TSV
+                        </button>
+                        <?php endif; ?>
+                        <?php if (!empty($blast_result['output'])): ?>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadResultsXML();">
+                            <i class="fa fa-code"></i> Download as XML
+                        </button>
+                        <?php endif; ?>
                     </div>
-                    
+
                     <?= getToggleQuerySectionScript() ?>
                     <?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? [], $blast_linkout_context ?? []) ?>
-                    
+
                     <?php if (isset($blast_result['pairwise'])): ?>
                         <div id="pairwiseOutput" style="display: none;">
                             <?= htmlspecialchars($blast_result['pairwise']) ?>
                         </div>
+                    <?php endif; ?>
+                    <?php if (!empty($blast_result['tabular'])): ?>
+                        <div id="tabularOutput" style="display: none;"><?= htmlspecialchars($blast_result['tabular']) ?></div>
+                    <?php endif; ?>
+                    <?php if (!empty($blast_result['output'])): ?>
+                        <div id="xmlOutput" style="display: none;"><?= htmlspecialchars($blast_result['output']) ?></div>
                     <?php endif; ?>
                 </div>
             </div>

@@ -7,39 +7,43 @@
  * - databasesByAssembly
  */
 
-function downloadResultsHTML() {
-    const resultsCard = document.querySelector('.card');
-    if (!resultsCard) return;
-    
-    const content = resultsCard.innerHTML;
-    const blob = new Blob([content], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'blast_results_' + new Date().toISOString().slice(0, 10) + '.html';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+function blastDownloadPost(content, filename, type) {
+    const date = new Date().toISOString().slice(0, 10);
+    const form = document.createElement('form');
+    form.method = 'POST';
+    const site = (typeof sitePath !== 'undefined') ? sitePath : ('/' + window.location.pathname.split('/')[1]);
+    form.action = site + '/api/blast_download.php';
+
+    const fields = { content, filename: filename.replace('{date}', date), type };
+    for (const [name, value] of Object.entries(fields)) {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = name;
+        inp.value = value;
+        form.appendChild(inp);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
 }
 
 function downloadResultsText() {
-    const pairwiseDiv = document.getElementById('pairwiseOutput');
-    if (!pairwiseDiv) {
-        alert('No BLAST results to download');
-        return;
-    }
-    
-    const textContent = pairwiseDiv.textContent || pairwiseDiv.innerText;
-    const blob = new Blob([textContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'blast_results_' + new Date().toISOString().slice(0, 10) + '.txt';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const div = document.getElementById('pairwiseOutput');
+    if (!div) { alert('No BLAST results to download'); return; }
+    blastDownloadPost(div.textContent, 'blast_results_{date}.txt', 'txt');
+}
+
+function downloadResultsTabular() {
+    const div = document.getElementById('tabularOutput');
+    if (!div) { alert('No tabular results to download'); return; }
+    blastDownloadPost(div.textContent, 'blast_results_{date}.tsv', 'tsv');
+}
+
+function downloadResultsXML() {
+    const div = document.getElementById('xmlOutput');
+    if (!div) { alert('No XML results to download'); return; }
+    blastDownloadPost(div.textContent, 'blast_results_{date}.xml', 'xml');
 }
 
 function clearResults() {

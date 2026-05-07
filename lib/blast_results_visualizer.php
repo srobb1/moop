@@ -68,6 +68,9 @@ function parseBlastResults($blast_xml) {
                 
                 $hit_id_str = !empty($hit_id) ? (string)$hit_id[0] : '';
                 $hit_def_str = !empty($hit_def) ? (string)$hit_def[0] : '';
+                if ($hit_def_str === '' || strcasecmp(trim($hit_def_str), 'No definition line') === 0) {
+                    $hit_def_str = $hit_id_str;
+                }
                 $hit_len_int = !empty($hit_len) ? (int)$hit_len[0] : 0;
                 
                 // Get all HSPs (High-scoring Segment Pairs) for this hit
@@ -532,7 +535,7 @@ function generateBlastGraphicalView($results) {
  * @param array $results Parsed BLAST results from parseBlastResults()
  * @return string HTML with alignment viewer
  */
-function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num = 1) {
+function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num = 1, $context = []) {
     $html = '<div class="blast-alignment-viewer mt-4">';
     $html .= '<h6><i class="fa fa-align-justify"></i> Detailed Alignments (HSPs)</h6>';
     $html .= '<small class="text-muted d-block mb-3">Each Hit section contains one or more High-Scoring Segment Pairs (HSPs)</small>';
@@ -1169,7 +1172,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
             $html .= generateHitsSummaryTable($query, $query_num);
             
             // Alignment viewer for this query
-            $html .= generateAlignmentViewer($query, $blast_program, $query_num);
+            $html .= generateAlignmentViewer($query, $blast_program, $query_num, $context);
         }
         
         $html .= '</div>'; // End query content
