@@ -105,6 +105,35 @@
 
             gG.appendChild(makeLine(PAD_LEFT, VIRTUAL_WIDTH - PAD_RIGHT, gCy, gCy, '#999', 1.5));
 
+            if (canFetchSeq) {
+                const bg = makeRect(0, gRowTop, VIRTUAL_WIDTH, ROW_HEIGHT + LABEL_HEIGHT, 'transparent', 0);
+                bg.setAttribute('class', 'iso-row-bg');
+                bg.style.cursor = 'pointer';
+                addRegionTitle(bg, 'Gene locus — download genomic sequence');
+                bg.addEventListener('click', () => showGenomicModal(gene, isoforms));
+                gG.appendChild(bg);
+
+                const gBy = gCy - EXON_H / 2;
+                const gXL = Math.min(toX(gene.start), toX(gene.end));
+                const gXR = Math.max(toX(gene.start), toX(gene.end));
+
+                const gUp = makeRect(gXL - FLANK_GAP - FLANK_W, gBy, FLANK_W, EXON_H, COLOR_UPSTREAM, 2);
+                gUp.setAttribute('stroke', COLOR_UPSTREAM_S);
+                gUp.setAttribute('stroke-width', '1');
+                gUp.style.cursor = 'pointer';
+                addRegionTitle(gUp, `Upstream flanking — ${gene.id || 'Gene'}`);
+                gUp.addEventListener('click', e => { e.stopPropagation(); fetchFlank(gene, 'upstream', 1000); });
+                gG.appendChild(gUp);
+
+                const gDn = makeRect(gXR + FLANK_GAP, gBy, FLANK_W, EXON_H, COLOR_DOWNSTREAM, 2);
+                gDn.setAttribute('stroke', COLOR_DOWNSTREAM_S);
+                gDn.setAttribute('stroke-width', '1');
+                gDn.style.cursor = 'pointer';
+                addRegionTitle(gDn, `Downstream flanking — ${gene.id || 'Gene'}`);
+                gDn.addEventListener('click', e => { e.stopPropagation(); fetchFlank(gene, 'downstream', 1000); });
+                gG.appendChild(gDn);
+            }
+
             svg.appendChild(gG);
         }
 
@@ -173,7 +202,7 @@
                 const rect = makeRect(x1, cy - EXON_H / 2, w, EXON_H, COLOR_EXON, 2);
                 rect.setAttribute('class', 'region-exon');
                 if (canFetchSeq) {
-                    const exonType = ex.type || 'Exon';
+                    const exonType = normalizeFeatureType(ex.type);
                     rect.style.cursor = 'pointer';
                     addRegionTitle(rect, `${exonType}  ${ex.start.toLocaleString()}–${ex.end.toLocaleString()}`);
                     rect.addEventListener('click', e => {
@@ -606,6 +635,16 @@
     }
 
     function makeSvgEl(tag) { return document.createElementNS(NS, tag); }
+
+    function normalizeFeatureType(type) {
+        switch ((type || '').toLowerCase()) {
+            case 'five_prime_utr':  return "5' UTR";
+            case 'three_prime_utr': return "3' UTR";
+            case 'utr':             return 'UTR';
+            case 'exon':            return 'Exon';
+            default:                return type || 'Exon';
+        }
+    }
 
     function addRegionTitle(el, text) {
         const t = document.createElementNS(NS, 'title');
