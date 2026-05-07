@@ -45,7 +45,7 @@
       </button>
       <button id="download-selected-btn" class="btn btn-sm btn-primary" disabled>
         <i class="fas fa-download me-1"></i>Download Selected
-        (<span id="selected-count">0</span>)
+        (<span id="selected-count">0</span> files<span id="selected-size-label"></span>)
       </button>
     </div>
   </div>
@@ -89,7 +89,7 @@
           <div class="assembly-block mb-2">
             <!-- Assembly header -->
             <div class="d-flex align-items-center px-2 py-2 rounded border assembly-header"
-                 style="cursor:pointer; background:#f8f9ff;"
+                 style="cursor:pointer; background:#dce8f8;"
                  data-bs-toggle="collapse"
                  data-bs-target="#<?= $asm_id ?>">
               <input type="checkbox"
@@ -130,7 +130,8 @@
                          data-download-url="<?= htmlspecialchars($dl_url) ?>"
                          data-organism="<?= htmlspecialchars($organism) ?>"
                          data-assembly="<?= htmlspecialchars($assembly) ?>"
-                         data-filename="<?= htmlspecialchars($file['name']) ?>">
+                         data-filename="<?= htmlspecialchars($file['name']) ?>"
+                         data-size="<?= $file['size'] ?>">
                   <a href="<?= htmlspecialchars($dl_url) ?>"
                      class="me-auto text-decoration-none file-link"
                      download="<?= htmlspecialchars($file['name']) ?>">

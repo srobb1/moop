@@ -58,9 +58,29 @@ $(document).ready(function () {
         cb.indeterminate = (checked > 0 && checked < total);
     }
 
+    function formatBytes(bytes) {
+        if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
+        if (bytes >= 1048576)    return (bytes / 1048576).toFixed(1)    + ' MB';
+        if (bytes >= 1024)       return (bytes / 1024).toFixed(1)       + ' KB';
+        return bytes + ' B';
+    }
+
     function updateSelectedCount() {
-        const count = $('.file-checkbox:checked').length;
+        const checked = $('.file-checkbox:checked');
+        const count   = checked.length;
+        let totalBytes = 0;
+        checked.each(function () {
+            totalBytes += parseInt($(this).data('size') || 0, 10);
+        });
+
         $('#selected-count').text(count);
+
+        if (count > 0 && totalBytes > 0) {
+            $('#selected-size-label').text(' · ' + formatBytes(totalBytes));
+        } else {
+            $('#selected-size-label').text('');
+        }
+
         $('#download-selected-btn').prop('disabled', count === 0);
     }
 
