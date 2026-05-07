@@ -764,6 +764,9 @@ function buildBlastHitLinkouts($hit, $context) {
 
     $html = '';
 
+    $gene_page_label = htmlspecialchars($linkout_config['gene_page_label'] ?? 'Gene Page');
+    $jbrowse_label   = htmlspecialchars($linkout_config['jbrowse_label']   ?? 'Genome Browser');
+
     if ($is_genome_db) {
         // Genome BLAST: hit subject is a chromosome/scaffold; HSP coords are genomic
         if (($linkout_config['jbrowse'] ?? false) && $has_jbrowse && !empty($hit['hsps'])) {
@@ -774,7 +777,7 @@ function buildBlastHitLinkouts($hit, $context) {
                   . '&loc=' . urlencode($loc);
             $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
                    . 'class="btn btn-sm btn-outline-success me-1">'
-                   . '<i class="fa fa-dna"></i> View in JBrowse</a>';
+                   . '<i class="fa fa-dna"></i> ' . $jbrowse_label . '</a>';
         }
     } else {
         // Feature BLAST (mRNA / CDS / protein): hit ID is a feature uniquename
@@ -787,7 +790,7 @@ function buildBlastHitLinkouts($hit, $context) {
                   . '&assembly=' . urlencode($assembly);
             $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
                    . 'class="btn btn-sm btn-outline-primary me-1">'
-                   . '<i class="fa fa-dna"></i> Gene Page</a>';
+                   . '<i class="fa fa-dna"></i> ' . $gene_page_label . '</a>';
         }
 
         if (($linkout_config['jbrowse'] ?? false) && $has_jbrowse && $entry) {
@@ -797,7 +800,7 @@ function buildBlastHitLinkouts($hit, $context) {
                   . '&loc=' . urlencode($loc);
             $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
                    . 'class="btn btn-sm btn-outline-success me-1">'
-                   . '<i class="fa fa-microscope"></i> View in JBrowse</a>';
+                   . '<i class="fa fa-microscope"></i> ' . $jbrowse_label . '</a>';
         }
     }
 

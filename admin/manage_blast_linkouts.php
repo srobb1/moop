@@ -16,14 +16,18 @@ $message     = '';
 $messageType = '';
 
 $linkout_config = $config->getArray('blast_linkouts', [
-    'gene_page' => true,
-    'jbrowse'   => true,
-    'external'  => [],
+    'gene_page'       => true,
+    'gene_page_label' => 'Gene Page',
+    'jbrowse'         => true,
+    'jbrowse_label'   => 'Genome Browser',
+    'external'        => [],
 ]);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $linkout_config['gene_page'] = isset($_POST['gene_page']);
-    $linkout_config['jbrowse']   = isset($_POST['jbrowse']);
+    $linkout_config['gene_page']       = isset($_POST['gene_page']);
+    $linkout_config['gene_page_label'] = trim($_POST['gene_page_label'] ?? '') ?: 'Gene Page';
+    $linkout_config['jbrowse']         = isset($_POST['jbrowse']);
+    $linkout_config['jbrowse_label']   = trim($_POST['jbrowse_label'] ?? '') ?: 'Genome Browser';
 
     $labels    = $_POST['ext_label']    ?? [];
     $templates = $_POST['ext_template'] ?? [];

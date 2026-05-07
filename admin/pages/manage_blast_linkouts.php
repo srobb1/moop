@@ -27,21 +27,37 @@
     <div class="card mb-4">
       <div class="card-header"><strong>Built-in Linkouts</strong></div>
       <div class="card-body">
-        <div class="form-check mb-3">
-          <input class="form-check-input" type="checkbox" name="gene_page" id="gene_page"
-                 <?= ($linkout_config['gene_page'] ?? true) ? 'checked' : '' ?>>
-          <label class="form-check-label" for="gene_page">
-            <strong>Gene Page</strong>
-            <span class="text-muted ms-2">— Links to the gene detail page (<code>tools/parent.php</code>) when the assembly has an organism database. Shown for mRNA, CDS, and protein BLAST databases.</span>
-          </label>
+        <div class="d-flex align-items-start gap-3 mb-3">
+          <div class="form-check mt-1" style="min-width:1.5rem;">
+            <input class="form-check-input" type="checkbox" name="gene_page" id="gene_page"
+                   <?= ($linkout_config['gene_page'] ?? true) ? 'checked' : '' ?>>
+          </div>
+          <div class="flex-grow-1">
+            <label class="form-check-label fw-semibold" for="gene_page">Gene Page</label>
+            <span class="text-muted ms-2 small">— Links to the gene detail page (<code>tools/parent.php</code>) when the assembly has an organism database. Shown for mRNA, CDS, and protein BLAST databases.</span>
+            <div class="mt-1">
+              <input type="text" class="form-control form-control-sm" style="max-width:220px;"
+                     name="gene_page_label" placeholder="Button label"
+                     value="<?= htmlspecialchars($linkout_config['gene_page_label'] ?? 'Gene Page') ?>">
+              <small class="text-muted">Button label shown on BLAST results</small>
+            </div>
+          </div>
         </div>
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" name="jbrowse" id="jbrowse"
-                 <?= ($linkout_config['jbrowse'] ?? true) ? 'checked' : '' ?>>
-          <label class="form-check-label" for="jbrowse">
-            <strong>View in JBrowse</strong>
-            <span class="text-muted ms-2">— Links to JBrowse2 at the gene locus when the assembly is registered. For genome BLAST, links directly to the HSP coordinates. Requires <code>feature_coords.tsv</code> (auto-generated when registering an assembly in JBrowse).</span>
-          </label>
+        <div class="d-flex align-items-start gap-3">
+          <div class="form-check mt-1" style="min-width:1.5rem;">
+            <input class="form-check-input" type="checkbox" name="jbrowse" id="jbrowse"
+                   <?= ($linkout_config['jbrowse'] ?? true) ? 'checked' : '' ?>>
+          </div>
+          <div class="flex-grow-1">
+            <label class="form-check-label fw-semibold" for="jbrowse">Genome Browser</label>
+            <span class="text-muted ms-2 small">— Links to JBrowse2 at the gene locus when the assembly is registered. For genome BLAST, links directly to the HSP coordinates. Requires <code>feature_coords.tsv</code> (auto-generated when registering an assembly in JBrowse).</span>
+            <div class="mt-1">
+              <input type="text" class="form-control form-control-sm" style="max-width:220px;"
+                     name="jbrowse_label" placeholder="Button label"
+                     value="<?= htmlspecialchars($linkout_config['jbrowse_label'] ?? 'Genome Browser') ?>">
+              <small class="text-muted">Button label shown on BLAST results</small>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -207,9 +207,11 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // jbrowse:   link to JBrowse2 if assembly is registered (requires feature_coords.tsv)
     // external:  user-defined URL templates; placeholders: {fasta_id}, {organism}, {assembly}
     'blast_linkouts' => [
-        'gene_page' => true,
-        'jbrowse'   => true,
-        'external'  => [],
+        'gene_page'       => true,
+        'gene_page_label' => 'Gene Page',
+        'jbrowse'         => true,
+        'jbrowse_label'   => 'Genome Browser',
+        'external'        => [],
     ],
 
     // ======== GALAXY INTEGRATION ========
