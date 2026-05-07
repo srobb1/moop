@@ -127,7 +127,10 @@
                          id="cb-<?= $file_id ?>"
                          data-org-id="<?= $org_id ?>"
                          data-asm-id="<?= $asm_id ?>"
-                         data-download-url="<?= htmlspecialchars($dl_url) ?>">
+                         data-download-url="<?= htmlspecialchars($dl_url) ?>"
+                         data-organism="<?= htmlspecialchars($organism) ?>"
+                         data-assembly="<?= htmlspecialchars($assembly) ?>"
+                         data-filename="<?= htmlspecialchars($file['name']) ?>">
                   <a href="<?= htmlspecialchars($dl_url) ?>"
                      class="me-auto text-decoration-none file-link"
                      download="<?= htmlspecialchars($file['name']) ?>">

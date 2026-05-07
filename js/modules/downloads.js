@@ -123,25 +123,45 @@ $(document).ready(function () {
     // ── Download Selected ────────────────────────────────────────────────────
 
     $('#download-selected-btn').on('click', function () {
-        const urls = [];
-        $('.file-checkbox:checked').each(function () {
-            const url = $(this).data('download-url');
-            if (url) urls.push(url);
+        const checked = $('.file-checkbox:checked');
+        if (checked.length === 0) return;
+
+        if (checked.length === 1) {
+            // Single file: direct download link, no need for server-side archive
+            const url = checked.first().data('download-url');
+            if (!url) return;
+            const a = document.createElement('a');
+            a.href     = url;
+            a.download = '';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            return;
+        }
+
+        // Multiple files: POST to download_zip.php which streams a tar.gz
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = sitePath + '/api/download_zip.php';
+
+        checked.each(function (i) {
+            const fields = {
+                organism: $(this).data('organism'),
+                assembly: $(this).data('assembly'),
+                filename: $(this).data('filename')
+            };
+            Object.entries(fields).forEach(function ([key, val]) {
+                const input   = document.createElement('input');
+                input.type    = 'hidden';
+                input.name    = 'files[' + i + '][' + key + ']';
+                input.value   = val || '';
+                form.appendChild(input);
+            });
         });
 
-        if (urls.length === 0) return;
-
-        // Trigger downloads sequentially; small delay avoids browser blocking
-        urls.forEach(function (url, i) {
-            setTimeout(function () {
-                const a = document.createElement('a');
-                a.href     = url;
-                a.download = '';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            }, i * 400);
-        });
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
     });
 
     // ── Init ─────────────────────────────────────────────────────────────────
