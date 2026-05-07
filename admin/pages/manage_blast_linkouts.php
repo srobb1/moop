@@ -243,9 +243,6 @@
 
 <script>
 // --- Global external linkouts ---
-
-<script>
-// --- Global external linkouts ---
 const newRowTemplate = `
   <tr class="linkout-row">
     <td><input type="text" class="form-control form-control-sm" name="ext_label[]" placeholder="Label" required></td>
