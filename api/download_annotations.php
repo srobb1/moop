@@ -28,23 +28,18 @@ $organism_name    = $organism_context['name'];
 
 $db = verifyOrganismDatabase($organism_name, $organism_data);
 
-// Permission-based genome filtering (same as parent.php)
-$group_data           = getGroupData();
-$accessible_assemblies = [];
-foreach ($group_data as $data) {
-    if ($data['organism'] === $organism_name && has_assembly_access($organism_name, $data['assembly'])) {
-        $accessible_assemblies[] = $data['assembly'];
-    }
-}
-$accessible_genome_ids = getAccessibleGenomeIds($organism_name, $accessible_assemblies, $db);
+// Permission-based gene_set filtering (same as parent.php)
+$sources_by_group        = getAccessibleAssemblies($organism_name);
+$accessible_sources      = flattenSourcesList($sources_by_group);
+$accessible_gene_set_ids = array_values(array_filter(array_column($accessible_sources, 'gene_set_id')));
 
-if (empty($accessible_genome_ids)) {
+if (empty($accessible_gene_set_ids)) {
     http_response_code(403);
     die('Access denied.');
 }
 
 // Resolve to top-level parent
-$ancestors = getAncestors($uniquename, $db, $accessible_genome_ids);
+$ancestors = getAncestors($uniquename, $db, $accessible_gene_set_ids);
 $feature_id = null;
 $feature_uniquename = $uniquename;
 
@@ -67,7 +62,7 @@ if (!$feature_id) {
 }
 
 // Collect parent + all children IDs
-$children       = getChildren($feature_id, $db, $accessible_genome_ids);
+$children       = getChildren($feature_id, $db, $accessible_gene_set_ids);
 $all_feature_ids = [$feature_id];
 foreach ($children as $child) {
     $all_feature_ids[] = $child['feature_id'];

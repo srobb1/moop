@@ -9,6 +9,7 @@
  *   organism   - Organism name (required)
  *   assembly   - Assembly accession (required)
  *   uniquename - Gene feature uniquename (required)
+ *   gene_set   - Gene set name (optional, defaults to 'v1')
  *
  * Returns: text/plain GFF3
  */
@@ -31,6 +32,7 @@ $organism_context = setupOrganismDisplayContext($_GET['organism'], $organism_dat
 $organism_name    = $organism_context['name'];
 
 $assembly   = preg_replace('/[^a-zA-Z0-9._\-]/', '', $_GET['assembly']);
+$gene_set   = preg_replace('/[^a-zA-Z0-9._\-]/', '', $_GET['gene_set'] ?? 'v1') ?: 'v1';
 $uniquename = trim($_GET['uniquename']);   // escapeshellarg handles shell safety below
 
 if (empty($assembly) || empty($uniquename)) {
@@ -39,13 +41,13 @@ if (empty($assembly) || empty($uniquename)) {
     exit;
 }
 
-if (!has_assembly_access($organism_name, $assembly)) {
+if (!has_gene_set_access($organism_name, $assembly, $gene_set)) {
     http_response_code(403);
     echo "# Error: access denied\n";
     exit;
 }
 
-$gff_file = "$organism_data/$organism_name/$assembly/genomic.gff";
+$gff_file = "$organism_data/$organism_name/$assembly/$gene_set/genomic.gff";
 if (!file_exists($gff_file) || filesize($gff_file) === 0) {
     http_response_code(404);
     echo "# GFF not available for $organism_name / $assembly\n";
