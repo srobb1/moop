@@ -105,6 +105,7 @@
         $context = createToolContext('parent', [
             'organism'     => $organism_name,
             'assembly'     => $genome_accession,
+            'gene_set'     => $gene_set_name,
             'display_name' => $feature_uniquename,
             'loc'          => $jbrowse_loc,
         ]);

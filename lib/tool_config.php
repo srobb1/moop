@@ -13,7 +13,7 @@ $available_tools = [
         'description' => 'Search and download sequences',
         'btn_class' => 'btn-success',
         'url_path' => '/tools/retrieve_sequences.php',
-        'context_params' => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
+        'context_params' => ['organism', 'assembly', 'gene_set', 'group', 'display_name', 'organisms'],
         'pages' => 'all',  // Show on all pages
     ],
     'blast_search' => [
@@ -23,7 +23,7 @@ $available_tools = [
         'description' => 'Search sequences against databases',
         'btn_class' => 'btn-warning',
         'url_path' => '/tools/blast.php',
-        'context_params' => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
+        'context_params' => ['organism', 'assembly', 'gene_set', 'group', 'display_name', 'organisms'],
         'pages' => 'all',  // Show on all pages
     ],
     'taxonomy_search' => [
@@ -54,7 +54,7 @@ $available_tools = [
         'description'    => 'Download genome files (FASTA, GFF, and more)',
         'btn_class'      => 'btn-secondary',
         'url_path'       => '/tools/downloads.php',
-        'context_params' => ['organism', 'assembly', 'group', 'display_name'],
+        'context_params' => ['organism', 'assembly', 'gene_set', 'group', 'display_name'],
         'pages'          => ['organism', 'assembly', 'group', 'multi_organism_search', 'index'],
     ],
     // Future tools can be added here

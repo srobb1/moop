@@ -516,8 +516,9 @@
 
         modal.show();
 
-        const site   = (typeof moopSite !== 'undefined') ? moopSite : '/moop';
-        const params = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, uniquename: gene.id });
+        const site    = (typeof moopSite !== 'undefined') ? moopSite : '/moop';
+        const geneSet = (typeof moopGeneSet !== 'undefined') ? moopGeneSet : 'v1';
+        const params  = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, gene_set: geneSet, uniquename: gene.id });
 
         fetch(`${site}/api/get_gff.php?${params}`)
             .then(r => {

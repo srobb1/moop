@@ -54,13 +54,13 @@
                 $assemblyCount = 0;
                 $staleCount    = 0;
                 if (isset($userData['access']) && is_array($userData['access'])) {
-                    foreach ($userData['access'] as $org => $assemblies) {
-                        if (is_array($assemblies)) {
-                            foreach ($assemblies as $asm) {
-                                $assemblyCount++;
-                                if (!isset($organisms[$org]) || !in_array($asm, $organisms[$org])) {
-                                    $staleCount++;
-                                }
+                    foreach ($userData['access'] as $org => $asm_data) {
+                        if (!is_array($asm_data)) continue;
+                        $asm_keys = array_is_list($asm_data) ? $asm_data : array_keys($asm_data);
+                        foreach ($asm_keys as $asm) {
+                            $assemblyCount++;
+                            if (!isset($organisms[$org]) || !in_array($asm, $organisms[$org])) {
+                                $staleCount++;
                             }
                         }
                     }
@@ -484,7 +484,11 @@
   }
 
   // ── Build one org row (chips + per-organism checkbox + count) ─────────
-  function buildOrgSection(organism, assemblies, selectedAccess, onGroupRefresh, onUpdate) {
+  // assembliesDict: {assembly: [gene_sets]} — e.g. {HIv3: ['v1'], GCA_1: ['v1','v2']}
+  // selectedAccess: {org: {assembly: ['*'] | [gene_sets]}}
+  function buildOrgSection(organism, assembliesDict, selectedAccess, onGroupRefresh, onUpdate) {
+    const assemblies = Object.keys(assembliesDict);
+
     const orgSection = document.createElement('div');
     orgSection.className = 'org-section';
     orgSection.dataset.org = organism;
@@ -513,7 +517,7 @@
     assemblyWrap.style.cssText = 'display:none; padding-left:44px;';
 
     function refreshOrg() {
-      const sel   = assemblies.filter(a => selectedAccess[organism]?.includes(a)).length;
+      const sel   = assemblies.filter(a => selectedAccess[organism]?.[a] !== undefined).length;
       const total = assemblies.length;
       orgCount.textContent = `${sel}/${total}`;
       orgCount.className = sel === 0     ? 'badge bg-secondary'
@@ -535,7 +539,7 @@
       chip.style.border      = '2px solid ' + orgColor(organism);
       chip.textContent = assembly;
 
-      const isSel = selectedAccess[organism]?.includes(assembly);
+      const isSel = selectedAccess[organism]?.[assembly] !== undefined;
       chip.style.opacity = isSel ? '1' : '0.35';
       if (isSel) chip.classList.add('selected');
 
@@ -543,11 +547,13 @@
         const sel = this.classList.toggle('selected');
         this.style.opacity = sel ? '1' : '0.35';
         if (sel) {
-          if (!selectedAccess[organism]) selectedAccess[organism] = [];
-          if (!selectedAccess[organism].includes(assembly)) selectedAccess[organism].push(assembly);
+          if (!selectedAccess[organism]) selectedAccess[organism] = {};
+          selectedAccess[organism][assembly] = ['*'];
         } else {
-          selectedAccess[organism] = (selectedAccess[organism] || []).filter(a => a !== assembly);
-          if (!selectedAccess[organism].length) delete selectedAccess[organism];
+          delete selectedAccess[organism]?.[assembly];
+          if (selectedAccess[organism] && !Object.keys(selectedAccess[organism]).length) {
+            delete selectedAccess[organism];
+          }
         }
         refreshOrg();
         onGroupRefresh();
@@ -560,7 +566,8 @@
     orgCb.addEventListener('click', function (e) {
       e.stopPropagation();
       if (this.checked) {
-        selectedAccess[organism] = [...assemblies];
+        selectedAccess[organism] = {};
+        assemblies.forEach(a => { selectedAccess[organism][a] = ['*']; });
       } else {
         delete selectedAccess[organism];
       }
@@ -569,7 +576,7 @@
         orgChevron.className = 'fa fa-chevron-down fa-fw text-muted';
       }
       assemblyWrap.querySelectorAll('.tag-chip-selector').forEach(chip => {
-        const isSel = selectedAccess[organism]?.includes(chip.dataset.assembly);
+        const isSel = selectedAccess[organism]?.[chip.dataset.assembly] !== undefined;
         chip.classList.toggle('selected', !!isSel);
         chip.style.opacity = isSel ? '1' : '0.35';
       });
@@ -630,10 +637,11 @@
 
       function refreshGroup() {
         let total = 0, sel = 0;
-        Object.entries(groupOrgs).forEach(([org, asms]) => {
-          asms.forEach(a => {
+        // groupOrgs is {org: {assembly: [gene_sets]}}
+        Object.entries(groupOrgs).forEach(([org, asmsDict]) => {
+          Object.keys(asmsDict).forEach(a => {
             total++;
-            if (selectedAccess[org]?.includes(a)) sel++;
+            if (selectedAccess[org]?.[a] !== undefined) sel++;
           });
         });
         groupCount.textContent = `${sel}/${total}`;
@@ -647,15 +655,14 @@
       groupCb.addEventListener('click', function (e) {
         e.stopPropagation();
         const selectAll = this.checked;
-        Object.entries(groupOrgs).forEach(([org, asms]) => {
+        Object.entries(groupOrgs).forEach(([org, asmsDict]) => {
           if (selectAll) {
-            const existing = new Set(selectedAccess[org] || []);
-            asms.forEach(a => existing.add(a));
-            selectedAccess[org] = [...existing];
+            if (!selectedAccess[org]) selectedAccess[org] = {};
+            Object.keys(asmsDict).forEach(a => { selectedAccess[org][a] = ['*']; });
           } else {
             if (selectedAccess[org]) {
-              selectedAccess[org] = selectedAccess[org].filter(a => !asms.includes(a));
-              if (!selectedAccess[org].length) delete selectedAccess[org];
+              Object.keys(asmsDict).forEach(a => { delete selectedAccess[org][a]; });
+              if (!Object.keys(selectedAccess[org]).length) delete selectedAccess[org];
             }
           }
         });
@@ -665,12 +672,13 @@
         }
         // Update org rows without full re-render
         groupBody.querySelectorAll('.org-section').forEach(orgSection => {
-          const org  = orgSection.dataset.org;
-          const asms = groupOrgs[org] || [];
+          const org     = orgSection.dataset.org;
+          const asmsDict = groupOrgs[org] || {};
+          const asmKeys  = Object.keys(asmsDict);
           const orgCb    = orgSection.querySelector('input[type=checkbox]');
           const orgCount = orgSection.querySelector('.badge');
-          const sel   = asms.filter(a => selectedAccess[org]?.includes(a)).length;
-          const total = asms.length;
+          const sel   = asmKeys.filter(a => selectedAccess[org]?.[a] !== undefined).length;
+          const total = asmKeys.length;
           if (orgCount) {
             orgCount.textContent = `${sel}/${total}`;
             orgCount.className = sel === 0     ? 'badge bg-secondary'
@@ -679,7 +687,7 @@
           }
           if (orgCb) { orgCb.checked = sel === total && total > 0; orgCb.indeterminate = sel > 0 && sel < total; }
           orgSection.querySelectorAll('.tag-chip-selector').forEach(chip => {
-            const isSel = selectedAccess[org]?.includes(chip.dataset.assembly);
+            const isSel = selectedAccess[org]?.[chip.dataset.assembly] !== undefined;
             chip.classList.toggle('selected', !!isSel);
             chip.style.opacity = isSel ? '1' : '0.35';
           });
@@ -696,6 +704,7 @@
       });
 
       Object.keys(groupOrgs).sort().forEach(org => {
+        // groupOrgs[org] is {assembly: [gene_sets]}
         groupBody.appendChild(buildOrgSection(org, groupOrgs[org], selectedAccess, refreshGroup, onUpdate));
       });
 
@@ -721,12 +730,18 @@
     previewEl.innerHTML = '';
     let total = 0;
 
+    // selectedAccess: {org: {assembly: [gene_sets]}}
     Object.keys(selectedAccess).sort().forEach(org => {
-      (selectedAccess[org] || []).forEach(asm => {
+      Object.keys(selectedAccess[org] || {}).sort().forEach(asm => {
+        const geneSets = selectedAccess[org][asm] || ['*'];
         total++;
-        const inp = document.createElement('input');
-        inp.type = 'hidden'; inp.name = `access[${org}][]`; inp.value = asm;
-        hiddenEl.appendChild(inp);
+
+        // Emit one hidden input per gene_set value
+        geneSets.forEach(gs => {
+          const inp = document.createElement('input');
+          inp.type = 'hidden'; inp.name = `access[${org}][${asm}][]`; inp.value = gs;
+          hiddenEl.appendChild(inp);
+        });
 
         const badge = document.createElement('span');
         badge.className = 'tag-chip me-1 mb-1';
@@ -739,8 +754,8 @@
         rm.style.cssText = 'cursor:pointer;opacity:0.8;';
         rm.addEventListener('click', function (e) {
           e.stopPropagation();
-          selectedAccess[org] = (selectedAccess[org] || []).filter(a => a !== asm);
-          if (!selectedAccess[org].length) delete selectedAccess[org];
+          delete selectedAccess[org]?.[asm];
+          if (selectedAccess[org] && !Object.keys(selectedAccess[org]).length) delete selectedAccess[org];
           syncSelection(hiddenId, previewId, selectedAccess);
           const containerEl = document.getElementById(
             hiddenId === 'create-selected-assemblies-hidden' ? 'create-access-container' : 'modal-access-container'
@@ -798,7 +813,11 @@
   function setupSelectAll(selectBtnId, clearBtnId, getAccess, containerEl, onUpdate) {
     document.getElementById(selectBtnId)?.addEventListener('click', function () {
       const acc = getAccess();
-      Object.keys(allOrganisms).forEach(org => { acc[org] = [...allOrganisms[org]]; });
+      // allOrganisms: {org: {assembly: [gene_sets]}}
+      Object.keys(allOrganisms).forEach(org => {
+        acc[org] = {};
+        Object.keys(allOrganisms[org]).forEach(asm => { acc[org][asm] = ['*']; });
+      });
       renderAssemblySelector(containerEl, acc, onUpdate);
       onUpdate();
     });
@@ -860,8 +879,16 @@
       if (!src?.access) return;
       const acc = getAccess();
       Object.keys(acc).forEach(k => delete acc[k]);
+      // Handle both old {org: [asms]} and new {org: {asm: [gene_sets]}} formats
       Object.keys(src.access).forEach(org => {
-        if (Array.isArray(src.access[org])) acc[org] = [...src.access[org]];
+        const d = src.access[org];
+        if (Array.isArray(d)) {
+          // Old format — convert
+          acc[org] = {};
+          d.forEach(asm => { acc[org][asm] = ['*']; });
+        } else if (d && typeof d === 'object') {
+          acc[org] = { ...d };
+        }
       });
       renderAssemblySelector(containerEl, acc, onUpdate);
       onUpdate();
@@ -959,7 +986,14 @@
       editSelectedAccess = {};
       if (userData.access && typeof userData.access === 'object') {
         Object.keys(userData.access).forEach(org => {
-          if (Array.isArray(userData.access[org])) editSelectedAccess[org] = [...userData.access[org]];
+          const d = userData.access[org];
+          if (Array.isArray(d)) {
+            // Old format — convert to new
+            editSelectedAccess[org] = {};
+            d.forEach(asm => { editSelectedAccess[org][asm] = ['*']; });
+          } else if (d && typeof d === 'object') {
+            editSelectedAccess[org] = { ...d };
+          }
         });
       }
 
@@ -986,8 +1020,10 @@
       staleItems.innerHTML = '';
       const staleList = [];
       Object.keys(userData.access || {}).forEach(org => {
-        (userData.access[org] || []).forEach(asm => {
-          if (!(allOrganisms[org] || []).includes(asm)) staleList.push({ org, asm });
+        const d = userData.access[org];
+        const asmKeys = Array.isArray(d) ? d : Object.keys(d || {});
+        asmKeys.forEach(asm => {
+          if (!Object.prototype.hasOwnProperty.call(allOrganisms[org] || {}, asm)) staleList.push({ org, asm });
         });
       });
       if (staleList.length > 0) {
@@ -999,8 +1035,8 @@
           const rm = document.createElement('i');
           rm.className = 'fa fa-times ms-1'; rm.style.cursor = 'pointer';
           rm.addEventListener('click', function () {
-            editSelectedAccess[org] = (editSelectedAccess[org] || []).filter(a => a !== asm);
-            if (!editSelectedAccess[org].length) delete editSelectedAccess[org];
+            delete editSelectedAccess[org]?.[asm];
+            if (editSelectedAccess[org] && !Object.keys(editSelectedAccess[org]).length) delete editSelectedAccess[org];
             chip.remove();
             if (!staleItems.children.length) staleAlert.classList.add('d-none');
             renderAssemblySelector(containerEl, editSelectedAccess, onUpdate);
@@ -1021,7 +1057,13 @@
         if (!src?.access) return;
         Object.keys(editSelectedAccess).forEach(k => delete editSelectedAccess[k]);
         Object.keys(src.access).forEach(org => {
-          if (Array.isArray(src.access[org])) editSelectedAccess[org] = [...src.access[org]];
+          const d = src.access[org];
+          if (Array.isArray(d)) {
+            editSelectedAccess[org] = {};
+            d.forEach(asm => { editSelectedAccess[org][asm] = ['*']; });
+          } else if (d && typeof d === 'object') {
+            editSelectedAccess[org] = { ...d };
+          }
         });
         renderAssemblySelector(containerEl, editSelectedAccess, onUpdate);
         onUpdate();

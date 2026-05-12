@@ -51,6 +51,7 @@
         <form method="POST" id="blastForm">
             <input type="hidden" name="context_organism" value="<?= htmlspecialchars($context_organism) ?>">
             <input type="hidden" name="context_assembly" value="<?= htmlspecialchars($context_assembly) ?>">
+            <input type="hidden" name="context_gene_set" value="<?= htmlspecialchars($context_gene_set) ?>">
             <input type="hidden" name="context_group" value="<?= htmlspecialchars($context_group) ?>">
             <input type="hidden" name="organism" value="">
             <input type="hidden" name="assembly" value="">
