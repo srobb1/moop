@@ -12,11 +12,11 @@
  *
  * @param string $feature_uniquename - The feature uniquename to start from
  * @param string $dbFile - Path to SQLite database
- * @param array $genome_ids - Optional: Array of genome IDs to filter results (empty = no filtering)
+ * @param array $gene_set_ids - Optional: Array of genome IDs to filter results (empty = no filtering)
  * @return array - Array of features: [self, parent, grandparent, ...]
  */
-function getAncestors($feature_uniquename, $dbFile, $genome_ids = []) {
-    $feature = getFeatureByUniquename($feature_uniquename, $dbFile, $genome_ids);
+function getAncestors($feature_uniquename, $dbFile, $gene_set_ids = []) {
+    $feature = getFeatureByUniquename($feature_uniquename, $dbFile, $gene_set_ids);
     
     if (empty($feature)) {
         return [];
@@ -25,7 +25,7 @@ function getAncestors($feature_uniquename, $dbFile, $genome_ids = []) {
     $ancestors = [$feature];
     
     if ($feature['parent_feature_id']) {
-        $parent_ancestors = getAncestorsByFeatureId($feature['parent_feature_id'], $dbFile, $genome_ids);
+        $parent_ancestors = getAncestorsByFeatureId($feature['parent_feature_id'], $dbFile, $gene_set_ids);
         $ancestors = array_merge($ancestors, $parent_ancestors);
     }
     
@@ -39,11 +39,11 @@ function getAncestors($feature_uniquename, $dbFile, $genome_ids = []) {
  *
  * @param int $feature_id - The feature ID to start from
  * @param string $dbFile - Path to SQLite database
- * @param array $genome_ids - Optional: Array of genome IDs to filter results
+ * @param array $gene_set_ids - Optional: Array of genome IDs to filter results
  * @return array - Array of ancestor features
  */
-function getAncestorsByFeatureId($feature_id, $dbFile, $genome_ids = []) {
-    $feature = getParentFeature($feature_id, $dbFile, $genome_ids);
+function getAncestorsByFeatureId($feature_id, $dbFile, $gene_set_ids = []) {
+    $feature = getParentFeature($feature_id, $dbFile, $gene_set_ids);
     
     if (empty($feature)) {
         return [];
@@ -52,7 +52,7 @@ function getAncestorsByFeatureId($feature_id, $dbFile, $genome_ids = []) {
     $ancestors = [$feature];
     
     if ($feature['parent_feature_id']) {
-        $parent_ancestors = getAncestorsByFeatureId($feature['parent_feature_id'], $dbFile, $genome_ids);
+        $parent_ancestors = getAncestorsByFeatureId($feature['parent_feature_id'], $dbFile, $gene_set_ids);
         $ancestors = array_merge($ancestors, $parent_ancestors);
     }
     
@@ -66,17 +66,17 @@ function getAncestorsByFeatureId($feature_id, $dbFile, $genome_ids = []) {
  *
  * @param int $feature_id - The parent feature ID
  * @param string $dbFile - Path to SQLite database
- * @param array $genome_ids - Optional: Array of genome IDs to filter results (empty = no filtering)
+ * @param array $gene_set_ids - Optional: Array of genome IDs to filter results (empty = no filtering)
  * @return array - Flat array of all children and descendants
  */
-function getChildren($feature_id, $dbFile, $genome_ids = []) {
+function getChildren($feature_id, $dbFile, $gene_set_ids = []) {
     $children = [];
     
-    $results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);
+    $results = getChildrenByFeatureId($feature_id, $dbFile, $gene_set_ids);
     
     foreach ($results as $row) {
         $children[] = $row;
-        $child_descendants = getChildren($row['feature_id'], $dbFile, $genome_ids);
+        $child_descendants = getChildren($row['feature_id'], $dbFile, $gene_set_ids);
         $children = array_merge($children, $child_descendants);
     }
     return $children;
@@ -90,14 +90,14 @@ function getChildren($feature_id, $dbFile, $genome_ids = []) {
  *
  * @param int $feature_id - The parent feature ID
  * @param string $dbFile - Path to SQLite database
- * @param array $genome_ids - Optional: Array of genome IDs to filter results
+ * @param array $gene_set_ids - Optional: Array of genome IDs to filter results
  * @return array - Array of children, each with 'grandchildren' key
  */
-function getChildrenHierarchical($feature_id, $dbFile, $genome_ids = []) {
-    $results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);
+function getChildrenHierarchical($feature_id, $dbFile, $gene_set_ids = []) {
+    $results = getChildrenByFeatureId($feature_id, $dbFile, $gene_set_ids);
     
     foreach ($results as &$child) {
-        $child['grandchildren'] = getChildrenHierarchical($child['feature_id'], $dbFile, $genome_ids);
+        $child['grandchildren'] = getChildrenHierarchical($child['feature_id'], $dbFile, $gene_set_ids);
     }
     
     return $results;
@@ -213,10 +213,10 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
  *
  * @param array $feature_ids - Array of feature IDs to fetch annotations for
  * @param string $dbFile - Path to SQLite database
- * @param array $genome_ids - Optional: Array of genome IDs to filter results (empty = no filtering)
+ * @param array $gene_set_ids - Optional: Array of genome IDs to filter results (empty = no filtering)
  * @return array - Organized as [$feature_id => [$annotation_type => [results]]]
  */
-function getAllAnnotationsForFeatures($feature_ids, $dbFile, $genome_ids = []) {
+function getAllAnnotationsForFeatures($feature_ids, $dbFile, $gene_set_ids = []) {
     if (empty($feature_ids)) {
         return [];
     }
@@ -227,19 +227,20 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile, $genome_ids = []) {
     $where_clause = "f.feature_id IN ($placeholders)";
     $params = $feature_ids;
     
-    if (!empty($genome_ids)) {
-        $genome_placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
-        $where_clause .= " AND f.genome_id IN ($genome_placeholders)";
-        $params = array_merge($params, $genome_ids);
+    if (!empty($gene_set_ids)) {
+        $gene_set_placeholders = implode(',', array_fill(0, count($gene_set_ids), '?'));
+        $where_clause .= " AND f.gene_set_id IN ($gene_set_placeholders)";
+        $params = array_merge($params, $gene_set_ids);
     }
-    
-    $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_type, 
-              a.annotation_accession, a.annotation_description, 
-              fa.score, fa.date, 
+
+    $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_type,
+              a.annotation_accession, a.annotation_description,
+              fa.score, fa.date,
               ans.annotation_source_name, ans.annotation_accession_url, ans.annotation_type
-        FROM annotation a, feature f, feature_annotation fa, annotation_source ans, genome g, organism o
+        FROM annotation a, feature f, feature_annotation fa, annotation_source ans, gene_set gs, genome g, organism o
         WHERE f.organism_id = o.organism_id
-          AND f.genome_id = g.genome_id
+          AND f.gene_set_id = gs.gene_set_id
+          AND gs.genome_id = g.genome_id
           AND ans.annotation_source_id = a.annotation_source_id
           AND f.feature_id = fa.feature_id
           AND fa.annotation_id = a.annotation_id
@@ -277,8 +278,8 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile, $genome_ids = []) {
  * @param bool $is_last - Internal use for recursion
  * @return string - HTML string with nested ul/li tree structure
  */
-function generateTreeHTML($feature_id, $dbFile, $all_annotations = [], $analysis_order = [], $prefix = '', $is_last = true, $genome_ids = []) {
-    $results = getChildrenByFeatureId($feature_id, $dbFile, $genome_ids);
+function generateTreeHTML($feature_id, $dbFile, $all_annotations = [], $analysis_order = [], $prefix = '', $is_last = true, $gene_set_ids = []) {
+    $results = getChildrenByFeatureId($feature_id, $dbFile, $gene_set_ids);
 
     if (empty($results)) {
         return '';
@@ -340,7 +341,7 @@ function generateTreeHTML($feature_id, $dbFile, $all_annotations = [], $analysis
         }
         
         // Recursive call for nested children
-        $html .= generateTreeHTML($child_feature_id, $dbFile, $all_annotations, $analysis_order, $prefix, $is_last_child, $genome_ids);
+        $html .= generateTreeHTML($child_feature_id, $dbFile, $all_annotations, $analysis_order, $prefix, $is_last_child, $gene_set_ids);
         $html .= "</li>";
     }
     $html .= "</ul>";
