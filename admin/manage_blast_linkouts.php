@@ -100,7 +100,7 @@ foreach ($all_orgs as $org_name => $assemblies) {
     }
 }
 
-// Build feature_coords.tsv status for each JBrowse-registered assembly
+// Build feature_coords.tsv status for each JBrowse-registered assembly, per gene set
 $feature_coord_status = [];
 $assemblies_meta_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
 if (is_dir($assemblies_meta_dir)) {
@@ -111,16 +111,21 @@ if (is_dir($assemblies_meta_dir)) {
         $asm = $jd['assemblyId'] ?? '';
         if ($org === '' || $asm === '') continue;
         $asm_path = $organisms_dir . '/' . $org . '/' . $asm;
-        $tsv      = $asm_path . '/feature_coords.tsv';
-        $gff      = $asm_path . '/genomic.gff';
-        $feature_coord_status[] = [
-            'organism'     => $org,
-            'assembly'     => $asm,
-            'has_tsv'      => file_exists($tsv),
-            'has_gff'      => file_exists($gff),
-            'tsv_modified' => file_exists($tsv) ? date('Y-m-d H:i', filemtime($tsv)) : null,
-            'tsv_lines'    => file_exists($tsv) ? count(file($tsv, FILE_SKIP_EMPTY_LINES)) : 0,
-        ];
+        if (!is_dir($asm_path)) continue;
+        foreach (glob($asm_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
+            $gene_set = basename($gs_dir);
+            $tsv = $gs_dir . '/feature_coords.tsv';
+            $gff = $gs_dir . '/genomic.gff';
+            $feature_coord_status[] = [
+                'organism'     => $org,
+                'assembly'     => $asm,
+                'gene_set'     => $gene_set,
+                'has_tsv'      => file_exists($tsv),
+                'has_gff'      => file_exists($gff),
+                'tsv_modified' => file_exists($tsv) ? date('Y-m-d H:i', filemtime($tsv)) : null,
+                'tsv_lines'    => file_exists($tsv) ? count(file($tsv, FILE_SKIP_EMPTY_LINES)) : 0,
+            ];
+        }
     }
 }
 

@@ -23,14 +23,17 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $organism = trim($_POST['organism'] ?? '');
 $assembly = trim($_POST['assembly'] ?? '');
+$gene_set = trim($_POST['gene_set'] ?? 'v1');
 
 if (empty($organism) || empty($assembly)) {
     echo json_encode(['success' => false, 'error' => 'Organism and assembly are required']);
     exit;
 }
 
-if (!preg_match('/^[A-Za-z0-9_\-\.]+$/', $organism) || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $assembly)) {
-    echo json_encode(['success' => false, 'error' => 'Invalid organism or assembly name']);
+if (!preg_match('/^[A-Za-z0-9_\-\.]+$/', $organism)
+ || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $assembly)
+ || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $gene_set)) {
+    echo json_encode(['success' => false, 'error' => 'Invalid organism, assembly, or gene set name']);
     exit;
 }
 
@@ -102,7 +105,7 @@ if (!file_exists("$target_fasta.fai")) {
 
 // ── Step 4: GFF (optional) ───────────────────────────────────────────────────
 
-$source_gff = "$source_dir/genomic.gff";
+$source_gff = "$source_dir/$gene_set/genomic.gff";
 if (file_exists($source_gff)) {
     $target_gff = "$genomes_dir/annotations.gff3";
     $gz_file    = "$genomes_dir/annotations.gff3.gz";
@@ -213,11 +216,19 @@ if (file_put_contents($assembly_json, json_encode($assembly_data, JSON_PRETTY_PR
 $log[] = "Created assembly definition: {$organism}_{$assembly}.json";
 
 // ── Step 5b: Generate feature coordinate index for BLAST linkouts ────────────
+// Generate for every gene_set subdir that has a genomic.gff.
 require_once __DIR__ . '/../../lib/blast_functions.php';
-if (generateFeatureCoordsIndex($source_dir)) {
-    $log[] = "Generated feature coordinate index (feature_coords.tsv)";
+$gs_count = 0;
+foreach (glob("$source_dir/*/genomic.gff") ?: [] as $gs_gff) {
+    $gs_path = dirname($gs_gff);
+    if (generateFeatureCoordsIndex($gs_path)) {
+        $gs_count++;
+    }
+}
+if ($gs_count > 0) {
+    $log[] = "Generated feature coordinate index (feature_coords.tsv) for $gs_count gene set(s)";
 } else {
-    $log[] = "Note: feature_coords.tsv not generated (genomic.gff may be absent)";
+    $log[] = "Note: feature_coords.tsv not generated (no gene set genomic.gff found)";
 }
 
 // ── Step 6: Create primary Genes track JSON ──────────────────────────────────

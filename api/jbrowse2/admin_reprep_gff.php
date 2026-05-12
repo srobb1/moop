@@ -9,6 +9,7 @@
  * POST params:
  *   organism          - organism directory name (e.g. Nematostella_vectensis)
  *   assembly          - assembly ID             (e.g. GCA_033964005.1)
+ *   gene_set          - gene set name           [default: v1]
  *   text_index        - 1 to also run jbrowse text-index after tabix  [optional]
  *   attributes        - comma-separated attributes for text-index      [default: Name,ID]
  */
@@ -24,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $organism   = trim($_POST['organism']   ?? '');
 $assembly   = trim($_POST['assembly']   ?? '');
+$gene_set   = trim($_POST['gene_set']   ?? 'v1');
 $do_index   = !empty($_POST['text_index']);
 $attributes = trim($_POST['attributes'] ?? 'Name,ID');
 
@@ -32,8 +34,10 @@ if (empty($organism) || empty($assembly)) {
     exit;
 }
 
-if (!preg_match('/^[A-Za-z0-9_\-\.]+$/', $organism) || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $assembly)) {
-    echo json_encode(['success' => false, 'error' => 'Invalid organism or assembly name']);
+if (!preg_match('/^[A-Za-z0-9_\-\.]+$/', $organism)
+ || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $assembly)
+ || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $gene_set)) {
+    echo json_encode(['success' => false, 'error' => 'Invalid organism, assembly, or gene set name']);
     exit;
 }
 
@@ -47,7 +51,7 @@ $organisms_dir = $config->getPath('organism_data');
 $site_path     = $config->getPath('site_path');
 $site          = $config->getString('site', 'moop');
 
-$source_gff  = "$organisms_dir/$organism/$assembly/genomic.gff";
+$source_gff  = "$organisms_dir/$organism/$assembly/$gene_set/genomic.gff";
 $genomes_dir = "$site_path/data/genomes/$organism/$assembly";
 $target_gff  = "$genomes_dir/annotations.gff3";
 $gz_file     = "$genomes_dir/annotations.gff3.gz";
