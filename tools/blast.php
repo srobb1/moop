@@ -87,7 +87,8 @@ $selected_assembly_name = $source_selection['selected_assembly_name'];
 // Extract context values for backward compatibility
 $context_organism = $context['organism'];
 $context_assembly = $context['assembly'];
-$context_group = $context['group'];
+$context_gene_set = $context['gene_set'];
+$context_group    = $context['group'];
 
 // Handle evalue with custom option
 $evalue = trim($_POST['evalue'] ?? '1e-3');
@@ -121,20 +122,18 @@ $blast_options = [];
 
 // If search is submitted
 if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
-    // Parse selected_source (format: organism|assembly)
+    // Parse selected_source (format: organism|assembly|gene_set)
     $source_parts = explode('|', $selected_source);
-    if (count($source_parts) === 2) {
-        $selected_organism = $source_parts[0];
-        $selected_assembly = $source_parts[1];
-    } else {
-        $selected_organism = '';
-        $selected_assembly = '';
-    }
-    
+    $selected_organism = $source_parts[0] ?? '';
+    $selected_assembly = $source_parts[1] ?? '';
+    $selected_gene_set = $source_parts[2] ?? '';
+
     // Find the selected source to verify access
     $selected_source_obj = null;
     foreach ($accessible_sources as $source) {
-        if ($source['assembly'] === $selected_assembly && $source['organism'] === $selected_organism) {
+        if ($source['organism'] === $selected_organism &&
+            $source['assembly'] === $selected_assembly &&
+            ($source['gene_set'] ?? '') === $selected_gene_set) {
             $selected_source_obj = $source;
             break;
         }
@@ -233,6 +232,7 @@ if (!empty($selected_source_obj) && !empty($selected_db_obj)) {
         'site'           => $site,
         'organism'       => $selected_organism,
         'assembly'       => $selected_assembly,
+        'gene_set'       => $selected_gene_set ?? '',
         'is_genome_db'   => $is_genome_db,
         'has_sqlite'     => $has_sqlite,
         'has_jbrowse'    => $has_jbrowse,
@@ -247,7 +247,7 @@ $databasesByAssembly = [];
 foreach ($sources_by_group as $group => $organisms) {
     foreach ($organisms as $organism => $assemblies) {
         foreach ($assemblies as $source) {
-            $key = $source['organism'] . '|' . $source['assembly'];
+            $key = $source['organism'] . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '');
             $databasesByAssembly[$key] = getBlastDatabases($source['path']);
         }
     }
@@ -279,7 +279,9 @@ $data = [
     'sources_by_group' => $sources_by_group,
     'context_organism' => $context_organism,
     'context_assembly' => $context_assembly,
-    'context_group' => $context_group,
+    'context_gene_set' => $context_gene_set,
+    'context_group'    => $context_group,
+    'selected_gene_set' => $selected_gene_set ?? '',
     'display_name' => $display_name,
     'filter_organisms' => $filter_organisms,
     'filter_organisms_string' => $filter_organisms_string,

@@ -31,7 +31,7 @@ function getFeatureById($feature_id, $dbFile, $gene_set_ids = []) {
         $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description,
                          f.feature_type, f.parent_feature_id, f.gene_set_id, f.organism_id,
                          o.genus, o.species, o.subtype, o.common_name, o.taxon_id,
-                         g.genome_accession, g.genome_name
+                         g.genome_accession, g.genome_name, gs.gene_set_name
                   FROM feature f
                   JOIN organism o ON f.organism_id = o.organism_id
                   JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
@@ -42,7 +42,7 @@ function getFeatureById($feature_id, $dbFile, $gene_set_ids = []) {
         $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description,
                          f.feature_type, f.parent_feature_id, f.gene_set_id, f.organism_id,
                          o.genus, o.species, o.subtype, o.common_name, o.taxon_id,
-                         g.genome_accession, g.genome_name
+                         g.genome_accession, g.genome_name, gs.gene_set_name
                   FROM feature f
                   JOIN organism o ON f.organism_id = o.organism_id
                   JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
@@ -70,7 +70,7 @@ function getFeatureByUniquename($feature_uniquename, $dbFile, $gene_set_ids = []
         $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description,
                          f.feature_type, f.parent_feature_id, f.gene_set_id, f.organism_id,
                          o.genus, o.species, o.subtype, o.common_name, o.taxon_id,
-                         g.genome_accession, g.genome_name
+                         g.genome_accession, g.genome_name, gs.gene_set_name
                   FROM feature f
                   JOIN organism o ON f.organism_id = o.organism_id
                   JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
@@ -81,7 +81,7 @@ function getFeatureByUniquename($feature_uniquename, $dbFile, $gene_set_ids = []
         $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description,
                          f.feature_type, f.parent_feature_id, f.gene_set_id, f.organism_id,
                          o.genus, o.species, o.subtype, o.common_name, o.taxon_id,
-                         g.genome_accession, g.genome_name
+                         g.genome_accession, g.genome_name, gs.gene_set_name
                   FROM feature f
                   JOIN organism o ON f.organism_id = o.organism_id
                   JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id

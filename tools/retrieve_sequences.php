@@ -98,12 +98,16 @@ $source_selection = prepareSourceSelection(
 );
 
 // Extract selected values
-$filter_organisms = $source_selection['filter_organisms'];
-$selected_source = $source_selection['selected_source'];
-$selected_organism = $source_selection['selected_organism'];
+$filter_organisms            = $source_selection['filter_organisms'];
+$selected_source             = $source_selection['selected_source'];
+$selected_organism           = $source_selection['selected_organism'];
 $selected_assembly_accession = $source_selection['selected_assembly_accession'];
-$selected_assembly_name = $source_selection['selected_assembly_name'];
-$should_auto_select = $source_selection['should_auto_select'];
+$selected_assembly_name      = $source_selection['selected_assembly_name'];
+$should_auto_select          = $source_selection['should_auto_select'];
+
+// Extract gene_set from 3-part selected_source (organism|assembly|gene_set)
+$source_parts        = explode('|', $selected_source);
+$selected_gene_set   = $source_parts[2] ?? '';
 
 // If sequence IDs are provided, extract ALL sequence types
 if (!empty($sequence_ids_provided)) {
@@ -114,8 +118,9 @@ if (!empty($sequence_ids_provided)) {
     // Works with either accession or genome_name
     $fasta_source = null;
     foreach ($accessible_sources as $source) {
-        if ($source['organism'] === $selected_organism && 
-            ($source['assembly'] === $selected_assembly_accession || $source['genome_name'] === $selected_assembly_name)) {
+        if ($source['organism'] === $selected_organism &&
+            ($source['assembly'] === $selected_assembly_accession || $source['genome_name'] === $selected_assembly_name) &&
+            ($selected_gene_set === '' || ($source['gene_set'] ?? '') === $selected_gene_set)) {
             $fasta_source = $source;
             break;
         }
@@ -311,7 +316,8 @@ $data = [
     'uniquenames' => $uniquenames,
     'found_ids' => $found_ids,
     'should_scroll_to_results' => $should_scroll_to_results,
-    'selected_source' => $selected_source,
+    'selected_source'   => $selected_source,
+    'selected_gene_set' => $selected_gene_set,
     'sample_feature_ids' => $config->getArray('sample_feature_ids', []),
     'parent_to_children' => $parent_to_children ?? [],
     'page_styles' => [

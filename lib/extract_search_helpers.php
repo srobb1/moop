@@ -64,11 +64,12 @@ function parseOrganismParameter($organisms_param, $context_organism = '') {
  */
 function parseContextParameters() {
     return [
-        'organism' => trim($_GET['context_organism'] ?? $_POST['context_organism'] ?? $_GET['organism'] ?? $_POST['organism'] ?? ''),
-        'assembly' => trim($_GET['context_assembly'] ?? $_POST['context_assembly'] ?? $_GET['assembly'] ?? $_POST['assembly'] ?? ''),
-        'group' => trim($_GET['context_group'] ?? $_POST['context_group'] ?? $_GET['group'] ?? $_POST['group'] ?? ''),
+        'organism'     => trim($_GET['context_organism'] ?? $_POST['context_organism'] ?? $_GET['organism']  ?? $_POST['organism']  ?? ''),
+        'assembly'     => trim($_GET['context_assembly'] ?? $_POST['context_assembly'] ?? $_GET['assembly']  ?? $_POST['assembly']  ?? ''),
+        'gene_set'     => trim($_GET['context_gene_set'] ?? $_POST['context_gene_set'] ?? $_GET['gene_set'] ?? $_POST['gene_set']  ?? ''),
+        'group'        => trim($_GET['context_group']    ?? $_POST['context_group']    ?? $_GET['group']     ?? $_POST['group']     ?? ''),
         'display_name' => trim($_GET['display_name'] ?? $_POST['display_name'] ?? ''),
-        'context_page' => trim($_GET['context_page'] ?? $_POST['context_page'] ?? '')
+        'context_page' => trim($_GET['context_page']  ?? $_POST['context_page']  ?? ''),
     ];
 }
 
@@ -433,30 +434,39 @@ function determineSelectedSource($context, $filter_organisms, $accessible_source
         'selected_assembly_name' => ''
     ];
     
-    // Case 1: Both organism and assembly explicitly specified
+    // Case 1: Both organism and assembly explicitly specified — find first matching gene_set
     if (!empty($selected_organism) && !empty($selected_assembly_accession)) {
-        $result['selected_source'] = $selected_organism . '|' . $selected_assembly_accession;
+        foreach ($accessible_sources as $source) {
+            if ($source['organism'] === $selected_organism &&
+                ($source['assembly'] === $selected_assembly_accession ||
+                 $source['genome_accession'] === $selected_assembly_accession)) {
+                $result['selected_source'] = $selected_organism . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '');
+                return $result;
+            }
+        }
+        // Fallback if source not found (no gene_set info available)
+        $result['selected_source'] = $selected_organism . '|' . $selected_assembly_accession . '|';
         return $result;
     }
-    
-    // Case 2: Only organism specified (select its first assembly)
+
+    // Case 2: Only organism specified (select its first assembly + gene_set)
     if (!empty($selected_organism)) {
         foreach ($accessible_sources as $source) {
             if ($source['organism'] === $selected_organism) {
-                $result['selected_source'] = $selected_organism . '|' . $source['assembly'];
+                $result['selected_source'] = $selected_organism . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '');
                 $result['selected_assembly_accession'] = $source['assembly'];
                 $result['selected_assembly_name'] = $source['genome_name'] ?? $source['assembly'];
                 return $result;
             }
         }
     }
-    
-    // Case 3: Group specified (select first organism from group, then its first assembly)
+
+    // Case 3: Group specified (select first organism from group, then its first assembly + gene_set)
     if (!empty($context['group']) && !empty($filter_organisms)) {
         $first_organism = reset($filter_organisms);
         foreach ($accessible_sources as $source) {
             if ($source['organism'] === $first_organism && in_array($context['group'], $source['groups'] ?? [])) {
-                $result['selected_source'] = $first_organism . '|' . $source['assembly'];
+                $result['selected_source'] = $first_organism . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '');
                 $result['selected_organism'] = $first_organism;
                 $result['selected_assembly_accession'] = $source['assembly'];
                 $result['selected_assembly_name'] = $source['genome_name'] ?? $source['assembly'];
@@ -464,13 +474,13 @@ function determineSelectedSource($context, $filter_organisms, $accessible_source
             }
         }
     }
-    
-    // Case 4: Organisms filter list specified (select first organism, then its first assembly)
+
+    // Case 4: Organisms filter list specified (select first organism, then its first assembly + gene_set)
     if (!empty($filter_organisms)) {
         $first_organism = reset($filter_organisms);
         foreach ($accessible_sources as $source) {
             if ($source['organism'] === $first_organism) {
-                $result['selected_source'] = $first_organism . '|' . $source['assembly'];
+                $result['selected_source'] = $first_organism . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '');
                 $result['selected_organism'] = $first_organism;
                 $result['selected_assembly_accession'] = $source['assembly'];
                 $result['selected_assembly_name'] = $source['genome_name'] ?? $source['assembly'];

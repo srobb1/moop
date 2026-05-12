@@ -73,19 +73,14 @@ $organism_info = $organism_context['info'];
 // Verify and get database path
 $db = verifyOrganismDatabase($organism_name, $organism_data);
 
-// Get accessible assemblies and convert to genome IDs for permission-based filtering
-$group_data = getGroupData();
-$accessible_assemblies = [];
-foreach ($group_data as $data) {
-    if ($data['organism'] === $organism_name && has_assembly_access($organism_name, $data['assembly'])) {
-        $accessible_assemblies[] = $data['assembly'];
-    }
-}
-$accessible_genome_ids = getAccessibleGenomeIds($organism_name, $accessible_assemblies, $db);
+// Get accessible gene_sets for permission-based DB filtering
+$sources_by_group      = getAccessibleAssemblies($organism_name);
+$accessible_sources    = flattenSourcesList($sources_by_group);
+$accessible_gene_set_ids = array_values(array_filter(array_column($accessible_sources, 'gene_set_id')));
 
-// Security: Verify user has access to at least one assembly
-if (empty($accessible_genome_ids)) {
-    die("Error: No accessible assemblies found for this organism.");
+// Security: Verify user has access to at least one gene_set for this organism
+if (empty($accessible_gene_set_ids)) {
+    die("Error: No accessible gene sets found for this organism.");
 }
 
 // Load annotation configuration using helper
@@ -124,7 +119,7 @@ if (!empty($organism_info['feature_types']['parents'])) {
 }
 
 // Get ancestors for the feature
-$ancestors = getAncestors($uniquename, $db, $accessible_genome_ids);
+$ancestors = getAncestors($uniquename, $db, $accessible_gene_set_ids);
 
 // Save the highest ancestor with type in $parents in these variables
 [$ancestor_feature_id, $ancestor_feature_uniquename, $ancestor_feature_type] = ['', '', ''];
@@ -151,7 +146,7 @@ if (count($ancestors) == 1) {
 }
 
 // Performing SQL query to get info associated with found Parent ID
-$row = getFeatureById($ancestor_feature_id, $db, $accessible_genome_ids);
+$row = getFeatureById($ancestor_feature_id, $db, $accessible_gene_set_ids);
 
 // Get all info about Highest Parent
 if (empty($row)) { 
@@ -169,12 +164,22 @@ $species_subtype = $row['subtype'];
 $type = $row['feature_type'];
 $common_name = $row['common_name'];
 $genome_accession = $row['genome_accession'];
-$genome_name = $row['genome_name'];
+$genome_name      = $row['genome_name'];
+$feature_gene_set_id = $row['gene_set_id'];
+
+// Resolve gene_set name from the accessible sources list
+$gene_set_name = $row['gene_set_name'] ?? 'v1';
+
+// Assembly-level dir (genome.fa lives here, not in gene_set subdir)
+$assembly_dir_base = $config->getPath('organism_data') . '/' . $organism_name . '/' . $genome_accession;
+
+// Gene-set-level dir (GFF, FASTA sequences live here)
+$gene_set_dir = $assembly_dir_base . '/' . $gene_set_name;
 
 // Look up feature coordinates and build gene model from GFF (only when file exists and is non-empty)
 $feature_loc   = null;
 $gene_model    = null;
-$gff_file      = $config->getPath('organism_data') . '/' . $organism_name . '/' . $genome_accession . '/genomic.gff';
+$gff_file      = "$gene_set_dir/genomic.gff";
 $gff_available = file_exists($gff_file) && filesize($gff_file) > 0;
 
 if ($gff_available) {
@@ -266,18 +271,17 @@ if ($gff_available) {
     }
 }
 
-// Check whether genomic sequence fetch is available for the SVG click-to-sequence feature
-$assembly_dir         = $config->getPath('organism_data') . '/' . $organism_name . '/' . $genome_accession;
-$genome_seq_available = file_exists("$assembly_dir/genome.fa") && file_exists("$assembly_dir/genome.fa.fai");
+// Check whether genomic sequence fetch is available (genome.fa stays at assembly level)
+$genome_seq_available = file_exists("$assembly_dir_base/genome.fa") && file_exists("$assembly_dir_base/genome.fa.fai");
 
 $family_feature_ids = [$feature_id];
 $retrieve_these_seqs = [$feature_uniquename];
 
 // Get children with hierarchical structure (for proper nesting)
-$children_hierarchical = getChildrenHierarchical($feature_id, $db, $accessible_genome_ids);
+$children_hierarchical = getChildrenHierarchical($feature_id, $db, $accessible_gene_set_ids);
 
 // Get all children flat for sequence retrieval (keeping getChildren for backwards compatibility)
-$children = getChildren($feature_id, $db, $accessible_genome_ids);
+$children = getChildren($feature_id, $db, $accessible_gene_set_ids);
 
 // Optimize: Get ALL annotations for parent and all children in ONE query
 $all_feature_ids = [$feature_id];
@@ -297,26 +301,12 @@ $gene_name = implode(",", $retrieve_these_seqs);
 
 // Handle download request if present (BEFORE rendering page)
 if ($download_file_flag && !empty($sequence_type)) {
-    $organism_dir = "$organism_data/$organism_name";
-    $dirs = array_diff(scandir($organism_dir), ['.', '..']);
-    $assembly_dir = null;
-    
-    foreach ($dirs as $item) {
-        $full_path = "$organism_dir/$item";
-        if (is_dir($full_path) && !in_array(basename($full_path), ['fasta_files'])) {
-            $assembly_dir = $full_path;
-            break;
-        }
-    }
-    
-    if (!empty($assembly_dir)) {
-        // Use the same extraction function as retrieve_sequences
+    if (is_dir($gene_set_dir)) {
         $feature_ids = array_map('trim', explode(',', $gene_name));
-        $extract_result = extractSequencesForAllTypes($assembly_dir, $feature_ids, $sequence_types, $organism_name, $genome_accession);
+        $extract_result = extractSequencesForAllTypes($gene_set_dir, $feature_ids, $sequence_types, $organism_name, $genome_accession);
         $displayed_content = $extract_result['content'];
-        
+
         if (!empty($displayed_content) && isset($displayed_content[$sequence_type])) {
-            // Clear output buffer if one was started
             if (ob_get_level()) {
                 ob_end_clean();
             }
@@ -341,6 +331,7 @@ echo render_display_page(
         'common_name' => $common_name,
         'genome_accession' => $genome_accession,
         'genome_name' => $genome_name,
+        'gene_set_name' => $gene_set_name,
         'children' => $children,
         'children_hierarchical' => $children_hierarchical,
         'db' => $db,
@@ -368,6 +359,7 @@ echo render_display_page(
             "const geneModelData = " . json_encode($gene_model) . ";",
             "const moopOrganism = '" . addslashes($organism_name) . "';",
             "const moopAssembly = '" . addslashes($genome_accession) . "';",
+            "const moopGeneSet = '" . addslashes($gene_set_name) . "';",
             "const moopSite = '/" . addslashes($site) . "';",
             "const siteTitle = '" . addslashes($siteTitle) . "';",
             "const genomeSequenceAvailable = " . ($genome_seq_available ? 'true' : 'false') . ";"
