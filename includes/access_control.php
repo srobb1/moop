@@ -152,6 +152,41 @@ function is_public_assembly($organism_name, $assembly_name) {
 }
 
 /**
+ * Check if a specific gene_set is public (in PUBLIC group)
+ *
+ * @param string $organism_name
+ * @param string $assembly_name
+ * @param string $gene_set
+ * @return bool
+ */
+if (!function_exists('is_public_gene_set')) {
+function is_public_gene_set($organism_name, $assembly_name, $gene_set) {
+    $config = ConfigManager::getInstance();
+    $metadata_path = $config->getPath('metadata_path');
+
+    $groups_file = "$metadata_path/organism_assembly_groups.json";
+    if (!file_exists($groups_file)) {
+        return false;
+    }
+
+    $groups_data = json_decode(file_get_contents($groups_file), true);
+    if (!$groups_data) {
+        return false;
+    }
+
+    foreach ($groups_data as $entry) {
+        if ($entry['organism'] === $organism_name &&
+            $entry['assembly'] === $assembly_name &&
+            ($entry['gene_set'] ?? '') === $gene_set) {
+            return isset($entry['groups']) && in_array('PUBLIC', $entry['groups']);
+        }
+    }
+
+    return false;
+}
+}
+
+/**
  * Check if a group has at least one public assembly
  * 
  * @param string $group_name The group name
@@ -259,9 +294,37 @@ function has_assembly_access($organism_name, $assembly_name) {
     // Collaborators check their specific access list
     if (has_access('COLLABORATOR')) {
         $user_access = get_user_access();
-        if (isset($user_access[$organism_name]) && is_array($user_access[$organism_name]) && in_array($assembly_name, $user_access[$organism_name])) {
+        if (isset($user_access[$organism_name][$assembly_name])) {
             return true;
         }
+    }
+
+    return false;
+}
+}
+
+/**
+ * Check if user has access to a specific gene_set
+ *
+ * @param string $organism_name
+ * @param string $assembly_name
+ * @param string $gene_set
+ * @return bool
+ */
+if (!function_exists('has_gene_set_access')) {
+function has_gene_set_access($organism_name, $assembly_name, $gene_set) {
+    if (has_access('ADMIN') || has_access('IP_IN_RANGE')) {
+        return true;
+    }
+
+    if (is_public_gene_set($organism_name, $assembly_name, $gene_set)) {
+        return true;
+    }
+
+    if (has_access('COLLABORATOR')) {
+        $user_access = get_user_access();
+        $allowed = $user_access[$organism_name][$assembly_name] ?? [];
+        return in_array('*', $allowed) || in_array($gene_set, $allowed);
     }
 
     return false;
