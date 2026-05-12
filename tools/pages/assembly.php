@@ -155,7 +155,7 @@
                 $colorInfo = getColorClassOrStyle($file_info['color'] ?? '');
               ?>
               <div class="col-6 col-md-3">
-                <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&type=<?= urlencode($type) ?>" 
+                <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=<?= urlencode($file_info['gene_set'] ?? '') ?>&type=<?= urlencode($file_info['seq_type'] ?? $type) ?>"
                    class="btn <?= $colorInfo['class'] ?> w-100 py-4 fw-bold text-white"
                    style="border-radius: 0.75rem; font-size: 1rem; <?= $colorInfo['style'] ?>"
                    download>

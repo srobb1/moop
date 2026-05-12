@@ -16,6 +16,7 @@ session_start();
 $organism = trim($_GET['organism'] ?? '');
 $assembly = trim($_GET['assembly'] ?? '');
 $genome_directory = trim($_GET['genome_directory'] ?? '');
+$gene_set = trim($_GET['gene_set'] ?? '');
 $type = trim($_GET['type'] ?? '');
 
 include_once __DIR__ . '/../includes/config_init.php';
@@ -59,6 +60,11 @@ $assembly_dir = "$organism_data/$organism/$assembly";
 // If genome_directory is provided, use that instead
 if (!empty($genome_directory)) {
     $assembly_dir = "$organism_data/$organism/$genome_directory";
+}
+
+// If gene_set is provided, files live in a subdir of the assembly dir
+if (!empty($gene_set)) {
+    $assembly_dir = "$assembly_dir/$gene_set";
 }
 
 // Prevent path traversal: resolve the real path and confirm it stays within organism_data.

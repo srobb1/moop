@@ -251,25 +251,52 @@ function getAssemblyFastaFiles($organism_name, $assembly_name) {
     $sequence_types = $config->getSequenceTypes();
     $fasta_files = [];
     $assembly_dir = "$organism_data/$organism_name/$assembly_name";
-    
-    if (is_dir($assembly_dir)) {
-        $fasta_files_found = glob($assembly_dir . '/*.fa');
-        foreach ($fasta_files_found as $fasta_file) {
-            $filename = basename($fasta_file);
-            $relative_path = "$organism_name/$assembly_name/$filename";
-            
-            foreach ($sequence_types as $type => $config) {
-                if (strpos($filename, $config['pattern']) !== false) {
-                    $fasta_files[$type] = [
-                        'path' => $relative_path,
-                        'label' => $config['label'],
-                        'color' => $config['color']
-                    ];
-                    break;
+
+    if (!is_dir($assembly_dir)) {
+        return $fasta_files;
+    }
+
+    // genome.fa stays at assembly level (not in a gene_set subdir)
+    foreach ($sequence_types as $type => $seq_config) {
+        if (strpos($seq_config['pattern'], 'genome') !== false) {
+            if (file_exists("$assembly_dir/genome.fa")) {
+                $fasta_files[$type] = [
+                    'path'     => "$organism_name/$assembly_name/genome.fa",
+                    'label'    => $seq_config['label'],
+                    'color'    => $seq_config['color'],
+                    'gene_set' => '',
+                    'seq_type' => $type,
+                ];
+            }
+            break;
+        }
+    }
+
+    // protein/transcript/cds live in gene_set subdirs
+    $gene_set_dirs = glob("$assembly_dir/*", GLOB_ONLYDIR) ?: [];
+    $multi_gs = count($gene_set_dirs) > 1;
+    foreach ($gene_set_dirs as $gs_dir) {
+        $gene_set = basename($gs_dir);
+        foreach ($sequence_types as $type => $seq_config) {
+            if (strpos($seq_config['pattern'], 'genome') !== false) continue;
+            $matches = glob("$gs_dir/" . $seq_config['pattern']);
+            if (!empty($matches)) {
+                $key = $type . '.' . $gene_set;
+                $label = $seq_config['label'];
+                if ($multi_gs) {
+                    $label .= ' (' . $gene_set . ')';
                 }
+                $fasta_files[$key] = [
+                    'path'     => "$organism_name/$assembly_name/$gene_set/" . basename($matches[0]),
+                    'label'    => $label,
+                    'color'    => $seq_config['color'],
+                    'gene_set' => $gene_set,
+                    'seq_type' => $type,
+                ];
             }
         }
     }
+
     return $fasta_files;
 }
 

@@ -81,40 +81,52 @@ if ($has_prepopulated_sequences) {
         if (!is_dir($organism_dir)) {
             $sequence_errors[] = "Organism directory not found: $organism_name";
         } else {
-            // Find the assembly directory
-            $dirs = array_diff(scandir($organism_dir), ['.', '..']);
+            // Find the assembly directory — use $assembly_name if available, else scan
             $assembly_found = false;
-            
-            foreach ($dirs as $item) {
-                $full_path = "$organism_dir/$item";
-                if (is_dir($full_path) && !in_array(basename($full_path), ['fasta_files'])) {
-                    $assembly_dir = $full_path;
-                    $assembly_found = true;
-                    break;
+            $cur_assembly_name = $assembly_name ?? '';
+            if (!empty($cur_assembly_name) && is_dir("$organism_dir/$cur_assembly_name")) {
+                $assembly_dir = "$organism_dir/$cur_assembly_name";
+                $assembly_found = true;
+            } else {
+                $dirs = array_diff(scandir($organism_dir), ['.', '..']);
+                foreach ($dirs as $item) {
+                    $full_path = "$organism_dir/$item";
+                    if (is_dir($full_path) && !in_array(basename($full_path), ['fasta_files'])) {
+                        $assembly_dir = $full_path;
+                        $assembly_found = true;
+                        break;
+                    }
                 }
             }
-            
+
             if (!$assembly_found) {
                 $sequence_errors[] = "Assembly directory not found in: $organism_name";
             } elseif (!is_dir($assembly_dir)) {
                 $sequence_errors[] = "Assembly directory is not readable: " . basename($assembly_dir);
             } else {
-                // Look for FASTA files
+                // FASTAs live in gene_set subdirs; use $gene_set_name if set, else scan all subdirs
                 $fasta_files_found = false;
-                foreach ($sequence_types as $seq_type => $seq_config) {
-                    $files = glob("$assembly_dir/*{$seq_config['pattern']}");
-                    
-                    if (!empty($files)) {
-                        $fasta_files_found = true;
-                        $fasta_file = $files[0];
-                        $available_sequences[$seq_type] = [
-                            'file' => $fasta_file,
-                            'label' => $seq_config['label'],
-                            'sequences' => []
-                        ];
+                $cur_gene_set = $gene_set_name ?? '';
+                if (!empty($cur_gene_set) && is_dir("$assembly_dir/$cur_gene_set")) {
+                    $search_dirs = ["$assembly_dir/$cur_gene_set"];
+                } else {
+                    $search_dirs = glob("$assembly_dir/*", GLOB_ONLYDIR) ?: [];
+                }
+                foreach ($search_dirs as $gs_dir) {
+                    foreach ($sequence_types as $seq_type => $seq_config) {
+                        if (strpos($seq_config['pattern'], 'genome') !== false) continue;
+                        $files = glob("$gs_dir/*{$seq_config['pattern']}");
+                        if (!empty($files)) {
+                            $fasta_files_found = true;
+                            $available_sequences[$seq_type] = [
+                                'file'      => $files[0],
+                                'label'     => $seq_config['label'],
+                                'sequences' => []
+                            ];
+                        }
                     }
                 }
-                
+
                 if (!$fasta_files_found) {
                     $sequence_errors[] = "No FASTA sequence files found for: $organism_name";
                 }
