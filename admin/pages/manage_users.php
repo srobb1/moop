@@ -924,7 +924,7 @@
       const pw = document.getElementById('create-password').value;
       const pw2 = document.getElementById('create-password-confirm').value;
       const adm = document.getElementById('create-isAdmin').checked;
-      const hasAsm = Object.values(createSelectedAccess).some(a => a.length > 0);
+      const hasAsm = Object.keys(createSelectedAccess).some(org => Object.keys(createSelectedAccess[org] || {}).length > 0);
       if (!pw) { e.preventDefault(); alert('Password is required for new users.'); document.getElementById('create-password').focus(); return; }
       if (pw !== pw2) { e.preventDefault(); alert('Passwords do not match.'); document.getElementById('create-password-confirm').focus(); return; }
       if (!adm && !hasAsm) { e.preventDefault(); alert('Select at least one assembly, or check Admin for full access.'); }
@@ -1075,7 +1075,7 @@
       const pw = document.getElementById('modal-password').value;
       const pw2 = document.getElementById('modal-password-confirm').value;
       const adm = document.getElementById('modal-isAdmin').checked;
-      const hasAsm = Object.values(editSelectedAccess).some(a => a.length > 0);
+      const hasAsm = Object.keys(editSelectedAccess).some(org => Object.keys(editSelectedAccess[org] || {}).length > 0);
       if (pw && pw !== pw2) { e.preventDefault(); alert('Passwords do not match.'); document.getElementById('modal-password-confirm').focus(); return; }
       if (!adm && !hasAsm) { e.preventDefault(); alert('Select at least one assembly, or check Admin for full access.'); }
     });

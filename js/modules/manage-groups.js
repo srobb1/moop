@@ -228,6 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelButton = row.querySelector('.cancel-new-btn');
     const organism = row.getAttribute('data-organism');
     const assembly = row.getAttribute('data-assembly');
+    const geneSet  = row.getAttribute('data-gene-set') || 'v1';
     
     let selectedTags = [];
     
@@ -327,34 +328,25 @@ document.addEventListener('DOMContentLoaded', function() {
       const form = document.createElement('form');
       form.method = 'post';
       form.action = 'manage_groups.php';
-      
+
       const orgInput = document.createElement('input');
-      orgInput.type = 'hidden';
-      orgInput.name = 'organism';
-      orgInput.value = organism;
-      
+      orgInput.type = 'hidden'; orgInput.name = 'organism'; orgInput.value = organism;
       const asmInput = document.createElement('input');
-      asmInput.type = 'hidden';
-      asmInput.name = 'assembly';
-      asmInput.value = assembly;
-      
+      asmInput.type = 'hidden'; asmInput.name = 'assembly'; asmInput.value = assembly;
+      const gsInput = document.createElement('input');
+      gsInput.type = 'hidden'; gsInput.name = 'gene_set'; gsInput.value = geneSet;
       const groupsInput = document.createElement('input');
-      groupsInput.type = 'hidden';
-      groupsInput.name = 'groups';
-      groupsInput.value = selectedTags.join(', ');
-      
+      groupsInput.type = 'hidden'; groupsInput.name = 'groups'; groupsInput.value = selectedTags.join(', ');
       const addInput = document.createElement('input');
-      addInput.type = 'hidden';
-      addInput.name = 'add';
-      addInput.value = '1';
-      
+      addInput.type = 'hidden'; addInput.name = 'add'; addInput.value = '1';
+
       form.appendChild(orgInput);
       form.appendChild(asmInput);
+      form.appendChild(gsInput);
       form.appendChild(groupsInput);
       form.appendChild(addInput);
-      
+
       addCsrfToken(form);
-      
       document.body.appendChild(form);
       form.submit();
     });
@@ -376,34 +368,28 @@ document.addEventListener('DOMContentLoaded', function() {
       const row = button.closest('tr');
       const organism = row.getAttribute('data-organism');
       const assembly = row.getAttribute('data-assembly');
-      
-      if (confirm(`Delete entry for ${organism} / ${assembly}? This cannot be undone.`)) {
-        // Create a form and submit
+      const geneSet  = row.getAttribute('data-gene-set') || 'v1';
+
+      if (confirm(`Delete entry for ${organism} / ${assembly} / ${geneSet}? This cannot be undone.`)) {
         const form = document.createElement('form');
         form.method = 'post';
         form.action = 'manage_groups.php';
-        
+
         const orgInput = document.createElement('input');
-        orgInput.type = 'hidden';
-        orgInput.name = 'organism';
-        orgInput.value = organism;
-        
+        orgInput.type = 'hidden'; orgInput.name = 'organism'; orgInput.value = organism;
         const asmInput = document.createElement('input');
-        asmInput.type = 'hidden';
-        asmInput.name = 'assembly';
-        asmInput.value = assembly;
-        
+        asmInput.type = 'hidden'; asmInput.name = 'assembly'; asmInput.value = assembly;
+        const gsInput = document.createElement('input');
+        gsInput.type = 'hidden'; gsInput.name = 'gene_set'; gsInput.value = geneSet;
         const deleteInput = document.createElement('input');
-        deleteInput.type = 'hidden';
-        deleteInput.name = 'delete';
-        deleteInput.value = '1';
-        
+        deleteInput.type = 'hidden'; deleteInput.name = 'delete'; deleteInput.value = '1';
+
         form.appendChild(orgInput);
         form.appendChild(asmInput);
+        form.appendChild(gsInput);
         form.appendChild(deleteInput);
-        
+
         addCsrfToken(form);
-        
         document.body.appendChild(form);
         form.submit();
       }
@@ -474,6 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelButton = row.querySelector('.cancel-btn');
     const organism = row.getAttribute('data-organism');
     const assembly = row.getAttribute('data-assembly');
+    const geneSet  = row.getAttribute('data-gene-set') || 'v1';
     
     // Get current tags from chip elements
     const chipElements = groupsSpan.querySelectorAll('.tag-chip');
@@ -579,38 +566,28 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     updateButton.addEventListener('click', function() {
-      // Create a form and submit
       const form = document.createElement('form');
       form.method = 'post';
       form.action = 'manage_groups.php';
-      
+
       const orgInput = document.createElement('input');
-      orgInput.type = 'hidden';
-      orgInput.name = 'organism';
-      orgInput.value = organism;
-      
+      orgInput.type = 'hidden'; orgInput.name = 'organism'; orgInput.value = organism;
       const asmInput = document.createElement('input');
-      asmInput.type = 'hidden';
-      asmInput.name = 'assembly';
-      asmInput.value = assembly;
-      
+      asmInput.type = 'hidden'; asmInput.name = 'assembly'; asmInput.value = assembly;
+      const gsInput = document.createElement('input');
+      gsInput.type = 'hidden'; gsInput.name = 'gene_set'; gsInput.value = geneSet;
       const groupsInput = document.createElement('input');
-      groupsInput.type = 'hidden';
-      groupsInput.name = 'groups';
-      groupsInput.value = selectedTags.join(', ');
-      
+      groupsInput.type = 'hidden'; groupsInput.name = 'groups'; groupsInput.value = selectedTags.join(', ');
       const updateInput = document.createElement('input');
-      updateInput.type = 'hidden';
-      updateInput.name = 'update';
-      updateInput.value = '1';
-      
+      updateInput.type = 'hidden'; updateInput.name = 'update'; updateInput.value = '1';
+
       form.appendChild(orgInput);
       form.appendChild(asmInput);
+      form.appendChild(gsInput);
       form.appendChild(groupsInput);
       form.appendChild(updateInput);
-      
+
       addCsrfToken(form);
-      
       document.body.appendChild(form);
       form.submit();
     });
@@ -680,7 +657,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = checkbox.closest('tr');
         selectedGroupedAssemblies.push({
           organism: row.getAttribute('data-organism'),
-          assembly: row.getAttribute('data-assembly')
+          assembly: row.getAttribute('data-assembly'),
+          gene_set: row.getAttribute('data-gene-set') || 'v1',
         });
       });
     } else {
@@ -688,22 +666,23 @@ document.addEventListener('DOMContentLoaded', function() {
       selectedGroupedAssemblies = [];
     }
   }
-  
+
   function updateBulkAddButton() {
     const checked = document.querySelectorAll('.assembly-checkbox:checked');
     const bulkBtn = document.getElementById('bulk-add-btn');
     const countSpan = document.getElementById('ungrouped-selected-count');
-    
+
     if (checked.length > 0) {
       bulkBtn.style.display = 'inline-block';
       countSpan.textContent = checked.length;
-      
+
       selectedUngroupedAssemblies = [];
       checked.forEach(checkbox => {
         const row = checkbox.closest('tr');
         selectedUngroupedAssemblies.push({
           organism: row.getAttribute('data-organism'),
-          assembly: row.getAttribute('data-assembly')
+          assembly: row.getAttribute('data-assembly'),
+          gene_set: row.getAttribute('data-gene-set') || 'v1',
         });
       });
     } else {
@@ -720,8 +699,8 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Show list
       const listDiv = document.getElementById('bulk-selected-list');
-      listDiv.innerHTML = selectedGroupedAssemblies.map(item => 
-        `<div><strong>${item.organism}</strong> / ${item.assembly}</div>`
+      listDiv.innerHTML = selectedGroupedAssemblies.map(item =>
+        `<div><strong>${item.organism}</strong> / ${item.assembly} / ${item.gene_set}</div>`
       ).join('');
       
       // Clear inputs

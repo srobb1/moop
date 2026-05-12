@@ -418,15 +418,20 @@
                            $has_name_mismatch = !$matching;
                          }
                          
-                         // Check if BLAST indexes are missing for FASTA files
+                         // Check if BLAST indexes are missing for FASTA files.
+                         // BLAST indexes now live in gene_set subdirs; aggregate across all gene_sets.
                          $assembly_path = $data['path'] . '/' . $assembly;
                          $has_missing_blast_indexes = false;
-                         $blast_validation = $data['blast_validation'][$assembly] ?? validateBlastIndexFiles($assembly_path, $sequence_types);
-                         if (!empty($blast_validation['databases'])) {
-                           foreach ($blast_validation['databases'] as $db) {
-                             if (!$db['has_indexes']) {
-                               $has_missing_blast_indexes = true;
-                               break;
+                         if (isset($data['blast_validation'][$assembly])) {
+                           $blast_validation = $data['blast_validation'][$assembly];
+                           foreach ($blast_validation['databases'] ?? [] as $db) {
+                             if (!$db['has_indexes']) { $has_missing_blast_indexes = true; break; }
+                           }
+                         } else {
+                           foreach (glob($assembly_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                             $bv = validateBlastIndexFiles($gs_dir, $sequence_types);
+                             foreach ($bv['databases'] ?? [] as $db) {
+                               if (!$db['has_indexes']) { $has_missing_blast_indexes = true; break 2; }
                              }
                            }
                          }

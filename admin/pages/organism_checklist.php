@@ -278,30 +278,26 @@
           <?php
           include_once __DIR__ . '/../../lib/blast_functions.php';
           
-          // Check for missing BLAST indexes
+          // Check for missing BLAST indexes.
+          // BLAST indexes now live in gene_set subdirs under each assembly dir.
           $blast_issues = [];
           foreach ($organisms_in_system as $org) {
               $org_dir = "$organism_data/$org";
-              
-              // Scan for assembly directories
-              if (is_dir($org_dir)) {
-                  foreach (scandir($org_dir) as $item) {
-                      if ($item !== '.' && $item !== '..' && is_dir("$org_dir/$item")) {
-                          $assembly_path = "$org_dir/$item";
-                          $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
-                          
-                          // Check if there are FASTA files missing indexes
-                          if (!empty($blast_validation['databases'])) {
-                              foreach ($blast_validation['databases'] as $db) {
-                                  if (!$db['has_indexes']) {
-                                      $blast_issues[] = [
-                                          'organism' => $org,
-                                          'assembly' => $item,
-                                          'fasta' => $db['fasta'],
-                                          'missing' => $db['missing_indexes']
-                                      ];
-                                  }
-                              }
+              if (!is_dir($org_dir)) continue;
+              foreach (scandir($org_dir) as $asm) {
+                  if ($asm === '.' || $asm === '..' || !is_dir("$org_dir/$asm")) continue;
+                  $asm_path = "$org_dir/$asm";
+                  foreach (glob($asm_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                      $blast_validation = validateBlastIndexFiles($gs_dir, $sequence_types);
+                      foreach ($blast_validation['databases'] ?? [] as $db) {
+                          if (!$db['has_indexes']) {
+                              $blast_issues[] = [
+                                  'organism' => $org,
+                                  'assembly' => $asm,
+                                  'gene_set' => basename($gs_dir),
+                                  'fasta'    => $db['fasta'],
+                                  'missing'  => $db['missing_indexes'],
+                              ];
                           }
                       }
                   }
@@ -328,19 +324,18 @@
                     <?php foreach ($blast_issues as $issue): ?>
                       <?php 
                         $organism_data_base = $config->getPath('organism_data');
-                        //$organism_data_base = realpath($organism_data_base) ?: $organism_data_base;
-                        $assembly_fullpath = $organism_data_base . '/' . $issue['organism'] . '/' . $issue['assembly'];
-                        $perm_check = checkAssemblyCanGenerateBlast($assembly_fullpath, [$issue['fasta']]);
+                        $gs_fullpath = $organism_data_base . '/' . $issue['organism'] . '/' . $issue['assembly'] . '/' . ($issue['gene_set'] ?? 'v1');
+                        $perm_check = checkAssemblyCanGenerateBlast($gs_fullpath, [$issue['fasta']]);
                         $can_generate = $perm_check['writable'];
-                        
+
                         // Calculate commands upfront so they're available everywhere
                         $is_protein = strpos($issue['fasta'], 'protein') !== false;
                         $db_type = $is_protein ? 'prot' : 'nucl';
-                        $cd_cmd = "cd " . htmlspecialchars($assembly_fullpath);
+                        $cd_cmd = "cd " . htmlspecialchars($gs_fullpath);
                         $makeblastdb_cmd = "makeblastdb -in " . htmlspecialchars($issue['fasta']) . " -dbtype " . htmlspecialchars($db_type) . " -parse_seqids";
                       ?>
                       <li class="mb-3 pb-3 border-bottom">
-                        <strong><?= htmlspecialchars($issue['organism']) ?>/<?= htmlspecialchars($issue['assembly']) ?>/<?= htmlspecialchars($issue['fasta']) ?></strong><br>
+                        <strong><?= htmlspecialchars($issue['organism']) ?>/<?= htmlspecialchars($issue['assembly']) ?>/<?= htmlspecialchars($issue['gene_set'] ?? 'v1') ?>/<?= htmlspecialchars($issue['fasta']) ?></strong><br>
                         <small class="text-danger">Missing: <?= htmlspecialchars(implode(', ', $issue['missing'])) ?></small>
                         <?php if (!$can_generate): ?>
                           <div class="alert alert-danger mt-2 mb-0 py-1 px-2 small">
@@ -355,7 +350,7 @@
                                 <i class="fa fa-copy"></i> Copy
                               </button>
                               <?php if ($can_generate): ?>
-                                <button type="button" class="btn btn-outline-success generate-blast-btn" data-organism="<?= htmlspecialchars($issue['organism']) ?>" data-assembly="<?= htmlspecialchars($issue['assembly']) ?>" data-fasta="<?= htmlspecialchars($issue['fasta']) ?>" title="Generate now">
+                                <button type="button" class="btn btn-outline-success generate-blast-btn" data-organism="<?= htmlspecialchars($issue['organism']) ?>" data-assembly="<?= htmlspecialchars($issue['assembly']) ?>" data-gene-set="<?= htmlspecialchars($issue['gene_set'] ?? 'v1') ?>" data-fasta="<?= htmlspecialchars($issue['fasta']) ?>" title="Generate now">
                                   <i class="fa fa-play"></i> Generate
                                 </button>
                               <?php endif; ?>
@@ -998,16 +993,17 @@ document.addEventListener('DOMContentLoaded', function() {
       e.preventDefault();
       const organism = this.getAttribute('data-organism');
       const assembly = this.getAttribute('data-assembly');
+      const geneSet  = this.getAttribute('data-gene-set') || 'v1';
       const fasta = this.getAttribute('data-fasta');
-      
-      if (!confirm(`Generate BLAST indexes for ${organism}/${assembly}/${fasta}?\n\nThis may take a few minutes.`)) {
+
+      if (!confirm(`Generate BLAST indexes for ${organism}/${assembly}/${geneSet}/${fasta}?\n\nThis may take a few minutes.`)) {
         return;
       }
-      
+
       const originalText = this.innerHTML;
       this.disabled = true;
       this.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating...';
-      
+
       fetch('api/generate_blast_indexes.php', {
         method: 'POST',
         headers: {
@@ -1016,6 +1012,7 @@ document.addEventListener('DOMContentLoaded', function() {
         body: new URLSearchParams({
           organism: organism,
           assembly: assembly,
+          gene_set: geneSet,
           fasta_file: fasta
         })
       })

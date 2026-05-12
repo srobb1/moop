@@ -790,32 +790,33 @@ function checkAssemblyWritableForBlast($assembly_path) {
  * @param string $organism_data_path Path to organism data directory
  * @return array Array with 'success' boolean, 'message', and 'output'
  */
-function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_data_path) {
+function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_data_path, $gene_set = 'v1') {
     $result = [
         'success' => false,
         'message' => '',
         'output' => '',
         'errors' => ''
     ];
-    
+
     // Validate inputs
     if (empty($organism) || empty($assembly) || empty($fasta_filename)) {
         $result['message'] = 'Missing required parameters';
         return $result;
     }
-    
+
     // Prevent directory traversal attacks
-    if (strpos($organism, '/') !== false || strpos($assembly, '/') !== false || strpos($fasta_filename, '/') !== false) {
+    if (strpos($organism, '/') !== false || strpos($assembly, '/') !== false
+     || strpos($fasta_filename, '/') !== false || strpos($gene_set, '/') !== false) {
         $result['message'] = 'Invalid characters in parameters';
         return $result;
     }
-    
-    $assembly_path = $organism_data_path . '/' . $organism . '/' . $assembly;
+
+    $assembly_path = $organism_data_path . '/' . $organism . '/' . $assembly . '/' . $gene_set;
     $fasta_path = $assembly_path . '/' . $fasta_filename;
-    
+
     // Verify paths exist
     if (!is_dir($assembly_path)) {
-        $result['message'] = 'Assembly directory does not exist';
+        $result['message'] = 'Gene set directory does not exist';
         return $result;
     }
     

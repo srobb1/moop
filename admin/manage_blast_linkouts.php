@@ -79,23 +79,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Build list of all available BLAST databases for the per-DB dropdown
+// Build list of all available BLAST databases for the per-DB dropdown.
+// BLAST indexes live in gene_set subdirs, but the per-DB linkout key stays
+// organism|assembly|seq_type (gene_set-agnostic) to avoid breaking saved configs.
 $organisms_dir = $config->getPath('organism_data');
 $all_orgs      = getOrganismsWithAssemblies($organisms_dir);
 $db_options    = [];
 foreach ($all_orgs as $org_name => $assemblies) {
     foreach ($assemblies as $asm_id) {
         $asm_path = $organisms_dir . '/' . $org_name . '/' . $asm_id;
-        foreach (getBlastDatabases($asm_path) as $db) {
-            $key = $org_name . '|' . $asm_id . '|' . $db['seq_type'];
-            $db_options[$key] = [
-                'key'      => $key,
-                'display'  => $org_name . ' / ' . $asm_id . ' / ' . $db['name'],
-                'organism' => $org_name,
-                'assembly' => $asm_id,
-                'db_type'  => $db['seq_type'],
-                'db_name'  => $db['name'],
-            ];
+        foreach (glob($asm_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
+            foreach (getBlastDatabases($gs_dir) as $db) {
+                $key = $org_name . '|' . $asm_id . '|' . $db['seq_type'];
+                if (!isset($db_options[$key])) {
+                    $db_options[$key] = [
+                        'key'      => $key,
+                        'display'  => $org_name . ' / ' . $asm_id . ' / ' . $db['name'],
+                        'organism' => $org_name,
+                        'assembly' => $asm_id,
+                        'db_type'  => $db['seq_type'],
+                        'db_name'  => $db['name'],
+                    ];
+                }
+            }
         }
     }
 }

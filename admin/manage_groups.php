@@ -66,10 +66,13 @@ if (file_exists($descriptions_file) && is_writable($descriptions_file)) {
 }
 
 // Create a mapping of which entries exist in the filesystem
+// Check to the gene_set subdir level (or assembly level for entries without gene_set)
 $groups_data_with_status = [];
 foreach ($groups_data as $data) {
-    $exists_in_fs = isset($all_organisms[$data['organism']]) && 
-                    in_array($data['assembly'], $all_organisms[$data['organism']]);
+    $gs = $data['gene_set'] ?? 'v1';
+    $asm_ok = isset($all_organisms[$data['organism']]) && in_array($data['assembly'], $all_organisms[$data['organism']]);
+    $gs_path = $organism_data_path . '/' . $data['organism'] . '/' . $data['assembly'] . '/' . $gs;
+    $exists_in_fs = $asm_ok && is_dir($gs_path);
     $data['_fs_exists'] = $exists_in_fs;
     $groups_data_with_status[] = $data;
 }
@@ -127,8 +130,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (isset($_POST['update'])) {
         $organism = $_POST['organism'];
         $assembly = $_POST['assembly'];
+        $gene_set = $_POST['gene_set'] ?? 'v1';
         $groups_input = trim($_POST['groups']);
-        
+
         if ($groups_input === '') {
             $groups = [];
         } else {
@@ -138,7 +142,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Find old groups for logging
         $old_groups = [];
         foreach ($groups_data as &$data) {
-            if ($data['organism'] === $organism && $data['assembly'] === $assembly) {
+            if ($data['organism'] === $organism && $data['assembly'] === $assembly && ($data['gene_set'] ?? 'v1') === $gene_set) {
                 $old_groups = $data['groups'];
                 $data['groups'] = $groups;
                 break;
@@ -161,8 +165,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (isset($_POST['add'])) {
         $organism = $_POST['organism'];
         $assembly = $_POST['assembly'];
+        $gene_set = $_POST['gene_set'] ?? 'v1';
         $groups_input = trim($_POST['groups']);
-        
+
         if ($groups_input === '') {
             $groups = [];
         } else {
@@ -173,7 +178,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $new_entry = [
             'organism' => $organism,
             'assembly' => $assembly,
-            'groups' => $groups
+            'gene_set' => $gene_set,
+            'groups'   => $groups,
         ];
         
         $groups_data[] = $new_entry;
@@ -192,11 +198,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (isset($_POST['delete'])) {
         $organism = $_POST['organism'];
         $assembly = $_POST['assembly'];
-        
+        $gene_set = $_POST['gene_set'] ?? 'v1';
+
         // Find and remove the entry
         $old_groups = [];
         foreach ($groups_data as $key => &$data) {
-            if ($data['organism'] === $organism && $data['assembly'] === $assembly) {
+            if ($data['organism'] === $organism && $data['assembly'] === $assembly && ($data['gene_set'] ?? 'v1') === $gene_set) {
                 $old_groups = $data['groups'];
                 unset($groups_data[$key]);
                 break;
@@ -260,35 +267,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         foreach ($assemblies as $assembly_data) {
             $organism = $assembly_data['organism'];
             $assembly = $assembly_data['assembly'];
-            
+            $gene_set = $assembly_data['gene_set'] ?? 'v1';
+
             // Find the entry
             foreach ($groups_data as &$data) {
-                if ($data['organism'] === $organism && $data['assembly'] === $assembly) {
+                if ($data['organism'] === $organism && $data['assembly'] === $assembly && ($data['gene_set'] ?? 'v1') === $gene_set) {
                     $old_groups = $data['groups'];
                     $new_groups = $data['groups'];
-                    
+
                     // Add groups
                     foreach ($groups_to_add as $group) {
                         if (!in_array($group, $new_groups)) {
                             $new_groups[] = $group;
                         }
                     }
-                    
+
                     // Remove groups
                     $new_groups = array_values(array_filter($new_groups, function($g) use ($groups_to_remove) {
                         return !in_array($g, $groups_to_remove);
                     }));
-                    
+
                     $data['groups'] = $new_groups;
-                    
+
                     $log_entries[] = sprintf(
-                        "[%s] BULK_EDIT by %s | Organism: %s | Assembly: %s | Old: [%s] | New: [%s]",
-                        $timestamp,
-                        $username,
-                        $organism,
-                        $assembly,
-                        implode(', ', $old_groups),
-                        implode(', ', $new_groups)
+                        "[%s] BULK_EDIT by %s | Organism: %s | Assembly: %s | Gene set: %s | Old: [%s] | New: [%s]",
+                        $timestamp, $username, $organism, $assembly, $gene_set,
+                        implode(', ', $old_groups), implode(', ', $new_groups)
                     );
                     $updated_count++;
                     break;
@@ -339,23 +343,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         foreach ($assemblies as $assembly_data) {
             $organism = $assembly_data['organism'];
             $assembly = $assembly_data['assembly'];
-            
+            $gene_set = $assembly_data['gene_set'] ?? 'v1';
+
             // Add new entry
             $new_entry = [
                 'organism' => $organism,
                 'assembly' => $assembly,
-                'groups' => $groups
+                'gene_set' => $gene_set,
+                'groups'   => $groups,
             ];
-            
+
             $groups_data[] = $new_entry;
-            
+
             $log_entries[] = sprintf(
-                "[%s] BULK_ADD by %s | Organism: %s | Assembly: %s | Groups: [%s]",
-                $timestamp,
-                $username,
-                $organism,
-                $assembly,
-                implode(', ', $groups)
+                "[%s] BULK_ADD by %s | Organism: %s | Assembly: %s | Gene set: %s | Groups: [%s]",
+                $timestamp, $username, $organism, $assembly, $gene_set, implode(', ', $groups)
             );
             $added_count++;
         }
@@ -381,19 +383,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     exit();
 }
 
-// Identify unrepresented organisms/assemblies
-$represented_organisms = [];
+// Identify unrepresented (organism, assembly, gene_set) tuples on disk
+$represented_tuples = [];
 foreach ($groups_data as $data) {
-    $represented_organisms[$data['organism']][] = $data['assembly'];
+    $gs  = $data['gene_set'] ?? 'v1';
+    $represented_tuples[$data['organism'] . '/' . $data['assembly'] . '/' . $gs] = true;
 }
 
-$unrepresented_organisms = [];
+$unrepresented_tuples = []; // [{organism, assembly, gene_set}, ...]
 foreach ($all_organisms as $organism => $assemblies) {
     foreach ($assemblies as $assembly) {
-        if (!isset($represented_organisms[$organism]) || !in_array($assembly, $represented_organisms[$organism])) {
-            $unrepresented_organisms[$organism][] = $assembly;
+        $asm_path = $organism_data_path . '/' . $organism . '/' . $assembly;
+        $subdirs  = glob($asm_path . '/*', GLOB_ONLYDIR) ?: [];
+        $gene_sets = array_map('basename', $subdirs) ?: ['v1'];
+        foreach ($gene_sets as $gene_set) {
+            $key = $organism . '/' . $assembly . '/' . $gene_set;
+            if (!isset($represented_tuples[$key])) {
+                $unrepresented_tuples[] = ['organism' => $organism, 'assembly' => $assembly, 'gene_set' => $gene_set];
+            }
         }
     }
+}
+// Keep $unrepresented_organisms for backward compat with bulk_add and JS
+$unrepresented_organisms = [];
+foreach ($unrepresented_tuples as $t) {
+    $unrepresented_organisms[$t['organism']][$t['assembly']][] = $t['gene_set'];
 }
 
 // Find stale entries (entries in groups_data but not in filesystem)
@@ -419,6 +433,7 @@ $data = [
     'groups_data_with_status' => $groups_data_with_status,
     'descriptions_data' => $descriptions_data,
     'unrepresented_organisms' => $unrepresented_organisms,
+    'unrepresented_tuples' => $unrepresented_tuples,
     'stale_entries' => $stale_entries,
     'existing_groups' => $all_existing_groups,
     'config' => $config,

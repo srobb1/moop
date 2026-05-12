@@ -14,8 +14,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Get parameters
-$organism = $_POST['organism'] ?? '';
-$assembly = $_POST['assembly'] ?? '';
+$organism  = $_POST['organism']   ?? '';
+$assembly  = $_POST['assembly']   ?? '';
+$gene_set  = $_POST['gene_set']   ?? 'v1';
 $fasta_file = $_POST['fasta_file'] ?? '';
 
 // Validate parameters
@@ -40,7 +41,7 @@ if (!$organism_data) {
 }
 
 // Generate BLAST indexes
-$result = generateBlastIndexes($organism, $assembly, $fasta_file, $organism_data);
+$result = generateBlastIndexes($organism, $assembly, $fasta_file, $organism_data, $gene_set);
 
 // Return JSON response
 header('Content-Type: application/json');

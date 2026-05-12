@@ -132,6 +132,7 @@
         <th><input type="checkbox" id="select-all-grouped" title="Select all"></th>
         <th>Organism</th>
         <th>Assembly</th>
+        <th>Gene Set</th>
         <th>Groups</th>
         <th>Status</th>
         <th>Action</th>
@@ -140,11 +141,13 @@
     <tbody id="assemblies-tbody">
       <?php foreach ($groups_data_with_status as $index => $data): ?>
         <?php if (!empty($data['groups'])): ?>
-        <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>" 
+        <?php $row_gs = htmlspecialchars($data['gene_set'] ?? 'v1'); ?>
+        <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>" data-gene-set="<?= $row_gs ?>"
             style="<?= !$data['_fs_exists'] ? 'background-color: #fff3cd;' : '' ?>">
           <td><input type="checkbox" class="grouped-assembly-checkbox" <?= !$data['_fs_exists'] ? 'disabled' : '' ?>></td>
           <td><?= htmlspecialchars($data['organism']) ?></td>
           <td><?= htmlspecialchars($data['assembly']) ?></td>
+          <td class="small text-muted"><?= $row_gs ?></td>
           <td>
             <span class="groups-display">
               <?php 
@@ -198,17 +201,19 @@
           <th><input type="checkbox" id="select-all-ungrouped" title="Select all"></th>
           <th>Organism</th>
           <th>Assembly</th>
+          <th>Gene Set</th>
           <th>Groups</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody id="new-assemblies-tbody">
-        <?php foreach ($unrepresented_organisms as $organism => $assemblies): ?>
-          <?php foreach ($assemblies as $assembly): ?>
-            <tr data-organism="<?= htmlspecialchars($organism) ?>" data-assembly="<?= htmlspecialchars($assembly) ?>" class="new-assembly-row">
+        <?php foreach ($unrepresented_tuples as $tuple): ?>
+          <?php $organism = $tuple['organism']; $assembly = $tuple['assembly']; $gene_set = $tuple['gene_set']; ?>
+            <tr data-organism="<?= htmlspecialchars($organism) ?>" data-assembly="<?= htmlspecialchars($assembly) ?>" data-gene-set="<?= htmlspecialchars($gene_set) ?>" class="new-assembly-row">
               <td><input type="checkbox" class="assembly-checkbox"></td>
               <td><?= htmlspecialchars($organism) ?></td>
               <td><?= htmlspecialchars($assembly) ?></td>
+              <td class="small text-muted"><?= htmlspecialchars($gene_set) ?></td>
               <td>
                 <span class="groups-display-new">(no groups)</span>
               </td>
@@ -219,7 +224,6 @@
               </td>
             </tr>
           <?php endforeach; ?>
-        <?php endforeach; ?>
       </tbody>
     </table>
   <?php endif; ?>
