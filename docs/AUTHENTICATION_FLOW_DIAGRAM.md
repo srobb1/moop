@@ -163,8 +163,11 @@
 │  $_SESSION["logged_in"] = true                                          │
 │  $_SESSION["username"] = "researcher123"                                │
 │  $_SESSION["access"] = [                                                │
-│      "Organism_A" => ["Assembly_1", "Assembly_2"],                      │
-│      "Organism_B" => ["Assembly_1"]                                     │
+│      "Organism_A" => [                                                  │
+│          "Assembly_1" => ["v1", "experimental"],                        │
+│          "Assembly_2" => ["*"]   // wildcard = all gene_sets            │
+│      ],                                                                 │
+│      "Organism_B" => ["Assembly_1" => ["v1"]]                          │
 │  ]                                                                      │
 │  $_SESSION["role"] = "admin" or "user"                                  │
 │                                                                         │

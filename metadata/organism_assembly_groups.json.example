@@ -2,9 +2,18 @@
     {
         "organism": "Example_organism",
         "assembly": "GCA_000000000.1",
+        "gene_set": "v1",
         "groups": [
             "Example Group",
             "PUBLIC"
+        ]
+    },
+    {
+        "organism": "Example_organism",
+        "assembly": "GCA_000000000.1",
+        "gene_set": "experimental",
+        "groups": [
+            "Example Group"
         ]
     }
 ]
