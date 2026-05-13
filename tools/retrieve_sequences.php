@@ -308,6 +308,7 @@ $data = [
     'context' => $context,
     'context_organism' => $context['organism'] ?? '',
     'context_assembly' => $context['assembly'] ?? '',
+    'context_gene_set' => $context['gene_set'] ?? '',
     'context_group' => $context['group'] ?? '',
     'should_auto_select' => $should_auto_select,
     'filter_organisms' => $filter_organisms,

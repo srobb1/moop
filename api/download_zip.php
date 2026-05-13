@@ -71,9 +71,16 @@ foreach ($files_param as $idx => $entry) {
         continue;
     }
 
-    if (!has_assembly_access($organism, $assembly)) {
-        $errors[] = "Entry $idx: access denied.";
-        continue;
+    if ($gene_set !== '') {
+        if (!has_gene_set_access($organism, $assembly, $gene_set)) {
+            $errors[] = "Entry $idx: access denied.";
+            continue;
+        }
+    } else {
+        if (!has_assembly_access($organism, $assembly)) {
+            $errors[] = "Entry $idx: access denied.";
+            continue;
+        }
     }
 
     $subdir   = $gene_set !== '' ? "$organism/$assembly/$gene_set" : "$organism/$assembly";
