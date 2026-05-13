@@ -112,9 +112,10 @@ function initializeBlastManager() {
                 return false;
             }
             
-            // Update hidden organism/assembly fields
+            // Update hidden organism/assembly/gene_set fields
             form.querySelector('input[name="organism"]').value = selectedSource.dataset.organism;
             form.querySelector('input[name="assembly"]').value = selectedSource.dataset.assembly;
+            form.querySelector('input[name="gene_set"]').value = selectedSource.dataset.geneSet || '';
             
             // Show progress indicator
             const progressIndicator = document.getElementById('progressIndicator');

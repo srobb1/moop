@@ -122,8 +122,10 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
       <!-- Assemblies collapse -->
       <div class="collapse" id="<?= $org_id ?>">
         <div class="card-body py-2 px-3">
-          <?php $asm_idx = 0; foreach ($assemblies as $assembly => $asm_data): $asm_idx++; ?>
-          <?php $asm_id = $org_id . '_asm_' . $asm_idx; ?>
+          <?php $asm_idx = 0; foreach ($assemblies as $assembly => $gene_sets): $asm_idx++; ?>
+          <?php $asm_id = $org_id . '_asm_' . $asm_idx;
+                $asm_total_files = array_sum(array_column($gene_sets, 'file_count'));
+          ?>
 
           <div class="assembly-block mb-2">
             <!-- Assembly header -->
@@ -144,45 +146,82 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
                 <?= htmlspecialchars($assembly) ?>
               </label>
               <small class="text-muted me-3 flex-shrink-0">
-                <?= $asm_data['file_count'] ?> file<?= $asm_data['file_count'] !== 1 ? 's' : '' ?>,
-                <?= htmlspecialchars($asm_data['total_label']) ?>
+                <?= $asm_total_files ?> file<?= $asm_total_files !== 1 ? 's' : '' ?>
               </small>
               <i class="fas fa-chevron-down toggle-icon text-muted"></i>
             </div>
 
-            <!-- Files collapse -->
+            <!-- Gene sets collapse -->
             <div class="collapse" id="<?= $asm_id ?>">
-              <div class="ps-4 pt-1">
-                <?php foreach ($asm_data['files'] as $fi => $file):
-                  $file_id = $asm_id . '_f' . $fi;
-                  $dl_url  = '/' . $site . '/api/download_file.php'
-                           . '?organism=' . urlencode($organism)
-                           . '&assembly=' . urlencode($assembly)
-                           . '&filename=' . urlencode($file['name']);
-                ?>
-                <div class="d-flex align-items-center py-1 px-2 file-row border-bottom">
+              <?php $gs_idx = 0; foreach ($gene_sets as $gene_set => $asm_data): $gs_idx++; ?>
+              <?php $gs_id = $asm_id . '_gs_' . $gs_idx; ?>
+              <div class="ps-3 pt-1">
+                <?php if (count($gene_sets) > 1): ?>
+                <!-- Gene set sub-header (only shown when multiple gene sets exist) -->
+                <div class="d-flex align-items-center px-2 py-1 rounded border mb-1 gs-header"
+                     style="cursor:pointer; background:#eef4fb;"
+                     data-bs-toggle="collapse"
+                     data-bs-target="#<?= $gs_id ?>">
                   <input type="checkbox"
-                         class="form-check-input me-2 flex-shrink-0 file-checkbox"
-                         id="cb-<?= $file_id ?>"
+                         class="form-check-input me-2 flex-shrink-0 gs-checkbox"
+                         id="cb-<?= $gs_id ?>"
                          data-org-id="<?= $org_id ?>"
                          data-asm-id="<?= $asm_id ?>"
-                         data-download-url="<?= htmlspecialchars($dl_url) ?>"
-                         data-organism="<?= htmlspecialchars($organism) ?>"
-                         data-assembly="<?= htmlspecialchars($assembly) ?>"
-                         data-filename="<?= htmlspecialchars($file['name']) ?>"
-                         data-size="<?= $file['size'] ?>">
-                  <a href="<?= htmlspecialchars($dl_url) ?>"
-                     class="me-auto text-decoration-none file-link"
-                     download="<?= htmlspecialchars($file['name']) ?>">
-                    <i class="fas fa-file me-1 text-muted small"></i><?= htmlspecialchars($file['name']) ?>
-                  </a>
-                  <span class="badge bg-secondary ms-3 flex-shrink-0">
-                    <?= htmlspecialchars($file['size_label']) ?>
-                  </span>
+                         data-gs-id="<?= $gs_id ?>"
+                         onclick="event.stopPropagation()">
+                  <label class="form-check-label fw-semibold me-auto mb-0 user-select-none small"
+                         for="cb-<?= $gs_id ?>"
+                         style="cursor:pointer;"
+                         onclick="event.stopPropagation()">
+                    Gene set: <?= htmlspecialchars($gene_set) ?>
+                  </label>
+                  <small class="text-muted me-3 flex-shrink-0">
+                    <?= $asm_data['file_count'] ?> file<?= $asm_data['file_count'] !== 1 ? 's' : '' ?>,
+                    <?= htmlspecialchars($asm_data['total_label']) ?>
+                  </small>
+                  <i class="fas fa-chevron-down toggle-icon text-muted"></i>
                 </div>
-                <?php endforeach; ?>
+                <div class="collapse" id="<?= $gs_id ?>">
+                <?php else: ?>
+                <div>
+                <?php endif; ?>
+                  <div class="ps-2 pt-1">
+                    <?php foreach ($asm_data['files'] as $fi => $file):
+                      $file_id = $gs_id . '_f' . $fi;
+                      $dl_url  = '/' . $site . '/api/download_file.php'
+                               . '?organism=' . urlencode($organism)
+                               . '&assembly=' . urlencode($assembly)
+                               . '&gene_set=' . urlencode($gene_set)
+                               . '&filename=' . urlencode($file['name']);
+                    ?>
+                    <div class="d-flex align-items-center py-1 px-2 file-row border-bottom">
+                      <input type="checkbox"
+                             class="form-check-input me-2 flex-shrink-0 file-checkbox"
+                             id="cb-<?= $file_id ?>"
+                             data-org-id="<?= $org_id ?>"
+                             data-asm-id="<?= $asm_id ?>"
+                             data-gs-id="<?= $gs_id ?>"
+                             data-download-url="<?= htmlspecialchars($dl_url) ?>"
+                             data-organism="<?= htmlspecialchars($organism) ?>"
+                             data-assembly="<?= htmlspecialchars($assembly) ?>"
+                             data-gene-set="<?= htmlspecialchars($gene_set) ?>"
+                             data-filename="<?= htmlspecialchars($file['name']) ?>"
+                             data-size="<?= $file['size'] ?>">
+                      <a href="<?= htmlspecialchars($dl_url) ?>"
+                         class="me-auto text-decoration-none file-link"
+                         download="<?= htmlspecialchars($file['name']) ?>">
+                        <i class="fas fa-file me-1 text-muted small"></i><?= htmlspecialchars($file['name']) ?>
+                      </a>
+                      <span class="badge bg-secondary ms-3 flex-shrink-0">
+                        <?= htmlspecialchars($file['size_label']) ?>
+                      </span>
+                    </div>
+                    <?php endforeach; ?>
+                  </div>
+                </div><!-- end gene set block -->
               </div>
-            </div><!-- end files collapse -->
+              <?php endforeach; ?>
+            </div><!-- end gene sets collapse -->
 
           </div><!-- end assembly-block -->
           <?php endforeach; ?>

@@ -55,6 +55,7 @@
             <input type="hidden" name="context_group" value="<?= htmlspecialchars($context_group) ?>">
             <input type="hidden" name="organism" value="">
             <input type="hidden" name="assembly" value="">
+            <input type="hidden" name="gene_set" value="">
 
             <!-- Sequence Input -->
             <div class="mb-4">

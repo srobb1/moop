@@ -168,6 +168,8 @@ function clearSourceFilters(filterId = 'sourceFilter', radioName = 'selected_sou
     if (selectedRadio && form) {
         form.querySelector('input[name="organism"]').value = selectedRadio.dataset.organism;
         form.querySelector('input[name="assembly"]').value = selectedRadio.dataset.assembly;
+        const gsField = form.querySelector('input[name="gene_set"]');
+        if (gsField) gsField.value = selectedRadio.dataset.geneSet || '';
     }
     
     // Focus back on filter input
@@ -201,11 +203,13 @@ function updateCurrentSelectionDisplay(selectionDivId = 'currentSelection', sour
         const group = groupBadge ? groupBadge.textContent.trim() : 'Unknown';
         const organism = checked.dataset.organism || 'Unknown';
         const assembly = checked.dataset.assembly || 'Unknown';
+        const geneSet  = checked.dataset.geneSet  || '';
         const isHidden = (showHiddenWarning && line && !isSourceVisible(line)) ? ' ⚠️ (HIDDEN - FILTERED OUT)' : '';
-        
+        const gsLabel  = geneSet ? ` > ${geneSet}` : '';
+
         selectionDiv.innerHTML = `
             <div style="color: #28a745; font-weight: bold;">
-                ${group} > ${organism} > ${assembly}${isHidden}
+                ${group} > ${organism} > ${assembly}${gsLabel}${isHidden}
             </div>
         `;
     } else {

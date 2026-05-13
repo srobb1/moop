@@ -42,6 +42,7 @@ function initializeSequenceRetrieval(options = {}) {
             if (form) {
                 form.querySelector('input[name="organism"]').value = radio.dataset.organism;
                 form.querySelector('input[name="assembly"]').value = radio.dataset.assembly;
+                form.querySelector('input[name="gene_set"]').value = radio.dataset.geneSet || '';
             }
             // Update display text
             updateCurrentSelectionDisplay();
@@ -71,6 +72,7 @@ function initializeSequenceRetrieval(options = {}) {
             if (checked) {
                 form.querySelector('input[name="organism"]').value = checked.dataset.organism;
                 form.querySelector('input[name="assembly"]').value = checked.dataset.assembly;
+                form.querySelector('input[name="gene_set"]').value = checked.dataset.geneSet || '';
             } else {
                 // No assembly selected - prevent submit and alert user
                 e.preventDefault();

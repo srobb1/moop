@@ -58,6 +58,7 @@
             <form method="POST" id="downloadForm">
             <input type="hidden" name="organism" value="<?= htmlspecialchars($selected_organism) ?>">
             <input type="hidden" name="assembly" value="<?= htmlspecialchars($selected_assembly_accession) ?>">
+            <input type="hidden" name="gene_set" value="<?= htmlspecialchars($selected_gene_set ?? '') ?>">
             <input type="hidden" name="context_organism" value="<?= htmlspecialchars($context_organism) ?>">
             <input type="hidden" name="context_assembly" value="<?= htmlspecialchars($context_assembly) ?>">
             <input type="hidden" name="context_gene_set" value="<?= htmlspecialchars($context_gene_set ?? '') ?>">
