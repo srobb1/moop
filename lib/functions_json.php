@@ -4,6 +4,14 @@
  * JSON file loading, parsing, and data manipulation
  */
 
+// PHP 8.1+ polyfill
+if (!function_exists('array_is_list')) {
+    function array_is_list(array $arr): bool {
+        if ($arr === []) return true;
+        return array_keys($arr) === range(0, count($arr) - 1);
+    }
+}
+
 /**
  * Load JSON file safely with error handling
  * 

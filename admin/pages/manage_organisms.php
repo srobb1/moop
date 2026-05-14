@@ -35,17 +35,18 @@
           <li>Inclusion in the taxonomy tree for homepage discovery</li>
         </ul>
         
-        <p><strong>Status Checklist (9 Requirements):</strong> The system tracks 9 dimensions of organism readiness:</p>
+        <p><strong>Status Checklist (10 Requirements):</strong> The system tracks 10 dimensions of organism readiness:</p>
         <ul>
-          <li>Has assemblies - At least one genome version exists</li>
-          <li>Has FASTA files - Required sequence files are present</li>
-          <li>Has BLAST indexes - Files are searchable via BLAST</li>
-          <li>Has FAI index - <code>genome.fa.fai</code> present for SVG sequence viewer</li>
-          <li>Has database file - SQLite database exists</li>
-          <li>Database is readable - Web server can access it</li>
-          <li>In organism groups - Assembly is assigned to user groups</li>
-          <li>In taxonomy tree - Visible on homepage organism selector</li>
-          <li>Metadata complete - All organism information is filled in</li>
+          <li>Has assemblies</li>
+          <li>Has FASTA files</li>
+          <li>Has BLAST indexes</li>
+          <li>Has FAI index</li>
+          <li>Has database file</li>
+          <li>Database is valid</li>
+          <li>Assembly &amp; gene set dirs match DB</li>
+          <li>In organism groups</li>
+          <li>In taxonomy tree</li>
+          <li>Metadata complete</li>
         </ul>
         
         <p><strong>Performance Note:</strong> This page always loads instantly from a pre-built cache.
@@ -61,7 +62,7 @@
           <li>Verify BLAST indexes are present</li>
           <li>Verify genome FAI index is present</li>
           <li>See which groups each organism belongs to</li>
-          <li>Track overall setup completion with the 9-point checklist</li>
+          <li>Track overall setup completion with the 10-point checklist</li>
         </ul>
       </div>
     </div>
@@ -83,10 +84,12 @@
             &nbsp;&nbsp;<i class="fa fa-database db-icon"></i> organism.sqlite<br>
             &nbsp;&nbsp;<i class="fa fa-file file-icon"></i> organism.json<br>
             &nbsp;&nbsp;<i class="fa fa-folder folder-icon"></i> <strong>assembly_name</strong> (e.g., GCA_004027475.1)<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.cds.nt.fa (coding sequences)<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.protein.aa.fa (proteins)<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.transcript.nt.fa (transcripts)<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.genome.nt.fa (optional)
+            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> genome.fa (reference genome — shared)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> genome.fa.fai (samtools FAI index)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-folder folder-icon"></i> <strong>gene_set_name</strong> (e.g., v1, OGS1.0)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.cds.nt.fa (coding sequences)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.protein.aa.fa (proteins)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.transcript.nt.fa (transcripts)
           </div>
         </div>
         
@@ -218,11 +221,11 @@
         <div class="mb-0">
           <h6 class="fw-bold mb-2"><i class="fa fa-star"></i> Overall Status</h6>
           <p class="mb-2">
-            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">9</span></button> - All 9 checks passed
+            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">10</span></button> - All 10 checks passed
             <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-warning text-dark">X</span></button> - Some checks passed (see modal for details)
             <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Critical <span class="badge bg-danger">0</span></button> - No checks passed (no database or no assemblies)
           </p>
-          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the status button to see the detailed checklist of all 9 setup requirements.</p>
+          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the status button to see the detailed checklist of all 10 setup requirements.</p>
           <p class="small text-muted"><strong>Checklist includes:</strong> Assemblies • FASTA files • BLAST indexes • FAI index • Database file • Database readable • Assemblies in groups • Organism in tree • Metadata complete</p>
         </div>
       </div>
@@ -341,7 +344,8 @@
                    'has_assemblies'       => 'no-assemblies',
                    'has_fasta'            => 'no-fasta',
                    'has_database'         => 'no-database',
-                   'database_readable'    => 'db-unreadable',
+                   'database_valid'       => 'db-invalid',
+                   'directories_match_db' => 'dir-mismatch',
                ];
                $row_issues = [];
                foreach ($row_issue_map as $chk => $lbl) {
@@ -543,7 +547,7 @@
                  ?>
                  <?php if ($status['all_pass']): ?>
                    <button class="btn btn-sm btn-outline-success" onclick="openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                     <i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">9</span>
+                     <i class="fa fa-check-circle"></i> Complete <span class="badge bg-success"><?= $total_count ?></span>
                    </button>
                  <?php elseif ($pass_count > 0): ?>
                    <button class="btn btn-sm btn-outline-warning" onclick="openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)">
@@ -617,22 +621,27 @@
           <li><strong>Add database file:</strong> Upload or create <code>organism.sqlite</code></li>
           <li><strong>Create organism.json:</strong> Add metadata about the organism</li>
           <li><strong>Create assembly directory:</strong> <code>mkdir Genus_species/assembly_name</code></li>
-          <li><strong>Upload FASTA files:</strong> Add CDS, protein, transcript, and genome files to the assembly directory</li>
+          <li><strong>Create gene set directory:</strong> <code>mkdir Genus_species/assembly_name/gene_set_name</code> (e.g., <code>v1</code>, <code>OGS1.0</code>)</li>
+          <li><strong>Upload FASTA files:</strong> Add CDS, protein, and transcript files to the gene set directory; place <code>genome.fa</code> in the assembly directory</li>
           <li><strong>Generate genome FAI index:</strong> Required for the SVG gene model sequence viewer:
             <pre class="bg-light p-2 mt-1 mb-0 rounded small">cd <?= htmlspecialchars($organism_data) ?>/Genus_species/assembly_name
 samtools faidx genome.fa</pre>
           </li>
-          <li><strong>Build BLAST indexes:</strong> Use the Organism Checklist → BLAST step, or run <code>makeblastdb</code> manually</li>
+          <li><strong>Build BLAST indexes:</strong> Use the Organism Checklist → BLAST step, or run <code>makeblastdb</code> manually inside each gene set directory</li>
           <li><strong>Assign to groups:</strong> Use "Manage Groups" to make the organism accessible</li>
         </ol>
         
-        <h6 class="fw-bold mt-4">Required Files in Assembly Directory:</h6>
+        <h6 class="fw-bold mt-4">Required Files:</h6>
+        <p class="mb-1"><strong>Assembly directory</strong> (<code>assembly_name/</code>):</p>
+        <ul>
+          <li><code>genome.fa</code> - Reference genome assembly (shared across gene sets)</li>
+          <li><code>genome.fa.fai</code> - samtools FAI index (generated via <code>samtools faidx genome.fa</code>)</li>
+        </ul>
+        <p class="mb-1"><strong>Gene set directory</strong> (<code>assembly_name/gene_set_name/</code>):</p>
         <ul>
           <li><code>*.cds.nt.fa</code> - Coding sequences (nucleotide)</li>
           <li><code>*.protein.aa.fa</code> - Protein sequences (amino acid)</li>
           <li><code>*.transcript.nt.fa</code> - Transcript sequences (nucleotide)</li>
-          <li><code>genome.fa</code> - Reference genome assembly</li>
-          <li><code>genome.fa.fai</code> - samtools FAI index (generated via <code>samtools faidx genome.fa</code>)</li>
         </ul>
         
         <h6 class="fw-bold mt-4">Additional Notes:</h6>

@@ -18,7 +18,8 @@ const searchManager = new AnnotationSearch({
     hideSections: ['#assemblyHeader', '#assemblyDownloads'],
     scrollToResults: false,
     extraAjaxParams: {assembly: assemblyAccession},
-    noReadMoreButton: true
+    noReadMoreButton: true,
+    noScopeFilter: true
 });
 
 searchManager.init();

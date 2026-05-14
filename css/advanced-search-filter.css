@@ -102,3 +102,53 @@
         max-height: 400px;
     }
 }
+
+/* ── Scope Filter ──────────────────────────────────────────────────────────── */
+
+#scopeFilterModal {
+    z-index: 1050;
+}
+
+#scopeFilterModal .modal-dialog {
+    z-index: 1051;
+    pointer-events: auto !important;
+}
+
+.scope-tree-container {
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.scope-org-group {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 10px;
+}
+
+.scope-org-group:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.scope-asm-group {
+    padding: 2px 0;
+}
+
+.scope-asm-group .form-check-label {
+    font-size: 0.9rem;
+}
+
+.scope-gs-row .form-check-label {
+    font-size: 0.82rem;
+    color: #555;
+}
+
+.btn-scope-filter {
+    white-space: nowrap;
+}
+
+@media (max-height: 800px) {
+    .scope-tree-container {
+        max-height: 360px;
+    }
+}

@@ -24,8 +24,27 @@ $search_keywords = $_GET['search_keywords'] ?? '';
 $organism = $_GET['organism'] ?? '';
 $group = $_GET['group'] ?? '';
 $assembly = $_GET['assembly'] ?? '';
+$gene_set = $_GET['gene_set'] ?? '';
 $quoted_search = isset($_GET['quoted']) && $_GET['quoted'] === '1';
 $source_names = $_GET['source_names'] ?? '';  // Comma-separated source names
+
+// scope: JSON array of {assembly, gene_set} pairs — overrides individual assembly/gene_set params
+$scope_pairs = [];
+$scope_json = $_GET['scope'] ?? '';
+if (!empty($scope_json)) {
+    $decoded = json_decode($scope_json, true);
+    if (is_array($decoded)) {
+        // Validate each pair has the expected keys
+        foreach ($decoded as $pair) {
+            if (isset($pair['assembly'], $pair['gene_set'])) {
+                $scope_pairs[] = [
+                    'assembly' => (string)$pair['assembly'],
+                    'gene_set' => (string)$pair['gene_set'],
+                ];
+            }
+        }
+    }
+}
 
 // Parse source names if provided
 $source_filter = [];
@@ -85,13 +104,13 @@ $organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $ab
 $organism_image_path = $organism_data_result['image_path'];
 
 // Check if searching by feature uniquename first
-$results = searchFeaturesByUniquenameForSearch($search_input, $db, '', $assembly);
+$results = searchFeaturesByUniquenameForSearch($search_input, $db, '', $assembly, $gene_set, $scope_pairs);
 $uniquename_search = !empty($results);
 $warning_message = null;
 
 // If no results by uniquename, search annotations
 if (!$uniquename_search) {
-    $search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db, $source_filter, $assembly);
+    $search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db, $source_filter, $assembly, $gene_set, $scope_pairs);
     $results = $search_result['results'];
     $warning_message = $search_result['warning'];
 }

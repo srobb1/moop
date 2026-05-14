@@ -379,39 +379,80 @@ if (is_dir($organism_data)) {
                         'type' => 'directory',
                         'required_perms' => '2775',
                         'required_group' => $web_group,
-                        'reason' => 'Web server needs to write BLAST index files here',
-                        'why_write' => 'BLAST indexes (.nhr, .nin, .nsq, .phr, .pin, .psq) must be writable by web server',
+                        'reason' => 'Web server needs write access to rename gene set subdirectories within this assembly dir',
+                        'why_write' => 'Gene set rename operations require group-write on the parent assembly directory',
                     ], $web_group);
-                    
+
                     if (!empty($check['issues'])) {
                         $assembly_subdir_issues[] = $check;
                     }
-                    
-                    // Check FASTA files in assembly directory based on configured patterns
+
+                    // Check gene_set subdirectories and their FASTA files
                     $sequence_types = $config->getSequenceTypes();
-                    foreach ($sequence_types as $seq_type => $seq_config) {
-                        $pattern = $seq_config['pattern'] ?? '';
-                        if (empty($pattern)) {
+                    foreach (scandir($item_path) as $gs_item) {
+                        $gs_path = $item_path . '/' . $gs_item;
+                        if ($gs_item === '.' || $gs_item === '..') {
                             continue;
                         }
-                        
-                        // Build the expected filename from the pattern
-                        $expected_file = basename($pattern);
-                        $fasta_path = $item_path . '/' . $expected_file;
-                        
-                        // Only check if file exists
-                        if (file_exists($fasta_path)) {
-                            $check = performPermissionCheck($fasta_path, [
-                                'name' => 'FASTA File: ' . $organism . '/' . $item . '/' . $expected_file,
-                                'type' => 'file',
-                                'required_perms' => '644',
+
+                        if (is_dir($gs_path)) {
+                            // Check gene_set subdirectory
+                            $check = performPermissionCheck($gs_path, [
+                                'name' => 'Gene Set Subdirectory: ' . $organism . '/' . $item . '/' . $gs_item,
+                                'type' => 'directory',
+                                'required_perms' => '2775',
                                 'required_group' => $web_group,
-                                'reason' => ucfirst($seq_type) . ' file must be readable by web server for BLAST',
-                                'why_write' => 'Web server reads ' . $seq_type . ' files to run BLAST searches',
+                                'reason' => 'Web server needs to write BLAST index files into gene set directories',
+                                'why_write' => 'BLAST indexes (.nhr, .nin, .nsq, .phr, .pin, .psq) must be writable by web server',
                             ], $web_group);
-                            
+
                             if (!empty($check['issues'])) {
-                                $fasta_file_issues[] = $check;
+                                $assembly_subdir_issues[] = $check;
+                            }
+
+                            // Check FASTA files in gene_set directory
+                            foreach ($sequence_types as $seq_type => $seq_config) {
+                                $pattern = $seq_config['pattern'] ?? '';
+                                if (empty($pattern)) {
+                                    continue;
+                                }
+                                $expected_file = basename($pattern);
+                                $fasta_path = $gs_path . '/' . $expected_file;
+                                if (file_exists($fasta_path)) {
+                                    $check = performPermissionCheck($fasta_path, [
+                                        'name' => 'FASTA File: ' . $organism . '/' . $item . '/' . $gs_item . '/' . $expected_file,
+                                        'type' => 'file',
+                                        'required_perms' => '644',
+                                        'required_group' => $web_group,
+                                        'reason' => ucfirst($seq_type) . ' file must be readable by web server for BLAST',
+                                        'why_write' => 'Web server reads ' . $seq_type . ' files to run BLAST searches',
+                                    ], $web_group);
+                                    if (!empty($check['issues'])) {
+                                        $fasta_file_issues[] = $check;
+                                    }
+                                }
+                            }
+                        } else {
+                            // Files at assembly level (genome.fa, genome.fa.fai) — check genome type only
+                            foreach ($sequence_types as $seq_type => $seq_config) {
+                                $pattern = $seq_config['pattern'] ?? '';
+                                if (empty($pattern)) {
+                                    continue;
+                                }
+                                $expected_file = basename($pattern);
+                                if ($gs_item === $expected_file && file_exists($gs_path)) {
+                                    $check = performPermissionCheck($gs_path, [
+                                        'name' => 'FASTA File: ' . $organism . '/' . $item . '/' . $gs_item,
+                                        'type' => 'file',
+                                        'required_perms' => '644',
+                                        'required_group' => $web_group,
+                                        'reason' => ucfirst($seq_type) . ' file must be readable by web server',
+                                        'why_write' => 'Web server reads ' . $seq_type . ' files for JBrowse2 and sequence views',
+                                    ], $web_group);
+                                    if (!empty($check['issues'])) {
+                                        $fasta_file_issues[] = $check;
+                                    }
+                                }
                             }
                         }
                     }

@@ -216,6 +216,36 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         }
     }
+    elseif (isset($_POST['remove_all_stale'])) {
+        // Remove every stale assembly from every user in one pass
+        $removed_count = 0;
+        foreach ($users as $user => $userData) {
+            foreach ($userData['access'] ?? [] as $org => $asm_data) {
+                if (!is_array($asm_data)) continue;
+                if (array_is_list($asm_data)) {
+                    $filtered = array_values(array_filter($asm_data, fn($a) => isset($organisms[$org]) && in_array($a, $organisms[$org])));
+                    if (count($filtered) < count($asm_data)) {
+                        $users[$user]['access'][$org] = $filtered;
+                        $removed_count += count($asm_data) - count($filtered);
+                    }
+                } else {
+                    foreach (array_keys($asm_data) as $asm) {
+                        if (!isset($organisms[$org]) || !in_array($asm, $organisms[$org])) {
+                            unset($users[$user]['access'][$org][$asm]);
+                            $removed_count++;
+                        }
+                    }
+                }
+            }
+        }
+        if ($removed_count > 0 && file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
+            $message = "Removed $removed_count stale assembly reference(s) across all users.";
+            $messageType = "success";
+        } elseif ($removed_count === 0) {
+            $message = "No stale assemblies found.";
+            $messageType = "info";
+        }
+    }
     elseif (isset($_POST['remove_stale_from_all'])) {
         $organism = $_POST['organism'];
         $assembly = $_POST['assembly'];

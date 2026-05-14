@@ -357,6 +357,76 @@ function renameAssemblyDirectory(event, organism, safeAsmId) {
     });
 }
 
+function renameGeneSetDirectory(event, organism, assembly, safeId) {
+    event.preventDefault();
+
+    const oldDir = document.getElementById('gsOldDirName' + safeId).value;
+    const newDir = document.getElementById('gsNewDirName' + safeId).value;
+    const resultDiv = document.getElementById('gsRenameResult' + safeId);
+    const button = event.target;
+
+    if (!oldDir || !newDir) {
+        resultDiv.innerHTML = '<div class="alert alert-warning">Please select a current directory name</div>';
+        resultDiv.classList.remove('d-none');
+        return;
+    }
+
+    if (oldDir === newDir) {
+        resultDiv.innerHTML = '<div class="alert alert-warning">Current and new names are the same</div>';
+        resultDiv.classList.remove('d-none');
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Renaming...';
+    resultDiv.classList.add('d-none');
+
+    fetch('manage_organisms.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=rename_gene_set&organism=' + encodeURIComponent(organism) +
+              '&assembly=' + encodeURIComponent(assembly) +
+              '&old_name=' + encodeURIComponent(oldDir) +
+              '&new_name=' + encodeURIComponent(newDir)
+    })
+    .then(response => response.json())
+    .then(data => {
+        button.disabled = false;
+
+        let alertClass = data.success ? 'alert-success' : 'alert-danger';
+        let html = '<div class="alert ' + alertClass + '">';
+        html += '<strong>' + (data.success ? '✓ Success!' : '✗ Failed!') + '</strong><br>';
+        html += '<p>' + data.message + '</p>';
+
+        if (data.command) {
+            html += '<div class="alert alert-info mt-2 small">';
+            html += '<strong>Run this command on the server:</strong><br>';
+            html += '<code class="text-break">' + escapeHtml(data.command) + '</code><br>';
+            html += '<small class="mt-2 d-block text-muted">After running the command, refresh this page to verify the fix.</small>';
+            html += '</div>';
+        }
+
+        html += '</div>';
+
+        if (data.success) {
+            button.innerHTML = '<i class="fa fa-check"></i> Renamed!';
+            button.classList.remove('btn-info');
+            button.classList.add('btn-success');
+        } else {
+            button.innerHTML = '<i class="fa fa-exchange-alt"></i> Try Again';
+        }
+
+        resultDiv.innerHTML = html;
+        resultDiv.classList.remove('d-none');
+    })
+    .catch(error => {
+        button.disabled = false;
+        button.innerHTML = '<i class="fa fa-exchange-alt"></i> Rename';
+        resultDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error + '</div>';
+        resultDiv.classList.remove('d-none');
+    });
+}
+
 function deleteAssemblyDirectory(event, organism, safeAsmId) {
     event.preventDefault();
     
@@ -760,5 +830,5 @@ async function openOrganismModal(type, organism, assembly) {
 
 function rescanOrganisms() {
   const btn = document.getElementById('rescanBtn');
-  refreshOrganismCache(btn, document.getElementById('refreshStatus'), false, btn?.innerHTML);
+  refreshOrganismCache(btn, document.getElementById('refreshStatus'), true, btn?.innerHTML);
 }

@@ -108,6 +108,25 @@ handleAdminAjax(function($action) use ($organisms) {
         return true;
     }
     
+    // Handle rename gene set directory
+    if ($action === 'rename_gene_set' && isset($_POST['organism']) && isset($_POST['assembly']) && isset($_POST['old_name']) && isset($_POST['new_name'])) {
+        $organism = $_POST['organism'];
+        $assembly = $_POST['assembly'];
+        $old_name = $_POST['old_name'];
+        $new_name = $_POST['new_name'];
+
+        if (!isset($organisms[$organism])) {
+            echo json_encode(['success' => false, 'message' => 'Organism not found']);
+            return true;
+        }
+
+        $organism_dir = $organisms[$organism]['path'];
+        $result = renameGeneSetDirectory($organism_dir, $assembly, $old_name, $new_name);
+
+        echo json_encode($result);
+        return true;
+    }
+
     // Handle delete assembly
     if ($action === 'delete_assembly' && isset($_POST['organism']) && isset($_POST['dir_name'])) {
         $organism = $_POST['organism'];

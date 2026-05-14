@@ -82,6 +82,7 @@ function validateDatabaseIntegrity($dbFile) {
     $required_tables = [
         'organism',
         'genome',
+        'gene_set',
         'feature',
         'annotation_source',
         'annotation',
@@ -158,13 +159,39 @@ function validateDatabaseIntegrity($dbFile) {
         // 3. Check for features without organisms
         if (in_array('feature', $result['tables_present']) && in_array('organism', $result['tables_present'])) {
             $stmt = $dbh->query("
-                SELECT COUNT(*) FROM feature f 
-                LEFT JOIN organism o ON f.organism_id = o.organism_id 
+                SELECT COUNT(*) FROM feature f
+                LEFT JOIN organism o ON f.organism_id = o.organism_id
                 WHERE o.organism_id IS NULL
             ");
             $orphaned_features = $stmt->fetchColumn();
             if ($orphaned_features > 0) {
                 $result['data_issues'][] = "Features without organism: $orphaned_features";
+            }
+        }
+
+        // 4. Check for features with invalid gene_set_id
+        if (in_array('feature', $result['tables_present']) && in_array('gene_set', $result['tables_present'])) {
+            $stmt = $dbh->query("
+                SELECT COUNT(*) FROM feature f
+                LEFT JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
+                WHERE gs.gene_set_id IS NULL
+            ");
+            $orphaned_gs_features = $stmt->fetchColumn();
+            if ($orphaned_gs_features > 0) {
+                $result['data_issues'][] = "Features with invalid gene_set_id: $orphaned_gs_features";
+            }
+        }
+
+        // 5. Check for gene_sets not linked to a genome
+        if (in_array('gene_set', $result['tables_present']) && in_array('genome', $result['tables_present'])) {
+            $stmt = $dbh->query("
+                SELECT COUNT(*) FROM gene_set gs
+                LEFT JOIN genome g ON gs.genome_id = g.genome_id
+                WHERE g.genome_id IS NULL
+            ");
+            $orphaned_gene_sets = $stmt->fetchColumn();
+            if ($orphaned_gene_sets > 0) {
+                $result['data_issues'][] = "Gene sets with invalid genome_id: $orphaned_gene_sets";
             }
         }
         

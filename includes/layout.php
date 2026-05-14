@@ -207,6 +207,7 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
         <script src="/<?= $config->getString('site') ?>/js/modules/help-text.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/annotation-search.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/advanced-search-filter.js"></script>
+        <script src="/<?= $config->getString('site') ?>/js/modules/scope-filter.js"></script>
         
         <!-- Loading Indicator - Available to all pages for database scanning operations -->
         <script src="/<?= $config->getString('site') ?>/js/loading-indicator.js"></script>

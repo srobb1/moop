@@ -107,10 +107,14 @@
                   <code>├─ organism.json</code> (metadata file)<br/>
                   <code>└─ <strong>assembly_name</strong></code> (e.g., GCA_004027475.1_v1)<br/>
                   <div class="ms-3">
-                    <code>├─ transcript.nt.fa</code> (mRNA sequences)<br/>
-                    <code>├─ protein.aa.fa</code> (protein sequences)<br/>
-                    <code>├─ cds.nt.fa</code> (coding sequences)<br/>
-                    <code>└─ genome.fa</code> (optional: full genome)<br/>
+                    <code>├─ genome.fa</code> (reference genome — shared across gene sets)<br/>
+                    <code>├─ genome.fa.fai</code> (samtools FAI index)<br/>
+                    <code>└─ <strong>gene_set_name</strong></code> (e.g., v1, OGS1.0)<br/>
+                    <div class="ms-3">
+                      <code>├─ *.transcript.nt.fa</code> (mRNA sequences)<br/>
+                      <code>├─ *.protein.aa.fa</code> (protein sequences)<br/>
+                      <code>└─ *.cds.nt.fa</code> (coding sequences)<br/>
+                    </div>
                   </div>
                 </div>
                 <div class="mt-2">

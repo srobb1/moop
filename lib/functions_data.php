@@ -933,7 +933,8 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         'has_blast_indexes' => false,
         'has_fai_index' => false,
         'has_database' => false,
-        'database_readable' => false,
+        'database_valid' => false,
+        'directories_match_db' => false,
         'assemblies_in_groups' => false,
         'in_taxonomy_tree' => false,
         'metadata_complete' => false,
@@ -967,7 +968,14 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
             $blast_validation = $data['blast_validation'][$assembly] ?? null;
             if (!$blast_validation) {
                 $assembly_path = $data['path'] . '/' . $assembly;
-                $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
+                // Aggregate across gene_set subdirs
+                $blast_validation = ['databases' => [], 'missing_count' => 0, 'total_count' => 0];
+                foreach (glob($assembly_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                    $bv = validateBlastIndexFiles($gs_dir, $sequence_types);
+                    $blast_validation['databases']     = array_merge($blast_validation['databases'], $bv['databases']);
+                    $blast_validation['missing_count'] += $bv['missing_count'];
+                    $blast_validation['total_count']   += $bv['total_count'];
+                }
             }
 
             if (!empty($blast_validation['databases'])) {
@@ -1014,12 +1022,20 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
     // 5. Is there a database file?
     $checks['has_database'] = $data['has_db'];
     
-    // 6. Is the database readable?
+    // 6. Is the database valid? (readable, correct schema, all tables present, no data issues)
     if ($checks['has_database'] && !empty($data['db_validation'])) {
-        $checks['database_readable'] = $data['db_validation']['readable'];
+        $checks['database_valid'] = $data['db_validation']['valid'] ?? $data['db_validation']['readable'];
+    }
+
+    // 7. Do assembly and gene_set directories on disk match the DB records?
+    if ($checks['has_database'] && !empty($data['assembly_validation'])) {
+        $checks['directories_match_db'] = $data['assembly_validation']['valid'] ?? false;
+    } elseif ($checks['has_database'] && !empty($data['db_file']) && !empty($data['path'])) {
+        $live = validateAssemblyDirectories($data['db_file'], $data['path']);
+        $checks['directories_match_db'] = $live['valid'];
     }
     
-    // 7. Is each assembly a member of at least one group?
+    // 8. Is each assembly a member of at least one group?
     if ($checks['has_assemblies']) {
         $all_in_groups = true;
         foreach ($data['assemblies'] as $assembly) {
@@ -1032,10 +1048,10 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         $checks['assemblies_in_groups'] = $all_in_groups;
     }
     
-    // 8. Is the organism found in the tree? (use pre-computed value from cache if available)
+    // 9. Is the organism found in the tree? (use pre-computed value from cache if available)
     $checks['in_taxonomy_tree'] = $data['in_taxonomy_tree'] ?? isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
-    
-    // 9. Is metadata complete?
+
+    // 10. Is metadata complete?
     if (!empty($data['json_validation'])) {
         $json_val = $data['json_validation'];
         $checks['metadata_complete'] = ($json_val['exists'] && $json_val['readable'] && $json_val['valid_json'] && $json_val['has_required_fields'] && $json_val['writable']);
@@ -1222,11 +1238,18 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
             'json_validation' => validateOrganismJson("$org_path/organism.json")
         ];
         
-        // Pre-compute blast validation per assembly
+        // Pre-compute blast validation per assembly — aggregate across gene_set subdirs
         $blast_by_assembly = [];
         foreach ($org_info['assemblies'] as $assembly) {
             $assembly_path = $org_path . '/' . $assembly;
-            $blast_by_assembly[$assembly] = validateBlastIndexFiles($assembly_path, $sequence_types);
+            $aggregated = ['databases' => [], 'missing_count' => 0, 'total_count' => 0];
+            foreach (glob($assembly_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                $bv = validateBlastIndexFiles($gs_dir, $sequence_types);
+                $aggregated['databases']     = array_merge($aggregated['databases'], $bv['databases']);
+                $aggregated['missing_count'] += $bv['missing_count'];
+                $aggregated['total_count']   += $bv['total_count'];
+            }
+            $blast_by_assembly[$assembly] = $aggregated;
         }
         $org_info['blast_validation'] = $blast_by_assembly;
 

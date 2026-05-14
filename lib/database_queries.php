@@ -284,7 +284,7 @@ function getAssemblyStats($genome_id_param, $dbFile) {
  * @param string $dbFile - Path to SQLite database
  * @return array - Array of matching features with annotations
  */
-function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, $source_names = [], $assembly_accession = '') {
+function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, $source_names = [], $assembly_accession = '', $gene_set_name = '', $scope_pairs = []) {
     // Use provided source names filter, or empty array if not provided
     $source_filter = !empty($source_names) ? $source_names : [];
     $search_term_clean = $search_term;
@@ -316,21 +316,34 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
         
         $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern];
         
-        // Add assembly filter if specified
-        if (!empty($assembly_accession)) {
-            $query .= " AND g.genome_accession = ?";
-            $params[] = $assembly_accession;
+        // scope_pairs overrides individual assembly/gene_set filters
+        if (!empty($scope_pairs)) {
+            $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
+            $query .= " AND (" . implode(' OR ', $clauses) . ")";
+            foreach ($scope_pairs as $pair) {
+                $params[] = $pair['assembly'];
+                $params[] = $pair['gene_set'];
+            }
+        } else {
+            if (!empty($assembly_accession)) {
+                $query .= " AND g.genome_accession = ?";
+                $params[] = $assembly_accession;
+            }
+            if (!empty($gene_set_name)) {
+                $query .= " AND gs.gene_set_name = ?";
+                $params[] = $gene_set_name;
+            }
         }
-        
+
         // Add source filter if specified (exact match with IN)
         if (!empty($source_filter)) {
             $placeholders = implode(',', array_fill(0, count($source_filter), '?'));
             $query .= " AND ans.annotation_source_name IN ($placeholders)";
             $params = array_merge($params, $source_filter);
         }
-        
-        $query .= " ORDER BY 
-                     CASE 
+
+        $query .= " ORDER BY
+                     CASE
                        WHEN f.feature_name REGEXP ? THEN 1
                        WHEN f.feature_name REGEXP ? THEN 2
                        WHEN f.feature_description REGEXP ? THEN 3
@@ -391,21 +404,34 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
                     AND gs.genome_id = g.genome_id
                     AND $where_clause";
         
-        // Add assembly filter if specified
-        if (!empty($assembly_accession)) {
-            $query .= " AND g.genome_accession = ?";
-            $params[] = $assembly_accession;
+        // scope_pairs overrides individual assembly/gene_set filters
+        if (!empty($scope_pairs)) {
+            $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
+            $query .= " AND (" . implode(' OR ', $clauses) . ")";
+            foreach ($scope_pairs as $pair) {
+                $params[] = $pair['assembly'];
+                $params[] = $pair['gene_set'];
+            }
+        } else {
+            if (!empty($assembly_accession)) {
+                $query .= " AND g.genome_accession = ?";
+                $params[] = $assembly_accession;
+            }
+            if (!empty($gene_set_name)) {
+                $query .= " AND gs.gene_set_name = ?";
+                $params[] = $gene_set_name;
+            }
         }
-        
+
         // Add source filter if specified (exact match with IN)
         if (!empty($source_filter)) {
             $placeholders = implode(',', array_fill(0, count($source_filter), '?'));
             $query .= " AND ans.annotation_source_name IN ($placeholders)";
             $params = array_merge($params, $source_filter);
         }
-        
-        $query .= " ORDER BY 
-                    CASE 
+
+        $query .= " ORDER BY
+                    CASE
                       WHEN f.feature_name REGEXP ? THEN 1
                       WHEN f.feature_name REGEXP ? THEN 2
                       WHEN f.feature_description REGEXP ? THEN 3
@@ -544,7 +570,7 @@ function searchFeaturesAndAnnotationsLike($search_term, $is_quoted_search, $dbFi
  * @param string $organism_name - Optional: Filter by organism
  * @return array - Array of matching features
  */
-function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_name = '', $assembly_accession = '') {
+function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_name = '', $assembly_accession = '', $gene_set_name = '', $scope_pairs = []) {
     if ($organism_name) {
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
@@ -557,15 +583,28 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
                     AND (o.genus || ' ' || o.species = ?)";
         $params = ["%$search_term%", $organism_name];
         
-        // Add assembly filter if specified
-        if (!empty($assembly_accession)) {
-            $query .= " AND g.genome_accession = ?";
-            $params[] = $assembly_accession;
+        // scope_pairs overrides individual assembly/gene_set filters
+        if (!empty($scope_pairs)) {
+            $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
+            $query .= " AND (" . implode(' OR ', $clauses) . ")";
+            foreach ($scope_pairs as $pair) {
+                $params[] = $pair['assembly'];
+                $params[] = $pair['gene_set'];
+            }
+        } else {
+            if (!empty($assembly_accession)) {
+                $query .= " AND g.genome_accession = ?";
+                $params[] = $assembly_accession;
+            }
+            if (!empty($gene_set_name)) {
+                $query .= " AND gs.gene_set_name = ?";
+                $params[] = $gene_set_name;
+            }
         }
-        
+
         $query .= " ORDER BY f.feature_uniquename";
     } else {
-        $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
+        $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
                          g.genome_accession
                   FROM feature f, organism o, gene_set gs, genome g
@@ -574,16 +613,29 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
                     AND gs.genome_id = g.genome_id
                     AND f.feature_uniquename LIKE ?";
         $params = ["%$search_term%"];
-        
-        // Add assembly filter if specified
-        if (!empty($assembly_accession)) {
-            $query .= " AND g.genome_accession = ?";
-            $params[] = $assembly_accession;
+
+        // scope_pairs overrides individual assembly/gene_set filters
+        if (!empty($scope_pairs)) {
+            $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
+            $query .= " AND (" . implode(' OR ', $clauses) . ")";
+            foreach ($scope_pairs as $pair) {
+                $params[] = $pair['assembly'];
+                $params[] = $pair['gene_set'];
+            }
+        } else {
+            if (!empty($assembly_accession)) {
+                $query .= " AND g.genome_accession = ?";
+                $params[] = $assembly_accession;
+            }
+            if (!empty($gene_set_name)) {
+                $query .= " AND gs.gene_set_name = ?";
+                $params[] = $gene_set_name;
+            }
         }
-        
+
         $query .= " ORDER BY f.feature_uniquename";
     }
-    
+
     return fetchData($query, $dbFile, $params);
 }
 

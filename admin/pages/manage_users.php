@@ -249,7 +249,14 @@
     </div>
     <div id="stale-audit" style="display:none;">
       <div class="card-body">
-        <p class="text-muted small">These assemblies are still assigned to users but no longer exist on disk.</p>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <p class="text-muted small mb-0">These assemblies are still assigned to users but no longer exist on disk.</p>
+          <form method="post" onsubmit="return confirm('Remove ALL <?= count($stale_entries_audit) ?> stale reference(s) from all users?');">
+            <?= csrf_input_field() ?>
+            <input type="hidden" name="remove_all_stale" value="1">
+            <button type="submit" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i> Remove All Stale</button>
+          </form>
+        </div>
         <div class="table-responsive">
           <table class="table table-sm table-hover">
             <thead>
@@ -464,6 +471,18 @@
 
   /* Dim the access section when admin is checked */
   .access-disabled { opacity: 0.45; pointer-events: none; }
+
+  /* Gene set chips inside expanded assembly panel */
+  .tag-chip-gs {
+    font-size: 10px;
+    padding: 1px 7px;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1.5px solid;
+    user-select: none;
+    transition: background 0.1s, color 0.1s, opacity 0.1s;
+  }
+  .tag-chip-gs:hover { opacity: 1 !important; filter: brightness(0.93); }
 </style>
 
 <script>
@@ -486,7 +505,8 @@
   // ── Build one org row (chips + per-organism checkbox + count) ─────────
   // assembliesDict: {assembly: [gene_sets]} — e.g. {HIv3: ['v1'], GCA_1: ['v1','v2']}
   // selectedAccess: {org: {assembly: ['*'] | [gene_sets]}}
-  function buildOrgSection(organism, assembliesDict, selectedAccess, onGroupRefresh, onUpdate) {
+  // asmRefreshRegistry: optional map keyed 'org::asm' → refreshFn, filled here
+  function buildOrgSection(organism, assembliesDict, selectedAccess, onGroupRefresh, onUpdate, asmRefreshRegistry) {
     const assemblies = Object.keys(assembliesDict);
 
     const orgSection = document.createElement('div');
@@ -525,42 +545,175 @@
                          :                 'badge bg-warning text-dark';
       orgCb.checked       = sel === total && total > 0;
       orgCb.indeterminate = sel > 0 && sel < total;
+      // Refresh each assembly chip (updates gene set badges too)
+      assemblies.forEach(a => asmRefreshRegistry?.[`${organism}::${a}`]?.());
     }
 
     assemblies.forEach(assembly => {
+      const geneSets  = assembliesDict[assembly] || ['v1'];
+      const hasGeneSets = geneSets.length >= 1;
+      const c             = orgColor(organism);
+
+      // Outer wrapper: chip row on top, gene set panel below (hidden by default)
+      const asmEntry = document.createElement('div');
+      asmEntry.style.cssText = 'display:inline-flex; flex-direction:column; vertical-align:top; margin:2px;';
+
+      const chipRow = document.createElement('div');
+      chipRow.className = 'd-flex align-items-center gap-1';
+
       const chip = document.createElement('span');
       chip.className = 'tag-chip-selector';
       chip.dataset.organism = organism;
       chip.dataset.assembly = assembly;
-      chip.style.cssText = 'font-size:11px; padding:2px 8px; margin:2px;';
-      chip.style.background  = orgColor(organism);
-      chip.style.borderColor = orgColor(organism);
-      chip.style.color       = 'white';
-      chip.style.border      = '2px solid ' + orgColor(organism);
+      chip.style.cssText = `font-size:11px; padding:2px 8px; cursor:pointer; background:${c}; border-color:${c}; color:white; border:2px solid ${c};`;
       chip.textContent = assembly;
 
-      const isSel = selectedAccess[organism]?.[assembly] !== undefined;
-      chip.style.opacity = isSel ? '1' : '0.35';
-      if (isSel) chip.classList.add('selected');
+      // Badge showing gene set selection state (only visible when >1 gs)
+      const gsBadge = document.createElement('span');
+      gsBadge.style.cssText = 'font-size:10px;';
 
+      // Gene set chips panel (expands when customize is clicked)
+      const gsPanel = document.createElement('div');
+      gsPanel.style.cssText = 'display:none; padding-top:3px;';
+
+      function getCurrentGs() { return selectedAccess[organism]?.[assembly]; }
+
+      function refreshAsmChip() {
+        const gs    = getCurrentGs();
+        const isSel = gs !== undefined;
+        chip.style.opacity = isSel ? '1' : '0.35';
+        chip.classList.toggle('selected', isSel);
+
+        if (!isSel) {
+          gsBadge.textContent = ''; gsBadge.className = '';
+        } else if (gs[0] === '*') {
+          gsBadge.textContent = 'all';
+          gsBadge.className   = 'badge bg-success ms-1';
+        } else {
+          gsBadge.textContent = `${gs.length}/${geneSets.length}`;
+          gsBadge.className   = 'badge bg-warning text-dark ms-1';
+        }
+
+        // Keep gs chip visuals in sync if panel is open
+        if (gsPanel.style.display !== 'none') {
+          gsPanel.querySelectorAll('.tag-chip-gs').forEach(gsChip => {
+            const gsName = gsChip.dataset.gs;
+            const sel    = gs === undefined ? false : (gs[0] === '*' ? true : gs.includes(gsName));
+            gsChip.style.opacity    = sel ? '1' : '0.45';
+            gsChip.style.background = sel ? c : 'white';
+            gsChip.style.color      = sel ? 'white' : c;
+            gsChip.classList.toggle('selected', sel);
+          });
+        }
+      }
+
+      if (asmRefreshRegistry) asmRefreshRegistry[`${organism}::${assembly}`] = refreshAsmChip;
+
+      // Assembly chip click → toggle all gene sets (or upgrade partial → all)
       chip.addEventListener('click', function () {
-        const sel = this.classList.toggle('selected');
-        this.style.opacity = sel ? '1' : '0.35';
-        if (sel) {
+        const gs = getCurrentGs();
+        if (gs === undefined) {
           if (!selectedAccess[organism]) selectedAccess[organism] = {};
           selectedAccess[organism][assembly] = ['*'];
+        } else if (gs[0] === '*') {
+          // Already all — deselect
+          delete selectedAccess[organism][assembly];
+          if (!Object.keys(selectedAccess[organism]).length) delete selectedAccess[organism];
         } else {
-          delete selectedAccess[organism]?.[assembly];
-          if (selectedAccess[organism] && !Object.keys(selectedAccess[organism]).length) {
-            delete selectedAccess[organism];
-          }
+          // Partial → upgrade to all
+          selectedAccess[organism][assembly] = ['*'];
         }
+        refreshAsmChip();
         refreshOrg();
         onGroupRefresh();
         onUpdate();
       });
 
-      assemblyWrap.appendChild(chip);
+      chipRow.appendChild(chip);
+      chipRow.appendChild(gsBadge);
+
+      // Customize button + individual gene set chips (only when assembly has >1 gene set)
+      if (hasGeneSets) {
+        const customBtn = document.createElement('button');
+        customBtn.type  = 'button';
+        customBtn.title = 'Customize gene sets';
+        customBtn.style.cssText = 'background:none; border:none; padding:0 2px; cursor:pointer; font-size:11px; color:#6c757d; line-height:1;';
+        customBtn.innerHTML = '<i class="fa fa-sliders-h"></i>';
+
+        customBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          const isOpen = gsPanel.style.display !== 'none';
+          gsPanel.style.display = isOpen ? 'none' : 'block';
+          this.innerHTML = isOpen
+            ? '<i class="fa fa-sliders-h"></i>'
+            : '<i class="fa fa-times-circle" style="color:#dc3545;"></i>';
+          if (!isOpen) refreshAsmChip(); // sync gs chip state when opening
+        });
+
+        chipRow.appendChild(customBtn);
+
+        geneSets.forEach(gs => {
+          const gsChip = document.createElement('span');
+          gsChip.className     = 'tag-chip-gs me-1';
+          gsChip.dataset.gs    = gs;
+          gsChip.style.borderColor = c;
+
+          const initGs  = getCurrentGs();
+          const initSel = initGs === undefined ? false : (initGs[0] === '*' ? true : initGs.includes(gs));
+          gsChip.style.background = initSel ? c : 'white';
+          gsChip.style.color      = initSel ? 'white' : c;
+          gsChip.style.opacity    = initSel ? '1' : '0.45';
+          gsChip.classList.toggle('selected', initSel);
+          gsChip.textContent = gs;
+
+          gsChip.addEventListener('click', function (e) {
+            e.stopPropagation();
+            let current = getCurrentGs();
+
+            if (current === undefined) {
+              // Assembly not yet selected — select just this gs
+              if (!selectedAccess[organism]) selectedAccess[organism] = {};
+              selectedAccess[organism][assembly] = [gs];
+            } else if (current[0] === '*') {
+              // All selected — remove this one
+              const remaining = geneSets.filter(g => g !== gs);
+              if (remaining.length === 0) {
+                delete selectedAccess[organism][assembly];
+                if (!Object.keys(selectedAccess[organism]).length) delete selectedAccess[organism];
+              } else {
+                selectedAccess[organism][assembly] = remaining;
+              }
+            } else {
+              // Specific list — toggle
+              if (current.includes(gs)) {
+                const remaining = current.filter(g => g !== gs);
+                if (remaining.length === 0) {
+                  delete selectedAccess[organism][assembly];
+                  if (!Object.keys(selectedAccess[organism]).length) delete selectedAccess[organism];
+                } else {
+                  selectedAccess[organism][assembly] = remaining;
+                }
+              } else {
+                const newList = [...current, gs];
+                // Upgrade to ['*'] if all gene sets are now selected
+                selectedAccess[organism][assembly] = newList.length === geneSets.length ? ['*'] : newList;
+              }
+            }
+
+            refreshAsmChip();
+            refreshOrg();
+            onGroupRefresh();
+            onUpdate();
+          });
+
+          gsPanel.appendChild(gsChip);
+        });
+      }
+
+      asmEntry.appendChild(chipRow);
+      if (hasGeneSets) asmEntry.appendChild(gsPanel);
+      assemblyWrap.appendChild(asmEntry);
+      refreshAsmChip();
     });
 
     orgCb.addEventListener('click', function (e) {
@@ -575,12 +728,7 @@
         assemblyWrap.style.display = 'block';
         orgChevron.className = 'fa fa-chevron-down fa-fw text-muted';
       }
-      assemblyWrap.querySelectorAll('.tag-chip-selector').forEach(chip => {
-        const isSel = selectedAccess[organism]?.[chip.dataset.assembly] !== undefined;
-        chip.classList.toggle('selected', !!isSel);
-        chip.style.opacity = isSel ? '1' : '0.35';
-      });
-      refreshOrg();
+      refreshOrg(); // refreshOrg calls asmRefreshRegistry for each asm
       onGroupRefresh();
       onUpdate();
     });
@@ -606,6 +754,7 @@
   // ── Render full selector grouped by group ─────────────────────────────
   function renderAssemblySelector(containerEl, selectedAccess, onUpdate) {
     containerEl.innerHTML = '';
+    const asmRefreshRegistry = {}; // 'org::asm' → refreshFn, populated by buildOrgSection
 
     Object.keys(allOrganismsByGroup).sort().forEach(group => {
       const groupOrgs = allOrganismsByGroup[group];
@@ -670,27 +819,23 @@
           groupBody.style.display = 'block';
           groupChevron.className = 'fa fa-chevron-down fa-fw';
         }
-        // Update org rows without full re-render
+        // Update org rows via registry (handles gene set badges too)
         groupBody.querySelectorAll('.org-section').forEach(orgSection => {
-          const org     = orgSection.dataset.org;
+          const org      = orgSection.dataset.org;
           const asmsDict = groupOrgs[org] || {};
           const asmKeys  = Object.keys(asmsDict);
-          const orgCb    = orgSection.querySelector('input[type=checkbox]');
-          const orgCount = orgSection.querySelector('.badge');
+          const orgCbEl  = orgSection.querySelector('input[type=checkbox]');
+          const orgCntEl = orgSection.querySelector('.badge');
           const sel   = asmKeys.filter(a => selectedAccess[org]?.[a] !== undefined).length;
           const total = asmKeys.length;
-          if (orgCount) {
-            orgCount.textContent = `${sel}/${total}`;
-            orgCount.className = sel === 0     ? 'badge bg-secondary'
+          if (orgCntEl) {
+            orgCntEl.textContent = `${sel}/${total}`;
+            orgCntEl.className = sel === 0     ? 'badge bg-secondary'
                                : sel === total ? 'badge bg-success'
                                :                 'badge bg-warning text-dark';
           }
-          if (orgCb) { orgCb.checked = sel === total && total > 0; orgCb.indeterminate = sel > 0 && sel < total; }
-          orgSection.querySelectorAll('.tag-chip-selector').forEach(chip => {
-            const isSel = selectedAccess[org]?.[chip.dataset.assembly] !== undefined;
-            chip.classList.toggle('selected', !!isSel);
-            chip.style.opacity = isSel ? '1' : '0.35';
-          });
+          if (orgCbEl) { orgCbEl.checked = sel === total && total > 0; orgCbEl.indeterminate = sel > 0 && sel < total; }
+          asmKeys.forEach(a => asmRefreshRegistry[`${org}::${a}`]?.());
         });
         refreshGroup();
         onUpdate();
@@ -705,7 +850,7 @@
 
       Object.keys(groupOrgs).sort().forEach(org => {
         // groupOrgs[org] is {assembly: [gene_sets]}
-        groupBody.appendChild(buildOrgSection(org, groupOrgs[org], selectedAccess, refreshGroup, onUpdate));
+        groupBody.appendChild(buildOrgSection(org, groupOrgs[org], selectedAccess, refreshGroup, onUpdate, asmRefreshRegistry));
       });
 
       groupHeader.appendChild(groupCb);
@@ -743,8 +888,16 @@
           hiddenEl.appendChild(inp);
         });
 
+        // Resolve ['*'] to actual gene set names for display
+        const displayGs = (geneSets.length === 1 && geneSets[0] === '*')
+          ? (allOrganisms[org]?.[asm] || ['v1'])
+          : geneSets;
+
+        const row = document.createElement('div');
+        row.className = 'd-flex align-items-start gap-1 mb-1';
+
         const badge = document.createElement('span');
-        badge.className = 'tag-chip me-1 mb-1';
+        badge.className = 'tag-chip flex-shrink-0';
         badge.style.background  = orgColor(org);
         badge.style.borderColor = orgColor(org);
         badge.textContent = `${org}: ${asm}`;
@@ -763,7 +916,46 @@
           if (containerEl) renderAssemblySelector(containerEl, selectedAccess, () => syncSelection(hiddenId, previewId, selectedAccess));
         });
         badge.appendChild(rm);
-        previewEl.appendChild(badge);
+
+        const gsWrap = document.createElement('span');
+        gsWrap.className = 'd-flex flex-wrap gap-1 align-items-center';
+        displayGs.forEach(gs => {
+          const allGs = allOrganisms[org]?.[asm] || ['v1'];
+          const gsChip = document.createElement('span');
+          gsChip.className = 'd-inline-flex align-items-center gap-1 badge rounded-pill';
+          gsChip.style.cssText = `background:${orgColor(org)}; opacity:0.82; font-size:10px; font-weight:normal; padding:3px 7px;`;
+          const gsLabel = document.createElement('span');
+          gsLabel.textContent = gs;
+          const gsRm = document.createElement('i');
+          gsRm.className = 'fa fa-times';
+          gsRm.style.cssText = 'cursor:pointer; opacity:0.7; font-size:9px;';
+          gsRm.title = `Remove ${gs}`;
+          gsRm.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const current = selectedAccess[org]?.[asm];
+            const fullList = (current && current.length === 1 && current[0] === '*') ? allGs : (current || allGs);
+            const remaining = fullList.filter(g => g !== gs);
+            if (remaining.length === 0) {
+              delete selectedAccess[org][asm];
+              if (!Object.keys(selectedAccess[org]).length) delete selectedAccess[org];
+            } else {
+              if (!selectedAccess[org]) selectedAccess[org] = {};
+              selectedAccess[org][asm] = remaining.length === allGs.length ? ['*'] : remaining;
+            }
+            syncSelection(hiddenId, previewId, selectedAccess);
+            const containerEl = document.getElementById(
+              hiddenId === 'create-selected-assemblies-hidden' ? 'create-access-container' : 'modal-access-container'
+            );
+            if (containerEl) renderAssemblySelector(containerEl, selectedAccess, () => syncSelection(hiddenId, previewId, selectedAccess));
+          });
+          gsChip.appendChild(gsLabel);
+          gsChip.appendChild(gsRm);
+          gsWrap.appendChild(gsChip);
+        });
+
+        row.appendChild(badge);
+        row.appendChild(gsWrap);
+        previewEl.appendChild(row);
       });
     });
 

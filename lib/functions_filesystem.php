@@ -86,44 +86,80 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
             }
         }
         
+        // Get gene_set records grouped by genome_id
+        $gene_sets_by_genome = [];
+        try {
+            $gs_stmt = $dbh->query("SELECT gene_set_id, genome_id, gene_set_name FROM gene_set ORDER BY gene_set_name");
+            foreach ($gs_stmt->fetchAll(PDO::FETCH_ASSOC) as $gs) {
+                $gene_sets_by_genome[$gs['genome_id']][] = $gs;
+            }
+        } catch (PDOException $e) {
+            // gene_set table may not exist in older DBs — treat as no gene sets
+        }
+
         // Check each genome record
         foreach ($genomes as $genome) {
-            $name = $genome['genome_name'];
+            $name      = $genome['genome_name'];
             $accession = $genome['genome_accession'];
             $genome_id = $genome['genome_id'];
-            
-            // Check if either name or accession matches a directory
+
+            // Check if either name or accession matches an assembly directory
             $found_dir = null;
             if (in_array($name, $dir_names)) {
                 $found_dir = $name;
             } elseif (in_array($accession, $dir_names)) {
                 $found_dir = $accession;
             }
-            
+
+            // Check gene_set subdirs within the assembly directory
+            $gene_set_checks = [];
+            if ($found_dir !== null) {
+                $asm_path = "$organism_data_dir/$found_dir";
+                foreach ($gene_sets_by_genome[$genome_id] ?? [] as $gs) {
+                    $gs_exists = is_dir("$asm_path/{$gs['gene_set_name']}");
+                    $gene_set_checks[] = [
+                        'gene_set_id'   => $gs['gene_set_id'],
+                        'gene_set_name' => $gs['gene_set_name'],
+                        'dir_exists'    => $gs_exists,
+                    ];
+                    if (!$gs_exists) {
+                        $result['valid'] = false;
+                        $result['mismatches'][] = [
+                            'type'           => 'missing_gene_set_directory',
+                            'genome_name'    => $name,
+                            'genome_accession' => $accession,
+                            'assembly_dir'   => $found_dir,
+                            'gene_set_name'  => $gs['gene_set_name'],
+                            'message'        => "No directory found for gene_set '{$gs['gene_set_name']}' inside assembly '$found_dir'"
+                        ];
+                    }
+                }
+            }
+
             $result['genomes'][] = [
-                'genome_id' => $genome_id,
-                'genome_name' => $name,
+                'genome_id'        => $genome_id,
+                'genome_name'      => $name,
                 'genome_accession' => $accession,
-                'directory_found' => $found_dir,
-                'exists' => $found_dir !== null
+                'directory_found'  => $found_dir,
+                'exists'           => $found_dir !== null,
+                'gene_set_checks'  => $gene_set_checks,
             ];
-            
+
             if ($found_dir === null) {
                 $result['valid'] = false;
                 $result['mismatches'][] = [
-                    'type' => 'missing_directory',
-                    'genome_name' => $name,
+                    'type'             => 'missing_directory',
+                    'genome_name'      => $name,
                     'genome_accession' => $accession,
-                    'message' => "No directory found matching genome_name '$name' or genome_accession '$accession'"
+                    'message'          => "No directory found matching genome_name '$name' or genome_accession '$accession'"
                 ];
             } elseif ($found_dir !== $name && $found_dir !== $accession) {
-                // Directory exists but doesn't match expected names
                 $result['mismatches'][] = [
-                    'type' => 'name_mismatch',
-                    'genome_name' => $name,
+                    'type'             => 'name_mismatch',
+                    'genome_name'      => $name,
                     'genome_accession' => $accession,
-                    'found_directory' => $found_dir,
-                    'message' => "Directory '$found_dir' found, but doesn't match genome_name '$name' or genome_accession '$accession'"
+                    'found_directory'  => $found_dir,
+                    'message'          => "Directory '$found_dir' found, but doesn't match genome_name '$name' or genome_accession '$accession'"
                 ];
             }
         }
@@ -172,16 +208,39 @@ function validateAssemblyFastaFiles($organism_dir, $sequence_types) {
             'missing_patterns' => []
         ];
         
-        // Check for each sequence type pattern
+        // Collect gene_set subdirs within this assembly dir
+        $gene_set_dirs = array_values(array_filter(
+            array_diff(scandir($full_path), ['.', '..']),
+            fn($f) => is_dir("$full_path/$f")
+        ));
+
+        // Check for each sequence type pattern — assembly-level first, then gene_set subdirs
         foreach ($sequence_types as $type => $config) {
             $pattern = $config['pattern'];
-            $files = glob("$full_path/*$pattern");
-            
-            if (!empty($files)) {
+            $found_file = null;
+
+            // Check directly in the assembly dir (e.g. genome.fa lives here)
+            $direct = glob("$full_path/*$pattern");
+            if (!empty($direct)) {
+                $found_file = basename($direct[0]);
+            }
+
+            // If not found at assembly level, check inside each gene_set subdir
+            if ($found_file === null) {
+                foreach ($gene_set_dirs as $gs) {
+                    $files = glob("$full_path/$gs/*$pattern");
+                    if (!empty($files)) {
+                        $found_file = basename($files[0]);
+                        break;
+                    }
+                }
+            }
+
+            if ($found_file !== null) {
                 $assembly_info['fasta_files'][$type] = [
                     'found' => true,
                     'pattern' => $pattern,
-                    'file' => basename($files[0])
+                    'file' => $found_file
                 ];
             } else {
                 $assembly_info['fasta_files'][$type] = [
@@ -241,6 +300,46 @@ function renameAssemblyDirectory($organism_dir, $old_name, $new_name) {
     $command = "cd " . escapeshellarg($organism_dir) . " && mv " . escapeshellarg($old_name) . " " . escapeshellarg($new_name);
     
     // Try to rename
+    if (@rename($old_path, $new_path)) {
+        return buildDirectoryResult(true, "Successfully renamed '$old_name' to '$new_name'", $command);
+    } else {
+        return buildDirectoryResult(false, 'Web server lacks permission to rename directory.', $command);
+    }
+}
+
+/**
+ * Rename a gene set directory within an assembly directory
+ *
+ * @param string $organism_dir - Path to organism directory
+ * @param string $assembly - Assembly directory name
+ * @param string $old_name - Current gene set directory name
+ * @param string $new_name - Target gene set directory name
+ * @return array - ['success' => bool, 'message' => string, 'command' => string]
+ */
+function renameGeneSetDirectory($organism_dir, $assembly, $old_name, $new_name) {
+    if (!validateDirectoryName($assembly) || !validateDirectoryName($old_name) || !validateDirectoryName($new_name)) {
+        return buildDirectoryResult(false, 'Invalid directory name (contains path separators)');
+    }
+
+    $assembly_path = "$organism_dir/$assembly";
+
+    if (!is_dir($assembly_path)) {
+        return buildDirectoryResult(false, "Assembly directory '$assembly' not found");
+    }
+
+    $old_path = "$assembly_path/$old_name";
+    $new_path = "$assembly_path/$new_name";
+
+    if (!is_dir($old_path)) {
+        return buildDirectoryResult(false, "Gene set directory '$old_name' not found in '$assembly'");
+    }
+
+    if (is_dir($new_path) || file_exists($new_path)) {
+        return buildDirectoryResult(false, "Directory '$new_name' already exists in '$assembly'");
+    }
+
+    $command = "cd " . escapeshellarg($assembly_path) . " && mv " . escapeshellarg($old_name) . " " . escapeshellarg($new_name);
+
     if (@rename($old_path, $new_path)) {
         return buildDirectoryResult(true, "Successfully renamed '$old_name' to '$new_name'", $command);
     } else {
