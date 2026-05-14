@@ -40,8 +40,8 @@ $organism_data = $config->getPath('organism_data');
 $absolute_images_path = $config->getPath('absolute_images_path');
 $images_path = $config->getString('images_path');
 
-// Get organisms from query parameters
-$organisms = $_GET['organisms'] ?? [];
+// Get organisms from query or post parameters
+$organisms = $_POST['organisms'] ?? $_GET['organisms'] ?? [];
 if (is_string($organisms)) {
     $organisms = [$organisms];
 }
