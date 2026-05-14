@@ -41,7 +41,7 @@ foreach ($sources_by_group as $group_name => $organisms) {
                 type="text" 
                 class="form-control" 
                 id="sourceFilter" 
-                placeholder="Filter by group, organism, or assembly..."
+                placeholder="Filter by group, organism, assembly, or gene set..."
                 value="<?= htmlspecialchars($selected_assembly_name ?: ($selected_organism ?: $context_group)) ?>"
                 >
             <button type="button" class="btn btn-success" onclick="<?= $clear_filter_function ?? 'clearSourceFilter' ?>();">
@@ -58,7 +58,8 @@ foreach ($sources_by_group as $group_name => $organisms) {
             foreach ($organisms as $organism => $assemblies): 
                 foreach ($assemblies as $source): 
                     $genome_name = $source['genome_name'] ?? $source['assembly'];
-                    $search_text = strtolower("$group_name $organism $source[assembly] $genome_name");
+                    $gene_set_label = $source['gene_set'] ?? '';
+                    $search_text = strtolower("$group_name $organism $source[assembly] $genome_name $gene_set_label");
                     
                     // Determine if this source should be hidden (filtered out)
                     $is_filtered_out = false;
@@ -103,6 +104,11 @@ foreach ($sources_by_group as $group_name => $organisms) {
                         <span class="badge badge-sm bg-info text-white">
                             <?= htmlspecialchars($source['genome_name'] ?? $source['assembly']) ?>
                         </span>
+                        <?php if (!empty($source['gene_set'])): ?>
+                        <span class="badge badge-sm bg-light text-dark border">
+                            <?= htmlspecialchars($source['gene_set']) ?>
+                        </span>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; 
             endforeach; 
