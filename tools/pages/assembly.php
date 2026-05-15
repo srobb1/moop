@@ -31,11 +31,11 @@
 
     <!-- Tools Column -->
     <div class="col-lg-4">
-      <?php 
+      <?php
       $context = createToolContext('assembly', [
-          'organism' => $organism_name,
-          'assembly' => $assembly_accession,
-          'display_name' => $assembly_info['genome_name']
+          'organism'     => $organism_name,
+          'assembly'     => $assembly_accession,
+          'display_name' => $assembly_info['genome_name'],
       ]);
       include_once TOOL_SECTION_PATH;
       ?>
@@ -57,21 +57,34 @@
   </div>
 
   <!-- Assembly Header Section with Info -->
+  <?php
+  list($genome_id, $genome_name, $genome_accession) = getAssemblyInfo($assembly_accession, $db_path);
+  $fasta_files     = getAssemblyFastaFiles($organism_name, $genome_name);
+  $genome_directory = $genome_name;
+  if (empty($fasta_files)) {
+      $fasta_files      = getAssemblyFastaFiles($organism_name, $genome_accession);
+      $genome_directory = $genome_accession;
+  }
+  // Pick out the genome.fa (assembly-level, gene_set = '')
+  $genome_file = null;
+  foreach ($fasta_files as $ftype => $finfo) {
+      if (($finfo['gene_set'] ?? '') === '') {
+          $genome_file = ['type' => $ftype, 'info' => $finfo];
+          break;
+      }
+  }
+  $image_data  = getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path);
+  $image_src   = $image_data['image_path'];
+  $image_info  = ['caption' => $image_data['caption'], 'link' => $image_data['link']];
+  $show_image  = !empty($image_src);
+  $image_alt   = htmlspecialchars($organism_info['common_name'] ?? $organism_name);
+  ?>
+
   <div class="row mb-4" id="assemblyHeader">
-    <?php 
-    $image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path);
-    $image_src = $image_data['image_path'];
-    $image_info = ['caption' => $image_data['caption'], 'link' => $image_data['link']];
-    $show_image = !empty($image_src);
-    $image_alt = htmlspecialchars($organism_info['common_name'] ?? $organism_name);
-    ?>
-    
     <?php if ($show_image): ?>
       <div class="col-md-4 mb-3">
         <div class="card shadow-sm">
-          <img src="<?= $image_src ?>" 
-               class="card-img-top" 
-               alt="<?= $image_alt ?>">
+          <img src="<?= $image_src ?>" class="card-img-top" alt="<?= $image_alt ?>">
           <?php if (!empty($image_info['caption'])): ?>
             <div class="card-body">
               <p class="card-text small text-muted">
@@ -91,41 +104,28 @@
 
     <div class="<?= $show_image ? 'col-md-8' : 'col-12' ?>">
       <div class="feature-header assembly-header-custom shadow">
-        <h1 class="mb-0 assembly-heading">
+        <h1 class="mb-2 assembly-heading">
           <?= htmlspecialchars($assembly_info['genome_name']) ?>
           <span class="badge bg-assembly ms-2">Assembly</span>
         </h1>
-        
         <div class="feature-info-item">
           <strong>Accession:</strong> <span class="feature-value text-monospace"><?= htmlspecialchars($assembly_info['genome_accession']) ?></span>
         </div>
         <div class="feature-info-item">
           <strong>Organism:</strong> <span class="feature-value"><em><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>" class="link-light-bordered"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></a></em></span>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Gene and mRNA Counts Section -->
-  <div class="row g-4 mb-5" id="assemblyStats">
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <div class="text-center">
-            <h2 class="fw-bold feature-color-gene mb-3">Genes</h2>
-            <h2 class="fw-bold feature-color-gene"><?= number_format($assembly_info['gene_count'] ?? 0) ?></h2>
-          </div>
+        <?php if ($genome_file):
+          $colorInfo = getColorClassOrStyle($genome_file['info']['color'] ?? '');
+        ?>
+        <div class="mt-3">
+          <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=&type=<?= urlencode($genome_file['info']['seq_type'] ?? $genome_file['type']) ?>"
+             class="btn <?= $colorInfo['class'] ?> btn-sm fw-bold text-white px-3 py-2"
+             style="border-radius: 0.6rem; <?= $colorInfo['style'] ?>"
+             download>
+            <i class="fa fa-download me-2"></i><?= htmlspecialchars($genome_file['info']['label']) ?>
+          </a>
         </div>
-      </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <div class="text-center">
-            <h2 class="fw-bold feature-color-mrna mb-3">Transcripts</h2>
-            <h2 class="fw-bold feature-color-mrna"><?= number_format($assembly_info['mrna_count'] ?? 0) ?></h2>
-          </div>
-        </div>
+        <?php endif; ?>
       </div>
     </div>
   </div>
@@ -174,46 +174,4 @@
   </div>
   <?php endif; ?>
 
-  <!-- Assembly Downloads Section -->
-  <?php
-  // Get both genome_name and genome_accession from database
-  list($genome_id, $genome_name, $genome_accession) = getAssemblyInfo($assembly_accession, $db_path);
-  // Try genome_name first, then fall back to genome_accession if no files found
-  $fasta_files = getAssemblyFastaFiles($organism_name, $genome_name);
-  $genome_directory = $genome_name;
-  if (empty($fasta_files)) {
-      $fasta_files = getAssemblyFastaFiles($organism_name, $genome_accession);
-      $genome_directory = $genome_accession;
-  }
-  ?>
-  
-  <?php if (!empty($fasta_files)): ?>
-  <div class="row mb-4" id="assemblyDownloads">
-    <div class="col-12">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <h3 class="card-title mb-4"><i class="fa fa-download"></i> Download Sequence Files</h3>
-          <div class="row g-3">
-            <?php foreach ($fasta_files as $type => $file_info): ?>
-              <?php 
-                $colorInfo = getColorClassOrStyle($file_info['color'] ?? '');
-              ?>
-              <div class="col-6 col-md-3">
-                <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=<?= urlencode($file_info['gene_set'] ?? '') ?>&type=<?= urlencode($file_info['seq_type'] ?? $type) ?>"
-                   class="btn <?= $colorInfo['class'] ?> w-100 py-4 fw-bold text-white"
-                   style="border-radius: 0.75rem; font-size: 1rem; <?= $colorInfo['style'] ?>"
-                   download>
-                   <i class="fa fa-download me-2"></i><?= htmlspecialchars($file_info['label']) ?>
-                 </a>
-               </div>
-             <?php endforeach; ?>
-           </div>
-         </div>
-       </div>
-     </div>
-   </div>
-   <?php endif; ?>
-
 </div>
-
-
