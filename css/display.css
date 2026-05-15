@@ -677,12 +677,12 @@ code {
 }
 
 .bg-gene-set {
-  background-color: #0d9488 !important;
+  background-color: #e11d48 !important;
   color: white !important;
 }
 
 .text-gene-set {
-  color: #0d9488;
+  color: #e11d48;
 }
 
 /* Assembly title and heading styles - consistent amber/orange color */
