@@ -227,7 +227,7 @@ $(document).ready(function () {
         const boxes   = $('[data-type="' + type + '"].source-cb');
         const total   = boxes.length;
         const checked = boxes.filter(':checked').length;
-        const cb      = $('#stype_' + CSS.escape(type))[0];
+        const cb      = $('[data-type="' + type + '"].source-type-cb')[0];
         if (!cb) return;
         cb.checked       = checked === total;
         cb.indeterminate = checked > 0 && checked < total;
