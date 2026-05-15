@@ -7,13 +7,18 @@ $(document).ready(function () {
 
     // ── Cascading checkboxes ──────────────────────────────────────────────────
 
-    // Org checkbox → all assemblies + files beneath it
+    // Org checkbox → all assemblies + gene sets + files beneath it; auto-expand when checking
     $(document).on('change', '.org-checkbox', function () {
         const orgId  = $(this).data('org-id');
         const checked = this.checked;
         this.indeterminate = false;
         $('[data-org-id="' + orgId + '"].asm-checkbox').prop({ checked, indeterminate: false });
+        $('[data-org-id="' + orgId + '"].gs-checkbox').prop({ checked, indeterminate: false });
         $('[data-org-id="' + orgId + '"].file-checkbox').prop('checked', checked);
+        if (checked) {
+            $('#' + orgId).collapse('show');
+            $('#' + orgId + ' .collapse').collapse('show');
+        }
         updateSelectedCount();
     });
 
@@ -111,6 +116,13 @@ $(document).ready(function () {
         $('#download-selected-btn').prop('disabled', count === 0);
     }
 
+    // Gene-set header collapse toggle (manual — avoids Bootstrap eating checkbox clicks)
+    $(document).on('click', '.gs-header', function (e) {
+        if ($(e.target).closest('input, label').length) return;
+        const targetId = $(this).data('collapse-target');
+        if (targetId) $(targetId).collapse('toggle');
+    });
+
     // ── Expand / Collapse All ────────────────────────────────────────────────
 
     $('#expand-all-btn').on('click', function () {
@@ -154,7 +166,7 @@ $(document).ready(function () {
     });
 
     $('#deselect-all-btn').on('click', function () {
-        $('.file-checkbox, .asm-checkbox, .org-checkbox').prop({ checked: false, indeterminate: false });
+        $('.file-checkbox, .gs-checkbox, .asm-checkbox, .org-checkbox').prop({ checked: false, indeterminate: false });
         updateSelectedCount();
     });
 

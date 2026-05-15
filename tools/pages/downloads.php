@@ -122,16 +122,16 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
 
       <!-- Assemblies collapse -->
       <div class="collapse" id="<?= $org_id ?>">
-        <div class="card-body py-2 px-3">
+        <div class="card-body py-1 px-2">
           <?php $asm_idx = 0; foreach ($assemblies as $assembly => $gene_sets): $asm_idx++; ?>
           <?php $asm_id = $org_id . '_asm_' . $asm_idx;
                 $asm_total_files = array_sum(array_column($gene_sets, 'file_count'));
           ?>
 
-          <div class="assembly-block mb-2">
+          <div class="assembly-block mb-1">
             <!-- Assembly header -->
-            <div class="d-flex align-items-center px-2 py-2 rounded assembly-header"
-                 style="cursor:pointer; background:#d97706; color:white;"
+            <div class="d-flex align-items-center px-2 rounded dl-asm-bar"
+                 style="cursor:pointer; background:#d97706; color:white; padding-top:2px; padding-bottom:2px;"
                  data-bs-toggle="collapse"
                  data-bs-target="#<?= $asm_id ?>">
               <input type="checkbox"
@@ -156,12 +156,11 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
             <div class="collapse" id="<?= $asm_id ?>">
               <?php $gs_idx = 0; foreach ($gene_sets as $gene_set => $asm_data): $gs_idx++; ?>
               <?php $gs_id = $asm_id . '_gs_' . $gs_idx; ?>
-              <div class="ps-3 pt-1">
+              <div class="ps-3">
                 <!-- Gene set header -->
-                <div class="d-flex align-items-center px-2 py-1 rounded mb-1 gs-header"
-                     style="cursor:pointer; background:#e11d48; color:white;"
-                     data-bs-toggle="collapse"
-                     data-bs-target="#<?= $gs_id ?>">
+                <div class="d-flex align-items-center px-2 rounded gs-header"
+                     style="cursor:pointer; background:#e11d48; color:white; padding-top:2px; padding-bottom:2px;"
+                     data-collapse-target="#<?= $gs_id ?>">
                   <input type="checkbox"
                          class="form-check-input me-2 flex-shrink-0 gs-checkbox"
                          id="cb-<?= $gs_id ?>"
@@ -169,7 +168,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
                          data-asm-id="<?= $asm_id ?>"
                          data-gs-id="<?= $gs_id ?>"
                          onclick="event.stopPropagation()">
-                  <label class="form-check-label fw-semibold me-auto mb-0 user-select-none small text-white"
+                  <label class="form-check-label fw-semibold me-auto mb-0 user-select-none text-white"
                          for="cb-<?= $gs_id ?>"
                          style="cursor:pointer;"
                          onclick="event.stopPropagation()">
@@ -205,7 +204,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
                              data-filename="<?= htmlspecialchars($file['name']) ?>"
                              data-size="<?= $file['size'] ?>">
                       <a href="<?= htmlspecialchars($dl_url) ?>"
-                         class="me-auto text-decoration-none file-link"
+                         class="me-auto text-decoration-none file-link<?= !empty($file['color_class']) ? ' ' . htmlspecialchars($file['color_class']) : '' ?>"
                          download="<?= htmlspecialchars($file['name']) ?>">
                         <i class="fas fa-file me-1 text-muted small"></i><?= htmlspecialchars($file['name']) ?>
                       </a>

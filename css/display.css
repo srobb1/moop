@@ -1020,4 +1020,31 @@ code {
   transform: translateY(-2px);
 }
 
+/* Downloads page colored bars */
+.dl-asm-bar,
+.dl-asm-bar:focus,
+.dl-asm-bar:focus-visible,
+.gs-header,
+.gs-header:focus,
+.gs-header:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.dl-asm-bar .form-check-input,
+.gs-header .form-check-input {
+  border-color: rgba(255, 255, 255, 0.6);
+  margin-top: 0;
+  outline: none;
+}
+.dl-asm-bar .form-check-input:focus,
+.gs-header .form-check-input:focus {
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.3);
+  outline: none;
+}
+.dl-asm-bar label,
+.gs-header label {
+  outline: none;
+}
+
 

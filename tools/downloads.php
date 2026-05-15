@@ -108,11 +108,22 @@ foreach ($unique_sources as $source) {
         $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
         if (isset($excluded_exts[$ext])) continue;
 
-        $size    = (int) filesize($fpath);
+        $size = (int) filesize($fpath);
+
+        // Determine display color class from sequence type patterns
+        $color_class = '';
+        $fname_lower = strtolower($fname);
+        if (str_contains($fname_lower, 'protein.aa.fa'))      $color_class = 'feature-color-protein';
+        elseif (str_contains($fname_lower, 'transcript.nt.fa')) $color_class = 'feature-color-mrna';
+        elseif (str_contains($fname_lower, 'cds.nt.fa'))      $color_class = 'feature-color-gene';
+        elseif (str_contains($fname_lower, 'genome.fa'))       $color_class = 'text-assembly';
+        elseif (in_array($ext, ['gff', 'gff3', 'gtf']))       $color_class = 'text-success';
+
         $files[] = [
-            'name'       => $fname,
-            'size'       => $size,
-            'size_label' => _downloads_format_size($size),
+            'name'        => $fname,
+            'size'        => $size,
+            'size_label'  => _downloads_format_size($size),
+            'color_class' => $color_class,
         ];
     }
 
