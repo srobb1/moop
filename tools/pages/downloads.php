@@ -130,8 +130,8 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
 
           <div class="assembly-block mb-2">
             <!-- Assembly header -->
-            <div class="d-flex align-items-center px-2 py-2 rounded border assembly-header"
-                 style="cursor:pointer; background:#dce8f8;"
+            <div class="d-flex align-items-center px-2 py-2 rounded assembly-header"
+                 style="cursor:pointer; background:#d97706; color:white;"
                  data-bs-toggle="collapse"
                  data-bs-target="#<?= $asm_id ?>">
               <input type="checkbox"
@@ -140,16 +140,16 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
                      data-org-id="<?= $org_id ?>"
                      data-asm-id="<?= $asm_id ?>"
                      onclick="event.stopPropagation()">
-              <label class="form-check-label fw-semibold me-auto mb-0 user-select-none"
+              <label class="form-check-label fw-semibold me-auto mb-0 user-select-none text-white"
                      for="cb-<?= $asm_id ?>"
                      style="cursor:pointer;"
                      onclick="event.stopPropagation()">
                 <?= htmlspecialchars($assembly) ?>
               </label>
-              <small class="text-muted me-3 flex-shrink-0">
+              <small class="me-3 flex-shrink-0" style="opacity:0.8;">
                 <?= $asm_total_files ?> file<?= $asm_total_files !== 1 ? 's' : '' ?>
               </small>
-              <i class="fas fa-chevron-down toggle-icon text-muted"></i>
+              <i class="fas fa-chevron-down toggle-icon text-white"></i>
             </div>
 
             <!-- Gene sets collapse -->
@@ -159,8 +159,8 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
               <div class="ps-3 pt-1">
                 <?php if (count($gene_sets) > 1): ?>
                 <!-- Gene set sub-header (only shown when multiple gene sets exist) -->
-                <div class="d-flex align-items-center px-2 py-1 rounded border mb-1 gs-header"
-                     style="cursor:pointer; background:#eef4fb;"
+                <div class="d-flex align-items-center px-2 py-1 rounded mb-1 gs-header"
+                     style="cursor:pointer; background:#e11d48; color:white;"
                      data-bs-toggle="collapse"
                      data-bs-target="#<?= $gs_id ?>">
                   <input type="checkbox"
@@ -170,17 +170,17 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
                          data-asm-id="<?= $asm_id ?>"
                          data-gs-id="<?= $gs_id ?>"
                          onclick="event.stopPropagation()">
-                  <label class="form-check-label fw-semibold me-auto mb-0 user-select-none small"
+                  <label class="form-check-label fw-semibold me-auto mb-0 user-select-none small text-white"
                          for="cb-<?= $gs_id ?>"
                          style="cursor:pointer;"
                          onclick="event.stopPropagation()">
-                    Gene set: <?= htmlspecialchars($gene_set) ?>
+                    <span class="badge bg-gene-set me-1" style="font-size:0.7rem;">Gene Set</span><?= htmlspecialchars($gene_set) ?>
                   </label>
-                  <small class="text-muted me-3 flex-shrink-0">
+                  <small class="me-3 flex-shrink-0" style="opacity:0.8;">
                     <?= $asm_data['file_count'] ?> file<?= $asm_data['file_count'] !== 1 ? 's' : '' ?>,
                     <?= htmlspecialchars($asm_data['total_label']) ?>
                   </small>
-                  <i class="fas fa-chevron-down toggle-icon text-muted"></i>
+                  <i class="fas fa-chevron-down toggle-icon text-white"></i>
                 </div>
                 <div class="collapse" id="<?= $gs_id ?>">
                 <?php else: ?>
