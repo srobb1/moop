@@ -58,6 +58,12 @@ if (empty($assembly_info)) {
     die("Error: Assembly not found.");
 }
 
+// Get gene sets for this assembly, filtered to what the current user can access
+$all_gene_sets = getAssemblyGeneSets($assembly_info['genome_accession'], $db_path);
+$accessible_sources = flattenSourcesList(getAccessibleAssemblies($organism_name, $assembly_info['genome_accession']));
+$accessible_gene_set_names = array_flip(array_column($accessible_sources, 'gene_set'));
+$gene_sets = array_values(array_filter($all_gene_sets, fn($gs) => isset($accessible_gene_set_names[$gs['gene_set_name']])));
+
 // Configure display template
 $display_config = [
     'title' => htmlspecialchars($assembly_info['genome_name']) . ' - ' . $config->getString('siteTitle'),
@@ -77,17 +83,18 @@ $display_config = [
 
 // Data to pass to content file
 $data = [
-    'assembly_info' => $assembly_info,
-    'organism_name' => $organism_name,
-    'organism_info' => $organism_info,
-    'assembly_accession' => $assembly_info['genome_accession'] ?? '',
-    'assembly_name' => $assembly_info['genome_name'] ?? '',
-    'site' => $site,
-    'images_path' => $config->getString('images_path'),
+    'assembly_info'        => $assembly_info,
+    'organism_name'        => $organism_name,
+    'organism_info'        => $organism_info,
+    'assembly_accession'   => $assembly_info['genome_accession'] ?? '',
+    'assembly_name'        => $assembly_info['genome_name'] ?? '',
+    'gene_sets'            => $gene_sets,
+    'site'                 => $site,
+    'images_path'          => $config->getString('images_path'),
     'absolute_images_path' => $config->getPath('absolute_images_path'),
-    'db_path' => $db_path,
-    'config' => $config,
-    'inline_scripts' => $display_config['inline_scripts']
+    'db_path'              => $db_path,
+    'config'               => $config,
+    'inline_scripts'       => $display_config['inline_scripts'],
 ];
 
 // Use generic display template

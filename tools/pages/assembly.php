@@ -130,6 +130,50 @@
     </div>
   </div>
 
+  <!-- Gene Sets Section -->
+  <?php if (!empty($gene_sets)): ?>
+  <div class="row mb-4" id="assemblyGeneSets">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex align-items-center">
+          <i class="fas fa-layer-group me-2 text-gene-set"></i>
+          <strong>Gene Sets</strong>
+          <span class="badge bg-secondary ms-2"><?= count($gene_sets) ?></span>
+        </div>
+        <div class="card-body p-0">
+          <div class="list-group list-group-flush">
+            <?php foreach ($gene_sets as $gs): ?>
+            <a href="/<?= $site ?>/tools/gene_set.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_info['genome_accession']) ?>&gene_set=<?= urlencode($gs['gene_set_name']) ?>"
+               class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+              <div class="flex-grow-1">
+                <div class="fw-semibold">
+                  <span class="badge bg-gene-set me-2">Gene Set</span>
+                  <?= htmlspecialchars($gs['gene_set_name']) ?>
+                </div>
+                <?php if (!empty($gs['gene_set_description'])): ?>
+                <div class="small text-muted mt-1"><?= htmlspecialchars($gs['gene_set_description']) ?></div>
+                <?php endif; ?>
+              </div>
+              <div class="d-flex gap-3 flex-shrink-0 text-center">
+                <div>
+                  <div class="fw-bold feature-color-gene"><?= number_format($gs['gene_count']) ?></div>
+                  <div class="small text-muted">genes</div>
+                </div>
+                <div>
+                  <div class="fw-bold feature-color-mrna"><?= number_format($gs['mrna_count']) ?></div>
+                  <div class="small text-muted">transcripts</div>
+                </div>
+              </div>
+              <i class="fas fa-chevron-right text-muted flex-shrink-0"></i>
+            </a>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <!-- Assembly Downloads Section -->
   <?php
   // Get both genome_name and genome_accession from database
