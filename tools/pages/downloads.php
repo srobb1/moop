@@ -157,8 +157,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
               <?php $gs_idx = 0; foreach ($gene_sets as $gene_set => $asm_data): $gs_idx++; ?>
               <?php $gs_id = $asm_id . '_gs_' . $gs_idx; ?>
               <div class="ps-3 pt-1">
-                <?php if (count($gene_sets) > 1): ?>
-                <!-- Gene set sub-header (only shown when multiple gene sets exist) -->
+                <!-- Gene set header -->
                 <div class="d-flex align-items-center px-2 py-1 rounded mb-1 gs-header"
                      style="cursor:pointer; background:#e11d48; color:white;"
                      data-bs-toggle="collapse"
@@ -183,9 +182,6 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
                   <i class="fas fa-chevron-down toggle-icon text-white"></i>
                 </div>
                 <div class="collapse" id="<?= $gs_id ?>">
-                <?php else: ?>
-                <div>
-                <?php endif; ?>
                   <div class="ps-2 pt-1">
                     <?php foreach ($asm_data['files'] as $fi => $file):
                       $file_id = $gs_id . '_f' . $fi;

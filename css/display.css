@@ -691,6 +691,25 @@ code {
   color: #d97706;
 }
 
+.gene-set-header-custom {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.gene-set-header-custom h1 {
+  background-color: #e11d48 !important;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.gene-set-heading {
+  color: #e11d48;
+}
+
 .assembly-card-title {
   color: #d97706;
   font-weight: 600;

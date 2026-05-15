@@ -57,8 +57,8 @@
   <!-- Gene Set Header -->
   <div class="row mb-4" id="geneSetHeader">
     <div class="col-12">
-      <div class="feature-header assembly-header-custom shadow">
-        <h1 class="mb-0 assembly-heading">
+      <div class="feature-header gene-set-header-custom shadow">
+        <h1 class="mb-0 gene-set-heading">
           <?= htmlspecialchars($gene_set_name) ?>
           <span class="badge bg-gene-set ms-2">Gene Set</span>
         </h1>
