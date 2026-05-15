@@ -65,6 +65,9 @@
                 <div class="feature-info-item">
                     <strong>Assembly:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars($genome_name) ?> (<?= htmlspecialchars($genome_accession) ?>)</a></span>
                 </div>
+                <div class="feature-info-item">
+                    <strong>Gene Set:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/gene_set.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>" class="link-light-bordered"><?= htmlspecialchars($gene_set_name) ?></a></span>
+                </div>
                 <?php
                 $jbrowse_assembly_file = $config->getPath('metadata_path')
                     . '/jbrowse2-configs/assemblies/'

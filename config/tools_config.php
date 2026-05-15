@@ -52,6 +52,17 @@ return [
         'pages'           => ['index'],
     ],
 
+    'downloads' => [
+        'id'              => 'downloads',
+        'name'            => 'Downloads',
+        'icon'            => 'fa-download',
+        'description'     => 'Browse and download genome files',
+        'btn_class'       => 'btn-secondary',
+        'url_path'        => '/tools/downloads.php',
+        'context_params'  => ['organism', 'assembly', 'gene_set', 'display_name'],
+        'pages'           => 'all',
+    ],
+
     'genome_browser' => [
         'id'              => 'genome_browser',
         'name'            => 'View in Genome Browser',

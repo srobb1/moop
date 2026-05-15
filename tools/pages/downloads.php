@@ -44,6 +44,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
             $parts[] = '<strong><em>' . htmlspecialchars(str_replace('_', ' ', $context_organism)) . '</em></strong>';
         }
         if (!empty($context_assembly)) $parts[] = 'assembly <strong>' . htmlspecialchars($context_assembly) . '</strong>';
+        if (!empty($context_gene_set)) $parts[] = 'gene set <strong>' . htmlspecialchars($context_gene_set) . '</strong>';
         echo implode(', ', $parts);
       ?>
     </span>
