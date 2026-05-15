@@ -64,6 +64,7 @@ $display_config = [
     ],
     'inline_scripts' => [
         "const sitePath = '/$site';",
+        "const siteTitle = '" . addslashes($siteTitle) . "';",
         "const allOrganisms = " . json_encode($all_organisms) . ";",
         "const scopeTree = "    . json_encode($scope_tree)    . ";",
     ],

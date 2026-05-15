@@ -546,8 +546,10 @@ class AnnotationSearch {
         const csvLabel = this.currentKeywords.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
         const csvDate = new Date().toISOString().slice(0, 10);
         a.download = csvLabel ? `annotation_search_${csvLabel}_${csvDate}.csv` : `annotation_search_${csvDate}.csv`;
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     downloadFasta() {

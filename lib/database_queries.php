@@ -354,11 +354,11 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
                     AND f.organism_id = o.organism_id
                     AND f.gene_set_id = gs.gene_set_id
                     AND gs.genome_id = g.genome_id
-                    AND (a.annotation_description LIKE ? 
-                       OR f.feature_name LIKE ? 
+                    AND (a.annotation_description LIKE ?
+                       OR f.feature_name LIKE ?
                        OR f.feature_description LIKE ?
                        OR a.annotation_accession LIKE ?)";
-        
+
         $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern];
         
         // scope_pairs overrides individual assembly/gene_set filters
