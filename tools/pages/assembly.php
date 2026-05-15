@@ -117,13 +117,15 @@
         <?php if ($genome_file):
           $colorInfo = getColorClassOrStyle($genome_file['info']['color'] ?? '');
         ?>
-        <div class="mt-3">
-          <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=&type=<?= urlencode($genome_file['info']['seq_type'] ?? $genome_file['type']) ?>"
-             class="btn <?= $colorInfo['class'] ?> btn-sm fw-bold text-white px-3 py-2"
-             style="border-radius: 0.6rem; <?= $colorInfo['style'] ?>"
-             download>
-            <i class="fa fa-download me-2"></i><?= htmlspecialchars($genome_file['info']['label']) ?>
-          </a>
+        <div class="mt-4 pt-3" style="border-top: 1px solid rgba(255,255,255,0.25);">
+          <div class="chip-container">
+            <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=&type=<?= urlencode($genome_file['info']['seq_type'] ?? $genome_file['type']) ?>"
+               class="btn <?= $colorInfo['class'] ?> fw-semibold text-white"
+               style="border-radius: 16px; font-size: 0.9rem; padding: 6px 14px; <?= $colorInfo['style'] ?>"
+               download>
+              <i class="fa fa-download me-1"></i><?= htmlspecialchars($genome_file['info']['label']) ?>
+            </a>
+          </div>
         </div>
         <?php endif; ?>
       </div>
