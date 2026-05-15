@@ -55,7 +55,7 @@ $available_tools = [
         'btn_class'      => 'btn-secondary',
         'url_path'       => '/tools/downloads.php',
         'context_params' => ['organism', 'assembly', 'gene_set', 'group', 'display_name'],
-        'pages'          => ['organism', 'assembly', 'group', 'multi_organism_search', 'index'],
+        'pages'          => ['organism', 'assembly', 'gene_set', 'parent', 'group', 'multi_organism_search', 'index'],
     ],
     // Future tools can be added here
     // Pages can be:

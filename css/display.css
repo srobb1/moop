@@ -676,6 +676,15 @@ code {
   color: #d97706;
 }
 
+.bg-gene-set {
+  background-color: #0d9488 !important;
+  color: white !important;
+}
+
+.text-gene-set {
+  color: #0d9488;
+}
+
 /* Assembly title and heading styles - consistent amber/orange color */
 .assembly-title,
 .assembly-heading {

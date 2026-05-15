@@ -275,6 +275,30 @@ function getAssemblyStats($genome_id_param, $dbFile) {
 }
 
 /**
+ * Get stats for a single gene set (gene/mRNA counts)
+ *
+ * @param string $assembly      - genome_accession or genome_name
+ * @param string $gene_set_name - gene_set_name
+ * @param string $dbFile        - path to organism.sqlite
+ * @return array - gene_set record with feature counts, or empty array
+ */
+function getGeneSetStats($assembly, $gene_set_name, $dbFile) {
+    $query = "SELECT gs.gene_set_id, gs.gene_set_name, gs.gene_set_description,
+                     g.genome_id, g.genome_accession, g.genome_name,
+                     COUNT(DISTINCT CASE WHEN f.feature_type = 'gene' THEN f.feature_id END) as gene_count,
+                     COUNT(DISTINCT CASE WHEN f.feature_type = 'mRNA' THEN f.feature_id END) as mrna_count,
+                     COUNT(DISTINCT f.feature_id) as total_features
+              FROM gene_set gs
+              JOIN genome g ON gs.genome_id = g.genome_id
+              LEFT JOIN feature f ON f.gene_set_id = gs.gene_set_id
+              WHERE (g.genome_accession = ? OR g.genome_name = ?)
+              AND gs.gene_set_name = ?
+              GROUP BY gs.gene_set_id";
+    $results = fetchData($query, $dbFile, [$assembly, $assembly, $gene_set_name]);
+    return !empty($results) ? $results[0] : [];
+}
+
+/**
  * Search features and annotations by keyword
  * Supports both keyword and quoted phrase searches
  * Used by annotation_search_ajax.php
