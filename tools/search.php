@@ -6,13 +6,13 @@
  */
 
 include_once __DIR__ . '/tool_init.php';
-include_once __DIR__ . '/../lib/database_queries.php';
+include_once __DIR__ . '/../lib/extract_search_helpers.php';
 
 $organism_data = $config->getPath('organism_data');
 
 // Build scope tree: organism → assembly → [gene_sets]
 // Also collect organism display info (genus/species/common_name)
-$raw_sources    = getAccessibleAssemblies();
+$raw_sources    = flattenSourcesList(getAccessibleAssemblies());
 $scope_tree     = [];   // [organism][assembly] = [gene_set, ...]
 $organism_info  = [];   // [organism] = ['genus'=>..., 'species'=>..., 'common_name'=>...]
 
@@ -28,17 +28,12 @@ foreach ($raw_sources as $src) {
     }
 
     if (!isset($organism_info[$org])) {
-        $db = "$organism_data/$org/organism.sqlite";
-        if (file_exists($db)) {
-            $info = getOrganismInfo($org, $db);
-            $organism_info[$org] = [
-                'genus'       => $info['genus']       ?? '',
-                'species'     => $info['species']     ?? '',
-                'common_name' => $info['common_name'] ?? '',
-            ];
-        } else {
-            $organism_info[$org] = ['genus' => '', 'species' => '', 'common_name' => ''];
-        }
+        $info = loadOrganismInfo($org, $organism_data) ?: [];
+        $organism_info[$org] = [
+            'genus'       => $info['genus']       ?? '',
+            'species'     => $info['species']     ?? '',
+            'common_name' => $info['common_name'] ?? '',
+        ];
     }
 }
 
