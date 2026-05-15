@@ -31,16 +31,21 @@ function createOrganismResultsTable(organism, results, sitePath, linkBasePath = 
     // Helper function to highlight search terms in text
     const highlightSearchTerms = (text, keywords) => {
         if (!keywords || !text) return text;
-        
-        // Split keywords into individual terms (min 3 chars)
-        const terms = keywords.trim().split(/\s+/).filter(t => t.length >= 3);
+        const HL = `<strong style="background-color: #fff3cd; font-weight: bold;">$&</strong>`;
+        const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        const trimmed = keywords.trim();
+        if (/^".+"$/.test(trimmed)) {
+            // Quoted phrase: highlight the whole phrase as a unit
+            const phrase = trimmed.slice(1, -1);
+            return text.replace(new RegExp(esc(phrase), 'gi'), HL);
+        }
+        // Keyword search: highlight each term individually
+        const terms = trimmed.split(/\s+/).filter(t => t.length >= 3);
         if (terms.length === 0) return text;
-        
-        // Create regex to match any term (case insensitive, including partial matches like HDAC in HDAC6)
         let highlighted = text;
         terms.forEach(term => {
-            const regex = new RegExp(`${term}`, 'gi');
-            highlighted = highlighted.replace(regex, `<strong style="background-color: #fff3cd; font-weight: bold;">$&</strong>`);
+            highlighted = highlighted.replace(new RegExp(esc(term), 'gi'), HL);
         });
         return highlighted;
     };
@@ -622,14 +627,18 @@ function initializeViewToggle(organism, results, sitePath, selectId, searchKeywo
                     const featureUrl = `${sitePath}/tools/parent.php?organism=${encodeURIComponent(organism)}&uniquename=${encodeURIComponent(result.feature_uniquename)}`;
                     const highlightSearchTerms = (text, keywords) => {
                         if (!keywords || !text) return text;
-                        
-                        const terms = keywords.trim().split(/\s+/).filter(t => t.length >= 3);
+                        const HL = `<strong style="background-color: #fff3cd; font-weight: bold;">$&</strong>`;
+                        const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const trimmed = keywords.trim();
+                        if (/^".+"$/.test(trimmed)) {
+                            const phrase = trimmed.slice(1, -1);
+                            return text.replace(new RegExp(esc(phrase), 'gi'), HL);
+                        }
+                        const terms = trimmed.split(/\s+/).filter(t => t.length >= 3);
                         if (terms.length === 0) return text;
-                        
                         let highlighted = text;
                         terms.forEach(term => {
-                            const regex = new RegExp(`${term}`, 'gi');
-                            highlighted = highlighted.replace(regex, `<strong style="background-color: #fff3cd; font-weight: bold;">$&</strong>`);
+                            highlighted = highlighted.replace(new RegExp(esc(term), 'gi'), HL);
                         });
                         return highlighted;
                     };
