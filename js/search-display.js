@@ -85,6 +85,36 @@ $(document).ready(function () {
         cb.indeterminate = checked > 0 && checked < total;
     }
 
+    // Scope filter
+    $('#scope-filter').on('input', function () {
+        const q = $(this).val().trim().toLowerCase();
+        if (!q) {
+            $('.scope-org, .scope-asm').show();
+            $('.scope-gs-cb').closest('.d-flex').show();
+            return;
+        }
+
+        // Hide everything; show matching rows + their ancestors
+        $('.scope-org').hide();
+        $('.scope-asm').hide();
+        $('.scope-gs-cb').closest('.d-flex').hide();
+
+        $('.scope-gs-cb').each(function () {
+            const org     = $(this).data('org');
+            const asm     = $(this).data('asm');
+            const gs      = String($(this).data('gs')).toLowerCase();
+            const orgText = $('[data-org="' + org + '"].scope-org')
+                              .find('.scope-org-row label').text().toLowerCase();
+
+            if (orgText.includes(q) || String(asm).toLowerCase().includes(q) || gs.includes(q)) {
+                $(this).closest('.d-flex').show();
+                $('[data-org="' + org + '"][data-asm="' + asm + '"].scope-asm').show();
+                const orgEl = $('[data-org="' + org + '"].scope-org').show();
+                orgEl.children('[id$="-body"]').show(); // ensure org body expanded
+            }
+        });
+    });
+
     // Select All / Deselect All scope
     $('#scope-select-all').on('click', function () {
         $('.scope-org-cb, .scope-asm-cb, .scope-gs-cb').prop({ checked: true, indeterminate: false });
@@ -220,8 +250,30 @@ $(document).ready(function () {
             syncSourceTypeCb($(this).data('type'));
         });
 
+        $('#sources-filter-wrap').show();
+        filterSources();
         updateSourcesSummary();
     }
+
+    function filterSources() {
+        const q = ($('#sources-filter').val() || '').trim().toLowerCase();
+        if (!q) {
+            $('.source-group').show();
+            $('.source-cb').closest('.d-flex').show();
+            return;
+        }
+        $('.source-group').each(function () {
+            let anyVisible = false;
+            $(this).find('.source-cb').each(function () {
+                const matches = String($(this).data('source')).toLowerCase().includes(q);
+                $(this).closest('.d-flex').toggle(matches);
+                if (matches) anyVisible = true;
+            });
+            $(this).toggle(anyVisible);
+        });
+    }
+
+    $(document).on('input', '#sources-filter', filterSources);
 
     function syncSourceTypeCb(type) {
         const boxes   = $('[data-type="' + type + '"].source-cb');

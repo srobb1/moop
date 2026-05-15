@@ -46,7 +46,11 @@
             <button id="scope-deselect-all" class="btn btn-sm btn-outline-secondary">None</button>
           </div>
         </div>
-        <div class="card-body p-2" style="overflow-y:auto; max-height:360px;">
+        <div class="px-2 pt-2 pb-1 border-bottom">
+          <input type="text" class="form-control form-control-sm" id="scope-filter"
+                 placeholder="Filter organisms, assemblies, gene sets…" autocomplete="off">
+        </div>
+        <div class="card-body p-2" style="overflow-y:auto; max-height:320px;">
           <?php if (empty($scope_tree)): ?>
             <p class="text-muted small p-2">No accessible organisms found.</p>
           <?php else: ?>
@@ -143,7 +147,11 @@
             <button id="sources-deselect-all" class="btn btn-sm btn-outline-secondary">None</button>
           </div>
         </div>
-        <div class="card-body p-2" id="sourcesPanel" style="overflow-y:auto; max-height:360px;">
+        <div class="px-2 pt-2 pb-1 border-bottom" id="sources-filter-wrap" style="display:none;">
+          <input type="text" class="form-control form-control-sm" id="sources-filter"
+                 placeholder="Filter sources…" autocomplete="off">
+        </div>
+        <div class="card-body p-2" id="sourcesPanel" style="overflow-y:auto; max-height:320px;">
           <div class="text-center p-3 text-muted">
             <i class="fa fa-spinner fa-spin me-1"></i> Loading sources…
           </div>
