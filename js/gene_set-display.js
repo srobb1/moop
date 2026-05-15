@@ -12,7 +12,7 @@ const searchManager = new AnnotationSearch({
     formSelector: '#geneSetSearchForm',
     organismsVar: [organismName],
     totalVar: 1,
-    hideSections: ['#geneSetHeader', '#geneSetStats', '#geneSetDownloads'],
+    hideSections: ['#geneSetHeader', '#geneSetStats'],
     scrollToResults: false,
     extraAjaxParams: {assembly: assemblyAccession, gene_set: geneSetName},
     noReadMoreButton: true,
