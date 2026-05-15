@@ -117,7 +117,7 @@
         <?php if ($genome_file):
           $colorInfo = getColorClassOrStyle($genome_file['info']['color'] ?? '');
         ?>
-        <div class="mt-4 pt-3" style="border-top: 1px solid rgba(255,255,255,0.25);">
+        <div class="feature-info-item" style="border-top: 1px solid rgba(255,255,255,0.25); margin-top: 0.5rem; padding-top: 1rem;">
           <div class="chip-container">
             <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=&type=<?= urlencode($genome_file['info']['seq_type'] ?? $genome_file['type']) ?>"
                class="btn <?= $colorInfo['class'] ?> fw-semibold text-white"
