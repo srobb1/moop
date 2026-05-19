@@ -140,16 +140,8 @@ if ($output_format === 'tsv') {
         }
     }
 
-    // Determine annotation source columns
-    if (!empty($annotation_columns_selected)) {
-        $source_cols = array_values($annotation_columns_selected);
-    } else {
-        $seen = [];
-        foreach ($all_annotations as $anns_by_src) {
-            foreach (array_keys($anns_by_src) as $src_name) $seen[$src_name] = true;
-        }
-        $source_cols = array_keys($seen);
-    }
+    // Determine annotation source columns — empty selection = no annotation columns
+    $source_cols = array_values($annotation_columns_selected);
     sort($source_cols);
 
     header('Content-Type: text/tab-separated-values; charset=UTF-8');

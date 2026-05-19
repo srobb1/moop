@@ -44,14 +44,18 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
 
     $where = ["f.gene_set_id IN ($placeholders)"];
 
-    if (!empty($filters['feature_types'])) {
-        $types = array_values($filters['feature_types']);
-        $tp    = implode(',', array_fill(0, count($types), '?'));
-        $where[] = "f.feature_type IN ($tp)";
-        array_push($params, ...$types);
-    }
+    // Default to gene-level features so output is one row per gene.
+    // Callers may override by passing feature_types explicitly.
+    $types = !empty($filters['feature_types'])
+        ? array_values($filters['feature_types'])
+        : ['gene', 'pseudogene'];
+    $tp    = implode(',', array_fill(0, count($types), '?'));
+    $where[] = "f.feature_type IN ($tp)";
+    array_push($params, ...$types);
 
-    // Annotation filter via EXISTS — keeps result set at one-row-per-feature
+    // Annotation filter via EXISTS on child features — annotations in the DB are
+    // stored on mRNA/transcript features (direct children of genes via parent_feature_id),
+    // not on gene features themselves.
     $ann_where  = [];
     $ann_params = [];
     if (!empty($filters['annotation_source'])) {
@@ -70,10 +74,11 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
         $ann_clause = implode(' AND ', $ann_where);
         $where[] = "EXISTS (
             SELECT 1
-            FROM feature_annotation fa2
-            JOIN annotation        a   ON fa2.annotation_id    = a.annotation_id
-            JOIN annotation_source ans ON a.annotation_source_id = ans.annotation_source_id
-            WHERE fa2.feature_id = f.feature_id
+            FROM feature           child
+            JOIN feature_annotation fa2 ON fa2.feature_id         = child.feature_id
+            JOIN annotation         a   ON fa2.annotation_id      = a.annotation_id
+            JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
+            WHERE child.parent_feature_id = f.feature_id
               AND $ann_clause
         )";
         array_push($params, ...$ann_params);
@@ -115,12 +120,12 @@ function moopmartCountFeatures(array $gene_set_ids, string $db_path, array $filt
 
     $where = ["f.gene_set_id IN ($placeholders)"];
 
-    if (!empty($filters['feature_types'])) {
-        $types = array_values($filters['feature_types']);
-        $tp    = implode(',', array_fill(0, count($types), '?'));
-        $where[] = "f.feature_type IN ($tp)";
-        array_push($params, ...$types);
-    }
+    $types = !empty($filters['feature_types'])
+        ? array_values($filters['feature_types'])
+        : ['gene', 'pseudogene'];
+    $tp    = implode(',', array_fill(0, count($types), '?'));
+    $where[] = "f.feature_type IN ($tp)";
+    array_push($params, ...$types);
 
     $ann_where  = [];
     $ann_params = [];
@@ -140,10 +145,11 @@ function moopmartCountFeatures(array $gene_set_ids, string $db_path, array $filt
         $ann_clause = implode(' AND ', $ann_where);
         $where[] = "EXISTS (
             SELECT 1
-            FROM feature_annotation fa2
-            JOIN annotation        a   ON fa2.annotation_id    = a.annotation_id
-            JOIN annotation_source ans ON a.annotation_source_id = ans.annotation_source_id
-            WHERE fa2.feature_id = f.feature_id
+            FROM feature           child
+            JOIN feature_annotation fa2 ON fa2.feature_id         = child.feature_id
+            JOIN annotation         a   ON fa2.annotation_id      = a.annotation_id
+            JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
+            WHERE child.parent_feature_id = f.feature_id
               AND $ann_clause
         )";
         array_push($params, ...$ann_params);
@@ -175,26 +181,43 @@ function moopmartGetAnnotationsForFeatures(array $feature_ids, string $db_path):
 {
     if (empty($feature_ids)) return [];
 
+    // Annotations live on mRNA/transcript children, not on gene features directly.
+    // Join through parent_feature_id so gene feature_ids resolve to their children's
+    // annotations. Result is keyed by the gene (parent) feature_id.
     $result = [];
     foreach (array_chunk($feature_ids, 500) as $chunk) {
         $ph    = implode(',', array_fill(0, count($chunk), '?'));
-        $query = "SELECT fa.feature_id,
+        $query = "SELECT child.parent_feature_id   AS gene_feature_id,
                          ans.annotation_source_name,
                          a.annotation_accession,
                          a.annotation_description
-                  FROM feature_annotation fa
-                  JOIN annotation        a   ON fa.annotation_id    = a.annotation_id
-                  JOIN annotation_source ans ON a.annotation_source_id = ans.annotation_source_id
-                  WHERE fa.feature_id IN ($ph)
-                  ORDER BY fa.feature_id, ans.annotation_source_name, a.annotation_accession";
+                  FROM feature            child
+                  JOIN feature_annotation fa  ON fa.feature_id          = child.feature_id
+                  JOIN annotation         a   ON fa.annotation_id       = a.annotation_id
+                  JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
+                  WHERE child.parent_feature_id IN ($ph)
+                  ORDER BY child.parent_feature_id, ans.annotation_source_name, a.annotation_accession";
 
         foreach (fetchData($query, $db_path, $chunk) as $row) {
-            $result[$row['feature_id']][$row['annotation_source_name']][] = [
-                'accession'   => $row['annotation_accession'],
+            $gfid = $row['gene_feature_id'];
+            $src  = $row['annotation_source_name'];
+            $acc  = $row['annotation_accession'];
+            // Deduplicate: the same accession may appear on multiple mRNA isoforms
+            $result[$gfid][$src][$acc] = [
+                'accession'   => $acc,
                 'description' => $row['annotation_description'],
             ];
         }
     }
+
+    // Convert inner associative-by-accession arrays to plain indexed arrays
+    foreach ($result as &$by_source) {
+        foreach ($by_source as &$entries) {
+            $entries = array_values($entries);
+        }
+    }
+    unset($by_source, $entries);
+
     return $result;
 }
 
