@@ -1,3 +1,9 @@
+<?php
+/**
+ * MOOPmart — MOOP Mega Search Display Page
+ * Variables: $scope_tree, $organism_info, $annotation_source_names
+ */
+?>
 <div class="container-fluid py-3">
 
     <div class="mb-3">
@@ -7,45 +13,105 @@
 
     <div class="row g-3">
 
-        <!-- 1. Dataset panel -->
-        <div class="col-lg-4">
+        <!-- Dataset (scope tree) -->
+        <div class="col-lg-5">
             <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center py-2">
-                    <span class="fw-semibold">1. Dataset</span>
+                <div class="card-header d-flex align-items-center py-2">
+                    <span class="fw-semibold me-auto">Dataset</span>
                     <div class="btn-group btn-group-sm">
                         <button type="button" class="btn btn-outline-secondary" id="mm-select-all">All</button>
                         <button type="button" class="btn btn-outline-secondary" id="mm-clear-all">None</button>
                     </div>
                 </div>
-                <div class="card-body p-2" style="max-height:460px; overflow-y:auto;">
+                <div class="px-2 pt-2 pb-1 border-bottom">
+                    <input type="text" class="form-control form-control-sm" id="mm-scope-filter"
+                           placeholder="Filter organisms, assemblies…" autocomplete="off">
+                </div>
+                <div class="card-body p-2" style="max-height:400px; overflow-y:auto;">
                     <div id="mm-scope-tree">
-                        <p class="text-muted small p-2">Loading…</p>
+                    <?php if (empty($scope_tree)): ?>
+                        <p class="text-muted small p-2">No accessible sources.</p>
+                    <?php else: ?>
+                        <?php $oi = 0; foreach ($scope_tree as $organism => $assemblies): $oi++;
+                            $info   = $organism_info[$organism] ?? [];
+                            $genus  = $info['genus']       ?? '';
+                            $sp     = $info['species']     ?? '';
+                            $cn     = $info['common_name'] ?? '';
+                            $label  = trim("$genus $sp") ?: str_replace('_', ' ', $organism);
+                            $oid    = 'mm-o' . $oi;
+                        ?>
+                        <div class="mm-org mb-1" data-org="<?= htmlspecialchars($organism) ?>">
+                            <div class="d-flex align-items-center gap-1 px-1 py-1 rounded" style="background:#f8f9fa;">
+                                <input type="checkbox" class="form-check-input flex-shrink-0 mm-org-cb mb-0"
+                                       id="<?= $oid ?>" data-org="<?= htmlspecialchars($organism) ?>" checked>
+                                <label class="form-check-label fw-semibold mb-0 me-auto"
+                                       for="<?= $oid ?>" style="cursor:pointer; font-size:0.9rem;">
+                                    <em><?= htmlspecialchars($label) ?></em>
+                                    <?php if ($cn): ?>
+                                    <span class="text-muted fw-normal">(<?= htmlspecialchars($cn) ?>)</span>
+                                    <?php endif; ?>
+                                </label>
+                                <i class="fa fa-chevron-down mm-toggle text-muted"
+                                   style="cursor:pointer; font-size:0.75rem;"
+                                   data-target="<?= $oid ?>-body"></i>
+                            </div>
+                            <div id="<?= $oid ?>-body" class="ps-3 pt-1">
+                                <?php $ai = 0; foreach ($assemblies as $assembly => $gene_sets): $ai++;
+                                    $aid = $oid . '_a' . $ai;
+                                ?>
+                                <div class="mm-asm mb-1" data-org="<?= htmlspecialchars($organism) ?>"
+                                     data-asm="<?= htmlspecialchars($assembly) ?>">
+                                    <div class="d-flex align-items-center gap-1 px-1 py-1 rounded" style="background:#fff3cd20;">
+                                        <input type="checkbox" class="form-check-input flex-shrink-0 mm-asm-cb mb-0"
+                                               id="<?= $aid ?>"
+                                               data-org="<?= htmlspecialchars($organism) ?>"
+                                               data-asm="<?= htmlspecialchars($assembly) ?>" checked>
+                                        <label class="form-check-label fw-semibold mb-0 me-auto"
+                                               for="<?= $aid ?>" style="cursor:pointer; font-size:0.85rem; color:#b45309;">
+                                            <?= htmlspecialchars($assembly) ?>
+                                        </label>
+                                    </div>
+                                    <div class="ps-3">
+                                        <?php $gi = 0; foreach ($gene_sets as $gs): $gi++;
+                                            $gsid  = $aid . '_g' . $gi;
+                                            $gsKey = "$organism|$assembly|$gs";
+                                        ?>
+                                        <div class="d-flex align-items-center gap-1 px-1 py-1">
+                                            <input type="checkbox" class="form-check-input flex-shrink-0 mm-gs-cb mb-0"
+                                                   id="<?= $gsid ?>"
+                                                   data-org="<?= htmlspecialchars($organism) ?>"
+                                                   data-asm="<?= htmlspecialchars($assembly) ?>"
+                                                   data-gs="<?= htmlspecialchars($gs) ?>"
+                                                   data-key="<?= htmlspecialchars($gsKey) ?>" checked>
+                                            <label class="form-check-label mb-0" for="<?= $gsid ?>"
+                                                   style="cursor:pointer; font-size:0.82rem;">
+                                                <span class="badge bg-secondary me-1" style="font-size:0.65rem;">GS</span><?= htmlspecialchars($gs ?: '(default)') ?>
+                                            </label>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 2 + 3. Filters and Attributes -->
-        <div class="col-lg-8 d-flex flex-column gap-3">
+        <!-- Filters + Attributes -->
+        <div class="col-lg-7 d-flex flex-column gap-3">
 
             <!-- Filters -->
             <div class="card">
                 <div class="card-header py-2">
-                    <span class="fw-semibold">2. Filters</span>
-                    <small class="text-muted ms-1">— all fields are optional and combined with AND</small>
+                    <span class="fw-semibold">Filters</span>
+                    <small class="text-muted ms-1">— all optional, combined with AND</small>
                 </div>
                 <div class="card-body pb-2">
                     <div class="row g-2">
-                        <div class="col-sm-6">
-                            <label class="form-label small mb-1">Feature type</label>
-                            <select id="mm-feature-type" class="form-select form-select-sm">
-                                <option value="">All types</option>
-                                <option value="gene">gene</option>
-                                <option value="pseudogene">pseudogene</option>
-                                <option value="mRNA">mRNA</option>
-                                <option value="CDS">CDS</option>
-                            </select>
-                        </div>
                         <div class="col-sm-6">
                             <label class="form-label small mb-1">Annotation source</label>
                             <select id="mm-annotation-source" class="form-select form-select-sm">
@@ -59,12 +125,12 @@
                             <label class="form-label small mb-1">Accession <span class="text-muted">(exact, e.g. GO:0006351)</span></label>
                             <input type="text" id="mm-annotation-accession" class="form-control form-control-sm" placeholder="GO:0000000">
                         </div>
-                        <div class="col-sm-6">
+                        <div class="col-12">
                             <label class="form-label small mb-1">Annotation keyword</label>
                             <input type="text" id="mm-annotation-keyword" class="form-control form-control-sm" placeholder="Search descriptions…">
                         </div>
                         <div class="col-12">
-                            <label class="form-label small mb-1">Coordinate range <span class="text-muted">(genes overlapping this region)</span></label>
+                            <label class="form-label small mb-1">Coordinate range <span class="text-muted">(features overlapping this region)</span></label>
                             <div class="d-flex gap-2 flex-wrap">
                                 <input type="text"   id="mm-coord-chr"   class="form-control form-control-sm" placeholder="Chr / scaffold" style="max-width:160px;">
                                 <input type="number" id="mm-coord-start" class="form-control form-control-sm" placeholder="Start (1-based)" min="1">
@@ -76,24 +142,21 @@
             </div>
 
             <!-- Attributes -->
+            <?php if (!empty($annotation_source_names)): ?>
             <div class="card">
-                <div class="card-header py-2">
-                    <span class="fw-semibold">3. Attributes</span>
-                    <small class="text-muted ms-1">— choose which annotation sources appear as TSV columns</small>
+                <div class="card-header py-2 d-flex align-items-center">
+                    <span class="fw-semibold me-auto">Attributes</span>
+                    <small class="text-muted me-3">annotation sources to include as TSV columns</small>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-link btn-sm p-0 me-2" id="mm-ann-all">All</button>
+                        <button type="button" class="btn btn-link btn-sm p-0" id="mm-ann-none">None</button>
+                    </div>
                 </div>
                 <div class="card-body pb-2">
                     <p class="small text-muted mb-2">
                         <strong>Always included:</strong> organism, assembly, gene set, gene ID, name, description, type, chr, start, end, strand
                     </p>
-                    <?php if (!empty($annotation_source_names)): ?>
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="small fw-semibold">Annotation sources</span>
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-link btn-sm p-0 me-2" id="mm-ann-all">All</button>
-                            <button type="button" class="btn btn-link btn-sm p-0" id="mm-ann-none">None</button>
-                        </div>
-                    </div>
-                    <div id="mm-attribute-sources" class="d-flex flex-wrap gap-x-3 gap-y-1" style="column-gap:1.5rem;">
+                    <div id="mm-attribute-sources" class="d-flex flex-wrap" style="column-gap:1.5rem;">
                         <?php foreach ($annotation_source_names as $src_name):
                             $safe_id = 'mm-ann-' . preg_replace('/[^a-z0-9]/i', '_', $src_name);
                         ?>
@@ -107,16 +170,14 @@
                         </div>
                         <?php endforeach; ?>
                     </div>
-                    <?php else: ?>
-                    <p class="small text-muted">No annotation sources found in the selected dataset.</p>
-                    <?php endif; ?>
                 </div>
             </div>
+            <?php endif; ?>
 
         </div>
     </div>
 
-    <!-- Results + Download bar -->
+    <!-- Action bar -->
     <div class="card mt-3">
         <div class="card-body py-2">
             <div class="d-flex align-items-center gap-3 flex-wrap">

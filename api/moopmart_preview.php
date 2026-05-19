@@ -81,11 +81,19 @@ foreach ($by_organism as $org => $org_data) {
         continue;
     }
 
+    // Index queried uniquenames by gene_set_id so coord loading is targeted
+    // (avoids loading the entire TSV; also picks up mRNA-level coords when
+    //  the query returns mRNA features, e.g. when searching by annotation).
+    $uniquenames_by_gs = [];
+    foreach ($features as $f) {
+        $uniquenames_by_gs[$f['gene_set_id']][] = $f['uniquename'];
+    }
+
     $coords_by_gs = [];
     foreach ($org_data['sources'] as $src) {
         $gs_id = $src['gene_set_id'];
         if ($gs_id && !isset($coords_by_gs[$gs_id])) {
-            $coords_by_gs[$gs_id] = moopmartLoadGeneCoords($src['path']);
+            $coords_by_gs[$gs_id] = moopmartLoadGeneCoords($src['path'], $uniquenames_by_gs[$gs_id] ?? []);
         }
     }
 

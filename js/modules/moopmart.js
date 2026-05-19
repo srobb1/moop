@@ -2,7 +2,6 @@
  * MOOPmart — MOOP Mega Search UI
  *
  * Requires globals injected via inline_scripts:
- *   scopeTree         — {organism: {assembly: [gene_sets]}}
  *   annotationSources — [source_name, ...]
  *   moopSite          — '/moop' (no trailing slash)
  */
@@ -26,78 +25,45 @@
     let currentFastaMode = 'gene';
 
     // -------------------------------------------------------
-    // Scope tree rendering
+    // Scope tree — checkbox propagation (HTML rendered by PHP)
     // -------------------------------------------------------
 
-    function renderScopeTree() {
+    function syncParent(org, asm) {
         const container = document.getElementById('mm-scope-tree');
-        if (!container || typeof scopeTree === 'undefined') return;
 
-        let html = '';
-        for (const org in scopeTree) {
-            const orgSafe = org.replace(/[^a-z0-9]/gi, '_');
-            const orgId   = 'mm-org-' + orgSafe;
-            html += `
-<div class="mm-org mb-1">
-  <div class="d-flex align-items-center">
-    <button type="button" class="btn btn-link btn-sm p-0 pe-1 mm-toggle" data-target="${orgId}-ch" style="line-height:1;">
-      <i class="fa fa-caret-down mm-caret text-muted" style="width:10px;"></i>
-    </button>
-    <div class="form-check mb-0">
-      <input type="checkbox" class="form-check-input mm-org-cb" id="${orgId}" data-org="${org}" checked>
-      <label class="form-check-label small fw-semibold" for="${orgId}">${org.replace(/_/g, ' ')}</label>
-    </div>
-  </div>
-  <div id="${orgId}-ch" class="ms-3">`;
-
-            const asms = scopeTree[org];
-            for (const asm in asms) {
-                const asmSafe = asm.replace(/[^a-z0-9]/gi, '_');
-                const asmId   = orgId + '_' + asmSafe;
-                const geneSets = asms[asm];
-                html += `
-    <div class="mm-asm mb-1">
-      <div class="d-flex align-items-center">
-        <button type="button" class="btn btn-link btn-sm p-0 pe-1 mm-toggle" data-target="${asmId}-ch" style="line-height:1;">
-          <i class="fa fa-caret-down mm-caret text-muted" style="width:10px;"></i>
-        </button>
-        <div class="form-check mb-0">
-          <input type="checkbox" class="form-check-input mm-asm-cb" id="${asmId}"
-                 data-org="${org}" data-asm="${asm}" checked>
-          <label class="form-check-label small" for="${asmId}">${asm}</label>
-        </div>
-      </div>
-      <div id="${asmId}-ch" class="ms-3">`;
-
-                for (const gs of geneSets) {
-                    const gsSafe = (gs || 'default').replace(/[^a-z0-9]/gi, '_');
-                    const gsId   = asmId + '_' + gsSafe;
-                    const gsKey  = `${org}|${asm}|${gs}`;
-                    html += `
-        <div class="form-check mb-0">
-          <input type="checkbox" class="form-check-input mm-gs-cb" id="${gsId}"
-                 data-org="${org}" data-asm="${asm}" data-gs="${gs}" data-key="${gsKey}" checked>
-          <label class="form-check-label small text-muted" for="${gsId}">${gs || '(default)'}</label>
-        </div>`;
-                }
-                html += `\n      </div>\n    </div>`;
-            }
-            html += `\n  </div>\n</div>`;
+        const gsCbs = Array.from(container.querySelectorAll(`.mm-gs-cb[data-org="${org}"][data-asm="${asm}"]`));
+        const asmEl = container.querySelector(`.mm-asm-cb[data-org="${org}"][data-asm="${asm}"]`);
+        if (asmEl && gsCbs.length) {
+            const allOn  = gsCbs.every(c => c.checked);
+            const allOff = gsCbs.every(c => !c.checked);
+            asmEl.checked       = allOn;
+            asmEl.indeterminate = !allOn && !allOff;
         }
 
-        container.innerHTML = html || '<p class="text-muted small p-2">No accessible sources.</p>';
+        const orgGsCbs = Array.from(container.querySelectorAll(`.mm-gs-cb[data-org="${org}"]`));
+        const orgEl    = container.querySelector(`.mm-org-cb[data-org="${org}"]`);
+        if (orgEl && orgGsCbs.length) {
+            const allOn  = orgGsCbs.every(c => c.checked);
+            const allOff = orgGsCbs.every(c => !c.checked);
+            orgEl.checked       = allOn;
+            orgEl.indeterminate = !allOn && !allOff;
+        }
+    }
+
+    function initScopeTree() {
+        const container = document.getElementById('mm-scope-tree');
+        if (!container) return;
 
         // Expand/collapse toggles
         container.addEventListener('click', function (e) {
-            const btn = e.target.closest('.mm-toggle');
-            if (!btn) return;
-            const children = document.getElementById(btn.dataset.target);
-            const caret    = btn.querySelector('.mm-caret');
-            if (!children) return;
-            const open = children.style.display !== 'none';
-            children.style.display = open ? 'none' : '';
-            caret.classList.toggle('fa-caret-down',  !open);
-            caret.classList.toggle('fa-caret-right',  open);
+            const toggle = e.target.closest('.mm-toggle');
+            if (!toggle) return;
+            const body = document.getElementById(toggle.dataset.target);
+            if (!body) return;
+            const open = body.style.display !== 'none';
+            body.style.display = open ? 'none' : '';
+            toggle.classList.toggle('fa-chevron-down',  !open);
+            toggle.classList.toggle('fa-chevron-right',  open);
         });
 
         // Checkbox propagation
@@ -116,29 +82,24 @@
                 syncParent(cb.dataset.org, cb.dataset.asm);
             }
         });
-    }
 
-    function syncParent(org, asm) {
-        const container = document.getElementById('mm-scope-tree');
-
-        // Sync assembly checkbox
-        const gsCbs = Array.from(container.querySelectorAll(`.mm-gs-cb[data-org="${org}"][data-asm="${asm}"]`));
-        const asmEl = container.querySelector(`.mm-asm-cb[data-org="${org}"][data-asm="${asm}"]`);
-        if (asmEl && gsCbs.length) {
-            const allOn  = gsCbs.every(c => c.checked);
-            const allOff = gsCbs.every(c => !c.checked);
-            asmEl.checked       = allOn;
-            asmEl.indeterminate = !allOn && !allOff;
-        }
-
-        // Sync organism checkbox
-        const orgGsCbs = Array.from(container.querySelectorAll(`.mm-gs-cb[data-org="${org}"]`));
-        const orgEl    = container.querySelector(`.mm-org-cb[data-org="${org}"]`);
-        if (orgEl && orgGsCbs.length) {
-            const allOn  = orgGsCbs.every(c => c.checked);
-            const allOff = orgGsCbs.every(c => !c.checked);
-            orgEl.checked       = allOn;
-            orgEl.indeterminate = !allOn && !allOff;
+        // Scope filter input
+        const filterInput = document.getElementById('mm-scope-filter');
+        if (filterInput) {
+            filterInput.addEventListener('input', function () {
+                const q = this.value.toLowerCase();
+                container.querySelectorAll('.mm-org').forEach(orgDiv => {
+                    const orgText = orgDiv.querySelector('label')?.textContent.toLowerCase() || '';
+                    let orgVisible = false;
+                    orgDiv.querySelectorAll('.mm-asm').forEach(asmDiv => {
+                        const asmText = asmDiv.querySelector('label')?.textContent.toLowerCase() || '';
+                        const match = !q || orgText.includes(q) || asmText.includes(q);
+                        asmDiv.style.display = match ? '' : 'none';
+                        if (match) orgVisible = true;
+                    });
+                    orgDiv.style.display = orgVisible || !q ? '' : 'none';
+                });
+            });
         }
     }
 
@@ -161,9 +122,6 @@
         fd.append('csrf_token', csrf);
 
         getSelectedSources().forEach(s => fd.append('sources[]', s));
-
-        const featureType = document.getElementById('mm-feature-type')?.value;
-        if (featureType) fd.append('feature_types[]', featureType);
 
         const annSrc = document.getElementById('mm-annotation-source')?.value;
         if (annSrc) fd.append('annotation_source', annSrc);
@@ -247,7 +205,6 @@
         caption.textContent = showing;
         section.classList.remove('d-none');
 
-        // Scroll to results
         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         if (resultsTable) {
@@ -282,7 +239,7 @@
             lengthMenu: [10, 25, 50, 100],
             order: [[0, 'asc']],
             autoWidth: false,
-            dom: 'ltipr',   // length, table, info, pagination — no built-in search (filter panel is the filter)
+            dom: 'ltipr',
             language: {
                 info:      'Showing _START_ to _END_ of _TOTAL_ preview rows',
                 infoEmpty: 'No results',
@@ -335,7 +292,7 @@
     // -------------------------------------------------------
 
     document.addEventListener('DOMContentLoaded', function () {
-        renderScopeTree();
+        initScopeTree();
 
         // Select all / clear all dataset
         document.getElementById('mm-select-all')?.addEventListener('click', function () {

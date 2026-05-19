@@ -203,16 +203,29 @@ function moopmartGetAnnotationsForFeatures(array $feature_ids, string $db_path):
 // ============================================================
 
 /**
- * Load gene-level coordinates from feature_coords.tsv, returning only the
- * canonical row for each gene (where uniquename === gene_id).
+ * Load coordinates from feature_coords.tsv for a given set of feature uniquenames.
  *
- * @param string $gene_set_path  Absolute path to the gene_set directory
+ * Each row in the TSV maps any feature (gene, mRNA, exon, …) to its gene ancestor's
+ * genomic coordinates.  Passing $filter_uniquenames limits the load to exactly the
+ * features that were returned by moopmartQueryFeatures(), avoiding the need to slurp
+ * the entire (potentially large) TSV into memory.
+ *
+ * Without a filter the function falls back to loading only gene-level rows
+ * (where uniquename === gene_id) for memory efficiency — useful if the full
+ * coord set is needed regardless of what the DB query returned.
+ *
+ * @param string   $gene_set_path       Absolute path to the gene_set directory
+ * @param string[] $filter_uniquenames  Only load entries for these uniquenames;
+ *                                      empty array = load gene-level rows only
  * @return array [uniquename => ['chr'=>'...','start'=>N,'end'=>N,'strand'=>'+'|'-']]
  */
-function moopmartLoadGeneCoords(string $gene_set_path): array
+function moopmartLoadGeneCoords(string $gene_set_path, array $filter_uniquenames = []): array
 {
     $tsv = "$gene_set_path/feature_coords.tsv";
     if (!file_exists($tsv)) return [];
+
+    // Build a fast lookup set when a filter is provided.
+    $filter = !empty($filter_uniquenames) ? array_flip($filter_uniquenames) : null;
 
     $coords = [];
     $fh     = fopen($tsv, 'r');
@@ -220,14 +233,21 @@ function moopmartLoadGeneCoords(string $gene_set_path): array
         $p = explode("\t", rtrim($line));
         if (count($p) < 6) continue;
         [$uniquename, $gene_id, $chr, $start, $end, $strand] = $p;
-        if ($uniquename === $gene_id) {
-            $coords[$uniquename] = [
-                'chr'    => $chr,
-                'start'  => (int)$start,
-                'end'    => (int)$end,
-                'strand' => $strand,
-            ];
+
+        if ($filter !== null) {
+            // Targeted load: any row whose uniquename is in the requested set.
+            if (!isset($filter[$uniquename])) continue;
+        } else {
+            // No filter: gene-level rows only (col0 === col1) for memory efficiency.
+            if ($uniquename !== $gene_id) continue;
         }
+
+        $coords[$uniquename] = [
+            'chr'    => $chr,
+            'start'  => (int)$start,
+            'end'    => (int)$end,
+            'strand' => $strand,
+        ];
     }
     fclose($fh);
     return $coords;
@@ -236,8 +256,8 @@ function moopmartLoadGeneCoords(string $gene_set_path): array
 /**
  * Attach coordinate data to feature rows and optionally filter by genomic region.
  *
- * Features with no entry in $coords_by_gene_set_id are silently dropped —
- * this happens when feature_coords.tsv is absent or the gene is not listed.
+ * Features with no coord entry are dropped unless feature_coords.tsv was absent
+ * (empty $coords_by_gs_id entry), in which case they are kept with empty coord fields.
  *
  * @param array $features           Output of moopmartQueryFeatures()
  * @param array $coords_by_gs_id    [gene_set_id => [uniquename => [chr,start,end,strand]]]

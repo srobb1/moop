@@ -15,19 +15,43 @@ include_once __DIR__ . '/../lib/moopmart_functions.php';
 $organism_data = $config->getPath('organism_data');
 $siteTitle     = $config->getString('siteTitle');
 
-// Load accessible sources for the dataset panel
 $all_accessible = flattenSourcesList(getAccessibleAssemblies());
 
-// Build scope tree: organism => assembly => [gene_sets]
-$scope_tree = [];
+// Build scope tree with deduplication: organism => assembly => [gene_sets]
+$scope_tree    = [];
+$organism_info = [];
+
 foreach ($all_accessible as $src) {
     $org = $src['organism'];
     $asm = $src['assembly'];
     $gs  = $src['gene_set'] ?? '';
-    $scope_tree[$org][$asm][] = $gs;
+
+    if (!isset($scope_tree[$org]))       $scope_tree[$org]       = [];
+    if (!isset($scope_tree[$org][$asm])) $scope_tree[$org][$asm] = [];
+    if ($gs !== '' && !in_array($gs, $scope_tree[$org][$asm], true)) {
+        $scope_tree[$org][$asm][] = $gs;
+    }
+
+    if (!isset($organism_info[$org])) {
+        $info = loadOrganismInfo($org, $organism_data) ?: [];
+        $organism_info[$org] = [
+            'genus'       => $info['genus']       ?? '',
+            'species'     => $info['species']     ?? '',
+            'common_name' => $info['common_name'] ?? '',
+        ];
+    }
 }
 
-// Collect all annotation source names from per-organism cache files
+ksort($scope_tree);
+foreach ($scope_tree as $org => &$asms) {
+    ksort($asms);
+    foreach ($asms as $asm => &$gene_sets) {
+        sort($gene_sets);
+    }
+}
+unset($asms, $gene_sets);
+
+// Collect annotation source names from per-organism cache files
 $annotation_source_names = [];
 $seen_orgs = [];
 foreach ($all_accessible as $src) {
@@ -49,11 +73,12 @@ sort($annotation_source_names);
 echo render_display_page(
     __DIR__ . '/pages/moopmart.php',
     [
+        'scope_tree'              => $scope_tree,
+        'organism_info'           => $organism_info,
         'annotation_source_names' => $annotation_source_names,
         'siteTitle'               => $siteTitle,
         'page_script'             => ["/$site/js/modules/moopmart.js"],
         'inline_scripts'          => [
-            'const scopeTree = '         . json_encode($scope_tree)              . ';',
             'const annotationSources = ' . json_encode($annotation_source_names) . ';',
             "const moopSite = '/$site';",
             "const siteTitle = '"        . addslashes($siteTitle)                . "';",
