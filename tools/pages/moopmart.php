@@ -13,21 +13,22 @@
 
     <div class="row g-3">
 
-        <!-- Dataset (scope tree) -->
+        <!-- Scope -->
         <div class="col-lg-5">
-            <div class="card h-100">
+            <div class="card shadow-sm h-100">
                 <div class="card-header d-flex align-items-center py-2">
-                    <span class="fw-semibold me-auto">Dataset</span>
-                    <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-outline-secondary" id="mm-select-all">All</button>
-                        <button type="button" class="btn btn-outline-secondary" id="mm-clear-all">None</button>
+                    <i class="fa fa-sitemap me-2 text-muted"></i>
+                    <strong class="me-auto">Scope</strong>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="mm-select-all">All</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="mm-clear-all">None</button>
                     </div>
                 </div>
                 <div class="px-2 pt-2 pb-1 border-bottom">
                     <input type="text" class="form-control form-control-sm" id="mm-scope-filter"
                            placeholder="Filter organisms, assemblies…" autocomplete="off">
                 </div>
-                <div class="card-body p-2" style="max-height:400px; overflow-y:auto;">
+                <div class="card-body p-2" style="overflow-y:auto; max-height:320px;">
                     <div id="mm-scope-tree">
                     <?php if (empty($scope_tree)): ?>
                         <p class="text-muted small p-2">No accessible sources.</p>
@@ -41,7 +42,8 @@
                             $oid    = 'mm-o' . $oi;
                         ?>
                         <div class="mm-org mb-1" data-org="<?= htmlspecialchars($organism) ?>">
-                            <div class="d-flex align-items-center gap-1 px-1 py-1 rounded" style="background:#f8f9fa;">
+                            <div class="d-flex align-items-center gap-1 px-1 py-1 rounded"
+                                 style="background:#f8f9fa;">
                                 <input type="checkbox" class="form-check-input flex-shrink-0 mm-org-cb mb-0"
                                        id="<?= $oid ?>" data-org="<?= htmlspecialchars($organism) ?>" checked>
                                 <label class="form-check-label fw-semibold mb-0 me-auto"
@@ -61,7 +63,8 @@
                                 ?>
                                 <div class="mm-asm mb-1" data-org="<?= htmlspecialchars($organism) ?>"
                                      data-asm="<?= htmlspecialchars($assembly) ?>">
-                                    <div class="d-flex align-items-center gap-1 px-1 py-1 rounded" style="background:#fff3cd20;">
+                                    <div class="d-flex align-items-center gap-1 px-1 py-1 rounded"
+                                         style="background:#fff3cd20;">
                                         <input type="checkbox" class="form-check-input flex-shrink-0 mm-asm-cb mb-0"
                                                id="<?= $aid ?>"
                                                data-org="<?= htmlspecialchars($organism) ?>"
@@ -85,7 +88,7 @@
                                                    data-key="<?= htmlspecialchars($gsKey) ?>" checked>
                                             <label class="form-check-label mb-0" for="<?= $gsid ?>"
                                                    style="cursor:pointer; font-size:0.82rem;">
-                                                <span class="badge bg-secondary me-1" style="font-size:0.65rem;">GS</span><?= htmlspecialchars($gs ?: '(default)') ?>
+                                                <span class="badge bg-gene-set me-1" style="font-size:0.65rem;">GS</span><?= htmlspecialchars($gs ?: '(default)') ?>
                                             </label>
                                         </div>
                                         <?php endforeach; ?>
@@ -98,69 +101,38 @@
                     <?php endif; ?>
                     </div>
                 </div>
+                <div class="card-footer py-1 px-2 text-muted" style="font-size:0.8rem;">
+                    <span id="mm-scope-summary"></span>
+                </div>
             </div>
         </div>
 
-        <!-- Filters + Attributes -->
-        <div class="col-lg-7 d-flex flex-column gap-3">
-
-            <!-- Filters -->
-            <div class="card">
-                <div class="card-header py-2">
-                    <span class="fw-semibold">Filters</span>
-                    <small class="text-muted ms-1">— all optional, combined with AND</small>
-                </div>
-                <div class="card-body pb-2">
-                    <div class="row g-2">
-                        <div class="col-sm-6">
-                            <label class="form-label small mb-1">Annotation source</label>
-                            <select id="mm-annotation-source" class="form-select form-select-sm">
-                                <option value="">Any source</option>
-                                <?php foreach ($annotation_source_names as $src_name): ?>
-                                <option value="<?= htmlspecialchars($src_name) ?>"><?= htmlspecialchars($src_name) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="form-label small mb-1">Accession <span class="text-muted">(exact, e.g. GO:0006351)</span></label>
-                            <input type="text" id="mm-annotation-accession" class="form-control form-control-sm" placeholder="GO:0000000">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small mb-1">Annotation keyword</label>
-                            <input type="text" id="mm-annotation-keyword" class="form-control form-control-sm" placeholder="Search descriptions…">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small mb-1">Coordinate range <span class="text-muted">(features overlapping this region)</span></label>
-                            <div class="d-flex gap-2 flex-wrap">
-                                <input type="text"   id="mm-coord-chr"   class="form-control form-control-sm" placeholder="Chr / scaffold" style="max-width:160px;">
-                                <input type="number" id="mm-coord-start" class="form-control form-control-sm" placeholder="Start (1-based)" min="1">
-                                <input type="number" id="mm-coord-end"   class="form-control form-control-sm" placeholder="End (1-based)"   min="1">
-                            </div>
-                        </div>
+        <!-- Annotation Sources (controls which columns appear in TSV output) -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex align-items-center py-2">
+                    <i class="fa fa-sliders-h me-2 text-muted"></i>
+                    <strong class="me-auto">Annotation Sources</strong>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="mm-ann-all">All</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="mm-ann-none">None</button>
                     </div>
                 </div>
-            </div>
-
-            <!-- Attributes -->
-            <?php if (!empty($annotation_source_names)): ?>
-            <div class="card">
-                <div class="card-header py-2 d-flex align-items-center">
-                    <span class="fw-semibold me-auto">Attributes</span>
-                    <small class="text-muted me-3">annotation sources to include as TSV columns</small>
-                    <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-link btn-sm p-0 me-2" id="mm-ann-all">All</button>
-                        <button type="button" class="btn btn-link btn-sm p-0" id="mm-ann-none">None</button>
-                    </div>
+                <?php if (!empty($annotation_source_names)): ?>
+                <div class="px-2 pt-2 pb-1 border-bottom">
+                    <input type="text" class="form-control form-control-sm" id="mm-ann-filter"
+                           placeholder="Filter sources…" autocomplete="off">
                 </div>
-                <div class="card-body pb-2">
+                <div class="card-body p-2" style="overflow-y:auto; max-height:320px;">
                     <p class="small text-muted mb-2">
+                        Select which annotation sources appear as columns in TSV downloads.<br>
                         <strong>Always included:</strong> organism, assembly, gene set, gene ID, name, description, type, chr, start, end, strand
                     </p>
                     <div id="mm-attribute-sources" class="d-flex flex-wrap" style="column-gap:1.5rem;">
                         <?php foreach ($annotation_source_names as $src_name):
                             $safe_id = 'mm-ann-' . preg_replace('/[^a-z0-9]/i', '_', $src_name);
                         ?>
-                        <div class="form-check mb-1">
+                        <div class="form-check mb-1 mm-ann-item">
                             <input class="form-check-input mm-ann-col" type="checkbox"
                                    value="<?= htmlspecialchars($src_name) ?>"
                                    id="<?= $safe_id ?>" checked>
@@ -171,9 +143,51 @@
                         <?php endforeach; ?>
                     </div>
                 </div>
+                <?php else: ?>
+                <div class="card-body p-2 text-muted small">No annotation sources found in the accessible data.</div>
+                <?php endif; ?>
+                <div class="card-footer py-1 px-2 text-muted" style="font-size:0.8rem;">
+                    <span id="mm-ann-summary"></span>
+                </div>
             </div>
-            <?php endif; ?>
+        </div>
 
+    </div>
+
+    <!-- Filters -->
+    <div class="card mt-3">
+        <div class="card-header py-2">
+            <span class="fw-semibold">Filters</span>
+            <small class="text-muted ms-1">— all optional, combined with AND</small>
+        </div>
+        <div class="card-body pb-2">
+            <div class="row g-2">
+                <div class="col-sm-4">
+                    <label class="form-label small mb-1">Annotation source</label>
+                    <select id="mm-annotation-source" class="form-select form-select-sm">
+                        <option value="">Any source</option>
+                        <?php foreach ($annotation_source_names as $src_name): ?>
+                        <option value="<?= htmlspecialchars($src_name) ?>"><?= htmlspecialchars($src_name) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label small mb-1">Accession <span class="text-muted">(exact, e.g. GO:0006351)</span></label>
+                    <input type="text" id="mm-annotation-accession" class="form-control form-control-sm" placeholder="GO:0000000">
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label small mb-1">Annotation keyword</label>
+                    <input type="text" id="mm-annotation-keyword" class="form-control form-control-sm" placeholder="Search descriptions…">
+                </div>
+                <div class="col-12">
+                    <label class="form-label small mb-1">Coordinate range <span class="text-muted">(features overlapping this region)</span></label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <input type="text"   id="mm-coord-chr"   class="form-control form-control-sm" placeholder="Chr / scaffold" style="max-width:160px;">
+                        <input type="number" id="mm-coord-start" class="form-control form-control-sm" placeholder="Start (1-based)" min="1">
+                        <input type="number" id="mm-coord-end"   class="form-control form-control-sm" placeholder="End (1-based)"   min="1">
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

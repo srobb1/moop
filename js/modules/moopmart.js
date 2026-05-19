@@ -28,6 +28,26 @@
     // Scope tree — checkbox propagation (HTML rendered by PHP)
     // -------------------------------------------------------
 
+    function updateScopeSummary() {
+        const total   = document.querySelectorAll('.mm-gs-cb').length;
+        const checked = document.querySelectorAll('.mm-gs-cb:checked').length;
+        const el = document.getElementById('mm-scope-summary');
+        if (!el) return;
+        el.textContent = checked === total
+            ? `All ${total} gene set${total !== 1 ? 's' : ''} selected`
+            : `${checked} of ${total} gene set${total !== 1 ? 's' : ''} selected`;
+    }
+
+    function updateAnnSummary() {
+        const total   = document.querySelectorAll('.mm-ann-col').length;
+        const checked = document.querySelectorAll('.mm-ann-col:checked').length;
+        const el = document.getElementById('mm-ann-summary');
+        if (!el) return;
+        el.textContent = total
+            ? (checked === total ? `All ${total} sources` : `${checked} of ${total} sources selected`)
+            : '';
+    }
+
     function syncParent(org, asm) {
         const container = document.getElementById('mm-scope-tree');
 
@@ -81,6 +101,7 @@
             } else if (cb.classList.contains('mm-gs-cb')) {
                 syncParent(cb.dataset.org, cb.dataset.asm);
             }
+            updateScopeSummary();
         });
 
         // Scope filter input
@@ -101,6 +122,8 @@
                 });
             });
         }
+
+        updateScopeSummary();
     }
 
     // -------------------------------------------------------
@@ -301,20 +324,38 @@
                 c.checked = true;
                 c.indeterminate = false;
             });
+            updateScopeSummary();
         });
         document.getElementById('mm-clear-all')?.addEventListener('click', function () {
             document.querySelectorAll('.mm-gs-cb, .mm-org-cb, .mm-asm-cb').forEach(c => {
                 c.checked = false;
                 c.indeterminate = false;
             });
+            updateScopeSummary();
         });
 
         // Annotation columns: all / none
         document.getElementById('mm-ann-all')?.addEventListener('click', function () {
             document.querySelectorAll('.mm-ann-col').forEach(c => c.checked = true);
+            updateAnnSummary();
         });
         document.getElementById('mm-ann-none')?.addEventListener('click', function () {
             document.querySelectorAll('.mm-ann-col').forEach(c => c.checked = false);
+            updateAnnSummary();
+        });
+
+        // Annotation sources filter input
+        document.getElementById('mm-ann-filter')?.addEventListener('input', function () {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('.mm-ann-item').forEach(item => {
+                const text = item.querySelector('label')?.textContent.toLowerCase() || '';
+                item.style.display = !q || text.includes(q) ? '' : 'none';
+            });
+        });
+
+        // Annotation column checkbox changes → update summary
+        document.getElementById('mm-attribute-sources')?.addEventListener('change', function () {
+            updateAnnSummary();
         });
 
         // Preview button
@@ -345,6 +386,7 @@
         });
 
         setFastaMode('gene');
+        updateAnnSummary();
     });
 
 })();
