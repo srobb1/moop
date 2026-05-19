@@ -213,27 +213,29 @@
                     <label class="form-label small mb-1">Annotation keyword</label>
                     <input type="text" id="mm-annotation-keyword" class="form-control form-control-sm" placeholder="Search descriptions…">
                 </div>
+                <div class="col-12">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="small fw-semibold text-muted">Coordinates</span>
+                        <span id="mm-coord-note" class="small text-muted fst-italic">
+                            — only available when a single assembly is selected
+                        </span>
+                    </div>
+                </div>
                 <div class="col-sm-4">
                     <label class="form-label small mb-1">Chr / scaffold</label>
                     <input type="text" id="mm-coord-chr" class="form-control form-control-sm"
-                           placeholder="e.g. CHR01" list="mm-chr-datalist" autocomplete="off">
-                    <?php if (!empty($chr_names_list)): ?>
-                    <datalist id="mm-chr-datalist">
-                        <?php foreach ($chr_names_list as $chr): ?>
-                        <option value="<?= htmlspecialchars($chr) ?>">
-                        <?php endforeach; ?>
-                    </datalist>
-                    <?php endif; ?>
+                           placeholder="e.g. CHR01" list="mm-chr-datalist" autocomplete="off" disabled>
+                    <datalist id="mm-chr-datalist"></datalist>
                 </div>
                 <div class="col-sm-4">
                     <label class="form-label small mb-1">Start <span class="text-muted">(1-based)</span></label>
                     <input type="number" id="mm-coord-start" class="form-control form-control-sm"
-                           placeholder="1" min="1">
+                           placeholder="1" min="1" disabled>
                 </div>
                 <div class="col-sm-4">
                     <label class="form-label small mb-1">End <span class="text-muted">(1-based)</span></label>
                     <input type="number" id="mm-coord-end" class="form-control form-control-sm"
-                           placeholder="1000000" min="1">
+                           placeholder="1000000" min="1" disabled>
                 </div>
             </div>
         </div>

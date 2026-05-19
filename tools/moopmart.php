@@ -90,26 +90,14 @@ ksort($annotation_source_types);
 $annotation_source_names = array_keys($annotation_source_names);
 sort($annotation_source_names);
 
-// Collect unique chromosome names across all accessible gene sets
-$chr_names_all  = [];
-$seen_gs_paths  = [];
-foreach ($all_accessible as $src) {
-    $gs_path = $src['path'] ?? '';
-    if (!$gs_path || isset($seen_gs_paths[$gs_path])) continue;
-    $seen_gs_paths[$gs_path] = true;
-    foreach (moopmartGetChrNames($gs_path) as $chr) {
-        $chr_names_all[$chr] = true;
-    }
-}
-$chr_names_list = array_keys($chr_names_all);
-sort($chr_names_list, SORT_NATURAL);
+// Chr names are loaded dynamically via API when exactly one assembly is selected.
+// No pre-loading here — avoids reading N×M cache files on every page load.
 
 echo render_display_page(
     __DIR__ . '/pages/moopmart.php',
     [
         'scope_tree'              => $scope_tree,
         'organism_info'           => $organism_info,
-        'chr_names_list'           => $chr_names_list,
         'annotation_source_types'  => $annotation_source_types,
         'annotation_source_names'  => $annotation_source_names,
         'siteTitle'               => $siteTitle,

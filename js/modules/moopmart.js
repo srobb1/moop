@@ -11,6 +11,7 @@
 
     const PREVIEW_URL = moopSite + '/api/moopmart_preview.php';
     const EXPORT_URL  = moopSite + '/api/moopmart_export.php';
+    const CHRS_URL    = moopSite + '/api/moopmart_chrs.php';
 
     const FASTA_LABELS = {
         gene:       'Gene sequence',
@@ -36,6 +37,72 @@
         el.textContent = checked === total
             ? `All ${total} gene set${total !== 1 ? 's' : ''} selected`
             : `${checked} of ${total} gene set${total !== 1 ? 's' : ''} selected`;
+    }
+
+    // -------------------------------------------------------
+    // Coordinate filter — only active when exactly one assembly is selected
+    // -------------------------------------------------------
+
+    let lastChrSource = null;
+
+    function getSelectedAssemblies() {
+        const seen = new Set();
+        document.querySelectorAll('.mm-gs-cb:checked').forEach(cb => {
+            seen.add(cb.dataset.org + '|' + cb.dataset.asm);
+        });
+        return Array.from(seen);
+    }
+
+    function updateCoordState() {
+        const asms     = getSelectedAssemblies();
+        const single   = asms.length === 1;
+        const coordIds = ['mm-coord-chr', 'mm-coord-start', 'mm-coord-end'];
+        const note     = document.getElementById('mm-coord-note');
+
+        coordIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.disabled = !single;
+            if (!single) el.value = '';
+        });
+
+        if (note) {
+            note.textContent = single
+                ? ''
+                : '— only available when a single assembly is selected';
+        }
+
+        if (!single) {
+            const dl = document.getElementById('mm-chr-datalist');
+            if (dl) dl.innerHTML = '';
+            lastChrSource = null;
+            return;
+        }
+
+        // Fetch chr names for the one selected assembly (use first checked gene set as key)
+        const firstKey = Array.from(document.querySelectorAll('.mm-gs-cb:checked'))
+            .find(cb => (cb.dataset.org + '|' + cb.dataset.asm) === asms[0])?.dataset.key;
+        if (!firstKey || firstKey === lastChrSource) return;
+        lastChrSource = firstKey;
+
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const fd   = new FormData();
+        fd.append('csrf_token', csrf);
+        fd.append('source', firstKey);
+
+        fetch(CHRS_URL, { method: 'POST', headers: { 'X-CSRF-Token': csrf }, body: fd })
+            .then(r => r.json())
+            .then(data => {
+                const dl = document.getElementById('mm-chr-datalist');
+                if (!dl) return;
+                dl.innerHTML = '';
+                (data.chrs || []).forEach(chr => {
+                    const opt = document.createElement('option');
+                    opt.value = chr;
+                    dl.appendChild(opt);
+                });
+            })
+            .catch(() => {});
     }
 
     function updateAnnSummary() {
@@ -131,6 +198,7 @@
                 syncParent(cb.dataset.org, cb.dataset.asm);
             }
             updateScopeSummary();
+            updateCoordState();
         });
 
         // Scope filter input
@@ -153,6 +221,7 @@
         }
 
         updateScopeSummary();
+        updateCoordState();
     }
 
     // -------------------------------------------------------
@@ -362,6 +431,7 @@
                 c.indeterminate = false;
             });
             updateScopeSummary();
+            updateCoordState();
         });
         document.getElementById('mm-clear-all')?.addEventListener('click', function () {
             document.querySelectorAll('.mm-gs-cb, .mm-org-cb, .mm-asm-cb').forEach(c => {
@@ -369,6 +439,7 @@
                 c.indeterminate = false;
             });
             updateScopeSummary();
+            updateCoordState();
         });
 
         // Annotation columns: all / none (also sync type checkboxes)
