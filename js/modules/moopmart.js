@@ -375,7 +375,10 @@
             updateAnnSummary();
         });
 
-        // Annotation sources filter input — hides items and empty groups
+        // Annotation sources filter input — hides items and empty groups.
+        // Must use classList/d-none rather than style.display because the items
+        // carry Bootstrap's d-flex class (display:flex !important) which beats
+        // an inline style.display='none'.
         document.getElementById('mm-ann-filter')?.addEventListener('input', function () {
             const q = this.value.toLowerCase();
             document.querySelectorAll('.mm-ann-group').forEach(group => {
@@ -383,10 +386,10 @@
                 group.querySelectorAll('.mm-ann-item').forEach(item => {
                     const text = item.querySelector('label')?.textContent.toLowerCase() || '';
                     const show = !q || text.includes(q);
-                    item.style.display = show ? '' : 'none';
+                    item.classList.toggle('d-none', !show);
                     if (show) anyVisible = true;
                 });
-                group.style.display = anyVisible || !q ? '' : 'none';
+                group.classList.toggle('d-none', !anyVisible && !!q);
             });
         });
 
