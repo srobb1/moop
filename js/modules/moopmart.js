@@ -175,6 +175,13 @@
 
         getSelectedSources().forEach(s => fd.append('sources[]', s));
 
+        const featureId  = document.getElementById('mm-feature-id')?.value?.trim();
+        const geneName   = document.getElementById('mm-gene-name')?.value?.trim();
+        const geneDesc   = document.getElementById('mm-gene-description')?.value?.trim();
+        if (featureId) fd.append('feature_id',          featureId);
+        if (geneName)  fd.append('gene_name',           geneName);
+        if (geneDesc)  fd.append('gene_description',    geneDesc);
+
         const annSrc = document.getElementById('mm-annotation-source')?.value;
         if (annSrc) fd.append('annotation_source', annSrc);
 

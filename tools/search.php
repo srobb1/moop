@@ -10,6 +10,13 @@ include_once __DIR__ . '/../lib/extract_search_helpers.php';
 
 $organism_data = $config->getPath('organism_data');
 
+// Read context parameters passed from toolbox links (organism, assembly, gene_set, group)
+$context      = parseContextParameters();
+$ctx_organism = $context['organism'];
+$ctx_assembly = $context['assembly'];
+$ctx_gene_set = $context['gene_set'];
+$ctx_group    = $context['group'];
+
 // Build scope tree: organism → assembly → [gene_sets]
 // Also collect organism display info (genus/species/common_name)
 $raw_sources    = flattenSourcesList(getAccessibleAssemblies());
@@ -49,6 +56,26 @@ unset($asms, $gene_sets);
 
 $all_organisms = array_keys($scope_tree);
 
+// Build scope context for JS pre-filtering.
+// Passed as null when no context — JS leaves all nodes checked.
+$scope_context = null;
+if ($ctx_organism) {
+    $scope_context = ['organism' => $ctx_organism];
+    if ($ctx_assembly) $scope_context['assembly'] = $ctx_assembly;
+    if ($ctx_gene_set) $scope_context['gene_set'] = $ctx_gene_set;
+} elseif ($ctx_group) {
+    $sources_by_group   = getAccessibleAssemblies();
+    $group_organisms    = array_keys($sources_by_group[$ctx_group] ?? []);
+    if (!empty($group_organisms)) {
+        $scope_context = ['organisms' => $group_organisms];
+    }
+} elseif (!empty($_GET['organisms'])) {
+    $org_result = parseOrganismParameter($_GET['organisms']);
+    if (!empty($org_result['organisms'])) {
+        $scope_context = ['organisms' => $org_result['organisms']];
+    }
+}
+
 $display_config = [
     'title'        => 'Search — ' . htmlspecialchars($siteTitle),
     'content_file' => __DIR__ . '/pages/search.php',
@@ -65,8 +92,9 @@ $display_config = [
     'inline_scripts' => [
         "const sitePath = '/$site';",
         "const siteTitle = '" . addslashes($siteTitle) . "';",
-        "const allOrganisms = " . json_encode($all_organisms) . ";",
-        "const scopeTree = "    . json_encode($scope_tree)    . ";",
+        "const allOrganisms = "  . json_encode($all_organisms)  . ";",
+        "const scopeTree = "     . json_encode($scope_tree)     . ";",
+        "const scopeContext = "  . json_encode($scope_context)  . ";",
     ],
 ];
 

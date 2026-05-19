@@ -3,6 +3,7 @@
  * MOOPmart Preview — Return feature count + first 100 rows for current filters.
  *
  * POST parameters: same as moopmart_export.php (sources[], feature_types[],
+ * feature_id, gene_name, gene_description,
  * annotation_source, annotation_accession, annotation_keyword,
  * coord_chr, coord_start, coord_end)
  *
@@ -46,6 +47,9 @@ if (empty($selected)) {
 $filters = [];
 $types = array_filter($_POST['feature_types'] ?? []);
 if (!empty($types))                             $filters['feature_types']        = array_values($types);
+if (!empty($_POST['feature_id']))               $filters['feature_id']           = trim($_POST['feature_id']);
+if (!empty($_POST['gene_name']))                $filters['gene_name']            = trim($_POST['gene_name']);
+if (!empty($_POST['gene_description']))         $filters['gene_description']     = trim($_POST['gene_description']);
 if (!empty($_POST['annotation_source']))        $filters['annotation_source']    = trim($_POST['annotation_source']);
 if (!empty($_POST['annotation_accession']))     $filters['annotation_accession'] = trim($_POST['annotation_accession']);
 if (!empty($_POST['annotation_keyword']))       $filters['annotation_keyword']   = trim($_POST['annotation_keyword']);

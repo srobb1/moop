@@ -27,6 +27,9 @@
  * @param string $db_path       Path to organism.sqlite
  * @param array  $filters {
  *   feature_types?:        string[]  e.g. ['gene','pseudogene']; empty = all types
+ *   feature_id?:           string    Exact match on feature_uniquename
+ *   gene_name?:            string    LIKE match on feature_name
+ *   gene_description?:     string    LIKE match on feature_description
  *   annotation_source?:    string    Require annotation from this source name
  *   annotation_accession?: string    Require this exact accession (e.g. 'GO:0006351')
  *   annotation_keyword?:   string    LIKE match on annotation_description
@@ -52,6 +55,26 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
     $tp    = implode(',', array_fill(0, count($types), '?'));
     $where[] = "f.feature_type IN ($tp)";
     array_push($params, ...$types);
+
+    // Feature-level filters (applied directly on gene rows)
+    if (!empty($filters['feature_id'])) {
+        // Match on the gene's own uniquename, OR on any child (transcript) uniquename —
+        // so typing either a gene ID or a transcript ID finds the same gene row.
+        $where[]  = '(f.feature_uniquename = ? OR EXISTS (
+                          SELECT 1 FROM feature child
+                          WHERE child.parent_feature_id = f.feature_id
+                            AND child.feature_uniquename = ?))';
+        $params[] = $filters['feature_id'];
+        $params[] = $filters['feature_id'];
+    }
+    if (!empty($filters['gene_name'])) {
+        $where[]  = 'f.feature_name LIKE ?';
+        $params[] = '%' . $filters['gene_name'] . '%';
+    }
+    if (!empty($filters['gene_description'])) {
+        $where[]  = 'f.feature_description LIKE ?';
+        $params[] = '%' . $filters['gene_description'] . '%';
+    }
 
     // Annotation filter via EXISTS on child features — annotations in the DB are
     // stored on mRNA/transcript features (direct children of genes via parent_feature_id),
@@ -126,6 +149,23 @@ function moopmartCountFeatures(array $gene_set_ids, string $db_path, array $filt
     $tp    = implode(',', array_fill(0, count($types), '?'));
     $where[] = "f.feature_type IN ($tp)";
     array_push($params, ...$types);
+
+    if (!empty($filters['feature_id'])) {
+        $where[]  = '(f.feature_uniquename = ? OR EXISTS (
+                          SELECT 1 FROM feature child
+                          WHERE child.parent_feature_id = f.feature_id
+                            AND child.feature_uniquename = ?))';
+        $params[] = $filters['feature_id'];
+        $params[] = $filters['feature_id'];
+    }
+    if (!empty($filters['gene_name'])) {
+        $where[]  = 'f.feature_name LIKE ?';
+        $params[] = '%' . $filters['gene_name'] . '%';
+    }
+    if (!empty($filters['gene_description'])) {
+        $where[]  = 'f.feature_description LIKE ?';
+        $params[] = '%' . $filters['gene_description'] . '%';
+    }
 
     $ann_where  = [];
     $ann_params = [];

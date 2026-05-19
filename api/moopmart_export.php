@@ -55,6 +55,9 @@ if (empty($selected)) {
 $filters = [];
 $types = array_filter($_POST['feature_types'] ?? []);
 if (!empty($types))                             $filters['feature_types']        = array_values($types);
+if (!empty($_POST['feature_id']))               $filters['feature_id']           = trim($_POST['feature_id']);
+if (!empty($_POST['gene_name']))                $filters['gene_name']            = trim($_POST['gene_name']);
+if (!empty($_POST['gene_description']))         $filters['gene_description']     = trim($_POST['gene_description']);
 if (!empty($_POST['annotation_source']))        $filters['annotation_source']    = trim($_POST['annotation_source']);
 if (!empty($_POST['annotation_accession']))     $filters['annotation_accession'] = trim($_POST['annotation_accession']);
 if (!empty($_POST['annotation_keyword']))       $filters['annotation_keyword']   = trim($_POST['annotation_keyword']);
@@ -150,10 +153,16 @@ if ($output_format === 'tsv') {
 
     $out = fopen('php://output', 'w');
 
-    // Header row
+    // Strip embedded newlines/tabs that would break TSV parsing in Excel
+    $clean = fn($s) => str_replace(["\r\n", "\r", "\n", "\t"], ' ', (string)$s);
+
+    // Header row — two columns per annotation source: IDs and descriptions
     $headers = ['organism', 'assembly', 'gene_set', 'gene_id', 'gene_name',
                 'description', 'type', 'chr', 'start', 'end', 'strand'];
-    foreach ($source_cols as $s) $headers[] = $s;
+    foreach ($source_cols as $s) {
+        $headers[] = 'ID:' . $s;
+        $headers[] = 'Description:' . $s;
+    }
     fputcsv($out, $headers, "\t");
 
     // Data rows
@@ -163,8 +172,8 @@ if ($output_format === 'tsv') {
             $f['genome_accession'],
             $f['gene_set_name'],
             $f['uniquename'],
-            $f['name']        ?? '',
-            $f['description'] ?? '',
+            $clean($f['name']        ?? ''),
+            $clean($f['description'] ?? ''),
             $f['type'],
             $f['chr']         ?? '',
             $f['start']       ?? '',
@@ -174,12 +183,11 @@ if ($output_format === 'tsv') {
         $ann_key  = $f['db_path'] . ':' . $f['feature_id'];
         $fid_anns = $all_annotations[$ann_key] ?? [];
         foreach ($source_cols as $src_name) {
-            $entries = $fid_anns[$src_name] ?? [];
-            $cells   = array_map(
-                fn($e) => $e['accession'] . ($e['description'] ? ': ' . $e['description'] : ''),
-                $entries
-            );
-            $row[] = implode('; ', $cells);
+            $entries      = $fid_anns[$src_name] ?? [];
+            $accessions   = array_map(fn($e) => $e['accession'], $entries);
+            $descriptions = array_map(fn($e) => $clean($e['description'] ?? ''), $entries);
+            $row[] = implode('; ', $accessions);
+            $row[] = implode('; ', $descriptions);
         }
         fputcsv($out, $row, "\t");
     }

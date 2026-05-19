@@ -8,7 +8,7 @@
 
     <div class="mb-3">
         <h4 class="mb-1">MOOP Mega Search</h4>
-        <p class="text-muted mb-0 small">Filter features across organisms, assemblies, and gene sets. Download results as TSV (with annotation columns) or FASTA (genomic regions, pre-built sequences).</p>
+        <p class="text-muted mb-0 small">Designed for bulk download of selected features and annotations. Filter across organisms, assemblies, and gene sets, then export results as a TSV with annotation columns or as FASTA sequences (genomic regions or pre-built protein, transcript, and CDS sequences).</p>
     </div>
 
     <div class="row g-3">
@@ -180,6 +180,18 @@
         </div>
         <div class="card-body pb-2">
             <div class="row g-2">
+                <div class="col-sm-4">
+                    <label class="form-label small mb-1">Feature ID</label>
+                    <input type="text" id="mm-feature-id" class="form-control form-control-sm" placeholder="exact gene ID">
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label small mb-1">Gene name</label>
+                    <input type="text" id="mm-gene-name" class="form-control form-control-sm" placeholder="partial match">
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label small mb-1">Description keyword</label>
+                    <input type="text" id="mm-gene-description" class="form-control form-control-sm" placeholder="search gene descriptions…">
+                </div>
                 <div class="col-sm-4">
                     <label class="form-label small mb-1">Annotation source</label>
                     <select id="mm-annotation-source" class="form-select form-select-sm">

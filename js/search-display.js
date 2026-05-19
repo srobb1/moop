@@ -362,6 +362,40 @@ $(document).ready(function () {
 
     // ── Init ─────────────────────────────────────────────────────────────────
 
+    // Pre-filter scope tree when launched from a context page (organism/assembly/gene_set/group)
+    function applyContextScope(ctx) {
+        if (!ctx) return;
+
+        const keepOrgs = new Set(ctx.organisms || (ctx.organism ? [ctx.organism] : []));
+        if (!keepOrgs.size) return;
+
+        $('.scope-gs-cb').each(function () {
+            let keep = keepOrgs.has(this.dataset.org);
+            if (keep && ctx.assembly) keep = (this.dataset.asm === ctx.assembly);
+            if (keep && ctx.gene_set) keep = (this.dataset.gs  === ctx.gene_set);
+            this.checked = keep;
+        });
+
+        // Sync assembly checkboxes
+        $('.scope-asm-cb').each(function () {
+            const boxes = $(`.scope-gs-cb[data-org="${this.dataset.org}"][data-asm="${this.dataset.asm}"]`);
+            const cnt   = boxes.filter(':checked').length;
+            this.checked       = cnt === boxes.length;
+            this.indeterminate = cnt > 0 && cnt < boxes.length;
+        });
+
+        // Sync organism checkboxes
+        $('.scope-org-cb').each(function () {
+            const boxes = $(`.scope-gs-cb[data-org="${this.dataset.org}"]`);
+            const cnt   = boxes.filter(':checked').length;
+            this.checked       = cnt === boxes.length;
+            this.indeterminate = cnt > 0 && cnt < boxes.length;
+        });
+
+        onScopeChange();
+    }
+
+    applyContextScope(typeof scopeContext !== 'undefined' ? scopeContext : null);
     updateScopeSummary();
     loadAnnotationSources(allOrganisms);
 });
