@@ -251,11 +251,20 @@ function moopmartAttachCoords(array $features, array $coords_by_gs_id, array $co
     $filter_start = (int)($coord_filter['start'] ?? 0);
     $filter_end   = (int)($coord_filter['end']   ?? 0);
 
+    $has_filter = $filter_chr !== '' || $filter_start > 0 || $filter_end > 0;
+
     $result = [];
     foreach ($features as $f) {
         $coords = $coords_by_gs_id[$f['gene_set_id']] ?? [];
         $entry  = $coords[$f['uniquename']] ?? null;
-        if (!$entry) continue;
+
+        if (!$entry) {
+            // With a coord filter we can't verify the feature is in range — drop it.
+            // Without a coord filter keep the feature; just leave coord fields empty.
+            if ($has_filter) continue;
+            $result[] = array_merge($f, ['chr' => '', 'start' => '', 'end' => '', 'strand' => '']);
+            continue;
+        }
 
         if ($filter_chr !== '' && $entry['chr'] !== $filter_chr) continue;
         if ($filter_start > 0 && $entry['end']   < $filter_start) continue;
