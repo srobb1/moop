@@ -23,6 +23,7 @@
 
 include_once __DIR__ . '/../tools/tool_init.php';
 include_once __DIR__ . '/../lib/moop_functions.php';
+include_once __DIR__ . '/../lib/blast_functions.php';
 
 header('Content-Type: application/json');
 
@@ -121,81 +122,4 @@ echo json_encode([
     'length'   => strlen($sequence),
 ]);
 
-// ---------------------------------------------------------------------------
-// Helper functions
-// ---------------------------------------------------------------------------
-
-/**
- * Extract a genomic region from an indexed FASTA file using pure PHP.
- *
- * Uses the samtools .fai index (5-column TSV: name, length, offset,
- * bases_per_line, bytes_per_line) to compute the exact byte position and
- * fseek/fread directly — no external tools required.
- *
- * @param string $fasta_path  Path to the FASTA file
- * @param string $fai_path    Path to the .fai index file
- * @param string $seqname     Sequence name (must match first column of .fai)
- * @param int    $start       1-based, inclusive start coordinate (GFF convention)
- * @param int    $end         1-based, inclusive end coordinate
- * @return string|null        Uppercase sequence string, or null if seqname not found
- */
-function extractFastaRegion($fasta_path, $fai_path, $seqname, $start, $end)
-{
-    // Parse FAI to find the target sequence entry
-    $fh    = fopen($fai_path, 'r');
-    $entry = null;
-    while (($line = fgets($fh)) !== false) {
-        $parts = explode("\t", rtrim($line));
-        if (count($parts) >= 5 && $parts[0] === $seqname) {
-            $entry = [
-                'length'         => (int)$parts[1],
-                'offset'         => (int)$parts[2],   // byte offset of first base
-                'bases_per_line' => (int)$parts[3],
-                'bytes_per_line' => (int)$parts[4],   // includes the newline character(s)
-            ];
-            break;
-        }
-    }
-    fclose($fh);
-
-    if (!$entry || $entry['bases_per_line'] === 0) return null;
-
-    // Convert 1-based GFF coords to 0-based
-    $s   = $start - 1;          // 0-based start index
-    $len = $end - $start + 1;   // number of bases to read
-
-    // Byte offset formula:
-    //   lines_before × bytes_per_line  +  remaining_bases_in_last_partial_line
-    $byte_pos = $entry['offset']
-              + intdiv($s, $entry['bases_per_line']) * $entry['bytes_per_line']
-              + ($s % $entry['bases_per_line']);
-
-    $fh = fopen($fasta_path, 'rb');
-    fseek($fh, $byte_pos);
-
-    $seq       = '';
-    $remaining = $len;
-    while ($remaining > 0) {
-        // Read enough bytes to cover remaining bases plus any embedded newlines
-        $read_len = $remaining + (int)ceil($remaining / $entry['bases_per_line']) + 4;
-        $chunk    = fread($fh, min(65536, $read_len));
-        if ($chunk === false || $chunk === '') break;
-
-        // Strip line endings and accumulate bases
-        $clean   = str_replace(["\r\n", "\r", "\n"], '', $chunk);
-        $take    = min($remaining, strlen($clean));
-        $seq    .= substr($clean, 0, $take);
-        $remaining -= $take;
-    }
-    fclose($fh);
-
-    return strtoupper($seq);
-}
-
-/**
- * Return the reverse complement of a DNA sequence.
- */
-function reverseComplement($seq)
-{
-    return strrev(strtr(strtoupper($seq), ['A' => 'T', 'T' => 'A', 'C' => 'G', 'G' => 'C']));
-}
+// extractFastaRegion() and reverseComplement() are defined in lib/blast_functions.php

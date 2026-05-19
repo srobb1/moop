@@ -27,6 +27,7 @@
          . '<a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>'
          . '<div class="dropdown-menu" aria-labelledby="toolsDropdown">'
          . '<a class="dropdown-item" href="/' . $site . '/tools/search.php">Annotation Search</a>'
+         . '<a class="dropdown-item" href="/' . $site . '/tools/moopmart.php">MOOP Mega Search</a>'
          . '<a class="dropdown-item" href="/' . $site . '/tools/blast.php">BLAST Search</a>'
          . '<a class="dropdown-item" href="/' . $site . '/tools/retrieve_sequences.php">Retrieve Sequences</a>'
          . '<a class="dropdown-item" href="/' . $site . '/tools/downloads.php">Downloads</a>'

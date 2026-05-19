@@ -995,5 +995,72 @@ function loadFeatureCoords($assembly_path) {
     return $coords;
 }
 
+/**
+ * Extract a genomic region from a samtools-indexed FASTA using pure PHP.
+ * Uses the .fai 5-column index to fseek directly — no external tools required.
+ *
+ * @param string $fasta_path
+ * @param string $fai_path
+ * @param string $seqname    Must match first column of .fai exactly
+ * @param int    $start      1-based inclusive
+ * @param int    $end        1-based inclusive
+ * @return string|null  Uppercase DNA sequence, or null if seqname not found
+ */
+if (!function_exists('extractFastaRegion')) {
+function extractFastaRegion(string $fasta_path, string $fai_path, string $seqname, int $start, int $end): ?string
+{
+    $fh    = fopen($fai_path, 'r');
+    $entry = null;
+    while (($line = fgets($fh)) !== false) {
+        $parts = explode("\t", rtrim($line));
+        if (count($parts) >= 5 && $parts[0] === $seqname) {
+            $entry = [
+                'offset'         => (int)$parts[2],
+                'bases_per_line' => (int)$parts[3],
+                'bytes_per_line' => (int)$parts[4],
+            ];
+            break;
+        }
+    }
+    fclose($fh);
+
+    if (!$entry || $entry['bases_per_line'] === 0) return null;
+
+    $s        = $start - 1;
+    $len      = $end - $start + 1;
+    $byte_pos = $entry['offset']
+              + intdiv($s, $entry['bases_per_line']) * $entry['bytes_per_line']
+              + ($s % $entry['bases_per_line']);
+
+    $fh = fopen($fasta_path, 'rb');
+    fseek($fh, $byte_pos);
+
+    $seq       = '';
+    $remaining = $len;
+    while ($remaining > 0) {
+        $read_len = $remaining + (int)ceil($remaining / $entry['bases_per_line']) + 4;
+        $chunk    = fread($fh, min(65536, $read_len));
+        if ($chunk === false || $chunk === '') break;
+        $clean     = str_replace(["\r\n", "\r", "\n"], '', $chunk);
+        $take      = min($remaining, strlen($clean));
+        $seq      .= substr($clean, 0, $take);
+        $remaining -= $take;
+    }
+    fclose($fh);
+
+    return strtoupper($seq);
+}
+}
+
+/**
+ * Return the reverse complement of a DNA sequence.
+ */
+if (!function_exists('reverseComplement')) {
+function reverseComplement(string $seq): string
+{
+    return strrev(strtr(strtoupper($seq), ['A' => 'T', 'T' => 'A', 'C' => 'G', 'G' => 'C']));
+}
+}
+
 ?>
 

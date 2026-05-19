@@ -1,0 +1,63 @@
+<?php
+/**
+ * MOOP Mega Search (MOOPmart)
+ *
+ * Filter-based bulk export of gene features, annotations, and sequences
+ * across organisms, assemblies, and gene sets.
+ */
+
+include_once __DIR__ . '/tool_init.php';
+include_once __DIR__ . '/../includes/layout.php';
+include_once __DIR__ . '/../lib/extract_search_helpers.php';
+include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/moopmart_functions.php';
+
+$organism_data = $config->getPath('organism_data');
+$siteTitle     = $config->getString('siteTitle');
+
+// Load accessible sources for the dataset panel
+$all_accessible = flattenSourcesList(getAccessibleAssemblies());
+
+// Build scope tree: organism => assembly => [gene_sets]
+$scope_tree = [];
+foreach ($all_accessible as $src) {
+    $org = $src['organism'];
+    $asm = $src['assembly'];
+    $gs  = $src['gene_set'] ?? '';
+    $scope_tree[$org][$asm][] = $gs;
+}
+
+// Collect all annotation source names from per-organism cache files
+$annotation_source_names = [];
+$seen_orgs = [];
+foreach ($all_accessible as $src) {
+    $org = $src['organism'];
+    if (isset($seen_orgs[$org])) continue;
+    $seen_orgs[$org] = true;
+    $cache = "$organism_data/$org/annotation_sources_cache.json";
+    if (!file_exists($cache)) continue;
+    $data = json_decode(file_get_contents($cache), true) ?: [];
+    foreach ($data as $sources_list) {
+        foreach ($sources_list as $s) {
+            $annotation_source_names[$s['name']] = true;
+        }
+    }
+}
+$annotation_source_names = array_keys($annotation_source_names);
+sort($annotation_source_names);
+
+echo render_display_page(
+    __DIR__ . '/pages/moopmart.php',
+    [
+        'annotation_source_names' => $annotation_source_names,
+        'siteTitle'               => $siteTitle,
+        'page_script'             => ["/$site/js/modules/moopmart.js"],
+        'inline_scripts'          => [
+            'const scopeTree = '         . json_encode($scope_tree)              . ';',
+            'const annotationSources = ' . json_encode($annotation_source_names) . ';',
+            "const moopSite = '/$site';",
+            "const siteTitle = '"        . addslashes($siteTitle)                . "';",
+        ],
+    ],
+    'MOOP Mega Search'
+);

@@ -75,6 +75,17 @@ return [
         'target'          => '_blank',
     ],
     
+    'moopmart' => [
+        'id'             => 'moopmart',
+        'name'           => 'MOOP Mega Search',
+        'icon'           => 'fa-filter',
+        'description'    => 'Filter features by annotation, coordinates, and gene set — download as TSV or FASTA',
+        'btn_class'      => 'btn-info',
+        'url_path'       => '/tools/moopmart.php',
+        'context_params' => [],
+        'pages'          => 'all',
+    ],
+
     // HOW TO ADD A NEW TOOL:
     // 1. Choose a unique 'id' (use snake_case, like 'my_new_tool')
     // 2. Create the tool PHP file in /data/moop/tools/ (or subdirectory)
