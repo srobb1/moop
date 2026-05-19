@@ -26,7 +26,7 @@ $group = $_GET['group'] ?? '';
 $assembly = $_GET['assembly'] ?? '';
 $gene_set = $_GET['gene_set'] ?? '';
 $quoted_search = isset($_GET['quoted']) && $_GET['quoted'] === '1';
-$source_names = $_GET['source_names'] ?? '';  // Comma-separated source names
+$source_names = $_GET['source_names'] ?? '';
 
 // scope: JSON array of {assembly, gene_set} pairs — overrides individual assembly/gene_set params
 $scope_pairs = [];
@@ -47,8 +47,9 @@ if (!empty($scope_json)) {
 }
 
 // Parse source names if provided
-$source_filter = [];
-if (!empty($source_names)) {
+$source_filter    = [];
+$gene_only_search = !empty($_GET['no_annotations']);  // user explicitly deselected all sources
+if (!$gene_only_search && !empty($source_names)) {
     $source_filter = array_map('trim', explode(',', $source_names));
 }
 
@@ -108,9 +109,13 @@ $results = searchFeaturesByUniquenameForSearch($search_input, $db, '', $assembly
 $uniquename_search = !empty($results);
 $warning_message = null;
 
-// If no results by uniquename, search annotations
+// If no results by uniquename, search by annotation or gene fields depending on source selection
 if (!$uniquename_search) {
-    $search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db, $source_filter, $assembly, $gene_set, $scope_pairs);
+    if ($gene_only_search) {
+        $search_result = searchFeaturesByNameDescription($search_input, $quoted_search, $db, $assembly, $gene_set, $scope_pairs);
+    } else {
+        $search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db, $source_filter, $assembly, $gene_set, $scope_pairs);
+    }
     $results = $search_result['results'];
     $warning_message = $search_result['warning'];
 }

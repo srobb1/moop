@@ -358,8 +358,13 @@ class AnnotationSearch {
                 quoted: quotedSearch ? '1' : '0',
                 ...this.config.extraAjaxParams
             };
-            if (this.selectedSources && this.selectedSources.length > 0) {
-                ajaxData.source_names = this.selectedSources.join(',');
+            if (this.selectedSources !== null) {
+                if (this.selectedSources.length === 0) {
+                    // Explicit "no annotation sources" — search gene fields only
+                    ajaxData.no_annotations = '1';
+                } else {
+                    ajaxData.source_names = this.selectedSources.join(',');
+                }
             }
             if (scopePairs !== null) {
                 ajaxData.scope = JSON.stringify(scopePairs);

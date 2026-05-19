@@ -329,6 +329,67 @@ function getAssemblyGeneSets($assembly, $dbFile) {
  * @param string $dbFile - Path to SQLite database
  * @return array - Array of matching features with annotations
  */
+/**
+ * Search features by name and description only — no annotation join.
+ * Used when the user has explicitly deselected all annotation sources.
+ * Returns rows in the same column format as searchFeaturesAndAnnotations
+ * (annotation columns are NULL) so result formatting code is unchanged.
+ */
+function searchFeaturesByNameDescription($search_term, $is_quoted_search, $dbFile, $assembly_accession = '', $gene_set_name = '', $scope_pairs = []) {
+    $select = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
+                      NULL AS annotation_accession, NULL AS annotation_description,
+                      NULL AS score, NULL AS date, NULL AS annotation_source_name,
+                      o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                      g.genome_accession
+               FROM feature f
+               JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
+               JOIN genome   g  ON gs.genome_id   = g.genome_id
+               JOIN organism o  ON f.organism_id  = o.organism_id";
+
+    $params = [];
+    $where  = [];
+
+    if ($is_quoted_search) {
+        $like = '%' . $search_term . '%';
+        $where[]  = '(f.feature_name LIKE ? OR f.feature_description LIKE ?)';
+        $params[] = $like;
+        $params[] = $like;
+    } else {
+        $terms = array_filter(array_map('trim', preg_split('/\s+/', $search_term)));
+        if (empty($terms)) return ['results' => [], 'capped' => false, 'warning' => null];
+        foreach ($terms as $term) {
+            $like = '%' . $term . '%';
+            $where[]  = '(f.feature_name LIKE ? OR f.feature_description LIKE ?)';
+            $params[] = $like;
+            $params[] = $like;
+        }
+    }
+
+    if (!empty($scope_pairs)) {
+        $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
+        $where[] = '(' . implode(' OR ', $clauses) . ')';
+        foreach ($scope_pairs as $pair) {
+            $params[] = $pair['assembly'];
+            $params[] = $pair['gene_set'];
+        }
+    } else {
+        if (!empty($assembly_accession)) { $where[] = 'g.genome_accession = ?'; $params[] = $assembly_accession; }
+        if (!empty($gene_set_name))      { $where[] = 'gs.gene_set_name = ?';   $params[] = $gene_set_name; }
+    }
+
+    $sql = $select . ' WHERE ' . implode(' AND ', $where) . ' ORDER BY f.feature_uniquename LIMIT 2500';
+
+    try {
+        $dbh  = new PDO('sqlite:' . $dbFile);
+        $stmt = $dbh->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return ['results' => $rows, 'capped' => count($rows) >= 2500, 'warning' => null];
+    } catch (Exception $e) {
+        return ['results' => [], 'capped' => false, 'warning' => null];
+    }
+}
+
 function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, $source_names = [], $assembly_accession = '', $gene_set_name = '', $scope_pairs = []) {
     // Use provided source names filter, or empty array if not provided
     $source_filter = !empty($source_names) ? $source_names : [];
