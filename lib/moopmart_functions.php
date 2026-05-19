@@ -221,6 +221,36 @@ function moopmartGetAnnotationsForFeatures(array $feature_ids, string $db_path):
     return $result;
 }
 
+/**
+ * Return the sorted list of unique chromosome/scaffold names for a gene set.
+ *
+ * Result is cached beside the TSV (chr_names_cache.json) and invalidated
+ * automatically when feature_coords.tsv is newer than the cache.
+ */
+function moopmartGetChrNames(string $gene_set_path): array
+{
+    $tsv   = "$gene_set_path/feature_coords.tsv";
+    if (!file_exists($tsv)) return [];
+
+    $cache = "$gene_set_path/chr_names_cache.json";
+    if (file_exists($cache) && filemtime($cache) >= filemtime($tsv)) {
+        return json_decode(file_get_contents($cache), true) ?: [];
+    }
+
+    $chrs = [];
+    $fh   = fopen($tsv, 'r');
+    while (($line = fgets($fh)) !== false) {
+        $p = explode("\t", $line, 4);
+        if (isset($p[2])) $chrs[trim($p[2])] = true;
+    }
+    fclose($fh);
+
+    $result = array_keys($chrs);
+    sort($result, SORT_NATURAL);
+    @file_put_contents($cache, json_encode($result));
+    return $result;
+}
+
 // ============================================================
 // COORDINATE FUNCTIONS (coords are in feature_coords.tsv, not the DB)
 // ============================================================
