@@ -51,8 +51,17 @@ foreach ($scope_tree as $org => &$asms) {
 }
 unset($asms, $gene_sets);
 
-// Collect annotation source names from per-organism cache files
-$annotation_source_names = [];
+// Load annotation type colors from config
+$metadata_path   = $config->getPath('metadata_path');
+$ann_config_file = "$metadata_path/annotation_config.json";
+$ann_types_config = [];
+if (file_exists($ann_config_file)) {
+    $ann_types_config = (json_decode(file_get_contents($ann_config_file), true) ?: [])['annotation_types'] ?? [];
+}
+
+// Collect annotation sources grouped by type (for the panel) and flat (for the filter dropdown)
+$annotation_source_types = []; // [type => ['color'=>..., 'sources'=>[name,...]]]
+$annotation_source_names = []; // flat sorted list
 $seen_orgs = [];
 foreach ($all_accessible as $src) {
     $org = $src['organism'];
@@ -61,12 +70,23 @@ foreach ($all_accessible as $src) {
     $cache = "$organism_data/$org/annotation_sources_cache.json";
     if (!file_exists($cache)) continue;
     $data = json_decode(file_get_contents($cache), true) ?: [];
-    foreach ($data as $sources_list) {
-        foreach ($sources_list as $s) {
-            $annotation_source_names[$s['name']] = true;
+    foreach ($data as $type => $sources) {
+        if (!isset($annotation_source_types[$type])) {
+            $annotation_source_types[$type] = [
+                'color'   => $ann_types_config[$type]['color'] ?? 'secondary',
+                'sources' => [],
+            ];
+        }
+        foreach ($sources as $s) {
+            $name = $s['name'];
+            if (!in_array($name, $annotation_source_types[$type]['sources'], true)) {
+                $annotation_source_types[$type]['sources'][] = $name;
+            }
+            $annotation_source_names[$name] = true;
         }
     }
 }
+ksort($annotation_source_types);
 $annotation_source_names = array_keys($annotation_source_names);
 sort($annotation_source_names);
 
@@ -75,7 +95,8 @@ echo render_display_page(
     [
         'scope_tree'              => $scope_tree,
         'organism_info'           => $organism_info,
-        'annotation_source_names' => $annotation_source_names,
+        'annotation_source_types'  => $annotation_source_types,
+        'annotation_source_names'  => $annotation_source_names,
         'siteTitle'               => $siteTitle,
         'page_script'             => ["/$site/js/modules/moopmart.js"],
         'inline_scripts'          => [

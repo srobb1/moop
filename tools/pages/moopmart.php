@@ -118,30 +118,48 @@
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="mm-ann-none">None</button>
                     </div>
                 </div>
-                <?php if (!empty($annotation_source_names)): ?>
+                <?php if (!empty($annotation_source_types)): ?>
                 <div class="px-2 pt-2 pb-1 border-bottom">
                     <input type="text" class="form-control form-control-sm" id="mm-ann-filter"
                            placeholder="Filter sources…" autocomplete="off">
                 </div>
-                <div class="card-body p-2" style="overflow-y:auto; max-height:320px;">
+                <div class="card-body p-2" id="mm-ann-panel" style="overflow-y:auto; max-height:320px;">
                     <p class="small text-muted mb-2">
                         Select which annotation sources appear as columns in TSV downloads.<br>
                         <strong>Always included:</strong> organism, assembly, gene set, gene ID, name, description, type, chr, start, end, strand
                     </p>
-                    <div id="mm-attribute-sources" class="d-flex flex-wrap" style="column-gap:1.5rem;">
-                        <?php foreach ($annotation_source_names as $src_name):
-                            $safe_id = 'mm-ann-' . preg_replace('/[^a-z0-9]/i', '_', $src_name);
-                        ?>
-                        <div class="form-check mb-1 mm-ann-item">
-                            <input class="form-check-input mm-ann-col" type="checkbox"
-                                   value="<?= htmlspecialchars($src_name) ?>"
-                                   id="<?= $safe_id ?>" checked>
-                            <label class="form-check-label small" for="<?= $safe_id ?>">
-                                <?= htmlspecialchars($src_name) ?>
+                    <?php foreach ($annotation_source_types as $type => $type_data):
+                        $type_safe = 'mm-atype-' . preg_replace('/[^a-z0-9]/i', '_', $type);
+                        $color     = htmlspecialchars($type_data['color']);
+                    ?>
+                    <div class="mm-ann-group mb-2">
+                        <div class="d-flex align-items-center px-2 py-1 rounded mb-1" style="background:#f1f3f5;">
+                            <input type="checkbox" class="form-check-input me-2 mb-0 mm-ann-type-cb flex-shrink-0"
+                                   id="<?= $type_safe ?>" data-type="<?= htmlspecialchars($type) ?>" checked>
+                            <label for="<?= $type_safe ?>"
+                                   class="form-check-label fw-semibold mb-0 me-auto"
+                                   style="cursor:pointer; font-size:0.88rem;">
+                                <span class="badge bg-<?= $color ?> me-1"><?= htmlspecialchars($type) ?></span>
                             </label>
                         </div>
-                        <?php endforeach; ?>
+                        <div class="ps-3">
+                            <?php foreach ($type_data['sources'] as $src_name):
+                                $safe_id = 'mm-ann-' . preg_replace('/[^a-z0-9]/i', '_', $src_name);
+                            ?>
+                            <div class="d-flex align-items-center gap-1 px-1 py-1 mm-ann-item">
+                                <input type="checkbox" class="form-check-input flex-shrink-0 mm-ann-col mb-0"
+                                       id="<?= $safe_id ?>"
+                                       value="<?= htmlspecialchars($src_name) ?>"
+                                       data-type="<?= htmlspecialchars($type) ?>" checked>
+                                <label class="form-check-label mb-0" for="<?= $safe_id ?>"
+                                       style="cursor:pointer; font-size:0.82rem;">
+                                    <?= htmlspecialchars($src_name) ?>
+                                </label>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
+                    <?php endforeach; ?>
                 </div>
                 <?php else: ?>
                 <div class="card-body p-2 text-muted small">No annotation sources found in the accessible data.</div>
@@ -166,8 +184,12 @@
                     <label class="form-label small mb-1">Annotation source</label>
                     <select id="mm-annotation-source" class="form-select form-select-sm">
                         <option value="">Any source</option>
-                        <?php foreach ($annotation_source_names as $src_name): ?>
-                        <option value="<?= htmlspecialchars($src_name) ?>"><?= htmlspecialchars($src_name) ?></option>
+                        <?php foreach ($annotation_source_types as $type => $type_data): ?>
+                        <optgroup label="<?= htmlspecialchars($type) ?>">
+                            <?php foreach ($type_data['sources'] as $src_name): ?>
+                            <option value="<?= htmlspecialchars($src_name) ?>"><?= htmlspecialchars($src_name) ?></option>
+                            <?php endforeach; ?>
+                        </optgroup>
                         <?php endforeach; ?>
                     </select>
                 </div>

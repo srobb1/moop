@@ -48,6 +48,35 @@
             : '';
     }
 
+    function syncAnnTypeCb(type) {
+        const sources = Array.from(document.querySelectorAll(`.mm-ann-col[data-type="${type}"]`));
+        const typeCb  = document.querySelector(`.mm-ann-type-cb[data-type="${type}"]`);
+        if (!typeCb || !sources.length) return;
+        const allOn  = sources.every(c => c.checked);
+        const allOff = sources.every(c => !c.checked);
+        typeCb.checked       = allOn;
+        typeCb.indeterminate = !allOn && !allOff;
+    }
+
+    function initAnnSources() {
+        const panel = document.getElementById('mm-ann-panel');
+        if (!panel) return;
+
+        panel.addEventListener('change', function (e) {
+            const cb = e.target;
+            if (cb.classList.contains('mm-ann-type-cb')) {
+                const type = cb.dataset.type;
+                document.querySelectorAll(`.mm-ann-col[data-type="${type}"]`)
+                    .forEach(c => { c.checked = cb.checked; c.indeterminate = false; });
+            } else if (cb.classList.contains('mm-ann-col')) {
+                syncAnnTypeCb(cb.dataset.type);
+            }
+            updateAnnSummary();
+        });
+
+        document.querySelectorAll('.mm-ann-type-cb').forEach(cb => syncAnnTypeCb(cb.dataset.type));
+    }
+
     function syncParent(org, asm) {
         const container = document.getElementById('mm-scope-tree');
 
@@ -316,6 +345,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         initScopeTree();
+        initAnnSources();
 
         // Select all / clear all dataset
         document.getElementById('mm-select-all')?.addEventListener('click', function () {
@@ -334,28 +364,30 @@
             updateScopeSummary();
         });
 
-        // Annotation columns: all / none
+        // Annotation columns: all / none (also sync type checkboxes)
         document.getElementById('mm-ann-all')?.addEventListener('click', function () {
             document.querySelectorAll('.mm-ann-col').forEach(c => c.checked = true);
+            document.querySelectorAll('.mm-ann-type-cb').forEach(c => { c.checked = true; c.indeterminate = false; });
             updateAnnSummary();
         });
         document.getElementById('mm-ann-none')?.addEventListener('click', function () {
-            document.querySelectorAll('.mm-ann-col').forEach(c => c.checked = false);
+            document.querySelectorAll('.mm-ann-col, .mm-ann-type-cb').forEach(c => { c.checked = false; c.indeterminate = false; });
             updateAnnSummary();
         });
 
-        // Annotation sources filter input
+        // Annotation sources filter input — hides items and empty groups
         document.getElementById('mm-ann-filter')?.addEventListener('input', function () {
             const q = this.value.toLowerCase();
-            document.querySelectorAll('.mm-ann-item').forEach(item => {
-                const text = item.querySelector('label')?.textContent.toLowerCase() || '';
-                item.style.display = !q || text.includes(q) ? '' : 'none';
+            document.querySelectorAll('.mm-ann-group').forEach(group => {
+                let anyVisible = false;
+                group.querySelectorAll('.mm-ann-item').forEach(item => {
+                    const text = item.querySelector('label')?.textContent.toLowerCase() || '';
+                    const show = !q || text.includes(q);
+                    item.style.display = show ? '' : 'none';
+                    if (show) anyVisible = true;
+                });
+                group.style.display = anyVisible || !q ? '' : 'none';
             });
-        });
-
-        // Annotation column checkbox changes → update summary
-        document.getElementById('mm-attribute-sources')?.addEventListener('change', function () {
-            updateAnnSummary();
         });
 
         // Preview button
