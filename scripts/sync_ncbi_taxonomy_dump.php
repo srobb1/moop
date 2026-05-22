@@ -113,7 +113,7 @@ if ($need_download) {
     $ok       = curl_exec($ch);
     $curl_err = curl_error($ch);
     $http     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $dl_md5   = curl_getinfo($ch, CURLINFO_CONTENT_MD5); // may be empty
+    $dl_md5   = defined('CURLINFO_CONTENT_MD5') ? curl_getinfo($ch, CURLINFO_CONTENT_MD5) : '';
     curl_close($ch);
     fclose($fp);
 
