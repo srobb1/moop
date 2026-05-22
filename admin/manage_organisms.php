@@ -55,8 +55,7 @@ if ($raw_cache) {
             $raw_cache['data']             = $organisms;
             $raw_cache['org_fingerprints'] = $current_org_fps;
             $raw_cache['generated']        = date('Y-m-d H:i:s');
-            @file_put_contents($cache_file, json_encode($raw_cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-            @chmod($cache_file, 0664);
+            organism_cache_write_atomic($cache_file, $raw_cache);
         }
 
         if (!empty($stale_organisms)) {
@@ -268,6 +267,14 @@ $display_config = [
     'content_file' => __DIR__ . '/pages/manage_organisms.php',
 ];
 
+// Read lineage cache metadata for UI display
+$lineage_cache_generated = null;
+$lineage_cache_file = "$metadata_path/taxonomy_lineage_cache.json";
+if (file_exists($lineage_cache_file)) {
+    $lc_raw = json_decode(file_get_contents($lineage_cache_file), true);
+    $lineage_cache_generated = $lc_raw['generated'] ?? null;
+}
+
 // Prepare data for content file
 $data = [
     'organisms' => $organisms,
@@ -280,6 +287,7 @@ $data = [
     'cache_generated' => $cache_generated,
     'stale_organisms' => $stale_organisms,
     'cache_stale_reason' => $cache_stale_reason,
+    'lineage_cache_generated' => $lineage_cache_generated,
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
         '/' . $config->getString('site') . '/js/modules/organism-management.js'
@@ -287,13 +295,17 @@ $data = [
     'inline_scripts' => [
         "const sitePath = '/" . $config->getString('site') . "';",
         "(function(){
-  const el = document.getElementById('cacheAge');
-  if (!el || !el.dataset.generated) return;
-  const d = new Date(el.dataset.generated.replace(' ', 'T') + 'Z');
-  const sec = Math.round((Date.now() - d) / 1000);
-  if (sec < 60) el.textContent = sec + 's ago';
-  else if (sec < 3600) el.textContent = Math.floor(sec/60) + 'm ago';
-  else el.textContent = Math.floor(sec/3600) + 'h ago';
+  function setAgeText(el) {
+    if (!el || !el.dataset.generated) return;
+    const d = new Date(el.dataset.generated.replace(' ', 'T') + 'Z');
+    const sec = Math.round((Date.now() - d) / 1000);
+    if (sec < 60) el.textContent = sec + 's ago';
+    else if (sec < 3600) el.textContent = Math.floor(sec/60) + 'm ago';
+    else if (sec < 86400) el.textContent = Math.floor(sec/3600) + 'h ago';
+    else el.textContent = Math.floor(sec/86400) + 'd ago';
+  }
+  setAgeText(document.getElementById('cacheAge'));
+  setAgeText(document.getElementById('taxonomySyncAge'));
 })();"
     ]
 ];

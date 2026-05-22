@@ -107,6 +107,31 @@ foreach ($organisms as $org => $assemblies) {
 
 $registered_count = array_sum(array_map('count', $registered_assemblies));
 
+// For each registered assembly, find gene sets on disk and their JBrowse status
+$tracks_meta_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/tracks';
+$site_path       = $config->getPath('site_path');
+$gene_sets_info  = [];
+foreach ($registered_assemblies as $org => $asms) {
+    foreach ($asms as $asm) {
+        $asm_dir = "$organisms_dir/$org/$asm";
+        if (!is_dir($asm_dir)) continue;
+        foreach (glob("$asm_dir/*/genomic.gff") ?: [] as $gff_path) {
+            $gs        = basename(dirname($gff_path));
+            $track_json = "$tracks_meta_dir/$org/$asm/gff/{$gs}_genes.json";
+            $gz_path    = "$site_path/data/genomes/$org/$asm/$gs/annotations.gff3.gz";
+            $tbi_path   = "$gz_path.tbi";
+            $gene_sets_info[] = [
+                'organism'      => $org,
+                'assembly'      => $asm,
+                'gene_set'      => $gs,
+                'gff_size'      => filesize($gff_path),
+                'gff_prepped'   => file_exists($gz_path) && file_exists($tbi_path),
+                'is_registered' => file_exists($track_json),
+            ];
+        }
+    }
+}
+
 // Get track statistics
 $tracks_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/tracks';
 $track_stats = [
@@ -167,11 +192,13 @@ $data = [
     'registered_assemblies' => $registered_assemblies,
     'registered_count' => $registered_count,
     'unregistered_assemblies' => $unregistered_assemblies,
+    'gene_sets_info' => $gene_sets_info,
     'inline_scripts' => [
-        'const jbrowseOrganisms = ' . json_encode($organisms) . ';',
-        'const registeredOrganisms = ' . json_encode($registered_assemblies) . ';',
-        'const sitePath = "' . $site . '";',
+        'const jbrowseOrganisms = '       . json_encode($organisms)             . ';',
+        'const registeredOrganisms = '    . json_encode($registered_assemblies) . ';',
+        'const sitePath = "'              . $site                               . '";',
         'const unregisteredAssemblies = ' . json_encode($unregistered_assemblies) . ';',
+        'const geneSetsInfo = '           . json_encode($gene_sets_info)        . ';',
     ],
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',

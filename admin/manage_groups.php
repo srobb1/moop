@@ -54,6 +54,7 @@ if (!is_dir($change_log_dir)) {
 }
 
 $all_organisms = getOrganismsWithAssemblies($organism_data_path);
+$organism_meta = loadAllOrganismsMetadata($organism_data_path);
 
 $all_existing_groups = getAllExistingGroups($groups_data);
 $descriptions_data = loadJsonFile($descriptions_file, []);
@@ -430,6 +431,7 @@ $data = [
     'desc_file_write_error' => $desc_file_write_error,
     'change_log_error' => $change_log_error,
     'all_organisms' => $all_organisms,
+    'organism_meta' => $organism_meta,
     'groups_data_with_status' => $groups_data_with_status,
     'descriptions_data' => $descriptions_data,
     'unrepresented_organisms' => $unrepresented_organisms,

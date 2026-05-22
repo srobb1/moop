@@ -241,8 +241,8 @@
       — <?= htmlspecialchars($cache_stale_reason) ?>.
       Rows marked <span class="badge bg-warning text-dark"><i class="fa fa-clock"></i> Stale</span> may show outdated status.
     </div>
-    <button class="btn btn-warning btn-sm fw-bold flex-shrink-0" onclick="rescanOrganisms()" id="rescanBtnBanner">
-      <i class="fa fa-sync-alt"></i> Update Cache Now
+    <button class="btn btn-warning btn-sm fw-bold flex-shrink-0" onclick="rescanOrganisms(this)" id="rescanBtnBanner">
+      <i class="fa fa-sync-alt"></i> Update Cache
     </button>
   </div>
   <?php elseif (empty($organisms)): ?>
@@ -282,11 +282,26 @@
           <small class="fw-normal ms-2 opacity-75" style="font-size:0.75rem;" id="cacheAge" data-generated="">no cache</small>
         <?php endif; ?>
       </h5>
-      <div class="d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
         <span id="refreshStatus" class="text-white-50 small" style="display:none;"></span>
-        <button id="rescanBtn" class="btn btn-sm btn-light" onclick="rescanOrganisms()" title="Rebuild the organism cache in the background — page reloads automatically when done">
+        <button id="rescanBtn" class="btn btn-sm btn-light" onclick="rescanOrganisms(this)" title="Rescan only organisms whose files changed since last cache">
           <i class="fa fa-sync-alt"></i> Refresh Cache
         </button>
+        <button id="forceRescanBtn" class="btn btn-sm btn-outline-warning" onclick="forceRescanOrganisms()" title="Rescan all organisms regardless of cache state — use when the cache seems wrong">
+          <i class="fa fa-redo"></i> Force Full Rescan
+        </button>
+        <span class="text-white-50 opacity-50">|</span>
+        <span id="syncTaxonomyStatus" class="text-white-50 small" style="display:none;"></span>
+        <button id="syncTaxonomyBtn" class="btn btn-sm btn-outline-info"
+                onclick="syncNcbiTaxonomy(this, document.getElementById('syncTaxonomyStatus'))"
+                title="Download NCBI taxonomy dump and populate lineage cache — eliminates per-organism API calls">
+          <i class="fa fa-download"></i> Sync NCBI Taxonomy
+        </button>
+        <?php if ($lineage_cache_generated): ?>
+          <small class="text-white-50" style="font-size:0.75rem;">
+            synced <span id="taxonomySyncAge" data-generated="<?= htmlspecialchars($lineage_cache_generated) ?>"></span>
+          </small>
+        <?php endif; ?>
       </div>
     </div>
     <div class="card-body">

@@ -138,6 +138,107 @@
   </div>
   <?php endif; ?>
 
+  <!-- Gene Annotation Tracks -->
+  <?php
+  $has_any_gene_sets = !empty($gene_sets_info);
+  $unregistered_gs   = array_filter($gene_sets_info, fn($r) => !$r['is_registered']);
+  $unprepped_gs      = array_filter($gene_sets_info, fn($r) => !$r['gff_prepped']);
+  ?>
+  <?php if ($has_any_gene_sets): ?>
+  <div class="card mb-4 border-success">
+    <div class="card-header bg-success bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#geneSetTracks">
+      <h5 class="mb-0">
+        <i class="fa fa-dna"></i> Gene Annotation Tracks
+        <?php if (!empty($unregistered_gs)): ?>
+          <span class="badge bg-warning ms-2"><?= count($unregistered_gs) ?> unregistered</span>
+        <?php elseif (!empty($unprepped_gs)): ?>
+          <span class="badge bg-warning ms-2"><?= count($unprepped_gs) ?> not prepped</span>
+        <?php else: ?>
+          <span class="badge bg-success ms-2"><i class="fa fa-check"></i> All ready</span>
+        <?php endif; ?>
+        <i class="fa fa-chevron-down float-end"></i>
+      </h5>
+    </div>
+    <div class="collapse <?= (!empty($unregistered_gs) || !empty($unprepped_gs)) ? 'show' : '' ?>" id="geneSetTracks">
+      <div class="card-body">
+        <p class="text-muted">
+          <i class="fa fa-info-circle"></i>
+          Each gene set needs its GFF sorted, compressed, and tabix-indexed before JBrowse can display it.
+          Registering a gene set creates the compressed GFF, the gene annotation track config, and the
+          feature coordinate index used by BLAST linkouts and MOOPmart.
+        </p>
+        <table class="table table-sm table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Organism</th>
+              <th>Assembly</th>
+              <th>Gene Set</th>
+              <th>GFF Size</th>
+              <th>GFF Prepped</th>
+              <th>Track Registered</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($gene_sets_info as $gs): ?>
+            <?php
+              $row_id = htmlspecialchars($gs['organism'] . '_' . $gs['assembly'] . '_' . $gs['gene_set']);
+              $size_fmt = $gs['gff_size'] > 1048576
+                  ? round($gs['gff_size'] / 1048576, 1) . ' MB'
+                  : round($gs['gff_size'] / 1024, 0) . ' KB';
+            ?>
+            <tr id="gs-row-<?= $row_id ?>">
+              <td><?= htmlspecialchars($gs['organism']) ?></td>
+              <td><?= htmlspecialchars($gs['assembly']) ?></td>
+              <td><code><?= htmlspecialchars($gs['gene_set']) ?></code></td>
+              <td class="text-muted small"><?= $gs['gff_size'] === 0 ? '<span class="text-danger">empty</span>' : $size_fmt ?></td>
+              <td>
+                <?php if ($gs['gff_prepped']): ?>
+                  <span class="text-success"><i class="fa fa-check-circle"></i></span>
+                <?php else: ?>
+                  <span class="text-warning"><i class="fa fa-clock"></i> pending</span>
+                <?php endif; ?>
+              </td>
+              <td>
+                <?php if ($gs['is_registered']): ?>
+                  <span class="text-success"><i class="fa fa-check-circle"></i></span>
+                <?php else: ?>
+                  <span class="text-warning"><i class="fa fa-exclamation-circle"></i> no</span>
+                <?php endif; ?>
+              </td>
+              <td>
+                <?php if (!$gs['is_registered']): ?>
+                  <button class="btn btn-sm btn-primary gs-register-btn"
+                          data-organism="<?= htmlspecialchars($gs['organism']) ?>"
+                          data-assembly="<?= htmlspecialchars($gs['assembly']) ?>"
+                          data-gene-set="<?= htmlspecialchars($gs['gene_set']) ?>"
+                          data-row="<?= $row_id ?>"
+                          <?= $gs['gff_size'] === 0 ? 'disabled title="GFF is empty"' : '' ?>>
+                    <i class="fa fa-plus"></i> Register
+                  </button>
+                <?php else: ?>
+                  <button class="btn btn-sm btn-outline-secondary gs-reprep-btn"
+                          data-organism="<?= htmlspecialchars($gs['organism']) ?>"
+                          data-assembly="<?= htmlspecialchars($gs['assembly']) ?>"
+                          data-gene-set="<?= htmlspecialchars($gs['gene_set']) ?>"
+                          data-row="<?= $row_id ?>">
+                    <i class="fa fa-sync"></i> Re-prep GFF
+                  </button>
+                <?php endif; ?>
+              </td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+        <div id="gsActionLog" class="mt-3" style="display:none;">
+          <pre class="border rounded p-3 bg-light mb-0 small" id="gsActionLogOutput"
+               style="max-height:220px;overflow-y:auto;white-space:pre-wrap;"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <!-- Register Google Sheets Track Source (starts open) -->
   <div class="card mb-4 border-warning">
     <div class="card-header bg-warning bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#sheetRegistration">
@@ -462,6 +563,82 @@
   </div>
 
 </div>
+
+<script>
+// ── Gene Set register / re-prep ───────────────────────────────────────────────
+
+async function geneSetAction(organism, assembly, geneSet, endpoint, rowId, btn) {
+    const logDiv = document.getElementById('gsActionLog');
+    const logPre = document.getElementById('gsActionLogOutput');
+
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+
+    logDiv.style.display = 'block';
+    logPre.textContent   = `Running ${endpoint} for ${organism}/${assembly}/${geneSet}…`;
+
+    const form = new URLSearchParams({
+        organism, assembly, gene_set: geneSet,
+        text_index: '0',
+    });
+
+    try {
+        const resp = await fetch(`/${sitePath}/api/jbrowse2/${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+            },
+            body: form,
+        });
+        const data = await resp.json();
+        logPre.textContent = data.output ?? '(no output)';
+
+        if (data.success) {
+            // Swap Register → Re-prep GFF in place
+            const cell = btn.closest('td');
+            btn.className = 'btn btn-sm btn-outline-secondary gs-reprep-btn';
+            btn.innerHTML = '<i class="fa fa-sync"></i> Re-prep GFF';
+            btn.removeEventListener('click', btn._gsHandler);
+            btn._gsHandler = () => geneSetAction(organism, assembly, geneSet, 'admin_reprep_gff.php', rowId, btn);
+            btn.addEventListener('click', btn._gsHandler);
+            btn.disabled = false;
+
+            // Mark prepped + registered cells
+            const cells = document.querySelectorAll(`#gs-row-${rowId} td`);
+            if (cells[4]) cells[4].innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i></span>';
+            if (cells[5]) cells[5].innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i></span>';
+        } else {
+            logPre.textContent = 'ERROR: ' + (data.error ?? 'unknown') + '\n\n' + (data.output ?? '');
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    } catch (err) {
+        logPre.textContent = 'Request failed: ' + err.message;
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.gs-register-btn').forEach(btn => {
+        const { organism, assembly } = btn.dataset;
+        const geneSet = btn.dataset.geneSet;
+        const rowId   = btn.dataset.row;
+        btn._gsHandler = () => geneSetAction(organism, assembly, geneSet, 'admin_register_gene_set.php', rowId, btn);
+        btn.addEventListener('click', btn._gsHandler);
+    });
+
+    document.querySelectorAll('.gs-reprep-btn').forEach(btn => {
+        const { organism, assembly } = btn.dataset;
+        const geneSet = btn.dataset.geneSet;
+        const rowId   = btn.dataset.row;
+        btn._gsHandler = () => geneSetAction(organism, assembly, geneSet, 'admin_reprep_gff.php', rowId, btn);
+        btn.addEventListener('click', btn._gsHandler);
+    });
+});
+</script>
 
 <!-- GFF Action Modal (Rebuild / Index Names) -->
 <div class="modal fade" id="gffActionModal" tabindex="-1" aria-labelledby="gffActionModalTitle" aria-hidden="true">

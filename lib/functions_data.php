@@ -29,6 +29,7 @@ function getGroupData() {
  */
 function getAllGroupCards($group_data) {
     $cards = [];
+    $group_organisms = [];
     foreach ($group_data as $data) {
         foreach ($data['groups'] as $group) {
             if (!isset($cards[$group])) {
@@ -37,8 +38,13 @@ function getAllGroupCards($group_data) {
                     'text' => "Explore $group Data",
                     'link' => 'tools/groups.php?group=' . urlencode($group)
                 ];
+                $group_organisms[$group] = [];
             }
+            $group_organisms[$group][$data['organism']] = true;
         }
+    }
+    foreach ($cards as $group => &$card) {
+        $card['organism_count'] = count($group_organisms[$group]);
     }
     return $cards;
 }
@@ -52,7 +58,8 @@ function getAllGroupCards($group_data) {
  */
 function getPublicGroupCards($group_data) {
     $public_groups = [];
-    
+    $group_organisms = [];
+
     // Find all groups that contain at least one public assembly
     foreach ($group_data as $data) {
         if (in_array('PUBLIC', $data['groups'])) {
@@ -63,9 +70,14 @@ function getPublicGroupCards($group_data) {
                         'text' => "Explore $group Data",
                         'link' => 'tools/groups.php?group=' . urlencode($group)
                     ];
+                    $group_organisms[$group] = [];
                 }
+                $group_organisms[$group][$data['organism']] = true;
             }
         }
+    }
+    foreach ($public_groups as $group => &$card) {
+        $card['organism_count'] = count($group_organisms[$group]);
     }
     return $public_groups;
 }
@@ -536,30 +548,32 @@ function syncGroupDescriptions($existing_groups, $descriptions_data) {
  */
 function fetch_taxonomy_lineage($taxon_id, $max_retries = 3) {
     $url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id={$taxon_id}&retmode=xml";
-    
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 10,
-            'user_agent' => 'MOOP Taxonomy Tree Generator'
-        ]
-    ]);
-    
-    $attempt = 0;
+
+    $attempt  = 0;
     $response = false;
-    
-    // Retry loop with exponential backoff
+
     while ($attempt < $max_retries && $response === false) {
-        $response = @file_get_contents($url, false, $context);
-        
-        if ($response === false) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_USERAGENT      => 'MOOP/1.0 Taxonomy Tree Generator',
+        ]);
+        $result = curl_exec($ch);
+        $err    = curl_errno($ch);
+        curl_close($ch);
+
+        if ($result !== false && !$err) {
+            $response = $result;
+        } else {
             $attempt++;
             if ($attempt < $max_retries) {
-                // Exponential backoff: 1s, 2s, 4s
-                usleep(1000000 * pow(2, $attempt - 1));
+                usleep(1000000 * (int)pow(2, $attempt - 1));
             }
         }
     }
-    
+
     if ($response === false) {
         error_log("NCBI taxonomy fetch failed for taxon_id {$taxon_id} after {$max_retries} attempts");
         return null;
@@ -1093,21 +1107,41 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
 // Increment this when the cache structure or computed fields change, to force a full rescan.
 define('ORGANISM_CACHE_SCHEMA_VERSION', 2);
 
+/**
+ * Write organism cache atomically: write to a temp file then rename().
+ * rename() is atomic on Linux — readers always see a complete file, never a partial write.
+ */
+function organism_cache_write_atomic($cache_file, array $data) {
+    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    if ($json === false) return false;
+    $tmp = $cache_file . '.tmp.' . getmypid();
+    if (@file_put_contents($tmp, $json) === false) return false;
+    @chmod($tmp, 0664);
+    if (!@rename($tmp, $cache_file)) {
+        @unlink($tmp);
+        return false;
+    }
+    return true;
+}
+
 function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh = false, $progress_callback = null) {
     $cache_file = "$organism_data_path/.organism_cache.json";
-    
+
     // Build per-organism fingerprints for all current organisms
     $current_fingerprints = buildPerOrganismFingerprints($organism_data_path);
-    
-    // Global config fingerprint (tree, groups files)
-    $config_fingerprint = buildConfigFingerprint($taxonomy_tree_file, $groups_file);
-    
+
+    // Config fingerprint used only for the DECISION of what to rescan.
+    // We recompute it at the end before writing so the stored value reflects
+    // the final state of config files, not the state at scan start. This prevents
+    // the cache from being born stale when a config file changes during a long scan.
+    $decision_config_fp = buildConfigFingerprint($taxonomy_tree_file, $groups_file);
+
     // Try to load existing cache
     $cached = null;
     $cached_fingerprints = [];
     $cached_config = null;
     $cached_data = [];
-    
+
     if (!$force_refresh && file_exists($cache_file)) {
         $cached = json_decode(file_get_contents($cache_file), true);
         if ($cached && isset($cached['org_fingerprints']) && isset($cached['config_fingerprint']) && isset($cached['data'])
@@ -1117,9 +1151,9 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
             $cached_data = $cached['data'];
         }
     }
-    
+
     // Determine what needs updating
-    $config_changed = ($cached_config !== $config_fingerprint);
+    $config_changed = ($cached_config !== $decision_config_fp);
     $organisms_to_scan = [];
     $organisms_to_keep = [];
     
@@ -1164,14 +1198,13 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
         // rewrite it now so the deleted entries don't persist across future loads.
         if ($removed_count > 0) {
             $cache_data = [
-                'generated'        => date('Y-m-d H:i:s'),
-                'schema_version'   => ORGANISM_CACHE_SCHEMA_VERSION,
-                'config_fingerprint' => $config_fingerprint,
-                'org_fingerprints' => $current_fingerprints,
-                'data'             => $organisms_to_keep,
+                'generated'          => date('Y-m-d H:i:s'),
+                'schema_version'     => ORGANISM_CACHE_SCHEMA_VERSION,
+                'config_fingerprint' => buildConfigFingerprint($taxonomy_tree_file, $groups_file),
+                'org_fingerprints'   => $current_fingerprints,
+                'data'               => $organisms_to_keep,
             ];
-            @file_put_contents($cache_file, json_encode($cache_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-            @chmod($cache_file, 0664);
+            organism_cache_write_atomic($cache_file, $cache_data);
         }
         return $organisms_to_keep;
     }
@@ -1279,18 +1312,17 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     // Sort by organism name
     ksort($all_organisms);
     
-    // Save to cache
+    // Recompute config fingerprint at END of scan so the stored value reflects
+    // the final state of config files, not the state when scanning started.
     $cache_data = [
-        'generated' => date('Y-m-d H:i:s'),
-        'schema_version' => ORGANISM_CACHE_SCHEMA_VERSION,
-        'config_fingerprint' => $config_fingerprint,
-        'org_fingerprints' => $current_fingerprints,
-        'data' => $all_organisms
+        'generated'          => date('Y-m-d H:i:s'),
+        'schema_version'     => ORGANISM_CACHE_SCHEMA_VERSION,
+        'config_fingerprint' => buildConfigFingerprint($taxonomy_tree_file, $groups_file),
+        'org_fingerprints'   => $current_fingerprints,
+        'data'               => $all_organisms,
     ];
-    
-    if (@file_put_contents($cache_file, json_encode($cache_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) !== false) {
-        @chmod($cache_file, 0664); // ensure web server (apache group) can overwrite on next run
-    }
+
+    organism_cache_write_atomic($cache_file, $cache_data);
 
     return $all_organisms;
 }
@@ -1343,11 +1375,15 @@ function buildPerOrganismFingerprints($organism_data_path) {
             $parts[] = 'json:' . filemtime($json_file);
         }
         
-        // Assembly directories count (quick check for structure changes)
+        // Assembly directories — include each dir's mtime so that adding/removing
+        // files inside an assembly (FASTA, FAI, BLAST indexes) triggers a rescan.
         $assemblies = array_filter(scandir($org_path), function($f) use ($org_path) {
             return $f[0] !== '.' && is_dir("$org_path/$f");
         });
         $parts[] = 'asm:' . count($assemblies);
+        foreach ($assemblies as $asm) {
+            $parts[] = 'asm_mtime:' . filemtime("$org_path/$asm");
+        }
         
         $fingerprints[$organism] = md5(implode('|', $parts));
     }

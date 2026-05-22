@@ -33,6 +33,8 @@ class AnnotationSearch {
         this.zeroResultOrganisms = [];
         this.currentKeywords = '';
         this.cappedOrganisms = [];
+        // null = no filter; [] = gene-only mode; [...] = specific sources
+        this.selectedSources = null;
         // selectedScope: {org: {accession: {gene_set: bool}}} or null (= all included)
         this.selectedScope = null;
     }

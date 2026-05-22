@@ -114,58 +114,23 @@ if (file_exists($cache_file)) {
     exit(1);
 }
 
-// --- Warm annotation config cache ---
+// --- Warm annotation config cache (per-organism, only re-query changed databases) ---
 echo "\nWarming annotation config...\n";
 $config_file = "$metadata_path/annotation_config.json";
 $annotation_config = loadJsonFile($config_file, []);
 
-$newest_mod_info = getNewestSqliteModTime($organism_data);
-$need_update = shouldUpdateAnnotationCounts($annotation_config, $newest_mod_info);
+[$annotation_config, $ann_updated] = update_annotation_config_modular(
+    $annotation_config,
+    $organism_data,
+    $force,
+    function($org, $cur, $tot) { echo "  [$cur/$tot] Querying $org\n"; }
+);
 
-if (!$need_update && !$force) {
+if ($ann_updated === 0 && !$force) {
     echo "Annotation config is already up to date.\n";
 } else {
-    $all_db_annotation_types = [];
-    $orgs_with_assemblies = getOrganismsWithAssemblies($organism_data);
-    $org_count = 0;
-    $org_total = count($orgs_with_assemblies);
-
-    foreach ($orgs_with_assemblies as $org_name => $assemblies) {
-        $org_count++;
-        $db_file = "$organism_data/$org_name/organism.sqlite";
-        if (file_exists($db_file)) {
-            echo "  [$org_count/$org_total] Querying $org_name\n";
-            $db_types = getAnnotationTypesFromDB($db_file);
-            foreach ($db_types as $type => $counts) {
-                if (!isset($all_db_annotation_types[$type])) {
-                    $all_db_annotation_types[$type] = $counts;
-                } else {
-                    $all_db_annotation_types[$type]['annotation_count'] += $counts['annotation_count'];
-                    $all_db_annotation_types[$type]['feature_count'] += $counts['feature_count'];
-                }
-            }
-        }
-    }
-
-    // Sync and save
-    if (isset($annotation_config['annotation_types'])) {
-        $annotation_config = syncAnnotationTypes($annotation_config, $all_db_annotation_types);
-
-        // Rebuild type order
-        $type_order = [];
-        foreach ($annotation_config['annotation_types'] as $type_name => $type_config) {
-            $type_order[] = ['name' => $type_name, 'order' => $type_config['order'] ?? 999];
-        }
-        usort($type_order, function($a, $b) { return $a['order'] - $b['order']; });
-        $annotation_config['annotation_type_order'] = array_map(function($item) { return $item['name']; }, $type_order);
-    }
-
-    if ($newest_mod_info !== null) {
-        $annotation_config['sqlite_mod_time'] = $newest_mod_info['unix_time'];
-    }
-
     saveJsonFile($config_file, $annotation_config);
-    echo "Annotation config updated with " . count($all_db_annotation_types) . " annotation types.\n";
+    echo "Annotation config updated ($ann_updated organism" . ($ann_updated !== 1 ? 's' : '') . " re-queried).\n";
 }
 
 // --- Update taxonomy tree ---

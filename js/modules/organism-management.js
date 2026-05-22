@@ -828,7 +828,12 @@ async function openOrganismModal(type, organism, assembly) {
     modalEl.addEventListener('hidden.bs.modal', () => { modalEl.innerHTML = ''; }, { once: true });
 }
 
-function rescanOrganisms() {
-  const btn = document.getElementById('rescanBtn');
+function rescanOrganisms(clickedBtn) {
+  const btn = clickedBtn || document.getElementById('rescanBtn');
+  refreshOrganismCache(btn, document.getElementById('refreshStatus'), false, btn?.innerHTML);
+}
+
+function forceRescanOrganisms() {
+  const btn = document.getElementById('forceRescanBtn');
   refreshOrganismCache(btn, document.getElementById('refreshStatus'), true, btn?.innerHTML);
 }

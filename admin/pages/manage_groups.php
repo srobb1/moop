@@ -131,6 +131,7 @@
       <tr>
         <th><input type="checkbox" id="select-all-grouped" title="Select all"></th>
         <th>Organism</th>
+        <th>Common Name</th>
         <th>Assembly</th>
         <th>Gene Set</th>
         <th>Groups</th>
@@ -140,23 +141,27 @@
     </thead>
     <tbody id="assemblies-tbody">
       <?php foreach ($groups_data_with_status as $index => $data): ?>
-        <?php if (!empty($data['groups'])): ?>
         <?php $row_gs = htmlspecialchars($data['gene_set'] ?? 'v1'); ?>
+        <?php $row_common_name = htmlspecialchars($organism_meta[$data['organism']]['common_name'] ?? ''); ?>
         <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>" data-gene-set="<?= $row_gs ?>"
             style="<?= !$data['_fs_exists'] ? 'background-color: #fff3cd;' : '' ?>">
           <td><input type="checkbox" class="grouped-assembly-checkbox" <?= !$data['_fs_exists'] ? 'disabled' : '' ?>></td>
           <td><?= htmlspecialchars($data['organism']) ?></td>
+          <td class="text-muted"><?= $row_common_name ?></td>
           <td><?= htmlspecialchars($data['assembly']) ?></td>
           <td class="small text-muted"><?= $row_gs ?></td>
           <td>
             <span class="groups-display">
-              <?php 
+              <?php
                 $sorted_groups = $data['groups'];
                 sort($sorted_groups);
-                foreach ($sorted_groups as $group): 
+                foreach ($sorted_groups as $group):
               ?>
                 <span class="tag-chip selected" style="cursor: default;"><?= htmlspecialchars($group) ?></span>
               <?php endforeach; ?>
+              <?php if (empty($data['groups'])): ?>
+                <span class="text-muted fst-italic small">no groups</span>
+              <?php endif; ?>
             </span>
           </td>
           <td>
@@ -176,7 +181,6 @@
             <?php endif; ?>
           </td>
         </tr>
-        <?php endif; ?>
       <?php endforeach; ?>
     </tbody>
   </table>
@@ -200,6 +204,7 @@
         <tr>
           <th><input type="checkbox" id="select-all-ungrouped" title="Select all"></th>
           <th>Organism</th>
+          <th>Common Name</th>
           <th>Assembly</th>
           <th>Gene Set</th>
           <th>Groups</th>
@@ -209,9 +214,11 @@
       <tbody id="new-assemblies-tbody">
         <?php foreach ($unrepresented_tuples as $tuple): ?>
           <?php $organism = $tuple['organism']; $assembly = $tuple['assembly']; $gene_set = $tuple['gene_set']; ?>
+          <?php $ungrouped_common_name = htmlspecialchars($organism_meta[$organism]['common_name'] ?? ''); ?>
             <tr data-organism="<?= htmlspecialchars($organism) ?>" data-assembly="<?= htmlspecialchars($assembly) ?>" data-gene-set="<?= htmlspecialchars($gene_set) ?>" class="new-assembly-row">
               <td><input type="checkbox" class="assembly-checkbox"></td>
               <td><?= htmlspecialchars($organism) ?></td>
+              <td class="text-muted"><?= $ungrouped_common_name ?></td>
               <td><?= htmlspecialchars($assembly) ?></td>
               <td class="small text-muted"><?= htmlspecialchars($gene_set) ?></td>
               <td>

@@ -56,6 +56,59 @@
 })();
 
 /**
+ * NCBI taxonomy dump sync — downloads new_taxdump.tar.gz, extracts lineage
+ * for all MOOP organisms into taxonomy_lineage_cache.json (~60 s).
+ * After this runs, warm_organism_cache makes no NCBI network calls.
+ */
+function syncNcbiTaxonomy(btn, statusEl) {
+  const sitePath  = window.sitePath || '/moop';
+  const endpoint  = sitePath + '/admin/api/sync_ncbi_taxonomy.php';
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+  const label     = btn ? btn.innerHTML : '';
+
+  if (btn)      { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Starting…'; }
+  if (statusEl) { statusEl.textContent = 'Connecting to NCBI…'; statusEl.style.display = ''; }
+
+  fetch(endpoint, { method: 'POST', headers: { 'X-CSRF-Token': csrfToken } })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        if (btn)      { btn.disabled = false; btn.innerHTML = label; }
+        if (statusEl) statusEl.textContent = 'Error: ' + data.error;
+        return;
+      }
+      if (btn) btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Downloading…';
+      const startedAt = Date.now();
+      const poll = setInterval(() => {
+        fetch(endpoint + '?status=1')
+          .then(r => r.json())
+          .then(s => {
+            const elapsed = Math.round((Date.now() - startedAt) / 1000);
+            if (elapsed > 5 && btn) btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Scanning…';
+            if (statusEl) statusEl.textContent = 'Running… ' + elapsed + 's';
+            if (s.status === 'idle' && elapsed >= 2) {
+              clearInterval(poll);
+              if (btn)      { btn.disabled = false; btn.innerHTML = label; }
+              if (statusEl) statusEl.textContent = s.count
+                ? '✓ ' + s.count + ' lineages cached'
+                : '✓ Done';
+              const ageEl = document.getElementById('taxonomySyncAge');
+              if (ageEl && s.generated) {
+                ageEl.textContent = 'just now';
+                ageEl.dataset.generated = s.generated;
+              }
+            }
+          })
+          .catch(() => clearInterval(poll));
+      }, 3000);
+    })
+    .catch(err => {
+      if (btn)      { btn.disabled = false; btn.innerHTML = label; }
+      if (statusEl) statusEl.textContent = 'Failed: ' + err;
+    });
+}
+
+/**
  * Background organism cache refresh — POSTs to the refresh endpoint,
  * polls until the background scan finishes, then reloads the page.
  *

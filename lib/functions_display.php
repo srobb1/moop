@@ -365,21 +365,30 @@ function fetch_organism_image($taxon_id, $organism_name = null, $absolute_images
     }
     
     // Download from NCBI with retry logic
-    $image_url = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon/{$taxon_id}/image";
-    
-    $attempt = 0;
+    $image_url  = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon/{$taxon_id}/image";
+    $attempt    = 0;
     $image_data = false;
-    
+
     while ($attempt < $max_retries && $image_data === false) {
-        $context = stream_context_create(['http' => ['timeout' => 10, 'user_agent' => 'MOOP']]);
-        $image_data = @file_get_contents($image_url, false, $context);
-        
-        if ($image_data === false || strlen($image_data) < 100) {
+        $ch = curl_init($image_url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_USERAGENT      => 'MOOP/1.0',
+        ]);
+        $result = curl_exec($ch);
+        $err    = curl_errno($ch);
+        curl_close($ch);
+
+        if ($result !== false && !$err && strlen($result) >= 100) {
+            $image_data = $result;
+        } else {
             $attempt++;
             if ($attempt < $max_retries) {
-                usleep(1000000); // Wait 1 second before retry
+                usleep(1000000);
             }
-            $image_data = false;
         }
     }
     
