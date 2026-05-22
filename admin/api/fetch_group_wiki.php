@@ -38,8 +38,8 @@ if (!empty($wiki['image_url'])) {
     $safe_name = preg_replace('/[^a-zA-Z0-9_-]/', '_', $group_name) . '.jpg';
     $dl = downloadWikimediaImage($wiki['image_url'], $safe_name);
     if ($dl) {
-        // Strip leading /site/ prefix — stored relative like organism images
-        $image_file = preg_replace('#^/' . preg_quote($config->getString('site'), '#') . '/#', '', $dl);
+        // Strip leading /site/images/ prefix — stored relative to images dir (e.g. "wikimedia/Foo.jpg")
+        $image_file = preg_replace('#^/' . preg_quote($config->getString('site'), '#') . '/images/#', '', $dl);
     }
 }
 
