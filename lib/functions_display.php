@@ -378,11 +378,14 @@ function fetch_organism_image($taxon_id, $organism_name = null, $absolute_images
             CURLOPT_TIMEOUT        => 15,
             CURLOPT_USERAGENT      => 'MOOP/1.0',
         ]);
-        $result = curl_exec($ch);
-        $err    = curl_errno($ch);
+        $result      = curl_exec($ch);
+        $err         = curl_errno($ch);
+        $http        = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
         curl_close($ch);
 
-        if ($result !== false && !$err && strlen($result) >= 100) {
+        $is_image = $content_type && strpos($content_type, 'image/') === 0;
+        if ($result !== false && !$err && $http === 200 && $is_image && strlen($result) >= 100) {
             $image_data = $result;
         } else {
             $attempt++;
@@ -391,8 +394,8 @@ function fetch_organism_image($taxon_id, $organism_name = null, $absolute_images
             }
         }
     }
-    
-    if ($image_data === false || strlen($image_data) < 100) {
+
+    if ($image_data === false) {
         return null;
     }
     
