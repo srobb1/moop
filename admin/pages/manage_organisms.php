@@ -302,8 +302,49 @@
             synced <span id="taxonomySyncAge" data-generated="<?= htmlspecialchars($lineage_cache_generated) ?>"></span>
           </small>
         <?php endif; ?>
+        <span class="text-white-50 opacity-50">|</span>
+        <button class="btn btn-sm btn-outline-light" data-bs-toggle="collapse" data-bs-target="#taskHelpPanel"
+                title="When to run each task" style="font-size:0.8rem; padding: 0.15rem 0.4rem;">
+          <i class="fa fa-info-circle"></i>
+        </button>
       </div>
     </div>
+
+    <!-- Task help panel — collapsed by default -->
+    <div class="collapse" id="taskHelpPanel">
+      <div class="border-bottom px-3 py-2" style="background:#f0f4ff; font-size:0.85rem; line-height:1.5;">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="d-flex gap-2">
+              <span class="mt-1 text-primary"><i class="fa fa-sync-alt fa-fw"></i></span>
+              <div>
+                <strong>Refresh Cache</strong><br>
+                <span class="text-muted">Run after any change to organism files — editing <code>organism.json</code>, uploading a new GFF, rebuilding BLAST indexes, or adding a new organism directory. Scans only what changed; fast even with many organisms.</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="d-flex gap-2">
+              <span class="mt-1 text-warning"><i class="fa fa-redo fa-fw"></i></span>
+              <div>
+                <strong>Force Full Rescan</strong><br>
+                <span class="text-muted">Use when the cache looks wrong and a normal refresh didn't fix it — for example after bulk-moving organism directories, restoring from backup, or if organism counts seem off. Slower: re-scans everything regardless of timestamps.</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="d-flex gap-2">
+              <span class="mt-1 text-info"><i class="fa fa-download fa-fw"></i></span>
+              <div>
+                <strong>Sync NCBI Taxonomy</strong><br>
+                <span class="text-muted">Run when adding an organism that has a <code>taxon_id</code> in its <code>organism.json</code>. Downloads the NCBI taxonomy dump (~60 MB) on first run; subsequent runs reuse the local copy and only re-download if NCBI has updated it. Housekeeping checks for updates monthly in the background.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="card-body">
       <!-- Status filter bar -->
       <div class="mb-3 d-flex flex-wrap gap-2 align-items-center" id="statusFilterBar">
