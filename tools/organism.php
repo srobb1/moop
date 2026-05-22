@@ -59,29 +59,50 @@ if (!empty($organism_info['genus']) && !empty($organism_info['species'])) {
     $scientific_name = $organism_info['genus'] . ' ' . $organism_info['species'];
 }
 
-// If no description in organism info, fetch from Wikipedia
-if (!isset($organism_info['html_p']) || empty($organism_info['html_p']) || !is_array($organism_info['html_p']) || count($organism_info['html_p']) === 0) {
+// Fetch Wikipedia data once — used for both description and image fallback below
+$wiki_data = null;
+$needs_description = !isset($organism_info['html_p']) || !is_array($organism_info['html_p']) || count($organism_info['html_p']) === 0;
+$needs_image       = empty($organism_info['images']) && empty(getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path)['image_path']);
+if ($needs_description || $needs_image) {
     $wiki_data = getWikipediaOrganismData($organism_name, $scientific_name);
+}
+
+// Build description paragraphs when not manually set in organism.json
+if ($needs_description) {
+    $html_p = [];
+
+    // Auto-description from lineage cache (always available when taxon_id is set)
+    if (!empty($organism_info['taxon_id']) && !empty($scientific_name)) {
+        $lineage_cache = load_lineage_cache($metadata_path);
+        $tid = (string)$organism_info['taxon_id'];
+        if (!empty($lineage_cache[$tid]['lineage'])) {
+            $auto_desc = buildAutoDescription($scientific_name, $lineage_cache[$tid]['lineage']);
+            if ($auto_desc) {
+                $html_p[] = ['text' => htmlspecialchars($auto_desc), 'class' => '', 'style' => ''];
+            }
+        }
+    }
+
+    // Wikipedia paragraph (shown in addition to the auto-description when available)
     if (!empty($wiki_data['description'])) {
-        $organism_info['html_p'] = [
-            [
-                'text' => htmlspecialchars($wiki_data['description']) . 
-                         '<br><br><small class="text-muted">Source: <a href="' . htmlspecialchars($wiki_data['wikipedia_url']) . 
-                         '" target="_blank">Wikipedia</a></small>',
-                'class' => '',
-                'style' => ''
-            ]
+        $html_p[] = [
+            'text'  => htmlspecialchars($wiki_data['description']) .
+                       '<br><br><small class="text-muted">Source: <a href="' . htmlspecialchars($wiki_data['wikipedia_url']) .
+                       '" target="_blank">Wikipedia</a></small>',
+            'class' => '',
+            'style' => ''
         ];
+    }
+
+    if (!empty($html_p)) {
+        $organism_info['html_p'] = $html_p;
     }
 }
 
-// If no image, fetch from Wikipedia
-if (empty($organism_info['images']) && empty(getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path)['image_path'])) {
-    $wiki_data = getWikipediaOrganismData($organism_name, $scientific_name);
-    if (!empty($wiki_data['image_url'])) {
-        $organism_info['wikipedia_image'] = $wiki_data['image_url'];
-        $organism_info['wikipedia_url'] = $wiki_data['wikipedia_url'];
-    }
+// Image fallback from Wikipedia
+if ($needs_image && !empty($wiki_data['image_url'])) {
+    $organism_info['wikipedia_image'] = $wiki_data['image_url'];
+    $organism_info['wikipedia_url']   = $wiki_data['wikipedia_url'];
 }
 
 // Configure display template

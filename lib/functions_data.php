@@ -1524,9 +1524,80 @@ function buildPerOrganismFingerprints($organism_data_path) {
 }
 
 /**
+ * Build a one-line description from lineage cache data.
+ * Used as a fallback when Wikipedia has no article for an organism.
+ * e.g. "Schmidtea nova is a species of flatworm in the family Dugesiidae."
+ *
+ * @param string $scientific_name  e.g. "Schmidtea nova"
+ * @param array  $lineage          Array of ['rank'=>..., 'name'=>...] from lineage cache
+ * @return string  One sentence, or empty string if not enough data.
+ */
+function buildAutoDescription(string $scientific_name, array $lineage): string {
+    if (empty($scientific_name) || empty($lineage)) return '';
+
+    $ranks = [];
+    foreach ($lineage as $entry) {
+        $ranks[$entry['rank']] = $entry['name'];
+    }
+
+    // Class-level names (more specific than phylum)
+    $class_map = [
+        'Mammalia'       => 'mammal',
+        'Aves'           => 'bird',
+        'Reptilia'       => 'reptile',
+        'Amphibia'       => 'amphibian',
+        'Actinopterygii' => 'ray-finned fish',
+        'Chondrichthyes' => 'cartilaginous fish',
+        'Insecta'        => 'insect',
+        'Arachnida'      => 'arachnid',
+        'Malacostraca'   => 'crustacean',
+        'Magnoliopsida'  => 'flowering plant',
+        'Liliopsida'     => 'monocot plant',
+        'Pinopsida'      => 'conifer',
+    ];
+
+    // Phylum-level fallbacks
+    $phylum_map = [
+        'Platyhelminthes' => 'flatworm',
+        'Nematoda'        => 'nematode',
+        'Annelida'        => 'annelid worm',
+        'Arthropoda'      => 'arthropod',
+        'Mollusca'        => 'mollusc',
+        'Echinodermata'   => 'echinoderm',
+        'Chordata'        => 'chordate',
+        'Porifera'        => 'sponge',
+        'Cnidaria'        => 'cnidarian',
+        'Streptophyta'    => 'plant',
+        'Ascomycota'      => 'fungus',
+        'Basidiomycota'   => 'fungus',
+        'Apicomplexa'     => 'apicomplexan parasite',
+        'Euglenozoa'      => 'euglenozoan',
+        'Amoebozoa'       => 'amoeba',
+        'Ciliophora'      => 'ciliate',
+        'Rhodophyta'      => 'red alga',
+        'Chlorophyta'     => 'green alga',
+        'Bacillariophyta' => 'diatom',
+    ];
+
+    $type = $class_map[$ranks['class'] ?? ''] ?? $phylum_map[$ranks['phylum'] ?? ''] ?? null;
+
+    $sentence = $type
+        ? "$scientific_name is a species of $type"
+        : "$scientific_name is a species";
+
+    if (!empty($ranks['family'])) {
+        $sentence .= " in the family {$ranks['family']}";
+    } elseif (!empty($ranks['order'])) {
+        $sentence .= " in the order {$ranks['order']}";
+    }
+
+    return $sentence . '.';
+}
+
+/**
  * Fetch Wikipedia data for a taxonomic rank/level
  * Gets description and image from Wikipedia using the search API
- * 
+ *
  * @param string $rank_name Name of taxonomic rank (e.g., 'Primates', 'Mammalia')
  * @return array Array with 'description' (HTML), 'image_url', 'wikipedia_url', 'source'
  */
