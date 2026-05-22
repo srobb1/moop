@@ -1270,38 +1270,48 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     $config_changed = ($cached_config !== $decision_config_fp);
     $organisms_to_scan = [];
     $organisms_to_keep = [];
-    
+    // Organisms whose files are unchanged but config changed — reuse expensive validation,
+    // only recalculate status fields (group membership, tree placement, overall_status).
+    $organisms_config_only = [];
+
     foreach ($current_fingerprints as $org_name => $fingerprint) {
         $cached_fingerprint = $cached_fingerprints[$org_name] ?? null;
-        if ($cached_fingerprint === $fingerprint && !$config_changed) {
-            // Organism unchanged and config unchanged - reuse cached data
-            if (isset($cached_data[$org_name])) {
-                $organisms_to_keep[$org_name] = $cached_data[$org_name];
+        if ($cached_fingerprint === $fingerprint) {
+            if (!$config_changed) {
+                // Organism and config both unchanged — fully reuse
+                if (isset($cached_data[$org_name])) {
+                    $organisms_to_keep[$org_name] = $cached_data[$org_name];
+                } else {
+                    $organisms_to_scan[] = $org_name;
+                }
             } else {
-                $organisms_to_scan[] = $org_name;
+                // Config changed but organism files unchanged — lightweight status refresh
+                if (isset($cached_data[$org_name])) {
+                    $organisms_config_only[$org_name] = $cached_data[$org_name];
+                } else {
+                    $organisms_to_scan[] = $org_name;
+                }
             }
         } else {
-            // Organism changed or config changed - needs rescan
+            // Organism files changed — full rescan
             $organisms_to_scan[] = $org_name;
         }
     }
-    
+
     // Check for removed organisms (in cache but not in current directory scan)
     foreach ($cached_fingerprints as $org_name => $fingerprint) {
         if (!isset($current_fingerprints[$org_name])) {
-            // Organism was removed from filesystem - remove from cache
             unset($organisms_to_keep[$org_name]);
+            unset($organisms_config_only[$org_name]);
         }
     }
-    
-    // If config changed (tree/groups), all organisms need status recalculation
-    // But we can still reuse the expensive parts (assemblies, FASTA, BLAST validation)
-    if ($config_changed && !empty($organisms_to_keep)) {
-        foreach ($organisms_to_keep as $org_name => $org_data) {
-            // Mark for status recalculation
-            $organisms_to_scan[] = $org_name;
-        }
-        $organisms_to_keep = [];
+
+    // For config-only changes: recalculate overall_status and in_taxonomy_tree
+    // without re-running the expensive DB/FASTA/BLAST validation.
+    foreach ($organisms_config_only as $org_name => $org_data) {
+        $org_data['in_taxonomy_tree'] = isAssemblyInTaxonomyTree($org_name, '', $taxonomy_tree_file);
+        $org_data['overall_status']   = getOrganismOverallStatus($org_name, $org_data, $groups_data, $taxonomy_tree_file, $sequence_types);
+        $organisms_to_keep[$org_name] = $org_data;
     }
     
     $total_scan_count = count($organisms_to_scan);
