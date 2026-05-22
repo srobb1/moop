@@ -624,12 +624,7 @@ function downloadWikimediaImage($wiki_url, $cache_filename, $cache_directory = '
         return "/$site/images/wikimedia/" . basename($cache_filename);
     }
     
-    $context = stream_context_create([
-        'http' => ['timeout' => 10, 'user_agent' => 'MOOP/1.0'],
-        'https' => ['timeout' => 10, 'user_agent' => 'MOOP/1.0']
-    ]);
-    
-    $image_data = @file_get_contents($wiki_url, false, $context);
+    $image_data = moop_curl_get($wiki_url, 10, 20);
     
     if ($image_data === false) {
         logError('Failed to download Wikimedia image', 'wikimedia_download', ['wiki_url' => $wiki_url]);

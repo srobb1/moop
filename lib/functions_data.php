@@ -5,6 +5,25 @@
  */
 
 /**
+ * cURL GET with connect + total timeouts — avoids D-state hangs from file_get_contents.
+ * Returns the response body string, or false on error.
+ */
+function moop_curl_get(string $url, int $connect_timeout = 5, int $total_timeout = 10) {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_CONNECTTIMEOUT => $connect_timeout,
+        CURLOPT_TIMEOUT        => $total_timeout,
+        CURLOPT_USERAGENT      => 'MOOP/1.0 (github.com)',
+    ]);
+    $result = curl_exec($ch);
+    $err    = curl_errno($ch);
+    curl_close($ch);
+    return ($result !== false && !$err) ? $result : false;
+}
+
+/**
  * Get group metadata from organism_assembly_groups.json
  * 
  * @return array Array of organism/assembly/groups data
@@ -1537,29 +1556,22 @@ function getWikipediaTaxonomyData($rank_name) {
         'redirects' => true
     ]);
     
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 5,
-            'user_agent' => 'MOOP (github.com)'
-        ]
-    ]);
-    
-    $response = @file_get_contents($wiki_search_url, false, $context);
-    
+    $response = moop_curl_get($wiki_search_url);
+
     if ($response === false) {
         return $result;
     }
-    
+
     $data = json_decode($response, true);
-    
+
     if (empty($data['query']['pages'])) {
         return $result;
     }
-    
+
     // Get first (and usually only) page result
     $pages = array_values($data['query']['pages']);
     $page = $pages[0];
-    
+
     if (!isset($page['pageid'])) {
         // Page not found, try search instead
         return getWikipediaTaxonomyDataFromSearch($rank_name);
@@ -1615,29 +1627,22 @@ function getWikipediaTaxonomyDataFromSearch($rank_name) {
         'srlimit' => 3
     ]);
     
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 5,
-            'user_agent' => 'MOOP (github.com)'
-        ]
-    ]);
-    
-    $response = @file_get_contents($search_url, false, $context);
-    
+    $response = moop_curl_get($search_url);
+
     if ($response === false) {
         return $result;
     }
-    
+
     $data = json_decode($response, true);
-    
+
     if (empty($data['query']['search'])) {
         return $result;
     }
-    
+
     // Try the first few results to find one with content
     foreach ($data['query']['search'] as $search_result) {
         $found_title = $search_result['title'];
-        
+
         // Fetch details about this page
         $fetch_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([
             'action' => 'query',
@@ -1650,8 +1655,8 @@ function getWikipediaTaxonomyDataFromSearch($rank_name) {
             'pithumbsize' => 300,
             'redirects' => true
         ]);
-        
-        $response = @file_get_contents($fetch_url, false, $context);
+
+        $response = moop_curl_get($fetch_url);
         
         if ($response === false) {
             continue;
@@ -1736,15 +1741,8 @@ function getWikipediaOrganismData($organism_name, $scientific_name = '') {
             'redirects' => true
         ]);
         
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 5,
-                'user_agent' => 'MOOP (github.com)'
-            ]
-        ]);
-        
-        $response = @file_get_contents($wiki_search_url, false, $context);
-        
+        $response = moop_curl_get($wiki_search_url);
+
         if ($response === false) {
             continue;
         }
@@ -1811,29 +1809,22 @@ function getWikipediaOrganismDataFromSearch($organism_name) {
         'srlimit' => 3
     ]);
     
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 5,
-            'user_agent' => 'MOOP (github.com)'
-        ]
-    ]);
-    
-    $response = @file_get_contents($search_url, false, $context);
-    
+    $response = moop_curl_get($search_url);
+
     if ($response === false) {
         return $result;
     }
-    
+
     $data = json_decode($response, true);
-    
+
     if (empty($data['query']['search'])) {
         return $result;
     }
-    
+
     // Try the first few results
     foreach ($data['query']['search'] as $search_result) {
         $found_title = $search_result['title'];
-        
+
         // Fetch details about this page
         $fetch_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([
             'action' => 'query',
@@ -1846,9 +1837,9 @@ function getWikipediaOrganismDataFromSearch($organism_name) {
             'pithumbsize' => 400,
             'redirects' => true
         ]);
-        
-        $response = @file_get_contents($fetch_url, false, $context);
-        
+
+        $response = moop_curl_get($fetch_url);
+
         if ($response === false) {
             continue;
         }
@@ -1931,38 +1922,31 @@ function fetchOrganismInfoFromNCBI($genus, $species) {
         'retmode' => 'json'
     ]);
     
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 5,
-            'user_agent' => 'MOOP (github.com)'
-        ]
-    ]);
-    
-    $response = @file_get_contents($search_url, false, $context);
-    
+    $response = moop_curl_get($search_url);
+
     if ($response === false) {
         $result['error'] = 'Failed to connect to NCBI';
         return $result;
     }
-    
+
     $data = json_decode($response, true);
-    
+
     if (empty($data['esearchresult']['idlist'])) {
         $result['error'] = 'Organism not found on NCBI';
         return $result;
     }
-    
+
     $taxon_id = $data['esearchresult']['idlist'][0];
     $result['taxon_id'] = $taxon_id;
-    
+
     // Fetch full details
     $fetch_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?' . http_build_query([
         'db' => 'taxonomy',
         'id' => $taxon_id,
         'retmode' => 'json'
     ]);
-    
-    $response = @file_get_contents($fetch_url, false, $context);
+
+    $response = moop_curl_get($fetch_url);
     
     if ($response === false) {
         return $result;
