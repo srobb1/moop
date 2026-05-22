@@ -228,7 +228,7 @@ gzclose($gz);
 
 echo "Found " . count($found) . " of " . count($need_lineage) . " in dump.\n";
 if (!empty($needed)) {
-    echo "Not found (will fall back to NCBI API on next cache warm): " . implode(', ', array_keys($needed)) . "\n";
+    echo "Not found in dump (these organisms will have no lineage data until the dump is refreshed): " . implode(', ', array_keys($needed)) . "\n";
 }
 
 // --- Build and write lineage entries ---

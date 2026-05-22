@@ -152,12 +152,18 @@ $need_fetch = array_filter($organism_infos, function($d) use ($lineage_cache) {
     return !empty($d['taxon_id']) && !isset($lineage_cache[(string)$d['taxon_id']]);
 });
 
+$stored_gz = "$metadata_path/ncbi_rankedlineage.dmp.gz";
+
 if (empty($need_fetch) && !$force) {
     echo "Lineage cache is up to date.\n";
+} elseif (!file_exists($stored_gz)) {
+    echo "WARNING: Local NCBI taxonomy dump not found.\n";
+    echo "         Lineage and taxonomy tree cannot be updated without it.\n";
+    echo "         Run: php scripts/sync_ncbi_taxonomy_dump.php\n";
 } else {
     $fetch_count = count($need_fetch);
     if ($fetch_count > 0) {
-        echo "Fetching lineage from NCBI for $fetch_count new organism(s)...\n";
+        echo "Resolving lineage for $fetch_count new organism(s) from local dump...\n";
         $lineage_cache = refresh_lineage_cache($need_fetch, $lineage_cache, function($org, $cur, $tot) {
             echo "  [$cur/$tot] $org\n";
         });

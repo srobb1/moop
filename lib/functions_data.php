@@ -770,8 +770,12 @@ function save_lineage_cache($lineage_cache, $metadata_path) {
 }
 
 /**
- * Fetch NCBI lineage for any organisms whose taxon_id is absent from the cache.
- * Existing entries are untouched. Returns the updated cache array.
+ * Populate lineage cache for any organisms whose taxon_id is absent, using ONLY
+ * the local NCBI dump. Never makes live NCBI API calls — those can block indefinitely
+ * (D-state) and are too slow for a synchronous cache refresh.
+ *
+ * If the local dump is missing, logs a warning and returns the cache unchanged.
+ * Callers should ensure sync_ncbi_taxonomy_dump.php has been run at least once.
  *
  * @param array    $organisms        organism_name => ['taxon_id', 'genus', 'species', 'common_name', ...]
  * @param array    $lineage_cache    Current cache keyed by taxon_id
@@ -790,60 +794,38 @@ function refresh_lineage_cache($organisms, $lineage_cache, $progress_cb = null) 
 
     if (empty($to_fetch)) return $lineage_cache;
 
-    // Try local dump first — one scan covers all missing organisms, no API calls.
     $config    = ConfigManager::getInstance();
     $stored_gz = $config->getPath('metadata_path') . '/ncbi_rankedlineage.dmp.gz';
-    if (file_exists($stored_gz)) {
-        $taxid_set = [];
-        foreach ($to_fetch as $data) {
-            if (!empty($data['taxon_id'])) $taxid_set[(string)$data['taxon_id']] = true;
-        }
-        $from_dump = ncbi_scan_local_dump($taxid_set, $stored_gz);
-        foreach ($from_dump as $tid => $entry) {
-            $lineage_cache[$tid] = $entry;
-        }
-        // Remove from to_fetch any organism whose lineage we just resolved
-        foreach ($to_fetch as $org_name => $data) {
-            if (isset($lineage_cache[(string)$data['taxon_id']])) {
-                unset($to_fetch[$org_name]);
-            }
-        }
+
+    if (!file_exists($stored_gz)) {
+        $missing = implode(', ', array_keys($to_fetch));
+        error_log("refresh_lineage_cache: local NCBI dump not found at $stored_gz. "
+            . "Run scripts/sync_ncbi_taxonomy_dump.php to download it. "
+            . "Skipped organisms: $missing");
+        return $lineage_cache;
     }
 
-    // Fall back to NCBI API for anything still missing (genuinely new taxa, etc.)
-    $total   = count($to_fetch);
-    $current = 0;
+    $taxid_set = [];
+    foreach ($to_fetch as $data) {
+        if (!empty($data['taxon_id'])) $taxid_set[(string)$data['taxon_id']] = true;
+    }
+
+    $from_dump = ncbi_scan_local_dump($taxid_set, $stored_gz);
+    foreach ($from_dump as $tid => $entry) {
+        $lineage_cache[$tid] = $entry;
+    }
+
+    // Report any taxon_ids that weren't found in the dump (dump may be stale)
+    $still_missing = [];
     foreach ($to_fetch as $org_name => $data) {
-        $current++;
-        $tid = (string)$data['taxon_id'];
-        if ($progress_cb) $progress_cb($org_name, $current, $total);
-
-        $lineage = fetch_taxonomy_lineage($tid);
-        $image   = fetch_organism_image($tid, $org_name);
-
-        if ($image === null && !empty($data['genus']) && !empty($data['species'])) {
-            $sci    = $data['genus'] . ' ' . $data['species'];
-            $wiki   = getWikipediaOrganismData($org_name, $sci);
-            if (!empty($wiki['image_url'])) {
-                $safe = preg_replace('/[^a-zA-Z0-9_-]/', '_', $org_name) . '.jpg';
-                $dl   = downloadWikimediaImage($wiki['image_url'], $safe);
-                if ($dl !== false) {
-                    $cfg   = ConfigManager::getInstance();
-                    $site  = $cfg->getString('site');
-                    $image = preg_replace('#^/' . preg_quote($site, '#') . '/#', '', $dl);
-                }
-            }
+        if (!isset($lineage_cache[(string)$data['taxon_id']])) {
+            $still_missing[] = "$org_name (taxon_id={$data['taxon_id']})";
         }
-
-        if ($lineage) {
-            $lineage_cache[$tid] = [
-                'lineage' => $lineage,
-                'image'   => $image,
-                'fetched' => date('Y-m-d'),
-            ];
-        }
-
-        usleep(500000); // 500 ms — 2 req/s NCBI rate limit
+    }
+    if (!empty($still_missing)) {
+        error_log("refresh_lineage_cache: " . count($still_missing) . " taxon_id(s) not found in local dump — "
+            . "dump may be stale. Re-run scripts/sync_ncbi_taxonomy_dump.php. "
+            . "Missing: " . implode(', ', $still_missing));
     }
 
     return $lineage_cache;
