@@ -33,7 +33,7 @@
           <li>Control who has access to what organisms</li>
           <li>Manage your organism data and metadata</li>
           <li>Organize annotations for display</li>
-          <li>Build the taxonomy tree for discovery</li>
+          <li>Keep organisms discoverable on the homepage selector (handled automatically by cache refresh)</li>
           <li>Maintain user accounts and permissions</li>
           <li>Monitor system health and errors</li>
         </ul>

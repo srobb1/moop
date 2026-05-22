@@ -47,8 +47,8 @@
         
         <p><strong>Built-in Checks & Actions:</strong> Each step includes automated checks to verify configuration and quick action buttons to fix easy-to-address issues:</p>
         <ul>
-          <li><strong>Automated Checks:</strong> File permissions, missing configuration files, group assignments, and taxonomy tree membership</li>
-          <li><strong>Quick Fix Actions:</strong> Generate missing organism.json files, assign organisms to default groups, and add organisms to taxonomy tree</li>
+          <li><strong>Automated Checks:</strong> File permissions, missing configuration files, group assignments, and homepage selector status</li>
+          <li><strong>Quick Fix Actions:</strong> Generate missing organism.json files, assign organisms to default groups, and trigger a cache refresh</li>
           <li><strong>Detailed Management:</strong> Links to full management pages for complex customizations</li>
         </ul>
         
@@ -650,59 +650,53 @@
       </div>
     </div>
 
-    <!-- Step 4: Add to Taxonomy Tree -->
+    <!-- Step 4: Verify Homepage Selector -->
     <div class="card mb-3 border-primary">
       <div class="card-header bg-primary bg-opacity-10">
         <h5 class="mb-0">
           <span class="badge bg-primary me-2">Step 4</span>
-          Add Organism to Taxonomy Tree
+          Verify Organism Appears in Homepage Selector
         </h5>
       </div>
       <div class="card-body">
-        <p><strong>What to do:</strong></p>
+        <p>MOOP's homepage shows a taxonomic hierarchy that lets visitors browse and select organisms. This hierarchy is built automatically from each organism's <code>taxon_id</code> field in <code>organism.json</code> using locally-cached NCBI lineage data.</p>
+        <p><strong>How it works:</strong></p>
         <ul>
-          <li>Add the new organism to the site's taxonomy tree</li>
-          <li>This makes it discoverable on the homepage organism selector</li>
-          <li>Organize it within the appropriate taxonomic hierarchy</li>
+          <li>Each organism needs a valid <code>taxon_id</code> (NCBI Taxonomy ID) in its <code>organism.json</code></li>
+          <li>The organism cache refresh (run from <strong>Manage Organisms</strong>) rebuilds the selector automatically using that ID</li>
+          <li>NCBI lineage data is synced monthly in the background — no manual steps needed</li>
+          <li>If two organisms share the same taxon ID, only one will appear in the selector</li>
         </ul>
 
         <?php
-        // Check taxonomy tree
         $tree_file = dirname($organism_data) . '/metadata/taxonomy_tree_config.json';
         $organisms_not_in_tree = [];
-        
         foreach ($organisms_in_system as $org) {
             if (!isAssemblyInTaxonomyTree($org, '', $tree_file)) {
                 $organisms_not_in_tree[] = $org;
             }
         }
         ?>
-        
+
         <?php if (!empty($organisms_not_in_tree)): ?>
           <div class="alert alert-warning mt-3">
-            <i class="fa fa-exclamation-triangle"></i> <strong>Missing from Taxonomy Tree:</strong>
+            <i class="fa fa-exclamation-triangle"></i> <strong>Not yet in selector:</strong>
             <ul class="mb-0 mt-2">
               <?php foreach ($organisms_not_in_tree as $org): ?>
                 <li><?= htmlspecialchars($org) ?></li>
               <?php endforeach; ?>
             </ul>
           </div>
-          
-          <p class="mt-3"><strong>Quick Action:</strong></p>
+          <p class="mt-3"><strong>Fix:</strong> Run a cache refresh to rebuild the selector.</p>
           <button type="button" class="btn btn-primary" id="generateTreeBtn">
-            <i class="fa fa-sync-alt"></i> Auto-Generate Tree from NCBI
+            <i class="fa fa-sync-alt"></i> Refresh Cache Now
           </button>
-          <small class="text-muted d-block mt-2">
-            <i class="fa fa-clock"></i> This will generate the tree for all organisms (~<?= count($organisms_in_system) ?> seconds)
-          </small>
           <div id="generateTreeStatus" style="display: none; margin-top: 1rem;"></div>
         <?php else: ?>
           <div class="alert alert-success mt-3">
-            <i class="fa fa-check-circle"></i> All organisms are in the taxonomy tree!
+            <i class="fa fa-check-circle"></i> All organisms are in the homepage selector.
           </div>
         <?php endif; ?>
-
-        <p class="mt-3 text-muted small"><i class="fa fa-info-circle"></i> The taxonomy tree is rebuilt automatically whenever you run <strong>Refresh Cache</strong> on the Manage Organisms page.</p>
       </div>
     </div>
 
