@@ -873,7 +873,7 @@ document.addEventListener('DOMContentLoaded', function() {
     form.submit();
   });
 
-async function fetchGroupWiki(groupName, btn) {
+window.fetchGroupWiki = async function fetchGroupWiki(groupName, btn) {
   const topicInput = document.getElementById('wiki-topic-' + groupName);
   const statusEl   = document.getElementById('wiki-status-' + groupName);
   const topic = topicInput.value.trim();
