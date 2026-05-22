@@ -101,10 +101,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $html_p = json_decode($_POST['html_p_json'], true);
         
         // Update the description
+        $wikipedia_topic = trim($_POST['wikipedia_topic'] ?? '');
         foreach ($descriptions_data as &$desc) {
             if ($desc['group_name'] === $group_name) {
                 $desc['images'] = $images;
                 $desc['html_p'] = $html_p;
+                $desc['wikipedia_topic'] = $wikipedia_topic;
                 break;
             }
         }

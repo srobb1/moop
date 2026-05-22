@@ -868,8 +868,61 @@ document.addEventListener('DOMContentLoaded', function() {
     form.appendChild(groupsInput);
     form.appendChild(bulkAddInput);
     addCsrfToken(form);
-    
+
     document.body.appendChild(form);
     form.submit();
   });
+
+async function fetchGroupWiki(groupName, btn) {
+  const topicInput = document.getElementById('wiki-topic-' + groupName);
+  const statusEl   = document.getElementById('wiki-status-' + groupName);
+  const topic = topicInput.value.trim();
+
+  if (!topic) {
+    statusEl.innerHTML = '<span class="text-danger">Enter a Wikipedia topic first.</span>';
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.innerHTML = '<span class="text-muted"><i class="fa fa-spinner fa-spin"></i> Fetching from Wikipedia...</span>';
+
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const resp = await fetch(sitePath + '/admin/api/fetch_group_wiki.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrfToken },
+      body: new URLSearchParams({ group_name: groupName, wikipedia_topic: topic })
+    });
+    const data = await resp.json();
+
+    if (!data.success) {
+      statusEl.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle"></i> ' + (data.message || 'Failed') + '</span>';
+      btn.disabled = false;
+      return;
+    }
+
+    // Update the first paragraph textarea with the fetched text
+    const parasContainer = document.getElementById('paragraphs-container-' + groupName);
+    const firstTextarea  = parasContainer?.querySelector('.para-text');
+    if (firstTextarea) {
+      const tmp = document.createElement('textarea');
+      tmp.innerHTML = data.description_html;
+      firstTextarea.value = tmp.value;
+    }
+
+    // Update first image field if an image was downloaded
+    if (data.image_file) {
+      const imagesContainer = document.getElementById('images-container-' + groupName);
+      const firstFileInput  = imagesContainer?.querySelector('.image-file');
+      if (firstFileInput) firstFileInput.value = data.image_file;
+    }
+
+    statusEl.innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i> Saved to JSON. '
+      + (data.wikipedia_url ? '<a href="' + data.wikipedia_url + '" target="_blank">View on Wikipedia</a>' : '')
+      + ' — edit below if needed, then click <strong>Save Changes</strong>.</span>';
+  } catch (e) {
+    statusEl.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle"></i> Error: ' + e.message + '</span>';
+  }
+  btn.disabled = false;
+}
 });

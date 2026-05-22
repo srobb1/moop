@@ -343,6 +343,25 @@
             <input type="hidden" name="images_json" id="images-json-<?= htmlspecialchars($desc['group_name']) ?>">
             <input type="hidden" name="html_p_json" id="html-p-json-<?= htmlspecialchars($desc['group_name']) ?>">
             
+            <!-- Wikipedia Topic -->
+            <div class="mb-4 p-3 border rounded bg-light">
+              <h6 class="mb-2"><i class="fa fa-wikipedia-w"></i> Wikipedia Topic</h6>
+              <p class="text-muted small mb-2">Enter the Wikipedia article title for this group (e.g. <em>Platyhelminthes</em>, <em>Planaria</em>, <em>Bats</em>). Click <strong>Retrieve &amp; Save</strong> to fetch the description and image and store them below.</p>
+              <input type="hidden" name="wikipedia_topic" id="wiki-topic-hidden-<?= htmlspecialchars($desc['group_name']) ?>" value="<?= htmlspecialchars($desc['wikipedia_topic'] ?? '') ?>">
+              <div class="input-group">
+                <input type="text" class="form-control" id="wiki-topic-<?= htmlspecialchars($desc['group_name']) ?>"
+                       value="<?= htmlspecialchars($desc['wikipedia_topic'] ?? '') ?>"
+                       placeholder="e.g. Platyhelminthes"
+                       oninput="document.getElementById('wiki-topic-hidden-<?= htmlspecialchars($desc['group_name']) ?>').value = this.value">
+                <button type="button" class="btn btn-outline-primary"
+                        onclick="fetchGroupWiki(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>, this)"
+                        <?= $desc_file_write_error ? 'disabled' : '' ?>>
+                  <i class="fa fa-download"></i> Retrieve &amp; Save
+                </button>
+              </div>
+              <div id="wiki-status-<?= htmlspecialchars($desc['group_name']) ?>" class="mt-2 small"></div>
+            </div>
+
             <h5>Images</h5>
             <div id="images-container-<?= htmlspecialchars($desc['group_name']) ?>">
               <?php foreach ($desc['images'] as $idx => $image): ?>
