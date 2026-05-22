@@ -149,7 +149,7 @@
     <div class="alert alert-warning alert-dismissible fade show">
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       <h5><i class="fa fa-exclamation-triangle"></i> Duplicate Taxon IDs Detected</h5>
-      <p><strong>Problem:</strong> Multiple organisms share the same NCBI Taxon ID. This causes organisms to be missing from the taxonomy tree because they have identical lineages.</p>
+      <p><strong>Problem:</strong> Multiple organisms share the same NCBI Taxon ID. Each taxon ID maps to one lineage entry, so when two organisms share one, only the first will appear in the homepage organism selector. The Taxon ID is also used to fetch classification data (kingdom, phylum, class, etc.) and organism images — duplicates cause incorrect or missing data for the affected organisms.</p>
       <p class="mb-2"><strong>Duplicates found:</strong></p>
       <ul class="mb-2">
         <?php foreach ($duplicate_taxon_ids as $taxon_id => $org_names): ?>
@@ -445,13 +445,13 @@
                    $in_taxonomy_tree = $data['in_taxonomy_tree'] ?? isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
                  ?>
                  <?php if ($in_taxonomy_tree): ?>
-                   <a href="manage_taxonomy_tree.php" target="_blank" class="btn btn-sm btn-outline-success" title="Click to manage taxonomy tree">
+                   <span class="btn btn-sm btn-outline-success disabled">
                      <i class="fa fa-check-circle"></i> Complete
-                   </a>
+                   </span>
                  <?php else: ?>
-                   <a href="manage_taxonomy_tree.php" target="_blank" class="btn btn-sm btn-outline-warning" title="Click to add to taxonomy tree">
+                   <span class="btn btn-sm btn-outline-warning disabled" title="Run Refresh Cache to rebuild the taxonomy tree">
                      <i class="fa fa-times-circle"></i> Missing
-                   </a>
+                   </span>
                  <?php endif; ?>
                </td>
                <td>
@@ -629,15 +629,7 @@
     </div>
     <div class="card-body">
       <div class="row">
-        <div class="col-md-4">
-          <div class="d-grid">
-            <a href="manage_taxonomy_tree.php" target="_blank" class="btn btn-primary">
-              <i class="fa fa-project-diagram"></i> Manage Taxonomy Tree
-            </a>
-            <small class="text-muted mt-2">Build the organism selector</small>
-          </div>
-        </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
           <div class="d-grid">
             <a href="manage_groups.php" target="_blank" class="btn btn-primary">
               <i class="fa fa-layer-group"></i> Manage Groups & Descriptions
@@ -645,7 +637,7 @@
             <small class="text-muted mt-2">Manage group metadata</small>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
           <div class="d-grid">
             <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#helpModal">
               <i class="fa fa-question-circle"></i> Upload Help

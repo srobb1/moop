@@ -702,7 +702,7 @@
           </div>
         <?php endif; ?>
 
-        <p class="mt-3"><strong>Full Management:</strong> <a href="manage_taxonomy_tree.php" class="btn btn-info"><i class="fa fa-sitemap"></i> Manage Taxonomy Tree</a></p>
+        <p class="mt-3 text-muted small"><i class="fa fa-info-circle"></i> The taxonomy tree is rebuilt automatically whenever you run <strong>Refresh Cache</strong> on the Manage Organisms page.</p>
       </div>
     </div>
 
@@ -878,30 +878,24 @@ async function generateOrganismJson() {
 async function generateTreeFromChecklist() {
   const btn = document.getElementById('generateTreeBtn');
   const statusDiv = document.getElementById('generateTreeStatus');
-  
-  // Disable button and show loading
+
   btn.disabled = true;
-  statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Generating taxonomy tree from NCBI (this may take a minute)...</div>';
+  statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Triggering cache refresh (rebuilds taxonomy tree automatically)...</div>';
   statusDiv.style.display = 'block';
-  
+
   try {
-    const response = await fetch('manage_taxonomy_tree.php', {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const response = await fetch(sitePath + '/admin/api/refresh_organism_cache.php', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'action=generate'
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrfToken },
+      body: 'action=start&force=1'
     });
-    
-    if (response.ok) {
-      statusDiv.innerHTML = '<div class="alert alert-success"><i class="fa fa-check-circle"></i> <strong>Success!</strong> Taxonomy tree has been generated. Reloading...</div>';
-      
-      // Reload the page after a short delay
-      setTimeout(() => {
-        location.reload();
-      }, 2000);
+    const data = await response.json();
+    if (data.success || data.status === 'started' || data.status === 'running') {
+      statusDiv.innerHTML = '<div class="alert alert-success"><i class="fa fa-check-circle"></i> Cache refresh started — taxonomy tree will be rebuilt. Reloading in 5s...</div>';
+      setTimeout(() => location.reload(), 5000);
     } else {
-      statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> Failed to generate tree. Please try again or use the full management page.</div>';
+      statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + (data.message || 'Unknown error') + '</div>';
       btn.disabled = false;
     }
   } catch (error) {

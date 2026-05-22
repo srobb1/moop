@@ -46,7 +46,6 @@
           <li><strong>Manage Organisms</strong> - View and manage all organism data</li>
           <li><strong>Manage Groups</strong> - Tag organisms with flexible categories</li>
           <li><strong>Manage Annotations</strong> - Customize annotation display</li>
-          <li><strong>Manage Taxonomy Tree</strong> - Build the organism selector</li>
           <li><strong>Error Logs</strong> - Monitor system health</li>
           <li><strong>PHP Function Registry</strong> - Maintain PHP code documentation</li>
           <li><strong>JavaScript Function Registry</strong> - Maintain JavaScript code documentation</li>
@@ -214,16 +213,6 @@
             <h5 class="card-title"><i class="fa fa-tags"></i> Manage Annotation Sections</h5>
             <p class="card-text">Configure annotation section types and descriptions.</p>
             <a href="manage_annotations.php" class="btn btn-success">Go to Annotation Sections</a>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title"><i class="fa fa-project-diagram"></i> Manage Taxonomy Tree</h5>
-            <p class="card-text">Generate and customize the taxonomy tree from organism taxonomy data.</p>
-            <a href="manage_taxonomy_tree.php" class="btn btn-success">Go to Taxonomy Tree</a>
           </div>
         </div>
       </div>
