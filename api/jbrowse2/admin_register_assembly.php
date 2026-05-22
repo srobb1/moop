@@ -13,6 +13,7 @@
 
 require_once __DIR__ . '/../../includes/config_init.php';
 require_once __DIR__ . '/../../admin/admin_access_check.php';
+require_once __DIR__ . '/../../lib/jbrowse/gene_set_functions.php';
 
 header('Content-Type: application/json');
 
@@ -103,65 +104,7 @@ if (!file_exists("$target_fasta.fai")) {
     $log[] = 'FASTA index already exists';
 }
 
-// ── Step 4: GFF (optional) ───────────────────────────────────────────────────
-
-$source_gff = "$source_dir/$gene_set/genomic.gff";
-if (file_exists($source_gff)) {
-    $target_gff = "$genomes_dir/annotations.gff3";
-    $gz_file    = "$genomes_dir/annotations.gff3.gz";
-    $tbi_file   = "$gz_file.tbi";
-
-    if (!file_exists($target_gff) && !is_link($target_gff)) {
-        symlink($source_gff, $target_gff);
-        $log[] = 'Symlinked annotations.gff3';
-    }
-
-    if (!file_exists($gz_file)) {
-        // Sort before compressing — tabix requires sorted positions.
-        // POSIX sort (original approach). Fallback to jbrowse sort-gff if needed.
-        $rc = 1; $out = [];
-        $sort_cmd = '(grep "^#" ' . escapeshellarg($target_gff)
-                  . '; grep -v "^#" ' . escapeshellarg($target_gff)
-                  . ' | sort -t"$(printf \'\\t\')" -k1,1 -k4,4n) | bgzip > ' . escapeshellarg($gz_file);
-        exec('/bin/bash -c ' . escapeshellarg($sort_cmd), $out, $rc);
-        if ($rc !== 0 || !file_exists($gz_file)) {
-            $jb_candidates = [
-                __DIR__ . '/../../tools/jbrowse-cli/jbrowse-run.sh',
-                __DIR__ . '/../../tools/jbrowse-cli/bin/jbrowse',
-                '/usr/local/bin/jbrowse', '/usr/bin/jbrowse',
-            ];
-            foreach ($jb_candidates as $p) {
-                if ($p && is_executable($p)) {
-                    $sort_cmd = escapeshellarg($p) . ' sort-gff ' . escapeshellarg($target_gff)
-                              . ' | bgzip > ' . escapeshellarg($gz_file);
-                    exec('/bin/bash -c ' . escapeshellarg($sort_cmd), $out, $rc);
-                    if ($rc === 0) break;
-                }
-            }
-        }
-        if ($rc !== 0 || !file_exists($gz_file)) {
-            $log[] = 'Warning: sort+bgzip failed — annotations will not be available: ' . implode(' ', $out);
-        } else {
-            $log[] = 'Sorted and compressed GFF (bgzip)';
-        }
-    } else {
-        $log[] = 'Compressed GFF already exists';
-    }
-
-    if (file_exists($gz_file) && !file_exists($tbi_file)) {
-        $cmd = 'tabix -p gff ' . escapeshellarg($gz_file) . ' 2>&1';
-        exec($cmd, $out, $rc);
-        if ($rc !== 0) {
-            $log[] = 'Warning: tabix failed — annotation search will not be available: ' . implode(' ', $out);
-        } else {
-            $log[] = 'Indexed GFF (tabix)';
-        }
-    } else {
-        $log[] = 'GFF index already exists';
-    }
-} else {
-    $log[] = 'No genomic.gff found — skipping annotation setup';
-}
+// ── Step 4: (reserved — GFF prep is now per-gene-set, handled below) ─────────
 
 // ── Step 5: Create assembly metadata JSON ────────────────────────────────────
 
@@ -174,11 +117,8 @@ $assembly_name = "{$organism}_{$assembly}";
 $display_name  = str_replace('_', ' ', $organism) . ' (' . $assembly . ')';
 $uri_base      = '/' . $site . '/data/genomes/' . $organism . '/' . $assembly;
 
-// Determine if we have a GFF-based gene track to register
-$gz_file        = "$genomes_dir/annotations.gff3.gz";
-$genes_track_id = $assembly_name . '_genes';
-$primary_gene_tracks = file_exists($gz_file) ? [$genes_track_id] : [];
-
+// Gene tracks are registered per-gene-set after the assembly JSON is created.
+// primaryGeneTracks starts empty and is populated by prepareGeneSetForJBrowse.
 $assembly_data = [
     'name'               => $assembly_name,
     'displayName'        => $display_name,
@@ -186,7 +126,7 @@ $assembly_data = [
     'assemblyId'         => $assembly,
     'aliases'            => [$assembly],
     'defaultAccessLevel' => 'PUBLIC',
-    'primaryGeneTracks'  => $primary_gene_tracks,
+    'primaryGeneTracks'  => [],
     'sequence'           => [
         'type'    => 'ReferenceSequenceTrack',
         'trackId' => $assembly_name . '-ReferenceSequenceTrack',
@@ -215,76 +155,18 @@ if (file_put_contents($assembly_json, json_encode($assembly_data, JSON_PRETTY_PR
 }
 $log[] = "Created assembly definition: {$organism}_{$assembly}.json";
 
-// ── Step 5b: Generate feature coordinate index for BLAST linkouts ────────────
-// Generate for every gene_set subdir that has a genomic.gff.
-require_once __DIR__ . '/../../lib/blast_functions.php';
+// ── Step 5b: Prep all detected gene sets ─────────────────────────────────────
+// prepareGeneSetForJBrowse handles bgzip, tabix, track JSON,
+// primaryGeneTracks update, and feature_coords.tsv for each gene set.
 $gs_count = 0;
 foreach (glob("$source_dir/*/genomic.gff") ?: [] as $gs_gff) {
-    $gs_path = dirname($gs_gff);
-    if (generateFeatureCoordsIndex($gs_path)) {
+    $detected_gs = basename(dirname($gs_gff));
+    if (prepareGeneSetForJBrowse($organism, $assembly, $detected_gs, $config, $log)) {
         $gs_count++;
     }
 }
-if ($gs_count > 0) {
-    $log[] = "Generated feature coordinate index (feature_coords.tsv) for $gs_count gene set(s)";
-} else {
-    $log[] = "Note: feature_coords.tsv not generated (no gene set genomic.gff found)";
-}
-
-// ── Step 6: Create primary Genes track JSON ──────────────────────────────────
-
-if (!empty($primary_gene_tracks)) {
-    $tracks_dir = "$metadata_path/jbrowse2-configs/tracks/$organism/$assembly/gff";
-    if (!is_dir($tracks_dir)) {
-        mkdir($tracks_dir, 0755, true);
-    }
-
-    $genes_track_file = "$tracks_dir/genes.json";
-    if (!file_exists($genes_track_file)) {
-        $genes_track = [
-            'trackId'       => $genes_track_id,
-            'name'          => 'Genes',
-            'assemblyNames' => [$assembly_name],
-            'category'      => ['Gene Models'],
-            'type'          => 'FeatureTrack',
-            'adapter'       => [
-                'type'           => 'Gff3TabixAdapter',
-                'gffGzLocation'  => [
-                    'uri'          => $uri_base . '/annotations.gff3.gz',
-                    'locationType' => 'UriLocation',
-                ],
-                'index'          => [
-                    'location' => [
-                        'uri'          => $uri_base . '/annotations.gff3.gz.tbi',
-                        'locationType' => 'UriLocation',
-                    ],
-                ],
-            ],
-            'displays' => [
-                [
-                    'type'      => 'LinearBasicDisplay',
-                    'displayId' => $genes_track_id . '-LinearBasicDisplay',
-                ],
-            ],
-            'metadata' => [
-                'management_track_id' => $genes_track_id,
-                'description'         => 'Primary gene models',
-                'access_level'        => 'PUBLIC',
-                'is_primary_gene_track' => true,
-                'file_path'           => "$genomes_dir/annotations.gff3.gz",
-                'is_remote'           => false,
-                'added_date'          => date('c'),
-            ],
-        ];
-
-        if (file_put_contents($genes_track_file, json_encode($genes_track, JSON_PRETTY_PRINT)) !== false) {
-            $log[] = "Created primary Genes track: $genes_track_id";
-        } else {
-            $log[] = 'Warning: Failed to write Genes track JSON';
-        }
-    } else {
-        $log[] = 'Genes track already exists';
-    }
+if ($gs_count === 0) {
+    $log[] = "No gene sets with genomic.gff found — register gene sets separately after uploading GFF files";
 }
 
 echo json_encode([
