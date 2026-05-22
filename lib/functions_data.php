@@ -632,6 +632,96 @@ function fetch_taxonomy_lineage($taxon_id, $max_retries = 3) {
     return !empty($lineage) ? $lineage : null;
 }
 
+// ── Local NCBI dump helpers ───────────────────────────────────────────────────
+
+function ncbi_load_local_dump_meta($metadata_path) {
+    $f = "$metadata_path/.ncbi_taxonomy_meta.json";
+    if (!file_exists($f)) return [];
+    return json_decode(file_get_contents($f), true) ?: [];
+}
+
+function ncbi_save_local_dump_meta($metadata_path, array $meta) {
+    $f = "$metadata_path/.ncbi_taxonomy_meta.json";
+    @file_put_contents($f, json_encode($meta, JSON_PRETTY_PRINT));
+    @chmod($f, 0664);
+}
+
+/**
+ * Fetch the 50-byte MD5 file from NCBI. Returns the hex hash string, or null on failure.
+ * Uses a short timeout — callers must handle null gracefully.
+ */
+function ncbi_fetch_remote_md5($md5_url) {
+    $ch = curl_init($md5_url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 5,
+        CURLOPT_USERAGENT      => 'MOOP/1.0 Taxonomy Sync',
+    ]);
+    $body = curl_exec($ch);
+    $err  = curl_errno($ch);
+    $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($err || $http !== 200 || !$body) return null;
+    // File format: "<md5hash>  new_taxdump.tar.gz\n"
+    $parts = preg_split('/\s+/', trim($body));
+    return (!empty($parts[0]) && strlen($parts[0]) === 32) ? $parts[0] : null;
+}
+
+/**
+ * Scan the local ncbi_rankedlineage.dmp.gz for a set of taxon IDs.
+ *
+ * Returns array keyed by taxon_id => ['lineage'=>[...], 'image'=>null, 'fetched'=>'...', 'source'=>'ncbi_dump'].
+ * Stops early once all requested IDs are found.
+ *
+ * @param array  $taxid_set   taxon_id (string) => any truthy value
+ * @param string $stored_gz   path to ncbi_rankedlineage.dmp.gz
+ */
+function ncbi_scan_local_dump(array $taxid_set, string $stored_gz): array {
+    if (!file_exists($stored_gz) || empty($taxid_set)) return [];
+
+    $rank_fields = [
+        'superkingdom' => 9, 'kingdom' => 8, 'phylum' => 7,
+        'class'        => 6, 'order'   => 5, 'family' => 4,
+        'genus'        => 3, 'species' => 1,
+    ];
+
+    $results = [];
+    $needed  = $taxid_set;
+
+    $gz = gzopen($stored_gz, 'r');
+    if (!$gz) return [];
+
+    while (!empty($needed) && ($line = gzgets($gz)) !== false) {
+        $tab = strpos($line, "\t");
+        if ($tab === false) continue;
+        $tid = substr($line, 0, $tab);
+        if (!isset($needed[$tid])) continue;
+
+        $stripped = rtrim($line, "\r\n");
+        if (substr($stripped, -2) === "\t|") $stripped = substr($stripped, 0, -2);
+        $parts   = explode("\t|\t", $stripped);
+        $lineage = [];
+        foreach ($rank_fields as $rank => $idx) {
+            $name = isset($parts[$idx]) ? trim($parts[$idx]) : '';
+            if ($name !== '') $lineage[] = ['rank' => $rank, 'name' => $name];
+        }
+        if (!empty($lineage)) {
+            $results[$tid] = [
+                'lineage' => $lineage,
+                'image'   => null,
+                'fetched' => date('Y-m-d'),
+                'source'  => 'ncbi_dump',
+            ];
+        }
+        unset($needed[$tid]);
+    }
+    gzclose($gz);
+
+    return $results;
+}
+
 /**
  * Load the taxonomy lineage cache from disk.
  * Returns array keyed by taxon_id (string). The 'generated' metadata key is stripped.
@@ -679,6 +769,29 @@ function refresh_lineage_cache($organisms, $lineage_cache, $progress_cb = null) 
         }
     }
 
+    if (empty($to_fetch)) return $lineage_cache;
+
+    // Try local dump first — one scan covers all missing organisms, no API calls.
+    $config    = ConfigManager::getInstance();
+    $stored_gz = $config->getPath('metadata_path') . '/ncbi_rankedlineage.dmp.gz';
+    if (file_exists($stored_gz)) {
+        $taxid_set = [];
+        foreach ($to_fetch as $data) {
+            if (!empty($data['taxon_id'])) $taxid_set[(string)$data['taxon_id']] = true;
+        }
+        $from_dump = ncbi_scan_local_dump($taxid_set, $stored_gz);
+        foreach ($from_dump as $tid => $entry) {
+            $lineage_cache[$tid] = $entry;
+        }
+        // Remove from to_fetch any organism whose lineage we just resolved
+        foreach ($to_fetch as $org_name => $data) {
+            if (isset($lineage_cache[(string)$data['taxon_id']])) {
+                unset($to_fetch[$org_name]);
+            }
+        }
+    }
+
+    // Fall back to NCBI API for anything still missing (genuinely new taxa, etc.)
     $total   = count($to_fetch);
     $current = 0;
     foreach ($to_fetch as $org_name => $data) {

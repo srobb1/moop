@@ -8,7 +8,9 @@
  *   then iterates through a list of small, fast tasks.
  *
  * ADDING A NEW TASK:
- *   1. Write a function below (keep it fast — no network calls, no heavy I/O).
+ *   1. Write a function below (keep it fast — no blocking network calls, no heavy I/O).
+ *      If a periodic network operation is needed, launch it as a background process
+ *      (see housekeeping_check_ncbi_taxonomy_update for the pattern).
  *   2. Add it to the $tasks array in run_housekeeping().
  *   That's it. It will run automatically on the next admin login.
  */
@@ -30,6 +32,7 @@ function run_housekeeping() {
         ['name' => 'snapshot_site_data',         'fn' => 'housekeeping_snapshot_site_data'],
         ['name' => 'environment_check',          'fn' => 'housekeeping_environment_check'],
         ['name' => 'refresh_annotation_caches',  'fn' => 'housekeeping_refresh_annotation_caches'],
+        ['name' => 'ncbi_taxonomy_update',       'fn' => 'housekeeping_check_ncbi_taxonomy_update'],
     ];
 
     foreach ($tasks as $task) {
@@ -413,5 +416,65 @@ function housekeeping_refresh_annotation_caches() {
 
     if ($refreshed > 0) {
         error_log("MOOP housekeeping: refreshed annotation source caches for $refreshed organism(s)");
+    }
+}
+
+/**
+ * Auto-update the local NCBI taxonomy dump once per 30 days.
+ *
+ * Pure local check — reads a timestamp from .ncbi_taxonomy_meta.json and
+ * exits immediately if < 30 days old. No network call happens here.
+ * If an update is due, launches sync_ncbi_taxonomy_dump.php as a background
+ * process (same pattern as the organism cache refresh) and returns instantly.
+ *
+ * The background script fetches the 50-byte NCBI MD5, compares it, and only
+ * re-downloads the ~60 MB dump when it has actually changed.
+ */
+function housekeeping_check_ncbi_taxonomy_update() {
+    $config        = ConfigManager::getInstance();
+    $metadata_path = $config->getPath('metadata_path');
+    $lock_file     = "$metadata_path/.ncbi_taxonomy_sync_lock";
+    $script_path   = realpath(dirname(__DIR__) . '/scripts/sync_ncbi_taxonomy_dump.php');
+
+    if (!$script_path || !file_exists($script_path)) return;
+
+    // Already running — don't stack jobs
+    if (file_exists($lock_file)) {
+        $pid = (int)trim(@file_get_contents($lock_file));
+        if ($pid > 0 && file_exists("/proc/$pid")) return;
+        @unlink($lock_file); // stale lock
+    }
+
+    // Check last_checked timestamp — pure local read
+    $meta         = function_exists('ncbi_load_local_dump_meta')
+                  ? ncbi_load_local_dump_meta($metadata_path)
+                  : [];
+    $last_checked = $meta['last_checked'] ?? null;
+    $stored_gz    = "$metadata_path/ncbi_rankedlineage.dmp.gz";
+
+    // If no local dump at all, skip — user needs to run the first sync manually
+    if (!file_exists($stored_gz)) return;
+
+    // 30-day check interval
+    $check_interval = 30 * 86400;
+    if ($last_checked && (time() - strtotime($last_checked)) < $check_interval) return;
+
+    // Due for a check — launch background sync
+    file_put_contents($lock_file, '0');
+    $shell_cmd = 'echo $$ > ' . escapeshellarg($lock_file)
+               . ' ; php ' . escapeshellarg($script_path)
+               . ' > /dev/null 2>&1'
+               . ' ; rm -f ' . escapeshellarg($lock_file);
+
+    $descriptors = [
+        0 => ['file', '/dev/null', 'r'],
+        1 => ['file', '/dev/null', 'w'],
+        2 => ['file', '/dev/null', 'w'],
+    ];
+    $proc = @proc_open(['/bin/sh', '-c', $shell_cmd], $descriptors, $pipes);
+    if (is_resource($proc)) {
+        error_log('MOOP housekeeping: launched NCBI taxonomy dump sync (30-day interval)');
+    } else {
+        @unlink($lock_file);
     }
 }
