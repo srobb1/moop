@@ -175,8 +175,9 @@ $(document).ready(function () {
     $('#organism-filter').on('input', function () {
         const query = $(this).val().toLowerCase().trim();
         $('.organism-block').each(function () {
-            const name = String($(this).data('organism-name') || '');
-            $(this).toggle(query === '' || name.includes(query));
+            const name   = String($(this).data('organism-name') || '');
+            const common = String($(this).data('common-name') || '');
+            $(this).toggle(query === '' || name.includes(query) || common.includes(query));
         });
     });
 

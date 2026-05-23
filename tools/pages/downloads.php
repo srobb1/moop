@@ -4,9 +4,10 @@
  * Rendered by tools/downloads.php via display-template.php.
  * Variables available: $download_tree, $site, $siteTitle, $page_title,
  *                      $context_organism, $context_assembly, $context_group,
- *                      $display_name, $filter_organisms
+ *                      $display_name, $filter_organisms, $organism_common_names
  */
-$filter_organisms = $filter_organisms ?? [];
+$filter_organisms      = $filter_organisms ?? [];
+$organism_common_names = $organism_common_names ?? [];
 $has_context = !empty($context_organism) || !empty($context_assembly)
             || !empty($context_group)    || !empty($filter_organisms);
 $clear_url   = '/' . $site . '/tools/downloads.php';
@@ -93,10 +94,17 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
   <!-- Download tree -->
   <div id="download-tree">
     <?php $org_idx = 0; foreach ($download_tree as $organism => $assemblies): $org_idx++; ?>
-    <?php $org_id = 'org_' . $org_idx; $org_display = str_replace('_', ' ', $organism); ?>
+    <?php
+      $org_id          = 'org_' . $org_idx;
+      $org_display     = str_replace('_', ' ', $organism);
+      $org_common_name = $organism_common_names[$organism] ?? '';
+      $show_common     = $org_common_name !== ''
+                      && strtolower($org_common_name) !== strtolower($org_display);
+    ?>
 
     <div class="organism-block card mb-2"
-         data-organism-name="<?= htmlspecialchars(strtolower($org_display)) ?>">
+         data-organism-name="<?= htmlspecialchars(strtolower($org_display)) ?>"
+         data-common-name="<?= htmlspecialchars(strtolower($org_common_name)) ?>">
 
       <!-- Organism header -->
       <div class="card-header d-flex align-items-center py-2 organism-header"
@@ -112,7 +120,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
                for="cb-<?= $org_id ?>"
                style="cursor:pointer;"
                onclick="event.stopPropagation()">
-          <em><?= htmlspecialchars($org_display) ?></em>
+          <em><?= htmlspecialchars($org_display) ?></em><?php if ($show_common): ?><small class="text-muted fw-normal"> · <?= htmlspecialchars($org_common_name) ?></small><?php endif; ?>
         </label>
         <small class="text-muted me-3 flex-shrink-0">
           <?= count($assemblies) ?> assembly<?= count($assemblies) !== 1 ? 'ies' : '' ?>

@@ -154,6 +154,17 @@ foreach ($unique_sources as $source) {
 
 ksort($download_tree);
 
+// Load common names for organisms that have downloadable files
+$organism_common_names = [];
+$organism_data_path = $config->getPath('organism_data');
+foreach (array_keys($download_tree) as $organism) {
+    $json_file = "$organism_data_path/$organism/organism.json";
+    if (file_exists($json_file)) {
+        $meta = @json_decode(@file_get_contents($json_file), true);
+        $organism_common_names[$organism] = $meta['common_name'] ?? '';
+    }
+}
+
 // Build page title
 $page_title = 'Downloads';
 if (!empty($display_name)) {
@@ -182,8 +193,9 @@ $data = [
     'context_gene_set' => $context_gene_set,
     'context_group'    => $context_group,
     'display_name'     => $display_name,
-    'filter_organisms' => $filter_organisms,
-    'page_title'       => $page_title,
+    'filter_organisms'       => $filter_organisms,
+    'page_title'             => $page_title,
+    'organism_common_names'  => $organism_common_names,
 ];
 
 include_once __DIR__ . '/display-template.php';
