@@ -427,8 +427,14 @@
                  <?php if (isset($data['info']['genus']) && isset($data['info']['species'])): ?>
                    <br><small class="text-muted"><em><?= htmlspecialchars($data['info']['genus']) ?> <?= htmlspecialchars($data['info']['species']) ?></em></small>
                  <?php endif; ?>
-                 <br><button class="btn btn-sm btn-outline-secondary" type="button" onclick="togglePath(this, '<?= htmlspecialchars($data['path']) ?>', '<?= htmlspecialchars($organism) ?>')">
+                 <br>
+                 <button class="btn btn-sm btn-outline-secondary" type="button" onclick="togglePath(this, '<?= htmlspecialchars($data['path']) ?>', '<?= htmlspecialchars($organism) ?>')">
                    <i class="fa fa-folder"></i> View Path
+                 </button>
+                 <button class="btn btn-sm btn-outline-secondary" type="button"
+                         onclick="rescanSingleOrganism(this, <?= htmlspecialchars(json_encode($organism)) ?>)"
+                         title="Force rescan this organism only">
+                   <i class="fa fa-sync-alt"></i> Rescan
                  </button>
                </td>
                <td>

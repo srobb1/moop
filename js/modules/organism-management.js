@@ -837,3 +837,9 @@ function forceRescanOrganisms() {
   const btn = document.getElementById('forceRescanBtn');
   refreshOrganismCache(btn, document.getElementById('refreshStatus'), true, btn?.innerHTML);
 }
+
+function rescanSingleOrganism(btn, organism) {
+  const statusEl = document.getElementById('refreshStatus');
+  const label = btn ? btn.innerHTML : '<i class="fa fa-sync-alt"></i>';
+  refreshOrganismCache(btn, statusEl, false, label, organism);
+}

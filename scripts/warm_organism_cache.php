@@ -21,6 +21,15 @@ if (php_sapi_name() !== 'cli') {
 
 $force = in_array('--force', $argv);
 
+// Optional: rescan a single named organism and skip taxonomy/annotation updates.
+$single_organism = null;
+foreach ($argv as $arg) {
+    if (str_starts_with($arg, '--organism=')) {
+        $single_organism = substr($arg, 11);
+        break;
+    }
+}
+
 // Bootstrap the app (config + all library functions)
 $base_dir = dirname(__DIR__);
 require_once "$base_dir/includes/config_init.php";
@@ -44,7 +53,7 @@ $org_dirs = array_filter(scandir($organism_data), function($f) use ($organism_da
 });
 echo "Found " . count($org_dirs) . " organisms\n";
 
-if (!$force) {
+if (!$force && !$single_organism) {
     // Check if organism cache is fresh
     $cache_file = "$organism_data/.organism_cache.json";
     if (file_exists($cache_file)) {
@@ -92,14 +101,32 @@ if (!$force) {
     }
 }
 
-echo "Scanning organisms...\n";
+if ($single_organism) {
+    echo "Rescanning single organism: $single_organism\n";
+} else {
+    echo "Scanning organisms...\n";
+}
 $start = microtime(true);
 
-$progress = function($organism, $current, $total) {
-    echo "  [$current/$total] $organism\n";
+$progress_file = "$organism_data/.organism_cache_progress.json";
+$progress = function($organism, $current, $total, $step = 'scanning') use ($progress_file) {
+    if ($step === 'scanning') {
+        echo "  [$current/$total] $organism\n";
+    }
+    @file_put_contents($progress_file, json_encode([
+        'organism' => $organism,
+        'step'     => $step,
+        'current'  => $current,
+        'total'    => $total,
+    ]));
 };
 
-$organisms = getCachedOrganismsInfo($organism_data, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force, $progress);
+$organisms = getCachedOrganismsInfo(
+    $organism_data, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file,
+    $force && !$single_organism,       // force_refresh: only for all-organism scans
+    $progress,
+    $single_organism ? [$single_organism] : []  // force_organisms: targeted rescan
+);
 
 $elapsed = round(microtime(true) - $start, 2);
 echo "Done! Scanned " . count($organisms) . " organisms in {$elapsed}s\n";
@@ -111,7 +138,15 @@ if (file_exists($cache_file)) {
     echo "Cache written: $cache_file ({$size} KB)\n";
 } else {
     echo "WARNING: Cache file was not written. Check directory permissions.\n";
+    @unlink($progress_file);
     exit(1);
+}
+
+@unlink($progress_file);
+
+if ($single_organism) {
+    echo "Done.\n";
+    exit(0);
 }
 
 // --- Warm annotation config cache (per-organism, only re-query changed databases) ---
@@ -203,7 +238,7 @@ if (file_exists($tree_config_file) && !is_writable($tree_config_file)) {
             }
             unset($org_entry);
             if ($changed) {
-                @file_put_contents($org_cache_file, json_encode($org_cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                organism_cache_write_atomic($org_cache_file, $org_cache);
                 echo "Organism cache patched with updated in_taxonomy_tree values.\n";
             }
         }

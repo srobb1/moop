@@ -1238,7 +1238,7 @@ function organism_cache_write_atomic($cache_file, array $data) {
     return true;
 }
 
-function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh = false, $progress_callback = null) {
+function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh = false, $progress_callback = null, $force_organisms = []) {
     $cache_file = "$organism_data_path/.organism_cache.json";
 
     // Build per-organism fingerprints for all current organisms
@@ -1275,6 +1275,11 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     $organisms_config_only = [];
 
     foreach ($current_fingerprints as $org_name => $fingerprint) {
+        // Specific organisms can be force-rescanned regardless of fingerprint.
+        if (!empty($force_organisms) && in_array($org_name, $force_organisms, true)) {
+            $organisms_to_scan[] = $org_name;
+            continue;
+        }
         $cached_fingerprint = $cached_fingerprints[$org_name] ?? null;
         if ($cached_fingerprint === $fingerprint) {
             if (!$config_changed) {
@@ -1343,7 +1348,7 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     foreach ($organisms_to_scan as $org_name) {
         $current++;
         if ($progress_callback) {
-            $progress_callback($org_name, $current, $total_scan_count);
+            $progress_callback($org_name, $current, $total_scan_count, 'scanning');
         }
         
         $org_path = "$organism_data_path/$org_name";
@@ -1377,10 +1382,19 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
         $assembly_validation = null;
         $fasta_validation = null;
         if ($has_db) {
+            if ($progress_callback) {
+                $progress_callback($org_name, $current, $total_scan_count, 'checking database');
+            }
             $db_validation = validateDatabaseIntegrity($db_file);
+            if ($progress_callback) {
+                $progress_callback($org_name, $current, $total_scan_count, 'checking assembly directories');
+            }
             $assembly_validation = validateAssemblyDirectories($db_file, $org_path);
         }
         // Validate FASTA files in assembly directories
+        if ($progress_callback) {
+            $progress_callback($org_name, $current, $total_scan_count, 'checking FASTA files');
+        }
         $fasta_validation = validateAssemblyFastaFiles($org_path, $sequence_types);
         
         $org_info = [
@@ -1396,6 +1410,9 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
         ];
         
         // Pre-compute blast validation per assembly — aggregate across gene_set subdirs
+        if ($progress_callback) {
+            $progress_callback($org_name, $current, $total_scan_count, 'checking BLAST indexes');
+        }
         $blast_by_assembly = [];
         foreach ($org_info['assemblies'] as $assembly) {
             $assembly_path = $org_path . '/' . $assembly;
@@ -1507,6 +1524,12 @@ function buildPerOrganismFingerprints($organism_data_path) {
         $parts[] = 'asm:' . count($assemblies);
         foreach ($assemblies as $asm) {
             $parts[] = 'asm_mtime:' . filemtime("$org_path/$asm");
+            // Gene_set subdirs sit one level below the assembly dir. On Linux, only direct
+            // children affect a directory's mtime, so files changed inside a gene_set subdir
+            // (e.g. BLAST indexes rebuilt) must be tracked here explicitly.
+            foreach (glob("$org_path/$asm/*", GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                $parts[] = 'gs_mtime:' . basename($gs_dir) . ':' . filemtime($gs_dir);
+            }
         }
         
         $fingerprints[$organism] = md5(implode('|', $parts));
