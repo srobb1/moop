@@ -34,8 +34,10 @@ if ($raw_cache) {
     $cached_config_fp = $raw_cache['config_fingerprint'] ?? null;
     $current_config_fp = buildConfigFingerprint($taxonomy_tree_file, $groups_file);
     if ($cached_config_fp !== $current_config_fp) {
-        // Groups or taxonomy tree changed — all organisms need a rescan
-        $stale_organisms = array_keys($organisms);
+        // Config (groups/taxonomy) changed — show the banner so the user knows a refresh
+        // is needed, but don't mark individual rows as stale. The per-row badge means
+        // that organism's own files changed; a groups edit doesn't change any organism's
+        // files, and the cache refresh for this case is fast (no DB/FASTA/BLAST recheck).
         $cache_stale_reason = 'groups or taxonomy config changed';
     } else {
         $cached_org_fps = $raw_cache['org_fingerprints'] ?? [];
