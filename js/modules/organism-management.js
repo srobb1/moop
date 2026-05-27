@@ -843,3 +843,113 @@ function rescanSingleOrganism(btn, organism) {
   const label = btn ? btn.innerHTML : '<i class="fa fa-sync-alt"></i>';
   refreshOrganismCache(btn, statusEl, false, label, organism);
 }
+
+// ── Quick Add Group ──────────────────────────────────────────────────────────
+
+let _quickAddOrganism = null;
+let _quickAddCellId   = null;
+
+function openQuickAddGroupModal(organism, cellId) {
+  _quickAddOrganism = organism;
+  _quickAddCellId   = cellId;
+
+  document.getElementById('quickAddOrgName').textContent = organism;
+  document.getElementById('quickAddGroupName').value = '';
+
+  const resultDiv = document.getElementById('quickAddResult');
+  resultDiv.style.display = 'none';
+  resultDiv.innerHTML = '';
+
+  const btn = document.getElementById('quickAddSubmitBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fa fa-plus"></i> Add Group';
+
+  // Populate datalist with existing groups
+  const dl = document.getElementById('quickAddGroupList');
+  dl.innerHTML = '';
+  (window.existingGroups || []).forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g;
+    dl.appendChild(opt);
+  });
+
+  new bootstrap.Modal(document.getElementById('quickAddGroupModal')).show();
+  setTimeout(() => document.getElementById('quickAddGroupName').focus(), 300);
+}
+
+function submitQuickAddGroup() {
+  const groupName = document.getElementById('quickAddGroupName').value.trim();
+  const resultDiv = document.getElementById('quickAddResult');
+  const btn       = document.getElementById('quickAddSubmitBtn');
+
+  if (!groupName) {
+    resultDiv.innerHTML = '<div class="alert alert-warning py-1 px-2 small mb-0">Enter a group name.</div>';
+    resultDiv.style.display = '';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Adding…';
+
+  const tok = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+  fetch(sitePath + '/admin/api/quick_add_group.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRF-Token': tok
+    },
+    body: 'organism=' + encodeURIComponent(_quickAddOrganism) +
+          '&group_name=' + encodeURIComponent(groupName)
+  })
+  .then(r => r.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-plus"></i> Add Group';
+    if (data.success) {
+      resultDiv.innerHTML =
+        '<div class="alert alert-success py-1 px-2 small mb-0"><i class="fa fa-check"></i> ' +
+        'Added ' + data.added + ' entr' + (data.added === 1 ? 'y' : 'ies') +
+        ' to <strong>' + escapeHtml(data.group) + '</strong>.</div>';
+      resultDiv.style.display = '';
+      _updateGroupsCell(_quickAddCellId, _quickAddOrganism, data.group);
+      setTimeout(() => {
+        bootstrap.Modal.getInstance(document.getElementById('quickAddGroupModal'))?.hide();
+      }, 1400);
+    } else {
+      resultDiv.innerHTML =
+        '<div class="alert alert-danger py-1 px-2 small mb-0"><i class="fa fa-times"></i> ' +
+        escapeHtml(data.error || 'Unknown error') + '</div>';
+      resultDiv.style.display = '';
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-plus"></i> Add Group';
+    resultDiv.innerHTML =
+      '<div class="alert alert-danger py-1 px-2 small mb-0">Request failed: ' + escapeHtml(String(err)) + '</div>';
+    resultDiv.style.display = '';
+  });
+}
+
+function _updateGroupsCell(cellId, organism, groupName) {
+  const cell = document.getElementById(cellId);
+  if (cell) {
+    cell.innerHTML =
+      '<span class="btn btn-sm btn-outline-success disabled"><i class="fa fa-check-circle"></i> OK</span>' +
+      '<div class="mt-1"><span class="badge bg-secondary">' + escapeHtml(groupName) + '</span></div>';
+  }
+  // Remove 'groups' from data-issues on the row so the filter updates
+  const table = document.getElementById('organismsTable');
+  if (!table) return;
+  table.querySelectorAll('tbody tr').forEach(row => {
+    const issues = (row.dataset.issues || '').split(' ').filter(i => i !== 'groups');
+    // Match on organism name in data or by scanning the first cell link
+    const link = row.querySelector('td:first-child a');
+    if (link && link.textContent.trim().startsWith(organism)) {
+      row.dataset.issues = issues.join(' ');
+      const noIssues = issues.every(i => i === '');
+      if (noIssues) row.dataset.status = 'complete';
+    }
+  });
+}

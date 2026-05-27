@@ -379,6 +379,7 @@
              <th>Organism</th>
              <th>Common Name</th>
              <th>Tree Status</th>
+             <th>Groups</th>
              <th>Assemblies</th>
              <th>DB Status</th>
              <th>Metadata Status</th>
@@ -458,6 +459,35 @@
                    <span class="btn btn-sm btn-outline-warning disabled" title="Run Refresh Cache to rebuild the taxonomy tree">
                      <i class="fa fa-times-circle"></i> Missing
                    </span>
+                 <?php endif; ?>
+               </td>
+               <?php
+                 $safe_groups_id = 'groups-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism);
+                 $in_groups = $row_checks['assemblies_in_groups'] ?? false;
+                 $org_group_list = $organism_groups_lookup[$organism] ?? [];
+               ?>
+               <td id="<?= $safe_groups_id ?>">
+                 <?php if ($in_groups): ?>
+                   <span class="btn btn-sm btn-outline-success disabled">
+                     <i class="fa fa-check-circle"></i> OK
+                   </span>
+                   <?php if (!empty($org_group_list)): ?>
+                     <div class="mt-1">
+                       <?php foreach ($org_group_list as $og): ?>
+                         <span class="badge bg-secondary"><?= htmlspecialchars($og) ?></span>
+                       <?php endforeach; ?>
+                     </div>
+                   <?php endif; ?>
+                 <?php else: ?>
+                   <span class="btn btn-sm btn-outline-warning disabled">
+                     <i class="fa fa-times-circle"></i> Missing
+                   </span>
+                   <div class="mt-1">
+                     <button class="btn btn-sm btn-outline-primary"
+                             onclick="openQuickAddGroupModal(<?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($safe_groups_id)) ?>)">
+                       <i class="fa fa-plus"></i> Add to Group
+                     </button>
+                   </div>
                  <?php endif; ?>
                </td>
                <td>
@@ -659,6 +689,33 @@
 
 <!-- Dynamic modal container for on-demand organism modals -->
 <div id="dynamicModal" class="modal fade" tabindex="-1" aria-modal="true" role="dialog"></div>
+
+<!-- Quick Add Group Modal -->
+<div class="modal fade" id="quickAddGroupModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa fa-layer-group"></i> Add to Group</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-2">Organism: <strong id="quickAddOrgName"></strong></p>
+        <label class="form-label fw-bold" for="quickAddGroupName">Group Name</label>
+        <input type="text" class="form-control" id="quickAddGroupName"
+               list="quickAddGroupList" placeholder="e.g. Bats, Public, Insects"
+               onkeydown="if(event.key==='Enter') submitQuickAddGroup()">
+        <datalist id="quickAddGroupList"></datalist>
+        <div id="quickAddResult" class="mt-2" style="display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="quickAddSubmitBtn" onclick="submitQuickAddGroup()">
+          <i class="fa fa-plus"></i> Add Group
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Help Modal -->
 <div class="modal fade" id="helpModal" tabindex="-1">

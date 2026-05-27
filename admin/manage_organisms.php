@@ -11,6 +11,20 @@ $metadata_path = $config->getPath('metadata_path');
 $sequence_types = $config->getSequenceTypes();
 $groups_data = getGroupData();
 $taxonomy_tree_file = $config->getPath('metadata_path') . '/taxonomy_tree_config.json';
+
+// Pre-build lookup structures for the Groups column
+$existing_groups = getAllExistingGroups($groups_data);
+$organism_groups_lookup = [];
+foreach ($groups_data as $_ge) {
+    foreach ($_ge['groups'] as $_g) {
+        $organism_groups_lookup[$_ge['organism']][$_g] = true;
+    }
+}
+foreach ($organism_groups_lookup as &$_gs) {
+    $_gs = array_keys($_gs);
+    sort($_gs);
+}
+unset($_gs, $_ge, $_g);
 $groups_file = $metadata_path . '/organism_assembly_groups.json';
 
 // Read the cache file directly — never scan synchronously in a web request.
@@ -281,6 +295,8 @@ if (file_exists($lineage_cache_file)) {
 $data = [
     'organisms' => $organisms,
     'groups_data' => $groups_data,
+    'existing_groups' => $existing_groups,
+    'organism_groups_lookup' => $organism_groups_lookup,
     'sequence_types' => $sequence_types,
     'config' => $config,
     'organism_data' => $organism_data,
@@ -296,6 +312,7 @@ $data = [
     ],
     'inline_scripts' => [
         "const sitePath = '/" . $config->getString('site') . "';",
+        "const existingGroups = " . json_encode($existing_groups) . ";",
         "(function(){
   function setAgeText(el) {
     if (!el || !el.dataset.generated) return;

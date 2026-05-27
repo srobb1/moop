@@ -82,6 +82,55 @@
     <?php endif; ?>
   <?php endif; ?>
 
+  <!-- Data Health Alerts -->
+  <?php
+    $has_health_issues = ($health_alerts['ungrouped'] > 0 || $health_alerts['not_in_tree'] > 0 || $health_alerts['stale_groups'] > 0);
+    if ($has_health_issues):
+  ?>
+  <div class="card mb-4 border-warning">
+    <div class="card-header bg-warning bg-opacity-10">
+      <h5 class="mb-0"><i class="fa fa-exclamation-triangle text-warning"></i> Data Health Issues</h5>
+    </div>
+    <div class="card-body p-0">
+      <?php if ($health_alerts['ungrouped'] > 0): ?>
+      <div class="alert alert-warning mb-0 border-0 rounded-0 <?= ($health_alerts['stale_groups'] > 0 || $health_alerts['not_in_tree'] > 0) ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
+        <div>
+          <i class="fa fa-layer-group me-2"></i>
+          <strong><?= $health_alerts['ungrouped'] ?> organism<?= $health_alerts['ungrouped'] > 1 ? 's' : '' ?></strong>
+          not assigned to any group — invisible to users.
+          Use "Add to Group" on the Manage Organisms page or fix in Manage Groups.
+        </div>
+        <div class="d-flex gap-2 flex-shrink-0">
+          <a href="manage_organisms.php" class="btn btn-sm btn-warning">Manage Organisms</a>
+          <a href="manage_groups.php" class="btn btn-sm btn-outline-warning">Manage Groups</a>
+        </div>
+      </div>
+      <?php endif; ?>
+      <?php if ($health_alerts['stale_groups'] > 0): ?>
+      <div class="alert alert-warning mb-0 border-0 rounded-0 <?= $health_alerts['not_in_tree'] > 0 ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
+        <div>
+          <i class="fa fa-trash-alt me-2"></i>
+          <strong><?= $health_alerts['stale_groups'] ?> stale group entr<?= $health_alerts['stale_groups'] > 1 ? 'ies' : 'y' ?></strong>
+          reference organisms or assemblies no longer on disk.
+        </div>
+        <a href="manage_groups.php" class="btn btn-sm btn-warning flex-shrink-0">Clean Up in Groups</a>
+      </div>
+      <?php endif; ?>
+      <?php if ($health_alerts['not_in_tree'] > 0): ?>
+      <div class="alert alert-info mb-0 border-0 rounded-0 d-flex align-items-center justify-content-between gap-3">
+        <div>
+          <i class="fa fa-sitemap me-2"></i>
+          <strong><?= $health_alerts['not_in_tree'] ?> organism<?= $health_alerts['not_in_tree'] > 1 ? 's' : '' ?></strong>
+          not in the taxonomy tree — won't appear in the homepage organism selector.
+          Check that <code>taxon_id</code> is set in <code>organism.json</code> and run Refresh Cache.
+        </div>
+        <a href="manage_organisms.php" class="btn btn-sm btn-info flex-shrink-0">View Organisms</a>
+      </div>
+      <?php endif; ?>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <!-- Environment Warnings -->
   <?php if (!empty($_SESSION['env_warnings'])): ?>
   <div class="card mb-4 border-warning">
