@@ -1,6 +1,6 @@
 <?php
 /**
- * JBrowse gene set prep — shared by admin_register_assembly and admin_register_gene_set.
+ * JBrowse gene set prep — shared by jbrowse_register_assembly and jbrowse_register_gene_set.
  */
 
 require_once __DIR__ . '/../blast_functions.php';

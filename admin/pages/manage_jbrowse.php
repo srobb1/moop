@@ -584,7 +584,7 @@ async function geneSetAction(organism, assembly, geneSet, endpoint, rowId, btn) 
     });
 
     try {
-        const resp = await fetch(`/${sitePath}/api/jbrowse2/${endpoint}`, {
+        const resp = await fetch(`/${sitePath}/admin/api/${endpoint}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -601,7 +601,7 @@ async function geneSetAction(organism, assembly, geneSet, endpoint, rowId, btn) 
             btn.className = 'btn btn-sm btn-outline-secondary gs-reprep-btn';
             btn.innerHTML = '<i class="fa fa-sync"></i> Re-prep GFF';
             btn.removeEventListener('click', btn._gsHandler);
-            btn._gsHandler = () => geneSetAction(organism, assembly, geneSet, 'admin_reprep_gff.php', rowId, btn);
+            btn._gsHandler = () => geneSetAction(organism, assembly, geneSet, 'jbrowse_reprep_gff.php', rowId, btn);
             btn.addEventListener('click', btn._gsHandler);
             btn.disabled = false;
 
@@ -626,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { organism, assembly } = btn.dataset;
         const geneSet = btn.dataset.geneSet;
         const rowId   = btn.dataset.row;
-        btn._gsHandler = () => geneSetAction(organism, assembly, geneSet, 'admin_register_gene_set.php', rowId, btn);
+        btn._gsHandler = () => geneSetAction(organism, assembly, geneSet, 'jbrowse_register_gene_set.php', rowId, btn);
         btn.addEventListener('click', btn._gsHandler);
     });
 
@@ -634,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { organism, assembly } = btn.dataset;
         const geneSet = btn.dataset.geneSet;
         const rowId   = btn.dataset.row;
-        btn._gsHandler = () => geneSetAction(organism, assembly, geneSet, 'admin_reprep_gff.php', rowId, btn);
+        btn._gsHandler = () => geneSetAction(organism, assembly, geneSet, 'jbrowse_reprep_gff.php', rowId, btn);
         btn.addEventListener('click', btn._gsHandler);
     });
 });
