@@ -8,7 +8,6 @@
 ob_start();
 
 include_once __DIR__ . '/tool_init.php';
-include_once __DIR__ . '/../lib/search_functions.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
