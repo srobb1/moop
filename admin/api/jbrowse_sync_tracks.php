@@ -87,7 +87,7 @@ foreach ($assembliesToSync as $item) {
     }
     
     // Build command
-    $cmd = "php " . escapeshellarg("$site_path/tools/jbrowse/generate_tracks_from_sheet.php") . " ";
+    $cmd = "php " . escapeshellarg("$site_path/scripts/generate_tracks_from_sheet.php") . " ";
     $cmd .= escapeshellarg($sheetId) . " ";
     $cmd .= "--gid " . escapeshellarg($gid) . " ";
     $cmd .= "--organism " . escapeshellarg($org) . " ";

@@ -247,7 +247,7 @@ try {
         if (!$options['dry_run']) {
             echo "Done!\n\n";
             echo "Next step: Generate JBrowse browser configs\n";
-            echo "  php tools/jbrowse/generate-jbrowse-configs.php\n";
+            echo "  php scripts/generate_tracks_from_sheet.php\n";
         } else {
             echo "DRY RUN - No changes were made\n";
         }
@@ -353,7 +353,7 @@ Examples:
   php generate_synteny_tracks_from_sheet.php 1AbC123... --gid 0 --force track1,track2
 
 After generating tracks, run:
-  php tools/jbrowse/generate-jbrowse-configs.php
+  php scripts/generate_tracks_from_sheet.php
 
 HELP;
 }

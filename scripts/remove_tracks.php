@@ -227,7 +227,7 @@ if (!empty($options['dry_run'])) {
     if (empty($options['remove_data'])) {
         echo "\n";
         echo "Data files preserved. Regenerate tracks with:\n";
-        echo "  php tools/jbrowse/generate_tracks_from_sheet.php ...\n";
+        echo "  php scripts/generate_tracks_from_sheet.php ...\n";
     }
 }
 
