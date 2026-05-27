@@ -27,16 +27,16 @@ $cache_file    = "$organism_data/.organism_cache.json";
 $lock_file     = "$organism_data/.organism_cache_lock";
 $cache_info    = ['generated' => null, 'organism_count' => 0, 'refreshing' => false];
 $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0];
+$_raw_cache_data = [];
 if (file_exists($cache_file)) {
     $raw = json_decode(file_get_contents($cache_file), true);
     if ($raw) {
         $cache_info['generated']      = $raw['generated'] ?? null;
         $cache_info['organism_count'] = count($raw['data'] ?? []);
-        foreach ($raw['data'] ?? [] as $_org_data) {
+        $_raw_cache_data = $raw['data'] ?? [];
+        // not_in_tree is stable between group edits — reading from cache is fine
+        foreach ($_raw_cache_data as $_org_data) {
             $_checks = $_org_data['overall_status']['checks'] ?? [];
-            if (isset($_checks['assemblies_in_groups']) && !$_checks['assemblies_in_groups']) {
-                $health_alerts['ungrouped']++;
-            }
             if (isset($_checks['in_taxonomy_tree']) && !$_checks['in_taxonomy_tree']) {
                 $health_alerts['not_in_tree']++;
             }
@@ -46,19 +46,35 @@ if (file_exists($cache_file)) {
 if (file_exists($lock_file) && (time() - filemtime($lock_file)) < 600) {
     $cache_info['refreshing'] = true;
 }
-// Count stale group entries (in JSON but not on disk at gene_set level)
+// Count ungrouped organisms and stale group entries using the LIVE groups file so
+// the dashboard stays accurate after group edits without requiring a cache refresh.
 $_groups_file = $config->getPath('metadata_path') . '/organism_assembly_groups.json';
-if (file_exists($_groups_file)) {
-    $_gd = json_decode(file_get_contents($_groups_file), true) ?? [];
-    foreach ($_gd as $_ge) {
-        $_gs = $_ge['gene_set'] ?? 'v1';
-        $_gs_path = $organism_data . '/' . $_ge['organism'] . '/' . $_ge['assembly'] . '/' . $_gs;
-        if (!is_dir($_gs_path)) {
-            $health_alerts['stale_groups']++;
+$_gd = file_exists($_groups_file) ? (json_decode(file_get_contents($_groups_file), true) ?? []) : [];
+// Build set of (organism/assembly) pairs that have at least one group assigned
+$_grouped_pairs = [];
+foreach ($_gd as $_ge) {
+    if (!empty($_ge['groups'])) {
+        $_grouped_pairs[$_ge['organism'] . '/' . $_ge['assembly']] = true;
+    }
+}
+// Count organisms where any assembly in the cache has no group entry
+foreach ($_raw_cache_data as $_org_name => $_org_data) {
+    foreach ($_org_data['assemblies'] ?? [] as $_asm) {
+        if (!isset($_grouped_pairs[$_org_name . '/' . $_asm])) {
+            $health_alerts['ungrouped']++;
+            break;
         }
     }
 }
-unset($_gd, $_ge, $_gs, $_gs_path, $_groups_file, $_org_data, $_checks);
+// Count stale group entries (in JSON but directory no longer on disk)
+foreach ($_gd as $_ge) {
+    $_gs = $_ge['gene_set'] ?? 'v1';
+    $_gs_path = $organism_data . '/' . $_ge['organism'] . '/' . $_ge['assembly'] . '/' . $_gs;
+    if (!is_dir($_gs_path)) {
+        $health_alerts['stale_groups']++;
+    }
+}
+unset($_gd, $_ge, $_gs, $_gs_path, $_groups_file, $_org_data, $_org_name, $_asm, $_checks, $_grouped_pairs, $_raw_cache_data);
 
 // Prepare data for content file
 // Site-data backup status comes from housekeeping (stored in session)
