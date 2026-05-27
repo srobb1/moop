@@ -230,11 +230,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Delete all stale entries (entries where directory doesn't exist)
         $deleted_count = 0;
         $log_entries = [];
-        
+
         foreach ($groups_data as $key => $data) {
-            $exists_in_fs = isset($all_organisms[$data['organism']]) && 
-                           in_array($data['assembly'], $all_organisms[$data['organism']]);
-            
+            $gs = $data['gene_set'] ?? 'v1';
+            $asm_ok = isset($all_organisms[$data['organism']]) &&
+                      in_array($data['assembly'], $all_organisms[$data['organism']]);
+            $gs_path = $organism_data_path . '/' . $data['organism'] . '/' . $data['assembly'] . '/' . $gs;
+            $exists_in_fs = $asm_ok && is_dir($gs_path);
+
             if (!$exists_in_fs) {
                 $log_entries[] = sprintf(
                     "[%s] DELETE_STALE by %s | Organism: %s | Assembly: %s | Groups: [%s]",
