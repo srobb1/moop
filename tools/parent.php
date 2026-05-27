@@ -290,9 +290,11 @@ foreach ($children as $child) {
 }
 $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 
-// Build gene_name for sequences (parent + all children) - needed for downloads
+// Build typed ID map and sequence list (parent + all children)
+$typed_ids = [$feature_uniquename => $type];
 $retrieve_these_seqs = [$feature_uniquename];
 foreach ($children as $child) {
+    $typed_ids[$child['feature_uniquename']] = $child['feature_type'];
     $retrieve_these_seqs[] = $child['feature_uniquename'];
 }
 $retrieve_these_seqs = array_unique($retrieve_these_seqs);
@@ -302,8 +304,7 @@ $gene_name = implode(",", $retrieve_these_seqs);
 // Handle download request if present (BEFORE rendering page)
 if ($download_file_flag && !empty($sequence_type)) {
     if (is_dir($gene_set_dir)) {
-        $feature_ids = array_map('trim', explode(',', $gene_name));
-        $extract_result = extractSequencesForAllTypes($gene_set_dir, $feature_ids, $sequence_types, $organism_name, $genome_accession);
+        $extract_result = extractSequencesForAllTypes($gene_set_dir, $typed_ids, $sequence_types, $organism_name, $genome_accession);
         $displayed_content = $extract_result['content'];
 
         if (!empty($displayed_content) && isset($displayed_content[$sequence_type])) {

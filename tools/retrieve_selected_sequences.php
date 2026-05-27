@@ -99,7 +99,9 @@ if (!empty($sequence_ids_provided)) {
         if (!is_dir($gene_set_dir)) {
             $extraction_errors[] = "Gene set directory not found for $assembly_name/$gene_set_name.";
         } elseif (!empty($uniquenames)) {
-            $extract_result = extractSequencesForAllTypes($gene_set_dir, $uniquenames, $sequence_types);
+            $db_path = "$organism_data/$organism_name/organism.sqlite";
+            $typed_ids = buildTypedIds($uniquenames, $db_path);
+            $extract_result = extractSequencesForAllTypes($gene_set_dir, $typed_ids, $sequence_types);
             $displayed_content = $extract_result['content'];
             if (!empty($extract_result['errors'])) {
                 $extraction_errors = array_merge($extraction_errors, $extract_result['errors']);

@@ -227,8 +227,11 @@ if ($output_format === 'tsv') {
             moopmartStreamGenomicFasta($gs_features, $assembly_dir, $gff_path, $fasta_mode, $flank_bp, $out);
         } else {
             // Pre-built FASTA files: protein, transcript, cds
-            $uniquenames    = array_column($gs_features, 'uniquename');
-            $extract_result = extractSequencesForAllTypes($gs_path, $uniquenames, $sequence_types, $org, $assembly);
+            // $gs_features is gene-level; expand to mRNA/CDS/protein children for extraction
+            $gene_uniquenames = array_column($gs_features, 'uniquename');
+            $db_path  = "$organism_data/$org/organism.sqlite";
+            $typed_ids = buildTypedIdsForGenes($gene_uniquenames, (int)$gs_id, $db_path);
+            $extract_result = extractSequencesForAllTypes($gs_path, $typed_ids, $sequence_types, $org, $assembly);
             if (isset($extract_result['content'][$fasta_mode])) {
                 fwrite($out, $extract_result['content'][$fasta_mode]);
             }

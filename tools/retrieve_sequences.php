@@ -234,7 +234,9 @@ if (!empty($sequence_ids_provided)) {
     
     // Extract sequences for ALL available types
     if (empty($extraction_errors) && !empty($uniquenames)) {
-        $extract_result = extractSequencesForAllTypes($fasta_source['path'], $uniquenames, $sequence_types, $selected_organism, $selected_assembly_accession, $ranges, $original_uniquenames ?? [], $parent_to_children ?? []);
+        $db_path = $organism_data . '/' . $selected_organism . '/organism.sqlite';
+        $typed_ids = buildTypedIds(array_values($uniquenames), $db_path);
+        $extract_result = extractSequencesForAllTypes($fasta_source['path'], $typed_ids, $sequence_types, $selected_organism, $selected_assembly_accession, $ranges, $original_uniquenames ?? [], $parent_to_children ?? []);
         $displayed_content = $extract_result['content'];
         if (!empty($extract_result['errors'])) {
             $extraction_errors = array_merge($extraction_errors, $extract_result['errors']);

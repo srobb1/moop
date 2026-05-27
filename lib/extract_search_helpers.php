@@ -139,62 +139,199 @@ function parseFeatureIds($uniquenames_string) {
 }
 
 /**
- * Extract sequences for all available types from BLAST database
- * 
- * Iterates through all sequence types and extracts for the given feature IDs
- * Supports range notation for subsequence extraction
- * 
- * @param string $assembly_dir - Path to assembly directory
- * @param array $uniquenames - Feature IDs to extract
- * @param array $sequence_types - Available sequence type configurations (from site_config)
- * @param string $organism - Organism name (for parent/child database lookup)
- * @param string $assembly - Assembly name (for parent/child database lookup)
- * @param array $ranges - Optional array of range strings ("ID:start-end") for subsequence extraction
- * @return array - ['success' => bool, 'content' => [...], 'errors' => []]
+ * Map a DB feature_type to the sequence_types config key used for FASTA routing.
+ * Returns null for types that have no dedicated FASTA (gene, exon, pseudogene, etc.).
  */
-function extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types, $organism = '', $assembly = '', $ranges = [], $original_input_ids = [], $parent_to_children = []) {
-    $displayed_content = [];
-    $errors = [];
-    
-    foreach ($sequence_types as $seq_type => $config) {
-        $files = glob("$assembly_dir/*{$config['pattern']}");
-        
-        if (!empty($files)) {
-            $fasta_file = $files[0];
-            $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly, $ranges, $original_input_ids, $parent_to_children);
-            
-            if ($extract_result['success']) {
-                // Remove blank lines
-                $lines = explode("\n", $extract_result['content']);
-                $lines = array_filter($lines, function($line) {
-                    return trim($line) !== '';
-                });
-                $displayed_content[$seq_type] = implode("\n", $lines);
-            } else {
-                $errors[] = "Failed to extract $seq_type sequences";
+function _fasta_key_for_type(string $type): ?string {
+    static $map = [
+        'mRNA'        => 'transcript',
+        'CDS'         => 'cds',
+        'protein'     => 'protein',
+        'polypeptide' => 'protein',
+    ];
+    return $map[$type] ?? null;
+}
+
+/**
+ * Batch-look up feature types from a SQLite DB for a list of uniquenames.
+ *
+ * @param array  $uniquenames  Feature uniquenames to resolve
+ * @param string $db_path      Path to organism.sqlite
+ * @return array [$uniquename => $feature_type|null]  null = not found in DB
+ */
+function buildTypedIds(array $uniquenames, string $db_path): array {
+    $result = array_fill_keys($uniquenames, null);
+    if (empty($uniquenames) || !file_exists($db_path)) {
+        return $result;
+    }
+    $placeholders = implode(',', array_fill(0, count($uniquenames), '?'));
+    try {
+        $dbh  = new PDO('sqlite:' . $db_path);
+        $stmt = $dbh->prepare(
+            "SELECT feature_uniquename, feature_type FROM feature WHERE feature_uniquename IN ($placeholders)"
+        );
+        $stmt->execute(array_values($uniquenames));
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $result[$row['feature_uniquename']] = $row['feature_type'];
+        }
+    } catch (Exception $e) {
+        // Return nulls on error — callers fall back to try-all behavior
+    }
+    return $result;
+}
+
+/**
+ * Expand gene uniquenames to their extractable descendants (mRNA, CDS, protein).
+ *
+ * Moopmart queries at gene level but FASTAs are indexed by child IDs.
+ * Two-level walk: genes → mRNA children → CDS/protein grandchildren.
+ * Features already at an extractable type pass through unchanged.
+ *
+ * @param array  $gene_uniquenames  Gene-level uniquenames to expand
+ * @param int    $gene_set_id       Scope expansion to this gene set
+ * @param string $db_path           Path to organism.sqlite
+ * @return array [$uniquename => $feature_type]
+ */
+function buildTypedIdsForGenes(array $gene_uniquenames, int $gene_set_id, string $db_path): array {
+    $result = [];
+    if (empty($gene_uniquenames) || !file_exists($db_path)) return $result;
+
+    $gp = implode(',', array_fill(0, count($gene_uniquenames), '?'));
+    try {
+        $dbh = new PDO('sqlite:' . $db_path);
+
+        // Level 1: direct mRNA/transcript children of the genes
+        $stmt = $dbh->prepare(
+            "SELECT f.feature_uniquename, f.feature_type
+               FROM feature f
+               JOIN feature g ON f.parent_feature_id = g.feature_id
+              WHERE g.feature_uniquename IN ($gp)
+                AND f.gene_set_id = ?
+                AND f.feature_type IN ('mRNA', 'transcript')"
+        );
+        $stmt->execute(array_merge(array_values($gene_uniquenames), [$gene_set_id]));
+        $mrna_ids = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $result[$row['feature_uniquename']] = $row['feature_type'];
+            $mrna_ids[] = $row['feature_uniquename'];
+        }
+
+        // Level 2: CDS/protein grandchildren (children of mRNAs)
+        if (!empty($mrna_ids)) {
+            $mp   = implode(',', array_fill(0, count($mrna_ids), '?'));
+            $stmt = $dbh->prepare(
+                "SELECT f.feature_uniquename, f.feature_type
+                   FROM feature f
+                   JOIN feature m ON f.parent_feature_id = m.feature_id
+                  WHERE m.feature_uniquename IN ($mp)
+                    AND f.gene_set_id = ?
+                    AND f.feature_type IN ('CDS', 'protein', 'polypeptide')"
+            );
+            $stmt->execute(array_merge(array_values($mrna_ids), [$gene_set_id]));
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $result[$row['feature_uniquename']] = $row['feature_type'];
             }
         }
+    } catch (Exception $e) {
+        // Return whatever we found; extractSequencesForAllTypes handles empty
     }
-    
-    // Only report "no sequences found" errors if we got no content at all
-    if (empty($displayed_content)) {
+    return $result;
+}
+
+/**
+ * Extract sequences using type-based FASTA routing.
+ *
+ * Each ID is routed to exactly one FASTA file based on its feature_type:
+ *   mRNA/transcript → transcript.nt.fa
+ *   CDS             → cds.nt.fa
+ *   protein         → protein.aa.fa
+ *   gene/exon/etc.  → skipped (no per-feature FASTA for these types)
+ *
+ * IDs with a null type (not found in DB) fall back to the old behavior:
+ * they are tried against every applicable FASTA.
+ *
+ * @param string $assembly_dir       Path to the gene-set directory
+ * @param array  $typed_ids          [$uniquename => $feature_type|null]
+ * @param array  $sequence_types     Sequence type config from ConfigManager::getSequenceTypes()
+ * @param string $organism           Passed through to blastdbcmd helper
+ * @param string $assembly           Passed through to blastdbcmd helper
+ * @param array  $ranges             Subsequence ranges ["ID:start-end", ...]
+ * @param array  $original_input_ids Original IDs before expansion (for not-found reporting)
+ * @param array  $parent_to_children Parent→children map for output grouping
+ * @return array ['success' => bool, 'content' => [type => fasta_string], 'errors' => []]
+ */
+function extractSequencesForAllTypes(
+    string $assembly_dir,
+    array  $typed_ids,
+    array  $sequence_types,
+    string $organism = '',
+    string $assembly = '',
+    array  $ranges = [],
+    array  $original_input_ids = [],
+    array  $parent_to_children = []
+): array {
+    $displayed_content = [];
+    $tool_errors       = [];
+
+    // Sort IDs into per-FASTA buckets; unknowns collected separately
+    $buckets = [];
+    $untyped = [];
+    foreach ($typed_ids as $uniquename => $feature_type) {
+        if ($feature_type === null) {
+            $untyped[] = $uniquename;
+            continue;
+        }
+        $key = _fasta_key_for_type($feature_type);
+        if ($key === null) continue; // gene, exon, etc. — no per-feature FASTA
+        $buckets[$key][] = $uniquename;
+    }
+
+    $run_extract = function (string $seq_type, string $fasta_file, array $ids)
+        use (&$displayed_content, &$tool_errors, $organism, $assembly, $ranges, $original_input_ids, $parent_to_children)
+    {
+        $result = extractSequencesFromBlastDb(
+            $fasta_file, $ids, $organism, $assembly,
+            $ranges, $original_input_ids, $parent_to_children
+        );
+        if ($result['success']) {
+            $lines   = array_filter(explode("\n", $result['content']), fn($l) => trim($l) !== '');
+            $content = implode("\n", $lines);
+            if ($content !== '') {
+                $displayed_content[$seq_type] = isset($displayed_content[$seq_type])
+                    ? $displayed_content[$seq_type] . "\n" . $content
+                    : $content;
+            }
+        } elseif (!empty($result['error'])) {
+            $tool_errors[] = $result['error'];
+        }
+    };
+
+    // Typed IDs → single FASTA each
+    foreach ($sequence_types as $seq_type => $config) {
+        if ($seq_type === 'genome') continue;
+        if (empty($buckets[$seq_type])) continue;
+        $files = glob("$assembly_dir/*{$config['pattern']}");
+        if (!empty($files)) {
+            $run_extract($seq_type, $files[0], $buckets[$seq_type]);
+        }
+    }
+
+    // Untyped IDs → try every FASTA (safe fallback for IDs not in DB)
+    if (!empty($untyped)) {
         foreach ($sequence_types as $seq_type => $config) {
+            if ($seq_type === 'genome') continue;
             $files = glob("$assembly_dir/*{$config['pattern']}");
             if (!empty($files)) {
-                $fasta_file = $files[0];
-                $extract_result = extractSequencesFromBlastDb($fasta_file, $uniquenames, $organism, $assembly, $ranges, $original_input_ids, $parent_to_children);
-                if (!empty($extract_result['error'])) {
-                    $errors[] = $extract_result['error'];
-                    break;
-                }
+                $run_extract($seq_type, $files[0], $untyped);
             }
         }
     }
-    
+
+    $errors = empty($displayed_content) ? $tool_errors : [];
     return [
         'success' => !empty($displayed_content),
         'content' => $displayed_content,
-        'errors' => $errors
+        'errors'  => $errors,
     ];
 }
 
