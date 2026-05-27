@@ -26,10 +26,10 @@ return [
         'description'     => 'Search and download sequences',
         'btn_class'       => 'btn-success',
         'url_path'        => '/tools/retrieve_sequences.php',
-        'context_params'  => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
+        'context_params'  => ['organism', 'assembly', 'gene_set', 'group', 'display_name', 'organisms'],
         'pages'           => 'all',
     ],
-    
+
     'blast_search' => [
         'id'              => 'blast_search',
         'name'            => 'BLAST Search',
@@ -37,7 +37,7 @@ return [
         'description'     => 'Search sequences against databases',
         'btn_class'       => 'btn-warning',
         'url_path'        => '/tools/blast.php',
-        'context_params'  => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
+        'context_params'  => ['organism', 'assembly', 'gene_set', 'group', 'display_name', 'organisms'],
         'pages'           => 'all',
     ],
     
@@ -59,8 +59,8 @@ return [
         'description'     => 'Browse and download genome files',
         'btn_class'       => 'btn-secondary',
         'url_path'        => '/tools/downloads.php',
-        'context_params'  => ['organism', 'assembly', 'gene_set', 'display_name'],
-        'pages'           => 'all',
+        'context_params'  => ['organism', 'assembly', 'gene_set', 'group', 'display_name'],
+        'pages'           => ['organism', 'assembly', 'gene_set', 'parent', 'group', 'multi_organism_search', 'index'],
     ],
 
     'genome_browser' => [

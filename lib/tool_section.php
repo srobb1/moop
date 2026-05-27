@@ -4,9 +4,9 @@
  * Reusable component for displaying available tools on display pages
  * 
  * This component dynamically loads and displays tools based on the provided context.
- * Tools are configured in tool_config.php and filtered based on available context parameters.
- * 
- * DEPENDENCIES: Requires access_control.php to be included first (which loads tool_config.php)
+ * Tools are configured in config/tools_config.php (loaded via ConfigManager).
+ *
+ * DEPENDENCIES: Requires config_init.php to be included first (which loads ConfigManager)
  * 
  * Context Parameters:
  * - organism (string, optional): Single organism context
@@ -50,7 +50,7 @@
  * - Renders tools as either direct links (default) or onclick buttons (if use_onclick_handler=true)
  * - Only displays if tools are available (returns early if empty)
  * - Uses consistent styling: blue header, flex-wrap layout, small buttons
- * - Links are pre-built using buildToolUrl() from tool_config.php
+ * - Links are pre-built using _build_tool_url() from functions_tools.php
  */
 
 // Ensure dependencies are loaded
@@ -81,13 +81,12 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
         <div class="d-flex flex-wrap gap-2">
             <?php foreach ($tools as $tool_id => $tool): ?>
                 <?php if ($use_onclick_handler): ?>
-                    <button 
+                    <button
                        class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
                        title="<?= htmlspecialchars($tool['description']) ?>"
                        id="tool-btn-<?= htmlspecialchars($tool_id) ?>"
                        data-tool-id="<?= htmlspecialchars($tool_id) ?>"
                        data-tool-path="<?= htmlspecialchars($tool['url_path']) ?>"
-                       data-context-params="<?= htmlspecialchars(json_encode($tool['context_params'])) ?>"
                        onclick="handleToolClick('<?= htmlspecialchars($tool_id) ?>')">
                       <span><?= htmlspecialchars($tool['name']) ?></span>
                     </button>
