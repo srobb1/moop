@@ -216,10 +216,17 @@
             <div class="mt-4 pt-3 border-top">
               <h6 class="text-muted mb-3" style="font-weight: 600;">Assemblies</h6>
               <div class="chip-container">
-                <?php foreach ($accessible_assemblies as $assembly): ?>
-                  <a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>" 
+                <?php foreach ($accessible_assemblies as $assembly):
+                    $has_genome_fa = file_exists("$organism_data/$organism_name/$assembly/genome.fa");
+                ?>
+                  <a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>"
                      class="assembly-chip">
                     <?= htmlspecialchars($assembly) ?>
+                    <?php if ($has_genome_fa): ?>
+                      <i class="fa fa-check-circle ms-1 text-success" title="Genome FASTA available"></i>
+                    <?php else: ?>
+                      <i class="fa fa-times-circle ms-1 text-muted" title="No genome FASTA"></i>
+                    <?php endif; ?>
                   </a>
                 <?php endforeach; ?>
               </div>
