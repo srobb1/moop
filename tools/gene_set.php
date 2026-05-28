@@ -69,8 +69,15 @@ $display_config = [
     ],
 ];
 
+// Load optional gene set metadata (source, date_added, note, etc.)
+$gene_set_meta_file = "$organism_data/$organism_name/$genome_accession/$gene_set_name/geneset.json";
+$gene_set_meta = file_exists($gene_set_meta_file)
+    ? (json_decode(file_get_contents($gene_set_meta_file), true) ?? [])
+    : [];
+
 $data = [
     'gene_set_info'        => $gene_set_info,
+    'gene_set_meta'        => $gene_set_meta,
     'organism_name'        => $organism_name,
     'organism_info'        => $organism_info,
     'genome_accession'     => $genome_accession,

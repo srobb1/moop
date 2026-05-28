@@ -86,6 +86,21 @@
             <?php endif; ?>
           </span>
         </div>
+        <?php if (!empty($gene_set_meta['source'])): ?>
+        <div class="feature-info-item">
+          <strong>Source:</strong> <span class="feature-value"><?= htmlspecialchars($gene_set_meta['source']) ?></span>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($gene_set_meta['date_added'])): ?>
+        <div class="feature-info-item">
+          <strong>Date added:</strong> <span class="feature-value"><?= htmlspecialchars($gene_set_meta['date_added']) ?></span>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($gene_set_meta['note'])): ?>
+        <div class="feature-info-item">
+          <strong>Note:</strong> <span class="feature-value"><?= htmlspecialchars($gene_set_meta['note']) ?></span>
+        </div>
+        <?php endif; ?>
       </div>
     </div>
   </div>

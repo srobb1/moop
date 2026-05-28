@@ -114,6 +114,21 @@
         <div class="feature-info-item">
           <strong>Organism:</strong> <span class="feature-value"><em><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>" class="link-light-bordered"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></a></em></span>
         </div>
+        <?php if (!empty($assembly_meta['source'])): ?>
+        <div class="feature-info-item">
+          <strong>Source:</strong> <span class="feature-value"><?= htmlspecialchars($assembly_meta['source']) ?></span>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($assembly_meta['date_added'])): ?>
+        <div class="feature-info-item">
+          <strong>Date added:</strong> <span class="feature-value"><?= htmlspecialchars($assembly_meta['date_added']) ?></span>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($assembly_meta['note'])): ?>
+        <div class="feature-info-item">
+          <strong>Note:</strong> <span class="feature-value"><?= htmlspecialchars($assembly_meta['note']) ?></span>
+        </div>
+        <?php endif; ?>
         <?php if ($genome_file):
           $colorInfo = getColorClassOrStyle($genome_file['info']['color'] ?? '');
         ?>
