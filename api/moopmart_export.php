@@ -124,6 +124,7 @@ $date     = date('Ymd_His');
 $ext      = $output_format === 'fasta' ? 'fa' : 'tsv';
 $filename = "moopmart_{$output_format}_{$date}.{$ext}";
 
+set_time_limit(0);
 while (ob_get_level()) ob_end_clean();
 
 // =============================================================
@@ -131,25 +132,15 @@ while (ob_get_level()) ob_end_clean();
 // =============================================================
 if ($output_format === 'tsv') {
 
-    // Fetch annotations grouped by organism DB
-    $by_db = [];
-    foreach ($all_features as $f) {
-        $by_db[$f['db_path']][] = $f['feature_id'];
-    }
-    $all_annotations = [];
-    foreach ($by_db as $db_path => $fids) {
-        foreach (moopmartGetAnnotationsForFeatures($fids, $db_path) as $fid => $anns) {
-            $all_annotations[$db_path . ':' . $fid] = $anns;
-        }
-    }
-
     // Determine annotation source columns — empty selection = no annotation columns
     $source_cols = array_values($annotation_columns_selected);
     sort($source_cols);
 
+    // Send headers immediately so nginx doesn't time out waiting for the first byte
     header('Content-Type: text/tab-separated-values; charset=UTF-8');
     header("Content-Disposition: attachment; filename=\"$filename\"");
     header('Cache-Control: no-cache, no-store');
+    header('X-Accel-Buffering: no');  // disable nginx proxy buffering
 
     $out = fopen('php://output', 'w');
 
@@ -164,32 +155,47 @@ if ($output_format === 'tsv') {
         $headers[] = 'Description:' . $s;
     }
     fputcsv($out, $headers, "\t");
+    flush();
 
-    // Data rows
+    // Group features by DB so annotation fetches hit one DB at a time.
+    // Process in chunks of 500 to keep annotation results memory-bounded;
+    // flush after each chunk so the browser receives data incrementally.
+    $by_db = [];
     foreach ($all_features as $f) {
-        $row = [
-            $f['organism_dir'],
-            $f['genome_accession'],
-            $f['gene_set_name'],
-            $f['uniquename'],
-            $clean($f['name']        ?? ''),
-            $clean($f['description'] ?? ''),
-            $f['type'],
-            $f['chr']         ?? '',
-            $f['start']       ?? '',
-            $f['end']         ?? '',
-            $f['strand']      ?? '',
-        ];
-        $ann_key  = $f['db_path'] . ':' . $f['feature_id'];
-        $fid_anns = $all_annotations[$ann_key] ?? [];
-        foreach ($source_cols as $src_name) {
-            $entries      = $fid_anns[$src_name] ?? [];
-            $accessions   = array_map(fn($e) => $e['accession'], $entries);
-            $descriptions = array_map(fn($e) => $clean($e['description'] ?? ''), $entries);
-            $row[] = implode('; ', $accessions);
-            $row[] = implode('; ', $descriptions);
+        $by_db[$f['db_path']][] = $f;
+    }
+
+    foreach ($by_db as $db_path => $db_features) {
+        foreach (array_chunk($db_features, 500) as $chunk) {
+            $fids        = array_column($chunk, 'feature_id');
+            $chunk_anns  = moopmartGetAnnotationsForFeatures($fids, $db_path);
+
+            foreach ($chunk as $f) {
+                $row = [
+                    $f['organism_dir'],
+                    $f['genome_accession'],
+                    $f['gene_set_name'],
+                    $f['uniquename'],
+                    $clean($f['name']        ?? ''),
+                    $clean($f['description'] ?? ''),
+                    $f['type'],
+                    $f['chr']         ?? '',
+                    $f['start']       ?? '',
+                    $f['end']         ?? '',
+                    $f['strand']      ?? '',
+                ];
+                $fid_anns = $chunk_anns[$f['feature_id']] ?? [];
+                foreach ($source_cols as $src_name) {
+                    $entries      = $fid_anns[$src_name] ?? [];
+                    $accessions   = array_map(fn($e) => $e['accession'], $entries);
+                    $descriptions = array_map(fn($e) => $clean($e['description'] ?? ''), $entries);
+                    $row[] = implode('; ', $accessions);
+                    $row[] = implode('; ', $descriptions);
+                }
+                fputcsv($out, $row, "\t");
+            }
+            flush();
         }
-        fputcsv($out, $row, "\t");
     }
     fclose($out);
 

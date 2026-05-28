@@ -23,20 +23,30 @@
         cds:        'CDS',
     };
 
-    let currentFastaMode = 'gene';
+    let currentFastaMode = 'transcript';
 
     // -------------------------------------------------------
     // Scope tree — checkbox propagation (HTML rendered by PHP)
     // -------------------------------------------------------
 
     function updateScopeSummary() {
-        const total   = document.querySelectorAll('.mm-gs-cb').length;
-        const checked = document.querySelectorAll('.mm-gs-cb:checked').length;
-        const el = document.getElementById('mm-scope-summary');
+        const el = document.getElementById('mm-scope-counts');
         if (!el) return;
-        el.textContent = checked === total
-            ? `All ${total} gene set${total !== 1 ? 's' : ''} selected`
-            : `${checked} of ${total} gene set${total !== 1 ? 's' : ''} selected`;
+        const checkedCbs = Array.from(document.querySelectorAll('.mm-gs-cb:checked'));
+        const totalGs    = document.querySelectorAll('.mm-gs-cb').length;
+        const checkedGs  = checkedCbs.length;
+        if (checkedGs === 0) {
+            el.textContent = '— nothing selected';
+            return;
+        }
+        const orgs = new Set(checkedCbs.map(c => c.dataset.org)).size;
+        const asms = new Set(checkedCbs.map(c => c.dataset.org + '|' + c.dataset.asm)).size;
+        const parts = [
+            `${orgs} organism${orgs !== 1 ? 's' : ''}`,
+            `${asms} assembl${asms !== 1 ? 'ies' : 'y'}`,
+            checkedGs === totalGs ? `all ${totalGs} gene set${totalGs !== 1 ? 's' : ''}` : `${checkedGs} of ${totalGs} gene set${totalGs !== 1 ? 's' : ''}`,
+        ];
+        el.textContent = '— ' + parts.join(', ');
     }
 
     // -------------------------------------------------------
@@ -106,13 +116,14 @@
     }
 
     function updateAnnSummary() {
+        const el      = document.getElementById('mm-ann-counts');
+        if (!el) return;
         const total   = document.querySelectorAll('.mm-ann-col').length;
         const checked = document.querySelectorAll('.mm-ann-col:checked').length;
-        const el = document.getElementById('mm-ann-summary');
-        if (!el) return;
-        el.textContent = total
-            ? (checked === total ? `All ${total} sources` : `${checked} of ${total} sources selected`)
-            : '';
+        if (!total) { el.textContent = ''; return; }
+        el.textContent = checked === total
+            ? `— all ${total} selected`
+            : `— ${checked} of ${total} selected`;
     }
 
     function syncAnnTypeCb(type) {
@@ -498,7 +509,7 @@
             document.querySelectorAll('.mm-flank-label').forEach(el => el.textContent = this.value);
         });
 
-        setFastaMode('gene');
+        setFastaMode('transcript');
         updateAnnSummary();
     });
 

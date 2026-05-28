@@ -18,7 +18,8 @@
             <div class="card shadow-sm h-100">
                 <div class="card-header d-flex align-items-center py-2">
                     <i class="fa fa-sitemap me-2 text-muted"></i>
-                    <strong class="me-auto">Scope</strong>
+                    <strong>Scope</strong>
+                    <span id="mm-scope-counts" class="text-muted small fw-normal ms-2 me-auto"></span>
                     <div class="d-flex gap-1">
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="mm-select-all">All</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="mm-clear-all">None</button>
@@ -101,9 +102,6 @@
                     <?php endif; ?>
                     </div>
                 </div>
-                <div class="card-footer py-1 px-2 text-muted" style="font-size:0.8rem;">
-                    <span id="mm-scope-summary"></span>
-                </div>
             </div>
         </div>
 
@@ -112,7 +110,8 @@
             <div class="card shadow-sm h-100">
                 <div class="card-header d-flex align-items-center py-2">
                     <i class="fa fa-sliders-h me-2 text-muted"></i>
-                    <strong class="me-auto">Annotation Sources</strong>
+                    <strong>Annotation Sources</strong>
+                    <span id="mm-ann-counts" class="text-muted small fw-normal ms-2 me-auto"></span>
                     <div class="d-flex gap-1">
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="mm-ann-all">All</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="mm-ann-none">None</button>
@@ -164,9 +163,6 @@
                 <?php else: ?>
                 <div class="card-body p-2 text-muted small">No annotation sources found in the accessible data.</div>
                 <?php endif; ?>
-                <div class="card-footer py-1 px-2 text-muted" style="font-size:0.8rem;">
-                    <span id="mm-ann-summary"></span>
-                </div>
             </div>
         </div>
 
