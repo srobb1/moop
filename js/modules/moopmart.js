@@ -296,6 +296,12 @@
         const spinner = document.getElementById('mm-count-spinner');
         const result  = document.getElementById('mm-count-result');
 
+        if (!getSelectedSources().length) {
+            result.textContent = 'Select at least one gene set in the Scope panel first.';
+            result.className = 'small text-warning';
+            return;
+        }
+
         spinner.classList.remove('d-none');
         btn.disabled = true;
         result.textContent = '';
@@ -487,11 +493,21 @@
 
         // TSV download
         document.getElementById('mm-dl-tsv')?.addEventListener('click', function () {
+            if (!getSelectedSources().length) {
+                document.getElementById('mm-count-result').textContent = 'Select at least one gene set in the Scope panel first.';
+                document.getElementById('mm-count-result').className = 'small text-warning';
+                return;
+            }
             submitDownload({ output_format: 'tsv' });
         });
 
         // FASTA download (current mode)
         document.getElementById('mm-dl-fasta-btn')?.addEventListener('click', function () {
+            if (!getSelectedSources().length) {
+                document.getElementById('mm-count-result').textContent = 'Select at least one gene set in the Scope panel first.';
+                document.getElementById('mm-count-result').className = 'small text-warning';
+                return;
+            }
             const flank = document.getElementById('mm-flank-bp')?.value || '500';
             submitDownload({ output_format: 'fasta', fasta_mode: currentFastaMode, flank_bp: flank });
         });

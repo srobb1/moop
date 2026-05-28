@@ -46,7 +46,7 @@
                             <div class="d-flex align-items-center gap-1 px-1 py-1 rounded"
                                  style="background:#f8f9fa;">
                                 <input type="checkbox" class="form-check-input flex-shrink-0 mm-org-cb mb-0"
-                                       id="<?= $oid ?>" data-org="<?= htmlspecialchars($organism) ?>" checked>
+                                       id="<?= $oid ?>" data-org="<?= htmlspecialchars($organism) ?>">
                                 <label class="form-check-label fw-semibold mb-0 me-auto"
                                        for="<?= $oid ?>" style="cursor:pointer; font-size:0.9rem;">
                                     <em><?= htmlspecialchars($label) ?></em>
@@ -69,7 +69,7 @@
                                         <input type="checkbox" class="form-check-input flex-shrink-0 mm-asm-cb mb-0"
                                                id="<?= $aid ?>"
                                                data-org="<?= htmlspecialchars($organism) ?>"
-                                               data-asm="<?= htmlspecialchars($assembly) ?>" checked>
+                                               data-asm="<?= htmlspecialchars($assembly) ?>">
                                         <label class="form-check-label fw-semibold mb-0 me-auto"
                                                for="<?= $aid ?>" style="cursor:pointer; font-size:0.85rem; color:#b45309;">
                                             <?= htmlspecialchars($assembly) ?>
@@ -86,7 +86,7 @@
                                                    data-org="<?= htmlspecialchars($organism) ?>"
                                                    data-asm="<?= htmlspecialchars($assembly) ?>"
                                                    data-gs="<?= htmlspecialchars($gs) ?>"
-                                                   data-key="<?= htmlspecialchars($gsKey) ?>" checked>
+                                                   data-key="<?= htmlspecialchars($gsKey) ?>">
                                             <label class="form-check-label mb-0" for="<?= $gsid ?>"
                                                    style="cursor:pointer; font-size:0.82rem;">
                                                 <span class="badge bg-gene-set me-1" style="font-size:0.65rem;">GS</span><?= htmlspecialchars($gs ?: '(default)') ?>
