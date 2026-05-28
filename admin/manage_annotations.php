@@ -65,101 +65,62 @@ if (empty($annotation_config['annotation_type_order']) && !empty($annotation_con
 $message = "";
 $messageType = "";
 
-// PHASE 2: Query databases and sync annotation types
-// Only query databases if counts are empty or SQLite files have been modified
+// PHASE 2: Query databases and sync annotation types (per-organism, only re-query changed databases)
 $all_db_annotation_types = [];
 $sync_status = [];
 
-// Check for update needed on EVERY request (GET, POST, etc.)
 try {
     $organisms_path = $config->getPath('organism_data');
-    $newest_mod_info = getNewestSqliteModTime($organisms_path);
-    
-    // Check if we need to update counts
-    $need_update = shouldUpdateAnnotationCounts($annotation_config, $newest_mod_info);
-    
-    if ($need_update) {
-        // Query all organism databases
-        $organisms = getOrganismsWithAssemblies($organisms_path);
-        
-        foreach ($organisms as $organism => $assemblies) {
-            $organism_path = "$organisms_path/$organism";
-            $db_file = "$organism_path/organism.sqlite";
-            
-            if (file_exists($db_file)) {
-                $db_types = getAnnotationTypesFromDB($db_file);
-                foreach ($db_types as $type => $counts) {
-                    if (!isset($all_db_annotation_types[$type])) {
-                        $all_db_annotation_types[$type] = $counts;
-                    } else {
-                        $all_db_annotation_types[$type]['annotation_count'] += $counts['annotation_count'];
-                        $all_db_annotation_types[$type]['feature_count'] += $counts['feature_count'];
-                    }
-                }
+
+    [$annotation_config, $ann_updated] = update_annotation_config_modular($annotation_config, $organisms_path);
+
+    if ($ann_updated > 0) {
+        saveJsonFile($config_file, $annotation_config);
+    }
+
+    // Reconstruct aggregated types from per-organism cache for the synonym check below
+    foreach (($annotation_config['per_organism_counts'] ?? []) as $org_data) {
+        foreach (($org_data['types'] ?? []) as $type => $counts) {
+            if (!isset($all_db_annotation_types[$type])) {
+                $all_db_annotation_types[$type] = $counts;
+            } else {
+                $all_db_annotation_types[$type]['annotation_count'] += $counts['annotation_count'];
+                $all_db_annotation_types[$type]['feature_count']    += $counts['feature_count'];
             }
         }
-        
-        // Sync annotation types if we're using the new schema
-        if (!empty($annotation_config) && isset($annotation_config['annotation_types'])) {
-            $annotation_config = syncAnnotationTypes($annotation_config, $all_db_annotation_types);
+    }
+
+    if ($ann_updated > 0 && isset($annotation_config['annotation_types'])) {
             
-            // Rebuild annotation_type_order to include all types sorted by order field
-            $type_order = [];
-            foreach ($annotation_config['annotation_types'] as $type_name => $type_config) {
-                $type_order[] = [
-                    'name' => $type_name,
-                    'order' => $type_config['order'] ?? 999
-                ];
-            }
-            usort($type_order, function($a, $b) {
-                return $a['order'] - $b['order'];
-            });
-            $annotation_config['annotation_type_order'] = array_map(function($item) { return $item['name']; }, $type_order);
-            
-            // Update the SQLite modification timestamp
-            if ($newest_mod_info !== null) {
-                $annotation_config['sqlite_mod_time'] = $newest_mod_info['unix_time'];
-            }
-            
-            // Save the updated config
-            saveJsonFile($config_file, $annotation_config);
-            
-            $sync_status = [
-                'total_db_types' => count($all_db_annotation_types),
-                'total_config_entries' => count($annotation_config['annotation_types'] ?? []),
-                'in_database' => array_filter($annotation_config['annotation_types'] ?? [], function($c) { return $c['in_database'] ?? false; }),
-                'not_in_database' => array_filter($annotation_config['annotation_types'] ?? [], function($c) { return !($c['in_database'] ?? false); }),
-                'new_types' => array_filter($annotation_config['annotation_types'] ?? [], function($c) { return $c['new'] ?? false; })
-            ];
-            
-            // Check if any synonyms have become DB annotation types
-            $deactivated_synonyms = [];
-            foreach ($annotation_config['annotation_types'] as $type_name => $type_config) {
-                if (!empty($type_config['synonyms'])) {
-                    foreach ($type_config['synonyms'] as $key => $synonym) {
-                        if (isset($all_db_annotation_types[$synonym])) {
-                            // This synonym is now a DB type - remove it and track it
-                            unset($annotation_config['annotation_types'][$type_name]['synonyms'][$key]);
-                            $deactivated_synonyms[] = [
-                                'synonym' => $synonym,
-                                'type' => $type_name
-                            ];
-                        }
-                    }
-                    // Re-index array
-                    if (!empty($annotation_config['annotation_types'][$type_name]['synonyms'])) {
-                        $annotation_config['annotation_types'][$type_name]['synonyms'] = array_values($annotation_config['annotation_types'][$type_name]['synonyms']);
+        $sync_status = [
+            'total_db_types'      => count($all_db_annotation_types),
+            'total_config_entries'=> count($annotation_config['annotation_types'] ?? []),
+            'in_database'  => array_filter($annotation_config['annotation_types'] ?? [], fn($c) => $c['in_database'] ?? false),
+            'not_in_database' => array_filter($annotation_config['annotation_types'] ?? [], fn($c) => !($c['in_database'] ?? false)),
+            'new_types'    => array_filter($annotation_config['annotation_types'] ?? [], fn($c) => $c['new'] ?? false),
+        ];
+
+        // Check if any synonyms have become real DB annotation types
+        $deactivated_synonyms = [];
+        foreach ($annotation_config['annotation_types'] as $type_name => $type_config) {
+            if (!empty($type_config['synonyms'])) {
+                foreach ($type_config['synonyms'] as $key => $synonym) {
+                    if (isset($all_db_annotation_types[$synonym])) {
+                        unset($annotation_config['annotation_types'][$type_name]['synonyms'][$key]);
+                        $deactivated_synonyms[] = ['synonym' => $synonym, 'type' => $type_name];
                     }
                 }
+                $annotation_config['annotation_types'][$type_name]['synonyms'] = array_values(
+                    $annotation_config['annotation_types'][$type_name]['synonyms']
+                );
             }
-            
-            // If synonyms were deactivated, save config and show warning
-            if (!empty($deactivated_synonyms)) {
-                saveJsonFile($config_file, $annotation_config);
-                $deactivated_list = implode(', ', array_map(function($d) { return "'{$d['synonym']}'"; }, $deactivated_synonyms));
-                $message = "⚠️ Warning: The following synonyms were deactivated because they are now annotation types in the database: $deactivated_list";
-                $messageType = "warning";
-            }
+        }
+
+        if (!empty($deactivated_synonyms)) {
+            saveJsonFile($config_file, $annotation_config);
+            $deactivated_list = implode(', ', array_map(fn($d) => "'{$d['synonym']}'", $deactivated_synonyms));
+            $message = "⚠️ Warning: The following synonyms were deactivated because they are now annotation types in the database: $deactivated_list";
+            $messageType = "warning";
         }
     }
 } catch (Exception $e) {

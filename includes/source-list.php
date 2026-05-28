@@ -10,7 +10,7 @@
  * - $context_organism (string, optional)
  * - $context_assembly (string, optional)
  * - $context_group (string, optional)
- * - $selected_source (string, optional) - "organism|assembly" format
+ * - $selected_source (string, optional) - "organism|assembly|gene_set" format
  * - $selected_organism (string, optional)
  * - $selected_assembly_accession (string, optional)
  * - $selected_assembly_name (string, optional) - genome_name for matching
@@ -41,7 +41,7 @@ foreach ($sources_by_group as $group_name => $organisms) {
                 type="text" 
                 class="form-control" 
                 id="sourceFilter" 
-                placeholder="Filter by group, organism, or assembly..."
+                placeholder="Filter by group, organism, assembly, or gene set..."
                 value="<?= htmlspecialchars($selected_assembly_name ?: ($selected_organism ?: $context_group)) ?>"
                 >
             <button type="button" class="btn btn-success" onclick="<?= $clear_filter_function ?? 'clearSourceFilter' ?>();">
@@ -58,7 +58,8 @@ foreach ($sources_by_group as $group_name => $organisms) {
             foreach ($organisms as $organism => $assemblies): 
                 foreach ($assemblies as $source): 
                     $genome_name = $source['genome_name'] ?? $source['assembly'];
-                    $search_text = strtolower("$group_name $organism $source[assembly] $genome_name");
+                    $gene_set_label = $source['gene_set'] ?? '';
+                    $search_text = strtolower("$group_name $organism $source[assembly] $genome_name $gene_set_label");
                     
                     // Determine if this source should be hidden (filtered out)
                     $is_filtered_out = false;
@@ -70,7 +71,8 @@ foreach ($sources_by_group as $group_name => $organisms) {
                     
                     // Determine if this source should be selected
                     $is_selected = false;
-                    if (!empty($selected_source) && $selected_source === ($organism . '|' . $source['assembly'])) {
+                    $source_value = $organism . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '');
+                    if (!empty($selected_source) && $selected_source === $source_value) {
                         $is_selected = true;
                     } elseif (!empty($selected_organism) && $selected_organism === $organism) {
                         // Match by organism and either accession or name
@@ -82,12 +84,13 @@ foreach ($sources_by_group as $group_name => $organisms) {
                     }
                     ?>
                     <div class="fasta-source-line" data-search="<?= htmlspecialchars($search_text) ?>"<?= $display_style ?>>
-                        <input 
-                            type="radio" 
-                            name="selected_source" 
-                            value="<?= htmlspecialchars($organism . '|' . $source['assembly']) ?>"
+                        <input
+                            type="radio"
+                            name="selected_source"
+                            value="<?= htmlspecialchars($source_value) ?>"
                             data-organism="<?= htmlspecialchars($organism) ?>"
                             data-assembly="<?= htmlspecialchars($source['assembly']) ?>"
+                            data-gene-set="<?= htmlspecialchars($source['gene_set'] ?? '') ?>"
                             <?= !empty($on_change_function) ? 'onchange="' . htmlspecialchars($on_change_function) . '();"' : '' ?>
                             <?= $is_selected ? 'checked' : '' ?>
                             >
@@ -101,6 +104,11 @@ foreach ($sources_by_group as $group_name => $organisms) {
                         <span class="badge badge-sm bg-info text-white">
                             <?= htmlspecialchars($source['genome_name'] ?? $source['assembly']) ?>
                         </span>
+                        <?php if (!empty($source['gene_set'])): ?>
+                        <span class="badge badge-sm bg-light text-dark border">
+                            <?= htmlspecialchars($source['gene_set']) ?>
+                        </span>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; 
             endforeach; 

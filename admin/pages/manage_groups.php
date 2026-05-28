@@ -131,7 +131,9 @@
       <tr>
         <th><input type="checkbox" id="select-all-grouped" title="Select all"></th>
         <th>Organism</th>
+        <th>Common Name</th>
         <th>Assembly</th>
+        <th>Gene Set</th>
         <th>Groups</th>
         <th>Status</th>
         <th>Action</th>
@@ -139,21 +141,27 @@
     </thead>
     <tbody id="assemblies-tbody">
       <?php foreach ($groups_data_with_status as $index => $data): ?>
-        <?php if (!empty($data['groups'])): ?>
-        <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>" 
+        <?php $row_gs = htmlspecialchars($data['gene_set'] ?? 'v1'); ?>
+        <?php $row_common_name = htmlspecialchars($organism_meta[$data['organism']]['common_name'] ?? ''); ?>
+        <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>" data-gene-set="<?= $row_gs ?>"
             style="<?= !$data['_fs_exists'] ? 'background-color: #fff3cd;' : '' ?>">
           <td><input type="checkbox" class="grouped-assembly-checkbox" <?= !$data['_fs_exists'] ? 'disabled' : '' ?>></td>
           <td><?= htmlspecialchars($data['organism']) ?></td>
+          <td class="text-muted"><?= $row_common_name ?></td>
           <td><?= htmlspecialchars($data['assembly']) ?></td>
+          <td class="small text-muted"><?= $row_gs ?></td>
           <td>
             <span class="groups-display">
-              <?php 
+              <?php
                 $sorted_groups = $data['groups'];
                 sort($sorted_groups);
-                foreach ($sorted_groups as $group): 
+                foreach ($sorted_groups as $group):
               ?>
                 <span class="tag-chip selected" style="cursor: default;"><?= htmlspecialchars($group) ?></span>
               <?php endforeach; ?>
+              <?php if (empty($data['groups'])): ?>
+                <span class="text-muted fst-italic small">no groups</span>
+              <?php endif; ?>
             </span>
           </td>
           <td>
@@ -173,7 +181,6 @@
             <?php endif; ?>
           </td>
         </tr>
-        <?php endif; ?>
       <?php endforeach; ?>
     </tbody>
   </table>
@@ -197,18 +204,23 @@
         <tr>
           <th><input type="checkbox" id="select-all-ungrouped" title="Select all"></th>
           <th>Organism</th>
+          <th>Common Name</th>
           <th>Assembly</th>
+          <th>Gene Set</th>
           <th>Groups</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody id="new-assemblies-tbody">
-        <?php foreach ($unrepresented_organisms as $organism => $assemblies): ?>
-          <?php foreach ($assemblies as $assembly): ?>
-            <tr data-organism="<?= htmlspecialchars($organism) ?>" data-assembly="<?= htmlspecialchars($assembly) ?>" class="new-assembly-row">
+        <?php foreach ($unrepresented_tuples as $tuple): ?>
+          <?php $organism = $tuple['organism']; $assembly = $tuple['assembly']; $gene_set = $tuple['gene_set']; ?>
+          <?php $ungrouped_common_name = htmlspecialchars($organism_meta[$organism]['common_name'] ?? ''); ?>
+            <tr data-organism="<?= htmlspecialchars($organism) ?>" data-assembly="<?= htmlspecialchars($assembly) ?>" data-gene-set="<?= htmlspecialchars($gene_set) ?>" class="new-assembly-row">
               <td><input type="checkbox" class="assembly-checkbox"></td>
               <td><?= htmlspecialchars($organism) ?></td>
+              <td class="text-muted"><?= $ungrouped_common_name ?></td>
               <td><?= htmlspecialchars($assembly) ?></td>
+              <td class="small text-muted"><?= htmlspecialchars($gene_set) ?></td>
               <td>
                 <span class="groups-display-new">(no groups)</span>
               </td>
@@ -219,7 +231,6 @@
               </td>
             </tr>
           <?php endforeach; ?>
-        <?php endforeach; ?>
       </tbody>
     </table>
   <?php endif; ?>
@@ -332,6 +343,25 @@
             <input type="hidden" name="images_json" id="images-json-<?= htmlspecialchars($desc['group_name']) ?>">
             <input type="hidden" name="html_p_json" id="html-p-json-<?= htmlspecialchars($desc['group_name']) ?>">
             
+            <!-- Wikipedia Topic -->
+            <div class="mb-4 p-3 border rounded bg-light">
+              <h6 class="mb-2"><i class="fa fa-wikipedia-w"></i> Wikipedia Topic</h6>
+              <p class="text-muted small mb-2">Enter the Wikipedia article title for this group (e.g. <em>Platyhelminthes</em>, <em>Planaria</em>, <em>Bats</em>). Click <strong>Retrieve &amp; Save</strong> to fetch the description and image and store them below.</p>
+              <input type="hidden" name="wikipedia_topic" id="wiki-topic-hidden-<?= htmlspecialchars($desc['group_name']) ?>" value="<?= htmlspecialchars($desc['wikipedia_topic'] ?? '') ?>">
+              <div class="input-group">
+                <input type="text" class="form-control" id="wiki-topic-<?= htmlspecialchars($desc['group_name']) ?>"
+                       value="<?= htmlspecialchars($desc['wikipedia_topic'] ?? '') ?>"
+                       placeholder="e.g. Platyhelminthes"
+                       oninput="document.getElementById('wiki-topic-hidden-<?= htmlspecialchars($desc['group_name']) ?>').value = this.value">
+                <button type="button" class="btn btn-outline-primary"
+                        onclick="fetchGroupWiki(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>, this)"
+                        <?= $desc_file_write_error ? 'disabled' : '' ?>>
+                  <i class="fa fa-download"></i> Retrieve &amp; Save
+                </button>
+              </div>
+              <div id="wiki-status-<?= htmlspecialchars($desc['group_name']) ?>" class="mt-2 small"></div>
+            </div>
+
             <h5>Images</h5>
             <div id="images-container-<?= htmlspecialchars($desc['group_name']) ?>">
               <?php foreach ($desc['images'] as $idx => $image): ?>

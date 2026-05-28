@@ -47,8 +47,8 @@
         
         <p><strong>Built-in Checks & Actions:</strong> Each step includes automated checks to verify configuration and quick action buttons to fix easy-to-address issues:</p>
         <ul>
-          <li><strong>Automated Checks:</strong> File permissions, missing configuration files, group assignments, and taxonomy tree membership</li>
-          <li><strong>Quick Fix Actions:</strong> Generate missing organism.json files, assign organisms to default groups, and add organisms to taxonomy tree</li>
+          <li><strong>Automated Checks:</strong> File permissions, missing configuration files, group assignments, and homepage selector status</li>
+          <li><strong>Quick Fix Actions:</strong> Generate missing organism.json files, assign organisms to default groups, and trigger a cache refresh</li>
           <li><strong>Detailed Management:</strong> Links to full management pages for complex customizations</li>
         </ul>
         
@@ -107,10 +107,14 @@
                   <code>├─ organism.json</code> (metadata file)<br/>
                   <code>└─ <strong>assembly_name</strong></code> (e.g., GCA_004027475.1_v1)<br/>
                   <div class="ms-3">
-                    <code>├─ transcript.nt.fa</code> (mRNA sequences)<br/>
-                    <code>├─ protein.aa.fa</code> (protein sequences)<br/>
-                    <code>├─ cds.nt.fa</code> (coding sequences)<br/>
-                    <code>└─ genome.fa</code> (optional: full genome)<br/>
+                    <code>├─ genome.fa</code> (reference genome — shared across gene sets)<br/>
+                    <code>├─ genome.fa.fai</code> (samtools FAI index)<br/>
+                    <code>└─ <strong>gene_set_name</strong></code> (e.g., v1, OGS1.0)<br/>
+                    <div class="ms-3">
+                      <code>├─ *.transcript.nt.fa</code> (mRNA sequences)<br/>
+                      <code>├─ *.protein.aa.fa</code> (protein sequences)<br/>
+                      <code>└─ *.cds.nt.fa</code> (coding sequences)<br/>
+                    </div>
                   </div>
                 </div>
                 <div class="mt-2">
@@ -278,30 +282,26 @@
           <?php
           include_once __DIR__ . '/../../lib/blast_functions.php';
           
-          // Check for missing BLAST indexes
+          // Check for missing BLAST indexes.
+          // BLAST indexes now live in gene_set subdirs under each assembly dir.
           $blast_issues = [];
           foreach ($organisms_in_system as $org) {
               $org_dir = "$organism_data/$org";
-              
-              // Scan for assembly directories
-              if (is_dir($org_dir)) {
-                  foreach (scandir($org_dir) as $item) {
-                      if ($item !== '.' && $item !== '..' && is_dir("$org_dir/$item")) {
-                          $assembly_path = "$org_dir/$item";
-                          $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
-                          
-                          // Check if there are FASTA files missing indexes
-                          if (!empty($blast_validation['databases'])) {
-                              foreach ($blast_validation['databases'] as $db) {
-                                  if (!$db['has_indexes']) {
-                                      $blast_issues[] = [
-                                          'organism' => $org,
-                                          'assembly' => $item,
-                                          'fasta' => $db['fasta'],
-                                          'missing' => $db['missing_indexes']
-                                      ];
-                                  }
-                              }
+              if (!is_dir($org_dir)) continue;
+              foreach (scandir($org_dir) as $asm) {
+                  if ($asm === '.' || $asm === '..' || !is_dir("$org_dir/$asm")) continue;
+                  $asm_path = "$org_dir/$asm";
+                  foreach (glob($asm_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                      $blast_validation = validateBlastIndexFiles($gs_dir, $sequence_types);
+                      foreach ($blast_validation['databases'] ?? [] as $db) {
+                          if (!$db['has_indexes']) {
+                              $blast_issues[] = [
+                                  'organism' => $org,
+                                  'assembly' => $asm,
+                                  'gene_set' => basename($gs_dir),
+                                  'fasta'    => $db['fasta'],
+                                  'missing'  => $db['missing_indexes'],
+                              ];
                           }
                       }
                   }
@@ -328,19 +328,18 @@
                     <?php foreach ($blast_issues as $issue): ?>
                       <?php 
                         $organism_data_base = $config->getPath('organism_data');
-                        //$organism_data_base = realpath($organism_data_base) ?: $organism_data_base;
-                        $assembly_fullpath = $organism_data_base . '/' . $issue['organism'] . '/' . $issue['assembly'];
-                        $perm_check = checkAssemblyCanGenerateBlast($assembly_fullpath, [$issue['fasta']]);
+                        $gs_fullpath = $organism_data_base . '/' . $issue['organism'] . '/' . $issue['assembly'] . '/' . ($issue['gene_set'] ?? 'v1');
+                        $perm_check = checkAssemblyCanGenerateBlast($gs_fullpath, [$issue['fasta']]);
                         $can_generate = $perm_check['writable'];
-                        
+
                         // Calculate commands upfront so they're available everywhere
                         $is_protein = strpos($issue['fasta'], 'protein') !== false;
                         $db_type = $is_protein ? 'prot' : 'nucl';
-                        $cd_cmd = "cd " . htmlspecialchars($assembly_fullpath);
+                        $cd_cmd = "cd " . htmlspecialchars($gs_fullpath);
                         $makeblastdb_cmd = "makeblastdb -in " . htmlspecialchars($issue['fasta']) . " -dbtype " . htmlspecialchars($db_type) . " -parse_seqids";
                       ?>
                       <li class="mb-3 pb-3 border-bottom">
-                        <strong><?= htmlspecialchars($issue['organism']) ?>/<?= htmlspecialchars($issue['assembly']) ?>/<?= htmlspecialchars($issue['fasta']) ?></strong><br>
+                        <strong><?= htmlspecialchars($issue['organism']) ?>/<?= htmlspecialchars($issue['assembly']) ?>/<?= htmlspecialchars($issue['gene_set'] ?? 'v1') ?>/<?= htmlspecialchars($issue['fasta']) ?></strong><br>
                         <small class="text-danger">Missing: <?= htmlspecialchars(implode(', ', $issue['missing'])) ?></small>
                         <?php if (!$can_generate): ?>
                           <div class="alert alert-danger mt-2 mb-0 py-1 px-2 small">
@@ -355,7 +354,7 @@
                                 <i class="fa fa-copy"></i> Copy
                               </button>
                               <?php if ($can_generate): ?>
-                                <button type="button" class="btn btn-outline-success generate-blast-btn" data-organism="<?= htmlspecialchars($issue['organism']) ?>" data-assembly="<?= htmlspecialchars($issue['assembly']) ?>" data-fasta="<?= htmlspecialchars($issue['fasta']) ?>" title="Generate now">
+                                <button type="button" class="btn btn-outline-success generate-blast-btn" data-organism="<?= htmlspecialchars($issue['organism']) ?>" data-assembly="<?= htmlspecialchars($issue['assembly']) ?>" data-gene-set="<?= htmlspecialchars($issue['gene_set'] ?? 'v1') ?>" data-fasta="<?= htmlspecialchars($issue['fasta']) ?>" title="Generate now">
                                   <i class="fa fa-play"></i> Generate
                                 </button>
                               <?php endif; ?>
@@ -651,59 +650,53 @@
       </div>
     </div>
 
-    <!-- Step 4: Add to Taxonomy Tree -->
+    <!-- Step 4: Verify Homepage Selector -->
     <div class="card mb-3 border-primary">
       <div class="card-header bg-primary bg-opacity-10">
         <h5 class="mb-0">
           <span class="badge bg-primary me-2">Step 4</span>
-          Add Organism to Taxonomy Tree
+          Verify Organism Appears in Homepage Selector
         </h5>
       </div>
       <div class="card-body">
-        <p><strong>What to do:</strong></p>
+        <p>MOOP's homepage shows a taxonomic hierarchy that lets visitors browse and select organisms. This hierarchy is built automatically from each organism's <code>taxon_id</code> field in <code>organism.json</code> using locally-cached NCBI lineage data.</p>
+        <p><strong>How it works:</strong></p>
         <ul>
-          <li>Add the new organism to the site's taxonomy tree</li>
-          <li>This makes it discoverable on the homepage organism selector</li>
-          <li>Organize it within the appropriate taxonomic hierarchy</li>
+          <li>Each organism needs a valid <code>taxon_id</code> (NCBI Taxonomy ID) in its <code>organism.json</code></li>
+          <li>The organism cache refresh (run from <strong>Manage Organisms</strong>) rebuilds the selector automatically using that ID</li>
+          <li>NCBI lineage data is synced monthly in the background — no manual steps needed</li>
+          <li>If two organisms share the same taxon ID, only one will appear in the selector</li>
         </ul>
 
         <?php
-        // Check taxonomy tree
         $tree_file = dirname($organism_data) . '/metadata/taxonomy_tree_config.json';
         $organisms_not_in_tree = [];
-        
         foreach ($organisms_in_system as $org) {
             if (!isAssemblyInTaxonomyTree($org, '', $tree_file)) {
                 $organisms_not_in_tree[] = $org;
             }
         }
         ?>
-        
+
         <?php if (!empty($organisms_not_in_tree)): ?>
           <div class="alert alert-warning mt-3">
-            <i class="fa fa-exclamation-triangle"></i> <strong>Missing from Taxonomy Tree:</strong>
+            <i class="fa fa-exclamation-triangle"></i> <strong>Not yet in selector:</strong>
             <ul class="mb-0 mt-2">
               <?php foreach ($organisms_not_in_tree as $org): ?>
                 <li><?= htmlspecialchars($org) ?></li>
               <?php endforeach; ?>
             </ul>
           </div>
-          
-          <p class="mt-3"><strong>Quick Action:</strong></p>
+          <p class="mt-3"><strong>Fix:</strong> Run a cache refresh to rebuild the selector.</p>
           <button type="button" class="btn btn-primary" id="generateTreeBtn">
-            <i class="fa fa-sync-alt"></i> Auto-Generate Tree from NCBI
+            <i class="fa fa-sync-alt"></i> Refresh Cache Now
           </button>
-          <small class="text-muted d-block mt-2">
-            <i class="fa fa-clock"></i> This will generate the tree for all organisms (~<?= count($organisms_in_system) ?> seconds)
-          </small>
           <div id="generateTreeStatus" style="display: none; margin-top: 1rem;"></div>
         <?php else: ?>
           <div class="alert alert-success mt-3">
-            <i class="fa fa-check-circle"></i> All organisms are in the taxonomy tree!
+            <i class="fa fa-check-circle"></i> All organisms are in the homepage selector.
           </div>
         <?php endif; ?>
-
-        <p class="mt-3"><strong>Full Management:</strong> <a href="manage_taxonomy_tree.php" class="btn btn-info"><i class="fa fa-sitemap"></i> Manage Taxonomy Tree</a></p>
       </div>
     </div>
 
@@ -879,30 +872,24 @@ async function generateOrganismJson() {
 async function generateTreeFromChecklist() {
   const btn = document.getElementById('generateTreeBtn');
   const statusDiv = document.getElementById('generateTreeStatus');
-  
-  // Disable button and show loading
+
   btn.disabled = true;
-  statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Generating taxonomy tree from NCBI (this may take a minute)...</div>';
+  statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Triggering cache refresh (rebuilds taxonomy tree automatically)...</div>';
   statusDiv.style.display = 'block';
-  
+
   try {
-    const response = await fetch('manage_taxonomy_tree.php', {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const response = await fetch(sitePath + '/admin/api/refresh_organism_cache.php', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'action=generate'
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrfToken },
+      body: 'action=start&force=1'
     });
-    
-    if (response.ok) {
-      statusDiv.innerHTML = '<div class="alert alert-success"><i class="fa fa-check-circle"></i> <strong>Success!</strong> Taxonomy tree has been generated. Reloading...</div>';
-      
-      // Reload the page after a short delay
-      setTimeout(() => {
-        location.reload();
-      }, 2000);
+    const data = await response.json();
+    if (data.success || data.status === 'started' || data.status === 'running') {
+      statusDiv.innerHTML = '<div class="alert alert-success"><i class="fa fa-check-circle"></i> Cache refresh started — taxonomy tree will be rebuilt. Reloading in 5s...</div>';
+      setTimeout(() => location.reload(), 5000);
     } else {
-      statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> Failed to generate tree. Please try again or use the full management page.</div>';
+      statusDiv.innerHTML = '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <strong>Error:</strong> ' + (data.message || 'Unknown error') + '</div>';
       btn.disabled = false;
     }
   } catch (error) {
@@ -998,16 +985,17 @@ document.addEventListener('DOMContentLoaded', function() {
       e.preventDefault();
       const organism = this.getAttribute('data-organism');
       const assembly = this.getAttribute('data-assembly');
+      const geneSet  = this.getAttribute('data-gene-set') || 'v1';
       const fasta = this.getAttribute('data-fasta');
-      
-      if (!confirm(`Generate BLAST indexes for ${organism}/${assembly}/${fasta}?\n\nThis may take a few minutes.`)) {
+
+      if (!confirm(`Generate BLAST indexes for ${organism}/${assembly}/${geneSet}/${fasta}?\n\nThis may take a few minutes.`)) {
         return;
       }
-      
+
       const originalText = this.innerHTML;
       this.disabled = true;
       this.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating...';
-      
+
       fetch('api/generate_blast_indexes.php', {
         method: 'POST',
         headers: {
@@ -1016,6 +1004,7 @@ document.addEventListener('DOMContentLoaded', function() {
         body: new URLSearchParams({
           organism: organism,
           assembly: assembly,
+          gene_set: geneSet,
           fasta_file: fasta
         })
       })

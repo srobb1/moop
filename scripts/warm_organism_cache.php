@@ -21,6 +21,15 @@ if (php_sapi_name() !== 'cli') {
 
 $force = in_array('--force', $argv);
 
+// Optional: rescan a single named organism and skip taxonomy/annotation updates.
+$single_organism = null;
+foreach ($argv as $arg) {
+    if (str_starts_with($arg, '--organism=')) {
+        $single_organism = substr($arg, 11);
+        break;
+    }
+}
+
 // Bootstrap the app (config + all library functions)
 $base_dir = dirname(__DIR__);
 require_once "$base_dir/includes/config_init.php";
@@ -44,7 +53,7 @@ $org_dirs = array_filter(scandir($organism_data), function($f) use ($organism_da
 });
 echo "Found " . count($org_dirs) . " organisms\n";
 
-if (!$force) {
+if (!$force && !$single_organism) {
     // Check if organism cache is fresh
     $cache_file = "$organism_data/.organism_cache.json";
     if (file_exists($cache_file)) {
@@ -92,14 +101,32 @@ if (!$force) {
     }
 }
 
-echo "Scanning organisms...\n";
+if ($single_organism) {
+    echo "Rescanning single organism: $single_organism\n";
+} else {
+    echo "Scanning organisms...\n";
+}
 $start = microtime(true);
 
-$progress = function($organism, $current, $total) {
-    echo "  [$current/$total] $organism\n";
+$progress_file = "$organism_data/.organism_cache_progress.json";
+$progress = function($organism, $current, $total, $step = 'scanning') use ($progress_file) {
+    if ($step === 'scanning') {
+        echo "  [$current/$total] $organism\n";
+    }
+    @file_put_contents($progress_file, json_encode([
+        'organism' => $organism,
+        'step'     => $step,
+        'current'  => $current,
+        'total'    => $total,
+    ]));
 };
 
-$organisms = getCachedOrganismsInfo($organism_data, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force, $progress);
+$organisms = getCachedOrganismsInfo(
+    $organism_data, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file,
+    $force && !$single_organism,       // force_refresh: only for all-organism scans
+    $progress,
+    $single_organism ? [$single_organism] : []  // force_organisms: targeted rescan
+);
 
 $elapsed = round(microtime(true) - $start, 2);
 echo "Done! Scanned " . count($organisms) . " organisms in {$elapsed}s\n";
@@ -111,61 +138,34 @@ if (file_exists($cache_file)) {
     echo "Cache written: $cache_file ({$size} KB)\n";
 } else {
     echo "WARNING: Cache file was not written. Check directory permissions.\n";
+    @unlink($progress_file);
     exit(1);
 }
 
-// --- Warm annotation config cache ---
+@unlink($progress_file);
+
+if ($single_organism) {
+    echo "Done.\n";
+    exit(0);
+}
+
+// --- Warm annotation config cache (per-organism, only re-query changed databases) ---
 echo "\nWarming annotation config...\n";
 $config_file = "$metadata_path/annotation_config.json";
 $annotation_config = loadJsonFile($config_file, []);
 
-$newest_mod_info = getNewestSqliteModTime($organism_data);
-$need_update = shouldUpdateAnnotationCounts($annotation_config, $newest_mod_info);
+[$annotation_config, $ann_updated] = update_annotation_config_modular(
+    $annotation_config,
+    $organism_data,
+    $force,
+    function($org, $cur, $tot) { echo "  [$cur/$tot] Querying $org\n"; }
+);
 
-if (!$need_update && !$force) {
+if ($ann_updated === 0 && !$force) {
     echo "Annotation config is already up to date.\n";
 } else {
-    $all_db_annotation_types = [];
-    $orgs_with_assemblies = getOrganismsWithAssemblies($organism_data);
-    $org_count = 0;
-    $org_total = count($orgs_with_assemblies);
-
-    foreach ($orgs_with_assemblies as $org_name => $assemblies) {
-        $org_count++;
-        $db_file = "$organism_data/$org_name/organism.sqlite";
-        if (file_exists($db_file)) {
-            echo "  [$org_count/$org_total] Querying $org_name\n";
-            $db_types = getAnnotationTypesFromDB($db_file);
-            foreach ($db_types as $type => $counts) {
-                if (!isset($all_db_annotation_types[$type])) {
-                    $all_db_annotation_types[$type] = $counts;
-                } else {
-                    $all_db_annotation_types[$type]['annotation_count'] += $counts['annotation_count'];
-                    $all_db_annotation_types[$type]['feature_count'] += $counts['feature_count'];
-                }
-            }
-        }
-    }
-
-    // Sync and save
-    if (isset($annotation_config['annotation_types'])) {
-        $annotation_config = syncAnnotationTypes($annotation_config, $all_db_annotation_types);
-
-        // Rebuild type order
-        $type_order = [];
-        foreach ($annotation_config['annotation_types'] as $type_name => $type_config) {
-            $type_order[] = ['name' => $type_name, 'order' => $type_config['order'] ?? 999];
-        }
-        usort($type_order, function($a, $b) { return $a['order'] - $b['order']; });
-        $annotation_config['annotation_type_order'] = array_map(function($item) { return $item['name']; }, $type_order);
-    }
-
-    if ($newest_mod_info !== null) {
-        $annotation_config['sqlite_mod_time'] = $newest_mod_info['unix_time'];
-    }
-
     saveJsonFile($config_file, $annotation_config);
-    echo "Annotation config updated with " . count($all_db_annotation_types) . " annotation types.\n";
+    echo "Annotation config updated ($ann_updated organism" . ($ann_updated !== 1 ? 's' : '') . " re-queried).\n";
 }
 
 // --- Update taxonomy tree ---
@@ -187,12 +187,18 @@ $need_fetch = array_filter($organism_infos, function($d) use ($lineage_cache) {
     return !empty($d['taxon_id']) && !isset($lineage_cache[(string)$d['taxon_id']]);
 });
 
+$stored_gz = "$metadata_path/ncbi_rankedlineage.dmp.gz";
+
 if (empty($need_fetch) && !$force) {
     echo "Lineage cache is up to date.\n";
+} elseif (!file_exists($stored_gz)) {
+    echo "WARNING: Local NCBI taxonomy dump not found.\n";
+    echo "         Lineage and taxonomy tree cannot be updated without it.\n";
+    echo "         Run: php scripts/sync_ncbi_taxonomy_dump.php\n";
 } else {
     $fetch_count = count($need_fetch);
     if ($fetch_count > 0) {
-        echo "Fetching lineage from NCBI for $fetch_count new organism(s)...\n";
+        echo "Resolving lineage for $fetch_count new organism(s) from local dump...\n";
         $lineage_cache = refresh_lineage_cache($need_fetch, $lineage_cache, function($org, $cur, $tot) {
             echo "  [$cur/$tot] $org\n";
         });
@@ -232,7 +238,7 @@ if (file_exists($tree_config_file) && !is_writable($tree_config_file)) {
             }
             unset($org_entry);
             if ($changed) {
-                @file_put_contents($org_cache_file, json_encode($org_cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                organism_cache_write_atomic($org_cache_file, $org_cache);
                 echo "Organism cache patched with updated in_taxonomy_tree values.\n";
             }
         }

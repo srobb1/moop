@@ -7,10 +7,11 @@
  * GET params:
  *   organism  - Organism directory name
  *   assembly  - Assembly directory name
- *   filename  - Filename within the assembly directory
+ *   filename  - Filename within the assembly or gene_set directory
+ *   gene_set  - Gene set name (optional; when provided, file is served from the gene_set subdir)
  *
  * Security:
- *   - Access checked via has_assembly_access()
+ *   - Access checked via has_gene_set_access() (gene_set param) or has_assembly_access()
  *   - Path traversal prevented via realpath() + base-dir check
  *   - Blocked file types rejected by extension
  */
@@ -30,11 +31,18 @@ $blocked_exts = array_flip([
 
 $organism = trim($_GET['organism'] ?? '');
 $assembly = trim($_GET['assembly'] ?? '');
+$gene_set = trim($_GET['gene_set'] ?? '');
 $filename = trim($_GET['filename'] ?? '');
 
 if ($organism === '' || $assembly === '' || $filename === '') {
     http_response_code(400);
     exit('Missing required parameters.');
+}
+
+// Reject path separators or traversal in gene_set
+if ($gene_set !== '' && (strpos($gene_set, '/') !== false || strpos($gene_set, '\\') !== false || strpos($gene_set, '..') !== false)) {
+    http_response_code(400);
+    exit('Invalid gene_set.');
 }
 
 // Reject any path separator or traversal attempt in filename
@@ -50,15 +58,23 @@ if (isset($blocked_exts[$ext])) {
     exit('This file type is not available for download.');
 }
 
-// Verify the user has access to this assembly
-if (!has_assembly_access($organism, $assembly)) {
-    http_response_code(403);
-    exit('Access denied.');
+// Verify access: gene_set-level when gene_set is provided, assembly-level otherwise
+if ($gene_set !== '') {
+    if (!has_gene_set_access($organism, $assembly, $gene_set)) {
+        http_response_code(403);
+        exit('Access denied.');
+    }
+} else {
+    if (!has_assembly_access($organism, $assembly)) {
+        http_response_code(403);
+        exit('Access denied.');
+    }
 }
 
 // Build and validate filesystem path (prevents path traversal)
 $organism_data = $config->getPath('organism_data');
-$base_dir = realpath("$organism_data/$organism/$assembly");
+$subdir = $gene_set !== '' ? "$organism/$assembly/$gene_set" : "$organism/$assembly";
+$base_dir = realpath("$organism_data/$subdir");
 
 if ($base_dir === false || !is_dir($base_dir)) {
     http_response_code(404);

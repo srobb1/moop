@@ -74,15 +74,14 @@ header('Cache-Control: no-cache');
 $found_any = false;
 
 foreach ($valid_organisms as $organism => $uniquenames) {
-    $organism_dir = "$organism_data/$organism";
+    $sources_by_group  = getAccessibleAssemblies($organism);
+    $organism_sources  = flattenSourcesList($sources_by_group);
 
-    $entries = array_diff(scandir($organism_dir), ['.', '..']);
-    foreach ($entries as $entry) {
-        $assembly_dir = "$organism_dir/$entry";
-        if (!is_dir($assembly_dir) || $entry === 'fasta_files') continue;
-        if (!has_assembly_access($organism, $entry)) continue;
+    foreach ($organism_sources as $source) {
+        if (!is_dir($source['path'])) continue;
 
-        $result = extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types, $organism, $entry);
+        $typed_ids = buildTypedIds($uniquenames, "$organism_data/$organism/organism.sqlite");
+        $result = extractSequencesForAllTypes($source['path'], $typed_ids, $sequence_types, $organism, $source['assembly']);
         if ($result['success']) {
             foreach ($result['content'] as $content) {
                 $chunk = rtrim($content) . "\n";

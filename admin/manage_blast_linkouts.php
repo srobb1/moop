@@ -79,28 +79,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Build list of all available BLAST databases for the per-DB dropdown
+// Build list of all available BLAST databases for the per-DB dropdown.
+// BLAST indexes live in gene_set subdirs, but the per-DB linkout key stays
+// organism|assembly|seq_type (gene_set-agnostic) to avoid breaking saved configs.
 $organisms_dir = $config->getPath('organism_data');
 $all_orgs      = getOrganismsWithAssemblies($organisms_dir);
 $db_options    = [];
 foreach ($all_orgs as $org_name => $assemblies) {
     foreach ($assemblies as $asm_id) {
         $asm_path = $organisms_dir . '/' . $org_name . '/' . $asm_id;
-        foreach (getBlastDatabases($asm_path) as $db) {
-            $key = $org_name . '|' . $asm_id . '|' . $db['seq_type'];
-            $db_options[$key] = [
-                'key'      => $key,
-                'display'  => $org_name . ' / ' . $asm_id . ' / ' . $db['name'],
-                'organism' => $org_name,
-                'assembly' => $asm_id,
-                'db_type'  => $db['seq_type'],
-                'db_name'  => $db['name'],
-            ];
+        foreach (glob($asm_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
+            foreach (getBlastDatabases($gs_dir) as $db) {
+                $key = $org_name . '|' . $asm_id . '|' . $db['seq_type'];
+                if (!isset($db_options[$key])) {
+                    $db_options[$key] = [
+                        'key'      => $key,
+                        'display'  => $org_name . ' / ' . $asm_id . ' / ' . $db['name'],
+                        'organism' => $org_name,
+                        'assembly' => $asm_id,
+                        'db_type'  => $db['seq_type'],
+                        'db_name'  => $db['name'],
+                    ];
+                }
+            }
         }
     }
 }
 
-// Build feature_coords.tsv status for each JBrowse-registered assembly
+// Build feature_coords.tsv status for each JBrowse-registered assembly, per gene set
 $feature_coord_status = [];
 $assemblies_meta_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
 if (is_dir($assemblies_meta_dir)) {
@@ -111,16 +117,21 @@ if (is_dir($assemblies_meta_dir)) {
         $asm = $jd['assemblyId'] ?? '';
         if ($org === '' || $asm === '') continue;
         $asm_path = $organisms_dir . '/' . $org . '/' . $asm;
-        $tsv      = $asm_path . '/feature_coords.tsv';
-        $gff      = $asm_path . '/genomic.gff';
-        $feature_coord_status[] = [
-            'organism'     => $org,
-            'assembly'     => $asm,
-            'has_tsv'      => file_exists($tsv),
-            'has_gff'      => file_exists($gff),
-            'tsv_modified' => file_exists($tsv) ? date('Y-m-d H:i', filemtime($tsv)) : null,
-            'tsv_lines'    => file_exists($tsv) ? count(file($tsv, FILE_SKIP_EMPTY_LINES)) : 0,
-        ];
+        if (!is_dir($asm_path)) continue;
+        foreach (glob($asm_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
+            $gene_set = basename($gs_dir);
+            $tsv = $gs_dir . '/feature_coords.tsv';
+            $gff = $gs_dir . '/genomic.gff';
+            $feature_coord_status[] = [
+                'organism'     => $org,
+                'assembly'     => $asm,
+                'gene_set'     => $gene_set,
+                'has_tsv'      => file_exists($tsv),
+                'has_gff'      => file_exists($gff),
+                'tsv_modified' => file_exists($tsv) ? date('Y-m-d H:i', filemtime($tsv)) : null,
+                'tsv_lines'    => file_exists($tsv) ? count(file($tsv, FILE_SKIP_EMPTY_LINES)) : 0,
+            ];
+        }
     }
 }
 

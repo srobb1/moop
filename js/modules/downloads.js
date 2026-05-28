@@ -7,36 +7,68 @@ $(document).ready(function () {
 
     // ── Cascading checkboxes ──────────────────────────────────────────────────
 
-    // Org checkbox → all assemblies + files beneath it
+    // Org checkbox → all assemblies + gene sets + files beneath it; auto-expand when checking
     $(document).on('change', '.org-checkbox', function () {
         const orgId  = $(this).data('org-id');
         const checked = this.checked;
         this.indeterminate = false;
         $('[data-org-id="' + orgId + '"].asm-checkbox').prop({ checked, indeterminate: false });
+        $('[data-org-id="' + orgId + '"].gs-checkbox').prop({ checked, indeterminate: false });
         $('[data-org-id="' + orgId + '"].file-checkbox').prop('checked', checked);
+        if (checked) {
+            $('#' + orgId).collapse('show');
+            $('#' + orgId + ' .collapse').collapse('show');
+        }
         updateSelectedCount();
     });
 
-    // Assembly checkbox → all files beneath; then sync org state
+    // Assembly checkbox → all gene sets + files beneath it
     $(document).on('change', '.asm-checkbox', function () {
         const asmId  = $(this).data('asm-id');
         const orgId  = $(this).data('org-id');
         const checked = this.checked;
         this.indeterminate = false;
+        $('[data-asm-id="' + asmId + '"].gs-checkbox').prop({ checked, indeterminate: false });
         $('[data-asm-id="' + asmId + '"].file-checkbox').prop('checked', checked);
         syncAsmCheckbox(asmId);
         syncOrgCheckbox(orgId);
         updateSelectedCount();
     });
 
-    // Individual file → sync assembly then org
-    $(document).on('change', '.file-checkbox', function () {
-        const asmId = $(this).data('asm-id');
-        const orgId = $(this).data('org-id');
+    // Gene-set checkbox → all files beneath; then sync asm + org state
+    $(document).on('change', '.gs-checkbox', function () {
+        const gsId   = $(this).data('gs-id');
+        const asmId  = $(this).data('asm-id');
+        const orgId  = $(this).data('org-id');
+        const checked = this.checked;
+        this.indeterminate = false;
+        $('[data-gs-id="' + gsId + '"].file-checkbox').prop('checked', checked);
+        syncGsCheckbox(gsId);
         syncAsmCheckbox(asmId);
         syncOrgCheckbox(orgId);
         updateSelectedCount();
     });
+
+    // Individual file → sync gene set, assembly, then org
+    $(document).on('change', '.file-checkbox', function () {
+        const gsId  = $(this).data('gs-id');
+        const asmId = $(this).data('asm-id');
+        const orgId = $(this).data('org-id');
+        if (gsId) syncGsCheckbox(gsId);
+        syncAsmCheckbox(asmId);
+        syncOrgCheckbox(orgId);
+        updateSelectedCount();
+    });
+
+    function syncGsCheckbox(gsId) {
+        const files   = $('[data-gs-id="' + gsId + '"].file-checkbox');
+        const total   = files.length;
+        const checked = files.filter(':checked').length;
+        const cb = document.getElementById('cb-' + gsId);
+        if (!cb) return;
+        cb.checked       = (total > 0 && checked === total);
+        cb.indeterminate = (checked > 0 && checked < total);
+    }
 
     function syncAsmCheckbox(asmId) {
         const files   = $('[data-asm-id="' + asmId + '"].file-checkbox');
@@ -84,6 +116,13 @@ $(document).ready(function () {
         $('#download-selected-btn').prop('disabled', count === 0);
     }
 
+    // Gene-set header collapse toggle (manual — avoids Bootstrap eating checkbox clicks)
+    $(document).on('click', '.gs-header', function (e) {
+        if ($(e.target).closest('input, label').length) return;
+        const targetId = $(this).data('collapse-target');
+        if (targetId) $(targetId).collapse('toggle');
+    });
+
     // ── Expand / Collapse All ────────────────────────────────────────────────
 
     $('#expand-all-btn').on('click', function () {
@@ -120,13 +159,14 @@ $(document).ready(function () {
     $('#select-all-btn').on('click', function () {
         // Only affect visible (non-filtered) organisms
         $('#download-tree .organism-block:visible .file-checkbox').prop('checked', true);
+        $('#download-tree .organism-block:visible .gs-checkbox').prop({ checked: true, indeterminate: false });
         $('#download-tree .organism-block:visible .asm-checkbox').prop({ checked: true, indeterminate: false });
         $('#download-tree .organism-block:visible .org-checkbox').prop({ checked: true, indeterminate: false });
         updateSelectedCount();
     });
 
     $('#deselect-all-btn').on('click', function () {
-        $('.file-checkbox, .asm-checkbox, .org-checkbox').prop({ checked: false, indeterminate: false });
+        $('.file-checkbox, .gs-checkbox, .asm-checkbox, .org-checkbox').prop({ checked: false, indeterminate: false });
         updateSelectedCount();
     });
 
@@ -135,8 +175,9 @@ $(document).ready(function () {
     $('#organism-filter').on('input', function () {
         const query = $(this).val().toLowerCase().trim();
         $('.organism-block').each(function () {
-            const name = String($(this).data('organism-name') || '');
-            $(this).toggle(query === '' || name.includes(query));
+            const name   = String($(this).data('organism-name') || '');
+            const common = String($(this).data('common-name') || '');
+            $(this).toggle(query === '' || name.includes(query) || common.includes(query));
         });
     });
 
@@ -168,6 +209,7 @@ $(document).ready(function () {
             const fields = {
                 organism: $(this).data('organism'),
                 assembly: $(this).data('assembly'),
+                gene_set: $(this).data('gene-set'),
                 filename: $(this).data('filename')
             };
             Object.entries(fields).forEach(function ([key, val]) {

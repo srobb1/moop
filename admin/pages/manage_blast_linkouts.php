@@ -233,7 +233,7 @@
       <div class="card mt-4 mb-4">
         <div class="card-header">
           <strong>Feature Coordinate Index</strong>
-          <span class="text-muted ms-2 small">— Required for Genome Browser linkouts on feature BLAST databases (protein / mRNA / CDS). Stored as <code>feature_coords.tsv</code> in each assembly directory. Generated automatically when registering an assembly in JBrowse.</span>
+          <span class="text-muted ms-2 small">— Required for Genome Browser linkouts on feature BLAST databases (protein / mRNA / CDS). Stored as <code>feature_coords.tsv</code> in each gene set directory. Generated automatically when registering an assembly in JBrowse.</span>
         </div>
         <div class="card-body p-0">
           <?php if (empty($feature_coord_status)): ?>
@@ -244,6 +244,7 @@
               <tr>
                 <th>Organism</th>
                 <th>Assembly</th>
+                <th>Gene Set</th>
                 <th>Status</th>
                 <th>Features</th>
                 <th>Last generated</th>
@@ -252,9 +253,11 @@
             </thead>
             <tbody>
               <?php foreach ($feature_coord_status as $row): ?>
-              <tr id="fcs-<?= htmlspecialchars($row['organism'] . '_' . $row['assembly']) ?>">
+              <?php $row_id = htmlspecialchars($row['organism'] . '_' . $row['assembly'] . '_' . $row['gene_set']); ?>
+              <tr id="fcs-<?= $row_id ?>">
                 <td class="small"><?= htmlspecialchars($row['organism']) ?></td>
                 <td class="small"><?= htmlspecialchars($row['assembly']) ?></td>
+                <td class="small"><?= htmlspecialchars($row['gene_set']) ?></td>
                 <td>
                   <?php if ($row['has_tsv']): ?>
                     <span class="badge bg-success">Ready</span>
@@ -270,7 +273,8 @@
                   <?php if ($row['has_gff']): ?>
                   <button type="button" class="btn btn-sm btn-outline-primary gen-feature-coords-btn"
                           data-organism="<?= htmlspecialchars($row['organism']) ?>"
-                          data-assembly="<?= htmlspecialchars($row['assembly']) ?>">
+                          data-assembly="<?= htmlspecialchars($row['assembly']) ?>"
+                          data-gene-set="<?= htmlspecialchars($row['gene_set']) ?>">
                     <i class="fa fa-sync-alt"></i> <?= $row['has_tsv'] ? 'Regenerate' : 'Generate' ?>
                   </button>
                   <?php endif; ?>
@@ -359,7 +363,8 @@ document.querySelectorAll('.gen-feature-coords-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
     const organism = btn.dataset.organism;
     const assembly = btn.dataset.assembly;
-    const row = document.getElementById('fcs-' + organism + '_' + assembly);
+    const geneSet  = btn.dataset.geneSet;
+    const row = document.getElementById('fcs-' + organism + '_' + assembly + '_' + geneSet);
     const origText = btn.innerHTML;
 
     btn.disabled = true;
@@ -369,6 +374,7 @@ document.querySelectorAll('.gen-feature-coords-btn').forEach(btn => {
       const fd = new FormData();
       fd.append('organism', organism);
       fd.append('assembly', assembly);
+      fd.append('gene_set', geneSet);
       const csrfMeta = document.querySelector('meta[name="csrf-token"]');
       if (csrfMeta) fd.append('csrf_token', csrfMeta.content);
 
@@ -376,9 +382,9 @@ document.querySelectorAll('.gen-feature-coords-btn').forEach(btn => {
       const data = await res.json();
 
       if (data.success) {
-        row.cells[2].innerHTML = '<span class="badge bg-success">Ready</span>';
-        row.cells[3].textContent = Number(data.features).toLocaleString();
-        row.cells[4].textContent = data.modified;
+        row.cells[3].innerHTML = '<span class="badge bg-success">Ready</span>';
+        row.cells[4].textContent = Number(data.features).toLocaleString();
+        row.cells[5].textContent = data.modified;
         btn.innerHTML = '<i class="fa fa-sync-alt"></i> Regenerate';
       } else {
         alert('Error: ' + data.message);

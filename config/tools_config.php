@@ -26,10 +26,10 @@ return [
         'description'     => 'Search and download sequences',
         'btn_class'       => 'btn-success',
         'url_path'        => '/tools/retrieve_sequences.php',
-        'context_params'  => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
+        'context_params'  => ['organism', 'assembly', 'gene_set', 'group', 'display_name', 'organisms'],
         'pages'           => 'all',
     ],
-    
+
     'blast_search' => [
         'id'              => 'blast_search',
         'name'            => 'BLAST Search',
@@ -37,7 +37,7 @@ return [
         'description'     => 'Search sequences against databases',
         'btn_class'       => 'btn-warning',
         'url_path'        => '/tools/blast.php',
-        'context_params'  => ['organism', 'assembly', 'group', 'display_name', 'organisms'],
+        'context_params'  => ['organism', 'assembly', 'gene_set', 'group', 'display_name', 'organisms'],
         'pages'           => 'all',
     ],
     
@@ -47,9 +47,20 @@ return [
         'icon'            => 'fa-search',
         'description'     => 'Search selected organisms',
         'btn_class'       => 'btn-info',
-        'url_path'        => '/tools/multi_organism_search.php',
+        'url_path'        => '/tools/multi_organism.php',
         'context_params'  => ['organisms', 'display_name'],
         'pages'           => ['index'],
+    ],
+
+    'downloads' => [
+        'id'              => 'downloads',
+        'name'            => 'Downloads',
+        'icon'            => 'fa-download',
+        'description'     => 'Browse and download genome files',
+        'btn_class'       => 'btn-secondary',
+        'url_path'        => '/tools/downloads.php',
+        'context_params'  => ['organism', 'assembly', 'gene_set', 'group', 'display_name'],
+        'pages'           => ['organism', 'assembly', 'gene_set', 'parent', 'group', 'multi_organism_search', 'index'],
     ],
 
     'genome_browser' => [
@@ -64,6 +75,17 @@ return [
         'target'          => '_blank',
     ],
     
+    'moopmart' => [
+        'id'             => 'moopmart',
+        'name'           => 'MOOP Mega Search',
+        'icon'           => 'fa-filter',
+        'description'    => 'Filter features by annotation, coordinates, and gene set — download as TSV or FASTA',
+        'btn_class'      => 'btn-info',
+        'url_path'       => '/tools/moopmart.php',
+        'context_params' => [],
+        'pages'          => 'all',
+    ],
+
     // HOW TO ADD A NEW TOOL:
     // 1. Choose a unique 'id' (use snake_case, like 'my_new_tool')
     // 2. Create the tool PHP file in /data/moop/tools/ (or subdirectory)

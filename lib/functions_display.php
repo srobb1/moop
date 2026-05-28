@@ -365,25 +365,37 @@ function fetch_organism_image($taxon_id, $organism_name = null, $absolute_images
     }
     
     // Download from NCBI with retry logic
-    $image_url = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon/{$taxon_id}/image";
-    
-    $attempt = 0;
+    $image_url  = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/taxon/{$taxon_id}/image";
+    $attempt    = 0;
     $image_data = false;
-    
+
     while ($attempt < $max_retries && $image_data === false) {
-        $context = stream_context_create(['http' => ['timeout' => 10, 'user_agent' => 'MOOP']]);
-        $image_data = @file_get_contents($image_url, false, $context);
-        
-        if ($image_data === false || strlen($image_data) < 100) {
+        $ch = curl_init($image_url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_USERAGENT      => 'MOOP/1.0',
+        ]);
+        $result      = curl_exec($ch);
+        $err         = curl_errno($ch);
+        $http        = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        curl_close($ch);
+
+        $is_image = $content_type && strpos($content_type, 'image/') === 0;
+        if ($result !== false && !$err && $http === 200 && $is_image && strlen($result) >= 100) {
+            $image_data = $result;
+        } else {
             $attempt++;
             if ($attempt < $max_retries) {
-                usleep(1000000); // Wait 1 second before retry
+                usleep(1000000);
             }
-            $image_data = false;
         }
     }
-    
-    if ($image_data === false || strlen($image_data) < 100) {
+
+    if ($image_data === false) {
         return null;
     }
     
@@ -615,12 +627,7 @@ function downloadWikimediaImage($wiki_url, $cache_filename, $cache_directory = '
         return "/$site/images/wikimedia/" . basename($cache_filename);
     }
     
-    $context = stream_context_create([
-        'http' => ['timeout' => 10, 'user_agent' => 'MOOP/1.0'],
-        'https' => ['timeout' => 10, 'user_agent' => 'MOOP/1.0']
-    ]);
-    
-    $image_data = @file_get_contents($wiki_url, false, $context);
+    $image_data = moop_curl_get($wiki_url, 10, 20);
     
     if ($image_data === false) {
         logError('Failed to download Wikimedia image', 'wikimedia_download', ['wiki_url' => $wiki_url]);

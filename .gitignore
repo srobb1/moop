@@ -35,6 +35,9 @@ metadata/*.json
 metadata/backups/
 metadata/jbrowse2-configs/
 metadata/change_log/
+# NCBI taxonomy dump — large binary, downloaded by sync_ncbi_taxonomy_dump.php
+metadata/ncbi_rankedlineage.dmp.gz
+metadata/.ncbi_taxonomy_meta.json
 
 # ── Logs and runtime state ───────────────────────────────────
 logs/

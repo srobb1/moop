@@ -35,17 +35,18 @@
           <li>Inclusion in the taxonomy tree for homepage discovery</li>
         </ul>
         
-        <p><strong>Status Checklist (9 Requirements):</strong> The system tracks 9 dimensions of organism readiness:</p>
+        <p><strong>Status Checklist (10 Requirements):</strong> The system tracks 10 dimensions of organism readiness:</p>
         <ul>
-          <li>Has assemblies - At least one genome version exists</li>
-          <li>Has FASTA files - Required sequence files are present</li>
-          <li>Has BLAST indexes - Files are searchable via BLAST</li>
-          <li>Has FAI index - <code>genome.fa.fai</code> present for SVG sequence viewer</li>
-          <li>Has database file - SQLite database exists</li>
-          <li>Database is readable - Web server can access it</li>
-          <li>In organism groups - Assembly is assigned to user groups</li>
-          <li>In taxonomy tree - Visible on homepage organism selector</li>
-          <li>Metadata complete - All organism information is filled in</li>
+          <li>Has assemblies</li>
+          <li>Has FASTA files</li>
+          <li>Has BLAST indexes</li>
+          <li>Has FAI index</li>
+          <li>Has database file</li>
+          <li>Database is valid</li>
+          <li>Assembly &amp; gene set dirs match DB</li>
+          <li>In organism groups</li>
+          <li>In taxonomy tree</li>
+          <li>Metadata complete</li>
         </ul>
         
         <p><strong>Performance Note:</strong> This page always loads instantly from a pre-built cache.
@@ -61,7 +62,7 @@
           <li>Verify BLAST indexes are present</li>
           <li>Verify genome FAI index is present</li>
           <li>See which groups each organism belongs to</li>
-          <li>Track overall setup completion with the 9-point checklist</li>
+          <li>Track overall setup completion with the 10-point checklist</li>
         </ul>
       </div>
     </div>
@@ -83,10 +84,12 @@
             &nbsp;&nbsp;<i class="fa fa-database db-icon"></i> organism.sqlite<br>
             &nbsp;&nbsp;<i class="fa fa-file file-icon"></i> organism.json<br>
             &nbsp;&nbsp;<i class="fa fa-folder folder-icon"></i> <strong>assembly_name</strong> (e.g., GCA_004027475.1)<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.cds.nt.fa (coding sequences)<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.protein.aa.fa (proteins)<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.transcript.nt.fa (transcripts)<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.genome.nt.fa (optional)
+            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> genome.fa (reference genome — shared)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> genome.fa.fai (samtools FAI index)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-folder folder-icon"></i> <strong>gene_set_name</strong> (e.g., v1, OGS1.0)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.cds.nt.fa (coding sequences)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.protein.aa.fa (proteins)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-file file-icon"></i> *.transcript.nt.fa (transcripts)
           </div>
         </div>
         
@@ -146,7 +149,7 @@
     <div class="alert alert-warning alert-dismissible fade show">
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       <h5><i class="fa fa-exclamation-triangle"></i> Duplicate Taxon IDs Detected</h5>
-      <p><strong>Problem:</strong> Multiple organisms share the same NCBI Taxon ID. This causes organisms to be missing from the taxonomy tree because they have identical lineages.</p>
+      <p><strong>Problem:</strong> Multiple organisms share the same NCBI Taxon ID. Each taxon ID maps to one lineage entry, so when two organisms share one, only the first will appear in the homepage organism selector. The Taxon ID is also used to fetch classification data (kingdom, phylum, class, etc.) and organism images — duplicates cause incorrect or missing data for the affected organisms.</p>
       <p class="mb-2"><strong>Duplicates found:</strong></p>
       <ul class="mb-2">
         <?php foreach ($duplicate_taxon_ids as $taxon_id => $org_names): ?>
@@ -218,11 +221,11 @@
         <div class="mb-0">
           <h6 class="fw-bold mb-2"><i class="fa fa-star"></i> Overall Status</h6>
           <p class="mb-2">
-            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">9</span></button> - All 9 checks passed
+            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">10</span></button> - All 10 checks passed
             <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-warning text-dark">X</span></button> - Some checks passed (see modal for details)
             <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Critical <span class="badge bg-danger">0</span></button> - No checks passed (no database or no assemblies)
           </p>
-          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the status button to see the detailed checklist of all 9 setup requirements.</p>
+          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the status button to see the detailed checklist of all 10 setup requirements.</p>
           <p class="small text-muted"><strong>Checklist includes:</strong> Assemblies • FASTA files • BLAST indexes • FAI index • Database file • Database readable • Assemblies in groups • Organism in tree • Metadata complete</p>
         </div>
       </div>
@@ -238,8 +241,8 @@
       — <?= htmlspecialchars($cache_stale_reason) ?>.
       Rows marked <span class="badge bg-warning text-dark"><i class="fa fa-clock"></i> Stale</span> may show outdated status.
     </div>
-    <button class="btn btn-warning btn-sm fw-bold flex-shrink-0" onclick="rescanOrganisms()" id="rescanBtnBanner">
-      <i class="fa fa-sync-alt"></i> Update Cache Now
+    <button class="btn btn-warning btn-sm fw-bold flex-shrink-0" onclick="rescanOrganisms(this)" id="rescanBtnBanner">
+      <i class="fa fa-sync-alt"></i> Update Cache
     </button>
   </div>
   <?php elseif (empty($organisms)): ?>
@@ -279,13 +282,69 @@
           <small class="fw-normal ms-2 opacity-75" style="font-size:0.75rem;" id="cacheAge" data-generated="">no cache</small>
         <?php endif; ?>
       </h5>
-      <div class="d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
         <span id="refreshStatus" class="text-white-50 small" style="display:none;"></span>
-        <button id="rescanBtn" class="btn btn-sm btn-light" onclick="rescanOrganisms()" title="Rebuild the organism cache in the background — page reloads automatically when done">
+        <button id="rescanBtn" class="btn btn-sm btn-light" onclick="rescanOrganisms(this)" title="Rescan only organisms whose files changed since last cache">
           <i class="fa fa-sync-alt"></i> Refresh Cache
+        </button>
+        <button id="forceRescanBtn" class="btn btn-sm btn-outline-warning" onclick="forceRescanOrganisms()" title="Rescan all organisms regardless of cache state — use when the cache seems wrong">
+          <i class="fa fa-redo"></i> Force Full Rescan
+        </button>
+        <span class="text-white-50 opacity-50">|</span>
+        <span id="syncTaxonomyStatus" class="text-white-50 small" style="display:none;"></span>
+        <button id="syncTaxonomyBtn" class="btn btn-sm btn-outline-info"
+                onclick="syncNcbiTaxonomy(this, document.getElementById('syncTaxonomyStatus'))"
+                title="Download NCBI taxonomy dump and populate lineage cache — eliminates per-organism API calls">
+          <i class="fa fa-download"></i> Sync NCBI Taxonomy
+        </button>
+        <?php if ($lineage_cache_generated): ?>
+          <small class="text-white-50" style="font-size:0.75rem;">
+            synced <span id="taxonomySyncAge" data-generated="<?= htmlspecialchars($lineage_cache_generated) ?>"></span>
+          </small>
+        <?php endif; ?>
+        <span class="text-white-50 opacity-50">|</span>
+        <button class="btn btn-sm btn-outline-light" data-bs-toggle="collapse" data-bs-target="#taskHelpPanel"
+                title="When to run each task" style="font-size:0.8rem; padding: 0.15rem 0.4rem;">
+          <i class="fa fa-info-circle"></i>
         </button>
       </div>
     </div>
+
+    <!-- Task help panel — collapsed by default -->
+    <div class="collapse" id="taskHelpPanel">
+      <div class="border-bottom px-3 py-2" style="background:#f0f4ff; font-size:0.85rem; line-height:1.5;">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="d-flex gap-2">
+              <span class="mt-1 text-primary"><i class="fa fa-sync-alt fa-fw"></i></span>
+              <div>
+                <strong>Refresh Cache</strong><br>
+                <span class="text-muted">Run after any change to organism files — editing <code>organism.json</code>, uploading a new GFF, rebuilding BLAST indexes, or adding a new organism directory. Scans only what changed; fast even with many organisms.</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="d-flex gap-2">
+              <span class="mt-1 text-warning"><i class="fa fa-redo fa-fw"></i></span>
+              <div>
+                <strong>Force Full Rescan</strong><br>
+                <span class="text-muted">Use when the cache looks wrong and a normal refresh didn't fix it — for example after bulk-moving organism directories, restoring from backup, or if organism counts seem off. Slower: re-scans everything regardless of timestamps.</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="d-flex gap-2">
+              <span class="mt-1 text-info"><i class="fa fa-download fa-fw"></i></span>
+              <div>
+                <strong>Sync NCBI Taxonomy</strong><br>
+                <span class="text-muted">Run when adding an organism that has a <code>taxon_id</code> in its <code>organism.json</code>. Downloads the NCBI taxonomy dump (~60 MB) on first run; subsequent runs reuse the local copy and only re-download if NCBI has updated it. Housekeeping checks for updates monthly in the background.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="card-body">
       <!-- Status filter bar -->
       <div class="mb-3 d-flex flex-wrap gap-2 align-items-center" id="statusFilterBar">
@@ -320,6 +379,7 @@
              <th>Organism</th>
              <th>Common Name</th>
              <th>Tree Status</th>
+             <th>Groups</th>
              <th>Assemblies</th>
              <th>DB Status</th>
              <th>Metadata Status</th>
@@ -341,7 +401,8 @@
                    'has_assemblies'       => 'no-assemblies',
                    'has_fasta'            => 'no-fasta',
                    'has_database'         => 'no-database',
-                   'database_readable'    => 'db-unreadable',
+                   'database_valid'       => 'db-invalid',
+                   'directories_match_db' => 'dir-mismatch',
                ];
                $row_issues = [];
                foreach ($row_issue_map as $chk => $lbl) {
@@ -367,8 +428,14 @@
                  <?php if (isset($data['info']['genus']) && isset($data['info']['species'])): ?>
                    <br><small class="text-muted"><em><?= htmlspecialchars($data['info']['genus']) ?> <?= htmlspecialchars($data['info']['species']) ?></em></small>
                  <?php endif; ?>
-                 <br><button class="btn btn-sm btn-outline-secondary" type="button" onclick="togglePath(this, '<?= htmlspecialchars($data['path']) ?>', '<?= htmlspecialchars($organism) ?>')">
+                 <br>
+                 <button class="btn btn-sm btn-outline-secondary" type="button" onclick="togglePath(this, '<?= htmlspecialchars($data['path']) ?>', '<?= htmlspecialchars($organism) ?>')">
                    <i class="fa fa-folder"></i> View Path
+                 </button>
+                 <button class="btn btn-sm btn-outline-secondary" type="button"
+                         onclick="rescanSingleOrganism(this, <?= htmlspecialchars(json_encode($organism)) ?>)"
+                         title="Force rescan this organism only">
+                   <i class="fa fa-sync-alt"></i> Rescan
                  </button>
                </td>
                <td>
@@ -385,13 +452,42 @@
                    $in_taxonomy_tree = $data['in_taxonomy_tree'] ?? isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
                  ?>
                  <?php if ($in_taxonomy_tree): ?>
-                   <a href="manage_taxonomy_tree.php" target="_blank" class="btn btn-sm btn-outline-success" title="Click to manage taxonomy tree">
+                   <span class="btn btn-sm btn-outline-success disabled">
                      <i class="fa fa-check-circle"></i> Complete
-                   </a>
+                   </span>
                  <?php else: ?>
-                   <a href="manage_taxonomy_tree.php" target="_blank" class="btn btn-sm btn-outline-warning" title="Click to add to taxonomy tree">
+                   <span class="btn btn-sm btn-outline-warning disabled" title="Run Refresh Cache to rebuild the taxonomy tree">
                      <i class="fa fa-times-circle"></i> Missing
-                   </a>
+                   </span>
+                 <?php endif; ?>
+               </td>
+               <?php
+                 $safe_groups_id = 'groups-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism);
+                 $in_groups = $row_checks['assemblies_in_groups'] ?? false;
+                 $org_group_list = $organism_groups_lookup[$organism] ?? [];
+               ?>
+               <td id="<?= $safe_groups_id ?>">
+                 <?php if ($in_groups): ?>
+                   <span class="btn btn-sm btn-outline-success disabled">
+                     <i class="fa fa-check-circle"></i> OK
+                   </span>
+                   <?php if (!empty($org_group_list)): ?>
+                     <div class="mt-1">
+                       <?php foreach ($org_group_list as $og): ?>
+                         <span class="badge bg-secondary"><?= htmlspecialchars($og) ?></span>
+                       <?php endforeach; ?>
+                     </div>
+                   <?php endif; ?>
+                 <?php else: ?>
+                   <span class="btn btn-sm btn-outline-warning disabled">
+                     <i class="fa fa-times-circle"></i> Missing
+                   </span>
+                   <div class="mt-1">
+                     <button class="btn btn-sm btn-outline-primary"
+                             onclick="openQuickAddGroupModal(<?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($safe_groups_id)) ?>)">
+                       <i class="fa fa-plus"></i> Add to Group
+                     </button>
+                   </div>
                  <?php endif; ?>
                </td>
                <td>
@@ -418,15 +514,20 @@
                            $has_name_mismatch = !$matching;
                          }
                          
-                         // Check if BLAST indexes are missing for FASTA files
+                         // Check if BLAST indexes are missing for FASTA files.
+                         // BLAST indexes now live in gene_set subdirs; aggregate across all gene_sets.
                          $assembly_path = $data['path'] . '/' . $assembly;
                          $has_missing_blast_indexes = false;
-                         $blast_validation = $data['blast_validation'][$assembly] ?? validateBlastIndexFiles($assembly_path, $sequence_types);
-                         if (!empty($blast_validation['databases'])) {
-                           foreach ($blast_validation['databases'] as $db) {
-                             if (!$db['has_indexes']) {
-                               $has_missing_blast_indexes = true;
-                               break;
+                         if (isset($data['blast_validation'][$assembly])) {
+                           $blast_validation = $data['blast_validation'][$assembly];
+                           foreach ($blast_validation['databases'] ?? [] as $db) {
+                             if (!$db['has_indexes']) { $has_missing_blast_indexes = true; break; }
+                           }
+                         } else {
+                           foreach (glob($assembly_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                             $bv = validateBlastIndexFiles($gs_dir, $sequence_types);
+                             foreach ($bv['databases'] ?? [] as $db) {
+                               if (!$db['has_indexes']) { $has_missing_blast_indexes = true; break 2; }
                              }
                            }
                          }
@@ -538,7 +639,7 @@
                  ?>
                  <?php if ($status['all_pass']): ?>
                    <button class="btn btn-sm btn-outline-success" onclick="openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                     <i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">9</span>
+                     <i class="fa fa-check-circle"></i> Complete <span class="badge bg-success"><?= $total_count ?></span>
                    </button>
                  <?php elseif ($pass_count > 0): ?>
                    <button class="btn btn-sm btn-outline-warning" onclick="openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)">
@@ -564,15 +665,7 @@
     </div>
     <div class="card-body">
       <div class="row">
-        <div class="col-md-4">
-          <div class="d-grid">
-            <a href="manage_taxonomy_tree.php" target="_blank" class="btn btn-primary">
-              <i class="fa fa-project-diagram"></i> Manage Taxonomy Tree
-            </a>
-            <small class="text-muted mt-2">Build the organism selector</small>
-          </div>
-        </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
           <div class="d-grid">
             <a href="manage_groups.php" target="_blank" class="btn btn-primary">
               <i class="fa fa-layer-group"></i> Manage Groups & Descriptions
@@ -580,7 +673,7 @@
             <small class="text-muted mt-2">Manage group metadata</small>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
           <div class="d-grid">
             <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#helpModal">
               <i class="fa fa-question-circle"></i> Upload Help
@@ -597,6 +690,33 @@
 <!-- Dynamic modal container for on-demand organism modals -->
 <div id="dynamicModal" class="modal fade" tabindex="-1" aria-modal="true" role="dialog"></div>
 
+<!-- Quick Add Group Modal -->
+<div class="modal fade" id="quickAddGroupModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa fa-layer-group"></i> Add to Group</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-2">Organism: <strong id="quickAddOrgName"></strong></p>
+        <label class="form-label fw-bold" for="quickAddGroupName">Group Name</label>
+        <input type="text" class="form-control" id="quickAddGroupName"
+               list="quickAddGroupList" placeholder="e.g. Bats, Public, Insects"
+               onkeydown="if(event.key==='Enter') submitQuickAddGroup()">
+        <datalist id="quickAddGroupList"></datalist>
+        <div id="quickAddResult" class="mt-2" style="display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="quickAddSubmitBtn" onclick="submitQuickAddGroup()">
+          <i class="fa fa-plus"></i> Add Group
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Help Modal -->
 <div class="modal fade" id="helpModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
@@ -612,22 +732,27 @@
           <li><strong>Add database file:</strong> Upload or create <code>organism.sqlite</code></li>
           <li><strong>Create organism.json:</strong> Add metadata about the organism</li>
           <li><strong>Create assembly directory:</strong> <code>mkdir Genus_species/assembly_name</code></li>
-          <li><strong>Upload FASTA files:</strong> Add CDS, protein, transcript, and genome files to the assembly directory</li>
+          <li><strong>Create gene set directory:</strong> <code>mkdir Genus_species/assembly_name/gene_set_name</code> (e.g., <code>v1</code>, <code>OGS1.0</code>)</li>
+          <li><strong>Upload FASTA files:</strong> Add CDS, protein, and transcript files to the gene set directory; place <code>genome.fa</code> in the assembly directory</li>
           <li><strong>Generate genome FAI index:</strong> Required for the SVG gene model sequence viewer:
             <pre class="bg-light p-2 mt-1 mb-0 rounded small">cd <?= htmlspecialchars($organism_data) ?>/Genus_species/assembly_name
 samtools faidx genome.fa</pre>
           </li>
-          <li><strong>Build BLAST indexes:</strong> Use the Organism Checklist → BLAST step, or run <code>makeblastdb</code> manually</li>
+          <li><strong>Build BLAST indexes:</strong> Use the Organism Checklist → BLAST step, or run <code>makeblastdb</code> manually inside each gene set directory</li>
           <li><strong>Assign to groups:</strong> Use "Manage Groups" to make the organism accessible</li>
         </ol>
         
-        <h6 class="fw-bold mt-4">Required Files in Assembly Directory:</h6>
+        <h6 class="fw-bold mt-4">Required Files:</h6>
+        <p class="mb-1"><strong>Assembly directory</strong> (<code>assembly_name/</code>):</p>
+        <ul>
+          <li><code>genome.fa</code> - Reference genome assembly (shared across gene sets)</li>
+          <li><code>genome.fa.fai</code> - samtools FAI index (generated via <code>samtools faidx genome.fa</code>)</li>
+        </ul>
+        <p class="mb-1"><strong>Gene set directory</strong> (<code>assembly_name/gene_set_name/</code>):</p>
         <ul>
           <li><code>*.cds.nt.fa</code> - Coding sequences (nucleotide)</li>
           <li><code>*.protein.aa.fa</code> - Protein sequences (amino acid)</li>
           <li><code>*.transcript.nt.fa</code> - Transcript sequences (nucleotide)</li>
-          <li><code>genome.fa</code> - Reference genome assembly</li>
-          <li><code>genome.fa.fai</code> - samtools FAI index (generated via <code>samtools faidx genome.fa</code>)</li>
         </ul>
         
         <h6 class="fw-bold mt-4">Additional Notes:</h6>

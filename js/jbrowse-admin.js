@@ -103,7 +103,7 @@ function initTracksTable() {
         processing: true,
         serverSide: true,
         ajax: {
-            url: `/${siteUrl}/api/jbrowse2/admin_list_tracks.php`,
+            url: `/${siteUrl}/admin/api/jbrowse_list_tracks.php`,
             type: 'POST',
             data: function(d) {
                 d.organism = $('#filterOrganism').val();
@@ -161,7 +161,7 @@ function updateBulkButtons() {
  * Load existing sheet configuration for selected organism/assembly
  */
 function loadExistingSheetConfig(organism, assembly) {
-    fetch(`/${siteUrl}/api/jbrowse2/admin_get_sheet_config.php?organism=${encodeURIComponent(organism)}&assembly=${encodeURIComponent(assembly)}`)
+    fetch(`/${siteUrl}/admin/api/jbrowse_get_sheet_config.php?organism=${encodeURIComponent(organism)}&assembly=${encodeURIComponent(assembly)}`)
         .then(response => response.json())
         .then(data => {
             if (data.success && data.config) {
@@ -209,7 +209,7 @@ function testSheet() {
     resultDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Testing connection...</div>';
     resultDiv.style.display = 'block';
     
-    fetch(`/${siteUrl}/api/jbrowse2/admin_register_sheet.php`, {
+    fetch(`/${siteUrl}/admin/api/jbrowse_register_sheet.php`, {
         method: 'POST',
         body: formData
     })
@@ -285,7 +285,7 @@ function rebuildGff(organism, assembly, buttonEl) {
                 fd.append('text_index', '1');
                 fd.append('attributes', attrs);
             }
-            return { url: `/${siteUrl}/api/jbrowse2/admin_reprep_gff.php`, formData: fd };
+            return { url: `/${siteUrl}/admin/api/jbrowse_reprep_gff.php`, formData: fd };
         },
         formatResult: (data) => {
             let log = data.output || '';
@@ -322,7 +322,7 @@ function indexTrackNames(trackId, organism, assembly, buttonEl) {
             fd.append('organism',   organism);
             fd.append('assembly',   assembly);
             fd.append('attributes', attrs);
-            return { url: `/${siteUrl}/api/jbrowse2/admin_text_index.php`, formData: fd };
+            return { url: `/${siteUrl}/admin/api/jbrowse_text_index.php`, formData: fd };
         },
         formatResult: (data) => {
             let log = `Attributes: ${data.attributes || ''}\n\n` + (data.output || '');
@@ -440,7 +440,7 @@ function deleteTrack(trackId, organism, assembly) {
     formData.append('organism', organism);
     formData.append('assembly', assembly);
     
-    fetch(`/${siteUrl}/api/jbrowse2/admin_delete_tracks.php`, {
+    fetch(`/${siteUrl}/admin/api/jbrowse_delete_tracks.php`, {
         method: 'POST',
         body: formData
     })
@@ -484,7 +484,7 @@ function deleteSelected() {
         formData.append('organism', organism);
         formData.append('assembly', assembly);
         
-        fetch(`/${siteUrl}/api/jbrowse2/admin_delete_tracks.php`, {
+        fetch(`/${siteUrl}/admin/api/jbrowse_delete_tracks.php`, {
             method: 'POST',
             body: formData
         })
@@ -533,7 +533,7 @@ function registerAssembly(organism, assembly, buttonEl) {
     formData.append('organism', organism);
     formData.append('assembly', assembly);
 
-    fetch(`/${siteUrl}/api/jbrowse2/admin_register_assembly.php`, {
+    fetch(`/${siteUrl}/admin/api/jbrowse_register_assembly.php`, {
         method: 'POST',
         body: formData
     })
@@ -578,7 +578,7 @@ function loadTracksServerConfig() {
     const formData = new FormData();
     formData.append('action', 'get_config');
 
-    fetch(`/${siteUrl}/api/jbrowse2/admin_tracks_server.php`, { method: 'POST', body: formData })
+    fetch(`/${siteUrl}/admin/api/jbrowse_tracks_server.php`, { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             if (!data.success) { console.error('get_config failed:', data.error); return; }
@@ -619,7 +619,7 @@ function testJWT() {
     const statusDiv = document.getElementById('jwtStatusDisplay');
     statusDiv.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Testing...';
 
-    fetch(`/${siteUrl}/api/jbrowse2/admin_tracks_server.php`, { method: 'POST', body: formData })
+    fetch(`/${siteUrl}/admin/api/jbrowse_tracks_server.php`, { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -700,7 +700,7 @@ $(document).ready(function() {
         resultDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Saving...</div>';
         resultDiv.style.display = 'block';
 
-        fetch(`/${siteUrl}/api/jbrowse2/admin_tracks_server.php`, { method: 'POST', body: formData })
+        fetch(`/${siteUrl}/admin/api/jbrowse_tracks_server.php`, { method: 'POST', body: formData })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
@@ -723,7 +723,7 @@ $(document).ready(function() {
         resultDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Registering sheet...</div>';
         resultDiv.style.display = 'block';
         
-        fetch(`/${siteUrl}/api/jbrowse2/admin_register_sheet.php`, {
+        fetch(`/${siteUrl}/admin/api/jbrowse_register_sheet.php`, {
             method: 'POST',
             body: formData
         })
@@ -768,7 +768,7 @@ $(document).ready(function() {
         progressDiv.style.display = 'block';
         logOutput.textContent = 'Starting track sync...\n';
         
-        fetch(`/${siteUrl}/api/jbrowse2/admin_sync_tracks.php`, {
+        fetch(`/${siteUrl}/admin/api/jbrowse_sync_tracks.php`, {
             method: 'POST',
             body: formData
         })

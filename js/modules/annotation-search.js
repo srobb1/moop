@@ -25,6 +25,7 @@ class AnnotationSearch {
             scrollToResults: config.scrollToResults || false,
             extraAjaxParams: config.extraAjaxParams || {},
             noReadMoreButton: config.noReadMoreButton || false,
+            noScopeFilter: config.noScopeFilter || false,
             sitePath: config.sitePath || window.sitePath || '/moop'
         };
 
@@ -32,6 +33,10 @@ class AnnotationSearch {
         this.zeroResultOrganisms = [];
         this.currentKeywords = '';
         this.cappedOrganisms = [];
+        // null = no filter; [] = gene-only mode; [...] = specific sources
+        this.selectedSources = null;
+        // selectedScope: {org: {accession: {gene_set: bool}}} or null (= all included)
+        this.selectedScope = null;
     }
 
     init() {
@@ -52,22 +57,37 @@ class AnnotationSearch {
         if (form.find('.search-controls').length === 0) {
             const submitBtn = form.find('button[type="submit"]');
 
+            const scopeBtn = this.config.noScopeFilter ? '' : `
+                    <!-- Scope filter button (organisms / assemblies / gene sets) -->
+                    <button type="button" class="btn btn-icon btn-scope-filter btn-outline-secondary"
+                            title="Scope Filter (Organisms / Assemblies / Gene Sets)"
+                            data-bs-toggle="tooltip" data-bs-placement="bottom">
+                        <i class="fa fa-sitemap"></i>
+                    </button>
+                    <button type="button" class="btn btn-icon btn-clear-scope btn-outline-secondary"
+                            title="Clear Scope Filter"
+                            data-bs-toggle="tooltip" data-bs-placement="bottom"
+                            style="display: none;">
+                        <i class="fa fa-times"></i>
+                    </button>`;
+
             const buttonGroup = `
                 <div class="search-controls d-flex gap-2 align-items-center ms-2">
-                    <!-- Filter button with icon only -->
+                    <!-- Annotation source filter button -->
                     <button type="button" class="btn btn-icon btn-advanced-filter"
-                            title="Advanced Filtering"
+                            title="Annotation Source Filter"
                             data-bs-toggle="tooltip" data-bs-placement="bottom">
                         <i class="fa fa-sliders-h"></i>
                     </button>
 
-                    <!-- Clear filters button (hidden initially) -->
+                    <!-- Clear source-filter button (hidden initially) -->
                     <button type="button" class="btn btn-icon btn-clear-filters btn-outline-secondary"
-                            title="Clear Filters"
+                            title="Clear Source Filter"
                             data-bs-toggle="tooltip" data-bs-placement="bottom"
                             style="display: none;">
                         <i class="fa fa-times"></i>
                     </button>
+                    ${scopeBtn}
                 </div>
             `;
 
@@ -75,6 +95,11 @@ class AnnotationSearch {
 
             form.find('.btn-advanced-filter').on('click', () => this.showFilterModal());
             form.find('.btn-clear-filters').on('click', () => this.clearFilters());
+
+            if (!this.config.noScopeFilter) {
+                form.find('.btn-scope-filter').on('click', () => this.showScopeFilterModal());
+                form.find('.btn-clear-scope').on('click', () => this.clearScope());
+            }
 
             const tooltipTriggerList = [].slice.call(form.find('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
@@ -157,6 +182,84 @@ class AnnotationSearch {
         filter.show();
     }
 
+    // ── Scope filter ─────────────────────────────────────────────────────────
+
+    showScopeFilterModal() {
+        const filter = new ScopeFilter({
+            sitePath: this.config.sitePath,
+            organisms: this.config.organismsVar,
+            selectedScope: this.selectedScope,
+            onApply: (selectedScope) => {
+                this.selectedScope = selectedScope;
+                this.updateScopeButtonState();
+            }
+        });
+        filter.show();
+    }
+
+    clearScope() {
+        this.selectedScope = null;
+        this.updateScopeButtonState();
+    }
+
+    countExcludedGeneSets() {
+        if (!this.selectedScope) return 0;
+        let excluded = 0;
+        for (const org in this.selectedScope) {
+            for (const accession in this.selectedScope[org]) {
+                for (const gs in this.selectedScope[org][accession]) {
+                    if (!this.selectedScope[org][accession][gs]) excluded++;
+                }
+            }
+        }
+        return excluded;
+    }
+
+    updateScopeButtonState() {
+        const form     = $(this.config.formSelector);
+        const scopeBtn = form.find('.btn-scope-filter');
+        const clearBtn = form.find('.btn-clear-scope');
+        if (!scopeBtn.length) return;
+
+        const excluded = this.countExcludedGeneSets();
+        if (excluded > 0) {
+            scopeBtn.removeClass('btn-outline-secondary').addClass('btn-primary');
+            scopeBtn.html(`<i class="fa fa-sitemap"></i><span class="badge badge-filter">${excluded}</span>`);
+            clearBtn.show();
+        } else {
+            scopeBtn.removeClass('btn-primary').addClass('btn-outline-secondary');
+            scopeBtn.html('<i class="fa fa-sitemap"></i>');
+            clearBtn.hide();
+        }
+    }
+
+    /**
+     * Returns scope pairs for one organism for the AJAX call.
+     * - null  → no scope filter; search everything for that organism
+     * - []    → organism is entirely excluded; skip the AJAX call
+     * - [...] → search only these (assembly, gene_set) pairs
+     */
+    getScopePairsForOrganism(organism) {
+        if (!this.selectedScope || !(organism in this.selectedScope)) return null;
+
+        const orgScope = this.selectedScope[organism];
+        const pairs = [];
+        let allSelected = true;
+
+        for (const accession in orgScope) {
+            for (const gs in orgScope[accession]) {
+                if (orgScope[accession][gs]) {
+                    pairs.push({ assembly: accession, gene_set: gs });
+                } else {
+                    allSelected = false;
+                }
+            }
+        }
+
+        if (allSelected) return null;
+        return pairs;
+    }
+
     handleSearch() {
         const keywords = $('#searchKeywords').val().trim();
         this.currentKeywords = keywords;
@@ -236,14 +339,37 @@ class AnnotationSearch {
             const index = nextIndex++;
             const organism = organisms[index];
 
+            // Check scope filter — skip organism if entirely excluded
+            const scopePairs = this.getScopePairsForOrganism(organism);
+            if (scopePairs !== null && scopePairs.length === 0) {
+                completed++;
+                const progress = Math.round((completed / total) * 100);
+                $('#progressFill').css('width', progress + '%').text(progress + '%');
+                $('#progressText').html(`Searching... (${completed}/${total} complete)`);
+                if (completed >= total) {
+                    this.finishSearch();
+                } else {
+                    launchNext();
+                }
+                return;
+            }
+
             const ajaxData = {
                 search_keywords: keywords,
                 organism: organism,
                 quoted: quotedSearch ? '1' : '0',
                 ...this.config.extraAjaxParams
             };
-            if (this.selectedSources && this.selectedSources.length > 0) {
-                ajaxData.source_names = this.selectedSources.join(',');
+            if (this.selectedSources !== null) {
+                if (this.selectedSources.length === 0) {
+                    // Explicit "no annotation sources" — search gene fields only
+                    ajaxData.no_annotations = '1';
+                } else {
+                    ajaxData.source_names = this.selectedSources.join(',');
+                }
+            }
+            if (scopePairs !== null) {
+                ajaxData.scope = JSON.stringify(scopePairs);
             }
 
             $.ajax({
@@ -427,8 +553,10 @@ class AnnotationSearch {
         const csvLabel = this.currentKeywords.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
         const csvDate = new Date().toISOString().slice(0, 10);
         a.download = csvLabel ? `annotation_search_${csvLabel}_${csvDate}.csv` : `annotation_search_${csvDate}.csv`;
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     downloadFasta() {

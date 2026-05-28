@@ -298,10 +298,9 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
         }
         
         // COLLABORATOR-SPECIFIC CHECK: Must have explicit assembly access
-        // COLLABORATOR users have access.php defining which assemblies they can see
         if ($user_access_level === 'COLLABORATOR' && $track_level_value >= 2) {
             $user_access = $_SESSION['access'] ?? [];
-            if (!isset($user_access[$organism]) || !in_array($assembly, (array)$user_access[$organism])) {
+            if (!isset($user_access[$organism][$assembly])) {
                 continue;
             }
         }
@@ -487,7 +486,7 @@ function canUserAccessAssembly($user_level, $assembly_level, $organism, $assembl
     if ($user_level === 'COLLABORATOR') {
         if ($organism && $assembly_id) {
             $user_access = $_SESSION['access'] ?? [];
-            return isset($user_access[$organism]) && in_array($assembly_id, (array)$user_access[$organism]);
+            return isset($user_access[$organism][$assembly_id]);
         }
         return false;
     }

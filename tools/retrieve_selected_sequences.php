@@ -44,8 +44,9 @@ $config = ConfigManager::getInstance();
 $site = $config->getString('site');
 
 // Get all parameters first for access check
-$organism_name = trim($_POST['organism'] ?? $_GET['organism'] ?? '');
-$assembly_name = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
+$organism_name      = trim($_POST['organism']  ?? $_GET['organism']  ?? '');
+$assembly_name      = trim($_POST['assembly']  ?? $_GET['assembly']  ?? '');
+$gene_set_name      = trim($_POST['gene_set']  ?? $_GET['gene_set']  ?? 'v1');
 $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
 
 // Assembly MUST be specified - it's a security requirement
@@ -54,8 +55,8 @@ if (empty($assembly_name)) {
     exit;
 }
 
-// Check access to the requested assembly
-if (!has_assembly_access($organism_name, $assembly_name)) {
+// Check access to the requested gene_set
+if (!has_gene_set_access($organism_name, $assembly_name, $gene_set_name)) {
     if (!is_logged_in()) {
         header("Location: /$site/login.php");
     } else {
@@ -93,22 +94,14 @@ if (!empty($sequence_ids_provided)) {
     
     // Find FASTA files and extract for all types
     if (empty($extraction_errors)) {
-        $organism_dir = "$organism_data/$organism_name";
-        $assembly_dir = null;
-        
-        if (is_dir($organism_dir)) {
-            $dirs = array_diff(scandir($organism_dir), ['.', '..']);
-            foreach ($dirs as $item) {
-                $full_path = "$organism_dir/$item";
-                if (is_dir($full_path) && !in_array(basename($full_path), ['fasta_files'])) {
-                    $assembly_dir = $full_path;
-                    break;
-                }
-            }
-        }
-        
-        if ($assembly_dir && !empty($uniquenames)) {
-            $extract_result = extractSequencesForAllTypes($assembly_dir, $uniquenames, $sequence_types);
+        $gene_set_dir = "$organism_data/$organism_name/$assembly_name/$gene_set_name";
+
+        if (!is_dir($gene_set_dir)) {
+            $extraction_errors[] = "Gene set directory not found for $assembly_name/$gene_set_name.";
+        } elseif (!empty($uniquenames)) {
+            $db_path = "$organism_data/$organism_name/organism.sqlite";
+            $typed_ids = buildTypedIds($uniquenames, $db_path);
+            $extract_result = extractSequencesForAllTypes($gene_set_dir, $typed_ids, $sequence_types);
             $displayed_content = $extract_result['content'];
             if (!empty($extract_result['errors'])) {
                 $extraction_errors = array_merge($extraction_errors, $extract_result['errors']);
@@ -145,6 +138,7 @@ $data = [
     'siteTitle' => $siteTitle,
     'organism_name' => $organism_name,
     'assembly_name' => $assembly_name,
+    'gene_set_name' => $gene_set_name,
     'uniquenames' => $uniquenames,
     'uniquenames_string' => $uniquenames_string,
     'displayed_content' => $displayed_content,

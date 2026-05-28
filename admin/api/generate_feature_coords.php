@@ -1,7 +1,7 @@
 <?php
 /**
- * Generate feature_coords.tsv for a given assembly.
- * Streams genomic.gff and writes organism|assembly-level feature → genomic coord mapping.
+ * Generate feature_coords.tsv for a given gene set.
+ * Streams genomic.gff and writes feature → genomic coord mapping.
  * Called from Manage BLAST Linkouts admin page.
  */
 
@@ -12,35 +12,37 @@ header('Content-Type: application/json');
 
 $organism = trim($_POST['organism'] ?? '');
 $assembly = trim($_POST['assembly'] ?? '');
+$gene_set = trim($_POST['gene_set'] ?? 'v1');
 
 if (!preg_match('/^[A-Za-z0-9_\-\.]+$/', $organism)
- || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $assembly)) {
-    echo json_encode(['success' => false, 'message' => 'Invalid organism or assembly name.']);
+ || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $assembly)
+ || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $gene_set)) {
+    echo json_encode(['success' => false, 'message' => 'Invalid organism, assembly, or gene set name.']);
     exit;
 }
 
-$assembly_path = $config->getPath('organism_data') . '/' . $organism . '/' . $assembly;
+$gene_set_path = $config->getPath('organism_data') . '/' . $organism . '/' . $assembly . '/' . $gene_set;
 
-if (!is_dir($assembly_path)) {
-    echo json_encode(['success' => false, 'message' => 'Assembly directory not found.']);
+if (!is_dir($gene_set_path)) {
+    echo json_encode(['success' => false, 'message' => 'Gene set directory not found.']);
     exit;
 }
 
-if (!file_exists($assembly_path . '/genomic.gff')) {
-    echo json_encode(['success' => false, 'message' => 'genomic.gff not found in assembly directory.']);
+if (!file_exists($gene_set_path . '/genomic.gff')) {
+    echo json_encode(['success' => false, 'message' => 'genomic.gff not found in gene set directory.']);
     exit;
 }
 
 set_time_limit(0);
 
-$ok = generateFeatureCoordsIndex($assembly_path);
+$ok = generateFeatureCoordsIndex($gene_set_path);
 
 if (!$ok) {
     echo json_encode(['success' => false, 'message' => 'Generation failed — check that genomic.gff is readable and well-formed.']);
     exit;
 }
 
-$tsv_file = $assembly_path . '/feature_coords.tsv';
+$tsv_file = $gene_set_path . '/feature_coords.tsv';
 $line_count = 0;
 if (file_exists($tsv_file)) {
     $fh = fopen($tsv_file, 'r');

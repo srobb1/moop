@@ -56,7 +56,7 @@ $data = $organisms[$organism];
 header('Content-Type: text/html; charset=utf-8');
 
 switch ($type) {
-    case 'db':       render_db_modal($organism, $data); break;
+    case 'db':       render_db_modal($organism, $data, $organism_data); break;
     case 'metadata': render_metadata_modal($organism, $data, $organism_data); break;
     case 'asm':
         if (!preg_match('/^[a-zA-Z0-9_\-\.]+$/', $assembly)) {
@@ -73,13 +73,16 @@ switch ($type) {
 
 // ---------------------------------------------------------------------------
 
-function render_db_modal($organism, $data) {
+function render_db_modal($organism, $data, $organism_data) {
     if (!$data['db_validation']) {
         echo '<div class="modal-dialog"><div class="modal-content"><div class="modal-body"><div class="alert alert-warning">No database validation data available.</div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div></div></div>';
         return;
     }
     $validation         = $data['db_validation'];
-    $assembly_validation = $data['assembly_validation'];
+    // Live scan — always fresh so the rename helper reflects current disk state
+    $assembly_validation = ($data['db_file'] && $data['path'])
+        ? validateAssemblyDirectories($data['db_file'], $data['path'])
+        : $data['assembly_validation'];
     $org_safe           = htmlspecialchars($organism);
     ?>
 <div class="modal-dialog modal-lg">
@@ -139,7 +142,7 @@ function render_db_modal($organism, $data) {
 
       <h6 class="fw-bold mb-2"><i class="fa fa-table"></i> Database Tables</h6>
       <div class="alert alert-info small mb-3">
-        <strong>Required Tables:</strong> organism, genome, feature, annotation_source, annotation, feature_annotation. Each table should have relevant data.
+        <strong>Required Tables:</strong> organism, genome, gene_set, feature, annotation_source, annotation, feature_annotation.
       </div>
       <div class="card mb-3">
         <div class="card-body small">
@@ -187,6 +190,107 @@ function render_db_modal($organism, $data) {
         </div>
       </div>
 
+      <h6 class="fw-bold mb-2"><i class="fa fa-layer-group"></i> Gene Sets</h6>
+      <div class="alert alert-info small mb-3">
+        Each genome assembly in the database should have at least one gene set, and each gene set should have a corresponding subdirectory inside the assembly directory on disk.
+      </div>
+      <?php
+        // Live query: get gene_sets from DB grouped by genome
+        $gene_sets_by_genome = [];
+        $gene_set_query_error = null;
+        if ($data['db_file'] && $data['db_validation']['readable'] ?? false) {
+            try {
+                $gs_dbh = new PDO("sqlite:" . $data['db_file']);
+                $gs_dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $gs_stmt = $gs_dbh->query("
+                    SELECT gs.gene_set_id, gs.gene_set_name, gs.gene_set_description,
+                           g.genome_id, g.genome_name, g.genome_accession
+                    FROM gene_set gs
+                    JOIN genome g ON gs.genome_id = g.genome_id
+                    ORDER BY g.genome_name, gs.gene_set_name
+                ");
+                foreach ($gs_stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                    $gkey = $row['genome_name'] ?: $row['genome_accession'];
+                    if (!isset($gene_sets_by_genome[$gkey])) {
+                        $gene_sets_by_genome[$gkey] = [
+                            'genome_name'      => $row['genome_name'],
+                            'genome_accession' => $row['genome_accession'],
+                            'gene_sets'        => []
+                        ];
+                    }
+                    // Find the assembly dir for this genome
+                    $org_path = $organism_data . '/' . $organism;
+                    $asm_dir  = null;
+                    foreach ([$row['genome_name'], $row['genome_accession']] as $candidate) {
+                        if ($candidate && is_dir("$org_path/$candidate")) { $asm_dir = $candidate; break; }
+                    }
+                    $gs_dir_exists = $asm_dir !== null && is_dir("$org_path/$asm_dir/{$row['gene_set_name']}");
+                    $gene_sets_by_genome[$gkey]['gene_sets'][] = [
+                        'name'        => $row['gene_set_name'],
+                        'description' => $row['gene_set_description'],
+                        'asm_dir'     => $asm_dir,
+                        'dir_exists'  => $gs_dir_exists,
+                    ];
+                }
+                $gs_dbh = null;
+            } catch (PDOException $e) {
+                $gene_set_query_error = $e->getMessage();
+            }
+        }
+      ?>
+      <?php if ($gene_set_query_error): ?>
+        <div class="alert alert-warning small mb-3">Could not query gene_set table: <?= htmlspecialchars($gene_set_query_error) ?></div>
+      <?php elseif (empty($gene_sets_by_genome)): ?>
+        <div class="card mb-3 border-danger border-2">
+          <div class="card-body small">
+            <span class="badge bg-danger"><i class="fa fa-times"></i></span>
+            No gene sets found in the database.
+          </div>
+        </div>
+      <?php else: ?>
+        <?php foreach ($gene_sets_by_genome as $gkey => $gdata): ?>
+          <?php $any_missing_dir = !empty(array_filter($gdata['gene_sets'], fn($gs) => !$gs['dir_exists'])); ?>
+          <div class="card mb-2 <?= $any_missing_dir ? 'border-warning border-2' : 'border-success' ?>">
+            <div class="card-header py-1 px-3 <?= $any_missing_dir ? 'bg-warning bg-opacity-10' : 'bg-success bg-opacity-10' ?>">
+              <strong><i class="fa fa-folder"></i> <?= htmlspecialchars($gdata['genome_name'] ?: $gdata['genome_accession']) ?></strong>
+              <small class="text-muted ms-2"><?= htmlspecialchars($gdata['genome_accession']) ?></small>
+              <?php if ($any_missing_dir): ?>
+                <span class="badge bg-warning text-dark ms-2"><i class="fa fa-exclamation-triangle"></i> Missing directories</span>
+              <?php else: ?>
+                <span class="badge bg-success ms-2"><i class="fa fa-check"></i> All directories present</span>
+              <?php endif; ?>
+            </div>
+            <div class="card-body small py-2">
+              <ul class="mb-0">
+                <?php foreach ($gdata['gene_sets'] as $gs): ?>
+                  <li class="mb-1">
+                    <?php if ($gs['dir_exists']): ?>
+                      <span class="badge bg-success"><i class="fa fa-check"></i></span>
+                    <?php else: ?>
+                      <span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i></span>
+                    <?php endif; ?>
+                    <strong><?= htmlspecialchars($gs['name']) ?></strong>
+                    <?php if ($gs['description']): ?>
+                      <small class="text-muted ms-1">— <?= htmlspecialchars($gs['description']) ?></small>
+                    <?php endif; ?>
+                    <?php if (!$gs['dir_exists']): ?>
+                      <small class="text-danger ms-1">
+                        — directory not found:
+                        <?php if ($gs['asm_dir']): ?>
+                          <code><?= htmlspecialchars($gs['asm_dir']) ?>/<?= htmlspecialchars($gs['name']) ?>/</code>
+                        <?php else: ?>
+                          assembly directory not found either
+                        <?php endif; ?>
+                      </small>
+                    <?php endif; ?>
+                  </li>
+                <?php endforeach; ?>
+              </ul>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      <?php endif; ?>
+
       <h6 class="fw-bold mb-2"><i class="fa fa-exclamation-triangle"></i> Data Quality</h6>
       <div class="alert alert-info small mb-3">
         <strong>Check:</strong> Database records should have valid relationships and complete data. This checks for orphaned annotations, missing accessions, and features without proper organism links.
@@ -228,24 +332,60 @@ function render_db_modal($organism, $data) {
         <div class="card mb-3 <?= $assembly_validation['valid'] ? 'border-success' : 'border-danger border-2' ?>">
           <div class="card-body small">
             <?php if ($assembly_validation['valid'] && empty($assembly_validation['mismatches'])): ?>
-              <p class="mb-0"><span class="badge bg-success"><i class="fa fa-check"></i></span> All assembly directories match database records</p>
+              <p class="mb-0"><span class="badge bg-success"><i class="fa fa-check"></i></span> All assembly and gene set directories match database records</p>
             <?php else: ?>
-              <p class="mb-2"><strong class="text-danger"><i class="fa fa-exclamation-circle"></i> Assembly Issues Found:</strong></p>
-              <p class="mb-2 text-danger"><small>One or more genome records in the database do not have corresponding directories in the organism folder.</small></p>
+              <p class="mb-2"><strong class="text-danger"><i class="fa fa-exclamation-circle"></i> Issues Found:</strong></p>
               <ul class="mb-0">
-                <?php if (!empty($assembly_validation['mismatches'])): ?>
-                  <?php foreach ($assembly_validation['mismatches'] as $mismatch): ?>
-                    <li class="mb-2">
-                      <span class="text-danger"><strong><?= htmlspecialchars($mismatch['type'] === 'missing_directory' ? 'Missing Directory' : 'Name Mismatch') ?>:</strong></span>
-                      <br>
-                      <?php if ($mismatch['type'] === 'missing_directory'): ?>
-                        <small class="text-muted">No directory found matching genome_name "<?= htmlspecialchars($mismatch['genome_name']) ?>" or genome_accession "<?= htmlspecialchars($mismatch['genome_accession']) ?>".</small>
+                <?php foreach ($assembly_validation['mismatches'] as $mismatch): ?>
+                  <li class="mb-2">
+                    <?php if ($mismatch['type'] === 'missing_directory'): ?>
+                      <span class="badge bg-danger">Missing assembly dir</span>
+                      <small class="text-muted ms-1">No directory matching genome_name "<?= htmlspecialchars($mismatch['genome_name']) ?>" or genome_accession "<?= htmlspecialchars($mismatch['genome_accession']) ?>"</small>
+                    <?php elseif ($mismatch['type'] === 'missing_gene_set_directory'): ?>
+                      <?php
+                        $gs_safe_id = preg_replace('/[^a-zA-Z0-9]/', '_', $mismatch['assembly_dir'] . '_' . $mismatch['gene_set_name']);
+                        $asm_path   = $data['path'] . '/' . $mismatch['assembly_dir'];
+                        $existing_gs_dirs = [];
+                        if (is_dir($asm_path)) {
+                            foreach (array_diff(scandir($asm_path), ['.', '..']) as $f) {
+                                if (is_dir("$asm_path/$f") && $f !== $mismatch['gene_set_name']) {
+                                    $existing_gs_dirs[] = $f;
+                                }
+                            }
+                        }
+                      ?>
+                      <span class="badge bg-warning text-dark">Missing gene set dir</span>
+                      <small class="text-muted ms-1">
+                        <code><?= htmlspecialchars($mismatch['assembly_dir']) ?>/<?= htmlspecialchars($mismatch['gene_set_name']) ?>/</code>
+                        not found on disk
+                      </small>
+                      <?php if (!empty($existing_gs_dirs)): ?>
+                        <div class="mt-2 p-2 border rounded bg-light">
+                          <p class="mb-1 small"><strong>Rename an existing directory to match:</strong></p>
+                          <div class="d-flex gap-2 align-items-center flex-wrap">
+                            <select id="gsOldDirName<?= $gs_safe_id ?>" class="form-select form-select-sm" style="max-width:200px;">
+                              <option value="">— select current dir —</option>
+                              <?php foreach ($existing_gs_dirs as $d): ?>
+                                <option value="<?= htmlspecialchars($d) ?>"><?= htmlspecialchars($d) ?></option>
+                              <?php endforeach; ?>
+                            </select>
+                            <span class="text-muted small">→</span>
+                            <input id="gsNewDirName<?= $gs_safe_id ?>" type="text" class="form-control form-control-sm" style="max-width:200px;" value="<?= htmlspecialchars($mismatch['gene_set_name']) ?>" readonly>
+                            <button class="btn btn-info btn-sm" onclick="renameGeneSetDirectory(event, <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($mismatch['assembly_dir'])) ?>, '<?= $gs_safe_id ?>')">
+                              <i class="fa fa-exchange-alt"></i> Rename
+                            </button>
+                          </div>
+                          <div id="gsRenameResult<?= $gs_safe_id ?>" class="mt-2 d-none"></div>
+                        </div>
                       <?php else: ?>
-                        <small class="text-muted">Directory "<?= htmlspecialchars($mismatch['found_directory']) ?>" doesn't match genome_name "<?= htmlspecialchars($mismatch['genome_name']) ?>" or genome_accession "<?= htmlspecialchars($mismatch['genome_accession']) ?>".</small>
+                        <div class="mt-1"><small class="text-muted fst-italic">No candidate directories found in <code><?= htmlspecialchars($mismatch['assembly_dir']) ?>/</code> to rename.</small></div>
                       <?php endif; ?>
-                    </li>
-                  <?php endforeach; ?>
-                <?php endif; ?>
+                    <?php else: ?>
+                      <span class="badge bg-warning text-dark">Name mismatch</span>
+                      <small class="text-muted ms-1">Directory "<?= htmlspecialchars($mismatch['found_directory']) ?>" doesn't match genome_name "<?= htmlspecialchars($mismatch['genome_name']) ?>" or genome_accession "<?= htmlspecialchars($mismatch['genome_accession']) ?>"</small>
+                    <?php endif; ?>
+                  </li>
+                <?php endforeach; ?>
               </ul>
             <?php endif; ?>
           </div>
@@ -544,33 +684,23 @@ function render_metadata_modal($organism, $data, $organism_data) {
 
 function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_data, $organism_data) {
     $safe_asm_id         = preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism . '_' . $assembly);
-    $asm_fasta           = $data['fasta_validation']['assemblies'][$assembly] ?? null;
-    $is_missing          = isset($data['fasta_validation']['missing_files'][$assembly]);
     $assembly_validation = $data['assembly_validation'];
     $assembly_path       = $data['path'] . '/' . $assembly;
 
-    $blast_validation = $data['blast_validation'][$assembly] ?? validateBlastIndexFiles($assembly_path, $sequence_types);
-
+    // FAI check (assembly-level)
     $genome_fa_path = $assembly_path . '/genome.fa';
     $fai_info = $data['fai_validation'][$assembly] ?? [
         'genome_fa_exists' => file_exists($genome_fa_path),
         'fai_exists'       => file_exists($genome_fa_path . '.fai'),
     ];
+    $modal_has_missing_fai = ($fai_info['genome_fa_exists'] && !$fai_info['fai_exists']);
 
     $assembly_groups = getAssemblyGroups($organism, $assembly, $groups_data);
 
-    $modal_has_missing_blast = false;
-    if (!empty($blast_validation['databases'])) {
-        foreach ($blast_validation['databases'] as $db) {
-            if (!$db['has_indexes']) { $modal_has_missing_blast = true; break; }
-        }
-    }
-    $modal_has_missing_fai = ($fai_info['genome_fa_exists'] && !$fai_info['fai_exists']);
-
+    // DB mismatch check
     $has_db_mismatch      = false;
     $db_mismatch_messages = [];
     $matching_genome      = null;
-
     if ($assembly_validation) {
         foreach ($assembly_validation['genomes'] as $genome) {
             if ($assembly === $genome['genome_name'] || $assembly === $genome['genome_accession']) {
@@ -579,8 +709,67 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
             }
         }
         if (!$matching_genome) {
-            $has_db_mismatch      = true;
+            $has_db_mismatch        = true;
             $db_mismatch_messages[] = "Assembly directory '$assembly' does not match any genome_name or genome_accession in the database";
+        }
+    }
+
+    // Live scan: gene_set subdirs inside this assembly
+    $gene_set_dirs_live = [];
+    if (is_dir($assembly_path)) {
+        foreach (array_diff(scandir($assembly_path), ['.', '..']) as $f) {
+            if (is_dir("$assembly_path/$f")) $gene_set_dirs_live[] = $f;
+        }
+    }
+    sort($gene_set_dirs_live);
+
+    // Classify sequence types: assembly-level (file found directly) vs gene_set-level
+    $asm_level_files = [];   // [type => ['config'=>..., 'file'=>string]]
+    $gs_level_types  = [];   // [type => config]  — checked per gene_set
+    foreach ($sequence_types as $type => $config) {
+        $direct = glob("$assembly_path/*{$config['pattern']}") ?: [];
+        if (!empty($direct)) {
+            $asm_level_files[$type] = ['config' => $config, 'file' => basename($direct[0])];
+        } else {
+            $gs_level_types[$type] = $config;
+        }
+    }
+
+    // Per gene_set: FASTA presence
+    $gs_fasta_status = [];  // [gs => [type => ['found'=>bool, 'file'=>string|null]]]
+    foreach ($gene_set_dirs_live as $gs) {
+        $gs_fasta_status[$gs] = [];
+        foreach ($gs_level_types as $type => $config) {
+            $files = glob("$assembly_path/$gs/*{$config['pattern']}") ?: [];
+            $gs_fasta_status[$gs][$type] = !empty($files)
+                ? ['found' => true,  'file' => basename($files[0])]
+                : ['found' => false, 'file' => null];
+        }
+    }
+
+    // Per gene_set: BLAST indexes
+    $gs_blast_status = [];  // [gs => blast_validation_result]
+    foreach ($gene_set_dirs_live as $gs) {
+        $gs_blast_status[$gs] = validateBlastIndexFiles("$assembly_path/$gs", $sequence_types);
+    }
+
+    // Compute missing flags from live data
+    $is_missing_live = false;
+    if (!empty($gs_level_types)) {
+        if (empty($gene_set_dirs_live)) {
+            $is_missing_live = true;
+        } else {
+            foreach ($gs_fasta_status as $gs_files) {
+                foreach ($gs_files as $fi) {
+                    if (!$fi['found']) { $is_missing_live = true; break 2; }
+                }
+            }
+        }
+    }
+    $modal_has_missing_blast = false;
+    foreach ($gs_blast_status as $bv) {
+        foreach ($bv['databases'] ?? [] as $db) {
+            if (!$db['has_indexes']) { $modal_has_missing_blast = true; break 2; }
         }
     }
     ?>
@@ -595,7 +784,7 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
       <h6 class="fw-bold mb-2"><i class="fa fa-star"></i> Overall Status</h6>
       <div class="card mb-3">
         <div class="card-body">
-          <?php if (!$has_db_mismatch && !$is_missing && !$modal_has_missing_blast && !$modal_has_missing_fai): ?>
+          <?php if (!$has_db_mismatch && !$is_missing_live && !$modal_has_missing_blast && !$modal_has_missing_fai): ?>
             <span class="badge bg-success h6"><i class="fa fa-check-circle"></i> Assembly is Complete</span>
           <?php else: ?>
             <span class="badge bg-danger h6"><i class="fa fa-times-circle"></i> Assembly has Issues</span>
@@ -728,75 +917,129 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
       <?php endif; ?>
 
       <h6 class="fw-bold mb-2"><i class="fa fa-dna"></i> FASTA Files</h6>
-      <div class="alert alert-info small mb-3">
-        <strong>Required:</strong> Each assembly directory should contain FASTA files matching the configured sequence type patterns.
-      </div>
-      <div class="card mb-3 <?= $is_missing ? 'border-danger border-2' : 'border-success' ?>">
-        <div class="card-body small">
-          <?php if ($asm_fasta): ?>
+
+      <?php if (!empty($asm_level_files)): ?>
+        <p class="text-muted small fw-bold mb-1 mt-2">Assembly directory</p>
+        <div class="card mb-3 border-success">
+          <div class="card-body small py-2">
             <ul class="mb-0">
-              <?php foreach ($asm_fasta['fasta_files'] as $type => $file_info): ?>
-                <li class="mb-2 pb-2 border-bottom" style="<?= $file_info['found'] ? '' : 'background-color: #fff3cd;' ?>">
-                  <?php if ($file_info['found']): ?>
-                    <span class="badge bg-success"><i class="fa fa-check"></i></span>
-                    <strong><?= htmlspecialchars($type) ?>:</strong>
-                    <?= htmlspecialchars($file_info['file']) ?>
-                  <?php else: ?>
-                    <span class="badge bg-danger"><i class="fa fa-times"></i></span>
-                    <strong><?= htmlspecialchars($type) ?>:</strong>
-                    <small class="text-muted">Missing pattern: *<?= htmlspecialchars($file_info['pattern']) ?></small>
-                  <?php endif; ?>
+              <?php foreach ($asm_level_files as $type => $fi): ?>
+                <li class="mb-1">
+                  <span class="badge bg-success"><i class="fa fa-check"></i></span>
+                  <strong><?= htmlspecialchars($fi['config']['label'] ?? $type) ?>:</strong>
+                  <?= htmlspecialchars($fi['file']) ?>
                 </li>
               <?php endforeach; ?>
             </ul>
-          <?php else: ?>
-            <div class="alert alert-warning mb-0">No FASTA file information available</div>
-          <?php endif; ?>
+          </div>
         </div>
-      </div>
+      <?php endif; ?>
+
+      <?php if (!empty($gs_level_types)): ?>
+        <p class="text-muted small fw-bold mb-1 mt-2">Gene sets</p>
+        <?php if (empty($gene_set_dirs_live)): ?>
+          <div class="card mb-3 border-danger border-2">
+            <div class="card-body small">
+              <span class="badge bg-danger"><i class="fa fa-times"></i></span>
+              No gene set subdirectories found inside this assembly directory.
+            </div>
+          </div>
+        <?php else: ?>
+          <?php foreach ($gs_fasta_status as $gs => $gs_files): ?>
+            <?php $gs_has_missing = in_array(false, array_column($gs_files, 'found')); ?>
+            <div class="card mb-2 <?= $gs_has_missing ? 'border-warning border-2' : 'border-success' ?>">
+              <div class="card-header py-1 px-3 <?= $gs_has_missing ? 'bg-warning bg-opacity-10' : 'bg-success bg-opacity-10' ?>">
+                <strong><i class="fa fa-folder"></i> <?= htmlspecialchars($gs) ?></strong>
+                <?php if ($gs_has_missing): ?>
+                  <span class="badge bg-warning text-dark ms-2"><i class="fa fa-exclamation-triangle"></i> Missing files</span>
+                <?php else: ?>
+                  <span class="badge bg-success ms-2"><i class="fa fa-check"></i> Complete</span>
+                <?php endif; ?>
+              </div>
+              <div class="card-body small py-2">
+                <ul class="mb-0">
+                  <?php foreach ($gs_files as $type => $fi): ?>
+                    <li class="mb-1">
+                      <?php if ($fi['found']): ?>
+                        <span class="badge bg-success"><i class="fa fa-check"></i></span>
+                        <strong><?= htmlspecialchars($gs_level_types[$type]['label'] ?? $type) ?>:</strong>
+                        <?= htmlspecialchars($fi['file']) ?>
+                      <?php else: ?>
+                        <span class="badge bg-danger"><i class="fa fa-times"></i></span>
+                        <strong><?= htmlspecialchars($gs_level_types[$type]['label'] ?? $type) ?>:</strong>
+                        <small class="text-muted">Missing — expected pattern: *<?= htmlspecialchars($gs_level_types[$type]['pattern']) ?></small>
+                      <?php endif; ?>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      <?php endif; ?>
 
       <h6 class="fw-bold mb-2"><i class="fa fa-rocket"></i> BLAST Database Indexes</h6>
-      <div class="alert alert-info small mb-3">
-        <strong>Required:</strong> Each FASTA file needs BLAST index files to be searchable.
-      </div>
-      <div class="card mb-3 <?= $blast_validation['missing_count'] > 0 ? 'border-warning border-2' : 'border-success' ?>">
-        <div class="card-body small">
-          <?php if (!empty($blast_validation['databases'])): ?>
-            <ul class="mb-0">
-              <?php foreach ($blast_validation['databases'] as $db): ?>
-                <li class="mb-2 pb-2 border-bottom">
-                  <?php if ($db['has_indexes']): ?>
-                    <span class="badge bg-success"><i class="fa fa-check"></i></span>
-                    <strong><?= htmlspecialchars($db['name']) ?>:</strong> <?= htmlspecialchars($db['fasta']) ?>
-                    <br><small class="text-muted">Indexes: ✓ Present</small>
-                  <?php else: ?>
-                    <span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i></span>
-                    <strong><?= htmlspecialchars($db['name']) ?>:</strong> <?= htmlspecialchars($db['fasta']) ?>
-                    <br><small class="text-danger">Missing indexes: <?= htmlspecialchars(implode(', ', $db['missing_indexes'])) ?></small>
-                    <br><small class="text-muted">This FASTA file cannot be used for BLAST searches until indexes are created.</small>
-                    <div class="mt-2 p-2 bg-light border rounded small">
-                      <strong class="d-block mb-2">To generate BLAST indexes, run on the server:</strong>
-                      <?php
-                        $assembly_fullpath = $organism_data . '/' . $organism . '/' . $assembly;
-                        $fasta_full_path   = $assembly_fullpath . '/' . $db['fasta'];
-                        $is_protein        = strpos($db['fasta'], 'protein') !== false;
-                        $db_type           = $is_protein ? 'prot' : 'nucl';
-                        $cd_cmd            = 'cd ' . htmlspecialchars($assembly_fullpath);
-                        $makeblastdb_cmd   = 'makeblastdb -in ' . htmlspecialchars($db['fasta']) . ' -dbtype ' . htmlspecialchars($db_type) . ' -parse_seqids';
-                      ?>
-                      <code class="d-block" style="word-break: break-all; white-space: normal;">
-                        <?= $cd_cmd ?> && \<br><?= $makeblastdb_cmd ?>
-                      </code>
-                    </div>
-                  <?php endif; ?>
-                </li>
-              <?php endforeach; ?>
-            </ul>
-          <?php else: ?>
-            <div class="alert alert-warning mb-0">No FASTA files found for BLAST indexing</div>
-          <?php endif; ?>
+
+      <?php if (empty($gene_set_dirs_live)): ?>
+        <div class="card mb-3 border-secondary">
+          <div class="card-body small text-muted">No gene set subdirectories found — nothing to index.</div>
         </div>
-      </div>
+      <?php else: ?>
+        <?php foreach ($gs_blast_status as $gs => $bv): ?>
+          <?php $gs_missing_blast = !empty(array_filter($bv['databases'] ?? [], fn($db) => !$db['has_indexes'])); ?>
+          <?php
+            if ($bv['total_count'] === 0)      $gs_border = 'border-secondary';
+            elseif ($gs_missing_blast)          $gs_border = 'border-warning border-2';
+            else                                $gs_border = 'border-success';
+            if ($bv['total_count'] === 0)      $gs_hdr = '';
+            elseif ($gs_missing_blast)          $gs_hdr = 'bg-warning bg-opacity-10';
+            else                                $gs_hdr = 'bg-success bg-opacity-10';
+          ?>
+          <div class="card mb-2 <?= $gs_border ?>">
+            <div class="card-header py-1 px-3 <?= $gs_hdr ?>">
+              <strong><i class="fa fa-folder"></i> <?= htmlspecialchars($gs) ?></strong>
+              <?php if ($bv['total_count'] === 0): ?>
+                <span class="badge bg-secondary ms-2">No FASTA files</span>
+              <?php elseif ($gs_missing_blast): ?>
+                <span class="badge bg-warning text-dark ms-2"><i class="fa fa-exclamation-triangle"></i> Missing indexes</span>
+              <?php else: ?>
+                <span class="badge bg-success ms-2"><i class="fa fa-check"></i> Complete</span>
+              <?php endif; ?>
+            </div>
+            <?php if (!empty($bv['databases'])): ?>
+              <div class="card-body small py-2">
+                <ul class="mb-0">
+                  <?php foreach ($bv['databases'] as $db): ?>
+                    <li class="mb-2">
+                      <?php if ($db['has_indexes']): ?>
+                        <span class="badge bg-success"><i class="fa fa-check"></i></span>
+                        <strong><?= htmlspecialchars($db['name']) ?>:</strong> <?= htmlspecialchars($db['fasta']) ?>
+                      <?php else: ?>
+                        <span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i></span>
+                        <strong><?= htmlspecialchars($db['name']) ?>:</strong> <?= htmlspecialchars($db['fasta']) ?>
+                        <br><small class="text-danger">Missing: <?= htmlspecialchars(implode(', ', $db['missing_indexes'])) ?></small>
+                        <div class="mt-2 p-2 bg-light border rounded small">
+                          <strong class="d-block mb-1">To generate BLAST indexes, run on the server:</strong>
+                          <?php
+                            $gs_fullpath     = $assembly_path . '/' . $gs;
+                            $is_protein      = strpos($db['fasta'], 'protein') !== false;
+                            $db_type         = $is_protein ? 'prot' : 'nucl';
+                            $cd_cmd          = 'cd ' . htmlspecialchars($gs_fullpath);
+                            $makeblastdb_cmd = 'makeblastdb -in ' . htmlspecialchars($db['fasta']) . ' -dbtype ' . htmlspecialchars($db_type) . ' -parse_seqids';
+                          ?>
+                          <code class="d-block" style="word-break:break-all;white-space:normal;">
+                            <?= $cd_cmd ?> && \<br><?= $makeblastdb_cmd ?>
+                          </code>
+                        </div>
+                      <?php endif; ?>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              </div>
+            <?php endif; ?>
+          </div>
+        <?php endforeach; ?>
+      <?php endif; ?>
 
       <h6 class="fw-bold mb-2"><i class="fa fa-dna"></i> Genome FAI Index</h6>
       <div class="alert alert-info small mb-3">
@@ -849,13 +1092,13 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
         </div>
       </div>
 
-      <div class="alert <?= ($is_missing || $has_db_mismatch || $modal_has_missing_blast || $modal_has_missing_fai) ? 'alert-danger' : 'alert-success' ?>">
-        <?php if ($has_db_mismatch || $is_missing || $modal_has_missing_blast || $modal_has_missing_fai): ?>
+      <div class="alert <?= ($is_missing_live || $has_db_mismatch || $modal_has_missing_blast || $modal_has_missing_fai) ? 'alert-danger' : 'alert-success' ?>">
+        <?php if ($has_db_mismatch || $is_missing_live || $modal_has_missing_blast || $modal_has_missing_fai): ?>
           <i class="fa fa-exclamation-circle"></i> <strong>Issues Found:</strong>
           <ul class="mb-0 mt-2">
             <?php if ($has_db_mismatch): ?><li>Directory name does not match any genome record in the database</li><?php endif; ?>
-            <?php if ($is_missing): ?><li>Missing required FASTA files</li><?php endif; ?>
-            <?php if ($modal_has_missing_blast): ?><li>Missing BLAST index files</li><?php endif; ?>
+            <?php if ($is_missing_live): ?><li>Missing required FASTA files in one or more gene sets</li><?php endif; ?>
+            <?php if ($modal_has_missing_blast): ?><li>Missing BLAST index files in one or more gene sets</li><?php endif; ?>
             <?php if ($modal_has_missing_fai): ?><li>Missing <code>genome.fa.fai</code> index (required for SVG sequence viewer)</li><?php endif; ?>
           </ul>
         <?php else: ?>
@@ -893,20 +1136,21 @@ function render_status_modal($organism, $data, $groups_data, $taxonomy_tree_file
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h6 class="mb-0"><i class="fa fa-list-check"></i> <strong>Setup Checklist</strong></h6>
-            <span class="badge bg-success fs-6"><?= $pass_count ?>/9 Complete</span>
+            <span class="badge <?= $status['all_pass'] ? 'bg-success' : 'bg-warning text-dark' ?> fs-6"><?= $pass_count ?>/<?= $status['total_count'] ?> Complete</span>
           </div>
           <div class="list-group">
             <?php
               $checklist = [
-                  'has_assemblies'    => 'Has assemblies',
-                  'has_fasta'         => 'Has FASTA files',
-                  'has_blast_indexes' => 'Has BLAST indexes',
-                  'has_fai_index'     => ['Has FAI index', '<small class="text-muted">(genome.fa.fai — required for SVG sequence viewer)</small>'],
-                  'has_database'      => 'Has database file',
-                  'database_readable' => 'Database is readable',
-                  'assemblies_in_groups' => 'Assembly in organism groups',
-                  'in_taxonomy_tree'  => 'In taxonomy tree',
-                  'metadata_complete' => 'Metadata complete',
+                  'has_assemblies'      => 'Has assemblies',
+                  'has_fasta'           => 'Has FASTA files',
+                  'has_blast_indexes'   => 'Has BLAST indexes',
+                  'has_fai_index'       => 'Has FAI index',
+                  'has_database'        => 'Has database file',
+                  'database_valid'      => 'Database is valid',
+                  'directories_match_db'=> 'Assembly &amp; gene set dirs match DB',
+                  'assemblies_in_groups'=> 'Assembly in organism groups',
+                  'in_taxonomy_tree'    => 'In taxonomy tree',
+                  'metadata_complete'   => 'Metadata complete',
               ];
               foreach ($checklist as $key => $label):
                   $pass = $checks[$key] ?? false;

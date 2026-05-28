@@ -357,6 +357,76 @@ function renameAssemblyDirectory(event, organism, safeAsmId) {
     });
 }
 
+function renameGeneSetDirectory(event, organism, assembly, safeId) {
+    event.preventDefault();
+
+    const oldDir = document.getElementById('gsOldDirName' + safeId).value;
+    const newDir = document.getElementById('gsNewDirName' + safeId).value;
+    const resultDiv = document.getElementById('gsRenameResult' + safeId);
+    const button = event.target;
+
+    if (!oldDir || !newDir) {
+        resultDiv.innerHTML = '<div class="alert alert-warning">Please select a current directory name</div>';
+        resultDiv.classList.remove('d-none');
+        return;
+    }
+
+    if (oldDir === newDir) {
+        resultDiv.innerHTML = '<div class="alert alert-warning">Current and new names are the same</div>';
+        resultDiv.classList.remove('d-none');
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Renaming...';
+    resultDiv.classList.add('d-none');
+
+    fetch('manage_organisms.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=rename_gene_set&organism=' + encodeURIComponent(organism) +
+              '&assembly=' + encodeURIComponent(assembly) +
+              '&old_name=' + encodeURIComponent(oldDir) +
+              '&new_name=' + encodeURIComponent(newDir)
+    })
+    .then(response => response.json())
+    .then(data => {
+        button.disabled = false;
+
+        let alertClass = data.success ? 'alert-success' : 'alert-danger';
+        let html = '<div class="alert ' + alertClass + '">';
+        html += '<strong>' + (data.success ? '✓ Success!' : '✗ Failed!') + '</strong><br>';
+        html += '<p>' + data.message + '</p>';
+
+        if (data.command) {
+            html += '<div class="alert alert-info mt-2 small">';
+            html += '<strong>Run this command on the server:</strong><br>';
+            html += '<code class="text-break">' + escapeHtml(data.command) + '</code><br>';
+            html += '<small class="mt-2 d-block text-muted">After running the command, refresh this page to verify the fix.</small>';
+            html += '</div>';
+        }
+
+        html += '</div>';
+
+        if (data.success) {
+            button.innerHTML = '<i class="fa fa-check"></i> Renamed!';
+            button.classList.remove('btn-info');
+            button.classList.add('btn-success');
+        } else {
+            button.innerHTML = '<i class="fa fa-exchange-alt"></i> Try Again';
+        }
+
+        resultDiv.innerHTML = html;
+        resultDiv.classList.remove('d-none');
+    })
+    .catch(error => {
+        button.disabled = false;
+        button.innerHTML = '<i class="fa fa-exchange-alt"></i> Rename';
+        resultDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error + '</div>';
+        resultDiv.classList.remove('d-none');
+    });
+}
+
 function deleteAssemblyDirectory(event, organism, safeAsmId) {
     event.preventDefault();
     
@@ -758,7 +828,128 @@ async function openOrganismModal(type, organism, assembly) {
     modalEl.addEventListener('hidden.bs.modal', () => { modalEl.innerHTML = ''; }, { once: true });
 }
 
-function rescanOrganisms() {
-  const btn = document.getElementById('rescanBtn');
+function rescanOrganisms(clickedBtn) {
+  const btn = clickedBtn || document.getElementById('rescanBtn');
   refreshOrganismCache(btn, document.getElementById('refreshStatus'), false, btn?.innerHTML);
+}
+
+function forceRescanOrganisms() {
+  const btn = document.getElementById('forceRescanBtn');
+  refreshOrganismCache(btn, document.getElementById('refreshStatus'), true, btn?.innerHTML);
+}
+
+function rescanSingleOrganism(btn, organism) {
+  const statusEl = document.getElementById('refreshStatus');
+  const label = btn ? btn.innerHTML : '<i class="fa fa-sync-alt"></i>';
+  refreshOrganismCache(btn, statusEl, false, label, organism);
+}
+
+// ── Quick Add Group ──────────────────────────────────────────────────────────
+
+let _quickAddOrganism = null;
+let _quickAddCellId   = null;
+
+function openQuickAddGroupModal(organism, cellId) {
+  _quickAddOrganism = organism;
+  _quickAddCellId   = cellId;
+
+  document.getElementById('quickAddOrgName').textContent = organism;
+  document.getElementById('quickAddGroupName').value = '';
+
+  const resultDiv = document.getElementById('quickAddResult');
+  resultDiv.style.display = 'none';
+  resultDiv.innerHTML = '';
+
+  const btn = document.getElementById('quickAddSubmitBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fa fa-plus"></i> Add Group';
+
+  // Populate datalist with existing groups
+  const dl = document.getElementById('quickAddGroupList');
+  dl.innerHTML = '';
+  (window.existingGroups || []).forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g;
+    dl.appendChild(opt);
+  });
+
+  new bootstrap.Modal(document.getElementById('quickAddGroupModal')).show();
+  setTimeout(() => document.getElementById('quickAddGroupName').focus(), 300);
+}
+
+function submitQuickAddGroup() {
+  const groupName = document.getElementById('quickAddGroupName').value.trim();
+  const resultDiv = document.getElementById('quickAddResult');
+  const btn       = document.getElementById('quickAddSubmitBtn');
+
+  if (!groupName) {
+    resultDiv.innerHTML = '<div class="alert alert-warning py-1 px-2 small mb-0">Enter a group name.</div>';
+    resultDiv.style.display = '';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Adding…';
+
+  const tok = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+  fetch(sitePath + '/admin/api/quick_add_group.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRF-Token': tok
+    },
+    body: 'organism=' + encodeURIComponent(_quickAddOrganism) +
+          '&group_name=' + encodeURIComponent(groupName)
+  })
+  .then(r => r.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-plus"></i> Add Group';
+    if (data.success) {
+      resultDiv.innerHTML =
+        '<div class="alert alert-success py-1 px-2 small mb-0"><i class="fa fa-check"></i> ' +
+        'Added ' + data.added + ' entr' + (data.added === 1 ? 'y' : 'ies') +
+        ' to <strong>' + escapeHtml(data.group) + '</strong>.</div>';
+      resultDiv.style.display = '';
+      _updateGroupsCell(_quickAddCellId, _quickAddOrganism, data.group);
+      setTimeout(() => {
+        bootstrap.Modal.getInstance(document.getElementById('quickAddGroupModal'))?.hide();
+      }, 1400);
+    } else {
+      resultDiv.innerHTML =
+        '<div class="alert alert-danger py-1 px-2 small mb-0"><i class="fa fa-times"></i> ' +
+        escapeHtml(data.error || 'Unknown error') + '</div>';
+      resultDiv.style.display = '';
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-plus"></i> Add Group';
+    resultDiv.innerHTML =
+      '<div class="alert alert-danger py-1 px-2 small mb-0">Request failed: ' + escapeHtml(String(err)) + '</div>';
+    resultDiv.style.display = '';
+  });
+}
+
+function _updateGroupsCell(cellId, organism, groupName) {
+  const cell = document.getElementById(cellId);
+  if (cell) {
+    cell.innerHTML =
+      '<span class="btn btn-sm btn-outline-success disabled"><i class="fa fa-check-circle"></i> OK</span>' +
+      '<div class="mt-1"><span class="badge bg-secondary">' + escapeHtml(groupName) + '</span></div>';
+  }
+  // Remove 'groups' from data-issues on the row so the filter updates
+  const table = document.getElementById('organismsTable');
+  if (!table) return;
+  table.querySelectorAll('tbody tr').forEach(row => {
+    const issues = (row.dataset.issues || '').split(' ').filter(i => i !== 'groups');
+    // Match on organism name in data or by scanning the first cell link
+    const link = row.querySelector('td:first-child a');
+    if (link && link.textContent.trim().startsWith(organism)) {
+      row.dataset.issues = issues.join(' ');
+      const noIssues = issues.every(i => i === '');
+      if (noIssues) row.dataset.status = 'complete';
+    }
+  });
 }

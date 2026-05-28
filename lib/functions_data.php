@@ -5,6 +5,25 @@
  */
 
 /**
+ * cURL GET with connect + total timeouts — avoids D-state hangs from file_get_contents.
+ * Returns the response body string, or false on error.
+ */
+function moop_curl_get(string $url, int $connect_timeout = 5, int $total_timeout = 10) {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_CONNECTTIMEOUT => $connect_timeout,
+        CURLOPT_TIMEOUT        => $total_timeout,
+        CURLOPT_USERAGENT      => 'MOOP/1.0 (github.com)',
+    ]);
+    $result = curl_exec($ch);
+    $err    = curl_errno($ch);
+    curl_close($ch);
+    return ($result !== false && !$err) ? $result : false;
+}
+
+/**
  * Get group metadata from organism_assembly_groups.json
  * 
  * @return array Array of organism/assembly/groups data
@@ -29,6 +48,7 @@ function getGroupData() {
  */
 function getAllGroupCards($group_data) {
     $cards = [];
+    $group_organisms = [];
     foreach ($group_data as $data) {
         foreach ($data['groups'] as $group) {
             if (!isset($cards[$group])) {
@@ -37,8 +57,13 @@ function getAllGroupCards($group_data) {
                     'text' => "Explore $group Data",
                     'link' => 'tools/groups.php?group=' . urlencode($group)
                 ];
+                $group_organisms[$group] = [];
             }
+            $group_organisms[$group][$data['organism']] = true;
         }
+    }
+    foreach ($cards as $group => &$card) {
+        $card['organism_count'] = count($group_organisms[$group]);
     }
     return $cards;
 }
@@ -52,7 +77,8 @@ function getAllGroupCards($group_data) {
  */
 function getPublicGroupCards($group_data) {
     $public_groups = [];
-    
+    $group_organisms = [];
+
     // Find all groups that contain at least one public assembly
     foreach ($group_data as $data) {
         if (in_array('PUBLIC', $data['groups'])) {
@@ -63,9 +89,14 @@ function getPublicGroupCards($group_data) {
                         'text' => "Explore $group Data",
                         'link' => 'tools/groups.php?group=' . urlencode($group)
                     ];
+                    $group_organisms[$group] = [];
                 }
+                $group_organisms[$group][$data['organism']] = true;
             }
         }
+    }
+    foreach ($public_groups as $group => &$card) {
+        $card['organism_count'] = count($group_organisms[$group]);
     }
     return $public_groups;
 }
@@ -251,25 +282,52 @@ function getAssemblyFastaFiles($organism_name, $assembly_name) {
     $sequence_types = $config->getSequenceTypes();
     $fasta_files = [];
     $assembly_dir = "$organism_data/$organism_name/$assembly_name";
-    
-    if (is_dir($assembly_dir)) {
-        $fasta_files_found = glob($assembly_dir . '/*.fa');
-        foreach ($fasta_files_found as $fasta_file) {
-            $filename = basename($fasta_file);
-            $relative_path = "$organism_name/$assembly_name/$filename";
-            
-            foreach ($sequence_types as $type => $config) {
-                if (strpos($filename, $config['pattern']) !== false) {
-                    $fasta_files[$type] = [
-                        'path' => $relative_path,
-                        'label' => $config['label'],
-                        'color' => $config['color']
-                    ];
-                    break;
+
+    if (!is_dir($assembly_dir)) {
+        return $fasta_files;
+    }
+
+    // genome.fa stays at assembly level (not in a gene_set subdir)
+    foreach ($sequence_types as $type => $seq_config) {
+        if (strpos($seq_config['pattern'], 'genome') !== false) {
+            if (file_exists("$assembly_dir/genome.fa")) {
+                $fasta_files[$type] = [
+                    'path'     => "$organism_name/$assembly_name/genome.fa",
+                    'label'    => $seq_config['label'],
+                    'color'    => $seq_config['color'],
+                    'gene_set' => '',
+                    'seq_type' => $type,
+                ];
+            }
+            break;
+        }
+    }
+
+    // protein/transcript/cds live in gene_set subdirs
+    $gene_set_dirs = glob("$assembly_dir/*", GLOB_ONLYDIR) ?: [];
+    $multi_gs = count($gene_set_dirs) > 1;
+    foreach ($gene_set_dirs as $gs_dir) {
+        $gene_set = basename($gs_dir);
+        foreach ($sequence_types as $type => $seq_config) {
+            if (strpos($seq_config['pattern'], 'genome') !== false) continue;
+            $matches = glob("$gs_dir/" . $seq_config['pattern']);
+            if (!empty($matches)) {
+                $key = $type . '.' . $gene_set;
+                $label = $seq_config['label'];
+                if ($multi_gs) {
+                    $label .= ' (' . $gene_set . ')';
                 }
+                $fasta_files[$key] = [
+                    'path'     => "$organism_name/$assembly_name/$gene_set/" . basename($matches[0]),
+                    'label'    => $label,
+                    'color'    => $seq_config['color'],
+                    'gene_set' => $gene_set,
+                    'seq_type' => $type,
+                ];
             }
         }
     }
+
     return $fasta_files;
 }
 
@@ -509,30 +567,32 @@ function syncGroupDescriptions($existing_groups, $descriptions_data) {
  */
 function fetch_taxonomy_lineage($taxon_id, $max_retries = 3) {
     $url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id={$taxon_id}&retmode=xml";
-    
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 10,
-            'user_agent' => 'MOOP Taxonomy Tree Generator'
-        ]
-    ]);
-    
-    $attempt = 0;
+
+    $attempt  = 0;
     $response = false;
-    
-    // Retry loop with exponential backoff
+
     while ($attempt < $max_retries && $response === false) {
-        $response = @file_get_contents($url, false, $context);
-        
-        if ($response === false) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_USERAGENT      => 'MOOP/1.0 Taxonomy Tree Generator',
+        ]);
+        $result = curl_exec($ch);
+        $err    = curl_errno($ch);
+        curl_close($ch);
+
+        if ($result !== false && !$err) {
+            $response = $result;
+        } else {
             $attempt++;
             if ($attempt < $max_retries) {
-                // Exponential backoff: 1s, 2s, 4s
-                usleep(1000000 * pow(2, $attempt - 1));
+                usleep(1000000 * (int)pow(2, $attempt - 1));
             }
         }
     }
-    
+
     if ($response === false) {
         error_log("NCBI taxonomy fetch failed for taxon_id {$taxon_id} after {$max_retries} attempts");
         return null;
@@ -591,6 +651,96 @@ function fetch_taxonomy_lineage($taxon_id, $max_retries = 3) {
     return !empty($lineage) ? $lineage : null;
 }
 
+// ── Local NCBI dump helpers ───────────────────────────────────────────────────
+
+function ncbi_load_local_dump_meta($metadata_path) {
+    $f = "$metadata_path/.ncbi_taxonomy_meta.json";
+    if (!file_exists($f)) return [];
+    return json_decode(file_get_contents($f), true) ?: [];
+}
+
+function ncbi_save_local_dump_meta($metadata_path, array $meta) {
+    $f = "$metadata_path/.ncbi_taxonomy_meta.json";
+    @file_put_contents($f, json_encode($meta, JSON_PRETTY_PRINT));
+    @chmod($f, 0664);
+}
+
+/**
+ * Fetch the 50-byte MD5 file from NCBI. Returns the hex hash string, or null on failure.
+ * Uses a short timeout — callers must handle null gracefully.
+ */
+function ncbi_fetch_remote_md5($md5_url) {
+    $ch = curl_init($md5_url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 5,
+        CURLOPT_USERAGENT      => 'MOOP/1.0 Taxonomy Sync',
+    ]);
+    $body = curl_exec($ch);
+    $err  = curl_errno($ch);
+    $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($err || $http !== 200 || !$body) return null;
+    // File format: "<md5hash>  new_taxdump.tar.gz\n"
+    $parts = preg_split('/\s+/', trim($body));
+    return (!empty($parts[0]) && strlen($parts[0]) === 32) ? $parts[0] : null;
+}
+
+/**
+ * Scan the local ncbi_rankedlineage.dmp.gz for a set of taxon IDs.
+ *
+ * Returns array keyed by taxon_id => ['lineage'=>[...], 'image'=>null, 'fetched'=>'...', 'source'=>'ncbi_dump'].
+ * Stops early once all requested IDs are found.
+ *
+ * @param array  $taxid_set   taxon_id (string) => any truthy value
+ * @param string $stored_gz   path to ncbi_rankedlineage.dmp.gz
+ */
+function ncbi_scan_local_dump(array $taxid_set, string $stored_gz): array {
+    if (!file_exists($stored_gz) || empty($taxid_set)) return [];
+
+    $rank_fields = [
+        'superkingdom' => 9, 'kingdom' => 8, 'phylum' => 7,
+        'class'        => 6, 'order'   => 5, 'family' => 4,
+        'genus'        => 3, 'species' => 1,
+    ];
+
+    $results = [];
+    $needed  = $taxid_set;
+
+    $gz = gzopen($stored_gz, 'r');
+    if (!$gz) return [];
+
+    while (!empty($needed) && ($line = gzgets($gz)) !== false) {
+        $tab = strpos($line, "\t");
+        if ($tab === false) continue;
+        $tid = substr($line, 0, $tab);
+        if (!isset($needed[$tid])) continue;
+
+        $stripped = rtrim($line, "\r\n");
+        if (substr($stripped, -2) === "\t|") $stripped = substr($stripped, 0, -2);
+        $parts   = explode("\t|\t", $stripped);
+        $lineage = [];
+        foreach ($rank_fields as $rank => $idx) {
+            $name = isset($parts[$idx]) ? trim($parts[$idx]) : '';
+            if ($name !== '') $lineage[] = ['rank' => $rank, 'name' => $name];
+        }
+        if (!empty($lineage)) {
+            $results[$tid] = [
+                'lineage' => $lineage,
+                'image'   => null,
+                'fetched' => date('Y-m-d'),
+                'source'  => 'ncbi_dump',
+            ];
+        }
+        unset($needed[$tid]);
+    }
+    gzclose($gz);
+
+    return $results;
+}
+
 /**
  * Load the taxonomy lineage cache from disk.
  * Returns array keyed by taxon_id (string). The 'generated' metadata key is stripped.
@@ -620,8 +770,12 @@ function save_lineage_cache($lineage_cache, $metadata_path) {
 }
 
 /**
- * Fetch NCBI lineage for any organisms whose taxon_id is absent from the cache.
- * Existing entries are untouched. Returns the updated cache array.
+ * Populate lineage cache for any organisms whose taxon_id is absent, using ONLY
+ * the local NCBI dump. Never makes live NCBI API calls — those can block indefinitely
+ * (D-state) and are too slow for a synchronous cache refresh.
+ *
+ * If the local dump is missing, logs a warning and returns the cache unchanged.
+ * Callers should ensure sync_ncbi_taxonomy_dump.php has been run at least once.
  *
  * @param array    $organisms        organism_name => ['taxon_id', 'genus', 'species', 'common_name', ...]
  * @param array    $lineage_cache    Current cache keyed by taxon_id
@@ -638,39 +792,40 @@ function refresh_lineage_cache($organisms, $lineage_cache, $progress_cb = null) 
         }
     }
 
-    $total   = count($to_fetch);
-    $current = 0;
+    if (empty($to_fetch)) return $lineage_cache;
+
+    $config    = ConfigManager::getInstance();
+    $stored_gz = $config->getPath('metadata_path') . '/ncbi_rankedlineage.dmp.gz';
+
+    if (!file_exists($stored_gz)) {
+        $missing = implode(', ', array_keys($to_fetch));
+        error_log("refresh_lineage_cache: local NCBI dump not found at $stored_gz. "
+            . "Run scripts/sync_ncbi_taxonomy_dump.php to download it. "
+            . "Skipped organisms: $missing");
+        return $lineage_cache;
+    }
+
+    $taxid_set = [];
+    foreach ($to_fetch as $data) {
+        if (!empty($data['taxon_id'])) $taxid_set[(string)$data['taxon_id']] = true;
+    }
+
+    $from_dump = ncbi_scan_local_dump($taxid_set, $stored_gz);
+    foreach ($from_dump as $tid => $entry) {
+        $lineage_cache[$tid] = $entry;
+    }
+
+    // Report any taxon_ids that weren't found in the dump (dump may be stale)
+    $still_missing = [];
     foreach ($to_fetch as $org_name => $data) {
-        $current++;
-        $tid = (string)$data['taxon_id'];
-        if ($progress_cb) $progress_cb($org_name, $current, $total);
-
-        $lineage = fetch_taxonomy_lineage($tid);
-        $image   = fetch_organism_image($tid, $org_name);
-
-        if ($image === null && !empty($data['genus']) && !empty($data['species'])) {
-            $sci    = $data['genus'] . ' ' . $data['species'];
-            $wiki   = getWikipediaOrganismData($org_name, $sci);
-            if (!empty($wiki['image_url'])) {
-                $safe = preg_replace('/[^a-zA-Z0-9_-]/', '_', $org_name) . '.jpg';
-                $dl   = downloadWikimediaImage($wiki['image_url'], $safe);
-                if ($dl !== false) {
-                    $cfg   = ConfigManager::getInstance();
-                    $site  = $cfg->getString('site');
-                    $image = preg_replace('#^/' . preg_quote($site, '#') . '/#', '', $dl);
-                }
-            }
+        if (!isset($lineage_cache[(string)$data['taxon_id']])) {
+            $still_missing[] = "$org_name (taxon_id={$data['taxon_id']})";
         }
-
-        if ($lineage) {
-            $lineage_cache[$tid] = [
-                'lineage' => $lineage,
-                'image'   => $image,
-                'fetched' => date('Y-m-d'),
-            ];
-        }
-
-        usleep(500000); // 500 ms — 2 req/s NCBI rate limit
+    }
+    if (!empty($still_missing)) {
+        error_log("refresh_lineage_cache: " . count($still_missing) . " taxon_id(s) not found in local dump — "
+            . "dump may be stale. Re-run scripts/sync_ncbi_taxonomy_dump.php. "
+            . "Missing: " . implode(', ', $still_missing));
     }
 
     return $lineage_cache;
@@ -906,7 +1061,8 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         'has_blast_indexes' => false,
         'has_fai_index' => false,
         'has_database' => false,
-        'database_readable' => false,
+        'database_valid' => false,
+        'directories_match_db' => false,
         'assemblies_in_groups' => false,
         'in_taxonomy_tree' => false,
         'metadata_complete' => false,
@@ -940,7 +1096,14 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
             $blast_validation = $data['blast_validation'][$assembly] ?? null;
             if (!$blast_validation) {
                 $assembly_path = $data['path'] . '/' . $assembly;
-                $blast_validation = validateBlastIndexFiles($assembly_path, $sequence_types);
+                // Aggregate across gene_set subdirs
+                $blast_validation = ['databases' => [], 'missing_count' => 0, 'total_count' => 0];
+                foreach (glob($assembly_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                    $bv = validateBlastIndexFiles($gs_dir, $sequence_types);
+                    $blast_validation['databases']     = array_merge($blast_validation['databases'], $bv['databases']);
+                    $blast_validation['missing_count'] += $bv['missing_count'];
+                    $blast_validation['total_count']   += $bv['total_count'];
+                }
             }
 
             if (!empty($blast_validation['databases'])) {
@@ -987,12 +1150,20 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
     // 5. Is there a database file?
     $checks['has_database'] = $data['has_db'];
     
-    // 6. Is the database readable?
+    // 6. Is the database valid? (readable, correct schema, all tables present, no data issues)
     if ($checks['has_database'] && !empty($data['db_validation'])) {
-        $checks['database_readable'] = $data['db_validation']['readable'];
+        $checks['database_valid'] = $data['db_validation']['valid'] ?? $data['db_validation']['readable'];
+    }
+
+    // 7. Do assembly and gene_set directories on disk match the DB records?
+    if ($checks['has_database'] && !empty($data['assembly_validation'])) {
+        $checks['directories_match_db'] = $data['assembly_validation']['valid'] ?? false;
+    } elseif ($checks['has_database'] && !empty($data['db_file']) && !empty($data['path'])) {
+        $live = validateAssemblyDirectories($data['db_file'], $data['path']);
+        $checks['directories_match_db'] = $live['valid'];
     }
     
-    // 7. Is each assembly a member of at least one group?
+    // 8. Is each assembly a member of at least one group?
     if ($checks['has_assemblies']) {
         $all_in_groups = true;
         foreach ($data['assemblies'] as $assembly) {
@@ -1005,10 +1176,10 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         $checks['assemblies_in_groups'] = $all_in_groups;
     }
     
-    // 8. Is the organism found in the tree? (use pre-computed value from cache if available)
+    // 9. Is the organism found in the tree? (use pre-computed value from cache if available)
     $checks['in_taxonomy_tree'] = $data['in_taxonomy_tree'] ?? isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
-    
-    // 9. Is metadata complete?
+
+    // 10. Is metadata complete?
     if (!empty($data['json_validation'])) {
         $json_val = $data['json_validation'];
         $checks['metadata_complete'] = ($json_val['exists'] && $json_val['readable'] && $json_val['valid_json'] && $json_val['has_required_fields'] && $json_val['writable']);
@@ -1050,21 +1221,41 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
 // Increment this when the cache structure or computed fields change, to force a full rescan.
 define('ORGANISM_CACHE_SCHEMA_VERSION', 2);
 
-function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh = false, $progress_callback = null) {
+/**
+ * Write organism cache atomically: write to a temp file then rename().
+ * rename() is atomic on Linux — readers always see a complete file, never a partial write.
+ */
+function organism_cache_write_atomic($cache_file, array $data) {
+    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    if ($json === false) return false;
+    $tmp = $cache_file . '.tmp.' . getmypid();
+    if (@file_put_contents($tmp, $json) === false) return false;
+    @chmod($tmp, 0664);
+    if (!@rename($tmp, $cache_file)) {
+        @unlink($tmp);
+        return false;
+    }
+    return true;
+}
+
+function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh = false, $progress_callback = null, $force_organisms = []) {
     $cache_file = "$organism_data_path/.organism_cache.json";
-    
+
     // Build per-organism fingerprints for all current organisms
     $current_fingerprints = buildPerOrganismFingerprints($organism_data_path);
-    
-    // Global config fingerprint (tree, groups files)
-    $config_fingerprint = buildConfigFingerprint($taxonomy_tree_file, $groups_file);
-    
+
+    // Config fingerprint used only for the DECISION of what to rescan.
+    // We recompute it at the end before writing so the stored value reflects
+    // the final state of config files, not the state at scan start. This prevents
+    // the cache from being born stale when a config file changes during a long scan.
+    $decision_config_fp = buildConfigFingerprint($taxonomy_tree_file, $groups_file);
+
     // Try to load existing cache
     $cached = null;
     $cached_fingerprints = [];
     $cached_config = null;
     $cached_data = [];
-    
+
     if (!$force_refresh && file_exists($cache_file)) {
         $cached = json_decode(file_get_contents($cache_file), true);
         if ($cached && isset($cached['org_fingerprints']) && isset($cached['config_fingerprint']) && isset($cached['data'])
@@ -1074,43 +1265,58 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
             $cached_data = $cached['data'];
         }
     }
-    
+
     // Determine what needs updating
-    $config_changed = ($cached_config !== $config_fingerprint);
+    $config_changed = ($cached_config !== $decision_config_fp);
     $organisms_to_scan = [];
     $organisms_to_keep = [];
-    
+    // Organisms whose files are unchanged but config changed — reuse expensive validation,
+    // only recalculate status fields (group membership, tree placement, overall_status).
+    $organisms_config_only = [];
+
     foreach ($current_fingerprints as $org_name => $fingerprint) {
+        // Specific organisms can be force-rescanned regardless of fingerprint.
+        if (!empty($force_organisms) && in_array($org_name, $force_organisms, true)) {
+            $organisms_to_scan[] = $org_name;
+            continue;
+        }
         $cached_fingerprint = $cached_fingerprints[$org_name] ?? null;
-        if ($cached_fingerprint === $fingerprint && !$config_changed) {
-            // Organism unchanged and config unchanged - reuse cached data
-            if (isset($cached_data[$org_name])) {
-                $organisms_to_keep[$org_name] = $cached_data[$org_name];
+        if ($cached_fingerprint === $fingerprint) {
+            if (!$config_changed) {
+                // Organism and config both unchanged — fully reuse
+                if (isset($cached_data[$org_name])) {
+                    $organisms_to_keep[$org_name] = $cached_data[$org_name];
+                } else {
+                    $organisms_to_scan[] = $org_name;
+                }
             } else {
-                $organisms_to_scan[] = $org_name;
+                // Config changed but organism files unchanged — lightweight status refresh
+                if (isset($cached_data[$org_name])) {
+                    $organisms_config_only[$org_name] = $cached_data[$org_name];
+                } else {
+                    $organisms_to_scan[] = $org_name;
+                }
             }
         } else {
-            // Organism changed or config changed - needs rescan
+            // Organism files changed — full rescan
             $organisms_to_scan[] = $org_name;
         }
     }
-    
+
     // Check for removed organisms (in cache but not in current directory scan)
     foreach ($cached_fingerprints as $org_name => $fingerprint) {
         if (!isset($current_fingerprints[$org_name])) {
-            // Organism was removed from filesystem - remove from cache
             unset($organisms_to_keep[$org_name]);
+            unset($organisms_config_only[$org_name]);
         }
     }
-    
-    // If config changed (tree/groups), all organisms need status recalculation
-    // But we can still reuse the expensive parts (assemblies, FASTA, BLAST validation)
-    if ($config_changed && !empty($organisms_to_keep)) {
-        foreach ($organisms_to_keep as $org_name => $org_data) {
-            // Mark for status recalculation
-            $organisms_to_scan[] = $org_name;
-        }
-        $organisms_to_keep = [];
+
+    // For config-only changes: recalculate overall_status and in_taxonomy_tree
+    // without re-running the expensive DB/FASTA/BLAST validation.
+    foreach ($organisms_config_only as $org_name => $org_data) {
+        $org_data['in_taxonomy_tree'] = isAssemblyInTaxonomyTree($org_name, '', $taxonomy_tree_file);
+        $org_data['overall_status']   = getOrganismOverallStatus($org_name, $org_data, $groups_data, $taxonomy_tree_file, $sequence_types);
+        $organisms_to_keep[$org_name] = $org_data;
     }
     
     $total_scan_count = count($organisms_to_scan);
@@ -1121,14 +1327,13 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
         // rewrite it now so the deleted entries don't persist across future loads.
         if ($removed_count > 0) {
             $cache_data = [
-                'generated'        => date('Y-m-d H:i:s'),
-                'schema_version'   => ORGANISM_CACHE_SCHEMA_VERSION,
-                'config_fingerprint' => $config_fingerprint,
-                'org_fingerprints' => $current_fingerprints,
-                'data'             => $organisms_to_keep,
+                'generated'          => date('Y-m-d H:i:s'),
+                'schema_version'     => ORGANISM_CACHE_SCHEMA_VERSION,
+                'config_fingerprint' => buildConfigFingerprint($taxonomy_tree_file, $groups_file),
+                'org_fingerprints'   => $current_fingerprints,
+                'data'               => $organisms_to_keep,
             ];
-            @file_put_contents($cache_file, json_encode($cache_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-            @chmod($cache_file, 0664);
+            organism_cache_write_atomic($cache_file, $cache_data);
         }
         return $organisms_to_keep;
     }
@@ -1143,7 +1348,7 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     foreach ($organisms_to_scan as $org_name) {
         $current++;
         if ($progress_callback) {
-            $progress_callback($org_name, $current, $total_scan_count);
+            $progress_callback($org_name, $current, $total_scan_count, 'scanning');
         }
         
         $org_path = "$organism_data_path/$org_name";
@@ -1177,10 +1382,19 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
         $assembly_validation = null;
         $fasta_validation = null;
         if ($has_db) {
+            if ($progress_callback) {
+                $progress_callback($org_name, $current, $total_scan_count, 'checking database');
+            }
             $db_validation = validateDatabaseIntegrity($db_file);
+            if ($progress_callback) {
+                $progress_callback($org_name, $current, $total_scan_count, 'checking assembly directories');
+            }
             $assembly_validation = validateAssemblyDirectories($db_file, $org_path);
         }
         // Validate FASTA files in assembly directories
+        if ($progress_callback) {
+            $progress_callback($org_name, $current, $total_scan_count, 'checking FASTA files');
+        }
         $fasta_validation = validateAssemblyFastaFiles($org_path, $sequence_types);
         
         $org_info = [
@@ -1195,11 +1409,21 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
             'json_validation' => validateOrganismJson("$org_path/organism.json")
         ];
         
-        // Pre-compute blast validation per assembly
+        // Pre-compute blast validation per assembly — aggregate across gene_set subdirs
+        if ($progress_callback) {
+            $progress_callback($org_name, $current, $total_scan_count, 'checking BLAST indexes');
+        }
         $blast_by_assembly = [];
         foreach ($org_info['assemblies'] as $assembly) {
             $assembly_path = $org_path . '/' . $assembly;
-            $blast_by_assembly[$assembly] = validateBlastIndexFiles($assembly_path, $sequence_types);
+            $aggregated = ['databases' => [], 'missing_count' => 0, 'total_count' => 0];
+            foreach (glob($assembly_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                $bv = validateBlastIndexFiles($gs_dir, $sequence_types);
+                $aggregated['databases']     = array_merge($aggregated['databases'], $bv['databases']);
+                $aggregated['missing_count'] += $bv['missing_count'];
+                $aggregated['total_count']   += $bv['total_count'];
+            }
+            $blast_by_assembly[$assembly] = $aggregated;
         }
         $org_info['blast_validation'] = $blast_by_assembly;
 
@@ -1229,18 +1453,17 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     // Sort by organism name
     ksort($all_organisms);
     
-    // Save to cache
+    // Recompute config fingerprint at END of scan so the stored value reflects
+    // the final state of config files, not the state when scanning started.
     $cache_data = [
-        'generated' => date('Y-m-d H:i:s'),
-        'schema_version' => ORGANISM_CACHE_SCHEMA_VERSION,
-        'config_fingerprint' => $config_fingerprint,
-        'org_fingerprints' => $current_fingerprints,
-        'data' => $all_organisms
+        'generated'          => date('Y-m-d H:i:s'),
+        'schema_version'     => ORGANISM_CACHE_SCHEMA_VERSION,
+        'config_fingerprint' => buildConfigFingerprint($taxonomy_tree_file, $groups_file),
+        'org_fingerprints'   => $current_fingerprints,
+        'data'               => $all_organisms,
     ];
-    
-    if (@file_put_contents($cache_file, json_encode($cache_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) !== false) {
-        @chmod($cache_file, 0664); // ensure web server (apache group) can overwrite on next run
-    }
+
+    organism_cache_write_atomic($cache_file, $cache_data);
 
     return $all_organisms;
 }
@@ -1293,11 +1516,21 @@ function buildPerOrganismFingerprints($organism_data_path) {
             $parts[] = 'json:' . filemtime($json_file);
         }
         
-        // Assembly directories count (quick check for structure changes)
+        // Assembly directories — include each dir's mtime so that adding/removing
+        // files inside an assembly (FASTA, FAI, BLAST indexes) triggers a rescan.
         $assemblies = array_filter(scandir($org_path), function($f) use ($org_path) {
             return $f[0] !== '.' && is_dir("$org_path/$f");
         });
         $parts[] = 'asm:' . count($assemblies);
+        foreach ($assemblies as $asm) {
+            $parts[] = 'asm_mtime:' . filemtime("$org_path/$asm");
+            // Gene_set subdirs sit one level below the assembly dir. On Linux, only direct
+            // children affect a directory's mtime, so files changed inside a gene_set subdir
+            // (e.g. BLAST indexes rebuilt) must be tracked here explicitly.
+            foreach (glob("$org_path/$asm/*", GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                $parts[] = 'gs_mtime:' . basename($gs_dir) . ':' . filemtime($gs_dir);
+            }
+        }
         
         $fingerprints[$organism] = md5(implode('|', $parts));
     }
@@ -1306,9 +1539,80 @@ function buildPerOrganismFingerprints($organism_data_path) {
 }
 
 /**
+ * Build a one-line description from lineage cache data.
+ * Used as a fallback when Wikipedia has no article for an organism.
+ * e.g. "Schmidtea nova is a species of flatworm in the family Dugesiidae."
+ *
+ * @param string $scientific_name  e.g. "Schmidtea nova"
+ * @param array  $lineage          Array of ['rank'=>..., 'name'=>...] from lineage cache
+ * @return string  One sentence, or empty string if not enough data.
+ */
+function buildAutoDescription(string $scientific_name, array $lineage): string {
+    if (empty($scientific_name) || empty($lineage)) return '';
+
+    $ranks = [];
+    foreach ($lineage as $entry) {
+        $ranks[$entry['rank']] = $entry['name'];
+    }
+
+    // Class-level names (more specific than phylum)
+    $class_map = [
+        'Mammalia'       => 'mammal',
+        'Aves'           => 'bird',
+        'Reptilia'       => 'reptile',
+        'Amphibia'       => 'amphibian',
+        'Actinopterygii' => 'ray-finned fish',
+        'Chondrichthyes' => 'cartilaginous fish',
+        'Insecta'        => 'insect',
+        'Arachnida'      => 'arachnid',
+        'Malacostraca'   => 'crustacean',
+        'Magnoliopsida'  => 'flowering plant',
+        'Liliopsida'     => 'monocot plant',
+        'Pinopsida'      => 'conifer',
+    ];
+
+    // Phylum-level fallbacks
+    $phylum_map = [
+        'Platyhelminthes' => 'flatworm',
+        'Nematoda'        => 'nematode',
+        'Annelida'        => 'annelid worm',
+        'Arthropoda'      => 'arthropod',
+        'Mollusca'        => 'mollusc',
+        'Echinodermata'   => 'echinoderm',
+        'Chordata'        => 'chordate',
+        'Porifera'        => 'sponge',
+        'Cnidaria'        => 'cnidarian',
+        'Streptophyta'    => 'plant',
+        'Ascomycota'      => 'fungus',
+        'Basidiomycota'   => 'fungus',
+        'Apicomplexa'     => 'apicomplexan parasite',
+        'Euglenozoa'      => 'euglenozoan',
+        'Amoebozoa'       => 'amoeba',
+        'Ciliophora'      => 'ciliate',
+        'Rhodophyta'      => 'red alga',
+        'Chlorophyta'     => 'green alga',
+        'Bacillariophyta' => 'diatom',
+    ];
+
+    $type = $class_map[$ranks['class'] ?? ''] ?? $phylum_map[$ranks['phylum'] ?? ''] ?? null;
+
+    $sentence = $type
+        ? "$scientific_name is a species of $type"
+        : "$scientific_name is a species";
+
+    if (!empty($ranks['family'])) {
+        $sentence .= " in the family {$ranks['family']}";
+    } elseif (!empty($ranks['order'])) {
+        $sentence .= " in the order {$ranks['order']}";
+    }
+
+    return $sentence . '.';
+}
+
+/**
  * Fetch Wikipedia data for a taxonomic rank/level
  * Gets description and image from Wikipedia using the search API
- * 
+ *
  * @param string $rank_name Name of taxonomic rank (e.g., 'Primates', 'Mammalia')
  * @return array Array with 'description' (HTML), 'image_url', 'wikipedia_url', 'source'
  */
@@ -1338,29 +1642,22 @@ function getWikipediaTaxonomyData($rank_name) {
         'redirects' => true
     ]);
     
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 5,
-            'user_agent' => 'MOOP (github.com)'
-        ]
-    ]);
-    
-    $response = @file_get_contents($wiki_search_url, false, $context);
-    
+    $response = moop_curl_get($wiki_search_url);
+
     if ($response === false) {
         return $result;
     }
-    
+
     $data = json_decode($response, true);
-    
+
     if (empty($data['query']['pages'])) {
         return $result;
     }
-    
+
     // Get first (and usually only) page result
     $pages = array_values($data['query']['pages']);
     $page = $pages[0];
-    
+
     if (!isset($page['pageid'])) {
         // Page not found, try search instead
         return getWikipediaTaxonomyDataFromSearch($rank_name);
@@ -1416,29 +1713,22 @@ function getWikipediaTaxonomyDataFromSearch($rank_name) {
         'srlimit' => 3
     ]);
     
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 5,
-            'user_agent' => 'MOOP (github.com)'
-        ]
-    ]);
-    
-    $response = @file_get_contents($search_url, false, $context);
-    
+    $response = moop_curl_get($search_url);
+
     if ($response === false) {
         return $result;
     }
-    
+
     $data = json_decode($response, true);
-    
+
     if (empty($data['query']['search'])) {
         return $result;
     }
-    
+
     // Try the first few results to find one with content
     foreach ($data['query']['search'] as $search_result) {
         $found_title = $search_result['title'];
-        
+
         // Fetch details about this page
         $fetch_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([
             'action' => 'query',
@@ -1451,8 +1741,8 @@ function getWikipediaTaxonomyDataFromSearch($rank_name) {
             'pithumbsize' => 300,
             'redirects' => true
         ]);
-        
-        $response = @file_get_contents($fetch_url, false, $context);
+
+        $response = moop_curl_get($fetch_url);
         
         if ($response === false) {
             continue;
@@ -1537,15 +1827,8 @@ function getWikipediaOrganismData($organism_name, $scientific_name = '') {
             'redirects' => true
         ]);
         
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 5,
-                'user_agent' => 'MOOP (github.com)'
-            ]
-        ]);
-        
-        $response = @file_get_contents($wiki_search_url, false, $context);
-        
+        $response = moop_curl_get($wiki_search_url);
+
         if ($response === false) {
             continue;
         }
@@ -1612,29 +1895,22 @@ function getWikipediaOrganismDataFromSearch($organism_name) {
         'srlimit' => 3
     ]);
     
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 5,
-            'user_agent' => 'MOOP (github.com)'
-        ]
-    ]);
-    
-    $response = @file_get_contents($search_url, false, $context);
-    
+    $response = moop_curl_get($search_url);
+
     if ($response === false) {
         return $result;
     }
-    
+
     $data = json_decode($response, true);
-    
+
     if (empty($data['query']['search'])) {
         return $result;
     }
-    
+
     // Try the first few results
     foreach ($data['query']['search'] as $search_result) {
         $found_title = $search_result['title'];
-        
+
         // Fetch details about this page
         $fetch_url = 'https://en.wikipedia.org/w/api.php?' . http_build_query([
             'action' => 'query',
@@ -1647,9 +1923,9 @@ function getWikipediaOrganismDataFromSearch($organism_name) {
             'pithumbsize' => 400,
             'redirects' => true
         ]);
-        
-        $response = @file_get_contents($fetch_url, false, $context);
-        
+
+        $response = moop_curl_get($fetch_url);
+
         if ($response === false) {
             continue;
         }
@@ -1732,38 +2008,31 @@ function fetchOrganismInfoFromNCBI($genus, $species) {
         'retmode' => 'json'
     ]);
     
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 5,
-            'user_agent' => 'MOOP (github.com)'
-        ]
-    ]);
-    
-    $response = @file_get_contents($search_url, false, $context);
-    
+    $response = moop_curl_get($search_url);
+
     if ($response === false) {
         $result['error'] = 'Failed to connect to NCBI';
         return $result;
     }
-    
+
     $data = json_decode($response, true);
-    
+
     if (empty($data['esearchresult']['idlist'])) {
         $result['error'] = 'Organism not found on NCBI';
         return $result;
     }
-    
+
     $taxon_id = $data['esearchresult']['idlist'][0];
     $result['taxon_id'] = $taxon_id;
-    
+
     // Fetch full details
     $fetch_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?' . http_build_query([
         'db' => 'taxonomy',
         'id' => $taxon_id,
         'retmode' => 'json'
     ]);
-    
-    $response = @file_get_contents($fetch_url, false, $context);
+
+    $response = moop_curl_get($fetch_url);
     
     if ($response === false) {
         return $result;

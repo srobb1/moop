@@ -62,7 +62,12 @@
           <a href="<?= htmlspecialchars($card['link']) ?>" target="_blank" class="text-decoration-none card-link">
             <div class="card h-100 shadow-sm border-0 rounded-3 organism-card">
               <div class="card-body text-center d-flex flex-column">
-                <h3 class="card-title mb-3 fw-bold text-dark"><?= htmlspecialchars($card['title']) ?></h3>
+                <h3 class="card-title mb-3 fw-bold text-dark">
+                  <?= htmlspecialchars($card['title']) ?>
+                  <?php if (!empty($card['organism_count'])): ?>
+                    <span class="text-muted fw-normal fs-6">(<?= $card['organism_count'] ?>)</span>
+                  <?php endif; ?>
+                </h3>
                 <p class="card-text text-muted mb-3"><?= htmlspecialchars($card['text']) ?></p>
               </div>
             </div>

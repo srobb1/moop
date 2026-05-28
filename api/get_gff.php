@@ -9,6 +9,7 @@
  *   organism   - Organism name (required)
  *   assembly   - Assembly accession (required)
  *   uniquename - Gene feature uniquename (required)
+ *   gene_set   - Gene set name (optional, defaults to 'v1')
  *
  * Returns: text/plain GFF3
  */
@@ -31,6 +32,7 @@ $organism_context = setupOrganismDisplayContext($_GET['organism'], $organism_dat
 $organism_name    = $organism_context['name'];
 
 $assembly   = preg_replace('/[^a-zA-Z0-9._\-]/', '', $_GET['assembly']);
+$gene_set   = preg_replace('/[^a-zA-Z0-9._\-]/', '', $_GET['gene_set'] ?? 'v1') ?: 'v1';
 $uniquename = trim($_GET['uniquename']);   // escapeshellarg handles shell safety below
 
 if (empty($assembly) || empty($uniquename)) {
@@ -39,13 +41,13 @@ if (empty($assembly) || empty($uniquename)) {
     exit;
 }
 
-if (!has_assembly_access($organism_name, $assembly)) {
+if (!has_gene_set_access($organism_name, $assembly, $gene_set)) {
     http_response_code(403);
     echo "# Error: access denied\n";
     exit;
 }
 
-$gff_file = "$organism_data/$organism_name/$assembly/genomic.gff";
+$gff_file = "$organism_data/$organism_name/$assembly/$gene_set/genomic.gff";
 if (!file_exists($gff_file) || filesize($gff_file) === 0) {
     http_response_code(404);
     echo "# GFF not available for $organism_name / $assembly\n";
@@ -54,19 +56,31 @@ if (!file_exists($gff_file) || filesize($gff_file) === 0) {
 
 // --- Collect GFF lines for gene and all descendants ---
 
-// Level 1: the gene line itself
+// Level 1: the gene line itself.
+// Try 1: ID attribute (bare or Ensembl-prefixed). Try 2: uniquename anywhere in attributes
+// (NCBI GFFs store the numeric GeneID in Dbxref, not ID). Accept only top-level lines (no Parent=).
 $gene_lines = [];
-exec('grep -m1 -F ' . escapeshellarg('ID=' . $uniquename . ';') . ' ' . escapeshellarg($gff_file), $gene_lines);
+exec('grep -m1 -E ' . escapeshellarg('ID=[^;:]*:?' . preg_quote($uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $gene_lines);
 if (empty($gene_lines)) {
-    exec('grep -m1 -F ' . escapeshellarg('ID=' . $uniquename) . ' ' . escapeshellarg($gff_file), $gene_lines);
+    $tmp = [];
+    exec('grep -m1 -F ' . escapeshellarg($uniquename) . ' ' . escapeshellarg($gff_file), $tmp);
+    if (!empty($tmp[0]) && str_contains($tmp[0], 'ID=') && !str_contains($tmp[0], 'Parent=')) {
+        $gene_lines = $tmp;
+    }
+}
+
+// Extract the actual GFF ID — may differ from $uniquename (e.g. ID=gene-SYMBOL vs Dbxref GeneID).
+$gff_gene_id = $uniquename;
+if (!empty($gene_lines[0])) {
+    $gp = explode("\t", $gene_lines[0]);
+    if (!empty($gp[8]) && preg_match('/\bID=([^;]+)/', $gp[8], $id_m)) {
+        $gff_gene_id = $id_m[1];
+    }
 }
 
 // Level 2: direct children (mRNA, ncRNA, pseudogenic_transcript, etc.)
 $child_lines = [];
-exec('grep -F ' . escapeshellarg('Parent=' . $uniquename . ';') . ' ' . escapeshellarg($gff_file), $child_lines);
-if (empty($child_lines)) {
-    exec('grep -F ' . escapeshellarg('Parent=' . $uniquename) . ' ' . escapeshellarg($gff_file), $child_lines);
-}
+exec('grep -E ' . escapeshellarg('Parent=' . preg_quote($gff_gene_id) . '(;|$)') . ' ' . escapeshellarg($gff_file), $child_lines);
 
 // Extract child IDs for the grandchild lookup
 $child_ids = [];

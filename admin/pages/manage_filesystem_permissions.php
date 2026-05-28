@@ -99,7 +99,7 @@
             <li><strong>Use 644 for read-only files:</strong> Database files that don't change</li>
             <li><strong>Never use 777 or 666:</strong> This allows anyone to access/modify files (security risk)</li>
             <li><strong>Check permissions regularly:</strong> Use this page to verify all permissions are correct</li>
-            <li><strong>For assembly rename operations:</strong> Organism directories need 2775 (write + execute) to allow web server to rename/move subdirectories. If rename fails in the admin interface, verify permissions here.</li>
+            <li><strong>For rename operations:</strong> Assembly directories need 2775 so the web server can rename gene set subdirectories within them. Gene set directories need 2775 so BLAST indexes can be written inside them. If a rename fails in the admin interface, check permissions here.</li>
         </ul>
     </div>
 </div>

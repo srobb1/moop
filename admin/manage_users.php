@@ -26,28 +26,48 @@ handleAdminAjax();
 // Load organisms for access control
 $organisms = getOrganismsWithAssemblies($organism_data_path);
 
-// Build group → organism → [assemblies] map for the JS selector
+// Build group → organism → {assembly: [gene_sets]} map for the JS selector
 $group_data = getGroupData();
 $organisms_by_group = [];
 $grouped_orgs = [];
 foreach ($group_data as $entry) {
     $org  = $entry['organism'];
     $asm  = $entry['assembly'];
+    $gs   = $entry['gene_set'] ?? 'v1';
     $grps = $entry['groups'] ?? [];
     if (!isset($organisms[$org]) || !in_array($asm, $organisms[$org])) continue;
     foreach ($grps as $g) {
         if ($g === 'Public') continue;
-        $organisms_by_group[$g][$org][] = $asm;
+        $organisms_by_group[$g][$org][$asm][] = $gs;
         $grouped_orgs[$org] = true;
     }
 }
 // Organisms not in any named group → "Other"
 foreach ($organisms as $org => $assemblies) {
     if (!isset($grouped_orgs[$org])) {
-        $organisms_by_group['Other'][$org] = $assemblies;
+        foreach ($assemblies as $asm) {
+            $organisms_by_group['Other'][$org][$asm][] = 'v1';
+        }
     }
 }
 ksort($organisms_by_group);
+
+// Build {org: {assembly: [gene_sets]}} for allOrganisms JS variable
+$orgs_with_gene_sets = [];
+foreach ($group_data as $entry) {
+    $org = $entry['organism'];
+    $asm = $entry['assembly'];
+    $gs  = $entry['gene_set'] ?? 'v1';
+    if (!isset($organisms[$org]) || !in_array($asm, $organisms[$org])) continue;
+    $orgs_with_gene_sets[$org][$asm][] = $gs;
+}
+foreach ($organisms as $org => $assemblies) {
+    foreach ($assemblies as $asm) {
+        if (!isset($orgs_with_gene_sets[$org][$asm])) {
+            $orgs_with_gene_sets[$org][$asm] = ['v1'];
+        }
+    }
+}
 
 $users = [];
 $file_write_error = null;
@@ -181,17 +201,49 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $organism = $_POST['organism'];
         $assembly = $_POST['assembly'];
 
-        if (isset($users[$username]) && isset($users[$username]['access'][$organism])) {
-            $key = array_search($assembly, $users[$username]['access'][$organism]);
-            if ($key !== false) {
-                unset($users[$username]['access'][$organism][$key]);
-                $users[$username]['access'][$organism] = array_values($users[$username]['access'][$organism]);
-                
-                if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
-                    $message = "Stale assembly removed from user.";
-                    $messageType = "success";
+        if (isset($users[$username]['access'][$organism])) {
+            $asm_data = $users[$username]['access'][$organism];
+            if (is_array($asm_data) && array_is_list($asm_data)) {
+                // Old format: [{asm, asm, ...}]
+                $users[$username]['access'][$organism] = array_values(array_filter($asm_data, fn($a) => $a !== $assembly));
+            } else {
+                // New format: {asm: [gene_sets]}
+                unset($users[$username]['access'][$organism][$assembly]);
+            }
+            if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
+                $message = "Stale assembly removed from user.";
+                $messageType = "success";
+            }
+        }
+    }
+    elseif (isset($_POST['remove_all_stale'])) {
+        // Remove every stale assembly from every user in one pass
+        $removed_count = 0;
+        foreach ($users as $user => $userData) {
+            foreach ($userData['access'] ?? [] as $org => $asm_data) {
+                if (!is_array($asm_data)) continue;
+                if (array_is_list($asm_data)) {
+                    $filtered = array_values(array_filter($asm_data, fn($a) => isset($organisms[$org]) && in_array($a, $organisms[$org])));
+                    if (count($filtered) < count($asm_data)) {
+                        $users[$user]['access'][$org] = $filtered;
+                        $removed_count += count($asm_data) - count($filtered);
+                    }
+                } else {
+                    foreach (array_keys($asm_data) as $asm) {
+                        if (!isset($organisms[$org]) || !in_array($asm, $organisms[$org])) {
+                            unset($users[$user]['access'][$org][$asm]);
+                            $removed_count++;
+                        }
+                    }
                 }
             }
+        }
+        if ($removed_count > 0 && file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
+            $message = "Removed $removed_count stale assembly reference(s) across all users.";
+            $messageType = "success";
+        } elseif ($removed_count === 0) {
+            $message = "No stale assemblies found.";
+            $messageType = "info";
         }
     }
     elseif (isset($_POST['remove_stale_from_all'])) {
@@ -200,13 +252,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $removed_count = 0;
 
         foreach ($users as $user => $userData) {
-            if (isset($userData['access'][$organism])) {
-                $key = array_search($assembly, $userData['access'][$organism]);
-                if ($key !== false) {
-                    unset($users[$user]['access'][$organism][$key]);
-                    $users[$user]['access'][$organism] = array_values($users[$user]['access'][$organism]);
+            if (!isset($userData['access'][$organism])) continue;
+            $asm_data = $userData['access'][$organism];
+            if (is_array($asm_data) && array_is_list($asm_data)) {
+                $filtered = array_values(array_filter($asm_data, fn($a) => $a !== $assembly));
+                if (count($filtered) < count($asm_data)) {
+                    $users[$user]['access'][$organism] = $filtered;
                     $removed_count++;
                 }
+            } elseif (isset($asm_data[$assembly])) {
+                unset($users[$user]['access'][$organism][$assembly]);
+                $removed_count++;
             }
         }
 
@@ -218,21 +274,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 
 // Build stale assemblies list (all users, all stale entries)
+// Handles both old {org: [asm,...]} and new {org: {asm: [gene_sets]}} formats
 $stale_entries_audit = [];
 foreach ($users as $username => $userData) {
     $userAccess = $userData['access'] ?? [];
-    foreach ($userAccess as $organism => $assemblies) {
-        if (is_array($assemblies)) {
-            foreach ($assemblies as $assembly) {
-                // Check if assembly exists in filesystem
-                if (!isset($organisms[$organism]) || !in_array($assembly, $organisms[$organism])) {
-                    $stale_entries_audit[] = [
-                        'username' => $username,
-                        'organism' => $organism,
-                        'assembly' => $assembly,
-                        'email' => $userData['email'] ?? ''
-                    ];
-                }
+    foreach ($userAccess as $organism => $asm_data) {
+        if (!is_array($asm_data)) continue;
+        $asm_keys = array_is_list($asm_data) ? $asm_data : array_keys($asm_data);
+        foreach ($asm_keys as $assembly) {
+            if (!isset($organisms[$organism]) || !in_array($assembly, $organisms[$organism])) {
+                $stale_entries_audit[] = [
+                    'username' => $username,
+                    'organism' => $organism,
+                    'assembly' => $assembly,
+                    'email'    => $userData['email'] ?? '',
+                ];
             }
         }
     }
@@ -260,7 +316,7 @@ $data = [
         '/' . $site . '/js/admin-utilities.js',
     ],
     'inline_scripts' => [
-        "const allOrganisms = " . json_encode($organisms) . ";",
+        "const allOrganisms = " . json_encode($orgs_with_gene_sets) . ";",
         "const allOrganismsByGroup = " . json_encode($organisms_by_group) . ";",
         "const allUsers = " . json_encode(array_map(function($u) { unset($u['password']); return $u; }, $users)) . ";",
     ]

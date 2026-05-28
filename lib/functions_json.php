@@ -4,6 +4,14 @@
  * JSON file loading, parsing, and data manipulation
  */
 
+// PHP 8.1+ polyfill
+if (!function_exists('array_is_list')) {
+    function array_is_list(array $arr): bool {
+        if ($arr === []) return true;
+        return array_keys($arr) === range(0, count($arr) - 1);
+    }
+}
+
 /**
  * Load JSON file safely with error handling
  * 
@@ -364,4 +372,82 @@ function shouldUpdateAnnotationCounts($annotation_config, $newest_mod_info) {
     }
     
     return false;
+}
+
+/**
+ * Update annotation config using per-organism tracking.
+ * Only re-queries SQLite databases for organisms whose mtime changed.
+ * Replaces the old all-or-nothing shouldUpdateAnnotationCounts approach.
+ *
+ * @param array    $annotation_config   Current config array (from annotation_config.json)
+ * @param string   $organism_data_path  Path to organisms directory
+ * @param bool     $force               Re-query all organisms regardless of mtime
+ * @param callable $progress            Optional: function($org_name, $current, $total)
+ * @return array   [$updated_config, $updated_count]
+ */
+function update_annotation_config_modular(array $annotation_config, string $organism_data_path, bool $force = false, callable $progress = null): array {
+    $per_org = $annotation_config['per_organism_counts'] ?? [];
+    $orgs    = getOrganismsWithAssemblies($organism_data_path);
+
+    // Determine which organisms need re-querying
+    $to_query = [];
+    foreach ($orgs as $org_name => $_) {
+        $db_file = "$organism_data_path/$org_name/organism.sqlite";
+        if (!file_exists($db_file)) continue;
+        $mtime = filemtime($db_file);
+        if ($force || ($per_org[$org_name]['sqlite_mod_time'] ?? null) !== $mtime) {
+            $to_query[$org_name] = ['db' => $db_file, 'mtime' => $mtime];
+        }
+    }
+
+    // Re-query only changed organisms
+    $updated_count = count($to_query);
+    $current = 0;
+    foreach ($to_query as $org_name => $info) {
+        $current++;
+        if ($progress) ($progress)($org_name, $current, $updated_count);
+        $per_org[$org_name] = [
+            'sqlite_mod_time' => $info['mtime'],
+            'types'           => getAnnotationTypesFromDB($info['db']),
+        ];
+    }
+
+    // Remove organisms that no longer exist on disk
+    foreach (array_keys($per_org) as $org_name) {
+        if (!isset($orgs[$org_name])) unset($per_org[$org_name]);
+    }
+
+    // Rebuild aggregates if anything changed
+    if ($updated_count > 0 || $force || !isset($annotation_config['annotation_types'])) {
+        $aggregated = [];
+        foreach ($per_org as $org_data) {
+            foreach (($org_data['types'] ?? []) as $type => $counts) {
+                if (!isset($aggregated[$type])) {
+                    $aggregated[$type] = $counts;
+                } else {
+                    $aggregated[$type]['annotation_count'] += $counts['annotation_count'];
+                    $aggregated[$type]['feature_count']    += $counts['feature_count'];
+                }
+            }
+        }
+
+        if (isset($annotation_config['annotation_types'])) {
+            $annotation_config = syncAnnotationTypes($annotation_config, $aggregated);
+            $type_order = [];
+            foreach ($annotation_config['annotation_types'] as $type_name => $cfg) {
+                $type_order[] = ['name' => $type_name, 'order' => $cfg['order'] ?? 999];
+            }
+            usort($type_order, fn($a, $b) => $a['order'] - $b['order']);
+            $annotation_config['annotation_type_order'] = array_column($type_order, 'name');
+        }
+    }
+
+    $annotation_config['per_organism_counts'] = $per_org;
+
+    // Keep legacy sqlite_mod_time updated (used by older code paths as a quick dirty-check)
+    $newest = 0;
+    foreach ($per_org as $d) { $newest = max($newest, $d['sqlite_mod_time'] ?? 0); }
+    if ($newest > 0) $annotation_config['sqlite_mod_time'] = $newest;
+
+    return [$annotation_config, $updated_count];
 }

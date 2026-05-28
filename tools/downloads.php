@@ -19,6 +19,7 @@ ob_end_clean();
 $context          = parseContextParameters();
 $context_organism = $context['organism'];
 $context_assembly = $context['assembly'];
+$context_gene_set = $context['gene_set'];
 $context_group    = $context['group'];
 $display_name     = $context['display_name'];
 
@@ -63,6 +64,11 @@ if (!empty($context_assembly)) {
         $accessible_sources, fn($s) => $s['assembly'] === $context_assembly
     ));
 }
+if (!empty($context_gene_set)) {
+    $accessible_sources = array_values(array_filter(
+        $accessible_sources, fn($s) => ($s['gene_set'] ?? '') === $context_gene_set
+    ));
+}
 if (!empty($context_group)) {
     $accessible_sources = array_values(array_filter(
         $accessible_sources, fn($s) => in_array($context_group, $s['groups'] ?? [])
@@ -73,7 +79,7 @@ if (!empty($context_group)) {
 $seen           = [];
 $unique_sources = [];
 foreach ($accessible_sources as $source) {
-    $key = $source['organism'] . "\0" . $source['assembly'];
+    $key = $source['organism'] . "\0" . $source['assembly'] . "\0" . ($source['gene_set'] ?? '');
     if (!isset($seen[$key])) {
         $seen[$key]       = true;
         $unique_sources[] = $source;
@@ -89,23 +95,35 @@ $download_tree = [];
 foreach ($unique_sources as $source) {
     $organism      = $source['organism'];
     $assembly      = $source['assembly'];
-    $assembly_path = $source['path'];
+    $gene_set      = $source['gene_set'] ?? '';
+    $gene_set_path = $source['path'];   // already points to {organism}/{assembly}/{gene_set}
 
-    if (!is_dir($assembly_path)) continue;
+    if (!is_dir($gene_set_path)) continue;
 
     $files = [];
-    foreach (scandir($assembly_path) as $fname) {
+    foreach (scandir($gene_set_path) as $fname) {
         if ($fname === '.' || $fname === '..') continue;
-        $fpath = "$assembly_path/$fname";
+        $fpath = "$gene_set_path/$fname";
         if (!is_file($fpath)) continue;
         $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
         if (isset($excluded_exts[$ext])) continue;
 
-        $size    = (int) filesize($fpath);
+        $size = (int) filesize($fpath);
+
+        // Determine display color class from sequence type patterns
+        $color_class = '';
+        $fname_lower = strtolower($fname);
+        if (str_contains($fname_lower, 'protein.aa.fa'))      $color_class = 'feature-color-protein';
+        elseif (str_contains($fname_lower, 'transcript.nt.fa')) $color_class = 'feature-color-mrna';
+        elseif (str_contains($fname_lower, 'cds.nt.fa'))      $color_class = 'feature-color-gene';
+        elseif (str_contains($fname_lower, 'genome.fa'))       $color_class = 'text-assembly';
+        elseif (in_array($ext, ['gff', 'gff3', 'gtf']))       $color_class = 'text-success';
+
         $files[] = [
-            'name'       => $fname,
-            'size'       => $size,
-            'size_label' => _downloads_format_size($size),
+            'name'        => $fname,
+            'size'        => $size,
+            'size_label'  => _downloads_format_size($size),
+            'color_class' => $color_class,
         ];
     }
 
@@ -124,7 +142,10 @@ foreach ($unique_sources as $source) {
     if (!isset($download_tree[$organism])) {
         $download_tree[$organism] = [];
     }
-    $download_tree[$organism][$assembly] = [
+    if (!isset($download_tree[$organism][$assembly])) {
+        $download_tree[$organism][$assembly] = [];
+    }
+    $download_tree[$organism][$assembly][$gene_set] = [
         'files'       => $files,
         'file_count'  => count($files),
         'total_label' => _downloads_format_size($total_size),
@@ -132,6 +153,17 @@ foreach ($unique_sources as $source) {
 }
 
 ksort($download_tree);
+
+// Load common names for organisms that have downloadable files
+$organism_common_names = [];
+$organism_data_path = $config->getPath('organism_data');
+foreach (array_keys($download_tree) as $organism) {
+    $json_file = "$organism_data_path/$organism/organism.json";
+    if (file_exists($json_file)) {
+        $meta = @json_decode(@file_get_contents($json_file), true);
+        $organism_common_names[$organism] = $meta['common_name'] ?? '';
+    }
+}
 
 // Build page title
 $page_title = 'Downloads';
@@ -158,10 +190,12 @@ $data = [
     'download_tree'    => $download_tree,
     'context_organism' => $context_organism,
     'context_assembly' => $context_assembly,
+    'context_gene_set' => $context_gene_set,
     'context_group'    => $context_group,
     'display_name'     => $display_name,
-    'filter_organisms' => $filter_organisms,
-    'page_title'       => $page_title,
+    'filter_organisms'       => $filter_organisms,
+    'page_title'             => $page_title,
+    'organism_common_names'  => $organism_common_names,
 ];
 
 include_once __DIR__ . '/display-template.php';

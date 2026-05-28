@@ -22,29 +22,31 @@
  * 
  * @param int $feature_id - Feature ID to retrieve
  * @param string $dbFile - Path to SQLite database
- * @param array $genome_ids - Optional: Array of genome IDs to filter results
+ * @param array $gene_set_ids - Optional: Array of genome IDs to filter results
  * @return array - Feature row with organism and genome info, or empty array
  */
-function getFeatureById($feature_id, $dbFile, $genome_ids = []) {
-    if (!empty($genome_ids)) {
-        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
-        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description, 
-                         f.feature_type, f.parent_feature_id, f.genome_id, f.organism_id,
+function getFeatureById($feature_id, $dbFile, $gene_set_ids = []) {
+    if (!empty($gene_set_ids)) {
+        $placeholders = implode(',', array_fill(0, count($gene_set_ids), '?'));
+        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description,
+                         f.feature_type, f.parent_feature_id, f.gene_set_id, f.organism_id,
                          o.genus, o.species, o.subtype, o.common_name, o.taxon_id,
-                         g.genome_accession, g.genome_name
+                         g.genome_accession, g.genome_name, gs.gene_set_name
                   FROM feature f
                   JOIN organism o ON f.organism_id = o.organism_id
-                  JOIN genome g ON f.genome_id = g.genome_id
-                  WHERE f.feature_id = ? AND f.genome_id IN ($placeholders)";
-        $params = array_merge([$feature_id], $genome_ids);
+                  JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
+                  JOIN genome g ON gs.genome_id = g.genome_id
+                  WHERE f.feature_id = ? AND f.gene_set_id IN ($placeholders)";
+        $params = array_merge([$feature_id], $gene_set_ids);
     } else {
-        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description, 
-                         f.feature_type, f.parent_feature_id, f.genome_id, f.organism_id,
+        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description,
+                         f.feature_type, f.parent_feature_id, f.gene_set_id, f.organism_id,
                          o.genus, o.species, o.subtype, o.common_name, o.taxon_id,
-                         g.genome_accession, g.genome_name
+                         g.genome_accession, g.genome_name, gs.gene_set_name
                   FROM feature f
                   JOIN organism o ON f.organism_id = o.organism_id
-                  JOIN genome g ON f.genome_id = g.genome_id
+                  JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
+                  JOIN genome g ON gs.genome_id = g.genome_id
                   WHERE f.feature_id = ?";
         $params = [$feature_id];
     }
@@ -59,29 +61,31 @@ function getFeatureById($feature_id, $dbFile, $genome_ids = []) {
  * 
  * @param string $feature_uniquename - Feature uniquename to retrieve
  * @param string $dbFile - Path to SQLite database
- * @param array $genome_ids - Optional: Array of genome IDs to filter results
+ * @param array $gene_set_ids - Optional: Array of genome IDs to filter results
  * @return array - Feature row with organism and genome info, or empty array
  */
-function getFeatureByUniquename($feature_uniquename, $dbFile, $genome_ids = []) {
-    if (!empty($genome_ids)) {
-        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
-        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description, 
-                         f.feature_type, f.parent_feature_id, f.genome_id, f.organism_id,
+function getFeatureByUniquename($feature_uniquename, $dbFile, $gene_set_ids = []) {
+    if (!empty($gene_set_ids)) {
+        $placeholders = implode(',', array_fill(0, count($gene_set_ids), '?'));
+        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description,
+                         f.feature_type, f.parent_feature_id, f.gene_set_id, f.organism_id,
                          o.genus, o.species, o.subtype, o.common_name, o.taxon_id,
-                         g.genome_accession, g.genome_name
+                         g.genome_accession, g.genome_name, gs.gene_set_name
                   FROM feature f
                   JOIN organism o ON f.organism_id = o.organism_id
-                  JOIN genome g ON f.genome_id = g.genome_id
-                  WHERE f.feature_uniquename = ? AND f.genome_id IN ($placeholders)";
-        $params = array_merge([$feature_uniquename], $genome_ids);
+                  JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
+                  JOIN genome g ON gs.genome_id = g.genome_id
+                  WHERE f.feature_uniquename = ? AND f.gene_set_id IN ($placeholders)";
+        $params = array_merge([$feature_uniquename], $gene_set_ids);
     } else {
-        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description, 
-                         f.feature_type, f.parent_feature_id, f.genome_id, f.organism_id,
+        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description,
+                         f.feature_type, f.parent_feature_id, f.gene_set_id, f.organism_id,
                          o.genus, o.species, o.subtype, o.common_name, o.taxon_id,
-                         g.genome_accession, g.genome_name
+                         g.genome_accession, g.genome_name, gs.gene_set_name
                   FROM feature f
                   JOIN organism o ON f.organism_id = o.organism_id
-                  JOIN genome g ON f.genome_id = g.genome_id
+                  JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
+                  JOIN genome g ON gs.genome_id = g.genome_id
                   WHERE f.feature_uniquename = ?";
         $params = [$feature_uniquename];
     }
@@ -96,19 +100,19 @@ function getFeatureByUniquename($feature_uniquename, $dbFile, $genome_ids = []) 
  * 
  * @param int $parent_feature_id - Parent feature ID
  * @param string $dbFile - Path to SQLite database
- * @param array $genome_ids - Optional: Array of genome IDs to filter results
+ * @param array $gene_set_ids - Optional: Array of genome IDs to filter results
  * @return array - Array of child feature rows
  */
-function getChildrenByFeatureId($parent_feature_id, $dbFile, $genome_ids = []) {
-    if (!empty($genome_ids)) {
-        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
-        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description, 
+function getChildrenByFeatureId($parent_feature_id, $dbFile, $gene_set_ids = []) {
+    if (!empty($gene_set_ids)) {
+        $placeholders = implode(',', array_fill(0, count($gene_set_ids), '?'));
+        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description,
                          f.feature_type, f.parent_feature_id
                   FROM feature f
-                  WHERE f.parent_feature_id = ? AND f.genome_id IN ($placeholders)";
-        $params = array_merge([$parent_feature_id], $genome_ids);
+                  WHERE f.parent_feature_id = ? AND f.gene_set_id IN ($placeholders)";
+        $params = array_merge([$parent_feature_id], $gene_set_ids);
     } else {
-        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description, 
+        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description,
                          f.feature_type, f.parent_feature_id
                   FROM feature f
                   WHERE f.parent_feature_id = ?";
@@ -124,16 +128,16 @@ function getChildrenByFeatureId($parent_feature_id, $dbFile, $genome_ids = []) {
  * 
  * @param int $feature_id - Feature ID to get parent of
  * @param string $dbFile - Path to SQLite database
- * @param array $genome_ids - Optional: Array of genome IDs to filter results
+ * @param array $gene_set_ids - Optional: Array of genome IDs to filter results
  * @return array - Parent feature row (minimal fields), or empty array
  */
-function getParentFeature($feature_id, $dbFile, $genome_ids = []) {
-    if (!empty($genome_ids)) {
-        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
+function getParentFeature($feature_id, $dbFile, $gene_set_ids = []) {
+    if (!empty($gene_set_ids)) {
+        $placeholders = implode(',', array_fill(0, count($gene_set_ids), '?'));
         $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_type, f.parent_feature_id
                   FROM feature f
-                  WHERE f.feature_id = ? AND f.genome_id IN ($placeholders)";
-        $params = array_merge([$feature_id], $genome_ids);
+                  WHERE f.feature_id = ? AND f.gene_set_id IN ($placeholders)";
+        $params = array_merge([$feature_id], $gene_set_ids);
     } else {
         $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_type, f.parent_feature_id
                   FROM feature f
@@ -151,21 +155,21 @@ function getParentFeature($feature_id, $dbFile, $genome_ids = []) {
  * 
  * @param string $feature_type - Feature type to retrieve (e.g., 'gene', 'mRNA')
  * @param string $dbFile - Path to SQLite database
- * @param array $genome_ids - Optional: Array of genome IDs to filter results
+ * @param array $gene_set_ids - Optional: Array of genome IDs to filter results
  * @return array - Array of features with specified type
  */
-function getFeaturesByType($feature_type, $dbFile, $genome_ids = []) {
-    if (!empty($genome_ids)) {
-        $placeholders = implode(',', array_fill(0, count($genome_ids), '?'));
-        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description, 
-                         f.feature_type, f.genome_id
+function getFeaturesByType($feature_type, $dbFile, $gene_set_ids = []) {
+    if (!empty($gene_set_ids)) {
+        $placeholders = implode(',', array_fill(0, count($gene_set_ids), '?'));
+        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description,
+                         f.feature_type, f.gene_set_id
                   FROM feature f
-                  WHERE f.feature_type = ? AND f.genome_id IN ($placeholders)
+                  WHERE f.feature_type = ? AND f.gene_set_id IN ($placeholders)
                   ORDER BY f.feature_uniquename";
-        $params = array_merge([$feature_type], $genome_ids);
+        $params = array_merge([$feature_type], $gene_set_ids);
     } else {
-        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description, 
-                         f.feature_type, f.genome_id
+        $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_name, f.feature_description,
+                         f.feature_type, f.gene_set_id
                   FROM feature f
                   WHERE f.feature_type = ?
                   ORDER BY f.feature_uniquename";
@@ -261,12 +265,58 @@ function getAssemblyStats($genome_id_param, $dbFile) {
                      COUNT(DISTINCT CASE WHEN f.feature_type = 'mRNA' THEN f.feature_id END) as mrna_count,
                      COUNT(DISTINCT f.feature_id) as total_features
               FROM genome g
-              LEFT JOIN feature f ON g.genome_id = f.genome_id
+              LEFT JOIN gene_set gs ON gs.genome_id = g.genome_id
+              LEFT JOIN feature f ON f.gene_set_id = gs.gene_set_id
               WHERE g.genome_accession = ? OR g.genome_name = ?
               GROUP BY g.genome_id";
     
     $results = fetchData($query, $dbFile, [$genome_id_param, $genome_id_param]);
     return !empty($results) ? $results[0] : [];
+}
+
+/**
+ * Get stats for a single gene set (gene/mRNA counts)
+ *
+ * @param string $assembly      - genome_accession or genome_name
+ * @param string $gene_set_name - gene_set_name
+ * @param string $dbFile        - path to organism.sqlite
+ * @return array - gene_set record with feature counts, or empty array
+ */
+function getGeneSetStats($assembly, $gene_set_name, $dbFile) {
+    $query = "SELECT gs.gene_set_id, gs.gene_set_name, gs.gene_set_description,
+                     g.genome_id, g.genome_accession, g.genome_name,
+                     COUNT(DISTINCT CASE WHEN f.feature_type = 'gene' THEN f.feature_id END) as gene_count,
+                     COUNT(DISTINCT CASE WHEN f.feature_type = 'mRNA' THEN f.feature_id END) as mrna_count,
+                     COUNT(DISTINCT f.feature_id) as total_features
+              FROM gene_set gs
+              JOIN genome g ON gs.genome_id = g.genome_id
+              LEFT JOIN feature f ON f.gene_set_id = gs.gene_set_id
+              WHERE (g.genome_accession = ? OR g.genome_name = ?)
+              AND gs.gene_set_name = ?
+              GROUP BY gs.gene_set_id";
+    $results = fetchData($query, $dbFile, [$assembly, $assembly, $gene_set_name]);
+    return !empty($results) ? $results[0] : [];
+}
+
+/**
+ * Get all gene sets for an assembly with per-gene-set feature counts
+ *
+ * @param string $assembly - genome_accession or genome_name
+ * @param string $dbFile   - path to organism.sqlite
+ * @return array - array of gene_set rows, each with gene_count and mrna_count
+ */
+function getAssemblyGeneSets($assembly, $dbFile) {
+    $query = "SELECT gs.gene_set_id, gs.gene_set_name, gs.gene_set_description,
+                     g.genome_accession, g.genome_name,
+                     COUNT(DISTINCT CASE WHEN f.feature_type = 'gene' THEN f.feature_id END) as gene_count,
+                     COUNT(DISTINCT CASE WHEN f.feature_type = 'mRNA' THEN f.feature_id END) as mrna_count
+              FROM gene_set gs
+              JOIN genome g ON gs.genome_id = g.genome_id
+              LEFT JOIN feature f ON f.gene_set_id = gs.gene_set_id
+              WHERE (g.genome_accession = ? OR g.genome_name = ?)
+              GROUP BY gs.gene_set_id
+              ORDER BY gs.gene_set_name";
+    return fetchData($query, $dbFile, [$assembly, $assembly]) ?: [];
 }
 
 /**
@@ -279,7 +329,68 @@ function getAssemblyStats($genome_id_param, $dbFile) {
  * @param string $dbFile - Path to SQLite database
  * @return array - Array of matching features with annotations
  */
-function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, $source_names = [], $assembly_accession = '') {
+/**
+ * Search features by name and description only — no annotation join.
+ * Used when the user has explicitly deselected all annotation sources.
+ * Returns rows in the same column format as searchFeaturesAndAnnotations
+ * (annotation columns are NULL) so result formatting code is unchanged.
+ */
+function searchFeaturesByNameDescription($search_term, $is_quoted_search, $dbFile, $assembly_accession = '', $gene_set_name = '', $scope_pairs = []) {
+    $select = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
+                      NULL AS annotation_accession, NULL AS annotation_description,
+                      NULL AS score, NULL AS date, NULL AS annotation_source_name,
+                      o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                      g.genome_accession
+               FROM feature f
+               JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
+               JOIN genome   g  ON gs.genome_id   = g.genome_id
+               JOIN organism o  ON f.organism_id  = o.organism_id";
+
+    $params = [];
+    $where  = [];
+
+    if ($is_quoted_search) {
+        $like = '%' . $search_term . '%';
+        $where[]  = '(f.feature_name LIKE ? OR f.feature_description LIKE ?)';
+        $params[] = $like;
+        $params[] = $like;
+    } else {
+        $terms = array_filter(array_map('trim', preg_split('/\s+/', $search_term)));
+        if (empty($terms)) return ['results' => [], 'capped' => false, 'warning' => null];
+        foreach ($terms as $term) {
+            $like = '%' . $term . '%';
+            $where[]  = '(f.feature_name LIKE ? OR f.feature_description LIKE ?)';
+            $params[] = $like;
+            $params[] = $like;
+        }
+    }
+
+    if (!empty($scope_pairs)) {
+        $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
+        $where[] = '(' . implode(' OR ', $clauses) . ')';
+        foreach ($scope_pairs as $pair) {
+            $params[] = $pair['assembly'];
+            $params[] = $pair['gene_set'];
+        }
+    } else {
+        if (!empty($assembly_accession)) { $where[] = 'g.genome_accession = ?'; $params[] = $assembly_accession; }
+        if (!empty($gene_set_name))      { $where[] = 'gs.gene_set_name = ?';   $params[] = $gene_set_name; }
+    }
+
+    $sql = $select . ' WHERE ' . implode(' AND ', $where) . ' ORDER BY f.feature_uniquename LIMIT 2500';
+
+    try {
+        $dbh  = new PDO('sqlite:' . $dbFile);
+        $stmt = $dbh->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return ['results' => $rows, 'capped' => count($rows) >= 2500, 'warning' => null];
+    } catch (Exception $e) {
+        return ['results' => [], 'capped' => false, 'warning' => null];
+    }
+}
+
+function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, $source_names = [], $assembly_accession = '', $gene_set_name = '', $scope_pairs = []) {
     // Use provided source names filter, or empty array if not provided
     $source_filter = !empty($source_names) ? $source_names : [];
     $search_term_clean = $search_term;
@@ -297,34 +408,48 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
                          fa.score, fa.date, ans.annotation_source_name, 
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
                          g.genome_accession
-                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, genome g
-                  WHERE ans.annotation_source_id = a.annotation_source_id 
-                    AND f.feature_id = fa.feature_id 
-                    AND fa.annotation_id = a.annotation_id 
+                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, gene_set gs, genome g
+                  WHERE ans.annotation_source_id = a.annotation_source_id
+                    AND f.feature_id = fa.feature_id
+                    AND fa.annotation_id = a.annotation_id
                     AND f.organism_id = o.organism_id
-                    AND f.genome_id = g.genome_id
-                    AND (a.annotation_description LIKE ? 
-                       OR f.feature_name LIKE ? 
+                    AND f.gene_set_id = gs.gene_set_id
+                    AND gs.genome_id = g.genome_id
+                    AND (a.annotation_description LIKE ?
+                       OR f.feature_name LIKE ?
                        OR f.feature_description LIKE ?
                        OR a.annotation_accession LIKE ?)";
-        
+
         $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern];
         
-        // Add assembly filter if specified
-        if (!empty($assembly_accession)) {
-            $query .= " AND g.genome_accession = ?";
-            $params[] = $assembly_accession;
+        // scope_pairs overrides individual assembly/gene_set filters
+        if (!empty($scope_pairs)) {
+            $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
+            $query .= " AND (" . implode(' OR ', $clauses) . ")";
+            foreach ($scope_pairs as $pair) {
+                $params[] = $pair['assembly'];
+                $params[] = $pair['gene_set'];
+            }
+        } else {
+            if (!empty($assembly_accession)) {
+                $query .= " AND g.genome_accession = ?";
+                $params[] = $assembly_accession;
+            }
+            if (!empty($gene_set_name)) {
+                $query .= " AND gs.gene_set_name = ?";
+                $params[] = $gene_set_name;
+            }
         }
-        
+
         // Add source filter if specified (exact match with IN)
         if (!empty($source_filter)) {
             $placeholders = implode(',', array_fill(0, count($source_filter), '?'));
             $query .= " AND ans.annotation_source_name IN ($placeholders)";
             $params = array_merge($params, $source_filter);
         }
-        
-        $query .= " ORDER BY 
-                     CASE 
+
+        $query .= " ORDER BY
+                     CASE
                        WHEN f.feature_name REGEXP ? THEN 1
                        WHEN f.feature_name REGEXP ? THEN 2
                        WHEN f.feature_description REGEXP ? THEN 3
@@ -376,29 +501,43 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
                          fa.score, fa.date, ans.annotation_source_name, 
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
                          g.genome_accession
-                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, genome g
-                  WHERE ans.annotation_source_id = a.annotation_source_id 
-                    AND f.feature_id = fa.feature_id 
-                    AND fa.annotation_id = a.annotation_id 
+                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, gene_set gs, genome g
+                  WHERE ans.annotation_source_id = a.annotation_source_id
+                    AND f.feature_id = fa.feature_id
+                    AND fa.annotation_id = a.annotation_id
                     AND f.organism_id = o.organism_id
-                    AND f.genome_id = g.genome_id
+                    AND f.gene_set_id = gs.gene_set_id
+                    AND gs.genome_id = g.genome_id
                     AND $where_clause";
         
-        // Add assembly filter if specified
-        if (!empty($assembly_accession)) {
-            $query .= " AND g.genome_accession = ?";
-            $params[] = $assembly_accession;
+        // scope_pairs overrides individual assembly/gene_set filters
+        if (!empty($scope_pairs)) {
+            $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
+            $query .= " AND (" . implode(' OR ', $clauses) . ")";
+            foreach ($scope_pairs as $pair) {
+                $params[] = $pair['assembly'];
+                $params[] = $pair['gene_set'];
+            }
+        } else {
+            if (!empty($assembly_accession)) {
+                $query .= " AND g.genome_accession = ?";
+                $params[] = $assembly_accession;
+            }
+            if (!empty($gene_set_name)) {
+                $query .= " AND gs.gene_set_name = ?";
+                $params[] = $gene_set_name;
+            }
         }
-        
+
         // Add source filter if specified (exact match with IN)
         if (!empty($source_filter)) {
             $placeholders = implode(',', array_fill(0, count($source_filter), '?'));
             $query .= " AND ans.annotation_source_name IN ($placeholders)";
             $params = array_merge($params, $source_filter);
         }
-        
-        $query .= " ORDER BY 
-                    CASE 
+
+        $query .= " ORDER BY
+                    CASE
                       WHEN f.feature_name REGEXP ? THEN 1
                       WHEN f.feature_name REGEXP ? THEN 2
                       WHEN f.feature_description REGEXP ? THEN 3
@@ -495,12 +634,13 @@ function searchFeaturesAndAnnotationsLike($search_term, $is_quoted_search, $dbFi
                          fa.score, fa.date, ans.annotation_source_name, 
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
                          g.genome_accession
-                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, genome g
-                  WHERE ans.annotation_source_id = a.annotation_source_id 
-                    AND f.feature_id = fa.feature_id 
-                    AND fa.annotation_id = a.annotation_id 
+                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, gene_set gs, genome g
+                  WHERE ans.annotation_source_id = a.annotation_source_id
+                    AND f.feature_id = fa.feature_id
+                    AND fa.annotation_id = a.annotation_id
                     AND f.organism_id = o.organism_id
-                    AND f.genome_id = g.genome_id
+                    AND f.gene_set_id = gs.gene_set_id
+                    AND gs.genome_id = g.genome_id
                     AND (a.annotation_description LIKE ? 
                        OR f.feature_name LIKE ? 
                        OR f.feature_description LIKE ?
@@ -512,12 +652,13 @@ function searchFeaturesAndAnnotationsLike($search_term, $is_quoted_search, $dbFi
                          fa.score, fa.date, ans.annotation_source_name, 
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
                          g.genome_accession
-                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, genome g
-                  WHERE ans.annotation_source_id = a.annotation_source_id 
-                    AND f.feature_id = fa.feature_id 
-                    AND fa.annotation_id = a.annotation_id 
+                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, gene_set gs, genome g
+                  WHERE ans.annotation_source_id = a.annotation_source_id
+                    AND f.feature_id = fa.feature_id
+                    AND fa.annotation_id = a.annotation_id
                     AND f.organism_id = o.organism_id
-                    AND f.genome_id = g.genome_id
+                    AND f.gene_set_id = gs.gene_set_id
+                    AND gs.genome_id = g.genome_id
                     AND $where_clause
                   ORDER BY f.feature_uniquename";
     }
@@ -535,44 +676,72 @@ function searchFeaturesAndAnnotationsLike($search_term, $is_quoted_search, $dbFi
  * @param string $organism_name - Optional: Filter by organism
  * @return array - Array of matching features
  */
-function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_name = '', $assembly_accession = '') {
+function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_name = '', $assembly_accession = '', $gene_set_name = '', $scope_pairs = []) {
     if ($organism_name) {
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
                          g.genome_accession
-                  FROM feature f, organism o, genome g
+                  FROM feature f, organism o, gene_set gs, genome g
                   WHERE f.organism_id = o.organism_id
-                    AND f.genome_id = g.genome_id
+                    AND f.gene_set_id = gs.gene_set_id
+                    AND gs.genome_id = g.genome_id
                     AND f.feature_uniquename LIKE ? 
                     AND (o.genus || ' ' || o.species = ?)";
         $params = ["%$search_term%", $organism_name];
         
-        // Add assembly filter if specified
-        if (!empty($assembly_accession)) {
-            $query .= " AND g.genome_accession = ?";
-            $params[] = $assembly_accession;
+        // scope_pairs overrides individual assembly/gene_set filters
+        if (!empty($scope_pairs)) {
+            $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
+            $query .= " AND (" . implode(' OR ', $clauses) . ")";
+            foreach ($scope_pairs as $pair) {
+                $params[] = $pair['assembly'];
+                $params[] = $pair['gene_set'];
+            }
+        } else {
+            if (!empty($assembly_accession)) {
+                $query .= " AND g.genome_accession = ?";
+                $params[] = $assembly_accession;
+            }
+            if (!empty($gene_set_name)) {
+                $query .= " AND gs.gene_set_name = ?";
+                $params[] = $gene_set_name;
+            }
         }
-        
+
         $query .= " ORDER BY f.feature_uniquename";
     } else {
-        $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
+        $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
                          g.genome_accession
-                  FROM feature f, organism o, genome g
+                  FROM feature f, organism o, gene_set gs, genome g
                   WHERE f.organism_id = o.organism_id
-                    AND f.genome_id = g.genome_id
+                    AND f.gene_set_id = gs.gene_set_id
+                    AND gs.genome_id = g.genome_id
                     AND f.feature_uniquename LIKE ?";
         $params = ["%$search_term%"];
-        
-        // Add assembly filter if specified
-        if (!empty($assembly_accession)) {
-            $query .= " AND g.genome_accession = ?";
-            $params[] = $assembly_accession;
+
+        // scope_pairs overrides individual assembly/gene_set filters
+        if (!empty($scope_pairs)) {
+            $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
+            $query .= " AND (" . implode(' OR ', $clauses) . ")";
+            foreach ($scope_pairs as $pair) {
+                $params[] = $pair['assembly'];
+                $params[] = $pair['gene_set'];
+            }
+        } else {
+            if (!empty($assembly_accession)) {
+                $query .= " AND g.genome_accession = ?";
+                $params[] = $assembly_accession;
+            }
+            if (!empty($gene_set_name)) {
+                $query .= " AND gs.gene_set_name = ?";
+                $params[] = $gene_set_name;
+            }
         }
-        
+
         $query .= " ORDER BY f.feature_uniquename";
     }
-    
+
     return fetchData($query, $dbFile, $params);
 }
 

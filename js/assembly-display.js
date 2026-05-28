@@ -15,10 +15,11 @@ const searchManager = new AnnotationSearch({
     formSelector: '#assemblySearchForm',
     organismsVar: [organismName],
     totalVar: 1,
-    hideSections: ['#assemblyHeader', '#assemblyDownloads'],
+    hideSections: ['#assemblyHeader', '#assemblyGeneSets'],
     scrollToResults: false,
     extraAjaxParams: {assembly: assemblyAccession},
-    noReadMoreButton: true
+    noReadMoreButton: true,
+    noScopeFilter: true
 });
 
 searchManager.init();

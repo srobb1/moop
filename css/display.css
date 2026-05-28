@@ -676,10 +676,38 @@ code {
   color: #d97706;
 }
 
+.bg-gene-set {
+  background-color: #e11d48 !important;
+  color: white !important;
+}
+
+.text-gene-set {
+  color: #e11d48;
+}
+
 /* Assembly title and heading styles - consistent amber/orange color */
 .assembly-title,
 .assembly-heading {
   color: #d97706;
+}
+
+.gene-set-header-custom {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.gene-set-header-custom h1 {
+  background-color: #e11d48 !important;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.gene-set-heading {
+  color: #e11d48;
 }
 
 .assembly-card-title {
@@ -990,6 +1018,33 @@ code {
   background-color: #0d9488;
   text-decoration: none !important;
   transform: translateY(-2px);
+}
+
+/* Downloads page colored bars */
+.dl-asm-bar,
+.dl-asm-bar:focus,
+.dl-asm-bar:focus-visible,
+.gs-header,
+.gs-header:focus,
+.gs-header:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.dl-asm-bar .form-check-input,
+.gs-header .form-check-input {
+  border-color: rgba(255, 255, 255, 0.6);
+  margin-top: 0;
+  outline: none;
+}
+.dl-asm-bar .form-check-input:focus,
+.gs-header .form-check-input:focus {
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.3);
+  outline: none;
+}
+.dl-asm-bar label,
+.gs-header label {
+  outline: none;
 }
 
 

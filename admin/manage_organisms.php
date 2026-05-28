@@ -11,6 +11,20 @@ $metadata_path = $config->getPath('metadata_path');
 $sequence_types = $config->getSequenceTypes();
 $groups_data = getGroupData();
 $taxonomy_tree_file = $config->getPath('metadata_path') . '/taxonomy_tree_config.json';
+
+// Pre-build lookup structures for the Groups column
+$existing_groups = getAllExistingGroups($groups_data);
+$organism_groups_lookup = [];
+foreach ($groups_data as $_ge) {
+    foreach ($_ge['groups'] as $_g) {
+        $organism_groups_lookup[$_ge['organism']][$_g] = true;
+    }
+}
+foreach ($organism_groups_lookup as &$_gs) {
+    $_gs = array_keys($_gs);
+    sort($_gs);
+}
+unset($_gs, $_ge, $_g);
 $groups_file = $metadata_path . '/organism_assembly_groups.json';
 
 // Read the cache file directly — never scan synchronously in a web request.
@@ -34,8 +48,10 @@ if ($raw_cache) {
     $cached_config_fp = $raw_cache['config_fingerprint'] ?? null;
     $current_config_fp = buildConfigFingerprint($taxonomy_tree_file, $groups_file);
     if ($cached_config_fp !== $current_config_fp) {
-        // Groups or taxonomy tree changed — all organisms need a rescan
-        $stale_organisms = array_keys($organisms);
+        // Config (groups/taxonomy) changed — show the banner so the user knows a refresh
+        // is needed, but don't mark individual rows as stale. The per-row badge means
+        // that organism's own files changed; a groups edit doesn't change any organism's
+        // files, and the cache refresh for this case is fast (no DB/FASTA/BLAST recheck).
         $cache_stale_reason = 'groups or taxonomy config changed';
     } else {
         $cached_org_fps = $raw_cache['org_fingerprints'] ?? [];
@@ -55,8 +71,7 @@ if ($raw_cache) {
             $raw_cache['data']             = $organisms;
             $raw_cache['org_fingerprints'] = $current_org_fps;
             $raw_cache['generated']        = date('Y-m-d H:i:s');
-            @file_put_contents($cache_file, json_encode($raw_cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-            @chmod($cache_file, 0664);
+            organism_cache_write_atomic($cache_file, $raw_cache);
         }
 
         if (!empty($stale_organisms)) {
@@ -108,6 +123,25 @@ handleAdminAjax(function($action) use ($organisms) {
         return true;
     }
     
+    // Handle rename gene set directory
+    if ($action === 'rename_gene_set' && isset($_POST['organism']) && isset($_POST['assembly']) && isset($_POST['old_name']) && isset($_POST['new_name'])) {
+        $organism = $_POST['organism'];
+        $assembly = $_POST['assembly'];
+        $old_name = $_POST['old_name'];
+        $new_name = $_POST['new_name'];
+
+        if (!isset($organisms[$organism])) {
+            echo json_encode(['success' => false, 'message' => 'Organism not found']);
+            return true;
+        }
+
+        $organism_dir = $organisms[$organism]['path'];
+        $result = renameGeneSetDirectory($organism_dir, $assembly, $old_name, $new_name);
+
+        echo json_encode($result);
+        return true;
+    }
+
     // Handle delete assembly
     if ($action === 'delete_assembly' && isset($_POST['organism']) && isset($_POST['dir_name'])) {
         $organism = $_POST['organism'];
@@ -249,10 +283,20 @@ $display_config = [
     'content_file' => __DIR__ . '/pages/manage_organisms.php',
 ];
 
+// Read lineage cache metadata for UI display
+$lineage_cache_generated = null;
+$lineage_cache_file = "$metadata_path/taxonomy_lineage_cache.json";
+if (file_exists($lineage_cache_file)) {
+    $lc_raw = json_decode(file_get_contents($lineage_cache_file), true);
+    $lineage_cache_generated = $lc_raw['generated'] ?? null;
+}
+
 // Prepare data for content file
 $data = [
     'organisms' => $organisms,
     'groups_data' => $groups_data,
+    'existing_groups' => $existing_groups,
+    'organism_groups_lookup' => $organism_groups_lookup,
     'sequence_types' => $sequence_types,
     'config' => $config,
     'organism_data' => $organism_data,
@@ -261,20 +305,26 @@ $data = [
     'cache_generated' => $cache_generated,
     'stale_organisms' => $stale_organisms,
     'cache_stale_reason' => $cache_stale_reason,
+    'lineage_cache_generated' => $lineage_cache_generated,
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
         '/' . $config->getString('site') . '/js/modules/organism-management.js'
     ],
     'inline_scripts' => [
         "const sitePath = '/" . $config->getString('site') . "';",
+        "const existingGroups = " . json_encode($existing_groups) . ";",
         "(function(){
-  const el = document.getElementById('cacheAge');
-  if (!el || !el.dataset.generated) return;
-  const d = new Date(el.dataset.generated.replace(' ', 'T') + 'Z');
-  const sec = Math.round((Date.now() - d) / 1000);
-  if (sec < 60) el.textContent = sec + 's ago';
-  else if (sec < 3600) el.textContent = Math.floor(sec/60) + 'm ago';
-  else el.textContent = Math.floor(sec/3600) + 'h ago';
+  function setAgeText(el) {
+    if (!el || !el.dataset.generated) return;
+    const d = new Date(el.dataset.generated.replace(' ', 'T') + 'Z');
+    const sec = Math.round((Date.now() - d) / 1000);
+    if (sec < 60) el.textContent = sec + 's ago';
+    else if (sec < 3600) el.textContent = Math.floor(sec/60) + 'm ago';
+    else if (sec < 86400) el.textContent = Math.floor(sec/3600) + 'h ago';
+    else el.textContent = Math.floor(sec/86400) + 'd ago';
+  }
+  setAgeText(document.getElementById('cacheAge'));
+  setAgeText(document.getElementById('taxonomySyncAge'));
 })();"
     ]
 ];

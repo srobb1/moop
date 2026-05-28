@@ -228,6 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelButton = row.querySelector('.cancel-new-btn');
     const organism = row.getAttribute('data-organism');
     const assembly = row.getAttribute('data-assembly');
+    const geneSet  = row.getAttribute('data-gene-set') || 'v1';
     
     let selectedTags = [];
     
@@ -327,34 +328,25 @@ document.addEventListener('DOMContentLoaded', function() {
       const form = document.createElement('form');
       form.method = 'post';
       form.action = 'manage_groups.php';
-      
+
       const orgInput = document.createElement('input');
-      orgInput.type = 'hidden';
-      orgInput.name = 'organism';
-      orgInput.value = organism;
-      
+      orgInput.type = 'hidden'; orgInput.name = 'organism'; orgInput.value = organism;
       const asmInput = document.createElement('input');
-      asmInput.type = 'hidden';
-      asmInput.name = 'assembly';
-      asmInput.value = assembly;
-      
+      asmInput.type = 'hidden'; asmInput.name = 'assembly'; asmInput.value = assembly;
+      const gsInput = document.createElement('input');
+      gsInput.type = 'hidden'; gsInput.name = 'gene_set'; gsInput.value = geneSet;
       const groupsInput = document.createElement('input');
-      groupsInput.type = 'hidden';
-      groupsInput.name = 'groups';
-      groupsInput.value = selectedTags.join(', ');
-      
+      groupsInput.type = 'hidden'; groupsInput.name = 'groups'; groupsInput.value = selectedTags.join(', ');
       const addInput = document.createElement('input');
-      addInput.type = 'hidden';
-      addInput.name = 'add';
-      addInput.value = '1';
-      
+      addInput.type = 'hidden'; addInput.name = 'add'; addInput.value = '1';
+
       form.appendChild(orgInput);
       form.appendChild(asmInput);
+      form.appendChild(gsInput);
       form.appendChild(groupsInput);
       form.appendChild(addInput);
-      
+
       addCsrfToken(form);
-      
       document.body.appendChild(form);
       form.submit();
     });
@@ -376,34 +368,28 @@ document.addEventListener('DOMContentLoaded', function() {
       const row = button.closest('tr');
       const organism = row.getAttribute('data-organism');
       const assembly = row.getAttribute('data-assembly');
-      
-      if (confirm(`Delete entry for ${organism} / ${assembly}? This cannot be undone.`)) {
-        // Create a form and submit
+      const geneSet  = row.getAttribute('data-gene-set') || 'v1';
+
+      if (confirm(`Delete entry for ${organism} / ${assembly} / ${geneSet}? This cannot be undone.`)) {
         const form = document.createElement('form');
         form.method = 'post';
         form.action = 'manage_groups.php';
-        
+
         const orgInput = document.createElement('input');
-        orgInput.type = 'hidden';
-        orgInput.name = 'organism';
-        orgInput.value = organism;
-        
+        orgInput.type = 'hidden'; orgInput.name = 'organism'; orgInput.value = organism;
         const asmInput = document.createElement('input');
-        asmInput.type = 'hidden';
-        asmInput.name = 'assembly';
-        asmInput.value = assembly;
-        
+        asmInput.type = 'hidden'; asmInput.name = 'assembly'; asmInput.value = assembly;
+        const gsInput = document.createElement('input');
+        gsInput.type = 'hidden'; gsInput.name = 'gene_set'; gsInput.value = geneSet;
         const deleteInput = document.createElement('input');
-        deleteInput.type = 'hidden';
-        deleteInput.name = 'delete';
-        deleteInput.value = '1';
-        
+        deleteInput.type = 'hidden'; deleteInput.name = 'delete'; deleteInput.value = '1';
+
         form.appendChild(orgInput);
         form.appendChild(asmInput);
+        form.appendChild(gsInput);
         form.appendChild(deleteInput);
-        
+
         addCsrfToken(form);
-        
         document.body.appendChild(form);
         form.submit();
       }
@@ -474,6 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelButton = row.querySelector('.cancel-btn');
     const organism = row.getAttribute('data-organism');
     const assembly = row.getAttribute('data-assembly');
+    const geneSet  = row.getAttribute('data-gene-set') || 'v1';
     
     // Get current tags from chip elements
     const chipElements = groupsSpan.querySelectorAll('.tag-chip');
@@ -579,38 +566,28 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     updateButton.addEventListener('click', function() {
-      // Create a form and submit
       const form = document.createElement('form');
       form.method = 'post';
       form.action = 'manage_groups.php';
-      
+
       const orgInput = document.createElement('input');
-      orgInput.type = 'hidden';
-      orgInput.name = 'organism';
-      orgInput.value = organism;
-      
+      orgInput.type = 'hidden'; orgInput.name = 'organism'; orgInput.value = organism;
       const asmInput = document.createElement('input');
-      asmInput.type = 'hidden';
-      asmInput.name = 'assembly';
-      asmInput.value = assembly;
-      
+      asmInput.type = 'hidden'; asmInput.name = 'assembly'; asmInput.value = assembly;
+      const gsInput = document.createElement('input');
+      gsInput.type = 'hidden'; gsInput.name = 'gene_set'; gsInput.value = geneSet;
       const groupsInput = document.createElement('input');
-      groupsInput.type = 'hidden';
-      groupsInput.name = 'groups';
-      groupsInput.value = selectedTags.join(', ');
-      
+      groupsInput.type = 'hidden'; groupsInput.name = 'groups'; groupsInput.value = selectedTags.join(', ');
       const updateInput = document.createElement('input');
-      updateInput.type = 'hidden';
-      updateInput.name = 'update';
-      updateInput.value = '1';
-      
+      updateInput.type = 'hidden'; updateInput.name = 'update'; updateInput.value = '1';
+
       form.appendChild(orgInput);
       form.appendChild(asmInput);
+      form.appendChild(gsInput);
       form.appendChild(groupsInput);
       form.appendChild(updateInput);
-      
+
       addCsrfToken(form);
-      
       document.body.appendChild(form);
       form.submit();
     });
@@ -680,7 +657,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = checkbox.closest('tr');
         selectedGroupedAssemblies.push({
           organism: row.getAttribute('data-organism'),
-          assembly: row.getAttribute('data-assembly')
+          assembly: row.getAttribute('data-assembly'),
+          gene_set: row.getAttribute('data-gene-set') || 'v1',
         });
       });
     } else {
@@ -688,22 +666,23 @@ document.addEventListener('DOMContentLoaded', function() {
       selectedGroupedAssemblies = [];
     }
   }
-  
+
   function updateBulkAddButton() {
     const checked = document.querySelectorAll('.assembly-checkbox:checked');
     const bulkBtn = document.getElementById('bulk-add-btn');
     const countSpan = document.getElementById('ungrouped-selected-count');
-    
+
     if (checked.length > 0) {
       bulkBtn.style.display = 'inline-block';
       countSpan.textContent = checked.length;
-      
+
       selectedUngroupedAssemblies = [];
       checked.forEach(checkbox => {
         const row = checkbox.closest('tr');
         selectedUngroupedAssemblies.push({
           organism: row.getAttribute('data-organism'),
-          assembly: row.getAttribute('data-assembly')
+          assembly: row.getAttribute('data-assembly'),
+          gene_set: row.getAttribute('data-gene-set') || 'v1',
         });
       });
     } else {
@@ -720,8 +699,8 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Show list
       const listDiv = document.getElementById('bulk-selected-list');
-      listDiv.innerHTML = selectedGroupedAssemblies.map(item => 
-        `<div><strong>${item.organism}</strong> / ${item.assembly}</div>`
+      listDiv.innerHTML = selectedGroupedAssemblies.map(item =>
+        `<div><strong>${item.organism}</strong> / ${item.assembly} / ${item.gene_set}</div>`
       ).join('');
       
       // Clear inputs
@@ -889,8 +868,61 @@ document.addEventListener('DOMContentLoaded', function() {
     form.appendChild(groupsInput);
     form.appendChild(bulkAddInput);
     addCsrfToken(form);
-    
+
     document.body.appendChild(form);
     form.submit();
   });
+
+window.fetchGroupWiki = async function fetchGroupWiki(groupName, btn) {
+  const topicInput = document.getElementById('wiki-topic-' + groupName);
+  const statusEl   = document.getElementById('wiki-status-' + groupName);
+  const topic = topicInput.value.trim();
+
+  if (!topic) {
+    statusEl.innerHTML = '<span class="text-danger">Enter a Wikipedia topic first.</span>';
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.innerHTML = '<span class="text-muted"><i class="fa fa-spinner fa-spin"></i> Fetching from Wikipedia...</span>';
+
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const resp = await fetch(sitePath + '/admin/api/fetch_group_wiki.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrfToken },
+      body: new URLSearchParams({ group_name: groupName, wikipedia_topic: topic })
+    });
+    const data = await resp.json();
+
+    if (!data.success) {
+      statusEl.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle"></i> ' + (data.message || 'Failed') + '</span>';
+      btn.disabled = false;
+      return;
+    }
+
+    // Update the first paragraph textarea with the fetched text
+    const parasContainer = document.getElementById('paragraphs-container-' + groupName);
+    const firstTextarea  = parasContainer?.querySelector('.para-text');
+    if (firstTextarea) {
+      const tmp = document.createElement('textarea');
+      tmp.innerHTML = data.description_html;
+      firstTextarea.value = tmp.value;
+    }
+
+    // Update first image field if an image was downloaded
+    if (data.image_file) {
+      const imagesContainer = document.getElementById('images-container-' + groupName);
+      const firstFileInput  = imagesContainer?.querySelector('.image-file');
+      if (firstFileInput) firstFileInput.value = data.image_file;
+    }
+
+    statusEl.innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i> Saved to JSON. '
+      + (data.wikipedia_url ? '<a href="' + data.wikipedia_url + '" target="_blank">View on Wikipedia</a>' : '')
+      + ' — edit below if needed, then click <strong>Save Changes</strong>.</span>';
+  } catch (e) {
+    statusEl.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle"></i> Error: ' + e.message + '</span>';
+  }
+  btn.disabled = false;
+}
 });

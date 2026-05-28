@@ -47,6 +47,7 @@ $errors = [];
 foreach ($files_param as $idx => $entry) {
     $organism = trim($entry['organism'] ?? '');
     $assembly = trim($entry['assembly'] ?? '');
+    $gene_set = trim($entry['gene_set'] ?? '');
     $filename = trim($entry['filename'] ?? '');
 
     if ($organism === '' || $assembly === '' || $filename === '') {
@@ -54,7 +55,11 @@ foreach ($files_param as $idx => $entry) {
         continue;
     }
 
-    // No path separators or traversal in filename
+    // No path separators or traversal in gene_set or filename
+    if ($gene_set !== '' && (strpbrk($gene_set, '/\\') !== false || strpos($gene_set, '..') !== false)) {
+        $errors[] = "Entry $idx: invalid gene_set.";
+        continue;
+    }
     if (strpbrk($filename, '/\\') !== false || strpos($filename, '..') !== false) {
         $errors[] = "Entry $idx: invalid filename.";
         continue;
@@ -66,14 +71,22 @@ foreach ($files_param as $idx => $entry) {
         continue;
     }
 
-    if (!has_assembly_access($organism, $assembly)) {
-        $errors[] = "Entry $idx: access denied.";
-        continue;
+    if ($gene_set !== '') {
+        if (!has_gene_set_access($organism, $assembly, $gene_set)) {
+            $errors[] = "Entry $idx: access denied.";
+            continue;
+        }
+    } else {
+        if (!has_assembly_access($organism, $assembly)) {
+            $errors[] = "Entry $idx: access denied.";
+            continue;
+        }
     }
 
-    $base_dir  = realpath("$real_data_dir/$organism/$assembly");
+    $subdir   = $gene_set !== '' ? "$organism/$assembly/$gene_set" : "$organism/$assembly";
+    $base_dir = realpath("$real_data_dir/$subdir");
     if (!$base_dir) {
-        $errors[] = "Entry $idx: assembly not found.";
+        $errors[] = "Entry $idx: directory not found.";
         continue;
     }
 
@@ -89,8 +102,8 @@ foreach ($files_param as $idx => $entry) {
         continue;
     }
 
-    // Relative path within organism_data preserves organism/assembly/filename hierarchy
-    $valid_relative_paths[] = $organism . '/' . $assembly . '/' . $filename;
+    // Relative path within organism_data preserves directory hierarchy in the archive
+    $valid_relative_paths[] = $subdir . '/' . $filename;
 }
 
 if (empty($valid_relative_paths)) {
