@@ -101,6 +101,36 @@
           <strong>Note:</strong> <span class="feature-value"><?= htmlspecialchars($gene_set_meta['note']) ?></span>
         </div>
         <?php endif; ?>
+        <?php
+        // Check for GFF
+        $gs_dir = $config->getPath('organism_data') . "/$organism_name/$genome_accession/$gene_set_name";
+        $has_gff = file_exists("$gs_dir/genomic.gff") && filesize("$gs_dir/genomic.gff") > 0;
+        $has_downloads = !empty($fasta_files) || $has_gff;
+        ?>
+        <?php if ($has_downloads): ?>
+        <div class="feature-info-item" style="border-top: 1px solid rgba(255,255,255,0.25); margin-top: 0.5rem; padding-top: 1rem;">
+          <div class="chip-container">
+            <?php foreach ($fasta_files as $f):
+                $colorInfo = getColorClassOrStyle($f['color'] ?? '');
+            ?>
+            <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>&type=<?= urlencode($f['seq_type']) ?>"
+               class="btn <?= $colorInfo['class'] ?> fw-semibold text-white"
+               style="border-radius: 16px; font-size: 0.9rem; padding: 6px 14px; <?= $colorInfo['style'] ?>"
+               download>
+              <i class="fa fa-download me-1"></i><?= htmlspecialchars($f['label']) ?>
+            </a>
+            <?php endforeach; ?>
+            <?php if ($has_gff): ?>
+            <a href="/<?= $site ?>/api/download_file.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>&filename=genomic.gff"
+               class="btn fw-semibold text-white"
+               style="border-radius: 16px; font-size: 0.9rem; padding: 6px 14px; background-color: #475569; border-color: #475569;"
+               download>
+              <i class="fa fa-download me-1"></i>GFF3
+            </a>
+            <?php endif; ?>
+          </div>
+        </div>
+        <?php endif; ?>
       </div>
     </div>
   </div>

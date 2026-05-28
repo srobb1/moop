@@ -50,7 +50,11 @@ $gene_set_id      = $gene_set_info['gene_set_id'];
 $gene_set_name    = $gene_set_info['gene_set_name'];
 
 // Get FASTA download files scoped to this gene_set only
-$all_fasta_files = getAssemblyFastaFiles($organism_name, $genome_name ?: $genome_accession);
+// Try accession directory first (the actual on-disk name), fall back to genome_name
+$all_fasta_files = getAssemblyFastaFiles($organism_name, $genome_accession);
+if (empty($all_fasta_files) && $genome_name && $genome_name !== $genome_accession) {
+    $all_fasta_files = getAssemblyFastaFiles($organism_name, $genome_name);
+}
 $fasta_files = array_values(array_filter($all_fasta_files, fn($f) => ($f['gene_set'] ?? '') === $gene_set_name));
 
 $display_config = [
