@@ -440,6 +440,11 @@
         initScopeTree();
         initAnnSources();
 
+        ['mm-ann-format-info', 'mm-scope-info', 'mm-ann-sources-info', 'mm-preview-info', 'mm-fasta-info'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) new bootstrap.Popover(el, { trigger: 'click' });
+        });
+
         // Select all / clear all dataset
         document.getElementById('mm-select-all')?.addEventListener('click', function () {
             document.querySelectorAll('.mm-gs-cb').forEach(c => c.checked = true);
@@ -498,7 +503,8 @@
                 document.getElementById('mm-count-result').className = 'small text-warning';
                 return;
             }
-            submitDownload({ output_format: 'tsv' });
+            const annFormat = document.querySelector('input[name="mm-ann-format"]:checked')?.value || 'wide';
+            submitDownload({ output_format: 'tsv', ann_format: annFormat });
         });
 
         // FASTA download (current mode)

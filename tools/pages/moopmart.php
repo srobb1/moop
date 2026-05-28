@@ -7,7 +7,7 @@
 <div class="container-fluid py-3">
 
     <div class="mb-3">
-        <h4 class="mb-1">MOOP Mega Search</h4>
+        <h4 class="mb-1">MOOPmart: Mega Search</h4>
         <p class="text-muted mb-0 small">Designed for bulk download of selected features and annotations. Filter across organisms, assemblies, and gene sets, then export results as a TSV with annotation columns or as FASTA sequences (genomic regions or pre-built protein, transcript, and CDS sequences).</p>
     </div>
 
@@ -19,6 +19,10 @@
                 <div class="card-header d-flex align-items-center py-2">
                     <i class="fa fa-sitemap me-2 text-muted"></i>
                     <strong>Scope</strong>
+                    <i class="fa fa-info-circle text-muted ms-1" id="mm-scope-info" style="cursor:pointer;"
+                       data-bs-toggle="popover" data-bs-placement="right" data-bs-html="true"
+                       data-bs-title="Scope"
+                       data-bs-content="Select which organisms, assemblies, and gene sets to search across.<br><br>The tree has three levels: <strong>organism → assembly → gene set</strong>. Checking a parent automatically selects all children below it.<br><br>Results and downloads are limited to the checked gene sets. Nothing selected = nothing to search."></i>
                     <span id="mm-scope-counts" class="text-muted small fw-normal ms-2 me-auto"></span>
                     <div class="d-flex gap-1">
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="mm-select-all">All</button>
@@ -111,6 +115,10 @@
                 <div class="card-header d-flex align-items-center py-2">
                     <i class="fa fa-sliders-h me-2 text-muted"></i>
                     <strong>Annotation Sources</strong>
+                    <i class="fa fa-info-circle text-muted ms-1" id="mm-ann-sources-info" style="cursor:pointer;"
+                       data-bs-toggle="popover" data-bs-placement="left" data-bs-html="true"
+                       data-bs-title="Annotation Sources"
+                       data-bs-content="Controls which annotation columns appear in TSV downloads.<br><br><strong>Always included:</strong> organism, assembly, gene set, gene ID, name, description, type, chr, start, end, strand.<br><br>Each checked source adds two columns: one for accession IDs and one for descriptions. Selecting nothing means no annotation columns — just the base feature columns above."></i>
                     <span id="mm-ann-counts" class="text-muted small fw-normal ms-2 me-auto"></span>
                     <div class="d-flex gap-1">
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="mm-ann-all">All</button>
@@ -242,19 +250,42 @@
         <div class="card-body py-2">
             <div class="d-flex align-items-center gap-3 flex-wrap">
 
-                <button type="button" class="btn btn-outline-primary" id="mm-preview-btn">
-                    <span id="mm-count-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                    Preview Results
-                </button>
+                <div class="d-flex align-items-center gap-1">
+                    <button type="button" class="btn btn-outline-primary" id="mm-preview-btn">
+                        <span id="mm-count-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        Preview Results
+                    </button>
+                    <i class="fa fa-info-circle text-muted" id="mm-preview-info" style="cursor:pointer;"
+                       data-bs-toggle="popover" data-bs-placement="top" data-bs-html="true"
+                       data-bs-title="Preview Results"
+                       data-bs-content="Shows the first 100 matching features in a table so you can verify filters before downloading.<br><br>The count shown is the total number of matching features — the download exports <strong>all of them</strong>, not just the 100 shown here."></i>
+                </div>
                 <span id="mm-count-result" class="small text-muted"></span>
 
                 <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
 
-                    <button type="button" class="btn btn-success" id="mm-dl-tsv">
-                        <i class="fa fa-file-alt me-1"></i>Download TSV
-                    </button>
+                    <div class="d-flex align-items-center gap-1">
+                        <button type="button" class="btn btn-success" id="mm-dl-tsv">
+                            <i class="fa fa-file-alt me-1"></i>Download TSV
+                        </button>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <input type="radio" class="btn-check" name="mm-ann-format" id="mm-ann-wide" value="wide" checked>
+                            <label class="btn btn-outline-secondary" for="mm-ann-wide">Wide</label>
+                            <input type="radio" class="btn-check" name="mm-ann-format" id="mm-ann-long" value="long">
+                            <label class="btn btn-outline-secondary" for="mm-ann-long">Long</label>
+                        </div>
+                        <i class="fa fa-info-circle text-muted" id="mm-ann-format-info" style="cursor:pointer;"
+                           data-bs-toggle="popover" data-bs-placement="top" data-bs-html="true"
+                           data-bs-title="Annotation format"
+                           data-bs-content="<strong>Wide</strong> (default): one row per gene. Multiple annotation IDs for the same source are joined with '; ' in a single cell.<br><br><strong>Long</strong>: one row per annotation term. Each GO term, InterPro entry, etc. gets its own row. Columns become <em>annotation_source</em>, <em>annotation_id</em>, <em>annotation_description</em> instead of one column-pair per source."></i>
+                    </div>
 
                     <!-- FASTA dropdown button group -->
+                    <div class="d-flex align-items-center gap-1">
+                    <i class="fa fa-info-circle text-muted" id="mm-fasta-info" style="cursor:pointer;"
+                       data-bs-toggle="popover" data-bs-placement="top" data-bs-html="true"
+                       data-bs-title="Download FASTA"
+                       data-bs-content="<strong>Genomic sequences</strong> — extracted on the fly from the genome FASTA:<br>• <em>Whole gene body</em>: from gene start to end<br>• <em>Upstream / Downstream</em>: flanking region of chosen size<br>• <em>Exons / sub-features</em>: spliced sequence from child features (e.g. CDS, exon) in the GFF<br><br><strong>Pre-built sequences</strong> — from pre-computed FASTA files in each gene set:<br>• <em>Transcript</em>: mRNA sequences<br>• <em>Protein</em>: translated sequences<br>• <em>CDS</em>: coding sequences<br><br>Pre-built files may not be available for all gene sets."></i>
                     <div class="btn-group">
                         <button type="button" class="btn btn-primary" id="mm-dl-fasta-btn">
                             <i class="fa fa-dna me-1"></i><span id="mm-fasta-label">Gene sequence</span>
@@ -283,6 +314,7 @@
                         <input type="number" id="mm-flank-bp" class="form-control"
                                value="500" min="1" max="100000" title="Flank size in bp">
                     </div>
+                    </div><!-- end FASTA info+group wrapper -->
 
                 </div>
             </div>

@@ -108,5 +108,5 @@ echo render_display_page(
             "const siteTitle = '"        . addslashes($siteTitle)                . "';",
         ],
     ],
-    'MOOP Mega Search'
+    'MOOPmart: Mega Search'
 );

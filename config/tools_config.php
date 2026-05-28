@@ -77,7 +77,7 @@ return [
     
     'moopmart' => [
         'id'             => 'moopmart',
-        'name'           => 'MOOP Mega Search',
+        'name'           => 'MOOPmart: Mega Search',
         'icon'           => 'fa-filter',
         'description'    => 'Filter features by annotation, coordinates, and gene set — download as TSV or FASTA',
         'btn_class'      => 'btn-info',

@@ -28,6 +28,7 @@ $selected_raw = $_POST['sources'] ?? [];
 if (!is_array($selected_raw)) $selected_raw = [$selected_raw];
 
 $output_format = in_array($_POST['output_format'] ?? '', ['tsv', 'fasta']) ? $_POST['output_format'] : 'tsv';
+$ann_format    = ($_POST['ann_format'] ?? 'wide') === 'long' ? 'long' : 'wide';
 $fasta_mode    = $_POST['fasta_mode'] ?? 'gene';
 $flank_bp      = max(1, min(100000, (int)($_POST['flank_bp'] ?? 500)));
 
@@ -147,12 +148,17 @@ if ($output_format === 'tsv') {
     // Strip embedded newlines/tabs that would break TSV parsing in Excel
     $clean = fn($s) => str_replace(["\r\n", "\r", "\n", "\t"], ' ', (string)$s);
 
-    // Header row — two columns per annotation source: IDs and descriptions
-    $headers = ['organism', 'assembly', 'gene_set', 'gene_id', 'gene_name',
-                'description', 'type', 'chr', 'start', 'end', 'strand'];
-    foreach ($source_cols as $s) {
-        $headers[] = 'ID:' . $s;
-        $headers[] = 'Description:' . $s;
+    // Header row
+    $feature_headers = ['organism', 'assembly', 'gene_set', 'gene_id', 'gene_name',
+                        'description', 'type', 'chr', 'start', 'end', 'strand'];
+    if ($ann_format === 'long') {
+        $headers = array_merge($feature_headers, ['annotation_source', 'annotation_id', 'annotation_description']);
+    } else {
+        $headers = $feature_headers;
+        foreach ($source_cols as $s) {
+            $headers[] = 'ID:' . $s;
+            $headers[] = 'Description:' . $s;
+        }
     }
     fputcsv($out, $headers, "\t");
     flush();
@@ -167,11 +173,11 @@ if ($output_format === 'tsv') {
 
     foreach ($by_db as $db_path => $db_features) {
         foreach (array_chunk($db_features, 500) as $chunk) {
-            $fids        = array_column($chunk, 'feature_id');
-            $chunk_anns  = moopmartGetAnnotationsForFeatures($fids, $db_path);
+            $fids       = array_column($chunk, 'feature_id');
+            $chunk_anns = moopmartGetAnnotationsForFeatures($fids, $db_path);
 
             foreach ($chunk as $f) {
-                $row = [
+                $base = [
                     $f['organism_dir'],
                     $f['genome_accession'],
                     $f['gene_set_name'],
@@ -179,20 +185,40 @@ if ($output_format === 'tsv') {
                     $clean($f['name']        ?? ''),
                     $clean($f['description'] ?? ''),
                     $f['type'],
-                    $f['chr']         ?? '',
-                    $f['start']       ?? '',
-                    $f['end']         ?? '',
-                    $f['strand']      ?? '',
+                    $f['chr']    ?? '',
+                    $f['start']  ?? '',
+                    $f['end']    ?? '',
+                    $f['strand'] ?? '',
                 ];
                 $fid_anns = $chunk_anns[$f['feature_id']] ?? [];
-                foreach ($source_cols as $src_name) {
-                    $entries      = $fid_anns[$src_name] ?? [];
-                    $accessions   = array_map(fn($e) => $e['accession'], $entries);
-                    $descriptions = array_map(fn($e) => $clean($e['description'] ?? ''), $entries);
-                    $row[] = implode('; ', $accessions);
-                    $row[] = implode('; ', $descriptions);
+
+                if ($ann_format === 'long') {
+                    $emitted = false;
+                    foreach ($source_cols as $src_name) {
+                        foreach ($fid_anns[$src_name] ?? [] as $entry) {
+                            fputcsv($out, array_merge($base, [
+                                $src_name,
+                                $entry['accession'],
+                                $clean($entry['description'] ?? ''),
+                            ]), "\t");
+                            $emitted = true;
+                        }
+                    }
+                    // Emit one row even if no annotations matched
+                    if (!$emitted) {
+                        fputcsv($out, array_merge($base, ['', '', '']), "\t");
+                    }
+                } else {
+                    $row = $base;
+                    foreach ($source_cols as $src_name) {
+                        $entries      = $fid_anns[$src_name] ?? [];
+                        $accessions   = array_map(fn($e) => $e['accession'], $entries);
+                        $descriptions = array_map(fn($e) => $clean($e['description'] ?? ''), $entries);
+                        $row[] = implode('; ', $accessions);
+                        $row[] = implode('; ', $descriptions);
+                    }
+                    fputcsv($out, $row, "\t");
                 }
-                fputcsv($out, $row, "\t");
             }
             flush();
         }
