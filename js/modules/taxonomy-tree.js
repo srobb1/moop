@@ -74,10 +74,12 @@ class PhyloTree {
             countEl.textContent = '0';
             if (searchBtn) searchBtn.disabled = true;
         } else {
+            const siteName = typeof sitePath !== 'undefined' ? sitePath.replace(/^\//, '').split('/')[0] : 'moop';
             const items = Array.from(this.selectedOrganisms).map(org => {
                 const parts = org.split('_');
                 const formatted = `<i>${parts[0]} ${parts[1]}</i>`;
-                return `<span class="badge bg-primary me-1 mb-1">${formatted}</span>`;
+                const url = `/${siteName}/tools/organism.php?organism=${encodeURIComponent(org)}`;
+                return `<a href="${url}" target="_blank" class="badge bg-primary me-1 mb-1 text-decoration-none">${formatted}</a>`;
             }).join('');
             listEl.innerHTML = items;
             countEl.textContent = this.selectedOrganisms.size;
