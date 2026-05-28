@@ -190,11 +190,31 @@ $gff_available = file_exists($gff_file) && filesize($gff_file) > 0;
 
 if ($gff_available) {
     // Find the gene's own GFF record for location and strand.
-    // Handles both bare IDs (ID=UNIQUENAME) and type-prefixed IDs (ID=gene:UNIQUENAME).
+    // Try 1: ID attribute match — handles bare (ID=UNIQUENAME) and Ensembl-prefixed (ID=gene:UNIQUENAME).
+    // Try 2: uniquename anywhere in attributes — handles NCBI GFFs where the numeric GeneID sits in
+    //         Dbxref (e.g. Dbxref=GeneID:105288252) while the ID is ID=gene-SYMBOL. Accept only lines
+    //         whose GFF feature type (col 3) matches the DB feature type to avoid picking up child lines.
     $gff_lines = [];
     exec('grep -m1 -E ' . escapeshellarg('ID=[^;:]*:?' . preg_quote($feature_uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $gff_lines);
+    if (empty($gff_lines)) {
+        $tmp = [];
+        exec('grep -m1 -F ' . escapeshellarg($feature_uniquename) . ' ' . escapeshellarg($gff_file), $tmp);
+        if (!empty($tmp[0])) {
+            $tmp_parts = explode("\t", $tmp[0]);
+            if (isset($tmp_parts[2]) && strtolower($tmp_parts[2]) === strtolower($type)) {
+                $gff_lines = $tmp;
+            }
+        }
+    }
+
+    // Extract the actual GFF ID from the found line — may differ from $feature_uniquename
+    // (e.g. NCBI: uniquename=105288252, GFF ID=gene-ANAPC13). All child lookups use $gff_gene_id.
+    $gff_gene_id = $feature_uniquename;
     if (!empty($gff_lines[0])) {
         $gff_parts = explode("\t", $gff_lines[0]);
+        if (count($gff_parts) >= 9 && preg_match('/\bID=([^;]+)/', $gff_parts[8], $id_m)) {
+            $gff_gene_id = $id_m[1];
+        }
         if (count($gff_parts) >= 7) {
             $feature_loc = [
                 'seqname'    => $gff_parts[0],
@@ -206,10 +226,10 @@ if ($gff_available) {
         }
     }
 
-    // Build isoform map from direct children of the gene
+    // Build isoform map from direct children of the gene, using the actual GFF ID
     if (!empty($feature_loc)) {
         $mrna_raw = [];
-        exec('grep -E ' . escapeshellarg('Parent=[^;:]*:?' . preg_quote($feature_uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $mrna_raw);
+        exec('grep -E ' . escapeshellarg('Parent=' . preg_quote($gff_gene_id) . '(;|$)') . ' ' . escapeshellarg($gff_file), $mrna_raw);
 
         $isoforms = [];
         foreach ($mrna_raw as $line) {

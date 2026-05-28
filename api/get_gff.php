@@ -56,14 +56,31 @@ if (!file_exists($gff_file) || filesize($gff_file) === 0) {
 
 // --- Collect GFF lines for gene and all descendants ---
 
-// Level 1: the gene line itself
-// Handles bare IDs (ID=UNIQUENAME) and type-prefixed IDs (ID=gene:UNIQUENAME).
+// Level 1: the gene line itself.
+// Try 1: ID attribute (bare or Ensembl-prefixed). Try 2: uniquename anywhere in attributes
+// (NCBI GFFs store the numeric GeneID in Dbxref, not ID). Accept only top-level lines (no Parent=).
 $gene_lines = [];
 exec('grep -m1 -E ' . escapeshellarg('ID=[^;:]*:?' . preg_quote($uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $gene_lines);
+if (empty($gene_lines)) {
+    $tmp = [];
+    exec('grep -m1 -F ' . escapeshellarg($uniquename) . ' ' . escapeshellarg($gff_file), $tmp);
+    if (!empty($tmp[0]) && str_contains($tmp[0], 'ID=') && !str_contains($tmp[0], 'Parent=')) {
+        $gene_lines = $tmp;
+    }
+}
+
+// Extract the actual GFF ID — may differ from $uniquename (e.g. ID=gene-SYMBOL vs Dbxref GeneID).
+$gff_gene_id = $uniquename;
+if (!empty($gene_lines[0])) {
+    $gp = explode("\t", $gene_lines[0]);
+    if (!empty($gp[8]) && preg_match('/\bID=([^;]+)/', $gp[8], $id_m)) {
+        $gff_gene_id = $id_m[1];
+    }
+}
 
 // Level 2: direct children (mRNA, ncRNA, pseudogenic_transcript, etc.)
 $child_lines = [];
-exec('grep -E ' . escapeshellarg('Parent=[^;:]*:?' . preg_quote($uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $child_lines);
+exec('grep -E ' . escapeshellarg('Parent=' . preg_quote($gff_gene_id) . '(;|$)') . ' ' . escapeshellarg($gff_file), $child_lines);
 
 // Extract child IDs for the grandchild lookup
 $child_ids = [];
