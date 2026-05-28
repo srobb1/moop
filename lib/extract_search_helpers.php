@@ -145,7 +145,9 @@ function parseFeatureIds($uniquenames_string) {
 function _fasta_key_for_type(string $type): ?string {
     static $map = [
         'mRNA'        => 'transcript',
+        'transcript'  => 'transcript',
         'CDS'         => 'cds',
+        'cds'         => 'cds',
         'protein'     => 'protein',
         'polypeptide' => 'protein',
     ];
