@@ -57,18 +57,13 @@ if (!file_exists($gff_file) || filesize($gff_file) === 0) {
 // --- Collect GFF lines for gene and all descendants ---
 
 // Level 1: the gene line itself
+// Handles bare IDs (ID=UNIQUENAME) and type-prefixed IDs (ID=gene:UNIQUENAME).
 $gene_lines = [];
-exec('grep -m1 -F ' . escapeshellarg('ID=' . $uniquename . ';') . ' ' . escapeshellarg($gff_file), $gene_lines);
-if (empty($gene_lines)) {
-    exec('grep -m1 -F ' . escapeshellarg('ID=' . $uniquename) . ' ' . escapeshellarg($gff_file), $gene_lines);
-}
+exec('grep -m1 -E ' . escapeshellarg('ID=[^;:]*:?' . preg_quote($uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $gene_lines);
 
 // Level 2: direct children (mRNA, ncRNA, pseudogenic_transcript, etc.)
 $child_lines = [];
-exec('grep -F ' . escapeshellarg('Parent=' . $uniquename . ';') . ' ' . escapeshellarg($gff_file), $child_lines);
-if (empty($child_lines)) {
-    exec('grep -F ' . escapeshellarg('Parent=' . $uniquename) . ' ' . escapeshellarg($gff_file), $child_lines);
-}
+exec('grep -E ' . escapeshellarg('Parent=[^;:]*:?' . preg_quote($uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $child_lines);
 
 // Extract child IDs for the grandchild lookup
 $child_ids = [];

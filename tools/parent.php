@@ -167,6 +167,12 @@ $genome_accession = $row['genome_accession'];
 $genome_name      = $row['genome_name'];
 $feature_gene_set_id = $row['gene_set_id'];
 
+// Which child feature types have annotations somewhere in this gene set?
+// Used to suppress purely structural types (exon, CDS) from the hierarchy and
+// annotation cards while still showing annotated types even when this specific
+// gene has 0 annotations for that type.
+$annotated_child_types = getAnnotatedFeatureTypesInGeneSet((int)$feature_gene_set_id, $db);
+
 // Resolve gene_set name from the accessible sources list
 $gene_set_name = $row['gene_set_name'] ?? 'v1';
 
@@ -183,12 +189,10 @@ $gff_file      = "$gene_set_dir/genomic.gff";
 $gff_available = file_exists($gff_file) && filesize($gff_file) > 0;
 
 if ($gff_available) {
-    // Find the gene's own GFF record for location and strand
+    // Find the gene's own GFF record for location and strand.
+    // Handles both bare IDs (ID=UNIQUENAME) and type-prefixed IDs (ID=gene:UNIQUENAME).
     $gff_lines = [];
-    exec('grep -m1 -F ' . escapeshellarg('ID=' . $feature_uniquename . ';') . ' ' . escapeshellarg($gff_file), $gff_lines);
-    if (empty($gff_lines)) {
-        exec('grep -m1 -F ' . escapeshellarg('ID=' . $feature_uniquename) . ' ' . escapeshellarg($gff_file), $gff_lines);
-    }
+    exec('grep -m1 -E ' . escapeshellarg('ID=[^;:]*:?' . preg_quote($feature_uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $gff_lines);
     if (!empty($gff_lines[0])) {
         $gff_parts = explode("\t", $gff_lines[0]);
         if (count($gff_parts) >= 7) {
@@ -205,10 +209,7 @@ if ($gff_available) {
     // Build isoform map from direct children of the gene
     if (!empty($feature_loc)) {
         $mrna_raw = [];
-        exec('grep -F ' . escapeshellarg('Parent=' . $feature_uniquename . ';') . ' ' . escapeshellarg($gff_file), $mrna_raw);
-        if (empty($mrna_raw)) {
-            exec('grep -F ' . escapeshellarg('Parent=' . $feature_uniquename) . ' ' . escapeshellarg($gff_file), $mrna_raw);
-        }
+        exec('grep -E ' . escapeshellarg('Parent=[^;:]*:?' . preg_quote($feature_uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $mrna_raw);
 
         $isoforms = [];
         foreach ($mrna_raw as $line) {
@@ -347,6 +348,7 @@ echo render_display_page(
         'assembly_name' => $genome_accession,
         'site' => $site,
 	'siteTitle' => $siteTitle,
+        'annotated_child_types' => $annotated_child_types,
         'gene_model' => $gene_model,
         'feature_loc' => $feature_loc,
         'genome_seq_available' => $genome_seq_available,

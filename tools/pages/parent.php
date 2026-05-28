@@ -267,8 +267,11 @@
                     
                     // Render children with hierarchical nesting support
                     foreach ($children_hierarchical as $child) {
-                        $has_annotations = true;
-                        echo generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count);
+                        $rendered = generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, false, $annotated_child_types ?? []);
+                        if ($rendered !== '') {
+                            $has_annotations = true;
+                            echo $rendered;
+                        }
                     }
                 }
                 

@@ -284,13 +284,13 @@ function generateTreeHTML($feature_id, $dbFile, $all_annotations = [], $analysis
     if (empty($results)) {
         return '';
     }
-    
+
     $html = "<ul>";
     $total = count($results);
-    
+
     foreach ($results as $index => $row) {
         $is_last_child = ($index === $total - 1);
-        
+
         $feature_type = htmlspecialchars($row['feature_type']);
         $feature_name = htmlspecialchars($row['feature_uniquename']);
         $child_feature_id = $row['feature_id'];
@@ -365,10 +365,15 @@ function generateTreeHTML($feature_id, $dbFile, $all_annotations = [], $analysis
  * @param bool $is_grandchild - Internal flag for styling grandchild level
  * @return string - HTML for child/grandchild annotation cards
  */
-function generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, &$count, $is_grandchild = false) {
+function generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, &$count, $is_grandchild = false, $annotated_child_types = []) {
     $child_feature_id = $child['feature_id'];
     $child_uniquename = $child['feature_uniquename'];
     $child_type = $child['feature_type'];
+
+    // Skip feature types that never carry annotations in this gene set
+    if (!empty($annotated_child_types) && !in_array($child_type, $annotated_child_types)) {
+        return '';
+    }
     
     // Count annotations for this child
     $child_annotation_count = 0;
@@ -438,7 +443,7 @@ function generateChildAnnotationCards($child, $all_annotations, $analysis_order,
     // Render grandchildren (recursively)
     if (!empty($child['grandchildren'])) {
         foreach ($child['grandchildren'] as $grandchild) {
-            $html .= generateChildAnnotationCards($grandchild, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, true);
+            $html .= generateChildAnnotationCards($grandchild, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, true, $annotated_child_types);
         }
     }
     

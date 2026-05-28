@@ -435,3 +435,20 @@ function getOrganismAssemblies($organism_name, $organism_data_dir) {
         return [];
     }
 }
+
+/**
+ * Return the set of feature types that have at least one annotation in a gene set.
+ * Used to decide which child feature types are worth showing on the parent page.
+ *
+ * @param int    $gene_set_id
+ * @param string $db_path
+ * @return string[]  e.g. ['mRNA', 'polypeptide']
+ */
+function getAnnotatedFeatureTypesInGeneSet(int $gene_set_id, string $db_path): array {
+    $query = "SELECT DISTINCT f.feature_type
+              FROM feature f
+              JOIN feature_annotation fa ON fa.feature_id = f.feature_id
+              WHERE f.gene_set_id = ?";
+    $rows = fetchData($query, $db_path, [$gene_set_id]);
+    return array_column($rows, 'feature_type');
+}
