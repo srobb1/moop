@@ -50,8 +50,9 @@ $sources_by_group = getAccessibleAssemblies();
 $accessible_sources = flattenSourcesList($sources_by_group);
 
 // Get organisms for filtering - support both array and comma-separated string formats
-$organisms_param = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
-$organism_result = parseOrganismParameter($organisms_param, '');
+$organisms_param         = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
+$organism_result         = parseOrganismParameter($organisms_param, '');
+$filter_organisms_string = $organism_result['string'] ?? '';
 
 // Get form data
 $search_query = trim($_POST['query'] ?? '');
@@ -116,9 +117,10 @@ $ungapped = isset($_POST['ungapped']);
 $strand = trim($_POST['strand'] ?? 'plus');
 
 // Initialize result variables
-$search_error = null;
-$blast_result = null;
+$search_error  = null;
+$blast_result  = null;
 $blast_options = [];
+$blast_hit_ids = [];  // Hit uniquenames, used for targeted feature_coords lookup
 
 // If search is submitted
 if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
@@ -194,6 +196,23 @@ if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
                     if (!empty($blast_result['stderr'])) {
                         $search_error .= "\n\nDetails: " . $blast_result['stderr'];
                     }
+                } elseif (!empty($blast_result['output'])) {
+                    // Extract hit IDs for targeted feature_coords lookup — avoids loading
+                    // entire (potentially 80MB+) coords file into the 128MB memory limit.
+                    preg_match_all('/<Hit_id>(.*?)<\/Hit_id>/', $blast_result['output'], $hit_id_matches);
+                    foreach ($hit_id_matches[1] ?? [] as $raw_id) {
+                        $hid = preg_replace('/^[a-z]{2,3}\|/', '', trim($raw_id));
+                        if (strpos($hid, '|') !== false) {
+                            $parts = explode('|', $hid);
+                            $hid = $parts[0] !== '' ? $parts[0] : ($parts[1] ?? $hid);
+                        }
+                        $hid = preg_replace('/:[a-z]+$/', '', $hid);
+                        // NCBI extracted CDS format: {chr}_cds_{ProteinAccession}_{index}
+                        if (preg_match('/_cds_([A-Z]{2}_?\d+\.\d+)_\d+$/', $hid, $m)) {
+                            $hid = $m[1];
+                        }
+                        $blast_hit_ids[] = $hid;
+                    }
                 }
             }
         }
@@ -225,7 +244,7 @@ if (!empty($selected_source_obj) && !empty($selected_db_obj)) {
     }
 
     $coords = (!$is_genome_db && ($linkout_config['jbrowse'] ?? false))
-        ? loadFeatureCoords($assembly_path)
+        ? loadFeatureCoords($assembly_path, $blast_hit_ids)
         : [];
 
     $blast_linkout_context = [

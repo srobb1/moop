@@ -183,30 +183,31 @@ function generateAssemblyList($user_access_level) {
  * @return void - Outputs JSON with gzip compression and exits
  */
 function generateAssemblyConfig($organism, $assembly, $user_access_level) {
-    // 1. VALIDATE PERMISSIONS
-    $accessible = getAccessibleAssemblies($organism, $assembly);
-    if (empty($accessible)) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Access denied to this assembly']);
-        exit;
-    }
-    
-    // 2. LOAD ASSEMBLY DEFINITION
+    // 1. LOAD ASSEMBLY DEFINITION
     $metadata_path = __DIR__ . '/../../metadata';
     $assemblies_dir = "$metadata_path/jbrowse2-configs/assemblies";
     $assembly_def_file = "$assemblies_dir/{$organism}_{$assembly}.json";
-    
+
     if (!file_exists($assembly_def_file)) {
         http_response_code(404);
         echo json_encode(['error' => "Assembly definition not found: {$organism}_{$assembly}"]);
         exit;
     }
-    
+
     $assembly_definition = json_decode(file_get_contents($assembly_def_file), true);
-    
+
     if (!$assembly_definition) {
         http_response_code(500);
         echo json_encode(['error' => "Invalid assembly definition JSON"]);
+        exit;
+    }
+
+    // 2. VALIDATE PERMISSIONS using defaultAccessLevel from assembly JSON
+    // (getAccessibleAssemblies checks gene-set groups, not genome browser access)
+    $assembly_access_level = $assembly_definition['defaultAccessLevel'] ?? 'PUBLIC';
+    if (!canUserAccessAssembly($user_access_level, $assembly_access_level, $organism, $assembly)) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Access denied to this assembly']);
         exit;
     }
     

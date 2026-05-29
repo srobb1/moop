@@ -122,6 +122,9 @@ if (is_dir($assemblies_meta_dir)) {
             $gene_set = basename($gs_dir);
             $tsv = $gs_dir . '/feature_coords.tsv';
             $gff = $gs_dir . '/genomic.gff';
+            $tsv_size_mb = file_exists($tsv)
+                ? round(filesize($tsv) / 1048576, 1) . ' MB'
+                : null;
             $feature_coord_status[] = [
                 'organism'     => $org,
                 'assembly'     => $asm,
@@ -129,7 +132,7 @@ if (is_dir($assemblies_meta_dir)) {
                 'has_tsv'      => file_exists($tsv),
                 'has_gff'      => file_exists($gff),
                 'tsv_modified' => file_exists($tsv) ? date('Y-m-d H:i', filemtime($tsv)) : null,
-                'tsv_lines'    => file_exists($tsv) ? count(file($tsv, FILE_SKIP_EMPTY_LINES)) : 0,
+                'tsv_size'     => $tsv_size_mb,
             ];
         }
     }

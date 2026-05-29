@@ -246,7 +246,7 @@
                 <th>Assembly</th>
                 <th>Gene Set</th>
                 <th>Status</th>
-                <th>Features</th>
+                <th>File size</th>
                 <th>Last generated</th>
                 <th></th>
               </tr>
@@ -267,7 +267,7 @@
                     <span class="badge bg-secondary">No genomic.gff</span>
                   <?php endif; ?>
                 </td>
-                <td class="small"><?= $row['has_tsv'] ? number_format($row['tsv_lines']) : '—' ?></td>
+                <td class="small"><?= $row['tsv_size'] ?? '—' ?></td>
                 <td class="small text-muted"><?= htmlspecialchars($row['tsv_modified'] ?? '—') ?></td>
                 <td>
                   <?php if ($row['has_gff']): ?>
@@ -383,7 +383,7 @@ document.querySelectorAll('.gen-feature-coords-btn').forEach(btn => {
 
       if (data.success) {
         row.cells[3].innerHTML = '<span class="badge bg-success">Ready</span>';
-        row.cells[4].textContent = Number(data.features).toLocaleString();
+        row.cells[4].textContent = data.tsv_size ?? '—';
         row.cells[5].textContent = data.modified;
         btn.innerHTML = '<i class="fa fa-sync-alt"></i> Regenerate';
       } else {

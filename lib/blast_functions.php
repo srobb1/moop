@@ -914,14 +914,15 @@ function generateFeatureCoordsIndex($assembly_path) {
         $parts = explode("\t", rtrim($line));
         if (count($parts) < 9) continue;
 
-        // Parse ID and Parent from attributes column
-        $id = null; $parent = null;
+        // Parse ID, Parent, and Name from attributes column
+        $id = null; $parent = null; $name = null;
         foreach (explode(';', $parts[8]) as $attr) {
             $kv = explode('=', $attr, 2);
             if (count($kv) !== 2) continue;
             $k = trim($kv[0]); $v = trim($kv[1]);
             if ($k === 'ID')     $id     = $v;
             if ($k === 'Parent') $parent = $v;
+            if ($k === 'Name')   $name   = $v;
         }
         if (!$id) continue;
 
@@ -932,6 +933,7 @@ function generateFeatureCoordsIndex($assembly_path) {
             'strand' => $parts[6],
             'type'   => strtolower($parts[2]),
             'parent' => $parent,
+            'name'   => $name,
         ];
     }
     fclose($fh);
@@ -942,6 +944,8 @@ function generateFeatureCoordsIndex($assembly_path) {
     $skip_types = ['region', 'chromosome', 'contig', 'scaffold', 'supercontig', 'biological_region'];
     $out = fopen($tsv_file, 'w');
     if (!$out) return false;
+
+    $written = [];  // track IDs already emitted to avoid duplicates
 
     foreach ($features as $id => $f) {
         if (in_array($f['type'], $skip_types)) continue;
@@ -958,9 +962,28 @@ function generateFeatureCoordsIndex($assembly_path) {
         }
 
         $gene = $features[$gene_id];
-        fwrite($out, implode("\t", [
-            $id, $gene_id, $gene['chr'], $gene['start'], $gene['end'], $gene['strand'],
-        ]) . "\n");
+        $row = [$gene_id, $gene['chr'], $gene['start'], $gene['end'], $gene['strand']];
+
+        $write = function($hit_id) use ($out, $row, &$written) {
+            if (!isset($written[$hit_id])) {
+                fwrite($out, $hit_id . "\t" . implode("\t", $row) . "\n");
+                $written[$hit_id] = true;
+            }
+        };
+
+        $write($id);
+
+        // For RefSeq-style GFF IDs with prefixes (rna-, cds-, gene-, id-), also write
+        // the bare accession — e.g. "rna-NM_001234.1" → "NM_001234.1" — so transcript
+        // and protein BLAST hits match without needing the prefix.
+        $bare = preg_replace('/^(?:rna|cds|gene|id)-/', '', $id);
+        if ($bare !== $id) $write($bare);
+
+        // For CDS features with a distinct Name (typically the protein accession in
+        // RefSeq GFFs), write that too — protein BLAST hits use the protein accession.
+        if ($f['type'] === 'cds' && $f['name'] !== null && $f['name'] !== $id && $f['name'] !== $bare) {
+            $write($f['name']);
+        }
     }
     fclose($out);
     return true;
@@ -972,9 +995,15 @@ function generateFeatureCoordsIndex($assembly_path) {
  * @param string $assembly_path  Absolute path to the assembly directory
  * @return array  ['uniquename' => ['gene_id','chr','start','end','strand'], ...]
  */
-function loadFeatureCoords($assembly_path) {
+function loadFeatureCoords($assembly_path, $filter_ids = null) {
     $tsv_file = $assembly_path . '/feature_coords.tsv';
     if (!file_exists($tsv_file)) return [];
+
+    // $filter_ids = null  → load everything (legacy callers)
+    // $filter_ids = []    → return immediately (no hits, no coords needed)
+    // $filter_ids = [...]  → only load matching rows (memory-safe for large files)
+    if ($filter_ids !== null && empty($filter_ids)) return [];
+    $filter_set = $filter_ids !== null ? array_flip($filter_ids) : null;
 
     $coords = [];
     $fh = fopen($tsv_file, 'r');
@@ -983,6 +1012,7 @@ function loadFeatureCoords($assembly_path) {
     while (($line = fgets($fh)) !== false) {
         $p = explode("\t", rtrim($line));
         if (count($p) < 6) continue;
+        if ($filter_set !== null && !isset($filter_set[$p[0]])) continue;
         $coords[$p[0]] = [
             'gene_id' => $p[1],
             'chr'     => $p[2],
@@ -990,6 +1020,8 @@ function loadFeatureCoords($assembly_path) {
             'end'     => (int)$p[4],
             'strand'  => $p[5],
         ];
+        // Once we have all requested IDs, stop scanning the file.
+        if ($filter_set !== null && count($coords) === count($filter_set)) break;
     }
     fclose($fh);
     return $coords;

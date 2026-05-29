@@ -43,16 +43,13 @@ if (!$ok) {
 }
 
 $tsv_file = $gene_set_path . '/feature_coords.tsv';
-$line_count = 0;
-if (file_exists($tsv_file)) {
-    $fh = fopen($tsv_file, 'r');
-    while (fgets($fh) !== false) $line_count++;
-    fclose($fh);
-}
+$tsv_size = file_exists($tsv_file)
+    ? round(filesize($tsv_file) / 1048576, 1) . ' MB'
+    : '—';
 
 echo json_encode([
     'success'  => true,
     'message'  => 'Generated feature_coords.tsv',
-    'features' => $line_count,
+    'tsv_size' => $tsv_size,
     'modified' => date('Y-m-d H:i', filemtime($tsv_file)),
 ]);

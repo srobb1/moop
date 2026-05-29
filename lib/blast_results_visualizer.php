@@ -809,6 +809,12 @@ function buildBlastHitLinkouts($hit, $context) {
         $parts = explode('|', $hit_id);
         $hit_id = $parts[0] !== '' ? $parts[0] : ($parts[1] ?? $hit_id);
     }
+    // Strip FASTA export type suffixes (:cds, :pep, etc.) — feature_coords.tsv uses bare IDs
+    $hit_id = preg_replace('/:[a-z]+$/', '', $hit_id);
+    // NCBI extracted CDS format: {chr}_cds_{ProteinAccession}_{index} → extract accession
+    if (preg_match('/_cds_([A-Z]{2}_?\d+\.\d+)_\d+$/', $hit_id, $m)) {
+        $hit_id = $m[1];
+    }
 
     $html = '';
 
