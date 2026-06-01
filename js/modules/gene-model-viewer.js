@@ -95,12 +95,13 @@
             const gG      = makeSvgEl('g');
 
             const gTypeLabel = makeSvgEl('text');
-            gTypeLabel.setAttribute('x', PAD_LEFT - 6);
+            gTypeLabel.setAttribute('x', 4);
             gTypeLabel.setAttribute('y', gRowTop + LABEL_HEIGHT - 2);
             gTypeLabel.setAttribute('font-size', '10');
             gTypeLabel.setAttribute('fill', COLOR_LABEL);
-            gTypeLabel.setAttribute('text-anchor', 'end');
+            gTypeLabel.setAttribute('text-anchor', 'start');
             gTypeLabel.setAttribute('font-style', 'italic');
+            gTypeLabel.setAttribute('font-weight', 'bold');
             gTypeLabel.textContent = gene.type || 'gene';
             gG.appendChild(gTypeLabel);
 
@@ -300,13 +301,14 @@
             const isoType        = isoforms[0].type || 'mRNA';
 
             const isoTypeLabel = makeSvgEl('text');
-            isoTypeLabel.setAttribute('x', PAD_LEFT - 6);
+            isoTypeLabel.setAttribute('x', 4);
             isoTypeLabel.setAttribute('y', isoCenterY);
             isoTypeLabel.setAttribute('font-size', '10');
             isoTypeLabel.setAttribute('fill', COLOR_LABEL);
-            isoTypeLabel.setAttribute('text-anchor', 'end');
+            isoTypeLabel.setAttribute('text-anchor', 'start');
             isoTypeLabel.setAttribute('dominant-baseline', 'middle');
             isoTypeLabel.setAttribute('font-style', 'italic');
+            isoTypeLabel.setAttribute('font-weight', 'bold');
             isoTypeLabel.textContent = isoType;
             svg.appendChild(isoTypeLabel);
         }
