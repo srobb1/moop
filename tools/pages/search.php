@@ -127,7 +127,7 @@
         <strong class="me-auto">Search only specific annotation sources</strong>
         <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted"
                 data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="About annotation types">
-          <i class="fa fa-circle-info"></i>
+          <i class="fa fa-info-circle"></i>
         </button>
         <small class="text-muted fst-italic ms-2">leave unchecked to search all</small>
         <div class="d-flex gap-1 ms-2">

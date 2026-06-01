@@ -52,7 +52,9 @@ $(document).ready(function () {
             if (!byOrg[org]) byOrg[org] = { label: '', cn: '', rows: [] };
             byOrg[org].label = $(this).data('label') || org.replace(/_/g, ' ');
             byOrg[org].cn    = $(this).data('cn') || '';
-            byOrg[org].rows.push($(this).closest('.scope-gs-row').find('label').text().trim());
+            const asmDisplay = $(this).data('asm-display') || $(this).data('asm');
+            const gs         = $(this).data('gs');
+            byOrg[org].rows.push(asmDisplay + ' › ' + gs);
         });
 
         const orgCount = Object.keys(byOrg).length;
