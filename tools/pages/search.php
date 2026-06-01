@@ -85,17 +85,17 @@
                      data-label="<?= htmlspecialchars($label) ?>"
                      data-cn="<?= htmlspecialchars($cn) ?>"
                      data-asm-display="<?= htmlspecialchars($asmDisplay) ?>">
-              <span class="org-groups">
+              <span class="org-groups flex-shrink-0">
                 <?php foreach ($groups as $g): ?>
                 <span class="org-group-chip" style="background:<?= $groupColor($g) ?>"><?= htmlspecialchars($g) ?></span>
                 <?php endforeach; ?>
               </span>
-              <em><?= htmlspecialchars($label) ?></em><?php if ($cn): ?><span class="text-muted"> · <?= htmlspecialchars($cn) ?></span><?php endif; ?>
-              <span class="text-muted mx-1">—</span>
-              <span><?= htmlspecialchars($asmDisplay) ?></span><?php if ($asmAccession): ?><small class="text-muted ms-1">(<?= htmlspecialchars($asmAccession) ?>)</small><?php endif; ?>
-              <span class="text-muted mx-1">›</span>
-              <span><?= htmlspecialchars($gs) ?></span>
-              <span class="org-check ms-auto"><i class="fas fa-check text-success"></i></span>
+              <span class="flex-grow-1 text-truncate" style="min-width:0; white-space:nowrap;">
+                <em><?= htmlspecialchars($label) ?></em><?php if ($cn): ?><span class="text-muted"> · <?= htmlspecialchars($cn) ?></span><?php endif;
+                ?><span class="text-muted"> — </span><?= htmlspecialchars($asmDisplay) ?><?php if ($asmAccession): ?><small class="text-muted ms-1">(<?= htmlspecialchars($asmAccession) ?>)</small><?php endif;
+                ?><span class="text-muted"> › </span><?= htmlspecialchars($gs) ?>
+              </span>
+              <span class="org-check flex-shrink-0"><i class="fas fa-check text-success"></i></span>
             </div>
             <?php endforeach; endforeach; endforeach; ?>
             <?php endif; ?>
