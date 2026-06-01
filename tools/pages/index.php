@@ -15,23 +15,29 @@
   <!-- Site Info Card -->
   <div class="row g-4 justify-content-center mb-5">
     <div class="col-md-12 col-lg-10">
-      <div class="card h-100 shadow-sm border-0 rounded-3 bg-info bg-opacity-10">
-        <div class="card-body">
-          <h5 class="fw-bold text-dark mb-3">Welcome to SIMRbase - MOOP Edition</h5>
-          <p class="card-text text-muted mb-3">
-            <strong>MOOP</strong> — to keep company, associate closely. Explore and discover how diverse organisms are mooped on SIMRbase. MOOP stands for Multiple Organisms One Platform. This new version of SIMRbase has the same data as before but it now easier to search across organsims. 
-          </p>
-          
-          <h6 class="fw-semibold text-dark mb-2">Getting Started:</h6>
-          <ul class="text-muted mb-3">
-            <li><strong>Select Organisms:</strong> Use <em>Group Select</em> for quick predefined groups or <em>Tree Select</em> for custom organism combinations</li>
-            <li><strong>Choose a Tool:</strong> Search sequences and annotations, run BLAST comparisons, examine genome assemblies, or analyze multiple organisms together</li>
-            <li><strong>Explore Results:</strong> View interactive tables, visualizations, and download data for external analysis</li>
-          </ul>
-          
-          <p class="text-muted mb-0">
-            <strong>New to SIMRbase?</strong> <a href="help.php?topic=getting-started" class="text-info text-decoration-none">Read the Getting Started guide</a> or explore other <a href="help.php" class="text-info text-decoration-none">tutorials and documentation</a> for detailed help.
-          </p>
+      <div class="card shadow-sm border-0 rounded-3 bg-info bg-opacity-10">
+        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center"
+             style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#site-info-body" aria-expanded="false" aria-controls="site-info-body">
+          <h5 class="fw-bold text-dark mb-0">Welcome to SIMRbase - MOOP Edition</h5>
+          <i class="fa fa-chevron-down text-muted" id="site-info-chevron"></i>
+        </div>
+        <div class="collapse" id="site-info-body">
+          <div class="card-body pt-0">
+            <p class="card-text text-muted mb-3">
+              <strong>MOOP</strong> — to keep company, associate closely. Explore and discover how diverse organisms are mooped on SIMRbase. MOOP stands for Multiple Organisms One Platform. This new version of SIMRbase has the same data as before but it now easier to search across organsims.
+            </p>
+
+            <h6 class="fw-semibold text-dark mb-2">Getting Started:</h6>
+            <ul class="text-muted mb-3">
+              <li><strong>Select Organisms:</strong> Use <em>Group Select</em> for quick predefined groups or <em>Tree Select</em> for custom organism combinations</li>
+              <li><strong>Choose a Tool:</strong> Search sequences and annotations, run BLAST comparisons, examine genome assemblies, or analyze multiple organisms together</li>
+              <li><strong>Explore Results:</strong> View interactive tables, visualizations, and download data for external analysis</li>
+            </ul>
+
+            <p class="text-muted mb-0">
+              <strong>New to SIMRbase?</strong> <a href="help.php?topic=getting-started" class="text-info text-decoration-none">Read the Getting Started guide</a> or explore other <a href="help.php" class="text-info text-decoration-none">tutorials and documentation</a> for detailed help.
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -144,5 +150,12 @@
 <script src="js/index.js?v=<?= filemtime(__DIR__ . '/../../js/index.js') ?>"></script>
 <script>
 const userAccess = <?= $user_access_json ?>;
+
+document.getElementById('site-info-body').addEventListener('show.bs.collapse', () => {
+    document.getElementById('site-info-chevron').classList.replace('fa-chevron-down', 'fa-chevron-up');
+});
+document.getElementById('site-info-body').addEventListener('hide.bs.collapse', () => {
+    document.getElementById('site-info-chevron').classList.replace('fa-chevron-up', 'fa-chevron-down');
+});
 const treeData = <?= json_encode($taxonomy_tree_data) ?>;
 </script>
