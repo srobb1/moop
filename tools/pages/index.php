@@ -46,7 +46,7 @@
                   <div>
                     <div class="fw-semibold mb-1">Choose a tool</div>
                     <p class="text-muted small mb-0">
-                      Click a tool in the <strong>Tools</strong> box. It opens in a new tab,
+                      Click a tool in the <strong>Tool Box</strong>. It opens in a new tab,
                       pre-filtered to exactly the organisms you selected.
                     </p>
                   </div>

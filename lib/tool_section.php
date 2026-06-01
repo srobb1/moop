@@ -75,7 +75,7 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
 <!-- Tools Section -->
 <div class="card shadow-sm" style="min-height: 200px;">
     <div class="card-header bg-tools text-white">
-        <h5 class="mb-0"><i class="fa fa-toolbox"></i> Tools</h5>
+        <h5 class="mb-0"><i class="fa fa-toolbox"></i> Tool Box</h5>
     </div>
     <div class="card-body p-2">
         <div class="d-flex flex-wrap gap-2">
