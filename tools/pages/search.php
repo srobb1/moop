@@ -54,55 +54,46 @@
         <?php else: ?>
         <div id="scope-tree">
           <?php $oi = 0; foreach ($scope_tree as $organism => $assemblies): $oi++;
-            $info   = $organism_info[$organism] ?? [];
-            $genus  = $info['genus']       ?? '';
-            $sp     = $info['species']     ?? '';
-            $cn     = $info['common_name'] ?? '';
-            $label  = trim("$genus $sp") ?: str_replace('_', ' ', $organism);
-            $oid    = 'so_' . $oi;
+            $info  = $organism_info[$organism] ?? [];
+            $genus = $info['genus']       ?? '';
+            $sp    = $info['species']     ?? '';
+            $cn    = $info['common_name'] ?? '';
+            $label = trim("$genus $sp") ?: str_replace('_', ' ', $organism);
+            $oid   = 'so_' . $oi;
           ?>
-          <div class="scope-org mb-1" data-org="<?= htmlspecialchars($organism) ?>">
-            <div class="d-flex align-items-center gap-1 px-1 py-1 rounded scope-org-row" style="background:#f8f9fa;">
-              <input type="checkbox" class="form-check-input flex-shrink-0 scope-org-cb mb-0"
-                     id="<?= $oid ?>" data-org="<?= htmlspecialchars($organism) ?>">
-              <label for="<?= $oid ?>" class="form-check-label fw-semibold mb-0 me-auto"
-                     style="cursor:pointer; font-size:0.9rem;">
-                <em><?= htmlspecialchars($label) ?></em>
-                <?php if ($cn): ?>
-                  <span class="text-muted fw-normal">(<?= htmlspecialchars($cn) ?>)</span>
-                <?php endif; ?>
-              </label>
-              <i class="fa fa-chevron-down scope-toggle text-muted"
-                 style="cursor:pointer; font-size:0.75rem;" data-target="<?= $oid ?>-body"></i>
-            </div>
-            <div id="<?= $oid ?>-body" class="ps-3 pt-1">
-              <?php $ai = 0; foreach ($assemblies as $assembly => $gene_sets): $ai++;
-                $aid = $oid . '_a' . $ai;
-              ?>
-              <?php /* Hidden assembly checkbox — kept for JS cascade logic */ ?>
-              <input type="checkbox" class="scope-asm-cb visually-hidden"
-                     id="<?= $aid ?>" data-org="<?= htmlspecialchars($organism) ?>"
-                     data-asm="<?= htmlspecialchars($assembly) ?>">
-
-              <?php $gi = 0; foreach ($gene_sets as $gs): $gi++;
-                $gsid = $aid . '_g' . $gi;
-              ?>
-              <div class="d-flex align-items-center gap-1 px-1 py-1">
-                <input type="checkbox" class="form-check-input flex-shrink-0 scope-gs-cb mb-0"
-                       id="<?= $gsid ?>" data-org="<?= htmlspecialchars($organism) ?>"
-                       data-asm="<?= htmlspecialchars($assembly) ?>"
-                       data-gs="<?= htmlspecialchars($gs) ?>">
-                <label for="<?= $gsid ?>" class="form-check-label mb-0"
-                       style="cursor:pointer; font-size:0.82rem;">
-                  <span style="color:#b45309; font-weight:600;"><?= htmlspecialchars($assembly) ?></span>
-                  <span class="text-muted mx-1">›</span>
-                  <?= htmlspecialchars($gs) ?>
-                </label>
-              </div>
-              <?php endforeach; ?>
-              <?php endforeach; ?>
-            </div>
+          <?php /* Hidden org + asm checkboxes kept for JS cascade/sync */ ?>
+          <input type="checkbox" class="scope-org-cb visually-hidden"
+                 id="<?= $oid ?>" data-org="<?= htmlspecialchars($organism) ?>">
+          <?php $ai = 0; foreach ($assemblies as $assembly => $gene_sets): $ai++;
+            $aid = $oid . '_a' . $ai;
+          ?>
+          <input type="checkbox" class="scope-asm-cb visually-hidden"
+                 id="<?= $aid ?>" data-org="<?= htmlspecialchars($organism) ?>"
+                 data-asm="<?= htmlspecialchars($assembly) ?>">
+          <?php $gi = 0; foreach ($gene_sets as $gs): $gi++;
+            $gsid       = $aid . '_g' . $gi;
+            $searchText = strtolower("$label $cn $assembly $gs");
+          ?>
+          <div class="d-flex align-items-center gap-1 px-1 py-1 scope-flat-row"
+               data-search="<?= htmlspecialchars($searchText) ?>">
+            <input type="checkbox" class="form-check-input flex-shrink-0 scope-gs-cb mb-0"
+                   id="<?= $gsid ?>" data-org="<?= htmlspecialchars($organism) ?>"
+                   data-asm="<?= htmlspecialchars($assembly) ?>"
+                   data-gs="<?= htmlspecialchars($gs) ?>">
+            <label for="<?= $gsid ?>" class="form-check-label mb-0"
+                   style="cursor:pointer; font-size:0.82rem;">
+              <em><?= htmlspecialchars($label) ?></em>
+              <?php if ($cn): ?>
+                <span class="text-muted fw-normal">(<?= htmlspecialchars($cn) ?>)</span>
+              <?php endif; ?>
+              <span class="text-muted mx-1">›</span>
+              <span style="color:#b45309; font-weight:600;"><?= htmlspecialchars($assembly) ?></span>
+              <span class="text-muted mx-1">›</span>
+              <?= htmlspecialchars($gs) ?>
+            </label>
           </div>
+          <?php endforeach; ?>
+          <?php endforeach; ?>
           <?php endforeach; ?>
         </div>
         <?php endif; ?>

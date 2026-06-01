@@ -85,33 +85,12 @@ $(document).ready(function () {
         cb.indeterminate = checked > 0 && checked < total;
     }
 
-    // Scope filter
+    // Scope filter — flat rows use data-search attribute
     $('#scope-filter').on('input', function () {
         const q = $(this).val().trim().toLowerCase();
-        if (!q) {
-            $('.scope-org, .scope-asm').show();
-            $('.scope-gs-cb').closest('.d-flex').show();
-            return;
-        }
-
-        // Hide everything; show matching rows + their ancestors
-        $('.scope-org').hide();
-        $('.scope-asm').hide();
-        $('.scope-gs-cb').closest('.d-flex').hide();
-
-        $('.scope-gs-cb').each(function () {
-            const org     = $(this).data('org');
-            const asm     = $(this).data('asm');
-            const gs      = String($(this).data('gs')).toLowerCase();
-            const orgText = $('[data-org="' + org + '"].scope-org')
-                              .find('.scope-org-row label').text().toLowerCase();
-
-            if (orgText.includes(q) || String(asm).toLowerCase().includes(q) || gs.includes(q)) {
-                $(this).closest('.d-flex').show();
-                $('[data-org="' + org + '"][data-asm="' + asm + '"].scope-asm').show();
-                const orgEl = $('[data-org="' + org + '"].scope-org').show();
-                orgEl.children('[id$="-body"]').show(); // ensure org body expanded
-            }
+        $('.scope-flat-row').each(function () {
+            const matches = !q || $(this).data('search').includes(q);
+            $(this).toggle(matches);
         });
     });
 
