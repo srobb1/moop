@@ -96,7 +96,7 @@
                        style="cursor:pointer; font-size:0.82rem;">
                   <span style="color:#b45309; font-weight:600;"><?= htmlspecialchars($assembly) ?></span>
                   <span class="text-muted mx-1">›</span>
-                  <span class="badge bg-gene-set me-1" style="font-size:0.65rem;">GS</span><?= htmlspecialchars($gs) ?>
+                  <?= htmlspecialchars($gs) ?>
                 </label>
               </div>
               <?php endforeach; ?>
