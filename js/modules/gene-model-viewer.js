@@ -27,7 +27,7 @@
     const LABEL_HEIGHT  = 16;
     const PAD_TOP       = 4;
     const PAD_BOTTOM    = 18;   // room for strand label
-    const PAD_LEFT      = 30;  // wider to accommodate upstream/downstream blocks
+    const PAD_LEFT      = 64;  // wider to accommodate upstream/downstream blocks and row-type labels
     const PAD_RIGHT     = 30;
     const EXON_H        = 10;
     const CDS_H         = 16;
@@ -93,6 +93,16 @@
             const gRowTop = PAD_TOP;
             const gCy     = gRowTop + LABEL_HEIGHT + ROW_HEIGHT / 2;
             const gG      = makeSvgEl('g');
+
+            const gTypeLabel = makeSvgEl('text');
+            gTypeLabel.setAttribute('x', PAD_LEFT - 6);
+            gTypeLabel.setAttribute('y', gRowTop + LABEL_HEIGHT - 2);
+            gTypeLabel.setAttribute('font-size', '10');
+            gTypeLabel.setAttribute('fill', COLOR_LABEL);
+            gTypeLabel.setAttribute('text-anchor', 'end');
+            gTypeLabel.setAttribute('font-style', 'italic');
+            gTypeLabel.textContent = gene.type || 'gene';
+            gG.appendChild(gTypeLabel);
 
             const gLabel = makeSvgEl('text');
             gLabel.setAttribute('x', PAD_LEFT);
@@ -281,6 +291,25 @@
 
             svg.appendChild(g);
         });
+
+        // Single isoform-type label centered over the whole mRNA block
+        if (isoforms.length > 0) {
+            const isoBlockTop    = PAD_TOP + GENE_ROW;
+            const isoBlockBottom = isoBlockTop + isoforms.length * (ROW_HEIGHT + LABEL_HEIGHT);
+            const isoCenterY     = (isoBlockTop + isoBlockBottom) / 2;
+            const isoType        = isoforms[0].type || 'mRNA';
+
+            const isoTypeLabel = makeSvgEl('text');
+            isoTypeLabel.setAttribute('x', PAD_LEFT - 6);
+            isoTypeLabel.setAttribute('y', isoCenterY);
+            isoTypeLabel.setAttribute('font-size', '10');
+            isoTypeLabel.setAttribute('fill', COLOR_LABEL);
+            isoTypeLabel.setAttribute('text-anchor', 'end');
+            isoTypeLabel.setAttribute('dominant-baseline', 'middle');
+            isoTypeLabel.setAttribute('font-style', 'italic');
+            isoTypeLabel.textContent = isoType;
+            svg.appendChild(isoTypeLabel);
+        }
 
         // Strand label bottom-right
         const strandText = makeSvgEl('text');

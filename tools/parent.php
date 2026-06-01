@@ -239,6 +239,7 @@ if ($gff_available) {
             $mid = $m[1];
             $isoforms[$mid] = [
                 'id'     => $mid,
+                'type'   => $parts[2],
                 'anchor' => 'annot_section_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $mid . '_' . ($analysis_order[0] ?? 'annotation')),
                 'start'  => (int)$parts[3],
                 'end'    => (int)$parts[4],
@@ -284,7 +285,7 @@ if ($gff_available) {
             ));
             if (!empty($isoform_list)) {
                 $gene_model = [
-                    'gene'     => array_merge($feature_loc, ['id' => $feature_uniquename]),
+                    'gene'     => array_merge($feature_loc, ['id' => $feature_uniquename, 'type' => $type]),
                     'isoforms' => $isoform_list,
                 ];
             }
