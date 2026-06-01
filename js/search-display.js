@@ -379,10 +379,18 @@ $(document).ready(function () {
     $('#searchForm').on('submit', function (e) {
         e.preventDefault();
 
-        const checkedOrgs = getCheckedOrganisms();
+        const checkedOrgs  = getCheckedOrganisms();
+        const checkedTypes = $('.source-cb:checked').length;
+
+        // Warn about searching all organisms first (most impactful)
+        if (checkedOrgs.length === 0) {
+            if (!confirm('No organisms selected — this will search across all ' + allOrganisms.length + ' organisms and may take a while. Continue?')) {
+                return;
+            }
+        }
 
         // Require at least one annotation type
-        if ($('.source-cb:checked').length === 0) {
+        if (checkedTypes === 0) {
             alert('Please select at least one annotation type in section 3 before searching.');
             return;
         }
@@ -394,15 +402,14 @@ $(document).ready(function () {
             searchManager.config.organismsVar = activeOrgs;
             searchManager.config.totalVar     = activeOrgs.length;
             searchManager.handleSearch();
+            // Scroll results into view after a brief delay so they start rendering
+            setTimeout(() => {
+                const results = document.getElementById('searchResults');
+                if (results) results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 200);
         };
 
-        if (checkedOrgs.length === 0) {
-            if (confirm('No organisms selected — this will search across all ' + allOrganisms.length + ' organisms and may take a while. Continue?')) {
-                proceed();
-            }
-        } else {
-            proceed();
-        }
+        proceed();
     });
 
     // ── Init ─────────────────────────────────────────────────────────────────
