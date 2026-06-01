@@ -45,111 +45,124 @@
 
   <!-- Available Organisms Header -->
   <div class="text-center mb-4">
-    <h3 class="fw-bold mb-3">Select organisms by group or customize selection with the taxonomy tree</h3>
+    <h3 class="fw-bold mb-3">Select organisms to explore</h3>
   </div>
 
-  <!-- View Toggle -->
-  <div class="text-center mb-4">
-    <div class="btn-group" role="group">
-      <button type="button" class="btn btn-outline-primary active" id="card-view-btn" onclick="switchView('card')">
-        <i class="fa fa-th"></i> Group Select 
-      </button>
-      <button type="button" class="btn btn-outline-primary" id="tree-view-btn" onclick="switchView('tree')">
-        <i class="fa fa-project-diagram"></i> Tree Select 
-      </button>
-    </div>
-  </div>
+  <!-- Two-column layout: tabs (left) + selection panel (right, always visible) -->
+  <div class="row g-4">
 
-  <!-- Card View -->
-  <div id="card-view" class="view-container">
-    <div class="row g-4 justify-content-center">
-      <?php foreach ($cards_to_display as $card): ?>
-        <div class="col-md-6 col-lg-4">
-          <a href="<?= htmlspecialchars($card['link']) ?>" target="_blank" class="text-decoration-none card-link">
-            <div class="card h-100 shadow-sm border-0 rounded-3 organism-card">
-              <div class="card-body text-center d-flex flex-column">
-                <h3 class="card-title mb-3 fw-bold text-dark">
-                  <?= htmlspecialchars($card['title']) ?>
-                  <?php if (!empty($card['organism_count'])): ?>
-                    <span class="text-muted fw-normal fs-6">(<?= $card['organism_count'] ?>)</span>
-                  <?php endif; ?>
-                </h3>
-                <p class="card-text text-muted mb-3"><?= htmlspecialchars($card['text']) ?></p>
+    <!-- Left: 4 tabs -->
+    <div class="col-lg-8">
+      <ul class="nav nav-tabs" id="organism-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-organism-select" type="button" role="tab">
+            <i class="fa fa-list me-1"></i> Organism Select
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-taxon-select" type="button" role="tab">
+            <i class="fa fa-sitemap me-1"></i> Taxon Select
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-group-select" type="button" role="tab">
+            <i class="fa fa-th me-1"></i> Group Select
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tree-select" type="button" role="tab">
+            <i class="fa fa-project-diagram me-1"></i> Tree Select
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content border border-top-0 rounded-bottom p-3" id="organism-tabs-content">
+
+        <!-- Tab 1: Organism Select -->
+        <div class="tab-pane fade show active" id="tab-organism-select" role="tabpanel">
+          <input type="text" class="form-control form-control-sm mb-2" id="organism-select-filter"
+                 placeholder="Filter by name, common name, or group…">
+          <div id="organism-select-list" class="org-select-list"></div>
+        </div>
+
+        <!-- Tab 2: Taxon Select -->
+        <div class="tab-pane fade" id="tab-taxon-select" role="tabpanel">
+          <input type="text" class="form-control form-control-sm mb-2" id="taxon-select-filter"
+                 placeholder="Filter by taxonomy, name, or common name…">
+          <div id="taxon-select-list" class="org-select-list"></div>
+        </div>
+
+        <!-- Tab 3: Group Select -->
+        <div class="tab-pane fade" id="tab-group-select" role="tabpanel">
+          <div class="row g-3">
+            <?php foreach ($cards_to_display as $card): ?>
+              <div class="col-sm-6">
+                <a href="<?= htmlspecialchars($card['link']) ?>" target="_blank" class="text-decoration-none card-link">
+                  <div class="card h-100 shadow-sm border-0 rounded-3 organism-card">
+                    <div class="card-body text-center d-flex flex-column">
+                      <h3 class="card-title mb-3 fw-bold text-dark">
+                        <?= htmlspecialchars($card['title']) ?>
+                        <?php if (!empty($card['organism_count'])): ?>
+                          <span class="text-muted fw-normal fs-6">(<?= $card['organism_count'] ?>)</span>
+                        <?php endif; ?>
+                      </h3>
+                      <p class="card-text text-muted mb-3"><?= htmlspecialchars($card['text']) ?></p>
+                    </div>
+                  </div>
+                </a>
               </div>
-            </div>
-          </a>
-        </div>
-      <?php endforeach; ?>
-    </div>
-  </div>
-
-  <!-- Taxonomy Tree View -->
-  <div id="tree-view" class="view-container hidden">
-    <div class="row">
-      <div class="col-lg-8">
-        <div class="card shadow-sm">
-          <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="fa fa-project-diagram"></i> Taxonomy Tree</h5>
-          </div>
-          <div class="card-body">
-            <!-- Tree Filter -->
-            <div class="mb-3">
-              <small class="text-muted">
-                <i class="fa fa-info-circle text-info"></i> Click any node to select/deselect organisms. Selecting a higher branch selects all organisms below it. Then select a a tool from the Tool Box.
-              </small>
-            </div>
-            <div class="mb-3">
-              <input 
-                type="text" 
-                class="form-control form-control-sm" 
-                id="taxonomy-filter" 
-                placeholder="Filter by name..."
-                >
-            </div>
-            <div class="taxonomy-tree-scroll">
-              <div id="taxonomy-tree-container"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-4">
-        <div class="card shadow-sm sticky-card mb-3">
-          <div class="card-header bg-success text-white">
-            <h5 class="mb-0">
-              Selected Organisms 
-              <span class="badge bg-light text-dark" id="selected-count">0</span>
-            </h5>
-          </div>
-          <div class="card-body">
-            <div id="selected-organisms-list" class="mb-3">
-              <div class="text-muted fst-italic">No organisms selected</div>
-            </div>
-            
-            <div class="mt-3">
-              <!--
-              <small class="text-muted">
-                <i class="fa fa-info-circle"></i> Click any node to select/deselect organisms. 
-                Selecting a higher branch selects all organisms below it. Then select a tool to proceed.
-              </small>
-              -->
-            </div>
+            <?php endforeach; ?>
           </div>
         </div>
 
-        <!-- Tools Card -->
-        <?php 
-        $context = createToolContext('index', ['use_onclick_handler' => true]);
-        include_once TOOL_SECTION_PATH;
-        ?>
+        <!-- Tab 4: Tree Select -->
+        <div class="tab-pane fade" id="tab-tree-select" role="tabpanel">
+          <div class="mb-2">
+            <small class="text-muted">
+              <i class="fa fa-info-circle text-info"></i> Click any node to select/deselect. Selecting a branch selects all organisms below it.
+            </small>
+          </div>
+          <input type="text" class="form-control form-control-sm mb-2" id="taxonomy-filter" placeholder="Filter by name…">
+          <div class="taxonomy-tree-scroll">
+            <div id="taxonomy-tree-container"></div>
+          </div>
+        </div>
+
+      </div><!-- /tab-content -->
+    </div><!-- /col-lg-8 -->
+
+    <!-- Right: always-visible selection panel -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm sticky-card mb-3">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">
+            Selected Organisms
+            <span class="badge bg-light text-dark ms-1" id="selected-count">0</span>
+          </h5>
+        </div>
+        <div class="card-body p-2">
+          <div id="selected-organisms-list">
+            <div class="text-muted fst-italic small px-1">No organisms selected</div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
+
+      <!-- Tools Card -->
+      <?php
+      $context = createToolContext('index', ['use_onclick_handler' => true]);
+      include_once TOOL_SECTION_PATH;
+      ?>
+    </div><!-- /col-lg-4 -->
+
+  </div><!-- /row -->
+</div><!-- /container -->
 
 <script src="js/modules/taxonomy-tree.js?v=<?= filemtime(__DIR__ . '/../../js/modules/taxonomy-tree.js') ?>"></script>
 <script src="js/index.js?v=<?= filemtime(__DIR__ . '/../../js/index.js') ?>"></script>
 <script>
-const userAccess = <?= $user_access_json ?>;
+const userAccess    = <?= $user_access_json ?>;
+const treeData      = <?= json_encode($taxonomy_tree_data) ?>;
+const organismData  = <?= $organism_list_json ?>;
 
 document.getElementById('site-info-body').addEventListener('show.bs.collapse', () => {
     document.getElementById('site-info-chevron').classList.replace('fa-chevron-down', 'fa-chevron-up');
@@ -157,5 +170,4 @@ document.getElementById('site-info-body').addEventListener('show.bs.collapse', (
 document.getElementById('site-info-body').addEventListener('hide.bs.collapse', () => {
     document.getElementById('site-info-chevron').classList.replace('fa-chevron-up', 'fa-chevron-down');
 });
-const treeData = <?= json_encode($taxonomy_tree_data) ?>;
 </script>

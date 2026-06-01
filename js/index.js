@@ -1,96 +1,223 @@
-// Index page shared functions
+// Index page — organism selection
+// Global state shared by all four tabs and the taxonomy tree
+
+let selectedOrganisms = new Set();
+let orgDataMap        = {};   // organism key → data object
+let phyloTree         = null;
+
+const GROUP_COLORS = [
+    '#3498db','#e74c3c','#2ecc71','#f39c12','#9b59b6',
+    '#1abc9c','#e67e22','#e91e63','#00bcd4','#795548','#607d8b'
+];
+
+function groupColor(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+    return GROUP_COLORS[Math.abs(h) % GROUP_COLORS.length];
+}
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Organism / Taxon lists ────────────────────────────────────────────────
+
+function renderOrganismList() {
+    const list = document.getElementById('organism-select-list');
+    if (!list) return;
+    list.innerHTML = organismData.map(o => {
+        const chips = o.groups.map(g =>
+            `<span class="org-group-chip" style="background:${groupColor(g)}">${escHtml(g)}</span>`
+        ).join('');
+        const common = o.common_name
+            ? `<span class="org-common text-muted">· ${escHtml(o.common_name)}</span>`
+            : '';
+        const searchText = [o.display_name, o.common_name, ...o.groups].join(' ').toLowerCase();
+        return `<div class="org-select-row" data-org="${escHtml(o.organism)}" data-search="${escHtml(searchText)}">
+            <span class="org-groups">${chips}</span>
+            <span class="org-name"><em>${escHtml(o.display_name)}</em></span>
+            ${common}
+            <span class="org-check ms-auto"><i class="fas fa-check text-success"></i></span>
+        </div>`;
+    }).join('');
+
+    list.addEventListener('click', e => {
+        const row = e.target.closest('.org-select-row');
+        if (row) toggleOrganism(row.dataset.org);
+    });
+}
+
+function renderTaxonList() {
+    const list = document.getElementById('taxon-select-list');
+    if (!list) return;
+    list.innerHTML = organismData.map(o => {
+        const chain    = o.taxon_chain || [];
+        const trimmed  = chain.slice(Math.max(0, chain.length - 6));
+        const ellipsis = trimmed.length < chain.length ? '… ' : '';
+        const chainStr = ellipsis + trimmed.join(' › ');
+        const common   = o.common_name
+            ? `<span class="org-common text-muted">· ${escHtml(o.common_name)}</span>`
+            : '';
+        const searchText = [o.display_name, o.common_name, ...chain].join(' ').toLowerCase();
+        return `<div class="org-select-row taxon-row" data-org="${escHtml(o.organism)}" data-search="${escHtml(searchText)}">
+            <span class="taxon-path">${escHtml(chainStr)}</span>
+            <span class="org-name"><em>${escHtml(o.display_name)}</em></span>
+            ${common}
+            <span class="org-check ms-auto"><i class="fas fa-check text-success"></i></span>
+        </div>`;
+    }).join('');
+
+    list.addEventListener('click', e => {
+        const row = e.target.closest('.org-select-row');
+        if (row) toggleOrganism(row.dataset.org);
+    });
+}
+
+function filterList(inputId, listId) {
+    const q    = document.getElementById(inputId)?.value.toLowerCase() ?? '';
+    const rows = document.querySelectorAll(`#${listId} .org-select-row`);
+    rows.forEach(row => {
+        row.classList.toggle('hidden', q !== '' && !row.dataset.search.includes(q));
+    });
+}
+
+// ─── Selection state ───────────────────────────────────────────────────────
+
+function toggleOrganism(org) {
+    if (selectedOrganisms.has(org)) {
+        selectedOrganisms.delete(org);
+    } else {
+        selectedOrganisms.add(org);
+    }
+    updateSelectedList();
+    refreshAllHighlights();
+    if (phyloTree) phyloTree.updateUI();
+}
+
+function removeOrganism(org) {
+    selectedOrganisms.delete(org);
+    updateSelectedList();
+    refreshAllHighlights();
+    if (phyloTree) phyloTree.updateUI();
+}
+
+function refreshAllHighlights() {
+    document.querySelectorAll('.org-select-row').forEach(row => {
+        row.classList.toggle('selected', selectedOrganisms.has(row.dataset.org));
+    });
+}
+
+function updateSelectedList() {
+    const listEl  = document.getElementById('selected-organisms-list');
+    const countEl = document.getElementById('selected-count');
+    if (!listEl) return;
+
+    countEl.textContent = selectedOrganisms.size;
+
+    if (selectedOrganisms.size === 0) {
+        listEl.innerHTML = '<div class="text-muted fst-italic small px-1">No organisms selected</div>';
+        return;
+    }
+
+    const site = typeof sitePath !== 'undefined' ? sitePath.replace(/^\//, '').split('/')[0] : 'moop';
+    listEl.innerHTML = Array.from(selectedOrganisms).map(org => {
+        const info    = orgDataMap[org];
+        const name    = info ? `<em>${escHtml(info.display_name)}</em>` : escHtml(org.replace(/_/g, ' '));
+        const common  = info?.common_name
+            ? ` <span class="text-muted">· ${escHtml(info.common_name)}</span>` : '';
+        const pageUrl = `/${site}/tools/organism.php?organism=${encodeURIComponent(org)}`;
+        return `<div class="selected-org-item d-flex align-items-center justify-content-between">
+            <span class="selected-org-name">${name}${common}</span>
+            <span class="selected-org-actions ms-2 flex-shrink-0 text-nowrap">
+                <a href="${pageUrl}" target="_blank" class="btn btn-link btn-sm p-0 me-1" title="Open organism page">
+                    <i class="fas fa-external-link-alt text-info"></i>
+                </a>
+                <button class="btn btn-link btn-sm p-0 text-danger remove-org-btn"
+                        data-org="${escHtml(org)}" title="Remove">
+                    <i class="fas fa-times"></i>
+                </button>
+            </span>
+        </div>`;
+    }).join('');
+}
+
+// ─── Tool submission ───────────────────────────────────────────────────────
 
 function handleToolClick(toolId) {
-  if (!phyloTree || phyloTree.selectedOrganisms.size === 0) {
-    alert('Please select at least one organism');
-    return;
-  }
-
-  const toolBtn = document.getElementById(`tool-btn-${toolId}`);
-  if (!toolBtn) {
-    console.error(`Tool button not found: tool-btn-${toolId}`);
-    return;
-  }
-
-  const toolPath = toolBtn.getAttribute('data-tool-path');
-  if (!toolPath) {
-    console.error('Tool path missing from button');
-    return;
-  }
-
-  const organisms = Array.from(phyloTree.selectedOrganisms);
-  const siteName = typeof sitePath !== 'undefined' ? sitePath.replace(/^\//,'').split('/')[0] : 'moop';
-
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = `/${siteName}${toolPath}`;
-  form.target = '_blank';
-
-  organisms.forEach(org => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'organisms[]';
-    input.value = org;
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
-  document.body.removeChild(form);
-}
-
-function switchView(view) {
-  const cardView = document.getElementById('card-view');
-  const treeView = document.getElementById('tree-view');
-  const cardBtn = document.getElementById('card-view-btn');
-  const treeBtn = document.getElementById('tree-view-btn');
-  
-  if (view === 'card') {
-    cardView.style.display = 'block';
-    treeView.style.display = 'none';
-    cardBtn.classList.add('active');
-    treeBtn.classList.remove('active');
-  } else {
-    cardView.style.display = 'none';
-    treeView.style.display = 'block';
-    cardBtn.classList.remove('active');
-    treeBtn.classList.add('active');
-    
-    // Initialize tree on first view
-    if (!phyloTree) {
-      initPhyloTree(treeData, userAccess);
-      // Setup filter listener after tree is initialized
-      setupTaxonomyFilter();
+    if (selectedOrganisms.size === 0) {
+        alert('Please select at least one organism');
+        return;
     }
-  }
+    const btn = document.getElementById(`tool-btn-${toolId}`);
+    if (!btn) return;
+    const toolPath = btn.getAttribute('data-tool-path');
+    if (!toolPath) return;
+
+    const site = typeof sitePath !== 'undefined' ? sitePath.replace(/^\//,'').split('/')[0] : 'moop';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/${site}${toolPath}`;
+    form.target = '_blank';
+
+    Array.from(selectedOrganisms).forEach(org => {
+        const inp = document.createElement('input');
+        inp.type  = 'hidden';
+        inp.name  = 'organisms[]';
+        inp.value = org;
+        form.appendChild(inp);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
 }
 
-function setupTaxonomyFilter() {
-  const filterInput = document.getElementById('taxonomy-filter');
-  if (!filterInput) return;
-  
-  filterInput.addEventListener('keyup', function() {
-    filterTaxonomyTree(this.value.toLowerCase());
-  });
-}
+// ─── Tree tab filter (reused from old code) ────────────────────────────────
 
 function filterTaxonomyTree(filterText) {
-  const nodes = document.querySelectorAll('.phylo-node');
-  
-  nodes.forEach(node => {
-    const nodeLabel = node.textContent.toLowerCase();
-    const matches = filterText === '' || nodeLabel.includes(filterText);
-    
-    if (matches) {
-      node.style.display = '';
-      // Show parent nodes if this node is visible
-      let parent = node.closest('.phylo-children')?.parentElement;
-      while (parent && parent.classList.contains('phylo-node')) {
-        parent.style.display = '';
-        parent = parent.closest('.phylo-children')?.parentElement;
-      }
-    } else {
-      node.style.display = 'none';
-    }
-  });
+    document.querySelectorAll('.phylo-node').forEach(node => {
+        const matches = filterText === '' || node.textContent.toLowerCase().includes(filterText);
+        node.style.display = matches ? '' : 'none';
+        if (matches) {
+            let parent = node.closest('.phylo-children')?.parentElement;
+            while (parent?.classList.contains('phylo-node')) {
+                parent.style.display = '';
+                parent = parent.closest('.phylo-children')?.parentElement;
+            }
+        }
+    });
 }
+
+// ─── Init ──────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Build lookup map
+    organismData.forEach(o => { orgDataMap[o.organism] = o; });
+
+    // Render both searchable lists
+    renderOrganismList();
+    renderTaxonList();
+
+    // Filter inputs
+    document.getElementById('organism-select-filter')
+        ?.addEventListener('input', () => filterList('organism-select-filter', 'organism-select-list'));
+    document.getElementById('taxon-select-filter')
+        ?.addEventListener('input', () => filterList('taxon-select-filter', 'taxon-select-list'));
+    document.getElementById('taxonomy-filter')
+        ?.addEventListener('input', function () { filterTaxonomyTree(this.value.toLowerCase()); });
+
+    // Init tree on first visit to Tree Select tab
+    document.getElementById('tab-tree-select')?.addEventListener('shown.bs.tab', () => {
+        if (!phyloTree) {
+            phyloTree = new PhyloTree('taxonomy-tree-container', treeData, userAccess);
+        }
+        phyloTree.updateUI();
+    });
+
+    // Remove-organism delegation on the selected panel
+    document.getElementById('selected-organisms-list')
+        ?.addEventListener('click', e => {
+            const btn = e.target.closest('.remove-org-btn');
+            if (btn) removeOrganism(btn.dataset.org);
+        });
+});

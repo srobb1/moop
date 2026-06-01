@@ -4,7 +4,6 @@ class PhyloTree {
         this.container = document.getElementById(containerId);
         this.data = data;
         this.userAccess = userAccess;
-        this.selectedOrganisms = new Set();
         this.nodeMap = new Map();
         this.render();
         this.attachEventListeners();
@@ -33,16 +32,19 @@ class PhyloTree {
 
     toggleNode(node) {
         const organisms = this.getAllOrganismsInNode(node);
-        const allSelected = organisms.every(org => this.selectedOrganisms.has(org));
+        const allSelected = organisms.every(org => selectedOrganisms.has(org));
         
         if (allSelected) {
-            organisms.forEach(org => this.selectedOrganisms.delete(org));
+            organisms.forEach(org => selectedOrganisms.delete(org));
         } else {
-            organisms.forEach(org => this.selectedOrganisms.add(org));
+            organisms.forEach(org => selectedOrganisms.add(org));
         }
         
         this.updateUI();
-        this.updateSelectedList();
+        if (typeof updateSelectedList !== 'undefined') {
+            updateSelectedList();
+            refreshAllHighlights();
+        }
     }
 
     updateUI() {
@@ -52,8 +54,8 @@ class PhyloTree {
             if (!nodeData) return;
             
             const organisms = this.getAllOrganismsInNode(nodeData);
-            const allSelected = organisms.length > 0 && organisms.every(org => this.selectedOrganisms.has(org));
-            const someSelected = organisms.some(org => this.selectedOrganisms.has(org));
+            const allSelected = organisms.length > 0 && organisms.every(org => selectedOrganisms.has(org));
+            const someSelected = organisms.some(org => selectedOrganisms.has(org));
             
             nodeElement.classList.remove('selected', 'partial');
             if (allSelected) {
@@ -64,31 +66,8 @@ class PhyloTree {
         });
     }
 
-    updateSelectedList() {
-        const listEl = document.getElementById('selected-organisms-list');
-        const countEl = document.getElementById('selected-count');
-        const searchBtn = document.getElementById('taxonomy-search-btn');
-        
-        if (this.selectedOrganisms.size === 0) {
-            listEl.innerHTML = '<div class="text-muted fst-italic">No organisms selected</div>';
-            countEl.textContent = '0';
-            if (searchBtn) searchBtn.disabled = true;
-        } else {
-            const siteName = typeof sitePath !== 'undefined' ? sitePath.replace(/^\//, '').split('/')[0] : 'moop';
-            const items = Array.from(this.selectedOrganisms).map(org => {
-                const parts = org.split('_');
-                const formatted = `<i>${parts[0]} ${parts[1]}</i>`;
-                const url = `/${siteName}/tools/organism.php?organism=${encodeURIComponent(org)}`;
-                return `<a href="${url}" target="_blank" class="badge bg-primary me-1 mb-1 text-decoration-none">${formatted}</a>`;
-            }).join('');
-            listEl.innerHTML = items;
-            countEl.textContent = this.selectedOrganisms.size;
-            if (searchBtn) searchBtn.disabled = false;
-        }
-    }
-
     navigateToSearch() {
-        const organisms = Array.from(this.selectedOrganisms);
+        const organisms = Array.from(selectedOrganisms);
         if (organisms.length === 1) {
             window.open(`tools/organism.php?organism=${encodeURIComponent(organisms[0])}&multi_search[]=${encodeURIComponent(organisms[0])}`, '_blank');
         } else {
@@ -165,9 +144,3 @@ class PhyloTree {
     }
 }
 
-// Initialize on page load
-let phyloTree = null;
-
-function initPhyloTree(treeData, userAccess) {
-    phyloTree = new PhyloTree('taxonomy-tree-container', treeData, userAccess);
-}
