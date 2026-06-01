@@ -129,10 +129,10 @@ $(document).ready(function () {
     let sourcesLoadTimer = null;
     function onScopeChange() {
         updateScopeSummary();
-        // Debounce source reload so rapid checkbox changes don't spam the endpoint
         clearTimeout(sourcesLoadTimer);
         sourcesLoadTimer = setTimeout(() => {
-            loadAnnotationSources(getCheckedOrganisms());
+            const orgs = getCheckedOrganisms();
+            loadAnnotationSources(orgs.length ? orgs : allOrganisms);
         }, 300);
     }
 
@@ -157,17 +157,21 @@ $(document).ready(function () {
         $('#scope-summary').text(txt);
     }
 
-    // Build selectedScope object for AnnotationSearch from current tree state
+    // Build selectedScope object for AnnotationSearch from current tree state.
+    // Returns null (= no filter) when nothing is checked or everything is checked.
     function buildSelectedScope() {
+        const checkedOrgs = getCheckedOrganisms();
+        if (!checkedOrgs.length) return null;
+
         const scope = {};
         let hasExclusion = false;
 
         $('.scope-gs-cb').each(function () {
-            const org     = $(this).data('org');
-            const asm     = $(this).data('asm');
-            const gs      = $(this).data('gs');
-            if (!scope[org])       scope[org]       = {};
-            if (!scope[org][asm])  scope[org][asm]  = {};
+            const org = $(this).data('org');
+            const asm = $(this).data('asm');
+            const gs  = $(this).data('gs');
+            if (!scope[org])      scope[org]      = {};
+            if (!scope[org][asm]) scope[org][asm] = {};
             scope[org][asm][gs] = $(this).is(':checked');
             if (!scope[org][asm][gs]) hasExclusion = true;
         });
@@ -181,11 +185,7 @@ $(document).ready(function () {
     let sourceOverrides = {};
 
     function loadAnnotationSources(organisms) {
-        if (!organisms.length) {
-            $('#sourcesPanel').html('<p class="text-muted small p-2">Select at least one organism to see annotation sources.</p>');
-            $('#sources-summary').text('');
-            return;
-        }
+        if (!organisms.length) organisms = allOrganisms;
 
         $('#sourcesPanel').html('<div class="text-center p-3 text-muted"><i class="fa fa-spinner fa-spin me-1"></i> Loading…</div>');
 
@@ -226,7 +226,7 @@ $(document).ready(function () {
 
             html += `<div class="ps-3">`;
             for (const src of sources) {
-                const checked   = sourceOverrides[src.name] !== false;
+                const checked   = sourceOverrides[src.name] === true;
                 const checkedAt = checked ? 'checked' : '';
                 const count     = src.count ? ` <span class="text-muted">(${src.count.toLocaleString()})</span>` : '';
                 html += `<div class="d-flex align-items-center gap-1 px-1 py-1">
@@ -328,9 +328,9 @@ $(document).ready(function () {
         $('.source-cb:checked').each(function () {
             sources.push($(this).data('source'));
         });
-        const allSources = $('.source-cb').length;
-        // If all checked (or none rendered yet), return null (= no filter)
-        return (sources.length === allSources) ? null : sources;
+        const total = $('.source-cb').length;
+        // none checked OR all checked = no filter
+        return (sources.length === 0 || sources.length === total) ? null : sources;
     }
 
     function updateSourcesSummary() {
@@ -346,16 +346,12 @@ $(document).ready(function () {
         e.preventDefault();
 
         const checkedOrgs = getCheckedOrganisms();
-        if (!checkedOrgs.length) {
-            alert('Please select at least one organism in the Scope panel.');
-            return;
-        }
+        const activeOrgs  = checkedOrgs.length ? checkedOrgs : allOrganisms;
 
-        // Inject current scope + sources into the search manager
         searchManager.selectedScope            = buildSelectedScope();
         searchManager.selectedSources          = getCheckedSources();
-        searchManager.config.organismsVar      = checkedOrgs;
-        searchManager.config.totalVar          = checkedOrgs.length;
+        searchManager.config.organismsVar      = activeOrgs;
+        searchManager.config.totalVar          = activeOrgs.length;
 
         searchManager.handleSearch();
     });
