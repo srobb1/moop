@@ -53,6 +53,10 @@
 
     <!-- Left: 4 tabs -->
     <div class="col-lg-8">
+      <div class="step-label mb-2">
+        <span class="step-badge">1</span>
+        <span class="step-text">Select one or more organisms</span>
+      </div>
       <ul class="nav nav-tabs" id="organism-tabs" role="tablist">
         <li class="nav-item" role="presentation">
           <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-organism-select" type="button" role="tab">
@@ -133,11 +137,20 @@
 
     <!-- Right: always-visible selection panel -->
     <div class="col-lg-4">
+      <div class="step-label mb-2">
+        <span class="step-badge">2</span>
+        <span class="step-text">Choose a tool — it runs on your selection</span>
+      </div>
       <!-- Tools Card -->
+      <div id="tools-card-wrapper">
       <?php
       $context = createToolContext('index', ['use_onclick_handler' => true]);
       include_once TOOL_SECTION_PATH;
       ?>
+      <p id="tool-select-hint" class="text-muted small fst-italic text-center mt-2 mb-0" style="display:none">
+        ← Select organisms first
+      </p>
+      </div>
 
       <div class="card shadow-sm sticky-card mb-3">
         <div class="card-header bg-success text-white">

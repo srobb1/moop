@@ -114,6 +114,16 @@ function updateSelectedList() {
 
     countEl.textContent = selectedOrganisms.size;
 
+    // Enable/disable tool buttons and show/hide hint
+    const hasSelection = selectedOrganisms.size > 0;
+    document.querySelectorAll('[id^="tool-btn-"]').forEach(btn => {
+        btn.disabled = !hasSelection;
+    });
+    const hint = document.getElementById('tool-select-hint');
+    if (hint) hint.style.display = hasSelection ? 'none' : '';
+    const wrapper = document.getElementById('tools-card-wrapper');
+    if (wrapper) wrapper.classList.toggle('tools-locked', !hasSelection);
+
     if (selectedOrganisms.size === 0) {
         listEl.innerHTML = '<div class="text-muted fst-italic small px-1">No organisms selected</div>';
         return;
@@ -197,6 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render both searchable lists
     renderOrganismList();
     renderTaxonList();
+
+    // Set initial tool button state (nothing selected yet)
+    updateSelectedList();
 
     // Filter inputs
     document.getElementById('organism-select-filter')

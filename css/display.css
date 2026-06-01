@@ -1070,6 +1070,40 @@ code {
 .btn-tool-amber    { background-color: #f59e0b; border-color: #f59e0b; color: #fff; }
 .btn-tool-amber:hover    { background-color: #d97706; border-color: #d97706; color: #fff; }
 
+/* ── Index page: step labels ─────────────────────────────────────────────── */
+
+.step-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.step-text {
+  font-size: 0.82rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+/* ── Tool card locked state (no organisms selected) ─────────────────────── */
+
+.tools-locked [id^="tool-btn-"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* ── Index page: Organism Select / Taxon Select lists ───────────────────── */
 
 .org-select-list {
