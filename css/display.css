@@ -1067,6 +1067,9 @@ code {
 .btn-tool-rose     { background-color: #f43f5e; border-color: #f43f5e; color: #fff; }
 .btn-tool-rose:hover     { background-color: #e11d48; border-color: #e11d48; color: #fff; }
 
+.btn-tool-amber    { background-color: #f59e0b; border-color: #f59e0b; color: #fff; }
+.btn-tool-amber:hover    { background-color: #d97706; border-color: #d97706; color: #fff; }
+
 /* ── Index page: Organism Select / Taxon Select lists ───────────────────── */
 
 .org-select-list {

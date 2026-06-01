@@ -75,6 +75,17 @@ return [
         'target'          => '_blank',
     ],
     
+    'annotation_search' => [
+        'id'             => 'annotation_search',
+        'name'           => 'Annotation Search',
+        'icon'           => 'fa-search',
+        'description'    => 'Search annotations across organisms, assemblies, and gene sets',
+        'btn_class'      => 'btn-tool-amber',
+        'url_path'       => '/tools/search.php',
+        'context_params' => ['organism', 'assembly', 'gene_set', 'group', 'display_name', 'organisms'],
+        'pages'          => 'all',
+    ],
+
     'moopmart' => [
         'id'             => 'moopmart',
         'name'           => 'MOOPmart: Mega Search',
