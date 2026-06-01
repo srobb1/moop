@@ -26,10 +26,12 @@ $(document).ready(function () {
 
     // ── Scope tree ──────────────────────────────────────────────────────────
 
-    // Row click — toggle the checkbox (label click handles it; this catches clicks outside the label)
-    $(document).on('click', '.scope-gs-full-row', function (e) {
-        if ($(e.target).is('input, label, span, em')) return;
-        $(this).find('.scope-gs-cb').trigger('click');
+    // Row click — toggle selection (no visible checkbox; whole row is the target)
+    $(document).on('click', '.scope-gs-full-row', function () {
+        const cb = $(this).find('.scope-gs-cb')[0];
+        cb.checked = !cb.checked;
+        $(this).toggleClass('selected', cb.checked);
+        onScopeChange();
     });
 
     // Gene-set checkbox change → sync row highlight + panel

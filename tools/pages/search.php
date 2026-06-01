@@ -68,7 +68,8 @@
               $groups = $organism_groups[$organism] ?? [];
               foreach ($assemblies as $asm => $gene_sets):
                 $an = $assembly_names[$organism][$asm] ?? '';
-                $asmDisplay = $an ? $an . ' (' . $asm . ')' : $asm;
+                $asmDisplay = $an ? $an : $asm;
+                $asmAccession = $an ? $asm : '';
                 foreach ($gene_sets as $gs):
                   $rowIdx++;
                   $gsid   = 'sgs_' . $rowIdx;
@@ -76,7 +77,7 @@
             ?>
             <div class="org-select-row scope-gs-full-row"
                  data-search="<?= htmlspecialchars($search) ?>">
-              <input type="checkbox" class="form-check-input flex-shrink-0 scope-gs-cb mb-0"
+              <input type="checkbox" class="scope-gs-cb visually-hidden"
                      id="<?= $gsid ?>"
                      data-org="<?= htmlspecialchars($organism) ?>"
                      data-asm="<?= htmlspecialchars($asm) ?>"
@@ -84,18 +85,16 @@
                      data-label="<?= htmlspecialchars($label) ?>"
                      data-cn="<?= htmlspecialchars($cn) ?>"
                      data-asm-display="<?= htmlspecialchars($asmDisplay) ?>">
-              <label for="<?= $gsid ?>" class="form-check-label mb-0 d-flex align-items-center flex-wrap gap-1" style="cursor:pointer;">
-                <span class="org-groups">
-                  <?php foreach ($groups as $g): ?>
-                  <span class="org-group-chip" style="background:<?= $groupColor($g) ?>"><?= htmlspecialchars($g) ?></span>
-                  <?php endforeach; ?>
-                </span>
-                <em><?= htmlspecialchars($label) ?></em><?php if ($cn): ?><span class="text-muted"> · <?= htmlspecialchars($cn) ?></span><?php endif; ?>
-                <span class="text-muted">—</span>
-                <span><?= htmlspecialchars($asmDisplay) ?></span>
-                <span class="text-muted">›</span>
-                <span><?= htmlspecialchars($gs) ?></span>
-              </label>
+              <span class="org-groups">
+                <?php foreach ($groups as $g): ?>
+                <span class="org-group-chip" style="background:<?= $groupColor($g) ?>"><?= htmlspecialchars($g) ?></span>
+                <?php endforeach; ?>
+              </span>
+              <em><?= htmlspecialchars($label) ?></em><?php if ($cn): ?><span class="text-muted"> · <?= htmlspecialchars($cn) ?></span><?php endif; ?>
+              <span class="text-muted mx-1">—</span>
+              <span><?= htmlspecialchars($asmDisplay) ?></span><?php if ($asmAccession): ?><small class="text-muted ms-1">(<?= htmlspecialchars($asmAccession) ?>)</small><?php endif; ?>
+              <span class="text-muted mx-1">›</span>
+              <span><?= htmlspecialchars($gs) ?></span>
               <span class="org-check ms-auto"><i class="fas fa-check text-success"></i></span>
             </div>
             <?php endforeach; endforeach; endforeach; ?>
