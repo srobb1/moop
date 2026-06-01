@@ -125,7 +125,11 @@
       <div class="card-header py-2 d-flex align-items-center gap-2">
         <span class="step-badge me-2">3</span>
         <strong class="me-auto">Search only specific annotation sources</strong>
-        <small class="text-muted fst-italic">leave unchecked to search all</small>
+        <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted"
+                data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="About annotation types">
+          <i class="fa fa-circle-info"></i>
+        </button>
+        <small class="text-muted fst-italic ms-2">leave unchecked to search all</small>
         <div class="d-flex gap-1 ms-2">
           <button type="button" id="sources-select-all" class="btn btn-sm btn-outline-secondary">All</button>
           <button type="button" id="sources-deselect-all" class="btn btn-sm btn-outline-secondary">None</button>
@@ -154,6 +158,38 @@
     </div>
 
   </form>
+
+  <!-- Annotation types info modal -->
+  <div class="modal fade" id="ann-types-modal" tabindex="-1" aria-labelledby="ann-types-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header py-2">
+          <h5 class="modal-title fw-bold" id="ann-types-modal-label">Annotation Types</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <?php foreach ($ann_type_info as $type => $info):
+              $color = htmlspecialchars($info['color']);
+              $desc  = $info['description'];
+              if (!$desc) continue;
+            ?>
+            <div class="col-md-6">
+              <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                  <h6 class="card-title mb-2">
+                    <span class="badge bg-<?= $color ?>"><?= htmlspecialchars($type) ?></span>
+                  </h6>
+                  <p class="card-text small text-muted mb-0"><?= $desc ?></p>
+                </div>
+              </div>
+            </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Search Results -->
   <div id="searchResults" class="hidden">

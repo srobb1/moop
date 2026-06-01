@@ -10,6 +10,19 @@ include_once __DIR__ . '/../lib/extract_search_helpers.php';
 
 $organism_data = $config->getPath('organism_data');
 
+// Load annotation type descriptions for the (i) modal
+$ann_config_file = $config->getPath('metadata_path') . '/annotation_config.json';
+$ann_type_info   = [];
+if (file_exists($ann_config_file)) {
+    $ann_cfg = json_decode(file_get_contents($ann_config_file), true) ?: [];
+    foreach ($ann_cfg['annotation_types'] ?? [] as $type => $data) {
+        $ann_type_info[$type] = [
+            'color'       => $data['color']       ?? 'secondary',
+            'description' => $data['description'] ?? '',
+        ];
+    }
+}
+
 // Read context parameters passed from toolbox links (organism, assembly, gene_set, group)
 $context      = parseContextParameters();
 $ctx_organism = $context['organism'];
@@ -120,6 +133,7 @@ $data = [
     'assembly_names'  => $assembly_names,
     'organism_groups' => $organism_groups,
     'all_organisms'   => $all_organisms,
+    'ann_type_info'   => $ann_type_info,
     'inline_scripts' => $display_config['inline_scripts'],
     'page_styles'    => $display_config['page_styles'],
 ];
