@@ -89,12 +89,62 @@ $(document).ready(function () {
         onScopeChange();
     });
 
-    // Scope filter
-    $('#scope-filter').on('input', function () {
-        const q = $(this).val().trim().toLowerCase();
+    // Save original HTML of each detail span so we can restore after highlight
+    $('.scope-row-detail').each(function () {
+        $(this).data('orig-html', this.innerHTML);
+    });
+
+    // Wrap matched text in text nodes only (skip HTML tags) with <mark class="scope-hl">
+    function highlightInDetail($row, query) {
+        const $detail = $row.find('.scope-row-detail');
+        if (!$detail.length) return;
+        const orig = $detail.data('orig-html');
+        if (orig === undefined) return;
+        if (!query) { $detail[0].innerHTML = orig; return; }
+        const esc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        $detail[0].innerHTML = orig.replace(/([^<>]+)/g, text =>
+            text.replace(new RegExp(esc, 'gi'), m => `<mark class="scope-hl">${m}</mark>`)
+        );
+    }
+
+    // Scope filter — show/hide rows; if match is in hidden detail, force-reveal + highlight exact text
+    function runScopeFilter() {
+        const q           = $('#scope-filter').val().trim().toLowerCase();
+        const detailHidden = !$('#scope-show-detail').is(':checked');
+
         $('.scope-gs-full-row').each(function () {
-            $(this).toggle(!q || String($(this).data('search')).includes(q));
+            const $row = $(this);
+            if (!q) {
+                $row.show().removeClass('scope-detail-forced scope-detail-matched');
+                highlightInDetail($row, '');
+                return;
+            }
+            const all    = String($row.data('search') || '');
+            const simple = String($row.data('search-simple') || all);
+            const detail = String($row.data('search-detail') || '');
+            const match  = all.includes(q);
+            $row.toggle(match);
+            if (match) {
+                const detailMatch = detail.includes(q);
+                if (detailMatch && detailHidden && !simple.includes(q)) {
+                    $row.addClass('scope-detail-forced scope-detail-matched');
+                } else {
+                    $row.removeClass('scope-detail-forced scope-detail-matched');
+                }
+                highlightInDetail($row, detailMatch ? q : '');
+            } else {
+                $row.removeClass('scope-detail-forced scope-detail-matched');
+                highlightInDetail($row, '');
+            }
         });
+    }
+
+    $('#scope-filter').on('input', runScopeFilter);
+
+    // Detail toggle switch
+    $('#scope-show-detail').on('change', function () {
+        $('#scope-org-list').toggleClass('scope-detail-hidden', !this.checked);
+        runScopeFilter(); // re-evaluate forced reveals
     });
 
     // Select All scope — confirm first

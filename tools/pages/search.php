@@ -4,6 +4,14 @@
  * Variables: $scope_tree, $organism_info, $all_organisms, $site, $siteTitle
  */
 ?>
+<style>
+/* Simple mode: assembly+gene-set detail is hidden */
+#scope-org-list.scope-detail-hidden .scope-row-detail { display: none; }
+/* Force-reveal when filter matched the hidden detail */
+.scope-gs-full-row.scope-detail-forced .scope-row-detail { display: inline !important; }
+/* Highlighted matched text within the detail span */
+mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; padding: 0 1px; color: inherit; }
+</style>
 <div class="container mt-4">
 
   <!-- Header -->
@@ -48,11 +56,15 @@
 
         <!-- Left: organism list -->
         <div class="col-lg-8 border-end d-flex flex-column">
-          <div class="px-2 pt-2 pb-1 border-bottom">
+          <div class="px-2 pt-2 pb-1 border-bottom d-flex align-items-center gap-2">
             <input type="text" class="form-control form-control-sm" id="scope-filter"
                    placeholder="Filter organisms…" autocomplete="off">
+            <div class="form-check form-switch mb-0 flex-shrink-0">
+              <input class="form-check-input" type="checkbox" role="switch" id="scope-show-detail">
+              <label class="form-check-label small text-muted text-nowrap" for="scope-show-detail">Details</label>
+            </div>
           </div>
-          <div style="overflow-y:auto; max-height:340px;" id="scope-org-list">
+          <div style="overflow-y:auto; max-height:340px;" id="scope-org-list" class="scope-detail-hidden">
             <?php if (empty($scope_tree)): ?>
               <p class="text-muted small p-3">No accessible organisms found.</p>
             <?php else: ?>
@@ -72,13 +84,17 @@
                 foreach ($gene_sets as $gs):
                   $rowIdx++;
                   $gsid   = 'sgs_' . $rowIdx;
-                  $search = strtolower("$label $cn $asm $an $gs " . implode(' ', $groups));
+                  $searchSimple = strtolower("$label $cn " . implode(' ', $groups));
+                  $searchDetail = strtolower("$asm $an $gs");
+                  $search = $searchSimple . ' ' . $searchDetail;
             ?>
             <?php
               $tooltip = $label . ($cn ? ' · ' . $cn : '') . ' · ' . $asmDisplay . ($asmAccession ? ' (' . $asmAccession . ')' : '') . ' › ' . $gs;
             ?>
             <div class="org-select-row scope-gs-full-row"
                  data-search="<?= htmlspecialchars($search) ?>"
+                 data-search-simple="<?= htmlspecialchars($searchSimple) ?>"
+                 data-search-detail="<?= htmlspecialchars($searchDetail) ?>"
                  title="<?= htmlspecialchars($tooltip) ?>">
               <input type="checkbox" class="scope-gs-cb visually-hidden"
                      id="<?= $gsid ?>"
@@ -95,7 +111,7 @@
               </span>
               <span class="flex-grow-1 text-truncate" style="min-width:0; white-space:nowrap;">
                 <em><?= htmlspecialchars($label) ?></em><?php if ($cn): ?><span class="text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($cn) ?></span><?php endif;
-                ?><span class="text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($asmDisplay) ?><?php if ($asmAccession): ?> <span style="font-size:0.9em;">(<?= htmlspecialchars($asmAccession) ?>)</span><?php endif; ?> › <?= htmlspecialchars($gs) ?></span>
+                ?><span class="scope-row-detail text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($asmDisplay) ?><?php if ($asmAccession): ?> <span style="font-size:0.9em;">(<?= htmlspecialchars($asmAccession) ?>)</span><?php endif; ?> › <?= htmlspecialchars($gs) ?></span>
               </span>
               <span class="org-check flex-shrink-0"><i class="fas fa-check text-success"></i></span>
             </div>
