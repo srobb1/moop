@@ -14,16 +14,15 @@
     const CHRS_URL    = moopSite + '/api/moopmart_chrs.php';
 
     const FASTA_LABELS = {
-        gene:       'Gene sequence',
+        gene:       'Genomic',
         upstream:   'Upstream',
         downstream: 'Downstream',
-        exons:      'Exons / sub-features',
         protein:    'Protein',
-        transcript: 'Transcript (mRNA)',
+        transcript: 'mRNA',
         cds:        'CDS',
     };
 
-    let currentFastaMode = 'transcript';
+    let currentFastaMode = 'gene';
 
     // -------------------------------------------------------
     // Scope tree — checkbox propagation (HTML rendered by PHP)
@@ -542,7 +541,7 @@
                 document.getElementById('mm-count-result').className = 'small text-warning';
                 return;
             }
-            const flank = document.getElementById('mm-flank-bp')?.value || '500';
+            const flank = document.getElementById('mm-flank-bp')?.value || '1000';
             submitDownload({ output_format: 'fasta', fasta_mode: currentFastaMode, flank_bp: flank });
         });
 
@@ -554,9 +553,8 @@
             });
         });
 
-        // Update flank bp label in dropdown when input changes
         document.getElementById('mm-flank-bp')?.addEventListener('input', function () {
-            document.querySelectorAll('.mm-flank-label').forEach(el => el.textContent = this.value);
+            // (no dropdown labels to sync any more)
         });
 
         setFastaMode('transcript');

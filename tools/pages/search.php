@@ -11,12 +11,16 @@
     <div class="col-12">
       <div class="card shadow-sm">
         <div class="card-body bg-search-light">
-          <h4 class="mb-3 text-primary fw-bold">
-            <i class="fa fa-search"></i> Search Gene IDs and Annotations
+          <h4 class="mb-1 text-primary fw-bold">
+            <i class="fa fa-search"></i> Annotation Search
             <i class="fa fa-info-circle search-instructions-trigger"
                style="cursor:pointer; margin-left:0.5rem; font-size:0.8em;"
                data-help-type="basic"></i>
           </h4>
+          <p class="text-muted small mb-3">
+            <strong>Find specific genes</strong> by ID or keyword across organisms and annotation sources.
+            Use <a href="moopmart.php" class="text-decoration-none">MOOPmart</a> if you want to bulk-download many genes at once.
+          </p>
           <form id="searchForm">
             <div class="d-flex gap-2 align-items-center">
               <input type="text" class="form-control" id="searchKeywords"
