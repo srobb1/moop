@@ -119,11 +119,11 @@
       </div><!-- /row -->
     </div>
 
-    <!-- ③ Annotation Sources -->
+    <!-- ③ Annotation Types -->
     <div class="card mb-3 shadow-sm">
       <div class="card-header py-2 d-flex align-items-center gap-2">
         <span class="step-badge me-2">3</span>
-        <strong class="me-auto">Search only specific annotation sources</strong>
+        <strong class="me-auto">Select annotation types to search</strong>
         <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted"
                 data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="About annotation types">
           <i class="fa fa-info-circle"></i>
@@ -133,18 +133,35 @@
           <button type="button" id="sources-deselect-all" class="btn btn-sm btn-outline-secondary">None</button>
         </div>
       </div>
-      <div class="px-2 pt-2 pb-1 border-bottom" id="sources-filter-wrap" style="display:none;">
-        <input type="text" class="form-control form-control-sm" id="sources-filter"
-               placeholder="Filter sources…" autocomplete="off">
-      </div>
-      <div class="card-body p-2" id="sourcesPanel" style="overflow-y:auto; max-height:300px;">
-        <div class="text-center p-3 text-muted">
-          <i class="fa fa-spinner fa-spin me-1"></i> Loading sources…
+
+      <div class="row g-0" style="min-height:120px;">
+
+        <!-- Left: annotation types list -->
+        <div class="col-lg-8 border-end d-flex flex-column">
+          <div class="px-2 pt-2 pb-1 border-bottom" id="sources-filter-wrap" style="display:none;">
+            <input type="text" class="form-control form-control-sm" id="sources-filter"
+                   placeholder="Filter annotation types…" autocomplete="off">
+          </div>
+          <div id="sourcesPanel" style="overflow-y:auto; max-height:280px;">
+            <div class="text-center p-3 text-muted">
+              <i class="fa fa-spinner fa-spin me-1"></i> Loading…
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="card-footer py-1 px-2 text-muted" style="font-size:0.8rem;">
-        <span id="sources-summary"></span>
-      </div>
+
+        <!-- Right: selected annotation types panel -->
+        <div class="col-lg-4 d-flex flex-column">
+          <div class="px-2 py-1 border-bottom d-flex justify-content-between align-items-center"
+               style="background:#f8f9fa;">
+            <span class="small fw-semibold text-muted">Selected</span>
+            <span class="badge bg-secondary" id="ann-types-selected-count">0</span>
+          </div>
+          <div style="overflow-y:auto; max-height:280px; font-size:0.82rem;" id="ann-types-selected-panel">
+            <div class="text-muted small p-2 fst-italic">No types selected</div>
+          </div>
+        </div>
+
+      </div><!-- /row -->
     </div>
 
     <!-- ④ Search -->
@@ -167,9 +184,10 @@
         </div>
         <div class="modal-body">
           <p class="text-muted mb-4">
-            By default your search keyword is matched against <strong>all</strong> annotation types.
-            Select specific types in section&nbsp;③ to narrow your search — for example,
-            find only genes with matching <em>Gene Ontology</em> terms or <em>Domain</em> annotations.
+            You must select at least one annotation type in section&nbsp;③ before searching.
+            Select only the types relevant to your query — for example, choose <em>Gene Ontology</em>
+            to find genes by GO term, or <em>Domains</em> to search protein domain annotations.
+            Selecting fewer types makes searches faster and results more focused.
           </p>
           <div class="row g-3">
             <?php foreach ($ann_type_info as $type => $info):

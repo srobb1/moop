@@ -165,7 +165,13 @@ $(document).ready(function () {
     let sourceOverrides = {};
 
     function loadAnnotationSources(organisms) {
-        if (!organisms.length) organisms = allOrganisms;
+        if (!organisms.length) {
+            $('#sourcesPanel').html('<p class="text-muted small p-3">Select organisms in section&nbsp;② to see available annotation types.</p>');
+            $('#sources-filter-wrap').hide();
+            updateSourcesSummary();
+            updateAnnotTypesPanel();
+            return;
+        }
 
         $('#sourcesPanel').html('<div class="text-center p-3 text-muted"><i class="fa fa-spinner fa-spin me-1"></i> Loading…</div>');
 
@@ -233,6 +239,7 @@ $(document).ready(function () {
         $('#sources-filter-wrap').show();
         filterSources();
         updateSourcesSummary();
+        updateAnnotTypesPanel();
     }
 
     function filterSources() {
@@ -275,6 +282,7 @@ $(document).ready(function () {
             sourceOverrides[$(this).data('source')] = checked;
         });
         updateSourcesSummary();
+        updateAnnotTypesPanel();
     });
 
     // Individual source checkbox
@@ -283,6 +291,7 @@ $(document).ready(function () {
         sourceOverrides[$(this).data('source')] = $(this).is(':checked');
         syncSourceTypeCb(type);
         updateSourcesSummary();
+        updateAnnotTypesPanel();
     });
 
     // Select All / Deselect All sources
@@ -293,6 +302,7 @@ $(document).ready(function () {
         });
         $('.source-type-cb').prop({ checked: true, indeterminate: false });
         updateSourcesSummary();
+        updateAnnotTypesPanel();
     });
     $('#sources-deselect-all').on('click', function () {
         $('.source-cb').each(function () {
@@ -301,6 +311,19 @@ $(document).ready(function () {
         });
         $('.source-type-cb').prop({ checked: false, indeterminate: false });
         updateSourcesSummary();
+        updateAnnotTypesPanel();
+    });
+
+    // Remove annotation type from selected panel
+    $(document).on('click', '.deselect-ann-type', function () {
+        const type = $(this).data('type');
+        $('[data-type="' + type + '"].source-cb').each(function () {
+            $(this).prop('checked', false);
+            sourceOverrides[$(this).data('source')] = false;
+        });
+        $('[data-type="' + type + '"].source-type-cb').prop({ checked: false, indeterminate: false });
+        updateSourcesSummary();
+        updateAnnotTypesPanel();
     });
 
     function getCheckedSources() {
@@ -308,16 +331,45 @@ $(document).ready(function () {
         $('.source-cb:checked').each(function () {
             sources.push($(this).data('source'));
         });
-        const total = $('.source-cb').length;
-        // none checked OR all checked = no filter
-        return (sources.length === 0 || sources.length === total) ? null : sources;
+        return sources.length ? sources : null;
     }
 
     function updateSourcesSummary() {
         const checked = $('.source-cb:checked').length;
         const total   = $('.source-cb').length;
         if (!total) { $('#sources-summary').text(''); return; }
-        $('#sources-summary').text(checked + ' / ' + total + ' source' + (total !== 1 ? 's' : '') + ' selected');
+        $('#sources-summary').text(checked + ' / ' + total + ' annotation type' + (total !== 1 ? 's' : '') + ' selected');
+    }
+
+    function updateAnnotTypesPanel() {
+        const panel     = document.getElementById('ann-types-selected-panel');
+        const countBadge = document.getElementById('ann-types-selected-count');
+        if (!panel) return;
+
+        const selected = [];
+        $('.source-type-cb').each(function () {
+            if (this.checked || this.indeterminate) {
+                selected.push({
+                    type:    $(this).data('type'),
+                    partial: this.indeterminate,
+                });
+            }
+        });
+
+        if (countBadge) countBadge.textContent = selected.length;
+
+        if (!selected.length) {
+            panel.innerHTML = '<div class="text-muted small p-2 fst-italic">No types selected</div>';
+            return;
+        }
+
+        panel.innerHTML = selected.map(({ type, partial }) =>
+            `<div class="d-flex align-items-center justify-content-between px-2 py-1 border-bottom">
+               <span class="small">${type}${partial ? ' <span class="text-muted fst-italic">(partial)</span>' : ''}</span>
+               <button type="button" class="btn btn-link btn-sm p-0 text-danger deselect-ann-type"
+                       data-type="${type}" title="Remove"><i class="fas fa-times"></i></button>
+             </div>`
+        ).join('');
     }
 
     // ── Search form submit ───────────────────────────────────────────────────
@@ -326,6 +378,12 @@ $(document).ready(function () {
         e.preventDefault();
 
         const checkedOrgs = getCheckedOrganisms();
+
+        // Require at least one annotation type
+        if ($('.source-cb:checked').length === 0) {
+            alert('Please select at least one annotation type in section 3 before searching.');
+            return;
+        }
 
         const proceed = () => {
             const activeOrgs = checkedOrgs.length ? checkedOrgs : allOrganisms;
@@ -387,5 +445,7 @@ $(document).ready(function () {
 
     applyContextScope(typeof scopeContext !== 'undefined' ? scopeContext : null);
     updateScopeSummary();
-    loadAnnotationSources(allOrganisms);
+    // Only load annotation types for pre-selected organisms; otherwise wait for user to select
+    const preselectedOrgs = getCheckedOrganisms();
+    loadAnnotationSources(preselectedOrgs);
 });
