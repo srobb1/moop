@@ -1070,6 +1070,44 @@ code {
 .btn-tool-amber    { background-color: #f59e0b; border-color: #f59e0b; color: #fff; }
 .btn-tool-amber:hover    { background-color: #d97706; border-color: #d97706; color: #fff; }
 
+/* ── Index page: info card ───────────────────────────────────────────────── */
+
+.info-step-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 12px 14px;
+  height: 100%;
+}
+.info-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.info-mode-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 10px 12px;
+  height: 100%;
+}
+.info-tool-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 0;
+}
+
 /* ── Index page: step labels ─────────────────────────────────────────────── */
 
 .step-label {

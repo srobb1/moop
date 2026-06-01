@@ -18,25 +18,88 @@
       <div class="card shadow-sm border-0 rounded-3 bg-info bg-opacity-10">
         <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center"
              style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#site-info-body" aria-expanded="false" aria-controls="site-info-body">
-          <h5 class="fw-bold text-dark mb-0">Welcome to SIMRbase - MOOP Edition</h5>
+          <h5 class="fw-bold text-dark mb-0">
+            <i class="fa fa-circle-info text-info me-2"></i>How to use <?= htmlspecialchars($siteTitle) ?>
+          </h5>
           <i class="fa fa-chevron-down text-muted" id="site-info-chevron"></i>
         </div>
         <div class="collapse" id="site-info-body">
-          <div class="card-body pt-0">
-            <p class="card-text text-muted mb-3">
-              <strong>MOOP</strong> — to keep company, associate closely. Explore and discover how diverse organisms are mooped on SIMRbase. MOOP stands for Multiple Organisms One Platform. This new version of SIMRbase has the same data as before but it now easier to search across organsims.
+          <div class="card-body pt-2">
+
+            <!-- Two-step workflow -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <div class="info-step-card">
+                  <div class="info-step-num">1</div>
+                  <div>
+                    <div class="fw-semibold mb-1">Select your organisms</div>
+                    <p class="text-muted small mb-0">
+                      Pick one or more organisms using any of the four selection modes below.
+                      You can mix and match — selections carry over between tabs.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="info-step-card">
+                  <div class="info-step-num">2</div>
+                  <div>
+                    <div class="fw-semibold mb-1">Choose a tool</div>
+                    <p class="text-muted small mb-0">
+                      Click a tool in the <strong>Tools</strong> box. It opens in a new tab,
+                      pre-filtered to exactly the organisms you selected.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Selection modes -->
+            <h6 class="fw-semibold text-dark mb-2">Selection modes</h6>
+            <div class="row g-2 mb-4">
+              <div class="col-sm-6 col-lg-3">
+                <div class="info-mode-card">
+                  <div class="fw-semibold small mb-1"><i class="fa fa-list text-primary me-1"></i> Organism Select</div>
+                  <p class="text-muted small mb-0">Searchable flat list. Filter by scientific name, common name, or group. Best for finding specific species quickly.</p>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="info-mode-card">
+                  <div class="fw-semibold small mb-1"><i class="fa fa-sitemap text-primary me-1"></i> Taxon Select</div>
+                  <p class="text-muted small mb-0">Each row shows the full taxonomic lineage. Filter by any rank — order, family, genus — to find related species.</p>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="info-mode-card">
+                  <div class="fw-semibold small mb-1"><i class="fa fa-th text-primary me-1"></i> Group Select</div>
+                  <p class="text-muted small mb-0">Curated organism groups (e.g. Bats, Reptiles). Click a group card to explore all organisms in that group together.</p>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="info-mode-card">
+                  <div class="fw-semibold small mb-1"><i class="fa fa-project-diagram text-primary me-1"></i> Tree Select</div>
+                  <p class="text-muted small mb-0">Interactive phylogenetic tree. Click any branch to select all organisms below it, or individual leaves for single species.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Available tools -->
+            <h6 class="fw-semibold text-dark mb-2">Available tools</h6>
+            <div class="row g-2 mb-3">
+              <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-emerald me-2">Retrieve Sequences</span><span class="text-muted small">Download gene, mRNA, CDS, or protein FASTA</span></div></div>
+              <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-orange me-2">BLAST Search</span><span class="text-muted small">Search a query sequence against selected genomes</span></div></div>
+              <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-amber me-2">Annotation Search</span><span class="text-muted small">Filter genes by functional annotation across organisms</span></div></div>
+              <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-rose me-2">MOOPmart</span><span class="text-muted small">Bulk export with flexible filters — TSV or FASTA</span></div></div>
+              <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-violet me-2">Search Organisms</span><span class="text-muted small">Cross-organism annotation comparison table</span></div></div>
+              <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-sky me-2">Downloads</span><span class="text-muted small">Browse and download genome assembly files</span></div></div>
+            </div>
+
+            <p class="text-muted small mb-0">
+              <i class="fa fa-circle-info text-info me-1"></i>
+              <strong>Tip:</strong> Selections are remembered as you switch between tabs.
+              Use the <strong>Selected Organisms</strong> panel on the right to review your list and remove any entries before running a tool.
             </p>
 
-            <h6 class="fw-semibold text-dark mb-2">Getting Started:</h6>
-            <ul class="text-muted mb-3">
-              <li><strong>Select Organisms:</strong> Use <em>Group Select</em> for quick predefined groups or <em>Tree Select</em> for custom organism combinations</li>
-              <li><strong>Choose a Tool:</strong> Search sequences and annotations, run BLAST comparisons, examine genome assemblies, or analyze multiple organisms together</li>
-              <li><strong>Explore Results:</strong> View interactive tables, visualizations, and download data for external analysis</li>
-            </ul>
-
-            <p class="text-muted mb-0">
-              <strong>New to SIMRbase?</strong> <a href="help.php?topic=getting-started" class="text-info text-decoration-none">Read the Getting Started guide</a> or explore other <a href="help.php" class="text-info text-decoration-none">tutorials and documentation</a> for detailed help.
-            </p>
           </div>
         </div>
       </div>
