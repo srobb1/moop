@@ -51,19 +51,19 @@ function renderTaxonList() {
     const list = document.getElementById('taxon-select-list');
     if (!list) return;
     list.innerHTML = organismData.map(o => {
-        const chain    = o.taxon_chain || [];
-        const trimmed  = chain.slice(Math.max(0, chain.length - 6));
-        const ellipsis = trimmed.length < chain.length ? '… ' : '';
-        const chainStr = ellipsis + trimmed.join(' › ');
-        const common   = o.common_name
-            ? `<span class="org-common text-muted">· ${escHtml(o.common_name)}</span>`
-            : '';
+        const chain      = o.taxon_chain || [];
+        const chainStr   = chain.join(' › ');
+        const common     = o.common_name
+            ? ` <span class="text-muted">· ${escHtml(o.common_name)}</span>` : '';
         const searchText = [o.display_name, o.common_name, ...chain].join(' ').toLowerCase();
         return `<div class="org-select-row taxon-row" data-org="${escHtml(o.organism)}" data-search="${escHtml(searchText)}">
-            <span class="taxon-path">${escHtml(chainStr)}</span>
-            <span class="org-name"><em>${escHtml(o.display_name)}</em></span>
-            ${common}
-            <span class="org-check ms-auto"><i class="fas fa-check text-success"></i></span>
+            <div class="taxon-row-inner">
+                <div class="taxon-path">${escHtml(chainStr)}</div>
+                <div class="taxon-row-name">
+                    <em>${escHtml(o.display_name)}</em>${common}
+                    <span class="org-check"><i class="fas fa-check text-success"></i></span>
+                </div>
+            </div>
         </div>`;
     }).join('');
 
@@ -207,11 +207,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ?.addEventListener('input', function () { filterTaxonomyTree(this.value.toLowerCase()); });
 
     // Init tree on first visit to Tree Select tab
-    document.getElementById('tab-tree-select')?.addEventListener('shown.bs.tab', () => {
-        if (!phyloTree) {
-            phyloTree = new PhyloTree('taxonomy-tree-container', treeData, userAccess);
+    // shown.bs.tab fires on the button, not the pane — listen on the tab bar
+    document.getElementById('organism-tabs')?.addEventListener('shown.bs.tab', e => {
+        if (e.target.getAttribute('data-bs-target') === '#tab-tree-select') {
+            if (!phyloTree) {
+                phyloTree = new PhyloTree('taxonomy-tree-container', treeData, userAccess);
+            }
+            phyloTree.updateUI();
         }
-        phyloTree.updateUI();
     });
 
     // Remove-organism delegation on the selected panel

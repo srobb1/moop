@@ -1093,16 +1093,31 @@ code {
 }
 .org-select-row.selected .org-check { opacity: 1; }
 
-/* Taxon Select: path on left, name on right */
+/* Taxon Select: two-line layout — chain above, name below */
+.taxon-row {
+  align-items: stretch;
+  padding: 0;
+}
+.taxon-row-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 5px 10px;
+}
 .taxon-path {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: #6c757d;
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 52%;
+  line-height: 1.3;
+  margin-bottom: 1px;
+}
+.taxon-row-name {
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.taxon-row-name .org-check {
+  margin-left: auto;
 }
 
 /* ── Selected organisms panel items ─────────────────────────────────────── */
