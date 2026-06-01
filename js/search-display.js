@@ -26,81 +26,44 @@ $(document).ready(function () {
 
     // ── Scope tree ──────────────────────────────────────────────────────────
 
-    // Collapse / expand organism body via chevron
-    $(document).on('click', '.scope-toggle', function () {
-        const target = $('#' + $(this).data('target'));
-        const open   = target.is(':visible');
-        target.toggle(!open);
-        $(this).toggleClass('fa-chevron-down', !open).toggleClass('fa-chevron-right', open);
-    });
-
-    // Org checkbox → cascade down to all asm + gs beneath it
-    $(document).on('change', '.scope-org-cb', function () {
-        const org     = $(this).data('org');
-        const checked = this.checked;
-        this.indeterminate = false;
-        $('[data-org="' + org + '"].scope-asm-cb').prop({ checked, indeterminate: false });
-        $('[data-org="' + org + '"].scope-gs-cb').prop('checked', checked);
+    // Organism row click — toggle all gene-sets for that org, update visual state
+    $(document).on('click', '.scope-org-row-item', function () {
+        const org       = $(this).data('org');
+        const gsCbs     = $('[data-org="' + org + '"].scope-gs-cb');
+        const anyOn     = gsCbs.filter(':checked').length > 0;
+        const nextState = !anyOn;
+        gsCbs.prop('checked', nextState);
+        $('[data-org="' + org + '"].scope-asm-cb').prop({ checked: nextState, indeterminate: false });
+        $('[data-org="' + org + '"].scope-org-cb').prop({ checked: nextState, indeterminate: false });
+        $(this).toggleClass('selected', nextState);
         onScopeChange();
     });
 
-    // Assembly checkbox → cascade down to gs, sync org up
-    $(document).on('change', '.scope-asm-cb', function () {
-        const org     = $(this).data('org');
-        const asm     = $(this).data('asm');
-        const checked = this.checked;
-        this.indeterminate = false;
-        $('[data-org="' + org + '"][data-asm="' + asm + '"].scope-gs-cb').prop('checked', checked);
-        syncScopeAsmCb(org, asm);
-        syncScopeOrgCb(org);
-        onScopeChange();
-    });
-
-    // Gene-set checkbox → sync asm + org up
-    $(document).on('change', '.scope-gs-cb', function () {
-        const org = $(this).data('org');
-        const asm = $(this).data('asm');
-        syncScopeAsmCb(org, asm);
-        syncScopeOrgCb(org);
-        onScopeChange();
-    });
-
-    function syncScopeAsmCb(org, asm) {
-        const boxes   = $('[data-org="' + org + '"][data-asm="' + asm + '"].scope-gs-cb');
-        const total   = boxes.length;
-        const checked = boxes.filter(':checked').length;
-        const cb      = $('[data-org="' + org + '"][data-asm="' + asm + '"].scope-asm-cb')[0];
-        if (!cb) return;
-        cb.checked       = checked === total;
-        cb.indeterminate = checked > 0 && checked < total;
+    function syncOrgRowHighlights() {
+        $('.scope-org-row-item').each(function () {
+            const org    = $(this).data('org');
+            const anyOn  = $('[data-org="' + org + '"].scope-gs-cb:checked').length > 0;
+            $(this).toggleClass('selected', anyOn);
+        });
     }
 
-    function syncScopeOrgCb(org) {
-        const boxes   = $('[data-org="' + org + '"].scope-gs-cb');
-        const total   = boxes.length;
-        const checked = boxes.filter(':checked').length;
-        const cb      = $('[data-org="' + org + '"].scope-org-cb')[0];
-        if (!cb) return;
-        cb.checked       = checked === total;
-        cb.indeterminate = checked > 0 && checked < total;
-    }
-
-    // Scope filter — flat rows use data-search attribute
+    // Scope filter
     $('#scope-filter').on('input', function () {
         const q = $(this).val().trim().toLowerCase();
-        $('.scope-flat-row').each(function () {
-            const matches = !q || $(this).data('search').includes(q);
-            $(this).toggle(matches);
+        $('.scope-org-row-item').each(function () {
+            $(this).toggle(!q || String($(this).data('search')).includes(q));
         });
     });
 
     // Select All / Deselect All scope
     $('#scope-select-all').on('click', function () {
-        $('.scope-org-cb, .scope-asm-cb, .scope-gs-cb').prop({ checked: true, indeterminate: false });
+        $('.scope-gs-cb, .scope-asm-cb, .scope-org-cb').prop({ checked: true, indeterminate: false });
+        syncOrgRowHighlights();
         onScopeChange();
     });
     $('#scope-deselect-all').on('click', function () {
-        $('.scope-org-cb, .scope-asm-cb, .scope-gs-cb').prop({ checked: false, indeterminate: false });
+        $('.scope-gs-cb, .scope-asm-cb, .scope-org-cb').prop({ checked: false, indeterminate: false });
+        syncOrgRowHighlights();
         onScopeChange();
     });
 
@@ -367,6 +330,7 @@ $(document).ready(function () {
             this.indeterminate = cnt > 0 && cnt < boxes.length;
         });
 
+        syncOrgRowHighlights();
         onScopeChange();
     }
 
