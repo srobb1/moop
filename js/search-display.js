@@ -186,54 +186,44 @@ $(document).ready(function () {
 
     function renderSourcesPanel(sourceTypes) {
         if (!Object.keys(sourceTypes).length) {
-            $('#sourcesPanel').html('<p class="text-muted small p-2">No annotation sources found for selected organisms.</p>');
+            $('#sourcesPanel').html('<p class="text-muted small p-3">No annotation types found for selected organisms.</p>');
             updateSourcesSummary();
+            updateAnnotTypesPanel();
             return;
         }
 
         let html = '';
         for (const [type, typeData] of Object.entries(sourceTypes)) {
-            const color  = typeData.color  || 'secondary';
-            const desc   = typeData.desc   || typeData.description || '';
+            const color   = typeData.color || 'secondary';
             const sources = typeData.sources || [];
 
-            html += `<div class="source-group mb-2">`;
-            html += `<div class="d-flex align-items-center px-2 py-1 rounded mb-1"
-                          style="background:#f1f3f5;">
-                       <input type="checkbox" class="form-check-input me-2 mb-0 source-type-cb flex-shrink-0"
-                              id="stype_${CSS.escape(type)}" data-type="${type}">
-                       <label for="stype_${CSS.escape(type)}"
-                              class="form-check-label fw-semibold mb-0 me-auto"
-                              style="cursor:pointer; font-size:0.88rem;">
+            // Type header row — clickable, no visible checkbox
+            html += `<div class="org-select-row source-type-row" data-type="${type}" style="background:#f8f9fa;">
+                       <input type="checkbox" class="source-type-cb visually-hidden" data-type="${type}">
+                       <span class="fw-semibold" style="font-size:0.88rem;">
                          <span class="badge bg-${color} me-1">${type}</span>
-                       </label>
+                       </span>
+                       <span class="org-check ms-auto"><i class="fas fa-check text-success"></i></span>
                      </div>`;
 
-            html += `<div class="ps-3">`;
+            // Individual source rows — indented, clickable
             for (const src of sources) {
-                const checked   = sourceOverrides[src.name] === true;
-                const checkedAt = checked ? 'checked' : '';
-                const count     = src.count ? ` <span class="text-muted">(${src.count.toLocaleString()})</span>` : '';
-                html += `<div class="d-flex align-items-center gap-1 px-1 py-1">
-                           <input type="checkbox" class="form-check-input flex-shrink-0 source-cb mb-0"
-                                  id="src_${CSS.escape(src.name)}" data-source="${src.name}"
-                                  data-type="${type}" ${checkedAt}>
-                           <label for="src_${CSS.escape(src.name)}"
-                                  class="form-check-label mb-0"
-                                  style="cursor:pointer; font-size:0.82rem;">
-                             ${src.name}${count}
-                           </label>
+                const on    = sourceOverrides[src.name] === true;
+                const count = src.count ? ` <span class="text-muted small">(${src.count.toLocaleString()})</span>` : '';
+                html += `<div class="org-select-row source-ind-row ps-4${on ? ' selected' : ''}"
+                              data-source="${src.name}" data-type="${type}" style="font-size:0.82rem;">
+                           <input type="checkbox" class="source-cb visually-hidden"
+                                  data-source="${src.name}" data-type="${type}"${on ? ' checked' : ''}>
+                           <span>${src.name}${count}</span>
+                           <span class="org-check ms-auto"><i class="fas fa-check text-success"></i></span>
                          </div>`;
             }
-            html += `</div></div>`;
         }
 
         $('#sourcesPanel').html(html);
 
-        // Sync type-level checkboxes
-        $('.source-type-cb').each(function () {
-            syncSourceTypeCb($(this).data('type'));
-        });
+        // Sync type row visual state from source rows
+        syncAllTypeRows();
 
         $('#sources-filter-wrap').show();
         filterSources();
@@ -241,18 +231,60 @@ $(document).ready(function () {
         updateAnnotTypesPanel();
     }
 
+    function syncAllTypeRows() {
+        $('.source-type-row').each(function () {
+            const type  = $(this).data('type');
+            const all   = $('[data-type="' + type + '"].source-cb');
+            const on    = all.filter(':checked').length;
+            const total = all.length;
+            const cb    = $(this).find('.source-type-cb')[0];
+            if (cb) { cb.checked = on === total; cb.indeterminate = on > 0 && on < total; }
+            $(this).toggleClass('selected', on > 0).toggleClass('partial', on > 0 && on < total);
+        });
+    }
+
+    // Type header row click — toggle all sources of that type
+    $(document).on('click', '.source-type-row', function () {
+        const type     = $(this).data('type');
+        const srcRows  = $('[data-type="' + type + '"].source-ind-row');
+        const anyOn    = srcRows.filter('.selected').length > 0;
+        const next     = !anyOn;
+        srcRows.each(function () {
+            const cb = $(this).find('.source-cb')[0];
+            cb.checked = next;
+            sourceOverrides[cb.dataset.source] = next;
+            $(this).toggleClass('selected', next);
+        });
+        const typeCb = $(this).find('.source-type-cb')[0];
+        if (typeCb) { typeCb.checked = next; typeCb.indeterminate = false; }
+        $(this).toggleClass('selected', next).toggleClass('partial', false);
+        updateSourcesSummary();
+        updateAnnotTypesPanel();
+    });
+
+    // Individual source row click
+    $(document).on('click', '.source-ind-row', function () {
+        const cb   = $(this).find('.source-cb')[0];
+        cb.checked = !cb.checked;
+        sourceOverrides[cb.dataset.source] = cb.checked;
+        $(this).toggleClass('selected', cb.checked);
+        syncAllTypeRows();
+        updateSourcesSummary();
+        updateAnnotTypesPanel();
+    });
+
     function filterSources() {
         const q = ($('#sources-filter').val() || '').trim().toLowerCase();
         if (!q) {
-            $('.source-group').show();
-            $('.source-cb').closest('.d-flex').show();
+            $('.source-type-row, .source-ind-row').show();
             return;
         }
-        $('.source-group').each(function () {
-            let anyVisible = false;
-            $(this).find('.source-cb').each(function () {
+        $('.source-type-row').each(function () {
+            const type = $(this).data('type');
+            let anyVisible = String(type).toLowerCase().includes(q);
+            $('[data-type="' + type + '"].source-ind-row').each(function () {
                 const matches = String($(this).data('source')).toLowerCase().includes(q);
-                $(this).closest('.d-flex').toggle(matches);
+                $(this).toggle(matches);
                 if (matches) anyVisible = true;
             });
             $(this).toggle(anyVisible);
@@ -261,66 +293,37 @@ $(document).ready(function () {
 
     $(document).on('input', '#sources-filter', filterSources);
 
-    function syncSourceTypeCb(type) {
-        const boxes   = $('[data-type="' + type + '"].source-cb');
-        const total   = boxes.length;
-        const checked = boxes.filter(':checked').length;
-        const cb      = $('[data-type="' + type + '"].source-type-cb')[0];
-        if (!cb) return;
-        cb.checked       = checked === total;
-        cb.indeterminate = checked > 0 && checked < total;
-    }
-
-    // Source type → cascade to all its sources
-    $(document).on('change', '.source-type-cb', function () {
-        const type    = $(this).data('type');
-        const checked = this.checked;
-        this.indeterminate = false;
-        $('[data-type="' + type + '"].source-cb').each(function () {
-            $(this).prop('checked', checked);
-            sourceOverrides[$(this).data('source')] = checked;
-        });
-        updateSourcesSummary();
-        updateAnnotTypesPanel();
-    });
-
-    // Individual source checkbox
-    $(document).on('change', '.source-cb', function () {
-        const type = $(this).data('type');
-        sourceOverrides[$(this).data('source')] = $(this).is(':checked');
-        syncSourceTypeCb(type);
-        updateSourcesSummary();
-        updateAnnotTypesPanel();
-    });
-
     // Select All / Deselect All sources
     $('#sources-select-all').on('click', function () {
         $('.source-cb').each(function () {
-            $(this).prop('checked', true);
+            this.checked = true;
             sourceOverrides[$(this).data('source')] = true;
         });
-        $('.source-type-cb').prop({ checked: true, indeterminate: false });
+        $('.source-ind-row').addClass('selected');
+        syncAllTypeRows();
         updateSourcesSummary();
         updateAnnotTypesPanel();
     });
     $('#sources-deselect-all').on('click', function () {
         $('.source-cb').each(function () {
-            $(this).prop('checked', false);
+            this.checked = false;
             sourceOverrides[$(this).data('source')] = false;
         });
-        $('.source-type-cb').prop({ checked: false, indeterminate: false });
+        $('.source-ind-row').removeClass('selected');
+        syncAllTypeRows();
         updateSourcesSummary();
         updateAnnotTypesPanel();
     });
 
-    // Remove annotation type from selected panel
+    // Remove annotation type from selected panel (× button)
     $(document).on('click', '.deselect-ann-type', function () {
         const type = $(this).data('type');
         $('[data-type="' + type + '"].source-cb').each(function () {
-            $(this).prop('checked', false);
+            this.checked = false;
             sourceOverrides[$(this).data('source')] = false;
         });
-        $('[data-type="' + type + '"].source-type-cb').prop({ checked: false, indeterminate: false });
+        $('[data-type="' + type + '"].source-ind-row').removeClass('selected');
+        syncAllTypeRows();
         updateSourcesSummary();
         updateAnnotTypesPanel();
     });
