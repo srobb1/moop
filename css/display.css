@@ -1047,6 +1047,26 @@ code {
   outline: none;
 }
 
+/* ── Tool button custom colors ───────────────────────────────────────────── */
+
+.btn-tool-emerald  { background-color: #10b981; border-color: #10b981; color: #fff; }
+.btn-tool-emerald:hover  { background-color: #059669; border-color: #059669; color: #fff; }
+
+.btn-tool-orange   { background-color: #f97316; border-color: #f97316; color: #fff; }
+.btn-tool-orange:hover   { background-color: #ea6c09; border-color: #ea6c09; color: #fff; }
+
+.btn-tool-violet   { background-color: #8b5cf6; border-color: #8b5cf6; color: #fff; }
+.btn-tool-violet:hover   { background-color: #7c3aed; border-color: #7c3aed; color: #fff; }
+
+.btn-tool-sky      { background-color: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+.btn-tool-sky:hover      { background-color: #0284c7; border-color: #0284c7; color: #fff; }
+
+.btn-tool-teal     { background-color: #14b8a6; border-color: #14b8a6; color: #fff; }
+.btn-tool-teal:hover     { background-color: #0d9488; border-color: #0d9488; color: #fff; }
+
+.btn-tool-rose     { background-color: #f43f5e; border-color: #f43f5e; color: #fff; }
+.btn-tool-rose:hover     { background-color: #e11d48; border-color: #e11d48; color: #fff; }
+
 /* ── Index page: Organism Select / Taxon Select lists ───────────────────── */
 
 .org-select-list {
