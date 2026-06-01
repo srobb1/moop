@@ -166,6 +166,11 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
+          <p class="text-muted mb-4">
+            By default your search keyword is matched against <strong>all</strong> annotation types.
+            Select specific types in section&nbsp;③ to narrow your search — for example,
+            find only genes with matching <em>Gene Ontology</em> terms or <em>Domain</em> annotations.
+          </p>
           <div class="row g-3">
             <?php foreach ($ann_type_info as $type => $info):
               $color = htmlspecialchars($info['color']);
