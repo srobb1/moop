@@ -301,8 +301,10 @@ class AnnotationSearch {
         this.warnings = [];
         this.cappedOrganisms = [];
         this.pendingTableInits = [];
+        this.cancelled = false;
         $('#searchResults').show();
         $('#resultsContainer').html('');
+        $('#search-cancel-btn').show();
 
         let searchInfo = `Searched for any record containing <strong>${keywords}</strong>`;
         if (this.selectedSources && this.selectedSources.length > 0) {
@@ -335,7 +337,7 @@ class AnnotationSearch {
         let completed = 0;
 
         const launchNext = () => {
-            if (nextIndex >= total) return;
+            if (this.cancelled || nextIndex >= total) return;
             const index = nextIndex++;
             const organism = organisms[index];
 
@@ -378,6 +380,7 @@ class AnnotationSearch {
                 data: ajaxData,
                 dataType: 'json',
                 success: (data) => {
+                    if (this.cancelled) return;
                     if (data.results && data.results.length > 0) {
                         this.allResults = this.allResults.concat(data.results);
                         this.displayOrganismResults(data);
@@ -405,6 +408,7 @@ class AnnotationSearch {
                     }
                 },
                 error: () => {
+                    if (this.cancelled) return;
                     completed++;
                     const progress = Math.round((completed / total) * 100);
                     $('#progressFill').css('width', progress + '%').text(progress + '%');
@@ -445,7 +449,15 @@ class AnnotationSearch {
         }
     }
 
+    cancel() {
+        this.cancelled = true;
+        $('#search-cancel-btn').hide();
+        $('#searchBtn').prop('disabled', false).removeClass('btn-searching').html('<i class="fa fa-search"></i>');
+        $('#progressText').html('<span class="text-warning"><i class="fa fa-ban me-1"></i>Search cancelled.</span>');
+    }
+
     finishSearch() {
+        $('#search-cancel-btn').hide();
         $('#searchBtn').prop('disabled', false).removeClass('btn-searching').html('<i class="fa fa-search"></i>');
 
         let capMessageHtml = '';

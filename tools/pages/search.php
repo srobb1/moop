@@ -165,10 +165,13 @@
     </div>
 
     <!-- ④ Search -->
-    <div class="mb-4">
-      <button type="submit" class="btn btn-lg w-100" id="searchBtn"
+    <div class="mb-4 d-flex gap-2">
+      <button type="submit" class="btn btn-lg flex-grow-1" id="searchBtn"
               style="background:#7c3aed; border-color:#7c3aed; color:#fff; font-size:1.1rem;">
         <i class="fa fa-search me-2"></i>Search
+      </button>
+      <button type="button" class="btn btn-lg btn-outline-danger" id="search-cancel-btn" style="display:none;">
+        <i class="fa fa-ban me-1"></i>Cancel
       </button>
     </div>
 

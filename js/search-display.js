@@ -184,7 +184,18 @@ $(document).ready(function () {
         });
     }
 
-    function renderSourcesPanel(sourceTypes) {
+    function renderSourcesPanel(sourceTypesRaw) {
+        // Sort types by config order if available
+        const order = (typeof annTypeOrder !== 'undefined') ? annTypeOrder : [];
+        const sourceTypes = Object.fromEntries(
+            Object.entries(sourceTypesRaw).sort(([a], [b]) => {
+                const ai = order.indexOf(a), bi = order.indexOf(b);
+                if (ai === -1 && bi === -1) return a.localeCompare(b);
+                if (ai === -1) return 1;
+                if (bi === -1) return -1;
+                return ai - bi;
+            })
+        );
         if (!Object.keys(sourceTypes).length) {
             $('#sourcesPanel').html('<p class="text-muted small p-3">No annotation types found for selected organisms.</p>');
             updateSourcesSummary();
@@ -451,6 +462,8 @@ $(document).ready(function () {
         updateSearchSelectedPanel();
         onScopeChange();
     }
+
+    $('#search-cancel-btn').on('click', () => searchManager.cancel());
 
     applyContextScope(typeof scopeContext !== 'undefined' ? scopeContext : null);
     updateScopeSummary();

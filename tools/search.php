@@ -122,6 +122,7 @@ $display_config = [
         "const allOrganisms = "  . json_encode($all_organisms)  . ";",
         "const scopeTree = "     . json_encode($scope_tree)     . ";",
         "const scopeContext = "  . json_encode($scope_context)  . ";",
+        "const annTypeOrder = "  . json_encode(array_keys($ann_type_info)) . ";",
     ],
 ];
 
