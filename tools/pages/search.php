@@ -8,7 +8,7 @@
 
   <!-- Header -->
   <div class="mb-4">
-    <h4 class="mb-1 text-primary fw-bold">
+    <h4 class="mb-1 fw-bold text-dark">
       <i class="fa fa-search me-1"></i> Annotation Search
       <i class="fa fa-info-circle search-instructions-trigger ms-1"
          style="cursor:pointer; font-size:0.8em;" data-help-type="basic"></i>
@@ -145,8 +145,9 @@
     </div>
 
     <!-- ④ Search -->
-    <div class="d-flex justify-content-end mb-4">
-      <button type="submit" class="btn btn-primary btn-lg px-5" id="searchBtn">
+    <div class="mb-4">
+      <button type="submit" class="btn btn-lg w-100" id="searchBtn"
+              style="background:#7c3aed; border-color:#7c3aed; color:#fff; font-size:1.1rem;">
         <i class="fa fa-search me-2"></i>Search
       </button>
     </div>
