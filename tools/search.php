@@ -22,6 +22,7 @@ $ctx_group    = $context['group'];
 $raw_sources    = flattenSourcesList(getAccessibleAssemblies());
 $scope_tree     = [];   // [organism][assembly] = [gene_set, ...]
 $organism_info  = [];   // [organism] = ['genus'=>..., 'species'=>..., 'common_name'=>...]
+$assembly_names = [];   // [organism][assembly] = genome_name (human-readable name if set)
 
 foreach ($raw_sources as $src) {
     $org = $src['organism'];
@@ -41,6 +42,11 @@ foreach ($raw_sources as $src) {
             'species'     => $info['species']     ?? '',
             'common_name' => $info['common_name'] ?? '',
         ];
+    }
+
+    if (!isset($assembly_names[$org][$asm])) {
+        $gn = $src['genome_name'] ?? '';
+        $assembly_names[$org][$asm] = ($gn && $gn !== $asm) ? $gn : '';
     }
 }
 
@@ -104,9 +110,10 @@ $display_config = [
 $data = [
     'site'          => $site,
     'siteTitle'     => $siteTitle,
-    'scope_tree'    => $scope_tree,
-    'organism_info' => $organism_info,
-    'all_organisms' => $all_organisms,
+    'scope_tree'     => $scope_tree,
+    'organism_info'  => $organism_info,
+    'assembly_names' => $assembly_names,
+    'all_organisms'  => $all_organisms,
     'inline_scripts' => $display_config['inline_scripts'],
     'page_styles'    => $display_config['page_styles'],
 ];

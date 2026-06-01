@@ -65,14 +65,15 @@
           <input type="checkbox" class="scope-org-cb visually-hidden"
                  id="<?= $oid ?>" data-org="<?= htmlspecialchars($organism) ?>">
           <?php $ai = 0; foreach ($assemblies as $assembly => $gene_sets): $ai++;
-            $aid = $oid . '_a' . $ai;
+            $aid      = $oid . '_a' . $ai;
+            $asm_name = $assembly_names[$organism][$assembly] ?? '';
           ?>
           <input type="checkbox" class="scope-asm-cb visually-hidden"
                  id="<?= $aid ?>" data-org="<?= htmlspecialchars($organism) ?>"
                  data-asm="<?= htmlspecialchars($assembly) ?>">
           <?php $gi = 0; foreach ($gene_sets as $gs): $gi++;
             $gsid       = $aid . '_g' . $gi;
-            $searchText = strtolower("$label $cn $assembly $gs");
+            $searchText = strtolower("$label $cn $assembly $asm_name $gs");
           ?>
           <div class="d-flex align-items-center gap-1 px-1 py-1 scope-flat-row"
                data-search="<?= htmlspecialchars($searchText) ?>">
@@ -82,12 +83,17 @@
                    data-gs="<?= htmlspecialchars($gs) ?>">
             <label for="<?= $gsid ?>" class="form-check-label mb-0"
                    style="cursor:pointer; font-size:0.82rem;">
-              <em><?= htmlspecialchars($label) ?></em>
+              <span style="color:#6366f1; font-weight:600;"><em><?= htmlspecialchars($label) ?></em></span>
               <?php if ($cn): ?>
                 <span class="text-muted fw-normal">(<?= htmlspecialchars($cn) ?>)</span>
               <?php endif; ?>
               <span class="text-muted mx-1">›</span>
-              <span style="color:#b45309; font-weight:600;"><?= htmlspecialchars($assembly) ?></span>
+              <?php if ($asm_name): ?>
+                <?= htmlspecialchars($asm_name) ?>
+                <span class="text-muted ms-1" style="font-size:0.75rem;">(<?= htmlspecialchars($assembly) ?>)</span>
+              <?php else: ?>
+                <?= htmlspecialchars($assembly) ?>
+              <?php endif; ?>
               <span class="text-muted mx-1">›</span>
               <?= htmlspecialchars($gs) ?>
             </label>
