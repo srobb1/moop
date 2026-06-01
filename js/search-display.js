@@ -26,32 +26,17 @@ $(document).ready(function () {
 
     // ── Scope tree ──────────────────────────────────────────────────────────
 
-    // Organism header row click — toggle ALL gene-sets for that organism
-    $(document).on('click', '.scope-org-row-item', function (e) {
-        if ($(e.target).is('input')) return; // let individual checkboxes handle themselves
-        const org       = $(this).data('org');
-        const gsCbs     = $('[data-org="' + org + '"].scope-gs-cb');
-        const nextState = gsCbs.filter(':checked').length === 0; // none on → turn all on; any on → turn all off
-        gsCbs.prop('checked', nextState);
-        syncOrgRowHighlights();
-        onScopeChange();
+    // Row click — toggle the checkbox (label click handles it; this catches clicks outside the label)
+    $(document).on('click', '.scope-gs-full-row', function (e) {
+        if ($(e.target).is('input, label, span, em')) return;
+        $(this).find('.scope-gs-cb').trigger('click');
     });
 
-    // Individual gene-set checkbox change
+    // Gene-set checkbox change → sync row highlight + panel
     $(document).on('change', '.scope-gs-cb', function () {
-        syncOrgRowHighlights();
+        $(this).closest('.scope-gs-full-row').toggleClass('selected', this.checked);
         onScopeChange();
     });
-
-    function syncOrgRowHighlights() {
-        $('.scope-org-row-item').each(function () {
-            const org   = $(this).data('org');
-            const total = $('[data-org="' + org + '"].scope-gs-cb').length;
-            const on    = $('[data-org="' + org + '"].scope-gs-cb:checked').length;
-            $(this).toggleClass('selected', on > 0);
-            $(this).toggleClass('partial',  on > 0 && on < total);
-        });
-    }
 
     function updateSearchSelectedPanel() {
         const panel     = document.getElementById('scope-selected-panel');
@@ -90,32 +75,33 @@ $(document).ready(function () {
         panel.innerHTML = html;
     }
 
-    // Remove individual organism from selected panel
+    // Remove organism from selected panel (× button)
     $(document).on('click', '.scope-deselect-org', function () {
         const org = $(this).data('org');
-        $('[data-org="' + org + '"].scope-gs-cb').prop('checked', false);
-        syncOrgRowHighlights();
+        $('[data-org="' + org + '"].scope-gs-cb').each(function () {
+            $(this).prop('checked', false);
+            $(this).closest('.scope-gs-full-row').removeClass('selected');
+        });
         onScopeChange();
     });
 
-    // Scope filter — matches against organism header row data-search
+    // Scope filter
     $('#scope-filter').on('input', function () {
         const q = $(this).val().trim().toLowerCase();
-        $('.scope-org-item').each(function () {
-            const matches = !q || String($(this).find('.scope-org-row-item').data('search')).includes(q);
-            $(this).toggle(matches);
+        $('.scope-gs-full-row').each(function () {
+            $(this).toggle(!q || String($(this).data('search')).includes(q));
         });
     });
 
     // Select All / Deselect All
     $('#scope-select-all').on('click', function () {
         $('.scope-gs-cb').prop('checked', true);
-        syncOrgRowHighlights();
+        $('.scope-gs-full-row').addClass('selected');
         onScopeChange();
     });
     $('#scope-deselect-all').on('click', function () {
         $('.scope-gs-cb').prop('checked', false);
-        syncOrgRowHighlights();
+        $('.scope-gs-full-row').removeClass('selected');
         onScopeChange();
     });
 
@@ -378,7 +364,10 @@ $(document).ready(function () {
             this.indeterminate = cnt > 0 && cnt < boxes.length;
         });
 
-        syncOrgRowHighlights();
+        // Sync flat row highlights after context is applied
+        $('.scope-gs-full-row').each(function () {
+            $(this).toggleClass('selected', $(this).find('.scope-gs-cb').is(':checked'));
+        });
         updateSearchSelectedPanel();
         onScopeChange();
     }

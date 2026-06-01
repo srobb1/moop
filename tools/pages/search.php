@@ -57,71 +57,48 @@
             <?php if (empty($scope_tree)): ?>
               <p class="text-muted small p-3">No accessible organisms found.</p>
             <?php else: ?>
-
             <?php
             $gp = ['#3498db','#e74c3c','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63','#00bcd4','#795548','#607d8b'];
             $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31) % count($gp)];
-            $oi = 0;
-            foreach ($scope_tree as $organism => $assemblies): $oi++;
+            $rowIdx = 0;
+            foreach ($scope_tree as $organism => $assemblies):
               $info   = $organism_info[$organism] ?? [];
-              $genus  = $info['genus']       ?? '';
-              $sp     = $info['species']     ?? '';
+              $label  = trim(($info['genus'] ?? '') . ' ' . ($info['species'] ?? '')) ?: str_replace('_', ' ', $organism);
               $cn     = $info['common_name'] ?? '';
-              $label  = trim("$genus $sp") ?: str_replace('_', ' ', $organism);
               $groups = $organism_groups[$organism] ?? [];
-              $search = strtolower("$label $cn " . implode(' ', $groups));
-              foreach ($assemblies as $asm => $gene_sets) {
-                  $an = $assembly_names[$organism][$asm] ?? '';
-                  $search .= ' ' . strtolower($asm . ' ' . $an . ' ' . implode(' ', $gene_sets));
-              }
+              foreach ($assemblies as $asm => $gene_sets):
+                $an = $assembly_names[$organism][$asm] ?? '';
+                $asmDisplay = $an ? $an . ' (' . $asm . ')' : $asm;
+                foreach ($gene_sets as $gs):
+                  $rowIdx++;
+                  $gsid   = 'sgs_' . $rowIdx;
+                  $search = strtolower("$label $cn $asm $an $gs " . implode(' ', $groups));
             ?>
-            <div class="scope-org-item" data-org="<?= htmlspecialchars($organism) ?>">
-
-              <!-- Organism header row (click = toggle all gene sets) -->
-              <div class="org-select-row scope-org-row-item"
-                   data-org="<?= htmlspecialchars($organism) ?>"
-                   data-search="<?= htmlspecialchars($search) ?>">
+            <div class="org-select-row scope-gs-full-row"
+                 data-search="<?= htmlspecialchars($search) ?>">
+              <input type="checkbox" class="form-check-input flex-shrink-0 scope-gs-cb mb-0"
+                     id="<?= $gsid ?>"
+                     data-org="<?= htmlspecialchars($organism) ?>"
+                     data-asm="<?= htmlspecialchars($asm) ?>"
+                     data-gs="<?= htmlspecialchars($gs) ?>"
+                     data-label="<?= htmlspecialchars($label) ?>"
+                     data-cn="<?= htmlspecialchars($cn) ?>"
+                     data-asm-display="<?= htmlspecialchars($asmDisplay) ?>">
+              <label for="<?= $gsid ?>" class="form-check-label mb-0 d-flex align-items-center flex-wrap gap-1" style="cursor:pointer;">
                 <span class="org-groups">
                   <?php foreach ($groups as $g): ?>
                   <span class="org-group-chip" style="background:<?= $groupColor($g) ?>"><?= htmlspecialchars($g) ?></span>
                   <?php endforeach; ?>
                 </span>
-                <span class="org-name"><em><?= htmlspecialchars($label) ?></em></span>
-                <?php if ($cn): ?>
-                  <span class="org-common text-muted">· <?= htmlspecialchars($cn) ?></span>
-                <?php endif; ?>
-                <span class="org-check ms-auto"><i class="fas fa-check text-success"></i></span>
-              </div>
-
-              <!-- Gene-set rows (one per assembly × gene set) -->
-              <?php $ai = 0; foreach ($assemblies as $asm => $gene_sets): $ai++;
-                $an = $assembly_names[$organism][$asm] ?? '';
-                $gi = 0; foreach ($gene_sets as $gs): $gi++;
-                  $gsid = 'sgs_' . $oi . '_' . $ai . '_' . $gi;
-              ?>
-              <div class="scope-gs-row d-flex align-items-center gap-2 ps-3 pe-2 py-1"
-                   style="border-top:1px solid #f3f3f3; font-size:0.79rem;">
-                <input type="checkbox" class="form-check-input flex-shrink-0 scope-gs-cb mb-0"
-                       id="<?= $gsid ?>"
-                       data-org="<?= htmlspecialchars($organism) ?>"
-                       data-asm="<?= htmlspecialchars($asm) ?>"
-                       data-gs="<?= htmlspecialchars($gs) ?>"
-                       data-label="<?= htmlspecialchars($label) ?>"
-                       data-cn="<?= htmlspecialchars($cn) ?>">
-                <label for="<?= $gsid ?>" class="form-check-label mb-0 text-muted" style="cursor:pointer;">
-                  <?php if ($an): ?>
-                    <?= htmlspecialchars($an) ?>
-                    <span class="ms-1" style="font-size:0.72rem;">(<?= htmlspecialchars($asm) ?>)</span>
-                  <?php else: ?>
-                    <?= htmlspecialchars($asm) ?>
-                  <?php endif; ?>
-                  <span class="mx-1">›</span><?= htmlspecialchars($gs) ?>
-                </label>
-              </div>
-              <?php endforeach; endforeach; ?>
-
+                <em><?= htmlspecialchars($label) ?></em><?php if ($cn): ?><span class="text-muted"> · <?= htmlspecialchars($cn) ?></span><?php endif; ?>
+                <span class="text-muted">—</span>
+                <span><?= htmlspecialchars($asmDisplay) ?></span>
+                <span class="text-muted">›</span>
+                <span><?= htmlspecialchars($gs) ?></span>
+              </label>
+              <span class="org-check ms-auto"><i class="fas fa-check text-success"></i></span>
             </div>
-            <?php endforeach; ?>
+            <?php endforeach; endforeach; endforeach; ?>
             <?php endif; ?>
           </div>
         </div>
