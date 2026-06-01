@@ -116,8 +116,7 @@ $(document).ready(function () {
         updateSearchSelectedPanel();
         clearTimeout(sourcesLoadTimer);
         sourcesLoadTimer = setTimeout(() => {
-            const orgs = getCheckedOrganisms();
-            loadAnnotationSources(orgs.length ? orgs : allOrganisms);
+            loadAnnotationSources(getCheckedOrganisms());
         }, 300);
     }
 
