@@ -75,8 +75,12 @@
                   $gsid   = 'sgs_' . $rowIdx;
                   $search = strtolower("$label $cn $asm $an $gs " . implode(' ', $groups));
             ?>
+            <?php
+              $tooltip = $label . ($cn ? ' · ' . $cn : '') . ' · ' . $asmDisplay . ($asmAccession ? ' (' . $asmAccession . ')' : '') . ' › ' . $gs;
+            ?>
             <div class="org-select-row scope-gs-full-row"
-                 data-search="<?= htmlspecialchars($search) ?>">
+                 data-search="<?= htmlspecialchars($search) ?>"
+                 title="<?= htmlspecialchars($tooltip) ?>">
               <input type="checkbox" class="scope-gs-cb visually-hidden"
                      id="<?= $gsid ?>"
                      data-org="<?= htmlspecialchars($organism) ?>"
