@@ -306,6 +306,9 @@ class AnnotationSearch {
         $('#resultsContainer').html('');
         $('#search-cancel-btn').show();
 
+        // Wire progress-area cancel (injected into #searchProgress below)
+        $(document).off('click.cancel').on('click.cancel', '#search-cancel-progress-btn', () => this.cancel());
+
         let searchInfo = `Searched for any record containing <strong>${keywords}</strong>`;
         if (this.selectedSources && this.selectedSources.length > 0) {
             searchInfo += ` (limited to ${this.selectedSources.join(', ')})`;
@@ -319,7 +322,12 @@ class AnnotationSearch {
             <div class="search-progress-bar">
                 <div class="search-progress-fill" id="progressFill" style="width: 0%">0%</div>
             </div>
-            <small class="text-muted mt-2 d-block" id="progressText">Starting search...</small>
+            <div class="d-flex align-items-center justify-content-between mt-1">
+                <small class="text-muted" id="progressText">Starting search…</small>
+                <button type="button" class="btn btn-sm btn-outline-danger ms-3" id="search-cancel-progress-btn">
+                    <i class="fa fa-ban me-1"></i>Cancel
+                </button>
+            </div>
         `);
 
         $('#searchBtn').prop('disabled', true).addClass('btn-searching').html('<i class="fa fa-search"></i>');

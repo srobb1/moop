@@ -393,13 +393,6 @@ $(document).ready(function () {
         const checkedOrgs  = getCheckedOrganisms();
         const checkedTypes = $('.source-cb:checked').length;
 
-        // Warn about searching all organisms first (most impactful)
-        if (checkedOrgs.length === 0) {
-            if (!confirm('No organisms selected — this will search across all ' + allOrganisms.length + ' organisms and may take a while. Continue?')) {
-                return;
-            }
-        }
-
         // Require at least one annotation type
         if (checkedTypes === 0) {
             alert('Please select at least one annotation type in section 3 before searching.');
@@ -420,7 +413,21 @@ $(document).ready(function () {
             }, 200);
         };
 
-        proceed();
+        if (checkedOrgs.length === 0) {
+            // Show Bootstrap modal warning instead of browser confirm
+            const modalEl = document.getElementById('search-all-orgs-modal');
+            const bodyEl  = document.getElementById('search-all-orgs-modal-body');
+            if (bodyEl) bodyEl.textContent = 'No organisms selected — this will search across all ' + allOrganisms.length + ' organisms and may take a while.';
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            // Wire confirm button once
+            $('#search-all-orgs-confirm').off('click.searchall').on('click.searchall', function () {
+                modal.hide();
+                proceed();
+            });
+            modal.show();
+        } else {
+            proceed();
+        }
     });
 
     // ── Init ─────────────────────────────────────────────────────────────────
@@ -463,7 +470,7 @@ $(document).ready(function () {
         onScopeChange();
     }
 
-    $('#search-cancel-btn').on('click', () => searchManager.cancel());
+    $('#search-cancel-btn, #search-cancel-progress-btn').on('click', () => searchManager.cancel());
 
     applyContextScope(typeof scopeContext !== 'undefined' ? scopeContext : null);
     updateScopeSummary();

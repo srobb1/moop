@@ -215,6 +215,24 @@
     </div>
   </div>
 
+  <!-- Search-all-organisms warning modal -->
+  <div class="modal fade" id="search-all-orgs-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-warning">
+        <div class="modal-header bg-warning bg-opacity-10 py-2">
+          <h5 class="modal-title fw-bold"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Search all organisms?</h5>
+        </div>
+        <div class="modal-body" id="search-all-orgs-modal-body">
+          No organisms selected — this will search across all organisms and may take a while.
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Go back</button>
+          <button type="button" class="btn btn-warning" id="search-all-orgs-confirm">Search all</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Search Results -->
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-5">
