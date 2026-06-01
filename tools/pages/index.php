@@ -216,11 +216,14 @@
       </div>
 
       <div class="card shadow-sm sticky-card mb-3">
-        <div class="card-header bg-success text-white">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
           <h5 class="mb-0">
             Selected Organisms
             <span class="badge bg-light text-dark ms-1" id="selected-count">0</span>
           </h5>
+          <button id="clear-all-organisms" class="btn btn-sm btn-outline-light py-0 px-2" style="display:none" title="Clear all">
+            <i class="fa fa-times me-1"></i>Clear all
+          </button>
         </div>
         <div class="card-body p-2">
           <div id="selected-organisms-list">

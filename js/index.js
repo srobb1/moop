@@ -123,6 +123,8 @@ function updateSelectedList() {
     if (hint) hint.style.display = hasSelection ? 'none' : '';
     const wrapper = document.getElementById('tools-card-wrapper');
     if (wrapper) wrapper.classList.toggle('tools-locked', !hasSelection);
+    const clearBtn = document.getElementById('clear-all-organisms');
+    if (clearBtn) clearBtn.style.display = hasSelection ? '' : 'none';
 
     if (selectedOrganisms.size === 0) {
         listEl.innerHTML = '<div class="text-muted fst-italic small px-1">No organisms selected</div>';
@@ -235,5 +237,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ?.addEventListener('click', e => {
             const btn = e.target.closest('.remove-org-btn');
             if (btn) removeOrganism(btn.dataset.org);
+        });
+
+    // Clear all
+    document.getElementById('clear-all-organisms')
+        ?.addEventListener('click', () => {
+            selectedOrganisms.clear();
+            updateSelectedList();
+            refreshAllHighlights();
+            if (phyloTree) phyloTree.updateUI();
         });
 });
