@@ -1166,6 +1166,7 @@ code {
 .org-select-row:hover       { background-color: #f8f9fa; }
 .org-select-row.selected    { background-color: #e3f2fd; }
 .org-select-row.hidden      { display: none; }
+.org-select-row.partial     { background-color: #f0f4ff; }
 
 .org-groups    { display: flex; gap: 3px; flex-shrink: 0; }
 .org-name      { font-size: 0.875rem; white-space: nowrap; }

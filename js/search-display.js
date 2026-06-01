@@ -26,43 +26,95 @@ $(document).ready(function () {
 
     // ── Scope tree ──────────────────────────────────────────────────────────
 
-    // Organism row click — toggle all gene-sets for that org, update visual state
-    $(document).on('click', '.scope-org-row-item', function () {
+    // Organism header row click — toggle ALL gene-sets for that organism
+    $(document).on('click', '.scope-org-row-item', function (e) {
+        if ($(e.target).is('input')) return; // let individual checkboxes handle themselves
         const org       = $(this).data('org');
         const gsCbs     = $('[data-org="' + org + '"].scope-gs-cb');
-        const anyOn     = gsCbs.filter(':checked').length > 0;
-        const nextState = !anyOn;
+        const nextState = gsCbs.filter(':checked').length === 0; // none on → turn all on; any on → turn all off
         gsCbs.prop('checked', nextState);
-        $('[data-org="' + org + '"].scope-asm-cb').prop({ checked: nextState, indeterminate: false });
-        $('[data-org="' + org + '"].scope-org-cb').prop({ checked: nextState, indeterminate: false });
-        $(this).toggleClass('selected', nextState);
+        syncOrgRowHighlights();
+        onScopeChange();
+    });
+
+    // Individual gene-set checkbox change
+    $(document).on('change', '.scope-gs-cb', function () {
+        syncOrgRowHighlights();
         onScopeChange();
     });
 
     function syncOrgRowHighlights() {
         $('.scope-org-row-item').each(function () {
-            const org    = $(this).data('org');
-            const anyOn  = $('[data-org="' + org + '"].scope-gs-cb:checked').length > 0;
-            $(this).toggleClass('selected', anyOn);
+            const org   = $(this).data('org');
+            const total = $('[data-org="' + org + '"].scope-gs-cb').length;
+            const on    = $('[data-org="' + org + '"].scope-gs-cb:checked').length;
+            $(this).toggleClass('selected', on > 0);
+            $(this).toggleClass('partial',  on > 0 && on < total);
         });
     }
 
-    // Scope filter
+    function updateSearchSelectedPanel() {
+        const panel     = document.getElementById('scope-selected-panel');
+        const countBadge = document.getElementById('scope-selected-count');
+        if (!panel) return;
+
+        // Collect selected gene-sets grouped by organism
+        const byOrg = {};
+        $('.scope-gs-cb:checked').each(function () {
+            const org = $(this).data('org');
+            if (!byOrg[org]) byOrg[org] = { label: '', cn: '', rows: [] };
+            byOrg[org].label = $(this).data('label') || org.replace(/_/g, ' ');
+            byOrg[org].cn    = $(this).data('cn') || '';
+            byOrg[org].rows.push($(this).closest('.scope-gs-row').find('label').text().trim());
+        });
+
+        const orgCount = Object.keys(byOrg).length;
+        if (countBadge) countBadge.textContent = orgCount;
+
+        if (!orgCount) {
+            panel.innerHTML = '<div class="text-muted small p-2 fst-italic">None — will search all organisms</div>';
+            return;
+        }
+
+        let html = '';
+        for (const [org, d] of Object.entries(byOrg)) {
+            html += `<div class="px-2 py-1 border-bottom">
+                <div class="d-flex justify-content-between align-items-start">
+                  <span><strong><em>${d.label}</em></strong>${d.cn ? ' <span class="text-muted small">· ' + d.cn + '</span>' : ''}</span>
+                  <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-danger scope-deselect-org flex-shrink-0"
+                          data-org="${org}" title="Remove"><i class="fas fa-times"></i></button>
+                </div>
+                ${d.rows.map(r => `<div class="text-muted ps-2" style="font-size:0.75rem;">› ${r}</div>`).join('')}
+              </div>`;
+        }
+        panel.innerHTML = html;
+    }
+
+    // Remove individual organism from selected panel
+    $(document).on('click', '.scope-deselect-org', function () {
+        const org = $(this).data('org');
+        $('[data-org="' + org + '"].scope-gs-cb').prop('checked', false);
+        syncOrgRowHighlights();
+        onScopeChange();
+    });
+
+    // Scope filter — matches against organism header row data-search
     $('#scope-filter').on('input', function () {
         const q = $(this).val().trim().toLowerCase();
-        $('.scope-org-row-item').each(function () {
-            $(this).toggle(!q || String($(this).data('search')).includes(q));
+        $('.scope-org-item').each(function () {
+            const matches = !q || String($(this).find('.scope-org-row-item').data('search')).includes(q);
+            $(this).toggle(matches);
         });
     });
 
-    // Select All / Deselect All scope
+    // Select All / Deselect All
     $('#scope-select-all').on('click', function () {
-        $('.scope-gs-cb, .scope-asm-cb, .scope-org-cb').prop({ checked: true, indeterminate: false });
+        $('.scope-gs-cb').prop('checked', true);
         syncOrgRowHighlights();
         onScopeChange();
     });
     $('#scope-deselect-all').on('click', function () {
-        $('.scope-gs-cb, .scope-asm-cb, .scope-org-cb').prop({ checked: false, indeterminate: false });
+        $('.scope-gs-cb').prop('checked', false);
         syncOrgRowHighlights();
         onScopeChange();
     });
@@ -71,6 +123,7 @@ $(document).ready(function () {
     let sourcesLoadTimer = null;
     function onScopeChange() {
         updateScopeSummary();
+        updateSearchSelectedPanel();
         clearTimeout(sourcesLoadTimer);
         sourcesLoadTimer = setTimeout(() => {
             const orgs = getCheckedOrganisms();
@@ -79,14 +132,9 @@ $(document).ready(function () {
     }
 
     function getCheckedOrganisms() {
-        const orgs = [];
-        $('.scope-org-cb').each(function () {
-            // Include organism if at least one of its gene sets is checked
-            const org     = $(this).data('org');
-            const anyGs   = $('[data-org="' + org + '"].scope-gs-cb:checked').length > 0;
-            if (anyGs) orgs.push(org);
-        });
-        return orgs;
+        const seen = new Set();
+        $('.scope-gs-cb:checked').each(function () { seen.add($(this).data('org')); });
+        return Array.from(seen);
     }
 
     function updateScopeSummary() {
@@ -331,6 +379,7 @@ $(document).ready(function () {
         });
 
         syncOrgRowHighlights();
+        updateSearchSelectedPanel();
         onScopeChange();
     }
 
