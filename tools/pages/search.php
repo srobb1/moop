@@ -95,7 +95,7 @@
                 <?php endforeach; ?>
               </span>
               <span class="flex-grow-1 text-truncate" style="min-width:0; white-space:nowrap;">
-                <em><?= htmlspecialchars($label) ?></em><?php if ($cn): ?><span class="text-muted"> · <?= htmlspecialchars($cn) ?></span><?php endif;
+                <em><?= htmlspecialchars($label) ?></em><?php if ($cn): ?><span class="text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($cn) ?></span><?php endif;
                 ?><span class="text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($asmDisplay) ?><?php if ($asmAccession): ?> <span style="font-size:0.9em;">(<?= htmlspecialchars($asmAccession) ?>)</span><?php endif; ?> › <?= htmlspecialchars($gs) ?></span>
               </span>
               <span class="org-check flex-shrink-0"><i class="fas fa-check text-success"></i></span>
