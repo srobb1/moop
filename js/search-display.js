@@ -97,11 +97,19 @@ $(document).ready(function () {
         });
     });
 
-    // Select All / Deselect All
+    // Select All scope — confirm first
     $('#scope-select-all').on('click', function () {
-        $('.scope-gs-cb').prop('checked', true);
-        $('.scope-gs-full-row').addClass('selected');
-        onScopeChange();
+        const total   = $('.scope-gs-cb').length;
+        const countEl = document.getElementById('select-all-orgs-count');
+        if (countEl) countEl.textContent = total + (total === 1 ? ' gene set' : ' gene sets across all organisms');
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('select-all-orgs-modal'));
+        $('#select-all-orgs-confirm').off('click.selall').on('click.selall', function () {
+            modal.hide();
+            $('.scope-gs-cb').prop('checked', true);
+            $('.scope-gs-full-row').addClass('selected');
+            onScopeChange();
+        });
+        modal.show();
     });
     $('#scope-deselect-all').on('click', function () {
         $('.scope-gs-cb').prop('checked', false);
@@ -413,21 +421,7 @@ $(document).ready(function () {
             }, 200);
         };
 
-        if (checkedOrgs.length === 0) {
-            // Show Bootstrap modal warning instead of browser confirm
-            const modalEl = document.getElementById('search-all-orgs-modal');
-            const bodyEl  = document.getElementById('search-all-orgs-modal-body');
-            if (bodyEl) bodyEl.textContent = 'No organisms selected — this will search across all ' + allOrganisms.length + ' organisms and may take a while.';
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            // Wire confirm button once
-            $('#search-all-orgs-confirm').off('click.searchall').on('click.searchall', function () {
-                modal.hide();
-                proceed();
-            });
-            modal.show();
-        } else {
-            proceed();
-        }
+        proceed();
     });
 
     // ── Init ─────────────────────────────────────────────────────────────────

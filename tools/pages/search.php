@@ -215,19 +215,20 @@
     </div>
   </div>
 
-  <!-- Search-all-organisms warning modal -->
-  <div class="modal fade" id="search-all-orgs-modal" tabindex="-1" aria-hidden="true">
+  <!-- Select-all-organisms warning modal -->
+  <div class="modal fade" id="select-all-orgs-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content border-warning">
         <div class="modal-header bg-warning bg-opacity-10 py-2">
-          <h5 class="modal-title fw-bold"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Search all organisms?</h5>
+          <h5 class="modal-title fw-bold"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Select all organisms?</h5>
         </div>
-        <div class="modal-body" id="search-all-orgs-modal-body">
-          No organisms selected — this will search across all organisms and may take a while.
+        <div class="modal-body">
+          This will select all <strong id="select-all-orgs-count"></strong> organisms.
+          Searches across all organisms can take a while — consider selecting only the ones you need.
         </div>
         <div class="modal-footer py-2">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Go back</button>
-          <button type="button" class="btn btn-warning" id="search-all-orgs-confirm">Search all</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-warning" id="select-all-orgs-confirm">Select all</button>
         </div>
       </div>
     </div>
