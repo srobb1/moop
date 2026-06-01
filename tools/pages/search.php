@@ -38,7 +38,6 @@
       <div class="card-header py-2 d-flex align-items-center gap-2">
         <span class="step-badge me-2">2</span>
         <strong class="me-auto">Limit to specific organisms</strong>
-        <small class="text-muted fst-italic d-none d-md-inline">leave unchecked to search all</small>
         <div class="d-flex gap-1 ms-2">
           <button type="button" id="scope-select-all" class="btn btn-sm btn-outline-secondary">All</button>
           <button type="button" id="scope-deselect-all" class="btn btn-sm btn-outline-secondary">None</button>
@@ -129,7 +128,6 @@
                 data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="About annotation types">
           <i class="fa fa-info-circle"></i>
         </button>
-        <small class="text-muted fst-italic ms-2">leave unchecked to search all</small>
         <div class="d-flex gap-1 ms-2">
           <button type="button" id="sources-select-all" class="btn btn-sm btn-outline-secondary">All</button>
           <button type="button" id="sources-deselect-all" class="btn btn-sm btn-outline-secondary">None</button>

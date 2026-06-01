@@ -326,14 +326,23 @@ $(document).ready(function () {
         e.preventDefault();
 
         const checkedOrgs = getCheckedOrganisms();
-        const activeOrgs  = checkedOrgs.length ? checkedOrgs : allOrganisms;
 
-        searchManager.selectedScope            = buildSelectedScope();
-        searchManager.selectedSources          = getCheckedSources();
-        searchManager.config.organismsVar      = activeOrgs;
-        searchManager.config.totalVar          = activeOrgs.length;
+        const proceed = () => {
+            const activeOrgs = checkedOrgs.length ? checkedOrgs : allOrganisms;
+            searchManager.selectedScope       = buildSelectedScope();
+            searchManager.selectedSources     = getCheckedSources();
+            searchManager.config.organismsVar = activeOrgs;
+            searchManager.config.totalVar     = activeOrgs.length;
+            searchManager.handleSearch();
+        };
 
-        searchManager.handleSearch();
+        if (checkedOrgs.length === 0) {
+            if (confirm('No organisms selected — this will search across all ' + allOrganisms.length + ' organisms and may take a while. Continue?')) {
+                proceed();
+            }
+        } else {
+            proceed();
+        }
     });
 
     // ── Init ─────────────────────────────────────────────────────────────────
