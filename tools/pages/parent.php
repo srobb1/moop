@@ -46,12 +46,13 @@
                         <span class="badge bg-feature-gene text-white ms-2 badge-accent badge-lg">
                             <?= htmlspecialchars($type) ?>
                         </span>
-                        <?php if (!empty($children) && count($children) > 0):
-                            $first_child_type = $children[0]['feature_type'] ?? 'mRNA';
+                        <?php if (!empty($children_hierarchical)):
+                            $first_child_type = $children_hierarchical[0]['feature_type'] ?? 'mRNA';
                             $child_class = strtoupper($first_child_type) === 'MRNA' ? 'bg-feature-mrna' : 'bg-feature-gene';
+                            $direct_child_count = count($children_hierarchical);
                         ?>
                             <span class="badge text-white ms-2 badge-lg <?= $child_class ?>">
-                                <?= count($children) ?> <?= htmlspecialchars($first_child_type) ?> child<?= count($children) > 1 ? 'ren' : '' ?>
+                                <?= $direct_child_count ?> <?= htmlspecialchars($first_child_type) ?> child<?= $direct_child_count > 1 ? 'ren' : '' ?>
                             </span>
                         <?php endif; ?>
                     </div>
