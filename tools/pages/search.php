@@ -46,6 +46,10 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
       <div class="card-header py-2 d-flex align-items-center gap-2">
         <span class="step-badge me-2">2</span>
         <strong class="me-auto">Limit to specific organisms</strong>
+        <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted"
+                data-bs-toggle="modal" data-bs-target="#scope-info-modal" title="About organism selection">
+          <i class="fa fa-info-circle"></i>
+        </button>
         <div class="d-flex gap-1 ms-2">
           <button type="button" id="scope-select-all" class="btn btn-sm btn-outline-secondary">All</button>
           <button type="button" id="scope-deselect-all" class="btn btn-sm btn-outline-secondary">None</button>
@@ -192,6 +196,40 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
     </div>
 
   </form>
+
+  <!-- Organism selection info modal -->
+  <div class="modal fade" id="scope-info-modal" tabindex="-1" aria-labelledby="scope-info-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header py-2">
+          <h5 class="modal-title fw-bold" id="scope-info-modal-label">Selecting organisms</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-3">
+            Click any row to select or deselect it. Each row represents one
+            <strong>organism → assembly → gene set</strong> combination. You must select at least one
+            row before searching — if nothing is selected, all organisms will be searched.
+          </p>
+          <h6 class="fw-semibold mb-1"><i class="fa fa-search me-1 text-muted"></i> Filter box</h6>
+          <p class="text-muted small mb-3">
+            Type to narrow the list. The filter searches organism names, common names, group labels,
+            assembly accessions, and gene set names — even when details are hidden.
+          </p>
+          <h6 class="fw-semibold mb-1"><i class="fa fa-toggle-on me-1 text-muted"></i> Details toggle</h6>
+          <p class="text-muted small mb-0">
+            By default only the organism name and common name are shown. Switch on
+            <strong>Details</strong> to also display the assembly and gene set for each row.
+            When the filter matches a hidden assembly or gene set name, that row's detail is
+            revealed automatically and the matched text is highlighted.
+          </p>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Annotation types info modal -->
   <div class="modal fade" id="ann-types-modal" tabindex="-1" aria-labelledby="ann-types-modal-label" aria-hidden="true">
