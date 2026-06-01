@@ -133,6 +133,12 @@
 
     <!-- Right: always-visible selection panel -->
     <div class="col-lg-4">
+      <!-- Tools Card -->
+      <?php
+      $context = createToolContext('index', ['use_onclick_handler' => true]);
+      include_once TOOL_SECTION_PATH;
+      ?>
+
       <div class="card shadow-sm sticky-card mb-3">
         <div class="card-header bg-success text-white">
           <h5 class="mb-0">
@@ -146,12 +152,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Tools Card -->
-      <?php
-      $context = createToolContext('index', ['use_onclick_handler' => true]);
-      include_once TOOL_SECTION_PATH;
-      ?>
     </div><!-- /col-lg-4 -->
 
   </div><!-- /row -->
