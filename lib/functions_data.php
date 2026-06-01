@@ -344,18 +344,26 @@ function getIndexDisplayCards($group_data) {
     if (get_access_level() === 'ADMIN' || get_access_level() === 'IP_IN_RANGE') {
         $cards_to_display = $all_cards;
     } elseif (is_logged_in()) {
-        // Logged-in users see: public groups + their permitted organisms
+        // Logged-in users see: public groups + any groups containing their permitted organisms
         $cards_to_display = getPublicGroupCards($group_data);
-        
-        foreach (get_user_access() as $organism => $assemblies) {
-            if (!isset($cards_to_display[$organism])) {
-                $formatted_name = formatIndexOrganismName($organism);
-                $cards_to_display[$organism] = [
-                    'title' => $formatted_name,
-                    'text'  => "Explore " . strip_tags($formatted_name) . " Data",
-                    'link'  => 'tools/organism.php?organism=' . urlencode($organism)
-                ];
+
+        $user_organisms = array_keys(get_user_access());
+        $group_organisms = [];
+        foreach ($group_data as $entry) {
+            if (!in_array($entry['organism'], $user_organisms, true)) continue;
+            foreach ($entry['groups'] as $group) {
+                if (isset($cards_to_display[$group])) continue;
+                if (!isset($group_organisms[$group])) $group_organisms[$group] = [];
+                $group_organisms[$group][$entry['organism']] = true;
             }
+        }
+        foreach ($group_organisms as $group => $orgs) {
+            $cards_to_display[$group] = [
+                'title'          => $group,
+                'text'           => "Explore $group Data",
+                'link'           => 'tools/groups.php?group=' . urlencode($group),
+                'organism_count' => count($orgs),
+            ];
         }
     } else {
         // Visitors see only groups with public assemblies
