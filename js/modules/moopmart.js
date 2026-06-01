@@ -436,9 +436,37 @@
     // Init
     // -------------------------------------------------------
 
+    function applyContextScope(ctx) {
+        if (!ctx) return;
+        const keepOrgs = new Set(ctx.organisms || (ctx.organism ? [ctx.organism] : []));
+        if (!keepOrgs.size) return;
+
+        document.querySelectorAll('.mm-gs-cb').forEach(cb => {
+            cb.checked = keepOrgs.has(cb.dataset.org);
+        });
+        document.querySelectorAll('.mm-asm-cb').forEach(cb => {
+            const boxes = document.querySelectorAll(`.mm-gs-cb[data-org="${cb.dataset.org}"][data-asm="${cb.dataset.asm}"]`);
+            const cnt = Array.from(boxes).filter(b => b.checked).length;
+            cb.checked       = cnt === boxes.length;
+            cb.indeterminate = cnt > 0 && cnt < boxes.length;
+        });
+        document.querySelectorAll('.mm-org-cb').forEach(cb => {
+            const boxes = document.querySelectorAll(`.mm-gs-cb[data-org="${cb.dataset.org}"]`);
+            const cnt = Array.from(boxes).filter(b => b.checked).length;
+            cb.checked       = cnt === boxes.length;
+            cb.indeterminate = cnt > 0 && cnt < boxes.length;
+        });
+        updateScopeSummary();
+        updateCoordState();
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         initScopeTree();
         initAnnSources();
+
+        if (typeof scopeContext !== 'undefined' && scopeContext) {
+            applyContextScope(scopeContext);
+        }
 
         ['mm-ann-format-info', 'mm-scope-info', 'mm-ann-sources-info', 'mm-preview-info', 'mm-fasta-info'].forEach(id => {
             const el = document.getElementById(id);

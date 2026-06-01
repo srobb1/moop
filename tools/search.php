@@ -69,10 +69,13 @@ if ($ctx_organism) {
     if (!empty($group_organisms)) {
         $scope_context = ['organisms' => $group_organisms];
     }
-} elseif (!empty($_GET['organisms'])) {
-    $org_result = parseOrganismParameter($_GET['organisms']);
-    if (!empty($org_result['organisms'])) {
-        $scope_context = ['organisms' => $org_result['organisms']];
+} else {
+    $incoming = $_POST['organisms'] ?? $_GET['organisms'] ?? null;
+    if (!empty($incoming)) {
+        $org_result = parseOrganismParameter($incoming);
+        if (!empty($org_result['organisms'])) {
+            $scope_context = ['organisms' => $org_result['organisms']];
+        }
     }
 }
 

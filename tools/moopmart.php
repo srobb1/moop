@@ -51,6 +51,19 @@ foreach ($scope_tree as $org => &$asms) {
 }
 unset($asms, $gene_sets);
 
+// Pre-filter to incoming organisms when launched from a toolbox
+$scope_context = null;
+$incoming_orgs = $_POST['organisms'] ?? $_GET['organisms'] ?? null;
+if (!empty($incoming_orgs)) {
+    $incoming_orgs = array_values(array_filter(
+        is_array($incoming_orgs) ? $incoming_orgs : [$incoming_orgs],
+        fn($o) => isset($scope_tree[$o])
+    ));
+    if (!empty($incoming_orgs)) {
+        $scope_context = ['organisms' => $incoming_orgs];
+    }
+}
+
 // Load annotation type colors from config
 $metadata_path   = $config->getPath('metadata_path');
 $ann_config_file = "$metadata_path/annotation_config.json";
@@ -106,6 +119,7 @@ echo render_display_page(
             'const annotationSources = ' . json_encode($annotation_source_names) . ';',
             "const moopSite = '/$site';",
             "const siteTitle = '"        . addslashes($siteTitle)                . "';",
+            'const scopeContext = '      . json_encode($scope_context)           . ';',
         ],
     ],
     'MOOPmart: Mega Search'
