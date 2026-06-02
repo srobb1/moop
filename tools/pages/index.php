@@ -119,8 +119,6 @@
           <div class="row g-2 mb-3">
             <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-emerald me-2">Retrieve Sequences</span><span class="text-muted small">Download gene, mRNA, CDS, or protein FASTA</span></div></div>
             <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-orange me-2">BLAST Search</span><span class="text-muted small">Search a query sequence against selected genomes</span></div></div>
-            <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-amber me-2">Annotation Search</span><span class="text-muted small">Filter genes by functional annotation across organisms</span></div></div>
-            <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-rose me-2">MOOPmart</span><span class="text-muted small">Bulk export with flexible filters — TSV or FASTA</span></div></div>
             <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-violet me-2">Search Organisms</span><span class="text-muted small">Cross-organism annotation comparison table</span></div></div>
             <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-sky me-2">Downloads</span><span class="text-muted small">Browse and download genome assembly files</span></div></div>
           </div>
