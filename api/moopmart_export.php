@@ -59,7 +59,10 @@ if (!empty($types))                             $filters['feature_types']       
 if (!empty($_POST['feature_id']))               $filters['feature_id']           = trim($_POST['feature_id']);
 if (!empty($_POST['gene_name']))                $filters['gene_name']            = trim($_POST['gene_name']);
 if (!empty($_POST['gene_description']))         $filters['gene_description']     = trim($_POST['gene_description']);
-if (!empty($_POST['annotation_source']))        $filters['annotation_source']    = trim($_POST['annotation_source']);
+$_raw_src = $_POST['annotation_filter_sources'] ?? [];
+if (!empty($_raw_src) && is_array($_raw_src)) {
+    $filters['annotation_sources'] = array_values(array_filter(array_map('trim', $_raw_src)));
+}
 if (!empty($_POST['annotation_accession']))     $filters['annotation_accession'] = trim($_POST['annotation_accession']);
 if (!empty($_POST['annotation_keyword']))       $filters['annotation_keyword']   = trim($_POST['annotation_keyword']);
 

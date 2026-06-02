@@ -81,7 +81,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       <?php endif; ?>
     </div>
     <div class="px-3 py-1 border-top d-flex align-items-center" style="background:#f8f9fa; font-size:0.8rem;">
-      <span class="text-muted" id="mm-scope-counts">No organisms selected — will include all accessible gene sets</span>
+      <span class="text-muted" id="mm-scope-counts">Select at least one organism above</span>
     </div>
   </div>
 
@@ -90,7 +90,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
     <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
       <span class="step-badge me-2">2</span>
       <span class="fw-semibold" style="font-size:0.9rem;">Build your list</span>
-      <small class="ms-1" style="color:rgba(255,255,255,0.75); font-size:0.78rem;">— all sections optional</small>
+      <small class="ms-auto" style="color:rgba(255,255,255,0.75); font-size:0.78rem;">all sections optional</small>
     </div>
     <div class="card-body pt-2 pb-3">
 
@@ -111,48 +111,47 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
         <!-- By Feature IDs -->
         <div>
-          <div class="browse-select-header mb-0" id="mm-ids-header" role="button"
+          <div class="browse-select-header browse-select-header--light mb-0" id="mm-ids-header" role="button"
                aria-expanded="false" aria-controls="mm-ids-body"
                data-bs-toggle="collapse" data-bs-target="#mm-ids-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
               <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">By Feature IDs</span>
-              <span class="ms-auto" style="font-size:0.72rem; opacity:0.75;">paste a list of IDs</span>
             </span>
           </div>
           <div class="collapse" id="mm-ids-body">
             <div class="browse-select-panel">
+              <p class="text-muted small mb-2">Paste a list of feature IDs — separate them with commas, spaces, or new lines.</p>
               <textarea id="mm-feature-ids" class="form-control moop-input" rows="4"
                         placeholder="Enter one or more feature IDs&#10;e.g.  gene1, gene2&#10;or one per line"></textarea>
-              <div class="text-muted mt-1" style="font-size:0.75rem;">
-                <i class="fa fa-info-circle me-1"></i>Separate IDs with commas, spaces, or new lines.
-              </div>
             </div>
           </div>
         </div>
 
         <!-- By Feature Name -->
         <div>
-          <div class="browse-select-header mb-0" id="mm-name-header" role="button"
+          <div class="browse-select-header browse-select-header--light mb-0" id="mm-name-header" role="button"
                aria-expanded="false" aria-controls="mm-name-body"
                data-bs-toggle="collapse" data-bs-target="#mm-name-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
               <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">By Feature Name</span>
-              <span class="ms-auto" style="font-size:0.72rem; opacity:0.75;">partial match</span>
             </span>
           </div>
           <div class="collapse" id="mm-name-body">
             <div class="browse-select-panel">
+              <p class="text-muted small mb-2">Partial match, case-insensitive. Searches the feature name field.
+                <i class="fa fa-info-circle search-instructions-trigger ms-1" style="cursor:pointer;" data-help-type="basic"></i>
+              </p>
               <input type="text" id="mm-gene-name" class="form-control moop-input"
-                     placeholder="e.g. BRCA1  (partial match, case-insensitive)">
+                     placeholder="e.g. BRCA1">
             </div>
           </div>
         </div>
 
         <!-- By Feature Description -->
         <div>
-          <div class="browse-select-header mb-0" id="mm-desc-header" role="button"
+          <div class="browse-select-header browse-select-header--light mb-0" id="mm-desc-header" role="button"
                aria-expanded="false" aria-controls="mm-desc-body"
                data-bs-toggle="collapse" data-bs-target="#mm-desc-body">
             <span class="d-flex align-items-center gap-2 w-100">
@@ -162,45 +161,95 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           </div>
           <div class="collapse" id="mm-desc-body">
             <div class="browse-select-panel">
+              <p class="text-muted small mb-2">Searches the feature description field. Partial match, case-insensitive.
+                <i class="fa fa-info-circle search-instructions-trigger ms-1" style="cursor:pointer;" data-help-type="basic"></i>
+              </p>
               <input type="text" id="mm-gene-description" class="form-control moop-input"
-                     placeholder="e.g. kinase  (searches the feature description field)">
+                     placeholder="e.g. kinase">
             </div>
           </div>
         </div>
 
         <!-- By Annotation -->
         <div>
-          <div class="browse-select-header mb-0" id="mm-ann-filter-header" role="button"
+          <div class="browse-select-header browse-select-header--light mb-0" id="mm-ann-filter-header" role="button"
                aria-expanded="false" aria-controls="mm-ann-filter-body"
                data-bs-toggle="collapse" data-bs-target="#mm-ann-filter-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
               <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">By Annotation</span>
-              <span class="ms-auto" style="font-size:0.72rem; opacity:0.75;">source, accession, or keyword</span>
             </span>
           </div>
           <div class="collapse" id="mm-ann-filter-body">
             <div class="browse-select-panel">
-              <div class="row g-2">
-                <div class="col-sm-4">
-                  <label class="form-label small mb-1">Annotation source</label>
-                  <select id="mm-annotation-source" class="form-select form-select-sm moop-input">
-                    <option value="">Any source</option>
-                    <?php foreach ($annotation_source_types as $type => $type_data): ?>
-                    <optgroup label="<?= htmlspecialchars($type) ?>">
-                      <?php foreach ($type_data['sources'] as $src_name): ?>
-                      <option value="<?= htmlspecialchars($src_name) ?>"><?= htmlspecialchars($src_name) ?></option>
-                      <?php endforeach; ?>
-                    </optgroup>
-                    <?php endforeach; ?>
-                  </select>
+              <p class="text-muted small mb-2">
+                Restrict to features that have at least one annotation from the selected type.
+                Leave all unchecked to include features regardless of annotation type.
+                Fill accession or keyword to further narrow within the selected types.
+                <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted"
+                        style="font-size:0.85rem; line-height:1; vertical-align:middle;"
+                        data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="About annotation types">
+                  <i class="fa fa-info-circle"></i>
+                </button>
+              </p>
+
+              <!-- Annotation type checkbox list -->
+              <div class="mb-3">
+                <div class="d-flex align-items-center mb-1">
+                  <span class="small fw-semibold text-muted me-auto">Annotation type</span>
+                  <span class="small text-muted fst-italic" id="mm-filter-ann-count">none selected</span>
                 </div>
-                <div class="col-sm-4">
+                <div class="px-2 pt-1 pb-1 border-bottom" style="background:#f8f9fa; border:1px solid #dee2e6; border-radius:0.375rem 0.375rem 0 0;">
+                  <input type="text" class="form-control form-control-sm moop-input border-0 bg-transparent p-0"
+                         id="mm-filter-ann-input" placeholder="Filter annotation types…" autocomplete="off">
+                </div>
+                <div style="max-height:150px; overflow-y:auto; background:#fff; border:1px solid #dee2e6; border-top:none; border-radius:0 0 0.375rem 0.375rem;"
+                     id="mm-filter-ann-panel">
+                  <?php foreach ($annotation_source_types as $type => $type_data):
+                    $type_safe = 'mm-filter-atype-' . preg_replace('/[^a-z0-9]/i', '_', $type);
+                    $color     = htmlspecialchars($type_data['color']);
+                    $src_count = count($type_data['sources']);
+                  ?>
+                  <div class="mm-filter-ann-group">
+                    <div class="d-flex align-items-center px-2 py-1" style="background:#f8f9fa; border-bottom:1px solid #e9ecef;">
+                      <input type="checkbox" class="form-check-input me-2 mb-0 mm-filter-ann-type-cb flex-shrink-0"
+                             id="<?= $type_safe ?>" data-type="<?= htmlspecialchars($type) ?>">
+                      <label for="<?= $type_safe ?>" class="form-check-label fw-semibold mb-0 me-auto"
+                             style="cursor:pointer; font-size:0.85rem;">
+                        <span class="badge bg-<?= $color ?> me-1"><?= htmlspecialchars($type) ?></span>
+                      </label>
+                      <span class="text-muted" style="font-size:0.72rem;"><?= $src_count ?> source<?= $src_count !== 1 ? 's' : '' ?></span>
+                    </div>
+                    <div class="ps-3">
+                      <?php foreach ($type_data['sources'] as $src_name):
+                        $safe_id = 'mm-filter-ann-' . preg_replace('/[^a-z0-9]/i', '_', $src_name);
+                      ?>
+                      <div class="d-flex align-items-center gap-1 px-1 py-1 mm-filter-ann-item">
+                        <input type="checkbox" class="form-check-input flex-shrink-0 mm-filter-ann-src-cb mb-0"
+                               id="<?= $safe_id ?>" value="<?= htmlspecialchars($src_name) ?>"
+                               data-type="<?= htmlspecialchars($type) ?>">
+                        <label class="form-check-label mb-0" for="<?= $safe_id ?>"
+                               style="cursor:pointer; font-size:0.82rem;">
+                          <?= htmlspecialchars($src_name) ?>
+                        </label>
+                      </div>
+                      <?php endforeach; ?>
+                    </div>
+                  </div>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+
+              <!-- Accession and keyword -->
+              <div class="row g-2">
+                <div class="col-sm-6">
                   <label class="form-label small mb-1">Accession <span class="text-muted">(exact, e.g. GO:0006351)</span></label>
                   <input type="text" id="mm-annotation-accession" class="form-control form-control-sm moop-input" placeholder="GO:0000000">
                 </div>
-                <div class="col-sm-4">
-                  <label class="form-label small mb-1">Annotation keyword</label>
+                <div class="col-sm-6">
+                  <label class="form-label small mb-1">Annotation keyword
+                    <i class="fa fa-info-circle search-instructions-trigger ms-1" style="cursor:pointer;" data-help-type="basic"></i>
+                  </label>
                   <input type="text" id="mm-annotation-keyword" class="form-control form-control-sm moop-input" placeholder="e.g. transporter">
                 </div>
               </div>
@@ -210,13 +259,12 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
         <!-- By Chromosomal Location -->
         <div>
-          <div class="browse-select-header mb-0" id="mm-loc-header" role="button"
+          <div class="browse-select-header browse-select-header--light mb-0" id="mm-loc-header" role="button"
                aria-expanded="false" aria-controls="mm-loc-body"
                data-bs-toggle="collapse" data-bs-target="#mm-loc-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
               <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">By Chromosomal Location</span>
-              <span class="ms-auto" style="font-size:0.72rem; opacity:0.75;">requires a single assembly selected above</span>
             </span>
           </div>
           <div class="collapse" id="mm-loc-body">
@@ -346,7 +394,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
         <?php if (!empty($annotation_source_types)): ?>
         <div>
           <div class="d-flex align-items-center gap-2 mb-2">
-            <div class="small fw-semibold text-muted">Annotation sources to include</div>
+            <div class="small fw-semibold text-muted">Annotation types to include</div>
             <div class="d-flex gap-1 ms-auto">
               <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="mm-ann-all">All</button>
               <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="mm-ann-none">None</button>
@@ -354,7 +402,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           </div>
           <div class="px-2 pb-1">
             <input type="text" class="form-control form-control-sm moop-input" id="mm-ann-filter"
-                   placeholder="Filter annotation sources…" autocomplete="off">
+                   placeholder="Filter annotation types…" autocomplete="off">
           </div>
           <div id="mm-ann-panel" style="overflow-y:auto; max-height:220px;" class="border rounded mt-1 p-2">
             <?php foreach ($annotation_source_types as $type => $type_data):
@@ -466,6 +514,8 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
   </div>
 
 </div>
+
+<?php include_once __DIR__ . '/../../includes/ann_types_modal.php'; ?>
 
 <style>
 /* Simple/detail toggle for organism scope list */

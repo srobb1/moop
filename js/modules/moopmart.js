@@ -23,7 +23,7 @@
         if (!el) return;
         const checked = Array.from(document.querySelectorAll('.mm-gs-cb:checked'));
         if (!checked.length) {
-            el.textContent = 'No organisms selected — will include all accessible gene sets';
+            el.textContent = 'Select at least one organism above';
             return;
         }
         const orgs = new Set(checked.map(c => c.dataset.org)).size;
@@ -283,6 +283,54 @@
             .map(c => `${c.dataset.org}|${c.dataset.asm}|${c.dataset.gs}`);
     }
 
+    function getFilterAnnotationSources() {
+        return Array.from(document.querySelectorAll('.mm-filter-ann-src-cb:checked')).map(c => c.value);
+    }
+
+    function updateFilterAnnCount() {
+        const el      = document.getElementById('mm-filter-ann-count');
+        if (!el) return;
+        const checked = document.querySelectorAll('.mm-filter-ann-src-cb:checked').length;
+        el.textContent = checked ? `${checked} selected` : 'none selected';
+    }
+
+    function syncFilterAnnTypeCb(type) {
+        const sources = Array.from(document.querySelectorAll(`.mm-filter-ann-src-cb[data-type="${type}"]`));
+        const typeCb  = document.querySelector(`.mm-filter-ann-type-cb[data-type="${type}"]`);
+        if (!typeCb || !sources.length) return;
+        const allOn  = sources.every(c => c.checked);
+        const allOff = sources.every(c => !c.checked);
+        typeCb.checked       = allOn;
+        typeCb.indeterminate = !allOn && !allOff;
+    }
+
+    function initFilterAnnPanel() {
+        const panel = document.getElementById('mm-filter-ann-panel');
+        if (!panel) return;
+        panel.addEventListener('change', function (e) {
+            const cb = e.target;
+            if (cb.classList.contains('mm-filter-ann-type-cb')) {
+                document.querySelectorAll(`.mm-filter-ann-src-cb[data-type="${cb.dataset.type}"]`)
+                    .forEach(c => { c.checked = cb.checked; c.indeterminate = false; });
+            } else if (cb.classList.contains('mm-filter-ann-src-cb')) {
+                syncFilterAnnTypeCb(cb.dataset.type);
+            }
+            updateFilterAnnCount();
+        });
+        document.getElementById('mm-filter-ann-input')?.addEventListener('input', function () {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('.mm-filter-ann-group').forEach(group => {
+                let any = false;
+                group.querySelectorAll('.mm-filter-ann-item').forEach(item => {
+                    const show = !q || (item.querySelector('label')?.textContent.toLowerCase() || '').includes(q);
+                    item.classList.toggle('d-none', !show);
+                    if (show) any = true;
+                });
+                group.classList.toggle('d-none', !any && !!q);
+            });
+        });
+    }
+
     function parseIds(raw) {
         // Accept comma, whitespace, or newline separated IDs
         return raw.split(/[\s,]+/).map(s => s.trim()).filter(Boolean);
@@ -311,9 +359,8 @@
         const desc = document.getElementById('mm-gene-description')?.value?.trim();
         if (desc) fd.append('gene_description', desc);
 
-        // Section: Annotation
-        const annSrc = document.getElementById('mm-annotation-source')?.value;
-        if (annSrc) fd.append('annotation_source', annSrc);
+        // Section: Annotation — selected types (multi-select)
+        getFilterAnnotationSources().forEach(s => fd.append('annotation_filter_sources[]', s));
         const annAcc = document.getElementById('mm-annotation-accession')?.value?.trim();
         if (annAcc) fd.append('annotation_accession', annAcc);
         const annKw  = document.getElementById('mm-annotation-keyword')?.value?.trim();
@@ -350,6 +397,11 @@
         const btn     = document.getElementById('mm-preview-btn');
         const spinner = document.getElementById('mm-count-spinner');
         const result  = document.getElementById('mm-count-result');
+
+        if (!getSelectedSources().length) {
+            if (result) { result.textContent = 'Select at least one organism in Step 1 first.'; result.className = 'small text-warning'; }
+            return;
+        }
 
         spinner?.classList.remove('d-none');
         if (btn) btn.disabled = true;
@@ -463,6 +515,7 @@
         initAccordionHeaders();
         initFormatToggle();
         initAnnSources();
+        initFilterAnnPanel();
 
         if (typeof scopeContext !== 'undefined' && scopeContext) {
             applyContextScope(scopeContext);
@@ -473,11 +526,21 @@
             new bootstrap.Popover(el, { trigger: 'click' });
         });
 
+        // Search instructions trigger (same modal as annotation search)
+        if (typeof initializeSearchInstructionsHandler === 'function') {
+            initializeSearchInstructionsHandler();
+        }
+
         // Preview
         document.getElementById('mm-preview-btn')?.addEventListener('click', previewResults);
 
         // Download (single button, format from radio)
         document.getElementById('mm-dl-btn')?.addEventListener('click', function () {
+            const result = document.getElementById('mm-count-result');
+            if (!getSelectedSources().length) {
+                if (result) { result.textContent = 'Select at least one organism in Step 1 first.'; result.className = 'small text-warning'; }
+                return;
+            }
             const format    = document.querySelector('input[name="mm-format"]:checked')?.value || 'tsv';
             const annFormat = document.querySelector('input[name="mm-ann-format"]:checked')?.value || 'wide';
             const fastaMode = document.querySelector('input[name="mm-fasta-type"]:checked')?.value || 'gene';

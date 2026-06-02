@@ -14,6 +14,50 @@
  */
 
 // ============================================================
+// SEARCH TERM PARSING
+// ============================================================
+
+/**
+ * Parse a free-text search term using the same rules as annotation search:
+ *   - Quoted ("exact phrase") → single LIKE '%phrase%' condition
+ *   - Multi-word              → one LIKE condition per token, ANDed by caller
+ *   - Tokens < 3 chars        → ignored (same as annotation search minimum)
+ *   - Returns null            → no usable tokens; caller should skip the filter
+ *
+ * @param string $raw    Raw input from the user
+ * @param string $column SQL column expression to match against (e.g. 'f.feature_name')
+ * @return array|null ['conditions'=>[...], 'params'=>[...]] or null if nothing to filter on
+ */
+function moopmartBuildTextConditions(string $raw, string $column): ?array
+{
+    $raw = trim($raw);
+    if ($raw === '') return null;
+
+    // Quoted search — strip quotes, treat whole string as one exact phrase
+    if (strlen($raw) >= 2 &&
+        (($raw[0] === '"' && $raw[-1] === '"') || ($raw[0] === "'" && $raw[-1] === "'"))) {
+        $term = trim(substr($raw, 1, -1));
+        if ($term === '') return null;
+        return ['conditions' => ["$column LIKE ?"], 'params' => ["%$term%"]];
+    }
+
+    // Multi-word: split on whitespace, drop tokens shorter than 3 chars
+    $tokens = array_values(array_filter(
+        preg_split('/\s+/', $raw),
+        fn($t) => strlen($t) >= 3
+    ));
+    if (empty($tokens)) return null;
+
+    $conditions = [];
+    $params     = [];
+    foreach ($tokens as $token) {
+        $conditions[] = "$column LIKE ?";
+        $params[]     = '%' . $token . '%';
+    }
+    return ['conditions' => $conditions, 'params' => $params];
+}
+
+// ============================================================
 // DB QUERY FUNCTIONS
 // ============================================================
 
@@ -68,12 +112,12 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
         $params[] = $filters['feature_id'];
     }
     if (!empty($filters['gene_name'])) {
-        $where[]  = 'f.feature_name LIKE ?';
-        $params[] = '%' . $filters['gene_name'] . '%';
+        $parsed = moopmartBuildTextConditions($filters['gene_name'], 'f.feature_name');
+        if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
     }
     if (!empty($filters['gene_description'])) {
-        $where[]  = 'f.feature_description LIKE ?';
-        $params[] = '%' . $filters['gene_description'] . '%';
+        $parsed = moopmartBuildTextConditions($filters['gene_description'], 'f.feature_description');
+        if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
     }
 
     // Annotation filter via EXISTS on child features — annotations in the DB are
@@ -81,17 +125,18 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
     // not on gene features themselves.
     $ann_where  = [];
     $ann_params = [];
-    if (!empty($filters['annotation_source'])) {
-        $ann_where[]  = 'ans.annotation_source_name = ?';
-        $ann_params[] = $filters['annotation_source'];
+    if (!empty($filters['annotation_sources']) && is_array($filters['annotation_sources'])) {
+        $ph = implode(',', array_fill(0, count($filters['annotation_sources']), '?'));
+        $ann_where[] = "ans.annotation_source_name IN ($ph)";
+        array_push($ann_params, ...$filters['annotation_sources']);
     }
     if (!empty($filters['annotation_accession'])) {
         $ann_where[]  = 'a.annotation_accession = ?';
         $ann_params[] = $filters['annotation_accession'];
     }
     if (!empty($filters['annotation_keyword'])) {
-        $ann_where[]  = 'a.annotation_description LIKE ?';
-        $ann_params[] = '%' . $filters['annotation_keyword'] . '%';
+        $parsed = moopmartBuildTextConditions($filters['annotation_keyword'], 'a.annotation_description');
+        if ($parsed) { foreach ($parsed['conditions'] as $c) $ann_where[] = $c; array_push($ann_params, ...$parsed['params']); }
     }
     if (!empty($ann_where)) {
         $ann_clause = implode(' AND ', $ann_where);
@@ -159,27 +204,28 @@ function moopmartCountFeatures(array $gene_set_ids, string $db_path, array $filt
         $params[] = $filters['feature_id'];
     }
     if (!empty($filters['gene_name'])) {
-        $where[]  = 'f.feature_name LIKE ?';
-        $params[] = '%' . $filters['gene_name'] . '%';
+        $parsed = moopmartBuildTextConditions($filters['gene_name'], 'f.feature_name');
+        if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
     }
     if (!empty($filters['gene_description'])) {
-        $where[]  = 'f.feature_description LIKE ?';
-        $params[] = '%' . $filters['gene_description'] . '%';
+        $parsed = moopmartBuildTextConditions($filters['gene_description'], 'f.feature_description');
+        if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
     }
 
     $ann_where  = [];
     $ann_params = [];
-    if (!empty($filters['annotation_source'])) {
-        $ann_where[]  = 'ans.annotation_source_name = ?';
-        $ann_params[] = $filters['annotation_source'];
+    if (!empty($filters['annotation_sources']) && is_array($filters['annotation_sources'])) {
+        $ph = implode(',', array_fill(0, count($filters['annotation_sources']), '?'));
+        $ann_where[] = "ans.annotation_source_name IN ($ph)";
+        array_push($ann_params, ...$filters['annotation_sources']);
     }
     if (!empty($filters['annotation_accession'])) {
         $ann_where[]  = 'a.annotation_accession = ?';
         $ann_params[] = $filters['annotation_accession'];
     }
     if (!empty($filters['annotation_keyword'])) {
-        $ann_where[]  = 'a.annotation_description LIKE ?';
-        $ann_params[] = '%' . $filters['annotation_keyword'] . '%';
+        $parsed = moopmartBuildTextConditions($filters['annotation_keyword'], 'a.annotation_description');
+        if ($parsed) { foreach ($parsed['conditions'] as $c) $ann_where[] = $c; array_push($ann_params, ...$parsed['params']); }
     }
     if (!empty($ann_where)) {
         $ann_clause = implode(' AND ', $ann_where);

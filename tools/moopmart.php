@@ -65,12 +65,20 @@ if (!empty($incoming_orgs)) {
     }
 }
 
-// Load annotation type colors from config
+// Load annotation type colors and descriptions from config
 $metadata_path   = $config->getPath('metadata_path');
 $ann_config_file = "$metadata_path/annotation_config.json";
 $ann_types_config = [];
+$ann_type_info    = [];
 if (file_exists($ann_config_file)) {
-    $ann_types_config = (json_decode(file_get_contents($ann_config_file), true) ?: [])['annotation_types'] ?? [];
+    $ann_cfg = json_decode(file_get_contents($ann_config_file), true) ?: [];
+    $ann_types_config = $ann_cfg['annotation_types'] ?? [];
+    foreach ($ann_types_config as $type => $data) {
+        $ann_type_info[$type] = [
+            'color'       => $data['color']       ?? 'secondary',
+            'description' => $data['description'] ?? '',
+        ];
+    }
 }
 
 // Collect annotation sources grouped by type (for the panel) and flat (for the filter dropdown)
@@ -121,13 +129,14 @@ foreach (getGroupData() as $entry) {
 echo render_display_page(
     __DIR__ . '/pages/moopmart.php',
     [
+        'ann_type_info'           => $ann_type_info,
         'scope_tree'              => $scope_tree,
         'organism_info'           => $organism_info,
         'organism_groups'         => $organism_groups,
         'annotation_source_types'  => $annotation_source_types,
         'annotation_source_names'  => $annotation_source_names,
         'siteTitle'               => $siteTitle,
-        'page_script'             => ["/$site/js/modules/moopmart.js"],
+        'page_script'             => ["/$site/js/modules/search-utils.js", "/$site/js/modules/moopmart.js"],
         'inline_scripts'          => [
             'const annotationSources = ' . json_encode($annotation_source_names) . ';',
             "const moopSite = '/$site';",

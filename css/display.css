@@ -1351,6 +1351,12 @@ code {
 .browse-select-header:hover {
   background: #0670a0;
 }
+.browse-select-header.browse-select-header--light {
+  background: #38b6cc;
+}
+.browse-select-header.browse-select-header--light:hover {
+  background: #2ea3b8;
+}
 .browse-select-chevron {
   font-size: 0.7rem;
   transition: transform 0.2s ease;
