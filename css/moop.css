@@ -465,6 +465,30 @@ footer .footer-meta {
   padding: 0.4em 0.6em;
 }
 
+/* ========== TOOL PAGE TITLE ========== */
+/* Shared title style across tool pages — uppercase, tracked, semibold      */
+/* Apply color separately: teal on index (.index-site-title), dark elsewhere */
+.moop-tool-title {
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 1.05rem;
+}
+
+/* ========== SEARCH / FILTER INPUT STYLE ========== */
+/* Apply .moop-input to any search or filter <input> site-wide */
+.moop-input {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: #4a5568;
+  letter-spacing: 0.01em;
+}
+.moop-input::placeholder {
+  color: #a0aec0;
+  letter-spacing: 0.01em;
+}
+
 /* ========== UTILITY CLASSES ========== */
 /* Common inline styles extracted to reusable classes */
 

@@ -1234,10 +1234,6 @@ code {
 /* ── Index page: site title wordmark ─────────────────────────────────────── */
 
 .index-site-title {
-  font-size: 1.05rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
   color: #0891b2;
   margin-bottom: 8px;
 }
@@ -1380,25 +1376,6 @@ code {
 }
 .qs-input-wrap {
   position: relative;
-}
-#qs-input,
-#organism-select-filter,
-#taxon-select-filter,
-#taxonomy-filter {
-  font-family: 'Inter', system-ui, sans-serif;
-  font-weight: 400;
-  font-size: 0.9rem;
-  color: #4a5568;
-  letter-spacing: 0.01em;
-}
-#qs-input::placeholder,
-#organism-select-filter::placeholder,
-#taxon-select-filter::placeholder,
-#taxonomy-filter::placeholder {
-  font-family: 'Inter', system-ui, sans-serif;
-  font-weight: 400;
-  color: #a0aec0;
-  letter-spacing: 0.01em;
 }
 .qs-dropdown {
   position: absolute;

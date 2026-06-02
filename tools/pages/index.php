@@ -8,7 +8,7 @@
 <div class="container py-3">
   <!-- Page Header -->
   <div class="text-center mb-3">
-    <p class="index-site-title"><?= htmlspecialchars($siteTitle) ?></p>
+    <p class="index-site-title moop-tool-title"><?= htmlspecialchars($siteTitle) ?></p>
     <hr class="mx-auto page-header-divider">
   </div>
 
@@ -21,7 +21,7 @@
             <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
               <i class="fa fa-search"></i>
             </span>
-            <input type="text" id="qs-input" class="form-control border-start-0 border-end-0 ps-1"
+            <input type="text" id="qs-input" class="form-control border-start-0 border-end-0 ps-1 moop-input"
                    placeholder="Search organisms, groups, assemblies, gene sets…"
                    autocomplete="off" spellcheck="false">
             <button id="qs-go" class="btn btn-primary px-3" type="button">Go</button>
@@ -225,14 +225,14 @@
 
             <!-- Tab 1: Organism Select -->
             <div class="tab-pane fade show active" id="tab-organism-select" role="tabpanel">
-              <input type="text" class="form-control form-control-sm mb-2" id="organism-select-filter"
+              <input type="text" class="form-control form-control-sm mb-2 moop-input" id="organism-select-filter"
                      placeholder="Filter by name, common name, or group…">
               <div id="organism-select-list" class="org-select-list"></div>
             </div>
 
             <!-- Tab 2: Taxon Select -->
             <div class="tab-pane fade" id="tab-taxon-select" role="tabpanel">
-              <input type="text" class="form-control form-control-sm mb-2" id="taxon-select-filter"
+              <input type="text" class="form-control form-control-sm mb-2 moop-input" id="taxon-select-filter"
                      placeholder="Filter by taxonomy, name, or common name…">
               <div id="taxon-select-list" class="org-select-list"></div>
             </div>
@@ -255,7 +255,7 @@
                   <button id="tree-collapse-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">Collapse All</button>
                 </div>
               </div>
-              <input type="text" class="form-control form-control-sm mb-2" id="taxonomy-filter" placeholder="Filter by taxon or organism…">
+              <input type="text" class="form-control form-control-sm mb-2 moop-input" id="taxonomy-filter" placeholder="Filter by taxon or organism…">
               <div class="taxonomy-tree-scroll">
                 <div id="taxonomy-tree-container"></div>
               </div>

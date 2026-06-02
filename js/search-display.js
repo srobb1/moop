@@ -521,4 +521,6 @@ $(document).ready(function () {
     // Only load annotation types for pre-selected organisms; otherwise wait for user to select
     const preselectedOrgs = getCheckedOrganisms();
     loadAnnotationSources(preselectedOrgs);
+
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el));
 });

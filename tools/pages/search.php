@@ -16,14 +16,19 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
 
   <!-- Header -->
   <div class="mb-4">
-    <h4 class="mb-1 fw-bold text-dark">
-      <i class="fa fa-search me-1"></i> Annotation Search
-      <i class="fa fa-info-circle search-instructions-trigger ms-1"
-         style="cursor:pointer; font-size:0.8em;" data-help-type="basic"></i>
+    <h4 class="mb-1 moop-tool-title text-dark d-flex align-items-center gap-2">
+      Search Features by Annotation
+      <button type="button" class="btn btn-link p-0 text-muted"
+              style="font-size:0.85rem; line-height:1; font-weight:400; text-transform:none; letter-spacing:0;"
+              data-bs-toggle="popover" data-bs-placement="right" data-bs-trigger="focus"
+              data-bs-title="What is an annotation?"
+              data-bs-content="An annotation is a functional description attached to a genomic feature — for example, a gene name, protein function, GO term, or database cross-reference. Most annotations are added by running bioinformatic analysis tools such as BLAST or InterProScan. This tool searches those descriptions to help you find specific genes, mRNAs, or other features across one or more organisms.">
+        <i class="fa fa-info-circle"></i>
+      </button>
     </h4>
     <p class="text-muted small mb-0">
-      <strong>Find specific genes</strong> by ID or keyword across organisms and annotation sources.
-      Use <a href="moopmart.php" class="text-decoration-none">MOOPmart</a> to bulk-download many genes at once.
+      Find specific genes, mRNAs, or other features by ID or keyword across one or more organisms.
+      Use <a href="moopmart.php" class="text-decoration-none">MOOPmart</a> to bulk-download many features at once.
     </p>
   </div>
 
@@ -31,28 +36,30 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
 
     <!-- ① Keyword -->
     <div class="card mb-3 shadow-sm">
-      <div class="card-header py-2 d-flex align-items-center">
+      <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
         <span class="step-badge me-2">1</span>
-        <strong>Enter a gene ID or annotation keyword</strong>
+        <span class="fw-semibold" style="font-size:0.9rem;">Enter a gene ID or annotation keyword</span>
+        <i class="fa fa-info-circle search-instructions-trigger ms-2"
+           style="cursor:pointer; font-size:0.85rem; color:rgba(255,255,255,0.7);" data-help-type="basic"></i>
       </div>
       <div class="card-body py-3">
-        <input type="text" class="form-control" id="searchKeywords"
-               placeholder="e.g. BRCA1, zinc finger, GO:0006351 (minimum 3 characters)…">
+        <input type="text" class="form-control moop-input" id="searchKeywords"
+               placeholder='e.g. BRCA1, "Histone Deacetylase 1", GO:0006351 (minimum 3 characters)…'>
       </div>
     </div>
 
     <!-- ② Organisms -->
     <div class="card mb-3 shadow-sm">
-      <div class="card-header py-2 d-flex align-items-center gap-2">
+      <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
         <span class="step-badge me-2">2</span>
-        <strong class="me-auto">Limit to specific organisms</strong>
-        <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted"
+        <span class="fw-semibold" style="font-size:0.9rem;">Limit to specific organisms</span>
+        <button type="button" class="btn btn-link btn-sm p-0 me-auto" style="color:rgba(255,255,255,0.7);"
                 data-bs-toggle="modal" data-bs-target="#scope-info-modal" title="About organism selection">
           <i class="fa fa-info-circle"></i>
         </button>
-        <div class="d-flex gap-1 ms-2">
-          <button type="button" id="scope-select-all" class="btn btn-sm btn-outline-secondary">All</button>
-          <button type="button" id="scope-deselect-all" class="btn btn-sm btn-outline-secondary">None</button>
+        <div class="d-flex gap-1">
+          <button type="button" id="scope-select-all" class="btn btn-sm btn-outline-light py-0">All</button>
+          <button type="button" id="scope-deselect-all" class="btn btn-sm btn-outline-light py-0">None</button>
         </div>
       </div>
 
@@ -61,14 +68,14 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
         <!-- Left: organism list -->
         <div class="col-lg-8 border-end d-flex flex-column">
           <div class="px-2 pt-2 pb-1 border-bottom d-flex align-items-center gap-2">
-            <input type="text" class="form-control form-control-sm" id="scope-filter"
-                   placeholder="Filter organisms…" autocomplete="off">
+            <input type="text" class="form-control form-control-sm moop-input" id="scope-filter"
+                   placeholder="Filter by group, organism, assembly, gene set…" autocomplete="off">
             <div class="form-check form-switch mb-0 flex-shrink-0">
               <input class="form-check-input" type="checkbox" role="switch" id="scope-show-detail">
               <label class="form-check-label small text-muted text-nowrap" for="scope-show-detail">Details</label>
             </div>
           </div>
-          <div style="overflow-y:auto; max-height:340px;" id="scope-org-list" class="scope-detail-hidden">
+          <div style="overflow-y:auto; max-height:180px;" id="scope-org-list" class="scope-detail-hidden">
             <?php if (empty($scope_tree)): ?>
               <p class="text-muted small p-3">No accessible organisms found.</p>
             <?php else: ?>
@@ -141,16 +148,16 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
 
     <!-- ③ Annotation Types -->
     <div class="card mb-3 shadow-sm">
-      <div class="card-header py-2 d-flex align-items-center gap-2">
+      <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
         <span class="step-badge me-2">3</span>
-        <strong class="me-auto">Select annotation types to search</strong>
-        <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted"
+        <span class="fw-semibold me-auto" style="font-size:0.9rem;">Select annotation types to search</span>
+        <button type="button" class="btn btn-link btn-sm p-0 ms-1" style="color:rgba(255,255,255,0.7);"
                 data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="About annotation types">
           <i class="fa fa-info-circle"></i>
         </button>
         <div class="d-flex gap-1 ms-2">
-          <button type="button" id="sources-select-all" class="btn btn-sm btn-outline-secondary">All</button>
-          <button type="button" id="sources-deselect-all" class="btn btn-sm btn-outline-secondary">None</button>
+          <button type="button" id="sources-select-all" class="btn btn-sm btn-outline-light py-0">All</button>
+          <button type="button" id="sources-deselect-all" class="btn btn-sm btn-outline-light py-0">None</button>
         </div>
       </div>
 
@@ -159,7 +166,7 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
         <!-- Left: annotation types list -->
         <div class="col-lg-8 border-end d-flex flex-column">
           <div class="px-2 pt-2 pb-1 border-bottom" id="sources-filter-wrap" style="display:none;">
-            <input type="text" class="form-control form-control-sm" id="sources-filter"
+            <input type="text" class="form-control form-control-sm moop-input" id="sources-filter"
                    placeholder="Filter annotation types…" autocomplete="off">
           </div>
           <div id="sourcesPanel" style="overflow-y:auto; max-height:280px;">
