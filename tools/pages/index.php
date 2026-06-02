@@ -40,13 +40,18 @@
     </div>
   </div>
 
+  <!-- Section divider -->
+  <div class="section-or-divider mb-4">
+    <span>or</span>
+  </div>
+
   <!-- How-to modal -->
   <div class="modal fade" id="how-to-modal" tabindex="-1" aria-labelledby="how-to-modal-label" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title fw-bold" id="how-to-modal-label">
-            <i class="fa fa-circle-info text-info me-2"></i>How to use <?= htmlspecialchars($siteTitle) ?>
+            <i class="fas fa-info-circle text-info me-2"></i>How to use <?= htmlspecialchars($siteTitle) ?>
           </h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
@@ -121,7 +126,7 @@
           </div>
 
           <p class="text-muted small mb-0">
-            <i class="fa fa-circle-info text-info me-1"></i>
+            <i class="fas fa-info-circle text-info me-1"></i>
             <strong>Tip:</strong> Selections are remembered as you switch between tabs.
             Use the <strong>Selected Organisms</strong> panel on the right to review your list and remove any entries before running a tool.
           </p>
@@ -136,14 +141,16 @@
 
     <!-- Left: 4 tabs -->
     <div class="col-lg-8">
-      <h6 class="text-uppercase fw-semibold text-muted mb-3" style="letter-spacing:0.1em;">Browse &amp; Select</h6>
+      <h6 class="text-uppercase fw-semibold text-muted mb-3 d-flex align-items-center gap-2" style="letter-spacing:0.1em;">
+        Browse &amp; Select
+        <button class="btn btn-link btn-sm p-0 text-muted" data-bs-toggle="modal" data-bs-target="#how-to-modal"
+                title="How to use" style="font-size:0.9rem; line-height:1; text-transform:none; letter-spacing:0;">
+          <i class="fas fa-info-circle"></i>
+        </button>
+      </h6>
       <div class="step-label mb-2">
         <span class="step-badge">1</span>
         <span class="step-text">Select one or more organisms</span>
-        <button class="btn btn-link btn-sm p-0 ms-1 text-muted" data-bs-toggle="modal" data-bs-target="#how-to-modal"
-                title="How to use" style="font-size:0.85rem; line-height:1;">
-          <i class="fa fa-circle-info"></i>
-        </button>
       </div>
       <ul class="nav nav-tabs" id="organism-tabs" role="tablist">
         <li class="nav-item" role="presentation">

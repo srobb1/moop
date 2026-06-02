@@ -1238,6 +1238,26 @@ code {
   margin-bottom: 8px;
 }
 
+/* ── Index page: section "or" divider ───────────────────────────────────── */
+
+.section-or-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #adb5bd;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.section-or-divider::before,
+.section-or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #dee2e6;
+}
+
 /* ── Index page: quick search ─────────────────────────────────────────────── */
 
 .qs-wrap {
