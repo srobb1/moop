@@ -47,12 +47,12 @@
     <span class="d-flex align-items-center gap-2">
       <i class="fas fa-chevron-down browse-select-chevron"></i>
       <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Browse &amp; Select</span>
+      <button class="btn btn-link btn-sm p-0" data-bs-toggle="modal" data-bs-target="#how-to-modal"
+              title="How to use" style="font-size:0.9rem; line-height:1; color:rgba(255,255,255,0.7);"
+              onclick="event.stopPropagation()">
+        <i class="fas fa-info-circle"></i>
+      </button>
     </span>
-    <button class="btn btn-link btn-sm p-0 text-muted" data-bs-toggle="modal" data-bs-target="#how-to-modal"
-            title="How to use" style="font-size:0.9rem; line-height:1;"
-            onclick="event.stopPropagation()">
-      <i class="fas fa-info-circle"></i>
-    </button>
   </div>
 
   <!-- How-to modal -->

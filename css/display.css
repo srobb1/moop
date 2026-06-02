@@ -1256,12 +1256,6 @@ code {
 .browse-select-header:hover {
   background: #0670a0;
 }
-.browse-select-header .btn-link {
-  color: rgba(255,255,255,0.7) !important;
-}
-.browse-select-header .btn-link:hover {
-  color: #fff !important;
-}
 .browse-select-chevron {
   font-size: 0.7rem;
   transition: transform 0.2s ease;
