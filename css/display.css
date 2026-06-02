@@ -1227,4 +1227,93 @@ code {
 .selected-org-item:last-child { border-bottom: none; }
 .selected-org-name            { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
+/* ── Index page: quick search ─────────────────────────────────────────────── */
+
+.qs-wrap {
+  position: relative;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.qs-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 0 0 0.5rem 0.5rem;
+  border-top: none;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.13);
+  max-height: 360px;
+  overflow-y: auto;
+  display: none;
+}
+.qs-dropdown.open { display: block; }
+.qs-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f2f2f2;
+  text-decoration: none;
+  color: inherit;
+}
+.qs-item:last-child { border-bottom: none; }
+.qs-item:hover, .qs-item.active { background: #f0f4ff; color: inherit; text-decoration: none; }
+.qs-type {
+  font-size: 0.63rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.qs-type-organism { background: #dbeafe; color: #1d4ed8; }
+.qs-type-group    { background: #dcfce7; color: #166534; }
+.qs-type-assembly { background: #fef3c7; color: #92400e; }
+.qs-type-geneset  { background: #f3e8ff; color: #6b21a8; }
+.qs-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  max-width: 260px;
+}
+.qs-secondary {
+  font-size: 0.78rem;
+  color: #6c757d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: auto;
+  flex-shrink: 1;
+  min-width: 0;
+}
+.qs-no-results {
+  padding: 10px 14px;
+  color: #6c757d;
+  font-size: 0.875rem;
+  font-style: italic;
+}
+.qs-advanced-link {
+  display: block;
+  text-align: right;
+  font-size: 0.78rem;
+  color: #6c757d;
+  margin-top: 5px;
+  text-decoration: none;
+}
+.qs-advanced-link:hover { color: #0d6efd; text-decoration: none; }
+/* keep border-radius square on bottom when dropdown is open */
+.qs-wrap .input-group:has(+ .qs-dropdown.open) input,
+.qs-wrap .input-group:has(+ .qs-dropdown.open) button:last-child {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
 

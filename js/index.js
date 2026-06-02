@@ -200,9 +200,90 @@ function filterTaxonomyTree(filterText) {
     });
 }
 
+// ─── Quick search ─────────────────────────────────────────────────────────
+
+function initQuickSearch() {
+    const input    = document.getElementById('qs-input');
+    const dropdown = document.getElementById('qs-dropdown');
+    const goBtn    = document.getElementById('qs-go');
+    if (!input || !dropdown || typeof quickSearchData === 'undefined') return;
+
+    const TYPE_LABEL = { organism: 'Organism', group: 'Group', assembly: 'Assembly', geneset: 'Gene Set' };
+    let activeIdx = -1;
+
+    function items() { return dropdown.querySelectorAll('.qs-item'); }
+
+    function setActive(idx) {
+        items().forEach((el, i) => el.classList.toggle('active', i === idx));
+        activeIdx = idx;
+    }
+
+    function matchResults(q) {
+        if (q.length < 2) return [];
+        const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+        return quickSearchData
+            .filter(d => words.every(w => d.search.includes(w)))
+            .slice(0, 10);
+    }
+
+    function renderDropdown(q) {
+        activeIdx = -1;
+        const results = matchResults(q.trim());
+        if (!q || q.trim().length < 2) {
+            dropdown.classList.remove('open');
+            dropdown.innerHTML = '';
+            return;
+        }
+        if (results.length === 0) {
+            dropdown.innerHTML = '<div class="qs-no-results">No matches found</div>';
+            dropdown.classList.add('open');
+            return;
+        }
+        dropdown.innerHTML = results.map((d, i) => {
+            const sec = d.secondary ? `<span class="qs-secondary">${escHtml(d.secondary)}</span>` : '';
+            return `<a class="qs-item" href="${escHtml(d.url)}" data-idx="${i}">
+                <span class="qs-type qs-type-${escHtml(d.type)}">${TYPE_LABEL[d.type] || d.type}</span>
+                <span class="qs-label">${escHtml(d.label)}</span>
+                ${sec}
+            </a>`;
+        }).join('');
+        dropdown.classList.add('open');
+    }
+
+    function navigate() {
+        const all = items();
+        const target = activeIdx >= 0 && all[activeIdx] ? all[activeIdx] : all[0];
+        if (target) window.location.href = target.href;
+    }
+
+    input.addEventListener('input', () => renderDropdown(input.value));
+
+    input.addEventListener('keydown', e => {
+        const all = items();
+        if (e.key === 'ArrowDown')  { e.preventDefault(); setActive(Math.min(activeIdx + 1, all.length - 1)); }
+        else if (e.key === 'ArrowUp')   { e.preventDefault(); setActive(Math.max(activeIdx - 1, 0)); }
+        else if (e.key === 'Enter')     { e.preventDefault(); navigate(); }
+        else if (e.key === 'Escape')    { dropdown.classList.remove('open'); activeIdx = -1; }
+    });
+
+    goBtn.addEventListener('click', navigate);
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.qs-wrap')) { dropdown.classList.remove('open'); activeIdx = -1; }
+    });
+
+    document.getElementById('qs-advanced-link')?.addEventListener('click', e => {
+        e.preventDefault();
+        document.getElementById('organism-tabs-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+
 // ─── Init ──────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Quick search
+    initQuickSearch();
+
     // Build lookup map
     organismData.forEach(o => { orgDataMap[o.organism] = o; });
 

@@ -77,6 +77,76 @@ foreach (indexTraverseTree($taxonomy_tree_data['tree']) as $leaf) {
 }
 usort($organism_list, fn($a, $b) => strcmp($a['display_name'], $b['display_name']));
 
+// Build quick-search dataset (organisms + groups + assemblies + gene sets)
+$site = $config->getString('site');
+
+$qs_items = [];
+
+// Organisms
+$org_display_map = [];
+foreach ($organism_list as $org_entry) {
+    $org_display_map[$org_entry['organism']] = $org_entry['display_name'];
+    $search_parts = array_filter(array_merge(
+        [$org_entry['display_name'], $org_entry['common_name']],
+        $org_entry['groups'],
+        $org_entry['taxon_chain']
+    ));
+    $qs_items[] = [
+        'type'      => 'organism',
+        'label'     => $org_entry['display_name'],
+        'secondary' => $org_entry['common_name'],
+        'url'       => "/$site/tools/organism.php?organism=" . urlencode($org_entry['organism']),
+        'search'    => strtolower(implode(' ', $search_parts)),
+    ];
+}
+
+// Groups
+foreach ($cards_to_display as $card) {
+    $count = !empty($card['organism_count']) ? $card['organism_count'] . ' organisms' : '';
+    $qs_items[] = [
+        'type'      => 'group',
+        'label'     => $card['title'],
+        'secondary' => $count,
+        'url'       => "/$site/tools/groups.php?group=" . urlencode($card['title']),
+        'search'    => strtolower($card['title']),
+    ];
+}
+
+// Assemblies and gene sets
+$seen_assemblies = [];
+$seen_genesets   = [];
+foreach (getAccessibleAssemblies() as $a) {
+    $org         = $a['organism'];
+    $org_display = $org_display_map[$org] ?? str_replace('_', ' ', $org);
+    $asm_id      = $a['genome_accession'] ?? $a['assembly'];
+    $asm_name    = $a['genome_name'] ?? '';
+
+    $asm_key = $org . '|' . $asm_id;
+    if (!isset($seen_assemblies[$asm_key])) {
+        $seen_assemblies[$asm_key] = true;
+        $secondary = trim(($asm_name ? $asm_name . ' · ' : '') . $org_display, ' · ');
+        $qs_items[] = [
+            'type'      => 'assembly',
+            'label'     => $asm_id,
+            'secondary' => $secondary,
+            'url'       => "/$site/tools/assembly.php?organism=" . urlencode($org) . "&assembly=" . urlencode($asm_id),
+            'search'    => strtolower(implode(' ', array_filter([$asm_id, $asm_name, $org_display, $org]))),
+        ];
+    }
+
+    $gs_key = $asm_key . '|' . $a['gene_set'];
+    if (!isset($seen_genesets[$gs_key])) {
+        $seen_genesets[$gs_key] = true;
+        $qs_items[] = [
+            'type'      => 'geneset',
+            'label'     => $a['gene_set'],
+            'secondary' => $org_display . ' › ' . $asm_id,
+            'url'       => "/$site/tools/gene_set.php?organism=" . urlencode($org) . "&assembly=" . urlencode($asm_id) . "&gene_set=" . urlencode($a['gene_set']),
+            'search'    => strtolower(implode(' ', array_filter([$a['gene_set'], $org_display, $org, $asm_id, $asm_name]))),
+        ];
+    }
+}
+
 // Render page using layout system
 echo render_display_page(
     __DIR__ . '/tools/pages/index.php',
@@ -87,6 +157,10 @@ echo render_display_page(
         'user_access_json'   => $user_access_json,
         'organism_list_json' => json_encode($organism_list),
         'ip'                 => $ip,
+        'inline_scripts'     => [
+            "const sitePath = '/$site';",
+            "const quickSearchData = " . json_encode($qs_items) . ";",
+        ],
     ],
     $config->getString('siteTitle')
 );

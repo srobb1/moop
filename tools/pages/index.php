@@ -5,15 +5,32 @@
  */
 ?>
 
-<div class="container py-5">
+<div class="container py-3">
   <!-- Page Header -->
-  <div class="text-center mb-5">
-    <h1 class="fw-bold mb-3"><?= htmlspecialchars($siteTitle) ?></h1>
+  <div class="text-center mb-3">
+    <h1 class="fw-bold mb-2"><?= htmlspecialchars($siteTitle) ?></h1>
     <hr class="mx-auto page-header-divider">
   </div>
 
+  <!-- Quick search -->
+  <div class="qs-wrap mb-4">
+    <div class="input-group shadow-sm">
+      <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
+        <i class="fa fa-search"></i>
+      </span>
+      <input type="text" id="qs-input" class="form-control border-start-0 border-end-0 ps-1"
+             placeholder="Search organisms, groups, assemblies, gene sets…"
+             autocomplete="off" spellcheck="false">
+      <button id="qs-go" class="btn btn-primary px-3" type="button">Go</button>
+    </div>
+    <div id="qs-dropdown" class="qs-dropdown"></div>
+    <a href="#organism-tabs" class="qs-advanced-link" id="qs-advanced-link">
+      Advanced search <i class="fa fa-chevron-down fa-xs"></i>
+    </a>
+  </div>
+
   <!-- Site Info Card -->
-  <div class="row g-4 justify-content-center mb-5">
+  <div class="row g-4 justify-content-center mb-3">
     <div class="col-md-12 col-lg-10">
       <div class="card shadow-sm border-0 rounded-3 bg-info bg-opacity-10">
         <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center"
@@ -106,13 +123,8 @@
     </div>
   </div>
 
-  <!-- Available Organisms Header -->
-  <div class="text-center mb-4">
-    <h3 class="fw-bold mb-3">Select organisms to explore</h3>
-  </div>
-
   <!-- Two-column layout: tabs (left) + selection panel (right, always visible) -->
-  <div class="row g-4">
+  <div class="row g-4" id="organism-tabs-anchor">
 
     <!-- Left: 4 tabs -->
     <div class="col-lg-8">
