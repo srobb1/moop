@@ -11,6 +11,7 @@ include_once __DIR__ . '/../includes/layout.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/moopmart_functions.php';
+include_once __DIR__ . '/../lib/moop_functions.php';
 
 $organism_data = $config->getPath('organism_data');
 $siteTitle     = $config->getString('siteTitle');
@@ -103,6 +104,17 @@ ksort($annotation_source_types);
 $annotation_source_names = array_keys($annotation_source_names);
 sort($annotation_source_names);
 
+// Build organism → groups map for group chips in the flat organism list
+$organism_groups = [];
+foreach (getGroupData() as $entry) {
+    $org = $entry['organism'];
+    if (!isset($organism_groups[$org])) $organism_groups[$org] = [];
+    foreach ($entry['groups'] as $g) {
+        if (!in_array($g, $organism_groups[$org], true))
+            $organism_groups[$org][] = $g;
+    }
+}
+
 // Chr names are loaded dynamically via API when exactly one assembly is selected.
 // No pre-loading here — avoids reading N×M cache files on every page load.
 
@@ -111,6 +123,7 @@ echo render_display_page(
     [
         'scope_tree'              => $scope_tree,
         'organism_info'           => $organism_info,
+        'organism_groups'         => $organism_groups,
         'annotation_source_types'  => $annotation_source_types,
         'annotation_source_names'  => $annotation_source_names,
         'siteTitle'               => $siteTitle,
@@ -122,5 +135,5 @@ echo render_display_page(
             'const scopeContext = '      . json_encode($scope_context)           . ';',
         ],
     ],
-    'MOOPmart: Mega Search'
+    'MOOPmart — Feature List Builder'
 );
