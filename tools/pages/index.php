@@ -8,7 +8,7 @@
 <div class="container py-3">
   <!-- Page Header -->
   <div class="text-center mb-3">
-    <h1 class="fw-bold mb-2"><?= htmlspecialchars($siteTitle) ?></h1>
+    <p class="index-site-title"><?= htmlspecialchars($siteTitle) ?></p>
     <hr class="mx-auto page-header-divider">
   </div>
 

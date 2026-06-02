@@ -1227,6 +1227,17 @@ code {
 .selected-org-item:last-child { border-bottom: none; }
 .selected-org-name            { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
+/* ── Index page: site title wordmark ─────────────────────────────────────── */
+
+.index-site-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #1e3a5f;
+  margin-bottom: 8px;
+}
+
 /* ── Index page: quick search ─────────────────────────────────────────────── */
 
 .qs-wrap {
