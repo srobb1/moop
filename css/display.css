@@ -1245,16 +1245,22 @@ code {
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
+  background: #1e3a5f;
+  border: none;
   border-radius: 0.5rem;
   cursor: pointer;
   user-select: none;
-  color: #495057;
+  color: #fff;
   transition: background 0.15s;
 }
 .browse-select-header:hover {
-  background: #e9ecef;
+  background: #16304f;
+}
+.browse-select-header .btn-link {
+  color: rgba(255,255,255,0.7) !important;
+}
+.browse-select-header .btn-link:hover {
+  color: #fff !important;
 }
 .browse-select-chevron {
   font-size: 0.7rem;
@@ -1267,8 +1273,15 @@ code {
 /* ── Index page: quick search ─────────────────────────────────────────────── */
 
 .qs-wrap {
-  max-width: 680px;
-  margin: 0 auto;
+  width: 100%;
+}
+.qs-card {
+  background: #1e3a5f;
+  padding: 20px;
+}
+.qs-card .card-body {
+  background: #fff;
+  border-radius: 0.4rem;
 }
 .qs-input-wrap {
   position: relative;

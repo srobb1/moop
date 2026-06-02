@@ -13,8 +13,8 @@
   </div>
 
   <!-- Quick search -->
-  <div class="qs-wrap mb-4">
-    <div class="card shadow-sm border-0 rounded-3">
+  <div class="qs-wrap mb-3">
+    <div class="card border-0 rounded-3 qs-card">
       <div class="card-body p-3">
         <div class="qs-input-wrap">
           <div class="input-group">
@@ -43,7 +43,7 @@
   <!-- Browse & Select collapsible header -->
   <div class="browse-select-header mb-0"
        data-bs-toggle="collapse" data-bs-target="#browse-select-body"
-       role="button" aria-expanded="true" aria-controls="browse-select-body">
+       role="button" aria-expanded="false" aria-controls="browse-select-body">
     <span class="d-flex align-items-center gap-2">
       <i class="fas fa-chevron-down browse-select-chevron"></i>
       <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Browse &amp; Select</span>
@@ -145,7 +145,7 @@
   </div>
 
   <!-- Two-column layout: tabs (left) + selection panel (right, always visible) -->
-  <div class="collapse show pt-3" id="browse-select-body">
+  <div class="collapse pt-3" id="browse-select-body">
   <div class="row g-4" id="organism-tabs-anchor">
 
     <!-- Left: 4 tabs -->
