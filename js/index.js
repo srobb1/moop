@@ -218,12 +218,23 @@ function initQuickSearch() {
         activeIdx = idx;
     }
 
+    const TYPE_RANK = { group: 0, organism: 1, assembly: 2, geneset: 3 };
+
     function matchResults(q) {
         if (q.length < 2) return [];
-        const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+        const ql    = q.toLowerCase().trim();
+        const words = ql.split(/\s+/).filter(Boolean);
         return quickSearchData
             .filter(d => words.every(w => d.search.includes(w)))
-            .slice(0, 10);
+            .map(d => {
+                const ll = d.label.toLowerCase();
+                const exactLabel  = ll === ql   ? -20 : 0;
+                const prefixLabel = ll.startsWith(ql) ? -10 : 0;
+                return { d, score: (TYPE_RANK[d.type] ?? 9) + exactLabel + prefixLabel };
+            })
+            .sort((a, b) => a.score - b.score)
+            .slice(0, 10)
+            .map(r => r.d);
     }
 
     function renderDropdown(q) {
