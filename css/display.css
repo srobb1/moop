@@ -1282,6 +1282,8 @@ code {
 .qs-card .card-body {
   background: #fff;
   border-radius: 0.4rem;
+  max-width: 680px;
+  margin: 0 auto;
 }
 .qs-input-wrap {
   position: relative;
