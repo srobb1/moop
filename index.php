@@ -100,50 +100,62 @@ foreach ($organism_list as $org_entry) {
     ];
 }
 
-// Groups
-foreach ($cards_to_display as $card) {
-    $count = !empty($card['organism_count']) ? $card['organism_count'] . ' organisms' : '';
-    $qs_items[] = [
-        'type'      => 'group',
-        'label'     => $card['title'],
-        'secondary' => $count,
-        'url'       => "/$site/tools/groups.php?group=" . urlencode($card['title']),
-        'search'    => strtolower($card['title']),
-    ];
-}
-
-// Assemblies and gene sets
+// Groups, assemblies, and gene sets — read directly from $group_data (already loaded),
+// filtered by $taxonomy_user_access so only what this user can see is included.
+$seen_groups    = [];
 $seen_assemblies = [];
-$seen_genesets   = [];
-foreach (getAccessibleAssemblies() as $a) {
-    $org         = $a['organism'];
-    $org_display = $org_display_map[$org] ?? str_replace('_', ' ', $org);
-    $asm_id      = $a['genome_accession'] ?? $a['assembly'];
-    $asm_name    = $a['genome_name'] ?? '';
+$seen_genesets  = [];
 
-    $asm_key = $org . '|' . $asm_id;
+foreach ($group_data as $entry) {
+    $org      = $entry['organism'];
+    $assembly = $entry['assembly'];   // this is the genome accession (e.g. GCA_004027475.1)
+    $gene_set = $entry['gene_set'] ?? '';
+    $groups   = $entry['groups'] ?? [];
+
+    if (!isset($taxonomy_user_access[$org])) continue;
+
+    $org_display = $org_display_map[$org] ?? str_replace('_', ' ', $org);
+
+    // Groups
+    foreach ($groups as $group) {
+        if (!isset($seen_groups[$group])) {
+            $seen_groups[$group] = true;
+            $qs_items[] = [
+                'type'      => 'group',
+                'label'     => $group,
+                'secondary' => '',
+                'url'       => "/$site/tools/groups.php?group=" . urlencode($group),
+                'search'    => strtolower($group),
+            ];
+        }
+    }
+
+    // Assembly
+    $asm_key = $org . '|' . $assembly;
     if (!isset($seen_assemblies[$asm_key])) {
         $seen_assemblies[$asm_key] = true;
-        $secondary = trim(($asm_name ? $asm_name . ' · ' : '') . $org_display, ' · ');
         $qs_items[] = [
             'type'      => 'assembly',
-            'label'     => $asm_id,
-            'secondary' => $secondary,
-            'url'       => "/$site/tools/assembly.php?organism=" . urlencode($org) . "&assembly=" . urlencode($asm_id),
-            'search'    => strtolower(implode(' ', array_filter([$asm_id, $asm_name, $org_display, $org]))),
+            'label'     => $assembly,
+            'secondary' => $org_display,
+            'url'       => "/$site/tools/assembly.php?organism=" . urlencode($org) . "&assembly=" . urlencode($assembly),
+            'search'    => strtolower(implode(' ', array_filter([$assembly, $org_display, $org]))),
         ];
     }
 
-    $gs_key = $asm_key . '|' . $a['gene_set'];
-    if (!isset($seen_genesets[$gs_key])) {
-        $seen_genesets[$gs_key] = true;
-        $qs_items[] = [
-            'type'      => 'geneset',
-            'label'     => $a['gene_set'],
-            'secondary' => $org_display . ' › ' . $asm_id,
-            'url'       => "/$site/tools/gene_set.php?organism=" . urlencode($org) . "&assembly=" . urlencode($asm_id) . "&gene_set=" . urlencode($a['gene_set']),
-            'search'    => strtolower(implode(' ', array_filter([$a['gene_set'], $org_display, $org, $asm_id, $asm_name]))),
-        ];
+    // Gene set
+    if ($gene_set) {
+        $gs_key = $asm_key . '|' . $gene_set;
+        if (!isset($seen_genesets[$gs_key])) {
+            $seen_genesets[$gs_key] = true;
+            $qs_items[] = [
+                'type'      => 'geneset',
+                'label'     => $gene_set,
+                'secondary' => $org_display . ' › ' . $assembly,
+                'url'       => "/$site/tools/gene_set.php?organism=" . urlencode($org) . "&assembly=" . urlencode($assembly) . "&gene_set=" . urlencode($gene_set),
+                'search'    => strtolower(implode(' ', array_filter([$gene_set, $org_display, $org, $assembly]))),
+            ];
+        }
     }
 }
 
