@@ -136,6 +136,7 @@
 
     <!-- Left: 4 tabs -->
     <div class="col-lg-8">
+      <h6 class="text-uppercase fw-semibold text-muted mb-3" style="letter-spacing:0.1em;">Browse &amp; Select</h6>
       <div class="step-label mb-2">
         <span class="step-badge">1</span>
         <span class="step-text">Select one or more organisms</span>
