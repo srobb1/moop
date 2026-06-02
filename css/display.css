@@ -1238,24 +1238,30 @@ code {
   margin-bottom: 8px;
 }
 
-/* ── Index page: section "or" divider ───────────────────────────────────── */
+/* ── Index page: Browse & Select collapsible header ─────────────────────── */
 
-.section-or-divider {
+.browse-select-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  color: #adb5bd;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  color: #495057;
+  transition: background 0.15s;
 }
-.section-or-divider::before,
-.section-or-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: #dee2e6;
+.browse-select-header:hover {
+  background: #e9ecef;
+}
+.browse-select-chevron {
+  font-size: 0.7rem;
+  transition: transform 0.2s ease;
+}
+.browse-select-header[aria-expanded="false"] .browse-select-chevron {
+  transform: rotate(-90deg);
 }
 
 /* ── Index page: quick search ─────────────────────────────────────────────── */

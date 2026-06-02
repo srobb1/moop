@@ -40,9 +40,19 @@
     </div>
   </div>
 
-  <!-- Section divider -->
-  <div class="section-or-divider mb-4">
-    <span>or</span>
+  <!-- Browse & Select collapsible header -->
+  <div class="browse-select-header mb-0"
+       data-bs-toggle="collapse" data-bs-target="#browse-select-body"
+       role="button" aria-expanded="true" aria-controls="browse-select-body">
+    <span class="d-flex align-items-center gap-2">
+      <i class="fas fa-chevron-down browse-select-chevron"></i>
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Browse &amp; Select</span>
+    </span>
+    <button class="btn btn-link btn-sm p-0 text-muted" data-bs-toggle="modal" data-bs-target="#how-to-modal"
+            title="How to use" style="font-size:0.9rem; line-height:1;"
+            onclick="event.stopPropagation()">
+      <i class="fas fa-info-circle"></i>
+    </button>
   </div>
 
   <!-- How-to modal -->
@@ -135,17 +145,11 @@
   </div>
 
   <!-- Two-column layout: tabs (left) + selection panel (right, always visible) -->
+  <div class="collapse show pt-3" id="browse-select-body">
   <div class="row g-4" id="organism-tabs-anchor">
 
     <!-- Left: 4 tabs -->
     <div class="col-lg-8">
-      <h6 class="text-uppercase fw-semibold text-muted mb-3 d-flex align-items-center gap-2" style="letter-spacing:0.1em;">
-        Browse &amp; Select
-        <button class="btn btn-link btn-sm p-0 text-muted" data-bs-toggle="modal" data-bs-target="#how-to-modal"
-                title="How to use" style="font-size:0.9rem; line-height:1; text-transform:none; letter-spacing:0;">
-          <i class="fas fa-info-circle"></i>
-        </button>
-      </h6>
       <div class="step-label mb-2">
         <span class="step-badge">1</span>
         <span class="step-text">Select one or more organisms</span>
@@ -264,6 +268,7 @@
     </div><!-- /col-lg-4 -->
 
   </div><!-- /row -->
+  </div><!-- /collapse browse-select-body -->
 </div><!-- /container -->
 
 <script src="js/modules/taxonomy-tree.js?v=<?= filemtime(__DIR__ . '/../../js/modules/taxonomy-tree.js') ?>"></script>
