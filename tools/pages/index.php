@@ -14,19 +14,30 @@
 
   <!-- Quick search -->
   <div class="qs-wrap mb-4">
-    <div class="input-group shadow-sm">
-      <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
-        <i class="fa fa-search"></i>
-      </span>
-      <input type="text" id="qs-input" class="form-control border-start-0 border-end-0 ps-1"
-             placeholder="Search organisms, groups, assemblies, gene sets…"
-             autocomplete="off" spellcheck="false">
-      <button id="qs-go" class="btn btn-primary px-3" type="button">Go</button>
+    <div class="card shadow-sm border-0 rounded-3">
+      <div class="card-body p-3">
+        <div class="qs-input-wrap">
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
+              <i class="fa fa-search"></i>
+            </span>
+            <input type="text" id="qs-input" class="form-control border-start-0 border-end-0 ps-1"
+                   placeholder="Search organisms, groups, assemblies, gene sets…"
+                   autocomplete="off" spellcheck="false">
+            <button id="qs-go" class="btn btn-primary px-3" type="button">Go</button>
+          </div>
+          <div id="qs-dropdown" class="qs-dropdown"></div>
+        </div>
+        <div class="qs-examples mt-2">
+          <span class="text-muted small me-1">e.g.</span>
+          <button class="qs-example-chip" type="button">Anoura caudifer</button>
+          <button class="qs-example-chip" type="button">Pallid Bat</button>
+          <button class="qs-example-chip" type="button">Bats</button>
+          <button class="qs-example-chip" type="button">GCA_004027475.1</button>
+          <button class="qs-example-chip" type="button">SIMR_2025-01-24</button>
+        </div>
+      </div>
     </div>
-    <div id="qs-dropdown" class="qs-dropdown"></div>
-    <a href="#organism-tabs" class="qs-advanced-link" id="qs-advanced-link">
-      Advanced search <i class="fa fa-chevron-down fa-xs"></i>
-    </a>
   </div>
 
   <!-- Site Info Card -->

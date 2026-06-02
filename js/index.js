@@ -282,9 +282,12 @@ function initQuickSearch() {
         if (!e.target.closest('.qs-wrap')) { dropdown.classList.remove('open'); activeIdx = -1; }
     });
 
-    document.getElementById('qs-advanced-link')?.addEventListener('click', e => {
-        e.preventDefault();
-        document.getElementById('organism-tabs-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.querySelectorAll('.qs-example-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            input.value = chip.textContent.trim();
+            input.focus();
+            renderDropdown(input.value);
+        });
     });
 }
 
