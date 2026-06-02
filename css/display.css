@@ -1241,7 +1241,8 @@ code {
 /* ── Index page: quick search ─────────────────────────────────────────────── */
 
 .qs-wrap {
-  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
 }
 .qs-input-wrap {
   position: relative;
