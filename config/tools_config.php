@@ -84,6 +84,7 @@ return [
         'url_path'       => '/tools/search.php',
         'context_params' => ['organism', 'assembly', 'gene_set', 'group', 'display_name', 'organisms'],
         'pages'          => 'all',
+        'toolbox'        => false,
     ],
 
     'moopmart' => [
@@ -95,6 +96,7 @@ return [
         'url_path'       => '/tools/moopmart.php',
         'context_params' => [],
         'pages'          => 'all',
+        'toolbox'        => false,
     ],
 
     // HOW TO ADD A NEW TOOL:

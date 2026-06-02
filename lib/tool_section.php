@@ -58,8 +58,8 @@ if (!function_exists('getAvailableTools')) {
     include_once __DIR__ . '/moop_functions.php';
 }
 
-// Get available tools for this context
-$tools = getAvailableTools($context ?? []);
+// Get available tools for this context, excluding toolbox=false tools
+$tools = array_filter(getAvailableTools($context ?? []), fn($t) => ($t['toolbox'] ?? true) !== false);
 
 // Debug: uncomment to see what's happening
 // error_log("DEBUG tool_section: context=" . json_encode($context) . ", tools=" . count($tools));
