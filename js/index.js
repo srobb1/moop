@@ -135,8 +135,6 @@ function updateSelectedList() {
     document.querySelectorAll('[id^="tool-btn-"]').forEach(btn => {
         btn.disabled = !hasSelection;
     });
-    const hint = document.getElementById('tool-select-hint');
-    if (hint) hint.style.display = hasSelection ? 'none' : '';
     const wrapper = document.getElementById('tools-card-wrapper');
     if (wrapper) wrapper.classList.toggle('tools-locked', !hasSelection);
     const clearBtn = document.getElementById('clear-all-organisms');

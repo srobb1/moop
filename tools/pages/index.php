@@ -170,85 +170,14 @@
     </div>
   </div>
 
-  <!-- Two-column layout: tabs (left) + selection panel (right, always visible) -->
+  <!-- Browse & Select: selected organisms full-width top row, then step 1 + step 2 below -->
   <div class="collapse" id="browse-select-body">
   <div class="browse-select-panel">
-  <div class="row g-4" id="organism-tabs-anchor">
+  <div class="bs-grid" id="organism-tabs-anchor">
 
-    <!-- Left: 4 tabs -->
-    <div class="col-lg-8">
-      <div class="step-label mb-2">
-        <span class="step-badge">1</span>
-        <span class="step-text">Select one or more organisms</span>
-      </div>
-      <ul class="nav nav-tabs" id="organism-tabs" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-organism-select" type="button" role="tab">
-            <i class="fa fa-list me-1"></i> Organisms Select
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-taxon-select" type="button" role="tab">
-            <i class="fa fa-sitemap me-1"></i> Taxon Select
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tree-select" type="button" role="tab">
-            <i class="fa fa-project-diagram me-1"></i> Tree Select
-          </button>
-        </li>
-      </ul>
-
-      <div class="tab-content border border-top-0 rounded-bottom p-3" id="organism-tabs-content">
-
-        <!-- Tab 1: Organism Select -->
-        <div class="tab-pane fade show active" id="tab-organism-select" role="tabpanel">
-          <input type="text" class="form-control form-control-sm mb-2" id="organism-select-filter"
-                 placeholder="Filter by name, common name, or group…">
-          <div id="organism-select-list" class="org-select-list"></div>
-        </div>
-
-        <!-- Tab 2: Taxon Select -->
-        <div class="tab-pane fade" id="tab-taxon-select" role="tabpanel">
-          <input type="text" class="form-control form-control-sm mb-2" id="taxon-select-filter"
-                 placeholder="Filter by taxonomy, name, or common name…">
-          <div id="taxon-select-list" class="org-select-list"></div>
-        </div>
-
-        <!-- Tab 3: Tree Select -->
-        <div class="tab-pane fade" id="tab-tree-select" role="tabpanel">
-          <div class="mb-2">
-            <small class="text-muted">
-              <i class="fa fa-info-circle text-info"></i> Click any node to select/deselect. Selecting a branch selects all organisms below it.
-            </small>
-          </div>
-          <input type="text" class="form-control form-control-sm mb-2" id="taxonomy-filter" placeholder="Filter by name…">
-          <div class="taxonomy-tree-scroll">
-            <div id="taxonomy-tree-container"></div>
-          </div>
-        </div>
-
-      </div><!-- /tab-content -->
-    </div><!-- /col-lg-8 -->
-
-    <!-- Right: always-visible selection panel -->
-    <div class="col-lg-4">
-      <div class="step-label mb-2">
-        <span class="step-badge">2</span>
-        <span class="step-text">Choose a tool — it runs on your selection</span>
-      </div>
-      <!-- Tools Card -->
-      <div id="tools-card-wrapper">
-      <?php
-      $context = createToolContext('index', ['use_onclick_handler' => true]);
-      include_once TOOL_SECTION_PATH;
-      ?>
-      <p id="tool-select-hint" class="text-muted small fst-italic text-center mt-2 mb-0" style="display:none">
-        ← Select organisms first
-      </p>
-      </div>
-
-      <div class="card shadow-sm sticky-card mb-3">
+    <!-- Row 1: Selected Organisms — full width -->
+    <div class="bs-grid-selected">
+      <div class="card shadow-sm" id="selected-organisms-card">
         <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
           <h5 class="mb-0">
             Selected Organisms
@@ -264,9 +193,79 @@
           </div>
         </div>
       </div>
-    </div><!-- /col-lg-4 -->
+    </div>
 
-  </div><!-- /row -->
+    <!-- Row 2, Col 1: Step 1 — organism selection tabs -->
+    <div class="bs-grid-step1">
+      <div class="card shadow-sm">
+        <div class="card-header bg-tools text-white py-2">
+          <span class="step-badge me-2">1</span>
+          <span class="fw-semibold" style="font-size:0.9rem;">Select one or more organisms</span>
+        </div>
+        <div class="card-body p-2">
+          <ul class="nav nav-tabs" id="organism-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-organism-select" type="button" role="tab">
+                <i class="fa fa-list me-1"></i> Organisms Select
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-taxon-select" type="button" role="tab">
+                <i class="fa fa-sitemap me-1"></i> Taxon Select
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tree-select" type="button" role="tab">
+                <i class="fa fa-project-diagram me-1"></i> Tree Select
+              </button>
+            </li>
+          </ul>
+
+          <div class="tab-content border border-top-0 rounded-bottom p-3" id="organism-tabs-content">
+
+            <!-- Tab 1: Organism Select -->
+            <div class="tab-pane fade show active" id="tab-organism-select" role="tabpanel">
+              <input type="text" class="form-control form-control-sm mb-2" id="organism-select-filter"
+                     placeholder="Filter by name, common name, or group…">
+              <div id="organism-select-list" class="org-select-list"></div>
+            </div>
+
+            <!-- Tab 2: Taxon Select -->
+            <div class="tab-pane fade" id="tab-taxon-select" role="tabpanel">
+              <input type="text" class="form-control form-control-sm mb-2" id="taxon-select-filter"
+                     placeholder="Filter by taxonomy, name, or common name…">
+              <div id="taxon-select-list" class="org-select-list"></div>
+            </div>
+
+            <!-- Tab 3: Tree Select -->
+            <div class="tab-pane fade" id="tab-tree-select" role="tabpanel">
+              <div class="mb-2">
+                <small class="text-muted">
+                  <i class="fa fa-info-circle text-info"></i> Click any node to select/deselect. Selecting a branch selects all organisms below it.
+                </small>
+              </div>
+              <input type="text" class="form-control form-control-sm mb-2" id="taxonomy-filter" placeholder="Filter by name…">
+              <div class="taxonomy-tree-scroll">
+                <div id="taxonomy-tree-container"></div>
+              </div>
+            </div>
+
+          </div><!-- /tab-content -->
+        </div><!-- /card-body -->
+      </div><!-- /card -->
+    </div><!-- /bs-grid-step1 -->
+
+    <!-- Row 2, Col 2: Step 2 — tool selection -->
+    <div class="bs-grid-step2">
+      <div id="tools-card-wrapper">
+      <?php
+      $context = createToolContext('index', ['use_onclick_handler' => true]);
+      include_once TOOL_SECTION_PATH;
+      ?>
+      </div>
+    </div><!-- /bs-grid-step2 -->
+
+  </div><!-- /bs-grid -->
   </div><!-- /browse-select-panel -->
   </div><!-- /collapse browse-select-body -->
 </div><!-- /container -->

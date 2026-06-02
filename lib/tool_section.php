@@ -73,9 +73,10 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
 ?>
 
 <!-- Tools Section -->
-<div class="card shadow-sm" style="min-height: 200px;">
-    <div class="card-header bg-tools text-white">
-        <h5 class="mb-0"><i class="fa fa-toolbox"></i> Tool Box</h5>
+<div class="card shadow-sm">
+    <div class="card-header bg-tools text-white py-2">
+        <span class="step-badge me-2">2</span>
+        <span class="fw-semibold" style="font-size:0.9rem;">Choose a tool — it runs on your selection</span>
     </div>
     <div class="card-body p-2">
         <div class="d-flex flex-wrap gap-2">
