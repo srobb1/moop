@@ -67,14 +67,14 @@ function renderTaxonList() {
     const list = document.getElementById('taxon-select-list');
     if (!list) return;
     list.innerHTML = organismData.map(o => {
-        const chain      = o.taxon_chain || [];
-        const chainStr   = chain.join(' › ');
+        const chain      = (o.taxon_chain || []).filter(t => t !== 'Life');
+        const chainStr   = chain.map(t => escHtml(t)).join('<span class="taxon-sep"> › </span>');
         const common     = o.common_name
             ? ` <span class="text-muted">· ${escHtml(o.common_name)}</span>` : '';
         const searchText = [o.display_name, o.common_name, ...chain].join(' ').toLowerCase();
         return `<div class="org-select-row taxon-row" data-org="${escHtml(o.organism)}" data-search="${escHtml(searchText)}">
             <div class="taxon-row-inner">
-                <div class="taxon-path">${escHtml(chainStr)}</div>
+                <div class="taxon-path">${chainStr}</div>
                 <div class="taxon-row-name">
                     <em>${escHtml(o.display_name)}</em>${common}
                     <span class="org-check"><i class="fas fa-check text-success"></i></span>
@@ -339,6 +339,9 @@ document.addEventListener('DOMContentLoaded', () => {
             phyloTree.updateUI();
         }
     });
+
+    document.getElementById('tree-expand-all')?.addEventListener('click', () => phyloTree?.expandAll());
+    document.getElementById('tree-collapse-all')?.addEventListener('click', () => phyloTree?.collapseAll());
 
     // Remove-organism delegation on the selected panel
     document.getElementById('selected-organisms-list')

@@ -239,10 +239,14 @@
 
             <!-- Tab 3: Tree Select -->
             <div class="tab-pane fade" id="tab-tree-select" role="tabpanel">
-              <div class="mb-2">
+              <div class="d-flex align-items-center justify-content-between mb-2">
                 <small class="text-muted">
-                  <i class="fa fa-info-circle text-info"></i> Click any node to select/deselect. Selecting a branch selects all organisms below it.
+                  <i class="fa fa-info-circle text-info"></i> Click any node to select/deselect.
                 </small>
+                <div class="d-flex gap-1">
+                  <button id="tree-expand-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">Expand All</button>
+                  <button id="tree-collapse-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">Collapse All</button>
+                </div>
               </div>
               <input type="text" class="form-control form-control-sm mb-2" id="taxonomy-filter" placeholder="Filter by name…">
               <div class="taxonomy-tree-scroll">

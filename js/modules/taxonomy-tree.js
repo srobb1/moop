@@ -11,7 +11,6 @@ class PhyloTree {
 
     hasAccess(organism) {
         if (!this.userAccess) return false;
-        // If userAccess is empty object, no access
         if (Object.keys(this.userAccess).length === 0) return false;
         return this.userAccess.hasOwnProperty(organism);
     }
@@ -33,13 +32,11 @@ class PhyloTree {
     toggleNode(node) {
         const organisms = this.getAllOrganismsInNode(node);
         const allSelected = organisms.every(org => selectedOrganisms.has(org));
-        
         if (allSelected) {
             organisms.forEach(org => selectedOrganisms.delete(org));
         } else {
             organisms.forEach(org => selectedOrganisms.add(org));
         }
-        
         this.updateUI();
         if (typeof updateSelectedList !== 'undefined') {
             updateSelectedList();
@@ -47,16 +44,25 @@ class PhyloTree {
         }
     }
 
+    toggleCollapse(nodeId) {
+        // Use dataset comparison to avoid CSS selector escaping issues
+        const children = Array.from(this.container.querySelectorAll('.phylo-children'))
+            .find(el => el.dataset.parentId === nodeId);
+        const nodeEl = Array.from(this.container.querySelectorAll('.phylo-node'))
+            .find(el => el.dataset.nodeId === nodeId);
+        if (!children) return;
+        const isNowCollapsed = children.classList.toggle('collapsed');
+        nodeEl?.classList.toggle('node-collapsed', isNowCollapsed);
+    }
+
     updateUI() {
         document.querySelectorAll('.phylo-node').forEach(nodeElement => {
             const nodeId = nodeElement.dataset.nodeId;
             const nodeData = this.nodeMap.get(nodeId);
             if (!nodeData) return;
-            
             const organisms = this.getAllOrganismsInNode(nodeData);
             const allSelected = organisms.length > 0 && organisms.every(org => selectedOrganisms.has(org));
             const someSelected = organisms.some(org => selectedOrganisms.has(org));
-            
             nodeElement.classList.remove('selected', 'partial');
             if (allSelected) {
                 nodeElement.classList.add('selected');
@@ -66,81 +72,102 @@ class PhyloTree {
         });
     }
 
-    navigateToSearch() {
-        const organisms = Array.from(selectedOrganisms);
-        if (organisms.length === 1) {
-            window.open(`tools/organism.php?organism=${encodeURIComponent(organisms[0])}&multi_search[]=${encodeURIComponent(organisms[0])}`, '_blank');
-        } else {
-            const params = organisms.map(org => `organisms[]=${encodeURIComponent(org)}`).join('&');
-            window.open(`tools/multi_organism.php?${params}`, '_blank');
-        }
-    }
-
     renderNode(node, level = 0, parentPath = '') {
         const hasAccessibleChildren = this.getAllOrganismsInNode(node).length > 0;
         if (!hasAccessibleChildren) return '';
 
         const isLeaf = !!node.organism;
-        const indent = level * 20;
-        const nodeClass = isLeaf ? 'phylo-leaf' : 'phylo-branch';
-        let icon = level === 0 ? '🌳' : '├';
-        if (isLeaf) {
-            icon = node.image 
-                ? `<img src="${node.image}" alt="${node.name}" style="width:18px;height:18px;border-radius:4px;object-fit:cover;vertical-align:middle;">`
-                : '🌳';
-        }
-        
-        // Create unique ID for this node
         const nodeId = parentPath ? `${parentPath}/${node.name}` : node.name;
         this.nodeMap.set(nodeId, node);
-        
+
+        const indent = level * 16;
+        const nodeClass = isLeaf ? 'phylo-leaf' : 'phylo-branch';
+
+        const icon = isLeaf
+            ? (node.image
+                ? `<img src="${node.image}" alt="" style="width:18px;height:18px;border-radius:4px;object-fit:cover;vertical-align:middle;">`
+                : '🌿')
+            : '';
+
         let displayName = node.name;
         if (isLeaf && node.common_name) {
             displayName += ` <span class="text-muted small">(${node.common_name})</span>`;
         }
 
         const childrenCount = this.getAllOrganismsInNode(node).length;
-        const countBadge = !isLeaf ? `<span class="badge bg-secondary ms-2">${childrenCount}</span>` : '';
+        const countBadge = !isLeaf
+            ? `<span class="badge bg-secondary ms-1" style="font-size:0.65rem;">${childrenCount}</span>`
+            : '';
+
+        const chevron = !isLeaf
+            ? `<span class="phylo-toggle" data-node-id="${nodeId}"><i class="fas fa-chevron-down"></i></span>`
+            : `<span class="phylo-toggle-spacer"></span>`;
 
         let html = `
-            <div class="phylo-node ${nodeClass}" 
-                 style="margin-left: ${indent}px"
+            <div class="phylo-node ${nodeClass}"
+                 style="padding-left: ${indent}px"
                  data-node-id="${nodeId}">
-                <span class="phylo-icon">${icon}</span>
+                ${chevron}
+                ${icon ? `<span class="phylo-icon">${icon}</span>` : ''}
                 <span class="phylo-name">${displayName}</span>
                 ${countBadge}
-            </div>
-        `;
+            </div>`;
 
         if (node.children) {
+            html += `<div class="phylo-children" data-parent-id="${nodeId}">`;
             node.children.forEach(child => {
                 html += this.renderNode(child, level + 1, nodeId);
             });
+            html += `</div>`;
         }
 
         return html;
     }
 
+    collapseAll() {
+        this.container.querySelectorAll('.phylo-children').forEach(el => el.classList.add('collapsed'));
+        this.container.querySelectorAll('.phylo-node.phylo-branch').forEach(el => el.classList.add('node-collapsed'));
+
+        // Re-expand the root level so Life's direct children remain visible
+        const rootNode = this.container.querySelector('.phylo-node.phylo-branch');
+        if (rootNode) {
+            const rootId = rootNode.dataset.nodeId;
+            const rootChildren = Array.from(this.container.querySelectorAll('.phylo-children'))
+                .find(el => el.dataset.parentId === rootId);
+            if (rootChildren) {
+                rootChildren.classList.remove('collapsed');
+                rootNode.classList.remove('node-collapsed');
+            }
+        }
+    }
+
+    expandAll() {
+        this.container.querySelectorAll('.phylo-children').forEach(el => el.classList.remove('collapsed'));
+        this.container.querySelectorAll('.phylo-node.phylo-branch').forEach(el => el.classList.remove('node-collapsed'));
+    }
+
     attachEventListeners() {
         this.container.addEventListener('click', (e) => {
+            // Chevron click — collapse/expand only, no selection change
+            const toggle = e.target.closest('.phylo-toggle');
+            if (toggle) {
+                const nodeId = toggle.dataset.nodeId;
+                if (nodeId) this.toggleCollapse(nodeId);
+                return;
+            }
+            // Node body click — toggle organism selection
             const nodeElement = e.target.closest('.phylo-node');
             if (nodeElement) {
                 const nodeId = nodeElement.dataset.nodeId;
                 const node = this.nodeMap.get(nodeId);
-                if (node) {
-                    this.toggleNode(node);
-                }
+                if (node) this.toggleNode(node);
             }
         });
     }
 
     render() {
-        const html = this.renderNode(this.data.tree);
         if (this.container) {
-            this.container.innerHTML = html;
-        } else {
-            console.error('Container not found!');
+            this.container.innerHTML = this.renderNode(this.data.tree);
         }
     }
 }
-

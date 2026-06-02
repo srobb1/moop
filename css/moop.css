@@ -424,6 +424,42 @@ footer .footer-meta {
   font-weight: 500;
 }
 
+/* Collapse toggle chevron */
+.phylo-toggle {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 4px;
+  border-radius: 3px;
+  color: #6c757d;
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: background 0.1s;
+  z-index: 1;
+}
+.phylo-toggle:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #343a40;
+}
+.phylo-toggle i {
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+.node-collapsed .phylo-toggle i {
+  transform: rotate(-90deg);
+}
+.phylo-toggle-spacer {
+  width: 24px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.phylo-children.collapsed {
+  display: none;
+}
+
 #selected-organisms-list .badge {
   font-size: 0.85rem;
   padding: 0.4em 0.6em;
