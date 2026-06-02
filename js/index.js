@@ -233,7 +233,6 @@ function initQuickSearch() {
                 return { d, score: (TYPE_RANK[d.type] ?? 9) + exactLabel + prefixLabel };
             })
             .sort((a, b) => a.score - b.score)
-            .slice(0, 10)
             .map(r => r.d);
     }
 
