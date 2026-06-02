@@ -1234,7 +1234,7 @@ code {
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #1e3a5f;
+  color: #0891b2;
   margin-bottom: 8px;
 }
 
@@ -1245,7 +1245,7 @@ code {
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: #1e3a5f;
+  background: #0891b2;
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -1254,7 +1254,7 @@ code {
   transition: background 0.15s;
 }
 .browse-select-header:hover {
-  background: #16304f;
+  background: #0670a0;
 }
 .browse-select-header .btn-link {
   color: rgba(255,255,255,0.7) !important;
@@ -1276,7 +1276,7 @@ code {
   width: 100%;
 }
 .qs-card {
-  background: #1e3a5f;
+  background: #0891b2;
   padding: 20px;
 }
 .qs-card .card-body {
