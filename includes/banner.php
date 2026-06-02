@@ -26,12 +26,12 @@ if (is_dir($banners_path)) {
 if (!empty($header_images)) {
   sort($header_images);
   $selected_image = $header_images[array_rand($header_images)];
-  echo "<div class=\"easygdb-top\">";
+  echo "<div class=\"moop-top\">";
   echo "  <div class=\"banner-blur\" style=\"background: url(/$images_path/banners/$selected_image) center center no-repeat; background-size:cover;\"></div>";
   echo "  <div class=\"banner-image-wrapper\"><img class=\"banner-image\" src=\"/$images_path/banners/$selected_image\" alt=\"Banner\"></div>";
   echo "</div>";
 } elseif (!empty($header_img = $config->getString('header_img'))) {
-  echo "<div class=\"easygdb-top\">";
+  echo "<div class=\"moop-top\">";
   echo "  <div class=\"banner-blur\" style=\"background: url(/$images_path/$header_img) center center no-repeat; background-size:cover;\"></div>";
   echo "  <div class=\"banner-image-wrapper\"><img class=\"banner-image\" src=\"/$images_path/$header_img\" alt=\"Banner\"></div>";
   echo "</div>";

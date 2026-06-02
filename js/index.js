@@ -10,10 +10,26 @@ const GROUP_COLORS = [
     '#1abc9c','#e67e22','#e91e63','#00bcd4','#795548','#607d8b'
 ];
 
+// Built lazily on first call so quickSearchData is guaranteed to be defined by then.
+let _groupColorMap = null;
+
 function groupColor(name) {
-    let h = 0;
-    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
-    return GROUP_COLORS[Math.abs(h) % GROUP_COLORS.length];
+    if (!_groupColorMap) {
+        const names = quickSearchData
+            .filter(d => d.type === 'group')
+            .map(d => d.label)
+            .sort((a, b) => a.localeCompare(b));
+        _groupColorMap = {};
+        names.forEach((name, i) => {
+            let idx = i % GROUP_COLORS.length;
+            if (i > 0) {
+                const prev = _groupColorMap[names[i - 1]];
+                while (GROUP_COLORS[idx] === prev) idx = (idx + 1) % GROUP_COLORS.length;
+            }
+            _groupColorMap[name] = GROUP_COLORS[idx];
+        });
+    }
+    return _groupColorMap[name] ?? GROUP_COLORS[0];
 }
 
 function escHtml(s) {
@@ -341,4 +357,9 @@ document.addEventListener('DOMContentLoaded', () => {
             refreshAllHighlights();
             if (phyloTree) phyloTree.updateUI();
         });
+
+    // Colorize Browse by Group chips — same map as org-select badges for visual consistency
+    document.querySelectorAll('.index-group-chip[data-group]').forEach(el => {
+        el.style.background = groupColor(el.dataset.group);
+    });
 });

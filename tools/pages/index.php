@@ -40,8 +40,34 @@
     </div>
   </div>
 
+  <!-- Browse by Group collapsible header -->
+  <div class="browse-select-header mb-3" id="browse-group-header"
+       data-bs-toggle="collapse" data-bs-target="#browse-group-body"
+       role="button" aria-expanded="false" aria-controls="browse-group-body">
+    <span class="d-flex align-items-center gap-2">
+      <i class="fas fa-chevron-down browse-select-chevron"></i>
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Browse by Group</span>
+    </span>
+  </div>
+  <div class="collapse mb-3" id="browse-group-body">
+    <div class="groups-strip">
+      <div class="index-group-chip-list">
+        <?php foreach ($cards_to_display as $card): ?>
+          <a href="<?= htmlspecialchars($card['link']) ?>" target="_blank"
+             class="index-group-chip text-decoration-none"
+             data-group="<?= htmlspecialchars($card['title']) ?>">
+            <?= htmlspecialchars($card['title']) ?>
+            <?php if (!empty($card['organism_count'])): ?>
+              <span class="index-group-chip-count">(<?= $card['organism_count'] ?>)</span>
+            <?php endif; ?>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </div>
+
   <!-- Browse & Select collapsible header -->
-  <div class="browse-select-header mb-0"
+  <div class="browse-select-header mb-0" id="browse-select-header"
        data-bs-toggle="collapse" data-bs-target="#browse-select-body"
        role="button" aria-expanded="false" aria-controls="browse-select-body">
     <span class="d-flex align-items-center gap-2">
@@ -145,7 +171,8 @@
   </div>
 
   <!-- Two-column layout: tabs (left) + selection panel (right, always visible) -->
-  <div class="collapse pt-3" id="browse-select-body">
+  <div class="collapse" id="browse-select-body">
+  <div class="browse-select-panel">
   <div class="row g-4" id="organism-tabs-anchor">
 
     <!-- Left: 4 tabs -->
@@ -157,17 +184,12 @@
       <ul class="nav nav-tabs" id="organism-tabs" role="tablist">
         <li class="nav-item" role="presentation">
           <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-organism-select" type="button" role="tab">
-            <i class="fa fa-list me-1"></i> Organism Select
+            <i class="fa fa-list me-1"></i> Organisms Select
           </button>
         </li>
         <li class="nav-item" role="presentation">
           <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-taxon-select" type="button" role="tab">
             <i class="fa fa-sitemap me-1"></i> Taxon Select
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-group-select" type="button" role="tab">
-            <i class="fa fa-th me-1"></i> Group Select
           </button>
         </li>
         <li class="nav-item" role="presentation">
@@ -193,30 +215,7 @@
           <div id="taxon-select-list" class="org-select-list"></div>
         </div>
 
-        <!-- Tab 3: Group Select -->
-        <div class="tab-pane fade" id="tab-group-select" role="tabpanel">
-          <div class="row g-3">
-            <?php foreach ($cards_to_display as $card): ?>
-              <div class="col-sm-6">
-                <a href="<?= htmlspecialchars($card['link']) ?>" target="_blank" class="text-decoration-none card-link">
-                  <div class="card h-100 shadow-sm border-0 rounded-3 organism-card">
-                    <div class="card-body text-center d-flex flex-column">
-                      <h3 class="card-title mb-3 fw-bold text-dark">
-                        <?= htmlspecialchars($card['title']) ?>
-                        <?php if (!empty($card['organism_count'])): ?>
-                          <span class="text-muted fw-normal fs-6">(<?= $card['organism_count'] ?>)</span>
-                        <?php endif; ?>
-                      </h3>
-                      <p class="card-text text-muted mb-3"><?= htmlspecialchars($card['text']) ?></p>
-                    </div>
-                  </div>
-                </a>
-              </div>
-            <?php endforeach; ?>
-          </div>
-        </div>
-
-        <!-- Tab 4: Tree Select -->
+        <!-- Tab 3: Tree Select -->
         <div class="tab-pane fade" id="tab-tree-select" role="tabpanel">
           <div class="mb-2">
             <small class="text-muted">
@@ -268,6 +267,7 @@
     </div><!-- /col-lg-4 -->
 
   </div><!-- /row -->
+  </div><!-- /browse-select-panel -->
   </div><!-- /collapse browse-select-body -->
 </div><!-- /container -->
 

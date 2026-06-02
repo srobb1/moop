@@ -65,6 +65,7 @@ function getAllGroupCards($group_data) {
     foreach ($cards as $group => &$card) {
         $card['organism_count'] = count($group_organisms[$group]);
     }
+    ksort($cards);
     return $cards;
 }
 
@@ -98,6 +99,7 @@ function getPublicGroupCards($group_data) {
     foreach ($public_groups as $group => &$card) {
         $card['organism_count'] = count($group_organisms[$group]);
     }
+    ksort($public_groups);
     return $public_groups;
 }
 
