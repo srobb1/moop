@@ -119,3 +119,4 @@ samtools-*
 # ── Site-specific data directories ──────────────────────────
 organisms_missing_data/
 /moop/
+smallscreen.png
