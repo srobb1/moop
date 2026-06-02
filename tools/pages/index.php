@@ -179,10 +179,10 @@
     <div class="bs-grid-selected">
       <div class="card shadow-sm" id="selected-organisms-card">
         <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">
+          <span class="fw-semibold" style="font-size:0.9rem;">
             Selected Organisms
             <span class="badge bg-light text-dark ms-1" id="selected-count">0</span>
-          </h5>
+          </span>
           <button id="clear-all-organisms" class="btn btn-sm btn-outline-light py-0 px-2" style="display:none" title="Clear all">
             <i class="fa fa-times me-1"></i>Clear all
           </button>
@@ -240,15 +240,22 @@
             <!-- Tab 3: Tree Select -->
             <div class="tab-pane fade" id="tab-tree-select" role="tabpanel">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <small class="text-muted">
-                  <i class="fa fa-info-circle text-info"></i> Click any node to select/deselect.
-                </small>
+                <button type="button" class="btn btn-link btn-sm p-0 text-muted text-decoration-none"
+                        id="tree-info-btn"
+                        data-bs-toggle="popover"
+                        data-bs-placement="right"
+                        data-bs-trigger="focus"
+                        data-bs-title="Using the Tree"
+                        data-bs-content="Click any node to select/deselect all organisms in that branch. Click the ❯ chevron to expand or collapse a branch without changing your selection. Use Expand All / Collapse All to navigate the full tree quickly."
+                        style="font-size:0.8rem;">
+                  <i class="fa fa-info-circle text-info me-1"></i>How to use
+                </button>
                 <div class="d-flex gap-1">
                   <button id="tree-expand-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">Expand All</button>
                   <button id="tree-collapse-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">Collapse All</button>
                 </div>
               </div>
-              <input type="text" class="form-control form-control-sm mb-2" id="taxonomy-filter" placeholder="Filter by name…">
+              <input type="text" class="form-control form-control-sm mb-2" id="taxonomy-filter" placeholder="Filter by taxon or organism…">
               <div class="taxonomy-tree-scroll">
                 <div id="taxonomy-tree-container"></div>
               </div>

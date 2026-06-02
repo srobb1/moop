@@ -201,15 +201,45 @@ function handleToolClick(toolId) {
 // ─── Tree tab filter (reused from old code) ────────────────────────────────
 
 function filterTaxonomyTree(filterText) {
-    document.querySelectorAll('.phylo-node').forEach(node => {
-        const matches = filterText === '' || node.textContent.toLowerCase().includes(filterText);
-        node.style.display = matches ? '' : 'none';
-        if (matches) {
-            let parent = node.closest('.phylo-children')?.parentElement;
-            while (parent?.classList.contains('phylo-node')) {
-                parent.style.display = '';
-                parent = parent.closest('.phylo-children')?.parentElement;
+    const container = document.getElementById('taxonomy-tree-container');
+    if (!container) return;
+
+    const allNodes      = Array.from(container.querySelectorAll('.phylo-node'));
+    const allContainers = Array.from(container.querySelectorAll('.phylo-children'));
+
+    if (filterText === '') {
+        allNodes.forEach(n => n.style.display = '');
+        allContainers.forEach(c => c.style.display = '');
+        return;
+    }
+
+    // Hide everything first
+    allNodes.forEach(n => n.style.display = 'none');
+    allContainers.forEach(c => c.style.display = 'none');
+
+    allNodes.forEach(node => {
+        if (!node.textContent.toLowerCase().includes(filterText)) return;
+
+        // Show this node
+        node.style.display = '';
+
+        // Show ancestors — walk up through phylo-children containers
+        let el = node.parentElement;
+        while (el && el !== container) {
+            el.style.display = '';
+            if (el.classList.contains('phylo-children') && el.dataset.parentId) {
+                const parentNode = allNodes.find(n => n.dataset.nodeId === el.dataset.parentId);
+                if (parentNode) parentNode.style.display = '';
             }
+            el = el.parentElement;
+        }
+
+        // Show descendants — find this node's children container and everything inside it
+        const childContainer = allContainers.find(c => c.dataset.parentId === node.dataset.nodeId);
+        if (childContainer) {
+            childContainer.style.display = '';
+            childContainer.querySelectorAll('.phylo-node, .phylo-children')
+                .forEach(d => d.style.display = '');
         }
     });
 }
@@ -342,6 +372,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('tree-expand-all')?.addEventListener('click', () => phyloTree?.expandAll());
     document.getElementById('tree-collapse-all')?.addEventListener('click', () => phyloTree?.collapseAll());
+
+    const treeInfoBtn = document.getElementById('tree-info-btn');
+    if (treeInfoBtn) new bootstrap.Popover(treeInfoBtn, { sanitize: false });
 
     // Remove-organism delegation on the selected panel
     document.getElementById('selected-organisms-list')
