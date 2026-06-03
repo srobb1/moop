@@ -27,7 +27,7 @@
     const LABEL_HEIGHT  = 16;
     const PAD_TOP       = 4;
     const PAD_BOTTOM    = 18;   // room for strand label
-    const PAD_LEFT      = 92;  // upstream block + gap to isoform label
+    const PAD_LEFT      = 112; // mRNA label + bracket + upstream block + gap to isoform label
     const PAD_RIGHT     = 80;  // downstream block + gap to track end
     const EXON_H        = 10;
     const CDS_H         = 16;
@@ -303,36 +303,22 @@
             svg.appendChild(g);
         });
 
-        // Rotated isoform-type label + bracket spanning the whole mRNA block
+        // Horizontal isoform-type label + bracket spanning the whole mRNA block.
+        // Layout (left margin):  [mRNA]─┬  (top tick pointing right)
+        //                               │
+        //                              ─┴  (bottom tick pointing right)
         if (isoforms.length > 0) {
             const isoBlockTop    = PAD_TOP + GENE_ROW;
             const isoBlockBottom = isoBlockTop + isoforms.length * (ROW_HEIGHT + LABEL_HEIGHT);
             const isoCenterY     = (isoBlockTop + isoBlockBottom) / 2;
             const isoType        = isoforms[0].type || 'mRNA';
-            const bracketX       = 3;  // sits left of the upstream block (which starts at PAD_LEFT-FLANK_GAP-FLANK_W ≈ 6)
+            const bracketX       = 33; // ~1px after "mRNA" text (font-size 10, ~28 units wide from x=4)
+            const tickLen        = 6;
 
-            // Light vertical bracket line
-            const bLine = makeSvgEl('line');
-            bLine.setAttribute('x1', bracketX); bLine.setAttribute('x2', bracketX);
-            bLine.setAttribute('y1', isoBlockTop + LABEL_HEIGHT); bLine.setAttribute('y2', isoBlockBottom - 4);
-            bLine.setAttribute('stroke', '#ccc'); bLine.setAttribute('stroke-width', '1');
-            svg.appendChild(bLine);
-            // Top tick
-            const tTop = makeSvgEl('line');
-            tTop.setAttribute('x1', bracketX); tTop.setAttribute('x2', bracketX + 4);
-            tTop.setAttribute('y1', isoBlockTop + LABEL_HEIGHT); tTop.setAttribute('y2', isoBlockTop + LABEL_HEIGHT);
-            tTop.setAttribute('stroke', '#ccc'); tTop.setAttribute('stroke-width', '1');
-            svg.appendChild(tTop);
-            // Bottom tick
-            const tBot = makeSvgEl('line');
-            tBot.setAttribute('x1', bracketX); tBot.setAttribute('x2', bracketX + 4);
-            tBot.setAttribute('y1', isoBlockBottom - 4); tBot.setAttribute('y2', isoBlockBottom - 4);
-            tBot.setAttribute('stroke', '#ccc'); tBot.setAttribute('stroke-width', '1');
-            svg.appendChild(tBot);
-
-            // Rotated label — reads bottom-to-top, centred on bracket
+            // "mRNA" text — vertical (rotated), centred on the isoform block
+            const labelX = 18;
             const isoTypeLabel = makeSvgEl('text');
-            isoTypeLabel.setAttribute('x', bracketX);
+            isoTypeLabel.setAttribute('x', labelX);
             isoTypeLabel.setAttribute('y', isoCenterY);
             isoTypeLabel.setAttribute('font-size', '10');
             isoTypeLabel.setAttribute('fill', COLOR_LABEL);
@@ -340,9 +326,28 @@
             isoTypeLabel.setAttribute('dominant-baseline', 'middle');
             isoTypeLabel.setAttribute('font-style', 'italic');
             isoTypeLabel.setAttribute('font-weight', 'bold');
-            isoTypeLabel.setAttribute('transform', `rotate(-90,${bracketX},${isoCenterY})`);
+            isoTypeLabel.setAttribute('transform', `rotate(-90,${labelX},${isoCenterY})`);
             isoTypeLabel.textContent = isoType;
             svg.appendChild(isoTypeLabel);
+
+            // Bracket: vertical line + top tick + bottom tick
+            const bLine = makeSvgEl('line');
+            bLine.setAttribute('x1', bracketX); bLine.setAttribute('x2', bracketX);
+            bLine.setAttribute('y1', isoBlockTop + LABEL_HEIGHT); bLine.setAttribute('y2', isoBlockBottom - 4);
+            bLine.setAttribute('stroke', '#bbb'); bLine.setAttribute('stroke-width', '1');
+            svg.appendChild(bLine);
+
+            const tTop = makeSvgEl('line');
+            tTop.setAttribute('x1', bracketX); tTop.setAttribute('x2', bracketX + tickLen);
+            tTop.setAttribute('y1', isoBlockTop + LABEL_HEIGHT); tTop.setAttribute('y2', isoBlockTop + LABEL_HEIGHT);
+            tTop.setAttribute('stroke', '#bbb'); tTop.setAttribute('stroke-width', '1');
+            svg.appendChild(tTop);
+
+            const tBot = makeSvgEl('line');
+            tBot.setAttribute('x1', bracketX); tBot.setAttribute('x2', bracketX + tickLen);
+            tBot.setAttribute('y1', isoBlockBottom - 4); tBot.setAttribute('y2', isoBlockBottom - 4);
+            tBot.setAttribute('stroke', '#bbb'); tBot.setAttribute('stroke-width', '1');
+            svg.appendChild(tBot);
         }
 
         // Strand label bottom-right
