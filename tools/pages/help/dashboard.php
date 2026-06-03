@@ -46,8 +46,24 @@ $tutorials = [
     [
         'id' => 'blast-tutorial',
         'title' => 'BLAST Search',
-        'description' => 'Learn how to use BLAST to compare sequences across organisms.',
+        'description' => 'Compare a DNA or protein sequence against genome assemblies to find homologs and conserved regions.',
         'icon' => 'fa-exchange-alt',
+        'color' => 'info',
+        'category' => 'general',
+    ],
+    [
+        'id' => 'moopmart',
+        'title' => 'MOOPmart — Gene List Builder',
+        'description' => 'Build custom gene lists by ID, name, annotation, or location and export as TSV or FASTA.',
+        'icon' => 'fa-shopping-cart',
+        'color' => 'info',
+        'category' => 'general',
+    ],
+    [
+        'id' => 'sequence-retrieval',
+        'title' => 'Sequence Retrieval',
+        'description' => 'Look up sequences by feature ID and download genomic, transcript, CDS, and protein sequences.',
+        'icon' => 'fa-dna',
         'color' => 'info',
         'category' => 'general',
     ],
@@ -127,20 +143,12 @@ $tutorials = [
 ?>
 
 <div class="container mt-5">
-  <h2><i class="fa fa-book"></i> Help & Tutorials</h2>
-  
-  <!-- Welcome Section -->
-  <div class="card mb-5 border-info">
-    <div class="card-header bg-info bg-opacity-10">
-      <h5 class="mb-0"><i class="fa fa-info-circle"></i> Welcome to MOOP Help</h5>
+  <div class="card shadow-sm mb-4">
+    <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-book me-2"></i>Help &amp; Tutorials</span>
     </div>
-    <div class="card-body">
-      <p class="mb-2">
-        <strong>MOOP</strong> — to keep company, associate closely. This help section contains tutorials and guides to help you get the most out of MOOP.
-      </p>
-      <p class="mb-0">
-        Select a tutorial below to learn about different features and how to use them effectively.
-      </p>
+    <div class="card-body py-2">
+      <p class="text-muted small mb-0"><strong>MOOP</strong> — to keep company, associate closely. Select a tutorial below to learn about different features and how to use them effectively.</p>
     </div>
   </div>
 
@@ -148,7 +156,7 @@ $tutorials = [
   <div class="mb-5">
     <div class="input-group">
       <input type="text" id="helpSearch" class="form-control form-control-lg" placeholder="Search help topics..." aria-label="Search help topics">
-      <span class="input-group-text bg-primary text-white">
+      <span class="input-group-text text-white" style="background-color:#0891b2;">
         <i class="fa fa-search"></i>
       </span>
     </div>

@@ -1,7 +1,7 @@
 <?php
 /**
  * BLAST TUTORIAL - Content File
- * 
+ *
  * Available variables:
  * - $config (ConfigManager instance)
  * - $siteTitle (Site title)
@@ -9,79 +9,137 @@
 ?>
 
 <div class="container mt-5">
-  <!-- Back to Help Link -->
   <div class="mb-4">
     <a href="help.php" class="btn btn-outline-secondary btn-sm">
-      <i class="fa fa-arrow-left"></i> Back to Help
+      <i class="fa fa-arrow-left me-1"></i>Back to Help
     </a>
   </div>
 
   <div class="row justify-content-center">
-    <div class="col-lg-8">
-      <h1 class="fw-bold mb-4"><i class="fa fa-exchange-alt"></i> BLAST Search</h1>
+    <div class="col-lg-9">
 
-      <div class="card shadow-sm border-0 rounded-3 mb-4">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
+          <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-exchange-alt me-2"></i>BLAST Search</span>
+        </div>
         <div class="card-body p-4">
-          <h3 class="fw-bold text-dark mb-3">Sequence Comparison with BLAST</h3>
-          <p class="text-muted mb-4">
-            BLAST (Basic Local Alignment Search Tool) is a powerful tool for comparing your sequence of interest 
-            against genomes and sequences in the MOOP database.
+          <p class="text-muted mb-0">
+            BLAST (Basic Local Alignment Search Tool) compares a query sequence against genome assemblies in MOOP to find regions of similarity. Use it to find homologs, verify annotations, or identify where an unknown sequence originates.
           </p>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">What is BLAST?</h4>
-          <p class="text-muted mb-3">
-            BLAST finds regions of similarity between sequences. It's useful for:
-          </p>
-          <ul class="text-muted">
-            <li>Finding homologous genes in other organisms</li>
-            <li>Identifying conserved sequences</li>
-            <li>Detecting sequence variations or mutations</li>
-            <li>Annotating unknown sequences</li>
+      <!-- Step-by-step -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+          <span class="step-badge me-2">1</span>
+          <span class="fw-semibold" style="font-size:0.9rem;">Paste a sequence</span>
+        </div>
+        <div class="card-body p-4">
+          <p class="text-muted mb-2">Paste your sequence directly into the text box. Both formats are accepted:</p>
+          <ul class="text-muted mb-3">
+            <li><strong>FASTA format</strong> — a header line starting with <code>&gt;</code> followed by the sequence on the next line(s)</li>
+            <li><strong>Plain sequence</strong> — just the nucleotide or amino acid letters, no header needed</li>
           </ul>
+          <p class="text-muted mb-0">Use the <strong>Sample Protein</strong> or <strong>Sample Nucleotide</strong> buttons to load a pre-filled example sequence if you want to try the tool before using your own data.</p>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Getting Started with BLAST</h4>
-          <ol class="text-muted">
-            <li><strong>Select organisms:</strong> Choose which organisms to search against</li>
-            <li><strong>Choose BLAST type:</strong> Select nucleotide (DNA) or protein search</li>
-            <li><strong>Enter your sequence:</strong> Paste your sequence in FASTA format</li>
-            <li><strong>Set parameters:</strong> Adjust E-value, word size, and other options</li>
-            <li><strong>Run search:</strong> Click the search button to submit your query</li>
-          </ol>
-
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Understanding BLAST Results</h4>
-          <p class="text-muted mb-3">
-            BLAST results are displayed in several formats:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Summary table:</strong> Overview of all matches with scores and statistics</li>
-            <li><strong>Alignments:</strong> Detailed alignment views showing matches</li>
-            <li><strong>Graphics:</strong> Visual representation of hit distribution</li>
-          </ul>
-
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Key BLAST Parameters</h4>
-          <div class="bg-light p-3 rounded">
-            <ul class="text-muted mb-0">
-              <li><strong>E-value:</strong> Statistical significance threshold (lower = more significant). Default 0.05</li>
-              <li><strong>Word size:</strong> Length of exact matches to trigger extension. Affects speed and sensitivity</li>
-              <li><strong>Max matches:</strong> Maximum number of results to return</li>
-              <li><strong>Gap penalties:</strong> Cost of opening and extending gaps in alignments</li>
-            </ul>
+      <div class="card shadow-sm mb-4">
+        <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+          <span class="step-badge me-2">2</span>
+          <span class="fw-semibold" style="font-size:0.9rem;">Select a BLAST program</span>
+        </div>
+        <div class="card-body p-4">
+          <p class="text-muted mb-3">Choose the program that matches your query type and what you want to search against:</p>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered text-muted mb-0">
+              <thead class="table-light">
+                <tr><th>Program</th><th>Query</th><th>Database</th><th>When to use</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>BLASTn</strong></td><td>DNA</td><td>DNA</td><td>Find similar nucleotide sequences; good for highly conserved or identical regions</td></tr>
+                <tr><td><strong>BLASTp</strong></td><td>Protein</td><td>Protein</td><td>Compare protein sequences directly; best for finding functional homologs</td></tr>
+                <tr><td><strong>BLASTx</strong></td><td>DNA</td><td>Protein</td><td>Translate a DNA query in all 6 frames and search protein databases; useful for unannotated sequences</td></tr>
+                <tr><td><strong>tBLASTn</strong></td><td>Protein</td><td>DNA</td><td>Search translated genome sequences with a protein query; finds genes not yet annotated</td></tr>
+                <tr><td><strong>tBLASTx</strong></td><td>DNA</td><td>DNA</td><td>Both query and database are translated; most sensitive but slowest</td></tr>
+              </tbody>
+            </table>
           </div>
+          <p class="text-muted small mt-2 mb-0">The program you select determines which databases are available in step 3 — protein programs show protein databases, nucleotide programs show nucleotide databases.</p>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">BLAST Tips</h4>
-          <ul class="text-muted">
-            <li>Make sure your sequence is in the correct format (FASTA)</li>
-            <li>Use appropriate BLAST type (nucleotide vs. protein)</li>
-            <li>Lower E-values give more stringent results</li>
-            <li>For quick screening, use high E-value; for careful analysis, use low E-value</li>
-            <li>Check sequence length - very short sequences may have many false positives</li>
+      <div class="card shadow-sm mb-4">
+        <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+          <span class="step-badge me-2">3</span>
+          <span class="fw-semibold" style="font-size:0.9rem;">Select organism and database</span>
+        </div>
+        <div class="card-body p-4">
+          <p class="text-muted mb-2">Use the organism list to choose which assembly to search against. You can filter by group, organism name, or assembly accession using the filter box.</p>
+          <p class="text-muted mb-2">Once an assembly is selected, the available databases appear as buttons — for example <strong>Genome</strong>, <strong>Transcript</strong>, <strong>CDS</strong>, or <strong>Protein</strong>. Select the one that matches your search intent.</p>
+          <p class="text-muted mb-0">The <strong>Currently selected</strong> panel shows your active organism and assembly so you always know what you're searching.</p>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+          <span class="step-badge me-2">4</span>
+          <span class="fw-semibold" style="font-size:0.9rem;">Run BLAST</span>
+        </div>
+        <div class="card-body p-4">
+          <p class="text-muted mb-2">Click <strong>Run BLAST</strong>. Results appear below the form and include:</p>
+          <ul class="text-muted mb-3">
+            <li><strong>Hit table</strong> — ranked list of matches with E-value, identity %, and alignment length</li>
+            <li><strong>Visual alignment diagram</strong> — shows where hits fall along your query sequence, color-coded by bit score</li>
+            <li><strong>Pairwise alignments</strong> — full alignment detail for each hit</li>
+          </ul>
+          <p class="text-muted mb-0">Download buttons let you save results as <strong>TXT</strong> (pairwise), <strong>TSV</strong> (tabular), or <strong>XML</strong> for downstream processing.</p>
+        </div>
+      </div>
+
+      <!-- Advanced Options -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header py-2" style="background:#f8f9fa;">
+          <span class="fw-semibold text-dark"><i class="fas fa-sliders-h me-2"></i>Advanced Options</span>
+        </div>
+        <div class="card-body p-4">
+          <p class="text-muted mb-3">Expand <strong>Advanced Options</strong> between steps 3 and 4 to fine-tune the search:</p>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered text-muted mb-0">
+              <thead class="table-light">
+                <tr><th>Parameter</th><th>What it controls</th><th>Default</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>E-value</strong></td><td>Statistical significance cutoff. Lower = more stringent; only high-confidence matches pass.</td><td>1e-3</td></tr>
+                <tr><td><strong>Maximum hits</strong></td><td>How many top hits to return.</td><td>50</td></tr>
+                <tr><td><strong>Scoring matrix</strong></td><td>Substitution matrix for protein searches (BLOSUM62 is standard).</td><td>BLOSUM62</td></tr>
+                <tr><td><strong>Word size</strong></td><td>Seed length for initial matches. Smaller = more sensitive but slower.</td><td>11 (blastn), 3 (blastp)</td></tr>
+                <tr><td><strong>Gap open / extend</strong></td><td>Cost for starting and extending a gap in an alignment.</td><td>Program-specific</td></tr>
+                <tr><td><strong>Percent identity</strong></td><td>Minimum identity % threshold; hits below this are discarded.</td><td>No threshold</td></tr>
+                <tr><td><strong>Filter low complexity</strong></td><td>Mask repetitive/low-complexity regions before searching.</td><td>Off</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tips -->
+      <div class="card shadow-sm mb-4 border-0" style="background:#f0f9ff;">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3"><i class="fa fa-lightbulb me-2" style="color:#0891b2;"></i>Tips</h5>
+          <ul class="text-muted mb-0">
+            <li>For quick screening use a relaxed E-value (0.1 or 1); for careful homology analysis use 1e-6 or lower.</li>
+            <li>Very short sequences (&lt;20 aa / &lt;50 nt) produce many low-confidence hits — filter by E-value or identity.</li>
+            <li>BLASTx and tBLASTn cross the nucleotide/protein boundary and are the most useful programs for finding unannotated genes.</li>
+            <li>If you get no hits, try relaxing the E-value threshold or switching to a more sensitive program (e.g. BLASTx instead of BLASTn).</li>
           </ul>
         </div>
       </div>
 
       <div class="mb-4">
         <a href="help.php" class="btn btn-outline-secondary btn-sm">
-          <i class="fa fa-arrow-left"></i> Back to Help
+          <i class="fa fa-arrow-left me-1"></i>Back to Help
         </a>
       </div>
     </div>

@@ -537,7 +537,12 @@ function registerAssembly(organism, assembly, buttonEl) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(t => { throw new Error(`HTTP ${response.status}: ${t.substring(0, 200)}`); });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             logOutput.textContent += data.output + '\n✓ Done\n';
