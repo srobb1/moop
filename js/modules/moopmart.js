@@ -172,6 +172,64 @@
     }
 
     // -------------------------------------------------------
+    // Step 3 — Feature column list (ordered, toggleable)
+    // -------------------------------------------------------
+
+    function renumberColList(list, startAt = 1) {
+        let n = startAt;
+        list.querySelectorAll('.mm-col-item').forEach(item => {
+            const badge = item.querySelector('.mm-col-num');
+            const label = item.querySelector('.mm-col-label');
+            if (item.classList.contains('selected')) {
+                badge.textContent = n++;
+                badge.style.visibility = 'visible';
+                item.style.background = 'rgba(8,145,178,0.09)';
+                item.style.borderColor = '#0891b2';
+                label.style.color = '';
+            } else {
+                badge.style.visibility = 'hidden';
+                item.style.background = '#fff';
+                item.style.borderColor = '#dee2e6';
+                label.style.color = '#adb5bd';
+            }
+        });
+        return n; // next available number
+    }
+
+    function renumberBothColLists() {
+        const featList = document.getElementById('mm-feat-col-list');
+        const annList  = document.getElementById('mm-ann-col-list');
+        const next = featList ? renumberColList(featList, 1) : 1;
+        if (annList) renumberColList(annList, next);
+    }
+
+    function initColList() {
+        ['mm-feat-col-list', 'mm-ann-col-list'].forEach(id => {
+            const list = document.getElementById(id);
+            if (!list) return;
+
+            list.querySelectorAll('.mm-col-item').forEach(item => item.classList.add('selected'));
+
+            list.addEventListener('click', function (e) {
+                const item = e.target.closest('.mm-col-item');
+                if (!item) return;
+
+                if (e.target.closest('.mm-col-up')) {
+                    const prev = item.previousElementSibling;
+                    if (prev) list.insertBefore(item, prev);
+                } else if (e.target.closest('.mm-col-down')) {
+                    const next = item.nextElementSibling;
+                    if (next) list.insertBefore(next, item);
+                } else {
+                    item.classList.toggle('selected');
+                }
+                renumberBothColLists();
+            });
+        });
+        renumberBothColLists();
+    }
+
+    // -------------------------------------------------------
     // Step 2 — Accordion header → panel connection
     // -------------------------------------------------------
 
@@ -202,6 +260,9 @@
                 tsvOpts?.classList.toggle('d-none', isFasta);
                 fastaOpts?.classList.toggle('d-none', !isFasta);
                 if (dlLabel) dlLabel.textContent = isFasta ? 'Download FASTA' : 'Download TSV';
+                // Clear stale preview when switching formats
+                document.getElementById('mm-results-section')?.classList.add('d-none');
+                document.getElementById('mm-fasta-preview-section')?.classList.add('d-none');
             });
         });
 
@@ -336,11 +397,11 @@
         if (start) fd.append('coord_start', start);
         if (end)   fd.append('coord_end',   end);
 
-        // Feature columns
-        document.querySelectorAll('.mm-feat-col:checked').forEach(c => fd.append('feature_columns[]', c.value));
+        // Feature columns — ordered by list position, selected only
+        document.querySelectorAll('#mm-feat-col-list .mm-col-item.selected').forEach(item => fd.append('feature_columns[]', item.dataset.col));
 
-        // Annotation basic columns
-        document.querySelectorAll('.mm-ann-col-basic:checked').forEach(c => fd.append('ann_columns[]', c.value));
+        // Annotation basic columns — ordered by list position, selected only
+        document.querySelectorAll('#mm-ann-col-list .mm-col-item.selected').forEach(item => fd.append('ann_columns[]', item.dataset.col));
 
         // Annotation sources
         document.querySelectorAll('.mm-ann-col:checked').forEach(c => fd.append('annotation_columns[]', c.value));
@@ -369,30 +430,94 @@
         if (btn) btn.disabled = true;
         if (result) result.textContent = '';
 
-        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
-        fetch(PREVIEW_URL, { method: 'POST', headers: { 'X-CSRF-Token': csrf }, body: buildFormData() })
-            .then(r => r.json())
-            .then(data => {
-                const total = data.count ?? 0;
-                const rows  = data.rows  ?? [];
-                if (result) {
-                    result.textContent = total > 0
-                        ? `${total.toLocaleString()} feature${total !== 1 ? 's' : ''} matched`
-                        : 'No features matched';
-                    result.className = 'small ' + (total > 0 ? 'text-success' : 'text-muted');
-                }
-                renderResultsTable(rows, total);
-            })
-            .catch(() => {
-                if (result) { result.textContent = 'Error fetching preview.'; result.className = 'small text-danger'; }
-            })
-            .finally(() => {
-                spinner?.classList.add('d-none');
-                if (btn) btn.disabled = false;
-            });
+        const csrf   = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const format = document.querySelector('input[name="mm-format"]:checked')?.value || 'tsv';
+
+        if (format === 'fasta') {
+            const fastaMode = document.querySelector('input[name="mm-fasta-type"]:checked')?.value || 'gene';
+            const flank     = document.getElementById('mm-flank-bp')?.value || '1000';
+            const fd = buildFormData({ output_format: 'fasta', fasta_mode: fastaMode, flank_bp: flank, fasta_preview: '1' });
+            fetch(EXPORT_URL, { method: 'POST', headers: { 'X-CSRF-Token': csrf }, body: fd })
+                .then(r => r.text())
+                .then(text => {
+                    if (result) {
+                        result.textContent = text.trim() ? 'Showing first 10 sequences' : 'No sequences matched';
+                        result.className = 'small ' + (text.trim() ? 'text-success' : 'text-muted');
+                    }
+                    renderFastaPreview(text);
+                })
+                .catch(() => {
+                    if (result) { result.textContent = 'Error fetching FASTA preview.'; result.className = 'small text-danger'; }
+                })
+                .finally(() => {
+                    spinner?.classList.add('d-none');
+                    if (btn) btn.disabled = false;
+                });
+        } else {
+            fetch(PREVIEW_URL, { method: 'POST', headers: { 'X-CSRF-Token': csrf }, body: buildFormData() })
+                .then(r => r.json())
+                .then(data => {
+                    const total      = data.count           ?? 0;
+                    const rows       = data.rows            ?? [];
+                    const annHeaders = data.ann_col_headers ?? [];
+                    if (result) {
+                        result.textContent = total > 0
+                            ? `${total.toLocaleString()} feature${total !== 1 ? 's' : ''} matched`
+                            : 'No features matched';
+                        result.className = 'small ' + (total > 0 ? 'text-success' : 'text-muted');
+                    }
+                    renderResultsTable(rows, total, annHeaders);
+                })
+                .catch(() => {
+                    if (result) { result.textContent = 'Error fetching preview.'; result.className = 'small text-danger'; }
+                })
+                .finally(() => {
+                    spinner?.classList.add('d-none');
+                    if (btn) btn.disabled = false;
+                });
+        }
     }
 
-    function renderResultsTable(rows, total) {
+    function renderFastaPreview(text) {
+        const tableSection = document.getElementById('mm-results-section');
+        const fastaSection = document.getElementById('mm-fasta-preview-section');
+        const pre          = document.getElementById('mm-fasta-preview-text');
+        tableSection?.classList.add('d-none');
+        if (resultsTable) { resultsTable.destroy(); resultsTable = null; }
+        if (!text.trim()) { fastaSection?.classList.add('d-none'); return; }
+        if (pre) pre.textContent = text;
+        fastaSection?.classList.remove('d-none');
+        fastaSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Column specs keyed by the UI data-col value — annotation basic cols omitted (not in preview data)
+    const FEAT_COL_SPECS = {
+        organism:     { title: 'Organism',             data: 'organism_dir',     defaultContent: '', render: (v) => v?.replace(/_/g, ' ') || '' },
+        assembly:     { title: 'Assembly',             data: 'genome_accession', defaultContent: '' },
+        gene_set:     { title: 'Gene Set',             data: 'gene_set_name',    defaultContent: '' },
+        feature_type: { title: 'Feature Type',         data: 'type',             defaultContent: '' },
+        feature_id:   { title: 'Feature ID',           data: 'uniquename',       defaultContent: '',
+                        render: (val, type, row) => type !== 'display' ? val
+                            : `<a href="${moopSite}/tools/parent.php?uniquename=${encodeURIComponent(val)}&organism=${encodeURIComponent(row.organism_dir)}" target="_blank">${val}</a>` },
+        feature_name: { title: 'Feature Name',         data: 'name',             defaultContent: '' },
+        feature_desc: { title: 'Feature Description',  data: 'description',      defaultContent: '',
+                        render: (v, t) => t === 'display' && v?.length > 60 ? `<span title="${v.replace(/"/g, '&quot;')}">${v.slice(0, 60)}…</span>` : (v || '') },
+        chr:          { title: 'Chr',                  data: 'chr',              defaultContent: '' },
+        start:        { title: 'Start',                data: 'start',            defaultContent: '' },
+        stop:         { title: 'Stop',                 data: 'end',              defaultContent: '' },
+        strand:       { title: 'Strand',               data: 'strand',           defaultContent: '' },
+    };
+
+    function getPreviewColumns() {
+        const items = document.querySelectorAll('#mm-feat-col-list .mm-col-item.selected');
+        const cols = Array.from(items)
+            .map(item => FEAT_COL_SPECS[item.dataset.col])
+            .filter(Boolean);
+        // Fall back to all columns in default order if nothing selected
+        return cols.length ? cols : Object.values(FEAT_COL_SPECS);
+    }
+
+    function renderResultsTable(rows, total, annColHeaders = []) {
         const section = document.getElementById('mm-results-section');
         const caption = document.getElementById('mm-results-caption');
         if (!rows.length) { section?.classList.add('d-none'); return; }
@@ -403,25 +528,16 @@
         section?.classList.remove('d-none');
         section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+        const annCols = annColHeaders.map(header => ({
+            title: header,
+            data: (row) => row[header] ?? '',
+            defaultContent: '',
+        }));
+
         if (resultsTable) { resultsTable.destroy(); resultsTable = null; }
         resultsTable = $('#mm-results-table').DataTable({
             data: rows,
-            columns: [
-                { title: 'Feature ID',  data: 'uniquename',
-                  render: (val, type, row) => type !== 'display' ? val
-                    : `<a href="${moopSite}/tools/parent.php?uniquename=${encodeURIComponent(val)}&organism=${encodeURIComponent(row.organism_dir)}" target="_blank">${val}</a>` },
-                { title: 'Name',        data: 'name',             defaultContent: '' },
-                { title: 'Type',        data: 'type',             defaultContent: '' },
-                { title: 'Description', data: 'description',      defaultContent: '',
-                  render: (v, t) => t === 'display' && v?.length > 60 ? `<span title="${v.replace(/"/g,'&quot;')}">${v.slice(0,60)}…</span>` : (v || '') },
-                { title: 'Organism',    data: 'organism_dir',     defaultContent: '', render: v => v?.replace(/_/g,' ') || '' },
-                { title: 'Assembly',    data: 'genome_accession', defaultContent: '' },
-                { title: 'Gene Set',    data: 'gene_set_name',    defaultContent: '' },
-                { title: 'Chr',         data: 'chr',              defaultContent: '' },
-                { title: 'Start',       data: 'start',            defaultContent: '' },
-                { title: 'End',         data: 'end',              defaultContent: '' },
-                { title: 'Strand',      data: 'strand',           defaultContent: '' },
-            ],
+            columns: [...getPreviewColumns(), ...annCols],
             pageLength: 25,
             lengthMenu: [10, 25, 50, 100],
             order: [[0, 'asc']],
@@ -474,6 +590,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         initScopeList();
         initAnnCriteria();
+        initColList();
         initAccordionHeaders();
         initFormatToggle();
         initAnnSources();
@@ -482,9 +599,17 @@
             applyContextScope(scopeContext);
         }
 
-        // Popovers
+        // Popovers — close on outside click
+        const popovers = [];
         document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
-            new bootstrap.Popover(el, { trigger: 'click' });
+            popovers.push(new bootstrap.Popover(el, { trigger: 'click' }));
+        });
+        document.addEventListener('click', e => {
+            popovers.forEach(pop => {
+                if (!pop._element.contains(e.target) && !document.querySelector('.popover')?.contains(e.target)) {
+                    pop.hide();
+                }
+            });
         });
 
         // Search instructions trigger (same modal as annotation search)

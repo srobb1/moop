@@ -114,6 +114,7 @@ foreach ($by_organism as $org => $org_data) {
     $matched = moopmartAttachCoords($features, $coords_by_gs, $coord_filter);
     foreach ($matched as $f) {
         $f['organism_dir'] = $org;
+        $f['db_path']      = $db;
         $all_features[]    = $f;
     }
     $by_org_counts[] = ['organism' => $org, 'count' => count($matched)];
@@ -122,22 +123,60 @@ foreach ($by_organism as $org => $org_data) {
 $total   = count($all_features);
 $preview = array_slice($all_features, 0, 100);
 
-$rows = array_map(fn($f) => [
-    'uniquename'       => $f['uniquename'],
-    'name'             => $f['name']             ?? '',
-    'description'      => $f['description']      ?? '',
-    'type'             => $f['type'],
-    'organism_dir'     => $f['organism_dir'],
-    'genome_accession' => $f['genome_accession'],
-    'gene_set_name'    => $f['gene_set_name'],
-    'chr'              => $f['chr']    ?? '',
-    'start'            => $f['start']  ?? '',
-    'end'              => $f['end']    ?? '',
-    'strand'           => $f['strand'] ?? '',
-], $preview);
+// Annotation columns for preview
+$annotation_columns_selected = array_values(array_filter($_POST['annotation_columns'] ?? []));
+$requested_ann = array_flip(array_values(array_filter($_POST['ann_columns'] ?? [])));
+$ann_incl_id   = empty($requested_ann) || isset($requested_ann['ann_id']);
+$ann_incl_desc = empty($requested_ann) || isset($requested_ann['ann_description']);
+$clean_prev    = fn($s) => str_replace(["\r\n", "\r", "\n", "\t"], ' ', (string)$s);
+
+$ann_col_headers   = [];
+$ann_by_uniquename = [];
+
+if (!empty($annotation_columns_selected)) {
+    foreach ($annotation_columns_selected as $src) {
+        if ($ann_incl_id)   $ann_col_headers[] = 'ID:' . $src;
+        if ($ann_incl_desc) $ann_col_headers[] = 'Description:' . $src;
+    }
+
+    // Fetch annotations for preview features grouped by DB
+    $preview_by_db = [];
+    foreach ($preview as $f) {
+        if (!empty($f['db_path'])) $preview_by_db[$f['db_path']][] = $f;
+    }
+    foreach ($preview_by_db as $db_path => $db_feats) {
+        $chunk_anns = moopmartGetAnnotationsForFeatures(array_column($db_feats, 'feature_id'), $db_path);
+        foreach ($db_feats as $f) {
+            $ann_by_uniquename[$f['uniquename']] = $chunk_anns[$f['feature_id']] ?? [];
+        }
+    }
+}
+
+$rows = array_map(function ($f) use ($annotation_columns_selected, $ann_by_uniquename, $ann_incl_id, $ann_incl_desc, $clean_prev) {
+    $row = [
+        'uniquename'       => $f['uniquename'],
+        'name'             => $f['name']             ?? '',
+        'description'      => $f['description']      ?? '',
+        'type'             => $f['type'],
+        'organism_dir'     => $f['organism_dir'],
+        'genome_accession' => $f['genome_accession'],
+        'gene_set_name'    => $f['gene_set_name'],
+        'chr'              => $f['chr']    ?? '',
+        'start'            => $f['start']  ?? '',
+        'end'              => $f['end']    ?? '',
+        'strand'           => $f['strand'] ?? '',
+    ];
+    foreach ($annotation_columns_selected as $src) {
+        $entries = $ann_by_uniquename[$f['uniquename']][$src] ?? [];
+        if ($ann_incl_id)   $row['ID:' . $src]          = implode('; ', array_map(fn($e) => $e['accession'], $entries));
+        if ($ann_incl_desc) $row['Description:' . $src] = implode('; ', array_map(fn($e) => $clean_prev($e['description'] ?? ''), $entries));
+    }
+    return $row;
+}, $preview);
 
 echo json_encode([
-    'count'       => $total,
-    'rows'        => $rows,
-    'by_organism' => $by_org_counts,
+    'count'           => $total,
+    'rows'            => $rows,
+    'ann_col_headers' => $ann_col_headers,
+    'by_organism'     => $by_org_counts,
 ]);

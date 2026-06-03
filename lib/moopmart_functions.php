@@ -324,6 +324,7 @@ function moopmartGetChrNames(string $gene_set_path): array
 
     $chrs = [];
     $fh   = fopen($tsv, 'r');
+    if ($fh === false) return [];
     while (($line = fgets($fh)) !== false) {
         $p = explode("\t", $line, 4);
         if (isset($p[2])) $chrs[trim($p[2])] = true;
@@ -367,25 +368,33 @@ function moopmartLoadGeneCoords(string $gene_set_path, array $filter_uniquenames
 
     $coords = [];
     $fh     = fopen($tsv, 'r');
+    if ($fh === false) return [];
     while (($line = fgets($fh)) !== false) {
         $p = explode("\t", rtrim($line));
         if (count($p) < 6) continue;
         [$uniquename, $gene_id, $chr, $start, $end, $strand] = $p;
 
         if ($filter !== null) {
-            // Targeted load: any row whose uniquename is in the requested set.
-            if (!isset($filter[$uniquename])) continue;
+            // Targeted load: match on gene_id (col1) — feature uniquenames are gene-level,
+            // but col0 in the TSV is the mRNA/isoform uniquename with a suffix.
+            if (!isset($filter[$gene_id])) continue;
+            if (isset($coords[$gene_id])) continue; // keep first isoform only
+            $coords[$gene_id] = [
+                'chr'    => $chr,
+                'start'  => (int)$start,
+                'end'    => (int)$end,
+                'strand' => rtrim($strand),
+            ];
         } else {
             // No filter: gene-level rows only (col0 === col1) for memory efficiency.
             if ($uniquename !== $gene_id) continue;
+            $coords[$uniquename] = [
+                'chr'    => $chr,
+                'start'  => (int)$start,
+                'end'    => (int)$end,
+                'strand' => $strand,
+            ];
         }
-
-        $coords[$uniquename] = [
-            'chr'    => $chr,
-            'start'  => (int)$start,
-            'end'    => (int)$end,
-            'strand' => $strand,
-        ];
     }
     fclose($fh);
     return $coords;
@@ -462,6 +471,7 @@ function moopmartGetExonCoords(string $gff_path, array $gene_uniquenames): array
     $exon_types = ['exon', 'cds', 'five_prime_utr', 'three_prime_utr', 'utr'];
 
     $fh = fopen($gff_path, 'r');
+    if ($fh === false) return [];
     while (($line = fgets($fh)) !== false) {
         if ($line[0] === '#') continue;
         $parts = explode("\t", rtrim($line));

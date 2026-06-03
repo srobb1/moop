@@ -218,7 +218,8 @@ function buildTypedIdsForGenes(array $gene_uniquenames, int $gene_set_id, string
             $mrna_ids[] = $row['feature_uniquename'];
         }
 
-        // Level 2: CDS/protein grandchildren (children of mRNAs)
+        // Level 2: CDS children of mRNAs
+        $cds_ids = [];
         if (!empty($mrna_ids)) {
             $mp   = implode(',', array_fill(0, count($mrna_ids), '?'));
             $stmt = $dbh->prepare(
@@ -227,9 +228,27 @@ function buildTypedIdsForGenes(array $gene_uniquenames, int $gene_set_id, string
                    JOIN feature m ON f.parent_feature_id = m.feature_id
                   WHERE m.feature_uniquename IN ($mp)
                     AND f.gene_set_id = ?
-                    AND f.feature_type IN ('CDS', 'protein', 'polypeptide')"
+                    AND f.feature_type IN ('cds', 'CDS')"
             );
             $stmt->execute(array_merge(array_values($mrna_ids), [$gene_set_id]));
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $result[$row['feature_uniquename']] = $row['feature_type'];
+                $cds_ids[] = $row['feature_uniquename'];
+            }
+        }
+
+        // Level 3: protein children of CDS (gene → mRNA → cds → protein)
+        if (!empty($cds_ids)) {
+            $cp   = implode(',', array_fill(0, count($cds_ids), '?'));
+            $stmt = $dbh->prepare(
+                "SELECT f.feature_uniquename, f.feature_type
+                   FROM feature f
+                   JOIN feature c ON f.parent_feature_id = c.feature_id
+                  WHERE c.feature_uniquename IN ($cp)
+                    AND f.gene_set_id = ?
+                    AND f.feature_type IN ('protein', 'polypeptide')"
+            );
+            $stmt->execute(array_merge(array_values($cds_ids), [$gene_set_id]));
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
                 $result[$row['feature_uniquename']] = $row['feature_type'];
             }

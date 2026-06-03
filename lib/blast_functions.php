@@ -1042,11 +1042,13 @@ if (!function_exists('extractFastaRegion')) {
 function extractFastaRegion(string $fasta_path, string $fai_path, string $seqname, int $start, int $end): ?string
 {
     $fh    = fopen($fai_path, 'r');
+    if ($fh === false) return null;
     $entry = null;
     while (($line = fgets($fh)) !== false) {
         $parts = explode("\t", rtrim($line));
         if (count($parts) >= 5 && $parts[0] === $seqname) {
             $entry = [
+                'total_len'      => (int)$parts[1],
                 'offset'         => (int)$parts[2],
                 'bases_per_line' => (int)$parts[3],
                 'bytes_per_line' => (int)$parts[4],
@@ -1058,6 +1060,10 @@ function extractFastaRegion(string $fasta_path, string $fai_path, string $seqnam
 
     if (!$entry || $entry['bases_per_line'] === 0) return null;
 
+    // Clamp to contig boundaries so we never read past the end into the next entry
+    if ($end > $entry['total_len']) $end = $entry['total_len'];
+    if ($start > $end) return null;
+
     $s        = $start - 1;
     $len      = $end - $start + 1;
     $byte_pos = $entry['offset']
@@ -1065,6 +1071,7 @@ function extractFastaRegion(string $fasta_path, string $fai_path, string $seqnam
               + ($s % $entry['bases_per_line']);
 
     $fh = fopen($fasta_path, 'rb');
+    if ($fh === false) return null;
     fseek($fh, $byte_pos);
 
     $seq       = '';

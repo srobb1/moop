@@ -266,6 +266,10 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
     <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
       <span class="step-badge me-2">3</span>
       <span class="fw-semibold" style="font-size:0.9rem;">Design your output</span>
+      <i class="fa fa-info-circle ms-1" style="cursor:pointer; color:rgba(255,255,255,0.7);"
+         data-bs-toggle="popover" data-bs-placement="right" data-bs-html="true"
+         data-bs-title="Design your output"
+         data-bs-content="Choose a <strong>format</strong> and which <strong>columns</strong> to include, then click Preview or Download in Step 4.<br><br><strong>TSV (Tab-Separated Values)</strong> — a plain-text spreadsheet where columns are separated by tab characters. To open in Excel: choose <em>File &rarr; Open</em>, select the downloaded file, and Excel will parse it automatically (or use <em>Data &rarr; From Text/CSV</em> if it opens as one column).<br><br><strong>Wide vs Long</strong> — Wide puts all annotation values for a feature on one row, joined with &#039;; &#039;. Long gives one row per annotation, which is easier to filter in Excel.<br><br><strong>FASTA</strong> — a standard sequence format used by bioinformatics tools. Each entry starts with a <code>&gt;header</code> line (containing the feature ID and organism), followed by the nucleotide or protein sequence on the next line. FASTA files can be opened in any text editor or loaded directly into tools like BLAST, MUSCLE, or Galaxy."></i>
     </div>
     <div class="card-body pt-3">
 
@@ -306,8 +310,8 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
         <!-- Feature columns -->
         <div class="mb-3">
-          <div class="small fw-semibold text-muted mb-2">Feature columns</div>
-          <div class="d-flex flex-wrap gap-2" id="mm-feature-col-checks">
+          <div class="small fw-semibold text-muted mb-2">Feature columns to include in TSV</div>
+          <div id="mm-feat-col-list" style="max-width:320px;">
             <?php
             $feat_cols = [
               'organism'     => 'Organism',
@@ -315,44 +319,58 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
               'gene_set'     => 'Gene Set',
               'feature_type' => 'Feature Type',
               'feature_id'   => 'Feature ID',
+              'feature_name' => 'Feature Name',
+              'feature_desc' => 'Feature Description',
               'chr'          => 'Chr',
               'start'        => 'Start',
               'stop'         => 'Stop',
               'strand'       => 'Strand',
             ];
             foreach ($feat_cols as $val => $lbl):
-              $id = 'mm-col-' . $val;
             ?>
-            <div class="form-check form-check-inline mb-0">
-              <input class="form-check-input mm-feat-col" type="checkbox" id="<?= $id ?>"
-                     value="<?= $val ?>" checked>
-              <label class="form-check-label small" for="<?= $id ?>"><?= $lbl ?></label>
+            <div class="mm-col-item d-flex align-items-center gap-2 px-2 py-1 mb-1 rounded border"
+                 data-col="<?= $val ?>" style="cursor:pointer; user-select:none;">
+              <span class="mm-col-num badge" style="min-width:1.5em; text-align:center; font-size:0.72rem; padding:0.25em 0.4em; background:#0891b2;"></span>
+              <span class="mm-col-label small"><?= $lbl ?></span>
+              <div class="ms-auto d-flex" style="gap:2px;">
+                <button type="button" class="mm-col-up border-0 rounded p-0 lh-1 text-muted"
+                        style="background:none; font-size:0.7rem; width:1.4em; height:1.4em;" title="Move up">&#9650;</button>
+                <button type="button" class="mm-col-down border-0 rounded p-0 lh-1 text-muted"
+                        style="background:none; font-size:0.7rem; width:1.4em; height:1.4em;" title="Move down">&#9660;</button>
+              </div>
             </div>
             <?php endforeach; ?>
           </div>
+          <div class="small text-muted mt-1" style="font-size:0.75rem;">Click to include/exclude &middot; arrows to reorder</div>
         </div>
 
         <!-- Annotation columns -->
         <div class="mb-3">
-          <div class="small fw-semibold text-muted mb-2">Annotation columns</div>
-          <div class="d-flex flex-wrap gap-2">
+          <div class="small fw-semibold text-muted mb-2">Annotation columns to include in TSV if Annotation types (below) are selected</div>
+          <div id="mm-ann-col-list" style="max-width:320px;">
             <?php
             $ann_cols = [
-              'ann_type'        => 'Ann. Type',
-              'ann_source'      => 'Ann. Source',
-              'ann_id'          => 'Ann. ID',
-              'ann_description' => 'Ann. Description',
+              'ann_type'        => 'Annotation Type',
+              'ann_source'      => 'Annotation Source',
+              'ann_id'          => 'Annotation ID',
+              'ann_description' => 'Annotation Description',
             ];
             foreach ($ann_cols as $val => $lbl):
-              $id = 'mm-col-' . $val;
             ?>
-            <div class="form-check form-check-inline mb-0">
-              <input class="form-check-input mm-ann-col-basic" type="checkbox" id="<?= $id ?>"
-                     value="<?= $val ?>" checked>
-              <label class="form-check-label small" for="<?= $id ?>"><?= $lbl ?></label>
+            <div class="mm-col-item d-flex align-items-center gap-2 px-2 py-1 mb-1 rounded border"
+                 data-col="<?= $val ?>" style="cursor:pointer; user-select:none;">
+              <span class="mm-col-num badge" style="min-width:1.5em; text-align:center; font-size:0.72rem; padding:0.25em 0.4em; background:#0891b2;"></span>
+              <span class="mm-col-label small"><?= $lbl ?></span>
+              <div class="ms-auto d-flex" style="gap:2px;">
+                <button type="button" class="mm-col-up border-0 rounded p-0 lh-1 text-muted"
+                        style="background:none; font-size:0.7rem; width:1.4em; height:1.4em;" title="Move up">&#9650;</button>
+                <button type="button" class="mm-col-down border-0 rounded p-0 lh-1 text-muted"
+                        style="background:none; font-size:0.7rem; width:1.4em; height:1.4em;" title="Move down">&#9660;</button>
+              </div>
             </div>
             <?php endforeach; ?>
           </div>
+          <div class="small text-muted mt-1" style="font-size:0.75rem;">Click to include/exclude &middot; arrows to reorder</div>
         </div>
 
         <!-- Annotation sources panel -->
@@ -463,7 +481,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
     </div>
   </div>
 
-  <!-- Results preview table -->
+  <!-- Results preview — TSV table -->
   <div id="mm-results-section" class="d-none mt-3">
     <div class="card">
       <div class="card-header py-2 d-flex justify-content-between align-items-center">
@@ -474,6 +492,19 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
         <div class="table-responsive">
           <table id="mm-results-table" class="table table-sm table-striped table-hover w-100" style="font-size:0.85rem;"></table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results preview — FASTA -->
+  <div id="mm-fasta-preview-section" class="d-none mt-3">
+    <div class="card">
+      <div class="card-header py-2 d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">FASTA Preview <small id="mm-fasta-caption" class="text-muted fw-normal ms-1"></small></span>
+        <span class="text-muted small">Showing first 10 sequences. Download exports all.</span>
+      </div>
+      <div class="card-body p-2">
+        <pre id="mm-fasta-preview-text" class="mb-0" style="font-size:0.78rem; max-height:400px; overflow-y:auto; background:#f8f9fa; border-radius:4px; padding:0.75rem;"></pre>
       </div>
     </div>
   </div>

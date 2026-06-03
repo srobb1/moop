@@ -27,10 +27,11 @@ csrf_protect();
 $selected_raw = $_POST['sources'] ?? [];
 if (!is_array($selected_raw)) $selected_raw = [$selected_raw];
 
-$output_format = in_array($_POST['output_format'] ?? '', ['tsv', 'fasta']) ? $_POST['output_format'] : 'tsv';
-$ann_format    = ($_POST['ann_format'] ?? 'wide') === 'long' ? 'long' : 'wide';
-$fasta_mode    = $_POST['fasta_mode'] ?? 'gene';
-$flank_bp      = max(1, min(100000, (int)($_POST['flank_bp'] ?? 500)));
+$output_format  = in_array($_POST['output_format'] ?? '', ['tsv', 'fasta']) ? $_POST['output_format'] : 'tsv';
+$ann_format     = ($_POST['ann_format'] ?? 'wide') === 'long' ? 'long' : 'wide';
+$fasta_mode     = $_POST['fasta_mode'] ?? 'gene';
+$flank_bp       = max(1, min(100000, (int)($_POST['flank_bp'] ?? 500)));
+$fasta_preview  = !empty($_POST['fasta_preview']);
 
 $valid_fasta_modes = ['gene', 'upstream', 'downstream', 'exons', 'protein', 'transcript', 'cds'];
 if (!in_array($fasta_mode, $valid_fasta_modes)) $fasta_mode = 'gene';
@@ -112,16 +113,18 @@ foreach ($by_organism as $org => $org_data) {
 
     $coords_by_gs = [];
     foreach ($sources as $src) {
-        $gs_id = $src['gene_set_id'];
+        $gs_id  = $src['gene_set_id'];
+        $gs_key = $db . '|' . $gs_id;
         if ($gs_id && !isset($coords_by_gs[$gs_id])) {
-            $coords_by_gs[$gs_id]     = moopmartLoadGeneCoords($src['path'], $uniquenames_by_gs[$gs_id] ?? []);
-            $sources_by_gs_id[$gs_id] = $src;
+            $coords_by_gs[$gs_id]      = moopmartLoadGeneCoords($src['path'], $uniquenames_by_gs[$gs_id] ?? []);
+            $sources_by_gs_id[$gs_key] = $src;
         }
     }
 
     foreach (moopmartAttachCoords($features, $coords_by_gs, $coord_filter) as $f) {
         $f['organism_dir'] = $org;
         $f['db_path']      = $db;
+        $f['gs_key']       = $db . '|' . $f['gene_set_id'];
         $all_features[]    = $f;
     }
 }
@@ -158,16 +161,45 @@ if ($output_format === 'tsv') {
     // Strip embedded newlines/tabs that would break TSV parsing in Excel
     $clean = fn($s) => str_replace(["\r\n", "\r", "\n", "\t"], ' ', (string)$s);
 
-    // Header row
-    $feature_headers = ['organism', 'assembly', 'gene_set', 'gene_id', 'gene_name',
-                        'description', 'type', 'chr', 'start', 'end', 'strand'];
+    // Feature column map: UI key → [header label, value extractor]
+    $feat_col_map = [
+        'organism'     => ['organism',      fn($f) => $f['organism_dir']],
+        'assembly'     => ['assembly',      fn($f) => $f['genome_accession']],
+        'gene_set'     => ['gene_set',      fn($f) => $f['gene_set_name']],
+        'feature_type' => ['feature_type',  fn($f) => $f['type']],
+        'feature_id'   => ['feature_id',    fn($f) => $f['uniquename']],
+        'feature_name' => ['feature_name',  fn($f) => $clean($f['name'] ?? '')],
+        'feature_desc' => ['feature_desc',  fn($f) => $clean($f['description'] ?? '')],
+        'chr'          => ['chr',           fn($f) => $f['chr'] ?? ''],
+        'start'        => ['start',         fn($f) => $f['start'] ?? ''],
+        'stop'         => ['stop',          fn($f) => $f['end'] ?? ''],
+        'strand'       => ['strand',        fn($f) => $f['strand'] ?? ''],
+    ];
+
+    $requested_feat = array_values(array_filter($_POST['feature_columns'] ?? []));
+    $active_feat    = empty($requested_feat)
+        ? array_keys($feat_col_map)
+        : array_values(array_filter($requested_feat, fn($k) => isset($feat_col_map[$k])));
+
+    // Annotation sub-column selection (ann_id / ann_description; ann_type / ann_source = no data field)
+    $requested_ann    = array_flip(array_values(array_filter($_POST['ann_columns'] ?? [])));
+    $ann_incl_id      = empty($requested_ann) || isset($requested_ann['ann_id']);
+    $ann_incl_desc    = empty($requested_ann) || isset($requested_ann['ann_description']);
+    $ann_incl_src     = empty($requested_ann) || isset($requested_ann['ann_source']);
+
+    // Build header row
+    $feature_headers = array_map(fn($k) => $feat_col_map[$k][0], $active_feat);
     if ($ann_format === 'long') {
-        $headers = array_merge($feature_headers, ['annotation_source', 'annotation_id', 'annotation_description']);
+        $ann_sub_headers = [];
+        if ($ann_incl_src)  $ann_sub_headers[] = 'annotation_source';
+        if ($ann_incl_id)   $ann_sub_headers[] = 'annotation_id';
+        if ($ann_incl_desc) $ann_sub_headers[] = 'annotation_description';
+        $headers = array_merge($feature_headers, $ann_sub_headers);
     } else {
         $headers = $feature_headers;
         foreach ($source_cols as $s) {
-            $headers[] = 'ID:' . $s;
-            $headers[] = 'Description:' . $s;
+            if ($ann_incl_id)   $headers[] = 'ID:' . $s;
+            if ($ann_incl_desc) $headers[] = 'Description:' . $s;
         }
     }
     fputcsv($out, $headers, "\t");
@@ -187,45 +219,31 @@ if ($output_format === 'tsv') {
             $chunk_anns = moopmartGetAnnotationsForFeatures($fids, $db_path);
 
             foreach ($chunk as $f) {
-                $base = [
-                    $f['organism_dir'],
-                    $f['genome_accession'],
-                    $f['gene_set_name'],
-                    $f['uniquename'],
-                    $clean($f['name']        ?? ''),
-                    $clean($f['description'] ?? ''),
-                    $f['type'],
-                    $f['chr']    ?? '',
-                    $f['start']  ?? '',
-                    $f['end']    ?? '',
-                    $f['strand'] ?? '',
-                ];
+                $base     = array_map(fn($k) => ($feat_col_map[$k][1])($f), $active_feat);
                 $fid_anns = $chunk_anns[$f['feature_id']] ?? [];
 
                 if ($ann_format === 'long') {
                     $emitted = false;
                     foreach ($source_cols as $src_name) {
                         foreach ($fid_anns[$src_name] ?? [] as $entry) {
-                            fputcsv($out, array_merge($base, [
-                                $src_name,
-                                $entry['accession'],
-                                $clean($entry['description'] ?? ''),
-                            ]), "\t");
+                            $ann_vals = [];
+                            if ($ann_incl_src)  $ann_vals[] = $src_name;
+                            if ($ann_incl_id)   $ann_vals[] = $entry['accession'];
+                            if ($ann_incl_desc) $ann_vals[] = $clean($entry['description'] ?? '');
+                            fputcsv($out, array_merge($base, $ann_vals), "\t");
                             $emitted = true;
                         }
                     }
                     // Emit one row even if no annotations matched
                     if (!$emitted) {
-                        fputcsv($out, array_merge($base, ['', '', '']), "\t");
+                        fputcsv($out, array_merge($base, array_fill(0, count($ann_sub_headers), '')), "\t");
                     }
                 } else {
                     $row = $base;
                     foreach ($source_cols as $src_name) {
-                        $entries      = $fid_anns[$src_name] ?? [];
-                        $accessions   = array_map(fn($e) => $e['accession'], $entries);
-                        $descriptions = array_map(fn($e) => $clean($e['description'] ?? ''), $entries);
-                        $row[] = implode('; ', $accessions);
-                        $row[] = implode('; ', $descriptions);
+                        $entries = $fid_anns[$src_name] ?? [];
+                        if ($ann_incl_id)   $row[] = implode('; ', array_map(fn($e) => $e['accession'], $entries));
+                        if ($ann_incl_desc) $row[] = implode('; ', array_map(fn($e) => $clean($e['description'] ?? ''), $entries));
                     }
                     fputcsv($out, $row, "\t");
                 }
@@ -241,21 +259,26 @@ if ($output_format === 'tsv') {
 } else {
 
     header('Content-Type: text/plain; charset=UTF-8');
-    header("Content-Disposition: attachment; filename=\"$filename\"");
+    if (!$fasta_preview) {
+        header("Content-Disposition: attachment; filename=\"$filename\"");
+    }
     header('Cache-Control: no-cache, no-store');
 
     $out = fopen('php://output', 'w');
 
-    // Group features by gene_set_id for per-file operations
+    // Limit to first 10 for preview
+    $fasta_features = $fasta_preview ? array_slice($all_features, 0, 10) : $all_features;
+
+    // Group features by db+gene_set_id so each organism's features hit its own genome files
     $by_gs = [];
-    foreach ($all_features as $f) {
-        $by_gs[$f['gene_set_id']][] = $f;
+    foreach ($fasta_features as $f) {
+        $by_gs[$f['gs_key']][] = $f;
     }
 
     $genomic_modes = ['gene', 'upstream', 'downstream', 'exons'];
 
-    foreach ($by_gs as $gs_id => $gs_features) {
-        $src = $sources_by_gs_id[$gs_id] ?? null;
+    foreach ($by_gs as $gs_key => $gs_features) {
+        $src = $sources_by_gs_id[$gs_key] ?? null;
         if (!$src) continue;
 
         $org          = $src['organism'];
@@ -272,7 +295,8 @@ if ($output_format === 'tsv') {
             // $gs_features is gene-level; expand to mRNA/CDS/protein children for extraction
             $gene_uniquenames = array_column($gs_features, 'uniquename');
             $db_path  = "$organism_data/$org/organism.sqlite";
-            $typed_ids = buildTypedIdsForGenes($gene_uniquenames, (int)$gs_id, $db_path);
+            $gs_id_int = (int)($gs_features[0]['gene_set_id'] ?? 0);
+            $typed_ids = buildTypedIdsForGenes($gene_uniquenames, $gs_id_int, $db_path);
             $extract_result = extractSequencesForAllTypes($gs_path, $typed_ids, $sequence_types, $org, $assembly);
             if (isset($extract_result['content'][$fasta_mode])) {
                 fwrite($out, $extract_result['content'][$fasta_mode]);
