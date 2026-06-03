@@ -53,9 +53,9 @@
               </thead>
               <tbody>
                 <tr><td>Find genes matching a keyword or annotation term across many organisms</td><td><strong>Annotation Search</strong></td></tr>
-                <tr><td>Build a gene list by ID, name, description, or GO term, then export TSV/FASTA</td><td><strong>MOOPmart</strong></td></tr>
+                <tr><td>Build a gene list by ID, name, description, or GO term across multiple assemblies, then export TSV/FASTA sequences</td><td><strong>MOOPmart</strong></td></tr>
                 <tr><td>Compare a sequence against multiple genome assemblies</td><td><strong>BLAST Search</strong></td></tr>
-                <tr><td>Retrieve specific gene sequences from multiple assemblies by ID</td><td><strong>Retrieve Sequences</strong></td></tr>
+                <tr><td>Retrieve sequences by ID from a single assembly</td><td><strong>Retrieve Sequences</strong></td></tr>
               </tbody>
             </table>
           </div>
