@@ -142,10 +142,23 @@ foreach ($by_organism as $org => $org_data) {
     $by_org_counts[] = ['organism' => $org, 'count' => count($matched)];
 }
 
-$total   = count($all_features);
-$preview = array_slice($all_features, 0, 100);
+// Expand gene rows to one row per mRNA, grouped by DB
+$gene_count   = count($all_features);
+$mrna_features = [];
+$by_db_expand  = [];
+foreach ($all_features as $f) {
+    $by_db_expand[$f['db_path']][] = $f;
+}
+foreach ($by_db_expand as $db_path => $db_feats) {
+    foreach (moopmartExpandToMrnaRows($db_feats, $db_path) as $row) {
+        $mrna_features[] = $row;
+    }
+}
 
-// Annotation columns for preview
+$total   = count($mrna_features);
+$preview = array_slice($mrna_features, 0, 100);
+
+// Annotation columns for preview (always wide — one mRNA row, annotations semicolon-joined)
 $annotation_columns_selected = array_values(array_filter($_POST['annotation_columns'] ?? []));
 $requested_ann = array_flip(array_values(array_filter($_POST['ann_columns'] ?? [])));
 $ann_incl_id   = empty($requested_ann) || isset($requested_ann['ann_id']);
@@ -161,10 +174,13 @@ if (!empty($annotation_columns_selected)) {
         if ($ann_incl_desc) $ann_col_headers[] = 'Description:' . $src;
     }
 
-    // Fetch annotations for preview features grouped by DB
+    // Deduplicate by gene feature_id before fetching annotations
+    $seen_fids     = [];
     $preview_by_db = [];
     foreach ($preview as $f) {
-        if (!empty($f['db_path'])) $preview_by_db[$f['db_path']][] = $f;
+        if (empty($f['db_path']) || isset($seen_fids[$f['feature_id']])) continue;
+        $seen_fids[$f['feature_id']]         = true;
+        $preview_by_db[$f['db_path']][]      = $f;
     }
     foreach ($preview_by_db as $db_path => $db_feats) {
         $chunk_anns = moopmartGetAnnotationsForFeatures(array_column($db_feats, 'feature_id'), $db_path);
@@ -177,17 +193,18 @@ if (!empty($annotation_columns_selected)) {
 $rows = array_map(function ($f) use ($annotation_columns_selected, $ann_by_uniquename, $ann_incl_id, $ann_incl_desc, $clean_prev) {
     $row = [
         'uniquename'       => $f['uniquename'],
-        'name'             => $f['name']             ?? '',
-        'description'      => $f['description']      ?? '',
-        'type'             => $f['type'],
+        'name'             => $f['name']          ?? '',
+        'description'      => $f['description']   ?? '',
         'organism_dir'     => $f['organism_dir'],
         'genome_accession' => $f['genome_accession'],
         'gene_set_name'    => $f['gene_set_name'],
-        'chr'              => $f['chr']    ?? '',
-        'start'            => $f['start']  ?? '',
-        'end'              => $f['end']    ?? '',
-        'strand'           => $f['strand'] ?? '',
-        'match_reason'     => $f['match_reason'] ?? '',
+        'mrna_id'          => $f['mrna_id']       ?? '',
+        'protein_id'       => $f['protein_id']    ?? '',
+        'chr'              => $f['chr']            ?? '',
+        'start'            => $f['start']          ?? '',
+        'end'              => $f['end']            ?? '',
+        'strand'           => $f['strand']         ?? '',
+        'match_reason'     => $f['match_reason']   ?? '',
     ];
     foreach ($annotation_columns_selected as $src) {
         $entries = $ann_by_uniquename[$f['uniquename']][$src] ?? [];
@@ -199,6 +216,7 @@ $rows = array_map(function ($f) use ($annotation_columns_selected, $ann_by_uniqu
 
 echo json_encode([
     'count'           => $total,
+    'gene_count'      => $gene_count,
     'rows'            => $rows,
     'ann_col_headers' => $ann_col_headers,
     'by_organism'     => $by_org_counts,

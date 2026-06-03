@@ -123,6 +123,86 @@ function buildMoopmartFilterReason(array $filters, array $coord_filter): string
 }
 
 // ============================================================
+// MRNA / PROTEIN CHILD ID EXPANSION
+// ============================================================
+
+/**
+ * Fetch mRNA and protein (polypeptide) IDs for a list of gene feature_ids.
+ * Returns one entry per mRNA child, with the protein ID of its first polypeptide grandchild.
+ *
+ * @param int[]  $gene_feature_ids
+ * @param string $db_path
+ * @return array [gene_feature_id => [['mrna_id'=>'...', 'protein_id'=>'...'], ...]]
+ */
+function moopmartGetChildIds(array $gene_feature_ids, string $db_path): array
+{
+    if (empty($gene_feature_ids)) return [];
+
+    $mrna_types = ['mrna', 'transcript', 'lnc_rna', 'ncrna', 'pre_mirna', 'rrna', 'trna',
+                   'pseudogenic_transcript', 'processed_transcript'];
+    $type_ph    = implode(',', array_fill(0, count($mrna_types), '?'));
+
+    $result = [];
+    foreach (array_chunk($gene_feature_ids, 500) as $chunk) {
+        $ph    = implode(',', array_fill(0, count($chunk), '?'));
+        $query = "SELECT
+                      mrna.parent_feature_id  AS gene_fid,
+                      mrna.feature_uniquename AS mrna_id,
+                      (SELECT prot.feature_uniquename
+                       FROM   feature prot
+                       WHERE  prot.parent_feature_id = mrna.feature_id
+                         AND  LOWER(prot.feature_type) = 'polypeptide'
+                       LIMIT  1) AS protein_id
+                  FROM  feature mrna
+                  WHERE mrna.parent_feature_id IN ($ph)
+                    AND LOWER(mrna.feature_type) IN ($type_ph)
+                  ORDER BY mrna.parent_feature_id, mrna.feature_uniquename";
+
+        foreach (fetchData($query, $db_path, array_merge($chunk, $mrna_types)) as $row) {
+            $result[(int)$row['gene_fid']][] = [
+                'mrna_id'    => $row['mrna_id'],
+                'protein_id' => $row['protein_id'] ?? '',
+            ];
+        }
+    }
+    return $result;
+}
+
+/**
+ * Expand gene-level feature rows to one row per mRNA child.
+ * Each expanded row inherits the gene row's data and adds mrna_id and protein_id.
+ * Genes with no mRNA children produce one row with empty mrna_id/protein_id.
+ *
+ * @param array  $gene_features  Rows from moopmartAttachCoords() with db_path set
+ * @param string $db_path        Path to this organism's organism.sqlite
+ * @return array
+ */
+function moopmartExpandToMrnaRows(array $gene_features, string $db_path): array
+{
+    if (empty($gene_features)) return [];
+
+    $child_ids = moopmartGetChildIds(array_column($gene_features, 'feature_id'), $db_path);
+
+    $expanded = [];
+    foreach ($gene_features as $f) {
+        $children = $child_ids[$f['feature_id']] ?? null;
+        if ($children) {
+            foreach ($children as $child) {
+                $row               = $f;
+                $row['mrna_id']    = $child['mrna_id'];
+                $row['protein_id'] = $child['protein_id'];
+                $expanded[]        = $row;
+            }
+        } else {
+            $f['mrna_id']    = '';
+            $f['protein_id'] = '';
+            $expanded[]      = $f;
+        }
+    }
+    return $expanded;
+}
+
+// ============================================================
 // SEARCH TERM PARSING
 // ============================================================
 

@@ -377,6 +377,10 @@
         const desc = document.getElementById('mm-gene-description')?.value?.trim();
         if (desc) fd.append('gene_description', desc);
 
+        // Section: Wide/Long toggle
+        const annFormat = document.getElementById('mm-ann-wide-switch')?.checked ? 'wide' : 'long';
+        fd.append('ann_format', annFormat);
+
         // Section: Annotation — repeatable criteria rows (AND between them)
         document.querySelectorAll('.mm-ann-criterion').forEach(row => {
             const src = row.querySelector('.mm-ann-src-select')?.value?.trim() || '';
@@ -458,11 +462,12 @@
                 .then(r => r.json())
                 .then(data => {
                     const total      = data.count           ?? 0;
+                    const geneCount  = data.gene_count      ?? total;
                     const rows       = data.rows            ?? [];
                     const annHeaders = data.ann_col_headers ?? [];
                     if (result) {
                         result.textContent = total > 0
-                            ? `${total.toLocaleString()} feature${total !== 1 ? 's' : ''} matched`
+                            ? `${geneCount.toLocaleString()} gene${geneCount !== 1 ? 's' : ''} → ${total.toLocaleString()} transcript row${total !== 1 ? 's' : ''}`
                             : 'No features matched';
                         result.className = 'small ' + (total > 0 ? 'text-success' : 'text-muted');
                     }
@@ -492,24 +497,25 @@
 
     // Column specs keyed by the UI data-col value — annotation basic cols omitted (not in preview data)
     const FEAT_COL_SPECS = {
-        organism:     { title: 'Organism',             data: 'organism_dir',     defaultContent: '', render: (v) => v?.replace(/_/g, ' ') || '' },
-        assembly:     { title: 'Assembly',             data: 'genome_accession', defaultContent: '' },
-        gene_set:     { title: 'Gene Set',             data: 'gene_set_name',    defaultContent: '' },
-        feature_type: { title: 'Feature Type',         data: 'type',             defaultContent: '' },
-        feature_id:   { title: 'Feature ID',           data: 'uniquename',       defaultContent: '',
-                        render: (val, type, row) => type !== 'display' ? val
-                            : `<a href="${moopSite}/tools/parent.php?uniquename=${encodeURIComponent(val)}&organism=${encodeURIComponent(row.organism_dir)}" target="_blank">${val}</a>` },
-        feature_name: { title: 'Feature Name',         data: 'name',             defaultContent: '' },
-        feature_desc: { title: 'Feature Description',  data: 'description',      defaultContent: '',
-                        render: (v, t) => t === 'display' && v?.length > 60 ? `<span title="${v.replace(/"/g, '&quot;')}">${v.slice(0, 60)}…</span>` : (v || '') },
-        chr:          { title: 'Chr',                  data: 'chr',              defaultContent: '' },
-        start:        { title: 'Start',                data: 'start',            defaultContent: '' },
-        stop:         { title: 'Stop',                 data: 'end',              defaultContent: '' },
-        strand:       { title: 'Strand',               data: 'strand',           defaultContent: '' },
-        why_included: { title: 'Why Included',         data: 'match_reason',     defaultContent: '',
-                        render: (v, t) => t === 'display' && v?.length > 80
-                            ? `<span title="${v.replace(/"/g, '&quot;')}">${v.slice(0, 80)}…</span>`
-                            : (v || '') },
+        organism:         { title: 'Organism',          data: 'organism_dir',     defaultContent: '', render: (v) => v?.replace(/_/g, ' ') || '' },
+        assembly:         { title: 'Assembly',          data: 'genome_accession', defaultContent: '' },
+        gene_set:         { title: 'Gene Set',          data: 'gene_set_name',    defaultContent: '' },
+        gene_id:          { title: 'Gene ID',           data: 'uniquename',       defaultContent: '',
+                            render: (val, type, row) => type !== 'display' ? val
+                                : `<a href="${moopSite}/tools/parent.php?uniquename=${encodeURIComponent(val)}&organism=${encodeURIComponent(row.organism_dir)}" target="_blank">${val}</a>` },
+        gene_name:        { title: 'Gene Name',         data: 'name',             defaultContent: '' },
+        gene_description: { title: 'Gene Description',  data: 'description',      defaultContent: '',
+                            render: (v, t) => t === 'display' && v?.length > 60 ? `<span title="${v.replace(/"/g, '&quot;')}">${v.slice(0, 60)}…</span>` : (v || '') },
+        mrna_id:          { title: 'mRNA ID',           data: 'mrna_id',          defaultContent: '' },
+        protein_id:       { title: 'Protein ID',        data: 'protein_id',       defaultContent: '' },
+        chr:              { title: 'Chr',               data: 'chr',              defaultContent: '' },
+        start:            { title: 'Start',             data: 'start',            defaultContent: '' },
+        stop:             { title: 'Stop',              data: 'end',              defaultContent: '' },
+        strand:           { title: 'Strand',            data: 'strand',           defaultContent: '' },
+        why_included:     { title: 'Why Included',      data: 'match_reason',     defaultContent: '',
+                            render: (v, t) => t === 'display' && v?.length > 80
+                                ? `<span title="${v.replace(/"/g, '&quot;')}">${v.slice(0, 80)}…</span>`
+                                : (v || '') },
     };
 
     function getPreviewColumns() {
@@ -632,10 +638,9 @@
                 return;
             }
             const format    = document.querySelector('input[name="mm-format"]:checked')?.value || 'tsv';
-            const annFormat = document.querySelector('input[name="mm-ann-format"]:checked')?.value || 'wide';
             const fastaMode = document.querySelector('input[name="mm-fasta-type"]:checked')?.value || 'gene';
             const flank     = document.getElementById('mm-flank-bp')?.value || '1000';
-            submitDownload({ output_format: format, ann_format: annFormat, fasta_mode: fastaMode, flank_bp: flank });
+            submitDownload({ output_format: format, fasta_mode: fastaMode, flank_bp: flank });
         });
 
         updateCoordState();

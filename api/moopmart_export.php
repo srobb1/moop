@@ -28,7 +28,7 @@ $selected_raw = $_POST['sources'] ?? [];
 if (!is_array($selected_raw)) $selected_raw = [$selected_raw];
 
 $output_format  = in_array($_POST['output_format'] ?? '', ['tsv', 'fasta']) ? $_POST['output_format'] : 'tsv';
-$ann_format     = ($_POST['ann_format'] ?? 'wide') === 'long' ? 'long' : 'wide';
+$ann_format     = ($_POST['ann_format'] ?? 'long') === 'wide' ? 'wide' : 'long';
 $fasta_mode     = $_POST['fasta_mode'] ?? 'gene';
 $flank_bp       = max(1, min(100000, (int)($_POST['flank_bp'] ?? 500)));
 $fasta_preview  = !empty($_POST['fasta_preview']);
@@ -181,18 +181,19 @@ if ($output_format === 'tsv') {
 
     // Feature column map: UI key → [header label, value extractor]
     $feat_col_map = [
-        'organism'     => ['organism',      fn($f) => $f['organism_dir']],
-        'assembly'     => ['assembly',      fn($f) => $f['genome_accession']],
-        'gene_set'     => ['gene_set',      fn($f) => $f['gene_set_name']],
-        'feature_type' => ['feature_type',  fn($f) => $f['type']],
-        'feature_id'   => ['feature_id',    fn($f) => $f['uniquename']],
-        'feature_name' => ['feature_name',  fn($f) => $clean($f['name'] ?? '')],
-        'feature_desc' => ['feature_desc',  fn($f) => $clean($f['description'] ?? '')],
-        'chr'          => ['chr',           fn($f) => $f['chr'] ?? ''],
-        'start'        => ['start',         fn($f) => $f['start'] ?? ''],
-        'stop'         => ['stop',          fn($f) => $f['end'] ?? ''],
-        'strand'       => ['strand',        fn($f) => $f['strand'] ?? ''],
-        'why_included' => ['why_included',  fn($f) => $f['match_reason'] ?? ''],
+        'organism'         => ['organism',         fn($f) => $f['organism_dir']],
+        'assembly'         => ['assembly',         fn($f) => $f['genome_accession']],
+        'gene_set'         => ['gene_set',         fn($f) => $f['gene_set_name']],
+        'gene_id'          => ['gene_id',          fn($f) => $f['uniquename']],
+        'gene_name'        => ['gene_name',        fn($f) => $clean($f['name'] ?? '')],
+        'gene_description' => ['gene_description', fn($f) => $clean($f['description'] ?? '')],
+        'mrna_id'          => ['mrna_id',          fn($f) => $f['mrna_id'] ?? ''],
+        'protein_id'       => ['protein_id',       fn($f) => $f['protein_id'] ?? ''],
+        'chr'              => ['chr',              fn($f) => $f['chr'] ?? ''],
+        'start'            => ['start',            fn($f) => $f['start'] ?? ''],
+        'stop'             => ['stop',             fn($f) => $f['end'] ?? ''],
+        'strand'           => ['strand',           fn($f) => $f['strand'] ?? ''],
+        'why_included'     => ['why_included',     fn($f) => $f['match_reason'] ?? ''],
     ];
 
     $requested_feat = array_values(array_filter($_POST['feature_columns'] ?? []));
@@ -234,12 +235,14 @@ if ($output_format === 'tsv') {
 
     foreach ($by_db as $db_path => $db_features) {
         foreach (array_chunk($db_features, 500) as $chunk) {
-            $fids       = array_column($chunk, 'feature_id');
+            // Expand gene rows to one row per mRNA before streaming
+            $expanded   = moopmartExpandToMrnaRows($chunk, $db_path);
+            $fids       = array_column($chunk, 'feature_id'); // gene-level fids for annotation lookup
             $chunk_anns = moopmartGetAnnotationsForFeatures($fids, $db_path);
 
-            foreach ($chunk as $f) {
+            foreach ($expanded as $f) {
                 $base     = array_map(fn($k) => ($feat_col_map[$k][1])($f), $active_feat);
-                $fid_anns = $chunk_anns[$f['feature_id']] ?? [];
+                $fid_anns = $chunk_anns[$f['feature_id']] ?? []; // feature_id is still the gene's
 
                 if ($ann_format === 'long') {
                     $emitted = false;

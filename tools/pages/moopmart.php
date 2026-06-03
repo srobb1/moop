@@ -340,20 +340,16 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       <div id="mm-tsv-options">
 
         <!-- Wide / Long -->
-        <div class="mb-4">
-          <div class="small fw-semibold text-muted mb-2">Table layout</div>
-          <div class="d-flex align-items-center gap-2">
-            <div class="btn-group btn-group-sm" role="group">
-              <input type="radio" class="btn-check" name="mm-ann-format" id="mm-ann-wide" value="wide" checked>
-              <label class="btn btn-outline-secondary" for="mm-ann-wide" title="One row per feature">Wide</label>
-              <input type="radio" class="btn-check" name="mm-ann-format" id="mm-ann-long" value="long">
-              <label class="btn btn-outline-secondary" for="mm-ann-long" title="One row per annotation">Long</label>
-            </div>
-            <i class="fa fa-info-circle text-muted" style="cursor:pointer;"
-               data-bs-toggle="popover" data-bs-placement="right" data-bs-html="true"
-               data-bs-title="Table layout"
-               data-bs-content="<strong>Wide</strong> — one row per feature. Multiple annotation values for the same source are joined with '; '<br><br><strong>Long</strong> — one row per annotation. Columns become <em>annotation_source</em>, <em>annotation_id</em>, <em>annotation_description</em>."></i>
+        <div class="mb-4 d-flex align-items-center gap-2">
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" role="switch" id="mm-ann-wide-switch">
+            <label class="form-check-label small text-muted text-nowrap" for="mm-ann-wide-switch">Wide</label>
           </div>
+          <input type="hidden" name="mm-ann-format" id="mm-ann-format-val" value="long">
+          <i class="fa fa-info-circle text-muted" style="cursor:pointer; font-size:0.85rem;"
+             data-bs-toggle="popover" data-bs-placement="right" data-bs-html="true"
+             data-bs-title="Table layout"
+             data-bs-content="<strong>Long</strong> (default) — one row per mRNA per annotation. Gene and mRNA IDs repeat so every annotation has its own line — easiest to filter in Excel.<br><br><strong>Wide</strong> — one row per mRNA, all annotation values for each source joined with '; '"></i>
         </div>
 
         <!-- Feature columns -->
@@ -362,18 +358,19 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           <div id="mm-feat-col-list" style="max-width:320px;">
             <?php
             $feat_cols = [
-              'organism'     => 'Organism',
-              'assembly'     => 'Assembly',
-              'gene_set'     => 'Gene Set',
-              'feature_type' => 'Feature Type',
-              'feature_id'   => 'Feature ID',
-              'feature_name' => 'Feature Name',
-              'feature_desc' => 'Feature Description',
-              'chr'          => 'Chr',
-              'start'        => 'Start',
-              'stop'         => 'Stop',
-              'strand'       => 'Strand',
-              'why_included' => 'Why Included',
+              'organism'         => 'Organism',
+              'assembly'         => 'Assembly',
+              'gene_set'         => 'Gene Set',
+              'gene_id'          => 'Gene ID',
+              'gene_name'        => 'Gene Name',
+              'gene_description' => 'Gene Description',
+              'mrna_id'          => 'mRNA ID',
+              'protein_id'       => 'Protein ID',
+              'chr'              => 'Chr',
+              'start'            => 'Start',
+              'stop'             => 'Stop',
+              'strand'           => 'Strand',
+              'why_included'     => 'Why Included',
             ];
             foreach ($feat_cols as $val => $lbl):
             ?>
