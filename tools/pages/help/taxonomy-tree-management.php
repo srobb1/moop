@@ -129,7 +129,7 @@
         <div class="card-body p-4">
           <h3 class="fw-bold text-dark mb-3">Managing the Taxonomy Tree (Administrator)</h3>
           <p class="text-muted mb-3">
-            Administrators can manage the taxonomy tree through the "Manage Taxonomy Tree" admin tool.
+            Administrators can update the taxonomy tree using the <strong>Update Tree</strong> button on the <strong>Manage Organisms</strong> admin page.
           </p>
 
           <h5 class="fw-semibold text-dark mt-3 mb-2">How the Tree is Generated:</h5>
@@ -154,11 +154,10 @@
             When you add new organisms to your MOOP database, regenerate the taxonomy tree:
           </p>
           <ol class="text-muted">
-            <li>Navigate to the Admin panel</li>
-            <li>Select "Manage Taxonomy Tree"</li>
-            <li>Click "Generate Tree from NCBI"</li>
-            <li>The system will scan all organisms and query NCBI for their taxonomic information</li>
-            <li>This may take several seconds depending on the number of organisms (approximately 350ms per organism)</li>
+            <li>Navigate to <strong>Admin → Manage Organisms</strong></li>
+            <li>Click the <strong>Update Tree</strong> button</li>
+            <li>The system scans all organisms and queries NCBI for their taxonomic lineage</li>
+            <li>This may take several seconds depending on the number of organisms (~350ms per organism on first build; cached organisms are near-instant)</li>
             <li>You'll see confirmation with the number of organisms processed</li>
           </ol>
 
@@ -313,7 +312,7 @@
 
           <h5 class="fw-semibold text-dark mt-3 mb-2">Tree not updating after adding organisms?</h5>
           <p class="text-muted mb-3">
-            Regenerate the tree through the Manage Taxonomy Tree admin tool. The tree doesn't automatically update when organisms are added.
+            Use the <strong>Update Tree</strong> button on <strong>Admin → Manage Organisms</strong>. The tree doesn't update automatically when organisms are added.
           </p>
 
           <h5 class="fw-semibold text-dark mt-3 mb-2">Organisms not appearing in the tree?</h5>
