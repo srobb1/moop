@@ -27,13 +27,13 @@
     const LABEL_HEIGHT  = 16;
     const PAD_TOP       = 4;
     const PAD_BOTTOM    = 18;   // room for strand label
-    const PAD_LEFT      = 76;  // wider to accommodate upstream/downstream blocks and row-type labels
-    const PAD_RIGHT     = 66;  // wider to fit downstream label block
+    const PAD_LEFT      = 80;  // upstream block + gap to isoform label
+    const PAD_RIGHT     = 78;  // downstream block + gap to track end
     const EXON_H        = 10;
     const CDS_H         = 16;
     const FLANK_W       = 58;  // upstream/downstream block width — fits 'downstream' at font-size 7
     const FLANK_H       = 16;  // upstream/downstream block height
-    const FLANK_GAP     = 4;   // gap between block and track edge
+    const FLANK_GAP     = 16;  // gap between block edge and track/label edge
 
     const COLOR_BACKBONE   = '#aaa';
     const COLOR_EXON       = '#e8833a';   // warm orange — UTR / exon background
@@ -305,7 +305,7 @@
             const isoBlockBottom = isoBlockTop + isoforms.length * (ROW_HEIGHT + LABEL_HEIGHT);
             const isoCenterY     = (isoBlockTop + isoBlockBottom) / 2;
             const isoType        = isoforms[0].type || 'mRNA';
-            const bracketX       = 10;
+            const bracketX       = 3;  // sits left of the upstream block (which starts at PAD_LEFT-FLANK_GAP-FLANK_W ≈ 6)
 
             // Light vertical bracket line
             const bLine = makeSvgEl('line');
@@ -315,20 +315,20 @@
             svg.appendChild(bLine);
             // Top tick
             const tTop = makeSvgEl('line');
-            tTop.setAttribute('x1', bracketX); tTop.setAttribute('x2', bracketX + 6);
+            tTop.setAttribute('x1', bracketX); tTop.setAttribute('x2', bracketX + 4);
             tTop.setAttribute('y1', isoBlockTop + LABEL_HEIGHT); tTop.setAttribute('y2', isoBlockTop + LABEL_HEIGHT);
             tTop.setAttribute('stroke', '#ccc'); tTop.setAttribute('stroke-width', '1');
             svg.appendChild(tTop);
             // Bottom tick
             const tBot = makeSvgEl('line');
-            tBot.setAttribute('x1', bracketX); tBot.setAttribute('x2', bracketX + 6);
+            tBot.setAttribute('x1', bracketX); tBot.setAttribute('x2', bracketX + 4);
             tBot.setAttribute('y1', isoBlockBottom - 4); tBot.setAttribute('y2', isoBlockBottom - 4);
             tBot.setAttribute('stroke', '#ccc'); tBot.setAttribute('stroke-width', '1');
             svg.appendChild(tBot);
 
             // Rotated label — reads bottom-to-top, centred on bracket
             const isoTypeLabel = makeSvgEl('text');
-            isoTypeLabel.setAttribute('x', bracketX - 2);
+            isoTypeLabel.setAttribute('x', bracketX);
             isoTypeLabel.setAttribute('y', isoCenterY);
             isoTypeLabel.setAttribute('font-size', '10');
             isoTypeLabel.setAttribute('fill', COLOR_LABEL);
@@ -336,7 +336,7 @@
             isoTypeLabel.setAttribute('dominant-baseline', 'middle');
             isoTypeLabel.setAttribute('font-style', 'italic');
             isoTypeLabel.setAttribute('font-weight', 'bold');
-            isoTypeLabel.setAttribute('transform', `rotate(-90,${bracketX - 2},${isoCenterY})`);
+            isoTypeLabel.setAttribute('transform', `rotate(-90,${bracketX},${isoCenterY})`);
             isoTypeLabel.textContent = isoType;
             svg.appendChild(isoTypeLabel);
         }
