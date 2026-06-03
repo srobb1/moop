@@ -38,22 +38,40 @@ function moopmartResolveInputIds(array $input_ids, string $db_path, array $gene_
 
     $by_gene = [];
 
-    foreach ($input_ids as $id) {
-        // getAncestors returns [self, parent, grandparent, ...] — last element is the gene
-        $ancestors = getAncestors($id, $db_path, $gene_set_ids);
-        if (empty($ancestors)) continue;
+    // Single batch CTE: walk UP the tree from every input ID simultaneously.
+    // One query resolves all IDs regardless of depth (gene/mRNA/protein/CDS).
+    $ph_ids = implode(',', array_fill(0, count($input_ids), '?'));
+    $ph_gs  = implode(',', array_fill(0, count($gene_set_ids), '?'));
 
-        $self = $ancestors[0];
-        $gene = end($ancestors);
+    $query = "WITH RECURSIVE chain AS (
+        SELECT f.feature_uniquename AS input_name,
+               f.feature_type       AS input_type,
+               f.feature_id,
+               f.feature_uniquename AS node_name,
+               f.parent_feature_id
+        FROM   feature f
+        WHERE  f.feature_uniquename IN ($ph_ids)
+          AND  f.gene_set_id IN ($ph_gs)
+        UNION ALL
+        SELECT c.input_name,
+               c.input_type,
+               f.feature_id,
+               f.feature_uniquename,
+               f.parent_feature_id
+        FROM   feature f
+        JOIN   chain c ON f.feature_id = c.parent_feature_id
+    )
+    SELECT input_name, input_type, node_name AS gene_uniquename
+    FROM   chain
+    WHERE  parent_feature_id IS NULL";
 
-        // If the feature itself has no parent it IS the gene
-        if (count($ancestors) === 1) {
-            $reason = "Gene ID: {$self['feature_uniquename']}";
-        } else {
-            $reason = moopmartFeatureTypeLabel($self['feature_type']) . ": {$self['feature_uniquename']}";
-        }
+    $rows = fetchData($query, $db_path, array_merge($input_ids, $gene_set_ids));
 
-        $by_gene[$gene['feature_uniquename']][] = $reason;
+    foreach ($rows as $row) {
+        $reason = ($row['input_name'] === $row['gene_uniquename'])
+            ? "Gene ID: {$row['input_name']}"
+            : moopmartFeatureTypeLabel($row['input_type']) . ": {$row['input_name']}";
+        $by_gene[$row['gene_uniquename']][] = $reason;
     }
 
     $result = [];

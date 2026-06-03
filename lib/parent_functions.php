@@ -15,48 +15,55 @@
  * @param array $gene_set_ids - Optional: Array of genome IDs to filter results (empty = no filtering)
  * @return array - Array of features: [self, parent, grandparent, ...]
  */
+/**
+ * Get the ancestor chain for a feature as a flat array [self, parent, grandparent, ...].
+ * Uses a single upward recursive CTE instead of one query per level.
+ *
+ * @param string $feature_uniquename  The feature to start from
+ * @param string $dbFile              Path to organism.sqlite
+ * @param array  $gene_set_ids        Optional: accessible gene_set_ids for access control
+ * @return array [self, parent, grandparent, ...] — empty if feature not found
+ */
 function getAncestors($feature_uniquename, $dbFile, $gene_set_ids = []) {
-    $feature = getFeatureByUniquename($feature_uniquename, $dbFile, $gene_set_ids);
-    
-    if (empty($feature)) {
-        return [];
+    $params = [$feature_uniquename];
+
+    $gs_clause = '';
+    if (!empty($gene_set_ids)) {
+        $ph        = implode(',', array_fill(0, count($gene_set_ids), '?'));
+        $gs_clause = "AND f.gene_set_id IN ($ph)";
+        array_push($params, ...$gene_set_ids);
     }
-    
-    $ancestors = [$feature];
-    
-    if ($feature['parent_feature_id']) {
-        $parent_ancestors = getAncestorsByFeatureId($feature['parent_feature_id'], $dbFile, $gene_set_ids);
-        $ancestors = array_merge($ancestors, $parent_ancestors);
-    }
-    
-    return $ancestors;
+
+    $query = "WITH RECURSIVE ancestors AS (
+        SELECT f.feature_id, f.feature_uniquename, f.feature_name,
+               f.feature_description, f.feature_type, f.parent_feature_id
+        FROM   feature f
+        WHERE  f.feature_uniquename = ? $gs_clause
+        UNION ALL
+        SELECT f.feature_id, f.feature_uniquename, f.feature_name,
+               f.feature_description, f.feature_type, f.parent_feature_id
+        FROM   feature f
+        JOIN   ancestors a ON f.feature_id = a.parent_feature_id
+    )
+    SELECT * FROM ancestors";
+
+    return fetchData($query, $dbFile, $params);
 }
 
 /**
- * Helper function for recursive ancestor traversal
- * Fetches ancestors by feature_id (used internally by getAncestors)
- * Optionally filters by genome_ids for permission-based access
- *
- * @param int $feature_id - The feature ID to start from
- * @param string $dbFile - Path to SQLite database
- * @param array $gene_set_ids - Optional: Array of genome IDs to filter results
- * @return array - Array of ancestor features
+ * getAncestorsByFeatureId — kept for backwards compatibility.
+ * Delegates to getAncestors() via a uniquename lookup.
  */
 function getAncestorsByFeatureId($feature_id, $dbFile, $gene_set_ids = []) {
-    $feature = getParentFeature($feature_id, $dbFile, $gene_set_ids);
-    
-    if (empty($feature)) {
-        return [];
-    }
-    
-    $ancestors = [$feature];
-    
-    if ($feature['parent_feature_id']) {
-        $parent_ancestors = getAncestorsByFeatureId($feature['parent_feature_id'], $dbFile, $gene_set_ids);
-        $ancestors = array_merge($ancestors, $parent_ancestors);
-    }
-    
-    return $ancestors;
+    $rows = fetchData(
+        "SELECT feature_uniquename FROM feature WHERE feature_id = ?",
+        $dbFile,
+        [$feature_id]
+    );
+    if (empty($rows)) return [];
+    $chain = getAncestors($rows[0]['feature_uniquename'], $dbFile, $gene_set_ids);
+    // Original callers expect the chain WITHOUT the seed feature itself
+    return array_slice($chain, 1);
 }
 
 /**
