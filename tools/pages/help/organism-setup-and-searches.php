@@ -11,14 +11,20 @@
 ?>
 
 <div class="container mt-5">
-  <h2><i class="fa fa-cogs"></i> Organism Setup & Search Configuration</h2>
-  <p class="lead text-muted">Technical guide for setting up new organisms and understanding how searches and the parent page work.</p>
 
-  <!-- Back to Help Link -->
   <div class="mb-4">
     <a href="help.php" class="btn btn-outline-secondary btn-sm">
-      <i class="fa fa-arrow-left"></i> Back to Help
+      <i class="fa fa-arrow-left me-1"></i>Back to Help
     </a>
+  </div>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-cogs me-2"></i>Setup &amp; Searches (Technical)</span>
+    </div>
+    <div class="card-body py-2">
+      <p class="text-muted small mb-0">Technical guide for setting up new organisms and understanding how searches and the feature detail page work.</p>
+    </div>
   </div>
 
   <!-- Quick Navigation -->
@@ -165,23 +171,34 @@
           </tbody>
         </table>
 
-        <h6 class="mt-4">Example Directory Structure:</h6>
+        <h6 class="mt-4">Directory Structure:</h6>
         <div class="alert alert-light border">
-          <pre><code>/data/moop/organisms/
+          <pre class="mb-0"><code>organisms/
 └── Homo_sapiens/
-    ├── organism.sqlite          ← Database with all genes/features
-    ├── organism.json            ← Metadata (genus, species, images, etc.)
-    ├── GRCh38/                  ← Assembly directory
-    │   ├── genome.fa            ← Reference genome
-    │   ├── transcript.nt.fa     ← Transcript sequences
-    │   ├── cds.nt.fa            ← Coding sequences
-    │   ├── protein.aa.fa        ← Protein sequences
-    │   ├── genome.fa.nhr        ← BLAST indices
-    │   ├── genome.fa.nin
-    │   └── [more BLAST files...]
-    └── GRCh37/                  ← Alternative assembly
-        ├── [FASTA files...]
-        └── [BLAST indices...]</code></pre>
+    ├── organism.sqlite          ← Database with all features and annotations
+    ├── organism.json            ← Display metadata (genus, species, etc.)
+    │
+    └── GCA_000001405.28/        ← Assembly directory
+        ├── genome.fa            ← Reference genome FASTA (assembly level)
+        ├── genome.fa.n*         ← BLAST genome index files
+        ├── genome.json          ← Assembly provenance metadata
+        │
+        └── My_Gene_Set/         ← Gene set directory (one per annotation set)
+            ├── transcript.nt.fa ← Spliced mRNA sequences
+            ├── transcript.nt.fa.n*
+            ├── cds.nt.fa        ← Coding sequences
+            ├── cds.nt.fa.n*
+            ├── protein.aa.fa    ← Protein sequences
+            ├── protein.aa.fa.p*
+            ├── genomic.gff      ← GFF3 annotation (required for JBrowse)
+            └── geneset.json     ← Gene set provenance metadata</code></pre>
+        </div>
+
+        <div class="alert alert-info">
+          <i class="fa fa-info-circle me-1"></i>
+          <strong>Gene set FASTA files live inside gene set subdirectories, not at the assembly level.</strong>
+          Only <code>genome.fa</code> (the chromosomal reference) belongs directly in the assembly directory.
+          An assembly can have multiple gene set subdirectories (e.g. different annotation versions).
         </div>
 
         <h6 class="mt-3">organism.json Format:</h6>
@@ -190,22 +207,27 @@
   "species": "sapiens",
   "common_name": "Human",
   "taxon_id": "9606",
-  "images": [
-    {
-      "file": "homo_sapiens.jpg",
-      "caption": "Image of a human"
-    }
-  ],
+  "subclassification": {
+    "type": null,
+    "value": null
+  },
+  "feature_types": {
+    "parents": ["gene"],
+    "children": ["mRNA", "transcript"]
+  },
   "html_p": [
     {
-      "text": "Humans are primates...",
+      "text": "Humans are primates of the family Hominidae...",
       "style": "",
       "class": "fs-5"
     }
   ]
 }</code></pre>
-
-        <p class="mt-3"><small class="text-muted"><strong>Note:</strong> You can edit organism.json through the "Manage Organisms" admin interface instead of manually editing the file.</small></p>
+        <p class="text-muted small mt-2">
+          <code>feature_types</code> controls which feature types appear as top-level entries on feature detail pages (<code>parents</code>) vs as children beneath them (<code>children</code>).
+          <code>html_p</code> is optional — if present, the text is shown in an "About" card on the organism page.
+          Edit via <strong>Admin → Manage Organisms</strong> rather than manually.
+        </p>
       </div>
     </div>
 
@@ -386,7 +408,7 @@
 
     <h4 class="mt-4">organism_assembly_groups.json</h4>
     <div class="card mb-4">
-      <div class="card-header bg-info bg-opacity-10">
+      <div class="card-header bg-light">
         <strong>Purpose:</strong> Maps assemblies to groups and controls public/private visibility
       </div>
       <div class="card-body">
@@ -397,46 +419,44 @@
   {
     "organism": "Organism_Name",
     "assembly": "Assembly_ID",
+    "gene_set": "Gene_Set_Name",
     "groups": ["Group1", "Group2", "Public"]
   }
 ]</code></pre>
 
         <h6 class="mt-3">Rules:</h6>
         <ul>
-          <li>Each entry = one organism + assembly combination</li>
-          <li><code>organism</code> - Must match directory name under /organisms/</li>
-          <li><code>assembly</code> - Must match subdirectory name</li>
-          <li><code>groups</code> - Array of group names (can be empty)</li>
-          <li><strong>"Public" group</strong> - Only special group that affects access control</li>
-          <li>Multiple entries for same organism but different assemblies allowed</li>
+          <li>Each entry = one organism + assembly + gene set combination</li>
+          <li><code>organism</code> — must match the directory name under <code>organisms/</code></li>
+          <li><code>assembly</code> — must match the assembly subdirectory name</li>
+          <li><code>gene_set</code> — must match the gene set subdirectory name inside the assembly</li>
+          <li><code>groups</code> — array of group names (can be empty <code>[]</code>)</li>
+          <li><strong>"Public" group</strong> — the only group name that affects access control; assemblies in this group are visible without login</li>
+          <li>An organism can have multiple entries (different assemblies or gene sets)</li>
         </ul>
 
-        <h6 class="mt-3">Example: Multiple Assemblies</h6>
+        <h6 class="mt-3">Example</h6>
         <pre class="bg-light p-3 rounded"><code>[
+  {
+    "organism": "Anoura_caudifer",
+    "assembly": "GCA_004027475.1",
+    "gene_set": "SIMR_2025-01-24",
+    "groups": ["Bats", "Public"]
+  },
   {
     "organism": "Homo_sapiens",
     "assembly": "GRCh38",
-    "groups": ["Primates", "Reference", "Public"]
-  },
-  {
-    "organism": "Homo_sapiens",
-    "assembly": "GRCh37",
-    "groups": ["Primates", "Legacy", "Public"]
-  },
-  {
-    "organism": "Homo_sapiens",
-    "assembly": "Draft_v1",
-    "groups": ["Primates", "Research"]
+    "gene_set": "Ensembl_v112",
+    "groups": ["Primates", "Reference"]
   }
 ]</code></pre>
-
-        <p class="mt-3"><strong>Result:</strong> GRCh38 and GRCh37 are public (no login). Draft_v1 is private (requires login).</p>
+        <p class="mt-2 text-muted small">The first entry is public (in the "Public" group). The second requires login.</p>
       </div>
     </div>
 
     <h4 class="mt-5">group_descriptions.json</h4>
     <div class="card mb-4">
-      <div class="card-header bg-info bg-opacity-10">
+      <div class="card-header bg-light">
         <strong>Purpose:</strong> Metadata and display information for each group
       </div>
       <div class="card-body">
@@ -494,7 +514,7 @@
 
     <h4 class="mt-5">taxonomy_tree_config.json</h4>
     <div class="card mb-4">
-      <div class="card-header bg-info bg-opacity-10">
+      <div class="card-header bg-light">
         <strong>Purpose:</strong> Hierarchical taxonomy tree for organism discovery
       </div>
       <div class="card-body">
@@ -560,7 +580,7 @@
 
     <h4 class="mt-5">annotation_config.json</h4>
     <div class="card mb-4">
-      <div class="card-header bg-info bg-opacity-10">
+      <div class="card-header bg-light">
         <strong>Purpose:</strong> Define annotation types displayed on feature pages
       </div>
       <div class="card-body">
@@ -631,13 +651,14 @@ User can export (CSV, Excel, FASTA)</code></pre>
         </div>
 
         <h6 class="mt-3">Database Query (Simplified):</h6>
-        <pre class="bg-light p-3 rounded"><code>SELECT f.*, g.genome_name FROM feature f
-JOIN genome g ON f.genome_id = g.genome_id
-WHERE (f.feature_name LIKE ?
-   OR f.feature_uniquename LIKE ?
-   OR f.feature_description LIKE ?)
-  AND f.genome_id IN (?, ?, ...)  -- Accessible genomes only
-  AND g.genome_id IN (?, ?, ...)  -- Accessible genomes only
+        <pre class="bg-light p-3 rounded"><code>SELECT f.*, gs.gene_set_name, g.genome_accession
+FROM feature f
+JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
+JOIN genome   g  ON gs.genome_id  = g.genome_id
+WHERE (f.feature_name        LIKE ?
+   OR  f.feature_uniquename  LIKE ?
+   OR  f.feature_description LIKE ?)
+  AND f.gene_set_id IN (?, ?, ...)  -- Accessible gene sets only
 ORDER BY f.feature_name</code></pre>
 
         <h6 class="mt-3">Key Points:</h6>
@@ -731,12 +752,8 @@ Display results with:
   ├─ Query/subject coverage
   └─ Links to feature pages</code></pre>
 
-        <h6 class="mt-3">Database Query for Linking BLAST Hits:</h6>
-        <pre class="bg-light p-3 rounded"><code>SELECT f.* FROM feature f
-WHERE f.genome_id = ?
-  AND f.feature_start <= ?  -- Subject end
-  AND f.feature_end >= ?    -- Subject start
-ORDER BY f.feature_start</code></pre>
+        <h6 class="mt-3">Linking BLAST Hits to Features:</h6>
+        <p class="text-muted small">BLAST hits are matched to features via <code>feature_coords.tsv</code> — a pre-built coordinate file generated when the gene set is registered in JBrowse. This avoids a slow coordinate query at search time.</p>
 
         <p class="mt-3"><small><strong>Note:</strong> Requires BLAST indices to exist. If missing, user sees helpful message with makeblastdb command.</small></p>
       </div>
@@ -1164,30 +1181,10 @@ ORDER BY feature_name;</code></pre>
     <!-- Back to Help Link -->
     <div class="mt-4">
       <a href="help.php" class="btn btn-outline-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Help
+        <i class="fa fa-arrow-left me-1"></i>Back to Help
       </a>
     </div>
   </section>
 
 </div>
 
-<style>
-.card {
-  margin-bottom: 1rem;
-}
-
-code {
-  background-color: #f5f5f5;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: 'Courier New', monospace;
-}
-
-pre {
-  overflow-x: auto;
-}
-
-table.table-sm {
-  font-size: 0.9rem;
-}
-</style>
