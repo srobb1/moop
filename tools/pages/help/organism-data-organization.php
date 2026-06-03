@@ -1,9 +1,9 @@
 <?php
 /**
  * ORGANISM DATA ORGANIZATION - Technical Help Documentation
- * 
+ *
  * Technical guide covering database schema, file organization, and data structure.
- * 
+ *
  * Available variables:
  * - $config (ConfigManager instance)
  * - $siteTitle (Site title)
@@ -11,100 +11,120 @@
 ?>
 
 <div class="container mt-5">
-  <!-- Back to Help Link -->
   <div class="mb-4">
     <a href="help.php" class="btn btn-outline-secondary btn-sm">
-      <i class="fa fa-arrow-left"></i> Back to Help
+      <i class="fa fa-arrow-left me-1"></i>Back to Help
     </a>
   </div>
 
-  <h2><i class="fa fa-database"></i> Organism Data Organization</h2>
-  <p class="lead text-muted">Technical documentation on how MOOP organizes and stores organism data.</p>
+  <div class="card shadow-sm mb-4">
+    <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-database me-2"></i>Organism Data Organization (Technical)</span>
+    </div>
+    <div class="card-body py-2">
+      <p class="text-muted small mb-0">How MOOP organizes and stores organism data — database schema, file layout, and hierarchical structure.</p>
+    </div>
+  </div>
 
   <!-- Quick Navigation -->
-  <div class="alert alert-light border">
+  <div class="alert alert-light border mb-4">
     <strong>On this page:</strong>
-    <ul class="mb-0">
-      <li><a href="#core-concepts">Core Concepts: Organisms, Assemblies, Features</a></li>
-      <li><a href="#database-schema">Database Schema</a></li>
+    <ul class="mb-0 mt-1">
+      <li><a href="#core-concepts">Core Concepts: Organisms, Assemblies, Gene Sets, Features, Annotations</a></li>
       <li><a href="#file-organization">File Organization</a></li>
-      <li><a href="#hierarchical-structure">Hierarchical Structure</a></li>
+      <li><a href="#database-schema">Database Schema</a></li>
+      <li><a href="#hierarchical-structure">Feature Hierarchy</a></li>
       <li><a href="#annotation-system">Annotation System</a></li>
     </ul>
   </div>
 
   <!-- Section 1: Core Concepts -->
-  <section id="core-concepts" class="mt-5">
-    <h3><i class="fa fa-layer-group"></i> Core Concepts: Organisms, Assemblies, Features</h3>
-    
-    <div class="row">
+  <section id="core-concepts" class="mt-4">
+    <h4 class="fw-semibold mb-3"><i class="fa fa-layer-group me-2"></i>Core Concepts</h4>
+
+    <div class="row g-3">
       <div class="col-lg-6">
-        <div class="card mb-3">
-          <div class="card-header bg-primary bg-opacity-10">
-            <h5 class="mb-0">Organism</h5>
+        <div class="card h-100">
+          <div class="card-header" style="background-color:#0f766e; color:white;">
+            <strong>Organism</strong>
           </div>
           <div class="card-body">
-            <p><strong>Definition:</strong> A biological species</p>
-            <p><strong>Example:</strong> <em>Homo sapiens</em>, <em>Anoura caudifer</em></p>
-            <ul class="mb-0">
+            <p class="mb-1"><strong>Definition:</strong> A biological species or strain</p>
+            <p class="mb-2"><strong>Example:</strong> <em>Anoura caudifer</em></p>
+            <ul class="mb-0 small">
               <li>One SQLite database per organism</li>
-              <li>Contains one or more assemblies</li>
-              <li>Stores all metadata and features</li>
-              <li>Located at: <code>/data/moop/organisms/Organism_Name/organism.sqlite</code></li>
+              <li>Stores all features and annotations across all assemblies</li>
+              <li>Path: <code>organisms/Organism_Name/organism.sqlite</code></li>
             </ul>
           </div>
         </div>
       </div>
 
       <div class="col-lg-6">
-        <div class="card mb-3">
-          <div class="card-header bg-info bg-opacity-10">
-            <h5 class="mb-0">Assembly</h5>
+        <div class="card h-100">
+          <div class="card-header" style="background-color:#d97706; color:white;">
+            <strong>Assembly</strong>
           </div>
           <div class="card-body">
-            <p><strong>Definition:</strong> A specific genome sequence build</p>
-            <p><strong>Example:</strong> GRCh38 (human reference), GCA_004027475.1</p>
-            <ul class="mb-0">
-              <li>One version of an organism's genome</li>
-              <li>Contains FASTA files and BLAST databases</li>
+            <p class="mb-1"><strong>Definition:</strong> A specific genome sequence build</p>
+            <p class="mb-2"><strong>Example:</strong> GCA_004027475.1</p>
+            <ul class="mb-0 small">
+              <li>Contains the genome FASTA and its BLAST index</li>
               <li>Multiple assemblies per organism allowed</li>
-              <li>Located at: <code>/data/moop/organisms/Organism_Name/Assembly_ID/</code></li>
+              <li>Path: <code>organisms/Organism_Name/Assembly_ID/</code></li>
             </ul>
           </div>
         </div>
       </div>
 
       <div class="col-lg-6">
-        <div class="card mb-3">
-          <div class="card-header bg-success bg-opacity-10">
-            <h5 class="mb-0">Feature</h5>
+        <div class="card h-100">
+          <div class="card-header" style="background-color:#e11d48; color:white;">
+            <strong>Gene Set</strong>
           </div>
           <div class="card-body">
-            <p><strong>Definition:</strong> A genomic element (gene, mRNA, exon, protein domain)</p>
-            <p><strong>Example:</strong> GENE_12345, insulin gene, exon_001</p>
-            <ul class="mb-0">
-              <li>Stored in SQLite database</li>
-              <li>Has unique ID (uniquename)</li>
-              <li>Linked to one assembly</li>
-              <li>Can have child features (hierarchy)</li>
+            <p class="mb-1"><strong>Definition:</strong> A named set of gene annotations for one assembly</p>
+            <p class="mb-2"><strong>Example:</strong> SIMR_2025-01-24</p>
+            <ul class="mb-0 small">
+              <li>Contains transcript, CDS, and protein FASTA files</li>
+              <li>Contains the GFF annotation file</li>
+              <li>Multiple gene sets per assembly allowed (e.g. different annotation versions)</li>
+              <li>Path: <code>organisms/Organism_Name/Assembly_ID/Gene_Set_Name/</code></li>
             </ul>
           </div>
         </div>
       </div>
 
       <div class="col-lg-6">
-        <div class="card mb-3">
-          <div class="card-header bg-warning bg-opacity-10">
-            <h5 class="mb-0">Annotation</h5>
+        <div class="card h-100">
+          <div class="card-header bg-secondary text-white">
+            <strong>Feature</strong>
           </div>
           <div class="card-body">
-            <p><strong>Definition:</strong> Functional hit from computational analysis</p>
-            <p><strong>Examples:</strong> BLAST hit, protein domain, ortholog</p>
-            <ul class="mb-0">
-              <li>Links features to external resources</li>
-              <li>Has accession, description, score</li>
-              <li>References annotation source (NCBI, InterPro, etc.)</li>
-              <li>Stored in SQLite database</li>
+            <p class="mb-1"><strong>Definition:</strong> A genomic element (gene, mRNA, exon, protein)</p>
+            <p class="mb-2"><strong>Example:</strong> <code>g24397</code> (gene), <code>g24397.t1</code> (mRNA)</p>
+            <ul class="mb-0 small">
+              <li>Stored in the organism SQLite database</li>
+              <li>Has a unique identifier (<code>feature_uniquename</code>)</li>
+              <li>Belongs to a gene set</li>
+              <li>Can have parent/child relationships (gene → mRNA → exon)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-header" style="background-color:#6366f1; color:white;">
+            <strong>Annotation</strong>
+          </div>
+          <div class="card-body">
+            <p class="mb-1"><strong>Definition:</strong> A functional hit from computational analysis</p>
+            <p class="mb-2"><strong>Examples:</strong> BLAST hit, InterPro domain, GO term, ortholog</p>
+            <ul class="mb-0 small">
+              <li>Links a feature to an external database entry</li>
+              <li>Has an accession, description, and score</li>
+              <li>References an annotation source (NCBI, InterPro, etc.)</li>
             </ul>
           </div>
         </div>
@@ -112,660 +132,383 @@
     </div>
   </section>
 
-  <!-- Section 2: Directory Structure -->
+  <!-- Section 2: File Organization -->
   <section id="file-organization" class="mt-5">
-    <h3><i class="fa fa-folder-tree"></i> File Organization</h3>
+    <h4 class="fw-semibold mb-3"><i class="fa fa-folder-tree me-2"></i>File Organization</h4>
 
-    <div class="alert alert-info">
-      <strong><i class="fa fa-info-circle"></i> Root Directory:</strong> <code>/data/moop/organisms/</code>
+    <div class="alert alert-light border">
+      <strong>Root directory:</strong> <code>organisms/</code> (symlinked from <code>/data/moop/organisms/</code>)
     </div>
 
-    <div class="card">
+    <div class="card mb-4">
       <div class="card-body">
-        <pre class="bg-light p-3 rounded border"><code>/data/moop/organisms/
-├── Organism_Name_1/
-│   ├── organism.sqlite              ← SQLite database for this organism
-│   │                                  (contains all features, annotations, metadata)
-│   ├── Assembly_ID_1/
-│   │   ├── genome.fa                ← Reference genome (nucleotides)
-│   │   ├── transcript.nt.fa         ← mRNA/transcript sequences
-│   │   ├── cds.nt.fa                ← Coding sequence (nucleotides)
-│   │   ├── protein.aa.fa            ← Protein sequences
-│   │   ├── genome.fa.nhr            ← BLAST database files (nucleotide)
-│   │   ├── genome.fa.nin            ← BLAST database files
-│   │   ├── protein.aa.fa.phr        ← BLAST database files (protein)
-│   │   └── protein.aa.fa.pin        ← BLAST database files
-│   └── Assembly_ID_2/
-│       └── [same structure...]
+        <pre class="bg-light p-3 rounded border mb-0"><code>organisms/
+├── Organism_Name/
+│   ├── organism.sqlite              ← SQLite database (features, annotations for ALL assemblies)
+│   ├── organism.json                ← Display metadata (genus, species, common name, image)
+│   ├── annotation_sources_cache.json  ← Cached annotation counts (auto-regenerated)
+│   │
+│   ├── Assembly_ID/                 ← One directory per assembly
+│   │   ├── genome.fa                ← Reference genome FASTA
+│   │   ├── genome.fa.fai            ← FASTA index (samtools)
+│   │   ├── genome.fa.n*             ← BLAST nucleotide index files
+│   │   ├── genome.json              ← Assembly metadata (source, date, notes)
+│   │   │
+│   │   └── Gene_Set_Name/           ← One directory per gene set
+│   │       ├── transcript.nt.fa     ← Spliced mRNA sequences
+│   │       ├── transcript.nt.fa.n*  ← BLAST index
+│   │       ├── cds.nt.fa            ← Coding sequences
+│   │       ├── cds.nt.fa.n*         ← BLAST index
+│   │       ├── protein.aa.fa        ← Protein sequences
+│   │       ├── protein.aa.fa.p*     ← BLAST protein index files
+│   │       ├── genomic.gff          ← GFF3 annotation file
+│   │       └── geneset.json         ← Gene set metadata (source, date, notes)
+│   │
+│   └── Another_Assembly_ID/
+│       └── [same structure]
 │
-├── Organism_Name_2/
-│   ├── organism.sqlite
-│   └── Assembly_ID_1/
-│       └── [same structure...]
-│
-└── [More organisms...]</code></pre>
+└── Another_Organism/
+    └── [same structure]</code></pre>
       </div>
     </div>
 
-    <h4 class="mt-4">File Types Explained</h4>
-    <table class="table table-sm">
-      <thead class="table-light">
-        <tr>
-          <th>File</th>
-          <th>Purpose</th>
-          <th>Format</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><code>organism.sqlite</code></td>
-          <td>SQLite database with all features, annotations, and metadata</td>
-          <td>Binary SQLite DB</td>
-        </tr>
-        <tr>
-          <td><code>genome.fa</code></td>
-          <td>Complete reference genome sequences</td>
-          <td>FASTA (nucleotides)</td>
-        </tr>
-        <tr>
-          <td><code>transcript.nt.fa</code></td>
-          <td>mRNA/transcript sequences</td>
-          <td>FASTA (nucleotides)</td>
-        </tr>
-        <tr>
-          <td><code>cds.nt.fa</code></td>
-          <td>Coding sequences (exons combined)</td>
-          <td>FASTA (nucleotides)</td>
-        </tr>
-        <tr>
-          <td><code>protein.aa.fa</code></td>
-          <td>Protein sequences (translated from CDS)</td>
-          <td>FASTA (amino acids)</td>
-        </tr>
-        <tr>
-          <td><code>*.nhr, *.nin, *.nsq</code></td>
-          <td>BLAST database indices (nucleotide)</td>
-          <td>Binary BLAST index</td>
-        </tr>
-        <tr>
-          <td><code>*.phr, *.pin, *.psq</code></td>
-          <td>BLAST database indices (protein)</td>
-          <td>Binary BLAST index</td>
-        </tr>
-      </tbody>
-    </table>
+    <h5 class="fw-semibold mb-3">File Types</h5>
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered">
+        <thead class="table-light">
+          <tr><th>File</th><th>Location</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>organism.sqlite</code></td><td>Organism level</td><td>All features and annotations for this organism</td></tr>
+          <tr><td><code>organism.json</code></td><td>Organism level</td><td>Display metadata: genus, species, common name, image path</td></tr>
+          <tr><td><code>genome.fa</code></td><td>Assembly level</td><td>Complete reference genome (chromosomes/scaffolds)</td></tr>
+          <tr><td><code>genome.json</code></td><td>Assembly level</td><td>Assembly metadata: source, date added, notes</td></tr>
+          <tr><td><code>transcript.nt.fa</code></td><td>Gene set level</td><td>Spliced mRNA sequences (exons only)</td></tr>
+          <tr><td><code>cds.nt.fa</code></td><td>Gene set level</td><td>Coding sequences (start codon to stop codon)</td></tr>
+          <tr><td><code>protein.aa.fa</code></td><td>Gene set level</td><td>Translated protein sequences</td></tr>
+          <tr><td><code>genomic.gff</code></td><td>Gene set level</td><td>GFF3 annotation file used by JBrowse2</td></tr>
+          <tr><td><code>geneset.json</code></td><td>Gene set level</td><td>Gene set metadata: source, date added, notes</td></tr>
+          <tr><td><code>*.n* / *.p*</code></td><td>Same dir as FASTA</td><td>BLAST database index files (auto-generated)</td></tr>
+        </tbody>
+      </table>
+    </div>
 
-    <h4 class="mt-4"><i class="fa fa-lightbulb"></i> Configuration Note</h4>
-    <p>File naming patterns are <strong>not hardcoded</strong>. They're configured in <code>config/config_editable.json</code> under the <code>sequence_types</code> key, allowing flexibility for different naming conventions across organisms.</p>
+    <div class="alert alert-info">
+      <i class="fa fa-info-circle me-1"></i>
+      <strong>Configuration note:</strong> FASTA file naming patterns are configured in <code>config/config_editable.json</code> under <code>sequence_types</code>, so they can vary between sites.
+    </div>
   </section>
 
   <!-- Section 3: Database Schema -->
   <section id="database-schema" class="mt-5">
-    <h3><i class="fa fa-sitemap"></i> Database Schema</h3>
+    <h4 class="fw-semibold mb-3"><i class="fa fa-sitemap me-2"></i>Database Schema</h4>
+    <p class="text-muted">Each organism has one SQLite database. The core tables are:</p>
 
-    <p>Each organism has one SQLite database with the following table structure:</p>
-
-    <h4 class="mt-4">Database Tables</h4>
-
-    <!-- Organism Table -->
     <div class="card mb-3">
-      <div class="card-header bg-primary text-white">
-        <code>organism</code> - Species metadata
-      </div>
+      <div class="card-header" style="background-color:#0f766e; color:white;"><code>organism</code> — species metadata</div>
       <div class="card-body">
-        <table class="table table-sm">
-          <thead class="table-light">
-            <tr>
-              <th>Column</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-          </thead>
+        <table class="table table-sm mb-1">
+          <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
           <tbody>
-            <tr>
-              <td><code>organism_id</code></td>
-              <td>INTEGER</td>
-              <td>Primary key, auto-increment</td>
-            </tr>
-            <tr>
-              <td><code>genus</code></td>
-              <td>TEXT</td>
-              <td>Genus name (e.g., "Homo")</td>
-            </tr>
-            <tr>
-              <td><code>species</code></td>
-              <td>TEXT</td>
-              <td>Species epithet (e.g., "sapiens")</td>
-            </tr>
-            <tr>
-              <td><code>subtype</code></td>
-              <td>TEXT</td>
-              <td>Optional subspecies or strain</td>
-            </tr>
-            <tr>
-              <td><code>common_name</code></td>
-              <td>TEXT</td>
-              <td>Display name (e.g., "Human")</td>
-            </tr>
-            <tr>
-              <td><code>taxon_id</code></td>
-              <td>INTEGER</td>
-              <td>NCBI Taxonomy ID (optional)</td>
-            </tr>
+            <tr><td><code>organism_id</code></td><td>INTEGER PK</td><td>Auto-increment</td></tr>
+            <tr><td><code>genus</code></td><td>TEXT</td><td>e.g. "Anoura"</td></tr>
+            <tr><td><code>species</code></td><td>TEXT</td><td>e.g. "caudifer"</td></tr>
+            <tr><td><code>common_name</code></td><td>TEXT</td><td>Display name</td></tr>
+            <tr><td><code>taxon_id</code></td><td>INTEGER</td><td>NCBI Taxonomy ID (optional)</td></tr>
           </tbody>
         </table>
-        <p class="mb-0"><em>Typically 1 row per database (one organism per SQLite file)</em></p>
+        <small class="text-muted">Typically 1 row (one organism per SQLite file)</small>
       </div>
     </div>
 
-    <!-- Genome Table -->
     <div class="card mb-3">
-      <div class="card-header bg-info text-white">
-        <code>genome</code> - Assembly/build metadata
-      </div>
+      <div class="card-header" style="background-color:#d97706; color:white;"><code>genome</code> — assembly metadata</div>
       <div class="card-body">
-        <table class="table table-sm">
-          <thead class="table-light">
-            <tr>
-              <th>Column</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-          </thead>
+        <table class="table table-sm mb-1">
+          <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
           <tbody>
-            <tr>
-              <td><code>genome_id</code></td>
-              <td>INTEGER</td>
-              <td>Primary key, auto-increment</td>
-            </tr>
-            <tr>
-              <td><code>organism_id</code></td>
-              <td>INTEGER</td>
-              <td>Foreign key → organism.organism_id</td>
-            </tr>
-            <tr>
-              <td><code>genome_name</code></td>
-              <td>TEXT</td>
-              <td>Assembly name (e.g., "GRCh38", "assembly_v1")</td>
-            </tr>
-            <tr>
-              <td><code>genome_accession</code></td>
-              <td>TEXT</td>
-              <td>Assembly accession ID (e.g., "GCA_000001405.28")</td>
-            </tr>
-            <tr>
-              <td><code>genome_description</code></td>
-              <td>TEXT</td>
-              <td>Description of this assembly</td>
-            </tr>
+            <tr><td><code>genome_id</code></td><td>INTEGER PK</td><td>Auto-increment</td></tr>
+            <tr><td><code>organism_id</code></td><td>INTEGER FK</td><td>→ organism.organism_id</td></tr>
+            <tr><td><code>genome_name</code></td><td>TEXT</td><td>Assembly name</td></tr>
+            <tr><td><code>genome_accession</code></td><td>TEXT</td><td>e.g. "GCA_004027475.1"</td></tr>
+            <tr><td><code>genome_description</code></td><td>TEXT</td><td>Optional description</td></tr>
           </tbody>
         </table>
-        <p class="mb-0"><em>Multiple rows per database (one row per assembly)</em></p>
+        <small class="text-muted">One row per assembly</small>
       </div>
     </div>
 
-    <!-- Feature Table -->
     <div class="card mb-3">
-      <div class="card-header bg-success text-white">
-        <code>feature</code> - Genomic elements (genes, mRNAs, exons)
-      </div>
+      <div class="card-header" style="background-color:#e11d48; color:white;"><code>gene_set</code> — gene set metadata</div>
       <div class="card-body">
-        <table class="table table-sm">
-          <thead class="table-light">
-            <tr>
-              <th>Column</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-          </thead>
+        <table class="table table-sm mb-1">
+          <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
           <tbody>
-            <tr>
-              <td><code>feature_id</code></td>
-              <td>INTEGER</td>
-              <td>Primary key, auto-increment</td>
-            </tr>
-            <tr>
-              <td><code>feature_uniquename</code></td>
-              <td>TEXT</td>
-              <td>Unique identifier (UNIQUE constraint) - used for searches</td>
-            </tr>
-            <tr>
-              <td><code>feature_type</code></td>
-              <td>TEXT</td>
-              <td>Type: "gene", "mRNA", "exon", "protein", etc.</td>
-            </tr>
-            <tr>
-              <td><code>feature_name</code></td>
-              <td>TEXT</td>
-              <td>Display name (e.g., "Insulin", "Insulin-1")</td>
-            </tr>
-            <tr>
-              <td><code>feature_description</code></td>
-              <td>TEXT</td>
-              <td>Text description (searchable)</td>
-            </tr>
-            <tr>
-              <td><code>genome_id</code></td>
-              <td>INTEGER</td>
-              <td>Foreign key → genome.genome_id (which assembly)</td>
-            </tr>
-            <tr>
-              <td><code>organism_id</code></td>
-              <td>INTEGER</td>
-              <td>Foreign key → organism.organism_id (denormalized for speed)</td>
-            </tr>
-            <tr>
-              <td><code>parent_feature_id</code></td>
-              <td>INTEGER</td>
-              <td>Self-reference for hierarchy (gene → mRNA → exon)</td>
-            </tr>
+            <tr><td><code>gene_set_id</code></td><td>INTEGER PK</td><td>Auto-increment</td></tr>
+            <tr><td><code>genome_id</code></td><td>INTEGER FK</td><td>→ genome.genome_id</td></tr>
+            <tr><td><code>gene_set_name</code></td><td>TEXT</td><td>e.g. "SIMR_2025-01-24"</td></tr>
+            <tr><td><code>gene_set_description</code></td><td>TEXT</td><td>Optional description</td></tr>
           </tbody>
         </table>
-        <p class="mb-0"><em>Thousands to millions of rows per database</em></p>
+        <small class="text-muted">One row per gene set; UNIQUE(genome_id, gene_set_name)</small>
       </div>
     </div>
 
-    <!-- Annotation Source Table -->
     <div class="card mb-3">
-      <div class="card-header bg-warning text-white">
-        <code>annotation_source</code> - External databases/sources
-      </div>
+      <div class="card-header bg-secondary text-white"><code>feature</code> — genomic elements (genes, mRNAs, exons, proteins)</div>
       <div class="card-body">
-        <table class="table table-sm">
-          <thead class="table-light">
-            <tr>
-              <th>Column</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-          </thead>
+        <table class="table table-sm mb-1">
+          <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
           <tbody>
-            <tr>
-              <td><code>annotation_source_id</code></td>
-              <td>INTEGER</td>
-              <td>Primary key, auto-increment</td>
-            </tr>
-            <tr>
-              <td><code>annotation_source_name</code></td>
-              <td>TEXT</td>
-              <td>Source name (e.g., "NCBI", "InterPro", "UniProt")</td>
-            </tr>
-            <tr>
-              <td><code>annotation_source_version</code></td>
-              <td>TEXT</td>
-              <td>Version info (e.g., "2024-01-15", "v5.2")</td>
-            </tr>
-            <tr>
-              <td><code>annotation_accession_url</code></td>
-              <td>TEXT</td>
-              <td>URL template with {ID} placeholder (e.g., "https://www.ncbi.nlm.nih.gov/protein/{ID}")</td>
-            </tr>
-            <tr>
-              <td><code>annotation_source_url</code></td>
-              <td>TEXT</td>
-              <td>Website URL for the source</td>
-            </tr>
-            <tr>
-              <td><code>annotation_type</code></td>
-              <td>TEXT</td>
-              <td>Type: "homolog", "ortholog", "domain", "pathway", "go_term"</td>
-            </tr>
+            <tr><td><code>feature_id</code></td><td>INTEGER PK</td><td>Auto-increment</td></tr>
+            <tr><td><code>feature_uniquename</code></td><td>TEXT UNIQUE</td><td>The ID used for searches and retrieval</td></tr>
+            <tr><td><code>feature_type</code></td><td>TEXT</td><td>"gene", "mRNA", "exon", "protein", etc.</td></tr>
+            <tr><td><code>feature_name</code></td><td>TEXT</td><td>Display name (e.g. "Insulin")</td></tr>
+            <tr><td><code>feature_description</code></td><td>TEXT</td><td>Searchable text description</td></tr>
+            <tr><td><code>organism_id</code></td><td>INTEGER FK</td><td>→ organism.organism_id (denormalized for speed)</td></tr>
+            <tr><td><code>gene_set_id</code></td><td>INTEGER FK</td><td>→ gene_set.gene_set_id</td></tr>
+            <tr><td><code>parent_feature_id</code></td><td>INTEGER FK</td><td>Self-reference: → feature.feature_id (gene → mRNA → exon)</td></tr>
           </tbody>
         </table>
-        <p class="mb-0"><em>Typically 5-20 rows per database</em></p>
+        <small class="text-muted">Thousands to millions of rows. Note: genome is reached through gene_set, not directly.</small>
       </div>
     </div>
 
-    <!-- Annotation Table -->
     <div class="card mb-3">
-      <div class="card-header" style="background-color: #fd7e14; color: white;">
-        <code>annotation</code> - Annotation records
-      </div>
+      <div class="card-header" style="background-color:#ff9800; color:white;"><code>annotation_source</code> — external databases</div>
       <div class="card-body">
-        <table class="table table-sm">
-          <thead class="table-light">
-            <tr>
-              <th>Column</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-          </thead>
+        <table class="table table-sm mb-1">
+          <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
           <tbody>
-            <tr>
-              <td><code>annotation_id</code></td>
-              <td>INTEGER</td>
-              <td>Primary key, auto-increment</td>
-            </tr>
-            <tr>
-              <td><code>annotation_accession</code></td>
-              <td>TEXT</td>
-              <td>External ID (e.g., "NM_000207.1", "IPR003236")</td>
-            </tr>
-            <tr>
-              <td><code>annotation_description</code></td>
-              <td>TEXT</td>
-              <td>Text from external source (searchable)</td>
-            </tr>
-            <tr>
-              <td><code>annotation_source_id</code></td>
-              <td>INTEGER</td>
-              <td>Foreign key → annotation_source.annotation_source_id</td>
-            </tr>
+            <tr><td><code>annotation_source_id</code></td><td>INTEGER PK</td><td>Auto-increment</td></tr>
+            <tr><td><code>annotation_source_name</code></td><td>TEXT</td><td>e.g. "InterProScan (Pfam)"</td></tr>
+            <tr><td><code>annotation_source_version</code></td><td>TEXT</td><td>Version or date run</td></tr>
+            <tr><td><code>annotation_accession_url</code></td><td>TEXT</td><td>URL template with <code>{ID}</code> placeholder</td></tr>
+            <tr><td><code>annotation_type</code></td><td>TEXT</td><td>"Domains", "Gene Ontology", "Homologs", etc.</td></tr>
           </tbody>
         </table>
-        <p class="mb-0"><em>Thousands of rows per database</em></p>
+        <small class="text-muted">Typically 5–20 rows per database</small>
       </div>
     </div>
 
-    <!-- Feature Annotation Table -->
     <div class="card mb-3">
-      <div class="card-header" style="background-color: #6f42c1; color: white;">
-        <code>feature_annotation</code> - Links features to annotations
-      </div>
+      <div class="card-header bg-danger text-white"><code>annotation</code> — annotation records</div>
       <div class="card-body">
-        <table class="table table-sm">
-          <thead class="table-light">
-            <tr>
-              <th>Column</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-          </thead>
+        <table class="table table-sm mb-1">
+          <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
           <tbody>
-            <tr>
-              <td><code>feature_annotation_id</code></td>
-              <td>INTEGER</td>
-              <td>Primary key, auto-increment</td>
-            </tr>
-            <tr>
-              <td><code>feature_id</code></td>
-              <td>INTEGER</td>
-              <td>Foreign key → feature.feature_id</td>
-            </tr>
-            <tr>
-              <td><code>annotation_id</code></td>
-              <td>INTEGER</td>
-              <td>Foreign key → annotation.annotation_id</td>
-            </tr>
-            <tr>
-              <td><code>score</code></td>
-              <td>REAL</td>
-              <td>e-value, bit score, or confidence value</td>
-            </tr>
-            <tr>
-              <td><code>date</code></td>
-              <td>TEXT</td>
-              <td>When this annotation was calculated/loaded</td>
-            </tr>
+            <tr><td><code>annotation_id</code></td><td>INTEGER PK</td><td>Auto-increment</td></tr>
+            <tr><td><code>annotation_accession</code></td><td>TEXT</td><td>External ID (e.g. "IPR003236", "GO:0005179")</td></tr>
+            <tr><td><code>annotation_description</code></td><td>TEXT</td><td>Searchable description from the source database</td></tr>
+            <tr><td><code>annotation_source_id</code></td><td>INTEGER FK</td><td>→ annotation_source.annotation_source_id</td></tr>
           </tbody>
         </table>
-        <p class="mb-0"><em>Hundreds of thousands to millions of rows (many annotations per feature)</em></p>
+        <small class="text-muted">Thousands to hundreds of thousands of rows</small>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header" style="background-color:#6366f1; color:white;"><code>feature_annotation</code> — links features to annotations</div>
+      <div class="card-body">
+        <table class="table table-sm mb-1">
+          <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>feature_annotation_id</code></td><td>INTEGER PK</td><td>Auto-increment</td></tr>
+            <tr><td><code>feature_id</code></td><td>INTEGER FK</td><td>→ feature.feature_id</td></tr>
+            <tr><td><code>annotation_id</code></td><td>INTEGER FK</td><td>→ annotation.annotation_id</td></tr>
+            <tr><td><code>score</code></td><td>REAL</td><td>e-value, bit score, or confidence value</td></tr>
+            <tr><td><code>date</code></td><td>TEXT</td><td>When this annotation was loaded</td></tr>
+          </tbody>
+        </table>
+        <small class="text-muted">Hundreds of thousands to millions of rows (many annotations per feature)</small>
       </div>
     </div>
 
     <!-- ER Diagram -->
-    <h4 class="mt-5"><i class="fa fa-diagram-project"></i> Entity Relationship Diagram</h4>
+    <h5 class="fw-semibold mt-4 mb-3">Entity Relationship Diagram</h5>
     <div class="card">
       <div class="card-body">
-        <svg viewBox="0 0 1000 700" class="w-100" style="max-height: 600px;">
-          <!-- Title -->
-          <text x="500" y="25" font-size="20" font-weight="bold" text-anchor="middle">MOOP Database Schema - Entity Relationship Diagram</text>
-
-          <!-- ORGANISM Table -->
-          <rect x="50" y="50" width="180" height="140" fill="#cfe2ff" stroke="#0d6efd" stroke-width="2"/>
-          <rect x="50" y="50" width="180" height="30" fill="#0d6efd"/>
-          <text x="140" y="70" font-weight="bold" fill="white" text-anchor="middle" font-size="14">organism</text>
-          <text x="60" y="95" font-family="monospace" font-size="12">organism_id (PK)</text>
-          <text x="60" y="115" font-family="monospace" font-size="12">genus</text>
-          <text x="60" y="135" font-family="monospace" font-size="12">species</text>
-          <text x="60" y="155" font-family="monospace" font-size="12">common_name</text>
-          <text x="60" y="175" font-family="monospace" font-size="12">taxon_id</text>
-
-          <!-- GENOME Table -->
-          <rect x="350" y="50" width="180" height="140" fill="#d1e7dd" stroke="#198754" stroke-width="2"/>
-          <rect x="350" y="50" width="180" height="30" fill="#198754"/>
-          <text x="440" y="70" font-weight="bold" fill="white" text-anchor="middle" font-size="14">genome</text>
-          <text x="360" y="95" font-family="monospace" font-size="12">genome_id (PK)</text>
-          <text x="360" y="115" font-family="monospace" font-size="12">organism_id (FK)</text>
-          <text x="360" y="135" font-family="monospace" font-size="12">genome_name</text>
-          <text x="360" y="155" font-family="monospace" font-size="12">genome_accession</text>
-          <text x="360" y="175" font-family="monospace" font-size="12">genome_description</text>
-
-          <!-- FEATURE Table -->
-          <rect x="680" y="50" width="200" height="160" fill="#e7d4f5" stroke="#6f42c1" stroke-width="2"/>
-          <rect x="680" y="50" width="200" height="30" fill="#6f42c1"/>
-          <text x="780" y="70" font-weight="bold" fill="white" text-anchor="middle" font-size="14">feature</text>
-          <text x="690" y="95" font-family="monospace" font-size="12">feature_id (PK)</text>
-          <text x="690" y="115" font-family="monospace" font-size="12">feature_uniquename</text>
-          <text x="690" y="135" font-family="monospace" font-size="12">feature_type</text>
-          <text x="690" y="155" font-family="monospace" font-size="12">feature_name</text>
-          <text x="690" y="175" font-family="monospace" font-size="12">genome_id (FK)</text>
-          <text x="690" y="195" font-family="monospace" font-size="12">parent_feature_id (self-ref)</text>
-
-          <!-- ANNOTATION_SOURCE Table -->
-          <rect x="50" y="350" width="200" height="140" fill="#fff3cd" stroke="#ff9800" stroke-width="2"/>
-          <rect x="50" y="350" width="200" height="30" fill="#ff9800"/>
-          <text x="150" y="370" font-weight="bold" fill="white" text-anchor="middle" font-size="14">annotation_source</text>
-          <text x="60" y="395" font-family="monospace" font-size="12">annotation_source_id (PK)</text>
-          <text x="60" y="415" font-family="monospace" font-size="12">annotation_source_name</text>
-          <text x="60" y="435" font-family="monospace" font-size="12">annotation_source_version</text>
-          <text x="60" y="455" font-family="monospace" font-size="12">annotation_accession_url</text>
-          <text x="60" y="475" font-family="monospace" font-size="12">annotation_type</text>
-
-          <!-- ANNOTATION Table -->
-          <rect x="350" y="350" width="180" height="120" fill="#f8d7da" stroke="#dc3545" stroke-width="2"/>
-          <rect x="350" y="350" width="180" height="30" fill="#dc3545"/>
-          <text x="440" y="370" font-weight="bold" fill="white" text-anchor="middle" font-size="14">annotation</text>
-          <text x="360" y="395" font-family="monospace" font-size="12">annotation_id (PK)</text>
-          <text x="360" y="415" font-family="monospace" font-size="12">annotation_accession</text>
-          <text x="360" y="435" font-family="monospace" font-size="12">annotation_description</text>
-          <text x="360" y="455" font-family="monospace" font-size="12">annotation_source_id (FK)</text>
-
-          <!-- FEATURE_ANNOTATION Table -->
-          <rect x="680" y="350" width="200" height="140" fill="#d1ecf1" stroke="#0c5460" stroke-width="2"/>
-          <rect x="680" y="350" width="200" height="30" fill="#0c5460"/>
-          <text x="780" y="370" font-weight="bold" fill="white" text-anchor="middle" font-size="14">feature_annotation</text>
-          <text x="690" y="395" font-family="monospace" font-size="12">feature_annotation_id (PK)</text>
-          <text x="690" y="415" font-family="monospace" font-size="12">feature_id (FK)</text>
-          <text x="690" y="435" font-family="monospace" font-size="12">annotation_id (FK)</text>
-          <text x="690" y="455" font-family="monospace" font-size="12">score</text>
-          <text x="690" y="475" font-family="monospace" font-size="12">date</text>
-
-          <!-- Relationships -->
-          <!-- organism -> genome -->
-          <line x1="230" y1="120" x2="350" y2="120" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-          <text x="280" y="110" font-size="12" fill="#333">1:N</text>
-
-          <!-- genome -> feature -->
-          <line x1="530" y1="120" x2="680" y2="120" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-          <text x="600" y="110" font-size="12" fill="#333">1:N</text>
-
-          <!-- annotation_source -> annotation -->
-          <line x1="250" y1="420" x2="350" y2="420" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-          <text x="290" y="410" font-size="12" fill="#333">1:N</text>
-
-          <!-- annotation -> feature_annotation -->
-          <line x1="530" y1="420" x2="680" y2="420" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-          <text x="600" y="410" font-size="12" fill="#333">1:N</text>
-
-          <!-- feature -> feature_annotation -->
-          <line x1="780" y1="210" x2="780" y2="350" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-          <text x="800" y="280" font-size="12" fill="#333">1:N</text>
-
-          <!-- Legend -->
-          <text x="50" y="650" font-weight="bold" font-size="14">Legend:</text>
-          <text x="50" y="680" font-size="12">PK = Primary Key | FK = Foreign Key | 1:N = One-to-Many Relationship</text>
-
-          <!-- Arrow marker definition -->
+        <svg viewBox="0 0 1050 580" class="w-100" style="max-height:560px; font-family:monospace;">
           <defs>
-            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
-              <polygon points="0 0, 10 5, 0 10" fill="#333"/>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#555"/>
             </marker>
           </defs>
+
+          <!-- organism -->
+          <rect x="20" y="20" width="160" height="110" rx="4" fill="#d1fae5" stroke="#0f766e" stroke-width="2"/>
+          <rect x="20" y="20" width="160" height="28" rx="4" fill="#0f766e"/>
+          <text x="100" y="39" fill="white" text-anchor="middle" font-size="12" font-weight="bold">organism</text>
+          <text x="30" y="64" font-size="11">organism_id (PK)</text>
+          <text x="30" y="80" font-size="11">genus</text>
+          <text x="30" y="96" font-size="11">species</text>
+          <text x="30" y="112" font-size="11">common_name</text>
+
+          <!-- genome -->
+          <rect x="240" y="20" width="175" height="125" rx="4" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+          <rect x="240" y="20" width="175" height="28" rx="4" fill="#d97706"/>
+          <text x="327" y="39" fill="white" text-anchor="middle" font-size="12" font-weight="bold">genome</text>
+          <text x="250" y="64" font-size="11">genome_id (PK)</text>
+          <text x="250" y="80" font-size="11">organism_id (FK)</text>
+          <text x="250" y="96" font-size="11">genome_name</text>
+          <text x="250" y="112" font-size="11">genome_accession</text>
+          <text x="250" y="128" font-size="11">genome_description</text>
+
+          <!-- gene_set -->
+          <rect x="480" y="20" width="175" height="110" rx="4" fill="#ffe4e6" stroke="#e11d48" stroke-width="2"/>
+          <rect x="480" y="20" width="175" height="28" rx="4" fill="#e11d48"/>
+          <text x="567" y="39" fill="white" text-anchor="middle" font-size="12" font-weight="bold">gene_set</text>
+          <text x="490" y="64" font-size="11">gene_set_id (PK)</text>
+          <text x="490" y="80" font-size="11">genome_id (FK)</text>
+          <text x="490" y="96" font-size="11">gene_set_name</text>
+          <text x="490" y="112" font-size="11">gene_set_description</text>
+
+          <!-- feature -->
+          <rect x="720" y="20" width="200" height="158" rx="4" fill="#e0e7ff" stroke="#6366f1" stroke-width="2"/>
+          <rect x="720" y="20" width="200" height="28" rx="4" fill="#6366f1"/>
+          <text x="820" y="39" fill="white" text-anchor="middle" font-size="12" font-weight="bold">feature</text>
+          <text x="730" y="64" font-size="11">feature_id (PK)</text>
+          <text x="730" y="80" font-size="11">feature_uniquename</text>
+          <text x="730" y="96" font-size="11">feature_type</text>
+          <text x="730" y="112" font-size="11">feature_name</text>
+          <text x="730" y="128" font-size="11">organism_id (FK)</text>
+          <text x="730" y="144" font-size="11">gene_set_id (FK)</text>
+          <text x="730" y="160" font-size="11">parent_feature_id (self)</text>
+
+          <!-- annotation_source -->
+          <rect x="20" y="340" width="200" height="125" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+          <rect x="20" y="340" width="200" height="28" rx="4" fill="#f59e0b"/>
+          <text x="120" y="359" fill="white" text-anchor="middle" font-size="12" font-weight="bold">annotation_source</text>
+          <text x="30" y="384" font-size="11">annotation_source_id (PK)</text>
+          <text x="30" y="400" font-size="11">annotation_source_name</text>
+          <text x="30" y="416" font-size="11">annotation_type</text>
+          <text x="30" y="432" font-size="11">annotation_accession_url</text>
+          <text x="30" y="448" font-size="11">annotation_source_version</text>
+
+          <!-- annotation -->
+          <rect x="340" y="340" width="195" height="110" rx="4" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+          <rect x="340" y="340" width="195" height="28" rx="4" fill="#dc2626"/>
+          <text x="437" y="359" fill="white" text-anchor="middle" font-size="12" font-weight="bold">annotation</text>
+          <text x="350" y="384" font-size="11">annotation_id (PK)</text>
+          <text x="350" y="400" font-size="11">annotation_accession</text>
+          <text x="350" y="416" font-size="11">annotation_description</text>
+          <text x="350" y="432" font-size="11">annotation_source_id (FK)</text>
+
+          <!-- feature_annotation -->
+          <rect x="660" y="340" width="200" height="125" rx="4" fill="#ddd6fe" stroke="#7c3aed" stroke-width="2"/>
+          <rect x="660" y="340" width="200" height="28" rx="4" fill="#7c3aed"/>
+          <text x="760" y="359" fill="white" text-anchor="middle" font-size="12" font-weight="bold">feature_annotation</text>
+          <text x="670" y="384" font-size="11">feature_annotation_id (PK)</text>
+          <text x="670" y="400" font-size="11">feature_id (FK)</text>
+          <text x="670" y="416" font-size="11">annotation_id (FK)</text>
+          <text x="670" y="432" font-size="11">score</text>
+          <text x="670" y="448" font-size="11">date</text>
+
+          <!-- Arrows: organism → genome -->
+          <line x1="180" y1="75" x2="238" y2="75" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="205" y="68" font-size="10" fill="#555">1:N</text>
+
+          <!-- genome → gene_set -->
+          <line x1="415" y1="75" x2="478" y2="75" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="436" y="68" font-size="10" fill="#555">1:N</text>
+
+          <!-- gene_set → feature -->
+          <line x1="655" y1="75" x2="718" y2="75" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="672" y="68" font-size="10" fill="#555">1:N</text>
+
+          <!-- annotation_source → annotation -->
+          <line x1="220" y1="404" x2="338" y2="404" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="262" y="397" font-size="10" fill="#555">1:N</text>
+
+          <!-- annotation → feature_annotation -->
+          <line x1="535" y1="404" x2="658" y2="404" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="578" y="397" font-size="10" fill="#555">1:N</text>
+
+          <!-- feature → feature_annotation (vertical) -->
+          <line x1="820" y1="178" x2="820" y2="250" stroke="#555" stroke-width="1.5"/>
+          <line x1="820" y1="250" x2="760" y2="250" stroke="#555" stroke-width="1.5"/>
+          <line x1="760" y1="250" x2="760" y2="338" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="775" y="244" font-size="10" fill="#555">1:N</text>
+
+          <!-- Legend -->
+          <text x="20" y="530" font-size="11" font-weight="bold">Legend:</text>
+          <text x="20" y="548" font-size="11">PK = Primary Key  |  FK = Foreign Key  |  1:N = One-to-Many</text>
+          <text x="20" y="564" font-size="11">self = self-referential (parent_feature_id points to feature_id in same table)</text>
         </svg>
       </div>
     </div>
   </section>
 
-  <!-- Section 4: Hierarchical Structure -->
+  <!-- Section 4: Feature Hierarchy -->
   <section id="hierarchical-structure" class="mt-5">
-    <h3><i class="fa fa-tree"></i> Hierarchical Structure: Feature Relationships</h3>
+    <h4 class="fw-semibold mb-3"><i class="fa fa-tree me-2"></i>Feature Hierarchy</h4>
 
-    <p>Features can have parent-child relationships, representing biological hierarchy:</p>
+    <p class="text-muted">Features form a parent-child tree representing biological structure. The <code>parent_feature_id</code> column points to the parent feature in the same table.</p>
 
-    <div class="card">
+    <div class="card mb-3">
       <div class="card-body">
-        <pre class="bg-light p-3 rounded border"><code>Gene (parent)
-├── mRNA_001 (transcript, parent_feature_id = gene_id)
-│   ├── Exon_001 (parent_feature_id = mRNA_001)
-│   ├── Exon_002
-│   ├── Exon_003
-│   └── CDS (coding sequence)
-│       └── Protein (translated from CDS)
+        <pre class="bg-light p-3 rounded border mb-0"><code>Gene (feature_type = "gene")
+├── mRNA_1 (feature_type = "mRNA", parent_feature_id → gene)
+│   ├── Exon_1 (feature_type = "exon", parent_feature_id → mRNA_1)
+│   ├── Exon_2
+│   └── CDS   (feature_type = "CDS")
+│       └── Protein (feature_type = "protein")
 │
-└── mRNA_002 (alternative spliceform)
-    ├── Exon_001 (different exon structure)
-    ├── Exon_004
+└── mRNA_2 (alternative isoform)
+    ├── Exon_1
+    ├── Exon_3
     └── CDS
-        └── Protein (different translation)</code></pre>
+        └── Protein</code></pre>
       </div>
     </div>
 
-    <h4 class="mt-3">Implementation</h4>
-    <p>The <code>parent_feature_id</code> column in the <code>feature</code> table stores the feature_id of the parent. This enables:</p>
-    <ul>
-      <li><strong>Traversal:</strong> Find all children of a gene, all parent features of an exon</li>
-      <li><strong>Hierarchy Display:</strong> Show indented trees on feature detail pages</li>
-      <li><strong>Batch Operations:</strong> Download all sequences in a transcript</li>
-    </ul>
-
-    <h4 class="mt-3">Example Query</h4>
-    <div class="alert alert-light border-left border-primary">
-      <strong>Find all mRNAs of a gene:</strong>
-      <pre class="mb-0"><code class="language-sql">SELECT * FROM feature
-WHERE parent_feature_id IN (
-    SELECT feature_id FROM feature
-    WHERE feature_id = ? AND feature_type = 'gene'
-)
-AND feature_type = 'mRNA';</code></pre>
-    </div>
+    <p class="text-muted">On feature detail pages, MOOP traverses this tree to show all children of a gene (mRNAs, exons, proteins) and to auto-expand parent IDs in Sequence Retrieval.</p>
   </section>
 
   <!-- Section 5: Annotation System -->
   <section id="annotation-system" class="mt-5">
-    <h3><i class="fa fa-tags"></i> Annotation System</h3>
+    <h4 class="fw-semibold mb-3"><i class="fa fa-tags me-2"></i>Annotation System</h4>
 
-    <h4>Data Flow: From Feature to Annotation</h4>
+    <p class="text-muted">Annotations are normalized across three tables to avoid duplication — the same InterPro domain can link to thousands of features with a single <code>annotation</code> row.</p>
 
-    <div class="card">
+    <div class="card mb-4">
       <div class="card-body">
-        <pre class="bg-light p-3 rounded border"><code>Feature (GENE_12345)
-    ↓
-feature_annotation (many rows)
-    ├─ Links to annotation_id=1, score=1e-45, date=2024-12-02
-    ├─ Links to annotation_id=2, score=1e-20, date=2024-12-02
-    └─ Links to annotation_id=3, score=0.95, date=2024-12-02
-        ↓
-    annotation (the actual annotations)
-        ├─ annotation_id=1, accession=NP_000207.1, source_id=1
-        ├─ annotation_id=2, accession=IPR003236, source_id=2
-        └─ annotation_id=3, accession=GO:0005179, source_id=3
-            ↓
-        annotation_source (where they came from)
-            ├─ source_id=1, name=NCBI, url_template=https://ncbi.nlm.nih.gov/protein/{ID}
-            ├─ source_id=2, name=InterPro, url_template=https://ebi.ac.uk/interpro/{ID}
-            └─ source_id=3, name=Gene Ontology, url_template=http://amigo.geneontology.org/{ID}</code></pre>
-      </div>
-    </div>
-
-    <h4 class="mt-3">Why This Structure?</h4>
-
-    <div class="row mt-3">
-      <div class="col-lg-6">
-        <div class="card">
-          <div class="card-header bg-success bg-opacity-10">
-            <h6 class="mb-0"><i class="fa fa-check"></i> Advantages</h6>
-          </div>
-          <div class="card-body">
-            <ul class="mb-0">
-              <li><strong>Reusability:</strong> One annotation can link to multiple features</li>
-              <li><strong>Efficiency:</strong> Store identical annotations once</li>
-              <li><strong>Flexibility:</strong> Easy to add new annotation sources</li>
-              <li><strong>Queryable:</strong> Search by score, date, source</li>
-              <li><strong>Scalability:</strong> Millions of feature_annotation rows</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-6">
-        <div class="card">
-          <div class="card-header bg-info bg-opacity-10">
-            <h6 class="mb-0"><i class="fa fa-search"></i> Query Examples</h6>
-          </div>
-          <div class="card-body">
-            <p><strong>Find all features with homolog annotations:</strong></p>
-            <pre class="mb-3 p-2 bg-light rounded" style="font-size: 11px;"><code>SELECT f.* FROM feature f
-JOIN feature_annotation fa ON f.feature_id = fa.feature_id
-JOIN annotation a ON fa.annotation_id = a.annotation_id
-JOIN annotation_source asrc ON a.annotation_source_id = asrc.annotation_source_id
-WHERE asrc.type = 'Homologs'</code></pre>
-
-            <p><strong>Get protein domains for a gene:</strong></p>
-            <pre class="mb-0 p-2 bg-light rounded" style="font-size: 11px;"><code>SELECT a.* FROM annotation a
-JOIN feature_annotation fa
-WHERE fa.feature_id = ?
-AND a.annotation_source_id = 2</code></pre>
-          </div>
-        </div>
+        <pre class="bg-light p-3 rounded border mb-0"><code>feature (g24397)
+    ↓  feature_annotation (many rows, one per hit)
+    ├─ feature_id=g24397, annotation_id=101, score=1e-45
+    ├─ feature_id=g24397, annotation_id=202, score=1e-20
+    └─ feature_id=g24397, annotation_id=303, score=0.95
+         ↓  annotation
+         ├─ id=101, accession=NP_000207.1, source_id=1
+         ├─ id=202, accession=IPR003236,   source_id=2
+         └─ id=303, accession=GO:0005179,  source_id=3
+              ↓  annotation_source
+              ├─ id=1, name="NCBI Protein BLAST",   type="Homologs"
+              ├─ id=2, name="InterProScan (InterPro)", type="Domains"
+              └─ id=3, name="Gene Ontology",          type="Gene Ontology"</code></pre>
       </div>
     </div>
   </section>
 
   <!-- Summary -->
-  <section id="summary" class="mt-5 mb-5">
+  <section id="summary" class="mt-4 mb-5">
     <div class="alert alert-success">
-      <h5><i class="fa fa-lightbulb"></i> Key Takeaways</h5>
+      <h6 class="fw-bold"><i class="fa fa-lightbulb me-1"></i>Key Takeaways</h6>
       <ul class="mb-0">
-        <li><strong>One organism = one SQLite database</strong> containing all data for that species</li>
-        <li><strong>One assembly = one directory</strong> with FASTA files and BLAST indices</li>
-        <li><strong>Features have hierarchy</strong> (gene → mRNA → exon) via parent_feature_id</li>
-        <li><strong>Annotations are normalized</strong> to reduce storage and enable reuse</li>
-        <li><strong>Everything is queryable</strong> through SQLite: search features, filter by annotation source, sort by score</li>
+        <li><strong>One organism = one SQLite database</strong> containing all features and annotations across all assemblies</li>
+        <li><strong>One assembly = one directory</strong> with <code>genome.fa</code> and its BLAST/FASTA indices at the assembly level</li>
+        <li><strong>One gene set = one subdirectory</strong> inside the assembly, containing transcript/CDS/protein FASTAs and the GFF file</li>
+        <li><strong>Features belong to a gene set</strong>, not directly to an assembly — the assembly is reached through the gene set</li>
+        <li><strong>Feature hierarchy</strong> (gene → mRNA → exon) is encoded via <code>parent_feature_id</code></li>
+        <li><strong>Annotations are normalized</strong> — one annotation row can link to many features</li>
       </ul>
     </div>
 
-    <!-- Back to Help Link -->
-    <div class="mt-4">
+    <div class="mt-3">
       <a href="help.php" class="btn btn-outline-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Help
+        <i class="fa fa-arrow-left me-1"></i>Back to Help
       </a>
     </div>
   </section>
 
 </div>
-
-<style>
-.card {
-  margin-bottom: 1rem;
-}
-
-table.table-sm {
-  font-size: 0.9rem;
-}
-
-code {
-  background-color: #f5f5f5;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: 'Courier New', monospace;
-}
-
-pre {
-  overflow-x: auto;
-}
-
-.border-left {
-  border-left: 4px solid !important;
-}
-</style>
