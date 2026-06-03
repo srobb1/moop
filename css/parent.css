@@ -267,10 +267,30 @@ td.export-only {
 #gene-model-svg .iso-row:hover .iso-row-bg {
     fill: rgba(113, 123, 200, 0.07);
 }
+/* Transitions for all clickable regions */
+#gene-model-svg.seq-enabled .region-exon,
+#gene-model-svg.seq-enabled .region-cds,
+#gene-model-svg.seq-enabled .region-flank {
+    transition: filter 0.1s ease;
+}
+
 /* Highlight clickable regions on hover — only when genome sequence is available */
-#gene-model-svg.seq-enabled .region-exon:hover   { filter: brightness(1.15); }
-#gene-model-svg.seq-enabled .region-cds:hover    { filter: brightness(1.2); }
-#gene-model-svg.seq-enabled .region-intron:hover { fill: rgba(0,0,0,0.08) !important; }
+#gene-model-svg.seq-enabled .region-exon:hover {
+    filter: brightness(0.75) drop-shadow(0 0 4px rgba(232, 131, 58, 0.85));
+    cursor: pointer;
+}
+#gene-model-svg.seq-enabled .region-cds:hover {
+    filter: brightness(0.78) drop-shadow(0 0 5px rgba(33, 113, 181, 0.9));
+    cursor: pointer;
+}
+#gene-model-svg.seq-enabled .region-intron:hover {
+    fill: rgba(0,0,0,0.15) !important;
+    cursor: pointer;
+}
+#gene-model-svg.seq-enabled .region-flank:hover {
+    filter: brightness(0.78) drop-shadow(0 0 4px rgba(0,0,0,0.45));
+    cursor: pointer;
+}
 
 /* Sequence modal pre block */
 .seq-region-pre {

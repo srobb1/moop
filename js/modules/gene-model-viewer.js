@@ -27,8 +27,8 @@
     const LABEL_HEIGHT  = 16;
     const PAD_TOP       = 4;
     const PAD_BOTTOM    = 18;   // room for strand label
-    const PAD_LEFT      = 80;  // upstream block + gap to isoform label
-    const PAD_RIGHT     = 78;  // downstream block + gap to track end
+    const PAD_LEFT      = 92;  // upstream block + gap to isoform label
+    const PAD_RIGHT     = 80;  // downstream block + gap to track end
     const EXON_H        = 10;
     const CDS_H         = 16;
     const FLANK_W       = 58;  // upstream/downstream block width — fits 'downstream' at font-size 7
@@ -130,6 +130,7 @@
                 const gDnX = VIRTUAL_WIDTH - PAD_RIGHT + FLANK_GAP;
 
                 const gUp = makeRect(gUpX, gBy, FLANK_W, FLANK_H, COLOR_UPSTREAM, 2);
+                gUp.setAttribute('class', 'region-flank');
                 gUp.setAttribute('stroke', COLOR_UPSTREAM_S);
                 gUp.setAttribute('stroke-width', '1');
                 gUp.style.cursor = 'pointer';
@@ -139,6 +140,7 @@
                 gG.appendChild(makeFlankLabel(gUpX + FLANK_W / 2, gCy, 'upstream', COLOR_UPSTREAM_S));
 
                 const gDn = makeRect(gDnX, gBy, FLANK_W, FLANK_H, COLOR_DOWNSTREAM, 2);
+                gDn.setAttribute('class', 'region-flank');
                 gDn.setAttribute('stroke', COLOR_DOWNSTREAM_S);
                 gDn.setAttribute('stroke-width', '1');
                 gDn.style.cursor = 'pointer';
@@ -262,6 +264,7 @@
                 const dnX    = VIRTUAL_WIDTH - PAD_RIGHT + FLANK_GAP;
 
                 const upRect = makeRect(upX, by, FLANK_W, FLANK_H, COLOR_UPSTREAM, 2);
+                upRect.setAttribute('class', 'region-flank');
                 upRect.setAttribute('stroke', COLOR_UPSTREAM_S);
                 upRect.setAttribute('stroke-width', '1');
                 upRect.style.cursor = 'pointer';
@@ -271,6 +274,7 @@
                 g.appendChild(makeFlankLabel(upX + FLANK_W / 2, cy, 'upstream', COLOR_UPSTREAM_S));
 
                 const dnRect = makeRect(dnX, by, FLANK_W, FLANK_H, COLOR_DOWNSTREAM, 2);
+                dnRect.setAttribute('class', 'region-flank');
                 dnRect.setAttribute('stroke', COLOR_DOWNSTREAM_S);
                 dnRect.setAttribute('stroke-width', '1');
                 dnRect.style.cursor = 'pointer';
