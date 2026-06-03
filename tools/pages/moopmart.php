@@ -170,8 +170,9 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       <?php endforeach; endforeach; endforeach; ?>
       <?php endif; ?>
     </div>
-    <div class="px-3 py-1 border-top d-flex align-items-center" style="background:#f8f9fa; font-size:0.8rem;">
+    <div class="px-3 py-1 border-top" style="background:#f8f9fa; font-size:0.8rem;">
       <span class="text-muted" id="mm-scope-counts">Select at least one organism above</span>
+      <div id="mm-scope-names" class="text-muted mt-1" style="font-size:0.78rem; font-style:italic;"></div>
     </div>
   </div>
 

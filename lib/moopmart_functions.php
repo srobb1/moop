@@ -21,8 +21,11 @@
  * Resolve raw input IDs (gene, mRNA, protein, CDS, etc.) to gene-level uniquenames
  * with a provenance string explaining why each gene was included.
  *
- * Walks up to 2 levels of parent_feature_id to find the enclosing gene.
+ * Uses getAncestors() to walk the full hierarchy regardless of depth, so
+ * protein→CDS→mRNA→gene (3 levels) works just as well as mRNA→gene (1 level).
  * Multiple input IDs that resolve to the same gene accumulate their reasons.
+ *
+ * Requires parent_functions.php (included transitively via blast_functions.php).
  *
  * @param string[] $input_ids    Raw IDs from user input
  * @param string   $db_path      Path to organism.sqlite
@@ -33,44 +36,24 @@ function moopmartResolveInputIds(array $input_ids, string $db_path, array $gene_
 {
     if (empty($input_ids) || empty($gene_set_ids)) return [];
 
-    $ph_ids = implode(',', array_fill(0, count($input_ids), '?'));
-    $ph_gs  = implode(',', array_fill(0, count($gene_set_ids), '?'));
-
-    $query = "SELECT
-                  f.feature_uniquename  AS f_name,
-                  f.feature_type        AS f_type,
-                  p.feature_uniquename  AS p_name,
-                  gp.feature_uniquename AS gp_name
-              FROM feature f
-              LEFT JOIN feature p  ON f.parent_feature_id = p.feature_id
-              LEFT JOIN feature gp ON p.parent_feature_id = gp.feature_id
-              WHERE f.feature_uniquename IN ($ph_ids)
-                AND f.gene_set_id IN ($ph_gs)";
-
-    $rows   = fetchData($query, $db_path, array_merge($input_ids, $gene_set_ids));
     $by_gene = [];
 
-    foreach ($rows as $row) {
-        $f_name  = $row['f_name'];
-        $f_type  = $row['f_type'];
-        $p_name  = $row['p_name'];
-        $gp_name = $row['gp_name'];
+    foreach ($input_ids as $id) {
+        // getAncestors returns [self, parent, grandparent, ...] — last element is the gene
+        $ancestors = getAncestors($id, $db_path, $gene_set_ids);
+        if (empty($ancestors)) continue;
 
-        if (!$p_name) {
-            // No parent — this IS the gene
-            $gene   = $f_name;
-            $reason = "Gene ID: $f_name";
-        } elseif (!$gp_name) {
-            // Parent has no grandparent — parent is the gene
-            $gene   = $p_name;
-            $reason = moopmartFeatureTypeLabel($f_type) . ": $f_name";
+        $self = $ancestors[0];
+        $gene = end($ancestors);
+
+        // If the feature itself has no parent it IS the gene
+        if (count($ancestors) === 1) {
+            $reason = "Gene ID: {$self['feature_uniquename']}";
         } else {
-            // Has grandparent — grandparent is the gene
-            $gene   = $gp_name;
-            $reason = moopmartFeatureTypeLabel($f_type) . ": $f_name";
+            $reason = moopmartFeatureTypeLabel($self['feature_type']) . ": {$self['feature_uniquename']}";
         }
 
-        $by_gene[$gene][] = $reason;
+        $by_gene[$gene['feature_uniquename']][] = $reason;
     }
 
     $result = [];

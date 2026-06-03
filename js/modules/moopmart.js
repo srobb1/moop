@@ -19,17 +19,28 @@
     // -------------------------------------------------------
 
     function updateScopeSummary() {
-        const el   = document.getElementById('mm-scope-counts');
+        const el        = document.getElementById('mm-scope-counts');
+        const namesEl   = document.getElementById('mm-scope-names');
         if (!el) return;
         const checked = Array.from(document.querySelectorAll('.mm-gs-cb:checked'));
         if (!checked.length) {
             el.textContent = 'Select at least one organism above';
+            if (namesEl) namesEl.textContent = '';
             return;
         }
         const orgs = new Set(checked.map(c => c.dataset.org)).size;
         const asms = new Set(checked.map(c => c.dataset.org + '|' + c.dataset.asm)).size;
         const gs   = checked.length;
         el.textContent = `${orgs} organism${orgs !== 1 ? 's' : ''}, ${asms} assembl${asms !== 1 ? 'ies' : 'y'}, ${gs} gene set${gs !== 1 ? 's' : ''} selected`;
+
+        if (namesEl) {
+            const orgNames = [...new Map(checked.map(c => [
+                c.dataset.org,
+                c.closest('.mm-scope-row')?.querySelector('em')?.textContent || c.dataset.org.replace(/_/g, ' ')
+            ])).values()];
+            const MAX = 6;
+            namesEl.textContent = orgNames.slice(0, MAX).join(', ') + (orgNames.length > MAX ? ` + ${orgNames.length - MAX} more` : '');
+        }
     }
 
     function initScopeList() {
