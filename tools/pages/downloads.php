@@ -13,10 +13,20 @@ $has_context = !empty($context_organism) || !empty($context_assembly)
 $clear_url   = '/' . $site . '/tools/downloads.php';
 ?>
 <div class="container mt-5">
-  <div class="row mb-3">
-    <div class="col-12">
-      <h2 class="mb-1"><i class="fas fa-download me-2"></i>Downloads</h2>
-      <p class="text-muted mb-0">Browse and download genome files for organisms you have access to.</p>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fas fa-download me-2"></i>Downloads</span>
+      <button type="button" class="btn btn-link p-0 text-white"
+              style="font-size:1rem; opacity:0.85; line-height:1;"
+              data-bs-toggle="popover" data-bs-placement="left" data-bs-trigger="focus" data-bs-html="true"
+              data-bs-title="How to use Downloads"
+              data-bs-content="Browse genome files organised by organism → assembly → gene set. Check individual files or use the checkboxes at each level to select everything within that group. When you have files selected, click <strong>Download Selected</strong> to fetch them all at once as a zip. Use <strong>Expand / Collapse All</strong> to navigate large trees quickly, and the filter box to narrow by organism name.">
+        <i class="fa fa-info-circle"></i>
+      </button>
+    </div>
+    <div class="card-body py-2">
+      <p class="text-muted small mb-0">Browse and download genome sequence and annotation files for organisms you have access to.</p>
     </div>
   </div>
 
@@ -84,7 +94,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
       <button id="deselect-all-btn" class="btn btn-sm btn-outline-secondary">
         <i class="far fa-square me-1"></i>Deselect All
       </button>
-      <button id="download-selected-btn" class="btn btn-sm btn-primary" disabled>
+      <button id="download-selected-btn" class="btn btn-sm fw-semibold text-white" style="background-color:#6366f1; border-color:#6366f1;" disabled>
         <i class="fas fa-download me-1"></i>Download Selected
         (<span id="selected-count">0</span> files<span id="selected-size-label"></span>)
       </button>
