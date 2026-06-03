@@ -69,38 +69,70 @@ function getAncestorsByFeatureId($feature_id, $dbFile, $gene_set_ids = []) {
  * @param array $gene_set_ids - Optional: Array of genome IDs to filter results (empty = no filtering)
  * @return array - Flat array of all children and descendants
  */
+/**
+ * Get all descendants of a feature as a flat array — single recursive CTE query.
+ * Replaces the previous recursive implementation that made one DB query per node.
+ *
+ * @param int    $feature_id   The root feature ID
+ * @param string $dbFile       Path to organism.sqlite
+ * @param array  $gene_set_ids Optional: accessible gene_set_ids for access control
+ * @return array Flat array of all descendant rows
+ */
 function getChildren($feature_id, $dbFile, $gene_set_ids = []) {
-    $children = [];
-    
-    $results = getChildrenByFeatureId($feature_id, $dbFile, $gene_set_ids);
-    
-    foreach ($results as $row) {
-        $children[] = $row;
-        $child_descendants = getChildren($row['feature_id'], $dbFile, $gene_set_ids);
-        $children = array_merge($children, $child_descendants);
+    $params = [$feature_id];
+
+    $gs_clause = '';
+    if (!empty($gene_set_ids)) {
+        $ph        = implode(',', array_fill(0, count($gene_set_ids), '?'));
+        $gs_clause = "AND f.gene_set_id IN ($ph)";
+        array_push($params, ...$gene_set_ids);
     }
-    return $children;
+
+    $query = "WITH RECURSIVE descendants AS (
+        SELECT f.feature_id, f.feature_uniquename, f.feature_name,
+               f.feature_description, f.feature_type, f.parent_feature_id
+        FROM   feature f
+        WHERE  f.parent_feature_id = ? $gs_clause
+        UNION ALL
+        SELECT f.feature_id, f.feature_uniquename, f.feature_name,
+               f.feature_description, f.feature_type, f.parent_feature_id
+        FROM   feature f
+        JOIN   descendants d ON f.parent_feature_id = d.feature_id
+    )
+    SELECT * FROM descendants";
+
+    return fetchData($query, $dbFile, $params);
 }
 
 /**
- * Get children with hierarchical structure (preserves parent-child relationships)
- * Unlike getChildren() which returns flat array, this preserves nesting
- * Each child has a 'grandchildren' key containing its own children
- * Enables proper display of parent -> child -> grandchild hierarchies
+ * Get all descendants as a nested tree (each row has a 'grandchildren' key).
+ * Uses a single CTE query then rebuilds the hierarchy in PHP — O(n) total.
  *
- * @param int $feature_id - The parent feature ID
- * @param string $dbFile - Path to SQLite database
- * @param array $gene_set_ids - Optional: Array of genome IDs to filter results
- * @return array - Array of children, each with 'grandchildren' key
+ * @param int    $feature_id   The root feature ID
+ * @param string $dbFile       Path to organism.sqlite
+ * @param array  $gene_set_ids Optional: accessible gene_set_ids for access control
+ * @return array Direct children, each with 'grandchildren' recursively populated
  */
 function getChildrenHierarchical($feature_id, $dbFile, $gene_set_ids = []) {
-    $results = getChildrenByFeatureId($feature_id, $dbFile, $gene_set_ids);
-    
-    foreach ($results as &$child) {
-        $child['grandchildren'] = getChildrenHierarchical($child['feature_id'], $dbFile, $gene_set_ids);
+    $flat = getChildren($feature_id, $dbFile, $gene_set_ids);
+    if (empty($flat)) return [];
+
+    // Group all nodes by their parent_feature_id for O(1) child lookup
+    $by_parent = [];
+    foreach ($flat as $row) {
+        $by_parent[$row['parent_feature_id']][] = $row;
     }
-    
-    return $results;
+
+    // Recursively attach grandchildren starting from direct children of $feature_id
+    return _buildChildTree($feature_id, $by_parent);
+}
+
+function _buildChildTree($parent_id, array &$by_parent) {
+    $children = $by_parent[$parent_id] ?? [];
+    foreach ($children as &$child) {
+        $child['grandchildren'] = _buildChildTree($child['feature_id'], $by_parent);
+    }
+    return $children;
 }
 
 /**
