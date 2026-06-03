@@ -104,7 +104,8 @@
               <tbody>
                 <tr><td>Download genes matching a keyword with their annotations</td><td>MOOPmart — description search</td></tr>
                 <tr><td>Download all genes in a gene set</td><td>MOOPmart — select the gene set, leave filters blank</td></tr>
-                <tr><td>Get sequences for a specific list of gene IDs</td><td>Retrieve Sequences</td></tr>
+                <tr><td>Get sequences for specific IDs from one assembly</td><td>Retrieve Sequences</td></tr>
+                <tr><td>Get sequences for IDs across multiple assemblies</td><td>MOOPmart — FASTA output</td></tr>
                 <tr><td>Download the genome FASTA or GFF file</td><td>Downloads page</td></tr>
                 <tr><td>Export my search result table</td><td>CSV / Excel buttons below the result table</td></tr>
                 <tr><td>Get all annotations for one gene</td><td>Download All Annotations on the gene's detail page</td></tr>
