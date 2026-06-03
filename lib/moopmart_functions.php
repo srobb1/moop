@@ -128,14 +128,22 @@ function moopmartGetChildIds(array $gene_feature_ids, string $db_path): array
     $result = [];
     foreach (array_chunk($gene_feature_ids, 500) as $chunk) {
         $ph    = implode(',', array_fill(0, count($chunk), '?'));
+        // Protein may be a direct child of mRNA OR a grandchild via CDS — handle both.
+        // Feature type may be stored as 'protein' or 'polypeptide' depending on the source GFF.
         $query = "SELECT
                       mrna.parent_feature_id  AS gene_fid,
                       mrna.feature_uniquename AS mrna_id,
-                      (SELECT prot.feature_uniquename
-                       FROM   feature prot
-                       WHERE  prot.parent_feature_id = mrna.feature_id
-                         AND  LOWER(prot.feature_type) = 'polypeptide'
-                       LIMIT  1) AS protein_id
+                      COALESCE(
+                          (SELECT prot.feature_uniquename FROM feature prot
+                           WHERE  prot.parent_feature_id = mrna.feature_id
+                             AND  LOWER(prot.feature_type) IN ('protein','polypeptide')
+                           LIMIT  1),
+                          (SELECT prot.feature_uniquename FROM feature cds
+                           JOIN   feature prot ON prot.parent_feature_id = cds.feature_id
+                                              AND LOWER(prot.feature_type) IN ('protein','polypeptide')
+                           WHERE  cds.parent_feature_id = mrna.feature_id
+                           LIMIT  1)
+                      ) AS protein_id
                   FROM  feature mrna
                   WHERE mrna.parent_feature_id IN ($ph)
                     AND LOWER(mrna.feature_type) IN ($type_ph)
