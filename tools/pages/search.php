@@ -15,21 +15,20 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
 <div class="container mt-4">
 
   <!-- Header -->
-  <div class="mb-4">
-    <h4 class="mb-1 moop-tool-title text-dark d-flex align-items-center gap-2">
-      Search Features by Annotation
-      <button type="button" class="btn btn-link p-0 text-muted"
-              style="font-size:0.85rem; line-height:1; font-weight:400; text-transform:none; letter-spacing:0;"
-              data-bs-toggle="popover" data-bs-placement="right" data-bs-trigger="focus"
+  <div class="card shadow-sm mb-4">
+    <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Search Features by Annotation</span>
+      <button type="button" class="btn btn-link p-0 text-white"
+              style="font-size:1rem; opacity:0.85; line-height:1;"
+              data-bs-toggle="popover" data-bs-placement="left" data-bs-trigger="focus" data-bs-html="true"
               data-bs-title="What is an annotation?"
               data-bs-content="An annotation is a functional description attached to a genomic feature — for example, a gene name, protein function, GO term, or database cross-reference. Most annotations are added by running bioinformatic analysis tools such as BLAST or InterProScan. This tool searches those descriptions to help you find specific genes, mRNAs, or other features across one or more organisms.">
         <i class="fa fa-info-circle"></i>
       </button>
-    </h4>
-    <p class="text-muted small mb-0">
-      Find specific genes, mRNAs, or other features by ID or keyword across one or more organisms.
-      Use <a href="moopmart.php" class="text-decoration-none">MOOPmart</a> to bulk-download many features at once.
-    </p>
+    </div>
+    <div class="card-body py-2">
+      <p class="text-muted small mb-0">Find specific genes, mRNAs, or other features by ID or keyword across one or more organisms. Use <a href="moopmart.php" class="text-decoration-none">MOOPmart</a> to bulk-download many features at once.</p>
+    </div>
   </div>
 
   <form id="searchForm">
@@ -192,14 +191,20 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
     </div>
 
     <!-- ④ Search -->
-    <div class="mb-4 d-flex gap-2">
-      <button type="submit" class="btn btn-lg flex-grow-1" id="searchBtn"
-              style="background:#7c3aed; border-color:#7c3aed; color:#fff; font-size:1.1rem;">
-        <i class="fa fa-search me-2"></i>Search
-      </button>
-      <button type="button" class="btn btn-lg btn-outline-danger" id="search-cancel-btn" style="display:none;">
-        <i class="fa fa-ban me-1"></i>Cancel
-      </button>
+    <div class="card mb-3 shadow-sm">
+      <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+        <span class="step-badge me-2">4</span>
+        <span class="fw-semibold" style="font-size:0.9rem;">Search</span>
+      </div>
+      <div class="card-body py-3 d-flex gap-2">
+        <button type="submit" class="btn btn-lg fw-semibold text-white flex-grow-1" id="searchBtn"
+                style="background:#6366f1; border-color:#6366f1;">
+          <i class="fa fa-search me-2"></i>Search
+        </button>
+        <button type="button" class="btn btn-lg btn-outline-danger" id="search-cancel-btn" style="display:none;">
+          <i class="fa fa-ban me-1"></i>Cancel
+        </button>
+      </div>
     </div>
 
   </form>

@@ -12,14 +12,18 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 <div class="container-fluid py-3">
 
   <!-- Header -->
-  <div class="mb-4">
-    <h4 class="mb-1 moop-tool-title text-dark">MOOPmart — Gene List Builder</h4>
-    <p class="text-muted mb-0 small">
-      Find genes or mRNAs by ID, name, annotation description, GO term, or genomic coordinates — then export decorated lists as TSV or FASTA.
-      <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline" style="font-size:0.85rem; color:#0891b2;" data-bs-toggle="modal" data-bs-target="#mm-help-modal">
+  <div class="card shadow-sm mb-4">
+    <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">MOOPmart — Gene List Builder</span>
+      <button type="button" class="btn btn-link p-0 text-white"
+              style="font-size:1rem; opacity:0.85; line-height:1;"
+              data-bs-toggle="modal" data-bs-target="#mm-help-modal">
         <i class="fa fa-info-circle"></i>
       </button>
-    </p>
+    </div>
+    <div class="card-body py-2">
+      <p class="text-muted small mb-0">Find genes or mRNAs by ID, name, annotation description, GO term, or genomic coordinates — then export decorated lists as TSV or FASTA.</p>
+    </div>
   </div>
 
   <!-- Help Modal -->
@@ -363,14 +367,17 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
   <!-- ③ Design Your Output -->
   <div class="card mb-3 shadow-sm">
-    <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
+    <div class="card-header py-2 d-flex align-items-center gap-2 cursor-pointer" style="background:#0891b2; color:#fff;"
+         data-bs-toggle="collapse" data-bs-target="#mm-design-body" aria-expanded="false" aria-controls="mm-design-body">
       <span class="step-badge me-2">3</span>
-      <span class="fw-semibold" style="font-size:0.9rem;">Design your output</span>
-      <i class="fa fa-info-circle ms-1" style="cursor:pointer; color:rgba(255,255,255,0.7);"
-         data-bs-toggle="popover" data-bs-placement="right" data-bs-html="true"
+      <span class="fw-semibold me-auto" style="font-size:0.9rem;">Design your output</span>
+      <i class="fa fa-info-circle" style="cursor:pointer; color:rgba(255,255,255,0.7);"
+         data-bs-toggle="popover" data-bs-placement="left" data-bs-html="true"
          data-bs-title="Design your output"
-         data-bs-content="Choose a <strong>format</strong> and which <strong>columns</strong> to include, then click Preview or Download in Step 4.<br><br><strong>TSV (Tab-Separated Values)</strong> — a plain-text spreadsheet where columns are separated by tab characters. To open in Excel: choose <em>File &rarr; Open</em>, select the downloaded file, and Excel will parse it automatically (or use <em>Data &rarr; From Text/CSV</em> if it opens as one column).<br><br><strong>Wide vs Long</strong> — Wide puts all annotation values for a feature on one row, joined with &#039;; &#039;. Long gives one row per annotation, which is easier to filter in Excel.<br><br><strong>FASTA</strong> — a standard sequence format used by bioinformatics tools. Each entry starts with a <code>&gt;header</code> line (containing the feature ID and organism), followed by the nucleotide or protein sequence on the next line. FASTA files can be opened in any text editor or loaded directly into tools like BLAST, MUSCLE, or Galaxy."></i>
+         data-bs-content="Choose a <strong>format</strong> and which <strong>columns</strong> to include, then click Preview or Download in Step 4.<br><br><strong>TSV (Tab-Separated Values)</strong> — a plain-text spreadsheet where columns are separated by tab characters. To open in Excel: choose <em>File &rarr; Open</em>, select the downloaded file, and Excel will parse it automatically (or use <em>Data &rarr; From Text/CSV</em> if it opens as one column).<br><br><strong>Wide vs Long</strong> — Wide puts all annotation values for a feature on one row, joined with &#039;; &#039;. Long gives one row per annotation, which is easier to filter in Excel.<br><br><strong>FASTA</strong> — a standard sequence format used by bioinformatics tools. Each entry starts with a <code>&gt;header</code> line (containing the feature ID and organism), followed by the nucleotide or protein sequence on the next line. FASTA files can be opened in any text editor or loaded directly into tools like BLAST, MUSCLE, or Galaxy." onclick="event.stopPropagation();"></i>
+      <i class="fa fa-chevron-down ms-1" style="font-size:0.75rem; opacity:0.8; transition:transform 0.2s;" id="mm-design-chevron"></i>
     </div>
+    <div class="collapse" id="mm-design-body">
     <div class="card-body pt-3">
 
       <!-- Format toggle -->
@@ -549,6 +556,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       </div>
 
     </div>
+    </div><!-- /collapse -->
   </div>
 
   <!-- ④ Preview & Download -->

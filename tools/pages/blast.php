@@ -20,9 +20,22 @@
 ?>
 
 <div class="container mt-5">
-    <div class="mb-3"></div>
 
-    <h2 class="mb-4"><i class="fa fa-dna"></i> BLAST Search</h2>
+    <div class="card shadow-sm mb-4">
+      <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
+        <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-dna me-2"></i>BLAST Search</span>
+        <button type="button" class="btn btn-link p-0 text-white"
+                style="font-size:1rem; opacity:0.85; line-height:1;"
+                data-bs-toggle="popover" data-bs-placement="left" data-bs-trigger="focus" data-bs-html="true"
+                data-bs-title="How to use BLAST"
+                data-bs-content="<ol class='mb-0 ps-3'><li>Paste a DNA or protein sequence (FASTA or plain text)</li><li>Select a BLAST program — the program determines which databases are available</li><li>Choose an organism and database to search against</li><li>Optionally adjust advanced parameters (e-value, max hits, scoring matrix, etc.)</li><li>Click <strong>Run BLAST</strong></li></ol>">
+          <i class="fa fa-info-circle"></i>
+        </button>
+      </div>
+      <div class="card-body py-2">
+        <p class="text-muted small mb-0">Search genome assemblies by sequence similarity. Paste a DNA or protein sequence, select a program and database, and run.</p>
+      </div>
+    </div>
 
     <?php if (empty($accessible_sources)): ?>
         <div class="alert alert-warning">
@@ -30,16 +43,6 @@
             <p class="mb-0">You do not have access to any organism assemblies, or the data directory is misconfigured.</p>
         </div>
     <?php else: ?>
-        <div class="fasta-info-box">
-            <strong><i class="fa fa-info-circle"></i> How to use:</strong>
-            <ol class="mb-0 mt-2">
-                <li>Paste a DNA or protein sequence</li>
-                <li>Select BLAST program (type determines available databases)</li>
-                <li>Select organism and database</li>
-                <li>Configure advanced options if needed</li>
-                <li>Click Search to run BLAST</li>
-            </ol>
-        </div>
 
         <?php if (isset($search_error)): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -57,73 +60,84 @@
             <input type="hidden" name="assembly" value="">
             <input type="hidden" name="gene_set" value="">
 
-            <!-- Sequence Input -->
-            <div class="mb-4">
-                <label for="query" class="form-label"><strong>Paste Sequence</strong></label>
-                <textarea 
-                    id="query" 
-                    name="query" 
-                    class="form-control fasta-textarea-ids" 
-                    rows="8"
-                    required
-                    placeholder="Enter sequence in FASTA format or plain text"
-                ><?= htmlspecialchars($search_query) ?></textarea>
-                <small class="form-text text-muted">You can paste FASTA format (with >) or just the raw sequence.</small>
-                
-                <div class="mt-2 d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-info" onclick="loadSampleSequence('protein')">
-                        <i class="fa fa-flask"></i> Sample Protein
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-info" onclick="loadSampleSequence('nucleotide')">
-                        <i class="fa fa-flask"></i> Sample Nucleotide
-                    </button>
+            <!-- Step 1: Sequence Input -->
+            <div class="card mb-3 shadow-sm">
+                <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+                    <span class="step-badge me-2">1</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;">Paste a sequence</span>
+                </div>
+                <div class="card-body py-3">
+                    <textarea
+                        id="query"
+                        name="query"
+                        class="form-control fasta-textarea-ids"
+                        rows="8"
+                        required
+                        placeholder="Enter sequence in FASTA format or plain text"
+                    ><?= htmlspecialchars($search_query) ?></textarea>
+                    <small class="form-text text-muted">FASTA format (with &gt;) or plain sequence.</small>
+                    <div class="mt-2 d-flex gap-2">
+                        <button type="button" class="btn btn-sm fw-semibold text-white" style="background-color:#0891b2; border-color:#0891b2;" onclick="loadSampleSequence('protein')">
+                            <i class="fa fa-flask me-1"></i>Sample Protein
+                        </button>
+                        <button type="button" class="btn btn-sm fw-semibold text-white" style="background-color:#0891b2; border-color:#0891b2;" onclick="loadSampleSequence('nucleotide')">
+                            <i class="fa fa-flask me-1"></i>Sample Nucleotide
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- BLAST Program Selection -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <label for="blast_program" class="form-label"><strong>BLAST Program</strong></label>
-                    <div id="sequenceTypeInfo" class="sequence-type-info" style="display: none;">
+            <!-- Step 2: BLAST Program -->
+            <div class="card mb-3 shadow-sm">
+                <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+                    <span class="step-badge me-2">2</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;">Select a BLAST program</span>
+                </div>
+                <div class="card-body py-3">
+                    <div id="sequenceTypeInfo" class="sequence-type-info mb-2" style="display:none;">
                         <small id="sequenceTypeMessage"></small>
                     </div>
                     <select id="blast_program" name="blast_program" class="form-control" onchange="updateDatabaseList();">
-                        <option value="blastn" <?= $blast_program === 'blastn' ? 'selected' : '' ?>>BLASTn (DNA vs DNA)</option>
-                        <option value="blastp" <?= $blast_program === 'blastp' ? 'selected' : '' ?>>BLASTp (Protein vs Protein)</option>
-                        <option value="blastx" <?= $blast_program === 'blastx' ? 'selected' : '' ?>>BLASTx (DNA to Protein)</option>
-                        <option value="tblastn" <?= $blast_program === 'tblastn' ? 'selected' : '' ?>>tBLASTn (Protein vs DNA)</option>
-                        <option value="tblastx" <?= $blast_program === 'tblastx' ? 'selected' : '' ?>>tBLASTx (DNA vs DNA)</option>
+                        <option value="blastn"  <?= $blast_program === 'blastn'  ? 'selected' : '' ?>>BLASTn — DNA query vs DNA database</option>
+                        <option value="blastp"  <?= $blast_program === 'blastp'  ? 'selected' : '' ?>>BLASTp — Protein query vs protein database</option>
+                        <option value="blastx"  <?= $blast_program === 'blastx'  ? 'selected' : '' ?>>BLASTx — DNA query vs protein database (translated)</option>
+                        <option value="tblastn" <?= $blast_program === 'tblastn' ? 'selected' : '' ?>>tBLASTn — Protein query vs DNA database (translated)</option>
+                        <option value="tblastx" <?= $blast_program === 'tblastx' ? 'selected' : '' ?>>tBLASTx — DNA query vs DNA database (both translated)</option>
                     </select>
                 </div>
             </div>
 
-            <!-- Source Selection -->
-            <?php
-            $clear_filter_function = 'clearBlastSourceFilters';
-            $on_change_function = 'updateDatabaseList';
-            include __DIR__ . '/../../includes/source-list.php';
-            ?>
-
-            <!-- Current Selection Display -->
-            <div class="mb-4 p-3 bg-light border rounded">
-                <strong>Currently Selected:</strong>
-                <div id="currentSelection" style="margin-top: 8px; font-size: 14px;">
-                    <span style="color: #999;">None selected</span>
+            <!-- Step 3: Organism and Database -->
+            <div class="card mb-3 shadow-sm">
+                <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+                    <span class="step-badge me-2">3</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;">Select organism and database</span>
                 </div>
-            </div>
-
-            <!-- Database Selection -->
-            <div class="mt-4" id="databaseSelector">
-                <label class="form-label"><strong>Select Database</strong></label>
-                <div id="databaseBadges" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
-                    <div style="padding: 15px; text-align: center; color: #666; width: 100%;">
-                        <small>Select an assembly first</small>
+                <div class="card-body py-3">
+                    <?php
+                    $clear_filter_function = 'clearBlastSourceFilters';
+                    $on_change_function = 'updateDatabaseList';
+                    include __DIR__ . '/../../includes/source-list.php';
+                    ?>
+                    <div class="mt-3 p-3 bg-light border rounded">
+                        <strong>Currently selected:</strong>
+                        <div id="currentSelection" style="margin-top:8px; font-size:14px;">
+                            <span style="color:#999;">None selected</span>
+                        </div>
+                    </div>
+                    <div class="mt-3" id="databaseSelector">
+                        <label class="form-label fw-semibold">Database</label>
+                        <div id="databaseBadges" style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <div style="padding:15px; text-align:center; color:#666; width:100%;">
+                                <small>Select an assembly first</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Advanced Options -->
-            <div class="mt-4">
+            <!-- Advanced Options (unnumbered — optional) -->
+            <div class="mb-3">
                 <button class="btn btn-outline-secondary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#advOptions" aria-expanded="false" aria-controls="advOptions">
                     <i class="fas fa-sliders-h"></i> <strong>Advanced Options</strong>
                 </button>
@@ -269,19 +283,25 @@
                 </div>
             </div>
 
-            <!-- Submit Button -->
-            <div class="d-grid gap-2 d-md-flex gap-md-2 mt-4">
-                <button type="submit" class="btn btn-primary btn-lg" id="searchBtn">
-                    <i class="fa fa-search"></i> Search BLAST
-                </button>
+            <!-- Step 4: Run -->
+            <div class="card mb-3 shadow-sm">
+                <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+                    <span class="step-badge me-2">4</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;">Run BLAST</span>
+                </div>
+                <div class="card-body py-3">
+                    <button type="submit" class="btn btn-lg fw-semibold text-white w-100" id="searchBtn" style="background-color:#6366f1; border-color:#6366f1;">
+                        <i class="fa fa-search me-1"></i>Run BLAST
+                    </button>
+                </div>
             </div>
         </form>
         
         <!-- Results Section -->
         <?php if (isset($blast_result) && !empty($blast_result)): ?>
             <div class="card mt-5 shadow-sm" id="blastResultsCard">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fa fa-chart-bar"></i> BLAST Results</h5>
+                <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
+                    <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-chart-bar me-2"></i>BLAST Results</span>
                 </div>
                 <div class="card-body">
                     <div class="mb-4 d-flex gap-2 flex-wrap">

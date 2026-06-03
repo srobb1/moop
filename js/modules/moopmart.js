@@ -683,6 +683,14 @@
         });
 
         updateCoordState();
+
+        // Chevron rotation for step 3 collapse
+        const designCollapse = document.getElementById('mm-design-body');
+        const designChevron  = document.getElementById('mm-design-chevron');
+        if (designCollapse && designChevron) {
+            designCollapse.addEventListener('show.bs.collapse',  () => designChevron.style.transform = 'rotate(180deg)');
+            designCollapse.addEventListener('hide.bs.collapse',  () => designChevron.style.transform = 'rotate(0deg)');
+        }
     });
 
 })();

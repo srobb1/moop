@@ -324,17 +324,14 @@ function loadSampleIds() {
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
-        // Check if shouldScroll option was provided via PHP
         const shouldScroll = typeof scrollToResults !== 'undefined' ? scrollToResults : false;
         initializeSequenceRetrieval({ shouldScroll: shouldScroll });
-        
-        // Delay tooltip initialization to ensure Bootstrap is loaded
         setTimeout(initializeCopyTooltips, 500);
+        document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el, { sanitize: false }));
     });
 } else {
-    // Already loaded
     const shouldScroll = typeof scrollToResults !== 'undefined' ? scrollToResults : false;
     initializeSequenceRetrieval({ shouldScroll: shouldScroll });
-    
     setTimeout(initializeCopyTooltips, 500);
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el, { sanitize: false }));
 }
