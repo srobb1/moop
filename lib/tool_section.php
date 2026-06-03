@@ -75,8 +75,13 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
 <!-- Tools Section -->
 <div class="card shadow-sm">
     <div class="card-header bg-tools text-white py-2">
-        <span class="step-badge me-2">2</span>
-        <span class="fw-semibold" style="font-size:0.9rem;">Choose a tool — it runs on your selection</span>
+        <?php if (($context['page'] ?? '') === 'index'): ?>
+            <span class="step-badge me-2">2</span>
+            <span class="fw-semibold" style="font-size:0.9rem;">Choose a tool — it runs on your selection</span>
+        <?php else: ?>
+            <i class="fa fa-toolbox me-2"></i>
+            <span class="fw-semibold" style="font-size:0.9rem;">Toolbox</span>
+        <?php endif; ?>
     </div>
     <div class="card-body p-2">
         <div class="d-flex flex-wrap gap-2">
