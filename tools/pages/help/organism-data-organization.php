@@ -35,6 +35,7 @@
       <li><a href="#database-schema">Database Schema</a></li>
       <li><a href="#hierarchical-structure">Feature Hierarchy</a></li>
       <li><a href="#annotation-system">Annotation System</a></li>
+      <li><a href="#example-queries">Example SQLite Queries</a></li>
     </ul>
   </div>
 
@@ -205,7 +206,7 @@
     <p class="text-muted">Each organism has one SQLite database. The core tables are:</p>
 
     <div class="card mb-3">
-      <div class="card-header" style="background-color:#0f766e; color:white;"><code>organism</code> — species metadata</div>
+      <div class="card-header" style="background-color:#0f766e; color:white;"><code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">organism</code> — species metadata</div>
       <div class="card-body">
         <table class="table table-sm mb-1">
           <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
@@ -222,7 +223,7 @@
     </div>
 
     <div class="card mb-3">
-      <div class="card-header" style="background-color:#d97706; color:white;"><code>genome</code> — assembly metadata</div>
+      <div class="card-header" style="background-color:#d97706; color:white;"><code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">genome</code> — assembly metadata</div>
       <div class="card-body">
         <table class="table table-sm mb-1">
           <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
@@ -239,7 +240,7 @@
     </div>
 
     <div class="card mb-3">
-      <div class="card-header" style="background-color:#e11d48; color:white;"><code>gene_set</code> — gene set metadata</div>
+      <div class="card-header" style="background-color:#e11d48; color:white;"><code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">gene_set</code> — gene set metadata</div>
       <div class="card-body">
         <table class="table table-sm mb-1">
           <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
@@ -255,7 +256,7 @@
     </div>
 
     <div class="card mb-3">
-      <div class="card-header bg-secondary text-white"><code>feature</code> — genomic elements (genes, mRNAs, exons, proteins)</div>
+      <div class="card-header bg-secondary text-white"><code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">feature</code> — genomic elements (genes, mRNAs, exons, proteins)</div>
       <div class="card-body">
         <table class="table table-sm mb-1">
           <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
@@ -275,7 +276,7 @@
     </div>
 
     <div class="card mb-3">
-      <div class="card-header" style="background-color:#ff9800; color:white;"><code>annotation_source</code> — external databases</div>
+      <div class="card-header" style="background-color:#ff9800; color:white;"><code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">annotation_source</code> — external databases</div>
       <div class="card-body">
         <table class="table table-sm mb-1">
           <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
@@ -292,7 +293,7 @@
     </div>
 
     <div class="card mb-3">
-      <div class="card-header bg-danger text-white"><code>annotation</code> — annotation records</div>
+      <div class="card-header bg-danger text-white"><code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">annotation</code> — annotation records</div>
       <div class="card-body">
         <table class="table table-sm mb-1">
           <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
@@ -308,7 +309,7 @@
     </div>
 
     <div class="card mb-3">
-      <div class="card-header" style="background-color:#6366f1; color:white;"><code>feature_annotation</code> — links features to annotations</div>
+      <div class="card-header" style="background-color:#6366f1; color:white;"><code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">feature_annotation</code> — links features to annotations</div>
       <div class="card-body">
         <table class="table table-sm mb-1">
           <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
@@ -488,6 +489,113 @@
               └─ id=3, name="Gene Ontology",          type="Gene Ontology"</code></pre>
       </div>
     </div>
+  </section>
+
+  <!-- Example Queries -->
+  <section id="example-queries" class="mt-5">
+    <h4 class="fw-semibold mb-3"><i class="fa fa-terminal me-2"></i>Example SQLite Queries</h4>
+    <p class="text-muted mb-3">Run these against <code>organisms/Organism_Name/organism.sqlite</code> using <code>sqlite3</code> on the server or any SQLite browser.</p>
+
+    <div class="card mb-3">
+      <div class="card-header py-2 bg-light fw-semibold">Count genes and transcripts in a gene set</div>
+      <div class="card-body p-0">
+        <pre class="m-0 p-3 bg-dark text-light rounded-bottom" style="font-size:0.8rem;"><code>SELECT
+    gs.gene_set_name,
+    SUM(CASE WHEN f.feature_type = 'gene' THEN 1 ELSE 0 END) AS genes,
+    SUM(CASE WHEN f.feature_type = 'mRNA' THEN 1 ELSE 0 END) AS transcripts
+FROM gene_set gs
+JOIN feature f ON f.gene_set_id = gs.gene_set_id
+GROUP BY gs.gene_set_id, gs.gene_set_name;</code></pre>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header py-2 bg-light fw-semibold">Look up a feature by ID and get its gene set and assembly</div>
+      <div class="card-body p-0">
+        <pre class="m-0 p-3 bg-dark text-light rounded-bottom" style="font-size:0.8rem;"><code>SELECT
+    f.feature_uniquename,
+    f.feature_type,
+    f.feature_name,
+    gs.gene_set_name,
+    g.genome_accession
+FROM feature f
+JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
+JOIN genome g    ON gs.genome_id  = g.genome_id
+WHERE f.feature_uniquename = 'g24397';</code></pre>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header py-2 bg-light fw-semibold">Search feature descriptions for a keyword</div>
+      <div class="card-body p-0">
+        <pre class="m-0 p-3 bg-dark text-light rounded-bottom" style="font-size:0.8rem;"><code>SELECT feature_uniquename, feature_type, feature_name, feature_description
+FROM feature
+WHERE feature_description LIKE '%kinase%'
+  AND feature_type = 'gene'
+LIMIT 50;</code></pre>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header py-2 bg-light fw-semibold">Get all annotations for a feature (with source info)</div>
+      <div class="card-body p-0">
+        <pre class="m-0 p-3 bg-dark text-light rounded-bottom" style="font-size:0.8rem;"><code>SELECT
+    ans.annotation_type,
+    ans.annotation_source_name,
+    a.annotation_accession,
+    a.annotation_description,
+    fa.score
+FROM feature f
+JOIN feature_annotation fa ON fa.feature_id        = f.feature_id
+JOIN annotation        a   ON a.annotation_id       = fa.annotation_id
+JOIN annotation_source ans ON ans.annotation_source_id = a.annotation_source_id
+WHERE f.feature_uniquename = 'g24397'
+ORDER BY ans.annotation_type, fa.score;</code></pre>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header py-2 bg-light fw-semibold">Find all features annotated with a specific GO term</div>
+      <div class="card-body p-0">
+        <pre class="m-0 p-3 bg-dark text-light rounded-bottom" style="font-size:0.8rem;"><code>SELECT DISTINCT f.feature_uniquename, f.feature_name, f.feature_type
+FROM feature f
+JOIN feature_annotation fa ON fa.feature_id  = f.feature_id
+JOIN annotation        a   ON a.annotation_id = fa.annotation_id
+WHERE a.annotation_accession = 'GO:0006351'  -- transcription by RNA pol II
+  AND f.feature_type = 'gene';</code></pre>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header py-2 bg-light fw-semibold">Annotation count by type for a gene set</div>
+      <div class="card-body p-0">
+        <pre class="m-0 p-3 bg-dark text-light rounded-bottom" style="font-size:0.8rem;"><code>SELECT
+    ans.annotation_type,
+    COUNT(DISTINCT a.annotation_id)  AS unique_annotations,
+    COUNT(DISTINCT f.feature_id)     AS annotated_genes
+FROM gene_set gs
+JOIN feature           f   ON f.gene_set_id         = gs.gene_set_id
+JOIN feature_annotation fa ON fa.feature_id          = f.feature_id
+JOIN annotation         a  ON a.annotation_id        = fa.annotation_id
+JOIN annotation_source ans ON ans.annotation_source_id = a.annotation_source_id
+WHERE gs.gene_set_name = 'SIMR_2025-01-24'
+  AND f.feature_type   = 'gene'
+GROUP BY ans.annotation_type
+ORDER BY annotated_genes DESC;</code></pre>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header py-2 bg-light fw-semibold">Get all mRNA children of a gene</div>
+      <div class="card-body p-0">
+        <pre class="m-0 p-3 bg-dark text-light rounded-bottom" style="font-size:0.8rem;"><code>SELECT child.feature_uniquename, child.feature_type, child.feature_name
+FROM feature parent
+JOIN feature child ON child.parent_feature_id = parent.feature_id
+WHERE parent.feature_uniquename = 'g24397'
+  AND child.feature_type = 'mRNA';</code></pre>
+      </div>
+    </div>
+
   </section>
 
   <!-- Summary -->
