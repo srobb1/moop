@@ -373,9 +373,9 @@ code {
   display: none;
 }
 
-/* Light blue background for search form sections */
+/* Search form section background */
 .bg-search-light {
-  background-color: #e8f4f8;
+  background-color: #fff;
 }
 
 /* Card header styling - darker blue background */
@@ -648,20 +648,87 @@ code {
   color: white;
 }
 
-.assembly-header-custom {
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-  color: white;
-  padding: 2rem;
+/* ========== SHARED FEATURE INFO BOX LAYOUT ========== */
+/* Used by parent, assembly, and gene_set pages */
+
+.feature-header {
+  background: white;
+  color: #333;
+  padding: 0;
   border-radius: 0.5rem;
-  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.feature-overview-body {
+  padding: 0.5rem 1.1rem 0.6rem;
+}
+
+.feature-info-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  row-gap: 0.15rem;
+  column-gap: 0.65rem;
+  font-size: 0.875rem;
+}
+
+.feature-info-grid dt {
+  color: #6c757d;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.feature-info-grid dd {
+  margin-bottom: 0;
+  color: #333;
+}
+
+.feature-info-grid a {
+  color: #333;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.feature-info-grid a:hover {
+  text-decoration: none;
+}
+
+.link-icon {
+  opacity: 0.35;
+  font-size: 0.7em;
+  vertical-align: middle;
+  margin-left: 0.25em;
+  transition: opacity 0.2s ease;
+}
+
+a:hover .link-icon {
+  opacity: 0.75;
+}
+
+/* ========================================================= */
+
+.assembly-header-custom {
+  background: white;
+  color: #333;
+  padding: 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.assembly-header-custom .feature-info-grid a:hover {
+  color: #b45309;
 }
 
 .assembly-header-custom h1 {
-  background-color: #d97706 !important;
-  font-weight: 700;
-  margin-bottom: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 1.05rem;
+  margin: 0;
+  padding: 0.6rem 1.25rem;
   color: white;
+  background-color: #d97706;
 }
+
 
 .assembly-value {
   color: rgba(255, 255, 255, 0.95);
@@ -692,18 +759,26 @@ code {
 }
 
 .gene-set-header-custom {
-  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
-  color: white;
-  padding: 2rem;
+  background: white;
+  color: #333;
+  padding: 0;
   border-radius: 0.5rem;
-  margin-bottom: 2rem;
+  overflow: hidden;
 }
 
 .gene-set-header-custom h1 {
-  background-color: #e11d48 !important;
-  font-weight: 700;
-  margin-bottom: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 1.05rem;
+  margin: 0;
+  padding: 0.6rem 1.25rem;
   color: white;
+  background-color: #e11d48;
+}
+
+.gene-set-header-custom .feature-info-grid a:hover {
+  color: #9f1239;
 }
 
 .gene-set-heading {

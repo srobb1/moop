@@ -443,7 +443,7 @@ function generateChildAnnotationCards($child, $all_annotations, $analysis_order,
     $html .= "    <span class=\"collapse-section\" data-bs-toggle=\"collapse\" data-bs-target=\"#child_$child_feature_id\" aria-expanded=\"true\" role=\"button\">";
     $html .= "      <i class=\"fas fa-minus toggle-icon text-info\"></i>";
     $html .= "    </span>";
-    $html .= "    <strong class=\"ms-2 text-dark\"><span class=\"text-white px-2 py-1 rounded child-feature-badge $badge_class badge-xlg\">$child_uniquename ($child_type)</span></strong>";
+    $html .= "    <span class=\"ms-2 text-white px-2 py-1 rounded child-feature-badge $badge_class badge-md\">$child_uniquename ($child_type)</span>";
     
     // Show colored annotation type badges
     if ($child_annotation_count > 0) {

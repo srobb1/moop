@@ -263,13 +263,8 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
   <!-- Search Results -->
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-5">
-      <div class="card-header bg-search-results text-white">
-        <h4 class="mb-0">
-          <i class="fa fa-list"></i> Search Results
-          <i class="fa fa-info-circle search-results-help-trigger"
-             style="cursor:pointer; margin-left:0.5rem; font-size:0.9em;"
-             data-help-type="results"></i>
-        </h4>
+      <div class="card-header bg-search-results">
+        <span class="fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-list me-1"></i> Search Results <i class="fa fa-info-circle search-results-help-trigger" style="cursor:pointer; margin-left:0.4rem; font-size:0.85em;" data-help-type="results"></i></span>
       </div>
       <div class="card-body">
         <div id="searchInfo" class="alert alert-info mb-3"></div>

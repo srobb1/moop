@@ -28,18 +28,22 @@
     <div class="col-lg-8">
       <div class="card shadow-sm h-100">
         <!-- Title Card -->
-        <div class="card-header bg-light border-bottom">
-          <h1 class="fw-bold mb-0 text-center"><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></h1>
+        <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0f766e;">
+          <div>
+            <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></span>
+            <div style="font-size:0.7rem; opacity:0.8; margin-top:0.1rem;">Search limited to this organism</div>
+          </div>
+          <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;">Organism</span>
         </div>
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> Search Gene IDs and Annotations <i class="fa fa-info-circle info-icon search-instructions-trigger" data-help-type="basic"></i></h4>
+          <div class="mb-2 fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <i class="fa fa-info-circle info-icon search-instructions-trigger" style="cursor:pointer; margin-left:0.4rem; font-size:0.85em;" data-help-type="basic"></i></div>
           <form id="organismSearchForm">
             <div class="row align-items-center">
               <div class="col">
                 <div class="d-flex gap-2 align-items-center">
-                  <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
+                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
                   <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
                     <i class="fa fa-search"></i>
                   </button>
@@ -67,8 +71,8 @@
   <!-- Search Results Section -->
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-4">
-      <div class="card-header bg-search-results text-white">
-        <h4 class="mb-0"><i class="fa fa-list"></i> Search Results <i class="fa fa-info-circle info-icon search-results-help-trigger" data-help-type="results"></i></h4>
+      <div class="card-header bg-search-results">
+        <span class="fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-list me-1"></i> Search Results <i class="fa fa-info-circle info-icon search-results-help-trigger" style="cursor:pointer; margin-left:0.4rem; font-size:0.85em;" data-help-type="results"></i></span>
       </div>
       <div class="card-body">
         <div id="searchInfo" class="alert alert-info mb-3"></div>

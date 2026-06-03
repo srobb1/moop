@@ -6,18 +6,22 @@
     <div class="col-lg-8">
       <div class="card shadow-sm h-100">
         <!-- Title Card -->
-        <div class="card-header bg-light border-bottom">
-          <h1 class="fw-bold mb-0 text-center"><?= htmlspecialchars($assembly_info['genome_name']) ?></h1>
+        <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#d97706;">
+          <div>
+            <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><?= htmlspecialchars($assembly_info['genome_name']) ?></span>
+            <div style="font-size:0.7rem; opacity:0.8; margin-top:0.1rem;">Search limited to this assembly</div>
+          </div>
+          <span class="badge bg-white text-assembly" style="font-size:0.65em; opacity:0.9;">Assembly</span>
         </div>
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> Search Gene IDs and Annotations <i class="fa fa-info-circle search-instructions-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-help-type="basic"></i></h4>
+          <div class="mb-2 fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <i class="fa fa-info-circle search-instructions-trigger" style="cursor:pointer; margin-left:0.4rem; font-size:0.85em;" data-help-type="basic"></i></div>
           <form id="assemblySearchForm">
             <div class="row align-items-center">
               <div class="col">
                 <div class="d-flex gap-2 align-items-center">
-                  <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
+                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
                   <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
                     <i class="fa fa-search"></i>
                   </button>
@@ -45,9 +49,10 @@
   <!-- Search Results Section -->
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-4">
-      <div class="card-header bg-search-results text-white">
-        <h4 class="mb-0"><i class="fa fa-list"></i> Search Results <i class="fa fa-info-circle search-results-help-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.9em;" data-help-type="results"></i></h4>
+      <div class="card-header bg-search-results">
+        <span class="fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-list me-1"></i> Search Results <i class="fa fa-info-circle search-results-help-trigger" style="cursor:pointer; margin-left:0.4rem; font-size:0.85em;" data-help-type="results"></i></span>
       </div>
+
       <div class="card-body">
         <div id="searchInfo" class="alert alert-info mb-3"></div>
         <div id="searchProgress" class="mb-3"></div>
@@ -104,45 +109,39 @@
 
     <div class="<?= $show_image ? 'col-md-8' : 'col-12' ?>">
       <div class="feature-header assembly-header-custom shadow">
-        <h1 class="mb-2 assembly-heading">
-          <?= htmlspecialchars($assembly_info['genome_name']) ?>
-          <span class="badge bg-assembly ms-2">Assembly</span>
-        </h1>
-        <div class="feature-info-item">
-          <strong>Accession:</strong> <span class="feature-value text-monospace"><?= htmlspecialchars($assembly_info['genome_accession']) ?></span>
-        </div>
-        <div class="feature-info-item">
-          <strong>Organism:</strong> <span class="feature-value"><em><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>" class="link-light-bordered"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></a></em></span>
-        </div>
-        <?php if (!empty($assembly_meta['source'])): ?>
-        <div class="feature-info-item">
-          <strong>Source:</strong> <span class="feature-value"><?= htmlspecialchars($assembly_meta['source']) ?></span>
-        </div>
-        <?php endif; ?>
-        <?php if (!empty($assembly_meta['date_added'])): ?>
-        <div class="feature-info-item">
-          <strong>Date added:</strong> <span class="feature-value"><?= htmlspecialchars($assembly_meta['date_added']) ?></span>
-        </div>
-        <?php endif; ?>
-        <?php if (!empty($assembly_meta['note'])): ?>
-        <div class="feature-info-item">
-          <strong>Note:</strong> <span class="feature-value"><?= htmlspecialchars($assembly_meta['note']) ?></span>
-        </div>
-        <?php endif; ?>
-        <?php if ($genome_file):
-          $colorInfo = getColorClassOrStyle($genome_file['info']['color'] ?? '');
-        ?>
-        <div class="feature-info-item" style="border-top: 1px solid rgba(255,255,255,0.25); margin-top: 0.5rem; padding-top: 1rem;">
-          <div class="chip-container">
+        <h1><?= htmlspecialchars($assembly_info['genome_name']) ?> <span class="badge bg-white text-assembly ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;">Assembly</span></h1>
+        <div class="feature-overview-body">
+          <dl class="feature-info-grid mb-0">
+            <dt>Accession</dt>
+            <dd><?= htmlspecialchars($assembly_info['genome_accession']) ?></dd>
+            <dt>Organism</dt>
+            <dd><em><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?><i class="fa fa-external-link-alt link-icon"></i></a></em></dd>
+            <?php if (!empty($assembly_meta['source'])): ?>
+            <dt>Source</dt>
+            <dd><?= htmlspecialchars($assembly_meta['source']) ?></dd>
+            <?php endif; ?>
+            <?php if (!empty($assembly_meta['date_added'])): ?>
+            <dt>Date added</dt>
+            <dd><?= htmlspecialchars($assembly_meta['date_added']) ?></dd>
+            <?php endif; ?>
+            <?php if (!empty($assembly_meta['note'])): ?>
+            <dt>Note</dt>
+            <dd><?= htmlspecialchars($assembly_meta['note']) ?></dd>
+            <?php endif; ?>
+          </dl>
+          <?php if ($genome_file):
+            $colorInfo = getColorClassOrStyle($genome_file['info']['color'] ?? '');
+          ?>
+          <div class="mt-2 pt-2" style="border-top: 1px solid #dee2e6;">
             <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=&type=<?= urlencode($genome_file['info']['seq_type'] ?? $genome_file['type']) ?>"
-               class="btn <?= $colorInfo['class'] ?> fw-semibold text-white"
-               style="border-radius: 16px; font-size: 0.9rem; padding: 6px 14px; <?= $colorInfo['style'] ?>"
+               class="btn btn-sm <?= $colorInfo['class'] ?> fw-semibold text-white"
+               style="border-radius: 16px; <?= $colorInfo['style'] ?>"
                download>
               <i class="fa fa-download me-1"></i><?= htmlspecialchars($genome_file['info']['label']) ?>
             </a>
           </div>
+          <?php endif; ?>
         </div>
-        <?php endif; ?>
       </div>
     </div>
   </div>
@@ -152,10 +151,10 @@
   <div class="row mb-4" id="assemblyGeneSets">
     <div class="col-12">
       <div class="card shadow-sm">
-        <div class="card-header d-flex align-items-center">
-          <i class="fas fa-layer-group me-2 text-gene-set"></i>
-          <strong>Gene Sets</strong>
-          <span class="badge bg-secondary ms-2"><?= count($gene_sets) ?></span>
+        <div class="card-header d-flex align-items-center" style="background-color:#e11d48;">
+          <i class="fas fa-layer-group me-2 text-white"></i>
+          <span class="text-uppercase fw-semibold text-white" style="letter-spacing:0.1em; font-size:0.8rem;">Gene Sets</span>
+          <span class="badge bg-white text-gene-set ms-2" style="font-size:0.65em;"><?= count($gene_sets) ?></span>
         </div>
         <div class="card-body p-0">
           <div class="list-group list-group-flush">

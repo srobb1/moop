@@ -22,52 +22,31 @@
 <div class="page_container">
 
     <!-- Navigation -->
-    <div class="margin-20">
-    </div>
-
     <!-- Feature Header and Tools Row -->
-    <div class="row mb-4">
+    <div class="row mb-3">
       <!-- Feature Header Column -->
       <div class="col-lg-8">
         <div class="feature-header shadow h-100">
-            <div class="d-flex align-items-start justify-content-between">
-                <div class="flex-grow-1">
-                    <h1 class="mb-3">
-                        <?php if (!empty($description)): ?>
-                            <?= htmlspecialchars(decodeAnnotationText($description)) ?>
-                        <?php else: ?>
-                            <?= htmlspecialchars($feature_uniquename) ?>
-                        <?php endif; ?>
-                    </h1>
-                    <div class="feature-info-item">
-			<span class="badge bg-feature-gene text-white ms-2 badge-accent badge-lg">
-                           <?= htmlspecialchars($feature_uniquename) ?>
+            <h1>
+                <?php if (!empty($description)): ?>
+                    <?= htmlspecialchars(decodeAnnotationText($description)) ?>
+                <?php else: ?>
+                    <?= htmlspecialchars($feature_uniquename) ?>
+                <?php endif; ?>
+            </h1>
+            <div class="feature-overview-body">
+                <div class="mb-2">
+                    <span class="badge bg-feature-gene text-white badge-sm"><?= htmlspecialchars($feature_uniquename) ?></span>
+                    <span class="badge bg-feature-gene text-white ms-1 badge-sm"><?= htmlspecialchars($type) ?></span>
+                    <?php if (!empty($children_hierarchical)):
+                        $first_child_type = $children_hierarchical[0]['feature_type'] ?? 'mRNA';
+                        $child_class = strtoupper($first_child_type) === 'MRNA' ? 'bg-feature-mrna' : 'bg-feature-gene';
+                        $direct_child_count = count($children_hierarchical);
+                    ?>
+                        <span class="badge text-white ms-1 badge-sm <?= $child_class ?>">
+                            <?= $direct_child_count ?> <?= htmlspecialchars($first_child_type) ?> child<?= $direct_child_count > 1 ? 'ren' : '' ?>
                         </span>
-                        <span class="badge bg-feature-gene text-white ms-2 badge-accent badge-lg">
-                            <?= htmlspecialchars($type) ?>
-                        </span>
-                        <?php if (!empty($children_hierarchical)):
-                            $first_child_type = $children_hierarchical[0]['feature_type'] ?? 'mRNA';
-                            $child_class = strtoupper($first_child_type) === 'MRNA' ? 'bg-feature-mrna' : 'bg-feature-gene';
-                            $direct_child_count = count($children_hierarchical);
-                        ?>
-                            <span class="badge text-white ms-2 badge-lg <?= $child_class ?>">
-                                <?= $direct_child_count ?> <?= htmlspecialchars($first_child_type) ?> child<?= $direct_child_count > 1 ? 'ren' : '' ?>
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-            
-            <div>
-                <div class="feature-info-item">
-                    <strong>Organism:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em></a><?php if ($common_name): ?> ( <?= htmlspecialchars($common_name) ?> )<?php endif; ?></span>
-                </div>
-                <div class="feature-info-item">
-                    <strong>Assembly:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars($genome_name) ?> (<?= htmlspecialchars($genome_accession) ?>)</a></span>
-                </div>
-                <div class="feature-info-item">
-                    <strong>Gene Set:</strong> <span class="feature-value"><a href="/<?= $site ?>/tools/gene_set.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>" class="link-light-bordered"><?= htmlspecialchars($gene_set_name) ?></a></span>
+                    <?php endif; ?>
                 </div>
                 <?php
                 $jbrowse_assembly_file = $config->getPath('metadata_path')
@@ -77,28 +56,33 @@
                     ? (!empty($feature_loc) ? $feature_loc['loc_string'] : $feature_uniquename)
                     : null;
                 ?>
-                <?php if (!empty($feature_loc)): ?>
-                <div class="feature-info-item">
-                    <strong>Location:</strong> <span class="feature-value">
-                        <?php
+                <dl class="feature-info-grid mb-0">
+                    <dt>Organism</dt>
+                    <dd><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em><?php if ($common_name): ?> (<?= htmlspecialchars($common_name) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
+                    <dt>Assembly</dt>
+                    <dd><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars($genome_name) ?> (<?= htmlspecialchars($genome_accession) ?>)<i class="fa fa-external-link-alt link-icon"></i></a></dd>
+                    <dt>Gene Set</dt>
+                    <dd><a href="/<?= $site ?>/tools/gene_set.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>" class="link-light-bordered"><?= htmlspecialchars($gene_set_name) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
+                    <?php if (!empty($feature_loc)): ?>
+                    <dt>Location</dt>
+                    <dd><?php
                         $loc_text = htmlspecialchars($feature_loc['seqname'])
                             . ':' . number_format($feature_loc['start'])
-                            . '-' . number_format($feature_loc['end']);
+                            . '&ndash;' . number_format($feature_loc['end']);
                         if ($feature_loc['strand'] === '+' || $feature_loc['strand'] === '-') {
-                            $loc_text .= ' (' . ($feature_loc['strand'] === '+' ? 'forward' : 'reverse') . ' strand)';
+                            $loc_text .= ' (' . ($feature_loc['strand'] === '+' ? '+' : '&minus;') . ')';
                         }
                         if ($jbrowse_loc) {
                             $browser_url = '/' . $site . '/jbrowse2.php?organism=' . urlencode($organism_name)
                                 . '&assembly=' . urlencode($genome_accession)
                                 . '&loc=' . urlencode($feature_loc['loc_string']);
-                            echo '<a href="' . $browser_url . '" target="_blank" class="link-light-bordered">' . $loc_text . '</a>';
+                            echo '<a href="' . $browser_url . '" target="_blank" class="link-light-bordered">' . $loc_text . ' <i class="fa fa-external-link-alt link-icon"></i></a>';
                         } else {
                             echo $loc_text;
                         }
-                        ?>
-                    </span>
-                </div>
-                <?php endif; ?>
+                    ?></dd>
+                    <?php endif; ?>
+                </dl>
             </div>
         </div>
       </div>
@@ -126,7 +110,7 @@
             <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#geneModelSection" aria-expanded="true" role="button">
                 <i class="fas fa-minus toggle-icon text-primary"></i>
             </span>
-            <strong class="ms-2">Gene Structure</strong>
+            <span class="ms-2 text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Gene Structure</span>
             <span class="ms-2 text-muted small">
                 <?= count($gene_model['isoforms']) ?> isoform<?= count($gene_model['isoforms']) !== 1 ? 's' : '' ?>
             </span>
@@ -168,7 +152,7 @@
             <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#hierarchySection" aria-expanded="true" role="button">
                 <i class="fas fa-sitemap toggle-icon text-primary"></i>
             </span>
-            <strong class="ms-2">Feature Hierarchy</strong>
+            <span class="ms-2 text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Feature Hierarchy</span>
         </div>
         <div id="hierarchySection" class="collapse show">
             <div class="card-body">
@@ -207,7 +191,7 @@
                 <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="true" role="button">
                     <i class="fas fa-minus toggle-icon text-primary"></i>
                 </span>
-                <strong class="ms-2">Annotations</strong>
+                <span class="ms-2 text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Annotations</span>
                 <button class="btn btn-sm btn-link p-0 ms-2 annotation-info-btn" type="button" data-bs-toggle="collapse" data-bs-target="#annotationsInfo" aria-expanded="false" title="What is an annotation?">
                     <i class="fas fa-info-circle"></i>
                 </button>

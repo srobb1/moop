@@ -1,78 +1,18 @@
 /* Parent Feature Display Styles */
 
-.feature-header {
-    background: white;
-    color: #333;
-    padding: 0;
-    border-radius: 0.5rem;
-    margin-bottom: 2rem;
-    overflow: hidden;
-}
-
 .feature-header h1 {
-    font-weight: 700;
-    margin-bottom: 0;
-    padding: 1.5rem 2rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-size: 1.05rem;
+    margin: 0;
+    padding: 0.6rem 1.25rem;
     color: white;
     background-color: #764ba2;
-    margin: 0;
 }
 
-.feature-description {
-    font-size: 1.05rem;
-    line-height: 1.6;
-    color: #333;
-    margin-bottom: 1rem !important;
-    padding: 1.5rem 2rem;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.feature-info-item {
-    margin-bottom: 0.75rem;
-    line-height: 1.6;
-    font-size: 0.95rem;
-    padding: 0.5rem 2rem;
-}
-
-.feature-info-item:first-of-type {
-    padding-top: 1.5rem;
-}
-
-.feature-info-item:last-of-type {
-    padding-bottom: 1.5rem;
-}
-
-.feature-info-item strong {
-    display: inline-block;
-    min-width: auto;
-    font-weight: 600;
-    color: #333;
-}
-
-.feature-value {
-    color: #333;
-}
-
-.feature-header a {
+.feature-header .feature-info-grid a:hover {
     color: #764ba2;
-    text-decoration: underline;
-    transition: color 0.2s ease;
-}
-
-.feature-header a:hover {
-    color: #5a3580;
-    text-decoration: none;
-}
-
-.link-light-bordered {
-    color: #333 !important;
-    text-decoration: underline;
-    transition: color 0.2s ease;
-}
-
-.link-light-bordered:hover {
-    color: #764ba2 !important;
-    text-decoration: none;
 }
 
 .info-table th {
