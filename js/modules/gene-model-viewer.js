@@ -125,27 +125,27 @@
                 bg.addEventListener('click', () => showGenomicModal(gene, isoforms));
                 gG.appendChild(bg);
 
-                const gBy = gCy - FLANK_H / 2;
-                const gXL = Math.min(toX(gene.start), toX(gene.end));
-                const gXR = Math.max(toX(gene.start), toX(gene.end));
+                const gBy  = gCy - FLANK_H / 2;
+                const gUpX = PAD_LEFT - FLANK_GAP - FLANK_W;
+                const gDnX = VIRTUAL_WIDTH - PAD_RIGHT + FLANK_GAP;
 
-                const gUp = makeRect(gXL - FLANK_GAP - FLANK_W, gBy, FLANK_W, FLANK_H, COLOR_UPSTREAM, 2);
+                const gUp = makeRect(gUpX, gBy, FLANK_W, FLANK_H, COLOR_UPSTREAM, 2);
                 gUp.setAttribute('stroke', COLOR_UPSTREAM_S);
                 gUp.setAttribute('stroke-width', '1');
                 gUp.style.cursor = 'pointer';
                 addRegionTitle(gUp, `Upstream flanking — ${gene.id || 'Gene'}`);
                 gUp.addEventListener('click', e => { e.stopPropagation(); fetchFlank(gene, 'upstream', 1000); });
                 gG.appendChild(gUp);
-                gG.appendChild(makeFlankLabel(gXL - FLANK_GAP - FLANK_W + FLANK_W / 2, gCy, 'upstream', COLOR_UPSTREAM_S));
+                gG.appendChild(makeFlankLabel(gUpX + FLANK_W / 2, gCy, 'upstream', COLOR_UPSTREAM_S));
 
-                const gDn = makeRect(gXR + FLANK_GAP, gBy, FLANK_W, FLANK_H, COLOR_DOWNSTREAM, 2);
+                const gDn = makeRect(gDnX, gBy, FLANK_W, FLANK_H, COLOR_DOWNSTREAM, 2);
                 gDn.setAttribute('stroke', COLOR_DOWNSTREAM_S);
                 gDn.setAttribute('stroke-width', '1');
                 gDn.style.cursor = 'pointer';
                 addRegionTitle(gDn, `Downstream flanking — ${gene.id || 'Gene'}`);
                 gDn.addEventListener('click', e => { e.stopPropagation(); fetchFlank(gene, 'downstream', 1000); });
                 gG.appendChild(gDn);
-                gG.appendChild(makeFlankLabel(gXR + FLANK_GAP + FLANK_W / 2, gCy, 'downstream', COLOR_DOWNSTREAM_S));
+                gG.appendChild(makeFlankLabel(gDnX + FLANK_W / 2, gCy, 'downstream', COLOR_DOWNSTREAM_S));
             }
 
             svg.appendChild(gG);
@@ -253,30 +253,31 @@
                 g.appendChild(rect);
             });
 
-            // Upstream / downstream flanking blocks in left/right margins
+            // Upstream / downstream flanking blocks — always pinned to the margins
+            // so they never float into the track and collide with isoform labels.
             if (canFetchSeq) {
-                const feat = Object.assign({ seqname: gene.seqname }, iso);
+                const feat   = Object.assign({ seqname: gene.seqname }, iso);
+                const by     = cy - FLANK_H / 2;
+                const upX    = PAD_LEFT - FLANK_GAP - FLANK_W;
+                const dnX    = VIRTUAL_WIDTH - PAD_RIGHT + FLANK_GAP;
 
-                // Upstream block — fixed gap from isoform's leftmost feature
-                const by   = cy - FLANK_H / 2;
-                const upRect = makeRect(xL - FLANK_GAP - FLANK_W, by, FLANK_W, FLANK_H, COLOR_UPSTREAM, 2);
+                const upRect = makeRect(upX, by, FLANK_W, FLANK_H, COLOR_UPSTREAM, 2);
                 upRect.setAttribute('stroke', COLOR_UPSTREAM_S);
                 upRect.setAttribute('stroke-width', '1');
                 upRect.style.cursor = 'pointer';
                 addRegionTitle(upRect, `Upstream flanking — ${iso.id}`);
                 upRect.addEventListener('click', e => { e.stopPropagation(); fetchFlank(feat, 'upstream', 1000); });
                 g.appendChild(upRect);
-                g.appendChild(makeFlankLabel(xL - FLANK_GAP - FLANK_W / 2, cy, 'upstream', COLOR_UPSTREAM_S));
+                g.appendChild(makeFlankLabel(upX + FLANK_W / 2, cy, 'upstream', COLOR_UPSTREAM_S));
 
-                // Downstream block — fixed gap from isoform's rightmost feature
-                const dnRect = makeRect(xR + FLANK_GAP, by, FLANK_W, FLANK_H, COLOR_DOWNSTREAM, 2);
+                const dnRect = makeRect(dnX, by, FLANK_W, FLANK_H, COLOR_DOWNSTREAM, 2);
                 dnRect.setAttribute('stroke', COLOR_DOWNSTREAM_S);
                 dnRect.setAttribute('stroke-width', '1');
                 dnRect.style.cursor = 'pointer';
                 addRegionTitle(dnRect, `Downstream flanking — ${iso.id}`);
                 dnRect.addEventListener('click', e => { e.stopPropagation(); fetchFlank(feat, 'downstream', 1000); });
                 g.appendChild(dnRect);
-                g.appendChild(makeFlankLabel(xR + FLANK_GAP + FLANK_W / 2, cy, 'downstream', COLOR_DOWNSTREAM_S));
+                g.appendChild(makeFlankLabel(dnX + FLANK_W / 2, cy, 'downstream', COLOR_DOWNSTREAM_S));
             }
 
             // Tooltip on the row background (navigate hint)
