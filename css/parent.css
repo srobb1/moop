@@ -276,11 +276,11 @@ td.export-only {
 
 /* Highlight clickable regions on hover — only when genome sequence is available */
 #gene-model-svg.seq-enabled .region-exon:hover {
-    filter: brightness(0.75) drop-shadow(0 0 4px rgba(232, 131, 58, 0.85));
+    filter: brightness(1.35) drop-shadow(0 0 4px rgba(232, 131, 58, 0.9));
     cursor: pointer;
 }
 #gene-model-svg.seq-enabled .region-cds:hover {
-    filter: brightness(0.78) drop-shadow(0 0 5px rgba(33, 113, 181, 0.9));
+    filter: brightness(1.5) drop-shadow(0 0 5px rgba(33, 113, 181, 1));
     cursor: pointer;
 }
 #gene-model-svg.seq-enabled .region-intron:hover {
