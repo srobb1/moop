@@ -93,18 +93,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       <small class="ms-auto" style="color:rgba(255,255,255,0.75); font-size:0.78rem;">all sections optional</small>
     </div>
     <div class="card-body pt-2 pb-3">
-
-      <!-- AND / OR logic toggle -->
-      <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-        <span class="small fw-semibold text-muted">Combine sections with:</span>
-        <div class="btn-group btn-group-sm" role="group">
-          <input type="radio" class="btn-check" name="mm-logic" id="mm-logic-and" value="and" checked>
-          <label class="btn btn-outline-secondary" for="mm-logic-and">AND</label>
-          <input type="radio" class="btn-check" name="mm-logic" id="mm-logic-or" value="or">
-          <label class="btn btn-outline-secondary" for="mm-logic-or">OR</label>
-        </div>
-        <span class="small text-muted fst-italic" id="mm-logic-hint">Features must match ALL filled sections</span>
-      </div>
+      <p class="text-muted small mb-3">All sections are combined with AND — features must satisfy every filled section.</p>
 
       <!-- Accordion sections -->
       <div class="d-flex flex-column gap-2">
@@ -171,6 +160,19 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
         </div>
 
         <!-- By Annotation -->
+        <?php
+        // Build dropdown HTML for reuse by JS when adding new criteria rows
+        $ann_dropdown = '<select class="form-select form-select-sm moop-input mm-ann-src-select">'
+                      . '<option value="">Any annotation type</option>';
+        foreach ($annotation_source_types as $_type => $_td):
+            $ann_dropdown .= '<optgroup label="' . htmlspecialchars($_type) . '">';
+            foreach ($_td['sources'] as $_src):
+                $ann_dropdown .= '<option value="' . htmlspecialchars($_src) . '">' . htmlspecialchars($_src) . '</option>';
+            endforeach;
+            $ann_dropdown .= '</optgroup>';
+        endforeach;
+        $ann_dropdown .= '</select>';
+        ?>
         <div>
           <div class="browse-select-header browse-select-header--light mb-0" id="mm-ann-filter-header" role="button"
                aria-expanded="false" aria-controls="mm-ann-filter-body"
@@ -182,10 +184,9 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           </div>
           <div class="collapse" id="mm-ann-filter-body">
             <div class="browse-select-panel">
-              <p class="text-muted small mb-2">
-                Restrict to features that have at least one annotation from the selected type.
-                Leave all unchecked to include features regardless of annotation type.
-                Fill accession or keyword to further narrow within the selected types.
+              <p class="text-muted small mb-3">
+                Every feature must satisfy <strong>all</strong> criteria (AND).
+                Each row filters by annotation type, exact accession, or keyword — fill any combination.
                 <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted"
                         style="font-size:0.85rem; line-height:1; vertical-align:middle;"
                         data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="About annotation types">
@@ -193,69 +194,33 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                 </button>
               </p>
 
-              <!-- Annotation type checkbox list -->
-              <div class="mb-3">
-                <div class="d-flex align-items-center mb-1">
-                  <span class="small fw-semibold text-muted me-auto">Annotation type</span>
-                  <span class="small text-muted fst-italic" id="mm-filter-ann-count">none selected</span>
-                </div>
-                <div class="px-2 pt-1 pb-1 border-bottom" style="background:#f8f9fa; border:1px solid #dee2e6; border-radius:0.375rem 0.375rem 0 0;">
-                  <input type="text" class="form-control form-control-sm moop-input border-0 bg-transparent p-0"
-                         id="mm-filter-ann-input" placeholder="Filter annotation types…" autocomplete="off">
-                </div>
-                <div style="max-height:150px; overflow-y:auto; background:#fff; border:1px solid #dee2e6; border-top:none; border-radius:0 0 0.375rem 0.375rem;"
-                     id="mm-filter-ann-panel">
-                  <?php foreach ($annotation_source_types as $type => $type_data):
-                    $type_safe = 'mm-filter-atype-' . preg_replace('/[^a-z0-9]/i', '_', $type);
-                    $color     = htmlspecialchars($type_data['color']);
-                    $src_count = count($type_data['sources']);
-                  ?>
-                  <div class="mm-filter-ann-group">
-                    <div class="d-flex align-items-center px-2 py-1" style="background:#f8f9fa; border-bottom:1px solid #e9ecef;">
-                      <input type="checkbox" class="form-check-input me-2 mb-0 mm-filter-ann-type-cb flex-shrink-0"
-                             id="<?= $type_safe ?>" data-type="<?= htmlspecialchars($type) ?>">
-                      <label for="<?= $type_safe ?>" class="form-check-label fw-semibold mb-0 me-auto"
-                             style="cursor:pointer; font-size:0.85rem;">
-                        <span class="badge bg-<?= $color ?> me-1"><?= htmlspecialchars($type) ?></span>
-                      </label>
-                      <span class="text-muted" style="font-size:0.72rem;"><?= $src_count ?> source<?= $src_count !== 1 ? 's' : '' ?></span>
-                    </div>
-                    <div class="ps-3">
-                      <?php foreach ($type_data['sources'] as $src_name):
-                        $safe_id = 'mm-filter-ann-' . preg_replace('/[^a-z0-9]/i', '_', $src_name);
-                      ?>
-                      <div class="d-flex align-items-center gap-1 px-1 py-1 mm-filter-ann-item">
-                        <input type="checkbox" class="form-check-input flex-shrink-0 mm-filter-ann-src-cb mb-0"
-                               id="<?= $safe_id ?>" value="<?= htmlspecialchars($src_name) ?>"
-                               data-type="<?= htmlspecialchars($type) ?>">
-                        <label class="form-check-label mb-0" for="<?= $safe_id ?>"
-                               style="cursor:pointer; font-size:0.82rem;">
-                          <?= htmlspecialchars($src_name) ?>
-                        </label>
-                      </div>
-                      <?php endforeach; ?>
-                    </div>
-                  </div>
-                  <?php endforeach; ?>
+              <!-- Column headers -->
+              <div class="row g-2 mb-1 text-muted" style="font-size:0.75rem;">
+                <div class="col-sm-4">Annotation type</div>
+                <div class="col-sm-4">Accession <span class="text-muted">(exact)</span></div>
+                <div class="col-sm-4">Keyword
+                  <i class="fa fa-info-circle search-instructions-trigger ms-1" style="cursor:pointer; font-size:0.9em;" data-help-type="basic"></i>
                 </div>
               </div>
 
-              <!-- Accession and keyword -->
-              <div class="row g-2">
-                <div class="col-sm-6">
-                  <label class="form-label small mb-1">Accession <span class="text-muted">(exact, e.g. GO:0006351)</span></label>
-                  <input type="text" id="mm-annotation-accession" class="form-control form-control-sm moop-input" placeholder="GO:0000000">
-                </div>
-                <div class="col-sm-6">
-                  <label class="form-label small mb-1">Annotation keyword
-                    <i class="fa fa-info-circle search-instructions-trigger ms-1" style="cursor:pointer;" data-help-type="basic"></i>
-                  </label>
-                  <input type="text" id="mm-annotation-keyword" class="form-control form-control-sm moop-input" placeholder="e.g. transporter">
+              <!-- Criteria rows -->
+              <div id="mm-ann-criteria">
+                <div class="mm-ann-criterion row g-2 mb-2 align-items-center">
+                  <div class="col-sm-4"><?= $ann_dropdown ?></div>
+                  <div class="col-sm-4"><input type="text" class="form-control form-control-sm moop-input mm-ann-accession" placeholder="e.g. GO:0006351"></div>
+                  <div class="col-sm-3"><input type="text" class="form-control form-control-sm moop-input mm-ann-keyword" placeholder="e.g. transporter"></div>
+                  <div class="col-sm-1"></div>
                 </div>
               </div>
+
+              <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="mm-add-criterion">
+                <i class="fa fa-plus me-1"></i> Add criterion
+              </button>
             </div>
           </div>
         </div>
+
+        <script>const mmAnnDropdownHtml = <?= json_encode($ann_dropdown) ?>;</script>
 
         <!-- By Chromosomal Location -->
         <div>

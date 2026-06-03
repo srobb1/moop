@@ -4,7 +4,7 @@
  *
  * POST parameters: same as moopmart_export.php (sources[], feature_types[],
  * feature_id, gene_name, gene_description,
- * annotation_source, annotation_accession, annotation_keyword,
+ * ann_criteria_src[], ann_criteria_acc[], ann_criteria_kw[],
  * coord_chr, coord_start, coord_end)
  *
  * Returns JSON: {
@@ -50,12 +50,19 @@ if (!empty($types))                             $filters['feature_types']       
 if (!empty($_POST['feature_id']))               $filters['feature_id']           = trim($_POST['feature_id']);
 if (!empty($_POST['gene_name']))                $filters['gene_name']            = trim($_POST['gene_name']);
 if (!empty($_POST['gene_description']))         $filters['gene_description']     = trim($_POST['gene_description']);
-$_raw_src = $_POST['annotation_filter_sources'] ?? [];
-if (!empty($_raw_src) && is_array($_raw_src)) {
-    $filters['annotation_sources'] = array_values(array_filter(array_map('trim', $_raw_src)));
+$_crit_srcs = $_POST['ann_criteria_src'] ?? [];
+$_crit_accs = $_POST['ann_criteria_acc'] ?? [];
+$_crit_kws  = $_POST['ann_criteria_kw']  ?? [];
+$_criteria  = [];
+foreach (array_keys((array)$_crit_srcs) as $_i) {
+    $src = trim($_crit_srcs[$_i] ?? '');
+    $acc = trim($_crit_accs[$_i] ?? '');
+    $kw  = trim($_crit_kws[$_i]  ?? '');
+    if ($src !== '' || $acc !== '' || $kw !== '') {
+        $_criteria[] = ['src' => $src, 'acc' => $acc, 'kw' => $kw];
+    }
 }
-if (!empty($_POST['annotation_accession']))     $filters['annotation_accession'] = trim($_POST['annotation_accession']);
-if (!empty($_POST['annotation_keyword']))       $filters['annotation_keyword']   = trim($_POST['annotation_keyword']);
+if (!empty($_criteria)) $filters['annotation_criteria'] = $_criteria;
 
 $coord_filter = [];
 if (!empty($_POST['coord_chr']))   $coord_filter['chr']   = trim($_POST['coord_chr']);

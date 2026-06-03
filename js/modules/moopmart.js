@@ -147,18 +147,27 @@
     }
 
     // -------------------------------------------------------
-    // Step 2 — AND/OR logic toggle
+    // Step 2 — Annotation criteria rows (add / remove)
     // -------------------------------------------------------
 
-    function initLogicToggle() {
-        const hint = document.getElementById('mm-logic-hint');
-        document.querySelectorAll('input[name="mm-logic"]').forEach(radio => {
-            radio.addEventListener('change', function () {
-                if (!hint) return;
-                hint.textContent = this.value === 'and'
-                    ? 'Features must match ALL filled sections'
-                    : 'Features match ANY filled section';
-            });
+    function initAnnCriteria() {
+        const container = document.getElementById('mm-ann-criteria');
+        if (!container) return;
+
+        document.getElementById('mm-add-criterion')?.addEventListener('click', function () {
+            const newRow = document.createElement('div');
+            newRow.className = 'mm-ann-criterion row g-2 mb-2 align-items-center';
+            newRow.innerHTML =
+                '<div class="col-sm-4">' + mmAnnDropdownHtml + '</div>' +
+                '<div class="col-sm-4"><input type="text" class="form-control form-control-sm moop-input mm-ann-accession" placeholder="e.g. GO:0006351"></div>' +
+                '<div class="col-sm-3"><input type="text" class="form-control form-control-sm moop-input mm-ann-keyword" placeholder="e.g. transporter"></div>' +
+                '<div class="col-sm-1 text-end"><button type="button" class="btn btn-sm btn-outline-danger py-0 mm-remove-criterion" title="Remove"><i class="fa fa-times"></i></button></div>';
+            container.appendChild(newRow);
+        });
+
+        container.addEventListener('click', function (e) {
+            const btn = e.target.closest('.mm-remove-criterion');
+            if (btn) btn.closest('.mm-ann-criterion').remove();
         });
     }
 
@@ -283,54 +292,6 @@
             .map(c => `${c.dataset.org}|${c.dataset.asm}|${c.dataset.gs}`);
     }
 
-    function getFilterAnnotationSources() {
-        return Array.from(document.querySelectorAll('.mm-filter-ann-src-cb:checked')).map(c => c.value);
-    }
-
-    function updateFilterAnnCount() {
-        const el      = document.getElementById('mm-filter-ann-count');
-        if (!el) return;
-        const checked = document.querySelectorAll('.mm-filter-ann-src-cb:checked').length;
-        el.textContent = checked ? `${checked} selected` : 'none selected';
-    }
-
-    function syncFilterAnnTypeCb(type) {
-        const sources = Array.from(document.querySelectorAll(`.mm-filter-ann-src-cb[data-type="${type}"]`));
-        const typeCb  = document.querySelector(`.mm-filter-ann-type-cb[data-type="${type}"]`);
-        if (!typeCb || !sources.length) return;
-        const allOn  = sources.every(c => c.checked);
-        const allOff = sources.every(c => !c.checked);
-        typeCb.checked       = allOn;
-        typeCb.indeterminate = !allOn && !allOff;
-    }
-
-    function initFilterAnnPanel() {
-        const panel = document.getElementById('mm-filter-ann-panel');
-        if (!panel) return;
-        panel.addEventListener('change', function (e) {
-            const cb = e.target;
-            if (cb.classList.contains('mm-filter-ann-type-cb')) {
-                document.querySelectorAll(`.mm-filter-ann-src-cb[data-type="${cb.dataset.type}"]`)
-                    .forEach(c => { c.checked = cb.checked; c.indeterminate = false; });
-            } else if (cb.classList.contains('mm-filter-ann-src-cb')) {
-                syncFilterAnnTypeCb(cb.dataset.type);
-            }
-            updateFilterAnnCount();
-        });
-        document.getElementById('mm-filter-ann-input')?.addEventListener('input', function () {
-            const q = this.value.toLowerCase();
-            document.querySelectorAll('.mm-filter-ann-group').forEach(group => {
-                let any = false;
-                group.querySelectorAll('.mm-filter-ann-item').forEach(item => {
-                    const show = !q || (item.querySelector('label')?.textContent.toLowerCase() || '').includes(q);
-                    item.classList.toggle('d-none', !show);
-                    if (show) any = true;
-                });
-                group.classList.toggle('d-none', !any && !!q);
-            });
-        });
-    }
-
     function parseIds(raw) {
         // Accept comma, whitespace, or newline separated IDs
         return raw.split(/[\s,]+/).map(s => s.trim()).filter(Boolean);
@@ -342,10 +303,6 @@
         fd.append('csrf_token', csrf);
 
         getSelectedSources().forEach(s => fd.append('sources[]', s));
-
-        // Logic (AND/OR)
-        const logic = document.querySelector('input[name="mm-logic"]:checked')?.value || 'and';
-        fd.append('logic', logic);
 
         // Section: Feature IDs
         const rawIds = document.getElementById('mm-feature-ids')?.value?.trim();
@@ -359,12 +316,17 @@
         const desc = document.getElementById('mm-gene-description')?.value?.trim();
         if (desc) fd.append('gene_description', desc);
 
-        // Section: Annotation — selected types (multi-select)
-        getFilterAnnotationSources().forEach(s => fd.append('annotation_filter_sources[]', s));
-        const annAcc = document.getElementById('mm-annotation-accession')?.value?.trim();
-        if (annAcc) fd.append('annotation_accession', annAcc);
-        const annKw  = document.getElementById('mm-annotation-keyword')?.value?.trim();
-        if (annKw)  fd.append('annotation_keyword', annKw);
+        // Section: Annotation — repeatable criteria rows (AND between them)
+        document.querySelectorAll('.mm-ann-criterion').forEach(row => {
+            const src = row.querySelector('.mm-ann-src-select')?.value?.trim() || '';
+            const acc = row.querySelector('.mm-ann-accession')?.value?.trim() || '';
+            const kw  = row.querySelector('.mm-ann-keyword')?.value?.trim() || '';
+            if (src || acc || kw) {
+                fd.append('ann_criteria_src[]', src);
+                fd.append('ann_criteria_acc[]', acc);
+                fd.append('ann_criteria_kw[]',  kw);
+            }
+        });
 
         // Section: Location
         const chr   = document.getElementById('mm-coord-chr')?.value?.trim();
@@ -511,11 +473,10 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         initScopeList();
-        initLogicToggle();
+        initAnnCriteria();
         initAccordionHeaders();
         initFormatToggle();
         initAnnSources();
-        initFilterAnnPanel();
 
         if (typeof scopeContext !== 'undefined' && scopeContext) {
             applyContextScope(scopeContext);

@@ -5,9 +5,9 @@
  * POST parameters:
  *   sources[]            - "organism|assembly|gene_set" strings (empty = all accessible)
  *   feature_types[]      - feature types to include (empty = all)
- *   annotation_source    - require annotation from this source name
- *   annotation_accession - require this exact accession
- *   annotation_keyword   - LIKE match on annotation description
+ *   ann_criteria_src[]   - annotation source name per criterion (empty = any)
+ *   ann_criteria_acc[]   - exact accession per criterion (empty = skip)
+ *   ann_criteria_kw[]    - keyword per criterion (empty = skip); criteria are AND'd
  *   coord_chr / coord_start / coord_end - coordinate range filter
  *   output_format        - 'tsv' | 'fasta'  (default: tsv)
  *   fasta_mode           - 'gene'|'upstream'|'downstream'|'exons'|'protein'|'transcript'|'cds'
@@ -59,12 +59,19 @@ if (!empty($types))                             $filters['feature_types']       
 if (!empty($_POST['feature_id']))               $filters['feature_id']           = trim($_POST['feature_id']);
 if (!empty($_POST['gene_name']))                $filters['gene_name']            = trim($_POST['gene_name']);
 if (!empty($_POST['gene_description']))         $filters['gene_description']     = trim($_POST['gene_description']);
-$_raw_src = $_POST['annotation_filter_sources'] ?? [];
-if (!empty($_raw_src) && is_array($_raw_src)) {
-    $filters['annotation_sources'] = array_values(array_filter(array_map('trim', $_raw_src)));
+$_crit_srcs = $_POST['ann_criteria_src'] ?? [];
+$_crit_accs = $_POST['ann_criteria_acc'] ?? [];
+$_crit_kws  = $_POST['ann_criteria_kw']  ?? [];
+$_criteria  = [];
+foreach (array_keys((array)$_crit_srcs) as $_i) {
+    $src = trim($_crit_srcs[$_i] ?? '');
+    $acc = trim($_crit_accs[$_i] ?? '');
+    $kw  = trim($_crit_kws[$_i]  ?? '');
+    if ($src !== '' || $acc !== '' || $kw !== '') {
+        $_criteria[] = ['src' => $src, 'acc' => $acc, 'kw' => $kw];
+    }
 }
-if (!empty($_POST['annotation_accession']))     $filters['annotation_accession'] = trim($_POST['annotation_accession']);
-if (!empty($_POST['annotation_keyword']))       $filters['annotation_keyword']   = trim($_POST['annotation_keyword']);
+if (!empty($_criteria)) $filters['annotation_criteria'] = $_criteria;
 
 $coord_filter = [];
 if (!empty($_POST['coord_chr']))   $coord_filter['chr']   = trim($_POST['coord_chr']);

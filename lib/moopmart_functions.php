@@ -70,13 +70,13 @@ function moopmartBuildTextConditions(string $raw, string $column): ?array
  * @param int[]  $gene_set_ids  Accessible gene_set_ids — MUST come from access control
  * @param string $db_path       Path to organism.sqlite
  * @param array  $filters {
- *   feature_types?:        string[]  e.g. ['gene','pseudogene']; empty = all types
- *   feature_id?:           string    Exact match on feature_uniquename
- *   gene_name?:            string    LIKE match on feature_name
- *   gene_description?:     string    LIKE match on feature_description
- *   annotation_source?:    string    Require annotation from this source name
- *   annotation_accession?: string    Require this exact accession (e.g. 'GO:0006351')
- *   annotation_keyword?:   string    LIKE match on annotation_description
+ *   feature_types?:         string[]  e.g. ['gene','pseudogene']; empty = all types
+ *   feature_id?:            string    Exact match on feature_uniquename
+ *   gene_name?:             string    LIKE match on feature_name
+ *   gene_description?:      string    LIKE match on feature_description
+ *   annotation_criteria?:   array     Each element: ['src'=>'', 'acc'=>'', 'kw'=>'']
+ *                                     Each criterion generates its own EXISTS clause (AND between them).
+ *                                     Empty src/acc/kw fields within a criterion are skipped.
  * }
  * @return array  Rows: feature_id, uniquename, name, description, type,
  *                      gene_set_id, gene_set_name, genome_accession, genome_name, organism_name
@@ -120,36 +120,35 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
         if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
     }
 
-    // Annotation filter via EXISTS on child features — annotations in the DB are
-    // stored on mRNA/transcript features (direct children of genes via parent_feature_id),
-    // not on gene features themselves.
-    $ann_where  = [];
-    $ann_params = [];
-    if (!empty($filters['annotation_sources']) && is_array($filters['annotation_sources'])) {
-        $ph = implode(',', array_fill(0, count($filters['annotation_sources']), '?'));
-        $ann_where[] = "ans.annotation_source_name IN ($ph)";
-        array_push($ann_params, ...$filters['annotation_sources']);
-    }
-    if (!empty($filters['annotation_accession'])) {
-        $ann_where[]  = 'a.annotation_accession = ?';
-        $ann_params[] = $filters['annotation_accession'];
-    }
-    if (!empty($filters['annotation_keyword'])) {
-        $parsed = moopmartBuildTextConditions($filters['annotation_keyword'], 'a.annotation_description');
-        if ($parsed) { foreach ($parsed['conditions'] as $c) $ann_where[] = $c; array_push($ann_params, ...$parsed['params']); }
-    }
-    if (!empty($ann_where)) {
-        $ann_clause = implode(' AND ', $ann_where);
-        $where[] = "EXISTS (
-            SELECT 1
-            FROM feature           child
-            JOIN feature_annotation fa2 ON fa2.feature_id         = child.feature_id
-            JOIN annotation         a   ON fa2.annotation_id      = a.annotation_id
-            JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
-            WHERE child.parent_feature_id = f.feature_id
-              AND $ann_clause
-        )";
-        array_push($params, ...$ann_params);
+    // Annotation criteria — each entry generates its own EXISTS clause (AND between them).
+    // Annotations live on mRNA/transcript children, not directly on gene features.
+    foreach ($filters['annotation_criteria'] ?? [] as $criterion) {
+        $crit_where  = [];
+        $crit_params = [];
+        if (!empty($criterion['src'])) {
+            $crit_where[]  = 'ans.annotation_source_name = ?';
+            $crit_params[] = $criterion['src'];
+        }
+        if (!empty($criterion['acc'])) {
+            $crit_where[]  = 'a.annotation_accession = ?';
+            $crit_params[] = $criterion['acc'];
+        }
+        if (!empty($criterion['kw'])) {
+            $parsed = moopmartBuildTextConditions($criterion['kw'], 'a.annotation_description');
+            if ($parsed) { foreach ($parsed['conditions'] as $c) $crit_where[] = $c; array_push($crit_params, ...$parsed['params']); }
+        }
+        if (!empty($crit_where)) {
+            $where[] = 'EXISTS (
+                SELECT 1
+                FROM feature           child
+                JOIN feature_annotation fa2 ON fa2.feature_id         = child.feature_id
+                JOIN annotation         a   ON fa2.annotation_id      = a.annotation_id
+                JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
+                WHERE child.parent_feature_id = f.feature_id
+                  AND ' . implode(' AND ', $crit_where) . '
+            )';
+            array_push($params, ...$crit_params);
+        }
     }
 
     $where_sql = implode(' AND ', $where);
@@ -212,33 +211,33 @@ function moopmartCountFeatures(array $gene_set_ids, string $db_path, array $filt
         if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
     }
 
-    $ann_where  = [];
-    $ann_params = [];
-    if (!empty($filters['annotation_sources']) && is_array($filters['annotation_sources'])) {
-        $ph = implode(',', array_fill(0, count($filters['annotation_sources']), '?'));
-        $ann_where[] = "ans.annotation_source_name IN ($ph)";
-        array_push($ann_params, ...$filters['annotation_sources']);
-    }
-    if (!empty($filters['annotation_accession'])) {
-        $ann_where[]  = 'a.annotation_accession = ?';
-        $ann_params[] = $filters['annotation_accession'];
-    }
-    if (!empty($filters['annotation_keyword'])) {
-        $parsed = moopmartBuildTextConditions($filters['annotation_keyword'], 'a.annotation_description');
-        if ($parsed) { foreach ($parsed['conditions'] as $c) $ann_where[] = $c; array_push($ann_params, ...$parsed['params']); }
-    }
-    if (!empty($ann_where)) {
-        $ann_clause = implode(' AND ', $ann_where);
-        $where[] = "EXISTS (
-            SELECT 1
-            FROM feature           child
-            JOIN feature_annotation fa2 ON fa2.feature_id         = child.feature_id
-            JOIN annotation         a   ON fa2.annotation_id      = a.annotation_id
-            JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
-            WHERE child.parent_feature_id = f.feature_id
-              AND $ann_clause
-        )";
-        array_push($params, ...$ann_params);
+    foreach ($filters['annotation_criteria'] ?? [] as $criterion) {
+        $crit_where  = [];
+        $crit_params = [];
+        if (!empty($criterion['src'])) {
+            $crit_where[]  = 'ans.annotation_source_name = ?';
+            $crit_params[] = $criterion['src'];
+        }
+        if (!empty($criterion['acc'])) {
+            $crit_where[]  = 'a.annotation_accession = ?';
+            $crit_params[] = $criterion['acc'];
+        }
+        if (!empty($criterion['kw'])) {
+            $parsed = moopmartBuildTextConditions($criterion['kw'], 'a.annotation_description');
+            if ($parsed) { foreach ($parsed['conditions'] as $c) $crit_where[] = $c; array_push($crit_params, ...$parsed['params']); }
+        }
+        if (!empty($crit_where)) {
+            $where[] = 'EXISTS (
+                SELECT 1
+                FROM feature           child
+                JOIN feature_annotation fa2 ON fa2.feature_id         = child.feature_id
+                JOIN annotation         a   ON fa2.annotation_id      = a.annotation_id
+                JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
+                WHERE child.parent_feature_id = f.feature_id
+                  AND ' . implode(' AND ', $crit_where) . '
+            )';
+            array_push($params, ...$crit_params);
+        }
     }
 
     $where_sql = implode(' AND ', $where);
