@@ -27,12 +27,12 @@
     const LABEL_HEIGHT  = 16;
     const PAD_TOP       = 4;
     const PAD_BOTTOM    = 18;   // room for strand label
-    const PAD_LEFT      = 70;  // wider to accommodate upstream/downstream blocks and row-type labels
-    const PAD_RIGHT     = 56;  // wider to fit downstream label block
+    const PAD_LEFT      = 76;  // wider to accommodate upstream/downstream blocks and row-type labels
+    const PAD_RIGHT     = 66;  // wider to fit downstream label block
     const EXON_H        = 10;
     const CDS_H         = 16;
-    const FLANK_W       = 48;  // upstream/downstream block width — fits 'downstream' at font-size 7
-    const FLANK_H       = 14;  // upstream/downstream block height
+    const FLANK_W       = 58;  // upstream/downstream block width — fits 'downstream' at font-size 7
+    const FLANK_H       = 16;  // upstream/downstream block height
     const FLANK_GAP     = 4;   // gap between block and track edge
 
     const COLOR_BACKBONE   = '#aaa';
