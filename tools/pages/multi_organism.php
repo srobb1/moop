@@ -4,19 +4,20 @@
     <div class="col-lg-8">
       <div class="card shadow-sm h-100">
         <!-- Title Card -->
-        <div class="card-header bg-light border-bottom">
-          <h1 class="fw-bold mb-0 text-center">Multi-Organism Search</h1>
+        <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
+          <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Multi-Organism Search</span>
+          <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0891b2;">search across selected organisms</span>
         </div>
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <h4 class="mb-3 text-primary fw-bold"><i class="fa fa-search"></i> Search Gene IDs and Annotations <i class="fa fa-info-circle search-instructions-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-help-type="multiOrganism"></i></h4>
+          <div class="mb-2 fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <i class="fa fa-info-circle search-instructions-trigger" style="cursor:pointer; margin-left:0.4rem; font-size:0.85em;" data-help-type="multiOrganism"></i></div>
           <form id="multiOrgSearchForm">
             <div class="row align-items-center">
               <div class="col">
                 <div class="d-flex gap-2 align-items-center">
-                  <input type="text" class="form-control" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
-                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn">
+                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
+                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
                     <i class="fa fa-search"></i>
                   </button>
                 </div>
@@ -39,8 +40,8 @@
   <!-- Search Results Section -->
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-5">
-      <div class="card-header bg-search-results text-white">
-        <h4 class="mb-0"><i class="fa fa-list"></i> Search Results <i class="fa fa-info-circle search-results-help-trigger" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.9em;" data-help-type="results"></i></h4>
+      <div class="card-header bg-search-results">
+        <span class="fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-list me-1"></i> Search Results <i class="fa fa-info-circle search-results-help-trigger" style="cursor:pointer; margin-left:0.4rem; font-size:0.85em;" data-help-type="results"></i></span>
       </div>
       <div class="card-body">
         <div id="searchInfo" class="alert alert-info mb-3"></div>
@@ -54,28 +55,20 @@
   <div class="row mb-5" id="organismsSection">
     <div class="col-12">
       <div class="card shadow-sm">
-        <div class="card-body">
-          <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-              <div>
-                <h3 class="card-title mb-0">
-                  Selected Organisms
-                  <i class="fa fa-info-circle organism-instructions-trigger info-icon" style="cursor: pointer; margin-left: 0.5rem; font-size: 0.8em;" data-instruction="Check/uncheck organisms to modify which are included in the search. Click an organism card to visit its page for organism-specific information and single-organism searches."></i>
-                </h3>
-              </div>
-              <div class="d-flex gap-2 align-items-center flex-wrap">
-                <input type="text" id="organismFilter" class="form-control form-control-sm" placeholder="Filter organisms..." style="width: 180px;">
-                <div class="btn-group" role="group">
-                  <button type="button" class="btn btn-sm btn-outline-secondary selectAllOrganisms">
-                    Select All
-                  </button>
-                  <button type="button" class="btn btn-sm btn-outline-secondary deselectAllOrganisms">
-                    Deselect All
-                  </button>
-                </div>
-              </div>
+        <div class="card-header text-white d-flex align-items-center justify-content-between flex-wrap gap-2" style="background-color:#0f766e;">
+          <div class="d-flex align-items-center gap-2">
+            <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Selected Organisms</span>
+            <i class="fa fa-info-circle organism-instructions-trigger" style="cursor:pointer; font-size:0.85em; opacity:0.8;" data-instruction="Check/uncheck organisms to modify which are included in the search. Click an organism card to visit its page for organism-specific information and single-organism searches."></i>
+          </div>
+          <div class="d-flex gap-2 align-items-center flex-wrap">
+            <input type="text" id="organismFilter" class="form-control form-control-sm" placeholder="Filter organisms..." style="width:180px; font-size:0.8rem;">
+            <div class="btn-group" role="group">
+              <button type="button" class="btn btn-sm btn-outline-light selectAllOrganisms" style="font-size:0.75rem;">Select All</button>
+              <button type="button" class="btn btn-sm btn-outline-light deselectAllOrganisms" style="font-size:0.75rem;">Deselect All</button>
             </div>
           </div>
+        </div>
+        <div class="card-body">
           <div class="row g-3">
             <?php
             $organism_list = is_array($organisms) ? $organisms : [$organisms];

@@ -33,16 +33,16 @@
 
 /* Search button styling */
 .btn-search {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
+    background-color: #0891b2;
+    border-color: #0891b2;
     color: white;
 }
 
 .btn-search:hover,
 .btn-search:focus {
-    background-color: #0b5ed7;
-    border-color: #0a58ca;
-    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+    background-color: #0e7490;
+    border-color: #0e7490;
+    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.25);
 }
 
 .btn-search-active {

@@ -94,8 +94,8 @@ if (!isset($data['site'])) {
 if (!isset($data['page_styles'])) {
     $site = $data['site'];
     $data['page_styles'] = [
-        '/' . $site . '/css/display.css',
         '/' . $site . '/css/parent.css',
+        '/' . $site . '/css/display.css',
         '/' . $site . '/css/advanced-search-filter.css',
         '/' . $site . '/css/search-controls.css',
     ];

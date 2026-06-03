@@ -7,11 +7,8 @@
       <div class="card shadow-sm h-100">
         <!-- Title Card -->
         <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#d97706;">
-          <div>
-            <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><?= htmlspecialchars($assembly_info['genome_name']) ?></span>
-            <div style="font-size:0.7rem; opacity:0.8; margin-top:0.1rem;">Search limited to this assembly</div>
-          </div>
-          <span class="badge bg-white text-assembly" style="font-size:0.65em; opacity:0.9;">Assembly</span>
+          <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><?= htmlspecialchars($assembly_info['genome_name']) ?></span>
+          <span class="badge bg-white text-assembly" style="font-size:0.65em; opacity:0.9;">search limited to this assembly</span>
         </div>
 
         <!-- Search Section -->

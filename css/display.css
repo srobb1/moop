@@ -720,9 +720,9 @@ a:hover .link-icon {
 
 .assembly-header-custom h1 {
   font-weight: 600;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-size: 1.05rem;
+  font-size: 0.8rem;
   margin: 0;
   padding: 0.6rem 1.25rem;
   color: white;
@@ -768,9 +768,9 @@ a:hover .link-icon {
 
 .gene-set-header-custom h1 {
   font-weight: 600;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-size: 1.05rem;
+  font-size: 0.8rem;
   margin: 0;
   padding: 0.6rem 1.25rem;
   color: white;

@@ -79,6 +79,17 @@ $gene_set_meta = file_exists($gene_set_meta_file)
     ? (json_decode(file_get_contents($gene_set_meta_file), true) ?? [])
     : [];
 
+// Load annotation type summary from organism-level cache (grouped by type)
+$annot_cache_file = "$organism_data/$organism_name/annotation_sources_cache.json";
+$annot_type_totals = [];
+if (file_exists($annot_cache_file)) {
+    $annot_cache = json_decode(file_get_contents($annot_cache_file), true) ?? [];
+    foreach ($annot_cache as $type => $sources) {
+        $annot_type_totals[$type] = array_sum(array_column($sources, 'count'));
+    }
+    arsort($annot_type_totals);
+}
+
 $data = [
     'gene_set_info'        => $gene_set_info,
     'gene_set_meta'        => $gene_set_meta,
@@ -95,6 +106,7 @@ $data = [
     'db_path'              => $db_path,
     'images_path'          => $config->getString('images_path'),
     'absolute_images_path' => $config->getPath('absolute_images_path'),
+    'annot_type_totals'    => $annot_type_totals,
 ];
 
 include_once __DIR__ . '/display-template.php';
