@@ -18,7 +18,14 @@
 
   <div class="row justify-content-center">
     <div class="col-lg-8">
-      <h1 class="fw-bold mb-4"><i class="fa fa-dna"></i> Selecting Organisms</h1>
+      <div class="card shadow-sm mb-4">
+        <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
+          <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-dna me-2"></i>Selecting Organisms</span>
+        </div>
+        <div class="card-body py-2">
+          <p class="text-muted small mb-0">MOOP provides two flexible methods for selecting which organisms you want to work with.</p>
+        </div>
+      </div>
 
       <div class="card shadow-sm border-0 rounded-3 mb-4">
         <div class="card-body p-4">

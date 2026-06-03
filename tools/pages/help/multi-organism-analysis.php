@@ -1,7 +1,7 @@
 <?php
 /**
  * MULTI-ORGANISM ANALYSIS TUTORIAL - Content File
- * 
+ *
  * Available variables:
  * - $config (ConfigManager instance)
  * - $siteTitle (Site title)
@@ -9,94 +9,93 @@
 ?>
 
 <div class="container mt-5">
-  <!-- Back to Help Link -->
   <div class="mb-4">
     <a href="help.php" class="btn btn-outline-secondary btn-sm">
-      <i class="fa fa-arrow-left"></i> Back to Help
+      <i class="fa fa-arrow-left me-1"></i>Back to Help
     </a>
   </div>
 
   <div class="row justify-content-center">
-    <div class="col-lg-8">
-      <h1 class="fw-bold mb-4"><i class="fa fa-project-diagram"></i> Multi-Organism Analysis</h1>
+    <div class="col-lg-9">
 
-      <div class="card shadow-sm border-0 rounded-3 mb-4">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
+          <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-project-diagram me-2"></i>Multi-Organism Analysis</span>
+        </div>
         <div class="card-body p-4">
-          <h3 class="fw-bold text-dark mb-3">Comparing Data Across Organisms</h3>
-          <p class="text-muted mb-4">
-            One of MOOP's powerful features is the ability to simultaneously analyze and compare data across multiple organisms. 
-            This guide explains how to perform multi-organism analysis.
+          <p class="text-muted mb-0">
+            Several MOOP tools work across multiple organisms at once. This page explains how to select organisms for multi-organism work and which tool to use for different tasks.
           </p>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">When to Use Multi-Organism Analysis</h4>
-          <p class="text-muted mb-3">
-            Multi-organism analysis is useful for:
-          </p>
-          <ul class="text-muted">
-            <li>Finding conserved features across species</li>
-            <li>Comparing gene content between organisms</li>
-            <li>Identifying species-specific sequences</li>
-            <li>Studying evolutionary relationships</li>
-            <li>Building comprehensive reference datasets</li>
+      <!-- Selecting organisms -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">Selecting Multiple Organisms</h5>
+          <p class="text-muted mb-3">Start from the home page:</p>
+          <ul class="text-muted mb-0">
+            <li><strong>Group page</strong> — click a group card to open a set of organisms, then use the checkboxes to include or exclude specific organisms from searches.</li>
+            <li><strong>Taxonomy tree</strong> — use Tree Select to pick organisms from different branches. Click a parent node to select all organisms below it. Your selection is shown in the sidebar.</li>
+            <li><strong>Multi-Organism Search page</strong> — this tool has its own organism selector built in (step 2), so you can refine your selection within the tool itself.</li>
           </ul>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Step 1: Select Multiple Organisms</h4>
-          <p class="text-muted mb-3">
-            Start by selecting the organisms you want to analyze together:
-          </p>
-          <ul class="text-muted">
-            <li>Use the Tree Select view for maximum flexibility</li>
-            <li>Click organism nodes to add them to your selection</li>
-            <li>You can select organisms from different groups and branches</li>
-            <li>The sidebar shows your complete selection</li>
-          </ul>
+      <!-- Tool comparison -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">Which Tool to Use</h5>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered text-muted mb-0">
+              <thead class="table-light">
+                <tr><th>Task</th><th>Tool</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Find genes matching a keyword or annotation term across many organisms</td><td><strong>Annotation Search</strong></td></tr>
+                <tr><td>Build a gene list by ID, name, description, or GO term, then export TSV/FASTA</td><td><strong>MOOPmart</strong></td></tr>
+                <tr><td>Compare a sequence against multiple genome assemblies</td><td><strong>BLAST Search</strong></td></tr>
+                <tr><td>Retrieve specific gene sequences from multiple assemblies by ID</td><td><strong>Retrieve Sequences</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Step 2: Choose Your Tool</h4>
-          <p class="text-muted mb-3">
-            Different tools support multi-organism analysis:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Multi-Organism Search:</strong> Search across all selected organisms simultaneously</li>
-            <li><strong>Sequence Retrieval:</strong> Retrieve sequences from multiple organisms</li>
-            <li><strong>BLAST Search:</strong> Search your sequence against multiple organism databases</li>
-          </ul>
+      <!-- Annotation Search multi-organism -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">Annotation Search — Multi-Organism Mode</h5>
+          <p class="text-muted mb-2">The Annotation Search tool's step 2 lets you choose which <strong>organism → assembly → gene set</strong> combinations to include. This is more granular than organism-level selection — if an organism has two gene sets, you can include one and exclude the other.</p>
+          <p class="text-muted mb-0">Results are returned per organism so you can see which organisms have matches and which don't.</p>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Step 3: Analyze Results</h4>
-          <p class="text-muted mb-3">
-            Results from multi-organism tools show data organized by organism:
-          </p>
-          <ul class="text-muted">
-            <li>Results are organized in tables with organism columns</li>
-            <li>You can sort and filter by any column</li>
-            <li>Organism names clearly identify which results come from which organism</li>
-            <li>Export options let you download results for further analysis</li>
-          </ul>
+      <!-- MOOPmart multi-organism -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">MOOPmart — Cross-Assembly Export</h5>
+          <p class="text-muted mb-2">MOOPmart is especially powerful for multi-organism work. Select multiple assemblies in step 1 and search by shared feature name to find genes across all of them in a single query.</p>
+          <p class="text-muted mb-0">For example: select 10 bat assemblies, search by feature name for <code>TP53</code>, and download a TSV with all matching features and their annotations across every assembly — in one click.</p>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Tips for Multi-Organism Analysis</h4>
-          <ul class="text-muted">
-            <li><strong>Start small:</strong> Begin with 2-3 organisms before scaling up</li>
-            <li><strong>Use filtering:</strong> Apply filters to focus on relevant results</li>
-            <li><strong>Review results by organism:</strong> Check which organisms have matches for your search terms</li>
-            <li><strong>Export for external tools:</strong> Download results for phylogenetic or statistical analysis</li>
-            <li><strong>Use organism groups:</strong> Pre-defined groups are often good starting points</li>
-          </ul>
-
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Performance Considerations</h4>
-          <p class="text-muted">
-            Analyzing many organisms or large datasets may take longer. To optimize performance:
-          </p>
-          <ul class="text-muted">
-            <li>Select only the organisms you need</li>
-            <li>Use specific search terms rather than broad queries</li>
-            <li>Apply filters early to reduce result sets</li>
-            <li>Consider downloading large results for local analysis</li>
+      <!-- Tips -->
+      <div class="card shadow-sm mb-4 border-0" style="background:#f0f9ff;">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3"><i class="fa fa-lightbulb me-2" style="color:#0891b2;"></i>Tips</h5>
+          <ul class="text-muted mb-0">
+            <li>Start with a small selection of organisms to test your query before expanding to all of them.</li>
+            <li>Annotation Search returns up to 2,500 results per organism — use specific terms or limit annotation types to stay under that limit.</li>
+            <li>For large cross-organism exports, MOOPmart is more efficient than exporting search results — it runs a single optimized query rather than one per organism.</li>
+            <li>Results from multi-organism searches always include the organism and assembly columns so you can tell which organism each hit came from.</li>
           </ul>
         </div>
       </div>
 
       <div class="mb-4">
         <a href="help.php" class="btn btn-outline-secondary btn-sm">
-          <i class="fa fa-arrow-left"></i> Back to Help
+          <i class="fa fa-arrow-left me-1"></i>Back to Help
         </a>
       </div>
     </div>

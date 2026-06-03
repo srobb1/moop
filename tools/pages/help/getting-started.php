@@ -1,7 +1,7 @@
 <?php
 /**
  * GETTING STARTED TUTORIAL - Content File
- * 
+ *
  * Available variables:
  * - $config (ConfigManager instance)
  * - $siteTitle (Site title)
@@ -9,75 +9,98 @@
 ?>
 
 <div class="container mt-5">
-  <!-- Back to Help Link -->
   <div class="mb-4">
     <a href="help.php" class="btn btn-outline-secondary btn-sm">
-      <i class="fa fa-arrow-left"></i> Back to Help
+      <i class="fa fa-arrow-left me-1"></i>Back to Help
     </a>
   </div>
 
   <div class="row justify-content-center">
-    <div class="col-lg-8">
-      <h1 class="fw-bold mb-4"><i class="fa fa-rocket"></i> Getting Started with MOOP</h1>
+    <div class="col-lg-9">
 
-      <div class="card shadow-sm border-0 rounded-3 mb-4">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
+          <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-rocket me-2"></i>Getting Started with MOOP</span>
+        </div>
         <div class="card-body p-4">
-          <h3 class="fw-bold text-dark mb-3">Welcome to MOOP</h3>
-          <p class="text-muted mb-3">
-            MOOP is a comprehensive platform for exploring and discovering how diverse organisms associate closely together. 
-            This guide will walk you through the basics of using MOOP.
+          <p class="text-muted mb-0">
+            MOOP is a platform for exploring genome assemblies, genes, transcripts, and functional annotations across multiple organisms. This guide walks through the basics of getting oriented.
           </p>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">1. Understanding the Home Page</h4>
-          <p class="text-muted mb-3">
-            When you first visit MOOP, you'll see the home page with two main ways to select organisms:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Group Select:</strong> Quick selection of pre-organized organism groups</li>
-            <li><strong>Tree Select:</strong> Interactive taxonomy tree for custom organism selection</li>
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">The Home Page</h5>
+          <p class="text-muted mb-3">The home page gives you two ways to select organisms:</p>
+          <ul class="text-muted mb-0">
+            <li><strong>Group Select</strong> — click a pre-organized group card (e.g. Bats, Planaria) to immediately open that organism set. Groups are curated by the site administrator around research themes.</li>
+            <li><strong>Tree Select</strong> — use the interactive taxonomy tree to browse the full organism hierarchy and build a custom cross-group selection. Click any node to select all organisms below it.</li>
           </ul>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">2. Selecting Organisms</h4>
-          <p class="text-muted mb-3">
-            You can select organisms in two ways:
-          </p>
-          <ul class="text-muted">
-            <li>Click on organism group cards to open a new view with that selection</li>
-            <li>Use the taxonomy tree to select specific organisms or build a custom set</li>
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">Organism, Assembly, and Gene Set Pages</h5>
+          <p class="text-muted mb-3">Clicking through from the home page or a search result brings you to a feature page — a dedicated view for a specific scope of data:</p>
+          <ul class="text-muted mb-0">
+            <li><strong>Organism page</strong> — overview of all assemblies for one organism; search is scoped to that organism</li>
+            <li><strong>Assembly page</strong> — overview of one genome assembly and its gene sets; search is scoped to that assembly</li>
+            <li><strong>Gene Set page</strong> — gene and transcript counts, annotation summary by type (GO, Domains, Homologs, etc.), and download links; search is scoped to that gene set</li>
           </ul>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">3. Accessing Tools</h4>
-          <p class="text-muted mb-3">
-            Once you've selected organisms, you'll see the Tool Box with available analysis and search tools:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Search:</strong> Find sequences and annotations across selected organisms</li>
-            <li><strong>BLAST:</strong> Compare sequences across organisms</li>
-            <li><strong>Assembly View:</strong> Examine genome assemblies and structure</li>
-            <li><strong>Multi-Organism Analysis:</strong> Analyze data across multiple organisms simultaneously</li>
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">The Tool Box</h5>
+          <p class="text-muted mb-3">On any organism, assembly, or gene set page you'll see the <strong>Tool Box</strong> — a set of tools pre-configured with your current context. The available tools are:</p>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered text-muted mb-0">
+              <thead class="table-light">
+                <tr><th>Tool</th><th>What it does</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>Annotation Search</strong></td><td>Find genes and features by keyword, annotation description, GO term, or ID. Supports multi-organism searches with fine-grained organism and annotation type filters.</td></tr>
+                <tr><td><strong>BLAST Search</strong></td><td>Compare a DNA or protein sequence against genome assemblies to find similar sequences.</td></tr>
+                <tr><td><strong>MOOPmart</strong></td><td>Build a gene list by ID, name, description, annotation term, or genomic location — then export as TSV or FASTA. The primary tool for bulk data download.</td></tr>
+                <tr><td><strong>Retrieve Sequences</strong></td><td>Look up specific feature IDs and download their genomic, transcript, CDS, or protein sequences.</td></tr>
+                <tr><td><strong>Downloads</strong></td><td>Browse and batch-download genome FASTA, GFF, and other files organized by organism → assembly → gene set.</td></tr>
+                <tr><td><strong>View in Genome Browser</strong></td><td>Open JBrowse2 pre-loaded with the current assembly and its gene tracks.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">A Typical Workflow</h5>
+          <ol class="text-muted mb-0">
+            <li class="mb-2"><strong>Pick organisms</strong> — use a group card or the taxonomy tree.</li>
+            <li class="mb-2"><strong>Search</strong> — use Annotation Search to find genes by keyword or GO term. Results show which features matched and which annotation sources they came from.</li>
+            <li class="mb-2"><strong>Drill down</strong> — click a result to open the gene's detail page, which shows all annotations, sequences, and links to JBrowse.</li>
+            <li class="mb-2"><strong>Export</strong> — use MOOPmart to bulk-export genes and annotations as TSV or FASTA, or Retrieve Sequences for specific IDs.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">Access Levels</h5>
+          <p class="text-muted mb-2">Not all organisms and assemblies are visible to all users:</p>
+          <ul class="text-muted mb-0">
+            <li><strong>Public</strong> — can see and search public assemblies without logging in</li>
+            <li><strong>Collaborator</strong> — logged-in user with access to specific organisms or assemblies granted by the administrator</li>
+            <li><strong>Admin</strong> — full access to all data and the admin panel</li>
           </ul>
-
-          <h4 class="fw-semibold text-dark mt-4 mb-2">4. Exploring Results</h4>
-          <p class="text-muted mb-3">
-            After using a tool, you'll see results displayed in:
-          </p>
-          <ul class="text-muted">
-            <li>Interactive tables with search and sorting capabilities</li>
-            <li>Visualization panels for sequences and alignments</li>
-            <li>Download options for exporting data</li>
-          </ul>
-
-          <h4 class="fw-semibold text-dark mt-4 mb-2">5. Need More Help?</h4>
-          <p class="text-muted">
-            Check out the other tutorials in the Help section for detailed guides on specific features. 
-            If you need additional assistance, contact the administrator.
-          </p>
         </div>
       </div>
 
       <div class="mb-4">
         <a href="help.php" class="btn btn-outline-secondary btn-sm">
-          <i class="fa fa-arrow-left"></i> Back to Help
+          <i class="fa fa-arrow-left me-1"></i>Back to Help
         </a>
       </div>
     </div>

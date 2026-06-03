@@ -1,7 +1,7 @@
 <?php
 /**
  * SEARCH & FILTER TUTORIAL - Content File
- * 
+ *
  * Available variables:
  * - $config (ConfigManager instance)
  * - $siteTitle (Site title)
@@ -9,143 +9,123 @@
 ?>
 
 <div class="container mt-5">
-  <!-- Back to Help Link -->
   <div class="mb-4">
     <a href="help.php" class="btn btn-outline-secondary btn-sm">
-      <i class="fa fa-arrow-left"></i> Back to Help
+      <i class="fa fa-arrow-left me-1"></i>Back to Help
     </a>
   </div>
 
   <div class="row justify-content-center">
-    <div class="col-lg-8">
-      <h1 class="fw-bold mb-4"><i class="fa fa-search"></i> Search & Filter</h1>
+    <div class="col-lg-9">
 
-      <div class="card shadow-sm border-0 rounded-3 mb-4">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
+          <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-search me-2"></i>Search &amp; Filter</span>
+        </div>
         <div class="card-body p-4">
-          <h3 class="fw-bold text-dark mb-3">Finding What You Need</h3>
-          <p class="text-muted mb-4">
-            MOOP provides powerful search and filtering capabilities to help you find specific sequences and annotations.
+          <p class="text-muted mb-0">
+            MOOP has two search interfaces: a quick search bar built into every organism, assembly, and gene set page, and the full <strong>Annotation Search</strong> tool for multi-organism queries with fine-grained filtering.
           </p>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Basic Search</h4>
-          <p class="text-muted mb-3">
-            Use the Search tool to find sequences by:
-          </p>
-          <ul class="text-muted">
-            <li>Gene name or ID</li>
-            <li>Sequence description</li>
-            <li>Annotation text</li>
-            <li>Keyword matching</li>
+      <!-- In-page search -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">In-Page Search (Organism / Assembly / Gene Set Pages)</h5>
+          <p class="text-muted mb-2">Every organism, assembly, and gene set page has a search box at the top that is pre-scoped to that context. Type at least 3 characters to find genes and annotations within that scope.</p>
+          <p class="text-muted mb-0">Results appear in a table below. Click any row to open the gene's full detail page.</p>
+        </div>
+      </div>
+
+      <!-- Annotation Search -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">Annotation Search — Step-by-Step</h5>
+          <p class="text-muted mb-3">The <strong>Annotation Search</strong> tool (accessible from the Tool Box on any page) supports multi-organism queries and walks you through four steps:</p>
+
+          <div class="d-flex align-items-start mb-3">
+            <span class="step-badge me-3 flex-shrink-0">1</span>
+            <div>
+              <strong>Enter a keyword or ID</strong>
+              <p class="text-muted mb-0 mt-1">Search by gene name, annotation keyword, GO term (e.g. <code>GO:0006351</code>), database ID (e.g. <code>PF00001</code>), or free text. Use <code>"quotes"</code> for exact phrase matching.</p>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-start mb-3">
+            <span class="step-badge me-3 flex-shrink-0">2</span>
+            <div>
+              <strong>Limit to specific organisms</strong>
+              <p class="text-muted mb-0 mt-1">Each row in the list represents one <strong>organism → assembly → gene set</strong> combination. Click rows to select or deselect. Use the filter box to narrow by name, accession, or gene set. If nothing is selected, all accessible gene sets are searched.</p>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-start mb-3">
+            <span class="step-badge me-3 flex-shrink-0">3</span>
+            <div>
+              <strong>Select annotation types to search</strong>
+              <p class="text-muted mb-0 mt-1">Choose which annotation categories to include — e.g. Gene Ontology, Domains, Homologs, BLAST hits. Deselecting types you don't need speeds up the search and reduces noise in results.</p>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-start">
+            <span class="step-badge me-3 flex-shrink-0">4</span>
+            <div>
+              <strong>Search</strong>
+              <p class="text-muted mb-0 mt-1">Click the Search button. Results are returned per organism and ranked by relevance.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">Understanding Results</h5>
+
+          <h6 class="fw-semibold mb-2">Feature Count vs. Annotation Match Count</h6>
+          <p class="text-muted mb-3">Each organism's results show two counters: <strong>Features</strong> (unique genes/sequences matched) and <strong>Annotation Matches</strong> (total annotations matched). A single gene with three matching annotations counts as 1 feature and 3 annotation matches.</p>
+
+          <h6 class="fw-semibold mb-2">Ranking</h6>
+          <p class="text-muted mb-3">Results are sorted by relevance: matches in feature names and descriptions rank higher than annotation matches; exact matches rank higher than partial; word-start matches rank higher than mid-word.</p>
+
+          <h6 class="fw-semibold mb-2">Result limit</h6>
+          <p class="text-muted mb-3">MOOP returns a maximum of 2,500 results per organism. If you receive exactly 2,500, try narrowing your query with more specific terms or fewer organisms.</p>
+
+          <h6 class="fw-semibold mb-2">Simple View vs. Expanded View</h6>
+          <ul class="text-muted mb-3">
+            <li><strong>Simple View</strong> (default) — one row per feature; shows the top matching annotation. Fast to scan.</li>
+            <li><strong>Expanded View</strong> — one row per annotation match; shows every annotation that matched with the keyword highlighted. Use when you need to understand exactly why a gene matched.</li>
           </ul>
+          <p class="text-muted mb-3">Toggle between views with the <strong>Expand All Matches</strong> button above each organism's result table.</p>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Advanced Filtering</h4>
-          <p class="text-muted mb-3">
-            Refine your results with advanced filters:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Annotation Sources:</strong> Click the filter icon to select specific annotation sources to search within</li>
-            <li><strong>Annotation Type:</strong> Show only certain annotation categories</li>
+          <h6 class="fw-semibold mb-2">Table controls</h6>
+          <ul class="text-muted mb-0">
+            <li>Click any column header to sort by that column</li>
+            <li>Use the per-column filter boxes to narrow results further</li>
+            <li>Click <strong>Column Visibility</strong> to show or hide specific columns</li>
+            <li>Select rows with checkboxes, then export with <strong>Copy</strong>, <strong>CSV</strong>, <strong>Excel</strong>, <strong>PDF</strong>, or <strong>Print</strong></li>
+            <li>Click any gene link to open its full detail page</li>
           </ul>
+        </div>
+      </div>
 
-          <h5 class="fw-semibold text-dark mt-3 mb-2">Filtering Examples</h5>
-          <p class="text-muted mb-3">
-            Here are some common filtering scenarios:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Search for Gene Ontology terms:</strong> Uncheck all annotation sources except "Gene Ontology" or "GO", then search for terms like "kinase" or "DNA binding", or search by GO ID like <code>GO:0016301</code> (kinase activity)</li>
-            <li><strong>Find protein domain annotations:</strong> Filter to show only "InterPro", "Pfam", or "SMART" sources, then search for domain names or IDs like <code>PF00001</code> (7 transmembrane receptor)</li>
-            <li><strong>Compare across annotation databases:</strong> Search with different annotation sources selected to see which databases have information about your gene</li>
-          </ul>
-
-          <h5 class="fw-semibold text-dark mt-3 mb-2">Filtering Organisms in Group Searches</h5>
-          <p class="text-muted mb-3">
-            When searching within a group, you can control which organisms are included:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Selection bars:</strong> Each organism card has a checkbox at the top</li>
-            <li><strong>Check/uncheck:</strong> Toggle individual organisms on or off to include/exclude them from the search</li>
-            <li><strong>Select All / Deselect All:</strong> Quickly manage all organisms in the group</li>
-            <li><strong>Search scope:</strong> Only checked organisms will be searched when you run a query</li>
-          </ul>
-
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Working with Results</h4>
-          <p class="text-muted mb-3">
-            Once you have search results:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Sort columns:</strong> Click column headers to sort by any field, including the Score column to rank matches by relevance</li>
-            <li><strong>Search within results:</strong> Use the search box at the top of the table</li>
-            <li><strong>Download results:</strong> Export your results in multiple formats: CSV, Excel (.xls), or FASTA</li>
-            <li><strong>View details:</strong> Click on a result row to see full information</li>
-          </ul>
-
-          <h5 class="fw-semibold text-dark mt-3 mb-2">Understanding Search Results Ranking</h5>
-          <p class="text-muted mb-3">
-            When you search, MOOP returns up to 2,500 results ranked by significance:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Ranked by Significance:</strong> Results are sorted automatically with the most relevant matches at the top
-              <ul>
-                <li>Matches in the sequence name or description rank higher (more specific)</li>
-                <li>Matches in annotations rank lower (less specific, but still relevant)</li>
-                <li>Results where your search term appears exactly as typed rank higher than partial matches</li>
-                <li>Results where your search term appears at the start of a word rank higher than matches in the middle</li>
-              </ul>
-            </li>
-            <li><strong>Result Limit:</strong> Due to performance, MOOP returns a maximum of 2,500 results per organism. If you get exactly 2,500 results, you may have more matches that aren't shown. Try refining your search with more specific terms or by selecting fewer organisms to see additional results</li>
-            <li><strong>Sort by Score:</strong> You can click the Score column header to re-rank results, allowing you to see different matches first after applying filters</li>
-          </ul>
-
-          <h5 class="fw-semibold text-dark mt-3 mb-2">Simple View vs. Expanded View</h5>
-          <p class="text-muted mb-3">
-            MOOP provides two ways to view your search results:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Simple View:</strong> Shows basic match information with sequence name, description, and top annotation
-              <ul>
-                <li>Use when you want a quick overview of results</li>
-                <li>Easier to scan through many results</li>
-                <li>Ideal for identifying which sequences match your search</li>
-              </ul>
-            </li>
-            <li><strong>Expanded View:</strong> Shows ALL matching annotations for each sequence with detailed information
-              <ul>
-                <li>Use when you need to see exactly where your search terms appeared</li>
-                <li>Shows every matching annotation and which search keywords matched</li>
-                <li>Useful for understanding why a sequence matched your search</li>
-              </ul>
-            </li>
-          </ul>
-
-          <p class="text-muted">
-            Click the <strong>"Expand All Matches"</strong> button to toggle between views. The simple view is shown by default for better performance with large result sets.
-          </p>
-
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Exporting Results</h4>
-          <p class="text-muted mb-3">
-            Save your search results for further analysis:
-          </p>
-          <ul class="text-muted">
-            <li><strong>CSV format:</strong> Import into spreadsheets or databases for analysis</li>
-            <li><strong>Excel (.xls):</strong> Open directly in spreadsheet applications with formatting</li>
-            <li><strong>FASTA format:</strong> Use in bioinformatics tools like BLAST or sequence alignment software</li>
-            <li><strong>Select rows:</strong> Choose specific results to export, or export all results</li>
-          </ul>
-
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Search Tips</h4>
-          <ul class="text-muted">
-            <li>Use quotation marks for exact matches: <code>"exact phrase"</code></li>
-            <li>Search for partial matches by entering part of a word or ID (e.g., <code>gene</code> will find "gene1", "gene2", etc.)</li>
-            <li>Combine multiple filters for more precise results</li>
-            <li>Download results as Excel, CSV, or FASTA to save your findings</li>
-            <li>Remember to deselect organisms you don't need to speed up searches</li>
+      <!-- Tips -->
+      <div class="card shadow-sm mb-4 border-0" style="background:#f0f9ff;">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3"><i class="fa fa-lightbulb me-2" style="color:#0891b2;"></i>Tips</h5>
+          <ul class="text-muted mb-0">
+            <li>Use <code>"exact phrase"</code> to find features with that precise text in an annotation.</li>
+            <li>Deselect annotation types you don't need — searching only GO terms is faster than searching all types.</li>
+            <li>If you need to download many genes with their annotations, use <strong>MOOPmart</strong> instead of exporting search results — it gives you more control over output format and columns.</li>
+            <li>The in-page search on organism/assembly/gene set pages is the quickest way to look up a specific gene ID.</li>
           </ul>
         </div>
       </div>
 
       <div class="mb-4">
         <a href="help.php" class="btn btn-outline-secondary btn-sm">
-          <i class="fa fa-arrow-left"></i> Back to Help
+          <i class="fa fa-arrow-left me-1"></i>Back to Help
         </a>
       </div>
     </div>
