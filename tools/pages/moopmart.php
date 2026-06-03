@@ -373,18 +373,12 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
     <div class="card-body pt-3">
 
       <!-- Format toggle -->
-      <div class="d-flex align-items-center gap-3 mb-4">
-        <span class="small fw-semibold text-muted">Format:</span>
-        <div class="btn-group" role="group">
-          <input type="radio" class="btn-check" name="mm-format" id="mm-format-tsv" value="tsv" checked>
-          <label class="btn btn-outline-secondary" for="mm-format-tsv">
-            <i class="fa fa-file-alt me-1"></i>TSV
-          </label>
-          <input type="radio" class="btn-check" name="mm-format" id="mm-format-fasta" value="fasta">
-          <label class="btn btn-outline-secondary" for="mm-format-fasta">
-            <i class="fa fa-dna me-1"></i>FASTA
-          </label>
+      <div class="d-flex align-items-center gap-2 mb-4">
+        <span id="mm-label-tsv" class="small fw-semibold" style="color:#0891b2; transition:color 0.15s;"><i class="fa fa-file-alt me-1"></i>TSV</span>
+        <div class="form-check form-switch mb-0 mx-1">
+          <input class="form-check-input" type="checkbox" role="switch" id="mm-format-switch" aria-label="FASTA format">
         </div>
+        <span id="mm-label-fasta" class="small" style="color:#adb5bd; transition:color 0.15s;"><i class="fa fa-dna me-1"></i>FASTA</span>
       </div>
 
       <!-- TSV options -->

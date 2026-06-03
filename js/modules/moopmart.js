@@ -270,23 +270,30 @@
     // -------------------------------------------------------
 
     function initFormatToggle() {
+        const sw        = document.getElementById('mm-format-switch');
         const tsvOpts   = document.getElementById('mm-tsv-options');
         const fastaOpts = document.getElementById('mm-fasta-options');
         const dlLabel   = document.getElementById('mm-dl-label');
+        const lblTsv    = document.getElementById('mm-label-tsv');
+        const lblFasta  = document.getElementById('mm-label-fasta');
+        if (!sw) return;
 
-        document.querySelectorAll('input[name="mm-format"]').forEach(radio => {
-            radio.addEventListener('change', function () {
-                const isFasta = this.value === 'fasta';
-                tsvOpts?.classList.toggle('d-none', isFasta);
-                fastaOpts?.classList.toggle('d-none', !isFasta);
-                if (dlLabel) dlLabel.textContent = isFasta ? 'Download FASTA' : 'Download TSV';
-                // Clear stale preview when switching formats
-                document.getElementById('mm-results-section')?.classList.add('d-none');
-                document.getElementById('mm-fasta-preview-section')?.classList.add('d-none');
-            });
-        });
+        function updateFormat() {
+            const isFasta = sw.checked;
+            tsvOpts?.classList.toggle('d-none', isFasta);
+            fastaOpts?.classList.toggle('d-none', !isFasta);
+            if (dlLabel) dlLabel.textContent = isFasta ? 'Download FASTA' : 'Download TSV';
+            if (lblTsv)  { lblTsv.style.color  = isFasta ? '#adb5bd' : '#0891b2'; lblTsv.style.fontWeight  = isFasta ? 'normal' : '600'; }
+            if (lblFasta){ lblFasta.style.color = isFasta ? '#0891b2' : '#adb5bd'; lblFasta.style.fontWeight = isFasta ? '600' : 'normal'; }
+            // Clear stale preview when switching formats
+            document.getElementById('mm-results-section')?.classList.add('d-none');
+            document.getElementById('mm-fasta-preview-section')?.classList.add('d-none');
+        }
 
-        // FASTA type → show/hide flank input
+        sw.addEventListener('change', updateFormat);
+        updateFormat();
+
+        // FASTA sequence type → show/hide flank input
         document.querySelectorAll('.mm-fasta-mode').forEach(radio => {
             radio.addEventListener('change', function () {
                 const flankWrap = document.getElementById('mm-flank-wrap');
@@ -455,7 +462,7 @@
         if (result) result.textContent = '';
 
         const csrf   = document.querySelector('meta[name="csrf-token"]')?.content || '';
-        const format = document.querySelector('input[name="mm-format"]:checked')?.value || 'tsv';
+        const format = document.getElementById('mm-format-switch')?.checked ? 'fasta' : 'tsv';
 
         if (format === 'fasta') {
             const fastaMode = document.querySelector('input[name="mm-fasta-type"]:checked')?.value || 'gene';
@@ -658,7 +665,7 @@
                 if (result) { result.textContent = 'Select at least one organism in Step 1 first.'; result.className = 'small text-warning'; }
                 return;
             }
-            const format    = document.querySelector('input[name="mm-format"]:checked')?.value || 'tsv';
+            const format    = document.getElementById('mm-format-switch')?.checked ? 'fasta' : 'tsv';
             const fastaMode = document.querySelector('input[name="mm-fasta-type"]:checked')?.value || 'gene';
             const flank     = document.getElementById('mm-flank-bp')?.value || '1000';
             submitDownload({ output_format: format, fasta_mode: fastaMode, flank_bp: flank });
