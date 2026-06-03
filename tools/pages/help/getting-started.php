@@ -32,10 +32,20 @@
       <div class="card shadow-sm mb-4">
         <div class="card-body p-4">
           <h5 class="fw-semibold mb-3">The Home Page</h5>
-          <p class="text-muted mb-3">The home page gives you two ways to select organisms:</p>
+          <p class="text-muted mb-3">The home page has three ways to find and select organisms:</p>
+
+          <h6 class="fw-semibold mb-1">Quick Search</h6>
+          <p class="text-muted mb-3">A search bar at the top of the page that searches across organisms, groups, assemblies, and gene sets by name or accession. As you type, a dropdown shows matching results — click any entry to go directly to that page. Example chips below the bar show you what kinds of things you can search for.</p>
+
+          <h6 class="fw-semibold mb-1">Browse by Group</h6>
+          <p class="text-muted mb-3">A collapsible strip of group chips (e.g. Bats, Planaria). Click any chip to open that group's page, which shows all organisms in the group and lets you run searches scoped to that group.</p>
+
+          <h6 class="fw-semibold mb-1">Browse &amp; Select</h6>
+          <p class="text-muted mb-2">A collapsible panel with three tabs for building a custom organism selection:</p>
           <ul class="text-muted mb-0">
-            <li><strong>Group Select</strong> — click a pre-organized group card (e.g. Bats, Planaria) to immediately open that organism set. Groups are curated by the site administrator around research themes.</li>
-            <li><strong>Tree Select</strong> — use the interactive taxonomy tree to browse the full organism hierarchy and build a custom cross-group selection. Click any node to select all organisms below it.</li>
+            <li><strong>Organism Select</strong> — a flat alphabetical list of all accessible organisms. Check the ones you want.</li>
+            <li><strong>Taxon Select</strong> — filter organisms by taxonomic group. Useful for finding all organisms within a particular lineage.</li>
+            <li><strong>Tree Select</strong> — an interactive taxonomy tree. Click any node to select all organisms below it. Your selection carries over between tabs.</li>
           </ul>
         </div>
       </div>

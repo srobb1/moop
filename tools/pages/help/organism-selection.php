@@ -27,87 +27,65 @@
         </div>
       </div>
 
-      <div class="card shadow-sm border-0 rounded-3 mb-4">
+      <!-- Quick Search -->
+      <div class="card shadow-sm mb-4">
         <div class="card-body p-4">
-          <h3 class="fw-bold text-dark mb-3">Two Ways to Select Organisms</h3>
-          <p class="text-muted mb-4">
-            MOOP provides two flexible methods for selecting which organisms you want to work with.
-          </p>
+          <h5 class="fw-semibold mb-2">Quick Search</h5>
+          <p class="text-muted mb-2">The search bar at the top of the home page searches across organisms, groups, assemblies, and gene sets simultaneously. As you type, a dropdown shows matching results — click any entry to navigate directly to that page.</p>
+          <p class="text-muted mb-0">Example chips below the bar show the kinds of queries you can make: species names, common names, group names, assembly accessions, or gene set names.</p>
+        </div>
+      </div>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Method 1: Group Select</h4>
-          <p class="text-muted mb-3">
-            The fastest way to start exploring. The home page displays pre-organized organism groups as cards.
-          </p>
-          <ul class="text-muted">
-            <li>Click on any group card to view organisms in that group</li>
-            <li>Each group has a description explaining what organisms it contains</li>
-            <li>Groups are created by administrators based on common research interests</li>
-            <li>Perfect for quick exploration or common analyses</li>
+      <!-- Browse by Group -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-2">Browse by Group</h5>
+          <p class="text-muted mb-3">Click the <strong>Browse by Group</strong> header to expand a strip of group chips. Each chip is a curator-defined organism set (e.g. Bats, Planaria, Acorn Worms). Clicking a chip opens that group's page.</p>
+
+          <h6 class="fw-semibold mb-2">On a group page</h6>
+          <ul class="text-muted mb-0">
+            <li><strong>Organism cards</strong> — each organism has a card with its image, scientific name, and common name. Click the card body to open the organism's dedicated page.</li>
+            <li><strong>Selection bar</strong> — a checkbox at the top of each card lets you include or exclude that organism from group-level searches. All organisms are selected by default.</li>
+            <li><strong>Select All / Deselect All</strong> — quickly toggle all organisms in the group.</li>
+            <li><strong>Search</strong> — runs across only the checked organisms in the group.</li>
           </ul>
+        </div>
+      </div>
 
-          <h5 class="fw-semibold text-dark mt-3 mb-2">Refining Group Searches with Organism Selection</h5>
-          <p class="text-muted mb-3">
-            When viewing a group, you can choose which specific organisms to include in your searches:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Selection bars:</strong> Each organism card displays a selection bar at the top</li>
-            <li><strong>Check/uncheck organisms:</strong> Click the checkbox icon to toggle individual organisms on or off</li>
-            <li><strong>Select All / Deselect All buttons:</strong> Quickly select or deselect all organisms in the group at once</li>
-            <li><strong>Visual feedback:</strong> The bar turns blue with a checkmark (✓) when an organism is selected, gray when deselected</li>
-            <li><strong>Targeted searches:</strong> Your search will only run on the organisms you have selected</li>
-            <li><strong>Default:</strong> All organisms are selected by default when you first view a group</li>
-          </ul>
+      <!-- Browse & Select -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">Browse &amp; Select — Three Tabs</h5>
+          <p class="text-muted mb-3">Click the <strong>Browse &amp; Select</strong> header to expand a tabbed panel for building a custom multi-organism selection. Your selection carries over between tabs.</p>
 
-          <h5 class="fw-semibold text-dark mt-3 mb-2">Viewing Individual Organisms</h5>
-          <p class="text-muted mb-3">
-            Click on an organism card (anywhere except the checkbox) to visit that organism's dedicated page:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Organism-specific page:</strong> Shows detailed information about that single organism</li>
-            <li><strong>Single-organism search:</strong> Search will only run on that one organism, not the group</li>
-            <li><strong>Organism details:</strong> View images, annotations, and other organism-specific data</li>
-            <li><strong>Dedicated tools:</strong> Access tools tailored for single-organism analysis</li>
-          </ul>
+          <h6 class="fw-semibold mb-1">Organism Select</h6>
+          <p class="text-muted mb-3">A flat alphabetical list of all accessible organisms. Check the ones you want to include. Use the filter box to search by name or common name. This is the fastest tab if you know exactly which organisms you need.</p>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Method 2: Tree Select (Custom Selection)</h4>
-          <p class="text-muted mb-3">
-            For more precise control, use the interactive taxonomy tree to build a custom set of organisms.
-          </p>
-          
-          <div class="bg-light p-3 rounded mb-3">
-            <strong>How to use the Tree Select:</strong>
-            <ul class="mb-0 mt-2">
-              <li><strong>Click any node</strong> to select or deselect organisms</li>
-              <li><strong>Selecting a parent node</strong> automatically selects all organisms below it</li>
-              <li><strong>Filter the tree</strong> using the search box to find specific organisms</li>
-              <li><strong>View selected organisms</strong> in the sidebar on the right</li>
-              <li><strong>Choose a tool</strong> from the Tool Box when ready</li>
-            </ul>
-          </div>
+          <h6 class="fw-semibold mb-1">Taxon Select</h6>
+          <p class="text-muted mb-3">Filter organisms by taxonomic grouping. Useful for selecting everything within a particular lineage without navigating the full tree.</p>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Understanding the Taxonomy Tree</h4>
-          <p class="text-muted mb-3">
-            The taxonomy tree is organized hierarchically:
-          </p>
-          <ul class="text-muted">
-            <li><strong>Root level:</strong> Highest taxonomic classifications</li>
-            <li><strong>Branches:</strong> Sub-groups organized by evolutionary relationships</li>
-            <li><strong>Leaf nodes:</strong> Individual organisms or strains</li>
-          </ul>
+          <h6 class="fw-semibold mb-1">Tree Select</h6>
+          <p class="text-muted mb-3">An interactive taxonomy tree organized hierarchically by evolutionary relationships. Click any internal node to select all organisms below it; click again to deselect. Use the search box to jump to a specific organism or group. Your selection is shown in the right-hand panel.</p>
 
-          <h4 class="fw-semibold text-dark mt-4 mb-2">Tips for Selection</h4>
-          <ul class="text-muted">
-            <li>Start with a group card if you're unsure what to select</li>
-            <li>Use tree filtering to find organisms by name</li>
-            <li>You can select organisms across different branches</li>
-            <li>Your selection is shown in the sidebar and persists while you browse</li>
+          <p class="text-muted mb-0">Once you've made a selection, click a tool in the <strong>Tool Box</strong> (which appears once organisms are selected) to open it with your selection pre-loaded.</p>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4 border-0" style="background:#f0f9ff;">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3"><i class="fa fa-lightbulb me-2" style="color:#0891b2;"></i>Tips</h5>
+          <ul class="text-muted mb-0">
+            <li>Quick Search is the fastest way to navigate to a specific organism or assembly — just start typing the name or accession.</li>
+            <li>Selections made in Browse &amp; Select carry over between the Organism, Taxon, and Tree tabs — you can refine your selection without losing previous choices.</li>
+            <li>On a group page, deselecting individual organisms before searching lets you exclude organisms you don't need without leaving the group context.</li>
+            <li>Click an organism card (not the checkbox) to go directly to that organism's page for single-organism searches and assembly details.</li>
           </ul>
         </div>
       </div>
 
       <div class="mb-4">
         <a href="help.php" class="btn btn-outline-secondary btn-sm">
-          <i class="fa fa-arrow-left"></i> Back to Help
+          <i class="fa fa-arrow-left me-1"></i>Back to Help
         </a>
       </div>
     </div>
