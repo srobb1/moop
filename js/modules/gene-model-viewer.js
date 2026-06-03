@@ -31,7 +31,8 @@
     const PAD_RIGHT     = 30;
     const EXON_H        = 10;
     const CDS_H         = 16;
-    const FLANK_W       = 12;  // upstream/downstream block width
+    const FLANK_W       = 24;  // upstream/downstream block width
+    const FLANK_H       = 14;  // upstream/downstream block height
     const FLANK_GAP     = 4;   // gap between block and track edge
 
     const COLOR_BACKBONE   = '#aaa';
@@ -124,25 +125,27 @@
                 bg.addEventListener('click', () => showGenomicModal(gene, isoforms));
                 gG.appendChild(bg);
 
-                const gBy = gCy - EXON_H / 2;
+                const gBy = gCy - FLANK_H / 2;
                 const gXL = Math.min(toX(gene.start), toX(gene.end));
                 const gXR = Math.max(toX(gene.start), toX(gene.end));
 
-                const gUp = makeRect(gXL - FLANK_GAP - FLANK_W, gBy, FLANK_W, EXON_H, COLOR_UPSTREAM, 2);
+                const gUp = makeRect(gXL - FLANK_GAP - FLANK_W, gBy, FLANK_W, FLANK_H, COLOR_UPSTREAM, 2);
                 gUp.setAttribute('stroke', COLOR_UPSTREAM_S);
                 gUp.setAttribute('stroke-width', '1');
                 gUp.style.cursor = 'pointer';
                 addRegionTitle(gUp, `Upstream flanking — ${gene.id || 'Gene'}`);
                 gUp.addEventListener('click', e => { e.stopPropagation(); fetchFlank(gene, 'upstream', 1000); });
                 gG.appendChild(gUp);
+                gG.appendChild(makeFlankLabel(gXL - FLANK_GAP - FLANK_W + FLANK_W / 2, gCy, 'upstream', COLOR_UPSTREAM_S));
 
-                const gDn = makeRect(gXR + FLANK_GAP, gBy, FLANK_W, EXON_H, COLOR_DOWNSTREAM, 2);
+                const gDn = makeRect(gXR + FLANK_GAP, gBy, FLANK_W, FLANK_H, COLOR_DOWNSTREAM, 2);
                 gDn.setAttribute('stroke', COLOR_DOWNSTREAM_S);
                 gDn.setAttribute('stroke-width', '1');
                 gDn.style.cursor = 'pointer';
                 addRegionTitle(gDn, `Downstream flanking — ${gene.id || 'Gene'}`);
                 gDn.addEventListener('click', e => { e.stopPropagation(); fetchFlank(gene, 'downstream', 1000); });
                 gG.appendChild(gDn);
+                gG.appendChild(makeFlankLabel(gXR + FLANK_GAP + FLANK_W / 2, gCy, 'downstream', COLOR_DOWNSTREAM_S));
             }
 
             svg.appendChild(gG);
@@ -253,25 +256,27 @@
             // Upstream / downstream flanking blocks in left/right margins
             if (canFetchSeq) {
                 const feat = Object.assign({ seqname: gene.seqname }, iso);
-                const by   = cy - EXON_H / 2;
 
                 // Upstream block — fixed gap from isoform's leftmost feature
-                const upRect = makeRect(xL - FLANK_GAP - FLANK_W, by, FLANK_W, EXON_H, COLOR_UPSTREAM, 2);
+                const by   = cy - FLANK_H / 2;
+                const upRect = makeRect(xL - FLANK_GAP - FLANK_W, by, FLANK_W, FLANK_H, COLOR_UPSTREAM, 2);
                 upRect.setAttribute('stroke', COLOR_UPSTREAM_S);
                 upRect.setAttribute('stroke-width', '1');
                 upRect.style.cursor = 'pointer';
                 addRegionTitle(upRect, `Upstream flanking — ${iso.id}`);
                 upRect.addEventListener('click', e => { e.stopPropagation(); fetchFlank(feat, 'upstream', 1000); });
                 g.appendChild(upRect);
+                g.appendChild(makeFlankLabel(xL - FLANK_GAP - FLANK_W / 2, cy, 'upstream', COLOR_UPSTREAM_S));
 
                 // Downstream block — fixed gap from isoform's rightmost feature
-                const dnRect = makeRect(xR + FLANK_GAP, by, FLANK_W, EXON_H, COLOR_DOWNSTREAM, 2);
+                const dnRect = makeRect(xR + FLANK_GAP, by, FLANK_W, FLANK_H, COLOR_DOWNSTREAM, 2);
                 dnRect.setAttribute('stroke', COLOR_DOWNSTREAM_S);
                 dnRect.setAttribute('stroke-width', '1');
                 dnRect.style.cursor = 'pointer';
                 addRegionTitle(dnRect, `Downstream flanking — ${iso.id}`);
                 dnRect.addEventListener('click', e => { e.stopPropagation(); fetchFlank(feat, 'downstream', 1000); });
                 g.appendChild(dnRect);
+                g.appendChild(makeFlankLabel(xR + FLANK_GAP + FLANK_W / 2, cy, 'downstream', COLOR_DOWNSTREAM_S));
             }
 
             // Tooltip on the row background (navigate hint)
@@ -293,22 +298,44 @@
             svg.appendChild(g);
         });
 
-        // Single isoform-type label centered over the whole mRNA block
+        // Rotated isoform-type label + bracket spanning the whole mRNA block
         if (isoforms.length > 0) {
             const isoBlockTop    = PAD_TOP + GENE_ROW;
             const isoBlockBottom = isoBlockTop + isoforms.length * (ROW_HEIGHT + LABEL_HEIGHT);
             const isoCenterY     = (isoBlockTop + isoBlockBottom) / 2;
             const isoType        = isoforms[0].type || 'mRNA';
+            const bracketX       = 10;
 
+            // Light vertical bracket line
+            const bLine = makeSvgEl('line');
+            bLine.setAttribute('x1', bracketX); bLine.setAttribute('x2', bracketX);
+            bLine.setAttribute('y1', isoBlockTop + LABEL_HEIGHT); bLine.setAttribute('y2', isoBlockBottom - 4);
+            bLine.setAttribute('stroke', '#ccc'); bLine.setAttribute('stroke-width', '1');
+            svg.appendChild(bLine);
+            // Top tick
+            const tTop = makeSvgEl('line');
+            tTop.setAttribute('x1', bracketX); tTop.setAttribute('x2', bracketX + 6);
+            tTop.setAttribute('y1', isoBlockTop + LABEL_HEIGHT); tTop.setAttribute('y2', isoBlockTop + LABEL_HEIGHT);
+            tTop.setAttribute('stroke', '#ccc'); tTop.setAttribute('stroke-width', '1');
+            svg.appendChild(tTop);
+            // Bottom tick
+            const tBot = makeSvgEl('line');
+            tBot.setAttribute('x1', bracketX); tBot.setAttribute('x2', bracketX + 6);
+            tBot.setAttribute('y1', isoBlockBottom - 4); tBot.setAttribute('y2', isoBlockBottom - 4);
+            tBot.setAttribute('stroke', '#ccc'); tBot.setAttribute('stroke-width', '1');
+            svg.appendChild(tBot);
+
+            // Rotated label — reads bottom-to-top, centred on bracket
             const isoTypeLabel = makeSvgEl('text');
-            isoTypeLabel.setAttribute('x', 4);
+            isoTypeLabel.setAttribute('x', bracketX - 2);
             isoTypeLabel.setAttribute('y', isoCenterY);
             isoTypeLabel.setAttribute('font-size', '10');
             isoTypeLabel.setAttribute('fill', COLOR_LABEL);
-            isoTypeLabel.setAttribute('text-anchor', 'start');
+            isoTypeLabel.setAttribute('text-anchor', 'middle');
             isoTypeLabel.setAttribute('dominant-baseline', 'middle');
             isoTypeLabel.setAttribute('font-style', 'italic');
             isoTypeLabel.setAttribute('font-weight', 'bold');
+            isoTypeLabel.setAttribute('transform', `rotate(-90,${bracketX - 2},${isoCenterY})`);
             isoTypeLabel.textContent = isoType;
             svg.appendChild(isoTypeLabel);
         }
@@ -682,6 +709,23 @@
         const t = document.createElementNS(NS, 'title');
         t.textContent = text + ' — click to view sequence';
         el.appendChild(t);
+    }
+
+    // Rotated label inside an upstream/downstream flanking block.
+    // cx/cy = centre of the block; text reads bottom-to-top.
+    function makeFlankLabel(cx, cy, text, color) {
+        const el = makeSvgEl('text');
+        el.setAttribute('x', cx);
+        el.setAttribute('y', cy);
+        el.setAttribute('font-size', '8');
+        el.setAttribute('fill', color);
+        el.setAttribute('text-anchor', 'middle');
+        el.setAttribute('dominant-baseline', 'middle');
+        el.setAttribute('font-weight', 'bold');
+        el.setAttribute('transform', `rotate(-90,${cx},${cy})`);
+        el.style.pointerEvents = 'none';
+        el.textContent = text;
+        return el;
     }
 
     function makeLine(x1, x2, y1, y2, stroke, sw) {
