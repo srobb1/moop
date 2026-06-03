@@ -64,6 +64,52 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
     </div>
   </div>
 
+  <!-- Build Your List help modal -->
+  <div class="modal fade" id="mm-build-help-modal" tabindex="-1" aria-labelledby="mm-build-help-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header py-2" style="background:#0891b2; color:#fff;">
+          <h6 class="modal-title fw-semibold mb-0" id="mm-build-help-label">How to build your list</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body small">
+
+          <p class="mb-3">Each section is a different way to filter genes. Leave a section empty to ignore it. Fill more than one and only genes that satisfy <strong>all</strong> of them will appear in your list.</p>
+
+          <h6 class="fw-semibold mb-1" style="color:#0891b2;">By Feature IDs</h6>
+          <p class="mb-1">Paste one or more IDs — gene IDs, mRNA IDs, or protein IDs — one per line or comma-separated. Each is resolved to its parent gene automatically.</p>
+          <ul class="mb-3">
+            <li><strong>Gene ID</strong> — matched directly: <code>AT1G12345</code></li>
+            <li><strong>mRNA ID</strong> — walks up to the parent gene: <code>AT1G12345.1</code></li>
+            <li><strong>Protein ID</strong> — walks up through mRNA to gene: <code>XP_023382306.1</code></li>
+          </ul>
+
+          <h6 class="fw-semibold mb-1" style="color:#0891b2;">By Feature Name</h6>
+          <p class="mb-3">Partial, case-insensitive match on the gene name field. For example, entering <code>HDAC</code> will find genes named <em>HDAC1</em>, <em>HDAC2</em>, <em>pHDAC3</em>, etc.</p>
+
+          <h6 class="fw-semibold mb-1" style="color:#0891b2;">By Feature Description</h6>
+          <p class="mb-3">Partial match on the gene description. For example, <code>kinase</code> finds any gene whose description contains that word, such as <em>serine/threonine-protein kinase</em>.</p>
+
+          <h6 class="fw-semibold mb-1" style="color:#0891b2;">By Annotation</h6>
+          <p class="mb-1">Filter by functional annotations attached to genes — GO terms, InterPro domains, BLAST hits, and more. Each row is one criterion; all rows must be satisfied (AND).</p>
+          <ul class="mb-3">
+            <li><strong>Annotation type</strong> — narrow to a specific database, e.g. <em>Gene Ontology</em> or <em>InterPro</em></li>
+            <li><strong>Accession (exact)</strong> — match a specific ID, e.g. <code>GO:0006351</code> or <code>IPR000719</code></li>
+            <li><strong>Keyword</strong> — partial match on the annotation description, e.g. <code>transcription factor</code></li>
+          </ul>
+          <p class="mb-3">Example: to find all genes with a kinase domain <em>and</em> a specific GO term, add two rows — one for <code>IPR000719</code> and one for <code>GO:0004672</code>.</p>
+
+          <h6 class="fw-semibold mb-1" style="color:#0891b2;">By Chromosomal Location</h6>
+          <p class="mb-0">Returns all genes whose coordinates overlap the specified range. Only available when exactly one assembly is selected in Step 1. Enter a chromosome or scaffold name and optional start/end positions.</p>
+
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-sm text-white" style="background:#0891b2;" data-bs-dismiss="modal">Got it</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ① Select Organisms -->
   <div class="card mb-3 shadow-sm">
     <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
@@ -134,6 +180,11 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
     <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
       <span class="step-badge me-2">2</span>
       <span class="fw-semibold" style="font-size:0.9rem;">Build your list</span>
+      <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline"
+              style="font-size:0.85rem; color:rgba(255,255,255,0.8);"
+              data-bs-toggle="modal" data-bs-target="#mm-build-help-modal">
+        <i class="fa fa-info-circle"></i>
+      </button>
       <small class="ms-auto" style="color:rgba(255,255,255,0.75); font-size:0.78rem;">all sections optional</small>
     </div>
     <div class="card-body pt-2 pb-3">
