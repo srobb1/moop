@@ -120,3 +120,11 @@ samtools-*
 organisms_missing_data/
 /moop/
 smallscreen.png
+
+# Self-hosted vendor assets (downloaded, not committed)
+js/vendor/
+css/fontawesome/
+css/bootstrap.min.css
+css/datatables/dataTables.bootstrap5.min.css
+css/datatables/buttons.bootstrap5.min.css
+css/datatables/colReorder.dataTables.min.css

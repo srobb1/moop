@@ -29,13 +29,8 @@ $site = $config->getString('site');
     <meta name="csrf-token" content="<?= htmlspecialchars(generate_csrf_token(), ENT_QUOTES) ?>">
     <?php endif; ?>
 
-    <!-- Inter — clean UI font for search/filter inputs -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
-
-    <!-- Bootstrap 5.3.2 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap 5.3.2 CSS — self-hosted -->
+    <link href="/<?= $site ?>/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- MOOP Base Styles (global styles + loader animation) -->
     <link rel="stylesheet" href="/<?= $site ?>/css/moop.css">
@@ -65,12 +60,10 @@ $site = $config->getString('site');
       }
     ?>
 
-    <!-- DataTables 1.13.4 core and Bootstrap 5 theme -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" integrity="sha384-ISVEfRng8Op3e05C6sGn0g+2Dx1ksAPwbTbkf3mNMmYLxY883tj0WZV+vPNjwvt6" crossorigin="anonymous">
-    <!-- DataTables Buttons 2.3.6 with Bootstrap 5 theme -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.bootstrap5.min.css" integrity="sha384-760jVcHKEQ7zpIFhZXFECFibxtsaQSxVvecxbyuYKJI9zvZCZdEVfpjHmL/pNq9K" crossorigin="anonymous">
-    <!-- Column reordering functionality -->
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/colreorder/1.5.5/css/colReorder.dataTables.min.css" integrity="sha384-LFPyhBHWePyFBkS6Kg3KZZX/XMsZG/c63KSiqh6vhDJTCMchcsjt/0edYvoF349b" crossorigin="anonymous">
+    <!-- DataTables 1.13.4 — self-hosted -->
+    <link rel="stylesheet" href="/<?= $site ?>/css/datatables/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="/<?= $site ?>/css/datatables/buttons.bootstrap5.min.css">
+    <link rel="stylesheet" href="/<?= $site ?>/css/datatables/colReorder.dataTables.min.css">
 
-    <!-- Font Awesome 5.7.0 - REQUIRED for icons (navigation, buttons, status indicators) -->
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
+    <!-- Font Awesome 5.7.0 — self-hosted -->
+    <link rel="stylesheet" href="/<?= $site ?>/css/fontawesome/all.css">
