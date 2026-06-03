@@ -392,12 +392,12 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
         <!-- Wide / Long -->
         <div class="mb-4 d-flex align-items-center gap-2">
-          <div class="form-check form-switch mb-0">
-            <input class="form-check-input" type="checkbox" role="switch" id="mm-ann-wide-switch">
-            <label class="form-check-label small text-muted text-nowrap" for="mm-ann-wide-switch">Wide</label>
+          <span id="mm-label-long" class="small fw-semibold" style="color:#0891b2; transition:color 0.15s;">Long</span>
+          <div class="form-check form-switch mb-0 mx-1">
+            <input class="form-check-input" type="checkbox" role="switch" id="mm-ann-wide-switch" aria-label="Wide format">
           </div>
-          <input type="hidden" name="mm-ann-format" id="mm-ann-format-val" value="long">
-          <i class="fa fa-info-circle text-muted" style="cursor:pointer; font-size:0.85rem;"
+          <span id="mm-label-wide" class="small" style="color:#adb5bd; transition:color 0.15s;">Wide</span>
+          <i class="fa fa-info-circle text-muted ms-1" style="cursor:pointer; font-size:0.85rem;"
              data-bs-toggle="popover" data-bs-placement="right" data-bs-html="true"
              data-bs-title="Table layout"
              data-bs-content="<strong>Long</strong> (default) — one row per mRNA per annotation. Gene and mRNA IDs repeat so every annotation has its own line — easiest to filter in Excel.<br><br><strong>Wide</strong> — one row per mRNA, all annotation values for each source joined with '; '"></i>

@@ -246,6 +246,26 @@
     }
 
     // -------------------------------------------------------
+    // Step 3 — Wide / Long switch label colours
+    // -------------------------------------------------------
+
+    function initWideLongSwitch() {
+        const sw      = document.getElementById('mm-ann-wide-switch');
+        const lblLong = document.getElementById('mm-label-long');
+        const lblWide = document.getElementById('mm-label-wide');
+        if (!sw) return;
+
+        function updateLabels() {
+            const isWide = sw.checked;
+            if (lblLong) { lblLong.style.color = isWide ? '#adb5bd' : '#0891b2'; lblLong.style.fontWeight = isWide ? 'normal' : '600'; }
+            if (lblWide) { lblWide.style.color = isWide ? '#0891b2' : '#adb5bd'; lblWide.style.fontWeight = isWide ? '600' : 'normal'; }
+        }
+
+        sw.addEventListener('change', updateLabels);
+        updateLabels();
+    }
+
+    // -------------------------------------------------------
     // Step 3 — Output format toggle (TSV / FASTA)
     // -------------------------------------------------------
 
@@ -602,6 +622,7 @@
         initAnnCriteria();
         initColList();
         initAccordionHeaders();
+        initWideLongSwitch();
         initFormatToggle();
         initAnnSources();
 
