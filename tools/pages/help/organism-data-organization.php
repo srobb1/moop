@@ -32,6 +32,7 @@
     <ul class="mb-0 mt-1">
       <li><a href="#core-concepts">Core Concepts: Organisms, Assemblies, Gene Sets, Features, Annotations</a></li>
       <li><a href="#file-organization">File Organization</a></li>
+      <li><a href="#json-metadata">JSON Metadata Files</a></li>
       <li><a href="#database-schema">Database Schema</a></li>
       <li><a href="#hierarchical-structure">Feature Hierarchy</a></li>
       <li><a href="#annotation-system">Annotation System</a></li>
@@ -197,6 +198,125 @@
     <div class="alert alert-info">
       <i class="fa fa-info-circle me-1"></i>
       <strong>Configuration note:</strong> FASTA file naming patterns are configured in <code>config/config_editable.json</code> under <code>sequence_types</code>, so they can vary between sites.
+    </div>
+  </section>
+
+  <!-- Section: JSON Metadata Files -->
+  <section id="json-metadata" class="mt-5">
+    <h4 class="fw-semibold mb-3"><i class="fa fa-file-code me-2"></i>JSON Metadata Files</h4>
+    <p class="text-muted mb-4">Three small JSON files sit alongside the data files at each level of the hierarchy. They store display and provenance metadata that isn't in the SQLite database.</p>
+
+    <!-- organism.json -->
+    <div class="card mb-4">
+      <div class="card-header text-white" style="background-color:#0f766e;">
+        <code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">organism.json</code>
+        <span class="ms-2 small opacity-75">— organisms/Organism_Name/organism.json</span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-3">Controls how the organism is displayed across the site. Also defines which feature types are treated as parent features (shown on feature detail pages) vs child features.</p>
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <pre class="bg-light p-3 rounded border mb-0" style="font-size:0.8rem;"><code>{
+  "genus": "Anoura",
+  "species": "caudifer",
+  "common_name": "Tailed Tailless Bat",
+  "taxon_id": "27642",
+  "subclassification": {
+    "type": null,
+    "value": null
+  },
+  "feature_types": {
+    "parents": ["gene"],
+    "children": ["mRNA", "transcript"]
+  }
+}</code></pre>
+          </div>
+          <div class="col-lg-6">
+            <table class="table table-sm table-bordered mb-0">
+              <thead class="table-light"><tr><th>Field</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>genus</code></td><td>Shown in italics throughout the site</td></tr>
+                <tr><td><code>species</code></td><td>Combined with genus for display</td></tr>
+                <tr><td><code>common_name</code></td><td>Shown in parentheses alongside the scientific name</td></tr>
+                <tr><td><code>taxon_id</code></td><td>NCBI Taxonomy ID — used to fetch the taxonomy tree node and Wikipedia image</td></tr>
+                <tr><td><code>subclassification</code></td><td>Optional strain or subspecies info (<code>type</code>: label, <code>value</code>: the value)</td></tr>
+                <tr><td><code>feature_types.parents</code></td><td>Feature types shown as top-level entries on feature detail pages (typically <code>"gene"</code>)</td></tr>
+                <tr><td><code>feature_types.children</code></td><td>Feature types shown as children under a parent (typically <code>"mRNA"</code>, <code>"transcript"</code>)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- genome.json -->
+    <div class="card mb-4">
+      <div class="card-header text-white" style="background-color:#d97706;">
+        <code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">genome.json</code>
+        <span class="ms-2 small opacity-75">— organisms/Organism_Name/Assembly_ID/genome.json</span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-3">Provenance metadata for the assembly. Shown on the assembly detail page under the info box.</p>
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <pre class="bg-light p-3 rounded border mb-0" style="font-size:0.8rem;"><code>{
+  "accession": "GCA_004027475.1",
+  "name": "",
+  "source": "GenBank",
+  "date_added": "2026-05-28"
+}</code></pre>
+          </div>
+          <div class="col-lg-6">
+            <table class="table table-sm table-bordered mb-0">
+              <thead class="table-light"><tr><th>Field</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>accession</code></td><td>Assembly accession — should match the directory name</td></tr>
+                <tr><td><code>name</code></td><td>Optional human-readable name shown alongside the accession</td></tr>
+                <tr><td><code>source</code></td><td>Where the genome came from (e.g. "GenBank", "RefSeq", "in-house")</td></tr>
+                <tr><td><code>date_added</code></td><td>ISO date when this assembly was loaded into MOOP (YYYY-MM-DD)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- geneset.json -->
+    <div class="card mb-4">
+      <div class="card-header text-white" style="background-color:#e11d48;">
+        <code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">geneset.json</code>
+        <span class="ms-2 small opacity-75">— organisms/Organism_Name/Assembly_ID/Gene_Set_Name/geneset.json</span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-3">Provenance metadata for the gene set. Shown on the gene set detail page under the info box.</p>
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <pre class="bg-light p-3 rounded border mb-0" style="font-size:0.8rem;"><code>{
+  "accession": "SIMR_2025-01-24",
+  "name": "",
+  "source": "other",
+  "date_added": "2026-05-28"
+}</code></pre>
+          </div>
+          <div class="col-lg-6">
+            <table class="table table-sm table-bordered mb-0">
+              <thead class="table-light"><tr><th>Field</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>accession</code></td><td>Gene set name — should match the directory name</td></tr>
+                <tr><td><code>name</code></td><td>Optional human-readable label</td></tr>
+                <tr><td><code>source</code></td><td>Annotation pipeline or source (e.g. "NCBI", "Maker", "other")</td></tr>
+                <tr><td><code>date_added</code></td><td>ISO date when this gene set was loaded (YYYY-MM-DD)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-info mb-0">
+      <i class="fa fa-info-circle me-1"></i>
+      <strong>Site-level metadata</strong> (organism groups, taxonomy tree, annotation config) is documented in the
+      <a href="help.php?topic=organism-setup-and-searches">Setup &amp; Searches</a> help page under "Metadata Configuration Files".
     </div>
   </section>
 
