@@ -41,7 +41,7 @@
           <p class="text-muted mb-3">A collapsible strip of group chips (e.g. Bats, Planaria). Click any chip to open that group's page, which shows all organisms in the group and lets you run searches scoped to that group.</p>
 
           <h6 class="fw-semibold mb-1">Browse &amp; Select</h6>
-          <p class="text-muted mb-2">A collapsible panel with three tabs for building a custom organism selection:</p>
+          <p class="text-muted mb-2">A collapsible panel with three tabs for building a custom organism selection. Once you've selected organisms, a Tool Box appears — click a tool there to launch it with your selection pre-loaded:</p>
           <ul class="text-muted mb-0">
             <li><strong>Organism Select</strong> — a flat alphabetical list of all accessible organisms. Check the ones you want.</li>
             <li><strong>Taxon Select</strong> — filter organisms by taxonomic group. Useful for finding all organisms within a particular lineage.</li>
@@ -64,23 +64,28 @@
 
       <div class="card shadow-sm mb-4">
         <div class="card-body p-4">
-          <h5 class="fw-semibold mb-3">The Tool Box</h5>
-          <p class="text-muted mb-3">On any organism, assembly, or gene set page you'll see the <strong>Tool Box</strong> — a set of tools pre-configured with your current context. The available tools are:</p>
-          <div class="table-responsive">
+          <h5 class="fw-semibold mb-3">Accessing Tools</h5>
+          <p class="text-muted mb-3">Tools are available in two places:</p>
+
+          <h6 class="fw-semibold mb-2">Tools dropdown (top navigation bar)</h6>
+          <p class="text-muted mb-3">The <strong>Tools</strong> menu in the top navigation bar is always available and gives direct access to every tool, independent of your current organism context:</p>
+          <div class="table-responsive mb-3">
             <table class="table table-sm table-bordered text-muted mb-0">
               <thead class="table-light">
                 <tr><th>Tool</th><th>What it does</th></tr>
               </thead>
               <tbody>
-                <tr><td><strong>Annotation Search</strong></td><td>Find genes and features by keyword, annotation description, GO term, or ID. Supports multi-organism searches with fine-grained organism and annotation type filters.</td></tr>
-                <tr><td><strong>BLAST Search</strong></td><td>Compare a DNA or protein sequence against genome assemblies to find similar sequences.</td></tr>
-                <tr><td><strong>MOOPmart</strong></td><td>Build a gene list by ID, name, description, annotation term, or genomic location — then export as TSV or FASTA. The primary tool for bulk data download.</td></tr>
+                <tr><td><strong>Annotation Search</strong></td><td>Find genes and features by keyword, GO term, or annotation ID across one or more organisms. Includes fine-grained organism and annotation type filters.</td></tr>
+                <tr><td><strong>MOOPmart</strong></td><td>Build a gene list by ID, name, description, annotation term, or location — then export as TSV or FASTA. The primary tool for bulk data download.</td></tr>
+                <tr><td><strong>BLAST Search</strong></td><td>Compare a DNA or protein sequence against genome assemblies.</td></tr>
                 <tr><td><strong>Retrieve Sequences</strong></td><td>Look up specific feature IDs and download their genomic, transcript, CDS, or protein sequences.</td></tr>
-                <tr><td><strong>Downloads</strong></td><td>Browse and batch-download genome FASTA, GFF, and other files organized by organism → assembly → gene set.</td></tr>
-                <tr><td><strong>View in Genome Browser</strong></td><td>Open JBrowse2 pre-loaded with the current assembly and its gene tracks.</td></tr>
+                <tr><td><strong>Downloads</strong></td><td>Browse and batch-download genome FASTA, GFF, and other files.</td></tr>
               </tbody>
             </table>
           </div>
+
+          <h6 class="fw-semibold mb-2">Tool Box (on feature pages and home page)</h6>
+          <p class="text-muted mb-0">On organism, assembly, gene set, and group pages — and on the home page after selecting organisms — a <strong>Tool Box</strong> appears with context-aware buttons that open tools pre-loaded with your current organism and assembly. On the home page Browse &amp; Select tabs, select one or more organisms first and then use the Tool Box to launch a search across your selection.</p>
         </div>
       </div>
 
