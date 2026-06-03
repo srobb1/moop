@@ -1,6 +1,6 @@
 <?php
 /**
- * MOOPmart — Feature List Builder
+ * MOOPmart — Gene List Builder
  * Variables: $scope_tree, $organism_info, $organism_groups,
  *            $annotation_source_names, $annotation_source_types
  */
@@ -13,11 +13,55 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
   <!-- Header -->
   <div class="mb-4">
-    <h4 class="mb-1 moop-tool-title text-dark">MOOPmart — Feature List Builder</h4>
+    <h4 class="mb-1 moop-tool-title text-dark">MOOPmart — Gene List Builder</h4>
     <p class="text-muted mb-0 small">
-      Build a list of genomic features and download as TSV or FASTA.
-      Use <a href="search.php" class="text-decoration-none">Annotation Search</a> to explore specific genes first.
+      Find genes or mRNAs by ID, name, annotation description, GO term, or genomic coordinates — then export decorated lists as TSV or FASTA.
+      <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline" style="font-size:0.85rem; color:#0891b2;" data-bs-toggle="modal" data-bs-target="#mm-help-modal">
+        <i class="fa fa-info-circle"></i>
+      </button>
     </p>
+  </div>
+
+  <!-- Help Modal -->
+  <div class="modal fade" id="mm-help-modal" tabindex="-1" aria-labelledby="mm-help-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header py-2" style="background:#0891b2; color:#fff;">
+          <h6 class="modal-title fw-semibold mb-0" id="mm-help-modal-label">What can MOOPmart do?</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body small">
+          <p class="mb-3">MOOPmart lets you build a custom list of genomic features — genes, mRNAs, or other annotation types — across one or more assemblies, then enrich and download that list.</p>
+
+          <h6 class="fw-semibold mb-1" style="color:#0891b2;">Build your list by…</h6>
+          <ul class="mb-3">
+            <li><strong>Feature IDs</strong> — paste a set of known gene or mRNA IDs</li>
+            <li><strong>Shared feature names</strong> — find features that share a common name across assemblies</li>
+            <li><strong>Annotation descriptions</strong> — e.g. all features with <em>"HDAC"</em> anywhere in their description</li>
+            <li><strong>Annotation IDs</strong> — e.g. all features with the Gene Ontology term <em>GO:0006351</em></li>
+            <li><strong>Genomic coordinates</strong> — all features within a specific chromosomal range</li>
+          </ul>
+
+          <h6 class="fw-semibold mb-1" style="color:#0891b2;">Decorate your list with…</h6>
+          <ul class="mb-3">
+            <li>UniProt/Swiss-Prot homolog information</li>
+            <li>PFAM domain annotations</li>
+            <li>Gene Ontology terms</li>
+            <li>Any other annotation columns available for your assemblies</li>
+          </ul>
+
+          <h6 class="fw-semibold mb-1" style="color:#0891b2;">Download as…</h6>
+          <ul class="mb-0">
+            <li><strong>TSV (spreadsheet)</strong> — choose and reorder the columns you want</li>
+            <li><strong>FASTA</strong> — pick the sequence type: genomic (with introns), mRNA, CDS, protein, or upstream/downstream flanking sequence</li>
+          </ul>
+        </div>
+        <div class="modal-footer py-2">
+          <a href="search.php" class="btn btn-sm btn-outline-secondary">Try Annotation Search first</a>
+          <button type="button" class="btn btn-sm text-white" style="background:#0891b2;" data-bs-dismiss="modal">Got it</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ① Select Organisms -->

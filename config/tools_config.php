@@ -89,7 +89,7 @@ return [
 
     'moopmart' => [
         'id'             => 'moopmart',
-        'name'           => 'MOOPmart: Mega Search',
+        'name'           => 'MOOPmart: Gene List Builder',
         'icon'           => 'fa-filter',
         'description'    => 'Filter features by annotation, coordinates, and gene set — download as TSV or FASTA',
         'btn_class'      => 'btn-tool-rose',

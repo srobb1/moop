@@ -51,7 +51,7 @@ $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
              data-bs-toggle="dropdown" aria-expanded="false">Tools</a>
           <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/search.php">Annotation Search</a></li>
-            <li><a class="dropdown-item" href="/<?= $site ?>/tools/moopmart.php">MOOPmart: Mega Search</a></li>
+            <li><a class="dropdown-item" href="/<?= $site ?>/tools/moopmart.php">MOOPmart: Gene List Builder</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/blast.php">BLAST Search</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/retrieve_sequences.php">Retrieve Sequences</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/downloads.php">Downloads</a></li>

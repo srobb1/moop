@@ -1,5 +1,5 @@
 /**
- * MOOPmart — Feature List Builder UI
+ * MOOPmart — Gene List Builder UI
  *
  * Requires globals injected via inline_scripts:
  *   annotationSources — [source_name, ...]
