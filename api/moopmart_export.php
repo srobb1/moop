@@ -53,11 +53,13 @@ if (empty($selected)) {
     die('No accessible sources selected.');
 }
 
-// --- Build filters ---
+// Raw input IDs (resolved per-organism below)
+$raw_input_ids = array_values(array_filter(array_map('trim', (array)($_POST['feature_ids'] ?? []))));
+
+// --- Build base filters (no feature_ids — those are resolved per-organism) ---
 $filters = [];
 $types = array_filter($_POST['feature_types'] ?? []);
 if (!empty($types))                             $filters['feature_types']        = array_values($types);
-if (!empty($_POST['feature_id']))               $filters['feature_id']           = trim($_POST['feature_id']);
 if (!empty($_POST['gene_name']))                $filters['gene_name']            = trim($_POST['gene_name']);
 if (!empty($_POST['gene_description']))         $filters['gene_description']     = trim($_POST['gene_description']);
 $_crit_srcs = $_POST['ann_criteria_src'] ?? [];
@@ -79,6 +81,7 @@ if (!empty($_POST['coord_chr']))   $coord_filter['chr']   = trim($_POST['coord_c
 if (!empty($_POST['coord_start'])) $coord_filter['start'] = (int)$_POST['coord_start'];
 if (!empty($_POST['coord_end']))   $coord_filter['end']   = (int)$_POST['coord_end'];
 
+$global_filter_reason        = buildMoopmartFilterReason($filters, $coord_filter);
 $annotation_columns_selected = array_filter($_POST['annotation_columns'] ?? []);
 
 $organism_data  = $config->getPath('organism_data');
@@ -103,7 +106,15 @@ foreach ($by_organism as $org => $org_data) {
     $gene_set_ids = array_values(array_filter(array_column($sources, 'gene_set_id')));
     if (empty($gene_set_ids)) continue;
 
-    $features = moopmartQueryFeatures($gene_set_ids, $db, $filters);
+    $id_reasons  = [];
+    $org_filters = $filters;
+    if (!empty($raw_input_ids)) {
+        $id_reasons = moopmartResolveInputIds($raw_input_ids, $db, $gene_set_ids);
+        if (empty($id_reasons)) continue;
+        $org_filters['feature_ids'] = array_keys($id_reasons);
+    }
+
+    $features = moopmartQueryFeatures($gene_set_ids, $db, $org_filters);
     if (empty($features)) continue;
 
     $uniquenames_by_gs = [];
@@ -125,6 +136,13 @@ foreach ($by_organism as $org => $org_data) {
         $f['organism_dir'] = $org;
         $f['db_path']      = $db;
         $f['gs_key']       = $db . '|' . $f['gene_set_id'];
+        if (!empty($id_reasons)) {
+            $reason = $id_reasons[$f['uniquename']] ?? '';
+            if ($global_filter_reason) $reason .= ($reason ? ' + ' : '') . $global_filter_reason;
+        } else {
+            $reason = $global_filter_reason;
+        }
+        $f['match_reason'] = $reason;
         $all_features[]    = $f;
     }
 }
@@ -174,6 +192,7 @@ if ($output_format === 'tsv') {
         'start'        => ['start',         fn($f) => $f['start'] ?? ''],
         'stop'         => ['stop',          fn($f) => $f['end'] ?? ''],
         'strand'       => ['strand',        fn($f) => $f['strand'] ?? ''],
+        'why_included' => ['why_included',  fn($f) => $f['match_reason'] ?? ''],
     ];
 
     $requested_feat = array_values(array_filter($_POST['feature_columns'] ?? []));

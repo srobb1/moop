@@ -506,6 +506,10 @@
         start:        { title: 'Start',                data: 'start',            defaultContent: '' },
         stop:         { title: 'Stop',                 data: 'end',              defaultContent: '' },
         strand:       { title: 'Strand',               data: 'strand',           defaultContent: '' },
+        why_included: { title: 'Why Included',         data: 'match_reason',     defaultContent: '',
+                        render: (v, t) => t === 'display' && v?.length > 80
+                            ? `<span title="${v.replace(/"/g, '&quot;')}">${v.slice(0, 80)}…</span>`
+                            : (v || '') },
     };
 
     function getPreviewColumns() {

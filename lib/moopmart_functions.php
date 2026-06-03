@@ -14,6 +14,115 @@
  */
 
 // ============================================================
+// ID RESOLUTION
+// ============================================================
+
+/**
+ * Resolve raw input IDs (gene, mRNA, protein, CDS, etc.) to gene-level uniquenames
+ * with a provenance string explaining why each gene was included.
+ *
+ * Walks up to 2 levels of parent_feature_id to find the enclosing gene.
+ * Multiple input IDs that resolve to the same gene accumulate their reasons.
+ *
+ * @param string[] $input_ids    Raw IDs from user input
+ * @param string   $db_path      Path to organism.sqlite
+ * @param int[]    $gene_set_ids Accessible gene_set_ids for this organism
+ * @return array   [gene_uniquename => reason_string]
+ */
+function moopmartResolveInputIds(array $input_ids, string $db_path, array $gene_set_ids): array
+{
+    if (empty($input_ids) || empty($gene_set_ids)) return [];
+
+    $ph_ids = implode(',', array_fill(0, count($input_ids), '?'));
+    $ph_gs  = implode(',', array_fill(0, count($gene_set_ids), '?'));
+
+    $query = "SELECT
+                  f.feature_uniquename  AS f_name,
+                  f.feature_type        AS f_type,
+                  p.feature_uniquename  AS p_name,
+                  gp.feature_uniquename AS gp_name
+              FROM feature f
+              LEFT JOIN feature p  ON f.parent_feature_id = p.feature_id
+              LEFT JOIN feature gp ON p.parent_feature_id = gp.feature_id
+              WHERE f.feature_uniquename IN ($ph_ids)
+                AND f.gene_set_id IN ($ph_gs)";
+
+    $rows   = fetchData($query, $db_path, array_merge($input_ids, $gene_set_ids));
+    $by_gene = [];
+
+    foreach ($rows as $row) {
+        $f_name  = $row['f_name'];
+        $f_type  = $row['f_type'];
+        $p_name  = $row['p_name'];
+        $gp_name = $row['gp_name'];
+
+        if (!$p_name) {
+            // No parent — this IS the gene
+            $gene   = $f_name;
+            $reason = "Gene ID: $f_name";
+        } elseif (!$gp_name) {
+            // Parent has no grandparent — parent is the gene
+            $gene   = $p_name;
+            $reason = moopmartFeatureTypeLabel($f_type) . ": $f_name";
+        } else {
+            // Has grandparent — grandparent is the gene
+            $gene   = $gp_name;
+            $reason = moopmartFeatureTypeLabel($f_type) . ": $f_name";
+        }
+
+        $by_gene[$gene][] = $reason;
+    }
+
+    $result = [];
+    foreach ($by_gene as $gene => $reasons) {
+        $result[$gene] = implode('; ', array_unique($reasons));
+    }
+    return $result;
+}
+
+/**
+ * Human-readable label for a feature type, used in "Why included" reason strings.
+ */
+function moopmartFeatureTypeLabel(string $type): string
+{
+    return match (strtolower($type)) {
+        'mrna', 'transcript'    => 'mRNA ID',
+        'cds'                   => 'CDS ID',
+        'polypeptide', 'protein' => 'Protein ID',
+        default                 => ucfirst($type) . ' ID',
+    };
+}
+
+/**
+ * Build a uniform "why included" reason string from the non-ID active filters.
+ * Applied to every row when no per-row ID resolution is available.
+ *
+ * @param array $filters      The $filters array passed to moopmartQueryFeatures()
+ * @param array $coord_filter ['chr'=>'', 'start'=>0, 'end'=>0]
+ * @return string
+ */
+function buildMoopmartFilterReason(array $filters, array $coord_filter): string
+{
+    $parts = [];
+    if (!empty($filters['gene_name']))        $parts[] = 'Name: ' . $filters['gene_name'];
+    if (!empty($filters['gene_description'])) $parts[] = 'Description: ' . $filters['gene_description'];
+    foreach ($filters['annotation_criteria'] ?? [] as $crit) {
+        $ann = [];
+        if (!empty($crit['src'])) $ann[] = $crit['src'];
+        if (!empty($crit['acc'])) $ann[] = $crit['acc'];
+        if (!empty($crit['kw']))  $ann[] = 'keyword: "' . $crit['kw'] . '"';
+        if ($ann) $parts[] = 'Annotation: ' . implode(', ', $ann);
+    }
+    if (!empty($coord_filter['chr'])) {
+        $loc = 'Location: ' . $coord_filter['chr'];
+        if (!empty($coord_filter['start'])) $loc .= ':' . number_format((int)$coord_filter['start']);
+        if (!empty($coord_filter['end']))   $loc .= '–' . number_format((int)$coord_filter['end']);
+        $parts[] = $loc;
+    }
+    return implode(' + ', $parts);
+}
+
+// ============================================================
 // SEARCH TERM PARSING
 // ============================================================
 
@@ -101,15 +210,12 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
     array_push($params, ...$types);
 
     // Feature-level filters (applied directly on gene rows)
-    if (!empty($filters['feature_id'])) {
-        // Match on the gene's own uniquename, OR on any child (transcript) uniquename —
-        // so typing either a gene ID or a transcript ID finds the same gene row.
-        $where[]  = '(f.feature_uniquename = ? OR EXISTS (
-                          SELECT 1 FROM feature child
-                          WHERE child.parent_feature_id = f.feature_id
-                            AND child.feature_uniquename = ?))';
-        $params[] = $filters['feature_id'];
-        $params[] = $filters['feature_id'];
+    // feature_ids contains already-resolved gene uniquenames from moopmartResolveInputIds()
+    if (!empty($filters['feature_ids'])) {
+        $ids = $filters['feature_ids'];
+        $ph  = implode(',', array_fill(0, count($ids), '?'));
+        $where[] = "f.feature_uniquename IN ($ph)";
+        array_push($params, ...$ids);
     }
     if (!empty($filters['gene_name'])) {
         $parsed = moopmartBuildTextConditions($filters['gene_name'], 'f.feature_name');
@@ -194,13 +300,11 @@ function moopmartCountFeatures(array $gene_set_ids, string $db_path, array $filt
     $where[] = "f.feature_type IN ($tp)";
     array_push($params, ...$types);
 
-    if (!empty($filters['feature_id'])) {
-        $where[]  = '(f.feature_uniquename = ? OR EXISTS (
-                          SELECT 1 FROM feature child
-                          WHERE child.parent_feature_id = f.feature_id
-                            AND child.feature_uniquename = ?))';
-        $params[] = $filters['feature_id'];
-        $params[] = $filters['feature_id'];
+    if (!empty($filters['feature_ids'])) {
+        $ids = $filters['feature_ids'];
+        $ph  = implode(',', array_fill(0, count($ids), '?'));
+        $where[] = "f.feature_uniquename IN ($ph)";
+        array_push($params, ...$ids);
     }
     if (!empty($filters['gene_name'])) {
         $parsed = moopmartBuildTextConditions($filters['gene_name'], 'f.feature_name');

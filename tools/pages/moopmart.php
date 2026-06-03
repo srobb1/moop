@@ -154,9 +154,13 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           </div>
           <div class="collapse" id="mm-ids-body">
             <div class="browse-select-panel">
-              <p class="text-muted small mb-2">Paste a list of feature IDs — separate them with commas, spaces, or new lines.</p>
+              <p class="text-muted small mb-2">
+                Paste gene IDs, mRNA IDs, or protein IDs — one per line or comma/space separated.
+                Each ID is resolved to its gene: a protein ID walks up to the parent mRNA, then the parent gene.
+                A <strong>Why Included</strong> column in your output will show exactly which input ID each result came from.
+              </p>
               <textarea id="mm-feature-ids" class="form-control moop-input" rows="4"
-                        placeholder="Enter one or more feature IDs&#10;e.g.  gene1, gene2&#10;or one per line"></textarea>
+                        placeholder="e.g. gene1, mRNA1.1, XP_023382306.1&#10;or one per line"></textarea>
             </div>
           </div>
         </div>
@@ -369,6 +373,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
               'start'        => 'Start',
               'stop'         => 'Stop',
               'strand'       => 'Strand',
+              'why_included' => 'Why Included',
             ];
             foreach ($feat_cols as $val => $lbl):
             ?>

@@ -43,11 +43,13 @@ if (empty($selected)) {
     exit;
 }
 
-// Build filters
+// Raw input IDs (resolved per-organism below)
+$raw_input_ids = array_values(array_filter(array_map('trim', (array)($_POST['feature_ids'] ?? []))));
+
+// Build base filters (no feature_ids — those are resolved per-organism)
 $filters = [];
 $types = array_filter($_POST['feature_types'] ?? []);
 if (!empty($types))                             $filters['feature_types']        = array_values($types);
-if (!empty($_POST['feature_id']))               $filters['feature_id']           = trim($_POST['feature_id']);
 if (!empty($_POST['gene_name']))                $filters['gene_name']            = trim($_POST['gene_name']);
 if (!empty($_POST['gene_description']))         $filters['gene_description']     = trim($_POST['gene_description']);
 $_crit_srcs = $_POST['ann_criteria_src'] ?? [];
@@ -69,6 +71,9 @@ if (!empty($_POST['coord_chr']))   $coord_filter['chr']   = trim($_POST['coord_c
 if (!empty($_POST['coord_start'])) $coord_filter['start'] = (int)$_POST['coord_start'];
 if (!empty($_POST['coord_end']))   $coord_filter['end']   = (int)$_POST['coord_end'];
 
+// Uniform reason string for non-ID filters (same for every matched row)
+$global_filter_reason = buildMoopmartFilterReason($filters, $coord_filter);
+
 $organism_data = $config->getPath('organism_data');
 
 // Group selected sources by organism
@@ -89,15 +94,24 @@ foreach ($by_organism as $org => $org_data) {
     $gene_set_ids = array_values(array_filter(array_column($org_data['sources'], 'gene_set_id')));
     if (empty($gene_set_ids)) continue;
 
-    $features = moopmartQueryFeatures($gene_set_ids, $db, $filters);
+    // Resolve input IDs for this organism and build per-gene reason map
+    $id_reasons  = [];
+    $org_filters = $filters;
+    if (!empty($raw_input_ids)) {
+        $id_reasons = moopmartResolveInputIds($raw_input_ids, $db, $gene_set_ids);
+        if (empty($id_reasons)) {
+            $by_org_counts[] = ['organism' => $org, 'count' => 0];
+            continue;
+        }
+        $org_filters['feature_ids'] = array_keys($id_reasons);
+    }
+
+    $features = moopmartQueryFeatures($gene_set_ids, $db, $org_filters);
     if (empty($features)) {
         $by_org_counts[] = ['organism' => $org, 'count' => 0];
         continue;
     }
 
-    // Index queried uniquenames by gene_set_id so coord loading is targeted
-    // (avoids loading the entire TSV; also picks up mRNA-level coords when
-    //  the query returns mRNA features, e.g. when searching by annotation).
     $uniquenames_by_gs = [];
     foreach ($features as $f) {
         $uniquenames_by_gs[$f['gene_set_id']][] = $f['uniquename'];
@@ -115,6 +129,14 @@ foreach ($by_organism as $org => $org_data) {
     foreach ($matched as $f) {
         $f['organism_dir'] = $org;
         $f['db_path']      = $db;
+        // Build "why included" reason: ID resolution takes priority; fall back to filter description
+        if (!empty($id_reasons)) {
+            $reason = $id_reasons[$f['uniquename']] ?? '';
+            if ($global_filter_reason) $reason .= ($reason ? ' + ' : '') . $global_filter_reason;
+        } else {
+            $reason = $global_filter_reason;
+        }
+        $f['match_reason'] = $reason;
         $all_features[]    = $f;
     }
     $by_org_counts[] = ['organism' => $org, 'count' => count($matched)];
@@ -165,6 +187,7 @@ $rows = array_map(function ($f) use ($annotation_columns_selected, $ann_by_uniqu
         'start'            => $f['start']  ?? '',
         'end'              => $f['end']    ?? '',
         'strand'           => $f['strand'] ?? '',
+        'match_reason'     => $f['match_reason'] ?? '',
     ];
     foreach ($annotation_columns_selected as $src) {
         $entries = $ann_by_uniquename[$f['uniquename']][$src] ?? [];
