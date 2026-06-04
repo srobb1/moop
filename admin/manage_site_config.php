@@ -199,6 +199,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // Parse Turnstile settings
+        if (isset($_POST['turnstile']) && is_array($_POST['turnstile'])) {
+            $current_secret = $config->getArray('turnstile', [])['secret_key'] ?? '';
+            $data['turnstile'] = [
+                'enabled'    => !empty($_POST['turnstile']['enabled']),
+                'site_key'   => trim($_POST['turnstile']['site_key'] ?? ''),
+                'secret_key' => $current_secret,  // preserve from config, never from POST
+            ];
+        }
+
         // Parse BLAST sample sequences from form
         if (isset($_POST['blast_sample_sequences']) && is_array($_POST['blast_sample_sequences'])) {
             $sample_sequences = [];

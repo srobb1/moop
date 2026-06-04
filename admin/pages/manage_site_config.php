@@ -413,6 +413,26 @@
                     </div>
                 </div>
 
+                <!-- Cloudflare Turnstile -->
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fa fa-shield-alt"></i> Bot Protection (Cloudflare Turnstile)</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">When enabled, all visitors must pass a Cloudflare Turnstile challenge once per session before accessing the site. Usually invisible to real users.</p>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="turnstile_enabled" name="turnstile[enabled]" value="1"
+                                <?= !empty($editable_config['turnstile']['current_value']['enabled']) ? 'checked' : '' ?>>
+                            <label class="form-check-label" for="turnstile_enabled">Enable Turnstile verification</label>
+                        </div>
+                        <label class="form-label small fw-semibold">Site Key <span class="text-muted fw-normal">(public — from Cloudflare dashboard)</span></label>
+                        <input type="text" class="form-control form-control-sm font-monospace"
+                               name="turnstile[site_key]" placeholder="0x4AAAA…"
+                               value="<?= htmlspecialchars($editable_config['turnstile']['current_value']['site_key'] ?? '') ?>">
+                        <small class="text-muted d-block mt-1">The secret key is stored in <code>config/secrets.php</code> and is never shown here.</small>
+                    </div>
+                </div>
+
                 <!-- BLAST CPU Threads -->
                 <div class="card card-config">
                     <div class="card-header bg-light">

@@ -64,7 +64,7 @@ class ConfigManager
      * Editable configuration keys - whitelisted keys that can be edited via admin UI
      * Used in both initialize() and saveEditableConfig() to ensure consistency
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'tracks_server', 'jbrowse2', 'site_data_path'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'tracks_server', 'jbrowse2', 'site_data_path', 'turnstile'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -574,7 +574,7 @@ class ConfigManager
                     }
                 }
 
-                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'blast_sample_sequences') {
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'blast_sample_sequences' || $key === 'turnstile') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);
@@ -759,6 +759,12 @@ class ConfigManager
                 'type' => 'text',
                 'current_value' => $this->getPath('site_data_path', ''),
                 'note' => 'Keep this directory outside the web root and private — it contains API keys and user account data.',
+            ],
+            'turnstile' => [
+                'label'         => 'Cloudflare Turnstile',
+                'description'   => 'Bot protection — visitors must pass a challenge once per session.',
+                'type'          => 'group',
+                'current_value' => $this->getArray('turnstile', ['enabled' => false, 'site_key' => '', 'secret_key' => '']),
             ],
         ];
     }

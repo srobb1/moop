@@ -10,6 +10,7 @@ if (!isset($_SESSION)) {
 
 include_once __DIR__ . '/config_init.php';
 
+
 // Tool section component path constant
 define('TOOL_SECTION_PATH', __DIR__ . '/../lib/tool_section.php');
 
@@ -474,3 +475,22 @@ function csrf_protect($json_response = false) {
 if (session_status() === PHP_SESSION_ACTIVE) {
     generate_csrf_token();
 }
+
+// ── Cloudflare Turnstile — human verification (once per session) ──────────────
+// Runs after all auth (IP-range, session login) so authenticated users are
+// never blocked. Only unauthenticated visitors need to pass the challenge.
+// Skipped on verify-human.php itself to avoid an infinite redirect loop.
+if (basename($_SERVER['SCRIPT_FILENAME'] ?? '') !== 'verify-human.php') {
+    $config = ConfigManager::getInstance();
+    $ts     = $config->getArray('turnstile', []);
+    if (!empty($ts['enabled'])
+        && empty($_SESSION['human_verified'])
+        && !is_logged_in()
+    ) {
+        $return = $_SERVER['REQUEST_URI'] ?? '/';
+        header('Location: /' . $config->getString('site', 'moop') . '/verify-human.php?return=' . urlencode($return));
+        exit;
+    }
+    unset($ts);
+}
+// ─────────────────────────────────────────────────────────────────────────────

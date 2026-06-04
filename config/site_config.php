@@ -310,6 +310,16 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // 3. Copy jwt_public_key.pem to remote server
     // 4. Copy track data to remote server
     // 5. Configure nginx/Apache on remote server
+    // ======== CLOUDFLARE TURNSTILE (bot protection) ========
+    // Enable to require human verification once per session.
+    // site_key goes in config_editable.json (admin UI).
+    // secret_key goes in config/secrets.php (never committed).
+    'turnstile' => [
+        'enabled'    => false,
+        'site_key'   => $secrets['turnstile']['site_key']   ?? '',
+        'secret_key' => $secrets['turnstile']['secret_key'] ?? '',
+    ],
+
     'tracks_server' => [
         'enabled' => false,                                        // Set to true when remote server deployed
         'url' => '',                                               // e.g., 'https://tracks.example.com/'
