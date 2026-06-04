@@ -94,7 +94,7 @@
   <!-- Featured groups -->
   <div class="mb-3 text-center pt-2">
     <div class="text-uppercase fw-semibold mb-2" style="letter-spacing:0.1em;font-size:0.8rem;color:#0891b2;">
-      Explore Curated Groups
+      Focus Your Search by Group
     </div>
     <hr class="mx-auto page-header-divider mb-3">
     <div class="d-flex justify-content-center flex-wrap gap-2">
@@ -119,7 +119,7 @@
        role="button" aria-expanded="false" aria-controls="browse-group-body">
     <span class="d-flex align-items-center gap-2">
       <i class="fas fa-chevron-down browse-select-chevron"></i>
-      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Browse Organisms by Group</span>
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Search in a Group of Organisms</span>
     </span>
   </div>
   <div class="collapse mb-3" id="browse-group-body">
@@ -146,15 +146,9 @@
        role="button" aria-expanded="false" aria-controls="browse-select-body">
     <span class="d-flex align-items-center gap-2">
       <i class="fas fa-chevron-down browse-select-chevron"></i>
-      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Browse &amp; Select Organisms</span>
-      <button class="btn btn-link btn-sm p-0" data-bs-toggle="modal" data-bs-target="#how-to-modal"
-              title="How to use" style="font-size:0.9rem; line-height:1; color:rgba(255,255,255,0.7);"
-              onclick="event.stopPropagation()">
-        <i class="fas fa-info-circle"></i>
-      </button>
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Search in a Custom Selection of Organisms</span>
     </span>
   </div>
-  <p class="text-muted mb-2 mt-1" style="font-size:0.78rem;">Select organisms, then pick a tool — results open in a new tab.</p>
 
   <!-- How-to modal -->
   <div class="modal fade" id="how-to-modal" tabindex="-1" aria-labelledby="how-to-modal-label" aria-hidden="true">
@@ -196,35 +190,6 @@
             </div>
           </div>
 
-          <!-- Selection modes -->
-          <h6 class="fw-semibold text-dark mb-2">Selection modes</h6>
-          <div class="row g-2 mb-4">
-            <div class="col-sm-6">
-              <div class="info-mode-card">
-                <div class="fw-semibold small mb-1"><i class="fa fa-list text-primary me-1"></i> Organism Select</div>
-                <p class="text-muted small mb-0">Searchable flat list. Filter by scientific name, common name, or group. Best for finding specific species quickly.</p>
-              </div>
-            </div>
-            <div class="col-sm-6">
-              <div class="info-mode-card">
-                <div class="fw-semibold small mb-1"><i class="fa fa-sitemap text-primary me-1"></i> Taxon Select</div>
-                <p class="text-muted small mb-0">Each row shows the full taxonomic lineage. Filter by any rank — order, family, genus — to find related species.</p>
-              </div>
-            </div>
-            <div class="col-sm-6">
-              <div class="info-mode-card">
-                <div class="fw-semibold small mb-1"><i class="fa fa-th text-primary me-1"></i> Group Select</div>
-                <p class="text-muted small mb-0">Curated organism groups (e.g. Bats, Reptiles). Click a group card to explore all organisms in that group together.</p>
-              </div>
-            </div>
-            <div class="col-sm-6">
-              <div class="info-mode-card">
-                <div class="fw-semibold small mb-1"><i class="fa fa-project-diagram text-primary me-1"></i> Tree Select</div>
-                <p class="text-muted small mb-0">Interactive phylogenetic tree. Click any branch to select all organisms below it, or individual leaves for single species.</p>
-              </div>
-            </div>
-          </div>
-
           <!-- Available tools -->
           <h6 class="fw-semibold text-dark mb-2">Available tools</h6>
           <div class="row g-2 mb-3">
@@ -258,7 +223,7 @@
 
     <!-- Row 1: Selected Organisms — full width -->
     <div class="bs-grid-selected">
-      <div class="card shadow-sm" id="selected-organisms-card">
+      <div class="card shadow-sm selection-empty" id="selected-organisms-card">
         <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
           <span class="fw-semibold" style="font-size:0.9rem;">
             Selected Organisms
@@ -306,6 +271,7 @@
 
             <!-- Tab 1: Organism Select -->
             <div class="tab-pane fade show active" id="tab-organism-select" role="tabpanel">
+              <p class="text-muted small mb-2">Filter by scientific name, common name, or group to find specific species. Select one or more to use with a tool.</p>
               <input type="text" class="form-control form-control-sm mb-2 moop-input" id="organism-select-filter"
                      placeholder="Filter by name, common name, or group…">
               <div id="organism-select-list" class="org-select-list"></div>
@@ -313,6 +279,7 @@
 
             <!-- Tab 2: Taxon Select -->
             <div class="tab-pane fade" id="tab-taxon-select" role="tabpanel">
+              <p class="text-muted small mb-2">Each row shows the full taxonomic lineage — filter by any rank to find related species.</p>
               <input type="text" class="form-control form-control-sm mb-2 moop-input" id="taxon-select-filter"
                      placeholder="Filter by taxonomy, name, or common name…">
               <div id="taxon-select-list" class="org-select-list"></div>
@@ -320,17 +287,8 @@
 
             <!-- Tab 3: Tree Select -->
             <div class="tab-pane fade" id="tab-tree-select" role="tabpanel">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <button type="button" class="btn btn-link btn-sm p-0 text-muted text-decoration-none"
-                        id="tree-info-btn"
-                        data-bs-toggle="popover"
-                        data-bs-placement="right"
-                        data-bs-trigger="focus"
-                        data-bs-title="Using the Tree"
-                        data-bs-content="Click any node to select/deselect all organisms in that branch. Click the ❯ chevron to expand or collapse a branch without changing your selection. Use Expand All / Collapse All to navigate the full tree quickly."
-                        style="font-size:0.8rem;">
-                  <i class="fa fa-info-circle text-info me-1"></i>How to use
-                </button>
+              <p class="text-muted small mb-2">Click any branch to select all organisms below it, or individual leaves for a single species. Use the ❯ chevron to expand without changing your selection.</p>
+              <div class="d-flex align-items-center justify-content-end mb-2">
                 <div class="d-flex gap-1">
                   <button id="tree-expand-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">Expand All</button>
                   <button id="tree-collapse-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">Collapse All</button>

@@ -140,8 +140,11 @@ function updateSelectedList() {
     const clearBtn = document.getElementById('clear-all-organisms');
     if (clearBtn) clearBtn.style.display = hasSelection ? '' : 'none';
 
+    const card = document.getElementById('selected-organisms-card');
+    if (card) card.classList.toggle('selection-empty', !hasSelection);
+
     if (selectedOrganisms.size === 0) {
-        listEl.innerHTML = '<div class="text-muted fst-italic small px-1">No organisms selected</div>';
+        listEl.innerHTML = '<div class="text-muted small px-1" style="opacity:0.6;">Your selected organisms will appear here.</div>';
         return;
     }
 

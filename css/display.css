@@ -1306,6 +1306,16 @@ a:hover .link-icon {
 .selected-org-item:last-child { border-bottom: none; }
 .selected-org-name            { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
+/* Empty state: muted header until organisms are selected */
+#selected-organisms-card.selection-empty .card-header {
+  background: #f0f9fb !important;
+  color: #64748b !important;
+  border-bottom-color: #e2e8f0;
+}
+#selected-organisms-card.selection-empty #selected-count {
+  display: none;
+}
+
 /* ── Index page: site title wordmark ─────────────────────────────────────── */
 
 .index-site-title {
@@ -1399,11 +1409,13 @@ a:hover .link-icon {
   color: rgba(255, 255, 255, 0.75);
 }
 
-/* ── Index page: organism tabs ───────────────────────────────────────────── */
+/* ── Index page: tabs (search + organism) ────────────────────────────────── */
 
+#search-tabs .nav-link:not(.active),
 #organism-tabs .nav-link:not(.active) {
   color: #0891b2;
 }
+#search-tabs .nav-link:not(.active):hover,
 #organism-tabs .nav-link:not(.active):hover {
   color: #0670a0;
 }
