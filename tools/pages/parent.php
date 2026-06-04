@@ -129,14 +129,17 @@
             <div class="card-body p-3">
                 <div class="collapse mb-3" id="geneModelInfo">
                     <div class="alert alert-info mb-0 font-size-xsmall">
-                        <span style="display:inline-block;width:12px;height:12px;background:#2171b5;border-radius:2px;vertical-align:middle;"></span> <strong>CDS</strong> &mdash; protein-coding sequence &nbsp;&nbsp;
-                        <span style="display:inline-block;width:12px;height:12px;background:#e8833a;border-radius:2px;vertical-align:middle;"></span> <strong>UTR / exon</strong> &mdash; untranslated or non-coding exon region<?php if (!empty($genome_seq_available)): ?> &nbsp;&nbsp;
-                        <span style="display:inline-block;width:12px;height:12px;background:#a1d99b;border-radius:2px;vertical-align:middle;"></span> <strong>Upstream</strong> &mdash; 5&prime; flanking sequence &nbsp;&nbsp;
-                        <span style="display:inline-block;width:12px;height:12px;background:#bcbddc;border-radius:2px;vertical-align:middle;"></span> <strong>Downstream</strong> &mdash; 3&prime; flanking sequence<?php endif; ?><br>
-                        <small class="text-muted">The diagram is always drawn 5&prime;&rarr;3&prime; left to right. Reverse-strand genes are flipped accordingly.</small>
+                        <div class="mb-2">
+                            The diagram is always drawn 5&prime;&rarr;3&prime; left to right. Reverse-strand genes are flipped accordingly.
+                        </div>
                         <?php if (!empty($genome_seq_available)): ?>
-                        <br><small class="text-muted">Click the colored flanking blocks on either side of an isoform to fetch sequence. Adjust the size inside the modal.</small>
+                        <div class="mb-2">
+                            <strong>Click any feature to view its sequence</strong> &mdash; exons, CDS blocks, introns, and flanking upstream/downstream regions are all clickable. The sequence appears in a popup; adjust flanking region size inside the modal.
+                        </div>
                         <?php endif; ?>
+                        <div class="mb-0">
+                            For bulk sequence downloads &mdash; full mRNA, CDS, protein, genomic, or upstream/downstream regions across multiple isoforms &mdash; use <a href="/<?= htmlspecialchars($config->getString('site', 'moop')) ?>/tools/moopmart.php?organism=<?= urlencode($organism_name) ?>" class="alert-link">MOOPmart</a>.
+                        </div>
                     </div>
                 </div>
 
