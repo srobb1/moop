@@ -119,10 +119,10 @@
             </button>
             <div class="ms-auto d-flex gap-1">
                 <?php if (!empty($genome_seq_available)): ?>
-                <button class="btn btn-sm btn-outline-primary" id="gene-model-seq-btn" title="Fetch full genomic sequence — gene locus + each isoform span">Download Genomic Sequence</button>
-                <button class="btn btn-sm btn-outline-secondary" id="gene-model-fmt-btn" title="Format sequence by feature type with custom highlighting"><i class="fas fa-palette me-1"></i>Format Sequence</button>
+                <button class="btn btn-sm btn-outline-secondary" id="gene-model-fmt-btn" title="Format sequence by feature type with custom highlighting"><i class="fas fa-palette me-1"></i>Sequence</button>
+                <button class="btn btn-sm btn-outline-primary" id="gene-model-seq-btn" title="Fetch full genomic sequence — gene locus + each isoform span"><i class="fas fa-download me-1"></i>Genomic</button>
                 <?php endif; ?>
-                <button class="btn btn-sm btn-outline-success" id="gene-model-gff-btn" title="Fetch GFF3 — gene, mRNA, exon, CDS, UTR and all sub-features">Download GFF</button>
+                <button class="btn btn-sm btn-outline-success" id="gene-model-gff-btn" title="Fetch GFF3 — gene, mRNA, exon, CDS, UTR and all sub-features"><i class="fas fa-download me-1"></i>GFF</button>
             </div>
         </div>
         <div id="geneModelSection" class="collapse show">
@@ -141,6 +141,17 @@
                 </div>
 
                 <svg id="gene-model-svg" width="100%" style="display:block; overflow:visible;"></svg>
+
+                <div class="mt-2 d-flex flex-wrap gap-3" style="font-size:0.78rem; font-weight:600; letter-spacing:0.02em;">
+                    <span style="color:#e8833a;">UTR</span>
+                    <span style="color:#2171b5;">CDS</span>
+                    <span style="color:#17becf;">Exon</span>
+                    <span style="color:#888;">Intron</span>
+                    <?php if (!empty($genome_seq_available)): ?>
+                    <span style="color:#31a354;">Upstream</span>
+                    <span style="color:#756bb1;">Downstream</span>
+                    <?php endif; ?>
+                </div>
 
             </div>
         </div>

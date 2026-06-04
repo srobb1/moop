@@ -35,9 +35,10 @@
     const FLANK_H       = 16;  // upstream/downstream block height
     const FLANK_GAP     = 16;  // gap between block edge and track/label edge
 
-    const COLOR_BACKBONE   = '#aaa';
-    const COLOR_EXON       = '#e8833a';   // warm orange — UTR / exon background
-    const COLOR_CDS        = '#2171b5';   // dark blue — CDS
+    const COLOR_BACKBONE    = '#aaa';
+    const COLOR_EXON        = '#e8833a';  // warm orange — UTR / implied-UTR exon
+    const COLOR_EXON_PLAIN  = '#17becf';  // teal — non-coding exon (isoform has no CDS)
+    const COLOR_CDS         = '#2171b5';  // dark blue — CDS
     const COLOR_LABEL      = '#555';
     const COLOR_UPSTREAM   = '#a1d99b';   // light green
     const COLOR_UPSTREAM_S = '#31a354';
@@ -210,12 +211,18 @@
                 g.appendChild(ir);
             }
 
-            // Exon boxes (orange — UTR / exon background)
+            // Exon boxes — orange when isoform has CDS (UTR / implied UTR),
+            // teal when isoform has no CDS (plain non-coding exon).
+            // Explicit UTR feature types always use orange regardless.
+            const hasCds    = iso.cds && iso.cds.length > 0;
+            const UTR_TYPES = new Set(['five_prime_utr', 'three_prime_utr', 'utr']);
             const exons = [...iso.exons].sort((a, b) => toX(a.start) - toX(b.start));
             exons.forEach(ex => {
-                const x1   = Math.min(toX(ex.start), toX(ex.end));
-                const w    = Math.max(2, Math.abs(toX(ex.end) - toX(ex.start)));
-                const rect = makeRect(x1, cy - EXON_H / 2, w, EXON_H, COLOR_EXON, 2);
+                const x1      = Math.min(toX(ex.start), toX(ex.end));
+                const w       = Math.max(2, Math.abs(toX(ex.end) - toX(ex.start)));
+                const ft      = (ex.type || 'exon').toLowerCase();
+                const exColor = (UTR_TYPES.has(ft) || hasCds) ? COLOR_EXON : COLOR_EXON_PLAIN;
+                const rect    = makeRect(x1, cy - EXON_H / 2, w, EXON_H, exColor, 2);
                 rect.setAttribute('class', 'region-exon');
                 if (canFetchSeq) {
                     const exonType = normalizeFeatureType(ex.type);

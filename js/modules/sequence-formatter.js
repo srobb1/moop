@@ -27,14 +27,24 @@
     // hl      = pastel highlight colour for the sequence background
     // swatch  = diagram colour shown in the controls row label
     const TMETA = {
-        CDS:             { label: 'CDS',    hl: '#bbdefb', swatch: '#2171b5' },
-        exon:            { label: 'Exon',   hl: '#ffd8a8', swatch: '#e8833a' },
-        five_prime_utr:  { label: "5' UTR", hl: '#ffd8a8', swatch: '#e8833a' },
-        three_prime_utr: { label: "3' UTR", hl: '#ffd8a8', swatch: '#e8833a' },
-        utr:             { label: 'UTR',    hl: '#ffd8a8', swatch: '#e8833a' },
-        intron:          { label: 'Intron', hl: '#e8eaed', swatch: '#aaaaaa' },
+        CDS:             { label: 'CDS',              hl: '#bbdefb', swatch: '#2171b5' },
+        exon:            { label: 'Exon',             hl: '#b2f0f0', swatch: '#17becf' },  // teal — no-CDS isoform
+        exon_implied_utr:{ label: 'Exon / Impl. UTR', hl: '#ffd8a8', swatch: '#e8833a' },  // orange — has CDS
+        five_prime_utr:  { label: "5' UTR",           hl: '#ffd8a8', swatch: '#e8833a' },
+        three_prime_utr: { label: "3' UTR",           hl: '#ffd8a8', swatch: '#e8833a' },
+        utr:             { label: 'UTR',              hl: '#ffd8a8', swatch: '#e8833a' },
+        intron:          { label: 'Intron',           hl: '#e8eaed', swatch: '#aaaaaa' },
     };
-    function tmeta(t) { return TMETA[t] || { label: t, hl: '#f0f0f0', swatch: '#999' }; }
+    // 'exon' colour/label depends on whether the active isoform has CDS.
+    // With CDS: exon regions outside CDS are implied UTR → orange.
+    // Without CDS: plain non-coding exon → teal.
+    function tmeta(t) {
+        if (t === 'exon') {
+            const hasCds = activeIso && activeIso.cds && activeIso.cds.length > 0;
+            return hasCds ? TMETA['exon_implied_utr'] : TMETA['exon'];
+        }
+        return TMETA[t] || { label: t, hl: '#f0f0f0', swatch: '#999' };
+    }
 
     // Preferred display order
     const TYPE_ORDER = ['CDS', 'five_prime_utr', 'three_prime_utr', 'utr', 'exon', 'intron'];
@@ -134,18 +144,19 @@
     let seqStr     = null;
     let segs       = null;
     let present    = [];   // ordered list of type names in this isoform
-    let cfg        = {};   // type → {hl, caseMode, bold, italic, underline}
+    let cfg        = {};   // type → {visible, hl, caseMode, bold, italic, underline}
 
     // ── Controls ──────────────────────────────────────────────────────────────
     function defaultCfg(types) {
         const c = {};
         for (const t of types) {
             c[t] = {
-                hl:       true,                  // all types highlighted by default
-                caseMode: t === 'intron' ? 'lower' : 'normal',
-                bold:     false,
-                italic:   false,
-                underline:false,
+                visible:   true,
+                hl:        true,
+                caseMode:  t === 'intron' ? 'lower' : 'upper',
+                bold:      false,
+                italic:    false,
+                underline: false,
             };
         }
         return c;
@@ -159,13 +170,16 @@
             const m = tmeta(t), s = cfg[t];
             const tr = document.createElement('tr');
             tr.innerHTML =
-                `<td class="ps-2">` +
-                  `<span style="display:inline-block;width:10px;height:10px;background:${m.swatch};border-radius:2px;margin-right:5px;vertical-align:middle;border:1px solid rgba(0,0,0,.15)"></span>` +
-                  `<span class="small fw-semibold">${m.label}</span>` +
+                `<td class="ps-2 text-center">` +
+                  `<button type="button" class="btn btn-xs sf-ctrl" data-t="${t}" data-p="visible" title="${s.visible ? 'Hide — cut from sequence' : 'Show'}" style="min-width:26px;border:none;background:none;padding:2px 4px;">` +
+                  `<i class="fas ${s.visible ? 'fa-eye' : 'fa-eye-slash'} ${s.visible ? 'text-secondary' : 'text-muted'}"></i></button>` +
                 `</td>` +
-                `<td class="text-center"><input type="checkbox" class="form-check-input sf-ctrl" data-t="${t}" data-p="hl" ${s.hl ? 'checked' : ''}></td>` +
+                `<td class="ps-1">` +
+                  `<span class="sf-ctrl" data-t="${t}" data-p="hl" title="Click to toggle highlight" ` +
+                  `style="cursor:pointer;padding:2px 9px;border-radius:12px;font-size:0.75rem;font-weight:600;letter-spacing:0.02em;white-space:nowrap;user-select:none;${s.hl ? `background:${m.swatch};color:#fff;` : 'background:#e9ecef;color:#333;'}">${m.label}</span>` +
+                `</td>` +
                 `<td><select class="form-select form-select-sm sf-ctrl" data-t="${t}" data-p="case" style="min-width:80px">` +
-                  `<option value="normal"${s.caseMode === 'normal' ? ' selected' : ''}>As-is</option>` +
+                  `<option value="normal"${s.caseMode === 'normal' ? ' selected' : ''}>Original</option>` +
                   `<option value="upper"${s.caseMode === 'upper'   ? ' selected' : ''}>UPPER</option>` +
                   `<option value="lower"${s.caseMode === 'lower'   ? ' selected' : ''}>lower</option>` +
                 `</select></td>` +
@@ -195,7 +209,20 @@
         const el = e.target.closest('.sf-ctrl');
         if (!el) return;
         const t = el.dataset.t, p = el.dataset.p;
-        if (p === 'hl'   && e.type === 'change') { cfg[t].hl = el.checked; render(); return; }
+        if (p === 'visible' && e.type === 'click') {
+            cfg[t].visible = !cfg[t].visible;
+            const icon = el.querySelector('i');
+            icon.className = `fas ${cfg[t].visible ? 'fa-eye text-secondary' : 'fa-eye-slash text-muted'}`;
+            el.title = cfg[t].visible ? 'Hide — cut from sequence' : 'Show';
+            render(); return;
+        }
+        if (p === 'hl' && e.type === 'click') {
+            cfg[t].hl = !cfg[t].hl;
+            const swatch = tmeta(t).swatch;
+            el.style.background = cfg[t].hl ? swatch : '#e9ecef';
+            el.style.color      = cfg[t].hl ? '#fff' : '#333';
+            render(); return;
+        }
         if (p === 'case' && e.type === 'change') { cfg[t].caseMode = el.value; render(); return; }
         if (['bold', 'italic', 'underline'].includes(p) && e.type === 'click') {
             cfg[t][p] = !cfg[t][p];
@@ -230,10 +257,14 @@
             const hlColors = [];
             let bold = false, italic = false, underline = false, caseMode = 'normal';
 
+            // Eye (visible): cut bases entirely if every type at this position is hidden.
+            // Mixed positions (e.g. exon + CDS) stay visible as long as one type is visible.
+            if (![...seg.types].some(t => cfg[t] && cfg[t].visible)) continue;
+
             for (const t of seg.types) {
                 const s = cfg[t];
-                if (!s) continue;
-                if (s.hl) hlColors.push(tmeta(t).hl);
+                if (!s || !s.visible) continue;          // invisible types contribute nothing
+                if (s.hl) hlColors.push(tmeta(t).hl);   // chip controls highlight color
                 if (s.bold)      bold      = true;
                 if (s.italic)    italic    = true;
                 if (s.underline) underline = true;
@@ -331,8 +362,8 @@
           <table class="table table-sm table-bordered mb-3" style="width:auto;">
             <thead class="table-light">
               <tr>
-                <th class="ps-2">Type</th>
-                <th class="text-center">Highlight</th>
+                <th></th>
+                <th class="ps-1">Type</th>
                 <th>Case</th>
                 <th class="text-center" style="min-width:32px">B</th>
                 <th class="text-center" style="min-width:32px">I</th>
@@ -363,7 +394,7 @@
 
     function showModal() {
         ensureModal();
-        bootstrap.Modal.getOrCreate(document.getElementById('sf-modal')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('sf-modal')).show();
     }
 
     function setLoading(on) {
