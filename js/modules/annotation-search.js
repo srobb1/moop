@@ -429,7 +429,7 @@ class AnnotationSearch {
             });
         };
 
-        const concurrency = Math.min(8, total);
+        const concurrency = Math.min(5, total);
         for (let i = 0; i < concurrency; i++) {
             launchNext();
         }
