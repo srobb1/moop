@@ -159,18 +159,40 @@ foreach ($group_data as $entry) {
     }
 }
 
+// Featured groups for above-the-fold chips — only show groups the current user can access
+$featured_groups = [];
+$desc_file = "$metadata_path/group_descriptions.json";
+if (file_exists($desc_file)) {
+    $all_descs = json_decode(file_get_contents($desc_file), true) ?: [];
+    foreach ($all_descs as $d) {
+        if (!empty($d['featured']) && isset($cards_to_display[$d['group_name']])) {
+            $featured_groups[] = [
+                'name' => $d['group_name'],
+                'url'  => "/$site/tools/groups.php?group=" . urlencode($d['group_name']),
+            ];
+        }
+    }
+}
+
 // Render page using layout system
 echo render_display_page(
     __DIR__ . '/tools/pages/index.php',
     [
         'siteTitle'          => $config->getString('siteTitle'),
+        'organism_count'     => count($organism_list),
+        'assembly_count'     => count($seen_assemblies),
+        'featured_groups'    => $featured_groups,
         'cards_to_display'   => $cards_to_display,
         'taxonomy_tree_data' => $taxonomy_tree_data,
         'user_access_json'   => $user_access_json,
         'organism_list_json' => json_encode($organism_list),
         'ip'                 => $ip,
+        'page_script'        => [
+            "/$site/js/modules/feature-search.js",
+        ],
         'inline_scripts'     => [
             "const sitePath = '/$site';",
+            "const moopSite = '/$site';",
             "const quickSearchData = " . json_encode($qs_items) . ";",
         ],
     ],

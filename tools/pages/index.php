@@ -1,7 +1,7 @@
 <?php
 /**
  * Index page content
- * Variables available: $siteTitle, $cards_to_display, $taxonomy_tree_data, $user_access_json, $ip
+ * Variables available: $siteTitle, $organism_count, $assembly_count, $cards_to_display, $taxonomy_tree_data, $user_access_json, $ip
  */
 ?>
 
@@ -9,36 +9,108 @@
   <!-- Page Header -->
   <div class="text-center mb-3">
     <p class="index-site-title moop-tool-title"><?= htmlspecialchars($siteTitle) ?></p>
+    <p class="mb-2" style="font-size:0.95rem;font-weight:300;color:rgba(8,145,178,0.7);letter-spacing:0.03em;">
+      Browse genes, genomes, and annotations<?php if (!empty($organism_count)): ?> across <strong style="font-weight:500;"><?= $organism_count ?></strong> organism<?= $organism_count !== 1 ? 's' : '' ?><?php if (!empty($assembly_count)): ?> and <strong style="font-weight:500;"><?= $assembly_count ?></strong> assembl<?= $assembly_count !== 1 ? 'ies' : 'y' ?><?php endif; ?><?php endif; ?>
+    </p>
     <hr class="mx-auto page-header-divider">
   </div>
 
-  <!-- Quick search -->
+  <!-- Quick search — tabbed -->
   <div class="qs-wrap mb-3">
-    <div class="card border-0 rounded-3 qs-card">
-      <div class="card-body p-3">
-        <div class="qs-input-wrap">
-          <div class="input-group">
-            <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
-              <i class="fa fa-search"></i>
-            </span>
-            <input type="text" id="qs-input" class="form-control border-start-0 border-end-0 ps-1 moop-input"
-                   placeholder="Search organisms, groups, assemblies, gene sets…"
-                   autocomplete="off" spellcheck="false">
-            <button id="qs-go" class="btn btn-primary px-3" type="button">Go</button>
+    <ul class="nav nav-tabs justify-content-end" id="search-tabs" style="border-bottom:0;">
+      <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-quick" type="button">
+          <i class="fa fa-search me-1"></i>Organisms
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-feature" type="button">
+          <i class="fa fa-fingerprint me-1"></i>Sequence ID
+        </button>
+      </li>
+    </ul>
+    <div class="tab-content">
+
+      <!-- Tab 1: organism / group / assembly / gene set search -->
+      <div class="tab-pane fade show active" id="tab-quick">
+        <div class="card border-0 border-top rounded-0 rounded-bottom qs-card">
+          <div class="card-body p-3" style="min-height:88px;">
+            <div class="qs-input-wrap">
+              <div class="input-group">
+                <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
+                  <i class="fa fa-search"></i>
+                </span>
+                <input type="text" id="qs-input" class="form-control border-start-0 border-end-0 ps-1 moop-input"
+                       placeholder="Search organisms, groups, assemblies, gene sets…"
+                       autocomplete="off" spellcheck="false">
+                <button id="qs-go" class="btn btn-primary px-3" type="button">Go</button>
+              </div>
+              <div id="qs-dropdown" class="qs-dropdown"></div>
+            </div>
+            <div class="qs-examples mt-2">
+              <span class="text-muted me-1" style="font-size:0.62rem;">e.g.</span>
+              <button class="qs-example-chip" type="button" style="font-size:0.62rem;">Anoura caudifer</button>
+              <button class="qs-example-chip" type="button" style="font-size:0.62rem;">Pallid Bat</button>
+              <button class="qs-example-chip" type="button" style="font-size:0.62rem;">Bats</button>
+              <button class="qs-example-chip" type="button" style="font-size:0.62rem;">GCA_004027475.1</button>
+              <button class="qs-example-chip" type="button" style="font-size:0.62rem;">SIMR_2025-01-24</button>
+            </div>
           </div>
-          <div id="qs-dropdown" class="qs-dropdown"></div>
-        </div>
-        <div class="qs-examples mt-2">
-          <span class="text-muted small me-1">e.g.</span>
-          <button class="qs-example-chip" type="button">Anoura caudifer</button>
-          <button class="qs-example-chip" type="button">Pallid Bat</button>
-          <button class="qs-example-chip" type="button">Bats</button>
-          <button class="qs-example-chip" type="button">GCA_004027475.1</button>
-          <button class="qs-example-chip" type="button">SIMR_2025-01-24</button>
         </div>
       </div>
+
+      <!-- Tab 2: exact sequence ID search across all accessible databases -->
+      <div class="tab-pane fade" id="tab-feature">
+        <div class="card border-0 border-top rounded-0 rounded-bottom qs-card">
+          <div class="card-body p-3" style="min-height:88px;">
+            <div class="qs-input-wrap">
+              <div class="input-group">
+                <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
+                  <i class="fa fa-fingerprint"></i>
+                </span>
+                <input type="text" id="fs-input" class="form-control border-start-0 border-end-0 ps-1 moop-input"
+                       placeholder="Enter exact sequence ID…"
+                       autocomplete="off" spellcheck="false">
+                <button id="fs-go" class="btn btn-primary px-3" type="button">Go</button>
+              </div>
+            </div>
+            <div class="qs-examples mt-2">
+              <span class="text-muted me-1" style="font-size:0.62rem;">e.g.</span>
+              <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;">LOC100636551</button>
+              <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;">XM_020002978.1</button>
+              <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;">ACA1_PVKU01000001.1_000001</button>
+              <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;">ACA1_PVKU01000001.1_000001.1</button>
+            </div>
+            <div id="fs-status" class="small mt-2 text-muted" style="display:none;"></div>
+            <div id="fs-results"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
+
+  <?php if (!empty($featured_groups)): ?>
+  <!-- Featured groups -->
+  <div class="mb-3 text-center">
+    <div class="text-uppercase fw-semibold mb-2" style="letter-spacing:0.1em;font-size:0.8rem;color:#0891b2;">
+      Explore Curated Groups
+    </div>
+    <div class="d-flex justify-content-center flex-wrap gap-2">
+      <?php foreach ($featured_groups as $fg): ?>
+        <a href="<?= htmlspecialchars($fg['url']) ?>" class="index-group-chip text-decoration-none"
+           data-group="<?= htmlspecialchars($fg['name']) ?>">
+          <?= htmlspecialchars($fg['name']) ?>
+        </a>
+      <?php endforeach; ?>
+      <button class="index-group-chip"
+              style="background:#e2e8f0;color:#475569;border:none;cursor:pointer;"
+              onclick="document.getElementById('browse-group-header').click()">
+        More&hellip;
+      </button>
+    </div>
+  </div>
+  <?php endif; ?>
 
   <!-- Browse by Group collapsible header -->
   <div class="browse-select-header mb-3" id="browse-group-header"
@@ -46,11 +118,12 @@
        role="button" aria-expanded="false" aria-controls="browse-group-body">
     <span class="d-flex align-items-center gap-2">
       <i class="fas fa-chevron-down browse-select-chevron"></i>
-      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Browse by Group</span>
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Browse Organisms by Group</span>
     </span>
   </div>
   <div class="collapse mb-3" id="browse-group-body">
     <div class="groups-strip">
+      <p class="text-muted small mb-2">Click a group to focus your searches on a curated set of organisms.</p>
       <div class="index-group-chip-list">
         <?php foreach ($cards_to_display as $card): ?>
           <a href="<?= htmlspecialchars($card['link']) ?>" target="_blank"
@@ -72,7 +145,7 @@
        role="button" aria-expanded="false" aria-controls="browse-select-body">
     <span class="d-flex align-items-center gap-2">
       <i class="fas fa-chevron-down browse-select-chevron"></i>
-      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Browse &amp; Select</span>
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Browse &amp; Select Organisms</span>
       <button class="btn btn-link btn-sm p-0" data-bs-toggle="modal" data-bs-target="#how-to-modal"
               title="How to use" style="font-size:0.9rem; line-height:1; color:rgba(255,255,255,0.7);"
               onclick="event.stopPropagation()">
@@ -173,6 +246,12 @@
   <!-- Browse & Select: selected organisms full-width top row, then step 1 + step 2 below -->
   <div class="collapse" id="browse-select-body">
   <div class="browse-select-panel">
+  <p class="text-muted small mb-2 px-1">Build a custom collection of organisms to focus your searches — complete
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#6366f1;color:#fff;font-size:0.62rem;font-weight:700;vertical-align:middle;">1</span>
+    then
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#6366f1;color:#fff;font-size:0.62rem;font-weight:700;vertical-align:middle;">2</span>
+    below.
+  </p>
   <div class="bs-grid" id="organism-tabs-anchor">
 
     <!-- Row 1: Selected Organisms — full width -->

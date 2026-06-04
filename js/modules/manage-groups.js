@@ -925,4 +925,31 @@ window.fetchGroupWiki = async function fetchGroupWiki(groupName, btn) {
   }
   btn.disabled = false;
 }
+
+// ── Featured toggle ───────────────────────────────────────────────────────────
+document.addEventListener('click', async function (e) {
+    const btn = e.target.closest('.featured-toggle');
+    if (!btn) return;
+    e.stopPropagation();
+
+    const group = btn.dataset.group;
+    const fd    = new FormData();
+    fd.append('group_name', group);
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    try {
+        const res  = await fetch(`${sitePath}/admin/api/toggle_group_featured.php`, {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken },
+            body: fd,
+        });
+        const data = await res.json();
+        if (!data.success) { alert(data.message || 'Failed'); return; }
+        const star = btn.querySelector('i');
+        btn.style.color = data.featured ? '#f59e0b' : '#adb5bd';
+        btn.title       = data.featured ? 'Remove from featured' : 'Mark as featured on home page';
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+});
 });

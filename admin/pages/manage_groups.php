@@ -318,9 +318,18 @@
               <span style="color: #ffc107; font-size: 18px; margin-right: 5px;" title="No content">⚠</span>
             <?php endif; ?>
             <span class="tag-chip selected" data-group-name="<?= htmlspecialchars($desc['group_name']) ?>" style="cursor: default; margin-right: 10px;"><?= htmlspecialchars($desc['group_name']) ?></span>
-            <span class="badge bg-<?= $desc['in_use'] ? 'success' : 'danger' ?>">
+            <span class="badge bg-<?= $desc['in_use'] ? 'success' : 'danger' ?> me-1">
               <?= $desc['in_use'] ? 'In Use' : 'Not In Use' ?>
             </span>
+            <?php if (!$file_write_error): ?>
+            <button type="button"
+                    class="btn btn-sm btn-link p-0 featured-toggle"
+                    data-group="<?= htmlspecialchars($desc['group_name']) ?>"
+                    title="<?= ($desc['featured'] ?? false) ? 'Remove from featured' : 'Mark as featured on home page' ?>"
+                    style="font-size:1.1rem;line-height:1;color:<?= ($desc['featured'] ?? false) ? '#f59e0b' : '#adb5bd' ?>;">
+              <i class="fas fa-star"></i>
+            </button>
+            <?php endif; ?>
           </div>
           <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
             <?php if (!$file_write_error): ?>
