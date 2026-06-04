@@ -33,6 +33,12 @@ $excluded_exts = array_flip([
     'sqlite', 'json',
 ]);
 
+// Filenames excluded from listing (internal data files not intended for download)
+$excluded_filenames = array_flip([
+    'feature_coords.tsv',
+    'annotated_feature_types.json',
+]);
+
 function _downloads_format_size(int $bytes): string {
     if ($bytes >= 1073741824) return round($bytes / 1073741824, 1) . ' GB';
     if ($bytes >= 1048576)    return round($bytes / 1048576,    1) . ' MB';
@@ -106,7 +112,8 @@ foreach ($unique_sources as $source) {
         $fpath = "$gene_set_path/$fname";
         if (!is_file($fpath)) continue;
         $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
-        if (isset($excluded_exts[$ext])) continue;
+        if (isset($excluded_exts[$ext]))       continue;
+        if (isset($excluded_filenames[$fname])) continue;
 
         $size = (int) filesize($fpath);
 
