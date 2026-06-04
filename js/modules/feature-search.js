@@ -51,7 +51,7 @@
             return `<tr data-search="${(r.organism + ' ' + r.type + ' ' + r.assembly + ' ' + r.gene_set).toLowerCase()}">
                <td style="line-height:1.2;">
                  <a href="${r.url}" target="_blank"
-                    class="fw-semibold font-monospace" style="font-size:0.85rem;">${r.uniquename}</a>
+                    class="fw-semibold font-monospace" style="font-size:0.85rem;color:#0891b2;">${r.uniquename}</a>
                  <div class="text-muted" style="font-size:0.75rem; margin-top:1px;">${secondary}</div>
                </td>
                <td class="text-end align-top" style="padding-top:6px;">${typeChip(r.type)}</td>
