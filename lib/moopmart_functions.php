@@ -369,6 +369,76 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
     return fetchData($query, $db_path, $params);
 }
 
+// ============================================================
+// ATTACH-BASED BATCH QUERIES (multi-organism, shared connection)
+// ============================================================
+
+/**
+ * Build the SQL + params for one organism's feature query, with all table
+ * references prefixed by $pfx (e.g. "db3.") for use with ATTACH.
+ * Returns ['sql' => string, 'params' => array], or ['sql'=>'','params'=>[]] if nothing to query.
+ */
+function moopmartBuildFeatureQueryPart(array $gene_set_ids, array $filters, string $organism, string $pfx): array
+{
+    $params       = [];
+    $placeholders = implode(',', array_fill(0, count($gene_set_ids), '?'));
+    array_push($params, ...$gene_set_ids);
+
+    $types = !empty($filters['feature_types']) ? array_values($filters['feature_types']) : ['gene', 'pseudogene'];
+    $tp    = implode(',', array_fill(0, count($types), '?'));
+    $where = ["f.gene_set_id IN ($placeholders)", "f.feature_type IN ($tp)"];
+    array_push($params, ...$types);
+
+    if (!empty($filters['feature_ids'])) {
+        $ids = $filters['feature_ids'][$organism] ?? [];
+        if (empty($ids)) return ['sql' => '', 'params' => []];
+        $ph = implode(',', array_fill(0, count($ids), '?'));
+        $where[] = "f.feature_uniquename IN ($ph)";
+        array_push($params, ...$ids);
+    }
+    if (!empty($filters['gene_name'])) {
+        $parsed = moopmartBuildTextConditions($filters['gene_name'], 'f.feature_name');
+        if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
+    }
+    if (!empty($filters['gene_description'])) {
+        $parsed = moopmartBuildTextConditions($filters['gene_description'], 'f.feature_description');
+        if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
+    }
+    foreach ($filters['annotation_criteria'] ?? [] as $criterion) {
+        $crit_where = []; $crit_params = [];
+        if (!empty($criterion['src'])) { $crit_where[] = 'ans.annotation_source_name = ?'; $crit_params[] = $criterion['src']; }
+        if (!empty($criterion['acc'])) { $crit_where[] = 'a.annotation_accession = ?';      $crit_params[] = $criterion['acc']; }
+        if (!empty($criterion['kw'])) {
+            $parsed = moopmartBuildTextConditions($criterion['kw'], 'a.annotation_description');
+            if ($parsed) { foreach ($parsed['conditions'] as $c) $crit_where[] = $c; array_push($crit_params, ...$parsed['params']); }
+        }
+        if (!empty($crit_where)) {
+            $where[] = "EXISTS (SELECT 1 FROM {$pfx}feature child
+                        JOIN {$pfx}feature_annotation fa2 ON fa2.feature_id = child.feature_id
+                        JOIN {$pfx}annotation a ON fa2.annotation_id = a.annotation_id
+                        JOIN {$pfx}annotation_source ans ON a.annotation_source_id = ans.annotation_source_id
+                        WHERE child.parent_feature_id = f.feature_id AND " . implode(' AND ', $crit_where) . ')';
+            array_push($params, ...$crit_params);
+        }
+    }
+
+    $where_sql = implode(' AND ', $where);
+    $sql = "SELECT DISTINCT f.feature_id, f.feature_uniquename AS uniquename,
+                f.feature_name AS name, f.feature_description AS description,
+                f.feature_type AS type, f.gene_set_id,
+                gs.gene_set_name, g.genome_accession, g.genome_name,
+                o.genus || ' ' || o.species AS organism_name,
+                ? AS organism_dir
+            FROM {$pfx}feature f
+            JOIN {$pfx}gene_set gs ON f.gene_set_id = gs.gene_set_id
+            JOIN {$pfx}genome   g  ON gs.genome_id  = g.genome_id
+            JOIN {$pfx}organism o  ON g.organism_id = o.organism_id
+            WHERE $where_sql";
+    array_unshift($params, $organism);
+
+    return ['sql' => $sql, 'params' => $params];
+}
+
 /**
  * Count features matching moopmartQueryFeatures filters (lightweight preview).
  */
