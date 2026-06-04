@@ -92,6 +92,7 @@
 
   <?php if (!empty($featured_groups)): ?>
   <!-- Featured groups -->
+  <hr class="mx-auto page-header-divider mb-3">
   <div class="mb-3 text-center">
     <div class="text-uppercase fw-semibold mb-2" style="letter-spacing:0.1em;font-size:0.8rem;color:#0891b2;">
       Explore Curated Groups
@@ -153,6 +154,7 @@
       </button>
     </span>
   </div>
+  <p class="text-muted mb-2 mt-1" style="font-size:0.78rem;">Select organisms, then pick a tool — results open in a new tab.</p>
 
   <!-- How-to modal -->
   <div class="modal fade" id="how-to-modal" tabindex="-1" aria-labelledby="how-to-modal-label" aria-hidden="true">
