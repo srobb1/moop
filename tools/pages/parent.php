@@ -120,6 +120,7 @@
             <div class="ms-auto d-flex gap-1">
                 <?php if (!empty($genome_seq_available)): ?>
                 <button class="btn btn-sm btn-outline-primary" id="gene-model-seq-btn" title="Fetch full genomic sequence — gene locus + each isoform span">Download Genomic Sequence</button>
+                <button class="btn btn-sm btn-outline-secondary" id="gene-model-fmt-btn" title="Format sequence by feature type with custom highlighting"><i class="fas fa-palette me-1"></i>Format Sequence</button>
                 <?php endif; ?>
                 <button class="btn btn-sm btn-outline-success" id="gene-model-gff-btn" title="Fetch GFF3 — gene, mRNA, exon, CDS, UTR and all sub-features">Download GFF</button>
             </div>

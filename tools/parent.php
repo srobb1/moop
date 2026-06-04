@@ -377,7 +377,8 @@ echo render_display_page(
         'page_script' => [
             "/moop/js/modules/collapse-handler.js",
             "/moop/js/modules/parent-tools.js",
-            "/moop/js/modules/gene-model-viewer.js"
+            "/moop/js/modules/gene-model-viewer.js",
+            "/moop/js/modules/sequence-formatter.js"
         ],
         'inline_scripts' => [
             "const geneModelData = " . json_encode($gene_model) . ";",
