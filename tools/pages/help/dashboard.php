@@ -28,14 +28,6 @@ $tutorials = [
         'category' => 'general',
     ],
     [
-        'id' => 'taxonomy-tree-management',
-        'title' => 'Taxonomy Tree',
-        'description' => 'Understand how the taxonomy tree works, how it\'s organized, and how to use it for organism selection and management.',
-        'icon' => 'fa-tree',
-        'color' => 'success',
-        'category' => 'both',
-    ],
-    [
         'id' => 'search-and-filter',
         'title' => 'Search & Filter',
         'description' => 'Use advanced search and filtering to find specific sequences and annotations.',

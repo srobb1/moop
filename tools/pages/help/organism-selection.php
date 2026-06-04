@@ -65,7 +65,8 @@
           <p class="text-muted mb-3">Filter organisms by taxonomic grouping. Useful for selecting everything within a particular lineage without navigating the full tree.</p>
 
           <h6 class="fw-semibold mb-1">Tree Select</h6>
-          <p class="text-muted mb-3">An interactive taxonomy tree organized hierarchically by evolutionary relationships. Click any internal node to select all organisms below it; click again to deselect. Use the search box to jump to a specific organism or group. Your selection is shown in the right-hand panel.</p>
+          <p class="text-muted mb-2">An interactive taxonomy tree organized hierarchically by evolutionary relationships — internal nodes represent taxonomic groups (Kingdom, Phylum, Order, Family, Genus…) and leaf nodes are individual organisms. Click any internal node to select all organisms below it; click again to deselect. Use the search box to jump to a specific organism or group. Your selection is shown in the right-hand panel.</p>
+          <p class="text-muted mb-3">You can select from multiple branches at once — for example, all mammals and all insects simultaneously.</p>
 
           <p class="text-muted mb-0">Once you've made a selection, click a tool in the <strong>Tool Box</strong> (which appears once organisms are selected) to open it with your selection pre-loaded.</p>
         </div>

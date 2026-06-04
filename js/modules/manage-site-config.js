@@ -137,6 +137,47 @@
 })();
 
 /**
+ * IP Range Add/Remove Handlers
+ */
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        const tbody = document.getElementById('ip_ranges_tbody');
+        const addBtn = document.getElementById('add_ip_range');
+
+        if (!tbody || !addBtn) return;
+
+        let nextIndex = tbody.querySelectorAll('.ip-range-row').length;
+
+        addBtn.addEventListener('click', function() {
+            const placeholder = tbody.querySelector('.no-ranges-row');
+            if (placeholder) placeholder.remove();
+
+            const tr = document.createElement('tr');
+            tr.className = 'ip-range-row';
+            tr.innerHTML =
+                '<td><input type="text" name="auto_login_ip_ranges[' + nextIndex + '][start]" value="" class="form-control form-control-sm" placeholder="192.168.1.0"></td>' +
+                '<td><input type="text" name="auto_login_ip_ranges[' + nextIndex + '][end]" value="" class="form-control form-control-sm" placeholder="192.168.1.255"></td>' +
+                '<td class="text-center"><button type="button" class="btn btn-sm btn-danger remove-ip-range"><i class="fa fa-trash"></i></button></td>';
+            tbody.appendChild(tr);
+            tr.querySelector('input').focus();
+            nextIndex++;
+        });
+
+        tbody.addEventListener('click', function(e) {
+            const btn = e.target.closest('.remove-ip-range');
+            if (!btn) return;
+            btn.closest('.ip-range-row').remove();
+            if (!tbody.querySelector('.ip-range-row')) {
+                const tr = document.createElement('tr');
+                tr.className = 'no-ranges-row';
+                tr.innerHTML = '<td colspan="3" class="text-center text-muted"><em>No IP ranges configured</em></td>';
+                tbody.appendChild(tr);
+            }
+        });
+    });
+})();
+
+/**
  * Sequence Type Color Input Handler
  */
 (function() {

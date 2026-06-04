@@ -176,9 +176,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['sequence_types'] = $sequence_types;
         }
         
-        // Parse IP ranges from form
+        // Parse IP ranges from form — always set (even empty) so clearing all ranges
+        // saves an explicit [] that overrides the site_config.php default.
+        $ip_ranges = [];
         if (isset($_POST['auto_login_ip_ranges']) && is_array($_POST['auto_login_ip_ranges'])) {
-            $ip_ranges = [];
             foreach ($_POST['auto_login_ip_ranges'] as $range) {
                 if (!empty($range['start']) && !empty($range['end'])) {
                     $ip_ranges[] = [
@@ -187,11 +188,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ];
                 }
             }
-            // Only include in data if there are actual IP ranges
-            if (!empty($ip_ranges)) {
-                $data['auto_login_ip_ranges'] = $ip_ranges;
-            }
         }
+        $data['auto_login_ip_ranges'] = $ip_ranges;
         
         // Parse BLAST thread count
         if (isset($_POST['blast_num_threads'])) {
