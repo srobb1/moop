@@ -1,81 +1,146 @@
 <?php
 /**
- * JBrowse2 - Integrated Genome Browser
- * 
- * Main entry point for JBrowse2 with MOOP authentication and layout
- * 
- * - IP-based users get auto-login with ALL access
- * - Anonymous users see only Public assemblies
- * - Logged-in users see their permitted assemblies
- * - Full MOOP navbar, header, and footer integration
+ * Genome Browser — JBrowse2
+ *
+ * Selector page for choosing an organism/assembly to view in JBrowse2.
+ * If organism + assembly are supplied as GET parameters the selector is
+ * skipped and the browser is launched directly (deep-link from gene pages,
+ * BLAST results, assembly pages, etc.).
  */
 
 include_once __DIR__ . '/includes/access_control.php';
 include_once __DIR__ . '/includes/layout.php';
 include_once __DIR__ . '/lib/moop_functions.php';
+include_once __DIR__ . '/lib/extract_search_helpers.php';
 
-// Get configuration
-$config = ConfigManager::getInstance();
+$config        = ConfigManager::getInstance();
+$site          = $config->getString('site', 'moop');
+$organism_data = $config->getPath('organism_data');
 
-// User authentication info for JavaScript
-$user_info = [
-    'logged_in' => is_logged_in(),
-    'username' => get_username(),
-    'access_level' => get_access_level(),
-    'is_admin' => ($_SESSION['is_admin'] ?? false),
-];
+// Build organism → assemblies map from accessible sources
+$raw_sources   = flattenSourcesList(getAccessibleAssemblies());
+$scope_tree    = [];   // [organism] = [assembly, ...]
+$organism_info = [];   // [organism] = {genus, species, common_name}
 
-// Optional feature location deep-link (chr:start-end or feature name)
-$loc = '';
-if (!empty($_GET['loc']) && preg_match('/^[\w.\-:]+$/', $_GET['loc'])) {
-    $loc = $_GET['loc'];
+foreach ($raw_sources as $src) {
+    $org = $src['organism'];
+    $asm = $src['genome_accession'] ?: $src['assembly'];
+    if (empty($asm)) continue;
+
+    if (!isset($scope_tree[$org]))         $scope_tree[$org] = [];
+    if (!in_array($asm, $scope_tree[$org])) $scope_tree[$org][] = $asm;
+
+    if (!isset($organism_info[$org])) {
+        $info = loadOrganismInfo($org, $organism_data) ?: [];
+        $organism_info[$org] = [
+            'genus'       => $info['genus']       ?? '',
+            'species'     => $info['species']     ?? '',
+            'common_name' => $info['common_name'] ?? '',
+        ];
+    }
 }
+ksort($scope_tree);
 
-// Optional BLAST sessionTracks payload (JSON array of FeatureTrack configs)
+// Deep-link parameters (coming from gene page / BLAST / assembly page)
+$dl_organism = '';
+$dl_assembly = '';
+if (!empty($_GET['organism']) && preg_match('/^[A-Za-z0-9_\-\.]+$/', $_GET['organism']))
+    $dl_organism = $_GET['organism'];
+if (!empty($_GET['assembly']) && preg_match('/^[A-Za-z0-9_\-\.]+$/', $_GET['assembly']))
+    $dl_assembly = $_GET['assembly'];
+
+$dl_loc = '';
+if (!empty($_GET['loc']) && preg_match('/^[\w.\-:]+$/', $_GET['loc']))
+    $dl_loc = $_GET['loc'];
+
 $session_tracks_json = '';
-$session_track_id    = '';
 if (!empty($_GET['sessionTracks'])) {
     $decoded = json_decode($_GET['sessionTracks'], true);
-    if (is_array($decoded)) {
-        $session_tracks_json = json_encode($decoded); // re-encode to sanitize
-    }
+    if (is_array($decoded)) $session_tracks_json = json_encode($decoded);
 }
-if (!empty($_GET['sessionTrackId']) && preg_match('/^[a-zA-Z0-9_]+$/', $_GET['sessionTrackId'])) {
+
+$session_track_id = '';
+if (!empty($_GET['sessionTrackId']) && preg_match('/^[a-zA-Z0-9_]+$/', $_GET['sessionTrackId']))
     $session_track_id = $_GET['sessionTrackId'];
-}
 
-// Primary gene track IDs for this assembly (used for deep-link track pre-selection)
+// Build per-assembly metadata: gene tracks + first gene loc (or first scaffold fallback).
+// Used by JS to pre-select gene tracks and set an initial loc on launch.
+$asm_config_dir  = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies/';
+$assembly_meta   = [];  // ["{org}_{asm}"] = ['geneTracks' => [...], 'firstLoc' => '...']
 $primary_gene_tracks = [];
-$dl_organism = $_GET['organism'] ?? '';
-$dl_assembly = $_GET['assembly'] ?? '';
-if (!empty($dl_organism) && !empty($dl_assembly)
-    && preg_match('/^[A-Za-z0-9_\-\.]+$/', $dl_organism)
-    && preg_match('/^[A-Za-z0-9_\-\.]+$/', $dl_assembly)) {
-    $assembly_json_path = $config->getPath('metadata_path')
-        . '/jbrowse2-configs/assemblies/'
-        . $dl_organism . '_' . $dl_assembly . '.json';
-    if (file_exists($assembly_json_path)) {
-        $assembly_def = json_decode(file_get_contents($assembly_json_path), true);
-        $primary_gene_tracks = $assembly_def['primaryGeneTracks'] ?? [];
+
+foreach ($scope_tree as $org => $assemblies) {
+    foreach ($assemblies as $asm) {
+        $json_path = $asm_config_dir . $org . '_' . $asm . '.json';
+        if (!file_exists($json_path)) continue;
+
+        $def         = json_decode(file_get_contents($json_path), true) ?: [];
+        $gene_tracks = $def['primaryGeneTracks'] ?? [];
+
+        // First gene loc: scan feature_coords.tsv files under organisms/{org}/{asm}/*/
+        // Each line: feature_uniquename \t gene_id \t seqname \t start \t end \t strand
+        // Lines with ':' in col 0 are derived features (:cds, :pep) — skip them.
+        $first_loc = '';
+        $coords_files = glob($organism_data . '/' . $org . '/' . $asm . '/*/feature_coords.tsv');
+        if ($coords_files) {
+            sort($coords_files);
+            if ($fh = fopen($coords_files[0], 'r')) {
+                while (($line = fgets($fh)) !== false) {
+                    $p = explode("\t", $line);
+                    if (count($p) >= 5 && strpos($p[0], ':') === false) {
+                        $first_loc = trim($p[2]) . ':' . trim($p[3]) . '..' . trim($p[4]);
+                        break;
+                    }
+                }
+                fclose($fh);
+            }
+        }
+
+        // Fallback: first sequence name from the .fai index
+        if (!$first_loc) {
+            $fai_uri = $def['sequence']['adapter']['faiLocation']['uri'] ?? '';
+            if ($fai_uri) {
+                $fai_path = $_SERVER['DOCUMENT_ROOT'] . $fai_uri;
+                if (file_exists($fai_path) && ($fh = fopen($fai_path, 'r'))) {
+                    $line = fgets($fh);
+                    fclose($fh);
+                    if ($line) $first_loc = explode("\t", trim($line))[0];
+                }
+            }
+        }
+
+        $assembly_meta[$org . '_' . $asm] = [
+            'geneTracks' => array_values($gene_tracks),
+            'firstLoc'   => $first_loc,
+        ];
+
+        // Also populate deep-link gene tracks if this is the requested assembly
+        if ($org === $dl_organism && $asm === $dl_assembly)
+            $primary_gene_tracks = $gene_tracks;
     }
 }
 
-// Render page using MOOP layout system
 echo render_display_page(
     __DIR__ . '/tools/pages/jbrowse2.php',
     [
-        'user_info' => json_encode($user_info),
-        'page_script' => '/moop/js/jbrowse2-loader.js',
-        'page_styles' => ['/moop/css/jbrowse2.css'],
-        'inline_scripts' => [
-            "window.moopUserInfo = "      . json_encode($user_info) . ";",
-            "window.moopLoc = "           . json_encode($loc) . ";",
-            "window.moopGeneTracks = "    . json_encode(array_values($primary_gene_tracks)) . ";",
-            "window.moopSessionTracks = " . json_encode($session_tracks_json) . ";",
-            "window.moopSessionTrackId = ". json_encode($session_track_id) . ";",
-            "console.log('JBrowse2 loaded for user:', window.moopUserInfo.username || 'anonymous');"
-        ]
+        'scope_tree'          => $scope_tree,
+        'organism_info'       => $organism_info,
+        'site'                => $site,
+        'dl_organism'         => $dl_organism,
+        'dl_assembly'         => $dl_assembly,
+        'page_script'         => ["/$site/js/modules/jbrowse2-browser.js"],
+        'page_styles'         => ["/$site/css/jbrowse2.css"],
+        'inline_scripts'      => [
+            "const moopSite        = " . json_encode('/' . $site)                        . ";",
+            "const jbDlOrganism    = " . json_encode($dl_organism)                      . ";",
+            "const jbDlAssembly    = " . json_encode($dl_assembly)                      . ";",
+            "const jbDlLoc         = " . json_encode($dl_loc)                           . ";",
+            "const jbGeneTracks    = " . json_encode(array_values($primary_gene_tracks)) . ";",
+            "const jbSessionTracks = " . json_encode($session_tracks_json)              . ";",
+            "const jbSessionTrackId= " . json_encode($session_track_id)                 . ";",
+            "const jbAssemblyMeta  = " . json_encode($assembly_meta)                    . ";",
+        ],
     ],
-    'JBrowse2 - Genome Browser'
+    'Genome Browser'
 );
 ?>

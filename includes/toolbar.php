@@ -43,13 +43,12 @@ $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
         <li class="nav-item">
           <a class="nav-link" href="/<?= $site ?>/index.php"><i class="fa fa-home me-1"></i><?= htmlspecialchars($title) ?></a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/<?= $site ?>/jbrowse2.php"><i class="fa fa-dna me-1"></i> Genome Browser</a>
-        </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
              data-bs-toggle="dropdown" aria-expanded="false">Tools</a>
           <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
+            <li><a class="dropdown-item" href="/<?= $site ?>/jbrowse2.php">Genome Browser</a></li>
+            <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/search.php">Annotation Search</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/moopmart.php">MOOPmart: Gene List Builder</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/blast.php">BLAST Search</a></li>
