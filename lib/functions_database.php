@@ -444,11 +444,24 @@ function getOrganismAssemblies($organism_name, $organism_data_dir) {
  * @param string $db_path
  * @return string[]  e.g. ['mRNA', 'polypeptide']
  */
-function getAnnotatedFeatureTypesInGeneSet(int $gene_set_id, string $db_path): array {
+function getAnnotatedFeatureTypesInGeneSet(int $gene_set_id, string $db_path, string $cache_dir = ''): array {
+    if ($cache_dir) {
+        $cache_file = "$cache_dir/annotated_feature_types.json";
+        if (file_exists($cache_file) && filemtime($cache_file) >= filemtime($db_path)) {
+            return json_decode(file_get_contents($cache_file), true) ?: [];
+        }
+    }
+
     $query = "SELECT DISTINCT f.feature_type
               FROM feature f
               JOIN feature_annotation fa ON fa.feature_id = f.feature_id
               WHERE f.gene_set_id = ?";
-    $rows = fetchData($query, $db_path, [$gene_set_id]);
-    return array_column($rows, 'feature_type');
+    $rows  = fetchData($query, $db_path, [$gene_set_id]);
+    $types = array_column($rows, 'feature_type');
+
+    if ($cache_dir) {
+        file_put_contents($cache_file, json_encode($types));
+    }
+
+    return $types;
 }

@@ -167,128 +167,178 @@ $genome_accession = $row['genome_accession'];
 $genome_name      = $row['genome_name'];
 $feature_gene_set_id = $row['gene_set_id'];
 
+// Resolve gene_set name and directories first (needed for caching below)
+$gene_set_name    = $row['gene_set_name'] ?? 'v1';
+$assembly_dir_base = $config->getPath('organism_data') . '/' . $organism_name . '/' . $genome_accession;
+$gene_set_dir     = $assembly_dir_base . '/' . $gene_set_name;
+
 // Which child feature types have annotations somewhere in this gene set?
 // Used to suppress purely structural types (exon, CDS) from the hierarchy and
 // annotation cards while still showing annotated types even when this specific
 // gene has 0 annotations for that type.
-$annotated_child_types = getAnnotatedFeatureTypesInGeneSet((int)$feature_gene_set_id, $db);
+$annotated_child_types = getAnnotatedFeatureTypesInGeneSet((int)$feature_gene_set_id, $db, $gene_set_dir);
 
-// Resolve gene_set name from the accessible sources list
-$gene_set_name = $row['gene_set_name'] ?? 'v1';
-
-// Assembly-level dir (genome.fa lives here, not in gene_set subdir)
-$assembly_dir_base = $config->getPath('organism_data') . '/' . $organism_name . '/' . $genome_accession;
-
-// Gene-set-level dir (GFF, FASTA sequences live here)
-$gene_set_dir = $assembly_dir_base . '/' . $gene_set_name;
-
-// Look up feature coordinates and build gene model from GFF (only when file exists and is non-empty)
+// Look up feature coordinates and build gene model from GFF.
+// Fast path: feature_coords.tsv (tiny file) → tabix indexed GFF (milliseconds).
+// Fallback:  plain grep on genomic.gff for gene sets not yet indexed.
+// With tabix the whole region is fetched in one call and parsed in PHP —
+// no separate grep passes for mRNAs or exons.
 $feature_loc   = null;
 $gene_model    = null;
 $gff_file      = "$gene_set_dir/genomic.gff";
 $gff_available = file_exists($gff_file) && filesize($gff_file) > 0;
 
-if ($gff_available) {
-    // Find the gene's own GFF record for location and strand.
-    // Try 1: ID attribute match — handles bare (ID=UNIQUENAME) and Ensembl-prefixed (ID=gene:UNIQUENAME).
-    // Try 2: uniquename anywhere in attributes — handles NCBI GFFs where the numeric GeneID sits in
-    //         Dbxref (e.g. Dbxref=GeneID:105288252) while the ID is ID=gene-SYMBOL. Accept only lines
-    //         whose GFF feature type (col 3) matches the DB feature type to avoid picking up child lines.
-    $gff_lines = [];
-    exec('grep -m1 -E ' . escapeshellarg('ID=[^;:]*:?' . preg_quote($feature_uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $gff_lines);
-    if (empty($gff_lines)) {
-        $tmp = [];
-        exec('grep -m1 -F ' . escapeshellarg($feature_uniquename) . ' ' . escapeshellarg($gff_file), $tmp);
-        if (!empty($tmp[0])) {
-            $tmp_parts = explode("\t", $tmp[0]);
-            if (isset($tmp_parts[2]) && strtolower($tmp_parts[2]) === strtolower($type)) {
-                $gff_lines = $tmp;
-            }
-        }
+$genomes_dir        = $config->getPath('genomes_directory');
+$tabix_gff          = "$genomes_dir/$organism_name/$genome_accession/$gene_set_name/annotations.gff3.gz";
+$tabix_available    = file_exists($tabix_gff) && (file_exists("$tabix_gff.tbi") || file_exists("$tabix_gff.csi"));
+$feature_coords_tsv = "$gene_set_dir/feature_coords.tsv";
+
+if ($tabix_available || $gff_available) {
+    $region_lines = [];   // all GFF lines for this gene's region
+
+    // ── Step 1: get coordinates from feature_coords.tsv ─────────────────────
+    $coord_out = [];
+    if (file_exists($feature_coords_tsv)) {
+        exec('grep -m1 ' . escapeshellarg('^' . $feature_uniquename . "\t") . ' ' . escapeshellarg($feature_coords_tsv), $coord_out);
     }
 
-    // Extract the actual GFF ID from the found line — may differ from $feature_uniquename
-    // (e.g. NCBI: uniquename=105288252, GFF ID=gene-ANAPC13). All child lookups use $gff_gene_id.
-    $gff_gene_id = $feature_uniquename;
-    if (!empty($gff_lines[0])) {
-        $gff_parts = explode("\t", $gff_lines[0]);
-        if (count($gff_parts) >= 9 && preg_match('/\bID=([^;]+)/', $gff_parts[8], $id_m)) {
-            $gff_gene_id = $id_m[1];
-        }
-        if (count($gff_parts) >= 7) {
+    if (!empty($coord_out[0])) {
+        $cp = explode("\t", trim($coord_out[0]));   // uniquename, gene_id, seqname, start, end, strand
+        if (count($cp) >= 5) {
             $feature_loc = [
-                'seqname'    => $gff_parts[0],
-                'start'      => (int)$gff_parts[3],
-                'end'        => (int)$gff_parts[4],
-                'strand'     => $gff_parts[6],
-                'loc_string' => $gff_parts[0] . ':' . $gff_parts[3] . '-' . $gff_parts[4],
+                'seqname'    => $cp[2],
+                'start'      => (int)$cp[3],
+                'end'        => (int)$cp[4],
+                'strand'     => $cp[5] ?? '.',
+                'loc_string' => $cp[2] . ':' . $cp[3] . '-' . $cp[4],
             ];
+            $region = escapeshellarg($cp[2] . ':' . $cp[3] . '-' . $cp[4]);
+            if ($tabix_available) {
+                exec('tabix ' . escapeshellarg($tabix_gff) . ' ' . $region, $region_lines);
+            } elseif ($gff_available) {
+                exec('grep -F ' . escapeshellarg($feature_uniquename) . ' ' . escapeshellarg($gff_file), $region_lines);
+            }
         }
     }
 
-    // Build isoform map from direct children of the gene, using the actual GFF ID
-    if (!empty($feature_loc)) {
-        $mrna_raw = [];
-        exec('grep -E ' . escapeshellarg('Parent=' . preg_quote($gff_gene_id) . '(;|$)') . ' ' . escapeshellarg($gff_file), $mrna_raw);
-
-        $isoforms = [];
-        foreach ($mrna_raw as $line) {
-            $parts = explode("\t", $line);
-            if (count($parts) < 9) continue;
-            if (!preg_match('/ID=([^;]+)/', $parts[8], $m)) continue;
-            $mid = $m[1];
-            $isoforms[$mid] = [
-                'id'     => $mid,
-                'type'   => $parts[2],
-                'anchor' => 'annot_section_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $mid . '_' . ($analysis_order[0] ?? 'annotation')),
-                'start'  => (int)$parts[3],
-                'end'    => (int)$parts[4],
-                'strand' => $parts[6],
-                'exons'  => [],
-                'cds'    => [],
-            ];
+    // ── Step 2: fallback grep if feature_coords.tsv missed ──────────────────
+    if (empty($region_lines) && $gff_available) {
+        exec('grep -m1 -E ' . escapeshellarg('ID=[^;:]*:?' . preg_quote($feature_uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $region_lines);
+        if (empty($region_lines)) {
+            $tmp = [];
+            exec('grep -m1 -F ' . escapeshellarg($feature_uniquename) . ' ' . escapeshellarg($gff_file), $tmp);
+            if (!empty($tmp[0])) {
+                $p = explode("\t", $tmp[0]);
+                if (isset($p[2]) && strtolower($p[2]) === strtolower($type)) $region_lines = $tmp;
+            }
         }
-
-        // Fetch all exon/CDS children in a single grep pass instead of one call per isoform
-        if (!empty($isoforms)) {
-            $patterns = array_map(fn($mid) => '-e ' . escapeshellarg('Parent=' . $mid . ';'), array_keys($isoforms));
-            $child_raw = [];
-            exec('grep -F ' . implode(' ', $patterns) . ' ' . escapeshellarg($gff_file), $child_raw);
-            if (empty($child_raw)) {
-                $patterns = array_map(fn($mid) => '-e ' . escapeshellarg('Parent=' . $mid), array_keys($isoforms));
-                exec('grep -F ' . implode(' ', $patterns) . ' ' . escapeshellarg($gff_file), $child_raw);
-            }
-
-            // Feature types treated as exon-equivalent for drawing (UTRs drawn orange like exons)
-            $exon_like = ['exon', 'five_prime_utr', 'three_prime_utr', 'utr'];
-
-            foreach ($child_raw as $child_line) {
-                $cp = explode("\t", $child_line);
-                if (count($cp) < 9) continue;
-                $ft = strtolower($cp[2]);
-                if ($ft !== 'cds' && !in_array($ft, $exon_like)) continue;
-                if (!preg_match('/Parent=([^;,]+)/', $cp[8], $pm)) continue;
-                $parent_id = $pm[1];
-                if (!isset($isoforms[$parent_id])) continue;
-                $coord = ['start' => (int)$cp[3], 'end' => (int)$cp[4]];
-                if ($ft === 'cds') {
-                    $isoforms[$parent_id]['cds'][] = $coord;
-                } else {
-                    // Preserve original case from GFF (e.g. "five_prime_UTR") for modal display
-                    $isoforms[$parent_id]['exons'][] = array_merge($coord, ['type' => $cp[2]]);
-                }
-            }
-
-            $isoform_list = array_values(array_filter(
-                $isoforms,
-                fn($iso) => !empty($iso['exons']) || !empty($iso['cds'])
-            ));
-            if (!empty($isoform_list)) {
-                $gene_model = [
-                    'gene'     => array_merge($feature_loc, ['id' => $feature_uniquename, 'type' => $type]),
-                    'isoforms' => $isoform_list,
+        if (!$feature_loc && !empty($region_lines[0])) {
+            $p = explode("\t", $region_lines[0]);
+            if (count($p) >= 7) {
+                $feature_loc = [
+                    'seqname'    => $p[0], 'start' => (int)$p[3], 'end' => (int)$p[4],
+                    'strand'     => $p[6], 'loc_string' => $p[0] . ':' . $p[3] . '-' . $p[4],
                 ];
             }
+        }
+    }
+
+    // ── Step 3: parse region lines for gene model ────────────────────────────
+    if ($feature_loc && !empty($region_lines)) {
+        $gff_gene_id = $feature_uniquename;
+        $isoforms    = [];
+        $exon_like   = ['exon', 'five_prime_utr', 'three_prime_utr', 'utr'];
+
+        // First pass: find the gene's GFF ID and collect mRNA children
+        foreach ($region_lines as $line) {
+            $p = explode("\t", $line);
+            if (count($p) < 9) continue;
+            if (!preg_match('/\bID=([^;]+)/', $p[8], $id_m)) continue;
+
+            $ft = strtolower($p[2]);
+
+            // Gene record — capture the actual GFF ID (may differ from DB uniquename)
+            if ($ft === strtolower($type) && (
+                strpos($p[8], $feature_uniquename) !== false ||
+                preg_match('/\bID=[^;:]*:?' . preg_quote($feature_uniquename) . '(;|$)/', $p[8])
+            )) {
+                $gff_gene_id = $id_m[1];
+                continue;
+            }
+
+            // mRNA / transcript child
+            if (preg_match('/\bParent=([^;,]+)/', $p[8], $par_m)) {
+                $parent = $par_m[1];
+                if (in_array($ft, ['mrna', 'transcript', 'mrna_with_minus_1_frameshift']) || strpos($ft, 'rna') !== false) {
+                    $mid = $id_m[1];
+                    $isoforms[$mid] = [
+                        'id'     => $mid,
+                        'type'   => $p[2],
+                        'anchor' => 'annot_section_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $mid . '_' . ($analysis_order[0] ?? 'annotation')),
+                        'start'  => (int)$p[3],
+                        'end'    => (int)$p[4],
+                        'strand' => $p[6],
+                        'exons'  => [],
+                        'cds'    => [],
+                    ];
+                }
+            }
+        }
+
+        // Second pass: collect exon/CDS into their parent isoforms
+        foreach ($region_lines as $line) {
+            $p = explode("\t", $line);
+            if (count($p) < 9) continue;
+            $ft = strtolower($p[2]);
+            if ($ft !== 'cds' && !in_array($ft, $exon_like)) continue;
+            if (!preg_match('/\bParent=([^;,]+)/', $p[8], $pm)) continue;
+            if (!isset($isoforms[$pm[1]])) continue;
+            $coord = ['start' => (int)$p[3], 'end' => (int)$p[4]];
+            if ($ft === 'cds') {
+                $isoforms[$pm[1]]['cds'][]   = $coord;
+            } else {
+                $isoforms[$pm[1]]['exons'][] = array_merge($coord, ['type' => $p[2]]);
+            }
+        }
+
+        // If tabix region lacked mRNAs (fallback grep case), do one targeted grep
+        if (empty($isoforms) && $gff_available) {
+            $mrna_raw = [];
+            exec('grep -E ' . escapeshellarg('Parent=' . preg_quote($gff_gene_id) . '(;|$)') . ' ' . escapeshellarg($gff_file), $mrna_raw);
+            foreach ($mrna_raw as $line) {
+                $p = explode("\t", $line);
+                if (count($p) < 9 || !preg_match('/\bID=([^;]+)/', $p[8], $m)) continue;
+                $mid = $m[1];
+                $isoforms[$mid] = [
+                    'id' => $mid, 'type' => $p[2],
+                    'anchor' => 'annot_section_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $mid . '_' . ($analysis_order[0] ?? 'annotation')),
+                    'start' => (int)$p[3], 'end' => (int)$p[4], 'strand' => $p[6],
+                    'exons' => [], 'cds' => [],
+                ];
+            }
+            if (!empty($isoforms)) {
+                $patterns  = array_map(fn($mid) => '-e ' . escapeshellarg('Parent=' . $mid), array_keys($isoforms));
+                $child_raw = [];
+                exec('grep -F ' . implode(' ', $patterns) . ' ' . escapeshellarg($gff_file), $child_raw);
+                foreach ($child_raw as $line) {
+                    $p = explode("\t", $line);
+                    if (count($p) < 9) continue;
+                    $ft = strtolower($p[2]);
+                    if ($ft !== 'cds' && !in_array($ft, $exon_like)) continue;
+                    if (!preg_match('/\bParent=([^;,]+)/', $p[8], $pm) || !isset($isoforms[$pm[1]])) continue;
+                    $coord = ['start' => (int)$p[3], 'end' => (int)$p[4]];
+                    if ($ft === 'cds') $isoforms[$pm[1]]['cds'][] = $coord;
+                    else               $isoforms[$pm[1]]['exons'][] = array_merge($coord, ['type' => $p[2]]);
+                }
+            }
+        }
+
+        $isoform_list = array_values(array_filter($isoforms, fn($i) => !empty($i['exons']) || !empty($i['cds'])));
+        if (!empty($isoform_list)) {
+            $gene_model = [
+                'gene'     => array_merge($feature_loc, ['id' => $feature_uniquename, 'type' => $type]),
+                'isoforms' => $isoform_list,
+            ];
         }
     }
 }
