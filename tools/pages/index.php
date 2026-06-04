@@ -279,7 +279,7 @@
 
             <!-- Tab 2: Taxon Select -->
             <div class="tab-pane fade" id="tab-taxon-select" role="tabpanel">
-              <p class="text-muted small mb-2">Each row shows the full taxonomic lineage — filter by any rank to find related species.</p>
+              <p class="text-muted small mb-2">Each row shows the full taxonomic lineage — filter by any rank to find related species. Select one or more to use with a tool.</p>
               <input type="text" class="form-control form-control-sm mb-2 moop-input" id="taxon-select-filter"
                      placeholder="Filter by taxonomy, name, or common name…">
               <div id="taxon-select-list" class="org-select-list"></div>
@@ -287,7 +287,7 @@
 
             <!-- Tab 3: Tree Select -->
             <div class="tab-pane fade" id="tab-tree-select" role="tabpanel">
-              <p class="text-muted small mb-2">Click any branch to select all organisms below it, or individual leaves for a single species. Use the ❯ chevron to expand without changing your selection.</p>
+              <p class="text-muted small mb-2">Click a branch to expand or collapse it. Use the <strong>+</strong> button on any row to add those organisms to your selection. Select one or more to use with a tool.</p>
               <div class="d-flex align-items-center justify-content-end mb-2">
                 <div class="d-flex gap-1">
                   <button id="tree-expand-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">Expand All</button>

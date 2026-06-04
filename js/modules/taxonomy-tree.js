@@ -69,6 +69,8 @@ class PhyloTree {
             } else if (someSelected) {
                 nodeElement.classList.add('partial');
             }
+            const btnIcon = nodeElement.querySelector('.phylo-select-btn i');
+            if (btnIcon) btnIcon.className = allSelected ? 'fas fa-check' : 'fas fa-plus';
         });
     }
 
@@ -103,6 +105,10 @@ class PhyloTree {
             ? `<span class="phylo-toggle" data-node-id="${nodeId}"><i class="fas fa-chevron-down"></i></span>`
             : `<span class="phylo-toggle-spacer"></span>`;
 
+        const selectBtn = `<button class="phylo-select-btn" data-node-id="${nodeId}" title="Add to selection">
+                <i class="fas fa-plus"></i>
+            </button>`;
+
         let html = `
             <div class="phylo-node ${nodeClass}"
                  style="padding-left: ${indent}px"
@@ -111,6 +117,7 @@ class PhyloTree {
                 ${icon ? `<span class="phylo-icon">${icon}</span>` : ''}
                 <span class="phylo-name">${displayName}</span>
                 ${countBadge}
+                ${selectBtn}
             </div>`;
 
         if (node.children) {
@@ -148,19 +155,26 @@ class PhyloTree {
 
     attachEventListeners() {
         this.container.addEventListener('click', (e) => {
-            // Chevron click — collapse/expand only, no selection change
+            // + button click — toggle selection only
+            const selectBtn = e.target.closest('.phylo-select-btn');
+            if (selectBtn) {
+                const nodeId = selectBtn.dataset.nodeId;
+                const node = this.nodeMap.get(nodeId);
+                if (node) this.toggleNode(node);
+                return;
+            }
+            // Chevron click — collapse/expand only
             const toggle = e.target.closest('.phylo-toggle');
             if (toggle) {
                 const nodeId = toggle.dataset.nodeId;
                 if (nodeId) this.toggleCollapse(nodeId);
                 return;
             }
-            // Node body click — toggle organism selection
+            // Branch row click — collapse/expand
             const nodeElement = e.target.closest('.phylo-node');
-            if (nodeElement) {
+            if (nodeElement && nodeElement.classList.contains('phylo-branch')) {
                 const nodeId = nodeElement.dataset.nodeId;
-                const node = this.nodeMap.get(nodeId);
-                if (node) this.toggleNode(node);
+                if (nodeId) this.toggleCollapse(nodeId);
             }
         });
     }

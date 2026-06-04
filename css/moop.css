@@ -373,7 +373,9 @@ footer .footer-meta {
 
 .phylo-node:hover {
   background: #e9ecef;
-  transform: translateX(4px);
+}
+.phylo-node:hover .phylo-select-btn {
+  opacity: 1;
 }
 
 .phylo-node.selected {
@@ -408,11 +410,12 @@ footer .footer-meta {
   font-style: italic;
   background: #fff;
   border: 1px solid #dee2e6;
+  cursor: default;
 }
 
 .phylo-leaf:hover {
-  border-color: #667eea;
-  background: #f0f4ff;
+  background: #f8f9fa;
+  border-color: #dee2e6;
 }
 
 .phylo-leaf.selected {
@@ -458,6 +461,47 @@ footer .footer-meta {
 }
 .phylo-children.collapsed {
   display: none;
+}
+
+/* Phylo select (+) button */
+.phylo-select-btn {
+  flex-shrink: 0;
+  margin-left: 8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+  opacity: 0;
+}
+.phylo-node:hover .phylo-select-btn {
+  opacity: 1;
+  color: #0891b2;
+  border-color: #0891b2;
+}
+.phylo-select-btn:hover {
+  background: #0891b2;
+  color: #fff !important;
+  border-color: #0891b2;
+}
+.phylo-node.selected .phylo-select-btn {
+  opacity: 1;
+  background: transparent;
+  border-color: transparent;
+  color: #fff;
+}
+.phylo-node.partial .phylo-select-btn {
+  opacity: 1;
+  color: #0891b2;
+  border-color: #0891b2;
 }
 
 #selected-organisms-list .badge {
