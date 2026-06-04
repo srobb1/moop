@@ -71,7 +71,7 @@
                 <input type="text" id="fs-input" class="form-control border-start-0 border-end-0 ps-1 moop-input"
                        placeholder="Enter exact sequence ID…"
                        autocomplete="off" spellcheck="false">
-                <button id="fs-go" class="btn btn-primary px-3" type="button">Go</button>
+                <button id="fs-go" class="btn btn-primary px-3" type="button">Search</button>
               </div>
             </div>
             <div class="qs-examples mt-2">
