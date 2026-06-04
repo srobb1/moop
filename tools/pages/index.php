@@ -9,10 +9,10 @@
   <!-- Page Header -->
   <div class="text-center mb-3">
     <p class="index-site-title moop-tool-title"><?= htmlspecialchars($siteTitle) ?></p>
+    <hr class="mx-auto page-header-divider">
     <p class="mb-2" style="font-size:0.95rem;font-weight:300;color:rgba(8,145,178,0.7);letter-spacing:0.03em;">
       Browse genes, genomes, and annotations<?php if (!empty($organism_count)): ?> across <strong style="font-weight:500;"><?= $organism_count ?></strong> organism<?= $organism_count !== 1 ? 's' : '' ?><?php if (!empty($assembly_count)): ?> and <strong style="font-weight:500;"><?= $assembly_count ?></strong> assembl<?= $assembly_count !== 1 ? 'ies' : 'y' ?><?php endif; ?><?php endif; ?>
     </p>
-    <hr class="mx-auto page-header-divider">
   </div>
 
   <!-- Quick search — tabbed -->
