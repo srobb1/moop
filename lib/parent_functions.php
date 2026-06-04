@@ -219,12 +219,12 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
     $html .= "<tbody>";
     
     foreach ($results as $row) {
-        $hit_id = htmlspecialchars($row['annotation_accession']);
+        $hit_id = htmlspecialchars(trim($row['annotation_accession']));
         $hit_description = htmlspecialchars($row['annotation_description']);
         $hit_score = htmlspecialchars($row['score']);
         $annotation_source = htmlspecialchars($row['annotation_source_name']);
-        $annotation_accession_url = htmlspecialchars($row['annotation_accession_url']);
-        $hit_id_link = $annotation_accession_url . urlencode($row['annotation_accession']);
+        $annotation_accession_url = htmlspecialchars(trim($row['annotation_accession_url']));
+        $hit_id_link = $annotation_accession_url . urlencode(trim($row['annotation_accession']));
         
         $html .= "<tr>";
         $html .= "<td class=\"export-only\">" . htmlspecialchars($organism) . "</td>";
