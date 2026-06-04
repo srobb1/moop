@@ -1539,18 +1539,24 @@ a:hover .link-icon {
 }
 .qs-example-chip {
   font-size: 0.73rem;
-  padding: 2px 9px;
-  border: 1px solid rgba(8, 145, 178, 0.2);
-  border-radius: 10px;
-  background: rgba(8, 145, 178, 0.08);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
   color: #4a8fa0;
   cursor: pointer;
   line-height: 1.5;
-  transition: background 0.12s, border-color 0.12s;
+  transition: color 0.12s;
+}
+.qs-examples .qs-example-chip + .qs-example-chip::before {
+  content: '·';
+  margin-right: 6px;
+  color: #adb5bd;
+  pointer-events: none;
 }
 .qs-example-chip:hover {
-  background: rgba(8, 145, 178, 0.16);
-  border-color: rgba(8, 145, 178, 0.4);
-  color: #1e6a80;
+  background: none;
+  border-color: transparent;
+  color: #0891b2;
 }
 
