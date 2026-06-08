@@ -35,6 +35,9 @@ function prepareGeneSetForJBrowse(
     $target_gff    = "$genomes_dir/annotations.gff3";
     $gz_file       = "$genomes_dir/annotations.gff3.gz";
     $tbi_file      = "$gz_file.tbi";
+    $csi_file      = "$gz_file.csi";
+    $index_type    = 'TBI';   // may be updated to 'CSI' below
+    $index_file    = $tbi_file;
     $assembly_name = "{$organism}_{$assembly}";
     $track_id      = "{$assembly_name}_{$gene_set}_genes";
     $track_name    = "Genes ($gene_set)";
@@ -69,7 +72,7 @@ function prepareGeneSetForJBrowse(
 
     // ── bgzip + tabix ────────────────────────────────────────────────────────
     if ($force || !file_exists($gz_file)) {
-        foreach ([$tbi_file, $gz_file] as $f) {
+        foreach ([$tbi_file, $csi_file, $gz_file] as $f) {
             if (file_exists($f)) unlink($f);
         }
         $rc = 1; $out = [];
@@ -98,16 +101,35 @@ function prepareGeneSetForJBrowse(
     }
 
     if (file_exists($gz_file)) {
-        if ($force || !file_exists($tbi_file)) {
+        $need_index = $force || (!file_exists($tbi_file) && !file_exists($csi_file));
+        if ($need_index) {
             if (file_exists($tbi_file)) unlink($tbi_file);
+            if (file_exists($csi_file)) unlink($csi_file);
             $out = []; $rc = 1;
-            $cmd = 'tabix -p gff ' . escapeshellarg($gz_file) . ' 2>&1';
-            exec($cmd, $out, $rc);
-            $log[] = ($rc === 0)
-                ? "$gene_set: tabix OK (" . number_format(filesize($tbi_file)) . " bytes)"
-                : "$gene_set: WARNING — tabix failed: " . implode(' ', $out);
+            exec('tabix -p gff ' . escapeshellarg($gz_file) . ' 2>&1', $out, $rc);
+            if ($rc !== 0) {
+                $err = implode(' ', $out);
+                // tabix fails with a "coordinate limit" message when chromosomes exceed 512 Mb; CSI handles those
+                if (stripos($err, 'coordinate') !== false || stripos($err, 'CSI') !== false) {
+                    $out = []; $rc = 1;
+                    exec('tabix -C -p gff ' . escapeshellarg($gz_file) . ' 2>&1', $out, $rc);
+                    $index_type = 'CSI';
+                    $index_file = $csi_file;
+                    $log[] = ($rc === 0)
+                        ? "$gene_set: tabix CSI OK (" . number_format(filesize($csi_file)) . " bytes) — chromosomes exceed TBI limit"
+                        : "$gene_set: WARNING — tabix CSI also failed: " . implode(' ', $out);
+                } else {
+                    $log[] = "$gene_set: WARNING — tabix failed: $err";
+                }
+            } else {
+                $log[] = "$gene_set: tabix TBI OK (" . number_format(filesize($tbi_file)) . " bytes)";
+            }
         } else {
-            $log[] = "$gene_set: tabix index already exists";
+            if (file_exists($csi_file)) {
+                $index_type = 'CSI';
+                $index_file = $csi_file;
+            }
+            $log[] = "$gene_set: tabix index already exists ($index_type)";
         }
     }
 
@@ -127,12 +149,20 @@ function prepareGeneSetForJBrowse(
                     'uri'          => "$uri_base/annotations.gff3.gz",
                     'locationType' => 'UriLocation',
                 ],
-                'index'         => [
-                    'location' => [
-                        'uri'          => "$uri_base/annotations.gff3.gz.tbi",
-                        'locationType' => 'UriLocation',
+                'index'         => ($index_type === 'CSI')
+                    ? [
+                        'indexType' => 'CSI',
+                        'location'  => [
+                            'uri'          => "$uri_base/annotations.gff3.gz.csi",
+                            'locationType' => 'UriLocation',
+                        ],
+                    ]
+                    : [
+                        'location' => [
+                            'uri'          => "$uri_base/annotations.gff3.gz.tbi",
+                            'locationType' => 'UriLocation',
+                        ],
                     ],
-                ],
             ],
             'displays' => [
                 [
