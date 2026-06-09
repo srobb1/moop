@@ -31,6 +31,9 @@ except ImportError:
 # ──────────────────────────────────────────────────────────────
 # New column order (matches nvec_tracks_updated.tsv)
 # ──────────────────────────────────────────────────────────────
+TRACKS_BASE_URL = 'https://tracks.stowers.org:8080/moop/data/tracks/'
+TRACKS_FS_PREFIX = '/var/www/privatehtml/moop/data/tracks/'
+
 NEW_HEADERS = [
     "TRACK_ID", "NAME", "technique", "CATEGORY", "institute", "source",
     "experiment", "developmental-stage", "tissue", "condition", "summary",
@@ -106,7 +109,9 @@ def parse_scp_commands(filepath):
             if m3 and current_code:
                 dest_path = m3.group(1).rstrip()
                 filename  = os.path.basename(dest_path)
-                file_map[current_code][filename] = dest_path
+                # Convert filesystem path to URL
+                url = dest_path.replace(TRACKS_FS_PREFIX, TRACKS_BASE_URL, 1)
+                file_map[current_code][filename] = url
 
     return org_map, file_map
 
@@ -350,7 +355,7 @@ def main():
     nvec_tsv = os.path.join(base, 'Nematostella_vectensis_updated.tsv')
     if os.path.exists(nvec_tsv):
         nvec_tab  = 'Nematostella_vectensis_GCA_033964005.1'
-        nvec_base = '/var/www/privatehtml/moop/data/tracks/Nematostella_vectensis/'
+        nvec_base = TRACKS_BASE_URL + 'Nematostella_vectensis/'
 
         # Column name mapping for Nvec TSV → new headers
         NVEC_MAP = {
