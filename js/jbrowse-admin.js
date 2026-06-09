@@ -83,10 +83,11 @@ function updateAssemblyDropdown(organism, assemblySelectId, dataSource) {
     assemblySelect.innerHTML = `<option value="">${defaultText}</option>`;
 
     if (organism && source[organism]) {
+        const nameMap = (typeof jbrowseAssemblyNames !== 'undefined' && jbrowseAssemblyNames[organism]) ? jbrowseAssemblyNames[organism] : {};
         source[organism].forEach(asm => {
             const option = document.createElement('option');
             option.value = asm;
-            option.textContent = asm;
+            option.textContent = nameMap[asm] ? nameMap[asm] : asm;
             assemblySelect.appendChild(option);
         });
         assemblySelect.disabled = false;

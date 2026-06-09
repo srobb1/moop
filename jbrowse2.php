@@ -18,9 +18,12 @@ $site          = $config->getString('site', 'moop');
 $organism_data = $config->getPath('organism_data');
 
 // Build organism → assemblies map from accessible sources
-$raw_sources   = flattenSourcesList(getAccessibleAssemblies());
-$scope_tree    = [];   // [organism] = [assembly, ...]
-$organism_info = [];   // [organism] = {genus, species, common_name}
+$raw_sources     = flattenSourcesList(getAccessibleAssemblies());
+$scope_tree      = [];   // [organism] = [assembly, ...]
+$organism_info   = [];   // [organism] = {genus, species, common_name}
+$organism_groups = [];   // [organism] = [group, ...]
+$all_groups      = [];   // distinct non-PUBLIC groups, sorted
+$assembly_names  = [];   // [organism][assembly] = human-readable name (if set)
 
 foreach ($raw_sources as $src) {
     $org = $src['organism'];
@@ -38,8 +41,21 @@ foreach ($raw_sources as $src) {
             'common_name' => $info['common_name'] ?? '',
         ];
     }
+
+    if (!isset($assembly_names[$org][$asm])) {
+        $gn = $src['genome_name'] ?? '';
+        $assembly_names[$org][$asm] = ($gn && $gn !== $asm) ? $gn : '';
+    }
+
+    if (!isset($organism_groups[$org])) $organism_groups[$org] = [];
+    foreach ($src['groups'] ?? [] as $g) {
+        if ($g === 'PUBLIC') continue;
+        if (!in_array($g, $organism_groups[$org], true)) $organism_groups[$org][] = $g;
+        if (!in_array($g, $all_groups, true))            $all_groups[] = $g;
+    }
 }
 ksort($scope_tree);
+sort($all_groups);
 
 // Deep-link parameters (coming from gene page / BLAST / assembly page)
 $dl_organism = '';
@@ -125,6 +141,8 @@ echo render_display_page(
     [
         'scope_tree'          => $scope_tree,
         'organism_info'       => $organism_info,
+        'organism_groups'     => $organism_groups,
+        'all_groups'          => $all_groups,
         'site'                => $site,
         'dl_organism'         => $dl_organism,
         'dl_assembly'         => $dl_assembly,
@@ -139,6 +157,7 @@ echo render_display_page(
             "const jbSessionTracks = " . json_encode($session_tracks_json)              . ";",
             "const jbSessionTrackId= " . json_encode($session_track_id)                 . ";",
             "const jbAssemblyMeta  = " . json_encode($assembly_meta)                    . ";",
+            "const jbAssemblyNames = " . json_encode($assembly_names)                  . ";",
         ],
     ],
     'Genome Browser'

@@ -495,7 +495,7 @@
       <div class="row mb-3">
         <div class="col-md-3">
           <label for="filterOrganism" class="form-label">Organism</label>
-          <select class="form-select" id="filterOrganism" onchange="filterTracks()">
+          <select class="form-select" id="filterOrganism">
             <option value="">All</option>
             <?php foreach ($organisms as $org => $assemblies): ?>
             <option value="<?php echo htmlspecialchars($org); ?>"><?php echo htmlspecialchars($org); ?></option>

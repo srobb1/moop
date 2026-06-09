@@ -80,11 +80,17 @@ $organisms = getOrganismsWithAssemblies($organisms_dir);
 // Get registered assemblies (those with JSON in metadata/jbrowse2-configs/assemblies/)
 $assemblies_meta_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
 $registered_assemblies = [];
+$assembly_display_names = [];  // [organism][assemblyId] = displayName
 if (is_dir($assemblies_meta_dir)) {
     foreach (glob($assemblies_meta_dir . '/*.json') as $file) {
         $asm_data = json_decode(file_get_contents($file), true);
         if ($asm_data && isset($asm_data['organism'], $asm_data['assemblyId'])) {
-            $registered_assemblies[$asm_data['organism']][] = $asm_data['assemblyId'];
+            $org = $asm_data['organism'];
+            $aid = $asm_data['assemblyId'];
+            $registered_assemblies[$org][] = $aid;
+            if (!empty($asm_data['displayName']) && $asm_data['displayName'] !== $aid) {
+                $assembly_display_names[$org][$aid] = $asm_data['displayName'];
+            }
         }
     }
 }
@@ -119,13 +125,12 @@ foreach ($registered_assemblies as $org => $asms) {
             $gs        = basename(dirname($gff_path));
             $track_json = "$tracks_meta_dir/$org/$asm/gff/{$gs}_genes.json";
             $gz_path    = "$site_path/data/genomes/$org/$asm/$gs/annotations.gff3.gz";
-            $tbi_path   = "$gz_path.tbi";
             $gene_sets_info[] = [
                 'organism'      => $org,
                 'assembly'      => $asm,
                 'gene_set'      => $gs,
                 'gff_size'      => filesize($gff_path),
-                'gff_prepped'   => file_exists($gz_path) && file_exists($tbi_path),
+                'gff_prepped'   => file_exists($gz_path) && (file_exists("$gz_path.tbi") || file_exists("$gz_path.csi")),
                 'is_registered' => file_exists($track_json),
             ];
         }
@@ -194,8 +199,9 @@ $data = [
     'unregistered_assemblies' => $unregistered_assemblies,
     'gene_sets_info' => $gene_sets_info,
     'inline_scripts' => [
-        'const jbrowseOrganisms = '       . json_encode($organisms)             . ';',
-        'const registeredOrganisms = '    . json_encode($registered_assemblies) . ';',
+        'const jbrowseOrganisms = '        . json_encode($organisms)               . ';',
+        'const registeredOrganisms = '    . json_encode($registered_assemblies)   . ';',
+        'const jbrowseAssemblyNames = '   . json_encode($assembly_display_names)  . ';',
         'const sitePath = "'              . $site                               . '";',
         'const unregisteredAssemblies = ' . json_encode($unregistered_assemblies) . ';',
         'const geneSetsInfo = '           . json_encode($gene_sets_info)        . ';',

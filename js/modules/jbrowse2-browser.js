@@ -104,13 +104,18 @@
             return;
         }
 
-        list.innerHTML = assemblies.map(asm => `
-            <div class="jb-asm-row px-3 py-2 border-bottom d-flex align-items-center gap-2"
+        const nameMap = (typeof jbAssemblyNames !== 'undefined' && jbAssemblyNames[selectedOrg]) ? jbAssemblyNames[selectedOrg] : {};
+        list.innerHTML = assemblies.map(asm => {
+            const name = nameMap[asm];
+            const label = name
+                ? `<span class="small">${name}</span> <span class="text-muted small font-monospace">(${asm})</span>`
+                : `<span class="small font-monospace">${asm}</span>`;
+            return `<div class="jb-asm-row px-3 py-2 border-bottom d-flex align-items-center gap-2"
                  style="cursor:pointer;" data-asm="${asm}">
               <i class="fas fa-circle-dot text-muted small jb-asm-radio"></i>
-              <span class="small font-monospace">${asm}</span>
-            </div>`
-        ).join('');
+              <div>${label}</div>
+            </div>`;
+        }).join('');
 
         // Auto-select if only one
         if (assemblies.length === 1) {
@@ -143,13 +148,35 @@
     }
 
     // ── Filter ────────────────────────────────────────────────────────────────
+    let activeGroupFilter = null;
+
+    function applyFilters() {
+        const term = (document.getElementById('jb-org-filter')?.value || '').trim().toLowerCase();
+        document.querySelectorAll('.jb-org-row').forEach(row => {
+            const matchesText  = !term || (row.dataset.search || '').includes(term);
+            const rowGroups    = JSON.parse(row.dataset.groups || '[]');
+            const matchesGroup = !activeGroupFilter || rowGroups.includes(activeGroupFilter);
+            row.classList.toggle('jb-hidden', !(matchesText && matchesGroup));
+        });
+    }
+
     function initFilter() {
         const input = document.getElementById('jb-org-filter');
-        if (!input) return;
-        input.addEventListener('input', function () {
-            const term = this.value.toLowerCase();
-            document.querySelectorAll('.jb-org-row').forEach(row => {
-                row.style.display = row.dataset.search.includes(term) ? '' : 'none';
+        if (input) input.addEventListener('input', applyFilters);
+
+        document.querySelectorAll('.jb-group-chip').forEach(chip => {
+            chip.addEventListener('click', function () {
+                const g = this.dataset.group;
+                if (activeGroupFilter === g) {
+                    activeGroupFilter = null;
+                    document.querySelectorAll('.jb-group-chip').forEach(c => c.style.opacity = '0.55');
+                } else {
+                    activeGroupFilter = g;
+                    document.querySelectorAll('.jb-group-chip').forEach(c => {
+                        c.style.opacity = c.dataset.group === g ? '1' : '0.35';
+                    });
+                }
+                applyFilters();
             });
         });
     }

@@ -1,8 +1,10 @@
 <?php
 /**
  * Genome Browser — Display Page
- * Variables: $scope_tree, $organism_info, $site, $dl_organism, $dl_assembly
+ * Variables: $scope_tree, $organism_info, $organism_groups, $all_groups, $site, $dl_organism, $dl_assembly
  */
+$gp = ['#3498db','#e74c3c','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63','#00bcd4','#795548','#607d8b'];
+$groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31) % count($gp)];
 ?>
 <div class="container-fluid py-3 px-3">
 
@@ -30,9 +32,17 @@
 
       <!-- Left: organism list -->
       <div class="col-lg-7 border-end d-flex flex-column">
-        <div class="px-2 pt-2 pb-1 border-bottom">
+        <div class="px-2 pt-2 pb-1 border-bottom d-flex flex-column gap-1">
           <input type="text" class="form-control form-control-sm moop-input" id="jb-org-filter"
                  placeholder="Filter organisms…" autocomplete="off">
+          <?php if (!empty($all_groups)): ?>
+          <div id="jb-group-chips" class="d-flex flex-wrap gap-1 pt-1">
+            <?php foreach ($all_groups as $g): ?>
+            <span class="org-group-chip jb-group-chip" style="background:<?= $groupColor($g) ?>; cursor:pointer; opacity:0.55;"
+                  data-group="<?= htmlspecialchars($g) ?>"><?= htmlspecialchars($g) ?></span>
+            <?php endforeach; ?>
+          </div>
+          <?php endif; ?>
         </div>
         <div style="overflow-y:auto; max-height:220px;" id="jb-org-list">
           <?php foreach ($scope_tree as $org => $assemblies):
@@ -40,23 +50,30 @@
             $genus   = $info['genus']       ?? '';
             $species = $info['species']     ?? '';
             $common  = $info['common_name'] ?? '';
+            $groups  = $organism_groups[$org] ?? [];
             $display = $genus && $species ? "$genus $species" : str_replace('_', ' ', $org);
+            $search  = strtolower("$org $display $common " . implode(' ', $groups));
           ?>
           <div class="jb-org-row px-3 py-2 border-bottom d-flex align-items-center gap-2"
                style="cursor:pointer;"
                data-org="<?= htmlspecialchars($org) ?>"
                data-assemblies="<?= htmlspecialchars(json_encode($assemblies)) ?>"
-               data-search="<?= htmlspecialchars(strtolower("$org $display $common")) ?>">
-            <div class="flex-grow-1">
+               data-groups="<?= htmlspecialchars(json_encode($groups)) ?>"
+               data-search="<?= htmlspecialchars($search) ?>">
+            <div class="flex-grow-1 d-flex align-items-center flex-wrap gap-1" style="min-width:0;">
+              <?php foreach ($groups as $g): ?>
+              <span class="org-group-chip" style="background:<?= $groupColor($g) ?>"><?= htmlspecialchars($g) ?></span>
+              <?php endforeach; ?>
               <span class="small fw-semibold"><em><?= htmlspecialchars($display) ?></em></span>
               <?php if ($common): ?>
-                <span class="text-muted small ms-1">(<?= htmlspecialchars($common) ?>)</span>
+                <span class="text-muted small">(<?= htmlspecialchars($common) ?>)</span>
               <?php endif; ?>
             </div>
-            <i class="fas fa-chevron-right text-muted small jb-org-chevron"></i>
+            <i class="fas fa-chevron-right text-muted small jb-org-chevron flex-shrink-0"></i>
           </div>
           <?php endforeach; ?>
         </div>
+        <style>.jb-org-row.jb-hidden { display: none !important; }</style>
       </div>
 
       <!-- Right: assembly picker -->
