@@ -297,7 +297,8 @@ if ($output_format === 'tsv') {
         $by_gs[$f['gs_key']][] = $f;
     }
 
-    $genomic_modes = ['gene', 'upstream', 'downstream', 'exons'];
+    $genomic_modes   = ['gene', 'upstream', 'downstream', 'exons'];
+    $skipped_datasets = [];
 
     foreach ($by_gs as $gs_key => $gs_features) {
         $src = $sources_by_gs_id[$gs_key] ?? null;
@@ -309,8 +310,16 @@ if ($output_format === 'tsv') {
         $assembly_dir = "$organism_data/$org/$assembly";
         $gs_path      = "$assembly_dir/$gs_name";
         $gff_path     = "$gs_path/genomic.gff";
+        $gs_label     = $gs_name ? "$org / $assembly / $gs_name" : "$org / $assembly";
 
         if (in_array($fasta_mode, $genomic_modes)) {
+            $fasta = "$assembly_dir/genome.fa";
+            $fai   = "$assembly_dir/genome.fa.fai";
+            if (!file_exists($fasta) || !file_exists($fai)) {
+                $missing = !file_exists($fasta) ? 'genome.fa' : 'genome.fa.fai';
+                $skipped_datasets[] = "$gs_label (missing $missing)";
+                continue;
+            }
             moopmartStreamGenomicFasta($gs_features, $assembly_dir, $gff_path, $fasta_mode, $flank_bp, $out);
         } else {
             // Pre-built FASTA files: protein, transcript, cds
@@ -322,8 +331,21 @@ if ($output_format === 'tsv') {
             $extract_result = extractSequencesForAllTypes($gs_path, $typed_ids, $sequence_types, $org, $assembly);
             if (isset($extract_result['content'][$fasta_mode])) {
                 fwrite($out, $extract_result['content'][$fasta_mode]);
+            } else {
+                $pattern = $sequence_types[$fasta_mode]['pattern'] ?? '';
+                if ($pattern && empty(glob("$gs_path/*$pattern"))) {
+                    $skipped_datasets[] = "$gs_label (missing $fasta_mode FASTA file)";
+                }
             }
         }
     }
+
+    if (!empty($skipped_datasets)) {
+        fwrite($out, "\n# WARNING: The following gene sets were skipped because required files are missing:\n");
+        foreach ($skipped_datasets as $ds) {
+            fwrite($out, "#   - $ds\n");
+        }
+    }
+
     fclose($out);
 }
