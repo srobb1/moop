@@ -59,6 +59,20 @@ $search_query = trim($_POST['query'] ?? '');
 $blast_program = trim($_POST['blast_program'] ?? 'blastx');
 $blast_db = trim($_POST['blast_db'] ?? '');
 
+// blastn-short is a task preset, not a separate binary — translate here
+if ($blast_program === 'blastn-short') {
+    $blast_program = 'blastn';
+    $_POST['task']      = 'blastn-short';
+    $_POST['evalue']    = $_POST['evalue']    ?? '10';
+    $_POST['word_size'] = $_POST['word_size'] ?? '7';
+    $_POST['gapopen']   = $_POST['gapopen']   ?? '5';
+    $_POST['gapextend'] = $_POST['gapextend'] ?? '2';
+    // unset filter_seq so low-complexity filtering is off by default
+    if (!isset($_POST['filter_seq'])) {
+        unset($_POST['filter_seq']);
+    }
+}
+
 // Get the assembly parameter from URL/POST (could be name or accession)
 $assembly_param = trim($_POST['assembly'] ?? $_GET['assembly'] ?? '');
 

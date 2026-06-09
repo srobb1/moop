@@ -87,12 +87,22 @@
 
         // All / None
         document.getElementById('mm-select-all')?.addEventListener('click', function () {
-            list.querySelectorAll('.mm-gs-cb').forEach(cb => {
-                cb.checked = true;
-                cb.closest('.mm-scope-row')?.classList.add('selected');
-            });
-            updateScopeSummary();
-            updateCoordState();
+            const total   = list.querySelectorAll('.mm-gs-cb').length;
+            const countEl = document.getElementById('mm-select-all-count');
+            if (countEl) countEl.textContent = total + (total === 1 ? ' gene set' : ' gene sets');
+            const modalEl = document.getElementById('mm-select-all-modal');
+            const modal   = bootstrap.Modal.getOrCreateInstance(modalEl);
+            const confirmBtn = document.getElementById('mm-select-all-confirm');
+            confirmBtn.onclick = function () {
+                modal.hide();
+                list.querySelectorAll('.mm-gs-cb').forEach(cb => {
+                    cb.checked = true;
+                    cb.closest('.mm-scope-row')?.classList.add('selected');
+                });
+                updateScopeSummary();
+                updateCoordState();
+            };
+            modal.show();
         });
         document.getElementById('mm-clear-all')?.addEventListener('click', function () {
             list.querySelectorAll('.mm-gs-cb').forEach(cb => {
@@ -550,7 +560,7 @@
         start:            { title: 'Start',             data: 'start',            defaultContent: '' },
         stop:             { title: 'Stop',              data: 'end',              defaultContent: '' },
         strand:           { title: 'Strand',            data: 'strand',           defaultContent: '' },
-        why_included:     { title: 'Why Included',      data: 'match_reason',     defaultContent: '',
+        why_included:     { title: 'Inclusion Criteria', data: 'match_reason',     defaultContent: '',
                             render: (v, t) => t === 'display' && v?.length > 80
                                 ? `<span title="${v.replace(/"/g, '&quot;')}">${v.slice(0, 80)}…</span>`
                                 : (v || '') },

@@ -97,13 +97,19 @@
                     <div id="sequenceTypeInfo" class="sequence-type-info mb-2" style="display:none;">
                         <small id="sequenceTypeMessage"></small>
                     </div>
-                    <select id="blast_program" name="blast_program" class="form-control" onchange="updateDatabaseList();">
-                        <option value="blastn"  <?= $blast_program === 'blastn'  ? 'selected' : '' ?>>BLASTn — DNA query vs DNA database</option>
-                        <option value="blastp"  <?= $blast_program === 'blastp'  ? 'selected' : '' ?>>BLASTp — Protein query vs protein database</option>
-                        <option value="blastx"  <?= $blast_program === 'blastx'  ? 'selected' : '' ?>>BLASTx — DNA query vs protein database (translated)</option>
-                        <option value="tblastn" <?= $blast_program === 'tblastn' ? 'selected' : '' ?>>tBLASTn — Protein query vs DNA database (translated)</option>
-                        <option value="tblastx" <?= $blast_program === 'tblastx' ? 'selected' : '' ?>>tBLASTx — DNA query vs DNA database (both translated)</option>
+                    <select id="blast_program" name="blast_program" class="form-select" onchange="updateDatabaseList(); applyBlastProgramDefaults(this.value);">
+                        <option value="blastn"       <?= $blast_program === 'blastn'       ? 'selected' : '' ?>>BLASTn — DNA query vs DNA database</option>
+                        <option value="blastp"       <?= $blast_program === 'blastp'       ? 'selected' : '' ?>>BLASTp — Protein query vs protein database</option>
+                        <option value="blastx"       <?= $blast_program === 'blastx'       ? 'selected' : '' ?>>BLASTx — DNA query vs protein database (translated)</option>
+                        <option value="tblastn"      <?= $blast_program === 'tblastn'      ? 'selected' : '' ?>>tBLASTn — Protein query vs DNA database (translated)</option>
+                        <option value="tblastx"      <?= $blast_program === 'tblastx'      ? 'selected' : '' ?>>tBLASTx — DNA query vs DNA database (both translated)</option>
+                        <option value="blastn-short" <?= $blast_program === 'blastn-short' ? 'selected' : '' ?>>BLASTn-short — Short DNA query (primers, ~20nt)</option>
                     </select>
+                    <div id="blastn-short-notice" class="alert alert-info py-2 mt-2 small mb-0 <?= $blast_program === 'blastn-short' ? '' : 'd-none' ?>">
+                        <i class="fa fa-circle-info me-1"></i>
+                        Optimized for short sequences: word size 7, E-value 1000, adjusted gap costs, no low-complexity filter.
+                        Advanced options have been pre-filled — you can override them.
+                    </div>
                 </div>
             </div>
 
@@ -138,16 +144,21 @@
 
             <!-- Advanced Options (unnumbered — optional) -->
             <div class="mb-3">
-                <button class="btn btn-outline-secondary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#advOptions" aria-expanded="false" aria-controls="advOptions">
-                    <i class="fas fa-sliders-h"></i> <strong>Advanced Options</strong>
+                <button class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#advOptions" aria-expanded="false" aria-controls="advOptions">
+                    <span><i class="fas fa-sliders-h me-2"></i><strong>Advanced Options</strong></span>
+                    <i class="fa fa-chevron-down adv-chevron" style="font-size:0.8rem; transition:transform 0.2s;"></i>
                 </button>
                 
                 <div id="advOptions" class="collapse mt-3">
                     <div class="card card-body">
+                        <!-- blastn-short preset notice -->
+                        <div id="adv-short-notice" class="d-none mb-3 small fw-semibold" style="color:#0891b2;">
+                            <i class="fa fa-circle-check me-1"></i>Optimized for short searches — highlighted parameters have been adjusted.
+                        </div>
                         <!-- Basic Parameters -->
                         <div class="row">
                             <div class="col-md-6">
-                                <label for="evalue" class="form-label"><strong>E-value Threshold</strong></label>
+                                <label for="evalue" class="form-label adv-short-param"><strong>E-value Threshold</strong></label>
                                 <select id="evalue" name="evalue" class="form-select" onchange="toggleEvalueCustom()">
                                     <option value="10" <?= $evalue === '10' ? 'selected' : '' ?>>10</option>
                                     <option value="1" <?= $evalue === '1' ? 'selected' : '' ?>>1</option>
@@ -188,7 +199,7 @@
                                 <label class="form-label">&nbsp;</label>
                                 <div class="form-check mt-2">
                                     <input class="form-check-input" type="checkbox" name="filter_seq" id="filter_seq" <?= (isset($blast_options) && $blast_options['filter']) ? 'checked' : '' ?>>
-                                    <label class="form-check-label" for="filter_seq">
+                                    <label class="form-check-label adv-short-param" for="filter_seq">
                                         Filter low complexity regions
                                     </label>
                                 </div>
@@ -201,7 +212,7 @@
                         
                         <div class="row">
                             <div class="col-md-6">
-                                <label for="word_size" class="form-label"><strong>Word Size</strong></label>
+                                <label for="word_size" class="form-label adv-short-param"><strong>Word Size</strong></label>
                                 <input type="number" id="word_size" name="word_size" class="form-control" value="<?= isset($blast_options) && $blast_options['word_size'] ? htmlspecialchars($blast_options['word_size']) : '' ?>" placeholder="Default (program-specific)" min="1">
                                 <small class="form-text text-muted">Length of initial exact match (typically 11 for blastn, 3 for blastp)</small>
                             </div>
@@ -229,13 +240,13 @@
 
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="gapopen" class="form-label"><strong>Gap Open Penalty</strong></label>
+                                <label for="gapopen" class="form-label adv-short-param"><strong>Gap Open Penalty</strong></label>
                                 <input type="number" id="gapopen" name="gapopen" class="form-control" value="<?= isset($blast_options) && $blast_options['gapopen'] ? htmlspecialchars($blast_options['gapopen']) : '' ?>" placeholder="Default" min="1">
                                 <small class="form-text text-muted">Cost to open a gap</small>
                             </div>
                             
                             <div class="col-md-6">
-                                <label for="gapextend" class="form-label"><strong>Gap Extend Penalty</strong></label>
+                                <label for="gapextend" class="form-label adv-short-param"><strong>Gap Extend Penalty</strong></label>
                                 <input type="number" id="gapextend" name="gapextend" class="form-control" value="<?= isset($blast_options) && $blast_options['gapextend'] ? htmlspecialchars($blast_options['gapextend']) : '' ?>" placeholder="Default" min="1">
                                 <small class="form-text text-muted">Cost to extend a gap</small>
                             </div>
@@ -340,3 +351,59 @@
         
     <?php endif; ?>
 </div>
+<style>
+.adv-chevron { transition: transform 0.2s; }
+#advOptions.show ~ * .adv-chevron,
+.adv-chevron.open { transform: rotate(180deg); }
+.blast-short-highlight { color: #0891b2 !important; }
+</style>
+<script>
+document.getElementById('advOptions')?.addEventListener('show.bs.collapse', function () {
+    document.querySelector('.adv-chevron')?.classList.add('open');
+});
+document.getElementById('advOptions')?.addEventListener('hide.bs.collapse', function () {
+    document.querySelector('.adv-chevron')?.classList.remove('open');
+});
+
+function applyBlastProgramDefaults(program) {
+    const notice    = document.getElementById('blastn-short-notice');
+    const advNotice = document.getElementById('adv-short-notice');
+    const isShort   = program === 'blastn-short';
+
+    notice?.classList.toggle('d-none', !isShort);
+    advNotice?.classList.toggle('d-none', !isShort);
+    document.querySelectorAll('.adv-short-param').forEach(el => {
+        el.classList.toggle('blast-short-highlight', isShort);
+    });
+
+    if (isShort) {
+        // Open advanced options so user can see what was set
+        const advEl = document.getElementById('advOptions');
+        if (advEl && !advEl.classList.contains('show')) {
+            bootstrap.Collapse.getOrCreateInstance(advEl).show();
+        }
+        // Pre-fill advanced fields
+        const wordSize  = document.getElementById('word_size');
+        const evalue    = document.getElementById('evalue');
+        const filterCb  = document.getElementById('filter_seq');
+        const gapopen   = document.getElementById('gapopen');
+        const gapextend = document.getElementById('gapextend');
+        if (wordSize)  wordSize.value   = '7';
+        if (evalue)    evalue.value     = '10';
+        if (filterCb)  filterCb.checked = true;
+        if (gapopen)   gapopen.value    = '5';
+        if (gapextend) gapextend.value  = '2';
+        // Auto-select genome database if available
+        const dbBadges = document.getElementById('databaseBadges');
+        if (dbBadges) {
+            const radios = dbBadges.querySelectorAll('input[type="radio"][name="blast_db"]');
+            let genomeRadio = null;
+            radios.forEach(r => {
+                const label = dbBadges.querySelector('label[for="' + r.id + '"]');
+                if (label && /genome/i.test(label.textContent)) genomeRadio = r;
+            });
+            if (genomeRadio) genomeRadio.checked = true;
+        }
+    }
+}
+</script>

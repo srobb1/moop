@@ -50,7 +50,7 @@ $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
             <li><a class="dropdown-item" href="/<?= $site ?>/jbrowse2.php">Genome Browser</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/search.php">Annotation Search</a></li>
-            <li><a class="dropdown-item" href="/<?= $site ?>/tools/moopmart.php">MOOPmart: Gene List Builder</a></li>
+            <li><a class="dropdown-item" href="/<?= $site ?>/tools/moopmart.php">MOOPmart: Data Exporter</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/blast.php">BLAST Search</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/retrieve_sequences.php">Retrieve Sequences</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/downloads.php">Downloads</a></li>

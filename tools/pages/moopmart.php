@@ -1,6 +1,6 @@
 <?php
 /**
- * MOOPmart — Gene List Builder
+ * MOOPmart — Data Exporter
  * Variables: $scope_tree, $organism_info, $organism_groups,
  *            $annotation_source_names, $annotation_source_types
  */
@@ -14,7 +14,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
   <!-- Header -->
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
-      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">MOOPmart — Gene List Builder</span>
+      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">MOOPmart — Data Exporter</span>
       <button type="button" class="btn btn-link p-0 text-white"
               style="font-size:1rem; opacity:0.85; line-height:1;"
               data-bs-toggle="modal" data-bs-target="#mm-help-modal">
@@ -22,7 +22,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       </button>
     </div>
     <div class="card-body py-2">
-      <p class="text-muted small mb-0">Find genes or mRNAs by ID, name, annotation description, GO term, or genomic coordinates — then export decorated lists as TSV or FASTA.</p>
+      <p class="text-muted small mb-0">Export annotation data or sequences.</p>
     </div>
   </div>
 
@@ -184,7 +184,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
   <div class="card mb-3 shadow-sm">
     <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
       <span class="step-badge me-2">2</span>
-      <span class="fw-semibold" style="font-size:0.9rem;">Build your list</span>
+      <span class="fw-semibold" style="font-size:0.9rem;">Select Genes</span>
       <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline"
               style="font-size:0.85rem; color:rgba(255,255,255,0.8);"
               data-bs-toggle="modal" data-bs-target="#mm-build-help-modal">
@@ -213,7 +213,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
               <p class="text-muted small mb-2">
                 Paste gene IDs, mRNA IDs, or protein IDs — one per line or comma/space separated.
                 Each ID is resolved to its gene: a protein ID walks up to the parent mRNA, then the parent gene.
-                A <strong>Why Included</strong> column in your output will show exactly which input ID each result came from.
+                An <strong>Inclusion Criteria</strong> column in your output will show exactly which input ID each result came from.
               </p>
               <textarea id="mm-feature-ids" class="form-control moop-input" rows="4"
                         placeholder="e.g. gene1, mRNA1.1, XP_023382306.1&#10;or one per line"></textarea>
@@ -370,7 +370,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
     <div class="card-header py-2 d-flex align-items-center gap-2 cursor-pointer" style="background:#0891b2; color:#fff;"
          data-bs-toggle="collapse" data-bs-target="#mm-design-body" aria-expanded="false" aria-controls="mm-design-body">
       <span class="step-badge me-2">3</span>
-      <span class="fw-semibold me-auto" style="font-size:0.9rem;">Design your output</span>
+      <span class="fw-semibold me-auto" style="font-size:0.9rem;">Select Output Options</span>
       <i class="fa fa-info-circle" style="cursor:pointer; color:rgba(255,255,255,0.7);"
          data-bs-toggle="popover" data-bs-placement="left" data-bs-html="true"
          data-bs-title="Design your output"
@@ -423,7 +423,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
               'start'            => 'Start',
               'stop'             => 'Stop',
               'strand'           => 'Strand',
-              'why_included'     => 'Why Included',
+              'why_included'     => 'Inclusion Criteria',
             ];
             foreach ($feat_cols as $val => $lbl):
             ?>
@@ -613,7 +613,28 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
 <?php include_once __DIR__ . '/../../includes/ann_types_modal.php'; ?>
 
+<!-- Select-all-organisms warning modal -->
+<div class="modal fade" id="mm-select-all-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-warning">
+      <div class="modal-header bg-warning bg-opacity-10 py-2">
+        <h5 class="modal-title fw-bold"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Select all organisms?</h5>
+      </div>
+      <div class="modal-body">
+        This will select all <strong id="mm-select-all-count"></strong> gene sets across all organisms.
+        Searches across all organisms can take a while — consider selecting only the ones you need.
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning" id="mm-select-all-confirm">Select all</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <style>
 /* Simple/detail toggle for organism scope list */
 #mm-scope-list.mm-scope-detail-hidden .mm-scope-row-detail { display: none; }
+/* Darker border on FASTA type radio buttons */
+#mm-fasta-options .form-check-input[type="radio"] { border-color: #6c757d; }
 </style>

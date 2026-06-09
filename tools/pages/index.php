@@ -25,7 +25,7 @@
       </li>
       <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-feature" type="button">
-          <i class="fa fa-fingerprint me-1"></i>Sequence ID
+          <i class="fa fa-search me-1"></i>Genes
         </button>
       </li>
     </ul>
@@ -69,7 +69,7 @@
                   <i class="fa fa-fingerprint"></i>
                 </span>
                 <input type="text" id="fs-input" class="form-control border-start-0 border-end-0 ps-1 moop-input"
-                       placeholder="Enter exact sequence ID…"
+                       placeholder="Enter Accession ID…"
                        autocomplete="off" spellcheck="false">
                 <button id="fs-go" class="btn btn-primary px-3" type="button">Search</button>
               </div>

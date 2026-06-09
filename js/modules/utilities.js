@@ -188,7 +188,7 @@ function updateDatabaseList() {
     // blastn, tblastn, tblastx need Nucleotide DB
     const compatibleDbs = allDbs.filter(db => {
         if (['blastp', 'blastx'].includes(program)) return db.type === 'protein';
-        if (['blastn', 'tblastn', 'tblastx'].includes(program)) return db.type === 'nucleotide';
+        if (['blastn', 'blastn-short', 'tblastn', 'tblastx'].includes(program)) return db.type === 'nucleotide';
         return true;
     });
     

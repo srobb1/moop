@@ -144,5 +144,5 @@ echo render_display_page(
             'const scopeContext = '      . json_encode($scope_context)           . ';',
         ],
     ],
-    'MOOPmart — Gene List Builder'
+    'MOOPmart — Data Exporter'
 );

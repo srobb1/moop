@@ -49,6 +49,13 @@ function getBlastDatabases($assembly_path) {
 
             // Accept if FASTA exists OR if a BLAST index exists (FASTA may have been removed after indexing)
             $idx_ext = $type_info['blast_type'] === 'protein' ? '.pin' : '.nin';
+            if (!file_exists($file_path) && !file_exists($file_path . $idx_ext)) {
+                // Gene sets live one level below the assembly dir — check parent for assembly-level files (e.g. genome.fa)
+                $parent_path = dirname($assembly_path) . "/$pattern";
+                if (file_exists($parent_path) || file_exists($parent_path . $idx_ext)) {
+                    $file_path = $parent_path;
+                }
+            }
             if (file_exists($file_path) || file_exists($file_path . $idx_ext)) {
                 $databases[] = [
                     'name'     => $type_info['name'],
@@ -78,6 +85,7 @@ function filterDatabasesByProgram($databases, $blast_program) {
     $compatible_types = [];
     switch ($blast_program) {
         case 'blastn':
+        case 'blastn-short':
         case 'tblastn':
         case 'tblastx':
             $compatible_types = ['nucleotide'];
@@ -886,107 +894,6 @@ function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_d
     }
     
     return $result;
-}
-
-/**
- * Generate feature_coords.tsv for an assembly from its genomic.gff.
- * Maps every feature uniquename (gene, mRNA, CDS, polypeptide, etc.) to its
- * gene ancestor's coordinates so BLAST hits can link to the correct locus.
- *
- * @param string $assembly_path  Absolute path to the assembly directory
- * @return bool  True on success, false if GFF missing or write fails
- */
-function generateFeatureCoordsIndex($assembly_path) {
-    $gff_file = $assembly_path . '/genomic.gff';
-    $tsv_file = $assembly_path . '/feature_coords.tsv';
-
-    if (!file_exists($gff_file) || filesize($gff_file) === 0) {
-        return false;
-    }
-
-    // First pass — collect all features keyed by ID
-    $features = [];
-    $fh = fopen($gff_file, 'r');
-    if (!$fh) return false;
-
-    while (($line = fgets($fh)) !== false) {
-        if ($line[0] === '#') continue;
-        $parts = explode("\t", rtrim($line));
-        if (count($parts) < 9) continue;
-
-        // Parse ID, Parent, and Name from attributes column
-        $id = null; $parent = null; $name = null;
-        foreach (explode(';', $parts[8]) as $attr) {
-            $kv = explode('=', $attr, 2);
-            if (count($kv) !== 2) continue;
-            $k = trim($kv[0]); $v = trim($kv[1]);
-            if ($k === 'ID')     $id     = $v;
-            if ($k === 'Parent') $parent = $v;
-            if ($k === 'Name')   $name   = $v;
-        }
-        if (!$id) continue;
-
-        $features[$id] = [
-            'chr'    => $parts[0],
-            'start'  => $parts[3],
-            'end'    => $parts[4],
-            'strand' => $parts[6],
-            'type'   => strtolower($parts[2]),
-            'parent' => $parent,
-            'name'   => $name,
-        ];
-    }
-    fclose($fh);
-
-    if (empty($features)) return false;
-
-    // Second pass — resolve gene ancestor, write TSV
-    $skip_types = ['region', 'chromosome', 'contig', 'scaffold', 'supercontig', 'biological_region'];
-    $out = fopen($tsv_file, 'w');
-    if (!$out) return false;
-
-    $written = [];  // track IDs already emitted to avoid duplicates
-
-    foreach ($features as $id => $f) {
-        if (in_array($f['type'], $skip_types)) continue;
-
-        // Walk parent chain to find gene-level ancestor
-        $gene_id = $id;
-        $seen = [];
-        while (true) {
-            if (isset($seen[$gene_id])) break;
-            $seen[$gene_id] = true;
-            $cur = $features[$gene_id] ?? null;
-            if (!$cur || !$cur['parent'] || !isset($features[$cur['parent']])) break;
-            $gene_id = $cur['parent'];
-        }
-
-        $gene = $features[$gene_id];
-        $row = [$gene_id, $gene['chr'], $gene['start'], $gene['end'], $gene['strand']];
-
-        $write = function($hit_id) use ($out, $row, &$written) {
-            if (!isset($written[$hit_id])) {
-                fwrite($out, $hit_id . "\t" . implode("\t", $row) . "\n");
-                $written[$hit_id] = true;
-            }
-        };
-
-        $write($id);
-
-        // For RefSeq-style GFF IDs with prefixes (rna-, cds-, gene-, id-), also write
-        // the bare accession — e.g. "rna-NM_001234.1" → "NM_001234.1" — so transcript
-        // and protein BLAST hits match without needing the prefix.
-        $bare = preg_replace('/^(?:rna|cds|gene|id)-/', '', $id);
-        if ($bare !== $id) $write($bare);
-
-        // For CDS features with a distinct Name (typically the protein accession in
-        // RefSeq GFFs), write that too — protein BLAST hits use the protein accession.
-        if ($f['type'] === 'cds' && $f['name'] !== null && $f['name'] !== $id && $f['name'] !== $bare) {
-            $write($f['name']);
-        }
-    }
-    fclose($out);
-    return true;
 }
 
 /**
