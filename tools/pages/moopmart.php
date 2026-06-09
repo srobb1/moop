@@ -143,11 +143,14 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           $cn     = $info['common_name'] ?? '';
           $groups = $organism_groups[$organism] ?? [];
           foreach ($assemblies as $asm => $gene_sets):
+            $an           = $assembly_names[$organism][$asm] ?? '';
+            $asmDisplay   = $an ? $an : $asm;
+            $asmAccession = $an ? $asm : '';
             foreach ($gene_sets as $gs):
               $rowIdx++;
               $gsid = 'mm_gs_' . $rowIdx;
               $searchSimple = strtolower("$label $cn " . implode(' ', $groups));
-              $searchDetail = strtolower("$asm $gs");
+              $searchDetail = strtolower("$asm $an $gs");
               $search = $searchSimple . ' ' . $searchDetail;
       ?>
       <div class="org-select-row mm-scope-row"
@@ -167,7 +170,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
         <span class="flex-grow-1 text-truncate" style="min-width:0;">
           <em><?= htmlspecialchars($label) ?></em>
           <?php if ($cn): ?><span class="text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($cn) ?></span><?php endif; ?>
-          <span class="mm-scope-row-detail text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($asm) ?> › <?= htmlspecialchars($gs ?: '(default)') ?></span>
+          <span class="mm-scope-row-detail text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($asmDisplay) ?><?php if ($asmAccession): ?> <span style="font-size:0.9em;">(<?= htmlspecialchars($asmAccession) ?>)</span><?php endif; ?> › <?= htmlspecialchars($gs ?: '(default)') ?></span>
         </span>
         <span class="org-check flex-shrink-0"><i class="fas fa-check text-success"></i></span>
       </div>

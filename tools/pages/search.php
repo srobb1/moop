@@ -246,6 +246,23 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
   <!-- Annotation types info modal -->
   <?php include_once __DIR__ . '/../../includes/ann_types_modal.php'; ?>
 
+  <!-- No annotation sources selected warning modal -->
+  <div class="modal fade" id="no-sources-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-warning">
+        <div class="modal-header bg-warning bg-opacity-10 py-2">
+          <h5 class="modal-title fw-bold"><i class="fa fa-triangle-exclamation text-warning me-2"></i>No annotation types selected</h5>
+        </div>
+        <div class="modal-body">
+          Please select at least one annotation type in section&nbsp;③ before searching.
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-warning" data-bs-dismiss="modal">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Select-all-organisms warning modal -->
   <div class="modal fade" id="select-all-orgs-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

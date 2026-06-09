@@ -453,7 +453,7 @@ $(document).ready(function () {
 
         // Require at least one annotation type
         if (checkedTypes === 0) {
-            alert('Please select at least one annotation type in section 3 before searching.');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('no-sources-modal')).show();
             return;
         }
 

@@ -19,8 +19,9 @@ $siteTitle     = $config->getString('siteTitle');
 $all_accessible = flattenSourcesList(getAccessibleAssemblies());
 
 // Build scope tree with deduplication: organism => assembly => [gene_sets]
-$scope_tree    = [];
-$organism_info = [];
+$scope_tree     = [];
+$organism_info  = [];
+$assembly_names = [];  // [organism][assembly] = human-readable name if set
 
 foreach ($all_accessible as $src) {
     $org = $src['organism'];
@@ -40,6 +41,11 @@ foreach ($all_accessible as $src) {
             'species'     => $info['species']     ?? '',
             'common_name' => $info['common_name'] ?? '',
         ];
+    }
+
+    if (!isset($assembly_names[$org][$asm])) {
+        $gn = $src['genome_name'] ?? '';
+        $assembly_names[$org][$asm] = ($gn && $gn !== $asm) ? $gn : '';
     }
 }
 
@@ -108,7 +114,15 @@ foreach ($all_accessible as $src) {
         }
     }
 }
-ksort($annotation_source_types);
+$ann_order = array_keys($ann_type_info);
+uksort($annotation_source_types, function ($a, $b) use ($ann_order) {
+    $ai = array_search($a, $ann_order);
+    $bi = array_search($b, $ann_order);
+    if ($ai === false && $bi === false) return strcmp($a, $b);
+    if ($ai === false) return 1;
+    if ($bi === false) return -1;
+    return $ai - $bi;
+});
 $annotation_source_names = array_keys($annotation_source_names);
 sort($annotation_source_names);
 
@@ -132,6 +146,7 @@ echo render_display_page(
         'ann_type_info'           => $ann_type_info,
         'scope_tree'              => $scope_tree,
         'organism_info'           => $organism_info,
+        'assembly_names'          => $assembly_names,
         'organism_groups'         => $organism_groups,
         'annotation_source_types'  => $annotation_source_types,
         'annotation_source_names'  => $annotation_source_names,
