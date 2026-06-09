@@ -6,7 +6,7 @@
  */
 
 include_once __DIR__ . '/../admin_init.php';
-include_once __DIR__ . '/../../lib/blast_functions.php';
+include_once __DIR__ . '/../../lib/jbrowse/gene_set_functions.php';
 
 header('Content-Type: application/json');
 

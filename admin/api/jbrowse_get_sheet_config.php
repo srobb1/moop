@@ -19,9 +19,9 @@ if (empty($organism) || empty($assembly)) {
     exit;
 }
 
-$config = ConfigManager::getInstance();
-$organism_data = $config->getPath('organism_data');
-$sheetConfigPath = "$organism_data/$organism/$assembly/jbrowse_tracks_sheet.txt";
+$config          = ConfigManager::getInstance();
+$metadata_path   = $config->getPath('metadata_path');
+$sheetConfigPath = "$metadata_path/jbrowse2-configs/sheets/$organism/$assembly/jbrowse_tracks_sheet.txt";
 
 if (!file_exists($sheetConfigPath)) {
     echo json_encode(['success' => false, 'message' => 'No sheet registered']);

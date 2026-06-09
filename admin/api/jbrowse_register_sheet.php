@@ -7,7 +7,7 @@
 
 require_once __DIR__ . '/../../includes/config_init.php';
 require_once __DIR__ . '/../../admin/admin_access_check.php';
-require_once __DIR__ . '/../../lib/JBrowse/GoogleSheetsParser.php';
+require_once __DIR__ . '/../../lib/jbrowse/GoogleSheetsParser.php';
 
 header('Content-Type: application/json');
 
@@ -97,26 +97,43 @@ try {
     
     // Register: Save sheet configuration
     if ($action === 'register') {
-        $config = ConfigManager::getInstance();
-        $organism_data = $config->getPath('organism_data');
-        $sheetConfigPath = "$organism_data/$organism/$assembly/jbrowse_tracks_sheet.txt";
-        
+        $config          = ConfigManager::getInstance();
+        $metadata_path   = $config->getPath('metadata_path');
+        $sheetsBase      = "$metadata_path/jbrowse2-configs/sheets";
+        $sheetConfigPath = "$sheetsBase/$organism/$assembly/jbrowse_tracks_sheet.txt";
+        $site            = $config->getString('site', 'moop');
+
         // Ensure directory exists
         $dir = dirname($sheetConfigPath);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0775, true);
+        if (!is_dir($dir) && !mkdir($dir, 0775, true)) {
+            echo json_encode([
+                'success' => false,
+                'error'   => "Cannot create directory $dir — check that the web server has write access to metadata/jbrowse2-configs/. "
+                           . "Visit /$site/admin/manage_filesystem_permissions.php to diagnose and fix permissions.",
+            ]);
+            exit;
         }
-        
+
+        if (!is_writable($dir)) {
+            echo json_encode([
+                'success' => false,
+                'error'   => "Directory $dir is not writable by the web server. "
+                           . "Visit /$site/admin/manage_filesystem_permissions.php to diagnose and fix permissions.",
+            ]);
+            exit;
+        }
+
         // Create config file
-        $configContent = "SHEET_ID=$sheetId\n";
+        $configContent  = "SHEET_ID=$sheetId\n";
         $configContent .= "GID=$gid\n";
         $configContent .= "REGISTERED_DATE=" . date('Y-m-d H:i:s') . "\n";
         $configContent .= "AUTO_SYNC=" . ($autoSync ? 'true' : 'false') . "\n";
-        
+
         if (file_put_contents($sheetConfigPath, $configContent) === false) {
             echo json_encode([
                 'success' => false,
-                'error' => 'Failed to write configuration file'
+                'error'   => "Write failed for $sheetConfigPath even though the directory appears writable — check disk space and SELinux/AppArmor. "
+                           . "Visit /$site/admin/manage_filesystem_permissions.php for diagnostics.",
             ]);
             exit;
         }

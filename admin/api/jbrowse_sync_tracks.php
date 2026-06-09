@@ -23,9 +23,11 @@ $assembly = $_POST['syncAssembly'] ?? '';
 $forceRegenerate = isset($_POST['forceRegenerate']);
 $dryRun = isset($_POST['dryRun']);
 
-$config = ConfigManager::getInstance();
+$config        = ConfigManager::getInstance();
 $organism_data = $config->getPath('organism_data');
-$site_path = $config->getPath('site_path');
+$metadata_path = $config->getPath('metadata_path');
+$sheets_base   = "$metadata_path/jbrowse2-configs/sheets";
+$site_path     = $config->getPath('site_path');
 
 $results = [];
 $errors = [];
@@ -35,19 +37,16 @@ $assembliesToSync = [];
 
 if ($syncMode === 'all') {
     // Find all assemblies with registered sheets
-    foreach (scandir($organism_data) as $org) {
-        if ($org === '.' || $org === '..') continue;
-        $orgPath = "$organism_data/$org";
-        if (!is_dir($orgPath)) continue;
-        
-        foreach (scandir($orgPath) as $asm) {
-            if ($asm === '.' || $asm === '..' || $asm === 'organism.sqlite') continue;
-            $asmPath = "$orgPath/$asm";
-            if (!is_dir($asmPath)) continue;
-            
-            $sheetFile = "$asmPath/jbrowse_tracks_sheet.txt";
-            if (file_exists($sheetFile)) {
-                $assembliesToSync[] = ['organism' => $org, 'assembly' => $asm];
+    if (is_dir($sheets_base)) {
+        foreach (scandir($sheets_base) as $org) {
+            if ($org === '.' || $org === '..') continue;
+            $orgPath = "$sheets_base/$org";
+            if (!is_dir($orgPath)) continue;
+            foreach (scandir($orgPath) as $asm) {
+                if ($asm === '.' || $asm === '..') continue;
+                if (file_exists("$orgPath/$asm/jbrowse_tracks_sheet.txt")) {
+                    $assembliesToSync[] = ['organism' => $org, 'assembly' => $asm];
+                }
             }
         }
     }
@@ -69,7 +68,7 @@ foreach ($assembliesToSync as $item) {
     $org = $item['organism'];
     $asm = $item['assembly'];
     
-    $sheetFile = "$organism_data/$org/$asm/jbrowse_tracks_sheet.txt";
+    $sheetFile = "$sheets_base/$org/$asm/jbrowse_tracks_sheet.txt";
     
     if (!file_exists($sheetFile)) {
         $errors[] = "$org/$asm: No registered sheet found";

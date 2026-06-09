@@ -74,7 +74,7 @@ session_start();
 require_once __DIR__ . '/../../includes/access_control.php';
 require_once __DIR__ . '/../../lib/functions_access.php';
 require_once __DIR__ . '/../../lib/jbrowse/track_token.php';
-require_once __DIR__ . '/../../lib/JBrowse/PluginLoader.php';
+require_once __DIR__ . '/../../lib/jbrowse/PluginLoader.php';
 
 // Get user's access level
 $user_access_level = get_access_level();

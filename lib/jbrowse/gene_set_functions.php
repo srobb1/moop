@@ -3,8 +3,6 @@
  * JBrowse gene set prep — shared by jbrowse_register_assembly and jbrowse_register_gene_set.
  */
 
-require_once __DIR__ . '/../blast_functions.php';
-
 /**
  * Prepare one gene set's GFF for JBrowse.
  *
@@ -204,7 +202,12 @@ function prepareGeneSetForJBrowse(
 
     // ── Feature coords index (for BLAST linkouts + MOOPmart) ─────────────────
     $gene_set_path = "$organisms_dir/$organism/$assembly/$gene_set";
-    if (generateFeatureCoordsIndex($gene_set_path)) {
+    $tsv_path      = "$gene_set_path/feature_coords.tsv";
+    $gff_mtime     = filemtime("$gene_set_path/genomic.gff") ?: 0;
+    $tsv_mtime     = file_exists($tsv_path) ? filemtime($tsv_path) : 0;
+    if ($tsv_mtime >= $gff_mtime && $tsv_mtime > 0) {
+        $log[] = "$gene_set: feature_coords.tsv is up to date — skipped";
+    } elseif (generateFeatureCoordsIndex($gene_set_path)) {
         $log[] = "$gene_set: generated feature_coords.tsv";
     }
 
@@ -300,6 +303,89 @@ function buildGeneSetTextIndex(
     file_put_contents($track_file, json_encode($track_def, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
     return ['success' => true];
+}
+
+/**
+ * Build feature_coords.tsv from a sorted GFF3 file.
+ *
+ * Streams the file one line at a time. Because the GFF is coordinate-sorted
+ * (by our bgzip prep step), all children of a gene appear consecutively after
+ * the gene line. When a new root feature is encountered the previous gene's
+ * batch is flushed to disk — so only one gene family is in memory at a time.
+ *
+ * Output format: hit_id\tgene_id\tchr\tstart\tend\tstrand
+ */
+function generateFeatureCoordsIndex(string $assembly_path): bool {
+    $gff_file = $assembly_path . '/genomic.gff';
+    $tsv_file = $assembly_path . '/feature_coords.tsv';
+
+    if (!file_exists($gff_file) || filesize($gff_file) === 0) {
+        return false;
+    }
+
+    $skip_types = ['region', 'chromosome', 'contig', 'scaffold', 'supercontig', 'biological_region'];
+
+    $fh = fopen($gff_file, 'r');
+    if (!$fh) return false;
+    $out = fopen($tsv_file, 'w');
+    if (!$out) { fclose($fh); return false; }
+
+    $gene    = null;   // current root: ['id','chr','start','end','strand']
+    $pending = [];     // feature rows for current gene family
+    $seen    = [];     // dedup within current gene family
+
+    $flush = function() use ($out, &$gene, &$pending, &$seen): void {
+        if (!$gene) return;
+        $suffix = "\t{$gene['id']}\t{$gene['chr']}\t{$gene['start']}\t{$gene['end']}\t{$gene['strand']}\n";
+        foreach ($pending as [$id, $type, $name]) {
+            if (!isset($seen[$id])) {
+                fwrite($out, $id . $suffix);
+                $seen[$id] = true;
+            }
+            $bare = preg_replace('/^(?:rna|cds|gene|id)-/', '', $id);
+            if ($bare !== $id && !isset($seen[$bare])) {
+                fwrite($out, $bare . $suffix);
+                $seen[$bare] = true;
+            }
+            if ($type === 'cds' && $name !== null && $name !== $id && $name !== $bare && !isset($seen[$name])) {
+                fwrite($out, $name . $suffix);
+                $seen[$name] = true;
+            }
+        }
+        $pending = [];
+        $seen    = [];
+    };
+
+    while (($line = fgets($fh)) !== false) {
+        if ($line[0] === '#') continue;
+        $parts = explode("\t", rtrim($line), 9);
+        if (count($parts) < 9) continue;
+        $type = strtolower($parts[2]);
+        if (in_array($type, $skip_types)) continue;
+
+        $id = $parent = $name = null;
+        foreach (explode(';', $parts[8]) as $attr) {
+            $kv = explode('=', $attr, 2);
+            if (count($kv) !== 2) continue;
+            switch (trim($kv[0])) {
+                case 'ID':     $id     = trim($kv[1]); break;
+                case 'Parent': $parent = trim($kv[1]); break;
+                case 'Name':   $name   = trim($kv[1]); break;
+            }
+        }
+        if (!$id) continue;
+
+        if (!$parent) {
+            $flush();
+            $gene = ['id' => $id, 'chr' => $parts[0], 'start' => $parts[3], 'end' => $parts[4], 'strand' => $parts[6]];
+        }
+        $pending[] = [$id, $type, $name];
+    }
+    $flush();
+
+    fclose($fh);
+    fclose($out);
+    return true;
 }
 
 function findJBrowseCliGS(): ?string {
