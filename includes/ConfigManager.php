@@ -64,7 +64,7 @@ class ConfigManager
      * Editable configuration keys - whitelisted keys that can be edited via admin UI
      * Used in both initialize() and saveEditableConfig() to ensure consistency
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'tracks_server', 'jbrowse2', 'site_data_path', 'turnstile'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'tracks_server', 'jbrowse2', 'site_data_path', 'turnstile', 'footer'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -574,7 +574,7 @@ class ConfigManager
                     }
                 }
 
-                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'blast_sample_sequences' || $key === 'turnstile') {
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'blast_sample_sequences' || $key === 'turnstile' || $key === 'footer') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);
@@ -765,6 +765,19 @@ class ConfigManager
                 'description'   => 'Bot protection — visitors must pass a challenge once per session.',
                 'type'          => 'group',
                 'current_value' => $this->getArray('turnstile', ['enabled' => false, 'site_key' => '', 'secret_key' => '']),
+            ],
+            'footer' => [
+                'label'       => 'Footer',
+                'description' => 'Content displayed in the site footer: institute, license, and custom links.',
+                'type'        => 'footer',
+                'current_value' => $this->getArray('footer', [
+                    'institute_name'   => '',
+                    'institute_url'    => '',
+                    'license_name'     => '',
+                    'license_url'      => '',
+                    'copyright_holder' => '',
+                    'links'            => [],
+                ]),
             ],
         ];
     }

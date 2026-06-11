@@ -347,6 +347,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['site_data_path'] = trim($_POST['site_data_path']);
         }
 
+        // Parse footer settings
+        if (isset($_POST['footer']) && is_array($_POST['footer'])) {
+            $f = $_POST['footer'];
+            $links = [];
+            if (!empty($f['links']) && is_array($f['links'])) {
+                foreach ($f['links'] as $link) {
+                    $label = trim($link['label'] ?? '');
+                    $url   = trim($link['url']   ?? '');
+                    if ($label !== '' && $url !== '') {
+                        $links[] = ['label' => $label, 'url' => $url];
+                    }
+                }
+            }
+            $data['footer'] = [
+                'institute_name'   => trim($f['institute_name']   ?? ''),
+                'institute_url'    => trim($f['institute_url']    ?? ''),
+                'license_name'     => trim($f['license_name']     ?? ''),
+                'license_url'      => trim($f['license_url']      ?? ''),
+                'copyright_holder' => trim($f['copyright_holder'] ?? ''),
+                'links'            => $links,
+            ];
+        }
+
         // Save if no upload error
         if (empty($error)) {
             $result = $config->saveEditableConfig($data, $config_dir);
@@ -364,6 +387,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Get editable config metadata
 $editable_config = $config->getEditableConfigMetadata();
+$footer_config   = $editable_config['footer']['current_value'];
 
 // Get list of banner images in banners directory
 $banner_images = [];
@@ -397,6 +421,7 @@ $display_config = [
 // Prepare data for content file
 $data = [
     'config' => $config,
+    'footer_config' => $footer_config,
     'message' => $message,
     'error' => $error,
     'file_write_error' => $file_write_error,

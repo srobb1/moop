@@ -77,6 +77,19 @@ return [
     // ======== OPTIONAL: Contact ========
     // EDITABLE in Admin Dashboard: Use "Manage Site Configuration" to change these
     'admin_email' => 'admin@example.com',  // Changed in config_editable.json if customized
+
+    // ======== OPTIONAL: Footer ========
+    // EDITABLE in Admin Dashboard: Use "Manage Site Configuration" to change these
+    'footer' => [
+        'institute_name' => 'Hosting Institute',
+        'institute_url'  => '',
+        'license_name'   => '',
+        'license_url'    => '',
+        'copyright_holder' => '',
+        'links' => [
+            ['label' => 'MOOP on GitHub', 'url' => 'https://github.com/srobb1/moop'],
+        ],
+    ],
     
     // ======== OPTIONAL: Files ========
     'users_file' => "$root_path/users.json",

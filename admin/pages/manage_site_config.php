@@ -567,6 +567,95 @@
                     </div>
                 </div>
 
+                <!-- Footer Settings Card -->
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fa fa-shoe-prints"></i> Footer</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">Content displayed in the site footer. The contact administrator link uses the Admin Email above.</p>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Institute Name</label>
+                                <input type="text" class="form-control" name="footer[institute_name]"
+                                       value="<?= htmlspecialchars($footer_config['institute_name'] ?? '') ?>"
+                                       placeholder="e.g. Stowers Institute">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Institute URL <span class="text-muted fw-normal">(optional)</span></label>
+                                <input type="url" class="form-control" name="footer[institute_url]"
+                                       value="<?= htmlspecialchars($footer_config['institute_url'] ?? '') ?>"
+                                       placeholder="https://www.yourinstitute.org">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">License Name <span class="text-muted fw-normal">(optional)</span></label>
+                                <input type="text" class="form-control" name="footer[license_name]"
+                                       value="<?= htmlspecialchars($footer_config['license_name'] ?? '') ?>"
+                                       placeholder="e.g. CC BY 4.0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">License URL <span class="text-muted fw-normal">(optional)</span></label>
+                                <input type="url" class="form-control" name="footer[license_url]"
+                                       value="<?= htmlspecialchars($footer_config['license_url'] ?? '') ?>"
+                                       placeholder="https://creativecommons.org/licenses/by/4.0/">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Copyright Holder <span class="text-muted fw-normal">(optional)</span></label>
+                                <input type="text" class="form-control" name="footer[copyright_holder]"
+                                       value="<?= htmlspecialchars($footer_config['copyright_holder'] ?? '') ?>"
+                                       placeholder="e.g. Stowers Institute for Medical Research">
+                                <small class="text-muted">Shown as "© YYYY [holder]". Leave empty to omit.</small>
+                            </div>
+                        </div>
+
+                        <label class="form-label fw-semibold">Footer Links</label>
+                        <p class="text-muted small mb-2">Links shown in the right section of the footer.</p>
+                        <div class="table-responsive mb-2">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Label</th>
+                                        <th>URL</th>
+                                        <th style="width:50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="footer_links_tbody">
+                                    <?php
+                                    $footer_links = $footer_config['links'] ?? [];
+                                    if (empty($footer_links)):
+                                    ?>
+                                    <tr class="no-footer-links-row">
+                                        <td colspan="3" class="text-center text-muted"><em>No links configured</em></td>
+                                    </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($footer_links as $i => $link): ?>
+                                        <tr class="footer-link-row">
+                                            <td><input type="text" class="form-control form-control-sm"
+                                                       name="footer[links][<?= $i ?>][label]"
+                                                       value="<?= htmlspecialchars($link['label'] ?? '') ?>"
+                                                       placeholder="Link label"></td>
+                                            <td><input type="url" class="form-control form-control-sm"
+                                                       name="footer[links][<?= $i ?>][url]"
+                                                       value="<?= htmlspecialchars($link['url'] ?? '') ?>"
+                                                       placeholder="https://..."></td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-danger remove-footer-link">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary" id="add_footer_link">
+                            <i class="fa fa-plus"></i> Add Link
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Submit Buttons -->
                 <div class="d-flex gap-2 mb-4">
                     <button type="submit" class="btn btn-primary btn-lg" id="saveBtn" <?= !$file_writable ? 'disabled' : '' ?>>

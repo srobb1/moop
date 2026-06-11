@@ -164,8 +164,9 @@ function prepareGeneSetForJBrowse(
             ],
             'displays' => [
                 [
-                    'type'      => 'LinearBasicDisplay',
-                    'displayId' => "$track_id-LinearBasicDisplay",
+                    'type'               => 'LinearGeneAnnotationsDisplay',
+                    'displayId'          => "$track_id-LinearGeneAnnotationsDisplay",
+                    'filterFeatureTypes' => ['gene', 'pseudogene'],
                 ],
             ],
             'metadata' => [

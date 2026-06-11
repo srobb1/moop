@@ -178,6 +178,46 @@
 })();
 
 /**
+ * Footer Links Add/Remove Handlers
+ */
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        const tbody = document.getElementById('footer_links_tbody');
+        const addBtn = document.getElementById('add_footer_link');
+        if (!tbody || !addBtn) return;
+
+        let nextIndex = tbody.querySelectorAll('.footer-link-row').length;
+
+        addBtn.addEventListener('click', function() {
+            const placeholder = tbody.querySelector('.no-footer-links-row');
+            if (placeholder) placeholder.remove();
+
+            const tr = document.createElement('tr');
+            tr.className = 'footer-link-row';
+            tr.innerHTML =
+                '<td><input type="text" class="form-control form-control-sm" name="footer[links][' + nextIndex + '][label]" placeholder="Link label"></td>' +
+                '<td><input type="url" class="form-control form-control-sm" name="footer[links][' + nextIndex + '][url]" placeholder="https://..."></td>' +
+                '<td class="text-center"><button type="button" class="btn btn-sm btn-danger remove-footer-link"><i class="fa fa-trash"></i></button></td>';
+            tbody.appendChild(tr);
+            tr.querySelector('input').focus();
+            nextIndex++;
+        });
+
+        tbody.addEventListener('click', function(e) {
+            const btn = e.target.closest('.remove-footer-link');
+            if (!btn) return;
+            btn.closest('.footer-link-row').remove();
+            if (!tbody.querySelector('.footer-link-row')) {
+                const tr = document.createElement('tr');
+                tr.className = 'no-footer-links-row';
+                tr.innerHTML = '<td colspan="3" class="text-center text-muted"><em>No links configured</em></td>';
+                tbody.appendChild(tr);
+            }
+        });
+    });
+})();
+
+/**
  * Sequence Type Color Input Handler
  */
 (function() {
