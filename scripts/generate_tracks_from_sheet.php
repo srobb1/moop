@@ -90,9 +90,9 @@
  */
 
 // Bootstrap
-require_once __DIR__ . '/../../includes/config_init.php';
-require_once __DIR__ . '/../../lib/jbrowse/TrackGenerator.php';
-require_once __DIR__ . '/../../lib/jbrowse/ColorSchemes.php';
+require_once __DIR__ . '/../includes/config_init.php';
+require_once __DIR__ . '/../lib/jbrowse/TrackGenerator.php';
+require_once __DIR__ . '/../lib/jbrowse/ColorSchemes.php';
 
 // Parse command line arguments
 $options = parseArguments($argv);

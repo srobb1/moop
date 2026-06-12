@@ -93,7 +93,7 @@ foreach ($assembliesToSync as $item) {
     $cmd .= "--assembly " . escapeshellarg($asm) . " ";
     
     if ($forceRegenerate) {
-        $cmd .= "--force ";
+        $cmd .= "--force --clean ";
     }
     
     if ($dryRun) {

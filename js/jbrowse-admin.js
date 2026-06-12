@@ -791,10 +791,10 @@ $(document).ready(function() {
                 }
                 
                 // Show success message with auto-refresh countdown
-                logOutput.textContent += '\n\n🔄 Refreshing page in 3 seconds to update statistics...\n';
+                logOutput.textContent += '\n\n🔄 Refreshing page in 10 seconds to update statistics...\n';
                 setTimeout(() => {
                     window.location.reload();
-                }, 3000);
+                }, 10000);
             } else {
                 logOutput.textContent += '\n✗ Error: ' + data.error + '\n';
                 if (data.output) {

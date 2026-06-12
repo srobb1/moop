@@ -504,9 +504,22 @@ class ConfigManager
     {
         // Use the centralized whitelist of allowed editable keys
         $allowed_keys = $this->editableConfigKeys;
-        
-        // Filter to only allowed keys
+
+        // Start from the existing file so keys owned by other admin pages are preserved
+        $config_file = $config_dir . '/config_editable.json';
         $editable_data = [];
+        if (file_exists($config_file)) {
+            $existing = json_decode(file_get_contents($config_file), true);
+            if (is_array($existing)) {
+                foreach ($allowed_keys as $key) {
+                    if (isset($existing[$key])) {
+                        $editable_data[$key] = $existing[$key];
+                    }
+                }
+            }
+        }
+
+        // Overlay only the keys present in $data (from this save operation)
         foreach ($allowed_keys as $key) {
             if (isset($data[$key])) {
                 // Validate email
