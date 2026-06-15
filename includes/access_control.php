@@ -54,7 +54,7 @@ foreach ($ip_ranges as $range) {
         $end_long = ip2long($range_end);
         
         if ($visitor_ip_long !== false && $visitor_ip_long >= $start_long && $visitor_ip_long <= $end_long) {
-            if (!isset($_SESSION["logged_in"]) || $_SESSION["access_level"] !== 'IP_IN_RANGE') {
+            if (empty($_SESSION["logged_in"])) {
                 $_SESSION["logged_in"] = true;
                 $_SESSION["username"] = "IP_USER_" . $visitor_ip;
                 $_SESSION["access_level"] = 'IP_IN_RANGE';
