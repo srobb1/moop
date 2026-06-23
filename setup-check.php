@@ -251,6 +251,14 @@ foreach ($required_tools as $tool => $fix) {
 }
 
 // Optional tools
+if (toolExists('bigWigSummary')) {
+    pass("bigWigSummary");
+} else {
+    warn("bigWigSummary not found in PATH",
+         "Optional — required for Expression Explorer. Install with:\n"
+         . "         sudo wget -q https://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigSummary -O /usr/local/bin/bigWigSummary && sudo chmod +x /usr/local/bin/bigWigSummary");
+}
+
 if (toolExists('jq')) {
     pass("jq");
 } else {

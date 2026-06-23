@@ -155,12 +155,13 @@ function checkEnvironment($base, $config) {
 
     // CLI tools
     $tools = [
-        'blastn'   => ['required' => true],
-        'samtools' => ['required' => true],
-        'tabix'    => ['required' => true],
-        'bgzip'    => ['required' => true],
-        'sqlite3'  => ['required' => true],
-        'jq'       => ['required' => false],
+        'blastn'         => ['required' => true],
+        'samtools'       => ['required' => true],
+        'tabix'          => ['required' => true],
+        'bgzip'          => ['required' => true],
+        'sqlite3'        => ['required' => true],
+        'bigWigSummary'  => ['required' => false, 'detail' => 'Optional — required for Expression Explorer'],
+        'jq'             => ['required' => false],
     ];
 
     foreach ($tools as $tool => $info) {
@@ -168,7 +169,7 @@ function checkEnvironment($base, $config) {
         $checks[] = [
             'label' => $tool,
             'status' => $exists ? 'pass' : ($info['required'] ? 'fail' : 'warn'),
-            'detail' => $exists ? '' : ($info['required'] ? 'Required' : 'Optional'),
+            'detail' => $exists ? '' : ($info['detail'] ?? ($info['required'] ? 'Required' : 'Optional')),
             'category' => 'CLI Tools',
         ];
     }

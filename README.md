@@ -20,6 +20,7 @@ Code to build a genome db that can work with multiple organisms
 - **Web Server**: Apache (with `mod_rewrite` and `mod_headers`) or Nginx
 - **Node.js** 18+ and npm (for JBrowse CLI / text-index feature)
 - **samtools** + **bgzip** + **tabix** (htslib) — for genome and GFF indexing
+- **bigWigSummary** (UCSC kent tools) — for the Expression Explorer feature (querying RNA-seq BigWig signal over gene bodies)
 - **Disk Space**: Minimum 50GB for organism data (scales with number of organisms)
 - **Operating System**: Linux/Unix (for POSIX functions)
 
@@ -174,7 +175,25 @@ bgzip --version       # Part of tabix package
 tabix --version
 ```
 
-**8. Install additional utilities:**
+**8. Install bigWigSummary (for Expression Explorer):**
+
+`bigWigSummary` is a UCSC kent tool that queries mean signal over a genomic interval from a local or remote BigWig file. It is required by the Expression Explorer to extract RNA-seq signal values over gene bodies.
+
+```bash
+# Download the precompiled static binary (no dependencies)
+sudo wget -q https://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigSummary \
+    -O /usr/local/bin/bigWigSummary
+sudo chmod +x /usr/local/bin/bigWigSummary
+
+# Verify installation
+bigWigSummary 2>&1 | head -1
+# Should print: bigWigSummary - Extract summary information from a bigWig file.
+```
+
+Note: `bigWigSummary` supports remote URLs (https://) directly, which is how MOOP
+queries BigWig files stored on a remote tracks server without downloading them.
+
+**9. Install additional utilities:**
 ```bash
 # JSON processor (useful for working with JSON config files)
 sudo apt-get install -y jq
@@ -431,6 +450,9 @@ samtools --version
 
 # Verify tabix (for JBrowse2)
 tabix --version
+
+# Verify bigWigSummary (for Expression Explorer)
+bigWigSummary 2>&1 | head -1
 
 # Verify JWT keys exist
 ls -la /var/www/html/moop/certs/*.pem
