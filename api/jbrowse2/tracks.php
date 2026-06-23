@@ -102,7 +102,16 @@ if ($token_data->organism !== $file_organism || $token_data->assembly !== $file_
 }
 
 // 5. BUILD AND SERVE FILE
-$file_path = $TRACKS_BASE_DIR . '/' . $file;
+$resolved_base = realpath($TRACKS_BASE_DIR);
+$file_path = realpath($TRACKS_BASE_DIR . '/' . $file);
+
+if ($file_path === false || strpos($file_path, $resolved_base . '/') !== 0) {
+    http_response_code(400);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Invalid file path']);
+    error_log("Tracks server: Path escape attempt - IP {$_SERVER['REMOTE_ADDR']} requested: $file");
+    exit;
+}
 
 if (!file_exists($file_path)) {
     http_response_code(404);

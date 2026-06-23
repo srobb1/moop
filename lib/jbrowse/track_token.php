@@ -66,12 +66,6 @@ function verifyTrackToken($token) {
     
     try {
         $decoded = JWT::decode($token, new Key($public_key, 'RS256'));
-        
-        // Verify token hasn't expired
-        if ($decoded->exp < time()) {
-            return false;
-        }
-        
         return $decoded;
     } catch (Exception $e) {
         error_log("JWT verification failed: " . $e->getMessage());
