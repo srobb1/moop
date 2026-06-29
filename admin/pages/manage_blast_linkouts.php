@@ -116,6 +116,13 @@
                          value="<?= (int)($linkout_config['jbrowse_hsp_max_span'] ?? 500000) ?>">
                   <div class="form-text">If total HSP span exceeds this, HSPs shown standalone. Default: 500,000.</div>
                 </div>
+                <div class="col-auto">
+                  <label class="form-label small mb-1">Max HSPs in hit-level browser link</label>
+                  <input type="number" class="form-control form-control-sm" style="max-width:130px;"
+                         name="jbrowse_hsp_max_link" min="1" step="1"
+                         value="<?= (int)($linkout_config['jbrowse_hsp_max_link'] ?? 10) ?>">
+                  <div class="form-text">Top N HSPs by score included in the hit-level link. Prevents URLs from getting too long. Default: 10.</div>
+                </div>
               </div>
             </div>
 

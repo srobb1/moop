@@ -23,6 +23,8 @@ $linkout_config = $config->getArray('blast_linkouts', [
     'jbrowse'               => true,
     'jbrowse_label'         => 'Genome Browser',
     'jbrowse_hsp_min_score' => 0,
+    'jbrowse_hsp_max_span'  => 500000,
+    'jbrowse_hsp_max_link'  => 10,
     'external'              => [],
     'per_db_external'       => [],
 ]);
@@ -34,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $linkout_config['jbrowse_label']         = trim($_POST['jbrowse_label'] ?? '') ?: 'Genome Browser';
     $linkout_config['jbrowse_hsp_min_score'] = max(0, (int)($_POST['jbrowse_hsp_min_score'] ?? 0));
     $linkout_config['jbrowse_hsp_max_span']  = max(1, (int)($_POST['jbrowse_hsp_max_span']  ?? 500000));
+    $linkout_config['jbrowse_hsp_max_link']  = max(1, (int)($_POST['jbrowse_hsp_max_link']  ?? 10));
 
     // Global external linkouts
     $labels    = $_POST['ext_label']    ?? [];
