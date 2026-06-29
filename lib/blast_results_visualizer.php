@@ -298,7 +298,7 @@ function generateHitsSummaryTable($results, $query_num = 1) {
     $html .= '<thead class="table-light">';
     $html .= '<tr>';
     $html .= '<th style="width: 5%">#</th>';
-    $html .= '<th style="width: 45%">Subject</th>';
+    $html .= '<th style="width: 45%">Hit ID / Description</th>';
     $html .= '<th style="width: 20%">Query Coverage %</th>';
     $html .= '<th style="width: 12%">E-value</th>';
     $html .= '<th style="width: 18%">HSPs</th>';
@@ -325,7 +325,11 @@ function generateHitsSummaryTable($results, $query_num = 1) {
         
         $html .= '<tr style="cursor: pointer;" onclick="const elem = document.getElementById(\'query-' . $query_num . '-hit-' . $hit_num . '\'); elem.scrollIntoView({behavior: \'smooth\', block: \'start\'}); highlightHitElement(elem);">';
         $html .= '<td><strong>' . $hit_num . '</strong></td>';
-        $html .= '<td><small>' . htmlspecialchars(substr($hit['subject'], 0, 60)) . '</small></td>';
+        $clean_id = cleanBlastHitId($hit['id']);
+        $html .= '<td>';
+        $html .= '<small class="d-block fw-bold">' . htmlspecialchars($clean_id) . '</small>';
+        $html .= '<small class="text-muted">' . htmlspecialchars(substr($hit['subject'], 0, 60)) . '</small>';
+        $html .= '</td>';
         $html .= '<td>';
         $html .= '<div class="blast-coverage-bar" style="width: 100%; background: #e9ecef; border-radius: 4px; overflow: hidden;">';
         $html .= '<div style="width: ' . $coverage_bar_width . '%; background: ' . $coverage_color . '; height: 20px; display: flex; align-items: center; justify-content: center;">';
@@ -432,13 +436,13 @@ function generateBlastGraphicalView($results) {
     $prev_subject = '';
     
     foreach ($results['hits'] as $hit_idx => $hit) {
-        $subject_name = substr($hit['subject'], 0, 40);
+        $subject_name = cleanBlastHitId($hit['id']);
         $is_new_subject = ($prev_subject !== $hit['subject']);
-        
+
         if ($is_new_subject && $prev_subject !== '') {
             $current_y += 5; // Add spacing between different subjects
         }
-        
+
         // Subject name (only once per hit)
         if ($is_new_subject) {
             $html .= '<text x="5" y="' . ($current_y + 15) . '" font-size="11" font-weight="bold" fill="#333">' . htmlspecialchars($subject_name) . '</text>';
@@ -568,15 +572,16 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
         $evalue_display = sprintf('%.2e', $hit['best_evalue']);
         
         // Hit header card
-        $html .= '<div id="query-' . $query_num . '-hit-' . $hit_num . '" style="padding: 15px;  scroll-margin-top: 20px; background: #f0f7ff; margin-bottom: 15px;">';
-        $html .= '<h5 style="margin-bottom: 10px; color: #007bff;">';
-        $html .= '<strong>Hit ' . $hit_num . ': ' . htmlspecialchars($hit['subject']) . '</strong>';
+        $clean_hit_id = cleanBlastHitId($hit['id']);
+        $html .= '<div id="query-' . $query_num . '-hit-' . $hit_num . '" style="padding: 15px; scroll-margin-top: 20px; background: #f0f7ff; margin-bottom: 15px;">';
+        $html .= '<h5 style="margin-bottom: 4px; color: #007bff; font-family: monospace;">';
+        $html .= '<strong>Hit ' . $hit_num . ': ' . htmlspecialchars($clean_hit_id) . '</strong>';
         $html .= '</h5>';
+        $html .= '<div style="margin-bottom: 10px; color: #555; font-size: 0.9em;">' . htmlspecialchars($hit['subject']) . '</div>';
         $html .= '<small class="d-block" style="margin-bottom: 10px;">';
-        $html .= '<strong>Hit ID:</strong> ' . htmlspecialchars($hit['id']) . ' | ';
         $html .= '<strong>Length:</strong> ' . $hit['length'] . ' ' . $unit . ' | ';
         $html .= '<strong>Best E-value:</strong> ' . $evalue_display . ' | ';
-        $html .= '<strong>Number of HSPs:</strong> ' . $hit['num_hsps'] . ' | ';
+        $html .= '<strong>HSPs:</strong> ' . $hit['num_hsps'] . ' | ';
         $html .= '<strong>Query Coverage:</strong> ' . $hit['query_coverage_percent'] . '% | ';
         $html .= '<strong>Subject Coverage:</strong> ' . $hit['subject_cumulative_coverage_percent'] . '%';
         $html .= '</small>';
@@ -616,7 +621,7 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
 
             // Per-HSP JBrowse button (genome BLAST only)
             if ($ctx_is_genome && $ctx_has_jbrowse && $ctx_jb_enabled && $ctx_site !== '') {
-                $hsp_subject = $hit['subject'] ?? $hit['id'] ?? '';
+                $hsp_subject = cleanBlastHitId($hit['id'] ?? '');
                 $s = min((int)$hsp['hit_from'], (int)$hsp['hit_to']) - 1;
                 $e = max((int)$hsp['hit_from'], (int)$hsp['hit_to']);
                 $hsp_track_id = 'blast_hsp_' . substr(md5($hit['id'] . '_' . $hsp_idx), 0, 10);
@@ -631,7 +636,7 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
                 $hsp_tracks = [[
                     'type'          => 'FeatureTrack',
                     'trackId'       => $hsp_track_id,
-                    'name'          => 'BLAST HSP ' . $hsp_num . ': ' . ($hit['id'] ?? ''),
+                    'name'          => 'BLAST HSP ' . $hsp_num . ': ' . $hsp_subject,
                     'assemblyNames' => [$ctx_jb2_asm],
                     'adapter'       => ['type' => 'FromConfigAdapter', 'features' => $hsp_features],
                 ]];
@@ -644,7 +649,7 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
                 $html .= '<div style="margin-bottom:8px;">'
                        . '<a href="' . htmlspecialchars($hsp_url) . '" target="_blank" '
                        . 'class="btn btn-sm btn-outline-success">'
-                       . '<i class="fa fa-microscope"></i> View HSP ' . $hsp_num . ' in Browser</a>'
+                       . 'View HSP ' . $hsp_num . ' in Browser</a>'
                        . '</div>';
             }
 
@@ -783,6 +788,20 @@ function generateBlastStatisticsSummary($results, $query_seq, $blast_program) {
  * @return string Complete HTML visualization
  */
 /**
+ * Strip BLAST source prefixes (lcl|, gb|, ref|, etc.) from a hit ID.
+ */
+function cleanBlastHitId(string $id): string {
+    // Strip leading source prefix: lcl|, gb|, ref|, dbj|, etc.
+    $id = preg_replace('/^[a-z]{2,4}\|/', '', $id);
+    // Handle remaining pipe-delimited formats like "AAB12345.1|"
+    if (strpos($id, '|') !== false) {
+        $parts = explode('|', $id);
+        $id = $parts[0] !== '' ? $parts[0] : ($parts[1] ?? $id);
+    }
+    return $id;
+}
+
+/**
  * Build linkout buttons for a single BLAST hit based on admin-configured rules.
  *
  * @param array $hit      Parsed hit array (subject, id, hsps, ...)
@@ -802,13 +821,7 @@ function buildBlastHitLinkouts($hit, $context) {
     $linkout_config = $context['linkout_config'] ?? [];
     $db_seq_type    = $context['db_seq_type']    ?? '';
 
-    // Strip BLAST sequence-source prefixes (lcl|, gb|, ref|, etc.)
-    $hit_id = preg_replace('/^[a-z]{2,3}\|/', '', $hit['id'] ?? '');
-    // Also handle pipe-delimited formats like "gb|AAB12345.1|"
-    if (strpos($hit_id, '|') !== false) {
-        $parts = explode('|', $hit_id);
-        $hit_id = $parts[0] !== '' ? $parts[0] : ($parts[1] ?? $hit_id);
-    }
+    $hit_id = cleanBlastHitId($hit['id'] ?? '');
     // Strip FASTA export type suffixes (:cds, :pep, etc.) — feature_coords.tsv uses bare IDs
     $hit_id = preg_replace('/:[a-z]+$/', '', $hit_id);
     // NCBI extracted CDS format: {chr}_cds_{ProteinAccession}_{index} → extract accession
@@ -822,6 +835,7 @@ function buildBlastHitLinkouts($hit, $context) {
     $jbrowse_label    = htmlspecialchars($linkout_config['jbrowse_label']         ?? 'Genome Browser');
     $hsp_min_score    = (float)($linkout_config['jbrowse_hsp_min_score']          ?? 0);
     $hsp_max_span     = (int)($linkout_config['jbrowse_hsp_max_span']             ?? 500000);
+    $hsp_max_link     = max(1, (int)($linkout_config['jbrowse_hsp_max_link']      ?? 10));
     $jb2_assembly_id  = $organism . '_' . $assembly; // JBrowse2 assembly name format
 
     if ($is_genome_db) {
@@ -829,36 +843,35 @@ function buildBlastHitLinkouts($hit, $context) {
         // Build a sessionTracks payload so JBrowse2 shows each HSP as a colored block.
         // Connect HSPs only if total span <= hsp_max_span AND score >= hsp_min_score.
         if (($linkout_config['jbrowse'] ?? false) && $has_jbrowse && !empty($hit['hsps'])) {
-            $subject    = $hit['subject'] ?? '';
+            // For genome BLAST, refName is the sequence ID (Hit_id), not the description (Hit_def)
+            $subject    = $hit_id;
+            $total_hsps = count($hit['hsps']);
+
+            // Sort by score descending, keep top $hsp_max_link
+            $hsps_sorted = $hit['hsps'];
+            usort($hsps_sorted, fn($a, $b) => ($b['bit_score'] ?? 0) <=> ($a['bit_score'] ?? 0));
+            $hsps_to_use = array_slice($hsps_sorted, 0, $hsp_max_link);
+            $dropped     = $total_hsps - count($hsps_to_use);
+
+            $all_s = array_map(fn($h) => min((int)$h['hit_from'], (int)$h['hit_to']) - 1, $hsps_to_use);
+            $all_e = array_map(fn($h) => max((int)$h['hit_from'], (int)$h['hit_to']), $hsps_to_use);
+            $parent_start = min($all_s);
+            $parent_end   = max($all_e);
+            $connect      = (($parent_end - $parent_start) <= $hsp_max_span);
+
             $subfeats   = [];
             $standalone = [];
-            $all_starts = [];
-            $all_ends   = [];
-
-            foreach ($hit['hsps'] as $i => $hsp) {
-                // BLAST coords are 1-based inclusive; JBrowse2 needs 0-based half-open
-                $s = min((int)$hsp['hit_from'], (int)$hsp['hit_to']) - 1;
-                $e = max((int)$hsp['hit_from'], (int)$hsp['hit_to']);
-                $all_starts[] = $s;
-                $all_ends[]   = $e;
-            }
-
-            $parent_start = min($all_starts);
-            $parent_end   = max($all_ends);
-            $total_span   = $parent_end - $parent_start;
-            $connect      = ($total_span <= $hsp_max_span);
-
-            foreach ($hit['hsps'] as $i => $hsp) {
-                $s = min((int)$hsp['hit_from'], (int)$hsp['hit_to']) - 1;
-                $e = max((int)$hsp['hit_from'], (int)$hsp['hit_to']);
+            foreach ($hsps_to_use as $i => $hsp) {
+                $s     = min((int)$hsp['hit_from'], (int)$hsp['hit_to']) - 1;
+                $e     = max((int)$hsp['hit_from'], (int)$hsp['hit_to']);
                 $score = (float)($hsp['bit_score'] ?? 0);
-                $feat = [
+                $feat  = [
                     'uniqueId' => $hit_id . '_hsp_' . $i,
                     'refName'  => $subject,
                     'start'    => $s,
                     'end'      => $e,
                     'score'    => (int)$score,
-                    'name'     => 'HSP ' . ($i + 1) . ' (evalue=' . ($hsp['evalue'] ?? '?') . ')',
+                    'name'     => 'HSP ' . ($i + 1) . ' (evalue=' . sprintf('%.2e', $hsp['evalue'] ?? 0) . ')',
                     'type'     => 'match_part',
                 ];
                 if ($connect && $score >= $hsp_min_score) {
@@ -870,7 +883,11 @@ function buildBlastHitLinkouts($hit, $context) {
                 }
             }
 
-            $track_id = 'blast_' . substr(md5($hit_id), 0, 10);
+            $track_id   = 'blast_' . substr(md5($hit_id), 0, 10);
+            $track_name = 'BLAST: ' . $hit_id;
+            if ($dropped > 0) {
+                $track_name .= ' (top ' . count($hsps_to_use) . '/' . $total_hsps . ' HSPs by score)';
+            }
 
             $features = [];
             if (!empty($subfeats)) {
@@ -891,24 +908,27 @@ function buildBlastHitLinkouts($hit, $context) {
             $session_tracks = [[
                 'type'          => 'FeatureTrack',
                 'trackId'       => $track_id,
-                'name'          => 'BLAST: ' . $hit_id,
+                'name'          => $track_name,
                 'assemblyNames' => [$jb2_assembly_id],
-                'adapter'       => [
-                    'type'     => 'FromConfigAdapter',
-                    'features' => $features,
-                ],
+                'adapter'       => ['type' => 'FromConfigAdapter', 'features' => $features],
             ]];
 
-            // loc uses 1-based coords (JBrowse2 URL convention)
             $loc = $subject . ':' . ($parent_start + 1) . '-' . $parent_end;
             $url = "/$site/jbrowse2.php?organism=" . urlencode($organism)
                  . '&assembly='      . urlencode($assembly)
                  . '&loc='           . urlencode($loc)
                  . '&sessionTracks=' . urlencode(json_encode($session_tracks))
                  . '&sessionTrackId='. urlencode($track_id);
+
+            $hsp_count = count($hsps_to_use);
+            if ($dropped > 0) {
+                $btn_label = 'View hit with ' . $hsp_count . ' of ' . $total_hsps . ' HSPs in browser';
+            } else {
+                $btn_label = 'View hit with ' . $hsp_count . ' ' . ($hsp_count === 1 ? 'HSP' : 'HSPs') . ' in browser';
+            }
             $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
                    . 'class="btn btn-sm btn-outline-success me-1">'
-                   . '<i class="fa fa-dna"></i> ' . $jbrowse_label . '</a>';
+                   . $btn_label . '</a>';
         }
     } else {
         // Feature BLAST (mRNA / CDS / protein): hit ID is a feature uniquename
@@ -921,7 +941,7 @@ function buildBlastHitLinkouts($hit, $context) {
                   . '&assembly=' . urlencode($assembly);
             $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
                    . 'class="btn btn-sm btn-outline-primary me-1">'
-                   . '<i class="fa fa-dna"></i> ' . $gene_page_label . '</a>';
+                   . $gene_page_label . '</a>';
         }
 
         if (($linkout_config['jbrowse'] ?? false) && $has_jbrowse && $entry) {
@@ -931,7 +951,7 @@ function buildBlastHitLinkouts($hit, $context) {
                   . '&loc=' . urlencode($loc);
             $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
                    . 'class="btn btn-sm btn-outline-success me-1">'
-                   . '<i class="fa fa-microscope"></i> ' . $jbrowse_label . '</a>';
+                   . $jbrowse_label . '</a>';
         }
     }
 
@@ -1271,7 +1291,7 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn', 
     // Add CSS for HSP visualization
     $html .= '<style>';
     $html .= '.hsp-row { display: flex; align-items: center; margin-bottom: 12px; }';
-    $html .= '.hsp-label { min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; word-break: break-all; }';
+    $html .= '.hsp-label { width: 150px; min-width: 150px; max-width: 150px; padding-right: 10px; font-size: 11px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }';
     $html .= '.hsp-segments { display: flex; align-items: center; width: 800px; position: relative; z-index: 5; }';
     $html .= '.hsp-segment { height: 16px; display: inline-block; margin-right: 0; cursor: pointer; border: 1px solid #333; transition: opacity 0.2s; }';
     $html .= '.hsp-segment:hover { opacity: 0.8; }';
@@ -1378,75 +1398,56 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn', 
         });
         
         // Build HTML row
+        $hit_clean_id = cleanBlastHitId($hit['id']);
         $html .= '<div class="hsp-row" style="cursor: pointer;" onclick="jumpToHit(' . $hit_idx . ', ' . $query_num . '); highlightHit(' . $hit_idx . ', ' . $query_num . ');">';
-        $html .= '<div class="hsp-label"></div>';
+        $html .= '<div class="hsp-label" title="' . htmlspecialchars($hit['subject']) . '">' . htmlspecialchars($hit_clean_id) . '</div>';
         $html .= '<div class="hsp-segments">';
-        
+
         // First HSP
         if (!empty($hsp_positions)) {
             $first_hsp = $hsp_positions[0];
             $first_idx = $first_hsp['index'];
             $color = getHspColorClass($hsp_scores[$first_idx]);
             $segment_width = ($first_hsp['end'] - $first_hsp['start']) * $px_unit;
-            
+
             // Add leading gap if needed
             if ($first_hsp['start'] > 1) {
                 $gap_width = ($first_hsp['start'] - 1) * $px_unit;
                 $html .= '<div class="hsp-gap" style="width: ' . $gap_width . 'px;"></div>';
             }
-            
+
             $hsp = $hsp_details[$first_idx];
-            // Extract just the subject name (first word/identifier before space or bracket)
-            $hit_name = 'Hit ' . $hit_num;
-            if (!empty($hit['subject'])) {
-                $desc = htmlspecialchars($hit['subject']);
-                // Extract first word or identifier (up to first space, bracket, or pipe)
-                preg_match('/^([^\s\[\|\-]+)/', $desc, $matches);
-                if (!empty($matches[1])) {
-                    $hit_name = $matches[1];
-                }
-            }
-            $title = $hit_name . ' - HSP ' . ($first_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
+            $title = $hit_clean_id . ' - HSP ' . ($first_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
             $html .= '<div class="hsp-segment ' . $color . '" style="width: ' . $segment_width . 'px;" title="' . htmlspecialchars($title) . '"></div>';
-            
+
             // Additional HSPs with connecting logic
             for ($k = 1; $k < count($hsp_positions); $k++) {
                 $current = $hsp_positions[$k];
                 $previous = $hsp_positions[$k - 1];
                 $current_idx = $current['index'];
-                
+
                 $gap = $current['start'] - $previous['end'];
-                
+
                 if ($gap > 0) {
                     // Add connector lines for gaps
                     $html .= '<div class="hsp-connector"></div>';
-                    
+
                     // Add gap
                     $gap_width = $gap * $px_unit;
                     $html .= '<div class="hsp-gap" style="width: ' . $gap_width . 'px;"></div>';
-                    
+
                     // Add connector on other side
                     $html .= '<div class="hsp-connector"></div>';
                 } else {
                     // Overlapping or adjacent HSPs - just connector line
                     $html .= '<div class="hsp-connector"></div>';
                 }
-                
+
                 // Add current segment
                 $color = getHspColorClass($hsp_scores[$current_idx]);
                 $segment_width = ($current['end'] - $current['start']) * $px_unit;
                 $hsp = $hsp_details[$current_idx];
-                // Extract just the subject name (first word/identifier before space or bracket)
-                $hit_name = 'Hit ' . $hit_num;
-                if (!empty($hit['subject'])) {
-                    $desc = htmlspecialchars($hit['subject']);
-                    // Extract first word or identifier (up to first space, bracket, or pipe)
-                    preg_match('/^([^\s\[\|\-]+)/', $desc, $matches);
-                    if (!empty($matches[1])) {
-                        $hit_name = $matches[1];
-                    }
-                }
-                $title = $hit_name . ' - HSP ' . ($current_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
+                $title = $hit_clean_id . ' - HSP ' . ($current_idx + 1) . ': ' . $hsp['percent_identity'] . '% identity | E-value: ' . sprintf('%.2e', $hsp['evalue']);
                 $html .= '<div class="hsp-segment ' . $color . '" style="width: ' . $segment_width . 'px;" title="' . htmlspecialchars($title) . '"></div>';
             }
             
