@@ -61,7 +61,8 @@ my $sth_update_feature_annotation = $dbh->prepare(q{
 });
 
 # Caches
-my (%annotation_cache, %feature_cache, %feature_annotation_cache);
+my (%annotation_cache, %feature_cache, %feature_annotation_cache,
+    %feature_type_cache, %parent_cache);
 
 # Counters
 my ($count_insert, $count_update, $count_annotations, $count_existing) = (0, 0, 0, 0);
@@ -145,12 +146,16 @@ if (!$source_id) {
     }
 }
 
-# Preload feature cache
+# Preload feature cache with type and parent for annotation-target walking
 {
-    my $sth = $dbh->prepare(q{ SELECT feature_id, feature_uniquename FROM feature });
+    my $sth = $dbh->prepare(q{
+        SELECT feature_id, feature_uniquename, feature_type, parent_feature_id FROM feature
+    });
     $sth->execute();
-    while (my ($fid, $uname) = $sth->fetchrow_array) {
-        $feature_cache{$uname} = $fid if defined $uname;
+    while (my ($fid, $uname, $ftype, $parent_fid) = $sth->fetchrow_array) {
+        $feature_cache{$uname}    = $fid    if defined $uname;
+        $feature_type_cache{$fid} = $ftype  if defined $ftype;
+        $parent_cache{$fid}       = $parent_fid if defined $parent_fid;
     }
 }
 
@@ -168,6 +173,22 @@ if (!$source_id) {
             date  => $d // '',
         };
     }
+}
+
+# Walk up parent chain to find the mRNA/transcript to associate annotations with.
+# For eukaryotes:  protein -> CDS -> mRNA  (returns mRNA)
+# For bacteria:    protein -> CDS -> gene  (no mRNA; returns CDS, one level above protein)
+# For mRNA input:  returns immediately
+sub find_annotation_target {
+    my ($fid) = @_;
+    my $cur = $fid;
+    while (defined $cur) {
+        my $type = $feature_type_cache{$cur} // '';
+        return $cur if $type eq 'mRNA' || $type eq 'transcript';
+        $cur = $parent_cache{$cur};
+    }
+    # No mRNA/transcript found — use direct parent of the input feature (CDS for bacteria)
+    return $parent_cache{$fid} // $fid;
 }
 
 # Process data lines
@@ -192,12 +213,13 @@ while (my $line = <$FH>) {
         $annotation_cache{$akey} = $annotation_id;
     }
 
-    # Lookup feature_id
+    # Lookup feature_id, then walk up to the mRNA/transcript for annotation storage
     my $feature_id = $feature_cache{$unique_name};
     unless (defined $feature_id) {
         warn "NOT Found: feature: $unique_name\n";
         next;
     }
+    $feature_id = find_annotation_target($feature_id);
 
     # Insert/update feature_annotation
     my $fakey = join('|', $feature_id, $annotation_id);
