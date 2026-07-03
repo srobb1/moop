@@ -219,12 +219,16 @@ if ($family === 'rhel') {
     }
 }
 
+$blast_install_fix = $family === 'rhel'
+    ? "BLAST+ is not in RHEL/EPEL repos. Install manually from NCBI:\n"
+      . "         curl -O https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.17.0+-x64-linux.tar.gz\n"
+      . "         tar xzf ncbi-blast-*.tar.gz && sudo cp ncbi-blast-*/bin/* /usr/local/bin/"
+    : "sudo $pkg ncbi-blast+";
+
 $required_tools = [
-    'blastn'   => $family === 'rhel'
-                    ? "BLAST+ is not in RHEL/EPEL repos. Install manually from NCBI:\n"
-                      . "         curl -O https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.17.0+-x64-linux.tar.gz\n"
-                      . "         tar xzf ncbi-blast-*.tar.gz && sudo cp ncbi-blast-*/bin/* /usr/local/bin/"
-                    : "sudo $pkg ncbi-blast+",
+    'blastn'          => $blast_install_fix,
+    'blast_formatter' => $blast_install_fix,
+    'blastdbcmd'      => $blast_install_fix,
     'samtools' => $family === 'rhel'
                     ? "Not in EPEL for RHEL 9. Install from source:\n"
                       . "         sudo dnf install -y gcc make zlib-devel bzip2-devel xz-devel curl-devel openssl-devel ncurses-devel\n"
@@ -263,6 +267,16 @@ if (toolExists('jq')) {
     pass("jq");
 } else {
     warn("jq not found in PATH", "Optional — install with: sudo $pkg jq");
+}
+
+// jbrowse CLI — needed for text-index (gene name search) and sort-gff
+$jbrowse_local = "$base/tools/jbrowse-cli/node_modules/.bin/jbrowse";
+if (toolExists('jbrowse') || file_exists($jbrowse_local)) {
+    pass("jbrowse CLI" . (file_exists($jbrowse_local) ? " (local install)" : ""));
+} else {
+    warn("jbrowse CLI not found",
+         "Optional — required for JBrowse text-index (gene name search) and sort-gff.\n"
+         . "         mkdir -p tools/jbrowse-cli && cd tools/jbrowse-cli && npm install @jbrowse/cli");
 }
 
 // Composer — check PATH and local composer.phar

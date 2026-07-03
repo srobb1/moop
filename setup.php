@@ -155,13 +155,16 @@ function checkEnvironment($base, $config) {
 
     // CLI tools
     $tools = [
-        'blastn'         => ['required' => true],
-        'samtools'       => ['required' => true],
-        'tabix'          => ['required' => true],
-        'bgzip'          => ['required' => true],
-        'sqlite3'        => ['required' => true],
-        'bigWigSummary'  => ['required' => false, 'detail' => 'Optional — required for Expression Explorer'],
-        'jq'             => ['required' => false],
+        'blastn'          => ['required' => true],
+        'blast_formatter' => ['required' => true,  'detail' => 'Part of NCBI BLAST+ suite — required for BLAST result display'],
+        'blastdbcmd'      => ['required' => true,  'detail' => 'Part of NCBI BLAST+ suite — required for sequence retrieval'],
+        'samtools'        => ['required' => true],
+        'tabix'           => ['required' => true],
+        'bgzip'           => ['required' => true],
+        'sqlite3'         => ['required' => true],
+        'jbrowse'         => ['required' => false, 'detail' => 'Optional — required for JBrowse text-index (gene name search in browser)'],
+        'bigWigSummary'   => ['required' => false, 'detail' => 'Optional — required for Expression Explorer'],
+        'jq'              => ['required' => false],
     ];
 
     foreach ($tools as $tool => $info) {
