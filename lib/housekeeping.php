@@ -1,28 +1,92 @@
 <?php
 /**
- * Housekeeping — lightweight maintenance tasks that run once per admin session.
+ * Housekeeping — lightweight maintenance tasks that run at most once per interval.
  *
  * HOW IT WORKS:
  *   admin_init.php calls run_housekeeping() after auth succeeds.
- *   The function checks a session flag so it only runs once per session,
- *   then iterates through a list of small, fast tasks.
+ *   Gating is a disk-based timestamp marker (logs/.housekeeping_last_run), NOT a
+ *   PHP session flag. Session lifetime here is unreliable as a "run once" signal:
+ *   PHP session GC is probabilistic (session.gc_probability/gc_divisor = 1/1000 by
+ *   default) and cookie_lifetime=0 relies on the browser actually closing, so an
+ *   admin's session can silently outlive the intended housekeeping interval by
+ *   days — during which nothing here would ever run again. The marker file is
+ *   shared across all admins/sessions and just asks "has it been long enough
+ *   since the last run?", independent of any one login's lifetime.
  *
  * ADDING A NEW TASK:
  *   1. Write a function below (keep it fast — no blocking network calls, no heavy I/O).
  *      If a periodic network operation is needed, launch it as a background process
  *      (see housekeeping_check_ncbi_taxonomy_update for the pattern).
  *   2. Add it to the $tasks array in run_housekeeping().
- *   That's it. It will run automatically on the next admin login.
+ *   That's it. It will run automatically the next time any admin loads a page,
+ *   at most once per HOUSEKEEPING_MIN_INTERVAL.
  */
 
+define('HOUSEKEEPING_MIN_INTERVAL', 4 * 3600); // re-run at most every 4 hours
+
 /**
- * Run all housekeeping tasks (once per session).
+ * Two tasks below (site data snapshot, environment check) drive dashboard widgets
+ * that used to live only in $_SESSION. Now that tasks run at most once per interval
+ * instead of once per session, most sessions would never be the one that happens to
+ * trigger a run — their $_SESSION would just never get those keys set, and the
+ * widgets would silently vanish. So those tasks also persist their result to this
+ * small status file, and every request (cheap: one file read, no throttle) hydrates
+ * its own $_SESSION from it — independent of whether this request is the one
+ * actually running the underlying task.
+ */
+function housekeeping_status_file(): string {
+    $config = ConfigManager::getInstance();
+    return $config->getPath('site_path') . '/logs/.housekeeping_status.json';
+}
+
+function housekeeping_persist_status(string $key, $value): void {
+    $file = housekeeping_status_file();
+    $all  = file_exists($file) ? (json_decode(file_get_contents($file), true) ?: []) : [];
+    $all[$key] = $value;
+    $dir = dirname($file);
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    @file_put_contents($file, json_encode($all, JSON_PRETTY_PRINT));
+}
+
+function housekeeping_hydrate_session_from_status(): void {
+    $file = housekeeping_status_file();
+    if (!file_exists($file)) return;
+    $all = json_decode(file_get_contents($file), true) ?: [];
+    if (isset($all['site_data_backup'])) $_SESSION['site_data_backup'] = $all['site_data_backup'];
+    if (isset($all['env_warnings']))     $_SESSION['env_warnings']     = $all['env_warnings'];
+}
+
+/**
+ * Run all housekeeping tasks (at most once per HOUSEKEEPING_MIN_INTERVAL).
  */
 function run_housekeeping() {
-    if (!empty($_SESSION['housekeeping_done'])) {
+    $config      = ConfigManager::getInstance();
+    $logs_dir    = $config->getPath('site_path') . '/logs';
+    $marker_file = "$logs_dir/.housekeeping_last_run";
+    $lock_file   = "$logs_dir/.housekeeping_lock";
+
+    // Cheap, unthrottled: every request's session gets the latest known status,
+    // regardless of whether the tasks below actually run on this tick.
+    housekeeping_hydrate_session_from_status();
+
+    $last_run = @filemtime($marker_file) ?: 0;
+    if ((time() - $last_run) < HOUSEKEEPING_MIN_INTERVAL) {
         return;
     }
-    $_SESSION['housekeeping_done'] = true;
+
+    // Claim the run so concurrent admin requests don't all fire it at once.
+    if (file_exists($lock_file)) {
+        $pid = (int)trim(@file_get_contents($lock_file));
+        if ($pid > 0 && file_exists("/proc/$pid")) {
+            return; // another request is already running housekeeping
+        }
+        // stale lock left by a crashed request — reclaim it
+    }
+    if (!is_dir($logs_dir)) @mkdir($logs_dir, 0755, true);
+    @file_put_contents($lock_file, (string)getmypid());
+    // Touch the marker before running tasks so a slow task can't cause a pile-up
+    // of concurrent housekeeping runs triggered by other requests mid-flight.
+    @touch($marker_file);
 
     // ── Task registry ────────────────────────────────────────
     // Each entry: ['name' => string, 'fn' => callable]
@@ -32,6 +96,7 @@ function run_housekeeping() {
         ['name' => 'snapshot_site_data',         'fn' => 'housekeeping_snapshot_site_data'],
         ['name' => 'environment_check',          'fn' => 'housekeeping_environment_check'],
         ['name' => 'refresh_annotation_caches',  'fn' => 'housekeeping_refresh_annotation_caches'],
+        ['name' => 'refresh_organism_cache',     'fn' => 'housekeeping_refresh_organism_cache_if_stale'],
         ['name' => 'ncbi_taxonomy_update',       'fn' => 'housekeeping_check_ncbi_taxonomy_update'],
     ];
 
@@ -42,6 +107,8 @@ function run_housekeeping() {
             error_log('MOOP housekeeping task "' . $task['name'] . '" failed: ' . $e->getMessage());
         }
     }
+
+    @unlink($lock_file);
 }
 
 // =====================================================================
@@ -101,7 +168,9 @@ function housekeeping_clean_temp_files() {
  * plain file copies are the baseline. If the directory happens to be a
  * git repo, changes are auto-committed as a bonus.
  *
- * Status is stored in $_SESSION['site_data_backup'] for the dashboard.
+ * Status is stored in $_SESSION['site_data_backup'] for the dashboard, and persisted
+ * to logs/.housekeeping_status.json so every session can be hydrated with it — see
+ * housekeeping_hydrate_session_from_status().
  */
 function housekeeping_snapshot_site_data() {
     $config = ConfigManager::getInstance();
@@ -116,11 +185,13 @@ function housekeeping_snapshot_site_data() {
     if (!is_dir($site_data_path)) {
         if (!@mkdir($site_data_path, 0750, true)) {
             error_log("MOOP housekeeping: could not create site data dir: $site_data_path");
-            $_SESSION['site_data_backup'] = [
+            $status = [
                 'status' => 'error',
                 'message' => "Could not create directory <code>" . htmlspecialchars($site_data_path) . "</code> — check permissions on the parent directory.",
                 'path' => $site_data_path,
             ];
+            $_SESSION['site_data_backup'] = $status;
+            housekeeping_persist_status('site_data_backup', $status);
             return;
         }
         error_log("MOOP housekeeping: created site data backup directory: $site_data_path");
@@ -232,13 +303,15 @@ README;
     }
 
     // Store status for the dashboard
-    $_SESSION['site_data_backup'] = [
+    $status = [
         'status' => 'ok',
         'is_git' => $is_git,
         'last_run' => date('Y-m-d H:i:s'),
         'files_copied' => $copied_count,
         'path' => $site_data_path,
     ];
+    $_SESSION['site_data_backup'] = $status;
+    housekeeping_persist_status('site_data_backup', $status);
 }
 
 /**
@@ -249,7 +322,9 @@ README;
  * missing CLI tools, missing composer dependencies.
  *
  * Results are stored in $_SESSION['env_warnings'] as an array of
- * ['level' => 'danger'|'warning', 'message' => string] entries.
+ * ['level' => 'danger'|'warning', 'message' => string] entries, and persisted to
+ * logs/.housekeeping_status.json so every session can be hydrated with it — see
+ * housekeeping_hydrate_session_from_status().
  * The admin dashboard reads this to display alerts.
  */
 function housekeeping_environment_check() {
@@ -326,9 +401,11 @@ function housekeeping_environment_check() {
     // 4. CLI tools available
     // PHP-FPM may have a restricted PATH, so also check /usr/local/bin explicitly
     $cli_tools = [
-        'blastn'     => 'BLAST searches will not work',
-        'samtools'   => 'Sequence retrieval will not work',
-        'makeblastdb'=> 'BLAST index building will not work',
+        'blastn'          => 'BLAST searches will not work',
+        'blast_formatter' => 'BLAST result display and downloads will not work',
+        'blastdbcmd'      => 'BLAST sequence retrieval will not work',
+        'samtools'        => 'BAM/CRAM tracks and FAI indexing will not work',
+        'makeblastdb'     => 'BLAST index building will not work',
     ];
     foreach ($cli_tools as $tool => $impact) {
         $path = trim(shell_exec("which " . escapeshellarg($tool) . " 2>/dev/null") ?? '');
@@ -361,6 +438,7 @@ function housekeeping_environment_check() {
     }
 
     $_SESSION['env_warnings'] = $warnings;
+    housekeeping_persist_status('env_warnings', $warnings);
 }
 
 /**
@@ -416,6 +494,65 @@ function housekeeping_refresh_annotation_caches() {
 
     if ($refreshed > 0) {
         error_log("MOOP housekeeping: refreshed annotation source caches for $refreshed organism(s)");
+    }
+}
+
+/**
+ * Keep organisms/.organism_cache.json from going stale indefinitely.
+ *
+ * Until this task existed, nothing refreshed this cache automatically — only a
+ * manual "Update Cache" click on the admin dashboard did. That's the same
+ * silent-staleness trap as PHP sessions: if no admin happens to click it, the
+ * DB/filesystem drift checks that read from this cache (e.g. gene_set
+ * directories orphaned by a DB rebuild — see validateAssemblyDirectories())
+ * never get re-evaluated, so the dashboard can show a clean bill of health
+ * that's actually days old.
+ *
+ * Launches the same background scanner the manual button uses (see
+ * admin/api/refresh_organism_cache.php) — non-blocking, returns immediately.
+ * The scan itself only re-examines organisms whose fingerprint changed, so
+ * this stays cheap even with many organisms. Only fires if the cache is older
+ * than the refresh interval and no scan is already running.
+ */
+function housekeeping_refresh_organism_cache_if_stale() {
+    $config        = ConfigManager::getInstance();
+    $organism_data = $config->getPath('organism_data');
+    $cache_file    = "$organism_data/.organism_cache.json";
+    $lock_file     = "$organism_data/.organism_cache_lock";
+    $script_path   = realpath(dirname(__DIR__) . '/scripts/warm_organism_cache.php');
+
+    if (!$script_path || !file_exists($script_path)) return;
+
+    // Already running (same PID-liveness check as refresh_organism_cache.php)
+    if (file_exists($lock_file)) {
+        $pid = (int)trim(@file_get_contents($lock_file));
+        if ($pid > 0 && file_exists("/proc/$pid")) return;
+        @unlink($lock_file); // stale lock
+    }
+
+    $refresh_interval = 12 * 3600; // re-scan at most every 12 hours
+    $last_generated   = null;
+    if (file_exists($cache_file)) {
+        $raw = json_decode(file_get_contents($cache_file), true);
+        $last_generated = $raw['generated'] ?? null;
+    }
+    if ($last_generated && (time() - strtotime($last_generated)) < $refresh_interval) return;
+
+    file_put_contents($lock_file, '0');
+    $shell_cmd = 'echo $$ > ' . escapeshellarg($lock_file) . ' ; '
+               . 'php ' . escapeshellarg($script_path)
+               . ' > /dev/null 2>&1 ; rm -f ' . escapeshellarg($lock_file);
+
+    $descriptors = [
+        0 => ['file', '/dev/null', 'r'],
+        1 => ['file', '/dev/null', 'w'],
+        2 => ['file', '/dev/null', 'w'],
+    ];
+    $proc = @proc_open(['/bin/sh', '-c', $shell_cmd], $descriptors, $pipes);
+    if (is_resource($proc)) {
+        error_log('MOOP housekeeping: launched organism cache refresh (12h interval)');
+    } else {
+        @unlink($lock_file);
     }
 }
 
