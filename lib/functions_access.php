@@ -293,6 +293,47 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
 }
 
 /**
+ * Find (organism, assembly, gene_set) tuples that exist as directories on disk but
+ * have no entry at all in organism_assembly_groups.json — i.e. nobody has access to
+ * them yet. This is the gap that hides newly-added gene sets: adding a gene_set to
+ * an assembly that already has *some* group entry (for other gene sets) doesn't
+ * change the assembly's grouped/ungrouped status, so a coarser organism/assembly
+ * level check never notices. Shared by the admin dashboard health widget and the
+ * Manage Groups "New Assemblies" section so both stay in sync.
+ *
+ * Cheap: filesystem globs only, no DB queries. $all_organisms should come from
+ * getOrganismsWithAssemblies(), which is already session-cached on dir mtime.
+ *
+ * @param array  $all_organisms       organism => [assembly names], from getOrganismsWithAssemblies()
+ * @param string $organism_data_path  Path to organisms directory
+ * @param array  $groups_data         Decoded organism_assembly_groups.json
+ * @return array List of ['organism'=>, 'assembly'=>, 'gene_set'=>]
+ */
+function getUnrepresentedGeneSetTuples(array $all_organisms, string $organism_data_path, array $groups_data): array {
+    $represented = [];
+    foreach ($groups_data as $entry) {
+        $gs = $entry['gene_set'] ?? 'v1';
+        $represented[$entry['organism'] . '/' . $entry['assembly'] . '/' . $gs] = true;
+    }
+
+    $unrepresented = [];
+    foreach ($all_organisms as $organism => $assemblies) {
+        foreach ($assemblies as $assembly) {
+            $asm_path  = $organism_data_path . '/' . $organism . '/' . $assembly;
+            $subdirs   = glob($asm_path . '/*', GLOB_ONLYDIR) ?: [];
+            $gene_sets = array_map('basename', $subdirs) ?: ['v1'];
+            foreach ($gene_sets as $gene_set) {
+                $key = $organism . '/' . $assembly . '/' . $gene_set;
+                if (!isset($represented[$key])) {
+                    $unrepresented[] = ['organism' => $organism, 'assembly' => $assembly, 'gene_set' => $gene_set];
+                }
+            }
+        }
+    }
+    return $unrepresented;
+}
+
+/**
  * Get taxonomy tree user access for display
  * Returns organisms accessible to current user for taxonomy tree display
  * 

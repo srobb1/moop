@@ -952,4 +952,70 @@ document.addEventListener('click', async function (e) {
         alert('Error: ' + e.message);
     }
 });
+
+// ── Archive orphaned gene set (files on disk, no longer in that organism's DB) ──
+document.addEventListener('click', async function (e) {
+    const btn = e.target.closest('.archive-gene-set-btn');
+    if (!btn) return;
+
+    const row      = btn.closest('tr');
+    const organism = row.dataset.organism;
+    const assembly = row.dataset.assembly;
+    const geneSet  = row.dataset.geneSet;
+
+    if (!confirm(`Archive ${organism} / ${assembly} / ${geneSet}?\n\nThis moves its files to an archive directory (nothing is deleted) and removes JBrowse/track/group references. It does not touch any database.`)) {
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Archiving…';
+
+    const fd = new FormData();
+    fd.append('organism', organism);
+    fd.append('assembly', assembly);
+    fd.append('gene_set', geneSet);
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    try {
+        const res  = await fetch(`${sitePath}/admin/api/archive_gene_set.php`, {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken },
+            body: fd,
+        });
+        const data = await res.json();
+        if (!data.success) {
+            alert('Archive failed: ' + (data.error || 'unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-archive"></i> Archive';
+            return;
+        }
+
+        // Visible confirmation before the row disappears — silently vanishing on
+        // success reads as "did this do anything?" otherwise.
+        const alertBox = document.getElementById('db-orphaned-alert');
+        if (alertBox) {
+            alertBox.innerHTML = `<div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fa fa-check-circle"></i> Archived <strong>${organism} / ${assembly} / ${geneSet}</strong> to
+                <code>${data.archived_to}</code>.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+        }
+        row.style.transition = 'opacity 0.4s';
+        row.style.opacity = '0';
+        setTimeout(() => {
+            row.remove();
+            const remaining = document.querySelectorAll('.db-orphaned-row').length;
+            const countBadge = document.getElementById('db-orphaned-count');
+            if (countBadge) countBadge.textContent = `🔗 Orphaned in Database (${remaining})`;
+            if (remaining === 0) {
+                const section = document.getElementById('db-orphaned-section');
+                if (section) section.style.display = 'none';
+            }
+        }, 400);
+    } catch (err) {
+        alert('Error: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-archive"></i> Archive';
+    }
+});
 });

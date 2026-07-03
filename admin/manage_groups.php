@@ -389,27 +389,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     exit();
 }
 
-// Identify unrepresented (organism, assembly, gene_set) tuples on disk
-$represented_tuples = [];
-foreach ($groups_data as $data) {
-    $gs  = $data['gene_set'] ?? 'v1';
-    $represented_tuples[$data['organism'] . '/' . $data['assembly'] . '/' . $gs] = true;
-}
-
-$unrepresented_tuples = []; // [{organism, assembly, gene_set}, ...]
-foreach ($all_organisms as $organism => $assemblies) {
-    foreach ($assemblies as $assembly) {
-        $asm_path = $organism_data_path . '/' . $organism . '/' . $assembly;
-        $subdirs  = glob($asm_path . '/*', GLOB_ONLYDIR) ?: [];
-        $gene_sets = array_map('basename', $subdirs) ?: ['v1'];
-        foreach ($gene_sets as $gene_set) {
-            $key = $organism . '/' . $assembly . '/' . $gene_set;
-            if (!isset($represented_tuples[$key])) {
-                $unrepresented_tuples[] = ['organism' => $organism, 'assembly' => $assembly, 'gene_set' => $gene_set];
-            }
-        }
-    }
-}
+// Identify unrepresented (organism, assembly, gene_set) tuples on disk.
+// Shared with the admin dashboard health widget — see getUnrepresentedGeneSetTuples().
+$unrepresented_tuples = getUnrepresentedGeneSetTuples($all_organisms, $organism_data_path, $groups_data);
 // Keep $unrepresented_organisms for backward compat with bulk_add and JS
 $unrepresented_organisms = [];
 foreach ($unrepresented_tuples as $t) {
@@ -420,6 +402,12 @@ foreach ($unrepresented_tuples as $t) {
 $stale_entries = array_filter($groups_data_with_status, function($data) {
     return !$data['_fs_exists'];
 });
+
+// Gene_set directories on disk with no matching row in their organism's database —
+// e.g. dropped upstream during a DB rebuild but never cleaned up here. Distinct from
+// $stale_entries above, which only checks "does the directory exist" and can't see
+// this case since the directory is still there. Cache-driven — see getOrphanedGeneSetTuples().
+$db_orphaned_tuples = getOrphanedGeneSetTuples($organism_data_path);
 
 // Configure display
 $display_config = [
@@ -442,6 +430,7 @@ $data = [
     'unrepresented_organisms' => $unrepresented_organisms,
     'unrepresented_tuples' => $unrepresented_tuples,
     'stale_entries' => $stale_entries,
+    'db_orphaned_tuples' => $db_orphaned_tuples,
     'existing_groups' => $all_existing_groups,
     'config' => $config,
     'page_styles' => [

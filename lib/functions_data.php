@@ -1213,6 +1213,40 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
 
 
 /**
+ * Read organisms/.organism_cache.json and pull out every gene_set directory that
+ * exists on disk but has no matching row in that organism's database — see
+ * validateAssemblyDirectories()'s 'orphaned_gene_set_directory' mismatch type.
+ *
+ * Deliberately reads only the cache (no DB queries here) so this stays cheap enough
+ * to call on every admin dashboard / Manage Groups page load. The cache itself is
+ * kept fresh automatically by housekeeping_refresh_organism_cache_if_stale() (at
+ * most ~12h old), so this can't silently go stale the way a one-off manual check
+ * would if nobody remembered to re-run it.
+ *
+ * @param string $organism_data_path Path to organisms directory
+ * @return array List of ['organism'=>, 'assembly'=>, 'gene_set'=>]
+ */
+function getOrphanedGeneSetTuples(string $organism_data_path): array {
+    $cache_file = "$organism_data_path/.organism_cache.json";
+    if (!file_exists($cache_file)) return [];
+
+    $raw = json_decode(file_get_contents($cache_file), true);
+    $tuples = [];
+    foreach ($raw['data'] ?? [] as $organism => $org_data) {
+        foreach ($org_data['assembly_validation']['mismatches'] ?? [] as $mm) {
+            if (($mm['type'] ?? '') === 'orphaned_gene_set_directory') {
+                $tuples[] = [
+                    'organism' => $organism,
+                    'assembly' => $mm['assembly_dir'] ?? '',
+                    'gene_set' => $mm['gene_set_name'] ?? '',
+                ];
+            }
+        }
+    }
+    return $tuples;
+}
+
+/**
  * Get organism info with caching.
  *
  * Returns cached data from organisms/.organism_cache.json if the fingerprint
@@ -1229,7 +1263,9 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
  *               and 'overall_status' keys per organism
  */
 // Increment this when the cache structure or computed fields change, to force a full rescan.
-define('ORGANISM_CACHE_SCHEMA_VERSION', 2);
+// v3: validateAssemblyDirectories() now also detects gene_set directories on disk with
+// no matching DB row ('orphaned_gene_set_directory' mismatch type).
+define('ORGANISM_CACHE_SCHEMA_VERSION', 3);
 
 /**
  * Write organism cache atomically: write to a temp file then rename().

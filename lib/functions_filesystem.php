@@ -134,6 +134,26 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
                         ];
                     }
                 }
+
+                // Reverse direction: gene_set directories on disk with no matching DB
+                // row. Happens when a gene_set is dropped from the database (DB rebuilt
+                // elsewhere, rows deleted) but its directory was never removed here — the
+                // DB-driven checks above can't see this since they only walk DB rows.
+                $known_gene_set_names = array_column($gene_sets_by_genome[$genome_id] ?? [], 'gene_set_name');
+                foreach (glob("$asm_path/*", GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                    $gs_name = basename($gs_dir);
+                    if (in_array($gs_name, $known_gene_set_names, true)) continue;
+                    if (!file_exists("$gs_dir/genomic.gff")) continue; // not a real gene_set dir
+                    $result['valid'] = false;
+                    $result['mismatches'][] = [
+                        'type'             => 'orphaned_gene_set_directory',
+                        'genome_name'      => $name,
+                        'genome_accession' => $accession,
+                        'assembly_dir'     => $found_dir,
+                        'gene_set_name'    => $gs_name,
+                        'message'          => "Directory '{$gs_name}' exists on disk but has no matching gene_set row in the database — likely deleted upstream",
+                    ];
+                }
             }
 
             $result['genomes'][] = [

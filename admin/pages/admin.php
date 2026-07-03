@@ -84,8 +84,14 @@
 
   <!-- Data Health Alerts -->
   <?php
-    $has_health_issues = ($health_alerts['ungrouped'] > 0 || $health_alerts['not_in_tree'] > 0 || $health_alerts['stale_groups'] > 0);
+    $has_health_issues = ($health_alerts['ungrouped'] > 0 || $health_alerts['not_in_tree'] > 0
+                        || $health_alerts['stale_groups'] > 0 || $health_alerts['new_gene_sets'] > 0
+                        || $health_alerts['orphaned_gene_sets'] > 0);
     if ($has_health_issues):
+      $_after_ungrouped   = $health_alerts['new_gene_sets'] > 0 || $health_alerts['stale_groups'] > 0 || $health_alerts['orphaned_gene_sets'] > 0 || $health_alerts['not_in_tree'] > 0;
+      $_after_new_gs      = $health_alerts['stale_groups'] > 0 || $health_alerts['orphaned_gene_sets'] > 0 || $health_alerts['not_in_tree'] > 0;
+      $_after_stale       = $health_alerts['orphaned_gene_sets'] > 0 || $health_alerts['not_in_tree'] > 0;
+      $_after_orphaned_gs = $health_alerts['not_in_tree'] > 0;
   ?>
   <div class="card mb-4 border-warning">
     <div class="card-header bg-warning bg-opacity-10">
@@ -93,7 +99,7 @@
     </div>
     <div class="card-body p-0">
       <?php if ($health_alerts['ungrouped'] > 0): ?>
-      <div class="alert alert-warning mb-0 border-0 rounded-0 <?= ($health_alerts['stale_groups'] > 0 || $health_alerts['not_in_tree'] > 0) ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
+      <div class="alert alert-warning mb-0 border-0 rounded-0 <?= $_after_ungrouped ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
         <div>
           <i class="fa fa-layer-group me-2"></i>
           <strong><?= $health_alerts['ungrouped'] ?> organism<?= $health_alerts['ungrouped'] > 1 ? 's' : '' ?></strong>
@@ -106,14 +112,41 @@
         </div>
       </div>
       <?php endif; ?>
+      <?php if ($health_alerts['new_gene_sets'] > 0): ?>
+      <div class="alert alert-warning mb-0 border-0 rounded-0 <?= $_after_new_gs ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
+        <div>
+          <i class="fa fa-dna me-2"></i>
+          <strong><?= $health_alerts['new_gene_sets'] ?> gene set<?= $health_alerts['new_gene_sets'] > 1 ? 's' : '' ?></strong>
+          on disk with no group assignment yet — invisible to every user, including you, until access is granted.
+          This is checked per gene set, not just per assembly, so adding a gene set to an
+          already-grouped assembly won't hide it here.
+        </div>
+        <a href="manage_groups.php#new-assemblies" class="btn btn-sm btn-warning flex-shrink-0">Grant Access</a>
+      </div>
+      <?php endif; ?>
       <?php if ($health_alerts['stale_groups'] > 0): ?>
-      <div class="alert alert-warning mb-0 border-0 rounded-0 <?= $health_alerts['not_in_tree'] > 0 ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
+      <div class="alert alert-warning mb-0 border-0 rounded-0 <?= $_after_stale ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
         <div>
           <i class="fa fa-trash-alt me-2"></i>
           <strong><?= $health_alerts['stale_groups'] ?> stale group entr<?= $health_alerts['stale_groups'] > 1 ? 'ies' : 'y' ?></strong>
           reference organisms or assemblies no longer on disk.
         </div>
         <a href="manage_groups.php" class="btn btn-sm btn-warning flex-shrink-0">Clean Up in Groups</a>
+      </div>
+      <?php endif; ?>
+      <?php if ($health_alerts['orphaned_gene_sets'] > 0): ?>
+      <div class="alert alert-danger mb-0 border-0 rounded-0 <?= $_after_orphaned_gs ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
+        <div>
+          <i class="fa fa-unlink me-2"></i>
+          <strong><?= $health_alerts['orphaned_gene_sets'] ?> gene set<?= $health_alerts['orphaned_gene_sets'] > 1 ? 's' : '' ?></strong>
+          still <?= $health_alerts['orphaned_gene_sets'] > 1 ? 'have files' : 'has files' ?> on disk but no longer exist in that organism's database —
+          likely removed in a database rebuild without cleaning up here. Still counted toward
+          BLAST indexes, JBrowse tracks, and group access even though queries can no longer find them.
+          <?php foreach ($_orphaned_gene_set_tuples as $t): ?>
+            <br><small class="text-muted"><?= htmlspecialchars($t['organism']) ?> / <?= htmlspecialchars($t['assembly']) ?> / <?= htmlspecialchars($t['gene_set']) ?></small>
+          <?php endforeach; ?>
+        </div>
+        <a href="manage_groups.php#db-orphaned" class="btn btn-sm btn-danger flex-shrink-0">Review &amp; Archive</a>
       </div>
       <?php endif; ?>
       <?php if ($health_alerts['not_in_tree'] > 0): ?>
@@ -197,29 +230,38 @@
           else                  $age_str = floor($sec/86400) . 'd ago';
       }
     ?>
-    <div class="alert <?= $generated ? 'alert-secondary' : 'alert-warning' ?> d-flex align-items-center justify-content-between gap-3 mb-4">
-      <div>
-        <i class="fa fa-sync-alt me-2"></i>
-        <strong>Organism Cache</strong> —
-        <?php if ($refreshing): ?>
-          <span class="text-primary"><i class="fa fa-spinner fa-spin"></i> Refresh in progress…</span>
-        <?php elseif ($generated): ?>
-          <?= $org_count ?> organisms, last updated <strong><?= htmlspecialchars($age_str) ?></strong>
-        <?php else: ?>
-          Cache not built yet — organism data may not be visible
-        <?php endif; ?>
+    <div class="alert <?= $generated ? 'alert-secondary' : 'alert-warning' ?> mb-4">
+      <div class="d-flex align-items-center justify-content-between gap-3">
+        <div>
+          <i class="fa fa-sync-alt me-2"></i>
+          <strong>Organism Cache</strong> —
+          <span id="dashCacheSummary">
+            <?php if ($refreshing): ?>
+              <span class="text-primary"><i class="fa fa-spinner fa-spin"></i> Refresh in progress…</span>
+            <?php elseif ($generated): ?>
+              <?= $org_count ?> organisms, last updated <strong><?= htmlspecialchars($age_str) ?></strong>
+            <?php else: ?>
+              Cache not built yet — organism data may not be visible
+            <?php endif; ?>
+          </span>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+          <button id="dashRefreshBtn"
+                  class="btn btn-sm <?= $generated ? 'btn-outline-secondary' : 'btn-warning' ?>"
+                  onclick="startOrganismCacheRefresh(this)"
+                  <?= $refreshing ? 'disabled' : '' ?>>
+            <i class="fa fa-sync-alt"></i> <?= $refreshing ? 'Refreshing…' : 'Update Cache' ?>
+          </button>
+          <a href="manage_organisms.php" class="btn btn-sm btn-outline-primary">
+            <i class="fa fa-list"></i> View Organisms
+          </a>
+        </div>
       </div>
-      <div class="d-flex align-items-center gap-2 flex-shrink-0">
-        <span id="dashCacheStatus" class="text-muted small" style="display:none;"></span>
-        <button id="dashRefreshBtn"
-                class="btn btn-sm <?= $generated ? 'btn-outline-secondary' : 'btn-warning' ?>"
-                onclick="refreshOrganismCache(this, document.getElementById('dashCacheStatus'))"
-                <?= $refreshing ? 'disabled' : '' ?>>
-          <i class="fa fa-sync-alt"></i> <?= $refreshing ? 'Refreshing…' : 'Update Cache' ?>
-        </button>
-        <a href="manage_organisms.php" class="btn btn-sm btn-outline-primary">
-          <i class="fa fa-list"></i> View Organisms
-        </a>
+      <div id="dashCacheProgressWrap" class="mt-2" style="display: <?= $refreshing ? 'block' : 'none' ?>;">
+        <div class="progress" style="height: 6px;">
+          <div id="dashCacheProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+        </div>
+        <small class="text-muted" id="dashCacheProgressText">Checking status…</small>
       </div>
     </div>
 

@@ -192,7 +192,7 @@
   <?php endif; ?>
 
   <?php if (!empty($unrepresented_organisms)): ?>
-    <h3 class="mt-4">
+    <h3 class="mt-4" id="new-assemblies">
       Assemblies Without Groups
       <button type="button" class="btn btn-success btn-sm ms-3" id="bulk-add-btn" style="display:none;" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : 'data-bs-toggle="modal" data-bs-target="#bulkAddModal"' ?>>
         <i class="fa fa-plus"></i> Bulk Add Groups (<span id="ungrouped-selected-count">0</span>)
@@ -250,6 +250,48 @@
       </button>
     </h3>
     <p class="text-muted">These entries are in the JSON file but the corresponding directories were moved or deleted. Stale entries are marked in the table above with yellow background.</p>
+  <?php endif; ?>
+
+  <?php if (!empty($db_orphaned_tuples)): ?>
+    <div id="db-orphaned-section">
+    <h3 class="mt-4" id="db-orphaned">
+      <span class="badge bg-danger" id="db-orphaned-count">🔗 Orphaned in Database (<?= count($db_orphaned_tuples) ?>)</span>
+    </h3>
+    <p class="text-muted">
+      These gene sets still have files on disk (and possibly group access below) but no longer exist in
+      that organism's database — most likely the database was rebuilt elsewhere and this gene set was
+      dropped, without the old files being cleaned up here. Since the database has already forgotten them,
+      they're invisible to search and the assembly page, but they still count toward BLAST indexes,
+      JBrowse tracks, and any group access they're still listed under.
+      <strong>Archive</strong> moves the source files to an archive directory (nothing is deleted) and
+      removes JBrowse/track/group references. It does not touch any database.
+    </p>
+    <div id="db-orphaned-alert"></div>
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Organism</th>
+          <th>Assembly</th>
+          <th>Gene Set</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($db_orphaned_tuples as $tuple): ?>
+          <tr data-organism="<?= htmlspecialchars($tuple['organism']) ?>" data-assembly="<?= htmlspecialchars($tuple['assembly']) ?>" data-gene-set="<?= htmlspecialchars($tuple['gene_set']) ?>" class="db-orphaned-row">
+            <td><?= htmlspecialchars($tuple['organism']) ?></td>
+            <td><?= htmlspecialchars($tuple['assembly']) ?></td>
+            <td class="small text-muted"><?= htmlspecialchars($tuple['gene_set']) ?></td>
+            <td>
+              <button type="button" class="btn btn-danger btn-sm archive-gene-set-btn" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
+                <i class="fa fa-archive"></i> Archive
+              </button>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+    </div>
   <?php endif; ?>
 
   <!-- Manage Group Descriptions Section -->
