@@ -41,4 +41,14 @@ if (getenv('VALIDATE_CONFIG') !== 'false') {
     }
 }
 
+/**
+ * Filename of the gene-models GFF inside each gene_set directory
+ * (organisms/{organism}/{assembly}/{gene_set}/). Single source of truth is the
+ * 'genes_gff_filename' value in config/site_config.php — to rename the file across
+ * the whole app (e.g. genomic.gff -> genes.gff), change only that value.
+ */
+function genes_gff_filename(): string {
+    return ConfigManager::getInstance()->getString('genes_gff_filename', 'genomic.gff');
+}
+
 ?>

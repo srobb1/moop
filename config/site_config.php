@@ -156,11 +156,12 @@ return [
         ]
     ],
     
-    // ======== ASSEMBLY ANNOTATION FILE ========
-    // Primary annotation GFF file pattern in organism directories
-    // Located in: /organisms/{organism}/{assembly}/
-    // The JBrowse setup script creates symlink and compressed version
-    'annotation_file' => 'genomic.gff',
+    // ======== GENE MODELS GFF FILENAME ========
+    // Filename of the gene-models GFF inside each gene_set directory:
+    //   organisms/{organism}/{assembly}/{gene_set}/{this}
+    // Read everywhere via the genes_gff_filename() helper (includes/config_init.php),
+    // so renaming the file across the whole app means changing ONLY this one value.
+    'genes_gff_filename' => 'genomic.gff',
     
     // ======== BLAST TOOL SAMPLE SEQUENCES ========
     // Sample sequences for users to test BLAST functionality

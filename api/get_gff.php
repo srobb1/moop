@@ -47,7 +47,7 @@ if (!has_gene_set_access($organism_name, $assembly, $gene_set)) {
     exit;
 }
 
-$gff_file = "$organism_data/$organism_name/$assembly/$gene_set/genomic.gff";
+$gff_file = "$organism_data/$organism_name/$assembly/$gene_set/" . genes_gff_filename();
 if (!file_exists($gff_file) || filesize($gff_file) === 0) {
     http_response_code(404);
     echo "# GFF not available for $organism_name / $assembly\n";

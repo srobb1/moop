@@ -28,7 +28,7 @@ function prepareGeneSetForJBrowse(
     $site          = $config->getString('site', 'moop');
     $metadata_path = $config->getPath('metadata_path');
 
-    $source_gff    = "$organisms_dir/$organism/$assembly/$gene_set/genomic.gff";
+    $source_gff    = "$organisms_dir/$organism/$assembly/$gene_set/" . genes_gff_filename();
     $genomes_dir   = "$site_path/data/genomes/$organism/$assembly/$gene_set";
     $target_gff    = "$genomes_dir/annotations.gff3";
     $gz_file       = "$genomes_dir/annotations.gff3.gz";
@@ -204,7 +204,7 @@ function prepareGeneSetForJBrowse(
     // ── Feature coords index (for BLAST linkouts + MOOPmart) ─────────────────
     $gene_set_path = "$organisms_dir/$organism/$assembly/$gene_set";
     $tsv_path      = "$gene_set_path/feature_coords.tsv";
-    $gff_mtime     = filemtime("$gene_set_path/genomic.gff") ?: 0;
+    $gff_mtime     = filemtime("$gene_set_path/" . genes_gff_filename()) ?: 0;
     $tsv_mtime     = file_exists($tsv_path) ? filemtime($tsv_path) : 0;
     if ($tsv_mtime >= $gff_mtime && $tsv_mtime > 0) {
         $log[] = "$gene_set: feature_coords.tsv is up to date — skipped";
@@ -407,7 +407,7 @@ function buildGeneSetTextIndex(
  * Output format: hit_id\tgene_id\tchr\tstart\tend\tstrand
  */
 function generateFeatureCoordsIndex(string $assembly_path): bool {
-    $gff_file = $assembly_path . '/genomic.gff';
+    $gff_file = $assembly_path . '/' . genes_gff_filename();
     $tsv_file = $assembly_path . '/feature_coords.tsv';
 
     if (!file_exists($gff_file) || filesize($gff_file) === 0) {

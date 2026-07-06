@@ -97,7 +97,8 @@
               </dl>
               <?php
               $gs_dir = $config->getPath('organism_data') . "/$organism_name/$genome_accession/$gene_set_name";
-              $has_gff = file_exists("$gs_dir/genomic.gff") && filesize("$gs_dir/genomic.gff") > 0;
+              $gff_name = genes_gff_filename();
+              $has_gff = file_exists("$gs_dir/$gff_name") && filesize("$gs_dir/$gff_name") > 0;
               $has_downloads = !empty($fasta_files) || $has_gff;
               ?>
               <?php if ($has_downloads): ?>
@@ -113,7 +114,7 @@
                 </a>
                 <?php endforeach; ?>
                 <?php if ($has_gff): ?>
-                <a href="/<?= $site ?>/api/download_file.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>&filename=genomic.gff"
+                <a href="/<?= $site ?>/api/download_file.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>&filename=<?= urlencode(genes_gff_filename()) ?>"
                    class="btn btn-sm fw-semibold text-white"
                    style="border-radius: 16px; background-color: #475569; border-color: #475569;"
                    download>

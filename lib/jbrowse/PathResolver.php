@@ -195,7 +195,7 @@ class PathResolver
      * 
      * AUTO paths resolve to symlinked files in JBrowse genomes directory.
      * Source files are in /organisms/{organism}/{assembly}/ and follow patterns
-     * defined in site_config.php (sequence_types['genome']['pattern'] and annotation_file).
+     * defined in site_config.php (sequence_types['genome']['pattern'] and genes_gff_filename).
      * 
      * Resolved paths:
      *   - fasta: {genomes_directory}/{organism}/{assembly}/reference.fasta

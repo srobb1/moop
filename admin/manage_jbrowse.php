@@ -121,7 +121,7 @@ foreach ($registered_assemblies as $org => $asms) {
     foreach ($asms as $asm) {
         $asm_dir = "$organisms_dir/$org/$asm";
         if (!is_dir($asm_dir)) continue;
-        foreach (glob("$asm_dir/*/genomic.gff") ?: [] as $gff_path) {
+        foreach (glob("$asm_dir/*/" . genes_gff_filename()) ?: [] as $gff_path) {
             $gs        = basename(dirname($gff_path));
             $track_json = "$tracks_meta_dir/$org/$asm/gff/{$gs}_genes.json";
             $gz_path    = "$site_path/data/genomes/$org/$asm/$gs/annotations.gff3.gz";

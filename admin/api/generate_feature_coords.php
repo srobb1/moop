@@ -28,7 +28,7 @@ if (!is_dir($gene_set_path)) {
     exit;
 }
 
-if (!file_exists($gene_set_path . '/genomic.gff')) {
+if (!file_exists($gene_set_path . '/' . genes_gff_filename())) {
     echo json_encode(['success' => false, 'message' => 'genomic.gff not found in gene set directory.']);
     exit;
 }

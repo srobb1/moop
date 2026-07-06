@@ -185,7 +185,7 @@ $annotated_child_types = getAnnotatedFeatureTypesInGeneSet((int)$feature_gene_se
 // no separate grep passes for mRNAs or exons.
 $feature_loc   = null;
 $gene_model    = null;
-$gff_file      = "$gene_set_dir/genomic.gff";
+$gff_file      = "$gene_set_dir/" . genes_gff_filename();
 $gff_available = file_exists($gff_file) && filesize($gff_file) > 0;
 
 $genomes_dir        = $config->getPath('genomes_directory');

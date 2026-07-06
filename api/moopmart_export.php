@@ -309,7 +309,7 @@ if ($output_format === 'tsv') {
         $gs_name      = $src['gene_set'] ?? '';
         $assembly_dir = "$organism_data/$org/$assembly";
         $gs_path      = "$assembly_dir/$gs_name";
-        $gff_path     = "$gs_path/genomic.gff";
+        $gff_path     = "$gs_path/" . genes_gff_filename();
         $gs_label     = $gs_name ? "$org / $assembly / $gs_name" : "$org / $assembly";
 
         if (in_array($fasta_mode, $genomic_modes)) {

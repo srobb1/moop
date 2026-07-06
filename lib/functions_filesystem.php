@@ -143,7 +143,7 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
                 foreach (glob("$asm_path/*", GLOB_ONLYDIR) ?: [] as $gs_dir) {
                     $gs_name = basename($gs_dir);
                     if (in_array($gs_name, $known_gene_set_names, true)) continue;
-                    if (!file_exists("$gs_dir/genomic.gff")) continue; // not a real gene_set dir
+                    if (!file_exists("$gs_dir/" . genes_gff_filename())) continue; // not a real gene_set dir
                     $result['valid'] = false;
                     $result['mismatches'][] = [
                         'type'             => 'orphaned_gene_set_directory',

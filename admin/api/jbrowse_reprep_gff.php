@@ -51,7 +51,7 @@ $organisms_dir = $config->getPath('organism_data');
 $site_path    = $config->getPath('site_path');
 
 // Validate source GFF exists and is non-empty
-$source_gff = "$organisms_dir/$organism/$assembly/$gene_set/genomic.gff";
+$source_gff = "$organisms_dir/$organism/$assembly/$gene_set/" . genes_gff_filename();
 if (!file_exists($source_gff)) {
     echo json_encode(['success' => false, 'error' => "No genomic.gff found at $source_gff"]);
     exit;

@@ -124,7 +124,7 @@ if (is_dir($assemblies_meta_dir)) {
         foreach (glob($asm_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
             $gene_set = basename($gs_dir);
             $tsv = $gs_dir . '/feature_coords.tsv';
-            $gff = $gs_dir . '/genomic.gff';
+            $gff = $gs_dir . '/' . genes_gff_filename();
             $tsv_size_mb = file_exists($tsv)
                 ? round(filesize($tsv) / 1048576, 1) . ' MB'
                 : null;

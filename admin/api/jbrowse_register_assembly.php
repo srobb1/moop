@@ -160,7 +160,7 @@ $log[] = "Created assembly definition: {$organism}_{$assembly}.json";
 // prepareGeneSetForJBrowse handles bgzip, tabix, track JSON,
 // primaryGeneTracks update, and feature_coords.tsv for each gene set.
 $gs_count = 0;
-foreach (glob("$source_dir/*/genomic.gff") ?: [] as $gs_gff) {
+foreach (glob("$source_dir/*/" . genes_gff_filename()) ?: [] as $gs_gff) {
     $detected_gs = basename(dirname($gs_gff));
     if (prepareGeneSetForJBrowse($organism, $assembly, $detected_gs, $config, $log)) {
         $gs_count++;
