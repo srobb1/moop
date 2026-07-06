@@ -353,12 +353,50 @@ function render_db_modal($organism, $data, $organism_data) {
                                 }
                             }
                         }
+                        // This mismatch means the gene set is a ROW in organism.sqlite with no
+                        // matching directory. The feature count tells the admin which case it is:
+                        // an empty leftover row (0) vs a real gene set whose data was not deployed (>0).
+                        $gs_feature_count = null;
+                        if (!empty($data['db_file']) && file_exists($data['db_file'])) {
+                            try {
+                                $_dbh  = new PDO('sqlite:' . $data['db_file']);
+                                $_dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                                $_stmt = $_dbh->prepare(
+                                    'SELECT COUNT(*) FROM feature f
+                                     JOIN gene_set gs ON gs.gene_set_id = f.gene_set_id
+                                     WHERE gs.gene_set_name = ?'
+                                );
+                                $_stmt->execute([$mismatch['gene_set_name']]);
+                                $gs_feature_count = (int) $_stmt->fetchColumn();
+                                $_dbh = null;
+                            } catch (PDOException $e) {
+                                $gs_feature_count = null;
+                            }
+                        }
                       ?>
-                      <span class="badge bg-warning text-dark">Missing gene set dir</span>
+                      <span class="badge bg-warning text-dark">Gene set in DB, no directory</span>
                       <small class="text-muted ms-1">
+                        Gene set <code><?= htmlspecialchars($mismatch['gene_set_name']) ?></code> is a row in
+                        <code>organism.sqlite</code> (assembly <code><?= htmlspecialchars($mismatch['assembly_dir']) ?></code>),
+                        but its directory
                         <code><?= htmlspecialchars($mismatch['assembly_dir']) ?>/<?= htmlspecialchars($mismatch['gene_set_name']) ?>/</code>
-                        not found on disk
+                        does not exist on disk<?php if ($gs_feature_count !== null): ?> (<?= number_format($gs_feature_count) ?> features in DB)<?php endif; ?>.
                       </small>
+                      <?php if ($gs_feature_count === 0): ?>
+                        <div class="mt-2 p-2 border rounded bg-light small">
+                          <i class="fa fa-info-circle text-secondary"></i>
+                          <strong>0 features</strong> — this is a <strong>stale leftover row</strong> from a previous import.
+                          Fix it by re-importing a corrected <code>organism.sqlite</code> (or deleting the row);
+                          do <strong>not</strong> create a directory. Renaming a directory will not help here.
+                        </div>
+                      <?php elseif ($gs_feature_count > 0): ?>
+                        <div class="mt-2 p-2 border rounded bg-light small">
+                          <i class="fa fa-info-circle text-secondary"></i>
+                          This gene set has <strong><?= number_format($gs_feature_count) ?> features</strong> in the database,
+                          so its data directory is expected but missing. Restore/copy the
+                          <code><?= htmlspecialchars($mismatch['gene_set_name']) ?>/</code> directory, or rename an existing one to match below.
+                        </div>
+                      <?php endif; ?>
                       <?php if (!empty($existing_gs_dirs)): ?>
                         <div class="mt-2 p-2 border rounded bg-light">
                           <p class="mb-1 small"><strong>Rename an existing directory to match:</strong></p>
