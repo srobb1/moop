@@ -218,10 +218,12 @@
     <h3 class="mb-3"><i class="fa fa-database"></i> Data Management</h3>
 
     <?php
-      $generated  = $cache_info['generated'] ?? null;
-      $org_count  = $cache_info['organism_count'] ?? 0;
-      $refreshing = $cache_info['refreshing'] ?? false;
-      $age_str    = 'never built';
+      $generated   = $cache_info['generated'] ?? null;
+      $org_count   = $cache_info['organism_count'] ?? 0;
+      $refreshing  = $cache_info['refreshing'] ?? false;
+      $stale       = ($cache_stale ?? false) && !$refreshing;
+      $changed     = $cache_changed_orgs ?? [];
+      $age_str     = 'never built';
       if ($generated) {
           $sec = time() - strtotime($generated);
           if ($sec < 60)        $age_str = $sec . 's ago';
@@ -229,8 +231,15 @@
           elseif ($sec < 86400) $age_str = floor($sec/3600) . 'h ago';
           else                  $age_str = floor($sec/86400) . 'd ago';
       }
+      // Preview a few changed organism names, then "+N more".
+      $changed_preview = '';
+      if (!empty($changed)) {
+          $changed_preview = htmlspecialchars(implode(', ', array_slice($changed, 0, 4)));
+          if (count($changed) > 4) $changed_preview .= ' +' . (count($changed) - 4) . ' more';
+      }
+      $alert_class = (!$generated || $stale) ? 'alert-warning' : 'alert-secondary';
     ?>
-    <div class="alert <?= $generated ? 'alert-secondary' : 'alert-warning' ?> mb-4">
+    <div class="alert <?= $alert_class ?> mb-4">
       <div class="d-flex align-items-center justify-content-between gap-3">
         <div>
           <i class="fa fa-sync-alt me-2"></i>
@@ -238,16 +247,19 @@
           <span id="dashCacheSummary">
             <?php if ($refreshing): ?>
               <span class="text-primary"><i class="fa fa-spinner fa-spin"></i> Refresh in progress…</span>
-            <?php elseif ($generated): ?>
-              <?= $org_count ?> organisms, last updated <strong><?= htmlspecialchars($age_str) ?></strong>
-            <?php else: ?>
+            <?php elseif (!$generated): ?>
               Cache not built yet — organism data may not be visible
+            <?php elseif ($stale): ?>
+              <i class="fa fa-exclamation-triangle"></i>
+              <strong>Out of date</strong> — <?= count($changed) ?> organism<?= count($changed) === 1 ? '' : 's' ?> changed since it was built<?= $changed_preview ? ' (' . $changed_preview . ')' : '' ?>. Re-cache recommended.
+            <?php else: ?>
+              <i class="fa fa-check text-success"></i> Up to date — <?= $org_count ?> organisms, built <strong><?= htmlspecialchars($age_str) ?></strong>
             <?php endif; ?>
           </span>
         </div>
         <div class="d-flex align-items-center gap-2 flex-shrink-0">
           <button id="dashRefreshBtn"
-                  class="btn btn-sm <?= $generated ? 'btn-outline-secondary' : 'btn-warning' ?>"
+                  class="btn btn-sm <?= (!$generated || $stale) ? 'btn-warning' : 'btn-outline-secondary' ?>"
                   onclick="startOrganismCacheRefresh(this)"
                   <?= $refreshing ? 'disabled' : '' ?>>
             <i class="fa fa-sync-alt"></i> <?= $refreshing ? 'Refreshing…' : 'Update Cache' ?>

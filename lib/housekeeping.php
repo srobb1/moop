@@ -530,13 +530,24 @@ function housekeeping_refresh_organism_cache_if_stale() {
         @unlink($lock_file); // stale lock
     }
 
-    $refresh_interval = 12 * 3600; // re-scan at most every 12 hours
-    $last_generated   = null;
+    // Only refresh when the underlying data actually changed — a DB rebuilt/copied over,
+    // groups or taxonomy edited — detected via the same fingerprints the warm script and
+    // dashboard use, rather than on a fixed timer. Keeps refreshes out of the admin's way:
+    // the only slow case is a big rebuild, and it runs in the background below.
     if (file_exists($cache_file)) {
         $raw = json_decode(file_get_contents($cache_file), true);
-        $last_generated = $raw['generated'] ?? null;
+        if ($raw && isset($raw['org_fingerprints'], $raw['config_fingerprint'])
+            && function_exists('buildPerOrganismFingerprints') && function_exists('buildConfigFingerprint')) {
+            $metadata_path      = $config->getPath('metadata_path');
+            $taxonomy_tree_file = "$metadata_path/taxonomy_tree_config.json";
+            $groups_file        = "$metadata_path/organism_assembly_groups.json";
+            if ($raw['org_fingerprints'] === buildPerOrganismFingerprints($organism_data)
+                && $raw['config_fingerprint'] === buildConfigFingerprint($taxonomy_tree_file, $groups_file)) {
+                return; // nothing changed — no refresh needed
+            }
+        }
+        // A cache with no fingerprints (older format) or unreadable → fall through and refresh.
     }
-    if ($last_generated && (time() - strtotime($last_generated)) < $refresh_interval) return;
 
     file_put_contents($lock_file, '0');
     $shell_cmd = 'echo $$ > ' . escapeshellarg($lock_file) . ' ; '

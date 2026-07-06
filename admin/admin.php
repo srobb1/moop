@@ -28,6 +28,8 @@ $lock_file     = "$organism_data/.organism_cache_lock";
 $cache_info    = ['generated' => null, 'organism_count' => 0, 'refreshing' => false];
 $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0];
 $_raw_cache_data = [];
+$cache_stale = false;      // true when live data fingerprints differ from the cache's
+$cache_changed_orgs = [];  // organisms whose data changed since the cache was built
 if (file_exists($cache_file)) {
     $raw = json_decode(file_get_contents($cache_file), true);
     if ($raw) {
@@ -35,13 +37,31 @@ if (file_exists($cache_file)) {
         $cache_info['organism_count'] = count($raw['data'] ?? []);
         $_raw_cache_data = $raw['data'] ?? [];
         // not_in_tree is stable between group edits — reading from cache is fine.
-        // The cache itself is kept fresh automatically by
-        // housekeeping_refresh_organism_cache_if_stale() (at most ~12h old).
         foreach ($_raw_cache_data as $_org_data) {
             $_checks = $_org_data['overall_status']['checks'] ?? [];
             if (isset($_checks['in_taxonomy_tree']) && !$_checks['in_taxonomy_tree']) {
                 $health_alerts['not_in_tree']++;
             }
+        }
+        // Content-based staleness: compare the CURRENT data fingerprints against the ones
+        // stored when the cache was built, so we flag "your data actually changed" (a DB
+        // rebuilt/copied over, groups/taxonomy edited) instead of nagging by age. Cheap
+        // (~3ms: organism.sqlite mtimes + two config files). This is what the drift/orphan
+        // checks below depend on — a stale cache silently hides real problems.
+        if (function_exists('buildPerOrganismFingerprints') && function_exists('buildConfigFingerprint')) {
+            $_meta_path   = $config->getPath('metadata_path');
+            $_cur_org_fps = buildPerOrganismFingerprints($organism_data);
+            $_cur_cfg_fp  = buildConfigFingerprint("$_meta_path/taxonomy_tree_config.json", "$_meta_path/organism_assembly_groups.json");
+            $_cached_org_fps = $raw['org_fingerprints'] ?? [];
+            foreach ($_cur_org_fps as $_o => $_fp) {
+                if (!isset($_cached_org_fps[$_o]) || $_cached_org_fps[$_o] !== $_fp) $cache_changed_orgs[] = $_o;
+            }
+            foreach ($_cached_org_fps as $_o => $_fp) {
+                if (!isset($_cur_org_fps[$_o])) $cache_changed_orgs[] = $_o . ' (removed)';
+            }
+            sort($cache_changed_orgs);
+            $_config_changed = isset($raw['config_fingerprint']) && $raw['config_fingerprint'] !== $_cur_cfg_fp;
+            $cache_stale = !empty($cache_changed_orgs) || $_config_changed;
         }
     }
 }
@@ -97,6 +117,8 @@ $data = [
     'site' => $site,
     'site_data_backup' => $_SESSION['site_data_backup'] ?? null,
     'cache_info' => $cache_info,
+    'cache_stale' => $cache_stale,
+    'cache_changed_orgs' => $cache_changed_orgs,
     'health_alerts' => $health_alerts,
     'new_gene_set_tuples' => $_new_gene_set_tuples,
     'orphaned_gene_set_tuples' => $_orphaned_gene_set_tuples,

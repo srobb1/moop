@@ -64,7 +64,7 @@ $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
         </li>
         <?php if (is_logged_in() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
         <li class="nav-item">
-          <a class="nav-link" href="/<?= $site ?>/admin/admin.php"><i class="fa fa-tools me-1"></i> Admin Tools</a>
+          <a id="admin_tools_link" class="nav-link" href="/<?= $site ?>/admin/admin.php"><i class="fa fa-tools me-1"></i> Admin Tools</a>
         </li>
         <?php endif; ?>
       </ul>
@@ -86,3 +86,31 @@ $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
     </div>
   </div>
 </nav>
+
+<?php if (is_logged_in() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+<!-- Admin dashboard loading overlay. The dashboard's first load per session can be slow
+     (once-per-session housekeeping snapshot + cold DB reads right after a data rebuild),
+     so give the admin immediate feedback instead of a frozen page — otherwise it looks
+     broken and they click the link repeatedly. Cleared automatically when the next page loads. -->
+<div id="adminLoadingOverlay"
+     style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(15,23,42,.78);
+            align-items:center;justify-content:center;flex-direction:column;color:#fff;text-align:center;padding:1rem;">
+  <div class="spinner-border mb-3" role="status" style="width:3rem;height:3rem;color:#0891b2;"></div>
+  <div style="font-size:1.1rem;">Loading admin dashboard…</div>
+  <div style="font-size:.85rem;opacity:.75;margin-top:.4rem;">The first load after a data rebuild can take a moment.</div>
+</div>
+<script>
+(function () {
+  var link = document.getElementById('admin_tools_link');
+  var overlay = document.getElementById('adminLoadingOverlay');
+  if (!link || !overlay) return;
+  link.addEventListener('click', function (e) {
+    // Skip modified clicks (open-in-new-tab etc.) — the current page isn't navigating away.
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    overlay.style.display = 'flex';
+    link.style.pointerEvents = 'none';
+    link.classList.add('disabled');
+  });
+})();
+</script>
+<?php endif; ?>

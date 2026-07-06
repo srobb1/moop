@@ -47,6 +47,14 @@ include_once __DIR__ . '/../lib/functions_display.php';
 include_once __DIR__ . '/../lib/functions_filesystem.php';
 include_once __DIR__ . '/../lib/housekeeping.php';
 
+// Admin pages do more work than public pages (once-per-session housekeeping snapshot,
+// drift scans, cold-DB reads right after a rebuild). Give them more headroom than the
+// global 30s max_execution_time so a slow cold first-load isn't killed mid-render.
+// NOTE: for the full effect the server's nginx `fastcgi_read_timeout` should also be
+// raised for the /admin/ location — max_execution_time only bounds CPU time, not the
+// I/O wait of cold disk reads, which is what the gateway timeout measures.
+@set_time_limit(180);
+
 // CSRF protection - verify token on every POST request.
 // This covers all admin pages and admin API endpoints in one place.
 // AJAX requests are covered automatically: csrf.js attaches the token as
