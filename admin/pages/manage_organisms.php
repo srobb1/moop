@@ -52,7 +52,13 @@
         <p><strong>Performance Note:</strong> This page always loads instantly from a pre-built cache.
         Click <strong>Refresh Cache</strong> to rebuild it in the background — the page reloads automatically
         when the scan finishes. You never need to wait for a scan during page load.</p>
-        
+
+        <p><strong>After an <code>rsync</code>, <code>cp -p</code>, <code>tar</code> extract, or restore-from-backup:</strong>
+        those tools preserve the original file timestamps. The change detection now also compares file
+        <em>size</em>, so a re-synced organism is normally caught automatically — but if the checklist ever
+        looks out of date after such a copy, click <strong>Force Rescan</strong> to rebuild the cache from
+        scratch regardless of timestamps.</p>
+
         <p class="mb-0"><strong>What You Can Do:</strong></p>
         <ul class="mb-0">
           <li>View all organisms and their status at a glance</li>
