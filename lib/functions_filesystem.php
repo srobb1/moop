@@ -69,9 +69,8 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
     }
     
     try {
-        $dbh = new PDO("sqlite:" . $dbFile);
-        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
+        $dbh = getDbConnection($dbFile);
+
         // Get all genome records
         $stmt = $dbh->query("SELECT genome_id, genome_name, genome_accession FROM genome ORDER BY genome_name");
         $genomes = $stmt->fetchAll(PDO::FETCH_ASSOC);

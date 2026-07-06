@@ -20,7 +20,7 @@ function validateDatabaseFile($dbFile) {
     }
     
     try {
-        $db = new PDO('sqlite:' . $dbFile);
+        $db = getDbConnection($dbFile);
         $db = null;
         return ['valid' => true, 'error' => ''];
     } catch (Exception $e) {
@@ -69,8 +69,7 @@ function validateDatabaseIntegrity($dbFile) {
     
     // Try to connect to database
     try {
-        $dbh = new PDO("sqlite:" . $dbFile);
-        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $dbh = getDbConnection($dbFile);
     } catch (PDOException $e) {
         $result['errors'][] = 'Invalid SQLite database: ' . $e->getMessage();
         return $result;
@@ -221,19 +220,20 @@ function validateDatabaseIntegrity($dbFile) {
  * @throws PDOException if connection fails
  */
 function getDbConnection($dbFile) {
-    try {
-        $dbh = new PDO("sqlite:" . $dbFile);
-        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
-        // Register custom REGEXP function for word boundary matching
-        $dbh->sqliteCreateFunction('REGEXP', function($pattern, $text) {
-            return preg_match('/' . $pattern . '/i', $text) ? 1 : 0;
-        }, 2);
-        
-        return $dbh;
-    } catch (PDOException $e) {
-        die("Database connection failed: " . $e->getMessage());
-    }
+    // The single door for every SQLite connection in MOOP. Sets strict error mode so a
+    // failed query THROWS instead of silently returning wrong/empty results (the class of
+    // bug that made search hide its own failures), and registers the REGEXP helper.
+    //
+    // Throws PDOException on failure — it deliberately does NOT die(). Callers wrap this
+    // in their own try/catch and decide what a failure means: surface a warning, report a
+    // validation error, fall back to defaults, or let it bubble to a 500. die()-ing here
+    // would stop validation probes and graceful-fallback callers from using this door.
+    $dbh = new PDO("sqlite:" . $dbFile);
+    $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $dbh->sqliteCreateFunction('REGEXP', function($pattern, $text) {
+        return preg_match('/' . $pattern . '/i', $text) ? 1 : 0;
+    }, 2);
+    return $dbh;
 }
 
 /**
@@ -416,9 +416,8 @@ function getOrganismAssemblies($organism_name, $organism_data_dir) {
     }
     
     try {
-        $dbh = new PDO("sqlite:" . $db_path);
-        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
+        $dbh = getDbConnection($db_path);
+
         $stmt = $dbh->query("SELECT genome_accession FROM genome ORDER BY genome_name ASC");
         $genomes = $stmt->fetchAll(PDO::FETCH_COLUMN);
         

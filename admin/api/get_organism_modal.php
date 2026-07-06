@@ -200,8 +200,7 @@ function render_db_modal($organism, $data, $organism_data) {
         $gene_set_query_error = null;
         if ($data['db_file'] && $data['db_validation']['readable'] ?? false) {
             try {
-                $gs_dbh = new PDO("sqlite:" . $data['db_file']);
-                $gs_dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $gs_dbh = getDbConnection($data['db_file']);
                 $gs_stmt = $gs_dbh->query("
                     SELECT gs.gene_set_id, gs.gene_set_name, gs.gene_set_description,
                            g.genome_id, g.genome_name, g.genome_accession
@@ -359,8 +358,7 @@ function render_db_modal($organism, $data, $organism_data) {
                         $gs_feature_count = null;
                         if (!empty($data['db_file']) && file_exists($data['db_file'])) {
                             try {
-                                $_dbh  = new PDO('sqlite:' . $data['db_file']);
-                                $_dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                                $_dbh  = getDbConnection($data['db_file']);
                                 $_stmt = $_dbh->prepare(
                                     'SELECT COUNT(*) FROM feature f
                                      JOIN gene_set gs ON gs.gene_set_id = f.gene_set_id

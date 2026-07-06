@@ -168,7 +168,7 @@ function buildTypedIds(array $uniquenames, string $db_path): array {
     }
     $placeholders = implode(',', array_fill(0, count($uniquenames), '?'));
     try {
-        $dbh  = new PDO('sqlite:' . $db_path);
+        $dbh  = getDbConnection($db_path);
         $stmt = $dbh->prepare(
             "SELECT feature_uniquename, feature_type FROM feature WHERE feature_uniquename IN ($placeholders)"
         );
@@ -200,7 +200,7 @@ function buildTypedIdsForGenes(array $gene_uniquenames, int $gene_set_id, string
 
     $gp = implode(',', array_fill(0, count($gene_uniquenames), '?'));
     try {
-        $dbh = new PDO('sqlite:' . $db_path);
+        $dbh = getDbConnection($db_path);
 
         // Level 1: direct mRNA/transcript children of the genes
         $stmt = $dbh->prepare(

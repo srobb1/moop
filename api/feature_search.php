@@ -56,8 +56,9 @@ $results       = [];
 
 foreach ($batches as $batch) {
     try {
-        $pdo = new PDO('sqlite::memory:');
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        // In-memory coordinator DB for batched cross-organism ATTACH — still routed
+        // through the one door so it gets strict error mode consistently.
+        $pdo = getDbConnection(':memory:');
 
         $parts  = [];
         $params = [];
