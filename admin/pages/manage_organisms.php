@@ -237,16 +237,14 @@
   <?php include __DIR__ . '/_data_health_card.php'; ?>
 
   <?php if (!empty($stale_organisms)): ?>
-  <div class="alert alert-warning d-flex align-items-center justify-content-between gap-3 mb-4" id="staleBanner">
-    <div>
-      <i class="fa fa-exclamation-triangle me-2"></i>
-      <strong><?= count($stale_organisms) === count($organisms) ? 'All organisms may be out of date' : count($stale_organisms) . ' organism' . (count($stale_organisms) > 1 ? 's' : '') . ' may be out of date' ?></strong>
-      — <?= htmlspecialchars($cache_stale_reason) ?>.
-      Rows marked <span class="badge bg-warning text-dark"><i class="fa fa-clock"></i> Stale</span> may show outdated status.
-    </div>
-    <button class="btn btn-warning btn-sm fw-bold flex-shrink-0" onclick="rescanOrganisms(this)" id="rescanBtnBanner">
-      <i class="fa fa-sync-alt"></i> Update Cache
-    </button>
+  <!-- The "cache out of date" warning + Update Cache button live in the Data Health card
+       above; this stays only to explain the per-row Stale badges on the table below. -->
+  <div class="alert alert-secondary d-flex align-items-center gap-2 mb-4 py-2" id="staleBanner">
+    <i class="fa fa-clock text-warning"></i>
+    <small>
+      Rows marked <span class="badge bg-warning text-dark"><i class="fa fa-clock"></i> Stale</span>
+      changed since the cache was built and may show outdated status — refresh via <strong>Update Cache</strong> in the notice above.
+    </small>
   </div>
   <?php elseif (empty($organisms)): ?>
   <div class="alert alert-info mb-4">
