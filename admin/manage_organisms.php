@@ -80,6 +80,10 @@ if ($raw_cache) {
     }
 }
 
+// Data health alerts — same shared helper the dashboard uses, so both pages show the
+// SAME warnings (ungrouped, orphaned gene sets, not-in-tree, stale groups, new gene sets).
+$_health = computeDataHealthAlerts($organism_data);
+
 // Handle image upload via AJAX
 include_once __DIR__ . '/api/handle_image_upload.php';
 handleImageUpload($config);
@@ -305,6 +309,9 @@ $data = [
     'cache_generated' => $cache_generated,
     'stale_organisms' => $stale_organisms,
     'cache_stale_reason' => $cache_stale_reason,
+    'health_alerts' => $_health['health_alerts'],
+    'orphaned_gene_set_tuples' => $_health['orphaned_gene_set_tuples'],
+    'new_gene_set_tuples' => $_health['new_gene_set_tuples'],
     'lineage_cache_generated' => $lineage_cache_generated,
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',

@@ -233,6 +233,9 @@
   </div>
 
 
+  <!-- Data Health Issues (shared partial — identical card on the Admin Dashboard) -->
+  <?php include __DIR__ . '/_data_health_card.php'; ?>
+
   <?php if (!empty($stale_organisms)): ?>
   <div class="alert alert-warning d-flex align-items-center justify-content-between gap-3 mb-4" id="staleBanner">
     <div>

@@ -1247,6 +1247,73 @@ function getOrphanedGeneSetTuples(string $organism_data_path): array {
 }
 
 /**
+ * Compute the "data health" alerts shown on BOTH the admin dashboard and the manage
+ * organisms page. Single source of truth so the two pages never drift. Reads the
+ * organism cache (.organism_cache.json) for taxonomy membership + which assemblies
+ * exist, and the LIVE groups file for grouping checks (so it stays accurate right
+ * after a group edit without waiting for a cache refresh). Cheap (~8ms).
+ *
+ * @param string $organism_data_path
+ * @return array{
+ *   health_alerts: array{ungrouped:int,not_in_tree:int,stale_groups:int,new_gene_sets:int,orphaned_gene_sets:int},
+ *   orphaned_gene_set_tuples: array,
+ *   new_gene_set_tuples: array
+ * }
+ */
+function computeDataHealthAlerts(string $organism_data_path): array {
+    $config        = ConfigManager::getInstance();
+    $metadata_path = $config->getPath('metadata_path');
+    $cache_file    = "$organism_data_path/.organism_cache.json";
+    $groups_file   = "$metadata_path/organism_assembly_groups.json";
+
+    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0];
+
+    // Cache-driven: taxonomy-tree membership + the list of assemblies per organism.
+    $cache_data = [];
+    if (file_exists($cache_file)) {
+        $raw = json_decode(file_get_contents($cache_file), true);
+        $cache_data = $raw['data'] ?? [];
+    }
+    foreach ($cache_data as $org_data) {
+        $checks = $org_data['overall_status']['checks'] ?? [];
+        if (isset($checks['in_taxonomy_tree']) && !$checks['in_taxonomy_tree']) {
+            $health_alerts['not_in_tree']++;
+        }
+    }
+
+    // Gene-set dirs on disk with no matching DB row (dropped in a rebuild, not cleaned up).
+    $orphaned_gene_set_tuples = getOrphanedGeneSetTuples($organism_data_path);
+    $health_alerts['orphaned_gene_sets'] = count($orphaned_gene_set_tuples);
+
+    // LIVE groups file — keeps grouping checks accurate right after a group edit.
+    $gd = file_exists($groups_file) ? (json_decode(file_get_contents($groups_file), true) ?? []) : [];
+    $grouped_pairs = [];
+    foreach ($gd as $ge) {
+        if (!empty($ge['groups'])) $grouped_pairs[$ge['organism'] . '/' . $ge['assembly']] = true;
+    }
+    // Organisms where any cached assembly has no group entry (invisible to users).
+    foreach ($cache_data as $org_name => $org_data) {
+        foreach ($org_data['assemblies'] ?? [] as $asm) {
+            if (!isset($grouped_pairs["$org_name/$asm"])) { $health_alerts['ungrouped']++; break; }
+        }
+    }
+    // Group entries whose gene-set directory no longer exists on disk.
+    foreach ($gd as $ge) {
+        $gs = $ge['gene_set'] ?? 'v1';
+        if (!is_dir("$organism_data_path/{$ge['organism']}/{$ge['assembly']}/$gs")) $health_alerts['stale_groups']++;
+    }
+    // Gene-set dirs on disk with no groups.json entry at all (checked per gene set).
+    $new_gene_set_tuples = getUnrepresentedGeneSetTuples(getOrganismsWithAssemblies($organism_data_path), $organism_data_path, $gd);
+    $health_alerts['new_gene_sets'] = count($new_gene_set_tuples);
+
+    return [
+        'health_alerts'            => $health_alerts,
+        'orphaned_gene_set_tuples' => $orphaned_gene_set_tuples,
+        'new_gene_set_tuples'      => $new_gene_set_tuples,
+    ];
+}
+
+/**
  * Get organism info with caching.
  *
  * Returns cached data from organisms/.organism_cache.json if the fingerprint

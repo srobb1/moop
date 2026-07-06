@@ -36,13 +36,6 @@ if (file_exists($cache_file)) {
         $cache_info['generated']      = $raw['generated'] ?? null;
         $cache_info['organism_count'] = count($raw['data'] ?? []);
         $_raw_cache_data = $raw['data'] ?? [];
-        // not_in_tree is stable between group edits — reading from cache is fine.
-        foreach ($_raw_cache_data as $_org_data) {
-            $_checks = $_org_data['overall_status']['checks'] ?? [];
-            if (isset($_checks['in_taxonomy_tree']) && !$_checks['in_taxonomy_tree']) {
-                $health_alerts['not_in_tree']++;
-            }
-        }
         // Content-based staleness: compare the CURRENT data fingerprints against the ones
         // stored when the cache was built, so we flag "your data actually changed" (a DB
         // rebuilt/copied over, groups/taxonomy edited) instead of nagging by age. Cheap
@@ -65,50 +58,16 @@ if (file_exists($cache_file)) {
         }
     }
 }
-// Gene_set directories on disk with no matching row in their organism's DB — e.g.
-// dropped upstream during a DB rebuild but never cleaned up here. Also cache-driven.
-$_orphaned_gene_set_tuples = getOrphanedGeneSetTuples($organism_data);
-$health_alerts['orphaned_gene_sets'] = count($_orphaned_gene_set_tuples);
 if (file_exists($lock_file) && (time() - filemtime($lock_file)) < 600) {
     $cache_info['refreshing'] = true;
 }
-// Count ungrouped organisms and stale group entries using the LIVE groups file so
-// the dashboard stays accurate after group edits without requiring a cache refresh.
-$_groups_file = $config->getPath('metadata_path') . '/organism_assembly_groups.json';
-$_gd = file_exists($_groups_file) ? (json_decode(file_get_contents($_groups_file), true) ?? []) : [];
-// Build set of (organism/assembly) pairs that have at least one group assigned
-$_grouped_pairs = [];
-foreach ($_gd as $_ge) {
-    if (!empty($_ge['groups'])) {
-        $_grouped_pairs[$_ge['organism'] . '/' . $_ge['assembly']] = true;
-    }
-}
-// Count organisms where any assembly in the cache has no group entry
-foreach ($_raw_cache_data as $_org_name => $_org_data) {
-    foreach ($_org_data['assemblies'] ?? [] as $_asm) {
-        if (!isset($_grouped_pairs[$_org_name . '/' . $_asm])) {
-            $health_alerts['ungrouped']++;
-            break;
-        }
-    }
-}
-// Count stale group entries (in JSON but directory no longer on disk)
-foreach ($_gd as $_ge) {
-    $_gs = $_ge['gene_set'] ?? 'v1';
-    $_gs_path = $organism_data . '/' . $_ge['organism'] . '/' . $_ge['assembly'] . '/' . $_gs;
-    if (!is_dir($_gs_path)) {
-        $health_alerts['stale_groups']++;
-    }
-}
-// Gene_set directories that exist on disk but have no groups.json entry at all —
-// e.g. a newly-added gene set nobody has granted access to yet. Checked at
-// gene_set granularity (not just organism/assembly) so adding a gene set to an
-// already-grouped assembly doesn't silently hide the gap — see
-// getUnrepresentedGeneSetTuples() for why the coarser check misses this.
-$_all_organisms = getOrganismsWithAssemblies($organism_data);
-$_new_gene_set_tuples = getUnrepresentedGeneSetTuples($_all_organisms, $organism_data, $_gd);
-$health_alerts['new_gene_sets'] = count($_new_gene_set_tuples);
-unset($_gd, $_ge, $_gs, $_gs_path, $_groups_file, $_org_data, $_org_name, $_asm, $_checks, $_grouped_pairs, $_raw_cache_data, $_all_organisms);
+// Data health alerts — computed by a shared helper so the dashboard and the manage
+// organisms page always show the SAME issues (single source of truth).
+$_health = computeDataHealthAlerts($organism_data);
+$health_alerts             = $_health['health_alerts'];
+$_orphaned_gene_set_tuples = $_health['orphaned_gene_set_tuples'];
+$_new_gene_set_tuples      = $_health['new_gene_set_tuples'];
+unset($_raw_cache_data, $_health);
 
 // Prepare data for content file
 // Site-data backup status comes from housekeeping (stored in session)
