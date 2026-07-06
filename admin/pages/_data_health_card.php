@@ -12,10 +12,13 @@ $health_alerts = ($health_alerts ?? []) + [
     'ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0,
 ];
 $orphaned_gene_set_tuples = $orphaned_gene_set_tuples ?? [];
+$cache_stale        = $cache_stale ?? false;
+$cache_changed_orgs = $cache_changed_orgs ?? [];
 
-$has_health_issues = ($health_alerts['ungrouped'] > 0 || $health_alerts['not_in_tree'] > 0
-                    || $health_alerts['stale_groups'] > 0 || $health_alerts['new_gene_sets'] > 0
-                    || $health_alerts['orphaned_gene_sets'] > 0);
+$_any_data_issue = ($health_alerts['ungrouped'] > 0 || $health_alerts['not_in_tree'] > 0
+                  || $health_alerts['stale_groups'] > 0 || $health_alerts['new_gene_sets'] > 0
+                  || $health_alerts['orphaned_gene_sets'] > 0);
+$has_health_issues = $cache_stale || $_any_data_issue;
 if ($has_health_issues):
     $_after_ungrouped   = $health_alerts['new_gene_sets'] > 0 || $health_alerts['stale_groups'] > 0 || $health_alerts['orphaned_gene_sets'] > 0 || $health_alerts['not_in_tree'] > 0;
     $_after_new_gs      = $health_alerts['stale_groups'] > 0 || $health_alerts['orphaned_gene_sets'] > 0 || $health_alerts['not_in_tree'] > 0;
@@ -27,6 +30,31 @@ if ($has_health_issues):
     <h5 class="mb-0"><i class="fa fa-exclamation-triangle text-warning"></i> Data Health Issues</h5>
   </div>
   <div class="card-body p-0">
+    <?php if ($cache_stale):
+      $_n = count($cache_changed_orgs);
+      $_preview = '';
+      if ($_n > 0) {
+          $_preview = htmlspecialchars(implode(', ', array_slice($cache_changed_orgs, 0, 4)));
+          if ($_n > 4) $_preview .= ' +' . ($_n - 4) . ' more';
+      }
+    ?>
+    <div class="alert alert-warning mb-0 border-0 rounded-0 <?= $_any_data_issue ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
+      <div>
+        <i class="fa fa-sync-alt me-2"></i>
+        <strong>Organism cache out of date</strong> —
+        <?php if ($_n > 0): ?>
+          <?= $_n ?> organism<?= $_n === 1 ? '' : 's' ?> changed since it was built (<?= $_preview ?>).
+        <?php else: ?>
+          groups or taxonomy config changed since it was built.
+        <?php endif; ?>
+        Re-cache recommended — the orphan/drift checks below read the cache, so they can be out of date until you refresh.
+      </div>
+      <button class="btn btn-sm btn-warning flex-shrink-0"
+              onclick="var f=window.startOrganismCacheRefresh||window.rescanOrganisms; if(f) f(this);">
+        <i class="fa fa-sync-alt"></i> Update Cache
+      </button>
+    </div>
+    <?php endif; ?>
     <?php if ($health_alerts['ungrouped'] > 0): ?>
     <div class="alert alert-warning mb-0 border-0 rounded-0 <?= $_after_ungrouped ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
       <div>

@@ -312,6 +312,11 @@ $data = [
     'health_alerts' => $_health['health_alerts'],
     'orphaned_gene_set_tuples' => $_health['orphaned_gene_set_tuples'],
     'new_gene_set_tuples' => $_health['new_gene_set_tuples'],
+    // Reuse this page's existing staleness computation for the shared health card's
+    // "cache out of date" notice ($stale_organisms = per-org changes; reason covers
+    // the config-only case where no individual organism file changed).
+    'cache_stale' => ($cache_stale_reason !== null),
+    'cache_changed_orgs' => $stale_organisms,
     'lineage_cache_generated' => $lineage_cache_generated,
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',

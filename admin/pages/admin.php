@@ -172,7 +172,7 @@
               Cache not built yet — organism data may not be visible
             <?php elseif ($stale): ?>
               <i class="fa fa-exclamation-triangle"></i>
-              <strong>Out of date</strong> — <?= count($changed) ?> organism<?= count($changed) === 1 ? '' : 's' ?> changed since it was built<?= $changed_preview ? ' (' . $changed_preview . ')' : '' ?>. Re-cache recommended.
+              <strong>Out of date</strong> — <?= count($changed) ?> organism<?= count($changed) === 1 ? '' : 's' ?> changed. Re-cache recommended.
             <?php else: ?>
               <i class="fa fa-check text-success"></i> Up to date — <?= $org_count ?> organisms, built <strong><?= htmlspecialchars($age_str) ?></strong>
             <?php endif; ?>
