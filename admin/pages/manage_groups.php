@@ -296,6 +296,13 @@
 
   <!-- Manage Group Descriptions Section -->
   <h3 class="mt-5 mb-4"><i class="fa fa-file-text"></i> Group Descriptions</h3>
+
+  <p class="text-muted mb-3">
+    <i class="fa fa-star" style="color:#f59e0b;"></i>
+    The star next to each group marks it as <strong>Featured</strong> — featured groups appear as
+    quick-access cards on the site's home page. Click a star to add or remove a group from that
+    home-page selection.
+  </p>
   
   <?php 
     echo generatePermissionAlert(
