@@ -320,350 +320,201 @@ function getAssemblyGeneSets($assembly, $dbFile) {
 }
 
 /**
- * Search features and annotations by keyword
- * Supports both keyword and quoted phrase searches
- * Used by annotation_search_ajax.php
- * 
- * @param string $search_term - Search term or phrase
- * @param bool $is_quoted_search - Whether this is a quoted phrase search
- * @param string $dbFile - Path to SQLite database
- * @return array - Array of matching features with annotations
+ * Build a safe SQLite FTS5 MATCH expression from already-sanitized search input.
+ *
+ * Keyword mode: every whitespace-separated term becomes a quoted prefix token
+ *   ("term"*) and the terms are AND-ed, so all must appear somewhere in the
+ *   feature's indexed text (any order). Prefix matching lets a query like "wnt"
+ *   reach the gene "wnt8b"; it is NOT substring matching ("inase" never matches
+ *   "kinase"). Quoting each term neutralises FTS5 operators (AND, OR, NEAR, the
+ *   prefix star, column filters) that a user might type, so they stay literal text.
+ * Quoted mode: the whole input is one exact phrase query ("zinc finger").
+ *
+ * The index tokenizer is 'porter unicode61' (see build_fts_index.sql), so matching
+ * is also case/accent-insensitive with English stemming (binding ~ binds ~ bound).
+ *
+ * Returns '' when nothing searchable remains — the caller treats that as no results.
  */
-/**
- * Search features by name and description only — no annotation join.
- * Used when the user has explicitly deselected all annotation sources.
- * Returns rows in the same column format as searchFeaturesAndAnnotations
- * (annotation columns are NULL) so result formatting code is unchanged.
- */
-function searchFeaturesByNameDescription($search_term, $is_quoted_search, $dbFile, $assembly_accession = '', $gene_set_name = '', $scope_pairs = []) {
-    $select = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
-                      NULL AS annotation_accession, NULL AS annotation_description,
-                      NULL AS score, NULL AS date, NULL AS annotation_source_name,
-                      o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
-                      g.genome_accession
-               FROM feature f
-               JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
-               JOIN genome   g  ON gs.genome_id   = g.genome_id
-               JOIN organism o  ON f.organism_id  = o.organism_id";
-
-    $params = [];
-    $where  = [];
+function buildFtsMatchExpr($search_term, $is_quoted_search) {
+    // Wrap a token/phrase as an FTS5 string literal ("" escapes an embedded quote).
+    $as_fts_string = function ($s) { return '"' . str_replace('"', '""', $s) . '"'; };
 
     if ($is_quoted_search) {
-        $like = '%' . $search_term . '%';
-        $where[]  = '(f.feature_name LIKE ? OR f.feature_description LIKE ?)';
-        $params[] = $like;
-        $params[] = $like;
-    } else {
-        $terms = array_filter(array_map('trim', preg_split('/\s+/', $search_term)));
-        if (empty($terms)) return ['results' => [], 'capped' => false, 'warning' => null];
-        foreach ($terms as $term) {
-            $like = '%' . $term . '%';
-            $where[]  = '(f.feature_name LIKE ? OR f.feature_description LIKE ?)';
-            $params[] = $like;
-            $params[] = $like;
-        }
+        if (!preg_match('/[\p{L}\p{N}]/u', $search_term)) return '';
+        return $as_fts_string($search_term);
     }
 
+    $exprs = [];
+    foreach (preg_split('/\s+/', trim($search_term)) as $term) {
+        if ($term === '' || !preg_match('/[\p{L}\p{N}]/u', $term)) continue;
+        $exprs[] = $as_fts_string($term) . '*';   // prefix query, e.g. "wnt8b"*
+    }
+    return implode(' AND ', $exprs);
+}
+
+/**
+ * The first search term, used for the "gene named with the term" ranking tier.
+ * (A gene whose feature_name contains this term is floated to the top of results.)
+ */
+function ftsPrimaryTerm($search_term, $is_quoted_search) {
+    if ($is_quoted_search) return trim($search_term);
+    foreach (preg_split('/\s+/', trim($search_term)) as $term) {
+        if ($term !== '') return $term;
+    }
+    return '';
+}
+
+/**
+ * Append the assembly / gene-set scope filters shared by both FTS search paths.
+ * scope_pairs (list of {assembly, gene_set}) overrides the single assembly/gene_set.
+ */
+function appendScopeFilters(&$sql, &$params, $assembly_accession, $gene_set_name, $scope_pairs) {
     if (!empty($scope_pairs)) {
         $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
-        $where[] = '(' . implode(' OR ', $clauses) . ')';
+        $sql .= ' AND (' . implode(' OR ', $clauses) . ')';
         foreach ($scope_pairs as $pair) {
             $params[] = $pair['assembly'];
             $params[] = $pair['gene_set'];
         }
     } else {
-        if (!empty($assembly_accession)) { $where[] = 'g.genome_accession = ?'; $params[] = $assembly_accession; }
-        if (!empty($gene_set_name))      { $where[] = 'gs.gene_set_name = ?';   $params[] = $gene_set_name; }
+        if (!empty($assembly_accession)) { $sql .= ' AND g.genome_accession = ?'; $params[] = $assembly_accession; }
+        if (!empty($gene_set_name))      { $sql .= ' AND gs.gene_set_name = ?';   $params[] = $gene_set_name; }
     }
+}
 
-    $sql = $select . ' WHERE ' . implode(' AND ', $where) . ' ORDER BY f.feature_uniquename LIMIT 2500';
-
+/**
+ * Execute a prepared FTS search and apply the shared 2,500-row cap + warning.
+ *
+ * The SQL is expected to SELECT one extra row than the cap (LIMIT 2501) so we can
+ * detect "more results exist". Unlike the old LIKE path, DB errors are surfaced
+ * (and logged) instead of being silently swallowed — a missing FTS index (an
+ * organism.sqlite built without build_fts_index.sql) is reported clearly rather
+ * than crashing the whole cross-organism search.
+ */
+function runFtsSearch($dbFile, $sql, $params) {
+    $max_display = 2500;
     try {
-        $dbh  = new PDO('sqlite:' . $dbFile);
+        $dbh  = getDbConnection($dbFile);
         $stmt = $dbh->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return ['results' => $rows, 'capped' => count($rows) >= 2500, 'warning' => null];
-    } catch (Exception $e) {
-        return ['results' => [], 'capped' => false, 'warning' => null];
-    }
-}
-
-function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, $source_names = [], $assembly_accession = '', $gene_set_name = '', $scope_pairs = []) {
-    // Use provided source names filter, or empty array if not provided
-    $source_filter = !empty($source_names) ? $source_names : [];
-    $search_term_clean = $search_term;
-    
-    // Build the WHERE clause for annotations with REGEXP ranking
-    if ($is_quoted_search) {
-        // Exact phrase match
-        $like_pattern = "%$search_term_clean%";
-        $regex_exact = '\b' . preg_quote($search_term_clean, '/') . '\b';
-        $regex_start = '\b' . preg_quote($search_term_clean, '/');
-        $regex_start_of_string = '^' . preg_quote($search_term_clean, '/');
-        
-        $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
-                         a.annotation_accession, a.annotation_description, 
-                         fa.score, fa.date, ans.annotation_source_name, 
-                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
-                         g.genome_accession
-                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, gene_set gs, genome g
-                  WHERE ans.annotation_source_id = a.annotation_source_id
-                    AND f.feature_id = fa.feature_id
-                    AND fa.annotation_id = a.annotation_id
-                    AND f.organism_id = o.organism_id
-                    AND f.gene_set_id = gs.gene_set_id
-                    AND gs.genome_id = g.genome_id
-                    AND (a.annotation_description LIKE ?
-                       OR f.feature_name LIKE ?
-                       OR f.feature_description LIKE ?
-                       OR a.annotation_accession LIKE ?)";
-
-        $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern];
-        
-        // scope_pairs overrides individual assembly/gene_set filters
-        if (!empty($scope_pairs)) {
-            $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
-            $query .= " AND (" . implode(' OR ', $clauses) . ")";
-            foreach ($scope_pairs as $pair) {
-                $params[] = $pair['assembly'];
-                $params[] = $pair['gene_set'];
-            }
-        } else {
-            if (!empty($assembly_accession)) {
-                $query .= " AND g.genome_accession = ?";
-                $params[] = $assembly_accession;
-            }
-            if (!empty($gene_set_name)) {
-                $query .= " AND gs.gene_set_name = ?";
-                $params[] = $gene_set_name;
-            }
-        }
-
-        // Add source filter if specified (exact match with IN)
-        if (!empty($source_filter)) {
-            $placeholders = implode(',', array_fill(0, count($source_filter), '?'));
-            $query .= " AND ans.annotation_source_name IN ($placeholders)";
-            $params = array_merge($params, $source_filter);
-        }
-
-        $query .= " ORDER BY
-                     CASE
-                       WHEN f.feature_name REGEXP ? THEN 1
-                       WHEN f.feature_name REGEXP ? THEN 2
-                       WHEN f.feature_description REGEXP ? THEN 3
-                       WHEN f.feature_description REGEXP ? THEN 4
-                       WHEN f.feature_description LIKE ? THEN 5
-                       WHEN a.annotation_description REGEXP ? THEN 6
-                       ELSE 7
-                     END,
-                     f.feature_uniquename";
-        
-        $params[] = $regex_exact;
-        $params[] = $regex_start;
-        $params[] = $regex_start_of_string;
-        $params[] = $regex_start;
-        $params[] = "%$search_term_clean%";
-        $params[] = $regex_exact;
-        
-    } else {
-        // Multi-term keyword search (all terms must appear somewhere)
-        $terms = array_filter(array_map('trim', preg_split('/\s+/', $search_term_clean)));
-        if (empty($terms)) {
-            return ['results' => [], 'capped' => false, 'warning' => null];
-        }
-        
-        // Extract primary term for relevance scoring (first word of search)
-        $primary_term = $terms[0];
-        $primary_pattern = "%$primary_term%";
-        $regex_exact = '\b' . preg_quote($primary_term, '/') . '\b';
-        $regex_start = '\b' . preg_quote($primary_term, '/');
-        $regex_start_of_string = '^' . preg_quote($primary_term, '/');
-        
-        // Build conditions: (col1 LIKE term1 OR col2 LIKE term1 OR ...) AND (col1 LIKE term2 OR ...)
-        $conditions = [];
-        $params = [];
-        $columns = ['a.annotation_description', 'f.feature_name', 'f.feature_description', 'a.annotation_accession'];
-        
-        foreach ($terms as $term) {
-            $term_conditions = implode(' OR ', array_map(function($col) { return "$col LIKE ?"; }, $columns));
-            $conditions[] = "($term_conditions)";
-            for ($i = 0; $i < count($columns); $i++) {
-                $params[] = "%$term%";
-            }
-        }
-        
-        $where_clause = implode(' AND ', $conditions);
-        
-        $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
-                         a.annotation_accession, a.annotation_description, 
-                         fa.score, fa.date, ans.annotation_source_name, 
-                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
-                         g.genome_accession
-                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, gene_set gs, genome g
-                  WHERE ans.annotation_source_id = a.annotation_source_id
-                    AND f.feature_id = fa.feature_id
-                    AND fa.annotation_id = a.annotation_id
-                    AND f.organism_id = o.organism_id
-                    AND f.gene_set_id = gs.gene_set_id
-                    AND gs.genome_id = g.genome_id
-                    AND $where_clause";
-        
-        // scope_pairs overrides individual assembly/gene_set filters
-        if (!empty($scope_pairs)) {
-            $clauses = array_fill(0, count($scope_pairs), '(g.genome_accession = ? AND gs.gene_set_name = ?)');
-            $query .= " AND (" . implode(' OR ', $clauses) . ")";
-            foreach ($scope_pairs as $pair) {
-                $params[] = $pair['assembly'];
-                $params[] = $pair['gene_set'];
-            }
-        } else {
-            if (!empty($assembly_accession)) {
-                $query .= " AND g.genome_accession = ?";
-                $params[] = $assembly_accession;
-            }
-            if (!empty($gene_set_name)) {
-                $query .= " AND gs.gene_set_name = ?";
-                $params[] = $gene_set_name;
-            }
-        }
-
-        // Add source filter if specified (exact match with IN)
-        if (!empty($source_filter)) {
-            $placeholders = implode(',', array_fill(0, count($source_filter), '?'));
-            $query .= " AND ans.annotation_source_name IN ($placeholders)";
-            $params = array_merge($params, $source_filter);
-        }
-
-        $query .= " ORDER BY
-                    CASE
-                      WHEN f.feature_name REGEXP ? THEN 1
-                      WHEN f.feature_name REGEXP ? THEN 2
-                      WHEN f.feature_description REGEXP ? THEN 3
-                      WHEN f.feature_description REGEXP ? THEN 4
-                      WHEN f.feature_description LIKE ? THEN 5
-                      WHEN a.annotation_description REGEXP ? THEN 6
-                      ELSE 7
-                    END,
-                    f.feature_uniquename";
-        
-        // Add primary term patterns for CASE statement to params
-        $params[] = $regex_exact;
-        $params[] = $regex_start;
-        $params[] = $regex_start_of_string;
-        $params[] = $regex_start;
-        $params[] = "%$primary_term%";
-        $params[] = $regex_exact;
-    }
-    
-    // Use LIMIT+check approach: query for 2501 results to detect if there are more
-    $max_display = 2500;
-    $query .= " LIMIT " . ($max_display + 1);
-    
-    try {
-        $dbh = new PDO("sqlite:" . $dbFile);
-        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
-        // Register REGEXP function
-        $dbh->sqliteCreateFunction('REGEXP', function($pattern, $text) {
-            return preg_match('/' . $pattern . '/i', $text) ? 1 : 0;
-        }, 2);
-        
-        $stmt = $dbh->prepare($query);
-        $stmt->execute($params);
-        $all_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        $dbh = null;
-        
-        // Check if results were capped
-        $capped = count($all_results) > $max_display;
-        $warning = null;
-        
-        if ($capped) {
-            // We got 2501+ results, so we know it's "2500+"
-            $results = array_slice($all_results, 0, $max_display);
-            $warning = "2,500+ results found. Use Advanced Filter or add more search terms to refine.";
-        } else {
-            // We got fewer than 2501, so all results are displayed
-            $results = $all_results;
-        }
-        
-        return [
-            'results' => $results,
-            'capped' => $capped,
-            'warning' => $warning
-        ];
-        
+        $dbh  = null;
     } catch (PDOException $e) {
+        error_log('FTS search failed for ' . $dbFile . ': ' . $e->getMessage());
+        $missing_index = stripos($e->getMessage(), 'no such table') !== false;
         return [
             'results' => [],
-            'capped' => false,
-            'warning' => 'Search error: ' . $e->getMessage()
+            'capped'  => false,
+            'warning' => $missing_index
+                ? 'Search index not built for this organism yet.'
+                : 'Search error.',
         ];
     }
+
+    if (count($rows) > $max_display) {
+        return [
+            'results' => array_slice($rows, 0, $max_display),
+            'capped'  => true,
+            'warning' => '2,500+ results found. Use Advanced Filter or add more search terms to refine.',
+        ];
+    }
+    return ['results' => $rows, 'capped' => false, 'warning' => null];
 }
 
-function searchFeaturesAndAnnotationsLike($search_term, $is_quoted_search, $dbFile) {
-    if ($is_quoted_search) {
-        $like_pattern = "%$search_term%";
-        $params = [$like_pattern, $like_pattern, $like_pattern, $like_pattern];
-    } else {
-        $terms = array_filter(array_map('trim', preg_split('/\s+/', $search_term)));
-        if (empty($terms)) {
-            return [];
-        }
-        
-        $conditions = [];
-        $params = [];
-        $columns = ['a.annotation_description', 'f.feature_name', 'f.feature_description', 'a.annotation_accession'];
-        
-        foreach ($terms as $term) {
-            $term_conditions = implode(' OR ', array_map(function($col) { return "$col LIKE ?"; }, $columns));
-            $conditions[] = "($term_conditions)";
-            for ($i = 0; $i < count($columns); $i++) {
-                $params[] = "%$term%";
-            }
-        }
-        $where_clause = implode(' AND ', $conditions);
+/**
+ * Search features by name and description only (gene-centric) — no annotation join.
+ * Used when the user has explicitly deselected all annotation sources. Backed by the
+ * feature_search FTS index, which covers EVERY feature (including unannotated ones).
+ * Returns rows in the same column shape as searchFeaturesAndAnnotations (annotation
+ * columns NULL) so the result-formatting code in the AJAX endpoint is unchanged.
+ */
+function searchFeaturesByNameDescription($search_term, $is_quoted_search, $dbFile, $assembly_accession = '', $gene_set_name = '', $scope_pairs = []) {
+    $match = buildFtsMatchExpr($search_term, $is_quoted_search);
+    if ($match === '') return ['results' => [], 'capped' => false, 'warning' => null];
+
+    $name_like = '%' . ftsPrimaryTerm($search_term, $is_quoted_search) . '%';
+
+    $sql = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
+                   NULL AS annotation_accession, NULL AS annotation_description,
+                   NULL AS score, NULL AS date, NULL AS annotation_source_name,
+                   o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                   g.genome_accession,
+                   (f.feature_name LIKE ?) AS name_match
+            FROM feature_search fs
+            JOIN feature   f  ON f.feature_id   = fs.rowid
+            JOIN gene_set  gs ON gs.gene_set_id = f.gene_set_id
+            JOIN genome    g  ON g.genome_id    = gs.genome_id
+            JOIN organism  o  ON o.organism_id  = f.organism_id
+            WHERE feature_search MATCH ?";
+    $params = [$name_like, $match];
+
+    appendScopeFilters($sql, $params, $assembly_accession, $gene_set_name, $scope_pairs);
+
+    // Named genes first (hard tier), then bm25 relevance (name col weighted 10, desc 5),
+    // then a stable id tiebreak. bm25 must stay in ORDER BY only (it errors if projected).
+    $sql .= " ORDER BY name_match DESC,
+                       bm25(feature_search, 10.0, 5.0),
+                       f.feature_uniquename
+              LIMIT 2501";
+
+    return runFtsSearch($dbFile, $sql, $params);
+}
+
+/**
+ * Search features and annotations by keyword or quoted phrase (the main search).
+ * Used by annotation_search_ajax.php. Backed by the feature_annotation_search FTS
+ * index (one row per feature×annotation pair). Returns feature×annotation rows; the
+ * frontend groups them per gene client-side, so the row shape must not change.
+ *
+ * @param string $search_term        Search term or phrase (already sanitized)
+ * @param bool   $is_quoted_search   Treat input as one exact phrase
+ * @param string $dbFile             Path to organism.sqlite
+ * @param array  $source_names       Optional annotation_source_name filter (IN list)
+ * @param string $assembly_accession Optional single-assembly scope
+ * @param string $gene_set_name      Optional single-gene-set scope
+ * @param array  $scope_pairs        Optional [{assembly, gene_set}] scope (overrides above)
+ * @return array ['results' => rows, 'capped' => bool, 'warning' => string|null]
+ */
+function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, $source_names = [], $assembly_accession = '', $gene_set_name = '', $scope_pairs = []) {
+    $match = buildFtsMatchExpr($search_term, $is_quoted_search);
+    if ($match === '') return ['results' => [], 'capped' => false, 'warning' => null];
+
+    $name_like = '%' . ftsPrimaryTerm($search_term, $is_quoted_search) . '%';
+
+    $sql = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
+                   a.annotation_accession, a.annotation_description,
+                   fa.score, fa.date, ans.annotation_source_name,
+                   o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                   g.genome_accession,
+                   (f.feature_name LIKE ?) AS name_match
+            FROM feature_annotation_search fas
+            JOIN feature_annotation  fa  ON fa.feature_annotation_id = fas.rowid
+            JOIN feature             f   ON f.feature_id             = fa.feature_id
+            JOIN annotation          a   ON a.annotation_id          = fa.annotation_id
+            JOIN annotation_source   ans ON ans.annotation_source_id = a.annotation_source_id
+            JOIN organism            o   ON o.organism_id            = f.organism_id
+            JOIN gene_set            gs  ON gs.gene_set_id           = f.gene_set_id
+            JOIN genome              g   ON g.genome_id              = gs.genome_id
+            WHERE feature_annotation_search MATCH ?";
+    $params = [$name_like, $match];
+
+    appendScopeFilters($sql, $params, $assembly_accession, $gene_set_name, $scope_pairs);
+
+    if (!empty($source_names)) {
+        $placeholders = implode(',', array_fill(0, count($source_names), '?'));
+        $sql .= " AND ans.annotation_source_name IN ($placeholders)";
+        foreach ($source_names as $s) { $params[] = $s; }
     }
-    
-    if ($is_quoted_search) {
-        $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
-                         a.annotation_accession, a.annotation_description, 
-                         fa.score, fa.date, ans.annotation_source_name, 
-                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
-                         g.genome_accession
-                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, gene_set gs, genome g
-                  WHERE ans.annotation_source_id = a.annotation_source_id
-                    AND f.feature_id = fa.feature_id
-                    AND fa.annotation_id = a.annotation_id
-                    AND f.organism_id = o.organism_id
-                    AND f.gene_set_id = gs.gene_set_id
-                    AND gs.genome_id = g.genome_id
-                    AND (a.annotation_description LIKE ? 
-                       OR f.feature_name LIKE ? 
-                       OR f.feature_description LIKE ?
-                       OR a.annotation_accession LIKE ?)
-                  ORDER BY f.feature_uniquename";
-    } else {
-        $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
-                         a.annotation_accession, a.annotation_description, 
-                         fa.score, fa.date, ans.annotation_source_name, 
-                         o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
-                         g.genome_accession
-                  FROM annotation a, feature f, feature_annotation fa, annotation_source ans, organism o, gene_set gs, genome g
-                  WHERE ans.annotation_source_id = a.annotation_source_id
-                    AND f.feature_id = fa.feature_id
-                    AND fa.annotation_id = a.annotation_id
-                    AND f.organism_id = o.organism_id
-                    AND f.gene_set_id = gs.gene_set_id
-                    AND gs.genome_id = g.genome_id
-                    AND $where_clause
-                  ORDER BY f.feature_uniquename";
-    }
-    
-    return fetchData($query, $dbFile, $params);
+
+    // Named genes first (hard tier); then bm25 relevance weighting name:10, feature_desc:5,
+    // annotation_desc:2, annotation_accession:3; then a stable id tiebreak. bm25 must stay
+    // in ORDER BY only (it errors if projected as a column or wrapped in an aggregate).
+    $sql .= " ORDER BY name_match DESC,
+                       bm25(feature_annotation_search, 10.0, 5.0, 2.0, 3.0),
+                       f.feature_uniquename
+              LIMIT 2501";
+
+    return runFtsSearch($dbFile, $sql, $params);
 }
 
 /**
