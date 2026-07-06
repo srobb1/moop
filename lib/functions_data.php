@@ -1589,7 +1589,9 @@ function buildConfigFingerprint($taxonomy_tree_file, $groups_file) {
     // Note: taxonomy_tree_config.json is intentionally excluded — it is an output
     // of the organism scan, so including its mtime would create a circular invalidation.
     if (file_exists($groups_file)) {
-        $parts[] = 'groups:' . filemtime($groups_file);
+        // mtime + size — a re-synced groups file can preserve its mtime, so size makes
+        // an actual content change detectable (same reasoning as buildPerOrganismFingerprints).
+        $parts[] = 'groups:' . filemtime($groups_file) . ':' . filesize($groups_file);
     }
     return md5(implode('|', $parts));
 }
@@ -1598,7 +1600,9 @@ function buildConfigFingerprint($taxonomy_tree_file, $groups_file) {
  * Build per-organism fingerprints
  * 
  * Returns array of organism_name => fingerprint
- * Fingerprint includes: sqlite mtime, organism.json mtime, assembly count
+ * Fingerprint includes: sqlite mtime+size, organism.json mtime+size, assembly count,
+ * and per-assembly / per-gene-set directory mtimes. Size is mixed in alongside mtime so
+ * timestamp-preserving copies (rsync -a, cp -p, tar, restore) don't slip past undetected.
  */
 function buildPerOrganismFingerprints($organism_data_path) {
     $fingerprints = [];
@@ -1617,16 +1621,18 @@ function buildPerOrganismFingerprints($organism_data_path) {
         $org_path = "$organism_data_path/$organism";
         $parts = [];
         
-        // SQLite file mtime
+        // SQLite file: mtime + size. Size catches timestamp-preserving replacements
+        // (rsync -a, cp -p, tar extract, restore-from-backup all keep the old mtime) —
+        // a rebuilt or re-synced DB is virtually always a different byte size.
         $sqlite_file = "$org_path/organism.sqlite";
         if (file_exists($sqlite_file)) {
-            $parts[] = 'db:' . filemtime($sqlite_file);
+            $parts[] = 'db:' . filemtime($sqlite_file) . ':' . filesize($sqlite_file);
         }
         
-        // organism.json mtime
+        // organism.json: mtime + size (same timestamp-lies reasoning as the DB above)
         $json_file = "$org_path/organism.json";
         if (file_exists($json_file)) {
-            $parts[] = 'json:' . filemtime($json_file);
+            $parts[] = 'json:' . filemtime($json_file) . ':' . filesize($json_file);
         }
         
         // Assembly directories — include each dir's mtime so that adding/removing
