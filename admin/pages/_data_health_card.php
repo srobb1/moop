@@ -60,13 +60,9 @@ if ($has_health_issues):
       <div>
         <i class="fa fa-layer-group me-2"></i>
         <strong><?= $health_alerts['ungrouped'] ?> organism<?= $health_alerts['ungrouped'] > 1 ? 's' : '' ?></strong>
-        not assigned to any group — invisible to users.
-        Use "Add to Group" on the Manage Organisms page or fix in Manage Groups.
+        not assigned to any group — invisible to users. Add to a group in Manage Groups.
       </div>
-      <div class="d-flex gap-2 flex-shrink-0">
-        <a href="manage_organisms.php" class="btn btn-sm btn-warning">Manage Organisms</a>
-        <a href="manage_groups.php" class="btn btn-sm btn-outline-warning">Manage Groups</a>
-      </div>
+      <a href="manage_groups.php#new-assemblies" class="btn btn-sm btn-warning flex-shrink-0">Manage Groups</a>
     </div>
     <?php endif; ?>
     <?php if ($health_alerts['new_gene_sets'] > 0): ?>
