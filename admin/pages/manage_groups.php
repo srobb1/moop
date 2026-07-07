@@ -192,14 +192,18 @@
   <?php endif; ?>
 
   <?php if (!empty($unrepresented_organisms)): ?>
-    <h3 class="mt-4" id="new-assemblies">
-      Assemblies Without Groups
-      <button type="button" class="btn btn-success btn-sm ms-3" id="bulk-add-btn" style="display:none;" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : 'data-bs-toggle="modal" data-bs-target="#bulkAddModal"' ?>>
-        <i class="fa fa-plus"></i> Bulk Add Groups (<span id="ungrouped-selected-count">0</span>)
-      </button>
-    </h3>
-    <p class="text-muted">Add group tags to these assemblies. Use checkboxes to select multiple.</p>
-    <table id="ungroupedTable" class="table table-hover">
+    <hr class="my-5">
+    <div class="card border-info mb-4" id="new-assemblies">
+      <div class="card-header bg-info-subtle d-flex flex-wrap align-items-center gap-2">
+        <span class="badge bg-info text-dark fs-6">🏷️ Assemblies Without Groups (<?= count($unrepresented_tuples) ?>)</span>
+        <span class="text-muted small">— present on disk, but not yet assigned to any group</span>
+        <button type="button" class="btn btn-success btn-sm ms-auto" id="bulk-add-btn" style="display:none;" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : 'data-bs-toggle="modal" data-bs-target="#bulkAddModal"' ?>>
+          <i class="fa fa-plus"></i> Bulk Add Groups (<span id="ungrouped-selected-count">0</span>)
+        </button>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-3">Add group tags to these assemblies. Use checkboxes to select multiple.</p>
+        <table id="ungroupedTable" class="table table-hover mb-0">
       <thead>
         <tr>
           <th><input type="checkbox" id="select-all-ungrouped" title="Select all"></th>
@@ -232,10 +236,12 @@
             </tr>
           <?php endforeach; ?>
       </tbody>
-    </table>
+        </table>
+      </div>
+    </div>
   <?php endif; ?>
 
-  <?php 
+  <?php
     // Find stale entries (in JSON but directory doesn't exist)
     $stale_entries = array_filter($groups_data_with_status, function($data) {
       return !$data['_fs_exists'];
@@ -243,54 +249,106 @@
   ?>
   
   <?php if (!empty($stale_entries)): ?>
-    <h3 class="mt-4">
-      <span class="badge bg-warning text-dark">⚠️ Stale Entries (<?= count($stale_entries) ?>)</span>
-      <button type="button" class="btn btn-danger btn-sm ms-3 delete-all-stale-btn" data-stale-count="<?= count($stale_entries) ?>" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
-        <i class="fa fa-trash"></i> Delete All Stale Entries
-      </button>
-    </h3>
-    <p class="text-muted">These entries are in the JSON file but the corresponding directories were moved or deleted. Stale entries are marked in the table above with yellow background.</p>
+    <hr class="my-5">
+    <div class="card border-warning mb-4">
+      <div class="card-header bg-warning-subtle d-flex flex-wrap align-items-center gap-2">
+        <span class="badge bg-warning text-dark fs-6">⚠️ Stale Entries (<?= count($stale_entries) ?>)</span>
+        <span class="text-muted small">— listed in the groups file, but the directory is missing on disk</span>
+        <button type="button" class="btn btn-danger btn-sm ms-auto delete-all-stale-btn" data-stale-count="<?= count($stale_entries) ?>" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
+          <i class="fa fa-trash"></i> Delete All Stale Entries
+        </button>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-3">These entries are in the JSON file but the corresponding directories were moved or deleted. Each is also highlighted with a yellow background in the &ldquo;Assemblies with Groups&rdquo; table above.</p>
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Organism</th>
+              <th>Common Name</th>
+              <th>Assembly</th>
+              <th>Gene Set</th>
+              <th>Groups</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($stale_entries as $stale): ?>
+              <?php $stale_gs = htmlspecialchars($stale['gene_set'] ?? 'v1'); ?>
+              <?php $stale_common_name = htmlspecialchars($organism_meta[$stale['organism']]['common_name'] ?? ''); ?>
+              <tr data-organism="<?= htmlspecialchars($stale['organism']) ?>" data-assembly="<?= htmlspecialchars($stale['assembly']) ?>" data-gene-set="<?= $stale_gs ?>">
+                <td><?= htmlspecialchars($stale['organism']) ?></td>
+                <td class="text-muted"><?= $stale_common_name ?></td>
+                <td><?= htmlspecialchars($stale['assembly']) ?></td>
+                <td class="small text-muted"><?= $stale_gs ?></td>
+                <td>
+                  <?php
+                    $stale_groups = $stale['groups'];
+                    sort($stale_groups);
+                    foreach ($stale_groups as $stale_group):
+                  ?>
+                    <span class="tag-chip selected" style="cursor: default;"><?= htmlspecialchars($stale_group) ?></span>
+                  <?php endforeach; ?>
+                  <?php if (empty($stale['groups'])): ?>
+                    <span class="text-muted fst-italic small">no groups</span>
+                  <?php endif; ?>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-danger btn-sm delete-stale-btn" data-organism="<?= htmlspecialchars($stale['organism']) ?>" data-assembly="<?= htmlspecialchars($stale['assembly']) ?>" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Delete</button>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
   <?php endif; ?>
 
   <?php if (!empty($db_orphaned_tuples)): ?>
-    <div id="db-orphaned-section">
-    <h3 class="mt-4" id="db-orphaned">
-      <span class="badge bg-danger" id="db-orphaned-count">🔗 Orphaned in Database (<?= count($db_orphaned_tuples) ?>)</span>
-    </h3>
-    <p class="text-muted">
-      These gene sets still have files on disk (and possibly group access below) but no longer exist in
-      that organism's database — most likely the database was rebuilt elsewhere and this gene set was
-      dropped, without the old files being cleaned up here. Since the database has already forgotten them,
-      they're invisible to search and the assembly page, but they still count toward BLAST indexes,
-      JBrowse tracks, and any group access they're still listed under.
-      <strong>Archive</strong> moves the source files to an archive directory (nothing is deleted) and
-      removes JBrowse/track/group references. It does not touch any database.
-    </p>
-    <div id="db-orphaned-alert"></div>
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th>Organism</th>
-          <th>Assembly</th>
-          <th>Gene Set</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($db_orphaned_tuples as $tuple): ?>
-          <tr data-organism="<?= htmlspecialchars($tuple['organism']) ?>" data-assembly="<?= htmlspecialchars($tuple['assembly']) ?>" data-gene-set="<?= htmlspecialchars($tuple['gene_set']) ?>" class="db-orphaned-row">
-            <td><?= htmlspecialchars($tuple['organism']) ?></td>
-            <td><?= htmlspecialchars($tuple['assembly']) ?></td>
-            <td class="small text-muted"><?= htmlspecialchars($tuple['gene_set']) ?></td>
-            <td>
-              <button type="button" class="btn btn-danger btn-sm archive-gene-set-btn" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
-                <i class="fa fa-archive"></i> Archive
-              </button>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
+    <hr class="my-5">
+    <div class="card border-danger mb-4" id="db-orphaned-section">
+      <div class="card-header bg-danger-subtle d-flex flex-wrap align-items-center gap-2" id="db-orphaned">
+        <span class="badge bg-danger fs-6" id="db-orphaned-count">🔗 Orphaned in Database (<?= count($db_orphaned_tuples) ?>)</span>
+        <span class="text-muted small">— files on disk, but the gene set no longer exists in the database</span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted">
+          These gene sets still have files on disk (and possibly group access below) but no longer exist in
+          that organism's database — most likely the database was rebuilt elsewhere and this gene set was
+          dropped, without the old files being cleaned up here. Since the database has already forgotten them,
+          they're invisible to search and the assembly page, but they still count toward BLAST indexes,
+          JBrowse tracks, and any group access they're still listed under.
+          <strong>Archive</strong> moves the source files to an archive directory (nothing is deleted) and
+          removes JBrowse/track/group references. It does not touch any database.
+        </p>
+        <div id="db-orphaned-alert"></div>
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Organism</th>
+              <th>Common Name</th>
+              <th>Assembly</th>
+              <th>Gene Set</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($db_orphaned_tuples as $tuple): ?>
+              <?php $orphan_common_name = htmlspecialchars($organism_meta[$tuple['organism']]['common_name'] ?? ''); ?>
+              <tr data-organism="<?= htmlspecialchars($tuple['organism']) ?>" data-assembly="<?= htmlspecialchars($tuple['assembly']) ?>" data-gene-set="<?= htmlspecialchars($tuple['gene_set']) ?>" class="db-orphaned-row">
+                <td><?= htmlspecialchars($tuple['organism']) ?></td>
+                <td class="text-muted"><?= $orphan_common_name ?></td>
+                <td><?= htmlspecialchars($tuple['assembly']) ?></td>
+                <td class="small text-muted"><?= htmlspecialchars($tuple['gene_set']) ?></td>
+                <td>
+                  <button type="button" class="btn btn-danger btn-sm archive-gene-set-btn" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
+                    <i class="fa fa-archive"></i> Archive
+                  </button>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
     </div>
   <?php endif; ?>
 
