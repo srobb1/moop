@@ -50,13 +50,11 @@ $site = $config->getString('site');
     <!-- Optional custom CSS if defined in config -->
     <?php
       $custom_css_path = $config->getPath('custom_css_path', '');
-      if (!empty($custom_css_path)) {
-          if (file_exists($custom_css_path)) {
-              $custom_css_url = $config->getString('custom_css_url');
-              echo '<link rel="stylesheet" href="' . htmlspecialchars($custom_css_url, ENT_QUOTES) . '">';
-          } else {
-              error_log("Warning: custom_css_path configured in site_config.php but file not found: $custom_css_path");
-          }
+      // Custom CSS is optional; silently skip when the file is absent (a missing
+      // optional override must not spam the error log on every page load).
+      if (!empty($custom_css_path) && file_exists($custom_css_path)) {
+          $custom_css_url = $config->getString('custom_css_url');
+          echo '<link rel="stylesheet" href="' . htmlspecialchars($custom_css_url, ENT_QUOTES) . '">';
       }
     ?>
 

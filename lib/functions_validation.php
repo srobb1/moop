@@ -83,7 +83,7 @@ function is_quoted_search($term) {
  * Redirects to home if missing/empty
  * 
  * @param string $organism_name Organism name to validate
- * @param string $redirect_on_empty URL to redirect to if empty (default: /moop/index.php)
+ * @param string|null $redirect_on_empty URL to redirect to if empty (default: /{site}/index.php)
  * @return string Validated organism name
  */
 function validateOrganismParam($organism_name, $redirect_on_empty = null) {

@@ -304,10 +304,15 @@ function validateOrganismJson($json_path) {
  * @param string $organism_name Organism from GET/POST
  * @param string $organism_data_dir Path to organism data directory
  * @param bool $check_access Whether to check access control (default: true)
- * @param string $redirect_home Home URL for redirects (default: /moop/index.php)
+ * @param string|null $redirect_home Home URL for redirects (default: /{site}/index.php)
  * @return array Array with 'name' and 'info' keys, or exits on error
  */
-function setupOrganismDisplayContext($organism_name, $organism_data_dir, $check_access = true, $redirect_home = '/moop/index.php') {
+function setupOrganismDisplayContext($organism_name, $organism_data_dir, $check_access = true, $redirect_home = null) {
+    if ($redirect_home === null) {
+        $site = ConfigManager::getInstance()->getString('site');
+        $redirect_home = "/$site/index.php";
+    }
+
     // Validate organism parameter
     $organism_name = validateOrganismParam($organism_name, $redirect_home);
     

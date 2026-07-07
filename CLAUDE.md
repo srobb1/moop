@@ -299,6 +299,4 @@ See `notes/IMPROVEMENT_ROADMAP.md` for the full list. Top remaining items:
 - **Medium:** BLAST temp files accumulate — add cron: `find /tmp -name 'blast_*' -mtime +1 -delete`
 - **Low:** `getBlastDatabases()` in `blast_functions.php` uses `global $sequence_types` — pass as param
 - **Low:** Backup files (`.bak`, `.backup`) in production — delete and rely on git
-- **Low:** `test_input()` in `functions_validation.php` is deprecated — remove callers then delete
-- **Low:** `validateOrganismParam()` hardcodes `/moop/index.php` — use ConfigManager for site name
 - **Low:** No SRI hashes on CDN `<script>` tags
