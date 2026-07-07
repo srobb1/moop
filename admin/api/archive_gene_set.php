@@ -85,11 +85,23 @@ if ($result['success']) {
     // this at most every 12h — see housekeeping_refresh_organism_cache_if_stale()),
     // even though the archive above already fixed it. A single-organism rescan is fast
     // enough to do inline here rather than waiting on that schedule.
-    $sequence_types     = $config->getSequenceTypes();
-    $taxonomy_tree_file = "$metadata_path/taxonomy_tree_config.json";
-    $groups_file        = "$metadata_path/organism_assembly_groups.json";
-    $groups_data         = getGroupData();
-    getCachedOrganismsInfo($organism_data, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, false, null, [$organism]);
+    // The archive itself (the destructive move + reference cleanup) has already
+    // completed successfully at this point. The cache refresh below is a
+    // convenience so the dashboard updates immediately — it must never be allowed
+    // to fail the request, or an error here masks a completed archive as a 500
+    // (which the browser then sees as an "Unexpected token '<'" JSON parse error).
+    // On failure we log and flag it; housekeeping_refresh_organism_cache_if_stale()
+    // will pick up the change within its normal interval regardless.
+    try {
+        $sequence_types     = $config->getSequenceTypes();
+        $taxonomy_tree_file = "$metadata_path/taxonomy_tree_config.json";
+        $groups_file        = "$metadata_path/organism_assembly_groups.json";
+        $groups_data        = getGroupData();
+        getCachedOrganismsInfo($organism_data, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, false, null, [$organism]);
+    } catch (\Throwable $e) {
+        error_log('archive_gene_set: archive succeeded but organism-cache refresh failed: ' . $e->getMessage());
+        $result['cache_refresh_deferred'] = true;
+    }
 }
 
 echo json_encode($result);

@@ -4,6 +4,14 @@
  * Data retrieval, group management, and assembly information
  */
 
+// getCachedOrganismsInfo() pre-computes BLAST-index validation per assembly via
+// validateBlastIndexFiles(), which lives in blast_functions.php. Most callers
+// (dashboard, organism checklist) already load that file, but leaner entry points
+// — e.g. admin/api/archive_gene_set.php — do not, and the missing function turned
+// a successful archive into an uncaught fatal. Require it here so every caller of
+// this file's functions has the dependency, regardless of include order.
+require_once __DIR__ . '/blast_functions.php';
+
 /**
  * cURL GET with connect + total timeouts — avoids D-state hangs from file_get_contents.
  * Returns the response body string, or false on error.
