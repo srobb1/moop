@@ -117,6 +117,10 @@ ncbi-blast-*
 samtools-*
 
 # ── Site-specific data directories ──────────────────────────
+# Gene sets archived out of organisms/ by admin/api/archive_gene_set.php.
+# Moved here (outside organisms/) so discovery routines don't scan them; it's
+# site data (large FASTA/BLAST binaries), not app code.
+/archived_gene_sets/
 organisms_missing_data/
 /moop/
 smallscreen.png
