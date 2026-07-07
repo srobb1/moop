@@ -182,7 +182,30 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
                 ];
             }
         }
-        
+
+        // Reverse direction at the ASSEMBLY level: directories on disk that are shaped
+        // like an assembly (they carry a genome.json) but match no genome row by name or
+        // accession. The DB-driven loop above only walks rows outward to disk, so a whole
+        // assembly dir dropped from the DB (rebuilt/removed upstream, or superseded by a
+        // rename) but left on disk stays invisible to every other check. genome.json is
+        // the marker for "this dir was meant to be an assembly" — same idea as requiring
+        // a genes gff to treat a subdir as a real gene_set above.
+        $known_assembly_dirs = [];
+        foreach ($genomes as $genome) {
+            if ($genome['genome_name'] !== '')      $known_assembly_dirs[$genome['genome_name']] = true;
+            if ($genome['genome_accession'] !== '') $known_assembly_dirs[$genome['genome_accession']] = true;
+        }
+        foreach ($dir_names as $dir) {
+            if (isset($known_assembly_dirs[$dir])) continue;
+            if (!file_exists("$organism_data_dir/$dir/genome.json")) continue; // not an assembly dir
+            $result['valid'] = false;
+            $result['mismatches'][] = [
+                'type'         => 'orphaned_assembly_directory',
+                'assembly_dir' => $dir,
+                'message'      => "Directory '$dir' exists on disk with a genome.json but has no matching genome row in the database — likely a stale leftover from a rename or reload",
+            ];
+        }
+
         $dbh = null;
     } catch (PDOException $e) {
         $result['valid'] = false;

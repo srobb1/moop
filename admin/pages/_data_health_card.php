@@ -4,26 +4,41 @@
  *
  * Included by both the admin dashboard (admin/pages/admin.php) and the manage
  * organisms page (admin/pages/manage_organisms.php) so both show the SAME warnings.
- * Expects two variables in scope (extracted from the page's $data):
- *   $health_alerts            — ['ungrouped','not_in_tree','stale_groups','new_gene_sets','orphaned_gene_sets']
+ * Expects these variables in scope (extracted from the page's $data):
+ *   $health_alerts            — ['ungrouped','not_in_tree','stale_groups','new_gene_sets','orphaned_gene_sets','orphaned_assemblies','no_database']
  *   $orphaned_gene_set_tuples — list of ['organism','assembly','gene_set']
+ *   $orphaned_assembly_tuples — list of ['organism','assembly']
+ *   $no_database_organisms    — list of organism-name strings
  */
 $health_alerts = ($health_alerts ?? []) + [
-    'ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0,
+    'ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0,
+    'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'no_database' => 0,
 ];
 $orphaned_gene_set_tuples = $orphaned_gene_set_tuples ?? [];
+$orphaned_assembly_tuples = $orphaned_assembly_tuples ?? [];
+$no_database_organisms    = $no_database_organisms ?? [];
 $cache_stale        = $cache_stale ?? false;
 $cache_changed_orgs = $cache_changed_orgs ?? [];
 
-$_any_data_issue = ($health_alerts['ungrouped'] > 0 || $health_alerts['not_in_tree'] > 0
-                  || $health_alerts['stale_groups'] > 0 || $health_alerts['new_gene_sets'] > 0
-                  || $health_alerts['orphaned_gene_sets'] > 0);
+// Presence of each alert, in the order they render top-to-bottom. Each alert draws a
+// bottom border when any alert after it is present, so the stack reads as one panel.
+$_p_ung   = $health_alerts['ungrouped'] > 0;
+$_p_ngs   = $health_alerts['new_gene_sets'] > 0;
+$_p_sg    = $health_alerts['stale_groups'] > 0;
+$_p_ogs   = $health_alerts['orphaned_gene_sets'] > 0;
+$_p_oa    = $health_alerts['orphaned_assemblies'] > 0;
+$_p_nodb  = $health_alerts['no_database'] > 0;
+$_p_nit   = $health_alerts['not_in_tree'] > 0;
+
+$_any_data_issue = ($_p_ung || $_p_ngs || $_p_sg || $_p_ogs || $_p_oa || $_p_nodb || $_p_nit);
 $has_health_issues = $cache_stale || $_any_data_issue;
 if ($has_health_issues):
-    $_after_ungrouped   = $health_alerts['new_gene_sets'] > 0 || $health_alerts['stale_groups'] > 0 || $health_alerts['orphaned_gene_sets'] > 0 || $health_alerts['not_in_tree'] > 0;
-    $_after_new_gs      = $health_alerts['stale_groups'] > 0 || $health_alerts['orphaned_gene_sets'] > 0 || $health_alerts['not_in_tree'] > 0;
-    $_after_stale       = $health_alerts['orphaned_gene_sets'] > 0 || $health_alerts['not_in_tree'] > 0;
-    $_after_orphaned_gs = $health_alerts['not_in_tree'] > 0;
+    $_after_ungrouped    = $_p_ngs || $_p_sg || $_p_ogs || $_p_oa || $_p_nodb || $_p_nit;
+    $_after_new_gs       = $_p_sg || $_p_ogs || $_p_oa || $_p_nodb || $_p_nit;
+    $_after_stale        = $_p_ogs || $_p_oa || $_p_nodb || $_p_nit;
+    $_after_orphaned_gs  = $_p_oa || $_p_nodb || $_p_nit;
+    $_after_orphaned_asm = $_p_nodb || $_p_nit;
+    $_after_no_db        = $_p_nit;
 ?>
 <div class="card mb-4 border-warning">
   <div class="card-header bg-warning bg-opacity-10">
@@ -100,6 +115,37 @@ if ($has_health_issues):
         <?php endforeach; ?>
       </div>
       <a href="manage_groups.php#db-orphaned" class="btn btn-sm btn-danger flex-shrink-0">Review &amp; Archive</a>
+    </div>
+    <?php endif; ?>
+    <?php if ($health_alerts['orphaned_assemblies'] > 0): ?>
+    <div class="alert alert-danger mb-0 border-0 rounded-0 <?= $_after_orphaned_asm ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
+      <div>
+        <i class="fa fa-folder-minus me-2"></i>
+        <strong><?= $health_alerts['orphaned_assemblies'] ?> assembly director<?= $health_alerts['orphaned_assemblies'] > 1 ? 'ies' : 'y' ?></strong>
+        on disk with a <code>genome.json</code> but no matching genome row in the database —
+        likely a stale leftover from a rename or reload. Invisible to the database, but still
+        scanned for BLAST indexes and FASTA files. Remove the directory on disk, or reload the
+        assembly if it should exist.
+        <?php foreach ($orphaned_assembly_tuples as $t): ?>
+          <br><small class="text-muted"><?= htmlspecialchars($t['organism']) ?> / <?= htmlspecialchars($t['assembly']) ?></small>
+        <?php endforeach; ?>
+      </div>
+      <a href="manage_organisms.php" class="btn btn-sm btn-danger flex-shrink-0">View Organisms</a>
+    </div>
+    <?php endif; ?>
+    <?php if ($health_alerts['no_database'] > 0): ?>
+    <div class="alert alert-danger mb-0 border-0 rounded-0 <?= $_after_no_db ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
+      <div>
+        <i class="fa fa-database me-2"></i>
+        <strong><?= $health_alerts['no_database'] ?> organism<?= $health_alerts['no_database'] > 1 ? 's' : '' ?></strong>
+        <?= $health_alerts['no_database'] > 1 ? 'have' : 'has' ?> assembly data on disk but no
+        <code>organism.sqlite</code> — never loaded, or the database was removed. Completely
+        invisible to the site. Load the organism's database, or remove the directory if it's abandoned.
+        <?php foreach ($no_database_organisms as $org_name): ?>
+          <br><small class="text-muted"><?= htmlspecialchars($org_name) ?></small>
+        <?php endforeach; ?>
+      </div>
+      <a href="manage_organisms.php" class="btn btn-sm btn-danger flex-shrink-0">View Organisms</a>
     </div>
     <?php endif; ?>
     <?php if ($health_alerts['not_in_tree'] > 0): ?>

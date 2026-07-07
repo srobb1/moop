@@ -34,7 +34,9 @@
 // Increment this when the cache structure or computed fields change, to force a full rescan.
 // v3: validateAssemblyDirectories() now also detects gene_set directories on disk with
 // no matching DB row ('orphaned_gene_set_directory' mismatch type).
-define('ORGANISM_CACHE_SCHEMA_VERSION', 3);
+// v4: validateAssemblyDirectories() now also detects whole assembly directories on disk
+// with no matching genome row ('orphaned_assembly_directory' mismatch type).
+define('ORGANISM_CACHE_SCHEMA_VERSION', 4);
 
 /**
  * Write organism cache atomically: write to a temp file then rename().

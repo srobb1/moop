@@ -311,6 +311,8 @@ $data = [
     'cache_stale_reason' => $cache_stale_reason,
     'health_alerts' => $_health['health_alerts'],
     'orphaned_gene_set_tuples' => $_health['orphaned_gene_set_tuples'],
+    'orphaned_assembly_tuples' => $_health['orphaned_assembly_tuples'],
+    'no_database_organisms' => $_health['no_database_organisms'],
     'new_gene_set_tuples' => $_health['new_gene_set_tuples'],
     // Reuse this page's existing staleness computation for the shared health card's
     // "cache out of date" notice ($stale_organisms = per-org changes; reason covers

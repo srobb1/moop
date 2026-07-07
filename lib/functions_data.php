@@ -908,6 +908,61 @@ function getOrphanedGeneSetTuples(string $organism_data_path): array {
 }
 
 /**
+ * Read organisms/.organism_cache.json and pull out every assembly directory that exists
+ * on disk (has a genome.json) but has no matching genome row in that organism's database —
+ * see validateAssemblyDirectories()'s 'orphaned_assembly_directory' mismatch type. These
+ * are whole assembly dirs left behind by a rename or an upstream DB rebuild; the DB-driven
+ * checks can't see them because they only walk DB rows outward to disk.
+ *
+ * Cache-only (no DB queries), same as getOrphanedGeneSetTuples(), so it stays cheap enough
+ * to call on every admin dashboard / Manage Organisms load.
+ *
+ * @param string $organism_data_path Path to organisms directory
+ * @return array List of ['organism'=>, 'assembly'=>]
+ */
+function getOrphanedAssemblyTuples(string $organism_data_path): array {
+    $cache_file = "$organism_data_path/.organism_cache.json";
+    if (!file_exists($cache_file)) return [];
+
+    $raw = json_decode(file_get_contents($cache_file), true);
+    $tuples = [];
+    foreach ($raw['data'] ?? [] as $organism => $org_data) {
+        foreach ($org_data['assembly_validation']['mismatches'] ?? [] as $mm) {
+            if (($mm['type'] ?? '') === 'orphaned_assembly_directory') {
+                $tuples[] = [
+                    'organism' => $organism,
+                    'assembly' => $mm['assembly_dir'] ?? '',
+                ];
+            }
+        }
+    }
+    return $tuples;
+}
+
+/**
+ * Read organisms/.organism_cache.json and return every organism that has assembly
+ * directories on disk but no organism.sqlite at all. validateAssemblyDirectories() bails
+ * out early on these (no DB to read), so they never produce a mismatch — they're invisible
+ * to every DB-driven check even though the whole organism is unreachable by the site.
+ *
+ * @param string $organism_data_path Path to organisms directory
+ * @return array List of organism names
+ */
+function getNoDatabaseOrganisms(string $organism_data_path): array {
+    $cache_file = "$organism_data_path/.organism_cache.json";
+    if (!file_exists($cache_file)) return [];
+
+    $raw = json_decode(file_get_contents($cache_file), true);
+    $names = [];
+    foreach ($raw['data'] ?? [] as $organism => $org_data) {
+        if (empty($org_data['has_db']) && !empty($org_data['assemblies'])) {
+            $names[] = $organism;
+        }
+    }
+    return $names;
+}
+
+/**
  * Compute the "data health" alerts shown on BOTH the admin dashboard and the manage
  * organisms page. Single source of truth so the two pages never drift. Reads the
  * organism cache (.organism_cache.json) for taxonomy membership + which assemblies
@@ -916,8 +971,10 @@ function getOrphanedGeneSetTuples(string $organism_data_path): array {
  *
  * @param string $organism_data_path
  * @return array{
- *   health_alerts: array{ungrouped:int,not_in_tree:int,stale_groups:int,new_gene_sets:int,orphaned_gene_sets:int},
+ *   health_alerts: array{ungrouped:int,not_in_tree:int,stale_groups:int,new_gene_sets:int,orphaned_gene_sets:int,orphaned_assemblies:int,no_database:int},
  *   orphaned_gene_set_tuples: array,
+ *   orphaned_assembly_tuples: array,
+ *   no_database_organisms: array,
  *   new_gene_set_tuples: array
  * }
  */
@@ -927,7 +984,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     $cache_file    = "$organism_data_path/.organism_cache.json";
     $groups_file   = "$metadata_path/organism_assembly_groups.json";
 
-    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0];
+    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'no_database' => 0];
 
     // Cache-driven: taxonomy-tree membership + the list of assemblies per organism.
     $cache_data = [];
@@ -945,6 +1002,14 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     // Gene-set dirs on disk with no matching DB row (dropped in a rebuild, not cleaned up).
     $orphaned_gene_set_tuples = getOrphanedGeneSetTuples($organism_data_path);
     $health_alerts['orphaned_gene_sets'] = count($orphaned_gene_set_tuples);
+
+    // Whole assembly dirs on disk with no matching genome row (rename/reload leftovers).
+    $orphaned_assembly_tuples = getOrphanedAssemblyTuples($organism_data_path);
+    $health_alerts['orphaned_assemblies'] = count($orphaned_assembly_tuples);
+
+    // Organism dirs with assembly data on disk but no organism.sqlite (never loaded).
+    $no_database_organisms = getNoDatabaseOrganisms($organism_data_path);
+    $health_alerts['no_database'] = count($no_database_organisms);
 
     // LIVE groups file — keeps grouping checks accurate right after a group edit.
     $gd = file_exists($groups_file) ? (json_decode(file_get_contents($groups_file), true) ?? []) : [];
@@ -970,6 +1035,8 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     return [
         'health_alerts'            => $health_alerts,
         'orphaned_gene_set_tuples' => $orphaned_gene_set_tuples,
+        'orphaned_assembly_tuples' => $orphaned_assembly_tuples,
+        'no_database_organisms'    => $no_database_organisms,
         'new_gene_set_tuples'      => $new_gene_set_tuples,
     ];
 }
