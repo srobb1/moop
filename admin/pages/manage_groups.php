@@ -297,13 +297,6 @@
   <!-- Manage Group Descriptions Section -->
   <h3 class="mt-5 mb-4"><i class="fa fa-file-text"></i> Group Descriptions</h3>
 
-  <p class="text-muted mb-3">
-    <i class="fa fa-star" style="color:#f59e0b;"></i>
-    The star next to each group marks it as <strong>Featured</strong> — featured groups appear as
-    quick-access cards on the site's home page. Click a star to add or remove a group from that
-    home-page selection.
-  </p>
-  
   <?php 
     echo generatePermissionAlert(
         $descriptions_file,
@@ -330,11 +323,15 @@
   <?php endif; ?>
 
   <div class="alert alert-info">
-    <strong>Legend:</strong><br>
-    <span style="color: #28a745; font-size: 18px;">✓</span> Has content (images or paragraphs) |
-    <span style="color: #ffc107; font-size: 18px;">⚠</span> No content yet<br>
-    <span style="color: #28a745;">Green</span> border = Currently in use | 
-    <span style="color: #dc3545;">Red</span> border = Obsolete (retained for reference)
+    <strong>Legend</strong>
+    <div style="display:grid; grid-template-columns:auto 1fr; gap:8px 12px; align-items:center; margin-top:10px;">
+      <span style="color:#28a745; font-size:18px; text-align:center;">✓</span>
+      <span>Has content (images or paragraphs)</span>
+      <span style="color:#ffc107; font-size:18px; text-align:center;">⚠</span>
+      <span>No content yet</span>
+      <span style="text-align:center;"><i class="fa fa-star" style="color:#f59e0b;"></i></span>
+      <span><strong>Featured</strong> — shown as a quick-access card on the home page (click a star to toggle)</span>
+    </div>
   </div>
 
   <div class="group-descriptions-container">
