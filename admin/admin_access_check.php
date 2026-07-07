@@ -2,11 +2,31 @@
 include_once __DIR__ . '/../includes/access_control.php';
 include_once __DIR__ . '/../lib/moop_functions.php';
 
+// Detect requests that expect JSON (admin API endpoints + AJAX) so an auth failure returns
+// a JSON error instead of an HTML redirect. Without this, a fetch()/$.ajax call follows the
+// redirect to the login / access-denied HTML page and the caller sees the cryptic
+// "Unexpected token '<', <!DOCTYPE ... is not valid JSON".
+if (!function_exists('admin_request_wants_json')) {
+    function admin_request_wants_json(): bool {
+        $script = $_SERVER['SCRIPT_NAME'] ?? ($_SERVER['PHP_SELF'] ?? '');
+        return strpos($script, '/admin/api/') !== false
+            || ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest'
+            || !empty($_SERVER['HTTP_X_CSRF_TOKEN'])
+            || strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false;
+    }
+}
+
 // Admin session inactivity timeout — 8 hours
 const ADMIN_SESSION_TIMEOUT = 28800;
 if (isset($_SESSION['admin_last_active']) && (time() - $_SESSION['admin_last_active']) > ADMIN_SESSION_TIMEOUT) {
     session_unset();
     session_destroy();
+    if (admin_request_wants_json()) {
+        header('Content-Type: application/json');
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Your admin session expired — reload the page and log in again.']);
+        exit;
+    }
     header('Location: ../login.php?timeout=1');
     exit;
 }
@@ -24,6 +44,12 @@ if (is_logged_in() && isset($users[get_username()]) && isset($users[get_username
 
 // Only allow ADMIN access level (not IP_IN_RANGE, as IP users shouldn't have admin panel access)
 if (!$is_admin || get_access_level() !== 'ADMIN') {
+    if (admin_request_wants_json()) {
+        header('Content-Type: application/json');
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin access required — your session may have ended. Reload the page and log in again.']);
+        exit;
+    }
     header('Location: ../access_denied.php', true, 302);
     exit;
 }
