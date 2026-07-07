@@ -1,0 +1,43 @@
+name: CI
+
+# Buys upgrade confidence: every push/PR gets a full php -l syntax sweep and the
+# assert-based smoke tests over the critical paths (access control, search-query
+# building, cache invalidation). No site data or secrets required — the tests are
+# hermetic (mocked $_SESSION + temp files).
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-test:
+    name: php -l lint + smoke tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'   # match the production runtime
+          coverage: none
+
+      - name: Lint every PHP file (php -l)
+        run: |
+          status=0
+          while IFS= read -r -d '' file; do
+            if ! php -l "$file" >/dev/null 2>&1; then
+              echo "::error file=$file::PHP syntax error"
+              php -l "$file" || true
+              status=1
+            fi
+          done < <(find . -path ./vendor -prune -o -name '*.php' -print0)
+          if [ "$status" -eq 0 ]; then echo "All PHP files pass php -l"; fi
+          exit $status
+
+      - name: Run smoke tests
+        env:
+          VALIDATE_CONFIG: 'false'   # skip config-completeness validation (no site data in CI)
+        run: php tests/smoke_tests.php
