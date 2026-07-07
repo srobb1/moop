@@ -878,11 +878,13 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
  * exists on disk but has no matching row in that organism's database — see
  * validateAssemblyDirectories()'s 'orphaned_gene_set_directory' mismatch type.
  *
- * Deliberately reads only the cache (no DB queries here) so this stays cheap enough
- * to call on every admin dashboard / Manage Groups page load. The cache itself is
- * kept fresh automatically by housekeeping_refresh_organism_cache_if_stale() (at
- * most ~12h old), so this can't silently go stale the way a one-off manual check
- * would if nobody remembered to re-run it.
+ * Reads the cache (no DB queries) plus one cheap is_dir() per already-flagged dir to
+ * confirm it still exists — so this stays cheap enough to call on every admin dashboard
+ * / Manage Groups page load while still self-correcting the instant an admin deletes an
+ * orphan (the cache itself is rebuilt in the background, not on delete). The cache is
+ * kept fresh automatically by housekeeping_refresh_organism_cache_if_stale() (at most
+ * ~12h old), so it can't silently go stale the way a one-off manual check would if
+ * nobody remembered to re-run it.
  *
  * @param string $organism_data_path Path to organisms directory
  * @return array List of ['organism'=>, 'assembly'=>, 'gene_set'=>]
@@ -896,10 +898,19 @@ function getOrphanedGeneSetTuples(string $organism_data_path): array {
     foreach ($raw['data'] ?? [] as $organism => $org_data) {
         foreach ($org_data['assembly_validation']['mismatches'] ?? [] as $mm) {
             if (($mm['type'] ?? '') === 'orphaned_gene_set_directory') {
+                $assembly = $mm['assembly_dir'] ?? '';
+                $gene_set = $mm['gene_set_name'] ?? '';
+                // Self-heal against a stale cache: the cache is rebuilt in the background,
+                // not on delete, so it can still list a directory an admin just removed.
+                // This mismatch asserts the dir exists on disk — if it's already gone it's
+                // no longer an orphan, so drop it now instead of showing a phantom alert
+                // until the next rescan. One stat() per already-flagged dir (rare); does
+                // not defeat the cache, which exists to skip the expensive DB/BLAST checks.
+                if (!is_dir("$organism_data_path/$organism/$assembly/$gene_set")) continue;
                 $tuples[] = [
                     'organism' => $organism,
-                    'assembly' => $mm['assembly_dir'] ?? '',
-                    'gene_set' => $mm['gene_set_name'] ?? '',
+                    'assembly' => $assembly,
+                    'gene_set' => $gene_set,
                 ];
             }
         }
@@ -929,9 +940,13 @@ function getOrphanedAssemblyTuples(string $organism_data_path): array {
     foreach ($raw['data'] ?? [] as $organism => $org_data) {
         foreach ($org_data['assembly_validation']['mismatches'] ?? [] as $mm) {
             if (($mm['type'] ?? '') === 'orphaned_assembly_directory') {
+                $assembly = $mm['assembly_dir'] ?? '';
+                // Self-heal against a cache that lags a manual delete — see the same
+                // guard in getOrphanedGeneSetTuples(). If the dir is already gone, skip it.
+                if (!is_dir("$organism_data_path/$organism/$assembly")) continue;
                 $tuples[] = [
                     'organism' => $organism,
-                    'assembly' => $mm['assembly_dir'] ?? '',
+                    'assembly' => $assembly,
                 ];
             }
         }
@@ -956,6 +971,12 @@ function getNoDatabaseOrganisms(string $organism_data_path): array {
     $names = [];
     foreach ($raw['data'] ?? [] as $organism => $org_data) {
         if (empty($org_data['has_db']) && !empty($org_data['assemblies'])) {
+            // Self-heal against a stale cache (same reasoning as getOrphanedGeneSetTuples):
+            // only report if the organism dir is still present and a database still hasn't
+            // appeared — a load could have added organism.sqlite, or the whole dir could
+            // have been removed, since the cache was built.
+            $org_dir = "$organism_data_path/$organism";
+            if (!is_dir($org_dir) || file_exists("$org_dir/organism.sqlite")) continue;
             $names[] = $organism;
         }
     }
