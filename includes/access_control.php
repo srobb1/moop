@@ -431,6 +431,24 @@ function get_csrf_token_from_request() {
 }
 
 /**
+ * Heuristic: does the current request expect a JSON response rather than an HTML page?
+ * True for API endpoints (path contains /api/), jQuery/fetch AJAX (X-Requested-With or
+ * X-CSRF-Token header), or an explicit Accept: application/json. Used so auth/CSRF
+ * failures return a machine-readable error to fetch()/$.ajax callers instead of an HTML
+ * page — which would otherwise surface as the cryptic
+ * "Unexpected token '<', <!DOCTYPE ... is not valid JSON".
+ */
+if (!function_exists('request_expects_json')) {
+function request_expects_json(): bool {
+    $script = $_SERVER['SCRIPT_NAME'] ?? ($_SERVER['PHP_SELF'] ?? '');
+    return strpos($script, '/api/') !== false
+        || ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest'
+        || !empty($_SERVER['HTTP_X_CSRF_TOKEN'])
+        || strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false;
+}
+}
+
+/**
  * Verify CSRF for the current request and abort with 403 if invalid.
  *
  * USAGE at the top of any POST handler:
@@ -450,7 +468,9 @@ function csrf_protect($json_response = false) {
     if (!verify_csrf_token($token)) {
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         error_log("MOOP SECURITY: CSRF token mismatch from IP $ip, URI: " . ($_SERVER['REQUEST_URI'] ?? ''));
-        if ($json_response) {
+        // Answer AJAX/API callers with JSON even if the caller didn't explicitly ask
+        // for it — an HTML page here breaks a fetch()/$.ajax caller with a JSON parse error.
+        if ($json_response || request_expects_json()) {
             http_response_code(403);
             header('Content-Type: application/json');
             echo json_encode(['success' => false, 'message' => 'Invalid security token. Please reload the page and try again.']);
