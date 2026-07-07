@@ -1444,9 +1444,13 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     $removed_count = count($cached_fingerprints) - count($current_fingerprints);
 
     if ($total_scan_count === 0) {
-        // Nothing to scan, but if organisms were deleted the on-disk cache is stale —
-        // rewrite it now so the deleted entries don't persist across future loads.
-        if ($removed_count > 0) {
+        // Nothing to scan, but the on-disk cache can still be stale in two ways:
+        //   - organisms were deleted (removed entries must not persist), or
+        //   - only the groups/taxonomy config changed. In that case we recomputed the
+        //     config-only organisms above and must persist the new config_fingerprint;
+        //     otherwise a non-force "Update Cache" click never clears the stale banner
+        //     (the reload recomputes the new fingerprint and it won't match the old one).
+        if ($removed_count > 0 || $config_changed) {
             $cache_data = [
                 'generated'          => date('Y-m-d H:i:s'),
                 'schema_version'     => ORGANISM_CACHE_SCHEMA_VERSION,
