@@ -15,7 +15,7 @@
  *
  * Steps performed:
  *   1. Create data/genomes/{org}/{asm}/{gene_set}/
- *   2. Symlink annotations.gff3 → source genomic.gff
+ *   2. Symlink annotations.gff3 → source genes.gff
  *   3. Sort + bgzip + tabix → annotations.gff3.gz + .tbi
  *   4. Create/update gene track JSON in jbrowse2-configs/tracks/
  *   5. Add track ID to assembly JSON primaryGeneTracks

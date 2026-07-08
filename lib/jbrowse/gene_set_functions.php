@@ -45,11 +45,11 @@ function prepareGeneSetForJBrowse(
     $uri_base      = "/$site/data/genomes/$organism/$assembly/$gene_set";
 
     if (!file_exists($source_gff)) {
-        $log[] = "$gene_set: no genomic.gff found — skipped";
+        $log[] = "$gene_set: no " . genes_gff_filename() . " found — skipped";
         return false;
     }
     if (filesize($source_gff) === 0) {
-        $log[] = "$gene_set: genomic.gff is empty — skipped";
+        $log[] = "$gene_set: " . genes_gff_filename() . " is empty — skipped";
         return false;
     }
     $log[] = "$gene_set: source GFF found (" . number_format(filesize($source_gff)) . " bytes)";
@@ -61,11 +61,23 @@ function prepareGeneSetForJBrowse(
     }
 
     // ── Symlink annotations.gff3 ─────────────────────────────────────────────
-    if (!is_link($target_gff) && !file_exists($target_gff)) {
+    // Self-healing: recreate if missing, dangling, or pointing at the wrong
+    // source (e.g. after the source GFF is renamed). is_link() alone is true
+    // for a *broken* link, so we must compare readlink() to the current source.
+    if (is_link($target_gff)) {
+        if (readlink($target_gff) === $source_gff) {
+            $log[] = "$gene_set: annotations.gff3 symlink OK";
+        } else {
+            unlink($target_gff);
+            symlink($source_gff, $target_gff);
+            $log[] = "$gene_set: repointed annotations.gff3 symlink";
+        }
+    } elseif (!file_exists($target_gff)) {
         symlink($source_gff, $target_gff);
         $log[] = "$gene_set: symlinked annotations.gff3";
     } else {
-        $log[] = "$gene_set: annotations.gff3 symlink OK";
+        // A real (non-symlink) file is present — leave it as-is.
+        $log[] = "$gene_set: annotations.gff3 present (regular file)";
     }
 
     // ── bgzip + tabix ────────────────────────────────────────────────────────

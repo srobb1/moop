@@ -36,7 +36,7 @@
  *   - HTTP/HTTPS URL: https://server.edu/tracks/sample.bw (used as-is)
  *   - AUTO (for reference/annotations): Script auto-resolves to:
  *     * Reference: {genomes_dir}/{organism}/{assembly}/reference.fasta
- *     * Annotations: {genomes_dir}/{organism}/{assembly}/genomic.gff
+ *     * Annotations: {genomes_dir}/{organism}/{assembly}/annotations.gff3.gz
  * 
  * Optional Columns:
  *   - access_level: PUBLIC, COLLABORATOR, IP_IN_RANGE, or ADMIN (default: PUBLIC)

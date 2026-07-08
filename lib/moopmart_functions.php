@@ -716,7 +716,7 @@ function moopmartAttachCoords(array $features, array $coords_by_gs_id, array $co
  * Sub-features collected: exon, CDS, five_prime_UTR, three_prime_UTR, UTR.
  * Features assumed to be in parent-before-child order (standard GFF3).
  *
- * @param string   $gff_path         Path to genomic.gff
+ * @param string   $gff_path         Path to genes.gff
  * @param string[] $gene_uniquenames  Gene IDs to collect sub-features for
  * @return array   [gene_id => [{start, end, type, strand}, ...]] sorted by start ASC
  */
@@ -807,7 +807,7 @@ function moopmartGetExonCoords(string $gff_path, array $gene_uniquenames): array
  *                                  gene_set_name, organism_name, ...}]
  * @param string   $assembly_dir  Path to {organism_data}/{organism}/{assembly}/
  *                                genome.fa lives here (not in gene_set subdir)
- * @param string   $gff_path      Path to genomic.gff (used for exons mode only)
+ * @param string   $gff_path      Path to genes.gff (used for exons mode only)
  * @param string   $mode          'gene' | 'upstream' | 'downstream' | 'exons'
  * @param int      $flank_bp      Flank size in bp (upstream/downstream only; ignored otherwise)
  * @param resource $handle        Writable file handle to stream FASTA output to

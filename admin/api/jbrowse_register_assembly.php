@@ -167,7 +167,7 @@ foreach (glob("$source_dir/*/" . genes_gff_filename()) ?: [] as $gs_gff) {
     }
 }
 if ($gs_count === 0) {
-    $log[] = "No gene sets with genomic.gff found — register gene sets separately after uploading GFF files";
+    $log[] = "No gene sets with " . genes_gff_filename() . " found — register gene sets separately after uploading GFF files";
 }
 
 echo json_encode([

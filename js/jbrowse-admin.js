@@ -272,7 +272,7 @@ let _gffActionState = null;
 function rebuildGff(organism, assembly, buttonEl) {
     _openGffModal({
         title:       `Rebuild GFF — ${organism} / ${assembly}`,
-        desc:        'Re-runs bgzip and tabix on the source genomic.gff. ' +
+        desc:        'Re-runs bgzip and tabix on the source genes.gff. ' +
                      'Leave the attributes field blank to skip text-indexing.',
         btnLabel:    'Rebuild',
         btnClass:    'btn btn-warning',

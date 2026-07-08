@@ -3,7 +3,7 @@
  * JBrowse Admin API: Re-prep GFF
  *
  * Re-runs sort + bgzip + tabix for a gene set and updates its gene track JSON.
- * Use after replacing the source genomic.gff with updated data.
+ * Use after replacing the source genes.gff with updated data.
  *
  * POST params:
  *   organism   - organism directory name (e.g. Nematostella_vectensis)
@@ -53,11 +53,11 @@ $site_path    = $config->getPath('site_path');
 // Validate source GFF exists and is non-empty
 $source_gff = "$organisms_dir/$organism/$assembly/$gene_set/" . genes_gff_filename();
 if (!file_exists($source_gff)) {
-    echo json_encode(['success' => false, 'error' => "No genomic.gff found at $source_gff"]);
+    echo json_encode(['success' => false, 'error' => "No " . genes_gff_filename() . " found at $source_gff"]);
     exit;
 }
 if (filesize($source_gff) === 0) {
-    echo json_encode(['success' => false, 'error' => "genomic.gff is empty (0 bytes). Replace it with real data first."]);
+    echo json_encode(['success' => false, 'error' => genes_gff_filename() . " is empty (0 bytes). Replace it with real data first."]);
     exit;
 }
 

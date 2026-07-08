@@ -22,12 +22,12 @@ organisms/
 └── Nematostella_vectensis/
     └── GCA_033964005.1/
         ├── genome.fa          ← Required: Reference genome (FASTA)
-        └── genomic.gff        ← Optional: Gene annotations (GFF3)
+        └── genes.gff        ← Optional: Gene annotations (GFF3)
 ```
 
 **Requirements:**
 - `genome.fa` - Reference genome sequence in FASTA format
-- `genomic.gff` - Gene annotations in GFF3 format (optional but recommended)
+- `genes.gff` - Gene annotations in GFF3 format (optional but recommended)
 
 ### 2. Track Data Files
 
@@ -110,7 +110,7 @@ data/genomes/
     └── GCA_033964005.1/
         ├── reference.fasta          ← Symlink to genome.fa
         ├── reference.fasta.fai      ← Generated: FASTA index
-        ├── annotations.gff3         ← Symlink to genomic.gff
+        ├── annotations.gff3         ← Symlink to genes.gff
         ├── annotations.gff3.gz      ← Generated: Compressed GFF
         └── annotations.gff3.gz.tbi  ← Generated: Tabix index
 ```
@@ -176,7 +176,7 @@ jbrowse2/configs/
 │   └── {Organism_name}/
 │       └── {Assembly_ID}/
 │           ├── genome.fa               ← Input: Reference genome
-│           └── genomic.gff             ← Input: Annotations
+│           └── genes.gff             ← Input: Annotations
 │
 ├── data/                                ← GENERATED/WORKING DATA (not in git)
 │   ├── genomes/                         ← Processed genome files
@@ -348,7 +348,7 @@ Place your source data in the organisms directory:
 ```bash
 /data/moop/organisms/Nematostella_vectensis/GCA_033964005.1/
 ├── genome.fa
-└── genomic.gff
+└── genes.gff
 ```
 
 And raw track data:
@@ -377,7 +377,7 @@ cd /data/moop
 1. Creates `/data/genomes/{Organism}/{Assembly}/`
 2. Symlinks genome.fa → reference.fasta
 3. Indexes FASTA with `samtools faidx`
-4. Symlinks genomic.gff → annotations.gff3
+4. Symlinks genes.gff → annotations.gff3
 5. Compresses GFF with `bgzip`
 6. Indexes GFF with `tabix`
 

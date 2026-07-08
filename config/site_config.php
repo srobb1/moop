@@ -161,7 +161,7 @@ return [
     //   organisms/{organism}/{assembly}/{gene_set}/{this}
     // Read everywhere via the genes_gff_filename() helper (includes/config_init.php),
     // so renaming the file across the whole app means changing ONLY this one value.
-    'genes_gff_filename' => 'genomic.gff',
+    'genes_gff_filename' => 'genes.gff',
     
     // ======== BLAST TOOL SAMPLE SEQUENCES ========
     // Sample sequences for users to test BLAST functionality

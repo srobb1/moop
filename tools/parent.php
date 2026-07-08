@@ -180,7 +180,7 @@ $annotated_child_types = getAnnotatedFeatureTypesInGeneSet((int)$feature_gene_se
 
 // Look up feature coordinates and build gene model from GFF.
 // Fast path: feature_coords.tsv (tiny file) → tabix indexed GFF (milliseconds).
-// Fallback:  plain grep on genomic.gff for gene sets not yet indexed.
+// Fallback:  plain grep on genes.gff for gene sets not yet indexed.
 // With tabix the whole region is fetched in one call and parsed in PHP —
 // no separate grep passes for mRNAs or exons.
 $feature_loc   = null;

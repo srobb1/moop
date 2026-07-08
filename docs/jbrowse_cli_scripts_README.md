@@ -139,7 +139,7 @@ sample1_pos       Sample 1 (+)         Gene Expression    /data/tracks/sample1.p
 
 **Options:**
 - `--genome-file FILE` - Genome filename (default: genome.fa)
-- `--gff-file FILE` - GFF filename (default: genomic.gff)
+- `--gff-file FILE` - GFF filename (default: genes.gff)
 - `--display-name NAME` - Display name (optional)
 - `--help` - Show help message
 
@@ -296,7 +296,7 @@ bulk_load_assemblies.sh
     └── {ORGANISM}/
         ├── {ASSEMBLY}/
         │   ├── genome.fa              (original genome)
-        │   ├── genomic.gff            (original GFF)
+        │   ├── genes.gff            (original GFF)
         │   └── organism.sqlite        (metadata)
         └── organism.sqlite            (shared metadata)
 ```

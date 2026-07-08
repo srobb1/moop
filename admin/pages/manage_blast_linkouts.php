@@ -271,7 +271,7 @@
                   <?php elseif ($row['has_gff']): ?>
                     <span class="badge bg-warning text-dark">Not generated</span>
                   <?php else: ?>
-                    <span class="badge bg-secondary">No genomic.gff</span>
+                    <span class="badge bg-secondary">No <?= genes_gff_filename() ?></span>
                   <?php endif; ?>
                 </td>
                 <td class="small"><?= $row['tsv_size'] ?? '—' ?></td>

@@ -48,7 +48,7 @@ if (getenv('VALIDATE_CONFIG') !== 'false') {
  * the whole app (e.g. genomic.gff -> genes.gff), change only that value.
  */
 function genes_gff_filename(): string {
-    return ConfigManager::getInstance()->getString('genes_gff_filename', 'genomic.gff');
+    return ConfigManager::getInstance()->getString('genes_gff_filename', 'genes.gff');
 }
 
 ?>

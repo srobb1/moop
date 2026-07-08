@@ -1,7 +1,7 @@
 <?php
 /**
  * Generate feature_coords.tsv for a given gene set.
- * Streams genomic.gff and writes feature → genomic coord mapping.
+ * Streams genes.gff and writes feature → genomic coord mapping.
  * Called from Manage BLAST Linkouts admin page.
  */
 
@@ -29,7 +29,7 @@ if (!is_dir($gene_set_path)) {
 }
 
 if (!file_exists($gene_set_path . '/' . genes_gff_filename())) {
-    echo json_encode(['success' => false, 'message' => 'genomic.gff not found in gene set directory.']);
+    echo json_encode(['success' => false, 'message' => genes_gff_filename() . ' not found in gene set directory.']);
     exit;
 }
 
@@ -38,7 +38,7 @@ set_time_limit(0);
 $ok = generateFeatureCoordsIndex($gene_set_path);
 
 if (!$ok) {
-    echo json_encode(['success' => false, 'message' => 'Generation failed — check that genomic.gff is readable and well-formed.']);
+    echo json_encode(['success' => false, 'message' => 'Generation failed — check that ' . genes_gff_filename() . ' is readable and well-formed.']);
     exit;
 }
 

@@ -163,7 +163,7 @@
 │   │       ├── cds.nt.fa.n*         ← BLAST index
 │   │       ├── protein.aa.fa        ← Protein sequences
 │   │       ├── protein.aa.fa.p*     ← BLAST protein index files
-│   │       ├── genomic.gff          ← GFF3 annotation file
+│   │       ├── genes.gff            ← GFF3 annotation file
 │   │       └── geneset.json         ← Gene set metadata (source, date, notes)
 │   │
 │   └── Another_Assembly_ID/
@@ -188,7 +188,7 @@
           <tr><td><code>transcript.nt.fa</code></td><td>Gene set level</td><td>Spliced mRNA sequences (exons only)</td></tr>
           <tr><td><code>cds.nt.fa</code></td><td>Gene set level</td><td>Coding sequences (start codon to stop codon)</td></tr>
           <tr><td><code>protein.aa.fa</code></td><td>Gene set level</td><td>Translated protein sequences</td></tr>
-          <tr><td><code>genomic.gff</code></td><td>Gene set level</td><td>GFF3 annotation file used by JBrowse2</td></tr>
+          <tr><td><code>genes.gff</code></td><td>Gene set level</td><td>GFF3 annotation file used by JBrowse2</td></tr>
           <tr><td><code>geneset.json</code></td><td>Gene set level</td><td>Gene set metadata: source, date added, notes</td></tr>
           <tr><td><code>*.n* / *.p*</code></td><td>Same dir as FASTA</td><td>BLAST database index files (auto-generated)</td></tr>
         </tbody>

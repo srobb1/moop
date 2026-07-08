@@ -190,7 +190,7 @@
             ├── cds.nt.fa.n*
             ├── protein.aa.fa    ← Protein sequences
             ├── protein.aa.fa.p*
-            ├── genomic.gff      ← GFF3 annotation (required for JBrowse)
+            ├── genes.gff        ← GFF3 annotation (required for JBrowse)
             └── geneset.json     ← Gene set provenance metadata</code></pre>
         </div>
 

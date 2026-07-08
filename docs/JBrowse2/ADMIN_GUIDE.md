@@ -46,7 +46,7 @@ Organism directories should follow this structure:
 └── {ORGANISM_NAME}/
     ├── {ASSEMBLY_ID}/
     │   ├── genome.fa          # Or custom name
-    │   └── genomic.gff        # Or custom name
+    │   └── genes.gff        # Or custom name
     └── organism.sqlite        # Optional, for metadata
 ```
 
@@ -56,7 +56,7 @@ Organism directories should follow this structure:
 └── Anoura_caudifer/
     ├── GCA_004027475.1/
     │   ├── genome.fa
-    │   └── genomic.gff
+    │   └── genes.gff
     └── organism.sqlite
 ```
 
@@ -73,7 +73,7 @@ Complete process to add one assembly:
 ```bash
 cd /data/moop
 
-# Basic usage (assumes genome.fa and genomic.gff)
+# Basic usage (assumes genome.fa and genes.gff)
 ./tools/jbrowse/setup_jbrowse_assembly.sh /organisms/Anoura_caudifer/GCA_004027475.1
 
 # With custom filenames
