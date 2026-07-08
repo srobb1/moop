@@ -415,12 +415,10 @@ function generateChildAnnotationCards($child, $all_annotations, $analysis_order,
     
     // Count annotations for this child
     $child_annotation_count = 0;
-    $child_annotation_types = [];
     foreach ($analysis_order as $annotation_type) {
         $annot_results = $all_annotations[$child_feature_id][$annotation_type] ?? [];
         if (!empty($annot_results)) {
             $child_annotation_count += count($annot_results);
-            $child_annotation_types[$annotation_type] = count($annot_results);
         }
     }
     
@@ -444,16 +442,10 @@ function generateChildAnnotationCards($child, $all_annotations, $analysis_order,
     $html .= "    </span>";
     $html .= "    <span class=\"ms-2 text-white px-2 py-1 rounded child-feature-badge $badge_class badge-md\">$child_uniquename ($child_type)</span>";
     
-    // Show colored annotation type badges
-    if ($child_annotation_count > 0) {
-        foreach ($child_annotation_types as $type_name => $type_count) {
-            $badge_color = $annotation_colors[$type_name] ?? 'warning';
-            $text_color = in_array($badge_color, ['warning', 'info', 'secondary']) ? 'text-dark' : 'text-white';
-            $display_label = $annotation_labels[$type_name] ?? $type_name;
-            $section_id = "annot_section_" . preg_replace('/[^a-zA-Z0-9_]/', '_', $child_uniquename . '_' . $type_name);
-            $html .= " <a href=\"#$section_id\" class=\"badge bg-$badge_color $text_color ms-1 text-decoration-none badge-s\" style=\"cursor: pointer;\">$display_label</a>";
-        }
-    } else {
+    // Annotation-type navigation now lives in the section sidebar (parent-nav.js),
+    // so per-type chips are no longer shown next to the child name. Children with
+    // no annotations still get a clear indicator here.
+    if ($child_annotation_count === 0) {
         $html .= " <span class=\"badge bg-secondary ms-2\">No annotations</span>";
     }
     
