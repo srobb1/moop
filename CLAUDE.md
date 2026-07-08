@@ -292,8 +292,12 @@ a new MOOP site from scratch. Site-specific data is versioned separately.
 See `notes/IMPROVEMENT_ROADMAP.md` for the full list. Top remaining items:
 
 - **RESOLVED:** `page-setup.php` deleted — removed broken CSS URL bug and dual DataTables loading
-- **Medium:** HTTP security headers (`X-Frame-Options`, `X-Content-Type-Options`,
-  `Content-Security-Policy`) not set — add to nginx/Apache config
+- **DONE (2026-07-08):** HTTP security headers now set in nginx (port-80 server block):
+  `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` are
+  enforced; `Content-Security-Policy` is **Report-Only** (with `'unsafe-inline'`) pending a
+  future refactor of ~154 inline event handlers (onclick/onchange/...) to `addEventListener`
+  + per-request nonces before it can be enforced. MOOP is served over HTTP (port 80), so HSTS
+  is N/A until a real HTTPS vhost exists.
 - **Medium:** JWT tokens passed as URL query parameter in JBrowse track requests
   (visible in server logs) — architectural constraint from JBrowse2
 - **Medium:** BLAST temp files accumulate — add cron: `find /tmp -name 'blast_*' -mtime +1 -delete`
