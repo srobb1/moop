@@ -1,0 +1,142 @@
+/* ============================================================================
+ * parent-nav.css — section navigation for the parent (gene) page
+ * Sticky collapsible sidebar on wide screens, sticky "Jump to" bar on narrow.
+ * TOC is built at runtime by js/modules/parent-nav.js (DOM scan) so it always
+ * matches the sections actually rendered. Palette follows MOOP teal (#0891b2).
+ * ==========================================================================*/
+
+:root{
+  --pnav-accent:#0891b2;
+  --pnav-accent-strong:#0e7490;
+  --pnav-accent-ink:#075766;
+  --pnav-wash:#ecfeff;
+  --pnav-wash-2:#cbf3f8;
+  --pnav-border:#dbe4ea;
+  --pnav-muted:#5a6b7a;
+  --pnav-w:264px;
+}
+
+/* ---- layout: sidebar + main, centred with a comfortable max width -------- */
+.pnav-layout{
+  display:grid;
+  grid-template-columns:var(--pnav-w) minmax(0,1fr);
+  gap:32px;
+  max-width:1440px;
+  margin:0 auto;
+  align-items:start;
+}
+.pnav-layout.pnav-collapsed{--pnav-w:46px}
+.pnav-main{min-width:0}  /* let content shrink instead of overflowing */
+
+/* ---- sidebar ------------------------------------------------------------- */
+.pnav-side{
+  position:sticky;
+  top:16px;
+  align-self:start;
+  max-height:calc(100vh - 28px);
+  display:flex;
+  flex-direction:column;
+  background:#fff;
+  border:1px solid var(--pnav-border);
+  border-radius:12px;
+  box-shadow:0 1px 2px rgba(16,40,55,.05),0 3px 12px rgba(16,40,55,.05);
+  overflow:hidden;
+}
+.pnav-side-head{
+  display:flex;align-items:center;justify-content:space-between;gap:.4rem;
+  padding:.6rem .75rem;border-bottom:1px solid var(--pnav-border);background:#f6f9fb;
+}
+.pnav-side-title{
+  font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--pnav-muted);font-weight:700;
+}
+.pnav-toggle{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;flex:none;cursor:pointer;
+  border:1px solid #c4d2dc;border-radius:7px;background:#fff;color:var(--pnav-muted);
+  transition:transform .15s ease;
+}
+.pnav-toggle:hover{color:var(--pnav-accent-strong);border-color:var(--pnav-accent);background:var(--pnav-wash)}
+.pnav-toggle:focus-visible{outline:2px solid var(--pnav-accent);outline-offset:2px}
+.pnav-scroll{overflow:auto;padding:.5rem .5rem .7rem}
+
+.pnav-collapsed .pnav-side-title{display:none}
+.pnav-collapsed .pnav-side-head{justify-content:center;padding:.6rem .3rem}
+.pnav-collapsed .pnav-scroll{display:none}
+.pnav-collapsed .pnav-side{max-height:none}
+.pnav-collapsed .pnav-toggle{transform:rotate(180deg)}
+
+/* ---- TOC tree ------------------------------------------------------------ */
+.pnav-list{list-style:none;margin:0;padding:0}
+.pnav-sub{overflow:hidden;transition:height .2s ease}
+.pnav-row{display:flex;align-items:center;gap:.1rem}
+.pnav-caret{
+  flex:none;width:20px;height:22px;display:inline-flex;align-items:center;justify-content:center;
+  background:none;border:none;color:#8496a5;cursor:pointer;padding:0;border-radius:5px;
+}
+.pnav-caret:hover{color:var(--pnav-accent-strong)}
+.pnav-caret:focus-visible{outline:2px solid var(--pnav-accent);outline-offset:1px}
+.pnav-caret svg{width:11px;height:11px;transition:transform .18s ease}
+.pnav-caret[aria-expanded="false"] svg{transform:rotate(-90deg)}
+.pnav-spacer{flex:none;width:20px}
+.pnav-link{
+  flex:1;min-width:0;display:flex;align-items:center;gap:.4rem;
+  padding:.32rem .5rem;border-radius:7px;color:#0f1e2b;font-size:.9rem;line-height:1.3;
+  border-left:3px solid transparent;text-decoration:none;
+}
+.pnav-link:hover{background:var(--pnav-wash);color:var(--pnav-accent-strong)}
+.pnav-link:focus-visible{outline:2px solid var(--pnav-accent);outline-offset:1px}
+.pnav-link.lvl-1{font-weight:600;color:var(--pnav-muted)}
+.pnav-link.lvl-2{font-size:.86rem}
+.pnav-link.lvl-3{font-size:.82rem;color:var(--pnav-muted)}
+.pnav-link .pnav-tag{
+  flex:none;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.62rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.02em;color:#5b60d6;background:#e7e8fb;
+  padding:.05rem .3rem;border-radius:5px;
+}
+.pnav-link .pnav-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnav-link.is-active{background:var(--pnav-wash);border-left-color:var(--pnav-accent);
+  color:var(--pnav-accent-ink);font-weight:700}
+/* ancestors get no highlight — only the current section lights up (kept subtle
+   on purpose; the branch is still auto-expanded so the active item is visible) */
+
+/* landing offset so sticky headers / cards don't hide the top of a target */
+[data-nav-label],.annotation-card,.annotation-section{scroll-margin-top:16px}
+
+/* ---- narrow "Jump to" bar ------------------------------------------------ */
+.pnav-jumpbar{
+  display:none;position:sticky;top:0;z-index:1020;align-items:center;gap:.6rem;
+  padding:.5rem .75rem;margin-bottom:14px;background:#fff;
+  border:1px solid var(--pnav-border);border-radius:10px;
+  box-shadow:0 2px 10px rgba(16,40,55,.08);
+}
+.pnav-jb-btn{
+  display:inline-flex;align-items:center;gap:.45rem;font:inherit;font-weight:600;color:#0f1e2b;
+  background:var(--pnav-wash);border:1px solid var(--pnav-wash-2);padding:.4rem .7rem;
+  border-radius:9px;cursor:pointer;
+}
+.pnav-jb-btn:focus-visible{outline:2px solid var(--pnav-accent);outline-offset:2px}
+.pnav-jb-btn svg{width:14px;height:14px}
+.pnav-jb-btn .pnav-jb-chev{transition:transform .18s ease}
+.pnav-jb-btn[aria-expanded="true"] .pnav-jb-chev{transform:rotate(180deg)}
+.pnav-jb-current{color:var(--pnav-muted);font-size:.85rem;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.pnav-jb-dd{
+  position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;
+  border:1px solid var(--pnav-border);border-radius:10px;
+  box-shadow:0 8px 30px rgba(16,40,55,.18);
+  max-height:min(66vh,460px);overflow:auto;padding:.5rem;display:none;
+}
+.pnav-jb-dd.open{display:block}
+
+/* ---- responsive: below xl, sidebar becomes the jump bar ------------------ */
+@media (max-width:1199.98px){
+  .pnav-layout{grid-template-columns:minmax(0,1fr);gap:0}
+  .pnav-side{display:none}
+  .pnav-jumpbar{display:flex}
+  [data-nav-label],.annotation-card,.annotation-section{scroll-margin-top:64px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .pnav-sub,.pnav-caret svg,.pnav-toggle,.pnav-jb-btn .pnav-jb-chev{transition:none}
+}

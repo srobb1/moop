@@ -21,9 +21,33 @@
 
 <div class="page_container">
 
-    <!-- Navigation -->
+    <!-- Section navigation — sidebar (wide) / jump-to bar (narrow). TOC is
+         built at runtime by js/modules/parent-nav.js from the sections below. -->
+    <div class="pnav-jumpbar">
+      <button class="pnav-jb-btn" id="pnavJbBtn" type="button" aria-expanded="false" aria-controls="pnavJbDd">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M2 4h12v1.6H2zM2 7.2h12v1.6H2zM2 10.4h8V12H2z"/></svg>
+        Jump to
+        <svg class="pnav-jb-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+      </button>
+      <span class="pnav-jb-current" id="pnavJbCurrent">Overview</span>
+      <div class="pnav-jb-dd" id="pnavJbDd"></div>
+    </div>
+
+    <div class="pnav-layout">
+      <aside class="pnav-side" aria-label="On this page">
+        <div class="pnav-side-head">
+          <span class="pnav-side-title">On this page</span>
+          <button class="pnav-toggle" id="pnavToggle" type="button" aria-label="Collapse navigation" aria-expanded="true" title="Collapse (content goes full width)">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+          </button>
+        </div>
+        <div class="pnav-scroll" id="pnavToc"></div>
+      </aside>
+
+      <div class="pnav-main">
+
     <!-- Feature Header and Tools Row -->
-    <div class="row mb-3">
+    <div class="row mb-3" id="pnav-overview" data-nav-label="Overview">
       <!-- Feature Header Column -->
       <div class="col-lg-8">
         <div class="feature-header shadow h-100">
@@ -105,7 +129,7 @@
 
     <?php if (!empty($gene_model)): ?>
     <!-- Gene Structure Section -->
-    <div class="card shadow-sm mb-4">
+    <div class="card shadow-sm mb-4" id="pnav-gene-structure" data-nav-label="Gene Structure">
         <div class="card-header d-flex align-items-center">
             <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#geneModelSection" aria-expanded="true" role="button">
                 <i class="fas fa-minus toggle-icon text-primary"></i>
@@ -162,7 +186,7 @@
     <?php endif; ?>
 
     <!-- Feature Hierarchy Section -->
-    <div class="card shadow-sm mb-4">
+    <div class="card shadow-sm mb-4" id="pnav-hierarchy" data-nav-label="Feature Hierarchy">
         <div class="card-header d-flex align-items-center">
             <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#hierarchySection" aria-expanded="true" role="button">
                 <i class="fas fa-sitemap toggle-icon text-primary"></i>
@@ -200,7 +224,7 @@
     </div>
 
     <!-- Annotations Section -->
-    <div class="card shadow-sm mb-4">
+    <div class="card shadow-sm mb-4" id="pnav-annotations" data-nav-label="Annotations">
         <div class="card-header d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center">
                 <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="true" role="button">
@@ -284,6 +308,7 @@
     </div>
 
     <!-- Sequences Section -->
+    <div id="pnav-sequences" data-nav-label="Sequences">
     <?php
     // $gene_name is built in the controller and passed via $data
     $enable_downloads = true;
@@ -295,6 +320,10 @@
         include_once $sequences_file;
     }
     ?>
+    </div><!-- /#pnav-sequences -->
+
+      </div><!-- /.pnav-main -->
+    </div><!-- /.pnav-layout -->
 
 </div>
 </div><!-- End page_container -->
