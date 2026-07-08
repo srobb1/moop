@@ -76,10 +76,13 @@
 
   <!-- Information Panel -->
   <div class="card mb-4">
-    <div class="card-header bg-info text-white">
+    <div class="card-header bg-info text-white d-flex align-items-center" role="button"
+         data-bs-toggle="collapse" data-bs-target="#orgDataMgmtBody"
+         aria-expanded="false" aria-controls="orgDataMgmtBody" style="cursor:pointer;">
       <h5 class="mb-0"><i class="fa fa-info-circle"></i> Organism Data Management</h5>
+      <i class="fa fa-chevron-down ms-auto"></i>
     </div>
-    <div class="card-body">
+    <div class="card-body collapse" id="orgDataMgmtBody">
       <p>Organisms and genome assemblies are managed by creating or uploading directories to the organisms data folder. Each organism follows a specific directory structure.</p>
       
       <div class="row">
@@ -170,75 +173,6 @@
   <?php endif; ?>
 
   <!-- Legend Box -->
-  <div class="card mb-4">
-    <div class="card-header bg-light" style="cursor: pointer;" id="legendHeader" role="button">
-      <h6 class="mb-0">
-        <i class="fa fa-book"></i> <strong>Legend & Status Guide</strong>
-        <span class="ms-2">
-          <span class="badge bg-warning" style="width: 12px; height: 12px; display: inline-block; padding: 0;"></span>
-          <span class="badge bg-danger" style="width: 12px; height: 12px; display: inline-block; padding: 0;"></span>
-          <span class="badge bg-info" style="width: 12px; height: 12px; display: inline-block; padding: 0;"></span>
-        </span>
-        <i class="fa fa-chevron-down float-end" id="legendChevron"></i>
-      </h6>
-    </div>
-    <div id="legendContent">
-      <div class="card-body">
-        <!-- Assemblies Legend -->
-        <div class="mb-4">
-          <h6 class="fw-bold mb-2"><i class="fa fa-folder"></i> Assemblies Status</h6>
-          <p class="mb-2">
-            <span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete</span> - Assembly directory exists with valid FASTA files
-            <br><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Name Mismatch</span> - Directory name doesn't match database genome name
-            <br><span class="badge bg-secondary"><i class="fa fa-rocket"></i> Missing BLAST Indexes</span> - FASTA files present but BLAST indexes need to be generated
-            <br><span class="badge bg-secondary"><i class="fa fa-dna"></i> Missing FAI Index</span> - <code>genome.fa.fai</code> missing; SVG sequence viewer unavailable
-            <br><span class="badge bg-info"><i class="fa fa-times-circle"></i> Missing Files</span> - Assembly missing required FASTA files
-          </p>
-          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click an assembly button for detailed information and available tools.</p>
-        </div>
-
-        <!-- Database Status Legend -->
-        <div class="mb-4">
-          <h6 class="fw-bold mb-2"><i class="fa fa-database"></i> Database Status</h6>
-          <p class="mb-2">
-            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Ready</button> - Database exists, is readable, and valid
-            <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete</button> - Database valid but has assembly issues
-            <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-lock"></i> Unreadable</button> - Database file exists but web server cannot read it
-            <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Invalid</button> - Database file is corrupted or invalid
-          </p>
-          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the database status button to view detailed validation information and troubleshooting options.</p>
-        </div>
-
-        <!-- Metadata Status Legend -->
-        <div class="mb-3">
-          <h6 class="fw-bold mb-2"><i class="fa fa-file-code"></i> Metadata Status</h6>
-          <p class="mb-2">
-            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete</button> - organism.json exists with all required fields and is writable
-            <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-lock"></i> Not Writable</button> - File has all required data but is not writable by web server
-            <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Missing</button> - organism.json file does not exist
-            <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-lock"></i> Unreadable</button> - File exists but cannot be read
-            <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Invalid JSON</button> - File exists but contains invalid JSON
-            <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete</button> - JSON valid but missing required fields
-          </p>
-          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the metadata status button to edit metadata, add images, and write organism descriptions.</p>
-        </div>
-
-        <!-- Overall Status Legend -->
-        <div class="mb-0">
-          <h6 class="fw-bold mb-2"><i class="fa fa-star"></i> Overall Status</h6>
-          <p class="mb-2">
-            <button class="btn btn-sm btn-outline-success"><i class="fa fa-check-circle"></i> Complete <span class="badge bg-success">10</span></button> - All 10 checks passed
-            <br><button class="btn btn-sm btn-outline-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-warning text-dark">X</span></button> - Some checks passed (see modal for details)
-            <br><button class="btn btn-sm btn-outline-danger"><i class="fa fa-times-circle"></i> Critical <span class="badge bg-danger">0</span></button> - No checks passed (no database or no assemblies)
-          </p>
-          <p class="small text-muted"><i class="fa fa-info-circle"></i> <strong>Tip:</strong> Click the status button to see the detailed checklist of all 10 setup requirements.</p>
-          <p class="small text-muted"><strong>Checklist includes:</strong> Assemblies • FASTA files • BLAST indexes • FAI index • Database file • Database readable • Assemblies in groups • Organism in tree • Metadata complete</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
   <!-- Data Health Issues (shared partial — identical card on the Admin Dashboard) -->
   <?php include __DIR__ . '/_data_health_card.php'; ?>
 
@@ -260,60 +194,143 @@
   <?php endif; ?>
 
   <?php
+  // Per-organism FASTA gaps, read from the cached fasta_validation. Returns whether
+  // any assembly is missing genome.fa, and whether any is missing a non-genome
+  // sequence type (transcript/cds/protein — "other FASTA"). Reused by the filter
+  // counts below and the per-row data-issues tokens.
+  $fasta_gaps = function (array $data): array {
+      $missing_genome = false;
+      $missing_other  = false;
+      foreach ($data['fasta_validation']['assemblies'] ?? [] as $asm) {
+          foreach ($asm['fasta_files'] ?? [] as $type => $info) {
+              if (!empty($info['found'])) continue;
+              if ($type === 'genome') $missing_genome = true;
+              else                    $missing_other  = true;
+          }
+      }
+      return ['genome_fa' => $missing_genome, 'other_fasta' => $missing_other];
+  };
+
   // Pre-compute filter counts for the status filter bar
   $filter_counts = ['needs-attention' => 0, 'blast' => 0, 'fai' => 0,
+                    'missing-genome-fa' => 0, 'missing-other-fasta' => 0,
                     'groups' => 0, 'tree' => 0, 'metadata' => 0, 'stale' => 0];
   foreach ($organisms as $_org => $_d) {
       $_c = $_d['overall_status']['checks'];
+      $_g = $fasta_gaps($_d);
       if (!$_d['overall_status']['all_pass'])   $filter_counts['needs-attention']++;
       if (!$_c['has_blast_indexes'])            $filter_counts['blast']++;
       if (!$_c['has_fai_index'])                $filter_counts['fai']++;
+      if ($_g['genome_fa'])                     $filter_counts['missing-genome-fa']++;
+      if ($_g['other_fasta'])                   $filter_counts['missing-other-fasta']++;
       if (!$_c['assemblies_in_groups'])         $filter_counts['groups']++;
       if (!$_c['in_taxonomy_tree'])             $filter_counts['tree']++;
       if (!$_c['metadata_complete'])            $filter_counts['metadata']++;
       if (in_array($_org, $stale_organisms ?? [])) $filter_counts['stale']++;
   }
-  unset($_org, $_d, $_c);
+  unset($_org, $_d, $_c, $_g);
   ?>
+
+  <!-- Legend & Status Guide — compact, collapsed by default, sits directly above the table -->
+  <div class="card mb-2">
+    <div class="card-header bg-light d-flex align-items-center py-2" role="button"
+         data-bs-toggle="collapse" data-bs-target="#legendContent"
+         aria-expanded="false" aria-controls="legendContent" style="cursor:pointer;">
+      <i class="fa fa-book text-muted me-2"></i>
+      <span class="fw-semibold">Legend &amp; Status Guide</span>
+      <span class="ms-2 d-inline-flex gap-1">
+        <span class="badge bg-success rounded-circle p-1">&nbsp;</span>
+        <span class="badge bg-warning rounded-circle p-1">&nbsp;</span>
+        <span class="badge bg-danger rounded-circle p-1">&nbsp;</span>
+      </span>
+      <i class="fa fa-chevron-down ms-auto text-muted"></i>
+    </div>
+    <div class="collapse" id="legendContent">
+      <div class="card-body py-3">
+        <div class="row g-3 small">
+          <div class="col-md-6 col-xl-3">
+            <h6 class="fw-bold mb-2"><i class="fa fa-folder text-muted"></i> Assemblies</h6>
+            <div class="d-flex flex-column gap-1">
+              <div><span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete</span> <span class="text-muted">dir + valid FASTA</span></div>
+              <div><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Name Mismatch</span> <span class="text-muted">dir ≠ DB genome name</span></div>
+              <div><span class="badge bg-secondary"><i class="fa fa-rocket"></i> Missing BLAST</span> <span class="text-muted">FASTA present, no indexes</span></div>
+              <div><span class="badge bg-secondary"><i class="fa fa-dna"></i> Missing FAI</span> <span class="text-muted"><code>genome.fa.fai</code> absent</span></div>
+              <div><span class="badge bg-info"><i class="fa fa-times-circle"></i> Missing Files</span> <span class="text-muted">required FASTA absent</span></div>
+            </div>
+          </div>
+          <div class="col-md-6 col-xl-3">
+            <h6 class="fw-bold mb-2"><i class="fa fa-database text-muted"></i> Database</h6>
+            <div class="d-flex flex-column gap-1">
+              <div><span class="badge bg-success"><i class="fa fa-check-circle"></i> Ready</span> <span class="text-muted">exists, readable, valid</span></div>
+              <div><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete</span> <span class="text-muted">valid, assembly issues</span></div>
+              <div><span class="badge bg-danger"><i class="fa fa-lock"></i> Unreadable</span> <span class="text-muted">server can't read file</span></div>
+              <div><span class="badge bg-danger"><i class="fa fa-times-circle"></i> Invalid</span> <span class="text-muted">corrupted / bad schema</span></div>
+            </div>
+          </div>
+          <div class="col-md-6 col-xl-3">
+            <h6 class="fw-bold mb-2"><i class="fa fa-file-code text-muted"></i> Metadata</h6>
+            <div class="d-flex flex-column gap-1">
+              <div><span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete</span> <span class="text-muted">all fields, writable</span></div>
+              <div><span class="badge bg-warning"><i class="fa fa-lock"></i> Not Writable</span> <span class="text-muted">complete but read-only</span></div>
+              <div><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete</span> <span class="text-muted">valid, missing fields</span></div>
+              <div><span class="badge bg-danger"><i class="fa fa-times-circle"></i> Missing / Invalid</span> <span class="text-muted">absent or bad JSON</span></div>
+            </div>
+          </div>
+          <div class="col-md-6 col-xl-3">
+            <h6 class="fw-bold mb-2"><i class="fa fa-star text-muted"></i> Overall</h6>
+            <div class="d-flex flex-column gap-1">
+              <div><span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete <span class="badge bg-light text-success">10</span></span> <span class="text-muted">all 10 checks pass</span></div>
+              <div><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-light text-dark">X</span></span> <span class="text-muted">some pass</span></div>
+              <div><span class="badge bg-danger"><i class="fa fa-times-circle"></i> Critical <span class="badge bg-light text-danger">0</span></span> <span class="text-muted">none pass</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="small text-muted mb-0 mt-3">
+          <i class="fa fa-info-circle"></i> Click any status badge in a row for details and fixes.
+          <strong>10-point checklist:</strong> Assemblies • FASTA files • BLAST indexes • FAI index • Database file • Database readable • Assemblies in groups • Organism in tree • Metadata complete
+        </p>
+      </div>
+    </div>
+  </div>
 
   <!-- Current Organisms Table -->
   <div class="card">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">
-        <i class="fa fa-list"></i> Current Organisms (<span id="organismCount"><?= count($organisms) ?></span>)
-        <?php if ($cache_generated): ?>
-          <small class="fw-normal ms-2 opacity-75" style="font-size:0.75rem;">
-            cached <span id="cacheAge" data-generated="<?= htmlspecialchars($cache_generated) ?>"></span>
+    <div class="card-header bg-primary text-white">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+          <h5 class="mb-0">
+            <i class="fa fa-list"></i> Current Organisms (<span id="organismCount"><?= count($organisms) ?></span>)
+          </h5>
+          <small class="fw-normal opacity-75" style="font-size:0.72rem;">
+            <?php if ($cache_generated): ?>
+              cached <span id="cacheAge" data-generated="<?= htmlspecialchars($cache_generated) ?>"></span>
+            <?php else: ?>
+              <span id="cacheAge" data-generated="">no cache</span>
+            <?php endif; ?>
+            <?php if ($lineage_cache_generated): ?>
+              &nbsp;&middot;&nbsp; NCBI taxonomy synced <span id="taxonomySyncAge" data-generated="<?= htmlspecialchars($lineage_cache_generated) ?>"></span>
+            <?php endif; ?>
           </small>
-        <?php else: ?>
-          <small class="fw-normal ms-2 opacity-75" style="font-size:0.75rem;" id="cacheAge" data-generated="">no cache</small>
-        <?php endif; ?>
-      </h5>
-      <div class="d-flex align-items-center gap-2 flex-wrap">
-        <span id="refreshStatus" class="text-white-50 small" style="display:none;"></span>
-        <button id="rescanBtn" class="btn btn-sm btn-light" onclick="rescanOrganisms(this)" title="Rescan only organisms whose files changed since last cache">
-          <i class="fa fa-sync-alt"></i> Refresh Cache
-        </button>
-        <button id="forceRescanBtn" class="btn btn-sm btn-outline-warning" onclick="forceRescanOrganisms()" title="Rescan all organisms regardless of cache state — use when the cache seems wrong">
-          <i class="fa fa-redo"></i> Force Full Rescan
-        </button>
-        <span class="text-white-50 opacity-50">|</span>
-        <span id="syncTaxonomyStatus" class="text-white-50 small" style="display:none;"></span>
-        <button id="syncTaxonomyBtn" class="btn btn-sm btn-outline-info"
-                onclick="syncNcbiTaxonomy(this, document.getElementById('syncTaxonomyStatus'))"
-                title="Download NCBI taxonomy dump and populate lineage cache — eliminates per-organism API calls">
-          <i class="fa fa-download"></i> Sync NCBI Taxonomy
-        </button>
-        <?php if ($lineage_cache_generated): ?>
-          <small class="text-white-50" style="font-size:0.75rem;">
-            synced <span id="taxonomySyncAge" data-generated="<?= htmlspecialchars($lineage_cache_generated) ?>"></span>
-          </small>
-        <?php endif; ?>
-        <span class="text-white-50 opacity-50">|</span>
-        <button class="btn btn-sm btn-outline-light" data-bs-toggle="collapse" data-bs-target="#taskHelpPanel"
-                title="When to run each task" style="font-size:0.8rem; padding: 0.15rem 0.4rem;">
-          <i class="fa fa-info-circle"></i>
-        </button>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <span id="refreshStatus" class="text-white-50 small" style="display:none;"></span>
+          <span id="syncTaxonomyStatus" class="text-white-50 small" style="display:none;"></span>
+          <button id="rescanBtn" class="btn btn-sm btn-light" onclick="rescanOrganisms(this)" title="Rescan only organisms whose files changed since last cache">
+            <i class="fa fa-sync-alt"></i> Refresh Cache
+          </button>
+          <button id="forceRescanBtn" class="btn btn-sm btn-outline-light" onclick="forceRescanOrganisms()" title="Rescan all organisms regardless of cache state — use when the cache seems wrong">
+            <i class="fa fa-redo"></i> Force Full Rescan
+          </button>
+          <button id="syncTaxonomyBtn" class="btn btn-sm btn-outline-light"
+                  onclick="syncNcbiTaxonomy(this, document.getElementById('syncTaxonomyStatus'))"
+                  title="Download NCBI taxonomy dump and populate lineage cache — eliminates per-organism API calls">
+            <i class="fa fa-download"></i> Sync NCBI Taxonomy
+          </button>
+          <button class="btn btn-sm btn-outline-light" data-bs-toggle="collapse" data-bs-target="#taskHelpPanel"
+                  title="When to run each task">
+            <i class="fa fa-info-circle"></i>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -366,6 +383,12 @@
         <?php if ($filter_counts['fai'] > 0): ?>
           <button class="btn btn-sm btn-outline-secondary" data-filter="fai">Missing FAI (<?= $filter_counts['fai'] ?>)</button>
         <?php endif; ?>
+        <?php if ($filter_counts['missing-genome-fa'] > 0): ?>
+          <button class="btn btn-sm btn-outline-info" data-filter="missing-genome-fa">Missing genome.fa (<?= $filter_counts['missing-genome-fa'] ?>)</button>
+        <?php endif; ?>
+        <?php if ($filter_counts['missing-other-fasta'] > 0): ?>
+          <button class="btn btn-sm btn-outline-info" data-filter="missing-other-fasta">Missing other FASTA (<?= $filter_counts['missing-other-fasta'] ?>)</button>
+        <?php endif; ?>
         <?php if ($filter_counts['groups'] > 0): ?>
           <button class="btn btn-sm btn-outline-danger" data-filter="groups">Not in Groups (<?= $filter_counts['groups'] ?>)</button>
         <?php endif; ?>
@@ -415,6 +438,9 @@
                foreach ($row_issue_map as $chk => $lbl) {
                    if (isset($row_checks[$chk]) && !$row_checks[$chk]) $row_issues[] = $lbl;
                }
+               $row_gaps = $fasta_gaps($data);
+               if ($row_gaps['genome_fa'])   $row_issues[] = 'missing-genome-fa';
+               if ($row_gaps['other_fasta']) $row_issues[] = 'missing-other-fasta';
                if ($is_stale) $row_issues[] = 'stale';
                $row_status = $row_status_info['all_pass'] ? 'complete'
                            : ($row_status_info['pass_count'] > 0 ? 'incomplete' : 'critical');

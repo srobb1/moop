@@ -1183,7 +1183,7 @@ function render_status_modal($organism, $data, $groups_data, $taxonomy_tree_file
                   'has_fai_index'       => 'Has FAI index',
                   'has_database'        => 'Has database file',
                   'database_valid'      => 'Database is valid',
-                  'directories_match_db'=> 'Assembly &amp; gene set dirs match DB',
+                  'directories_match_db'=> 'Assembly & gene set dirs match DB',
                   'assemblies_in_groups'=> 'Assembly in organism groups',
                   'in_taxonomy_tree'    => 'In taxonomy tree',
                   'metadata_complete'   => 'Metadata complete',
