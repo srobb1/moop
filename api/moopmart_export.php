@@ -95,28 +95,43 @@ foreach ($selected as $src) {
     $by_organism[$org]['sources'][] = $src;
 }
 
-// --- Collect all matching features with coordinates ---
-$all_features     = [];
+// Genes per streaming chunk. A chunk's annotation map is the dominant cost of the export
+// (~47 KB per gene, so 250 genes ≈ 12 MB); keeping it small is what lets a whole-organism
+// export finish inside PHP's 128M limit.
+const MOOPMART_EXPORT_GENE_CHUNK = 250;
+
 $sources_by_gs_id = [];
 
-foreach ($by_organism as $org => $org_data) {
+/**
+ * Yield one organism's matched gene rows in chunks, with coordinates attached.
+ *
+ * A generator rather than a returned array on purpose: collecting every matched row first
+ * cost ~108 MB for a 28k-gene genome — attaching coordinates rewrites each row into a new
+ * array — and the export then died fetching the first chunk's annotations, before writing
+ * a single data row. Streaming keeps peak memory flat however many organisms are selected.
+ */
+$organismChunks = function (string $org, array $org_data) use (
+    $filters, $raw_input_ids, $coord_filter, $global_filter_reason, &$sources_by_gs_id
+): Generator {
     $db = $org_data['db_path'];
-    if (!file_exists($db)) continue;
+    if (!file_exists($db)) return;
     $sources      = $org_data['sources'];
     $gene_set_ids = array_values(array_filter(array_column($sources, 'gene_set_id')));
-    if (empty($gene_set_ids)) continue;
+    if (empty($gene_set_ids)) return;
 
     $id_reasons  = [];
     $org_filters = $filters;
     if (!empty($raw_input_ids)) {
         $id_reasons = moopmartResolveInputIds($raw_input_ids, $db, $gene_set_ids);
-        if (empty($id_reasons)) continue;
+        if (empty($id_reasons)) return;
         $org_filters['feature_ids'] = array_keys($id_reasons);
     }
 
     $features = moopmartQueryFeatures($gene_set_ids, $db, $org_filters);
-    if (empty($features)) continue;
+    if (empty($features)) return;
 
+    // Coordinates come from a per-gene-set TSV, so load each one once for the whole gene
+    // set rather than re-reading it for every chunk.
     $uniquenames_by_gs = [];
     foreach ($features as $f) {
         $uniquenames_by_gs[$f['gene_set_id']][] = $f['uniquename'];
@@ -131,26 +146,27 @@ foreach ($by_organism as $org => $org_data) {
             $sources_by_gs_id[$gs_key] = $src;
         }
     }
+    unset($uniquenames_by_gs);
 
-    foreach (moopmartAttachCoords($features, $coords_by_gs, $coord_filter) as $f) {
-        $f['organism_dir'] = $org;
-        $f['db_path']      = $db;
-        $f['gs_key']       = $db . '|' . $f['gene_set_id'];
-        if (!empty($id_reasons)) {
-            $reason = $id_reasons[$f['uniquename']] ?? '';
-            if ($global_filter_reason) $reason .= ($reason ? ' + ' : '') . $global_filter_reason;
-        } else {
-            $reason = $global_filter_reason;
+    foreach (array_chunk($features, MOOPMART_EXPORT_GENE_CHUNK) as $chunk) {
+        $rows = [];
+        // The coordinate filter can drop rows, so a chunk may come back empty.
+        foreach (moopmartAttachCoords($chunk, $coords_by_gs, $coord_filter) as $f) {
+            $f['organism_dir'] = $org;
+            $f['db_path']      = $db;
+            $f['gs_key']       = $db . '|' . $f['gene_set_id'];
+            if (!empty($id_reasons)) {
+                $reason = $id_reasons[$f['uniquename']] ?? '';
+                if ($global_filter_reason) $reason .= ($reason ? ' + ' : '') . $global_filter_reason;
+            } else {
+                $reason = $global_filter_reason;
+            }
+            $f['match_reason'] = $reason;
+            $rows[]            = $f;
         }
-        $f['match_reason'] = $reason;
-        $all_features[]    = $f;
+        if ($rows) yield $db => $rows;
     }
-}
-
-if (empty($all_features)) {
-    http_response_code(404);
-    die('No features matched the selected filters.');
-}
+};
 
 $date     = date('Ymd_His');
 $ext      = $output_format === 'fasta' ? 'fa' : 'tsv';
@@ -168,16 +184,9 @@ if ($output_format === 'tsv') {
     $source_cols = array_values($annotation_columns_selected);
     sort($source_cols);
 
-    // Send headers immediately so nginx doesn't time out waiting for the first byte
-    header('Content-Type: text/tab-separated-values; charset=UTF-8');
-    header("Content-Disposition: attachment; filename=\"$filename\"");
-    header('Cache-Control: no-cache, no-store');
-    header('X-Accel-Buffering: no');  // disable nginx proxy buffering
-
-    $out = fopen('php://output', 'w');
-
     // Strip embedded newlines/tabs that would break TSV parsing in Excel
     $clean = fn($s) => str_replace(["\r\n", "\r", "\n", "\t"], ' ', (string)$s);
+    $out   = null;
 
     // Feature column map: UI key → [header label, value extractor]
     $feat_col_map = [
@@ -222,19 +231,28 @@ if ($output_format === 'tsv') {
             if ($ann_incl_desc) $headers[] = 'Description:' . $s;
         }
     }
-    fputcsv($out, $headers, "\t");
-    flush();
+    // Emit HTTP headers and the header row on the first surviving chunk. Until then nothing
+    // has been written, so a run that matches nothing can still answer 404 instead of
+    // returning a 200 with a lone header row.
+    $beginOutput = function () use (&$out, $headers, $filename) {
+        // Send headers immediately so nginx doesn't time out waiting for the first byte
+        header('Content-Type: text/tab-separated-values; charset=UTF-8');
+        header("Content-Disposition: attachment; filename=\"$filename\"");
+        header('Cache-Control: no-cache, no-store');
+        header('X-Accel-Buffering: no');  // disable nginx proxy buffering
 
-    // Group features by DB so annotation fetches hit one DB at a time.
-    // Process in chunks of 500 to keep annotation results memory-bounded;
-    // flush after each chunk so the browser receives data incrementally.
-    $by_db = [];
-    foreach ($all_features as $f) {
-        $by_db[$f['db_path']][] = $f;
-    }
+        $out = fopen('php://output', 'w');
+        fputcsv($out, $headers, "\t");
+        flush();
+    };
 
-    foreach ($by_db as $db_path => $db_features) {
-        foreach (array_chunk($db_features, 500) as $chunk) {
+    // One organism at a time, one chunk at a time: expand to mRNA rows, fetch only that
+    // chunk's annotations, write, free. Flush per chunk so the browser receives data
+    // incrementally instead of waiting on the whole export.
+    foreach ($by_organism as $org => $org_data) {
+        foreach ($organismChunks($org, $org_data) as $db_path => $chunk) {
+            if ($out === null) $beginOutput();
+
             // Expand gene rows to one row per mRNA before streaming
             $expanded   = moopmartExpandToMrnaRows($chunk, $db_path);
             $fids       = array_column($chunk, 'feature_id'); // gene-level fids for annotation lookup
@@ -270,8 +288,14 @@ if ($output_format === 'tsv') {
                     fputcsv($out, $row, "\t");
                 }
             }
+            unset($expanded, $chunk_anns);
             flush();
         }
+    }
+
+    if ($out === null) {
+        http_response_code(404);
+        die('No features matched the selected filters.');
     }
     fclose($out);
 
@@ -280,64 +304,91 @@ if ($output_format === 'tsv') {
 // =============================================================
 } else {
 
-    header('Content-Type: text/plain; charset=UTF-8');
-    if (!$fasta_preview) {
-        header("Content-Disposition: attachment; filename=\"$filename\"");
-    }
-    header('Cache-Control: no-cache, no-store');
+    $out = null;
+    $beginOutput = function () use (&$out, $filename, $fasta_preview) {
+        header('Content-Type: text/plain; charset=UTF-8');
+        if (!$fasta_preview) {
+            header("Content-Disposition: attachment; filename=\"$filename\"");
+        }
+        header('Cache-Control: no-cache, no-store');
+        $out = fopen('php://output', 'w');
+    };
 
-    $out = fopen('php://output', 'w');
-
-    // Limit to first 10 for preview
-    $fasta_features = $fasta_preview ? array_slice($all_features, 0, 10) : $all_features;
-
-    // Group features by db+gene_set_id so each organism's features hit its own genome files
-    $by_gs = [];
-    foreach ($fasta_features as $f) {
-        $by_gs[$f['gs_key']][] = $f;
-    }
-
-    $genomic_modes   = ['gene', 'upstream', 'downstream', 'exons'];
+    $genomic_modes    = ['gene', 'upstream', 'downstream', 'exons'];
     $skipped_datasets = [];
+    $collect_limit    = $fasta_preview ? 10 : PHP_INT_MAX;
+    $collected        = 0;
+    $reached_limit    = false;
 
-    foreach ($by_gs as $gs_key => $gs_features) {
-        $src = $sources_by_gs_id[$gs_key] ?? null;
-        if (!$src) continue;
+    foreach ($by_organism as $org_name => $org_data) {
+        if ($reached_limit) break;
 
-        $org          = $src['organism'];
-        $assembly     = $src['assembly'];
-        $gs_name      = $src['gene_set'] ?? '';
-        $assembly_dir = "$organism_data/$org/$assembly";
-        $gs_path      = "$assembly_dir/$gs_name";
-        $gff_path     = "$gs_path/" . genes_gff_filename();
-        $gs_label     = $gs_name ? "$org / $assembly / $gs_name" : "$org / $assembly";
-
-        if (in_array($fasta_mode, $genomic_modes)) {
-            $fasta = "$assembly_dir/genome.fa";
-            $fai   = "$assembly_dir/genome.fa.fai";
-            if (!file_exists($fasta) || !file_exists($fai)) {
-                $missing = !file_exists($fasta) ? 'genome.fa' : 'genome.fa.fai';
-                $skipped_datasets[] = "$gs_label (missing $missing)";
-                continue;
+        // Group this organism's genes by gene set: the exon writer makes a single GFF pass over
+        // a whole gene set, so it needs one intact. Keep only the fields the FASTA writers read
+        // — carrying descriptions and match reasons here costs several times the memory for
+        // nothing, and this is the one array the export still holds in full.
+        $by_gs = [];
+        foreach ($organismChunks($org_name, $org_data) as $chunk) {
+            foreach ($chunk as $f) {
+                $by_gs[$f['gs_key']][] = [
+                    'uniquename'  => $f['uniquename'],
+                    'chr'         => $f['chr']    ?? '',
+                    'start'       => $f['start']  ?? 0,
+                    'end'         => $f['end']    ?? 0,
+                    'strand'      => $f['strand'] ?? '',
+                    'gene_set_id' => $f['gene_set_id'],
+                ];
+                if (++$collected >= $collect_limit) { $reached_limit = true; break 2; }
             }
-            moopmartStreamGenomicFasta($gs_features, $assembly_dir, $gff_path, $fasta_mode, $flank_bp, $out);
-        } else {
-            // Pre-built FASTA files: protein, transcript, cds
-            // $gs_features is gene-level; expand to mRNA/CDS/protein children for extraction
-            $gene_uniquenames = array_column($gs_features, 'uniquename');
-            $db_path  = "$organism_data/$org/organism.sqlite";
-            $gs_id_int = (int)($gs_features[0]['gene_set_id'] ?? 0);
-            $typed_ids = buildTypedIdsForGenes($gene_uniquenames, $gs_id_int, $db_path);
-            $extract_result = extractSequencesForAllTypes($gs_path, $typed_ids, $sequence_types, $org, $assembly);
-            if (isset($extract_result['content'][$fasta_mode])) {
-                fwrite($out, $extract_result['content'][$fasta_mode]);
+        }
+        if (empty($by_gs)) continue;
+        if ($out === null) $beginOutput();
+
+        foreach ($by_gs as $gs_key => $gs_features) {
+            $src = $sources_by_gs_id[$gs_key] ?? null;
+            if (!$src) continue;
+
+            $org          = $src['organism'];
+            $assembly     = $src['assembly'];
+            $gs_name      = $src['gene_set'] ?? '';
+            $assembly_dir = "$organism_data/$org/$assembly";
+            $gs_path      = "$assembly_dir/$gs_name";
+            $gff_path     = "$gs_path/" . genes_gff_filename();
+            $gs_label     = $gs_name ? "$org / $assembly / $gs_name" : "$org / $assembly";
+
+            if (in_array($fasta_mode, $genomic_modes)) {
+                $fasta = "$assembly_dir/genome.fa";
+                $fai   = "$assembly_dir/genome.fa.fai";
+                if (!file_exists($fasta) || !file_exists($fai)) {
+                    $missing = !file_exists($fasta) ? 'genome.fa' : 'genome.fa.fai';
+                    $skipped_datasets[] = "$gs_label (missing $missing)";
+                    continue;
+                }
+                moopmartStreamGenomicFasta($gs_features, $assembly_dir, $gff_path, $fasta_mode, $flank_bp, $out);
             } else {
-                $pattern = $sequence_types[$fasta_mode]['pattern'] ?? '';
-                if ($pattern && empty(glob("$gs_path/*$pattern"))) {
-                    $skipped_datasets[] = "$gs_label (missing $fasta_mode FASTA file)";
+                // Pre-built FASTA files: protein, transcript, cds
+                // $gs_features is gene-level; expand to mRNA/CDS/protein children for extraction
+                $gene_uniquenames = array_column($gs_features, 'uniquename');
+                $db_path  = "$organism_data/$org/organism.sqlite";
+                $gs_id_int = (int)($gs_features[0]['gene_set_id'] ?? 0);
+                $typed_ids = buildTypedIdsForGenes($gene_uniquenames, $gs_id_int, $db_path);
+                $extract_result = extractSequencesForAllTypes($gs_path, $typed_ids, $sequence_types, $org, $assembly);
+                if (isset($extract_result['content'][$fasta_mode])) {
+                    fwrite($out, $extract_result['content'][$fasta_mode]);
+                } else {
+                    $pattern = $sequence_types[$fasta_mode]['pattern'] ?? '';
+                    if ($pattern && empty(glob("$gs_path/*$pattern"))) {
+                        $skipped_datasets[] = "$gs_label (missing $fasta_mode FASTA file)";
+                    }
                 }
             }
         }
+        unset($by_gs);
+    }
+
+    if ($out === null) {
+        http_response_code(404);
+        die('No features matched the selected filters.');
     }
 
     if (!empty($skipped_datasets)) {
