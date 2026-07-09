@@ -10,8 +10,7 @@
 (function () {
     'use strict';
 
-    // Preview fans out one request per organism (progressive); the aggregate
-    // moopmart_preview.php remains server-side as a single-shot fallback.
+    // Preview fans out one request per organism so results fill in progressively.
     const PREVIEW_ORG_URL = moopSite + '/api/moopmart_preview_organism.php';
     const EXPORT_URL      = moopSite + '/api/moopmart_export.php';
     const CHRS_URL        = moopSite + '/api/moopmart_chrs.php';

@@ -2,7 +2,7 @@
 /**
  * MOOPmart Per-Organism Preview — feature count + preview rows for ONE organism.
  *
- * Same POST parameters as moopmart_preview.php, plus:
+ * Same POST parameters as moopmart_export.php, plus:
  *   organism — the organism directory name to scope this request to
  *
  * Called by the MOOPmart UI in a JS fan-out (one request per organism,

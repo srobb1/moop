@@ -1005,11 +1005,11 @@ function moopmartParsePreviewRequest(array $post): array {
 }
 
 /**
- * Collect all matching, mRNA-expanded preview rows for a SINGLE organism.
+ * Collect matching, mRNA-expanded preview rows for a SINGLE organism.
  *
- * Extracted from the per-organism body of the MOOPmart preview so the aggregate
- * endpoint (api/moopmart_preview.php) and the progressive per-organism endpoint
- * (api/moopmart_preview_organism.php) share one implementation.
+ * Backs api/moopmart_preview_organism.php, which the MOOPmart UI calls once per
+ * selected organism. Pass $row_cap to bound how many rows are materialised —
+ * 'row_count' stays exact regardless.
  *
  * @param string $org                  Organism directory name
  * @param array  $org_sources          Selected source rows for this organism (each has gene_set_id, path, ...)
