@@ -1922,5 +1922,3 @@ function toggleQuerySection(contentId, headerElement) {
 </script>
 JS;
 }
-?>
-

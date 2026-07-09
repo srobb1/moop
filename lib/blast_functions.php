@@ -1007,6 +1007,3 @@ function reverseComplement(string $seq): string
     return strrev(strtr(strtoupper($seq), ['A' => 'T', 'T' => 'A', 'C' => 'G', 'G' => 'C']));
 }
 }
-
-?>
-
