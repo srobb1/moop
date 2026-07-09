@@ -13,6 +13,9 @@
  *   lib/blast_functions.php     — loadFeatureCoords(), extractFastaRegion(), reverseComplement()
  */
 
+/** Max rows a preview endpoint materialises and returns. Counts stay exact regardless. */
+const MOOPMART_PREVIEW_ROW_CAP = 100;
+
 // ============================================================
 // ID RESOLUTION
 // ============================================================
@@ -128,6 +131,52 @@ function buildMoopmartFilterReason(array $filters, array $coord_filter): string
 // ============================================================
 
 /**
+ * Feature types treated as transcript children of a gene.
+ * moopmartGetChildIds() and moopmartCountChildRows() must agree on this list, or a
+ * preview's reported row count will not match the rows it actually renders.
+ *
+ * @return string[]
+ */
+function moopmartMrnaTypes(): array
+{
+    return ['mrna', 'transcript', 'lnc_rna', 'ncrna', 'pre_mirna', 'rrna', 'trna',
+            'pseudogenic_transcript', 'processed_transcript'];
+}
+
+/**
+ * Count transcript children per gene without materialising them.
+ *
+ * Lets a caller total up the expanded row count for a whole organism while only ever
+ * holding one int per gene, instead of one copy of the gene row per transcript.
+ *
+ * @param int[]  $gene_feature_ids
+ * @param string $db_path
+ * @return array [gene_feature_id => child_count]  (genes with no children are absent)
+ */
+function moopmartCountChildRows(array $gene_feature_ids, string $db_path): array
+{
+    if (empty($gene_feature_ids)) return [];
+
+    $mrna_types = moopmartMrnaTypes();
+    $type_ph    = implode(',', array_fill(0, count($mrna_types), '?'));
+
+    $counts = [];
+    foreach (array_chunk($gene_feature_ids, 500) as $chunk) {
+        $ph    = implode(',', array_fill(0, count($chunk), '?'));
+        $query = "SELECT parent_feature_id AS gene_fid, COUNT(*) AS n
+                  FROM   feature
+                  WHERE  parent_feature_id IN ($ph)
+                    AND  LOWER(feature_type) IN ($type_ph)
+                  GROUP BY parent_feature_id";
+
+        foreach (fetchData($query, $db_path, array_merge($chunk, $mrna_types)) as $row) {
+            $counts[(int)$row['gene_fid']] = (int)$row['n'];
+        }
+    }
+    return $counts;
+}
+
+/**
  * Fetch mRNA and protein (polypeptide) IDs for a list of gene feature_ids.
  * Returns one entry per mRNA child, with the protein ID of its first polypeptide grandchild.
  *
@@ -139,8 +188,7 @@ function moopmartGetChildIds(array $gene_feature_ids, string $db_path): array
 {
     if (empty($gene_feature_ids)) return [];
 
-    $mrna_types = ['mrna', 'transcript', 'lnc_rna', 'ncrna', 'pre_mirna', 'rrna', 'trna',
-                   'pseudogenic_transcript', 'processed_transcript'];
+    $mrna_types = moopmartMrnaTypes();
     $type_ph    = implode(',', array_fill(0, count($mrna_types), '?'));
 
     $result = [];
@@ -893,4 +941,216 @@ function moopmartStreamGenomicFasta(
         $header = ">$uname $label {$chr}:{$ext_start}-{$ext_end}($strand)";
         fwrite($handle, "$header\n" . chunk_split($seq, 60, "\n"));
     }
+}
+
+/**
+ * Parse the shared MOOPmart preview/export request parameters from a POST array
+ * into the structures the preview endpoints consume. Keeps the aggregate and
+ * per-organism preview endpoints parsing identically.
+ *
+ * @param array $post  Usually $_POST
+ * @return array {
+ *   raw_input_ids, filters, coord_filter, global_filter_reason,
+ *   annotation_columns, ann_incl_id, ann_incl_desc
+ * }
+ */
+function moopmartParsePreviewRequest(array $post): array {
+    // Raw input IDs (resolved per-organism downstream)
+    $raw_input_ids = array_values(array_filter(array_map('trim', (array)($post['feature_ids'] ?? []))));
+
+    // Base filters (no feature_ids — those are resolved per-organism)
+    $filters = [];
+    $types = array_filter($post['feature_types'] ?? []);
+    if (!empty($types))                     $filters['feature_types']    = array_values($types);
+    if (!empty($post['gene_name']))         $filters['gene_name']        = trim($post['gene_name']);
+    if (!empty($post['gene_description']))  $filters['gene_description'] = trim($post['gene_description']);
+
+    $crit_srcs = $post['ann_criteria_src'] ?? [];
+    $crit_accs = $post['ann_criteria_acc'] ?? [];
+    $crit_kws  = $post['ann_criteria_kw']  ?? [];
+    $criteria  = [];
+    foreach (array_keys((array)$crit_srcs) as $i) {
+        $src = trim($crit_srcs[$i] ?? '');
+        $acc = trim($crit_accs[$i] ?? '');
+        $kw  = trim($crit_kws[$i]  ?? '');
+        if ($src !== '' || $acc !== '' || $kw !== '') {
+            $criteria[] = ['src' => $src, 'acc' => $acc, 'kw' => $kw];
+        }
+    }
+    if (!empty($criteria)) $filters['annotation_criteria'] = $criteria;
+
+    $coord_filter = [];
+    if (!empty($post['coord_chr']))   $coord_filter['chr']   = trim($post['coord_chr']);
+    if (!empty($post['coord_start'])) $coord_filter['start'] = (int)$post['coord_start'];
+    if (!empty($post['coord_end']))   $coord_filter['end']   = (int)$post['coord_end'];
+
+    // Uniform reason string for non-ID filters (same for every matched row)
+    $global_filter_reason = buildMoopmartFilterReason($filters, $coord_filter);
+
+    // Annotation columns for the preview (which sources, and ID vs Description)
+    $annotation_columns = array_values(array_filter($post['annotation_columns'] ?? []));
+    $requested_ann      = array_flip(array_values(array_filter($post['ann_columns'] ?? [])));
+    $ann_incl_id        = empty($requested_ann) || isset($requested_ann['ann_id']);
+    $ann_incl_desc      = empty($requested_ann) || isset($requested_ann['ann_description']);
+
+    return [
+        'raw_input_ids'        => $raw_input_ids,
+        'filters'              => $filters,
+        'coord_filter'         => $coord_filter,
+        'global_filter_reason' => $global_filter_reason,
+        'annotation_columns'   => $annotation_columns,
+        'ann_incl_id'          => $ann_incl_id,
+        'ann_incl_desc'        => $ann_incl_desc,
+    ];
+}
+
+/**
+ * Collect all matching, mRNA-expanded preview rows for a SINGLE organism.
+ *
+ * Extracted from the per-organism body of the MOOPmart preview so the aggregate
+ * endpoint (api/moopmart_preview.php) and the progressive per-organism endpoint
+ * (api/moopmart_preview_organism.php) share one implementation.
+ *
+ * @param string $org                  Organism directory name
+ * @param array  $org_sources          Selected source rows for this organism (each has gene_set_id, path, ...)
+ * @param array  $filters              Base filters (feature_types, gene_name, annotation_criteria, ...) — no feature_ids
+ * @param array  $coord_filter         ['chr'=>, 'start'=>, 'end'=>] or []
+ * @param array  $raw_input_ids        Raw user-supplied IDs (resolved per-organism here)
+ * @param string $global_filter_reason Uniform "why included" string for non-ID filters
+ * @param string $organism_data        Base organism-data path
+ * @return array ['gene_count' => int, 'rows' => array]  rows = one entry per mRNA
+ */
+function moopmartCollectOrganismRows(string $org, array $org_sources, array $filters, array $coord_filter, array $raw_input_ids, string $global_filter_reason, string $organism_data, ?int $row_cap = null): array {
+    $empty = ['gene_count' => 0, 'row_count' => 0, 'rows' => []];
+
+    $db = "$organism_data/$org/organism.sqlite";
+    if (!file_exists($db)) return $empty;
+
+    $gene_set_ids = array_values(array_filter(array_column($org_sources, 'gene_set_id')));
+    if (empty($gene_set_ids)) return $empty;
+
+    // Resolve input IDs for this organism and build per-gene reason map
+    $id_reasons  = [];
+    $org_filters = $filters;
+    if (!empty($raw_input_ids)) {
+        $id_reasons = moopmartResolveInputIds($raw_input_ids, $db, $gene_set_ids);
+        if (empty($id_reasons)) return $empty;
+        $org_filters['feature_ids'] = array_keys($id_reasons);
+    }
+
+    $features = moopmartQueryFeatures($gene_set_ids, $db, $org_filters);
+    if (empty($features)) return $empty;
+
+    $uniquenames_by_gs = [];
+    foreach ($features as $f) {
+        $uniquenames_by_gs[$f['gene_set_id']][] = $f['uniquename'];
+    }
+
+    $coords_by_gs = [];
+    foreach ($org_sources as $src) {
+        $gs_id = $src['gene_set_id'];
+        if ($gs_id && !isset($coords_by_gs[$gs_id])) {
+            $coords_by_gs[$gs_id] = moopmartLoadGeneCoords($src['path'], $uniquenames_by_gs[$gs_id] ?? []);
+        }
+    }
+
+    $matched   = moopmartAttachCoords($features, $coords_by_gs, $coord_filter);
+    $gene_rows = [];
+    foreach ($matched as $f) {
+        $f['organism_dir'] = $org;
+        $f['db_path']      = $db;
+        // "why included": ID resolution takes priority; fall back to filter description
+        if (!empty($id_reasons)) {
+            $reason = $id_reasons[$f['uniquename']] ?? '';
+            if ($global_filter_reason) $reason .= ($reason ? ' + ' : '') . $global_filter_reason;
+        } else {
+            $reason = $global_filter_reason;
+        }
+        $f['match_reason'] = $reason;
+        $gene_rows[]       = $f;
+    }
+
+    // Total expanded rows, counted rather than built: expansion copies the whole gene row
+    // once per transcript, which for a large genome is hundreds of MB the caller would only
+    // throw away. Genes with no transcript children still render one row, hence max(n, 1).
+    $child_counts = moopmartCountChildRows(array_column($gene_rows, 'feature_id'), $db);
+    $row_count    = 0;
+    foreach ($gene_rows as $f) {
+        $row_count += max($child_counts[(int)$f['feature_id']] ?? 0, 1);
+    }
+
+    // Expand only as far as the caller will read. Every gene yields at least one row, so the
+    // first $row_cap genes always supply at least $row_cap rows.
+    $to_expand = $row_cap === null ? $gene_rows : array_slice($gene_rows, 0, $row_cap);
+    $mrna_rows = moopmartExpandToMrnaRows($to_expand, $db);
+    if ($row_cap !== null && count($mrna_rows) > $row_cap) {
+        $mrna_rows = array_slice($mrna_rows, 0, $row_cap);
+    }
+
+    return ['gene_count' => count($gene_rows), 'row_count' => $row_count, 'rows' => $mrna_rows];
+}
+
+/**
+ * Build the JSON-ready preview rows (+ annotation column headers) from a slice
+ * of mRNA-expanded rows. Fetches the selected annotation-source columns for the
+ * preview rows only. Shared by the aggregate and per-organism preview endpoints.
+ *
+ * @param array $preview                     mRNA rows already sliced to the preview cap
+ * @param array $annotation_columns_selected Selected annotation source names
+ * @param bool  $ann_incl_id                 Include "ID:<src>" columns
+ * @param bool  $ann_incl_desc               Include "Description:<src>" columns
+ * @return array ['rows' => array, 'ann_col_headers' => array]
+ */
+function moopmartBuildPreviewRows(array $preview, array $annotation_columns_selected, bool $ann_incl_id, bool $ann_incl_desc): array {
+    $clean_prev        = fn($s) => str_replace(["\r\n", "\r", "\n", "\t"], ' ', (string)$s);
+    $ann_col_headers   = [];
+    $ann_by_uniquename = [];
+
+    if (!empty($annotation_columns_selected)) {
+        foreach ($annotation_columns_selected as $src) {
+            if ($ann_incl_id)   $ann_col_headers[] = 'ID:' . $src;
+            if ($ann_incl_desc) $ann_col_headers[] = 'Description:' . $src;
+        }
+
+        // Deduplicate by gene feature_id before fetching annotations
+        $seen_fids     = [];
+        $preview_by_db = [];
+        foreach ($preview as $f) {
+            if (empty($f['db_path']) || isset($seen_fids[$f['feature_id']])) continue;
+            $seen_fids[$f['feature_id']]    = true;
+            $preview_by_db[$f['db_path']][] = $f;
+        }
+        foreach ($preview_by_db as $db_path => $db_feats) {
+            $chunk_anns = moopmartGetAnnotationsForFeatures(array_column($db_feats, 'feature_id'), $db_path);
+            foreach ($db_feats as $f) {
+                $ann_by_uniquename[$f['uniquename']] = $chunk_anns[$f['feature_id']] ?? [];
+            }
+        }
+    }
+
+    $rows = array_map(function ($f) use ($annotation_columns_selected, $ann_by_uniquename, $ann_incl_id, $ann_incl_desc, $clean_prev) {
+        $row = [
+            'uniquename'       => $f['uniquename'],
+            'name'             => $f['name']          ?? '',
+            'description'      => $f['description']   ?? '',
+            'organism_dir'     => $f['organism_dir'],
+            'genome_accession' => $f['genome_accession'],
+            'gene_set_name'    => $f['gene_set_name'],
+            'mrna_id'          => $f['mrna_id']       ?? '',
+            'protein_id'       => $f['protein_id']    ?? '',
+            'chr'              => $f['chr']            ?? '',
+            'start'            => $f['start']          ?? '',
+            'end'              => $f['end']            ?? '',
+            'strand'           => $f['strand']         ?? '',
+            'match_reason'     => $f['match_reason']   ?? '',
+        ];
+        foreach ($annotation_columns_selected as $src) {
+            $entries = $ann_by_uniquename[$f['uniquename']][$src] ?? [];
+            if ($ann_incl_id)   $row['ID:' . $src]          = implode('; ', array_map(fn($e) => $e['accession'], $entries));
+            if ($ann_incl_desc) $row['Description:' . $src] = implode('; ', array_map(fn($e) => $clean_prev($e['description'] ?? ''), $entries));
+        }
+        return $row;
+    }, $preview);
+
+    return ['rows' => $rows, 'ann_col_headers' => $ann_col_headers];
 }

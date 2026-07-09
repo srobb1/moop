@@ -9,7 +9,7 @@
 $gp = ['#3498db','#e74c3c','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63','#00bcd4','#795548','#607d8b'];
 $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31) % count($gp)];
 ?>
-<div class="container-fluid py-3">
+<div class="container py-3">
 
   <!-- Header -->
   <div class="card shadow-sm mb-4">
@@ -479,7 +479,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
         <?php if (!empty($annotation_source_types)): ?>
         <div>
           <div class="d-flex align-items-center gap-2 mb-2">
-            <div class="small fw-semibold text-muted">Annotation types to include</div>
+            <div class="small fw-semibold text-muted">Annotation types to include in TSV</div>
             <div class="d-flex gap-1 ms-auto">
               <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="mm-ann-all">All</button>
               <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="mm-ann-none">None</button>
@@ -516,6 +516,9 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                          style="cursor:pointer; font-size:0.82rem;">
                     <?= htmlspecialchars($src_name) ?>
                   </label>
+                  <span class="badge bg-secondary ms-1 mm-ann-count d-none" style="font-size:0.68rem;"
+                        data-src="<?= htmlspecialchars($src_name) ?>"
+                        title="Annotations available in the selected organisms (across all their genes)"></span>
                 </div>
                 <?php endforeach; ?>
               </div>

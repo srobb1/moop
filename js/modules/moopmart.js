@@ -10,9 +10,14 @@
 (function () {
     'use strict';
 
-    const PREVIEW_URL = moopSite + '/api/moopmart_preview.php';
-    const EXPORT_URL  = moopSite + '/api/moopmart_export.php';
-    const CHRS_URL    = moopSite + '/api/moopmart_chrs.php';
+    // Preview fans out one request per organism (progressive); the aggregate
+    // moopmart_preview.php remains server-side as a single-shot fallback.
+    const PREVIEW_ORG_URL = moopSite + '/api/moopmart_preview_organism.php';
+    const EXPORT_URL      = moopSite + '/api/moopmart_export.php';
+    const CHRS_URL        = moopSite + '/api/moopmart_chrs.php';
+
+    // Max rows rendered in the progressive preview table (count stays exact).
+    const PREVIEW_ROW_CAP = 100;
 
     // -------------------------------------------------------
     // Step 1 — Organism scope (flat list)
@@ -22,6 +27,7 @@
         const el        = document.getElementById('mm-scope-counts');
         const namesEl   = document.getElementById('mm-scope-names');
         if (!el) return;
+        refreshAnnotationCounts();   // keep Step 3 availability counts in sync with the selection
         const checked = Array.from(document.querySelectorAll('.mm-gs-cb:checked'));
         if (!checked.length) {
             el.textContent = 'Select at least one organism above';
@@ -41,6 +47,86 @@
             const MAX = 6;
             namesEl.textContent = orgNames.slice(0, MAX).join(', ') + (orgNames.length > MAX ? ` + ${orgNames.length - MAX} more` : '');
         }
+    }
+
+    // -------------------------------------------------------
+    // Step 3 — annotation availability counts for the selected organisms
+    // -------------------------------------------------------
+
+    let annCountTimer = null;
+    let annCountSeq   = 0;   // discard out-of-order responses
+
+    // Update the per-source count badges in Step 3 to reflect the organisms selected
+    // in Step 1. Counts are across ALL genes of those organisms (not the gene filter),
+    // so a source with a count but an empty preview means the current gene subset lacks
+    // it, while 0 means the selected organisms have none. Reuses the annotation-search
+    // pages' endpoint. Debounced so bulk (de)selection fires a single request.
+    function refreshAnnotationCounts() {
+        clearTimeout(annCountTimer);
+        annCountTimer = setTimeout(() => {
+            const badges  = document.querySelectorAll('.mm-ann-count');
+            const summary = document.getElementById('mm-ann-counts');
+            const orgs    = getSelectedOrganisms();
+            if (!orgs.length) {
+                // No selection yet — clear counts and show the full list (subject to text filter)
+                badges.forEach(b => { b.textContent = ''; b.classList.add('d-none'); });
+                document.querySelectorAll('.mm-ann-item').forEach(it => it.classList.remove('mm-ann-zerocount'));
+                applyAnnVisibility();
+                if (summary) summary.textContent = '';
+                return;
+            }
+            if (summary) summary.textContent = 'Counting annotations…';
+            const seq = ++annCountSeq;
+            const url = `${moopSite}/tools/get_annotation_sources_grouped.php?organisms=`
+                      + encodeURIComponent(orgs.join(','));
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    if (seq !== annCountSeq) return;   // superseded by a newer selection
+                    const counts = {};
+                    Object.values(data.source_types || {}).forEach(td =>
+                        (td.sources || []).forEach(s => { counts[s.name] = (counts[s.name] || 0) + s.count; }));
+                    badges.forEach(b => {
+                        const n = counts[b.dataset.src] || 0;
+                        // Mark sources with no annotations for this selection; applyAnnVisibility() hides them
+                        b.closest('.mm-ann-item')?.classList.toggle('mm-ann-zerocount', n === 0);
+                        if (n > 0) {
+                            b.textContent = n.toLocaleString();
+                            b.classList.remove('d-none', 'bg-light', 'text-muted');
+                            b.classList.add('bg-secondary');
+                        } else {
+                            b.textContent = '';
+                            b.classList.add('d-none');
+                        }
+                    });
+                    applyAnnVisibility();
+                    if (summary) {
+                        const total = data.total_annotations || 0;
+                        summary.textContent = total > 0
+                            ? `${total.toLocaleString()} annotations across ${data.total_sources || 0} source${(data.total_sources || 0) !== 1 ? 's' : ''} for the selected organism${orgs.length !== 1 ? 's' : ''}`
+                            : 'No annotations for the selected organisms';
+                    }
+                })
+                .catch(() => { if (summary) summary.textContent = ''; /* keep prior badges */ });
+        }, 250);
+    }
+
+    // Show an annotation source only when it passes the text filter AND has annotations
+    // for the current organism selection (marked via .mm-ann-zerocount). Groups with no
+    // visible sources are hidden. Shared by the text filter and the count refresh so the
+    // two never fight over the same d-none class.
+    function applyAnnVisibility() {
+        const q = (document.getElementById('mm-ann-filter')?.value || '').toLowerCase();
+        document.querySelectorAll('.mm-ann-group').forEach(group => {
+            let anyVisible = false;
+            group.querySelectorAll('.mm-ann-item').forEach(item => {
+                const passText = !q || (item.querySelector('label')?.textContent.toLowerCase() || '').includes(q);
+                const show = passText && !item.classList.contains('mm-ann-zerocount');
+                item.classList.toggle('d-none', !show);
+                if (show) anyVisible = true;
+            });
+            group.classList.toggle('d-none', !anyVisible);
+        });
     }
 
     function initScopeList() {
@@ -375,18 +461,7 @@
             updateAnnSummary();
         });
 
-        document.getElementById('mm-ann-filter')?.addEventListener('input', function () {
-            const q = this.value.toLowerCase();
-            document.querySelectorAll('.mm-ann-group').forEach(group => {
-                let anyVisible = false;
-                group.querySelectorAll('.mm-ann-item').forEach(item => {
-                    const show = !q || (item.querySelector('label')?.textContent.toLowerCase() || '').includes(q);
-                    item.classList.toggle('d-none', !show);
-                    if (show) anyVisible = true;
-                });
-                group.classList.toggle('d-none', !anyVisible && !!q);
-            });
-        });
+        document.getElementById('mm-ann-filter')?.addEventListener('input', applyAnnVisibility);
 
         document.querySelectorAll('.mm-ann-type-cb').forEach(cb => syncAnnTypeCb(cb.dataset.type));
         updateAnnSummary();
@@ -399,6 +474,14 @@
     function getSelectedSources() {
         return Array.from(document.querySelectorAll('.mm-gs-cb:checked'))
             .map(c => `${c.dataset.org}|${c.dataset.asm}|${c.dataset.gs}`);
+    }
+
+    // Distinct organism dirs among the selected sources — the fan-out unit for the
+    // progressive preview (one request per organism).
+    function getSelectedOrganisms() {
+        const seen = new Set();
+        document.querySelectorAll('.mm-gs-cb:checked').forEach(c => seen.add(c.dataset.org));
+        return Array.from(seen);
     }
 
     function parseIds(raw) {
@@ -468,6 +551,18 @@
 
     let resultsTable = null;
 
+    // Fully tear down the preview DataTable: destroy the instance if one exists (checking
+    // the DOM, not just our module var, in case they desync) and empty the <table> so the
+    // next build can use a different column set. Re-initialising DataTables on leftover
+    // header/body DOM throws "Cannot reinitialise". Safe to call when no table exists.
+    function destroyResultsTable() {
+        if ($.fn.dataTable.isDataTable('#mm-results-table')) {
+            $('#mm-results-table').DataTable().clear().destroy();
+        }
+        $('#mm-results-table').empty();
+        resultsTable = null;
+    }
+
     function previewResults() {
         const btn     = document.getElementById('mm-preview-btn');
         const spinner = document.getElementById('mm-count-spinner');
@@ -506,29 +601,99 @@
                     if (btn) btn.disabled = false;
                 });
         } else {
-            fetch(PREVIEW_URL, { method: 'POST', headers: { 'X-CSRF-Token': csrf }, body: buildFormData() })
-                .then(r => r.json())
-                .then(data => {
-                    const total      = data.count           ?? 0;
-                    const geneCount  = data.gene_count      ?? total;
-                    const rows       = data.rows            ?? [];
-                    const annHeaders = data.ann_col_headers ?? [];
-                    if (result) {
-                        result.textContent = total > 0
-                            ? `${geneCount.toLocaleString()} gene${geneCount !== 1 ? 's' : ''} → ${total.toLocaleString()} transcript row${total !== 1 ? 's' : ''}`
-                            : 'No features matched';
-                        result.className = 'small ' + (total > 0 ? 'text-success' : 'text-muted');
-                    }
-                    renderResultsTable(rows, total, annHeaders);
+            runTsvPreviewFanout(csrf, btn, spinner, result);
+        }
+    }
+
+    // Progressive TSV preview: fan out one request per selected organism (concurrency
+    // 5, mirroring the AnnotationSearch pattern) so the count and table fill in as each
+    // organism reports, instead of blocking on one all-organisms request. The running
+    // total stays exact; the table shows the first PREVIEW_ROW_CAP rows.
+    function runTsvPreviewFanout(csrf, btn, spinner, result) {
+        const organisms = getSelectedOrganisms();
+        const total = organisms.length;
+
+        resetResultsTable();
+        const accRows = [];
+        let totalRows = 0, totalGenes = 0, completed = 0, failed = 0, annHeaders = null;
+
+        const showStatus = (done) => {
+            if (!result) return;
+            // A partial run must never look complete: the totals below only cover the
+            // organisms that answered, so say so rather than reporting an exact-looking
+            // number that silently omits the ones that failed.
+            const failNote = failed ? ` · ${failed} organism${failed !== 1 ? 's' : ''} failed` : '';
+            if (totalRows > 0) {
+                result.textContent =
+                    `${totalGenes.toLocaleString()} gene${totalGenes !== 1 ? 's' : ''} → `
+                    + `${totalRows.toLocaleString()} transcript row${totalRows !== 1 ? 's' : ''}`
+                    + (done ? '' : ` · ${completed}/${total} organism${total !== 1 ? 's' : ''}…`)
+                    + failNote;
+                result.className = 'small ' + (failed ? 'text-warning' : 'text-success');
+            } else if (done && failed) {
+                result.textContent = `Preview failed for all ${failed} organism${failed !== 1 ? 's' : ''}.`;
+                result.className = 'small text-danger';
+            } else {
+                result.textContent = done
+                    ? 'No features matched'
+                    : `Searching… ${completed}/${total} organism${total !== 1 ? 's' : ''}`;
+                result.className = 'small text-muted';
+            }
+        };
+
+        const onData = (data) => {
+            totalGenes += data.gene_count ?? 0;
+            totalRows  += data.count ?? 0;
+            if (annHeaders === null) annHeaders = data.ann_col_headers ?? [];
+
+            const before = accRows.length;
+            for (const r of (data.rows || [])) {
+                if (accRows.length >= PREVIEW_ROW_CAP) break;
+                accRows.push(r);
+            }
+            if (!accRows.length) return;
+            if (!resultsTable) buildResultsTable(accRows, totalRows, annHeaders || []);
+            else               updateResultsTable(accRows, totalRows, accRows.length !== before);
+        };
+
+        let nextIndex = 0;
+        const launchNext = () => {
+            if (nextIndex >= total) return;
+            const organism = organisms[nextIndex++];
+            fetch(PREVIEW_ORG_URL, {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': csrf },
+                body: buildFormData({ organism }),
+            })
+                .then(r => {
+                    // A 500 returns an HTML error page, which r.json() would reject on with a
+                    // parse error that says nothing useful. Fail loudly on the status instead.
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    return r.json();
                 })
-                .catch(() => {
-                    if (result) { result.textContent = 'Error fetching preview.'; result.className = 'small text-danger'; }
+                .then(onData)
+                .catch(err => {
+                    // One organism failing shouldn't abort the run, but it must be counted so
+                    // showStatus() can flag the totals as incomplete.
+                    failed++;
+                    console.error(`MOOPmart preview failed for ${organism}:`, err);
                 })
                 .finally(() => {
-                    spinner?.classList.add('d-none');
-                    if (btn) btn.disabled = false;
+                    completed++;
+                    const done = completed >= total;
+                    showStatus(done);
+                    if (done) {
+                        spinner?.classList.add('d-none');
+                        if (btn) btn.disabled = false;
+                    } else {
+                        launchNext();
+                    }
                 });
-        }
+        };
+
+        showStatus(false);
+        const concurrency = Math.min(5, total);
+        for (let i = 0; i < concurrency; i++) launchNext();
     }
 
     function renderFastaPreview(text) {
@@ -536,7 +701,7 @@
         const fastaSection = document.getElementById('mm-fasta-preview-section');
         const pre          = document.getElementById('mm-fasta-preview-text');
         tableSection?.classList.add('d-none');
-        if (resultsTable) { resultsTable.destroy(); resultsTable = null; }
+        destroyResultsTable();
         if (!text.trim()) { fastaSection?.classList.add('d-none'); return; }
         if (pre) pre.textContent = text;
         fastaSection?.classList.remove('d-none');
@@ -575,14 +740,27 @@
         return cols.length ? cols : Object.values(FEAT_COL_SPECS);
     }
 
-    function renderResultsTable(rows, total, annColHeaders = []) {
-        const section = document.getElementById('mm-results-section');
+    function setResultsCaption(shown, total) {
         const caption = document.getElementById('mm-results-caption');
-        if (!rows.length) { section?.classList.add('d-none'); return; }
-
-        if (caption) caption.textContent = rows.length < total
-            ? `— showing first ${rows.length.toLocaleString()} of ${total.toLocaleString()}`
+        if (!caption) return;
+        caption.textContent = shown < total
+            ? `— showing first ${shown.toLocaleString()} of ${total.toLocaleString()}`
             : `— ${total.toLocaleString()} result${total !== 1 ? 's' : ''}`;
+    }
+
+    // Tear down any existing preview table and hide the section — call at the start of
+    // a fresh preview run so progressive updates begin from a clean slate.
+    function resetResultsTable() {
+        destroyResultsTable();
+        document.getElementById('mm-results-section')?.classList.add('d-none');
+    }
+
+    // Build the preview DataTable once, revealing and scrolling to the section a single
+    // time. Columns (feature cols + annotation headers) are fixed for the run, so later
+    // organisms only add rows via updateResultsTable().
+    function buildResultsTable(rows, total, annColHeaders = []) {
+        const section = document.getElementById('mm-results-section');
+        setResultsCaption(rows.length, total);
         section?.classList.remove('d-none');
         section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -592,7 +770,7 @@
             defaultContent: '',
         }));
 
-        if (resultsTable) { resultsTable.destroy(); resultsTable = null; }
+        destroyResultsTable();
         resultsTable = $('#mm-results-table').DataTable({
             data: rows,
             columns: [...getPreviewColumns(), ...annCols],
@@ -603,6 +781,19 @@
             dom: 'ltipr',
             language: { info: 'Showing _START_ to _END_ of _TOTAL_ preview rows', infoEmpty: 'No results', lengthMenu: 'Show _MENU_ rows' },
         });
+    }
+
+    // Refresh the preview table as more organisms report. Re-adds rows only when the
+    // row set actually grew (preserving paging); always refreshes the caption so the
+    // running total stays live even after the row cap is reached.
+    function updateResultsTable(rows, total, rowsChanged) {
+        if (!resultsTable) { buildResultsTable(rows, total); return; }
+        if (rowsChanged) {
+            resultsTable.clear();
+            resultsTable.rows.add(rows);
+            resultsTable.draw(false);
+        }
+        setResultsCaption(rows.length, total);
     }
 
     // -------------------------------------------------------
