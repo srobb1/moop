@@ -57,13 +57,24 @@ function generateTrackToken($organism, $assembly) {
 function verifyTrackToken($token) {
     $config_dir = dirname(__DIR__, 2) . '/certs';
     $public_key_path = $config_dir . '/jwt_public_key.pem';
-    
+
     if (!file_exists($public_key_path)) {
+        error_log("JWT verification failed: public key not found at $public_key_path");
         return false;
     }
-    
+
     $public_key = file_get_contents($public_key_path);
-    
+    if ($public_key === false) {
+        error_log("JWT verification failed: public key at $public_key_path is not readable");
+        return false;
+    }
+
+    // The signing host (MOOP) and this verifying host may be seconds apart, and
+    // php-jwt defaults to zero tolerance: a token whose `iat` is one second in
+    // the verifier's future is rejected outright. Tokens live an hour, so a
+    // minute of slack costs nothing.
+    JWT::$leeway = 60;
+
     try {
         $decoded = JWT::decode($token, new Key($public_key, 'RS256'));
         return $decoded;
@@ -72,5 +83,3 @@ function verifyTrackToken($token) {
         return false;
     }
 }
-
-?>
