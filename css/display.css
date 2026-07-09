@@ -1227,6 +1227,18 @@ a:hover .link-icon {
   background: #fff;
 }
 
+/* Row lists whose rows hide their checkbox with Bootstrap's .visually-hidden must
+   establish a containing block. That class is position:absolute, and overflow only
+   clips descendants the scroller actually contains — a static scroller therefore lets
+   every checkbox escape the clip and extend the document's scrollable overflow down to
+   its own static position, which shows up as a tall blank tail below the footer. */
+.org-select-list,
+#mm-scope-list,
+#scope-org-list,
+#sourcesPanel {
+  position: relative;
+}
+
 .org-select-row {
   display: flex;
   align-items: center;
