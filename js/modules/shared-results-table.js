@@ -441,7 +441,11 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
  */
 function initializeSimpleResultsTable(tableId, selectId, organism, results, sitePath, searchKeywords = '') {
     const buttonId = 'toggle-select-btn' + selectId + '-simple';
-    
+
+    // Wire the toggle first: a failure in the DataTable setup below must not
+    // leave the "Expand All Matches" button without its click handler.
+    initializeViewToggle(organism, results, sitePath, selectId, searchKeywords);
+
     // Populate filter containers
     $('#' + tableId + ' .column-filter-container').each(function(i) {
         const columnIndex = $(this).data('column-index');
@@ -530,33 +534,28 @@ function initializeSimpleResultsTable(tableId, selectId, organism, results, site
         const infoBox = $(`#info-${selectId}`);
         infoBox.slideToggle(200);
     });
-    
-    // Setup toggle button
-    initializeViewToggle(organism, results, sitePath, selectId, searchKeywords);
 }
 
 /**
  * Toggle between simple and expanded views
  */
 function initializeViewToggle(organism, results, sitePath, selectId, searchKeywords = '') {
-    
-    // Find the parent organism results div
-    const containers = document.querySelectorAll(`[data-organism="${selectId}"]`);
-    if (containers.length === 0) {
-        return;
-    }
-    
-    const parentDiv = containers[0].closest('.organism-results');
+    // Look the results block up by its own id. A document-wide [data-organism]
+    // scan also matches the organism selector cards on the multi-organism and
+    // group search pages, so it only picks the right element while the results
+    // container happens to precede those cards in the markup.
+    const parentDiv = document.getElementById('results-' + selectId);
     if (!parentDiv) {
+        console.warn(`initializeViewToggle: no results block found for "${selectId}"`);
         return;
     }
-    
+
     const toggleBtn = parentDiv.querySelector('.toggle-view-btn');
     const simpleContainer = parentDiv.querySelector(`.simple-view-container[data-organism="${selectId}"]`);
     const expandedContainer = parentDiv.querySelector(`.expanded-view-container[data-organism="${selectId}"]`);
-    
-    
+
     if (!toggleBtn || !simpleContainer || !expandedContainer) {
+        console.warn(`initializeViewToggle: missing toggle button or view containers for "${selectId}"`);
         return;
     }
     
