@@ -11,6 +11,37 @@
     background-color: #764ba2;
 }
 
+/* Parent-page overview header: the short, stable ID goes in the colored bar,
+   and the (sometimes long) descriptive name becomes the readable headline below.
+   The shared .feature-header h1 rule above still serves assembly/gene_set. */
+.feature-header .feature-header-id {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 0.01em;
+    margin: 0;
+    padding: 0.55rem 1.1rem;
+    color: #fff;
+    background-color: #764ba2;
+}
+.feature-header .feature-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: normal;
+    text-transform: none;
+    color: #2d2140;
+    background: none;
+    margin: 0.2rem 0 0.55rem;
+    padding: 0;
+}
+.feature-header .feature-title-empty {
+    font-weight: 500;
+    font-style: italic;
+    font-size: 1.05rem;
+    color: #6c757d;
+}
+
 .feature-header .feature-info-grid a:hover {
     color: #764ba2;
 }

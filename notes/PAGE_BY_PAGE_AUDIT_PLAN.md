@@ -119,6 +119,24 @@ CLAUDE.md access-control section (contradicted by #3).
       env. **Next:** check whether the default session's display type is malformed for this
       assembly. (The failing google-analytics request is just the sandbox blocking GA — ignore.)
 
+## I. Parent (gene) page — UI polish (iterated live with the user 2026-07-10)
+
+- [x] Sidebar section-nav title "On this page" → **"Jump to"** (matches the mobile jump-bar).
+- [x] Sidebar type chips now use the site feature color code (mRNA=teal #17a2b8, gene=purple,
+      protein/polypeptide=green); removed forced uppercase so casing is correct (**mRNA**, not MRNA).
+      CDS has no color in the code yet — add `.feature-color-cds` if wanted.
+- [x] **Overview card redesign** — the short stable **ID** now sits in the colored bar; the
+      descriptive **name** is a proper-case ~20px `<h1>` headline in the body (was a tiny 12.8px
+      all-caps label). Fallback to feature_name, then "No description available" when blank. Exactly
+      one `<h1>`. Parent-only (new `.feature-header-id` / `.feature-title` classes); the shared
+      `.feature-header h1` rule still serves assembly/gene_set. Also added `gy-3` gap (#14) and
+      `flex-wrap` headers (#10) earlier. Redundant ID badge removed from the body; the color-coded
+      `gene` + `mRNA child` badges stay as a classification line. Headline kept in natural NCBI case
+      (user preference — no `::first-letter` capitalization).
+- [ ] **Gene Structure (gene diagram) section — user wants to review for a couple of tweaks.**
+      Not yet specified; revisit. File: `tools/pages/parent.php` (~line 132+, `#gene-model-svg`)
+      and the JS that draws it (`js/` gene-model script).
+
 ## H. Bonus findings during implementation (not in the original 12)
 
 - [x] **#14 Info box & Toolbox touch with no gap when stacked** — DONE. On the gene (parent) page the

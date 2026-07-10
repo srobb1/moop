@@ -34,9 +34,9 @@
     </div>
 
     <div class="pnav-layout">
-      <aside class="pnav-side" aria-label="On this page">
+      <aside class="pnav-side" aria-label="Jump to">
         <div class="pnav-side-head">
-          <span class="pnav-side-title">On this page</span>
+          <span class="pnav-side-title">Jump to</span>
           <button class="pnav-toggle" id="pnavToggle" type="button" aria-label="Collapse navigation" aria-expanded="true" title="Collapse (content goes full width)">
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
           </button>
@@ -51,17 +51,22 @@
       <!-- Feature Header Column -->
       <div class="col-lg-8">
         <div class="feature-header shadow h-100">
-            <h1>
-                <?php if (!empty($description)): ?>
-                    <?= htmlspecialchars(decodeAnnotationText($description)) ?>
-                <?php else: ?>
-                    <?= htmlspecialchars($feature_uniquename) ?>
-                <?php endif; ?>
-            </h1>
+            <div class="feature-header-id"><?= htmlspecialchars($feature_uniquename) ?></div>
             <div class="feature-overview-body">
+                <?php
+                $overview_title = !empty($description)
+                    ? decodeAnnotationText($description)
+                    : (!empty($name) ? $name : '');
+                ?>
+                <h1 class="feature-title">
+                    <?php if ($overview_title !== ''): ?>
+                        <?= htmlspecialchars($overview_title) ?>
+                    <?php else: ?>
+                        <span class="feature-title-empty">No description available</span>
+                    <?php endif; ?>
+                </h1>
                 <div class="mb-2">
-                    <span class="badge bg-feature-gene text-white badge-sm"><?= htmlspecialchars($feature_uniquename) ?></span>
-                    <span class="badge bg-feature-gene text-white ms-1 badge-sm"><?= htmlspecialchars($type) ?></span>
+                    <span class="badge bg-feature-gene text-white badge-sm"><?= htmlspecialchars($type) ?></span>
                     <?php if (!empty($children_hierarchical)):
                         $first_child_type = $children_hierarchical[0]['feature_type'] ?? 'mRNA';
                         $child_class = strtoupper($first_child_type) === 'MRNA' ? 'bg-feature-mrna' : 'bg-feature-gene';
