@@ -47,7 +47,7 @@
       <div class="pnav-main">
 
     <!-- Feature Header and Tools Row -->
-    <div class="row mb-3" id="pnav-overview" data-nav-label="Overview">
+    <div class="row gy-3 mb-3" id="pnav-overview" data-nav-label="Overview">
       <!-- Feature Header Column -->
       <div class="col-lg-8">
         <div class="feature-header shadow h-100">
@@ -130,7 +130,7 @@
     <?php if (!empty($gene_model)): ?>
     <!-- Gene Structure Section -->
     <div class="card shadow-sm mb-4" id="pnav-gene-structure" data-nav-label="Gene Structure">
-        <div class="card-header d-flex align-items-center">
+        <div class="card-header d-flex align-items-center flex-wrap">
             <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#geneModelSection" aria-expanded="true" role="button">
                 <i class="fas fa-minus toggle-icon text-primary"></i>
             </span>
@@ -225,7 +225,7 @@
 
     <!-- Annotations Section -->
     <div class="card shadow-sm mb-4" id="pnav-annotations" data-nav-label="Annotations">
-        <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center">
                 <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="true" role="button">
                     <i class="fas fa-minus toggle-icon text-primary"></i>
