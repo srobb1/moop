@@ -230,11 +230,18 @@ function has_access($required_level = 'PUBLIC', $resource_name = null) {
     $access_level = get_access_level();
     $user_access = get_user_access();
     
-    // ADMIN and IP_IN_RANGE have access to everything
-    if ($access_level === 'ADMIN' || $access_level === 'IP_IN_RANGE') {
+    // ADMIN can do everything, including satisfy an ADMIN requirement.
+    if ($access_level === 'ADMIN') {
         return true;
     }
-    
+
+    // IP_IN_RANGE gets full DATA access (equivalent to a collaborator with every
+    // organism) but is NOT an administrator — it must never satisfy an ADMIN
+    // requirement, or the whole trusted subnet would gain admin privileges.
+    if ($access_level === 'IP_IN_RANGE') {
+        return $required_level !== 'ADMIN';
+    }
+
     // Public access is always allowed
     if ($required_level === 'PUBLIC') {
         return true;

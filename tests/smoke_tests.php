@@ -53,6 +53,12 @@ ok(has_access('COLLABORATOR', 'OrgA') === true,'COLLABORATOR is granted a resour
 ok(has_access('COLLABORATOR', 'OrgZ') === false,'COLLABORATOR is denied a resource NOT in its list');
 ok(has_access('ADMIN') === false,              'COLLABORATOR is denied ADMIN (no privilege escalation)');
 
+// IP_IN_RANGE (trusted subnet): full DATA access, but NOT admin.
+$_SESSION = ['access_level' => 'IP_IN_RANGE', 'access' => []];
+ok(has_access('COLLABORATOR') === true,        'IP_IN_RANGE satisfies the COLLABORATOR requirement');
+ok(has_access('COLLABORATOR', 'AnyOrg') === true,'IP_IN_RANGE reaches any organism resource');
+ok(has_access('ADMIN') === false,              'IP_IN_RANGE is denied ADMIN (trusted subnet is not admin)');
+
 // has_assembly_access(): ADMIN short-circuit + collaborator per-assembly list.
 // Uses a made-up organism so is_public_assembly() reads the real groups file and returns false.
 $_SESSION = ['access_level' => 'ADMIN', 'access' => []];

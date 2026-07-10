@@ -16,7 +16,8 @@ CLAUDE.md access-control section (contradicted by #3).
 
 ## A. Security / information disclosure — do first
 
-- [ ] **#1 CLI preflight script served over HTTP** — `setup-check.php` returns HTTP 200 to any
+- [x] **#1 CLI preflight script served over HTTP** — DONE (`PHP_SAPI !== 'cli'` guard; now 403 over
+      HTTP, still runs from CLI). `setup-check.php` returns HTTP 200 to any
       anonymous visitor and prints base dir (`/var/www/html/moop`), web-server user
       (`apache:apache`), PHP version, loaded extensions, and every missing/installed CLI tool.
       It's a `#!/usr/bin/env php` CLI script with no web guard.
@@ -24,7 +25,8 @@ CLAUDE.md access-control section (contradicted by #3).
       (and to `setup-check.php` / any sibling CLI scripts), or an nginx `location ~ setup.*\.php`
       deny. `setup.php` already self-blocks via the `config_editable.json` gate — mirror that intent.
 
-- [ ] **#2 `setup-admin.php` served over HTTP** — same exposure; also confirms `users.json` exists
+- [x] **#2 `setup-admin.php` served over HTTP** — DONE (same `PHP_SAPI` guard; 403 over HTTP).
+      same exposure; also confirms `users.json` exists
       and prints its menu (option 2 = "DELETES all other users"). Under PHP-FPM `stdin` is EOF so
       the delete can't actually complete (falls through to "Setup cancelled"), so this is
       disclosure + fragility, not live destruction — but it should not be reachable at all.
@@ -32,7 +34,10 @@ CLAUDE.md access-control section (contradicted by #3).
 
 ## B. Correctness vs. documented behavior
 
-- [ ] **#3 `has_access('ADMIN')` returns `true` for IP_IN_RANGE** — proven via PHP harness. This
+- [x] **#3 `has_access('ADMIN')` returns `true` for IP_IN_RANGE** — DONE. `has_access()` now returns
+      `$required_level !== 'ADMIN'` for IP_IN_RANGE (full data access, never admin); added 3
+      IP_IN_RANGE smoke-test cases (29 pass); live admin panel still denies IP_IN_RANGE, organism
+      page still 200. Proven via PHP harness. This
       contradicts CLAUDE.md ("IP_IN_RANGE — full data access, **no admin panel**") and the
       function's own docblock. The admin panel is safe *only* because
       `admin/admin_access_check.php:38` bypasses the helper and checks
