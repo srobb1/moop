@@ -76,7 +76,6 @@
             </div>
             <div class="qs-examples mt-2">
               <span class="text-muted me-1" style="font-size:0.62rem;">e.g.</span>
-              <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;">LOC100636551</button>
               <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;">XM_020002978.1</button>
               <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;">ACA1_PVKU01000001.1_000001</button>
               <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;">ACA1_PVKU01000001.1_000001.1</button>

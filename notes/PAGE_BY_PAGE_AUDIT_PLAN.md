@@ -165,7 +165,25 @@ section I. Candidates (confirm specifics with the user when we get to it):
 - [ ] Review the `text-uppercase` eyebrow labels ("Search Gene IDs and Annotations", "Search
       Results", lines ~38/72) for the same readability considerations.
 
+## M. "Working examples" validator/generator — to build (user idea 2026-07-10)
+
+Problem: example values are **hardcoded** wherever we show them (index organism-search chips +
+gene-search chips, BLAST "Sample Protein/Nucleotide", search page, moopmart "HDAC"/"GO:0006351"),
+so they go stale as data changes and a dead example (e.g. `LOC100636551`, removed 2026-07-10) makes
+the site look broken.
+
+Proposed: an admin action (on Manage Site Configuration) that keeps examples honest, in two modes:
+1. **Validate** — run each configured example against the live DBs and flag the broken ones.
+2. **Suggest/generate** — pull a real, representative value per context straight from the DBs
+   (a real gene ID, mRNA/accession, annotation term, assembly accession, organism/group name).
+
+Root-cause fix so it can't drift: move examples out of hardcoded HTML into `config_editable.json`
+(a small `examples` block), have index/BLAST/search/moopmart read from config, and let the admin
+tool refresh/validate that block. Assessment: high value, low risk, directly prevents "example
+returns no match" embarrassment. Reuses existing FTS/search + DB helpers.
+
 ## L. Index (home) page — quick fixes (done 2026-07-10)
+- [x] Removed dead gene-id example `LOC100636551` from the index gene-search chips.
 
 - [x] Site title `<p>` → `<h1>` (part of #9; same styling, no visual change).
 - [x] Stop password managers autofilling the 5 search/filter boxes: added `autocomplete="off"`,
