@@ -65,7 +65,9 @@ CLAUDE.md access-control section (contradicted by #3).
 
 ## D. UX / display-consistency — same data shouldn't look different
 
-- [ ] **#6 Species name UPPERCASED on organism page only** — `tools/pages/organism.php:32` wraps
+- [x] **#6 Species name UPPERCASED on organism page only** — DONE. Dropped `text-uppercase` from the
+      binomial span (now proper-case italic, matching every other page).
+      `tools/pages/organism.php:32` wraps
       the binomial in `text-uppercase`, rendering `NEMATOSTELLA VECTENSIS`. Every other page
       (assembly, gene_set, parent, groups) shows proper-case italic `Nematostella vectensis`.
       Uppercasing a scientific name is both inconsistent and taxonomically wrong.
@@ -96,8 +98,12 @@ CLAUDE.md access-control section (contradicted by #3).
 
 ## F. Dead code
 
-- [ ] **#11 `tools/get_annotation_sources.php` is unreferenced** — 0 refs in PHP or JS; superseded
-      by `get_annotation_sources_grouped.php` (4 refs). **Fix:** delete.
+- [x] **#11 `tools/get_annotation_sources.php` is unreferenced** — DONE. Deleted (recoverable from
+      git). Re-verified: only mention was in the auto-generated `docs/function_registry.json`; all 3
+      JS callers use `_grouped`; no dynamic URL, nginx rewrite, or tools-config entry. Its lib fn
+      `getAnnotationSources()` is now dead → tracked in
+      [UNUSED_FUNCTIONS_CLEANUP_PLAN.md](UNUSED_FUNCTIONS_CLEANUP_PLAN.md). Superseded
+      by `get_annotation_sources_grouped.php` (4 refs).
 
 ## G. Needs investigation (not yet confirmed a bug)
 
@@ -106,6 +112,18 @@ CLAUDE.md access-control section (contradicted by #3).
       errors, not the known tracks/CORS/network issue. Couldn't fully isolate from the headless
       env. **Next:** check whether the default session's display type is malformed for this
       assembly. (The failing google-analytics request is just the sandbox blocking GA — ignore.)
+
+## H. Bonus findings during implementation (not in the original 12)
+
+- [x] **#13 Admin "Generate Registry" button fails** — DONE. `docs/function_registry.json` was
+      `-rwxr-xr-x smr apache` (no group write), so the generator succeeds when run from the CLI
+      (as `smr`) but `file_put_contents` fails when run by php-fpm (as `apache`) → generator prints
+      "❌ Error writing JSON file" → the endpoint's `stripos($output,'error')` check reports
+      "Failed to generate." Fix: `chmod 664` the file (now group-writable) + added
+      `@chmod($jsonFile, 0664)` after write in both `generate_registry_json.php` and
+      `generate_js_registry_json.php` so it self-heals regardless of which user regenerates.
+      Secondary (not fixed): the endpoint infers success from `$output` being non-empty and a naive
+      "error" substring scan rather than the generator's real exit code — fragile, worth hardening.
 
 ---
 

@@ -492,6 +492,10 @@ $jsonFile = $docs_path . '/js_function_registry.json';
 
 $json = json_encode($registryData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 if (file_put_contents($jsonFile, $json)) {
+    // Keep group-writable so both the CLI user and the web-server user (php-fpm)
+    // can regenerate it — otherwise the admin "Generate" button fails on the
+    // second run. See generate_registry_json.php for the same fix.
+    @chmod($jsonFile, 0664);
     echo "\n✅ JavaScript Registry generated successfully!\n";
     echo "   File: " . str_replace(__DIR__ . '/../', '', $jsonFile) . "\n";
     echo "   Total Functions: " . $totalFuncs . "\n";
