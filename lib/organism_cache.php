@@ -74,7 +74,7 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     $cached_data = [];
 
     if (!$force_refresh && file_exists($cache_file)) {
-        $cached = json_decode(file_get_contents($cache_file), true);
+        $cached = loadJsonFile($cache_file, []);
         if ($cached && isset($cached['org_fingerprints']) && isset($cached['config_fingerprint']) && isset($cached['data'])
             && ($cached['schema_version'] ?? 0) === ORGANISM_CACHE_SCHEMA_VERSION) {
             $cached_fingerprints = $cached['org_fingerprints'];

@@ -141,7 +141,7 @@ function getAccessibleAssemblies($specific_organism = null, $specific_assembly =
     $groups_data = [];
     $groups_file = "$metadata_path/organism_assembly_groups.json";
     if (file_exists($groups_file)) {
-        $groups_data = json_decode(file_get_contents($groups_file), true) ?: [];
+        $groups_data = loadJsonFile($groups_file, []);
     }
 
     // Session-based caching for full (unfiltered) requests only

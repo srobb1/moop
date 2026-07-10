@@ -111,7 +111,7 @@ function fetch_taxonomy_lineage($taxon_id, $max_retries = 3) {
 function ncbi_load_local_dump_meta($metadata_path) {
     $f = "$metadata_path/.ncbi_taxonomy_meta.json";
     if (!file_exists($f)) return [];
-    return json_decode(file_get_contents($f), true) ?: [];
+    return loadJsonFile($f, []);
 }
 
 function ncbi_save_local_dump_meta($metadata_path, array $meta) {
@@ -203,7 +203,7 @@ function ncbi_scan_local_dump(array $taxid_set, string $stored_gz): array {
 function load_lineage_cache($metadata_path) {
     $cache_file = "$metadata_path/taxonomy_lineage_cache.json";
     if (!file_exists($cache_file)) return [];
-    $data = json_decode(file_get_contents($cache_file), true);
+    $data = loadJsonFile($cache_file, []);
     if (!is_array($data)) return [];
     unset($data['generated']);
     return $data;

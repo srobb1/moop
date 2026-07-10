@@ -41,7 +41,7 @@ function housekeeping_status_file(): string {
 
 function housekeeping_persist_status(string $key, $value): void {
     $file = housekeeping_status_file();
-    $all  = file_exists($file) ? (json_decode(file_get_contents($file), true) ?: []) : [];
+    $all  = loadJsonFile($file, []);
     $all[$key] = $value;
     $dir = dirname($file);
     if (!is_dir($dir)) @mkdir($dir, 0755, true);
@@ -51,7 +51,7 @@ function housekeeping_persist_status(string $key, $value): void {
 function housekeeping_hydrate_session_from_status(): void {
     $file = housekeeping_status_file();
     if (!file_exists($file)) return;
-    $all = json_decode(file_get_contents($file), true) ?: [];
+    $all = loadJsonFile($file, []);
     if (isset($all['site_data_backup'])) $_SESSION['site_data_backup'] = $all['site_data_backup'];
     if (isset($all['env_warnings']))     $_SESSION['env_warnings']     = $all['env_warnings'];
 }
@@ -535,7 +535,7 @@ function housekeeping_refresh_organism_cache_if_stale() {
     // dashboard use, rather than on a fixed timer. Keeps refreshes out of the admin's way:
     // the only slow case is a big rebuild, and it runs in the background below.
     if (file_exists($cache_file)) {
-        $raw = json_decode(file_get_contents($cache_file), true);
+        $raw = loadJsonFile($cache_file, []);
         if ($raw && isset($raw['org_fingerprints'], $raw['config_fingerprint'])
             && function_exists('buildPerOrganismFingerprints') && function_exists('buildConfigFingerprint')) {
             $metadata_path      = $config->getPath('metadata_path');

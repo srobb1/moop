@@ -447,7 +447,7 @@ function getAnnotatedFeatureTypesInGeneSet(int $gene_set_id, string $db_path, st
     if ($cache_dir) {
         $cache_file = "$cache_dir/annotated_feature_types.json";
         if (file_exists($cache_file) && filemtime($cache_file) >= filemtime($db_path)) {
-            return json_decode(file_get_contents($cache_file), true) ?: [];
+            return loadJsonFile($cache_file, []);
         }
     }
 

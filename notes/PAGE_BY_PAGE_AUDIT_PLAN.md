@@ -77,11 +77,17 @@ CLAUDE.md access-control section (contradicted by #3).
         (`manage_jbrowse` ×3, `jbrowse_text_index` ×2, `jbrowse_list_tracks`, `manage_blast_linkouts:117`),
         `sync_ncbi_taxonomy:29`, `pages/manage_site_config.php:677` (uses `: null` sentinel → convert
         with `loadJsonFile($p, null)`).
-      - [ ] Remaining: `lib/` (~25), `includes/` (access_control ×4, ConfigManager ×2 — **loaded
-        before functions_json, so need the helper included first or leave as-is**), `api/jbrowse2/`
-        (~10), root (index/login/jbrowse2 ~6; setup*.php CLI — low priority), + the deferred admin
-        jbrowse/site-config ones. Rule: skip object decodes (no `, true`); `: null` sentinels →
-        `loadJsonFile($p, null)`.
+      - [x] **`lib/` batch DONE** (15 sites: functions_data ×6, housekeeping ×3, taxonomy_functions
+        ×2, functions_access, functions_database, moopmart_functions, organism_cache). 0 raw left in
+        those files; smoke + live pages (index, groups, organism, moopmart, admin dashboard/
+        organisms/checklist) all clean. Confirmed the CLI warmer loads moop_functions → helper in
+        scope for organism_cache.
+      - [ ] Remaining ~28: **`lib/jbrowse/*` (9 — deferred: api/cli load-order, do together with the
+        admin jbrowse ones)**, `lib/functions_login_protection.php:54` (runs during login BEFORE
+        functions_json loads — leave, or load helper earlier), `includes/` (access_control ×4,
+        ConfigManager ×2 — **loaded before functions_json**), `api/jbrowse2/` (~10), root (index/
+        login/jbrowse2 ~6; setup*.php CLI — low priority). Rule: skip object decodes (no `, true`);
+        `: null` sentinels → `loadJsonFile($p, null)`; verify helper is loaded in that context first.
 
 ## D. UX / display-consistency — same data shouldn't look different
 

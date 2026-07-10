@@ -630,7 +630,7 @@ function moopmartGetChrNames(string $gene_set_path): array
 
     $cache = "$gene_set_path/chr_names_cache.json";
     if (file_exists($cache) && filemtime($cache) >= filemtime($tsv)) {
-        return json_decode(file_get_contents($cache), true) ?: [];
+        return loadJsonFile($cache, []);
     }
 
     $chrs = [];

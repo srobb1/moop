@@ -45,7 +45,7 @@ function getGroupData() {
     $groups_file = "$metadata_path/organism_assembly_groups.json";
     $groups_data = [];
     if (file_exists($groups_file)) {
-        $groups_data = json_decode(file_get_contents($groups_file), true);
+        $groups_data = loadJsonFile($groups_file, []);
     }
     return $groups_data;
 }
@@ -893,7 +893,7 @@ function getOrphanedGeneSetTuples(string $organism_data_path): array {
     $cache_file = "$organism_data_path/.organism_cache.json";
     if (!file_exists($cache_file)) return [];
 
-    $raw = json_decode(file_get_contents($cache_file), true);
+    $raw = loadJsonFile($cache_file, []);
     $tuples = [];
     foreach ($raw['data'] ?? [] as $organism => $org_data) {
         foreach ($org_data['assembly_validation']['mismatches'] ?? [] as $mm) {
@@ -935,7 +935,7 @@ function getOrphanedAssemblyTuples(string $organism_data_path): array {
     $cache_file = "$organism_data_path/.organism_cache.json";
     if (!file_exists($cache_file)) return [];
 
-    $raw = json_decode(file_get_contents($cache_file), true);
+    $raw = loadJsonFile($cache_file, []);
     $tuples = [];
     foreach ($raw['data'] ?? [] as $organism => $org_data) {
         foreach ($org_data['assembly_validation']['mismatches'] ?? [] as $mm) {
@@ -967,7 +967,7 @@ function getNoDatabaseOrganisms(string $organism_data_path): array {
     $cache_file = "$organism_data_path/.organism_cache.json";
     if (!file_exists($cache_file)) return [];
 
-    $raw = json_decode(file_get_contents($cache_file), true);
+    $raw = loadJsonFile($cache_file, []);
     $names = [];
     foreach ($raw['data'] ?? [] as $organism => $org_data) {
         if (empty($org_data['has_db']) && !empty($org_data['assemblies'])) {
@@ -1010,7 +1010,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     // Cache-driven: taxonomy-tree membership + the list of assemblies per organism.
     $cache_data = [];
     if (file_exists($cache_file)) {
-        $raw = json_decode(file_get_contents($cache_file), true);
+        $raw = loadJsonFile($cache_file, []);
         $cache_data = $raw['data'] ?? [];
     }
     foreach ($cache_data as $org_data) {
@@ -1033,7 +1033,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     $health_alerts['no_database'] = count($no_database_organisms);
 
     // LIVE groups file — keeps grouping checks accurate right after a group edit.
-    $gd = file_exists($groups_file) ? (json_decode(file_get_contents($groups_file), true) ?? []) : [];
+    $gd = loadJsonFile($groups_file, []);
     $grouped_pairs = [];
     foreach ($gd as $ge) {
         if (!empty($ge['groups'])) $grouped_pairs[$ge['organism'] . '/' . $ge['assembly']] = true;
