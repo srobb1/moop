@@ -91,9 +91,14 @@
 .pnav-link.lvl-3{font-size:.82rem;color:var(--pnav-muted)}
 .pnav-link .pnav-tag{
   flex:none;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.62rem;font-weight:700;
-  text-transform:uppercase;letter-spacing:.02em;color:#5b60d6;background:#e7e8fb;
+  letter-spacing:.02em;color:#5b60d6;background:#e7e8fb;
   padding:.05rem .3rem;border-radius:5px;
 }
+/* Type chips match the site feature color code (see /css/display.css .feature-color-*). */
+.pnav-link .pnav-tag--mrna        { color:#17a2b8; background:rgba(23,162,184,.13); }
+.pnav-link .pnav-tag--gene        { color:#764ba2; background:rgba(118,75,162,.13); }
+.pnav-link .pnav-tag--protein,
+.pnav-link .pnav-tag--polypeptide { color:#55b317; background:rgba(85,179,23,.16); }
 .pnav-link .pnav-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-link.is-active{background:var(--pnav-wash);border-left-color:var(--pnav-accent);
   color:var(--pnav-accent-ink);font-weight:700}

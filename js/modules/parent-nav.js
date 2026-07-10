@@ -110,7 +110,8 @@
         var caret = hasKids
           ? '<button class="pnav-caret" aria-expanded="true" aria-label="Toggle section" data-key="' + n.key + '">' + chevron + "</button>"
           : '<span class="pnav-spacer"></span>';
-        var tag = n.tag ? '<span class="pnav-tag">' + esc(n.tag) + "</span>" : "";
+        var tagSlug = n.tag ? n.tag.toLowerCase().replace(/[^a-z0-9]+/g, "") : "";
+        var tag = n.tag ? '<span class="pnav-tag pnav-tag--' + tagSlug + '">' + esc(n.tag) + "</span>" : "";
         var link =
           '<a class="pnav-link lvl-' + n.lvl + '" href="#" data-key="' + n.key + '" title="' + esc(n.label) + '">' +
           tag + '<span class="pnav-label">' + esc(n.label) + "</span></a>";
