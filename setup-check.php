@@ -14,6 +14,12 @@
  *   1 = one or more checks failed
  */
 
+// CLI-only: never expose install diagnostics (paths, OS user, tool inventory) over HTTP.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit;
+}
+
 // ── ANSI Colors ──────────────────────────────────────────────────────────────
 
 const C_GREEN  = "\033[0;32m";

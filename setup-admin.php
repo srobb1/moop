@@ -10,6 +10,12 @@
  * Usage: sudo php setup-admin.php
  */
 
+// CLI-only: this script reads/writes users.json and must never be reachable over HTTP.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit;
+}
+
 // ANSI color codes
 const COLOR_GREEN = "\033[0;32m";
 const COLOR_YELLOW = "\033[1;33m";
