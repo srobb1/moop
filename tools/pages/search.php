@@ -17,7 +17,7 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
   <!-- Header -->
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
-      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Search Features by Annotation</span>
+      <?= page_title('Search Features by Annotation') ?>
       <button type="button" class="btn btn-link p-0 text-white"
               style="font-size:1rem; opacity:0.85; line-height:1;"
               data-bs-toggle="popover" data-bs-placement="left" data-bs-trigger="focus" data-bs-html="true"

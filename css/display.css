@@ -648,6 +648,22 @@ code {
   color: white;
 }
 
+/* ========== SHARED PAGE TITLE ========== */
+/* The single <h1> emitted by page_title() (includes/page_header.php). Keeps the
+   established "eyebrow" look; inherits color so it works on a colored header bar
+   (white text) or a light background. One <h1> per page — accessibility. */
+.page-title-eyebrow {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.2;
+}
+
 /* ========== SHARED FEATURE INFO BOX LAYOUT ========== */
 /* Used by parent, assembly, and gene_set pages */
 

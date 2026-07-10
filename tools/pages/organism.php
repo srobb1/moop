@@ -123,9 +123,9 @@
     <div class="<?= $show_image ? 'col-md-8' : 'col-12' ?>">
       <div class="card shadow-sm">
                  <div class="card-body">
-           <h2 class="fw-bold mb-1" style="color: #0f766e;">
+           <h1 class="fw-bold mb-1 h2" style="color: #0f766e;">
              <?= htmlspecialchars($organism_info['common_name'] ?? str_replace('_', ' ', $organism_name)) ?>
-           </h2>
+           </h1>
            <p class="lead text-muted mb-4" style="font-size: 1.1rem; font-style: italic;">
              <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> 
                  <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>

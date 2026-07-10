@@ -83,14 +83,28 @@ CLAUDE.md access-control section (contradicted by #3).
       system. **Fix:** pick one primary pattern (the `info-icon`→modal system) and standardize;
       at minimum add guided help to parent.php. Larger cleanup — scope separately.
 
-- [ ] **#8 Assembly identified two ways** — bare accession `GCA_033964005.1` on organism +
-      assembly pages vs friendly `Nvec200 (GCA_033964005.1)` on gene_set + parent. **Fix:** pick
-      one convention (recommend `FriendlyName (Accession)`) and apply everywhere. Minor.
+- [ ] **#8 Assembly shown inconsistently — standardize on `Name (Accession)`** (user-confirmed
+      convention, 2026-07-10). The assembly identifier appears **three** ways across the site: bare
+      accession (`GCA_033964005.1`), bare name (`Nvec200`), and the good form
+      `Nvec200 (GCA_033964005.1)`. **Fix:** always render `Name (Accession)`. Audit every place an
+      assembly is displayed (organism, assembly, gene_set, parent, downloads, moopmart, search
+      scope chips, dropdowns, breadcrumb-to-be) and route through a single helper so it can't drift
+      again — e.g. `assembly_label($name, $accession)`. Organism-page instances overlap with the
+      deferred design pass (section J).
 
-- [ ] **#9 Heading hierarchy disagrees between pages** — assembly/gene_set/parent use a real
-      `<h1>`; organism uses `<h2>`; index and groups have no `<h1>` (groups' largest text is `<h5>`
-      card titles). Affects accessibility and visual rhythm. **Fix:** each page gets exactly one
-      `<h1>` as its title; demote/promote accordingly.
+- [x] **#9 Heading hierarchy disagrees between pages** — DONE. Every page now has exactly one
+      semantic `<h1>` (verified live: index, blast, downloads, search, moopmart, groups, organism +
+      the already-correct assembly/gene_set/parent). No visual change anywhere. Fresh audit: 7/10 pages had
+      **zero** `<h1>` (index, groups, organism, search, blast, moopmart, downloads); only
+      assembly/gene_set/parent are correct. organism starts at `<h2>`; groups + tool pages use a
+      styled `<span>` eyebrow as the "title".
+      **Chosen fix = A via C (real component):** built `page_title($text,$icon)` in
+      `includes/page_header.php` (wired into `render_display_page()`), with styling centralized in
+      `css/display.css .page-title-eyebrow`. Emits one semantic `<h1>` in the existing eyebrow style
+      — no visual change. Consolidates the inline-styled `<span>` titles that were hand-rolled per
+      page (root-cause fix). **Piloted on BLAST** (1 `<h1>`, look identical). Rollout pending user OK:
+      downloads, search, moopmart next; index gets an `<h1>`; organism/groups adopt it in their
+      design passes (section J).
 
 ## E. Layout
 
@@ -136,6 +150,45 @@ CLAUDE.md access-control section (contradicted by #3).
 - [ ] **Gene Structure (gene diagram) section — user wants to review for a couple of tweaks.**
       Not yet specified; revisit. File: `tools/pages/parent.php` (~line 132+, `#gene-model-svg`)
       and the JS that draws it (`js/` gene-model script).
+
+## J. Organism page — apply the same design updates as the gene page (user request 2026-07-10)
+
+The organism page (`tools/pages/organism.php`) needs a design pass mirroring the parent-page work in
+section I. Candidates (confirm specifics with the user when we get to it):
+- [ ] **Heading level:** the page title is an `<h2 class="fw-bold mb-1">` ("Starlet Sea Anemone",
+      line ~126) — should be the page's single `<h1>` (ties into audit #9 heading hierarchy).
+- [ ] **Header/overview card treatment:** apply the readable header pattern from the gene page
+      (clear title hierarchy; ID/short-identifier vs descriptive-name split where relevant) instead
+      of the tiny uppercase eyebrow labels. (Binomial casing already fixed in #6.)
+- [ ] **Shadow / card hierarchy & section styling:** keep it consistent with the gene page's
+      two-tier shadow and section-card conventions.
+- [ ] Review the `text-uppercase` eyebrow labels ("Search Gene IDs and Annotations", "Search
+      Results", lines ~38/72) for the same readability considerations.
+
+## L. Index (home) page — quick fixes (done 2026-07-10)
+
+- [x] Site title `<p>` → `<h1>` (part of #9; same styling, no visual change).
+- [x] Stop password managers autofilling the 5 search/filter boxes: added `autocomplete="off"`,
+      `data-1p-ignore`, `data-lpignore="true"`, `data-form-type="other"`, and switched
+      `type="text"` → `type="search"` (the lever Safari/iCloud Passwords actually respects). If
+      iCloud still pops up on the user's machine, it's Safari heuristics largely outside site control.
+- [x] Gene-search input icon `fa-fingerprint` → `fa-search` (matches the organism search).
+
+## K. Feature breadcrumb — to discuss (user idea 2026-07-10)
+
+Add a hierarchy breadcrumb at the top of the detail pages so users can see and navigate the
+organism → assembly → gene set → feature chain:
+- **Gene/feature page:** Organism → Assembly → Gene Set → Feature
+- **Gene set page:** Organism → Assembly → Gene Set
+- **Assembly page:** Organism → Assembly
+
+The links already exist (the overview info-grid rows link to `organism.php` / `assembly.php` /
+`gene_set.php`), so this is mostly a presentation/navigation layer. Points to discuss:
+- Placement (above the overview card? in/near the "Jump to" bar?) and whether it complements or
+  replaces the info-grid links.
+- Styling (Bootstrap breadcrumb vs. custom), truncation of long names, mobile wrapping.
+- Whether the last crumb (current page) is plain text vs. linked.
+- Consistency across all three detail page types + reuse of one component.
 
 ## H. Bonus findings during implementation (not in the original 12)
 

@@ -14,7 +14,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
   <!-- Header -->
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
-      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">MOOPmart — Data Exporter</span>
+      <?= page_title('MOOPmart — Data Exporter') ?>
       <button type="button" class="btn btn-link p-0 text-white"
               style="font-size:1rem; opacity:0.85; line-height:1;"
               data-bs-toggle="modal" data-bs-target="#mm-help-modal">

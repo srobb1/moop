@@ -23,7 +23,7 @@
 
     <div class="card shadow-sm mb-4">
       <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
-        <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-dna me-2"></i>BLAST Search</span>
+        <?= page_title('BLAST Search', 'fa fa-dna') ?>
         <button type="button" class="btn btn-link p-0 text-white"
                 style="font-size:1rem; opacity:0.85; line-height:1;"
                 data-bs-toggle="popover" data-bs-placement="left" data-bs-trigger="focus" data-bs-html="true"

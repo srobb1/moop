@@ -117,7 +117,10 @@
 function render_display_page($content_file, $data = [], $title = '', $options = []) {
     // Get config instance for use in layout
     $config = ConfigManager::getInstance();
-    
+
+    // Shared page-title component (page_title()) — available to every content file.
+    require_once __DIR__ . '/page_header.php';
+
     // Extract data array to variables for use in included content file
     // This allows content file to use $organism_name directly instead of $data['organism_name']
     extract($data);
