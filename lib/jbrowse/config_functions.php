@@ -92,8 +92,8 @@ function loadSyntenyTracks($assembly1, $assembly2, $user_access_level)
     $user_level_value = $access_hierarchy[$user_access_level] ?? 0;
     
     foreach ($track_files as $track_file) {
-        $track_def = json_decode(file_get_contents($track_file), true);
-        
+        $track_def = loadJsonFile($track_file, []);
+
         if (!$track_def) continue;
         
         // Get track access level
@@ -181,8 +181,8 @@ function generateDualAssemblyConfig($assembly1, $assembly2, $user_access_level)
         exit;
     }
     
-    $assembly1_def = json_decode(file_get_contents($assembly1_file), true);
-    $assembly2_def = json_decode(file_get_contents($assembly2_file), true);
+    $assembly1_def = loadJsonFile($assembly1_file, []);
+    $assembly2_def = loadJsonFile($assembly2_file, []);
     
     if (!$assembly1_def || !$assembly2_def) {
         http_response_code(500);

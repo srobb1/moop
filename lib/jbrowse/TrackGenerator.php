@@ -465,7 +465,7 @@ class TrackGenerator
             $files = glob("$fullPath/*.json");
             foreach ($files as $file) {
                 $trackId = basename($file, '.json');
-                $metadata = json_decode(file_get_contents($file), true);
+                $metadata = loadJsonFile($file, []);
                 
                 $tracks[] = [
                     'track_id' => $trackId,

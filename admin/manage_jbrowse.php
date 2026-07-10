@@ -83,7 +83,7 @@ $registered_assemblies = [];
 $assembly_display_names = [];  // [organism][assemblyId] = displayName
 if (is_dir($assemblies_meta_dir)) {
     foreach (glob($assemblies_meta_dir . '/*.json') as $file) {
-        $asm_data = json_decode(file_get_contents($file), true);
+        $asm_data = loadJsonFile($file, []);
         if ($asm_data && isset($asm_data['organism'], $asm_data['assemblyId'])) {
             $org = $asm_data['organism'];
             $aid = $asm_data['assemblyId'];
@@ -153,14 +153,14 @@ if (is_dir($tracks_dir)) {
 
     $stats_cache_file = dirname($tracks_dir) . '/track_stats_cache.json';
     $newest_mtime = $track_files ? max(array_map('filemtime', $track_files)) : 0;
-    $cached = is_file($stats_cache_file) ? json_decode(file_get_contents($stats_cache_file), true) : null;
+    $cached = loadJsonFile($stats_cache_file, null);
 
     if ($cached && ($cached['mtime'] ?? 0) === $newest_mtime && ($cached['total'] ?? -1) === $track_stats['total']) {
         $track_stats = $cached['stats'];
         $track_stats['total'] = count($track_files);
     } else {
         foreach ($track_files as $file) {
-            $track = json_decode(file_get_contents($file), true);
+            $track = loadJsonFile($file, []);
             if (!$track) continue;
 
             $type = $track['type'] ?? 'Unknown';

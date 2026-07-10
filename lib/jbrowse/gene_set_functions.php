@@ -203,7 +203,7 @@ function prepareGeneSetForJBrowse(
 
     // ── Update assembly JSON primaryGeneTracks ───────────────────────────────
     if (file_exists($assembly_json)) {
-        $asm_data = json_decode(file_get_contents($assembly_json), true) ?: [];
+        $asm_data = loadJsonFile($assembly_json, []);
         $primary  = $asm_data['primaryGeneTracks'] ?? [];
         if (!in_array($track_id, $primary, true)) {
             $primary[] = $track_id;
@@ -290,7 +290,7 @@ function archiveGeneSet(string $organism, string $assembly, string $gene_set, Co
     }
     $assembly_json = "$metadata_path/jbrowse2-configs/assemblies/{$organism}_{$assembly}.json";
     if (file_exists($assembly_json)) {
-        $asm_data = json_decode(file_get_contents($assembly_json), true) ?: [];
+        $asm_data = loadJsonFile($assembly_json, []);
         $primary  = $asm_data['primaryGeneTracks'] ?? [];
         $filtered = array_values(array_filter($primary, fn($id) => $id !== $track_id));
         if (count($filtered) !== count($primary)) {
@@ -304,7 +304,7 @@ function archiveGeneSet(string $organism, string $assembly, string $gene_set, Co
     //    access to.
     $groups_file = "$metadata_path/organism_assembly_groups.json";
     if (file_exists($groups_file)) {
-        $groups_data = json_decode(file_get_contents($groups_file), true) ?: [];
+        $groups_data = loadJsonFile($groups_file, []);
         $filtered = array_values(array_filter($groups_data, function ($e) use ($organism, $assembly, $gene_set) {
             return !($e['organism'] === $organism && $e['assembly'] === $assembly && ($e['gene_set'] ?? 'v1') === $gene_set);
         }));
@@ -361,7 +361,7 @@ function buildGeneSetTextIndex(
     if (!file_exists($track_file)) {
         return ['success' => false, 'error' => "Gene track JSON not found: $track_file — register the gene set first"];
     }
-    $track_def = json_decode(file_get_contents($track_file), true);
+    $track_def = loadJsonFile($track_file, []);
     if (!$track_def) {
         return ['success' => false, 'error' => "Could not parse gene track JSON"];
     }

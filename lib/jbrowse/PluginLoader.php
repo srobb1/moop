@@ -18,7 +18,7 @@ function loadJBrowse2Plugins() {
         return [];
     }
     
-    $plugins = json_decode(file_get_contents($pluginFile), true);
+    $plugins = loadJsonFile($pluginFile, []);
     
     if (!is_array($plugins)) {
         error_log("Invalid JBrowse2 plugin config format");

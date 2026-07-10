@@ -26,7 +26,7 @@ function ncbi_lock_is_active($lock_file) {
 function ncbi_lineage_cache_meta($metadata_path) {
     $f = "$metadata_path/taxonomy_lineage_cache.json";
     if (!file_exists($f)) return ['generated' => null, 'count' => 0];
-    $d = json_decode(file_get_contents($f), true);
+    $d = loadJsonFile($f, []);
     $count = is_array($d) ? count(array_filter(array_keys($d), fn($k) => $k !== 'generated')) : 0;
     return ['generated' => $d['generated'] ?? null, 'count' => $count];
 }

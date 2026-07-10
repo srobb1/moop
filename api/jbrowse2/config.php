@@ -138,8 +138,8 @@ function generateAssemblyList($user_access_level) {
     $assembly_files = glob("$metadata_path/*.json");
     
     foreach ($assembly_files as $file) {
-        $assembly_def = json_decode(file_get_contents($file), true);
-        
+        $assembly_def = loadJsonFile($file, []);
+
         if (!$assembly_def) continue;
         
         $assembly_access_level = $assembly_def['defaultAccessLevel'] ?? 'PUBLIC';
@@ -194,7 +194,7 @@ function generateAssemblyConfig($organism, $assembly, $user_access_level) {
         exit;
     }
 
-    $assembly_definition = json_decode(file_get_contents($assembly_def_file), true);
+    $assembly_definition = loadJsonFile($assembly_def_file, []);
 
     if (!$assembly_definition) {
         http_response_code(500);
@@ -284,8 +284,8 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
     $user_level_value = $access_hierarchy[$user_access_level] ?? 0;
     
     foreach ($track_files as $track_file) {
-        $track_def = json_decode(file_get_contents($track_file), true);
-        
+        $track_def = loadJsonFile($track_file, []);
+
         if (!$track_def) continue;
         
         // Get track access level from metadata

@@ -82,12 +82,23 @@ CLAUDE.md access-control section (contradicted by #3).
         those files; smoke + live pages (index, groups, organism, moopmart, admin dashboard/
         organisms/checklist) all clean. Confirmed the CLI warmer loads moop_functions → helper in
         scope for organism_cache.
-      - [ ] Remaining ~28: **`lib/jbrowse/*` (9 — deferred: api/cli load-order, do together with the
-        admin jbrowse ones)**, `lib/functions_login_protection.php:54` (runs during login BEFORE
-        functions_json loads — leave, or load helper earlier), `includes/` (access_control ×4,
-        ConfigManager ×2 — **loaded before functions_json**), `api/jbrowse2/` (~10), root (index/
-        login/jbrowse2 ~6; setup*.php CLI — low priority). Rule: skip object decodes (no `, true`);
-        `: null` sentinels → `loadJsonFile($p, null)`; verify helper is loaded in that context first.
+      - [x] **ENABLER**: `functions_json.php` now loaded in `config_init.php` (commit d13e441), so
+        `loadJsonFile()` is globally available — unblocked the jbrowse/api/login/core paths.
+      - [x] **jbrowse subsystem batch DONE** (25 sites: lib/jbrowse gene_set_functions ×4,
+        config_functions ×3, PluginLoader, TrackGenerator; admin manage_jbrowse ×3,
+        jbrowse_text_index ×2, jbrowse_list_tracks, manage_blast_linkouts:117, sync_ncbi_taxonomy;
+        api/jbrowse2 config.php ×3, config-optimized.php ×5). The real browser endpoint `config.php`
+        still generates valid config (1 assembly, 1176 tracks); jbrowse2 + manage_jbrowse clean.
+      - [ ] Remaining: `includes/` (access_control ×4 — request-time fns, now safe; ConfigManager
+        ×2 — bootstrap, verify), `lib/functions_login_protection.php:54` (now safe — login loads
+        access_control→config_init→functions_json), root (index ×3, login, jbrowse2; setup*.php CLI
+        low-pri), `api/galaxy*` (2), `api/jbrowse2/archive/*` (2 — dead). Rule: skip object decodes
+        (no `, true`); `: null` sentinels → `loadJsonFile($p, null)`.
+
+- [x] **#15 (bonus) `api/jbrowse2/config-optimized.php` is broken (pre-existing HTTP 500)** — an
+  unused alternative config generator; the app fetches `config.php` (js/jbrowse2-loader.js). Returns
+  500 before and after the #5 edit (references `getDbConnection()` not in its load path). Dead +
+  broken — fix or delete. Noted 2026-07-10.
 
 ## D. UX / display-consistency — same data shouldn't look different
 

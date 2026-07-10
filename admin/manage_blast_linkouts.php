@@ -114,7 +114,7 @@ $feature_coord_status = [];
 $assemblies_meta_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
 if (is_dir($assemblies_meta_dir)) {
     foreach (glob($assemblies_meta_dir . '/*.json') ?: [] as $jf) {
-        $jd = json_decode(file_get_contents($jf), true);
+        $jd = loadJsonFile($jf, []);
         if (empty($jd)) continue;
         $org = $jd['organism'] ?? '';
         $asm = $jd['assemblyId'] ?? '';

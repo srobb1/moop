@@ -58,7 +58,7 @@ if (!$track_file) {
     exit;
 }
 
-$track_def = json_decode(file_get_contents($track_file), true);
+$track_def = loadJsonFile($track_file, []);
 if (!$track_def) {
     echo json_encode(['success' => false, 'error' => 'Could not parse track JSON']);
     exit;
@@ -181,7 +181,7 @@ function find_track_json(string $track_dir, string $track_id): ?string {
     }
     // Fallback: search all JSON files by trackId field
     foreach (glob("$track_dir/*/*.json") ?: [] as $f) {
-        $def = json_decode(file_get_contents($f), true);
+        $def = loadJsonFile($f, []);
         if (($def['trackId'] ?? '') === $track_id) return $f;
     }
     return null;

@@ -124,8 +124,8 @@ function generateAssemblyList($user_access_level) {
     $assembly_files = glob("$metadata_path/*.json");
     
     foreach ($assembly_files as $file) {
-        $assembly_def = json_decode(file_get_contents($file), true);
-        
+        $assembly_def = loadJsonFile($file, []);
+
         if (!$assembly_def) continue;
         
         $assembly_access_level = $assembly_def['defaultAccessLevel'] ?? 'PUBLIC';
@@ -181,7 +181,7 @@ function generateOptimizedAssemblyConfig($organism, $assembly, $user_access_leve
         exit;
     }
     
-    $assembly_definition = json_decode(file_get_contents($assembly_def_file), true);
+    $assembly_definition = loadJsonFile($assembly_def_file, []);
     
     if (!$assembly_definition) {
         http_response_code(500);
@@ -266,7 +266,7 @@ function getTrackReferences($organism, $assembly, $user_access_level) {
     $track_refs = [];
     
     foreach ($track_files as $track_file) {
-        $track_def = json_decode(file_get_contents($track_file), true);
+        $track_def = loadJsonFile($track_file, []);
         
         if (!$track_def) continue;
         
@@ -314,7 +314,7 @@ function getTrackReferences($organism, $assembly, $user_access_level) {
 function loadFullTrackConfigs($track_refs, $organism, $assembly, $user_access_level) {
     $tracks = [];
     foreach ($track_refs as $ref) {
-        $track_def = json_decode(file_get_contents($ref['file']), true);
+        $track_def = loadJsonFile($ref['file'], []);
         $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly);
         
         if ($track_with_tokens) {
@@ -395,7 +395,7 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
     $track_files = glob("$tracks_dir/$organism/$assembly/*/*.json");
     
     foreach ($track_files as $track_file) {
-        $track_def = json_decode(file_get_contents($track_file), true);
+        $track_def = loadJsonFile($track_file, []);
         
         if ($track_def && $track_def['trackId'] === $track_id) {
             // Check access

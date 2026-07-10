@@ -34,7 +34,7 @@ if (is_dir($tracks_dir)) {
     $trackFiles = glob($pattern);
     
     foreach ($trackFiles as $file) {
-        $track = json_decode(file_get_contents($file), true);
+        $track = loadJsonFile($file, []);
         if (!$track) continue;
         
         // Extract organism and assembly from path
