@@ -22,6 +22,12 @@
  * Access control remains in access_control.php and is unaffected.
  */
 
+// JSON helpers (loadJsonFile, loadJsonFileRequired, ...) are used pervasively.
+// Load the dependency-free leaf here — the single early choke point every entry
+// path hits (access_control -> config_init, admin_init, the jbrowse/api paths,
+// and ConfigManager bootstrap below) — so the helpers are always in scope.
+require_once __DIR__ . '/../lib/functions_json.php';
+
 // Load the ConfigManager class
 require_once __DIR__ . '/ConfigManager.php';
 
