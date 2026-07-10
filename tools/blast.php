@@ -248,7 +248,7 @@ if (!empty($selected_source_obj) && !empty($selected_db_obj)) {
     $assemblies_meta = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
     if (is_dir($assemblies_meta)) {
         foreach (glob($assemblies_meta . '/*.json') ?: [] as $jf) {
-            $jd = json_decode(file_get_contents($jf), true);
+            $jd = loadJsonFile($jf, []);
             if (($jd['organism'] ?? '') === $selected_organism
                 && ($jd['assemblyId'] ?? '') === $selected_assembly) {
                 $has_jbrowse = true;

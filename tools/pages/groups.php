@@ -135,7 +135,7 @@
                   $organism_json_path = "$organism_data/$organism/organism.json";
                   $organism_info = [];
                   if (file_exists($organism_json_path)) {
-                    $organism_info = json_decode(file_get_contents($organism_json_path), true);
+                    $organism_info = loadJsonFile($organism_json_path, []);
                     
                     // Handle improperly wrapped JSON (extra outer braces)
                     if ($organism_info && !isset($organism_info['genus']) && !isset($organism_info['common_name'])) {

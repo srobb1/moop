@@ -53,7 +53,7 @@ foreach ($organisms as $organism) {
     // Cache is invalidated automatically when organism.sqlite is newer than the cache file.
     $cache_file = "$organism_data/$organism/annotation_sources_cache.json";
     if (file_exists($cache_file) && filemtime($cache_file) >= filemtime($db)) {
-        $cached = json_decode(file_get_contents($cache_file), true);
+        $cached = loadJsonFile($cache_file, []);
         $source_types = is_array($cached) ? $cached : [];
     } else {
         $source_types = getAnnotationSourcesByType($db);

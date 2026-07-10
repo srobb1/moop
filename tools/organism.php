@@ -51,7 +51,7 @@ $organism_info = $organism_context['info'];
 // Load taxonomy tree and user access for breadcrumb counts
 $group_data = getGroupData();
 $taxonomy_user_access = getTaxonomyTreeUserAccess($group_data);
-$taxonomy_tree_data = json_decode(file_get_contents("$metadata_path/taxonomy_tree_config.json"), true);
+$taxonomy_tree_data = loadJsonFile("$metadata_path/taxonomy_tree_config.json", []);
 
 // Build scientific name from genus and species
 $scientific_name = '';

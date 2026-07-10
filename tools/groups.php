@@ -61,7 +61,7 @@ $group_data = getGroupData();
 // Handle both manual groups and taxonomy groups
 if ($is_taxonomy_group) {
     // Taxonomy group: Load tree and get organisms at this level
-    $taxonomy_tree_data = json_decode(file_get_contents("$metadata_path/taxonomy_tree_config.json"), true);
+    $taxonomy_tree_data = loadJsonFile("$metadata_path/taxonomy_tree_config.json", []);
     $group_organisms = getOrganismsAtTaxonomyLevel($taxonomy_rank, $taxonomy_tree_data['tree'], $group_data);
     
     // Fetch Wikipedia data for this taxonomic rank

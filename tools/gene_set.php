@@ -75,15 +75,13 @@ $display_config = [
 
 // Load optional gene set metadata (source, date_added, note, etc.)
 $gene_set_meta_file = "$organism_data/$organism_name/$genome_accession/$gene_set_name/geneset.json";
-$gene_set_meta = file_exists($gene_set_meta_file)
-    ? (json_decode(file_get_contents($gene_set_meta_file), true) ?? [])
-    : [];
+$gene_set_meta = loadJsonFile($gene_set_meta_file, []);
 
 // Load annotation type summary from organism-level cache (grouped by type)
 $annot_cache_file = "$organism_data/$organism_name/annotation_sources_cache.json";
 $annot_type_totals = [];
 if (file_exists($annot_cache_file)) {
-    $annot_cache = json_decode(file_get_contents($annot_cache_file), true) ?? [];
+    $annot_cache = loadJsonFile($annot_cache_file, []);
     foreach ($annot_cache as $type => $sources) {
         $annot_type_totals[$type] = array_sum(array_column($sources, 'count'));
     }

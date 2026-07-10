@@ -84,9 +84,7 @@ $display_config = [
 
 // Load optional genome metadata (source, date_added, note, etc.)
 $assembly_meta_file = "$organism_data/$organism_name/{$assembly_info['genome_accession']}/genome.json";
-$assembly_meta = file_exists($assembly_meta_file)
-    ? (json_decode(file_get_contents($assembly_meta_file), true) ?? [])
-    : [];
+$assembly_meta = loadJsonFile($assembly_meta_file, []);
 
 // Data to pass to content file
 $data = [

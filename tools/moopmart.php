@@ -77,7 +77,7 @@ $ann_config_file = "$metadata_path/annotation_config.json";
 $ann_types_config = [];
 $ann_type_info    = [];
 if (file_exists($ann_config_file)) {
-    $ann_cfg = json_decode(file_get_contents($ann_config_file), true) ?: [];
+    $ann_cfg = loadJsonFile($ann_config_file, []);
     $ann_types_config = $ann_cfg['annotation_types'] ?? [];
     foreach ($ann_types_config as $type => $data) {
         $ann_type_info[$type] = [
@@ -97,7 +97,7 @@ foreach ($all_accessible as $src) {
     $seen_orgs[$org] = true;
     $cache = "$organism_data/$org/annotation_sources_cache.json";
     if (!file_exists($cache)) continue;
-    $data = json_decode(file_get_contents($cache), true) ?: [];
+    $data = loadJsonFile($cache, []);
     foreach ($data as $type => $sources) {
         if (!isset($annotation_source_types[$type])) {
             $annotation_source_types[$type] = [

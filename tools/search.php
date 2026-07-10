@@ -14,7 +14,7 @@ $organism_data = $config->getPath('organism_data');
 $ann_config_file = $config->getPath('metadata_path') . '/annotation_config.json';
 $ann_type_info   = [];
 if (file_exists($ann_config_file)) {
-    $ann_cfg = json_decode(file_get_contents($ann_config_file), true) ?: [];
+    $ann_cfg = loadJsonFile($ann_config_file, []);
     foreach ($ann_cfg['annotation_types'] ?? [] as $type => $data) {
         $ann_type_info[$type] = [
             'color'       => $data['color']       ?? 'secondary',

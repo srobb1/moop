@@ -60,11 +60,17 @@ CLAUDE.md access-control section (contradicted by #3).
       documented snake_case one. **Fix:** delete `requireAccess()`, repoint `groups.php` to
       `require_access()`.
 
-- [ ] **#5 JSON loading done two ways** — 65 raw `json_decode(file_get_contents(...))` calls vs 11
-      uses of the `loadJsonFile()` helper. `tools/groups.php` uses **both**, 8 lines apart (helper
-      at :56, raw at :64). Raw form has no missing/corrupt-file handling. **Fix:** migrate raw
-      calls to `loadJsonFile()` (start with tools/, then admin/); do it incrementally, one file
-      per commit.
+- [~] **#5 JSON loading done two ways** — IN PROGRESS. Fresh count: **89** raw
+      `json_decode(file_get_contents(...))` calls across ~50 files vs `loadJsonFile()`. Raw form has
+      no missing/corrupt-file handling (warns + returns null). **Migrating to `loadJsonFile($p,[])`
+      in batches by directory, verifying each is `, true` (assoc) and preserves any null-vs-missing
+      logic.**
+      - [x] **`tools/` batch DONE** (11 sites: gene_set×2, assembly, organism, groups,
+        pages/groups, blast, moopmart×2, search, get_annotation_sources_grouped). 0 raw left in
+        tools/; all 8 affected pages render clean (200, no notices).
+      - [ ] Remaining ~78 sites: `admin/` (~20), `lib/` (~25), `includes/` (4), `api/` (~15),
+        root (index/login/setup/jbrowse2 ~10). Note setup*.php are CLI installers — lower priority.
+        Skip any that decode to objects (no `, true`) or depend on distinguishing null from `{}`.
 
 ## D. UX / display-consistency — same data shouldn't look different
 
