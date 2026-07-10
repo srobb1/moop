@@ -443,29 +443,3 @@ function getTaxonomyLineageWithCounts($lineage, $tree_node, $user_access) {
         return $item;
     }, $lineage);
 }
-
-/**
- * Require user to have specific access level or redirect to access denied
- * 
- * @param string $level Required access level (e.g., 'COLLABORATOR', 'ADMIN')
- * @param string $resource Resource name (e.g., group name or organism name)
- * @param array $options Options array with keys:
- *   - redirect_on_deny (bool, default: true) - Redirect to deny page if no access
- *   - deny_page (string, default: /$site/access_denied.php) - URL to redirect to
- * @return bool True if user has access, false otherwise
- */
-function requireAccess($level, $resource, $options = []) {
-    global $site;
-    
-    $redirect_on_deny = $options['redirect_on_deny'] ?? true;
-    $deny_page = $options['deny_page'] ?? "/$site/access_denied.php";
-    
-    $has_access = has_access($level, $resource);
-    
-    if (!$has_access && $redirect_on_deny) {
-        header("Location: $deny_page");
-        exit;
-    }
-    
-    return $has_access;
-}

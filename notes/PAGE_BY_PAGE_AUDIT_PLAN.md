@@ -50,7 +50,10 @@ CLAUDE.md access-control section (contradicted by #3).
 
 ## C. Code-consistency — one way to do each thing
 
-- [ ] **#4 Duplicate access-gate function** — `require_access()`
+- [x] **#4 Duplicate access-gate function** — DONE. Deleted `requireAccess()` from
+      `lib/functions_access.php`; repointed `tools/groups.php:112` to the documented
+      `require_access()`. No refs remain, both files lint, 29/29 smoke pass, groups page still 200.
+      `require_access()`
       (`includes/access_control.php:266`, uses ConfigManager) vs `requireAccess()`
       (`lib/functions_access.php:457`, uses fragile `global $site`). One caller each:
       `tools/groups.php:112` uses the camelCase lib copy; `lib/functions_display.php:331` uses the
@@ -91,7 +94,10 @@ CLAUDE.md access-control section (contradicted by #3).
 
 ## E. Layout
 
-- [ ] **#10 `parent.php` horizontal overflow on mobile** — +97px at 375px wide; the right-aligned
+- [x] **#10 `parent.php` horizontal overflow on mobile** — DONE. Added `flex-wrap` to the Gene
+      Structure and Annotations card headers; the button toolbars now wrap under the title on narrow
+      screens. Verified 375px overflow 97px→0px, desktop 1440px unchanged (header still one line).
+      +97px at 375px wide; the right-aligned
       action toolbar (`.ms-auto` group: Retrieve Sequences / BLAST / Downloads / View in Genome
       Browser) doesn't wrap. Every other page is clean at 375px. **Fix:** allow the toolbar to wrap
       (`flex-wrap`) or collapse to a menu on narrow widths.
@@ -114,6 +120,14 @@ CLAUDE.md access-control section (contradicted by #3).
       assembly. (The failing google-analytics request is just the sandbox blocking GA — ignore.)
 
 ## H. Bonus findings during implementation (not in the original 12)
+
+- [x] **#14 Info box & Toolbox touch with no gap when stacked** — DONE. On the gene (parent) page the
+      Overview `row` holds `col-lg-8` (info box) + `col-lg-4` (Toolbox); below the `lg` breakpoint
+      (~<992px) they stack, and Bootstrap columns have no vertical gutter, so the two cards touched.
+      Added `gy-3` to the row: 16px gap when stacked, unchanged side-by-side on desktop. Found while
+      reviewing the #10 fix (pre-existing, unrelated to it). Ordering (overview then toolbox) kept —
+      identity first, then actions.
+
 
 - [x] **#13 Admin "Generate Registry" button fails** — DONE. `docs/function_registry.json` was
       `-rwxr-xr-x smr apache` (no group write), so the generator succeeds when run from the CLI
