@@ -29,7 +29,7 @@
       <div class="card shadow-sm h-100">
         <!-- Title Card -->
         <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0f766e;">
-          <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></span>
+          <span class="fw-semibold" style="letter-spacing:0.03em; font-size:0.9rem;"><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></span>
           <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;">search limited to this organism</span>
         </div>
 
