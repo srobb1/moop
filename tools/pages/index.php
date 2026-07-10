@@ -8,7 +8,7 @@
 <div class="container py-3">
   <!-- Page Header -->
   <div class="text-center mb-3">
-    <p class="index-site-title moop-tool-title"><?= htmlspecialchars($siteTitle) ?></p>
+    <h1 class="index-site-title moop-tool-title"><?= htmlspecialchars($siteTitle) ?></h1>
     <hr class="mx-auto page-header-divider">
     <p class="mb-2" style="font-size:0.95rem;font-weight:300;color:rgba(8,145,178,0.7);letter-spacing:0.03em;">
       Browse genes, genomes, and annotations<?php if (!empty($organism_count)): ?> across <strong style="font-weight:500;"><?= $organism_count ?></strong> organism<?= $organism_count !== 1 ? 's' : '' ?><?php if (!empty($assembly_count)): ?> and <strong style="font-weight:500;"><?= $assembly_count ?></strong> assembl<?= $assembly_count !== 1 ? 'ies' : 'y' ?><?php endif; ?><?php endif; ?>
@@ -40,7 +40,7 @@
                 <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
                   <i class="fa fa-search"></i>
                 </span>
-                <input type="text" id="qs-input" class="form-control border-start-0 border-end-0 ps-1 moop-input"
+                <input type="search" id="qs-input" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control border-start-0 border-end-0 ps-1 moop-input"
                        placeholder="Search organisms, groups, assemblies, gene sets…"
                        autocomplete="off" spellcheck="false">
                 <button id="qs-go" class="btn btn-primary px-3" type="button">Go</button>
@@ -66,9 +66,9 @@
             <div class="qs-input-wrap">
               <div class="input-group">
                 <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
-                  <i class="fa fa-fingerprint"></i>
+                  <i class="fa fa-search"></i>
                 </span>
-                <input type="text" id="fs-input" class="form-control border-start-0 border-end-0 ps-1 moop-input"
+                <input type="search" id="fs-input" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control border-start-0 border-end-0 ps-1 moop-input"
                        placeholder="Enter Accession ID…"
                        autocomplete="off" spellcheck="false">
                 <button id="fs-go" class="btn btn-primary px-3" type="button">Search</button>
@@ -272,7 +272,7 @@
             <!-- Tab 1: Organism Select -->
             <div class="tab-pane fade show active" id="tab-organism-select" role="tabpanel">
               <p class="text-muted small mb-2">Filter by scientific name, common name, or group to find specific species. Select one or more to use with a tool.</p>
-              <input type="text" class="form-control form-control-sm mb-2 moop-input" id="organism-select-filter"
+              <input type="search" autocomplete="off" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control form-control-sm mb-2 moop-input" id="organism-select-filter"
                      placeholder="Filter by name, common name, or group…">
               <div id="organism-select-list" class="org-select-list"></div>
             </div>
@@ -280,7 +280,7 @@
             <!-- Tab 2: Taxon Select -->
             <div class="tab-pane fade" id="tab-taxon-select" role="tabpanel">
               <p class="text-muted small mb-2">Each row shows the full taxonomic lineage — filter by any rank to find related species. Select one or more to use with a tool.</p>
-              <input type="text" class="form-control form-control-sm mb-2 moop-input" id="taxon-select-filter"
+              <input type="search" autocomplete="off" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control form-control-sm mb-2 moop-input" id="taxon-select-filter"
                      placeholder="Filter by taxonomy, name, or common name…">
               <div id="taxon-select-list" class="org-select-list"></div>
             </div>
@@ -294,7 +294,7 @@
                   <button id="tree-collapse-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">Collapse All</button>
                 </div>
               </div>
-              <input type="text" class="form-control form-control-sm mb-2 moop-input" id="taxonomy-filter" placeholder="Filter by taxon or organism…">
+              <input type="search" autocomplete="off" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control form-control-sm mb-2 moop-input" id="taxonomy-filter" placeholder="Filter by taxon or organism…">
               <div class="taxonomy-tree-scroll">
                 <div id="taxonomy-tree-container"></div>
               </div>
