@@ -31,7 +31,7 @@ $_raw_cache_data = [];
 $cache_stale = false;      // true when live data fingerprints differ from the cache's
 $cache_changed_orgs = [];  // organisms whose data changed since the cache was built
 if (file_exists($cache_file)) {
-    $raw = json_decode(file_get_contents($cache_file), true);
+    $raw = loadJsonFile($cache_file, []);
     if ($raw) {
         $cache_info['generated']      = $raw['generated'] ?? null;
         $cache_info['organism_count'] = count($raw['data'] ?? []);

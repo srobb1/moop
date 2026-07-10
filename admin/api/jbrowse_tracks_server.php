@@ -62,7 +62,7 @@ switch ($action) {
             exit;
         }
 
-        $editable = json_decode(file_get_contents($config_file), true) ?? [];
+        $editable = loadJsonFile($config_file, []);
 
         $editable['tracks_server'] = [
             'enabled'      => $enabled,

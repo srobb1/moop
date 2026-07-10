@@ -19,7 +19,7 @@ $groups_file = "$metadata_path/organism_assembly_groups.json";
 $group_name = $_POST['group'] ?? 'New';
 
 // Load current group data
-$group_data = json_decode(file_get_contents($groups_file), true) ?? [];
+$group_data = loadJsonFile($groups_file, []);
 
 // Get all organisms in system
 $organisms_in_system = [];

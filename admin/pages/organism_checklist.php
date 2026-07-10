@@ -729,7 +729,7 @@
         $group_assignments = [];
         
         if (file_exists($groups_file)) {
-            $group_data = json_decode(file_get_contents($groups_file), true);
+            $group_data = loadJsonFile($groups_file, []);
             if (is_array($group_data)) {
                 foreach ($group_data as $item) {
                     $org = $item['organism'] ?? '';

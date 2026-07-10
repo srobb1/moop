@@ -26,7 +26,7 @@ if (!file_exists($desc_file) || !is_writable($desc_file)) {
     exit;
 }
 
-$data = json_decode(file_get_contents($desc_file), true) ?: [];
+$data = loadJsonFile($desc_file, []);
 
 $found    = false;
 $featured = false;

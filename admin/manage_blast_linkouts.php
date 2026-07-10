@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $current = [];
     if (file_exists($editable_config_file)) {
-        $current = json_decode(file_get_contents($editable_config_file), true) ?? [];
+        $current = loadJsonFile($editable_config_file, []);
     }
     $current['blast_linkouts'] = $linkout_config;
 

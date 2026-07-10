@@ -68,9 +68,20 @@ CLAUDE.md access-control section (contradicted by #3).
       - [x] **`tools/` batch DONE** (11 sites: gene_set×2, assembly, organism, groups,
         pages/groups, blast, moopmart×2, search, get_annotation_sources_grouped). 0 raw left in
         tools/; all 8 affected pages render clean (200, no notices).
-      - [ ] Remaining ~78 sites: `admin/` (~20), `lib/` (~25), `includes/` (4), `api/` (~15),
-        root (index/login/setup/jbrowse2 ~10). Note setup*.php are CLI installers — lower priority.
-        Skip any that decode to objects (no `, true`) or depend on distinguishing null from `{}`.
+      - [x] **`admin/` batch DONE** (12 sites: admin.php, manage_blast_linkouts, manage_organisms×2,
+        organism_checklist, get_organism_modal, toggle_group_featured, assign_organisms_to_group,
+        jbrowse_tracks_server, fetch_group_wiki, refresh_organism_cache×2). All affected admin pages
+        render clean as admin. **Deliberately skipped:** `manage_users.php:76` (already guards with
+        `=== null` + json_last_error + die), `api/generate_registry.php:18` (reads `php://input`,
+        not a file). **Deferred (need downstream review):** the jbrowse-track loaders
+        (`manage_jbrowse` ×3, `jbrowse_text_index` ×2, `jbrowse_list_tracks`, `manage_blast_linkouts:117`),
+        `sync_ncbi_taxonomy:29`, `pages/manage_site_config.php:677` (uses `: null` sentinel → convert
+        with `loadJsonFile($p, null)`).
+      - [ ] Remaining: `lib/` (~25), `includes/` (access_control ×4, ConfigManager ×2 — **loaded
+        before functions_json, so need the helper included first or leave as-is**), `api/jbrowse2/`
+        (~10), root (index/login/jbrowse2 ~6; setup*.php CLI — low priority), + the deferred admin
+        jbrowse/site-config ones. Rule: skip object decodes (no `, true`); `: null` sentinels →
+        `loadJsonFile($p, null)`.
 
 ## D. UX / display-consistency — same data shouldn't look different
 

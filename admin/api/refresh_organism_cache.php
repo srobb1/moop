@@ -21,7 +21,7 @@ $script_path    = realpath(dirname(dirname(__DIR__)) . '/scripts/warm_organism_c
 
 function read_cache_meta($cache_file) {
     if (!file_exists($cache_file)) return ['generated' => null, 'organism_count' => 0];
-    $raw = json_decode(file_get_contents($cache_file), true);
+    $raw = loadJsonFile($cache_file, []);
     return [
         'generated'      => $raw['generated'] ?? null,
         'organism_count' => count($raw['data'] ?? []),
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $meta = read_cache_meta($cache_file);
     $progress = null;
     if ($is_running && file_exists($progress_file)) {
-        $progress = json_decode(file_get_contents($progress_file), true);
+        $progress = loadJsonFile($progress_file, null);
     }
     echo json_encode([
         'status'         => $is_running ? 'running' : 'idle',

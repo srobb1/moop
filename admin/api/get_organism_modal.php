@@ -42,7 +42,7 @@ if (!file_exists($cache_file)) {
     exit;
 }
 
-$raw_cache = json_decode(file_get_contents($cache_file), true);
+$raw_cache = loadJsonFile($cache_file, []);
 $organisms = $raw_cache['data'] ?? [];
 
 if (!isset($organisms[$organism])) {

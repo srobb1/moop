@@ -44,7 +44,7 @@ if (!empty($wiki['image_url'])) {
 }
 
 // Update group_descriptions.json
-$data = json_decode(file_get_contents($descriptions_file), true) ?: [];
+$data = loadJsonFile($descriptions_file, []);
 $found = false;
 foreach ($data as &$entry) {
     if ($entry['group_name'] === $group_name) {

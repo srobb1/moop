@@ -34,7 +34,7 @@ $organisms = [];
 $cache_generated = null;
 $raw_cache = null;
 if (file_exists($cache_file)) {
-    $raw_cache = json_decode(file_get_contents($cache_file), true);
+    $raw_cache = loadJsonFile($cache_file, []);
     if ($raw_cache && isset($raw_cache['data'])) {
         $organisms = $raw_cache['data'];
         $cache_generated = $raw_cache['generated'] ?? null;
@@ -291,7 +291,7 @@ $display_config = [
 $lineage_cache_generated = null;
 $lineage_cache_file = "$metadata_path/taxonomy_lineage_cache.json";
 if (file_exists($lineage_cache_file)) {
-    $lc_raw = json_decode(file_get_contents($lineage_cache_file), true);
+    $lc_raw = loadJsonFile($lineage_cache_file, []);
     $lineage_cache_generated = $lc_raw['generated'] ?? null;
 }
 
