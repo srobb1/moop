@@ -174,10 +174,49 @@ CLAUDE.md access-control section (contradicted by #3).
   but it makes the installer impossible to drive headlessly or test in CI. Fix: bail out if
   `fgets()` returns `false`, and cap retries. Unrelated to the loadJsonFile refactor. Noted 2026-07-13.
 
-- [x] **#15 (bonus) `api/jbrowse2/config-optimized.php` is broken (pre-existing HTTP 500)** — an
-  unused alternative config generator; the app fetches `config.php` (js/jbrowse2-loader.js). Returns
-  500 before and after the #5 edit (references `getDbConnection()` not in its load path). Dead +
-  broken — fix or delete. Noted 2026-07-10.
+- [x] **#15 `api/jbrowse2/config-optimized.php` — RESURRECTED, now at parity with `config.php`**
+  (2026-07-13). **The original note was WRONG on both counts; corrected here.** It does *not* call
+  `getDbConnection()` anywhere (that error came from a bare CLI harness that lacked the include
+  chain, not from the file), and the "pre-existing HTTP 500" was almost certainly an **opcache
+  artifact**: `git stash`/`pop` rewrites the file within the same second, so php-fpm served a stale
+  or torn copy. A `touch` + 1s wait makes the 500 vanish. **Beware this trap when A/B-ing a live PHP
+  file by stashing — always `touch` and settle before curling, or serve the old version from a
+  different filename.**
+
+  The file's *real* defects (now fixed) were **drift** — it never received two commits that
+  `config.php` got:
+  - `b31104e` "JBrowse config access fix": load the assembly JSON *first*, then authorize with
+    `canUserAccessAssembly()` against its `defaultAccessLevel`. `getAccessibleAssemblies()` checks
+    **gene-set** groups, not genome-browser access, and returns empty for PUBLIC users — so
+    config-optimized was **403-ing every PUBLIC user** on PUBLIC assemblies (fail-closed, unusable).
+  - `5a3fc5c` "sort Gene Models first": category ordering. Ported into `getTrackReferences()` (not the
+    callers) so **both** the full-config and track-URI paths inherit it.
+
+  Two further problems found while porting:
+  - 🔒 **`serveSingleTrackConfig()` had NO per-track access check** — it computed
+    `$track_access_level` and then had a literal `// ... access check logic ...` stub, serving the
+    track unconditionally. The broken assembly gate was the *only* thing holding the door shut.
+    **Fixing the assembly gate alone would have converted a fail-closed bug into a data leak**: any
+    PUBLIC user could have pulled the 44 COLLABORATOR-only tracks (with working JWTs to the BAMs) off
+    the PUBLIC Nvec assembly. Both had to be fixed together, and were.
+  - `config-optimized.php` never enabled gzip (it even *documents* gzip in its header comment).
+    Without it the endpoint sent 552 KB where `config.php` sent 66 KB, i.e. the "optimized" path
+    looked ~8× *worse*. Ported the `ob_gzhandler` block.
+
+  **Verified** (Nvec `GCA_033964005.1`, PUBLIC, 1176 tracks): both endpoints now return 200 with the
+  identical track set **and order**, Gene Models first, identical `assemblies` block; optimized is
+  **21 KB gzipped vs config.php's 66 KB** (and 552 KB vs 3.07 MB decoded — the actual win). As a
+  PUBLIC user: 1132 tracks listed, **0 of the 44 COLLABORATOR tracks leaked**, and the single-track
+  endpoint returns `403 Access denied to this track` for them while serving PUBLIC ones.
+  ⚠️ **Testing note:** curling MOOP *from this box* auto-authenticates as **IP_IN_RANGE**
+  (`logged_in: yes`), which outranks COLLABORATOR — so "anonymous" curl tests are NOT anonymous and
+  will appear to leak restricted tracks. That is correct behavior, not a bug. Use a CLI include
+  (no `REMOTE_ADDR`) to test as a true PUBLIC user.
+
+  **Still open (not a bug, a design smell):** `canUserAccessAssembly()` and `addTokensToTrack()` are
+  **duplicated** in both files — that duplication is exactly how this drift happened. If the
+  optimized path is adopted, extract the shared functions into `lib/jbrowse/config_functions.php` so
+  the two generators cannot diverge again.
 
 ## D. UX / display-consistency — same data shouldn't look different
 

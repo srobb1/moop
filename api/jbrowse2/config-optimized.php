@@ -66,6 +66,12 @@
  * Last Updated: 2026-02-14
  */
 
+// Enable gzip compression, same as config.php. Without this the track-URI payload
+// goes out uncompressed and is far larger on the wire than the standard endpoint.
+if (!ob_start('ob_gzhandler')) {
+    ob_start();
+}
+
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 
@@ -162,33 +168,34 @@ function generateAssemblyList($user_access_level) {
  * @return void - Outputs JSON and exits
  */
 function generateOptimizedAssemblyConfig($organism, $assembly, $user_access_level) {
-    // 1. VALIDATE PERMISSIONS
-    $accessible = getAccessibleAssemblies($organism, $assembly);
-    if (empty($accessible)) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Access denied to this assembly']);
-        exit;
-    }
-    
-    // 2. LOAD ASSEMBLY DEFINITION
+    // 1. LOAD ASSEMBLY DEFINITION
     $metadata_path = __DIR__ . '/../../metadata';
     $assemblies_dir = "$metadata_path/jbrowse2-configs/assemblies";
     $assembly_def_file = "$assemblies_dir/{$organism}_{$assembly}.json";
-    
+
     if (!file_exists($assembly_def_file)) {
         http_response_code(404);
         echo json_encode(['error' => "Assembly definition not found: {$organism}_{$assembly}"]);
         exit;
     }
-    
+
     $assembly_definition = loadJsonFile($assembly_def_file, []);
-    
+
     if (!$assembly_definition) {
         http_response_code(500);
         echo json_encode(['error' => "Invalid assembly definition JSON"]);
         exit;
     }
-    
+
+    // 2. VALIDATE PERMISSIONS using defaultAccessLevel from assembly JSON
+    // (getAccessibleAssemblies checks gene-set groups, not genome browser access)
+    $assembly_access_level = $assembly_definition['defaultAccessLevel'] ?? 'PUBLIC';
+    if (!canUserAccessAssembly($user_access_level, $assembly_access_level, $organism, $assembly)) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Access denied to this assembly']);
+        exit;
+    }
+
     // 3. BUILD BASE CONFIG WITH PLUGINS
     $config = [
         'assemblies' => [
@@ -295,7 +302,23 @@ function getTrackReferences($organism, $assembly, $user_access_level) {
             'category' => $track_def['category'] ?? []
         ];
     }
-    
+
+    // Sort so Gene Models appear first, then other categories in a natural order.
+    // Done here (not in the two callers) so both the full-config and the track-URI
+    // path inherit the same ordering.
+    $category_order = [
+        'Gene Models'   => 0,
+        'Gene Expression' => 1,
+    ];
+    usort($track_refs, function($a, $b) use ($category_order) {
+        $ca = $a['category'][0] ?? 'Z';
+        $cb = $b['category'][0] ?? 'Z';
+        $oa = $category_order[$ca] ?? 99;
+        $ob = $category_order[$cb] ?? 99;
+        if ($oa !== $ob) return $oa - $ob;
+        return strcmp($ca, $cb);
+    });
+
     return $track_refs;
 }
 
@@ -382,28 +405,64 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
         exit;
     }
     
-    // Validate permissions
-    $accessible = getAccessibleAssemblies($organism, $assembly);
-    if (empty($accessible)) {
+    // Validate assembly permissions using defaultAccessLevel from the assembly JSON
+    // (getAccessibleAssemblies checks gene-set groups, not genome browser access)
+    $metadata_path = __DIR__ . '/../../metadata';
+    $assembly_def_file = "$metadata_path/jbrowse2-configs/assemblies/{$organism}_{$assembly}.json";
+    $assembly_definition = loadJsonFile($assembly_def_file, []);
+
+    if (!$assembly_definition) {
+        http_response_code(404);
+        echo json_encode(['error' => "Assembly definition not found: {$organism}_{$assembly}"]);
+        exit;
+    }
+
+    $assembly_access_level = $assembly_definition['defaultAccessLevel'] ?? 'PUBLIC';
+    if (!canUserAccessAssembly($user_access_level, $assembly_access_level, $organism, $assembly)) {
         http_response_code(403);
         echo json_encode(['error' => 'Access denied']);
         exit;
     }
-    
+
+    // Per-track access must be enforced here too. This endpoint serves tracks one at a
+    // time, so it cannot rely on the filtering done in getTrackReferences() — without
+    // its own check it would hand out restricted tracks that the config listing hides.
+    $access_hierarchy = [
+        'ADMIN' => 4,
+        'IP_IN_RANGE' => 3,
+        'COLLABORATOR' => 2,
+        'PUBLIC' => 1
+    ];
+    $user_level_value = $access_hierarchy[$user_access_level] ?? 0;
+
     // Find track file
     $tracks_dir = __DIR__ . "/../../metadata/jbrowse2-configs/tracks";
     $track_files = glob("$tracks_dir/$organism/$assembly/*/*.json");
-    
+
     foreach ($track_files as $track_file) {
         $track_def = loadJsonFile($track_file, []);
-        
+
         if ($track_def && $track_def['trackId'] === $track_id) {
-            // Check access
             $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
-            // ... access check logic ...
-            
+            $track_level_value  = $access_hierarchy[$track_access_level] ?? 1;
+
+            if ($user_level_value < $track_level_value) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Access denied to this track']);
+                exit;
+            }
+
+            if ($user_access_level === 'COLLABORATOR' && $track_level_value >= 2) {
+                $user_access = $_SESSION['access'] ?? [];
+                if (!isset($user_access[$organism][$assembly])) {
+                    http_response_code(403);
+                    echo json_encode(['error' => 'Access denied to this track']);
+                    exit;
+                }
+            }
+
             $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly);
-            
+
             echo json_encode($track_with_tokens, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             exit;
         }
