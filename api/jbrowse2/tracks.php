@@ -101,6 +101,50 @@ if ($token_data->organism !== $file_organism || $token_data->assembly !== $file_
     exit;
 }
 
+// 4b. PER-FILE ACCESS LEVEL — audit #17.
+// The org/assembly check above is necessary but not sufficient: a PUBLIC assembly can
+// carry COLLABORATOR/ADMIN track files, and a public token is scoped to the whole
+// assembly. Enforce the file's required level (from the per-assembly manifest that
+// ships with the track data) against the bearer's level claimed in the token.
+$user_level = isset($token_data->level) ? (int)$token_data->level : 1; // missing ⇒ PUBLIC (least privilege)
+$manifest_file   = $TRACKS_BASE_DIR . '/' . $file_organism . '/' . $file_assembly . '/access_manifest.json';
+$rel_in_assembly = implode('/', array_slice($file_parts, 2)); // path within the assembly dir
+
+$required_level = null;
+if (is_readable($manifest_file)) {
+    $manifest  = json_decode(file_get_contents($manifest_file), true);
+    $files_map = (is_array($manifest) && isset($manifest['files']) && is_array($manifest['files']))
+        ? $manifest['files'] : [];
+    if (isset($files_map[$rel_in_assembly])) {
+        $required_level = $files_map[$rel_in_assembly];
+    } else {
+        // Derived index files (.bai/.tbi/.csi/.crai/.idx/.fai) inherit their data file's level.
+        foreach (['.bai', '.tbi', '.csi', '.crai', '.idx', '.fai'] as $suffix) {
+            if (substr($rel_in_assembly, -strlen($suffix)) === $suffix) {
+                $base = substr($rel_in_assembly, 0, -strlen($suffix));
+                if (isset($files_map[$base])) { $required_level = $files_map[$base]; break; }
+            }
+        }
+    }
+}
+
+if ($required_level === null) {
+    // Manifest missing, or file not listed → fail closed (do not serve unclassified files).
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Access denied', 'message' => 'File not covered by access manifest']);
+    error_log("Tracks server: no manifest entry for '$file' (manifest: $manifest_file) - IP {$_SERVER['REMOTE_ADDR']}");
+    exit;
+}
+
+if ($user_level < trackAccessLevelValue($required_level)) {
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Access denied', 'message' => 'Token access level is insufficient for this file']);
+    error_log("Tracks server: level $user_level < required $required_level for '$file' - IP {$_SERVER['REMOTE_ADDR']}");
+    exit;
+}
+
 // 5. BUILD AND SERVE FILE
 $resolved_base = realpath($TRACKS_BASE_DIR);
 $file_path = realpath($TRACKS_BASE_DIR . '/' . $file);

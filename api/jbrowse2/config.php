@@ -306,8 +306,8 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
             }
         }
         
-        $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly);
-        
+        $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly, $user_access_level);
+
         if ($track_with_tokens) {
             $filtered_tracks[] = $track_with_tokens;
         }
@@ -342,9 +342,9 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
  * @param string $assembly - Assembly ID
  * @return array|null - Track config with tokens, or null if token generation fails
  */
-function addTokensToTrack($track_def, $organism, $assembly) {
+function addTokensToTrack($track_def, $organism, $assembly, $user_access_level = 'PUBLIC') {
     try {
-        $token = generateTrackToken($organism, $assembly);
+        $token = generateTrackToken($organism, $assembly, $user_access_level);
     } catch (Exception $e) {
         error_log("Failed to generate token for track {$track_def['trackId']}: " . $e->getMessage());
         return null;

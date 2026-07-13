@@ -338,8 +338,8 @@ function loadFullTrackConfigs($track_refs, $organism, $assembly, $user_access_le
     $tracks = [];
     foreach ($track_refs as $ref) {
         $track_def = loadJsonFile($ref['file'], []);
-        $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly);
-        
+        $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly, $user_access_level);
+
         if ($track_with_tokens) {
             $tracks[] = $track_with_tokens;
         }
@@ -461,7 +461,7 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
                 }
             }
 
-            $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly);
+            $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly, $user_access_level);
 
             echo json_encode($track_with_tokens, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             exit;
@@ -472,10 +472,10 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
     echo json_encode(['error' => 'Track not found']);
 }
 
-function addTokensToTrack($track_def, $organism, $assembly) {
+function addTokensToTrack($track_def, $organism, $assembly, $user_access_level = 'PUBLIC') {
     // ALWAYS generate JWT tokens for all users
     try {
-        $token = generateTrackToken($organism, $assembly);
+        $token = generateTrackToken($organism, $assembly, $user_access_level);
     } catch (Exception $e) {
         error_log("Failed to generate token for track {$track_def['trackId']}: " . $e->getMessage());
         return null;

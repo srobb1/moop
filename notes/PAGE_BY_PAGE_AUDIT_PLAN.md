@@ -174,6 +174,119 @@ CLAUDE.md access-control section (contradicted by #3).
   but it makes the installer impossible to drive headlessly or test in CI. Fix: bail out if
   `fgets()` returns `false`, and cap retries. Unrelated to the loadJsonFile refactor. Noted 2026-07-13.
 
+- [~] **#17 🔒 SECURITY — JBrowse track tokens scoped to org/assembly, not track/file. MOOP-SIDE
+  FIX IMPLEMENTED 2026-07-13; remote-server deploy REMAINS.** Option A was approved and built.
+
+  **DONE (MOOP box, all verified, committed separately):**
+  - `lib/jbrowse/track_token.php`: added `trackAccessLevelValue()` (canonical PUBLIC=1..ADMIN=4,
+    case-insensitive, unset/unknown→1; the single source of truth, travels to the tracks server with
+    this file). `generateTrackToken($org,$asm,$user_level='PUBLIC')` now embeds a numeric `level` claim.
+  - Both config generators pass `$user_access_level` at the existing per-track mint call (config.php
+    addTokensToTrack + loadFilteredTracks; config-optimized addTokensToTrack + its 2 callers).
+  - `lib/jbrowse/access_manifest.php` (NEW): `buildAccessManifest()` / `writeAccessManifest()` /
+    `refreshAccessManifest($org,$asm)`. Walks track JSONs, maps every `/data/tracks/{org}/{asm}/` file
+    (incl. .bai/.tbi indexes) → required level, **most-restrictive wins** for multi-level files (user
+    decision). Writes `data/tracks/{org}/{asm}/access_manifest.json`.
+  - `api/jbrowse2/tracks.php`: after the org/asm check, reads the assembly manifest, resolves the
+    file's required level (with index-suffix fallback), and enforces `token.level >= file_level`.
+    **Fail-closed:** manifest missing OR file unlisted ⇒ 403. Missing `level` claim ⇒ treated as
+    PUBLIC (least privilege).
+  - Auto-regen wired so the manifest never goes stale: `scripts/generate_tracks_from_sheet.php` (the
+    real writer, used by both the admin Sync button and CLI) refreshes at end of a non-dry-run;
+    `admin/api/jbrowse_delete_tracks.php` refreshes after a delete. (Registering a sheet alone writes
+    no tracks, so nothing to refresh there — the following sync does it.)
+  - Backfill run: **69/69 assemblies have manifests**, 1280 files classified, only Nvec has conflicts
+    (28 files → most-restrictive). Manifests are **gitignored** (generated data under data/tracks/).
+  - Verified end-to-end against the real local `tracks.php`: PUBLIC token → COLLABORATOR file AND its
+    .bai = **403 denied**; PUBLIC→public, COLLABORATOR→collab, ADMIN→collab = **allowed** (pass the
+    check, then 400 only because the file is remote-hosted, not local); orphan file even as ADMIN =
+    **fail-closed**. Live site unaffected (remote tracks.php still runs old code, ignores the new
+    claim), 29/29 smoke, live config.php 200, tokens now carry level.
+
+  **REMAINS — remote tracks-server deploy (the fix is INERT until this is done):** copy the updated
+  `api/jbrowse2/tracks.php` + `lib/jbrowse/track_token.php` to `tracks.stowers.org:8080`, and get the
+  per-assembly `access_manifest.json` files there under its `data/tracks/{org}/{asm}/` (they ship WITH
+  the track data — copying an assembly's data dir carries its manifest). Because enforcement is
+  fail-closed, EVERY assembly served remotely must have a manifest present before/with the tracks.php
+  swap, or its tracks 403. **The copy-set is exactly {tracks.php, track_token.php, the manifests}** —
+  all box-agnostic (per the user's "copy the files over, don't hand-edit the remote box" requirement;
+  a fresh tracks server = copy this set + vendor/ + certs/jwt_public_key.pem). See
+  [[bug_tracks_server_8080_unreachable]].
+
+  ---
+  ORIGINAL FINDING (kept for context):
+  The JWT minted by
+  `generateTrackToken()` carries only `{organism, assembly, iat, exp}` — no track, no access level.
+  `api/jbrowse2/tracks.php` authorizes a file request purely on `token.organism/assembly ===` the
+  first two path segments (plus a `realpath` base-dir check). **Consequence:** a PUBLIC user, who
+  legitimately receives a token for a PUBLIC assembly just by viewing any public track, can use that
+  same token to fetch a COLLABORATOR/ADMIN track's *file* on the same assembly — the only thing
+  stopping them is not knowing the file path (security-by-obscurity; paths follow the predictable
+  `MOLNG-####.##.bam` pattern). Verified 2026-07-13 by replicating tracks.php's authz check: a
+  PUBLIC-scoped token authorizes both a public and a COLLABORATOR file on Nvec.
+  **Exposure today:** exactly 1 assembly — `Nematostella_vectensis/GCA_033964005.1` (PUBLIC) — carries
+  44 restricted (COLLABORATOR) track files reachable this way. Bounded further by 1-hour token expiry.
+  Pre-existing; present in `config.php` too; NOT introduced by the #15 work. That it's a real
+  boundary (not just listing curation) is implied by the config carefully filtering restricted tracks
+  out of listings AND the per-track 403 now enforced in `serveSingleTrackConfig()`.
+
+  **Key enabling facts for a fix:** tokens are *already minted per-track* (config.php:347 in the
+  `loadFilteredTracks` loop; config-optimized addTokensToTrack:478) — so scoping needs no change to
+  *when* we sign, only *what's in the token* + *what tracks.php checks*. Current token = 514 chars in
+  the URL (room to grow). `tracks.php` already reads from disk and has NO DB/session access by design
+  (that constraint must be preserved). **Both** the MOOP box and the remote tracks server
+  (`tracks.stowers.org:8080`) run their own copy of `tracks.php` + `jwt_public_key.pem`, so any token
+  format / verify change must deploy to BOTH — see [[bug_tracks_server_8080_unreachable]] (do not scp
+  canonical files onto the tracks box).
+
+  **PROPOSAL — Option A (recommended): access-level claim + per-assembly file manifest.**
+  1. `generateTrackToken($organism, $assembly, $user_level)` adds a numeric `level` claim = the
+     bearer's granted access level (PUBLIC=1 … ADMIN=4). Minting stays per-track; the flow config.php
+     uses is otherwise unchanged (this is the one spot that touches "how the normal config handles
+     JWT" — additive only, one claim).
+  2. At track registration, emit a static `access_manifest.json` per assembly mapping
+     `relative/file/path → required level` (alongside how `feature_coords.tsv` is already generated).
+  3. `tracks.php` reads that manifest (cacheable; keeps it DB-free), looks up the requested file's
+     required level, and enforces `token.level >= file_level` in addition to the existing org/assembly
+     check. Missing manifest entry ⇒ deny (fail closed).
+  Handles multi-file tracks cleanly (e.g. the 4-bigWig MultiWiggle combo) because the token encodes
+  the *user's* level, not a single file — so no per-URI re-minting and no extra RSA-sign cost.
+  - **Rejected — Option B (per-file token):** token carries the exact file. Forces per-URI minting
+    inside `addTokenToAdapterUrls`, multiplying RSA signs (config.php already burns ~1.4 s signing
+    per-track on Nvec; per-file would be far worse) and changing the minting pattern the user wants
+    left alone.
+  - **Rejected — Option C (encode level in storage path):** requires re-laying-out track files on the
+    remote box; large data migration.
+  **Blast radius (Option A):** `lib/jbrowse/track_token.php` (`generateTrackToken` signature +
+  payload), both config generators (pass user level at the existing call site), `tracks.php`
+  (manifest read + level compare) on **both** hosts, and the registration pipeline (emit manifest).
+  **Deploy (SIMPLIFIED — dev, no backward-compat required, confirmed 2026-07-13):** single atomic
+  change, no phasing. Ship the new `generateTrackToken` (adds `level`), manifest generation +
+  manifests on both hosts, and the enforcing `tracks.php` (missing `level` ⇒ deny) together; deploy
+  to the MOOP box and the remote tracks server. Old in-flight tokens simply stop working, which is
+  acceptable in dev. This removes the phased plan's only insecure window (the legacy-allow step) and
+  roughly halves the effort. Still touches the sensitive tracks box — see
+  [[bug_tracks_server_8080_unreachable]]; deploy tracks.php to it in place, don't scp canonical data.
+  Approve before code.
+
+- [ ] **#18 (bug, config-optimized only) `generateAssemblyList()` puts plugins in the wrong place.**
+  `config.php` emits a top-level `plugins` key with `configuration: {}`; `config-optimized.php`
+  instead nests the plugin array under `configuration` and emits **no top-level `plugins` key**. JSON
+  is valid and tracks are all present, so it looks fine, but JBrowse2 would load **no plugins** on the
+  optimized path. Confirmed against live responses 2026-07-13 (config.php: `plugins`=1 at top level;
+  optimized: `plugins` ABSENT). Contained fix — config-optimized only, zero prod risk (that endpoint
+  is unused). Blocks adoption of the optimized path. Fix when the optimized path is next touched.
+
+- [ ] **#19 (maintainability) Four functions duplicated across `config.php` and `config-optimized.php`
+  — this is exactly how the #15 drift happened.** `canUserAccessAssembly()` and `addTokensToTrack()`
+  are byte-identical (logic); `generateAssemblyList()` diverges (the #18 bug); `addTokenToAdapterUrls()`
+  diverges **meaningfully** — config-optimized has an internal-path→remote-tracks-server rewrite
+  (from `dbfe578`) that config.php never got, and config.php's version is the one in production and
+  is known-good (user: do NOT change how config.php handles JWT/token URLs). So this can't be a blind
+  extract. Plan when the optimized path is adopted: first reconcile #18, then extract the 2 identical
+  fns into `lib/jbrowse/config_functions.php`, and make a deliberate decision on `addTokenToAdapterUrls`
+  (keep config.php's semantics as canonical) before merging it. Until then they stay duplicated.
+
 - [x] **#15 `api/jbrowse2/config-optimized.php` — RESURRECTED, now at parity with `config.php`**
   (2026-07-13). **The original note was WRONG on both counts; corrected here.** It does *not* call
   `getDbConnection()` anywhere (that error came from a bare CLI harness that lacked the include

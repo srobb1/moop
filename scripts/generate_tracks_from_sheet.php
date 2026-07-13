@@ -93,6 +93,7 @@
 require_once __DIR__ . '/../includes/config_init.php';
 require_once __DIR__ . '/../lib/jbrowse/TrackGenerator.php';
 require_once __DIR__ . '/../lib/jbrowse/ColorSchemes.php';
+require_once __DIR__ . '/../lib/jbrowse/access_manifest.php';
 
 // Parse command line arguments
 $options = parseArguments($argv);
@@ -293,8 +294,15 @@ try {
     } else {
         echo "Done!\n";
         echo "Note: Using dynamic permission-based configs via api/jbrowse2/config.php\n";
+
+        // Regenerate the per-file access manifest so tracks.php per-file enforcement
+        // stays in sync with the tracks just written/cleaned (audit #17).
+        $mres = refreshAccessManifest($options['organism'], $options['assembly']);
+        echo "✓ Access manifest updated: {$mres['file_count']} files"
+           . (count($mres['conflicts']) ? " (" . count($mres['conflicts']) . " multi-level → most-restrictive)" : "")
+           . "\n";
     }
-    
+
     exit(0);
     
 } catch (Exception $e) {
