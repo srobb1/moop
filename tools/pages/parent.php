@@ -89,7 +89,7 @@
                     <dt>Organism</dt>
                     <dd><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><em><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em><?php if ($common_name): ?> (<?= htmlspecialchars($common_name) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
                     <dt>Assembly</dt>
-                    <dd><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars($genome_name) ?> (<?= htmlspecialchars($genome_accession) ?>)<i class="fa fa-external-link-alt link-icon"></i></a></dd>
+                    <dd><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars(assembly_label($genome_name, $genome_accession)) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
                     <dt>Gene Set</dt>
                     <dd><a href="/<?= $site ?>/tools/gene_set.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>" class="link-light-bordered"><?= htmlspecialchars($gene_set_name) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
                     <?php if (!empty($feature_loc)): ?>

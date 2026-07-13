@@ -353,14 +353,28 @@ CLAUDE.md access-control section (contradicted by #3).
       system. **Fix:** pick one primary pattern (the `info-icon`→modal system) and standardize;
       at minimum add guided help to parent.php. Larger cleanup — scope separately.
 
-- [ ] **#8 Assembly shown inconsistently — standardize on `Name (Accession)`** (user-confirmed
-      convention, 2026-07-10). The assembly identifier appears **three** ways across the site: bare
-      accession (`GCA_033964005.1`), bare name (`Nvec200`), and the good form
-      `Nvec200 (GCA_033964005.1)`. **Fix:** always render `Name (Accession)`. Audit every place an
-      assembly is displayed (organism, assembly, gene_set, parent, downloads, moopmart, search
-      scope chips, dropdowns, breadcrumb-to-be) and route through a single helper so it can't drift
-      again — e.g. `assembly_label($name, $accession)`. Organism-page instances overlap with the
-      deferred design pass (section J).
+- [x] **#8 Assembly shown inconsistently — standardize on `Name (Accession)`** — DONE for the
+      user-facing PHP display sites 2026-07-13. Data model: `genome` table has `genome_name`
+      (`Nvec200`) + `genome_accession` (`GCA_033964005.1`), resolved by `getAssemblyInfo()`; the URL
+      `$assembly` param IS the accession. **Single helper `assembly_label($name,$accession)` added to
+      `lib/functions_access.php`** (next to getAssemblyInfo) — returns `"Name (Accession)"`, or bare
+      accession when name is empty/equals accession. Routed through it:
+      - `includes/source-list.php:105` — the shared source selector (all tool pages w/ selector, e.g.
+        blast, retrieve_sequences) — was bare `genome_name`; now `Name (Accession)`. Highest-traffic fix.
+      - `tools/pages/assembly.php:10` — heading card — was bare name; now `Name (Accession)`.
+      - `tools/pages/parent.php:92` and `gene_set.php:82` — already the good form but with hand-rolled
+        inline logic; consolidated onto the helper so they can't drift.
+      Verified live: assembly heading, gene_set link, and blast selector all render `Name (Accession)`
+      (e.g. `Nvec200 (GCA_033964005.1)`, `AmpQue_v1.1 (GCF_000090795.2)`); helper unit-tested;
+      29/29 smoke. Non-standard cases (name==accession, or accession-less like `Bats`) correctly fall
+      back to bare — not bugs.
+      **Deliberately NOT changed (out of scope / lower priority):** `retrieve_sequences.php:161`
+      (`$assembly_name` is an internal var passed to sequences_display, not a user label) and its
+      hidden form input (:64); admin `manage_organisms.php` (no simple label display — comparisons
+      only); the browser `<title>` tag in `tools/assembly.php:70` (tab title, conventionally the short
+      name); JS sites (mostly use accession as a KEY or are admin chips like manage-users.js — no
+      user-facing "Name (Accession)" label rendered in JS). If a JS label surface appears later, add a
+      JS twin of `assembly_label()`. Organism-page instances still fold into the section J design pass.
 
 - [x] **#9 Heading hierarchy disagrees between pages** — DONE. Every page now has exactly one
       semantic `<h1>` (verified live: index, blast, downloads, search, moopmart, groups, organism +

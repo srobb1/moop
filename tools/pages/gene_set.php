@@ -79,7 +79,7 @@
               <?php endif; ?>
               <dl class="feature-info-grid mb-0">
                 <dt>Assembly</dt>
-                <dd><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>"><?= htmlspecialchars($genome_name ?: $genome_accession) ?><?php if ($genome_name && $genome_name !== $genome_accession): ?> (<?= htmlspecialchars($genome_accession) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
+                <dd><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>"><?= htmlspecialchars(assembly_label($genome_name, $genome_accession)) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
                 <dt>Organism</dt>
                 <dd><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em><?php if (!empty($organism_info['common_name'])): ?> (<?= htmlspecialchars($organism_info['common_name']) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
                 <?php if (!empty($gene_set_meta['source'])): ?>

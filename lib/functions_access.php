@@ -15,6 +15,30 @@ require_once __DIR__ . '/functions_filesystem.php';
  * @param string $db_path - Path to organism.sqlite database
  * @return array - [genome_id, genome_name, genome_accession] or [null, null, $assembly] on error
  */
+/**
+ * Canonical assembly display label — "Name (Accession)".
+ *
+ * The one place assembly labels are formatted, so the three historical forms
+ * (bare accession, bare name, "Name (Accession)") can't drift again. Falls back to
+ * the bare accession when there is no distinct name (name empty, or equal to the
+ * accession). audit #8.
+ *
+ * @param string|null $name      genome_name (e.g. "Nvec200")
+ * @param string|null $accession genome_accession (e.g. "GCA_033964005.1")
+ * @return string
+ */
+function assembly_label($name, $accession) {
+    $name = trim((string)$name);
+    $accession = trim((string)$accession);
+    if ($name === '' || $name === $accession) {
+        return $accession;
+    }
+    if ($accession === '') {
+        return $name;
+    }
+    return "$name ($accession)";
+}
+
 function getAssemblyInfo($assembly, $db_path) {
     $genome_id = null;
     $genome_name = null;

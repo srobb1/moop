@@ -102,7 +102,7 @@ foreach ($sources_by_group as $group_name => $organisms) {
                             <?= htmlspecialchars($organism) ?>
                         </span>
                         <span class="badge badge-sm bg-info text-white">
-                            <?= htmlspecialchars($source['genome_name'] ?? $source['assembly']) ?>
+                            <?= htmlspecialchars(assembly_label($source['genome_name'] ?? '', $source['assembly'])) ?>
                         </span>
                         <?php if (!empty($source['gene_set'])): ?>
                         <span class="badge badge-sm bg-light text-dark border">
