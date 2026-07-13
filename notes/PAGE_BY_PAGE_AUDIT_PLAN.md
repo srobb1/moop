@@ -89,11 +89,33 @@ CLAUDE.md access-control section (contradicted by #3).
         jbrowse_text_index ×2, jbrowse_list_tracks, manage_blast_linkouts:117, sync_ncbi_taxonomy;
         api/jbrowse2 config.php ×3, config-optimized.php ×5). The real browser endpoint `config.php`
         still generates valid config (1 assembly, 1176 tracks); jbrowse2 + manage_jbrowse clean.
-      - [ ] Remaining: `includes/` (access_control ×4 — request-time fns, now safe; ConfigManager
-        ×2 — bootstrap, verify), `lib/functions_login_protection.php:54` (now safe — login loads
-        access_control→config_init→functions_json), root (index ×3, login, jbrowse2; setup*.php CLI
-        low-pri), `api/galaxy*` (2), `api/jbrowse2/archive/*` (2 — dead). Rule: skip object decodes
-        (no `, true`); `: null` sentinels → `loadJsonFile($p, null)`.
+      - [x] **auth-core batch DONE** (7 sites: `includes/access_control.php` ×4 — all four are the
+        same `$groups_data = ...; if (!$groups_data) return false;` shape, so `[]` is faithful;
+        `includes/ConfigManager.php` ×2 — both already `is_array()`-guarded;
+        `lib/functions_login_protection.php:54` — `@json_decode` → `loadJsonFile($f, [])`, keeps its
+        `is_array()` guard). Safe because the ENABLER puts functions_json before ConfigManager in
+        config_init, and access_control includes config_init at line 11. Verified: php -l clean on
+        all 3; **29/29 smoke tests pass** (they exercise has_assembly_access / is_public_assembly
+        directly); live `/`, `/login.php` render clean, no new PHP errors in logs.
+        Note: `tools/groups.php` 302→index.php and `admin/admin.php` 302→login for an
+        unauthenticated curl are **pre-existing/correct** (verified identical against stashed code).
+
+      - [ ] **PICK UP HERE — 19 raw `json_decode(file_get_contents(...))` sites left**, by file:
+        - `index.php` ×3, `login.php` ×1, `jbrowse2.php` ×1 — root pages; helper IS in scope
+          (they load access_control → config_init). Straightforward; do these first.
+        - `admin/pages/manage_site_config.php:677` — uses a `: null` sentinel → `loadJsonFile($p, null)`.
+        - `api/galaxy/mafft.php` ×1, `api/galaxy_mafft_align.php` ×1 — **verify helper is in scope
+          first** (these may not load config_init).
+        - `setup.php` ×3, `setup-admin.php` ×2 — CLI/first-run installers, run BEFORE config exists.
+          **Probably leave alone** (helper may not be loadable); low value.
+        - `scripts/warm_organism_cache.php` ×1, `scripts/generate_taxonomy_tree.php` ×1 — CLI; check
+          include chain.
+        - `api/jbrowse2/archive/*` ×2 — **dead code, skip** (see #15).
+        - `admin/manage_users.php:76` — **deliberately skipped** (already guards `=== null` +
+          json_last_error + die).
+        - `admin/api/generate_registry.php:18` — **not applicable** (reads `php://input`, not a file).
+        - Rule: skip object decodes (no `, true`); `: null` sentinels → `loadJsonFile($p, null)`;
+          confirm the helper is in scope for that context before converting.
 
 - [x] **#15 (bonus) `api/jbrowse2/config-optimized.php` is broken (pre-existing HTTP 500)** — an
   unused alternative config generator; the app fetches `config.php` (js/jbrowse2-loader.js). Returns

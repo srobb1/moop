@@ -112,7 +112,7 @@ class ConfigManager
         // Load editable configuration (overrides defaults from site_config.php)
         $editable_config_path = dirname($site_config_path) . '/config_editable.json';
         if (file_exists($editable_config_path)) {
-            $editable_config = json_decode(file_get_contents($editable_config_path), true);
+            $editable_config = loadJsonFile($editable_config_path, []);
             if (is_array($editable_config)) {
                 // Use the centralized whitelist
                 foreach ($this->editableConfigKeys as $key) {
@@ -509,7 +509,7 @@ class ConfigManager
         $config_file = $config_dir . '/config_editable.json';
         $editable_data = [];
         if (file_exists($config_file)) {
-            $existing = json_decode(file_get_contents($config_file), true);
+            $existing = loadJsonFile($config_file, []);
             if (is_array($existing)) {
                 foreach ($allowed_keys as $key) {
                     if (isset($existing[$key])) {

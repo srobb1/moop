@@ -51,7 +51,7 @@ function load_login_attempts() {
     if (!file_exists($file)) {
         return [];
     }
-    $data = @json_decode(file_get_contents($file), true);
+    $data = loadJsonFile($file, []);
     return is_array($data) ? $data : [];
 }
 

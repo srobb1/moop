@@ -101,7 +101,7 @@ function is_public_organism($organism_name) {
         return false;
     }
     
-    $groups_data = json_decode(file_get_contents($groups_file), true);
+    $groups_data = loadJsonFile($groups_file, []);
     if (!$groups_data) {
         return false;
     }
@@ -135,7 +135,7 @@ function is_public_assembly($organism_name, $assembly_name) {
         return false;
     }
     
-    $groups_data = json_decode(file_get_contents($groups_file), true);
+    $groups_data = loadJsonFile($groups_file, []);
     if (!$groups_data) {
         return false;
     }
@@ -170,7 +170,7 @@ function is_public_gene_set($organism_name, $assembly_name, $gene_set) {
         return false;
     }
 
-    $groups_data = json_decode(file_get_contents($groups_file), true);
+    $groups_data = loadJsonFile($groups_file, []);
     if (!$groups_data) {
         return false;
     }
@@ -203,7 +203,7 @@ function is_public_group($group_name) {
         return false;
     }
     
-    $groups_data = json_decode(file_get_contents($groups_file), true);
+    $groups_data = loadJsonFile($groups_file, []);
     if (!$groups_data) {
         return false;
     }
