@@ -24,6 +24,7 @@ const COLOR_RESET = "\033[0m";
 
 // Load configuration to get the correct path
 $config_data = require __DIR__ . '/config/site_config.php';
+require_once __DIR__ . '/lib/functions_json.php';
 $root_path = $config_data['root_path'];
 $users_file = $root_path . '/users.json';
 
@@ -108,7 +109,7 @@ if (!preg_match('/^[a-zA-Z0-9_-]+$/', $admin_username)) {
 // Check if this username already exists in the current users.json
 $username_exists = false;
 if ($mode === 'add_admin' && file_exists($users_file)) {
-    $existing_users = json_decode(file_get_contents($users_file), true);
+    $existing_users = loadJsonFile($users_file, []);
     if ($existing_users && isset($existing_users[$admin_username])) {
         $username_exists = true;
         echo "\n";
@@ -176,7 +177,9 @@ $new_user = [
 // Determine which users to save
 if ($mode === 'add_admin') {
     // Load existing users and add/update the admin user
-    $existing_users = json_decode(file_get_contents($users_file), true);
+    // null default (not []) — the check below must still distinguish an unreadable
+    // or corrupt users.json from a legitimately empty one before we overwrite it.
+    $existing_users = loadJsonFile($users_file, null);
     if ($existing_users === null) {
         echo COLOR_RED . "Error: Could not read existing users.json" . COLOR_RESET . "\n";
         exit(1);

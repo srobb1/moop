@@ -100,22 +100,51 @@ CLAUDE.md access-control section (contradicted by #3).
         Note: `tools/groups.php` 302→index.php and `admin/admin.php` 302→login for an
         unauthenticated curl are **pre-existing/correct** (verified identical against stashed code).
 
-      - [ ] **PICK UP HERE — 19 raw `json_decode(file_get_contents(...))` sites left**, by file:
+      - [x] **installers batch DONE — the hard one** (4 sites). These run BEFORE config exists and
+        include almost nothing (`setup-admin.php` included *nothing*), so each now requires the helper
+        directly: `setup.php:80` → `require_once "$base/lib/functions_json.php"` (next to the existing
+        distro_detect require; `$base = __DIR__`), `setup-admin.php:27` → `require_once __DIR__ .
+        '/lib/functions_json.php'`. **Safe because `lib/functions_json.php` has zero include-time side
+        effects** — its only top-level statement is a `function_exists`-guarded `array_is_list` polyfill;
+        everything else is function defs, and `loadJsonFile()` itself touches no config/globals.
+        Converted: `setup.php:415` (is_array-guarded → `[]`), `setup.php:521` (was already `?? []` →
+        exactly `loadJsonFile($p, [])`), `setup-admin.php:111` (truthy-guarded → `[]`),
+        **`setup-admin.php:179` → `loadJsonFile($f, null)`** — its `=== null` check is load-bearing:
+        it distinguishes an unreadable/corrupt users.json from an empty one and aborts rather than
+        overwriting. `setup.php:197` is **N/A** (reads `php://input`, not a file) — leave it.
+
+        Verified (installers can't be run against the live site, so this was done in sandboxes):
+        - **Behavioral-equivalence harness**: old expr vs new expr over 5 input shapes (valid / empty /
+          invalid-JSON / missing / unreadable-chmod-000) — identical downstream decision at every site,
+          including the safety-critical "corrupt → ABORT, don't clobber users.json".
+        - `setup.php`: sandboxed copy + **stub config** (paths confined to sandbox — the real config's
+          `users_file` points at `/data/users.json`, so never run its POST path with the real config),
+          token gate passed, full wizard renders (15.8 KB), no fatals, nothing written outside sandbox.
+          Note the live `setup.php` self-disables anyway because `config/config_editable.json` exists.
+        - `setup-admin.php`: sandboxed run reaches Step 1 / Step 2 prompts ⇒ execution passed the new
+          `require_once` with no fatal. Its POST/interactive tail can't be driven headlessly (see #16).
+
+      - [ ] **PICK UP HERE — 15 raw `json_decode(file_get_contents(...))` sites left**, by file:
         - `index.php` ×3, `login.php` ×1, `jbrowse2.php` ×1 — root pages; helper IS in scope
           (they load access_control → config_init). Straightforward; do these first.
         - `admin/pages/manage_site_config.php:677` — uses a `: null` sentinel → `loadJsonFile($p, null)`.
         - `api/galaxy/mafft.php` ×1, `api/galaxy_mafft_align.php` ×1 — **verify helper is in scope
           first** (these may not load config_init).
-        - `setup.php` ×3, `setup-admin.php` ×2 — CLI/first-run installers, run BEFORE config exists.
-          **Probably leave alone** (helper may not be loadable); low value.
         - `scripts/warm_organism_cache.php` ×1, `scripts/generate_taxonomy_tree.php` ×1 — CLI; check
           include chain.
         - `api/jbrowse2/archive/*` ×2 — **dead code, skip** (see #15).
         - `admin/manage_users.php:76` — **deliberately skipped** (already guards `=== null` +
           json_last_error + die).
-        - `admin/api/generate_registry.php:18` — **not applicable** (reads `php://input`, not a file).
+        - `setup.php:197`, `admin/api/generate_registry.php:18` — **not applicable** (`php://input`).
         - Rule: skip object decodes (no `, true`); `: null` sentinels → `loadJsonFile($p, null)`;
           confirm the helper is in scope for that context before converting.
+
+- [ ] **#16 (bonus, pre-existing) `setup-admin.php` password prompt infinite-loops on EOF** — found
+  while sandbox-testing the #5 installer batch. `getPasswordInput()` does `fgets()` with no EOF/false
+  guard, so on non-interactive stdin it spins forever printing "Error: Password must be at least 8
+  characters" (also emits `stty: Inappropriate ioctl for device` each pass). Harmless interactively,
+  but it makes the installer impossible to drive headlessly or test in CI. Fix: bail out if
+  `fgets()` returns `false`, and cap retries. Unrelated to the loadJsonFile refactor. Noted 2026-07-13.
 
 - [x] **#15 (bonus) `api/jbrowse2/config-optimized.php` is broken (pre-existing HTTP 500)** — an
   unused alternative config generator; the app fetches `config.php` (js/jbrowse2-loader.js). Returns

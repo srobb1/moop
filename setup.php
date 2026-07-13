@@ -77,6 +77,7 @@ if (!is_array($config)) {
     die('FATAL: config/site_config.php did not return a valid config array.');
 }
 require_once "$base/lib/distro_detect.php";
+require_once "$base/lib/functions_json.php";
 
 // ── Helper Functions ────────────────────────────────────────────────────────
 
@@ -412,7 +413,7 @@ HTACCESS;
     $usersFile = $config['users_file'] ?? "$base/../users.json";
 
     if (file_exists($usersFile)) {
-        $existingUsers = json_decode(file_get_contents($usersFile), true);
+        $existingUsers = loadJsonFile($usersFile, []);
         if (is_array($existingUsers) && isset($existingUsers[$username]) && ($existingUsers[$username]['role'] ?? '') === 'admin') {
             $steps['admin_user'] = [
                 'success' => true,
@@ -518,7 +519,7 @@ HTACCESS;
     $newConfig = [];
 
     if (file_exists($exampleConfig)) {
-        $newConfig = json_decode(file_get_contents($exampleConfig), true) ?? [];
+        $newConfig = loadJsonFile($exampleConfig, []);
     }
 
     // Apply user-provided values
