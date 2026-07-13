@@ -16,13 +16,8 @@ include_once __DIR__ . '/includes/access_control.php';
 include_once __DIR__ . '/includes/layout.php';
 include_once __DIR__ . '/lib/moop_functions.php';
 
-// Get configuration and user data
+// Get configuration
 $config = ConfigManager::getInstance();
-$usersFile = $config->getPath('users_file');
-$users = [];
-if (file_exists($usersFile)) {
-    $users = json_decode(file_get_contents($usersFile), true);
-}
 
 // Get visitor IP (set in access_control.php)
 global $visitor_ip;
@@ -34,7 +29,7 @@ $cards_to_display = getIndexDisplayCards($group_data);
 
 // Load taxonomy tree data
 $metadata_path = $config->getPath('metadata_path');
-$taxonomy_tree_data = json_decode(file_get_contents("$metadata_path/taxonomy_tree_config.json"), true);
+$taxonomy_tree_data = loadJsonFile("$metadata_path/taxonomy_tree_config.json", []);
 
 // Get user access for taxonomy tree
 $taxonomy_user_access = getTaxonomyTreeUserAccess($group_data);
@@ -163,7 +158,7 @@ foreach ($group_data as $entry) {
 $featured_groups = [];
 $desc_file = "$metadata_path/group_descriptions.json";
 if (file_exists($desc_file)) {
-    $all_descs = json_decode(file_get_contents($desc_file), true) ?: [];
+    $all_descs = loadJsonFile($desc_file, []);
     foreach ($all_descs as $d) {
         if (!empty($d['featured']) && isset($cards_to_display[$d['group_name']])) {
             $featured_groups[] = [

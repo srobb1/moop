@@ -90,7 +90,7 @@ foreach ($scope_tree as $org => $assemblies) {
         $json_path = $asm_config_dir . $org . '_' . $asm . '.json';
         if (!file_exists($json_path)) continue;
 
-        $def         = json_decode(file_get_contents($json_path), true) ?: [];
+        $def         = loadJsonFile($json_path, []);
         $gene_tracks = $def['primaryGeneTracks'] ?? [];
 
         // First gene loc: scan feature_coords.tsv files under organisms/{org}/{asm}/*/

@@ -15,7 +15,7 @@ include_once __DIR__ . '/lib/functions_login_protection.php';
 
 $config = ConfigManager::getInstance();
 $usersFile = $config->getPath('users_file');
-$users = json_decode(file_get_contents($usersFile), true);
+$users = loadJsonFile($usersFile, []);
 $siteTitle = $config->getString('siteTitle');
 
 $error = "";

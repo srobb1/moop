@@ -124,9 +124,23 @@ CLAUDE.md access-control section (contradicted by #3).
         - `setup-admin.php`: sandboxed run reaches Step 1 / Step 2 prompts ⇒ execution passed the new
           `require_once` with no fatal. Its POST/interactive tail can't be driven headlessly (see #16).
 
-      - [ ] **PICK UP HERE — 15 raw `json_decode(file_get_contents(...))` sites left**, by file:
-        - `index.php` ×3, `login.php` ×1, `jbrowse2.php` ×1 — root pages; helper IS in scope
-          (they load access_control → config_init). Straightforward; do these first.
+      - [x] **root-pages batch DONE** (5 sites; helper in scope via access_control → config_init).
+        `index.php:37` taxonomy_tree_config (unguarded → `[]`), `index.php:166` (was `?: []` → exact),
+        `login.php:18` users.json (unguarded → `[]`), `jbrowse2.php:93` (was `?: []` → exact).
+        **`index.php:21-25` DELETED, not converted** — `$users`/`$usersFile` were assigned and never
+        read again (not in the `$data` array, not referenced by `tools/pages/index.php`), i.e. the
+        public homepage was reading `/data/users.json` (the bcrypt credential file) on *every* page
+        load for nothing. Dead read removed.
+        `login.php:18` safety argument: `loadJsonFile()` returns exactly what `json_decode()` returns
+        unless that's `null`, in which case `[]`. Downstream is `isset($users[$u])`, and
+        `isset(null[$u]) === isset([][$u]) === false` — so the login decision is identical in *every*
+        case. Confirmed with a fixture harness (real users.json is `0600 apache:root`, deliberately
+        unreadable to a CLI test): valid creds still LOGIN; missing/corrupt file still DENY.
+        Verified: php -l ×3; **rendered HTML byte-identical to the committed code** for index / login /
+        jbrowse2 (only the per-request CSRF token and the randomly-rotating banner image differ);
+        29/29 smoke tests.
+
+      - [ ] **PICK UP HERE — 10 raw `json_decode(file_get_contents(...))` sites left**, by file:
         - `admin/pages/manage_site_config.php:677` — uses a `: null` sentinel → `loadJsonFile($p, null)`.
         - `api/galaxy/mafft.php` ×1, `api/galaxy_mafft_align.php` ×1 — **verify helper is in scope
           first** (these may not load config_init).
@@ -136,6 +150,7 @@ CLAUDE.md access-control section (contradicted by #3).
         - `admin/manage_users.php:76` — **deliberately skipped** (already guards `=== null` +
           json_last_error + die).
         - `setup.php:197`, `admin/api/generate_registry.php:18` — **not applicable** (`php://input`).
+        - So the real remaining work is only ~5 sites; the other 5 are skip/N-A by decision.
         - Rule: skip object decodes (no `, true`); `: null` sentinels → `loadJsonFile($p, null)`;
           confirm the helper is in scope for that context before converting.
 
