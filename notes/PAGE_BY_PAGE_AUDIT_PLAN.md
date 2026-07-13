@@ -60,11 +60,21 @@ CLAUDE.md access-control section (contradicted by #3).
       documented snake_case one. **Fix:** delete `requireAccess()`, repoint `groups.php` to
       `require_access()`.
 
-- [~] **#5 JSON loading done two ways** — IN PROGRESS. Fresh count: **89** raw
-      `json_decode(file_get_contents(...))` calls across ~50 files vs `loadJsonFile()`. Raw form has
-      no missing/corrupt-file handling (warns + returns null). **Migrating to `loadJsonFile($p,[])`
-      in batches by directory, verifying each is `, true` (assoc) and preserves any null-vs-missing
-      logic.**
+- [x] **#5 JSON loading done two ways** — ✅ **COMPLETE (2026-07-13)**. Started at **89** raw
+      `json_decode(file_get_contents(...))` calls across ~50 files. **82 converted** to
+      `loadJsonFile()` across 8 batches; **7 remain, all by deliberate decision** (see "final state"
+      below) — there is no pending work left on this item. The raw form had no missing/corrupt-file
+      handling (warns + returns null); every conversion verified `, true` (assoc) and preserved any
+      null-vs-missing logic.
+
+      **Final state — the 7 remaining raw calls are all intentional, do NOT "fix" them:**
+      - `api/galaxy/mafft.php:39`, `api/galaxy_mafft_align.php:47`, `setup.php:198`,
+        `admin/api/generate_registry.php:18` — **N/A**: these read `php://input` (the request body),
+        not a file. `loadJsonFile()` is a file loader and does not apply.
+      - `api/jbrowse2/archive/get-config.php:57`, `api/jbrowse2/archive/config.json.php:24` —
+        **dead code**, skip (see #15).
+      - `admin/manage_users.php:76` — **deliberately skipped**: already guards with `=== null` +
+        `json_last_error()` + `die`, which is stricter than the helper.
       - [x] **`tools/` batch DONE** (11 sites: gene_set×2, assembly, organism, groups,
         pages/groups, blast, moopmart×2, search, get_annotation_sources_grouped). 0 raw left in
         tools/; all 8 affected pages render clean (200, no notices).
@@ -140,19 +150,22 @@ CLAUDE.md access-control section (contradicted by #3).
         jbrowse2 (only the per-request CSRF token and the randomly-rotating banner image differ);
         29/29 smoke tests.
 
-      - [ ] **PICK UP HERE — 10 raw `json_decode(file_get_contents(...))` sites left**, by file:
-        - `admin/pages/manage_site_config.php:677` — uses a `: null` sentinel → `loadJsonFile($p, null)`.
-        - `api/galaxy/mafft.php` ×1, `api/galaxy_mafft_align.php` ×1 — **verify helper is in scope
-          first** (these may not load config_init).
-        - `scripts/warm_organism_cache.php` ×1, `scripts/generate_taxonomy_tree.php` ×1 — CLI; check
-          include chain.
-        - `api/jbrowse2/archive/*` ×2 — **dead code, skip** (see #15).
-        - `admin/manage_users.php:76` — **deliberately skipped** (already guards `=== null` +
-          json_last_error + die).
-        - `setup.php:197`, `admin/api/generate_registry.php:18` — **not applicable** (`php://input`).
-        - So the real remaining work is only ~5 sites; the other 5 are skip/N-A by decision.
-        - Rule: skip object decodes (no `, true`); `: null` sentinels → `loadJsonFile($p, null)`;
-          confirm the helper is in scope for that context before converting.
+      - [x] **final batch DONE** (3 sites — closes #5).
+        `admin/pages/manage_site_config.php:677` → `loadJsonFile($config_file, null)` (the `null`
+        default is exact: the old code was `file_exists(...) ? json_decode(...) : null`; helper is in
+        scope because the controller includes `admin_init.php`);
+        `scripts/warm_organism_cache.php:60` and `scripts/generate_taxonomy_tree.php:45` → both decode
+        the *same* `.organism_cache.json` behind the same `if ($cached && isset(...))` guard, so `[]`
+        is faithful; both scripts `require` `config_init.php` directly, so the helper is in scope.
+        **The two `api/galaxy*` sites turned out to be `php://input`, not files** — N/A, not
+        convertible (an earlier note wrongly listed them as "check scope").
+        Verified: php -l ×3; old-vs-new `===` identical on the *real* `.organism_cache.json` and the
+        *real* `config_editable.json`, plus both failure modes (missing / corrupt) for the `null`
+        sentinel; `scripts/warm_organism_cache.php` **run end-to-end** — read the cache, matched
+        fingerprints across 85 organisms, reported "Cache is already up to date", exited 0, left the
+        file byte-identical; `generate_taxonomy_tree.php`'s changed line proven to build a deep-`===`
+        identical 85-organism list (the full script was **not** run — it rewrites the live
+        `metadata/taxonomy_tree_config.json` that `index.php` reads); 29/29 smoke tests; live pages 200.
 
 - [ ] **#16 (bonus, pre-existing) `setup-admin.php` password prompt infinite-loops on EOF** — found
   while sandbox-testing the #5 installer batch. `getPasswordInput()` does `fgets()` with no EOF/false

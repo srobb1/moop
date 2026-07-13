@@ -674,7 +674,7 @@
                 </div>
                 <div class="card-body">
                     <?php
-                    $editable_json = file_exists($config_file) ? json_decode(file_get_contents($config_file), true) : null;
+                    $editable_json = loadJsonFile($config_file, null);
                     if ($editable_json && isset($editable_json['_metadata'])):
                         $metadata = $editable_json['_metadata'];
                     ?>

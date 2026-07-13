@@ -42,7 +42,7 @@ echo "Loading organisms...\n";
 $organisms = [];
 $org_cache = "$organism_data/.organism_cache.json";
 if (file_exists($org_cache)) {
-    $cached = json_decode(file_get_contents($org_cache), true);
+    $cached = loadJsonFile($org_cache, []);
     if ($cached && isset($cached['data'])) {
         foreach ($cached['data'] as $org_name => $org_data) {
             if (!empty($org_data['info'])) $organisms[$org_name] = $org_data['info'];

@@ -57,7 +57,7 @@ if (!$force && !$single_organism) {
     // Check if organism cache is fresh
     $cache_file = "$organism_data/.organism_cache.json";
     if (file_exists($cache_file)) {
-        $cached = json_decode(file_get_contents($cache_file), true);
+        $cached = loadJsonFile($cache_file, []);
         if ($cached && isset($cached['org_fingerprints'], $cached['config_fingerprint'], $cached['generated'])) {
             $current_org_fps   = buildPerOrganismFingerprints($organism_data);
             $current_config_fp = buildConfigFingerprint($taxonomy_tree_file, $groups_file);
