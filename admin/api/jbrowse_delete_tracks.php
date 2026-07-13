@@ -7,7 +7,6 @@
 
 require_once __DIR__ . '/../../includes/config_init.php';
 require_once __DIR__ . '/../../admin/admin_access_check.php';
-require_once __DIR__ . '/../../lib/jbrowse/access_manifest.php';
 
 header('Content-Type: application/json');
 
@@ -51,8 +50,6 @@ if (!$trackFile) {
 
 // Delete the file
 if (unlink($trackFile)) {
-    // Keep the per-file access manifest in sync with the remaining tracks (audit #17).
-    refreshAccessManifest($organism, $assembly);
     echo json_encode([
         'success' => true,
         'message' => "Track deleted: $trackId"

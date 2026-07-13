@@ -174,44 +174,49 @@ CLAUDE.md access-control section (contradicted by #3).
   but it makes the installer impossible to drive headlessly or test in CI. Fix: bail out if
   `fgets()` returns `false`, and cap retries. Unrelated to the loadJsonFile refactor. Noted 2026-07-13.
 
-- [~] **#17 🔒 SECURITY — JBrowse track tokens scoped to org/assembly, not track/file. MOOP-SIDE
-  FIX IMPLEMENTED 2026-07-13; remote-server deploy REMAINS.** Option A was approved and built.
+- [x] **#17 🔒 SECURITY — JBrowse track tokens scoped to org/assembly, not track/file. FIXED via
+  PER-FILE-BOUND TOKENS and DEPLOYED + VERIFIED LIVE 2026-07-13.**
+  **Live proof (run from cerebro against tracks.stowers.org:8080 — MOOP itself can't reach the tracks
+  box; 172.16.2.31, ports firewalled):** legitimate token→its file = HTTP 206; same token replayed on
+  a DIFFERENT file = HTTP 403 "Token does not authorize this file". Under the old code that replay
+  would have been 206, so 403 also confirms the new tracks.php is the running code. Deploy was a
+  one-time copy of `api/jbrowse2/tracks.php` + `lib/jbrowse/track_token.php` to
+  `/var/www/privatehtml/moop/…`; NOTHING is sent to the tracks box on future track updates.
 
-  **DONE (MOOP box, all verified, committed separately):**
-  - `lib/jbrowse/track_token.php`: added `trackAccessLevelValue()` (canonical PUBLIC=1..ADMIN=4,
-    case-insensitive, unset/unknown→1; the single source of truth, travels to the tracks server with
-    this file). `generateTrackToken($org,$asm,$user_level='PUBLIC')` now embeds a numeric `level` claim.
-  - Both config generators pass `$user_access_level` at the existing per-track mint call (config.php
-    addTokensToTrack + loadFilteredTracks; config-optimized addTokensToTrack + its 2 callers).
-  - `lib/jbrowse/access_manifest.php` (NEW): `buildAccessManifest()` / `writeAccessManifest()` /
-    `refreshAccessManifest($org,$asm)`. Walks track JSONs, maps every `/data/tracks/{org}/{asm}/` file
-    (incl. .bai/.tbi indexes) → required level, **most-restrictive wins** for multi-level files (user
-    decision). Writes `data/tracks/{org}/{asm}/access_manifest.json`.
-  - `api/jbrowse2/tracks.php`: after the org/asm check, reads the assembly manifest, resolves the
-    file's required level (with index-suffix fallback), and enforces `token.level >= file_level`.
-    **Fail-closed:** manifest missing OR file unlisted ⇒ 403. Missing `level` claim ⇒ treated as
-    PUBLIC (least privilege).
-  - Auto-regen wired so the manifest never goes stale: `scripts/generate_tracks_from_sheet.php` (the
-    real writer, used by both the admin Sync button and CLI) refreshes at end of a non-dry-run;
-    `admin/api/jbrowse_delete_tracks.php` refreshes after a delete. (Registering a sheet alone writes
-    no tracks, so nothing to refresh there — the following sync does it.)
-  - Backfill run: **69/69 assemblies have manifests**, 1280 files classified, only Nvec has conflicts
-    (28 files → most-restrictive). Manifests are **gitignored** (generated data under data/tracks/).
-  - Verified end-to-end against the real local `tracks.php`: PUBLIC token → COLLABORATOR file AND its
-    .bai = **403 denied**; PUBLIC→public, COLLABORATOR→collab, ADMIN→collab = **allowed** (pass the
-    check, then 400 only because the file is remote-hosted, not local); orphan file even as ADMIN =
-    **fail-closed**. Live site unaffected (remote tracks.php still runs old code, ignores the new
-    claim), 29/29 smoke, live config.php 200, tokens now carry level.
+  **PIVOTED away from the manifest approach.** First attempt (committed b51bcf6) added a `level` claim
+  + a per-assembly `access_manifest.json` that tracks.php read. It worked, but the manifest had to
+  reach the tracks server on every track change, and **MOOP and tracks are two separate machines with
+  no shared drive — the user copies files tracks-only, manually, as data is generated.** So a manifest
+  is a per-update manual step, and because enforcement was fail-closed, forgetting it = all tracks on
+  that assembly 403. Unacceptable failure point. Reverted all of it (deleted access_manifest.php, the
+  `level` claim, `trackAccessLevelValue`, the two auto-regen hooks, and the 69 generated manifests).
 
-  **REMAINS — remote tracks-server deploy (the fix is INERT until this is done):** copy the updated
-  `api/jbrowse2/tracks.php` + `lib/jbrowse/track_token.php` to `tracks.stowers.org:8080`, and get the
-  per-assembly `access_manifest.json` files there under its `data/tracks/{org}/{asm}/` (they ship WITH
-  the track data — copying an assembly's data dir carries its manifest). Because enforcement is
-  fail-closed, EVERY assembly served remotely must have a manifest present before/with the tracks.php
-  swap, or its tracks 403. **The copy-set is exactly {tracks.php, track_token.php, the manifests}** —
-  all box-agnostic (per the user's "copy the files over, don't hand-edit the remote box" requirement;
-  a fresh tracks server = copy this set + vendor/ + certs/jwt_public_key.pem). See
-  [[bug_tracks_server_8080_unreachable]].
+  **Final design — the token IS the capability (no manifest, nothing to sync per update):**
+  - `lib/jbrowse/track_token.php`: `generateTrackToken($org,$asm,$file)` binds each token to the ONE
+    file it authorizes via a `file` claim (= the exact `?file=` path). No level, no manifest.
+  - `api/jbrowse2/config.php` + `config-optimized.php`: `addTokenToAdapterUrls()` now mints a token
+    **per file URI** (bound to that file's path) instead of stamping one per-track token on every URI.
+    `addTokensToTrack()` no longer pre-mints. The 1348 tracks-server URIs get a bound token; the 136
+    `/moop/data/genomes/…` gene-model URIs (served statically by MOOP, token decorative) get a
+    path-bound token too, harmlessly.
+  - `api/jbrowse2/tracks.php`: replaced the org/assembly scope check (and the whole manifest block)
+    with one check — `token.file === requested file`, else 403. The tracks server needs no access
+    list; the signed token carries the authorization. Missing/empty `file` claim ⇒ 403.
+  - Verified: live config.php embeds **1339/1339 tokens each bound to its own file**; driving the real
+    tracks.php — a PUBLIC file's token replayed on a COLLABORATOR file = **403 "Token does not
+    authorize this file"**, replayed on a *different public* file = **403** too (a token is good for
+    exactly one file), legitimate same-file request = passes auth. 29/29 smoke; live pages 200. Token
+    ~623 chars (fine for URLs). Live site unaffected (remote tracks.php still old code, ignores claim).
+
+  **REMAINS — remote deploy (the fix is INERT until done), and it's now a ONE-TIME code copy with
+  ZERO per-update syncing ever after:** copy just two files to the tracks server —
+  `api/jbrowse2/tracks.php` and `lib/jbrowse/track_token.php` — to
+  `/var/www/privatehtml/moop/…` (the tracks box's moop root; NOT /var/www/html). Both are box-agnostic.
+  vendor/ + certs/jwt_public_key.pem already there. After this, adding/changing tracks needs NO file
+  sent to tracks (MOOP bakes the authorization into the URLs it generates). ⚠ Enable via php-fpm
+  reload on the tracks box if opcache is sticky. See [[bug_tracks_server_8080_unreachable]].
+  (NOTE 2026-07-13: user already scp'd the OLD manifest-era tracks.php + track_token.php to tracks;
+  they must re-copy these FINAL versions. The manifest tarball was never sent — good, it's obsolete.)
 
   ---
   ORIGINAL FINDING (kept for context):

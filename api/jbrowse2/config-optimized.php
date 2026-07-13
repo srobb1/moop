@@ -338,7 +338,7 @@ function loadFullTrackConfigs($track_refs, $organism, $assembly, $user_access_le
     $tracks = [];
     foreach ($track_refs as $ref) {
         $track_def = loadJsonFile($ref['file'], []);
-        $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly, $user_access_level);
+        $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly);
 
         if ($track_with_tokens) {
             $tracks[] = $track_with_tokens;
@@ -461,7 +461,7 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
                 }
             }
 
-            $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly, $user_access_level);
+            $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly);
 
             echo json_encode($track_with_tokens, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             exit;
@@ -472,22 +472,20 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
     echo json_encode(['error' => 'Track not found']);
 }
 
-function addTokensToTrack($track_def, $organism, $assembly, $user_access_level = 'PUBLIC') {
-    // ALWAYS generate JWT tokens for all users
-    try {
-        $token = generateTrackToken($organism, $assembly, $user_access_level);
-    } catch (Exception $e) {
-        error_log("Failed to generate token for track {$track_def['trackId']}: " . $e->getMessage());
-        return null;
-    }
-    
-    // Get track access level for validation warnings
+function addTokensToTrack($track_def, $organism, $assembly) {
+    // Per-file tokens are minted inside addTokenToAdapterUrls (each bound to the exact
+    // file it authorizes — audit #17), so nothing is pre-minted here.
     $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
-    
+
     if (isset($track_def['adapter'])) {
-        $track_def['adapter'] = addTokenToAdapterUrls($track_def['adapter'], $token, $track_access_level);
+        try {
+            $track_def['adapter'] = addTokenToAdapterUrls($track_def['adapter'], $organism, $assembly, $track_access_level);
+        } catch (Exception $e) {
+            error_log("Failed to generate token(s) for track {$track_def['trackId']}: " . $e->getMessage());
+            return null;
+        }
     }
-    
+
     return $track_def;
 }
 
@@ -499,19 +497,19 @@ function addTokensToTrack($track_def, $organism, $assembly, $user_access_level =
  * - External servers (not in whitelist) → NEVER add token
  * - MOOP internal paths → ALWAYS add token
  */
-function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC') {
+function addTokenToAdapterUrls($adapter, $organism, $assembly, $track_access_level = 'PUBLIC') {
     $config = ConfigManager::getInstance();
     $warn_on_external_private = $config->getBoolean('jbrowse2.warn_on_external_private_tracks', true);
     $site = $config->getString('site', 'moop');
-    
+
     foreach ($adapter as $key => &$value) {
         if (is_array($value)) {
             if (isset($value['uri']) && !empty($value['uri'])) {
                 $uri = $value['uri'];
-                
+
                 // Detect external URLs
                 $is_external = preg_match('#^(https?|ftp)://#i', $uri);
-                
+
                 $tracks_server_cfg     = $config->get('tracks_server', []);
                 $tracks_server_enabled = !empty($tracks_server_cfg['enabled']);
                 $tracks_server_url     = isset($tracks_server_cfg['url']) ? rtrim($tracks_server_cfg['url'], '/') : '';
@@ -531,8 +529,11 @@ function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC')
                             if (($q = strpos($file_path, '?')) !== false) {
                                 $file_path = substr($file_path, 0, $q);
                             }
+                            // Token bound to THIS file (audit #17).
+                            $token = generateTrackToken($organism, $assembly, $file_path);
                             $value['uri'] = $remote_base . '/api/jbrowse2/tracks.php?file=' . urlencode($file_path) . '&token=' . urlencode($token);
                         } else {
+                            $token = generateTrackToken($organism, $assembly, $uri);
                             $separator = strpos($uri, '?') !== false ? '&' : '?';
                             $value['uri'] .= $separator . 'token=' . urlencode($token);
                         }
@@ -550,6 +551,11 @@ function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC')
                     // Internal paths → Add token, redirect through remote tracks server if enabled
                     if (preg_match("#^/{$site}/data/tracks/(.+)$#", $uri, $matches)) {
                         $file_path = $matches[1];
+                        if (($q = strpos($file_path, '?')) !== false) {
+                            $file_path = substr($file_path, 0, $q);
+                        }
+                        // Token bound to THIS file (audit #17).
+                        $token = generateTrackToken($organism, $assembly, $file_path);
                         if ($tracks_server_enabled && $tracks_server_url) {
                             $value['uri'] = $tracks_server_url . '/api/jbrowse2/tracks.php?file=' . urlencode($file_path);
                         } else {
@@ -557,16 +563,17 @@ function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC')
                         }
                         $value['uri'] .= '&token=' . urlencode($token);
                     } elseif (preg_match("#^/{$site}/#", $uri)) {
+                        $token = generateTrackToken($organism, $assembly, $uri);
                         $separator = strpos($uri, '?') !== false ? '&' : '?';
                         $value['uri'] .= $separator . 'token=' . urlencode($token);
                     }
                 }
             } else {
-                $value = addTokenToAdapterUrls($value, $token, $track_access_level);
+                $value = addTokenToAdapterUrls($value, $organism, $assembly, $track_access_level);
             }
         }
     }
-    
+
     return $adapter;
 }
 

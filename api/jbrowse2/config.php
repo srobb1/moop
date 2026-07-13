@@ -306,7 +306,7 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
             }
         }
         
-        $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly, $user_access_level);
+        $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly);
 
         if ($track_with_tokens) {
             $filtered_tracks[] = $track_with_tokens;
@@ -342,22 +342,20 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
  * @param string $assembly - Assembly ID
  * @return array|null - Track config with tokens, or null if token generation fails
  */
-function addTokensToTrack($track_def, $organism, $assembly, $user_access_level = 'PUBLIC') {
-    try {
-        $token = generateTrackToken($organism, $assembly, $user_access_level);
-    } catch (Exception $e) {
-        error_log("Failed to generate token for track {$track_def['trackId']}: " . $e->getMessage());
-        return null;
-    }
-    
-    // Get track access level for validation warnings
+function addTokensToTrack($track_def, $organism, $assembly) {
+    // Tokens are minted per-file inside addTokenToAdapterUrls (each bound to the exact
+    // file it authorizes — audit #17), so nothing is pre-minted here.
     $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
-    
-    // Add token to adapter URLs using URL whitelist strategy
+
     if (isset($track_def['adapter'])) {
-        $track_def['adapter'] = addTokenToAdapterUrls($track_def['adapter'], $token, $track_access_level);
+        try {
+            $track_def['adapter'] = addTokenToAdapterUrls($track_def['adapter'], $organism, $assembly, $track_access_level);
+        } catch (Exception $e) {
+            error_log("Failed to generate token(s) for track {$track_def['trackId']}: " . $e->getMessage());
+            return null;
+        }
     }
-    
+
     return $track_def;
 }
 
@@ -389,12 +387,16 @@ function addTokensToTrack($track_def, $organism, $assembly, $user_access_level =
  * - COLLABORATOR track on your server → Token added (authenticated access)
  * - COLLABORATOR track on UCSC → No token + warning logged (misconfigured)
  * 
+ * Each tracks.php-routed file gets its OWN token, bound to that exact file (audit #17),
+ * so a token cannot be replayed against a different file on the same assembly.
+ *
  * @param array $adapter - Adapter configuration (may contain nested arrays)
- * @param string $token - JWT token to add
+ * @param string $organism - Organism (token context)
+ * @param string $assembly - Assembly (token context)
  * @param string $track_access_level - Track's access level (for validation warnings)
- * @return array - Adapter config with tokens added appropriately
+ * @return array - Adapter config with per-file tokens added appropriately
  */
-function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC') {
+function addTokenToAdapterUrls($adapter, $organism, $assembly, $track_access_level = 'PUBLIC') {
     $config = ConfigManager::getInstance();
     $warn_on_external_private = $config->getBoolean('jbrowse2.warn_on_external_private_tracks', true);
     $site = $config->getString('site', 'moop');
@@ -432,8 +434,12 @@ function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC')
                             if (($q = strpos($file_path, '?')) !== false) {
                                 $file_path = substr($file_path, 0, $q);
                             }
+                            // Token bound to THIS file — it authorizes only $file_path.
+                            $token = generateTrackToken($organism, $assembly, $file_path);
                             $value['uri'] = $remote_base . '/api/jbrowse2/tracks.php?file=' . urlencode($file_path) . '&token=' . urlencode($token);
                         } else {
+                            // Trusted external, non-tracks URL: token is decorative (no ?file to bind).
+                            $token = generateTrackToken($organism, $assembly, $uri);
                             $separator = strpos($uri, '?') !== false ? '&' : '?';
                             $value['uri'] .= $separator . 'token=' . urlencode($token);
                         }
@@ -464,19 +470,26 @@ function addTokenToAdapterUrls($adapter, $token, $track_access_level = 'PUBLIC')
                     // with their https:// URL directly and are handled by CASE 1.
                     if (preg_match("#^/{$site}/data/tracks/(.+)$#", $uri, $matches)) {
                         $file_path = $matches[1];
+                        if (($q = strpos($file_path, '?')) !== false) {
+                            $file_path = substr($file_path, 0, $q);
+                        }
+                        // Token bound to THIS file.
+                        $token = generateTrackToken($organism, $assembly, $file_path);
                         $value['uri'] = "/{$site}/api/jbrowse2/tracks.php?file=" . urlencode($file_path) . '&token=' . urlencode($token);
 
                     } elseif (preg_match("#^/{$site}/#", $uri)) {
-                        // CASE 4: Other MOOP paths → Add token
+                        // CASE 4: Other MOOP paths (e.g. /moop/data/genomes/… served directly by MOOP).
+                        // Token is decorative here (not routed through tracks.php); bind to the path.
+                        $token = generateTrackToken($organism, $assembly, $uri);
                         $separator = strpos($uri, '?') !== false ? '&' : '?';
                         $value['uri'] .= $separator . 'token=' . urlencode($token);
                     }
                     // CASE 5: Other paths (relative, absolute) → Leave unchanged
                 }
-                
+
             } else {
                 // Recurse into nested adapter structures
-                $value = addTokenToAdapterUrls($value, $token, $track_access_level);
+                $value = addTokenToAdapterUrls($value, $organism, $assembly, $track_access_level);
             }
         }
     }

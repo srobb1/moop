@@ -73,75 +73,21 @@ if (!$token_data) {
     exit;
 }
 
-// 4. VALIDATE FILE PATH MATCHES TOKEN PERMISSIONS
-// File path format: organism/assembly/type/filename
-$file_parts = explode('/', $file);
+// 4. AUTHORIZE: the token must be bound to THIS exact file (audit #17).
+// Each token MOOP issues authorizes exactly one file (its `file` claim equals the
+// `?file=` path). A token handed out for a PUBLIC file therefore cannot be replayed
+// against a restricted file on the same assembly. No per-file access list is needed
+// on the tracks server — the authorization is carried in the signed token itself.
+$token_file = $token_data->file ?? '';
 
-if (count($file_parts) < 2) {
-    http_response_code(400);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Invalid file path format']);
-    exit;
-}
-
-$file_organism = $file_parts[0];
-$file_assembly = $file_parts[1];
-
-// Token must grant access to THIS specific organism/assembly
-if ($token_data->organism !== $file_organism || $token_data->assembly !== $file_assembly) {
+if ($token_file === '' || $token_file !== $file) {
     http_response_code(403);
     header('Content-Type: application/json');
     echo json_encode([
         'error' => 'Access denied',
-        'message' => 'Token does not grant access to this file',
-        'token_scope' => "{$token_data->organism}/{$token_data->assembly}",
-        'requested_file' => "$file_organism/$file_assembly"
+        'message' => 'Token does not authorize this file',
     ]);
-    error_log("Tracks server: Token scope mismatch - IP {$_SERVER['REMOTE_ADDR']} tried to access $file_organism/$file_assembly with token for {$token_data->organism}/{$token_data->assembly}");
-    exit;
-}
-
-// 4b. PER-FILE ACCESS LEVEL — audit #17.
-// The org/assembly check above is necessary but not sufficient: a PUBLIC assembly can
-// carry COLLABORATOR/ADMIN track files, and a public token is scoped to the whole
-// assembly. Enforce the file's required level (from the per-assembly manifest that
-// ships with the track data) against the bearer's level claimed in the token.
-$user_level = isset($token_data->level) ? (int)$token_data->level : 1; // missing ⇒ PUBLIC (least privilege)
-$manifest_file   = $TRACKS_BASE_DIR . '/' . $file_organism . '/' . $file_assembly . '/access_manifest.json';
-$rel_in_assembly = implode('/', array_slice($file_parts, 2)); // path within the assembly dir
-
-$required_level = null;
-if (is_readable($manifest_file)) {
-    $manifest  = json_decode(file_get_contents($manifest_file), true);
-    $files_map = (is_array($manifest) && isset($manifest['files']) && is_array($manifest['files']))
-        ? $manifest['files'] : [];
-    if (isset($files_map[$rel_in_assembly])) {
-        $required_level = $files_map[$rel_in_assembly];
-    } else {
-        // Derived index files (.bai/.tbi/.csi/.crai/.idx/.fai) inherit their data file's level.
-        foreach (['.bai', '.tbi', '.csi', '.crai', '.idx', '.fai'] as $suffix) {
-            if (substr($rel_in_assembly, -strlen($suffix)) === $suffix) {
-                $base = substr($rel_in_assembly, 0, -strlen($suffix));
-                if (isset($files_map[$base])) { $required_level = $files_map[$base]; break; }
-            }
-        }
-    }
-}
-
-if ($required_level === null) {
-    // Manifest missing, or file not listed → fail closed (do not serve unclassified files).
-    http_response_code(403);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Access denied', 'message' => 'File not covered by access manifest']);
-    error_log("Tracks server: no manifest entry for '$file' (manifest: $manifest_file) - IP {$_SERVER['REMOTE_ADDR']}");
-    exit;
-}
-
-if ($user_level < trackAccessLevelValue($required_level)) {
-    http_response_code(403);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Access denied', 'message' => 'Token access level is insufficient for this file']);
-    error_log("Tracks server: level $user_level < required $required_level for '$file' - IP {$_SERVER['REMOTE_ADDR']}");
+    error_log("Tracks server: token/file mismatch - IP {$_SERVER['REMOTE_ADDR']} requested '$file' with token for '" . ($token_file !== '' ? $token_file : '(no file claim)') . "'");
     exit;
 }
 
