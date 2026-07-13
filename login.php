@@ -16,6 +16,11 @@ include_once __DIR__ . '/lib/functions_login_protection.php';
 $config = ConfigManager::getInstance();
 $usersFile = $config->getPath('users_file');
 $users = loadJsonFile($usersFile, []);
+if (!$users) {
+    // Fails closed either way, but without this every login just says "invalid
+    // credentials" with nothing to explain why the user list never loaded.
+    error_log("login: user list is empty — users.json missing, unreadable, or corrupt: $usersFile");
+}
 $siteTitle = $config->getString('siteTitle');
 
 $error = "";
