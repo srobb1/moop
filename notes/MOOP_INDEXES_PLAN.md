@@ -56,6 +56,28 @@ a **separate writable directory** from the FASTA. There is no SELinux-only short
 NOT affected: JBrowse `.fai` (AutoTrack.php, on `data/genomes`, already writable, browser-fetched)
 and GFF bgzip+tabix (writes `data/genomes`).
 
+## Two layers — BOTH are part of the design (not either/or)
+
+The writable `index/` subdir sits UNDER the docroot, so on its own it re-creates the webshell
+condition (writable + web-served → a written `.php` gets executed). The nginx no-exec rule is
+what makes the writable subdir safe. Ship both:
+
+- **Execution layer (nginx, in moop-security.conf):** nothing legitimately fetches `organisms/`
+  over HTTP (verified — clients use `data/genomes`; downloads stream via PHP), so deny it wholesale;
+  and block `.php` under `data/`:
+  ```nginx
+  location ^~ /moop/organisms/     { return 404; }   # covers the writable index/ subdir too
+  location ~ ^/moop/data/.*\.php$  { return 404; }   # data/genomes serves data, never code
+  ```
+  A webshell written anywhere in the data trees can then never execute.
+  NOTE: `data/genomes` is writable + under the docroot RIGHT NOW, so that second rule closes a
+  *current* hole independent of this whole plan — worth doing early and cheaply.
+- **Integrity layer (SELinux):** FASTA/GFF/DB stay read-only; only `index/` is writable, via the
+  narrow `semanage` rule. Source data can't be corrupted.
+
+Neither alone suffices: nginx-only leaves data corruptible; SELinux-only leaves the writable
+subdir executable.
+
 ## Verify hard
 
 - Same BLAST search before/after → identical hits (protein + nucleotide, and the blastdbcmd
@@ -63,13 +85,24 @@ and GFF bgzip+tabix (writes `data/genomes`).
 - A **web-triggered** "Build BLAST Index" succeeds against otherwise-read-only organisms/.
 - Symlink self-heals on assembly rename/reload.
 
-## Fallbacks (if this is ever deprioritized)
+## Rollout (two phases)
 
-- On-demand builds already work from the CLI on-box (`smr` is unconfined) — no change needed for that.
-- `organisms/` fully writable + an nginx no-exec rule (`location ^~ /moop/organisms/ {return 404;}`,
-  `location ~ ^/moop/data/.*\.php$ {return 404;}`) closes the webshell risk without protecting
-  FASTA integrity. Simplest, less protection. User found this less appealing than keeping FASTAs
-  genuinely read-only.
+**Phase 1 — now, cheap (~15 min, nginx + SELinux, no code):** restore function + close the
+serious hole.
+1. Add the two nginx no-exec rules to moop-security.conf; `nginx -t`; reload. Closes the
+   webshell risk everywhere in the data trees (incl. the current `data/genomes` one).
+2. Revert `organisms/` to writable (drop the narrow rule, re-add the recursive rw rule,
+   restorecon) so the web "Build BLAST Index" / register-assembly buttons work again.
+   Result: buttons work, webshell closed. FASTA *integrity* not yet protected — acceptable,
+   because the serious threat (persistent RCE) is closed and FASTAs are rebuildable.
+
+**Phase 2 — fresh focused session (the refactor above):** add FASTA integrity.
+- `index/` subdir + symlink + narrow SELinux rule + the blast_functions.php/checklist changes +
+  migration, verified against identical BLAST hits. Tightens FASTA/GFF/DB back to read-only while
+  the web buttons keep working.
+
+**Interim note:** on-demand builds also work from the CLI on-box today (`smr` is unconfined), so
+nothing is truly blocked even before Phase 1.
 
 Related: [[project_cache_path_and_readonly_organisms]] (the cache move + read-only organisms/
 this builds on), audit §O.
