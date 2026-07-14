@@ -59,5 +59,15 @@ expression browser."
 - **Phase 2:** wire selected accessions into the existing off-box align→bigWig pipeline (Galaxy),
   output landing in the Expression Explorer.
 
-Related: the Expression Explorer plan (standalone MOOPmart-style tool, bigWigSummary, Nvec bigWigs)
-is where the outputs land; this feeds its inputs.
+## Scope boundary (2026-07-14)
+
+This plan is **external data acquisition only** — find public RNA-seq that exists in the world, triage
+it, and hand accessions to the align→bigWig pipeline. It is **not** where the display/query work
+lives. Everything about *reading bigWigs we already have* moved to its own docs:
+
+- `EXPRESSION_DATA_LAYER_PLAN.md` — the shared substrate (catalog, coords, bigWig reads,
+  precomputed `expression.sqlite`). **New tracks produced by this plan land here.**
+- `EXPRESSION_GENE_PAGE_PLAN.md` — 1 gene × many tracks (gene-page section)
+- `EXPRESSION_EXPLORER_PLAN.md` — many genes × few experiments (standalone tool)
+
+This plan feeds their **inputs**; it does not define how the data is stored or shown.
