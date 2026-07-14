@@ -1,25 +1,31 @@
 #!/bin/bash
-# Restore MOOP's SELinux contexts after the 2026-07-13 hardening run.
+# Apply MOOP's required SELinux contexts, booleans, and the cache directory on a
+# hardened RHEL host. This is the canonical, reproducible SELinux setup for a
+# MOOP deployment — run it on a fresh install, or to recover after a SCAP/
+# OpenSCAP hardening run resets labels.
 #
 # WHY semanage AND NOT chcon:
-#   chcon sets a label now, but the next SCAP/hardening relabel (restorecon)
-#   resets it to the policy default and the site breaks again. semanage writes
-#   a PERSISTENT policy rule, so future hardening runs RE-APPLY these labels.
+#   chcon sets a label now, but the next hardening relabel (restorecon) resets it
+#   to the policy default and the site breaks again. semanage writes a PERSISTENT
+#   policy rule, so future hardening runs RE-APPLY these labels automatically.
+#   You do NOT need IT to redo these after a hardening run — that is the point.
 #
 # WHY the (/.*)? suffix:
-#   semanage fcontext takes a REGEX. A bare path matches only that directory's
-#   own inode, NOT its contents. Rules added without the suffix (as happened on
-#   2026-07-13) leave every subdirectory read-only. This is the bug we are fixing.
+#   semanage fcontext takes a REGEX. A bare path matches only that directory's own
+#   inode, NOT its contents. A rule without the suffix leaves every subdirectory
+#   at the policy default (read-only).
 #
 # Idempotent — safe to re-run.
 set -euo pipefail
 [[ $EUID -eq 0 ]] || { echo "must run as root: sudo $0"; exit 1; }
 
 MOOP=/var/www/html/moop
+CACHE=/var/www/moop-cache
 
-# Every directory the web server (php-fpm as apache) writes into.
-# Derived empirically: `find . -user apache` — these all contain apache-created files.
-DIRS=(
+# Directories the web server (php-fpm as apache) must be able to WRITE.
+# NOTE: organisms/ is deliberately NOT here — it is read-only except organism.json
+# (handled separately below). Its regenerable caches live in $CACHE instead.
+RW_DIRS=(
     "$MOOP/logs"                    # error.log, login_attempts.json
     "$MOOP/config"                  # config_editable.json (admin UI)
     "$MOOP/metadata"                # jbrowse2-configs/{tracks,assemblies,sheets}, groups, taxonomy
@@ -27,52 +33,63 @@ DIRS=(
     "$MOOP/images/wikimedia"        # cached Wikipedia images
     "$MOOP/images/ncbi_taxonomy"    # cached NCBI taxonomy images
     "$MOOP/archived_gene_sets"      # gene-set archives
-    "$MOOP/organisms"               # scattered caches: chr_names_cache.json,
-                                    # annotated_feature_types.json, .organism_cache.json
-    /var/www/moop-site-data         # site-data backup (had NO rule at all)
+    /var/www/moop-site-data         # site-data backup (config, secrets, users.json)
+    "$CACHE"                        # generated caches (organism scan, annotation counts, ...)
 )
 
-echo "== 0. Remove a typo'd rule (2026-07-13: 'configs' — no such directory) =="
+echo "== 0. Remove a historical typo'd rule ('configs' — no such directory) =="
 semanage fcontext -d "$MOOP/configs(/.*)?" 2>/dev/null && echo "  removed" || echo "  not present (fine)"
 
-echo "== 1. Persistent SELinux rules (recursive) =="
-for d in "${DIRS[@]}"; do
+echo "== 1. Create the cache directory if missing (apache-owned, SGID) =="
+if [[ ! -d "$CACHE" ]]; then
+    mkdir -p "$CACHE"
+    echo "  created $CACHE"
+fi
+chown apache:apache "$CACHE"
+chmod 2775 "$CACHE"   # SGID: new cache files inherit group apache (php-fpm + CLI both read/write)
+
+echo "== 2. Persistent read-write SELinux rules (recursive) =="
+for d in "${RW_DIRS[@]}"; do
     [[ -d "$d" ]] || { echo "  SKIP (missing): $d"; continue; }
     spec="${d}(/.*)?"
     semanage fcontext -a -t httpd_sys_rw_content_t "$spec" 2>/dev/null \
       || semanage fcontext -m -t httpd_sys_rw_content_t "$spec"
-    echo "  $spec"
+    echo "  rw  $spec"
 done
 
-echo "== 2. Apply the labels now =="
-for d in "${DIRS[@]}"; do
+echo "== 3. organisms/ is READ-ONLY except organism.json =="
+# Drop any old recursive rw rule, then allow ONLY the per-organism organism.json
+# (edited in place by the admin UI). Everything else — genomes, SQLite DBs, FASTA,
+# BLAST indexes — stays read-only, so a compromised php-fpm cannot write the data tree.
+semanage fcontext -d "$MOOP/organisms(/.*)?" 2>/dev/null && echo "  dropped old recursive rw rule" || echo "  no recursive rw rule (fine)"
+semanage fcontext -a -t httpd_sys_rw_content_t "$MOOP/organisms/[^/]+/organism\.json" 2>/dev/null \
+  || semanage fcontext -m -t httpd_sys_rw_content_t "$MOOP/organisms/[^/]+/organism\.json"
+echo "  rw  $MOOP/organisms/[^/]+/organism.json  (tree otherwise read-only)"
+
+echo "== 4. Apply all labels now =="
+for d in "${RW_DIRS[@]}" "$MOOP/organisms"; do
     [[ -d "$d" ]] && restorecon -R "$d"
 done
-echo "  relabelled ${#DIRS[@]} trees"
+echo "  relabelled"
 
-echo "== 3. Allow php-fpm outbound connections (Google Sheets sync) =="
+echo "== 5. Allow php-fpm outbound connections (Google Sheets sync) =="
 setsebool -P httpd_can_network_connect on
 echo "  httpd_can_network_connect -> $(getsebool httpd_can_network_connect | awk '{print $3}')"
 
-echo "== 4. Restore apache ownership under the JBrowse track configs =="
-# A manual edit on 2026-07-13 flipped some of these to smr, which would make
-# apache unable to overwrite them on a re-prep.
+echo "== 6. Restore apache ownership under the JBrowse track configs =="
 TRACKS="$MOOP/metadata/jbrowse2-configs/tracks"
-chown -R apache:apache "$TRACKS"
-find "$TRACKS" -type d -exec chmod 2775 {} +   # setgid: new files keep group apache
-find "$TRACKS" -type f -exec chmod 664 {} +
-echo "  $TRACKS -> apache:apache, dirs 2775 / files 664"
+if [[ -d "$TRACKS" ]]; then
+    chown -R apache:apache "$TRACKS"
+    find "$TRACKS" -type d -exec chmod 2775 {} +
+    find "$TRACKS" -type f -exec chmod 664 {} +
+    echo "  $TRACKS -> apache:apache, dirs 2775 / files 664"
+fi
 
-cat <<'EOF'
+cat <<EOF
 
-DONE.
-
-Next: Admin -> Manage JBrowse -> click "re-prep" on each gene set.
-That regenerates the track JSON with the corrected LinearBasicDisplay type.
-(6 assemblies still carry the bad type: Amphimedon, Chamaeleo, Congeria,
- Drosophila, Furcifer, Scolanthus. Nematostella is already fixed.)
-
-Verify:
-  grep -rl LinearGeneAnnotationsDisplay /var/www/html/moop/metadata   # expect no output
-  getsebool httpd_can_network_connect                                 # expect: on
+DONE. Verify:
+  ls -ldZ $CACHE                                         # httpd_sys_rw_content_t
+  ls -ldZ $MOOP/organisms                                # httpd_sys_content_t (read-only)
+  ls -lZ  $MOOP/organisms/*/organism.json | head -1      # httpd_sys_rw_content_t
+  getsebool httpd_can_network_connect                    # on
 EOF

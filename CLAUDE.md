@@ -284,6 +284,13 @@ a new MOOP site from scratch. Site-specific data is versioned separately.
 2. Copy `.example` files → remove `.example` suffix, edit values
 3. Run `composer install`
 4. Site-data backup directory is created automatically on first admin login
+5. **Cache directory** — the `cache_path` setting (Admin → Site Configuration) names where
+   the app writes regenerable caches. Leave it empty to keep caches inside `organisms/`
+   (works out of the box). To keep `organisms/` read-only to the web server, point it at a
+   directory **outside the document root** (e.g. `/var/www/moop-cache`). On a hardened
+   (SELinux) host that directory needs `apache:apache`, mode `2775`, and an
+   `httpd_sys_rw_content_t` rule — `scripts/fix_moop_selinux.sh` creates and labels it. See
+   `docs/SELINUX_AND_HARDENING.md`.
 
 ---
 

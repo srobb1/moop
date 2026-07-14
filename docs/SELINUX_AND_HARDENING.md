@@ -64,11 +64,44 @@ Every directory below contains files created by the `apache` user (verified empi
 | `/var/www/html/moop/config` | `config_editable.json` (written by the admin UI) |
 | `/var/www/html/moop/metadata` | JBrowse track/assembly configs, groups, taxonomy |
 | `/var/www/html/moop/data/genomes` | `annotations.gff3.gz` + tabix indexes, regenerated on re-prep |
-| `/var/www/html/moop/organisms` | scattered caches: `chr_names_cache.json`, `annotated_feature_types.json`, `.organism_cache.json` |
 | `/var/www/html/moop/images/wikimedia` | cached remote images |
 | `/var/www/html/moop/images/ncbi_taxonomy` | cached remote images |
 | `/var/www/html/moop/archived_gene_sets` | gene-set archive output |
 | `/var/www/moop-site-data` | site-data backup (config, secrets, users.json) |
+| `/var/www/moop-cache` | generated caches — see the `cache_path` section below |
+
+### organisms/ is read-only except organism.json (2026-07-14)
+
+`organisms/` — the largest and most valuable tree (genomes, SQLite databases, FASTA,
+BLAST indexes) — is deliberately **not** in the table above. It used to need to be
+writable only because the app scattered regenerable caches inside it
+(`.organism_cache.json`, `annotation_sources_cache.json`, `chr_names_cache.json`,
+`annotated_feature_types.json`, and the `.organism_cache_lock`). Those now live under
+`cache_path` (see below), so the tree can be **read-only to the web server**, with a
+single narrow exception for `organism.json`, which the admin UI edits in place:
+
+```bash
+semanage fcontext -d "/var/www/html/moop/organisms(/.*)?"                                    # no recursive rw
+semanage fcontext -a -t httpd_sys_rw_content_t "/var/www/html/moop/organisms/[^/]+/organism\.json"
+restorecon -R /var/www/html/moop/organisms
+```
+
+A compromised php-fpm then cannot write anywhere in the data tree. **One caveat:** the
+admin "Generate organism JSON" button *creates* an `organism.json` for an organism that
+lacks one, which needs directory write. Sites that build `organism.json` on a compute
+server and ship it in never hit this; if you do need it, temporarily
+`chcon -t httpd_sys_rw_content_t` the organism's directory, generate, then `restorecon`.
+
+### The cache directory (`cache_path`)
+
+The app writes regenerable caches (organism scan, annotation counts, chromosome-name
+lists, annotated feature types) to the directory named by the `cache_path` config value
+(Admin → Site Configuration). Point it **outside the document root** — the shipped
+default on this deployment is `/var/www/moop-cache` — so `organisms/` can stay read-only.
+It needs `apache:apache`, mode `2775` (SGID, so both php-fpm and CLI scripts can write),
+and a persistent `httpd_sys_rw_content_t` rule. `scripts/fix_moop_selinux.sh` creates and
+labels it. Leaving `cache_path` empty is also valid — caches then fall back into the
+`organisms/` tree (legacy behaviour), and you would keep that tree writable instead.
 
 Plus one boolean:
 
@@ -105,33 +138,37 @@ semanage fcontext -a -t httpd_sys_rw_content_t "/var/www/html/moop/metadata"
 
 ## `scripts/fix_moop_selinux.sh`
 
-Applies everything above in one idempotent, root-only pass: removes a typo'd rule, adds all
-nine recursive rules, relabels, sets the boolean, and restores `apache` ownership under the
-JBrowse track configs.
+Applies everything above in one idempotent, root-only pass: creates and labels the cache
+directory, adds the recursive read-write rules, applies the `organisms/` read-only + narrow
+`organism.json` rule, relabels, sets the `httpd_can_network_connect` boolean, and restores
+`apache` ownership under the JBrowse track configs. **You run it yourself with `sudo`** —
+no IT round-trip is needed for SELinux rules or labels; only the central hardening *job*
+(which profile, when it runs) is IT's.
 
-**This script may well be unnecessary.** As of 2026-07-14, IT applied these rules directly
-to the host, and because they are persistent policy they should survive future hardening
-runs on their own. The script is kept for three reasons:
+The script is the canonical setup and is kept for:
 
 - **standing up a new MOOP deployment** on a hardened host,
-- **recovery** if the local policy store is ever wiped or the host is rebuilt,
-- **documentation** — it is the executable form of the table above.
+- **recovery** after a hardening run, a rebuilt host, or a wiped policy store,
+- **documentation** — it is the executable form of this document.
 
 Check before assuming you need it:
 
 ```bash
-getsebool httpd_can_network_connect                                  # expect: on
-matchpathcon /var/www/html/moop/metadata/jbrowse2-configs/tracks     # expect: httpd_sys_rw_content_t
+getsebool httpd_can_network_connect                    # expect: on
+ls -ldZ /var/www/moop-cache                            # expect: httpd_sys_rw_content_t
+ls -ldZ /var/www/html/moop/organisms                   # expect: httpd_sys_content_t (read-only)
 ```
 
 ---
 
-## Still outstanding
+## Resolved
 
-- **nginx has no systemd unit.** It will not come back on its own after a reboot or a mass
-  service restart. This is why the site stayed down on 2026-07-13 rather than
-  self-recovering. Worth fixing — it is the single highest-value item here.
-- **Reducing the writable surface.** MOOP currently needs nine exceptions because it caches
-  and regenerates data inside its own document root. Consolidating the scattered caches into
-  one directory would let `organisms/` — the largest tree, holding the SQLite databases and
-  all genome data — go back to being fully read-only.
+- **nginx now has a systemd unit** (2026-07-14). Installed the vendor `nginx` package (its
+  unit was missing — only `nginx-core` was present), enabled it, and added a
+  `Restart=on-failure` drop-in. nginx is now supervised, confined (`httpd_t`, was
+  `unconfined_t`), and comes back after reboots and mass service restarts. The stale TLS key
+  label (`user_tmp_t` → `cert_t`) was fixed first so confined nginx could read it.
+- **Writable surface reduced** (2026-07-14). The regenerable caches were moved out of the
+  data tree into `cache_path` (`/var/www/moop-cache`), so `organisms/` — the SQLite
+  databases and all genome data — is now read-only to the web server (see the
+  organism.json section above). This is the largest single reduction in writable surface.
