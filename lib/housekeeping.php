@@ -476,7 +476,7 @@ function housekeeping_refresh_annotation_caches() {
             continue;
         }
         $db         = "$organism_data/$entry/organism.sqlite";
-        $cache_file = "$organism_data/$entry/annotation_sources_cache.json";
+        $cache_file = moop_annotation_sources_cache_file($entry);
 
         if (!file_exists($db)) {
             continue;
@@ -517,7 +517,7 @@ function housekeeping_refresh_annotation_caches() {
 function housekeeping_refresh_organism_cache_if_stale() {
     $config        = ConfigManager::getInstance();
     $organism_data = $config->getPath('organism_data');
-    $cache_file    = "$organism_data/.organism_cache.json";
+    $cache_file    = moop_organism_cache_file();
     $lock_file     = "$organism_data/.organism_cache_lock";
     $script_path   = realpath(dirname(__DIR__) . '/scripts/warm_organism_cache.php');
 

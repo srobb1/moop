@@ -124,7 +124,7 @@ $permission_items = [
         'description' => 'JSON cache of all organism metadata, written by background cache refresh process',
         'type' => 'file',
         'paths' => [
-            $organism_data . '/.organism_cache.json',
+            moop_organism_cache_file(),
         ],
         'required_perms' => '664',
         'required_owner' => $moop_owner,

@@ -628,8 +628,10 @@ function moopmartGetChrNames(string $gene_set_path): array
     $tsv   = "$gene_set_path/feature_coords.tsv";
     if (!file_exists($tsv)) return [];
 
-    $cache = "$gene_set_path/chr_names_cache.json";
-    if (file_exists($cache) && filemtime($cache) >= filemtime($tsv)) {
+    // Source TSV stays in the organism tree; only the cache goes to the cache root.
+    $cache_dir = moop_cache_dir_for($gene_set_path);
+    $cache     = $cache_dir !== '' ? "$cache_dir/chr_names_cache.json" : '';
+    if ($cache !== '' && file_exists($cache) && filemtime($cache) >= filemtime($tsv)) {
         return loadJsonFile($cache, []);
     }
 
@@ -644,7 +646,7 @@ function moopmartGetChrNames(string $gene_set_path): array
 
     $result = array_keys($chrs);
     sort($result, SORT_NATURAL);
-    @file_put_contents($cache, json_encode($result));
+    if ($cache !== '') @file_put_contents($cache, json_encode($result));
     return $result;
 }
 

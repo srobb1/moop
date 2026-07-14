@@ -35,7 +35,7 @@ $sequence_types     = $config->getSequenceTypes();
 $groups_data        = getGroupData();
 $taxonomy_tree_file = $metadata_path . '/taxonomy_tree_config.json';
 
-$cache_file = "$organism_data/.organism_cache.json";
+$cache_file = moop_organism_cache_file();
 if (!file_exists($cache_file)) {
     http_response_code(503);
     echo '<div class="modal-dialog"><div class="modal-content"><div class="modal-body"><div class="alert alert-warning">Cache unavailable — try refreshing the cache.</div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div></div></div>';

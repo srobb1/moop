@@ -176,7 +176,7 @@ $gene_set_dir     = $assembly_dir_base . '/' . $gene_set_name;
 // Used to suppress purely structural types (exon, CDS) from the hierarchy and
 // annotation cards while still showing annotated types even when this specific
 // gene has 0 annotations for that type.
-$annotated_child_types = getAnnotatedFeatureTypesInGeneSet((int)$feature_gene_set_id, $db, $gene_set_dir);
+$annotated_child_types = getAnnotatedFeatureTypesInGeneSet((int)$feature_gene_set_id, $db, moop_cache_dir_for($gene_set_dir));
 
 // Look up feature coordinates and build gene model from GFF.
 // Fast path: feature_coords.tsv (tiny file) → tabix indexed GFF (milliseconds).

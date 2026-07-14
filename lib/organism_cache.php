@@ -56,7 +56,7 @@ function organism_cache_write_atomic($cache_file, array $data) {
 }
 
 function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_tree_file, $groups_data, $groups_file, $force_refresh = false, $progress_callback = null, $force_organisms = []) {
-    $cache_file = "$organism_data_path/.organism_cache.json";
+    $cache_file = moop_organism_cache_file();
 
     // Build per-organism fingerprints for all current organisms
     $current_fingerprints = buildPerOrganismFingerprints($organism_data_path);

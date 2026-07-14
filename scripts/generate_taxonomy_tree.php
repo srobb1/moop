@@ -40,7 +40,7 @@ if (file_exists($tree_config_file) && !is_writable($tree_config_file)) {
 // Load organisms from organism cache
 echo "Loading organisms...\n";
 $organisms = [];
-$org_cache = "$organism_data/.organism_cache.json";
+$org_cache = moop_organism_cache_file();
 if (file_exists($org_cache)) {
     $cached = loadJsonFile($org_cache, []);
     if ($cached && isset($cached['data'])) {

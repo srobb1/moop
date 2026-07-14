@@ -51,7 +51,7 @@ foreach ($organisms as $organism) {
 
     // Use per-organism cache to avoid re-running the expensive COUNT aggregate query.
     // Cache is invalidated automatically when organism.sqlite is newer than the cache file.
-    $cache_file = "$organism_data/$organism/annotation_sources_cache.json";
+    $cache_file = moop_annotation_sources_cache_file($organism);
     if (file_exists($cache_file) && filemtime($cache_file) >= filemtime($db)) {
         $cached = loadJsonFile($cache_file, []);
         $source_types = is_array($cached) ? $cached : [];

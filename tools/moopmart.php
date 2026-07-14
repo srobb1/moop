@@ -95,7 +95,7 @@ foreach ($all_accessible as $src) {
     $org = $src['organism'];
     if (isset($seen_orgs[$org])) continue;
     $seen_orgs[$org] = true;
-    $cache = "$organism_data/$org/annotation_sources_cache.json";
+    $cache = moop_annotation_sources_cache_file($org);
     if (!file_exists($cache)) continue;
     $data = loadJsonFile($cache, []);
     foreach ($data as $type => $sources) {

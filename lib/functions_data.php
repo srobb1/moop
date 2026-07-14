@@ -890,7 +890,7 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
  * @return array List of ['organism'=>, 'assembly'=>, 'gene_set'=>]
  */
 function getOrphanedGeneSetTuples(string $organism_data_path): array {
-    $cache_file = "$organism_data_path/.organism_cache.json";
+    $cache_file = moop_organism_cache_file();
     if (!file_exists($cache_file)) return [];
 
     $raw = loadJsonFile($cache_file, []);
@@ -932,7 +932,7 @@ function getOrphanedGeneSetTuples(string $organism_data_path): array {
  * @return array List of ['organism'=>, 'assembly'=>]
  */
 function getOrphanedAssemblyTuples(string $organism_data_path): array {
-    $cache_file = "$organism_data_path/.organism_cache.json";
+    $cache_file = moop_organism_cache_file();
     if (!file_exists($cache_file)) return [];
 
     $raw = loadJsonFile($cache_file, []);
@@ -964,7 +964,7 @@ function getOrphanedAssemblyTuples(string $organism_data_path): array {
  * @return array List of organism names
  */
 function getNoDatabaseOrganisms(string $organism_data_path): array {
-    $cache_file = "$organism_data_path/.organism_cache.json";
+    $cache_file = moop_organism_cache_file();
     if (!file_exists($cache_file)) return [];
 
     $raw = loadJsonFile($cache_file, []);
@@ -1002,7 +1002,7 @@ function getNoDatabaseOrganisms(string $organism_data_path): array {
 function computeDataHealthAlerts(string $organism_data_path): array {
     $config        = ConfigManager::getInstance();
     $metadata_path = $config->getPath('metadata_path');
-    $cache_file    = "$organism_data_path/.organism_cache.json";
+    $cache_file    = moop_organism_cache_file();
     $groups_file   = "$metadata_path/organism_assembly_groups.json";
 
     $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'no_database' => 0];

@@ -101,7 +101,20 @@ return [
     // from the app repo. Set to empty string to disable auto-snapshots.
     // The housekeeping system copies changed files here on admin login.
     'site_data_path' => "$root_path/moop-site-data",
-    
+
+    // ======== CACHE DIRECTORY ========
+    // Where the app writes its own generated caches (organism scan cache,
+    // annotation-source counts, chromosome-name lists, annotated feature types).
+    // These are all regenerable — the directory can be deleted at any time.
+    //
+    // Pointing this OUTSIDE the document root (e.g. "$root_path/moop-cache")
+    // lets the organisms/ data tree be read-only to the web server, which is
+    // the more secure posture on a hardened host (see docs/SELINUX_AND_HARDENING.md).
+    //
+    // Leave as '' to keep the legacy behaviour: caches are written inside the
+    // organisms/ tree, exactly where earlier versions put them.
+    'cache_path' => '',
+
     // ======== OPTIONAL: IP-Based Auto-Login ========
     // IP ranges for automatic login with full access (e.g., institutional/campus networks)
     // Format: Array of ranges, each with 'start' and 'end' IP addresses (IPv4 only)

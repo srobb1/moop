@@ -29,7 +29,7 @@ $groups_file = $metadata_path . '/organism_assembly_groups.json';
 
 // Read the cache file directly — never scan synchronously in a web request.
 // Scanning happens via the background refresh endpoint (admin/api/refresh_organism_cache.php).
-$cache_file = "$organism_data/.organism_cache.json";
+$cache_file = moop_organism_cache_file();
 $organisms = [];
 $cache_generated = null;
 $raw_cache = null;

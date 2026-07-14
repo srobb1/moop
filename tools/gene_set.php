@@ -78,7 +78,7 @@ $gene_set_meta_file = "$organism_data/$organism_name/$genome_accession/$gene_set
 $gene_set_meta = loadJsonFile($gene_set_meta_file, []);
 
 // Load annotation type summary from organism-level cache (grouped by type)
-$annot_cache_file = "$organism_data/$organism_name/annotation_sources_cache.json";
+$annot_cache_file = moop_annotation_sources_cache_file($organism_name);
 $annot_type_totals = [];
 if (file_exists($annot_cache_file)) {
     $annot_cache = loadJsonFile($annot_cache_file, []);

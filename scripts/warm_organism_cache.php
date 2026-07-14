@@ -55,7 +55,7 @@ echo "Found " . count($org_dirs) . " organisms\n";
 
 if (!$force && !$single_organism) {
     // Check if organism cache is fresh
-    $cache_file = "$organism_data/.organism_cache.json";
+    $cache_file = moop_organism_cache_file();
     if (file_exists($cache_file)) {
         $cached = loadJsonFile($cache_file, []);
         if ($cached && isset($cached['org_fingerprints'], $cached['config_fingerprint'], $cached['generated'])) {
@@ -132,7 +132,7 @@ $elapsed = round(microtime(true) - $start, 2);
 echo "Done! Scanned " . count($organisms) . " organisms in {$elapsed}s\n";
 
 // Verify cache was written
-$cache_file = "$organism_data/.organism_cache.json";
+$cache_file = moop_organism_cache_file();
 if (file_exists($cache_file)) {
     $size = round(filesize($cache_file) / 1024, 1);
     echo "Cache written: $cache_file ({$size} KB)\n";
@@ -220,7 +220,7 @@ if (file_exists($tree_config_file) && !is_writable($tree_config_file)) {
         // Patch the organism cache in-place so in_taxonomy_tree reflects the new tree.
         // The cache was written before the tree update, so without this patch the
         // manage_organisms page would show stale tree-membership until the next full rescan.
-        $org_cache_file = "$organism_data/.organism_cache.json";
+        $org_cache_file = moop_organism_cache_file();
         $org_cache = @json_decode(@file_get_contents($org_cache_file), true);
         if ($org_cache && isset($org_cache['data'])) {
             $tree_content = $tree_json;
