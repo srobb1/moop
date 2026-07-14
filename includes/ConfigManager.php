@@ -64,7 +64,7 @@ class ConfigManager
      * Editable configuration keys - whitelisted keys that can be edited via admin UI
      * Used in both initialize() and saveEditableConfig() to ensure consistency
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'tracks_server', 'jbrowse2', 'site_data_path', 'turnstile', 'footer'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'turnstile', 'footer'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -587,6 +587,17 @@ class ConfigManager
                     }
                 }
 
+                // Validate cache_path (same rule: absolute, or empty for the in-tree default)
+                if ($key === 'cache_path') {
+                    $path = trim($data[$key]);
+                    if ($path !== '' && !str_starts_with($path, '/')) {
+                        return [
+                            'success' => false,
+                            'message' => 'Cache path must be an absolute path (starting with /).'
+                        ];
+                    }
+                }
+
                 if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'blast_sample_sequences' || $key === 'turnstile' || $key === 'footer') {
                     $editable_data[$key] = $data[$key];
                 } else {
@@ -772,6 +783,13 @@ class ConfigManager
                 'type' => 'text',
                 'current_value' => $this->getPath('site_data_path', ''),
                 'note' => 'Keep this directory outside the web root and private — it contains API keys and user account data.',
+            ],
+            'cache_path' => [
+                'label' => 'Cache Directory',
+                'description' => 'Absolute filesystem path for generated caches (organism scan, annotation counts, chromosome names). All contents are regenerable. Leave empty to store caches inside the organisms/ data tree (legacy behaviour).',
+                'type' => 'text',
+                'current_value' => $this->getPath('cache_path', ''),
+                'note' => 'Pointing this outside the document root lets the organisms/ tree be read-only to the web server. The directory must exist and be writable by the web server (correct owner/permission and, on SELinux hosts, the httpd_sys_rw_content_t label) — it is auto-created on the next admin login if missing.',
             ],
             'turnstile' => [
                 'label'         => 'Cloudflare Turnstile',

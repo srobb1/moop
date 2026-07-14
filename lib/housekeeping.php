@@ -93,6 +93,7 @@ function run_housekeeping() {
     // Tasks should be fast and safe to skip on failure.
     $tasks = [
         ['name' => 'clean_temp_files',           'fn' => 'housekeeping_clean_temp_files'],
+        ['name' => 'ensure_cache_dir',           'fn' => 'housekeeping_ensure_cache_dir'],
         ['name' => 'snapshot_site_data',         'fn' => 'housekeeping_snapshot_site_data'],
         ['name' => 'environment_check',          'fn' => 'housekeeping_environment_check'],
         ['name' => 'refresh_annotation_caches',  'fn' => 'housekeeping_refresh_annotation_caches'],
@@ -172,6 +173,27 @@ function housekeeping_clean_temp_files() {
  * to logs/.housekeeping_status.json so every session can be hydrated with it — see
  * housekeeping_hydrate_session_from_status().
  */
+/**
+ * Ensure the configured cache directory exists.
+ *
+ * When 'cache_path' points outside the organisms/ tree, create it once here so the
+ * first request doesn't pay the mkdir and so a broken configuration surfaces as a
+ * logged error rather than silently disabling caching. When 'cache_path' is empty
+ * the caches live in the organisms/ tree (which already exists) — nothing to do.
+ */
+function housekeeping_ensure_cache_dir() {
+    $config     = ConfigManager::getInstance();
+    $cache_path = $config->getPath('cache_path');
+
+    if (empty($cache_path)) {
+        return; // legacy in-tree caching; no dedicated directory to create
+    }
+
+    if (!is_dir($cache_path) && !@mkdir($cache_path, 0775, true) && !is_dir($cache_path)) {
+        error_log("MOOP housekeeping: could not create cache dir: $cache_path");
+    }
+}
+
 function housekeeping_snapshot_site_data() {
     $config = ConfigManager::getInstance();
     $site_data_path = $config->getPath('site_data_path');

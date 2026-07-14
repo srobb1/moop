@@ -347,6 +347,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['site_data_path'] = trim($_POST['site_data_path']);
         }
 
+        // Parse cache directory path
+        if (isset($_POST['cache_path'])) {
+            $data['cache_path'] = trim($_POST['cache_path']);
+        }
+
         // Parse footer settings
         if (isset($_POST['footer']) && is_array($_POST['footer'])) {
             $f = $_POST['footer'];
