@@ -605,8 +605,13 @@ async function geneSetAction(organism, assembly, geneSet, endpoint, rowId, btn) 
             btn.addEventListener('click', btn._gsHandler);
             btn.disabled = false;
 
-            // Mark prepped + registered cells
-            const cells = document.querySelectorAll(`#gs-row-${rowId} td`);
+            // Mark prepped + registered cells.
+            // getElementById, NOT querySelector('#gs-row-...'): rowId contains the
+            // assembly accession (e.g. GCA_033964005.1) and the dot makes it an
+            // invalid CSS selector, which threw *after* the request had succeeded
+            // and made the UI report "Request failed" on work that actually worked.
+            const row   = document.getElementById(`gs-row-${rowId}`);
+            const cells = row ? row.querySelectorAll('td') : [];
             if (cells[4]) cells[4].innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i></span>';
             if (cells[5]) cells[5].innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i></span>';
         } else {
