@@ -105,3 +105,14 @@ function moop_annotation_sources_cache_file(string $organism): string
     $dir = moop_cache_root() . '/' . $organism;
     return moop_ensure_cache_dir($dir) ? "$dir/annotation_sources_cache.json" : '';
 }
+
+/**
+ * Lock file coordinating the background organism-cache refresh. Lives beside the
+ * organism cache it guards. Was: organisms/.organism_cache_lock — moved out with
+ * the cache so the organisms/ tree can be read-only to the web server.
+ */
+function moop_organism_cache_lock_file(): string
+{
+    $root = moop_cache_root();
+    return moop_ensure_cache_dir($root) ? "$root/.organism_cache_lock" : '';
+}

@@ -13,7 +13,7 @@ header('Content-Type: application/json');
 
 $organism_data  = $config->getPath('organism_data');
 $cache_file     = moop_organism_cache_file();
-$lock_file      = "$organism_data/.organism_cache_lock";
+$lock_file      = moop_organism_cache_lock_file();
 $progress_file  = "$organism_data/.organism_cache_progress.json";
 $script_path    = realpath(dirname(dirname(__DIR__)) . '/scripts/warm_organism_cache.php');
 

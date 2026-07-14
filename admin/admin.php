@@ -24,7 +24,7 @@ $display_config = [
 // Read organism cache metadata for dashboard status widget (no scanning)
 $organism_data = $config->getPath('organism_data');
 $cache_file    = moop_organism_cache_file();
-$lock_file     = "$organism_data/.organism_cache_lock";
+$lock_file     = moop_organism_cache_lock_file();
 $cache_info    = ['generated' => null, 'organism_count' => 0, 'refreshing' => false];
 $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'no_database' => 0];
 $_raw_cache_data = [];

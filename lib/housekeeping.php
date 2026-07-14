@@ -540,7 +540,7 @@ function housekeeping_refresh_organism_cache_if_stale() {
     $config        = ConfigManager::getInstance();
     $organism_data = $config->getPath('organism_data');
     $cache_file    = moop_organism_cache_file();
-    $lock_file     = "$organism_data/.organism_cache_lock";
+    $lock_file     = moop_organism_cache_lock_file();
     $script_path   = realpath(dirname(__DIR__) . '/scripts/warm_organism_cache.php');
 
     if (!$script_path || !file_exists($script_path)) return;

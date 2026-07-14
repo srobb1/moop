@@ -13,6 +13,7 @@ include_once __DIR__ . '/../includes/layout.php';
 // Get paths from config
 $organism_data = $config->getPath('organism_data');
 $metadata_path = $config->getPath('metadata_path');
+$cache_path = $config->getPath('cache_path'); // empty = caches live in organisms/ (checked there already)
 $absolute_images_path = $config->getPath('absolute_images_path');
 $site_path = $config->getPath('site_path');
 $root_path = $config->getPath('root_path');
@@ -131,6 +132,22 @@ $permission_items = [
         'required_group' => $web_group,
         'reason' => 'Written by background cache refresh process run as web server user',
         'why_write' => 'The "Update Cache" background process (run as apache) must be able to overwrite this file',
+    ],
+
+    // Cache Directory - Write Required (only when cache_path is configured)
+    [
+        'name' => 'Cache Directory',
+        'description' => 'Directory for generated caches (organism scan, annotation counts, chromosome names, annotated feature types). All contents are regenerable.',
+        'type' => 'directory',
+        // Empty when cache_path is unset — the loop skips entries with no paths,
+        // and the in-tree caches are covered by the organism directory checks above.
+        'paths' => ($cache_path !== '' ? [$cache_path] : []),
+        'required_perms' => '2775',
+        'required_owner' => 'apache',
+        'required_group' => $web_group,
+        'reason' => 'SGID bit forces new cache files to group ' . $web_group . ' so both php-fpm (apache) and CLI scripts (in group ' . $web_group . ') can read and write them',
+        'why_write' => 'Web server writes caches here; keeping them outside organisms/ lets that data tree stay read-only',
+        'sgid_bit' => true,
     ],
 
     // Database Files - Read Only
