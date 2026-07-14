@@ -1,62 +1,75 @@
-# moop-indexes — relocate DB indexes to a writable dir outside the docroot
+# Writable index/ subdir — protect FASTAs, keep the web build buttons working
 
-**Status:** planned 2026-07-14, not started. Execute in a fresh session — this touches BLAST
+**Status:** planned 2026-07-14, not started. Execute in a fresh session — touches BLAST
 search correctness; a wrong `-db` path returns wrong/no hits silently.
 
-## Goal
+## Goal (MOOP's north star: easy to manage, automatic)
 
-After the cache move + read-only `organisms/` ([[project_cache_path_and_readonly_organisms]]),
-**web-triggered** index building (makeblastdb, samtools faidx) is blocked because php-fpm
-(`httpd_t`) can't write the read-only tree. We do NOT want to depend on always building indexes
-off-box ahead of time. Solution: build indexes into a **writable directory outside the
-document root** (`/var/www/moop-indexes`, mirrors `moop-cache`), so:
+Web-triggered index building (the admin "Build BLAST Index" button, assembly registration's
+`samtools faidx`) must keep working, **and** the source FASTA/GFF/DB files must stay read-only
+to the web server. The admin must never have to think about it — no pre-building off-box, no
+manual unlock. This is why the file-permission manager exists: so the web buttons Just Work.
 
-- source data (FASTA, GFF, SQLite) stays read-only in `organisms/`,
-- index building works from the web again (dir is `httpd_sys_rw_content_t`),
-- indexes are outside the docroot → writable but NOT web-executable (no webshell surface —
-  this was part of why read-only organisms/ mattered).
+## The constraint that drives the design
 
-Indexes are regenerable derived data, like caches — same philosophy, different consumers.
+You cannot make *only the index files* writable while the FASTA beside them is read-only, if
+they share a directory: creating a new file (`makeblastdb` writes `protein.aa.fa.phr`, which
+did not exist) needs **write on the directory** (SELinux `add_name` on the dir type), not on
+the file. A read-only directory blocks creating *any* file in it. So the indexes MUST live in
+a **separate writable directory** from the FASTA. There is no SELinux-only shortcut.
 
-## Why it's more than the cache move
+## Design: a writable `index/` subdir per unit, with FASTA symlinks
 
-Caches are read only by PHP (look anywhere). Indexes are consumed by external tools with
-path expectations. What must change, all in `lib/blast_functions.php` unless noted:
+- Build indexes into a subdir the app owns, e.g. `organisms/{org}/{asm}/{gs}/index/`
+  (gene-set BLAST dbs: protein/transcript/cds) and `organisms/{org}/{asm}/index/`
+  (assembly: genome.fa BLAST db + `.fai`). Confirm the exact levels during build.
+- That subdir is the ONLY writable thing under `organisms/` (besides `organism.json`), via a
+  narrow persistent SELinux rule, e.g.
+  `semanage fcontext -a -t httpd_sys_rw_content_t "/var/www/html/moop/organisms/(.*/)?index(/.*)?"`
+  (pin the exact regex to the chosen levels). FASTA/GFF/DB stay `httpd_sys_content_t`.
+- **Symlink the FASTA into the `index/` subdir**, so the subdir looks like a complete,
+  blast-able assembly dir. Existing code that assumes "FASTA and its indexes share a folder"
+  then works by just pointing it at the subdir — shrinking the change from "thread a separate
+  index path everywhere" to "compute the subdir path + drop a FASTA symlink." Precedent already
+  in the codebase: `gene_set_functions.php` self-heals the `annotations.gff3` symlink.
+- Fully automatic: the app auto-creates the subdir + symlinks (like it does cache dirs and the
+  annotations.gff3 symlink), `scripts/fix_moop_selinux.sh` sets the label, housekeeping keeps it
+  healthy. The admin never touches it.
 
-- `getBlastDatabases($assembly_path)` (:23) — build db list from the moop-indexes mirror,
-  not the assembly dir.
-- `-db` path construction (:176–183) — point `blastp/blastn -db <prefix>` at moop-indexes.
-- `.phr/.nhr/.pdb` existence checks (:136, :350) and `validateBlastIndexFiles()` (:625, used
-  by organism_cache.php:242 for the checklist) — look in moop-indexes.
-- `makeblastdb` build (:853) — `-out` into moop-indexes (keeps `-in` reading organisms/).
-- MOOP's own `.fai` reader (:939, fseek sequence extraction) — read `genome.fa.fai` from
-  moop-indexes. samtools faidx build → write there.
-- `organism_checklist.php:395` — the `is_writable()` false-green (see audit §O): it checks
-  DAC, which still passes; switch the "can build" test to the moop-indexes dir (which IS
-  web-writable), so the checklist tells the truth.
+## What changes (all in `lib/blast_functions.php` unless noted)
 
-NOT affected: JBrowse `.fai` (AutoTrack.php:75/176) — that's on `data/genomes` tracks
-(already writable, browser fetches by URI). GFF bgzip+tabix — already writes `data/genomes`.
+- `getBlastDatabases()` (:23), `-db` construction (:176–183), `.phr/.nhr/.pdb` existence checks
+  (:136, :350), `validateBlastIndexFiles()` (:625; used by organism_cache.php:242 for the
+  checklist) → resolve to the `index/` subdir.
+- `makeblastdb` (:853) `-out` into the subdir; keep `-in` reading the read-only FASTA.
+- `.fai`: MOOP's own reader (:939, fseek) reads from the subdir; `samtools faidx` (assembly
+  registration, jbrowse_register_assembly.php:97) writes there.
+- `organism_checklist.php:395` — fix the `is_writable()` false-green: test the writable `index/`
+  subdir (which IS web-writable), so "can build" is truthful.
+- New helper `lib/index_paths.php` (mirror cache_paths.php): compute the subdir, ensure it
+  exists, create/repoint the FASTA symlink (self-healing).
+- Migration: move existing `*.phr/.pin/.psq/.nhr/.nin/.nsq/.ndb/.pdb/.p*/.n*` and `*.fai` from
+  the assembly/gene-set dirs into the `index/` subdirs; create the FASTA symlinks.
+- SELinux: add the narrow `index/` rule to `fix_moop_selinux.sh`; keep organisms/ otherwise
+  read-only + the `organism.json` rule.
 
-## Implementation sketch
+NOT affected: JBrowse `.fai` (AutoTrack.php, on `data/genomes`, already writable, browser-fetched)
+and GFF bgzip+tabix (writes `data/genomes`).
 
-1. New config `index_path` (default `''` = in-tree/legacy, like `cache_path`). Admin-editable,
-   mirrors cache_path. `/var/www/moop-indexes` on this box.
-2. `lib/index_paths.php` helper: `moop_index_dir_for($assembly_or_geneset_dir)` mirroring the
-   organisms/ relative path into index_path (copy cache_paths.php's shape). Empty → falls back
-   to the in-tree path (byte-identical legacy behaviour).
-3. Route the blast_functions + checklist sites above through the helper.
-4. Migrate existing indexes: move `*.phr/.pin/.psq/.nhr/.nin/.nsq/.ndb/.pdb/.p*/.n*` and
-   `*.fai` from organisms/ into the mirror under moop-indexes.
-5. SELinux: create `/var/www/moop-indexes` (apache:apache 2775) + persistent
-   `httpd_sys_rw_content_t` rule; add to `scripts/fix_moop_selinux.sh`.
-6. **Verify hard:** run the SAME BLAST search before and after and diff the hits — must be
-   identical. Test protein + nucleotide, and the "fetch sequence by id" (blastdbcmd) path
-   (:495, :535). Then a web-triggered "Build BLAST Index" must succeed against read-only
-   organisms/.
+## Verify hard
 
-## Meanwhile (nothing is broken in steady state)
+- Same BLAST search before/after → identical hits (protein + nucleotide, and the blastdbcmd
+  "fetch sequence by id" path at :495/:535).
+- A **web-triggered** "Build BLAST Index" succeeds against otherwise-read-only organisms/.
+- Symlink self-heals on assembly rename/reload.
 
-Serving, browsing, and BLAST **search** all work today (search reads prebuilt indexes; results
-go to a temp dir). Only in-app index BUILDING is deferred — build off-box or via a temporary
-`chcon` until this lands.
+## Fallbacks (if this is ever deprioritized)
+
+- On-demand builds already work from the CLI on-box (`smr` is unconfined) — no change needed for that.
+- `organisms/` fully writable + an nginx no-exec rule (`location ^~ /moop/organisms/ {return 404;}`,
+  `location ~ ^/moop/data/.*\.php$ {return 404;}`) closes the webshell risk without protecting
+  FASTA integrity. Simplest, less protection. User found this less appealing than keeping FASTAs
+  genuinely read-only.
+
+Related: [[project_cache_path_and_readonly_organisms]] (the cache move + read-only organisms/
+this builds on), audit §O.
