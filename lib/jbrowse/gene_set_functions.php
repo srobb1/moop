@@ -176,9 +176,12 @@ function prepareGeneSetForJBrowse(
             ],
             'displays' => [
                 [
-                    'type'               => 'LinearGeneAnnotationsDisplay',
-                    'displayId'          => "$track_id-LinearGeneAnnotationsDisplay",
-                    'filterFeatureTypes' => ['gene', 'pseudogene'],
+                    // Must be a display type the deployed JBrowse2 build actually
+                    // registers. An unknown type (or unknown property) makes
+                    // mobx-state-tree reject the ENTIRE config — every track and the
+                    // assembly — with "No matching type for union". (audit #12)
+                    'type'      => 'LinearBasicDisplay',
+                    'displayId' => "$track_id-LinearBasicDisplay",
                 ],
             ],
             'metadata' => [

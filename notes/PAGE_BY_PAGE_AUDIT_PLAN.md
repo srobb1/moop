@@ -514,6 +514,46 @@ The links already exist (the overview info-grid rows link to `organism.php` / `a
 
 ---
 
+## K. JBrowse Google Sheets — per-track feature-type filtering (2026-07-13)
+
+> **CORRECTION (2026-07-14).** An earlier draft of this section claimed
+> `filterFeatureTypes` "already works for auto-generated gene tracks." **It does not, and
+> it never did.** That property does not exist in the deployed JBrowse2 build (verified:
+> 0 occurrences in `jbrowse2/static/js/`). JBrowse validates the config as a single unit,
+> so an unrecognised display property — or an unrecognised display *type* — makes
+> mobx-state-tree reject the ENTIRE config with "No matching type for union", taking down
+> every track and the assembly with it. This is exactly what broke the browser between
+> 2026-07-08 and 2026-07-14. **Do not add `filterFeatureTypes` to any track type.**
+
+- [ ] **Add per-track feature-type filtering to the Google Sheets pipeline.** Lets you
+      point two sheet rows at the same GFF file and show different feature types per track
+      (e.g. genes vs. transcripts).
+      Real-world case: `kc_nvec200_LOE_genes` and `kc_nvec200_LOE_transcripts` both point to
+      the same LOE GFF but currently show all feature types identically.
+
+      The supported mechanism is **`jexlFilters`** — a real `LinearBasicDisplay` property
+      (39 occurrences in the deployed build). It takes an array of JEXL expression strings:
+
+      ```php
+      'displays' => [[
+          'type'        => 'LinearBasicDisplay',
+          'displayId'   => "$track_id-LinearBasicDisplay",
+          'jexlFilters' => ["jexl:get(feature,'type') == 'gene'"],
+      ]],
+      ```
+
+      Files to change:
+      1. `lib/jbrowse/GoogleSheetsParser.php` — add the column to `cleanTrackData()`
+      2. `lib/jbrowse/TrackTypes/GFFTrack.php` — translate it into `jexlFilters` in the display
+      3. `lib/jbrowse/TrackTypes/GTFTrack.php` — same
+      4. `scripts/generate_tracks_from_sheet.php` — document it in the "Optional Columns" list
+
+      **Verify against the deployed build before shipping** — grep
+      `jbrowse2/static/js/` for any display property before emitting it. A single unknown
+      key is not ignored; it is fatal to the whole config.
+
+---
+
 ## Suggested order
 
 1. #1, #2, #3 — exposure/correctness, small diffs.
