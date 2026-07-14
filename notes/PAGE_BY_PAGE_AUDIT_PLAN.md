@@ -554,6 +554,79 @@ The links already exist (the overview info-grid rows link to `organism.php` / `a
 
 ---
 
+## N. Admin dashboard — front-door health pointers (user idea 2026-07-14)
+
+The dashboard should tell the admin *that* a sub-page has problems and *how many*, then
+link to it — NOT reproduce the issues on the dashboard. A count/badge + "go look here", so
+the dashboard stays a router, not a wall of detail. Mirrors the existing
+`housekeeping_environment_check()` collapsible card.
+
+- [ ] **File Permissions pointer** — "N permission issues → Permissions Manager", linking to
+  `manage_filesystem_permissions.php`. Needs a light aggregate count (reuse
+  `performPermissionCheck()` there for pass/fail totals). **PERF:** it `stat()`s many files —
+  do NOT run it on every dashboard load. Compute once per admin session in
+  `lib/housekeeping.php`, stash the count in the status file (same pattern as
+  `housekeeping_environment_check`), dashboard reads the cached number. **Don't false-alarm on
+  `organisms/` being read-only** — intentional as of 2026-07-14; only `organism.json` and the
+  cache dir must be writable (see docs/SELINUX_AND_HARDENING.md).
+
+- [ ] **New Organism Checklist pointer** — "N organisms need setup steps" → `organism_checklist.php`.
+  Overlaps existing `health_alerts` (`new_gene_sets`, `no_database`) — decide whether to fold
+  those into one "needs attention" pointer rather than a separate card.
+
+- [ ] **Git status in the site-backup card** (user idea 2026-07-14) — the existing top-of-dashboard
+  site-backup card should show the backup repo's git state: "all committed & pushed" vs
+  "N files to commit" / "N commits to push". `site_data_path` is (optionally) a git repo;
+  run `git status --porcelain` + ahead/behind in housekeeping (once per session, cache it),
+  show a green/amber badge. Keep it a status line, not a full git UI.
+
+- [ ] Other candidates, same badge+link pattern, priority order: **site-data backup status**
+  (`$_SESSION['site_data_backup']` already populated — just surface failures/staleness);
+  **error-log activity** ("N errors in 24h", see ERROR_LOG_IMPROVEMENTS_PLAN.md); **account
+  lockouts** (`logs/login_attempts.json`); **cache/refresh health** (organism cache stale or
+  last refresh errored); **disk space** on the genome volume (a fill-up is silent today).
+
+---
+
+## O. Read-only organisms/ vs in-app index building (2026-07-14) — DECIDE
+
+After moving caches out and making `organisms/` read-only to the web server (see
+docs/SELINUX_AND_HARDENING.md, [[project_cache_path_and_readonly_organisms]]), some
+**web-triggered** admin operations that WRITE into the tree now fail. Key nuance: the
+block is domain-based, not user-based. php-fpm runs as `apache` in `httpd_t`; commands it
+exec's (makeblastdb, samtools) inherit `httpd_t` and are blocked. The SAME commands run
+from the CLI / compute-server run in `unconfined_t` and write fine (verified). So:
+
+- **BLAST index build** (`makeblastdb`, blast_functions.php:853, cd's into the assembly dir
+  and writes `.phr/.psq/...` there) — breaks from the web ("Build BLAST Index" button); works
+  from CLI/compute-server.
+- **samtools faidx** on assembly registration (`jbrowse_register_assembly.php:97`, writes
+  `genome.fa.fai` into organisms/) — same.
+- **Generate organism JSON** for an organism with no json yet (creates the file, needs dir
+  write) — same.
+- GFF bgzip+tabix is NOT affected — it writes to `data/genomes/` (writable).
+
+**False-green to fix regardless of the decision:** `organism_checklist.php:395` and
+blast_functions.php `isAssemblyDirectoryWritable` use `is_writable()`, which checks DAC only
+and returns TRUE for organisms/ (mode 2775 is intact; SELinux is what blocks the write). So
+the checklist says "ready to build" and the web build then fails at runtime. Either detect
+the httpd_t block (attempt-and-catch, or check the SELinux label) or reword to "build from
+the compute server." Also the permission-manager "Organism Data Directories" entry still says
+the tree must be writable — its DAC check still passes (2775), but the `why_write` text is now
+misleading; reword to note it is intentionally read-only to httpd_t.
+
+**Options (pick one):**
+- **A. Build indexes CLI/compute-side, keep read-only** — fits the existing "ship data in"
+  workflow; in-app build buttons become "run on the compute server" (or are removed). Cleanest,
+  preserves the security win. RECOMMENDED if indexes are already built off-box.
+- **B. Unlock-build-relock** — keep read-only for serving; provide a small root script that
+  `chcon`s a specific assembly dir to rw, builds, then `restorecon`s. Preserves in-app builds
+  as an occasional privileged action.
+- **C. Revert read-only** — put organisms/ back to httpd_sys_rw_content_t. Simplest; loses the
+  writable-surface reduction (security benefit was modest — the tree is non-executable).
+
+---
+
 ## Suggested order
 
 1. #1, #2, #3 — exposure/correctness, small diffs.
