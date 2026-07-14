@@ -32,6 +32,20 @@ CLAUDE.md access-control section (contradicted by #3).
       disclosure + fragility, not live destruction — but it should not be reachable at all.
       **Fix:** same `PHP_SAPI` guard / nginx deny as #1.
 
+- [x] **#2b Web-exposure sweep + nginx no-exec layer** — DONE 2026-07-14 (commits 023f768, f5678e2).
+      Found `config/`, `logs/`, `metadata/`, and `.git/` served over HTTP (world-readable JSON/logs;
+      `config_editable.json`, `error.log`, `organism_assembly_groups.json`, `.git/config` all
+      reachable), and the data trees web-executable. Added `docs/nginx/moop-security.conf` (deployed
+      to `/etc/nginx/default.d/`): denies `config/`, `logs/`, `metadata/`, dotfiles, and
+      `/moop/organisms/` wholesale, plus `.php` under `/moop/data/`. No credentials leaked
+      (`secrets.php`/`site_config.php` are `.php`, execute to empty).
+
+- [ ] **#2c Remaining minor exposure** — found 2026-07-14, not yet blocked: `composer.json` → 200
+      (leaks the dependency list) and `includes/config_init.php` → 200 (executes to empty, but
+      shouldn't be a direct entry point). **Fix:** add to `moop-security.conf` —
+      `location = /moop/composer.json { return 404; }` and `location ^~ /moop/includes/`,
+      `location ^~ /moop/lib/ { return 404; }` (never fetched directly; include-only).
+
 ## B. Correctness vs. documented behavior
 
 - [x] **#3 `has_access('ADMIN')` returns `true` for IP_IN_RANGE** — DONE. `has_access()` now returns
@@ -409,6 +423,10 @@ CLAUDE.md access-control section (contradicted by #3).
       [UNUSED_FUNCTIONS_CLEANUP_PLAN.md](UNUSED_FUNCTIONS_CLEANUP_PLAN.md). Superseded
       by `get_annotation_sources_grouped.php` (4 refs).
 
+- [ ] **`api/jbrowse2/archive/` is dead code** — found 2026-07-14. Zero references anywhere
+      (`grep --include=*.php --include=*.js`); web-reachable and 500s when hit;
+      `assembly-cached.php` does a `mkdir` into `data/`. Delete the directory (recoverable from git).
+
 ## G. Needs investigation (not yet confirmed a bug)
 
 - [ ] **#12 `jbrowse2.php` throws real JS errors** — `no session model found` + a
@@ -566,19 +584,19 @@ the dashboard stays a router, not a wall of detail. Mirrors the existing
   `performPermissionCheck()` there for pass/fail totals). **PERF:** it `stat()`s many files —
   do NOT run it on every dashboard load. Compute once per admin session in
   `lib/housekeeping.php`, stash the count in the status file (same pattern as
-  `housekeeping_environment_check`), dashboard reads the cached number. **Don't false-alarm on
-  `organisms/` being read-only** — intentional as of 2026-07-14; only `organism.json` and the
-  cache dir must be writable (see docs/SELINUX_AND_HARDENING.md).
+  `housekeeping_environment_check`), dashboard reads the cached number. (As of Phase 1,
+  2026-07-14, `organisms/` is writable again — see §O — so a normal permission check is accurate;
+  only if Phase 2 re-tightens it to read-only, don't false-alarm on that.)
 
 - [ ] **New Organism Checklist pointer** — "N organisms need setup steps" → `organism_checklist.php`.
   Overlaps existing `health_alerts` (`new_gene_sets`, `no_database`) — decide whether to fold
   those into one "needs attention" pointer rather than a separate card.
 
-- [ ] **Git status in the site-backup card** (user idea 2026-07-14) — the existing top-of-dashboard
-  site-backup card should show the backup repo's git state: "all committed & pushed" vs
-  "N files to commit" / "N commits to push". `site_data_path` is (optionally) a git repo;
-  run `git status --porcelain` + ahead/behind in housekeeping (once per session, cache it),
-  show a green/amber badge. Keep it a status line, not a full git UI.
+- [x] **Git status in the site-backup card** — DONE 2026-07-14 (commit 96fb61a). The backup card
+  now shows the repo's real state: green "All committed & pushed — N commits · last X" when clean,
+  amber "N files to commit, M commits to push" + the exact command when not. Computed once per
+  admin session via `housekeeping_git_status()` (local read-only git; graceful fallback to the old
+  "Git available" badge). Confirmed git runs fine under httpd_t (card shows live numbers).
 
 - [ ] Other candidates, same badge+link pattern, priority order: **site-data backup status**
   (`$_SESSION['site_data_backup']` already populated — just surface failures/staleness);
@@ -588,7 +606,17 @@ the dashboard stays a router, not a wall of detail. Mirrors the existing
 
 ---
 
-## O. Read-only organisms/ vs in-app index building (2026-07-14) — DECIDE
+## O. Read-only organisms/ vs in-app index building (2026-07-14) — RESOLVED (Phase 1)
+
+**RESOLVED 2026-07-14 (Phase 1, commit f5678e2)** — chose a hybrid, not A/B/C as written below.
+Reverted `organisms/` to **writable** (in-app index building AND SQLite both need it — read-only
+also caused a ~740/min `{ write }` AVC flood because PDO opens DBs read-write, falls back to ro)
+AND closed the webshell risk at the **execution layer** instead: nginx
+(`docs/nginx/moop-security.conf`) denies HTTP to `/moop/organisms/` and `.php` under `/moop/data/`,
+so a written `.php` can't execute. **Phase 2** (`notes/MOOP_INDEXES_PLAN.md`) adds FASTA *integrity*
+back via an `index/` subdir (symlink FASTA in) + read-only DB connections (`mode=ro`). The
+false-green fix below applies to Phase 2 only (organisms/ is writable now, so the checklist is
+accurate). Original analysis kept for context:
 
 After moving caches out and making `organisms/` read-only to the web server (see
 docs/SELINUX_AND_HARDENING.md, [[project_cache_path_and_readonly_organisms]]), some
