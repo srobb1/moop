@@ -70,12 +70,30 @@
         last run: <?= htmlspecialchars($site_data_backup['last_run']) ?>,
         <?= $site_data_backup['files_copied'] ?> file(s) updated
         <br><small class="text-muted">Config, metadata, and organism files are checked for changes on every admin login and copied to <code><?= htmlspecialchars($site_data_backup['path']) ?></code>.</small>
-        <?php if ($site_data_backup['is_git']): ?>
+        <?php if ($site_data_backup['is_git'] && !empty($site_data_backup['git'])): $g = $site_data_backup['git']; ?>
+          <div class="mt-2 pt-2 border-top">
+            <?php if ($g['clean']): ?>
+              <span class="text-success"><i class="fa fa-check-circle"></i>
+                <strong>All committed<?= $g['has_upstream'] ? ' &amp; pushed' : '' ?></strong></span>
+              <small class="text-muted ms-1"><?= (int) $g['commits'] ?> commit<?= $g['commits'] == 1 ? '' : 's' ?>
+                &middot; last <?= htmlspecialchars($g['last_commit']) ?><?= $g['has_upstream'] ? '' : ' &middot; no remote configured' ?></small>
+            <?php else: ?>
+              <span class="text-warning"><i class="fa fa-exclamation-triangle"></i>
+                <strong>Backup not synced</strong></span>
+              <small class="text-muted ms-1"><?php
+                $bits = [];
+                if ($g['uncommitted'] > 0) $bits[] = $g['uncommitted'] . ' file' . ($g['uncommitted'] == 1 ? '' : 's') . ' to commit';
+                if ($g['ahead'] > 0)       $bits[] = $g['ahead'] . ' commit' . ($g['ahead'] == 1 ? '' : 's') . ' to push';
+                if (!$g['has_upstream'])   $bits[] = 'no remote configured';
+                echo htmlspecialchars(implode(', ', $bits));
+              ?></small>
+              <br><small class="text-muted d-block mt-1">
+                <code style="font-size: 0.85em;">cd <?= htmlspecialchars($site_data_backup['path']) ?> &amp;&amp; git add -A &amp;&amp; git commit -m "Site data backup"<?= $g['has_upstream'] ? ' &amp;&amp; git push' : '' ?></code>
+              </small>
+            <?php endif; ?>
+          </div>
+        <?php elseif ($site_data_backup['is_git']): ?>
           <span class="badge bg-secondary ms-2">Git available</span>
-          <br><small class="text-muted mt-1 d-block">
-            Backup directory is a git repo — run these commands to commit and push:<br>
-            <code style="font-size: 0.85em;">cd <?= htmlspecialchars($site_data_backup['path'] ?? '/path/to/backup') ?> && git add -A && git commit -m "Site data backup" && git push</code>
-          </small>
         <?php endif; ?>
       </div>
     </div>

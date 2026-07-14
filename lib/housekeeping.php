@@ -194,6 +194,34 @@ function housekeeping_ensure_cache_dir() {
     }
 }
 
+/**
+ * Summarise the git state of the site-data backup repo for the dashboard.
+ *
+ * All commands are local and read-only (no fetch/push) so this stays fast and needs
+ * no network. 'ahead' counts commits not yet pushed to the tracked upstream, using the
+ * last-known upstream ref — it does not fetch, so it reflects state as of the last pull/push.
+ *
+ * @return array{uncommitted:int, has_upstream:bool, ahead:int, commits:int, last_commit:string, clean:bool}
+ */
+function housekeeping_git_status(string $dir): array {
+    $run = function (string $args) use ($dir): string {
+        $out = @shell_exec('git -C ' . escapeshellarg($dir) . ' ' . $args . ' 2>/dev/null');
+        return $out === null ? '' : trim($out);
+    };
+    $porcelain     = $run('status --porcelain');
+    $uncommitted   = $porcelain === '' ? 0 : count(explode("\n", $porcelain));
+    $has_upstream  = $run('rev-parse --abbrev-ref --symbolic-full-name "@{u}"') !== '';
+    $ahead         = $has_upstream ? (int) $run('rev-list --count "@{u}"..HEAD') : -1;
+    return [
+        'uncommitted'  => $uncommitted,
+        'has_upstream' => $has_upstream,
+        'ahead'        => $ahead,
+        'commits'      => (int) $run('rev-list --count HEAD'),
+        'last_commit'  => $run('log -1 --format=%cr') ?: 'no commits yet',
+        'clean'        => $uncommitted === 0 && $ahead <= 0,
+    ];
+}
+
 function housekeeping_snapshot_site_data() {
     $config = ConfigManager::getInstance();
     $site_data_path = $config->getPath('site_data_path');
@@ -328,6 +356,7 @@ README;
     $status = [
         'status' => 'ok',
         'is_git' => $is_git,
+        'git' => $is_git ? housekeeping_git_status($site_data_path) : null,
         'last_run' => date('Y-m-d H:i:s'),
         'files_copied' => $copied_count,
         'path' => $site_data_path,
