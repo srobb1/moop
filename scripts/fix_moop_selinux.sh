@@ -35,7 +35,14 @@ RW_DIRS=(
     "$MOOP/archived_gene_sets"      # gene-set archives
     /var/www/moop-site-data         # site-data backup (config, secrets, users.json)
     "$CACHE"                        # generated caches (organism scan, annotation counts, ...)
+    "$MOOP/organisms"               # organism data + in-tree BLAST/.fai indexes the web builds
 )
+# NOTE (2026-07-14): organisms/ is WRITABLE. It briefly was read-only, but that blocked
+# in-app index building AND made SQLite log a { write } denial on every DB open (PDO opens
+# read-write, falls back to read-only). The webshell risk from a writable data tree is instead
+# closed at the EXECUTION layer by nginx (docs/nginx/moop-security.conf denies /moop/organisms/
+# and .php under /moop/data/). Phase 2 (notes/MOOP_INDEXES_PLAN.md) will re-tighten to read-only
+# with an index/ subdir + read-only DB connections; until then, keep organisms/ writable.
 
 echo "== 0. Remove a historical typo'd rule ('configs' — no such directory) =="
 semanage fcontext -d "$MOOP/configs(/.*)?" 2>/dev/null && echo "  removed" || echo "  not present (fine)"
@@ -57,17 +64,12 @@ for d in "${RW_DIRS[@]}"; do
     echo "  rw  $spec"
 done
 
-echo "== 3. organisms/ is READ-ONLY except organism.json =="
-# Drop any old recursive rw rule, then allow ONLY the per-organism organism.json
-# (edited in place by the admin UI). Everything else — genomes, SQLite DBs, FASTA,
-# BLAST indexes — stays read-only, so a compromised php-fpm cannot write the data tree.
-semanage fcontext -d "$MOOP/organisms(/.*)?" 2>/dev/null && echo "  dropped old recursive rw rule" || echo "  no recursive rw rule (fine)"
-semanage fcontext -a -t httpd_sys_rw_content_t "$MOOP/organisms/[^/]+/organism\.json" 2>/dev/null \
-  || semanage fcontext -m -t httpd_sys_rw_content_t "$MOOP/organisms/[^/]+/organism\.json"
-echo "  rw  $MOOP/organisms/[^/]+/organism.json  (tree otherwise read-only)"
+echo "== 3. Clean up the retired organism.json narrow rule (organisms/ is now writable) =="
+# organisms/ is fully writable via RW_DIRS above. Remove the Phase-1.5 narrow rule if present.
+semanage fcontext -d "$MOOP/organisms/[^/]+/organism\.json" 2>/dev/null && echo "  removed retired narrow rule" || echo "  not present (fine)"
 
 echo "== 4. Apply all labels now =="
-for d in "${RW_DIRS[@]}" "$MOOP/organisms"; do
+for d in "${RW_DIRS[@]}"; do
     [[ -d "$d" ]] && restorecon -R "$d"
 done
 echo "  relabelled"
@@ -89,7 +91,9 @@ cat <<EOF
 
 DONE. Verify:
   ls -ldZ $CACHE                                         # httpd_sys_rw_content_t
-  ls -ldZ $MOOP/organisms                                # httpd_sys_content_t (read-only)
-  ls -lZ  $MOOP/organisms/*/organism.json | head -1      # httpd_sys_rw_content_t
+  ls -ldZ $MOOP/organisms                                # httpd_sys_rw_content_t (writable)
   getsebool httpd_can_network_connect                    # on
+
+Also ensure the nginx execution-layer rules are deployed (they make the writable data
+trees safe): docs/nginx/moop-security.conf -> /etc/nginx/default.d/moop-security.conf.
 EOF

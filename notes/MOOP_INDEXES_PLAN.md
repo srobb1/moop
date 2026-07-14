@@ -100,6 +100,12 @@ serious hole.
 - `index/` subdir + symlink + narrow SELinux rule + the blast_functions.php/checklist changes +
   migration, verified against identical BLAST hits. Tightens FASTA/GFF/DB back to read-only while
   the web buttons keep working.
+- **MUST also open SQLite connections read-only** (`mode=ro` / `SQLITE_OPEN_READONLY` in the PDO
+  DSN/flags) before re-tightening. Otherwise the `{ write }` denial flood returns: PDO opens
+  read-write by default, and a read-only `organism.sqlite` denies every open (falls back to
+  read-only, so it "works" but spams the audit log — observed 2026-07-14, ~740 denials/minute).
+  The web workload is read-only queries, so read-only opens are correct anyway. Find every
+  `new PDO('sqlite:...')` (functions_database.php and elsewhere) and add the read-only flag.
 
 **Interim note:** on-demand builds also work from the CLI on-box today (`smr` is unconfined), so
 nothing is truly blocked even before Phase 1.
