@@ -65,7 +65,12 @@ foreach ($batches as $batch) {
 
         foreach ($batch as $i => $entry) {
             $alias = "db$i";
-            $pdo->exec('ATTACH DATABASE ' . $pdo->quote($entry['path']) . " AS $alias");
+            // Attach READ-ONLY via a file: URI so the attached organism DB opens O_RDONLY
+            // (no O_RDWR write-open → no SELinux { write } denial once organisms/ is
+            // read-only). Enabled by the URI flag on the :memory: coordinator (see
+            // getDbConnection). Organism paths are controlled (no spaces/URI-special chars).
+            $ro_uri = 'file:' . $entry['path'] . '?mode=ro';
+            $pdo->exec('ATTACH DATABASE ' . $pdo->quote($ro_uri) . " AS $alias");
 
             $type_ph  = implode(',', array_fill(0, count($feature_types), '?'));
             $gs_ids   = implode(',', array_map('intval', $entry['gene_set_ids'] ?: [0]));

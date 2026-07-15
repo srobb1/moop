@@ -100,6 +100,10 @@ serious hole.
 - `index/` subdir + symlink + narrow SELinux rule + the blast_functions.php/checklist changes +
   migration, verified against identical BLAST hits. Tightens FASTA/GFF/DB back to read-only while
   the web buttons keep working.
+- **✅ DONE 2026-07-15 (SQLite read-only opens).** `getDbConnection()` opens file DBs with
+  `PDO::SQLITE_OPEN_READONLY`; the `:memory:` cross-org coordinator gets the URI flag (`0x40`) so
+  `api/feature_search.php` can `ATTACH 'file:PATH?mode=ro'`; `AutoTrack.php` uses `SQLITE3_OPEN_READONLY`.
+  strace-proven O_RDONLY-only; verified live. This prerequisite is now met — the rest of Phase 2 remains.
 - **MUST also open SQLite connections read-only** (`mode=ro` / `SQLITE_OPEN_READONLY` in the PDO
   DSN/flags) before re-tightening. Otherwise the `{ write }` denial flood returns: PDO opens
   read-write by default, and a read-only `organism.sqlite` denies every open (falls back to

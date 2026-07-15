@@ -351,7 +351,9 @@ class AutoTrack implements TrackTypeInterface
         }
         
         try {
-            $db = new SQLite3($dbPath);
+            // Read-only open (this only reads) — avoids the O_RDWR write-open that
+            // SELinux denies once organisms/ is read-only. See notes/MOOP_INDEXES_PLAN.md.
+            $db = new SQLite3($dbPath, SQLITE3_OPEN_READONLY);
             $result = $db->querySingle("SELECT genome_name FROM genome LIMIT 1");
             $db->close();
             return $result;

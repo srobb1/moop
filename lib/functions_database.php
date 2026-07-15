@@ -228,7 +228,20 @@ function getDbConnection($dbFile) {
     // in their own try/catch and decide what a failure means: surface a warning, report a
     // validation error, fall back to defaults, or let it bubble to a 500. die()-ing here
     // would stop validation probes and graceful-fallback callers from using this door.
-    $dbh = new PDO("sqlite:" . $dbFile);
+    // Open READ-ONLY. The web workload is queries only; a default (read-write) open
+    // issues an O_RDWR|O_CREAT on the file, which SELinux denies once organisms/ is
+    // read-only — SQLite falls back to read-only so it "works", but spams the audit log
+    // (~740 { write } AVC/min, observed 2026-07-14). READONLY opens O_RDONLY directly.
+    // See notes/MOOP_INDEXES_PLAN.md.
+    // Exception: the ':memory:' coordinator used for cross-organism ATTACH
+    // (api/feature_search.php) must stay writable AND enable URI filenames so it can
+    // ATTACH the real DBs as 'file:...?mode=ro' (also read-only). SQLITE_OPEN_URI has no
+    // PDO constant here (PHP 8.0), so use its literal value 0x40.
+    $uri_flag = defined('PDO::SQLITE_OPEN_URI') ? PDO::SQLITE_OPEN_URI : 0x40;
+    $open_flags = ($dbFile === ':memory:')
+        ? (PDO::SQLITE_OPEN_READWRITE | PDO::SQLITE_OPEN_CREATE | $uri_flag)
+        : PDO::SQLITE_OPEN_READONLY;
+    $dbh = new PDO("sqlite:" . $dbFile, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => $open_flags]);
     $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $dbh->sqliteCreateFunction('REGEXP', function($pattern, $text) {
         return preg_match('/' . $pattern . '/i', $text) ? 1 : 0;
