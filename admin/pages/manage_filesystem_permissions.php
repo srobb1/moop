@@ -35,9 +35,9 @@
             
             <p><strong>Permission Levels:</strong></p>
             <ul>
-                <li><strong>644 (rw-r--r--):</strong> Read-only files that don't change (databases)</li>
+                <li><strong>640 / 660 / 644 (group-readable):</strong> Read-only data the web serves (FASTA, genomes, databases) — the web server reads via its group, so any of these work; world-readable is not required</li>
                 <li><strong>664 (rw-rw-r--):</strong> Configuration files edited by admins through the web interface</li>
-                <li><strong>2775 (drwxrwsr-x):</strong> Directories with SGID - ensures new files automatically get correct group</li>
+                <li><strong>2775 (drwxrwsr-x):</strong> Directories the web server writes into — SGID ensures new files inherit the correct group (needs the <code>httpd_sys_rw_content_t</code> SELinux label too)</li>
             </ul>
             
             <p class="mb-0"><strong>What You Can Do Here:</strong></p>
@@ -91,15 +91,16 @@
         <h5 class="mb-0"><i class="fa fa-star"></i> Best Practices</h5>
     </div>
      <div class="card-body">
+        <p class="mb-2">These checks judge permissions by <strong>impact</strong>, not by an exact mode string. The web server runs as <code><?= htmlspecialchars($web_group) ?></code> and reads data through its <strong>group</strong>, so a file does not need to be world-readable to be served.</p>
         <ul>
-            <li><strong>Owner should always be:</strong> <code><?= htmlspecialchars($moop_owner) ?></code> (detected from system)</li>
-            <li><strong>Group should always be:</strong> <code><?= htmlspecialchars($web_group) ?></code> (detected from system)</li>
-            <li><strong>Always use SGID (2775) on directories</strong> to auto-assign group to new files</li>
-            <li><strong>Use 664 for files that need write:</strong> Configuration JSONs, metadata files</li>
-            <li><strong>Use 644 for read-only files:</strong> Database files that don't change</li>
-            <li><strong>Never use 777 or 666:</strong> This allows anyone to access/modify files (security risk)</li>
-            <li><strong>Check permissions regularly:</strong> Use this page to verify all permissions are correct</li>
-            <li><strong>For rename operations:</strong> Assembly directories need 2775 so the web server can rename gene set subdirectories within them. Gene set directories need 2775 so BLAST indexes can be written inside them. If a rename fails in the admin interface, check permissions here.</li>
+            <li><strong>Owner should be <code><?= htmlspecialchars($moop_owner) ?></code>, group <code><?= htmlspecialchars($web_group) ?></code></strong> (detected from the system). The web server reads via the group.</li>
+            <li><strong>Data files just need to be group-readable</strong> — FASTA, genomes, and databases at <code>640</code>, <code>660</code>, <code>664</code>, or <code>644</code> all work. <strong>World-readable (<code>644</code>) is not required, and is worse for restricted data</strong> — don't "fix" a <code>660</code> file up to <code>644</code>.</li>
+            <li><strong>Never world-writable</strong> (<code>777</code>, <code>666</code>, or any <code>o+w</code>), and <strong>data files should not be executable</strong> — those are the perms that genuinely matter.</li>
+            <li><strong>Only a specific set of directories is writable by the web server</strong> — logs, config, metadata, <code>data/genomes</code>, the image caches (<code>wikimedia</code>, <code>ncbi_taxonomy</code>), and the cache dir. These use SGID <code>2775</code> so new files inherit the <code><?= htmlspecialchars($web_group) ?></code> group. Everything else — including the whole <code>organisms/</code> tree, uploaded images, and <code>docs/</code> — is <strong>read-only served content</strong>.</li>
+            <li><strong>Under SELinux (Enforcing), the label is the real gate.</strong> A directory can look writable (<code>2775</code>) yet be blocked because its SELinux type is <code>httpd_sys_content_t</code>. Writable dirs need <code>httpd_sys_rw_content_t</code>; apply it with <code>scripts/fix_moop_selinux.sh</code> (see <code>docs/SELINUX_AND_HARDENING.md</code>), not <code>chmod</code>.</li>
+            <li><strong>Use 664 for config/metadata files</strong> the admin UI edits (so the web group can write them).</li>
+            <li><strong>The <code>organisms/</code> tree is read-only</strong> except <code>organism.json</code> (and, once the index refactor ships, a writable <code>index/</code> subdir for BLAST indexes). BLAST-index builds and renames are handled there — not by loosening the whole tree. If a web build/rename fails, check the SELinux label here, not just the Unix mode.</li>
+            <li><strong>Check regularly:</strong> the admin dashboard now surfaces a pointer here when something needs attention.</li>
         </ul>
     </div>
 </div>

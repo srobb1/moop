@@ -579,14 +579,36 @@ link to it — NOT reproduce the issues on the dashboard. A count/badge + "go lo
 the dashboard stays a router, not a wall of detail. Mirrors the existing
 `housekeeping_environment_check()` collapsible card.
 
-- [ ] **File Permissions pointer** — "N permission issues → Permissions Manager", linking to
-  `manage_filesystem_permissions.php`. Needs a light aggregate count (reuse
-  `performPermissionCheck()` there for pass/fail totals). **PERF:** it `stat()`s many files —
-  do NOT run it on every dashboard load. Compute once per admin session in
-  `lib/housekeeping.php`, stash the count in the status file (same pattern as
-  `housekeeping_environment_check`), dashboard reads the cached number. (As of Phase 1,
-  2026-07-14, `organisms/` is writable again — see §O — so a normal permission check is accurate;
-  only if Phase 2 re-tightens it to read-only, don't false-alarm on that.)
+- [x] **File Permissions pointer** — DONE 2026-07-15. Extracted the rule list + org-tree walk out of
+  `manage_filesystem_permissions.php` into a shared `lib/permission_check.php` so the dashboard and the
+  detail page can't drift — same rationale as `computeDataHealthAlerts`. `housekeeping_permission_check`
+  runs the scan once per interval, persists a compact summary to `logs/.housekeeping_status.json`
+  (hydrated per request, same pattern as `housekeeping_environment_check`); the scan is read-only.
+
+  **The checker was rebuilt around IMPACT, not exact-mode, after this exposed that the old rules were
+  stale post-SELinux-hardening.** The old "must be exactly 644" flagged ~378 issues on the live tree —
+  but ~322 were FASTA at `660`/`664` that apache reads fine (group `apache`), and world-readable is
+  *worse* for restricted data. New model in `performPermissionCheck` (three `check_mode`s from
+  `moop_permission_check_mode`):
+  - `data` (FASTA/genome/SQLite): OK if web-readable, not world-writable, not executable — `640/660/664/644` all pass.
+  - `writable` (logs/caches/config/metadata/images/org-tree): must be web-writable + right group + not world-writable.
+  - `secret` (JWT keys): web-readable and not exposed to other users.
+
+  **Severity = impact** (`high` = broken now / secret exposed; `medium` = future-build breakage or wrong
+  group; `low` = cosmetic). **Findings aggregate by CATEGORY** (`moop_permission_findings`): "Sequence
+  files (FASTA) — 233 affected" is ONE finding, not 233. Dashboard shows findings by the worst severity
+  *present* (red/amber/muted), **never "0 high"**, and is hidden when clean.
+
+  Verified (predicted apache-perspective, since is_readable/is_writable are owner-biased under CLI `smr` —
+  the §O false-green trap): the live tree collapses **378 → 3 findings** (Gene-set dirs ×27 not-writable,
+  Assembly dirs ×21 not-writable, FASTA ×7 executable), all `medium`, `0 high`. Authoritative count is
+  written when an admin next loads the dashboard (housekeeping runs as apache; marker cleared).
+  Card branches (high/medium/low/clean) + aggregation edges tested green.
+
+  **Follow-up (optional, not done):** (a) the 48 non-writable data dirs + 7 executable FASTAs are real —
+  a `chmod` cleanup (dirs→2775, drop exec bit) would take them to ~0; note some `660` were deliberate.
+  (b) manage-page detail rows still print the old "required 644" column for data files that now pass by
+  impact — cosmetic, thread `check_mode` into the display when next touched.
 
 - [ ] **New Organism Checklist pointer** — "N organisms need setup steps" → `organism_checklist.php`.
   Overlaps existing `health_alerts` (`new_gene_sets`, `no_database`) — decide whether to fold

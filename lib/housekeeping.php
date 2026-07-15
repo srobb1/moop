@@ -54,6 +54,7 @@ function housekeeping_hydrate_session_from_status(): void {
     $all = loadJsonFile($file, []);
     if (isset($all['site_data_backup'])) $_SESSION['site_data_backup'] = $all['site_data_backup'];
     if (isset($all['env_warnings']))     $_SESSION['env_warnings']     = $all['env_warnings'];
+    if (isset($all['perm_summary']))     $_SESSION['perm_summary']     = $all['perm_summary'];
 }
 
 /**
@@ -96,6 +97,7 @@ function run_housekeeping() {
         ['name' => 'ensure_cache_dir',           'fn' => 'housekeeping_ensure_cache_dir'],
         ['name' => 'snapshot_site_data',         'fn' => 'housekeeping_snapshot_site_data'],
         ['name' => 'environment_check',          'fn' => 'housekeeping_environment_check'],
+        ['name' => 'permission_check',           'fn' => 'housekeeping_permission_check'],
         ['name' => 'refresh_annotation_caches',  'fn' => 'housekeeping_refresh_annotation_caches'],
         ['name' => 'refresh_organism_cache',     'fn' => 'housekeeping_refresh_organism_cache_if_stale'],
         ['name' => 'ncbi_taxonomy_update',       'fn' => 'housekeeping_check_ncbi_taxonomy_update'],
@@ -490,6 +492,33 @@ function housekeeping_environment_check() {
 
     $_SESSION['env_warnings'] = $warnings;
     housekeeping_persist_status('env_warnings', $warnings);
+}
+
+/**
+ * Aggregate the filesystem-permission checks into a small severity summary for the
+ * dashboard pointer card (PAGE_BY_PAGE_AUDIT_PLAN §N).
+ *
+ * The underlying scan stat()s the whole organism tree, so it must NOT run on every
+ * dashboard load — this runs it at most once per HOUSEKEEPING_MIN_INTERVAL and stores
+ * only the counts. The dashboard reads the cached summary (hydrated into $_SESSION)
+ * and links to the full Filesystem Permissions page for detail. Uses the SAME shared
+ * collector the detail page uses, so the numbers always agree.
+ *
+ * Persisted to logs/.housekeeping_status.json (next to env_warnings / site_data_backup),
+ * NOT to cache_path — this is dashboard status, not a regenerable data cache.
+ *
+ * NOTE (§O): as of Phase 1 organisms/ is writable again, so a plain permission check
+ * is accurate. If Phase 2 re-tightens organisms/ to read-only for httpd_t, revisit so
+ * this doesn't false-alarm on an intentionally read-only tree.
+ */
+function housekeeping_permission_check() {
+    $config = ConfigManager::getInstance();
+    require_once $config->getPath('site_path') . '/lib/permission_check.php';
+
+    $summary = moop_permission_issue_summary($config);
+
+    $_SESSION['perm_summary'] = $summary;
+    housekeeping_persist_status('perm_summary', $summary);
 }
 
 /**

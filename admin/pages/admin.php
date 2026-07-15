@@ -126,6 +126,39 @@
   </div>
   <?php endif; ?>
 
+  <!-- Filesystem Permissions pointer — a router to the detail page, grouped by CATEGORY
+       (one finding per section, not per file) and phrased by the worst severity PRESENT
+       (never "0 high"). Precomputed once per housekeeping interval into
+       logs/.housekeeping_status.json — NOT scanned on dashboard load. Hidden when clean. -->
+  <?php if (!empty($_SESSION['perm_summary']['findings'])):
+    $ps       = $_SESSION['perm_summary'];
+    $worst    = $ps['worst'] ?? 'medium';
+    $cls      = $worst === 'high' ? 'danger' : ($worst === 'medium' ? 'warning' : 'secondary');
+    $icon     = $worst === 'high' ? 'lock' : ($worst === 'medium' ? 'exclamation-triangle' : 'info-circle');
+    // Findings at the worst tier lead; anything below is a muted footnote.
+    $top      = array_values(array_filter($ps['findings'], fn($f) => $f['severity'] === $worst));
+    $below    = count($ps['findings']) - count($top);
+    $labels   = array_map(fn($f) => $f['category'] . ' (' . $f['count'] . ')', $top);
+    $headline = $worst === 'high'
+        ? 'permission ' . (count($top) === 1 ? 'area needs' : 'areas need') . ' attention — may break tools, logging, or expose a secret'
+        : ($worst === 'medium'
+            ? 'permission ' . (count($top) === 1 ? 'area' : 'areas') . ' to address'
+            : 'low-priority permission ' . (count($top) === 1 ? 'item' : 'items') . ' to tidy');
+  ?>
+  <div class="alert alert-<?= $cls ?> d-flex align-items-center justify-content-between gap-3 mb-4" role="alert">
+    <div>
+      <i class="fa fa-<?= $icon ?> me-2"></i>
+      <strong><?= count($top) ?> <?= $headline ?></strong>
+      <span class="d-block small text-muted">
+        <?= htmlspecialchars(implode(', ', $labels)) ?><?php if ($below > 0): ?> &middot; <?= $below ?> lower-priority <?= $below === 1 ? 'area' : 'areas' ?><?php endif; ?>
+      </span>
+    </div>
+    <a href="manage_filesystem_permissions.php" class="btn btn-sm btn-<?= $cls ?> flex-shrink-0">
+      <i class="fa fa-lock"></i> Permission Manager
+    </a>
+  </div>
+  <?php endif; ?>
+
   <!-- System Configuration -->
   <div class="mt-5">
     <h3 class="mb-3"><i class="fa fa-cog"></i> System Configuration</h3>
