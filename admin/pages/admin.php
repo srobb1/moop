@@ -196,9 +196,8 @@
       <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-2" role="status">
         <span class="spinner-border spinner-border-sm flex-shrink-0"></span>
         <div class="small">
-          <strong>Housekeeping is running in the background.</strong>
-          The figures on this page were taken before it started —
-          <a href="">reload</a> in a few seconds for the updated numbers.
+          <strong>Housekeeping is running.</strong> These figures were taken before it started —
+          <a href="">reload</a> in a few seconds.
         </div>
       </div>
       <?php endif; ?>
@@ -206,9 +205,9 @@
       <div class="d-flex align-items-center justify-content-between gap-3">
         <div class="small text-muted">
           <i class="fa fa-clock-o me-1"></i>
-          The health checks above are <strong>precomputed</strong>, not measured on page load.
-          <?php if ($scanned): ?>Last run <strong><?= htmlspecialchars($scanned) ?></strong>.<?php endif; ?>
-          Something you have just fixed can still be listed.
+          Health checks above are cached<?php if ($scanned): ?> — last run
+          <strong><?= htmlspecialchars($scanned) ?></strong><?php endif; ?>,
+          so a recent fix may still be listed.
           <a class="ms-1" data-bs-toggle="collapse" href="#housekeepingTasks" role="button"
              aria-expanded="false" aria-controls="housekeepingTasks" style="cursor:pointer;">
             What runs? <i class="fa fa-chevron-down small"></i>
@@ -224,16 +223,10 @@
       <div class="collapse" id="housekeepingTasks">
         <hr class="my-2">
         <p class="small text-muted mb-2">
-          <strong>There is no cron to set up.</strong> These tasks run when an
-          <em>admin loads an admin page</em>, and no more often than once every
-          <?= $iv_hrs ?> hour<?= $iv_hrs === 1 ? '' : 's' ?>
-          (at most <?= (int) floor(24 / max(1, $iv_hrs)) ?>× a day). They run
-          <strong>in the background</strong> and never slow the page down — the visit that
-          triggers a run still shows the previous figures, and the new ones appear on your
-          next visit.
-          If nobody visits the admin area, <strong>they do not run at all</strong> — which is
-          why this button exists, and why a card can sit stale longer than
-          <?= $iv_hrs ?> hour<?= $iv_hrs === 1 ? '' : 's' ?>.
+          <strong>Nothing to set up — no cron.</strong> These run in the background when an
+          admin loads a page, at most once
+          <?= $iv_hrs === 1 ? 'an hour' : 'every ' . $iv_hrs . ' hours' ?>,
+          and never slow it down. New figures appear on your next visit.
         </p>
         <?php foreach (housekeeping_task_registry() as $_t): ?>
         <div class="mb-2">
@@ -244,9 +237,7 @@
         </div>
         <?php endforeach; ?>
         <p class="small text-muted mb-0 fst-italic">
-          Results persist to <code>logs/.housekeeping_status.json</code>; every admin page load
-          hydrates the session from it cheaply. Defined in <code>lib/housekeeping.php</code>
-          (<code>housekeeping_task_registry()</code>).
+          Defined in <code>lib/housekeeping.php</code>.
         </p>
       </div>
     </div>
