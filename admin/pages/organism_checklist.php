@@ -716,6 +716,75 @@
           </div>
         <?php endif; ?>
 
+        <?php
+        // Gene sets with no annotations file.
+        //
+        // Nothing checked this before 2026-07-16 — unsurprisingly, since Step 1 never told
+        // anyone to copy genes.gff in the first place. A gene set without it still BLASTs
+        // (blast_functions.php resolves FASTA directly and never looks at the GFF), but
+        // JBrowse gets no annotation track and feature_coords.tsv is never built, so BLAST
+        // linkouts are dead. gene_set_functions.php logs "no genes.gff found — skipped" and
+        // carries on, which is why this can sit unnoticed.
+        //
+        // Gene sets are identified by their FASTA payload (is_gene_set_dir), never by the
+        // GFF — testing for the GFF to decide what IS a gene set makes the ones missing it
+        // invisible, which was the pre-existing bug in validateAssemblyDirectories().
+        $gene_sets_missing_gff = [];
+        foreach ($organisms_in_system as $org) {
+            foreach (glob("$organism_data/$org/*", GLOB_ONLYDIR) ?: [] as $asm_dir) {
+                foreach (glob("$asm_dir/*", GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                    if (!is_gene_set_dir($gs_dir)) continue;
+                    if (file_exists($gs_dir . '/' . genes_gff_filename())) continue;
+
+                    // Report what IS there: a protein-only set has no genomic coordinates,
+                    // so having no GFF is correct for it. One with cds/transcript almost
+                    // certainly should have one, and is worth chasing on the data server.
+                    $has = [];
+                    foreach (ConfigManager::getInstance()->getSequenceTypes() as $k => $seq) {
+                        if ($k === 'genome') continue;
+                        if (!empty($seq['pattern']) && file_exists($gs_dir . '/' . $seq['pattern'])) {
+                            $has[] = $seq['label'] ?? $k;
+                        }
+                    }
+                    $gene_sets_missing_gff[] = [
+                        'path' => str_replace($organism_data . '/', '', $gs_dir),
+                        'has'  => $has,
+                    ];
+                }
+            }
+        }
+        ?>
+
+        <?php if (!empty($gene_sets_missing_gff)): ?>
+          <div class="alert alert-warning mt-3">
+            <i class="fa fa-exclamation-triangle"></i>
+            <strong>No <code><?= htmlspecialchars(genes_gff_filename()) ?></code> in
+              <?= count($gene_sets_missing_gff) ?> gene set<?= count($gene_sets_missing_gff) === 1 ? '' : 's' ?>:</strong>
+            <div class="small mt-1">
+              These still work for BLAST, but JBrowse has <strong>no annotation track</strong> for them and
+              BLAST linkouts are unavailable (<code>feature_coords.tsv</code> is built from the GFF).
+              A <strong>protein-only</strong> set has no genomic coordinates, so having no GFF is expected —
+              anything holding mRNA or CDS is worth tracking down on your data server.
+            </div>
+            <div class="mt-2 p-2 bg-dark text-light rounded" style="font-family: monospace; font-size: 0.8em; max-height: 16em; overflow-y: auto;">
+              <?php foreach ($gene_sets_missing_gff as $gs): ?>
+                <?= htmlspecialchars($gs['path']) ?><span class="text-muted"><?= $gs['has'] ? '   [has: ' . htmlspecialchars(implode(', ', $gs['has'])) . ']' : '' ?></span><br>
+              <?php endforeach; ?>
+            </div>
+            <small class="text-muted d-block mt-2">
+              <i class="fa fa-info-circle"></i>
+              Copy the missing <code><?= htmlspecialchars(genes_gff_filename()) ?></code> into each gene-set
+              directory, then re-register the gene set (Manage JBrowse) to build its annotation track and
+              <code>feature_coords.tsv</code>.
+            </small>
+          </div>
+        <?php else: ?>
+          <div class="alert alert-success mt-3">
+            <i class="fa fa-check-circle"></i> Every gene set has its
+            <code><?= htmlspecialchars(genes_gff_filename()) ?></code> annotations file.
+          </div>
+        <?php endif; ?>
+
         <p class="mt-3"><strong>Full Management:</strong> <a href="manage_organisms.php" class="btn btn-success"><i class="fa fa-dna"></i> Manage Organisms</a></p>
       </div>
     </div>

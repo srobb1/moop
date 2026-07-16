@@ -5,6 +5,34 @@
  */
 
 /**
+ * Does this directory hold a gene set?
+ *
+ * Answered by "does it contain any configured sequence FASTA", because the FASTA is the
+ * payload — a gene-set directory without one has nothing to serve. Verified against the
+ * live tree 2026-07-16: 94 dirs have both a FASTA and geneset.json, 0 have only one, so
+ * either marker works and this one needs no extra metadata file.
+ *
+ * Do NOT go back to testing for the GFF. That is what this replaced, and it was circular:
+ * a gene set with no genes.gff was declared "not a real gene_set dir" and vanished from
+ * the checks — 23 of the 94 on this deployment have no GFF (protein-only sets legitimately
+ * have none; JBrowse annotations simply are not available for them). Using the GFF to
+ * decide what IS a gene set means the ones missing it can never be reported.
+ *
+ * 'genome' is excluded: genome.fa lives at the ASSEMBLY level, so including it would make
+ * every assembly directory look like a gene set.
+ */
+function is_gene_set_dir(string $dir): bool {
+    if (!is_dir($dir)) return false;
+    $types = ConfigManager::getInstance()->getSequenceTypes();
+    unset($types['genome']);
+    foreach ($types as $seq) {
+        $pattern = $seq['pattern'] ?? '';
+        if ($pattern !== '' && file_exists("$dir/$pattern")) return true;
+    }
+    return false;
+}
+
+/**
  * Validate directory name for security
  * 
  * Prevents path traversal attacks by checking for invalid characters
@@ -142,7 +170,11 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
                 foreach (glob("$asm_path/*", GLOB_ONLYDIR) ?: [] as $gs_dir) {
                     $gs_name = basename($gs_dir);
                     if (in_array($gs_name, $known_gene_set_names, true)) continue;
-                    if (!file_exists("$gs_dir/" . genes_gff_filename())) continue; // not a real gene_set dir
+                    // Identify a gene set by its FASTA payload, NOT by genes.gff. The GFF
+                    // test was circular: a gene set missing its GFF was dismissed as "not a
+                    // real gene_set dir", so an orphaned one could never be reported — the
+                    // exact case most worth reporting. 23 of 94 gene sets here have no GFF.
+                    if (!is_gene_set_dir($gs_dir)) continue; // not a gene_set dir
                     $result['valid'] = false;
                     $result['mismatches'][] = [
                         'type'             => 'orphaned_gene_set_directory',
