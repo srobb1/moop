@@ -211,6 +211,44 @@ function moop_permission_is_data_tree(string $name): bool {
 }
 
 /**
+ * Evidence that the web server has WRITTEN into a directory we classify read-only.
+ *
+ * Why this exists: the writable allowlist in moop_permission_check_mode() is the ONLY
+ * thing linking "the app writes here" to "check the label here". It is hand-maintained,
+ * so a missing entry fails silently — the label stays read-only, no label check runs, and
+ * the feature simply stops. That is not hypothetical: banner upload was dead for three
+ * days in July 2026 because images/banners was classified read-only, so nothing checked it.
+ *
+ * Files OWNED BY THE WEB USER are hard evidence the app writes somewhere the allowlist
+ * does not know about. It is only evidence, not proof of a fault — the files may equally
+ * be leftovers from a retired feature — so this reports the ambiguity for a human rather
+ * than guessing.
+ *
+ * Prunes any path carrying its own writable rule: images/wikimedia lives under images/,
+ * and flagging the parent for its own cache subdir would be a false alarm.
+ *
+ * @param  list<string> $prune_paths absolute paths to skip (the writable rules' own paths)
+ * @return list<string> up to $limit offending paths; empty means no evidence
+ */
+function moop_web_owned_evidence(string $dir, string $web_user, array $prune_paths = [], int $limit = 3): array {
+    if ($web_user === '' || !is_dir($dir)) return [];
+
+    $dir = rtrim($dir, '/');
+    $cmd = 'find ' . escapeshellarg($dir) . ' -xdev';
+    foreach ($prune_paths as $p) {
+        $p = rtrim((string) $p, '/');
+        // Only prune things actually inside $dir; a sibling rule is irrelevant here.
+        if ($p === '' || strpos($p, $dir . '/') !== 0) continue;
+        $cmd .= ' -path ' . escapeshellarg($p) . ' -prune -o';
+    }
+    $cmd .= ' -user ' . escapeshellarg($web_user) . ' -print 2>/dev/null';
+
+    $out = [];
+    @exec($cmd . ' | head -n ' . (int) $limit, $out);
+    return array_values(array_filter(array_map('trim', $out), fn($s) => $s !== ''));
+}
+
+/**
  * Check one path by IMPACT and assign a severity.
  *
  * Result keys mirror the old shape (name/path/exists/current_perms/current_owner/
@@ -303,6 +341,20 @@ function performPermissionCheck($path, $item, $web_group = 'www-data') {
             // Directories legitimately carry the traverse (x) bit; only flag executable FILES.
             $result['issues'][] = "Marked executable ($perms) — data files should not be executable";
             $bump('medium');
+        }
+        // Does the web server write here despite being classified read-only? Skip the data
+        // trees (organisms/, data/tracks): those ARE web-written by design and are only
+        // 'data' here because their FILES need not be writable — see moop_permission_check_mode.
+        if ($result['type'] === 'directory' && !moop_permission_is_data_tree($item['name'])) {
+            $evidence = moop_web_owned_evidence($path, (string) ($item['_web_user'] ?? ''), $item['prune_paths'] ?? []);
+            if ($evidence) {
+                $result['issues'][] = 'Contains file(s) owned by the web server ('
+                    . ($item['_web_user'] ?? '?') . ') — e.g. ' . $evidence[0]
+                    . '. This path is classified read-only, so nothing here checks its SELinux'
+                    . ' label. Either it belongs in the writable set, or these are leftovers'
+                    . ' from a retired feature and should be chowned back.';
+                $bump('medium');
+            }
         }
     } elseif ($mode === 'secret') {
         if (!$result['is_readable']) {
@@ -733,9 +785,24 @@ function moop_collect_permission_checks($config): array {
         'docs_path'            => $docs_path,
     ]);
 
+    // Paths that carry their own writable rule. The read-only evidence scan must not
+    // descend into them: images/wikimedia sits under images/, and flagging the parent for
+    // its own cache subdir would be a false alarm.
+    $writable_paths = [];
+    foreach ($permission_items as $item) {
+        if (moop_permission_check_mode($item['name']) !== 'writable') continue;
+        foreach ($item['paths'] ?? [] as $p) {
+            $writable_paths[] = rtrim($p, '/');
+        }
+    }
+
     // Check permissions for each fixed item
     $checks = [];
     foreach ($permission_items as $item) {
+        // Consumed by the read-only evidence scan in performPermissionCheck().
+        $item['_web_user']   = $web_user;
+        $item['prune_paths'] = $writable_paths;
+
         if ($item['type'] === 'directory' || ($item['type'] === 'file' && !isset($item['pattern']))) {
             foreach ($item['paths'] ?? [] as $path) {
                 $checks[] = performPermissionCheck($path, $item, $web_group);

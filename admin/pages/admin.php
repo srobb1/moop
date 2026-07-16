@@ -144,6 +144,19 @@
         : ($worst === 'medium'
             ? 'permission ' . (count($top) === 1 ? 'area' : 'areas') . ' to address'
             : 'low-priority permission ' . (count($top) === 1 ? 'item' : 'items') . ' to tidy');
+
+    // Staleness note. This is a cached scan, so a finding may already be fixed — that
+    // is not hypothetical: the banners label was repaired ~5 min after a scan and the
+    // card kept reporting it. Show age RELATIVE, never absolute: PHP's date.timezone is
+    // typically unset (UTC) while the host clock is local, so a printed wall-clock time
+    // reads hours off. The Permission Manager re-scans live on every load.
+    $iv_hrs  = (int) round((defined('HOUSEKEEPING_MIN_INTERVAL') ? HOUSEKEEPING_MIN_INTERVAL : 4 * 3600) / 3600);
+    $age_s   = !empty($ps['checked_at']) ? max(0, time() - strtotime($ps['checked_at'])) : null;
+    $scanned = $age_s === null
+        ? null
+        : ($age_s < 3600
+            ? max(1, (int) round($age_s / 60)) . ' min ago'
+            : (int) floor($age_s / 3600) . ' hr ago');
   ?>
   <div class="alert alert-<?= $cls ?> d-flex align-items-center justify-content-between gap-3 mb-4" role="alert">
     <div>
@@ -151,6 +164,12 @@
       <strong><?= count($top) ?> <?= $headline ?></strong>
       <span class="d-block small text-muted">
         <?= htmlspecialchars(implode(', ', $labels)) ?><?php if ($below > 0): ?> &middot; <?= $below ?> lower-priority <?= $below === 1 ? 'area' : 'areas' ?><?php endif; ?>
+      </span>
+      <span class="d-block small text-muted fst-italic mt-1">
+        <i class="fa fa-clock-o"></i>
+        <?php if ($scanned): ?>Scanned <?= htmlspecialchars($scanned) ?><?php else: ?>Cached scan<?php endif; ?>
+        &middot; rescanned every <?= $iv_hrs ?> hr, so anything already fixed may still be listed here.
+        The Permission Manager re-checks live.
       </span>
     </div>
     <a href="manage_filesystem_permissions.php" class="btn btn-sm btn-<?= $cls ?> flex-shrink-0">
