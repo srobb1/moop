@@ -24,6 +24,15 @@
 
 define('HOUSEKEEPING_MIN_INTERVAL', 4 * 3600); // re-run at most every 4 hours
 
+// environment_check and permission_check call getWebServerUser(). That function lives in
+// functions_system.php, which nothing here loaded — it happened to be in scope only
+// because admin_init.php includes moop_functions.php (which requires it) a few lines
+// earlier. Depend on it explicitly: if that ordering ever changed, both tasks would throw,
+// the catch below would swallow it into the log, and the dashboard cards would simply
+// VANISH — identical to "everything is clean". That is the silent-failure shape this file
+// is supposed to detect, not exhibit.
+require_once __DIR__ . '/functions_system.php';
+
 /**
  * Two tasks below (site data snapshot, environment check) drive dashboard widgets
  * that used to live only in $_SESSION. Now that tasks run at most once per interval
@@ -59,8 +68,19 @@ function housekeeping_hydrate_session_from_status(): void {
 
 /**
  * Run all housekeeping tasks (at most once per HOUSEKEEPING_MIN_INTERVAL).
+ *
+ * @param bool $force Skip the interval throttle and run now. Used by the admin
+ *                    dashboard's "Run now" button, for when you have just fixed
+ *                    something and do not want to wait up to 4h to see the card
+ *                    clear. The LOCK is still honoured even when forcing — a forced
+ *                    run must not stampede a run already in flight.
+ * @return array{ran:bool, reason:?string, tasks:list<array{name:string,ok:bool,ms:int,error:?string}>}
+ *         Per-task results so callers can report what actually happened rather than
+ *         just spinning. Existing callers may ignore the return value.
  */
-function run_housekeeping() {
+function run_housekeeping(bool $force = false): array {
+    $result = ['ran' => false, 'reason' => null, 'tasks' => []];
+
     $config      = ConfigManager::getInstance();
     $logs_dir    = $config->getPath('site_path') . '/logs';
     $marker_file = "$logs_dir/.housekeeping_last_run";
@@ -71,15 +91,17 @@ function run_housekeeping() {
     housekeeping_hydrate_session_from_status();
 
     $last_run = @filemtime($marker_file) ?: 0;
-    if ((time() - $last_run) < HOUSEKEEPING_MIN_INTERVAL) {
-        return;
+    if (!$force && (time() - $last_run) < HOUSEKEEPING_MIN_INTERVAL) {
+        $result['reason'] = 'throttled';
+        return $result;
     }
 
     // Claim the run so concurrent admin requests don't all fire it at once.
     if (file_exists($lock_file)) {
         $pid = (int)trim(@file_get_contents($lock_file));
         if ($pid > 0 && file_exists("/proc/$pid")) {
-            return; // another request is already running housekeeping
+            $result['reason'] = 'already_running';
+            return $result; // another request is already running housekeeping
         }
         // stale lock left by a crashed request — reclaim it
     }
@@ -104,14 +126,29 @@ function run_housekeeping() {
     ];
 
     foreach ($tasks as $task) {
+        $t0 = microtime(true);
         try {
             call_user_func($task['fn']);
+            $result['tasks'][] = [
+                'name'  => $task['name'],
+                'ok'    => true,
+                'ms'    => (int) round((microtime(true) - $t0) * 1000),
+                'error' => null,
+            ];
         } catch (\Throwable $e) {
             error_log('MOOP housekeeping task "' . $task['name'] . '" failed: ' . $e->getMessage());
+            $result['tasks'][] = [
+                'name'  => $task['name'],
+                'ok'    => false,
+                'ms'    => (int) round((microtime(true) - $t0) * 1000),
+                'error' => $e->getMessage(),
+            ];
         }
     }
 
     @unlink($lock_file);
+    $result['ran'] = true;
+    return $result;
 }
 
 // =====================================================================

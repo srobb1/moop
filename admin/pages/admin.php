@@ -126,6 +126,22 @@
   </div>
   <?php endif; ?>
 
+  <?php
+  // Housekeeping freshness — computed OUTSIDE the permission-card conditional below,
+  // because the "Run housekeeping now" row uses it too and must stay visible when the
+  // cards are clean. Age is shown RELATIVE, never absolute: PHP's date.timezone is
+  // typically unset (UTC) while the host clock is local, so a printed wall-clock time
+  // reads hours off.
+  $iv_hrs  = (int) round((defined('HOUSEKEEPING_MIN_INTERVAL') ? HOUSEKEEPING_MIN_INTERVAL : 4 * 3600) / 3600);
+  $_hk_at  = $_SESSION['perm_summary']['checked_at'] ?? null;
+  $age_s   = $_hk_at ? max(0, time() - strtotime($_hk_at)) : null;
+  $scanned = $age_s === null
+      ? null
+      : ($age_s < 3600
+          ? max(1, (int) round($age_s / 60)) . ' min ago'
+          : (int) floor($age_s / 3600) . ' hr ago');
+  ?>
+
   <!-- Filesystem Permissions pointer — a router to the detail page, grouped by CATEGORY
        (one finding per section, not per file) and phrased by the worst severity PRESENT
        (never "0 high"). Precomputed once per housekeeping interval into
@@ -144,19 +160,6 @@
         : ($worst === 'medium'
             ? 'permission ' . (count($top) === 1 ? 'area' : 'areas') . ' to address'
             : 'low-priority permission ' . (count($top) === 1 ? 'item' : 'items') . ' to tidy');
-
-    // Staleness note. This is a cached scan, so a finding may already be fixed — that
-    // is not hypothetical: the banners label was repaired ~5 min after a scan and the
-    // card kept reporting it. Show age RELATIVE, never absolute: PHP's date.timezone is
-    // typically unset (UTC) while the host clock is local, so a printed wall-clock time
-    // reads hours off. The Permission Manager re-scans live on every load.
-    $iv_hrs  = (int) round((defined('HOUSEKEEPING_MIN_INTERVAL') ? HOUSEKEEPING_MIN_INTERVAL : 4 * 3600) / 3600);
-    $age_s   = !empty($ps['checked_at']) ? max(0, time() - strtotime($ps['checked_at'])) : null;
-    $scanned = $age_s === null
-        ? null
-        : ($age_s < 3600
-            ? max(1, (int) round($age_s / 60)) . ' min ago'
-            : (int) floor($age_s / 3600) . ' hr ago');
   ?>
   <div class="alert alert-<?= $cls ?> d-flex align-items-center justify-content-between gap-3 mb-4" role="alert">
     <div>
@@ -168,8 +171,7 @@
       <span class="d-block small text-muted fst-italic mt-1">
         <i class="fa fa-clock-o"></i>
         <?php if ($scanned): ?>Scanned <?= htmlspecialchars($scanned) ?><?php else: ?>Cached scan<?php endif; ?>
-        &middot; rescanned every <?= $iv_hrs ?> hr, so anything already fixed may still be listed here.
-        The Permission Manager re-checks live.
+        &middot; the Permission Manager re-checks live.
       </span>
     </div>
     <a href="manage_filesystem_permissions.php" class="btn btn-sm btn-<?= $cls ?> flex-shrink-0">
@@ -177,6 +179,27 @@
     </a>
   </div>
   <?php endif; ?>
+
+  <!-- Housekeeping freshness + manual re-run.
+       Sits with the health cards above because it is what refreshes them, and stays
+       visible when they are all clean — "did my fix work?" is exactly when you want it.
+       The staleness explanation lives HERE rather than on each card: every card above is
+       precomputed on the same interval, and saying it once beats four copies drifting. -->
+  <div class="d-flex align-items-center justify-content-between gap-3 mb-4 px-3 py-2 rounded border bg-light">
+    <div class="small text-muted">
+      <i class="fa fa-clock-o me-1"></i>
+      The health checks above are <strong>precomputed</strong>, not measured on page load —
+      they are rescanned at most every <?= $iv_hrs ?> hr, so something you have just fixed
+      can still be listed.
+      <?php if ($scanned): ?>Last scan: <strong><?= htmlspecialchars($scanned) ?></strong>.<?php endif; ?>
+    </div>
+    <div class="flex-shrink-0">
+      <button type="button" id="rerunHousekeepingBtn" class="btn btn-sm btn-outline-secondary">
+        <i class="fa fa-refresh"></i> Run housekeeping now
+      </button>
+    </div>
+  </div>
+  <div id="rerunHousekeepingResult" class="small mt-2 mb-4"></div>
 
   <!-- System Configuration -->
   <div class="mt-5">

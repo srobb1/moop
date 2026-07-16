@@ -85,6 +85,11 @@ $data = [
     'orphaned_gene_set_tuples' => $_orphaned_gene_set_tuples,
     'orphaned_assembly_tuples' => $_orphaned_assembly_tuples,
     'no_database_organisms' => $_no_database_organisms,
+    // Per CLAUDE.md §6: JS logic belongs in js/modules/, not inline. (The organism-cache
+    // widget below predates that rule.)
+    'page_script' => [
+        '/' . $config->getString('site') . '/js/modules/housekeeping-rerun.js',
+    ],
     'inline_scripts' => [
         "const sitePath = '/" . $config->getString('site') . "';",
         // Organism cache status widget for the dashboard. Polls the same GET status
