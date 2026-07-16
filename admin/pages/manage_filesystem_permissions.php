@@ -108,12 +108,14 @@
 </div>
 
 
-<!-- Quick Reference -->
+<!-- Quick Reference — reference material, collapsed by default like About/Best Practices -->
 <div class="card mb-4">
-    <div class="card-header bg-light">
-        <h5 class="mb-0"><i class="fa fa-book"></i> Permission Modes Reference</h5>
+    <div class="card-header bg-light" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#modesReference">
+        <h5 class="mb-0"><i class="fa fa-book"></i> Permission Modes Reference <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
+    <div class="collapse" id="modesReference">
     <div class="card-body">
+        <p class="small text-muted mb-3">The web server runs as <code><?= htmlspecialchars($web_group) ?></code> and reads through the <strong>group</strong>. What matters is impact — is it group-readable, is it world-writable, is a <em>file</em> executable — not matching an exact number below.</p>
         <table class="table table-sm">
             <thead>
                 <tr>
@@ -125,31 +127,50 @@
             </thead>
             <tbody>
                 <tr>
-                    <td><code>644</code></td>
-                    <td>rw-r--r--</td>
-                    <td>Config/JSON files</td>
-                    <td>Owner reads/writes, group & others read only</td>
+                    <td><code>640</code></td>
+                    <td>rw-r-----</td>
+                    <td>Read-only data (restricted)</td>
+                    <td>Owner reads/writes, group reads, <strong>no world access</strong>. The web serves it via the group. Tightest option for restricted gene sets.</td>
+                </tr>
+                <tr>
+                    <td><code>660</code></td>
+                    <td>rw-rw----</td>
+                    <td>Read-only data / <code>organism.json</code></td>
+                    <td>Owner &amp; group read/write, no world access. Common across the data tree after hardening — <strong>this passes</strong>; do not "fix" it up to 644.</td>
                 </tr>
                 <tr>
                     <td><code>664</code></td>
                     <td>rw-rw-r--</td>
-                    <td>Shared config files</td>
-                    <td>Owner & group read/write, others read only</td>
+                    <td>Config the admin UI edits</td>
+                    <td>Owner &amp; group read/write, others read. The web group <strong>must</strong> be able to write these or admin saves fail.</td>
+                </tr>
+                <tr>
+                    <td><code>644</code></td>
+                    <td>rw-r--r--</td>
+                    <td>Public files only</td>
+                    <td><strong>World-readable.</strong> Fine for public data, but never <em>required</em> — the web reads via the group. Wrong for restricted data, and the group can't write, so don't use it for admin-edited config.</td>
                 </tr>
                 <tr>
                     <td><code>2775</code></td>
                     <td>drwxrwsr-x</td>
-                    <td>Shared directories</td>
-                    <td>SGID (2) + owner/group write. The <code>s</code> (SGID) ensures new files inherit the directory's group</td>
+                    <td>Directories the web writes into</td>
+                    <td>SGID (2) + owner/group write. The <code>s</code> ensures new files inherit the directory's group. Needs the <code>httpd_sys_rw_content_t</code> SELinux label too.</td>
                 </tr>
                 <tr>
+                    <td><code>755</code></td>
+                    <td>drwxr-xr-x</td>
+                    <td>Read-only directories</td>
+                    <td>Traverse + read for everyone; only the owner writes.</td>
+                </tr>
+                <tr class="table-warning">
                     <td><code>775</code></td>
-                    <td>drwxrwxr-x</td>
-                    <td>General directories</td>
-                    <td>Owner & group can read/write/execute, others read/execute only</td>
+                    <td>rwxrwxr-x</td>
+                    <td><strong>Directories only</strong></td>
+                    <td>Fine on a directory (it needs the traverse bit). On a <strong>file</strong> it means <strong>executable</strong>, which is flagged — data should never be executable. Beware <code>chmod -R 775</code>: it hits files too.</td>
                 </tr>
             </tbody>
         </table>
+    </div>
     </div>
 </div>
 
