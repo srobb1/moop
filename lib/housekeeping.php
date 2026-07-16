@@ -67,6 +67,75 @@ function housekeeping_hydrate_session_from_status(): void {
 }
 
 /**
+ * The housekeeping task registry — the ONE list, used both to RUN the tasks and to
+ * DESCRIBE them on the admin dashboard.
+ *
+ * Descriptions live here, beside the callable, on purpose. A separate list of
+ * descriptions maintained next to the runner is the two-sources-of-truth shape that has
+ * repeatedly bitten this codebase (CLAUDE.md §10): the two drift, and the copy nobody
+ * runs is the one that lies. Add a task here and it documents itself.
+ *
+ * 'desc' is ADMIN-FACING UI text: say what the task does, in terms of things the admin
+ * can see or act on. Rationale, history, and "why this exists" belong in the individual
+ * task docblocks below, not here — the reader of this string is looking at a dashboard,
+ * not the source.
+ *
+ * @return list<array{name:string, fn:string, label:string, desc:string}>
+ */
+function housekeeping_task_registry(): array {
+    return [
+        [
+            'name'  => 'clean_temp_files',
+            'fn'    => 'housekeeping_clean_temp_files',
+            'label' => 'Clean temp files',
+            'desc'  => 'Deletes BLAST and MAFFT scratch files older than 24 hours from the system temp directory.',
+        ],
+        [
+            'name'  => 'ensure_cache_dir',
+            'fn'    => 'housekeeping_ensure_cache_dir',
+            'label' => 'Ensure cache directory',
+            'desc'  => 'Creates the cache directory if it is missing and repairs its ownership and permissions.',
+        ],
+        [
+            'name'  => 'snapshot_site_data',
+            'fn'    => 'housekeeping_snapshot_site_data',
+            'label' => 'Snapshot site data',
+            'desc'  => 'Copies changed site data (config_editable.json, secrets.php, metadata, organism.json files, users.json) to the backup directory. It does NOT commit: if that directory is a git repo, MOOP only reads its state for the dashboard badge — committing and pushing stay manual, by design.',
+        ],
+        [
+            'name'  => 'environment_check',
+            'fn'    => 'housekeeping_environment_check',
+            'label' => 'Environment check',
+            'desc'  => 'Detects degraded requirements that cause silent failures: missing PHP extensions, missing JWT keys, unwritable directories, absent CLI tools (blastn, samtools, makeblastdb).',
+        ],
+        [
+            'name'  => 'permission_check',
+            'fn'    => 'housekeeping_permission_check',
+            'label' => 'Filesystem permission check',
+            'desc'  => 'Sweeps the filesystem for permission and SELinux problems by impact, storing only the counts. This is the slow one (~4s of the ~4.5s total) because it walks the whole organism tree — which is precisely why it is cached rather than run on every dashboard load.',
+        ],
+        [
+            'name'  => 'refresh_annotation_caches',
+            'fn'    => 'housekeeping_refresh_annotation_caches',
+            'label' => 'Refresh annotation caches',
+            'desc'  => "Rebuilds each organism's annotation_sources_cache.json when it is missing or older than that organism's SQLite database.",
+        ],
+        [
+            'name'  => 'refresh_organism_cache',
+            'fn'    => 'housekeeping_refresh_organism_cache_if_stale',
+            'label' => 'Refresh organism cache',
+            'desc'  => 'Rebuilds the organism cache in the background when the data it was built from has actually changed — it compares per-organism and config fingerprints rather than watching a clock, so an unchanged site costs nothing. Without it, the drift checks that read this cache would keep reporting a clean bill of health that is days old.',
+        ],
+        [
+            'name'  => 'ncbi_taxonomy_update',
+            'fn'    => 'housekeeping_check_ncbi_taxonomy_update',
+            'label' => 'NCBI taxonomy update',
+            'desc'  => 'Syncs the local NCBI taxonomy dump if it is more than 30 days old. Reads a local timestamp first, so no network call happens unless an update is actually due.',
+        ],
+    ];
+}
+
+/**
  * Run all housekeeping tasks (at most once per HOUSEKEEPING_MIN_INTERVAL).
  *
  * @param bool $force Skip the interval throttle and run now. Used by the admin
@@ -111,19 +180,7 @@ function run_housekeeping(bool $force = false): array {
     // of concurrent housekeeping runs triggered by other requests mid-flight.
     @touch($marker_file);
 
-    // ── Task registry ────────────────────────────────────────
-    // Each entry: ['name' => string, 'fn' => callable]
-    // Tasks should be fast and safe to skip on failure.
-    $tasks = [
-        ['name' => 'clean_temp_files',           'fn' => 'housekeeping_clean_temp_files'],
-        ['name' => 'ensure_cache_dir',           'fn' => 'housekeeping_ensure_cache_dir'],
-        ['name' => 'snapshot_site_data',         'fn' => 'housekeeping_snapshot_site_data'],
-        ['name' => 'environment_check',          'fn' => 'housekeeping_environment_check'],
-        ['name' => 'permission_check',           'fn' => 'housekeeping_permission_check'],
-        ['name' => 'refresh_annotation_caches',  'fn' => 'housekeeping_refresh_annotation_caches'],
-        ['name' => 'refresh_organism_cache',     'fn' => 'housekeeping_refresh_organism_cache_if_stale'],
-        ['name' => 'ncbi_taxonomy_update',       'fn' => 'housekeeping_check_ncbi_taxonomy_update'],
-    ];
+    $tasks = housekeeping_task_registry();
 
     foreach ($tasks as $task) {
         $t0 = microtime(true);
@@ -205,8 +262,13 @@ function housekeeping_clean_temp_files() {
  *
  * Copies config, metadata, and user files to a backup directory.
  * Auto-creates the directory if it doesn't exist. Git is NOT required —
- * plain file copies are the baseline. If the directory happens to be a
- * git repo, changes are auto-committed as a bonus.
+ * plain file copies are the baseline, and they are the whole mechanism.
+ *
+ * This function does NOT commit anything. If the directory happens to be a git repo,
+ * MOOP only READS its state (housekeeping_git_status()) to show a badge on the
+ * dashboard; committing and pushing stay manual, deliberately, so the admin controls
+ * when credentials-bearing snapshots get versioned. The README this writes into the
+ * backup directory tells them exactly that.
  *
  * Status is stored in $_SESSION['site_data_backup'] for the dashboard, and persisted
  * to logs/.housekeeping_status.json so every session can be hydrated with it — see
@@ -628,8 +690,15 @@ function housekeeping_refresh_annotation_caches() {
  * Launches the same background scanner the manual button uses (see
  * admin/api/refresh_organism_cache.php) — non-blocking, returns immediately.
  * The scan itself only re-examines organisms whose fingerprint changed, so
- * this stays cheap even with many organisms. Only fires if the cache is older
- * than the refresh interval and no scan is already running.
+ * this stays cheap even with many organisms.
+ *
+ * TRIGGER IS FINGERPRINT-BASED, NOT TIME-BASED. It fires when the per-organism
+ * fingerprints or the config fingerprint no longer match what the cache was built from —
+ * i.e. when something ACTUALLY changed — and skips when a scan is already running (lock).
+ * There is no interval check here despite the function name. (This docblock previously
+ * claimed "only fires if the cache is older than the refresh interval", and the log line
+ * below said "12h interval"; both were leftovers from an older time-based version and
+ * described a gate that does not exist. Corrected 2026-07-16.)
  */
 function housekeeping_refresh_organism_cache_if_stale() {
     $config        = ConfigManager::getInstance();
@@ -678,7 +747,7 @@ function housekeeping_refresh_organism_cache_if_stale() {
     ];
     $proc = @proc_open(['/bin/sh', '-c', $shell_cmd], $descriptors, $pipes);
     if (is_resource($proc)) {
-        error_log('MOOP housekeeping: launched organism cache refresh (12h interval)');
+        error_log('MOOP housekeeping: launched organism cache refresh (fingerprints changed)');
     } else {
         @unlink($lock_file);
     }

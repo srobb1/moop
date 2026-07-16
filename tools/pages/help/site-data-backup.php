@@ -125,7 +125,7 @@ git push -u origin main</pre>
           </p>
           <ul class="text-muted mb-3">
             <li><strong class="text-success">Green — Site data backup active:</strong> The backup ran successfully. Shows how many files were updated and the timestamp.</li>
-            <li><strong>Git badge:</strong> Shown when the backup directory is a git repo; changes were auto-committed.</li>
+            <li><strong>Git badge:</strong> Shown when the backup directory is a git repo. It reports that repo's state (uncommitted files, commits not yet pushed) — MOOP reads git, it never commits for you. See "Optional: Git version history" above.</li>
             <li><strong class="text-warning">Yellow warning:</strong> The backup directory could not be created or a file copy failed — check directory permissions.</li>
           </ul>
           <p class="text-muted mb-0">

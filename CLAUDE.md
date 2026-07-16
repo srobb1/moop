@@ -351,9 +351,12 @@ via `config_editable.json` — read it through ConfigManager, never from `site_c
 **How snapshots work:**
 - `lib/housekeeping.php` → `housekeeping_snapshot_site_data()` runs on the housekeeping
   interval (§9 — at most once every 4h, not once per session)
-- Auto-creates the backup directory if it doesn't exist
+- Auto-creates the backup directory if it doesn't exist (and writes a README into it)
 - Copies changed files to the backup directory
-- Git is NOT required — if the directory is a git repo, changes are auto-committed as a bonus
+- Git is NOT required, and **MOOP never commits**. If the directory is a git repo, MOOP
+  only *reads* its state (`housekeeping_git_status()` — `status --porcelain`, ahead count)
+  to render a badge on the dashboard. Committing and pushing are manual, by design; the
+  README it writes into the backup directory says so.
 - Status is stored in `$_SESSION['site_data_backup']` for the admin dashboard
 
 **Setting up a new deployment:**

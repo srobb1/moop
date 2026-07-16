@@ -184,19 +184,52 @@
        Sits with the health cards above because it is what refreshes them, and stays
        visible when they are all clean — "did my fix work?" is exactly when you want it.
        The staleness explanation lives HERE rather than on each card: every card above is
-       precomputed on the same interval, and saying it once beats four copies drifting. -->
-  <div class="d-flex align-items-center justify-content-between gap-3 mb-4 px-3 py-2 rounded border bg-light">
-    <div class="small text-muted">
-      <i class="fa fa-clock-o me-1"></i>
-      The health checks above are <strong>precomputed</strong>, not measured on page load —
-      they are rescanned at most every <?= $iv_hrs ?> hr, so something you have just fixed
-      can still be listed.
-      <?php if ($scanned): ?>Last scan: <strong><?= htmlspecialchars($scanned) ?></strong>.<?php endif; ?>
-    </div>
-    <div class="flex-shrink-0">
-      <button type="button" id="rerunHousekeepingBtn" class="btn btn-sm btn-outline-secondary">
-        <i class="fa fa-refresh"></i> Run housekeeping now
-      </button>
+       precomputed on the same interval, and saying it once beats four copies drifting.
+       The task list is rendered from housekeeping_task_registry() — the same list that
+       RUNS them — so it cannot drift out of date. -->
+  <div class="card mb-4">
+    <div class="card-body py-2">
+      <div class="d-flex align-items-center justify-content-between gap-3">
+        <div class="small text-muted">
+          <i class="fa fa-clock-o me-1"></i>
+          The health checks above are <strong>precomputed</strong>, not measured on page load.
+          <?php if ($scanned): ?>Last run <strong><?= htmlspecialchars($scanned) ?></strong>.<?php endif; ?>
+          Something you have just fixed can still be listed.
+          <a class="ms-1" data-bs-toggle="collapse" href="#housekeepingTasks" role="button"
+             aria-expanded="false" aria-controls="housekeepingTasks" style="cursor:pointer;">
+            What runs? <i class="fa fa-chevron-down small"></i>
+          </a>
+        </div>
+        <div class="flex-shrink-0">
+          <button type="button" id="rerunHousekeepingBtn" class="btn btn-sm btn-outline-secondary">
+            <i class="fa fa-refresh"></i> Run housekeeping now
+          </button>
+        </div>
+      </div>
+
+      <div class="collapse" id="housekeepingTasks">
+        <hr class="my-2">
+        <p class="small text-muted mb-2">
+          <strong>Housekeeping is not a scheduled job — there is no cron.</strong> These tasks run
+          when an <em>admin loads an admin page</em>, and no more often than once every
+          <?= $iv_hrs ?> hours (so at most <?= (int) floor(24 / max(1, $iv_hrs)) ?>× a day).
+          If nobody visits the admin area, <strong>they do not run at all</strong> — which is why
+          this button exists, and why a card can sit stale far longer than <?= $iv_hrs ?> hours.
+        </p>
+        <?php foreach (housekeeping_task_registry() as $_t): ?>
+        <div class="mb-2">
+          <div class="small"><strong><?= htmlspecialchars($_t['label']) ?></strong>
+            <code class="text-muted ms-1"><?= htmlspecialchars($_t['name']) ?></code>
+          </div>
+          <div class="small text-muted"><?= htmlspecialchars($_t['desc']) ?></div>
+        </div>
+        <?php endforeach; ?>
+        <p class="small text-muted mb-0 fst-italic">
+          Results persist to <code>logs/.housekeeping_status.json</code>; every admin page load
+          hydrates the session from it cheaply. Defined in <code>lib/housekeeping.php</code>
+          (<code>housekeeping_task_registry()</code>).
+        </p>
+      </div>
     </div>
   </div>
   <div id="rerunHousekeepingResult" class="small mt-2 mb-4"></div>
