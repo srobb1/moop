@@ -64,9 +64,7 @@ Every directory below contains files created by the `apache` user (verified empi
 | `/var/www/html/moop/config` | `config_editable.json` (written by the admin UI) |
 | `/var/www/html/moop/metadata` | JBrowse track/assembly configs, groups, taxonomy |
 | `/var/www/html/moop/data/genomes` | `annotations.gff3.gz` + tabix indexes, regenerated on re-prep |
-| `/var/www/html/moop/images/wikimedia` | cached remote images |
-| `/var/www/html/moop/images/ncbi_taxonomy` | cached remote images |
-| `/var/www/html/moop/images/banners` | banner upload/delete via Admin → Site Configuration |
+| `/var/www/html/moop/images` | the **whole tree** is web-written: organism images upload to the top level (edit-organism modal → `handle_image_upload.php`), `banners/` via Site Configuration, `wikimedia/` + `ncbi_taxonomy/` are remote-image caches php downloads into |
 | `/var/www/html/moop/archived_gene_sets` | gene-set archive output |
 | `/var/www/moop-site-data` | site-data backup (config, secrets, users.json) |
 | `/var/www/moop-cache` | generated caches — see the `cache_path` section below |

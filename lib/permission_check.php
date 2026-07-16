@@ -62,6 +62,8 @@ function moop_permission_check_mode(string $name): string {
         'Genome Data Directory'           => 1,  // data/genomes — gff.gz + tabix
         'Cache Directory'                 => 1,  // cache_path
         'Organism Cache File'             => 1,  // under cache_path
+        'Images Directory'                => 1,  // images/ — organism images upload HERE, flat
+                                                //   (handle_image_upload.php -> absolute_images_path)
         'NCBI Taxonomy Images Cache'      => 1,  // images/ncbi_taxonomy (php downloads)
         'Wikimedia Images Cache'          => 1,  // images/wikimedia (php downloads)
         'Banner Images Directory'         => 1,  // images/banners — admin UI uploads/deletes

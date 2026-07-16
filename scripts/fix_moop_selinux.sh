@@ -29,9 +29,13 @@ RW_DIRS=(
     "$MOOP/config"                  # config_editable.json (admin UI)
     "$MOOP/metadata"                # jbrowse2-configs/{tracks,assemblies,sheets}, groups, taxonomy
     "$MOOP/data/genomes"            # annotations.gff3.gz + tabix indexes (regenerated on re-prep)
-    "$MOOP/images/wikimedia"        # cached Wikipedia images
-    "$MOOP/images/ncbi_taxonomy"    # cached NCBI taxonomy images
-    "$MOOP/images/banners"          # admin UI uploads/deletes banners (manage_site_config.php)
+    # The whole images/ tree is web-written, so label it recursively rather than listing
+    # subdirs. Top level: organism images uploaded from the edit-organism modal land HERE
+    # (admin/api/handle_image_upload.php -> $config->getPath('absolute_images_path')).
+    # Below it: banners/ (manage_site_config.php uploads), wikimedia/ + ncbi_taxonomy/
+    # (php downloads remote images into these caches).
+    # Safe despite being served: nginx denies .php under /moop/images/ (moop-security.conf).
+    "$MOOP/images"
     "$MOOP/archived_gene_sets"      # gene-set archives
     /var/www/moop-site-data         # site-data backup (config, secrets, users.json)
     "$CACHE"                        # generated caches (organism scan, annotation counts, ...)
