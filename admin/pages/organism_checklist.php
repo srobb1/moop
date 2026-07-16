@@ -573,10 +573,15 @@
                 </li>
               <?php endforeach; ?>
             </ul>
+            <?php // NOT `chmod -R 2775`: the -R applies 2775 to FILES too, making every
+                  // genome, database and BLAST index executable. That command — handed out
+                  // right here — is where 234 executable index files on this box came from.
+                  // Directories need the traverse bit; data files never do. Split them. ?>
             <div class="mt-3 p-2 bg-dark text-light rounded" style="font-family: monospace; font-size: 0.85em;">
               <strong>To fix all organism directories, run:</strong><br>
-              sudo chmod -R 2775 <?= htmlspecialchars($organism_data) ?><br>
-              sudo chgrp -R <?= htmlspecialchars($expected_group) ?> <?= htmlspecialchars($organism_data) ?>
+              sudo chgrp -R <?= htmlspecialchars($expected_group) ?> <?= escapeshellarg($organism_data) ?><br>
+              sudo find <?= escapeshellarg($organism_data) ?> -type d -exec chmod 2775 {} +<br>
+              sudo find <?= escapeshellarg($organism_data) ?> -type f -exec chmod a-x {} +
             </div>
           </div>
         <?php else: ?>

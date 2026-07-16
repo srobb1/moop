@@ -510,8 +510,13 @@ function generatePermissionAlert($file_path, $title = '', $problem = '', $file_t
         $html .= '  <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">' . "\n";
         $html .= '    <code style="word-break: break-all; display: block; font-size: 0.9em;">' . "\n";
         if ($is_dir) {
+            // NOT `chmod -R 775`: -R applies 775 to FILES too, making every genome,
+            // database and BLAST index executable. That advice is where 234 executable
+            // files on this deployment came from. Directories need the traverse bit;
+            // data files never do — so split them.
             $html .= '      sudo chgrp -R ' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
-            $html .= '      sudo chmod -R 775 ' . $safe_path . "\n";
+            $html .= '      sudo find ' . $safe_path . ' -type d -exec chmod 2775 {} +<br>' . "\n";
+            $html .= '      sudo find ' . $safe_path . ' -type f -exec chmod a-x {} +' . "\n";
         } else {
             $html .= '      sudo chgrp ' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
             $html .= '      sudo chmod 664 ' . $safe_path . "\n";
@@ -524,8 +529,13 @@ function generatePermissionAlert($file_path, $title = '', $problem = '', $file_t
         $html .= '  <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">' . "\n";
         $html .= '    <code style="word-break: break-all; display: block; font-size: 0.9em;">' . "\n";
         if ($is_dir) {
+            // NOT `chmod -R 775`: -R applies 775 to FILES too, making every genome,
+            // database and BLAST index executable. That advice is where 234 executable
+            // files on this deployment came from. Directories need the traverse bit;
+            // data files never do — so split them.
             $html .= '      sudo chgrp -R ' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
-            $html .= '      sudo chmod -R 775 ' . $safe_path . "\n";
+            $html .= '      sudo find ' . $safe_path . ' -type d -exec chmod 2775 {} +<br>' . "\n";
+            $html .= '      sudo find ' . $safe_path . ' -type f -exec chmod a-x {} +' . "\n";
         } else {
             $html .= '      sudo chgrp ' . htmlspecialchars($web_group) . ' ' . $safe_path . '<br>' . "\n";
             $html .= '      sudo chmod 664 ' . $safe_path . "\n";

@@ -154,6 +154,21 @@ function moop_permission_fix_commands(array $check, string $moop_owner): array {
 }
 
 /**
+ * One command that clears every executable data file in the organism tree.
+ *
+ * The per-path fixes above are fine for one or two files, but this arrives in bulk: an
+ * admin scp's in an organism whose BLAST databases were built elsewhere and the execute
+ * bits come along for the ride. Nobody pastes 234 chmods.
+ *
+ * `-type f` is the whole point — the recursive form (`chmod -R 775`) is what CREATED this
+ * problem, because -R hits files as well as directories. Directories keep their traverse
+ * bit; files lose the exec bit they never needed.
+ */
+function moop_permission_fix_exec_files_command(string $organism_data): string {
+    return 'sudo find ' . escapeshellarg($organism_data) . ' -type f -exec chmod a-x {} +';
+}
+
+/**
  * Is SELinux in enforcing mode? (Cached; one getenforce per process.)
  * When enforcing, the SELinux label — not the Unix mode — is what actually decides
  * whether httpd_t can write. is_writable() sees only DAC, so a dir can be
@@ -855,6 +870,44 @@ function moop_collect_permission_checks($config): array {
         }
     }
 
+    // ── Executable data files, ANY extension ─────────────────────────────────────────
+    //
+    // Ask the filesystem instead of a pattern list. The per-file rules below enumerate
+    // *.fa, organism.json and organism.sqlite — a hand-maintained second copy of "what
+    // files live here", which cannot know about a type nobody added to it. BLAST index
+    // files (.nsq/.nin/.nhr/.pto/...) were never in that list, so 234 executable ones sat
+    // invisible on this box (2026-07-16) while the checker reported clean.
+    //
+    // It matters for the realistic workflow: an admin scp's in a new organism with
+    // pre-built BLAST databases, and whatever modes the source had come with it. A pattern
+    // list will never cover that; a sweep does. ~9ms over the whole tree.
+    $exec_file_issues = [];
+    if (is_dir($organism_data)) {
+        $found = [];
+        @exec('find ' . escapeshellarg($organism_data) . ' -type f -perm /111 -print 2>/dev/null', $found);
+        foreach ($found as $path) {
+            $path = trim($path);
+            if ($path === '') continue;
+            $exec_file_issues[] = [
+                'name'           => 'Executable Data Files',
+                'path'           => $path,
+                'type'           => 'file',
+                'check_mode'     => 'data',
+                'exists'         => true,
+                'current_perms'  => substr(sprintf('%o', @fileperms($path)), -4),
+                'current_owner'  => '',
+                'current_group'  => '',
+                'is_readable'    => true,
+                'is_writable'    => false,
+                'severity'       => 'medium',
+                'required_group' => $web_group,
+                'reason'         => 'Data files are read by BLAST and the app; nothing executes them.',
+                'issues'         => ['Marked executable — data files should never carry the execute bit'
+                                     . ' (commonly from a recursive chmod, or copied in with the bit already set)'],
+            ];
+        }
+    }
+
     // Check assembly subdirectories and FASTA files
     $assembly_subdir_issues = [];
     $fasta_file_issues = [];
@@ -980,6 +1033,7 @@ function moop_collect_permission_checks($config): array {
         'checks'                 => $checks,
         'assembly_subdir_issues' => $assembly_subdir_issues,
         'fasta_file_issues'      => $fasta_file_issues,
+        'exec_file_issues'       => $exec_file_issues,
         'web_user'               => $web_user,
         'web_group'              => $web_group,
         'moop_owner'             => $moop_owner,
@@ -1005,7 +1059,8 @@ function moop_permission_findings($config, ?array $collected = null): array {
     $all = array_merge(
         $collected['checks'],
         $collected['assembly_subdir_issues'],
-        $collected['fasta_file_issues']
+        $collected['fasta_file_issues'],
+        $collected['exec_file_issues'] ?? []
     );
     $rank = ['low' => 1, 'medium' => 2, 'high' => 3];
     $cats = [];
