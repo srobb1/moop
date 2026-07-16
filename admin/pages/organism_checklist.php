@@ -173,6 +173,15 @@
               <i class="fa fa-lightbulb"></i> <strong>Easy Option:</strong> Use the <strong>Status</strong> button in <a href="manage_organisms.php" target="_blank"><strong>Manage Organisms</strong></a> (Step 3) to create and edit the organism.json file through an interactive interface. No manual file editing needed!
             </div>
 
+            <div class="alert alert-success mb-3">
+              <i class="fa fa-magic"></i> <strong>You only need four fields.</strong>
+              Give MOOP <code>genus</code>, <code>species</code>, <code>common_name</code> and
+              <code>taxon_id</code>, and it fills in the rest by itself: it writes a description from the
+              organism's taxonomic lineage plus the Wikipedia extract (credited, with a link), and fetches
+              a Wikipedia image — cached locally in <code>images/wikimedia/</code>, so it downloads once.
+              Add <code>html_p</code> or <code>images</code> only when you want to override that.
+            </div>
+
             <p class="mb-2"><strong>Required Fields:</strong></p>
             <ul class="mb-3">
               <li><code>genus</code> - Organism genus (required)</li>
@@ -183,8 +192,22 @@
 
             <p class="mb-2"><strong>Optional Fields:</strong></p>
             <ul class="mb-3">
-              <li><code>images</code> - Array of image objects with filename and caption</li>
-              <li><code>html_p</code> - Array of HTML content paragraphs</li>
+              <li><code>images</code> - Array of image objects with filename and caption.
+                  <strong>Leave it out and MOOP fetches an image from Wikipedia</strong> for you, caching it
+                  in <code>images/wikimedia/</code> so it is only downloaded once. Supply this field only
+                  when you want a specific image instead.</li>
+              <li><code>html_p</code> - Array of HTML content paragraphs.
+                  <strong>Leave it out and MOOP writes the description itself</strong>: a summary built from
+                  the organism's taxonomic lineage (from <code>taxon_id</code>), plus the Wikipedia extract,
+                  credited with a link back to the article. Supply this field only to override that.</li>
+              <li><code>feature_types</code> - Which feature types are treated as parents and children,
+                  e.g. <code>{"parents":["gene"],"children":["mRNA","transcript","protein"]}</code>.
+                  Controls what the gene page treats as the top-level feature. Omit it and MOOP falls back
+                  to <code>["gene","pseudogene"]</code> as parents. Every organism on this deployment has it,
+                  because the loader writes it.</li>
+              <li><code>subclassification</code> - Optional grouping shown on the organism page, e.g.
+                  <code>{"type":"strain","value":"CC7"}</code>. Written as
+                  <code>{"type":null,"value":null}</code> when unused.</li>
             </ul>
 
             <p class="mb-2"><strong>Example organism.json:</strong></p>
@@ -719,7 +742,14 @@
         </ul>
 
         <?php
-        $tree_file = dirname($organism_data) . '/metadata/taxonomy_tree_config.json';
+        // Ask ConfigManager; do not derive. This used to be
+        // dirname($organism_data) . '/metadata/taxonomy_tree_config.json', which resolves
+        // correctly only because metadata_path happens to sit beside organisms/ on this
+        // deployment. Both paths are configurable independently — point metadata_path
+        // anywhere else and isAssemblyInTaxonomyTree() reads a file that does not exist,
+        // so every organism reports "not yet in selector". A wall of false warnings, from
+        // a path that was never wrong here. (CLAUDE.md: never derive, use ConfigManager.)
+        $tree_file = $config->getPath('metadata_path') . '/taxonomy_tree_config.json';
         $organisms_not_in_tree = [];
         foreach ($organisms_in_system as $org) {
             if (!isAssemblyInTaxonomyTree($org, '', $tree_file)) {
