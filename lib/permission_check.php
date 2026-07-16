@@ -70,6 +70,8 @@ function moop_permission_check_mode(string $name): string {
                                                 //   (handle_image_upload.php -> absolute_images_path)
         'Documentation Directory'         => 1,  // docs/ — the admin "Generate registry" button
                                                 //   rewrites function_registry.json here
+        'Function Registry Files'         => 1,  // docs/*function_registry.json — rewritten in
+                                                //   place, so the FILE must be group-writable
         'NCBI Taxonomy Images Cache'      => 1,  // images/ncbi_taxonomy (php downloads)
         'Wikimedia Images Cache'          => 1,  // images/wikimedia (php downloads)
         'Banner Images Directory'         => 1,  // images/banners — admin UI uploads/deletes
@@ -774,8 +776,33 @@ function moop_build_permission_items($config, array $ctx): array {
             'required_owner' => $moop_owner,
             'required_group' => $web_group,
             'reason' => 'SGID (Set-Group-ID) bit ensures new documentation files automatically get ' . $web_group . ' as group',
-            'why_write' => 'Docs may be updated through admin interface',
+            'why_write' => 'The admin "Generate/update registry" buttons rewrite the function registries here',
             'sgid_bit' => true,
+        ],
+
+        // Function Registry Files — the FILES, not just the directory they live in.
+        //
+        // A writable DIRECTORY lets the web CREATE files; rewriting an EXISTING file needs
+        // write on the FILE. Nothing checked that until 2026-07-16, and it bit exactly
+        // here: docs/ was rw and function_registry.json (664) regenerated fine, while
+        // js_function_registry.json (644 — world-readable, NOT group-writable) failed with
+        // "Permission denied". Same directory, same user, opposite outcome. The admin saw
+        // only "Failed to generate js registry".
+        //
+        // A rule rather than a sweep, deliberately: "the web rewrites this file in place"
+        // varies per file and cannot be derived from the filesystem. Most files in docs/
+        // are git-tracked prose that SHOULD stay read-only — demanding 664 across the tree
+        // would be wrong. Only these two are rewritten by a button.
+        [
+            'name' => 'Function Registry Files',
+            'description' => 'Generated function registries (docs/function_registry.json, docs/js_function_registry.json)',
+            'type' => 'file_pattern',
+            'pattern' => $docs_path . '/*function_registry.json',
+            'required_perms' => '664',
+            'required_owner' => $moop_owner,
+            'required_group' => $web_group,
+            'reason' => 'Rewritten in place by the admin registry buttons, so the web group must be able to write the file itself — a writable docs/ is not enough.',
+            'why_write' => 'Admin → PHP/JS Function Registry → "Generate/update registry" runs tools/generate_*_registry_json.php, which file_put_contents() over these files',
         ],
 
         // Backups Directory
