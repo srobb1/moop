@@ -99,21 +99,37 @@
             <i class="fa fa-folder"></i> Expected Directory Structure <i class="fa fa-chevron-down float-end"></i>
           </h6>
           <div class="collapse" id="directoryStructureStep1">
+            <?php
+            // FASTA names are rendered from the LIVE config, never hardcoded — they are
+            // admin-editable in Manage Site Configuration, so a literal list here would
+            // start lying the moment someone changed one. 'genome' sits at the assembly
+            // level (shared across gene sets); the rest live in the gene set.
+            $seq_types    = $config->getSequenceTypes();
+            $genome_cfg   = $seq_types['genome'] ?? null;
+            $geneset_seqs = array_diff_key($seq_types, ['genome' => 1]);
+            ?>
             <div class="structure-box bg-light p-3 border rounded mb-3">
               <div class="mb-2">
                 <code><strong>Genus_species</strong></code> (e.g., Anoura_caudifer)<br/>
                 <div class="ms-3">
                   <code>├─ organism.sqlite</code> (gene database)<br/>
-                  <code>├─ organism.json</code> (metadata file)<br/>
-                  <code>└─ <strong>assembly_name</strong></code> (e.g., GCA_004027475.1_v1)<br/>
+                  <code>├─ organism.json</code> (organism metadata)<br/>
+                  <code>└─ <strong>assembly_name</strong></code> (e.g., GCA_004027475.1)<br/>
                   <div class="ms-3">
-                    <code>├─ genome.fa</code> (reference genome — shared across gene sets)<br/>
-                    <code>├─ genome.fa.fai</code> (samtools FAI index)<br/>
-                    <code>└─ <strong>gene_set_name</strong></code> (e.g., v1, OGS1.0)<br/>
+                    <?php if ($genome_cfg): ?>
+                    <code>├─ <?= htmlspecialchars($genome_cfg['pattern']) ?></code> (reference genome — shared across gene sets)<br/>
+                    <code>├─ <?= htmlspecialchars($genome_cfg['pattern']) ?>.fai</code> <span class="text-muted">— generated</span><br/>
+                    <?php endif; ?>
+                    <code>├─ genome.json</code> (assembly metadata)<br/>
+                    <code>└─ <strong>gene_set_name</strong></code> (e.g., NV2, OGS1.0)<br/>
                     <div class="ms-3">
-                      <code>├─ *.transcript.nt.fa</code> (mRNA sequences)<br/>
-                      <code>├─ *.protein.aa.fa</code> (protein sequences)<br/>
-                      <code>└─ *.cds.nt.fa</code> (coding sequences)<br/>
+                      <code>├─ <?= htmlspecialchars(genes_gff_filename()) ?></code> (annotations — GFF3)<br/>
+                      <code>├─ geneset.json</code> (gene-set metadata)<br/>
+                      <?php foreach ($geneset_seqs as $st): ?>
+                      <code>├─ <?= htmlspecialchars($st['pattern']) ?></code> (<?= htmlspecialchars($st['label'] ?? '') ?> sequences)<br/>
+                      <?php endforeach; ?>
+                      <code>├─ BLAST index files</code> <span class="text-muted">— generated (Step 3)</span><br/>
+                      <code>└─ feature_coords.tsv</code> <span class="text-muted">— generated at registration</span><br/>
                     </div>
                   </div>
                 </div>
@@ -129,8 +145,18 @@
               <li>Organism directory: Use underscores to separate genus, species, and optional subspecies</li>
               <li>Database file: Must be named <code>organism.sqlite</code></li>
               <li>Metadata file: Must be named <code>organism.json</code></li>
-              <li>FASTA files: Patterns shown above are the defaults. <strong>These are configurable!</strong> See <a href="manage_site_config.php" target="_blank">Manage Site Configuration</a> to customize which file types are enabled and their naming patterns</li>
+              <li><strong>Use the FASTA names exactly as shown — no prefix.</strong>
+                  <code><?= htmlspecialchars($geneset_seqs['transcript']['pattern'] ?? 'transcript.nt.fa') ?></code>,
+                  not <code>myorg.<?= htmlspecialchars($geneset_seqs['transcript']['pattern'] ?? 'transcript.nt.fa') ?></code>.
+                  BLAST resolves the exact filename, so a prefixed file is <strong>silently skipped</strong>:
+                  sequence extraction and search still find it, but no BLAST database is built for that
+                  type and nothing reports an error.</li>
+              <li>The names above come from your live configuration and are <strong>editable</strong> in
+                  <a href="manage_site_config.php" target="_blank">Manage Site Configuration</a>, where you
+                  can also turn types on and off. This list follows whatever you set there.</li>
               <li>Assembly directory: Use a unique identifier (typically from NCBI: GCA_xxxxxxx.x)</li>
+              <li>Items marked <span class="text-muted">generated</span> are created for you — do not copy
+                  them in.</li>
             </ul>
           </div>
         </div>
@@ -684,7 +710,10 @@
         <p><strong>How it works:</strong></p>
         <ul>
           <li>Each organism needs a valid <code>taxon_id</code> (NCBI Taxonomy ID) in its <code>organism.json</code></li>
-          <li>The organism cache refresh (run from <strong>Manage Organisms</strong>) rebuilds the selector automatically using that ID</li>
+          <li>The organism cache rebuilds the selector from that ID. It refreshes <strong>automatically</strong>
+              in the background when the underlying data changes (housekeeping compares fingerprints, so an
+              unchanged site costs nothing) — you can also force it from <strong>Manage Organisms</strong>
+              if you want it now.</li>
           <li>NCBI lineage data is synced monthly in the background — no manual steps needed</li>
           <li>If two organisms share the same taxon ID, only one will appear in the selector</li>
         </ul>
