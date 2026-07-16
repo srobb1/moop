@@ -121,6 +121,29 @@ function detectWebUser() {
  * Check if a CLI tool is available via `which`.
  */
 /**
+ * Which web server is actually running? MOOP supports both Apache and nginx, so no
+ * check may assume one. Detected from running processes (same approach as
+ * detectWebUser), falling back to which config tree exists on disk.
+ *
+ * @return string 'nginx' | 'apache' | 'unknown'
+ */
+function detectWebServer() {
+    static $flavor = null;
+    if ($flavor !== null) return $flavor;
+
+    $out = [];
+    @exec("ps -eo comm --no-headers 2>/dev/null | sort -u", $out);
+    $procs = implode(' ', $out);
+    if (preg_match('/\bnginx\b/', $procs))          return $flavor = 'nginx';
+    if (preg_match('/\b(apache2|httpd)\b/', $procs)) return $flavor = 'apache';
+
+    // Nothing running (fresh install, or checking before starting the server).
+    if (is_dir('/etc/nginx'))                        return $flavor = 'nginx';
+    if (is_dir('/etc/httpd') || is_dir('/etc/apache2')) return $flavor = 'apache';
+    return $flavor = 'unknown';
+}
+
+/**
  * Numeric uid/gid for the web server account. Cached; resolved without posix.
  *
  * The posix extension is NOT loaded in this PHP CLI (verified 2026-07-16), so
@@ -505,7 +528,68 @@ foreach ($readonly_dirs as $label => $path) {
     }
 }
 
-// ── Section 5b: SELinux ─────────────────────────────────────────────────────
+// ── Section 5b: Data-tree Execution Guard ───────────────────────────────────
+//
+// Applies to EVERY install — any OS, any web server, SELinux or not. MOOP writes into
+// directories that are also served over HTTP, which is safe only while the web server
+// refuses to execute .php inside them. Without that, one file-write bug in the app
+// becomes a persistent webshell.
+//
+// Do not assume nginx: MOOP supports Apache too (the README lists it first).
+
+section("Data-tree Execution Guard");
+
+$server_flavor = detectWebServer();
+
+// [deployed path, canonical file in the repo, reload command]
+$guard_targets = [
+    'nginx'  => [
+        ['/etc/nginx/default.d/moop-security.conf'],
+        "$base/docs/nginx/moop-security.conf",
+        'sudo nginx -t && sudo systemctl reload nginx',
+    ],
+    'apache' => [
+        ['/etc/httpd/conf.d/moop-security.conf', '/etc/apache2/conf-available/moop-security.conf'],
+        "$base/docs/apache/moop-security.conf",
+        'sudo apachectl configtest && sudo systemctl reload httpd   # Debian: a2enconf moop-security && systemctl reload apache2',
+    ],
+];
+
+if ($server_flavor === 'unknown') {
+    warn("Could not detect the web server — cannot verify the execution guard",
+         "Deny .php under organisms/, data/, images/, jbrowse2/ and archived_gene_sets/.\n" .
+         "         References: docs/nginx/moop-security.conf, docs/apache/moop-security.conf");
+} else {
+    [$deploy_paths, $canonical, $reload] = $guard_targets[$server_flavor];
+    $deployed = null;
+    foreach ($deploy_paths as $p) {
+        if (file_exists($p)) { $deployed = $p; break; }
+    }
+    $target = $deploy_paths[0];
+
+    if (!file_exists($canonical)) {
+        warn("No canonical guard shipped for $server_flavor ($canonical)");
+    } elseif ($deployed === null) {
+        fail("Execution guard is not deployed ($server_flavor)",
+             "sudo cp $canonical $target && sudo chmod 644 $target\n" .
+             "         $reload\n" .
+             "         (Without it, an uploaded .php in a served data tree will execute.)");
+    } elseif (md5_file($deployed) !== md5_file($canonical)) {
+        warn("Deployed guard differs from " . str_replace("$base/", '', $canonical),
+             "It may predate a rule that closes a hole. Re-deploy:\n" .
+             "         sudo cp $canonical $deployed && $reload");
+    } else {
+        pass("Execution guard deployed and current ($server_flavor)");
+    }
+
+    if ($server_flavor === 'apache' && file_exists($canonical)) {
+        warn("The Apache guard has not been verified on a live Apache host",
+             "Confirm it actually blocks execution — a 404 on a missing path proves nothing:\n" .
+             "         see the VERIFY block at the bottom of docs/apache/moop-security.conf");
+    }
+}
+
+// ── Section 5c: SELinux ─────────────────────────────────────────────────────
 //
 // This is how an admin finds out fix_moop_selinux.sh exists. The admin dashboard
 // points at it too, but that pointer is useless in the case that matters most: a
@@ -551,23 +635,6 @@ if ($selinux_enforcing) {
              "          The label is the real gate — chmod will NOT fix this.)");
     } else {
         pass("Writable directories carry httpd_sys_rw_content_t");
-    }
-
-    // The writable trees are served over HTTP, so they are only safe because nginx
-    // refuses to execute .php inside them. Deployed is not the same as in force.
-    $guard = '/etc/nginx/default.d/moop-security.conf';
-    if (!file_exists($guard)) {
-        fail("nginx no-exec guard is not deployed ($guard)",
-             "sudo cp $base/docs/nginx/moop-security.conf $guard && \\\n" .
-             "         sudo chmod 644 $guard && sudo nginx -t && sudo systemctl reload nginx\n" .
-             "         (Without it, a writable+served data tree can execute an uploaded .php.)");
-    } elseif (file_exists("$base/docs/nginx/moop-security.conf")
-              && md5_file($guard) !== md5_file("$base/docs/nginx/moop-security.conf")) {
-        warn("Deployed nginx guard differs from docs/nginx/moop-security.conf",
-             "It may predate a rule that closes a hole. Re-deploy:\n" .
-             "         sudo cp $base/docs/nginx/moop-security.conf $guard && sudo nginx -t && sudo systemctl reload nginx");
-    } else {
-        pass("nginx no-exec guard deployed and current");
     }
 
     if (toolExists('getsebool')) {

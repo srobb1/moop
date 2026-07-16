@@ -434,38 +434,79 @@ history. See the README created inside the backup directory for instructions.
 
 See `lib/housekeeping.php` for details on what gets backed up.
 
-### SELinux and hardened hosts (RHEL / CentOS / Rocky)
+### Stop the data directories executing code (all installs)
 
-**Skip this only if `getenforce` says `Disabled` or `Permissive`.** On an Enforcing host
-this step is not optional, and skipping it produces the worst kind of failure: the site
-loads fine and then **silently cannot write anything** — no error on the page, nothing in
-sight. Three MOOP features were dead for three days this way in July 2026.
+MOOP writes into directories that are also served over HTTP — caches, generated indexes,
+uploaded images. That combination is only safe if the web server **refuses to execute
+`.php` inside them**; otherwise a single file-write bug in the app becomes a persistent
+webshell. This applies to **every install**, on any OS and any web server.
 
-SELinux labels the document root read-only by default, because the usual assumption is
-that a web app does not write into the directory it serves from. MOOP does (caches,
-generated indexes, uploads), so each writable directory needs an explicit rule:
+**nginx** — MOOP ships the rule:
 
 ```bash
-# Deploy the nginx no-exec guard FIRST — the writable trees are only safe with it
 sudo cp docs/nginx/moop-security.conf /etc/nginx/default.d/moop-security.conf
 sudo chmod 644 /etc/nginx/default.d/moop-security.conf
 sudo nginx -t && sudo systemctl reload nginx
-
-# Then apply the SELinux rules, labels, and the cache directory (idempotent)
-sudo scripts/fix_moop_selinux.sh
 ```
 
-That order matters, and the script enforces it: it refuses to run until the guard is
-deployed, because it makes data trees **writable**, and those trees are served over HTTP.
-Without the nginx rule denying `.php` inside them, one file-write bug becomes a webshell.
+**Apache**:
 
-Re-run `fix_moop_selinux.sh` after any host hardening run (SCAP/OpenSCAP), a rebuild, or
-a wiped policy store. It uses `semanage`, not `chcon`, so the rules are **persistent** —
-a future hardening run re-applies them instead of destroying them. You run it yourself
-with `sudo`; no IT round-trip is needed.
+```bash
+# RHEL / CentOS / Rocky
+sudo cp docs/apache/moop-security.conf /etc/httpd/conf.d/moop-security.conf
+sudo apachectl configtest && sudo systemctl reload httpd
+
+# Debian / Ubuntu
+sudo cp docs/apache/moop-security.conf /etc/apache2/conf-available/moop-security.conf
+sudo a2enconf moop-security && sudo systemctl reload apache2
+```
+
+⚠ The Apache rules are **not yet verified on a live Apache host** — they were written
+against a working nginx deployment. The directives are standard, but run the check below
+before trusting them, and please report corrections.
+
+Verify it actually works — a 404 on a path that does not exist proves nothing:
+
+```bash
+echo '<?php echo "EXECTEST"; ?>' > images/wikimedia/_exectest.php
+curl -s http://your-host/moop/images/wikimedia/_exectest.php   # want 404, NOT "EXECTEST"
+rm -f images/wikimedia/_exectest.php
+```
+
+### SELinux (RHEL / CentOS / Rocky only)
+
+**Only relevant if `getenforce` reports `Enforcing`.** Debian/Ubuntu use AppArmor, which
+does not label the document root this way — skip this section entirely there.
+
+On an Enforcing host this step is not optional, and skipping it produces the worst kind
+of failure: the site loads fine and then **silently cannot write anything** — no error on
+the page, nothing in the logs you would think to check. Three MOOP features were dead for
+three days this way in July 2026.
+
+SELinux labels the document root read-only by default, on the assumption that a web app
+does not write into the directory it serves from. MOOP does, so each writable directory
+needs an explicit rule:
+
+```bash
+sudo scripts/fix_moop_selinux.sh     # idempotent; safe to re-run
+```
+
+Deploy the no-exec guard above **first**: this script makes the data trees writable, and
+they are only safe once the guard is in place. On nginx the script enforces that order
+and refuses to run until the guard matches; on Apache it warns and continues.
+
+Re-run it after any host hardening run (SCAP/OpenSCAP), a rebuild, or a wiped policy
+store. It uses `semanage`, not `chcon`, so the rules are **persistent** — a future
+hardening run re-applies them instead of destroying them. You run it yourself with
+`sudo`; no IT round-trip is needed.
+
+The script assumes the RHEL web user `apache`, MOOP at `/var/www/html/moop`, and the
+cache at `/var/www/moop-cache`; edit the variables at the top if your paths differ.
 
 Full background, including what to do when the site is already down:
-[`docs/SELINUX_AND_HARDENING.md`](docs/SELINUX_AND_HARDENING.md).
+[`docs/SELINUX_AND_HARDENING.md`](docs/SELINUX_AND_HARDENING.md). That document records a
+specific 2026-07-13 incident at one site — the SELinux **rules** are general, the story
+around them is not.
 
 ### Verifying Installation
 

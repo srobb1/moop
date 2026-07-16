@@ -4,6 +4,19 @@
 # MOOP deployment — run it on a fresh install, or to recover after a SCAP/
 # OpenSCAP hardening run resets labels.
 #
+# WHO THIS IS FOR — it does NOT apply to every MOOP install:
+#   * SELinux only. RHEL/CentOS/Rocky/Fedora. If `getenforce` says Disabled or
+#     Permissive, or you are on Debian/Ubuntu (AppArmor, which does not label the
+#     document root this way), you do not need this script at all.
+#   * Assumes the RHEL web user `apache`. On Debian/Ubuntu it is `www-data` — another
+#     reason this script is not for those hosts.
+#   * Assumes MOOP at /var/www/html/moop and the cache at /var/www/moop-cache. Edit
+#     the two variables below if your paths differ.
+#   * The nginx guard check assumes nginx. MOOP also supports Apache; the check is
+#     skipped there, with a warning, because the underlying risk still applies.
+#   * The 2026-07-13 incident this was written for is site-specific (a SCAP baseline
+#     applied by central IT). The RULES are general to SELinux; the STORY is not.
+#
 # WHY semanage AND NOT chcon:
 #   chcon sets a label now, but the next hardening relabel (restorecon) resets it
 #   to the policy default and the site breaks again. semanage writes a PERSISTENT
@@ -63,6 +76,33 @@ NGINX_CANON="$MOOP/docs/nginx/moop-security.conf"
 
 if [[ "${SKIP_NGINX_CHECK:-0}" == "1" ]]; then
     echo "  SKIPPED (SKIP_NGINX_CHECK=1) — writable trees will NOT be protected from .php execution"
+elif [[ ! -d /etc/nginx ]]; then
+    # nginx is not the web server here — MOOP supports Apache too. Do not block the
+    # SELinux setup over an nginx-specific file; the RISK is not nginx-specific, so
+    # check for the Apache guard instead of waving it through.
+    APACHE_CANON="$MOOP/docs/apache/moop-security.conf"
+    if [[ -f /etc/httpd/conf.d/moop-security.conf ]] || [[ -f /etc/apache2/conf-available/moop-security.conf ]]; then
+        echo "  nginx not detected; Apache guard is deployed — continuing"
+        echo "  NOTE: verify it actually blocks execution (see the VERIFY block in $APACHE_CANON)."
+    else
+        cat <<MSG
+  nginx not detected, and no Apache guard is deployed.
+
+  IMPORTANT: the directories this script makes writable are served over HTTP. They are
+  only safe if your web server refuses to execute .php inside them; without that, one
+  file-write bug in the app becomes a persistent webshell.
+
+  For Apache, deploy the shipped rule:
+
+    RHEL:    sudo cp $APACHE_CANON /etc/httpd/conf.d/moop-security.conf
+             sudo apachectl configtest && sudo systemctl reload httpd
+    Debian:  sudo cp $APACHE_CANON /etc/apache2/conf-available/moop-security.conf
+             sudo a2enconf moop-security && sudo systemctl reload apache2
+
+  Continuing anyway — refusing here would block SELinux setup over a web-server file,
+  and a half-labelled host is its own kind of broken. But do not leave this undone.
+MSG
+    fi
 elif [[ ! -f "$NGINX_CANON" ]]; then
     echo "  WARN: canonical copy missing ($NGINX_CANON) — cannot verify; continuing"
 elif [[ ! -f "$NGINX_GUARD" ]]; then
