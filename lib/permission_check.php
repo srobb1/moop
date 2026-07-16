@@ -47,9 +47,13 @@ function moop_permission_check_mode(string $name): string {
     // NOTE on organisms/: the tree IS writable to apache by design (§73 — the web builds
     // BLAST/.fai indexes in place), but its entries stay 'data' here deliberately. The
     // *directories* need apache write (makeblastdb creates new files); the FASTA/SQLite
-    // *files* do not, and should stay unwritable. 'data' mode already reports a softened
-    // "not writable" for data trees (see moop_permission_is_data_tree), which is the
-    // right signal for "a build button may fail" without demanding writable data files.
+    // *files* do not, and should stay unwritable. performPermissionCheck's 'data' branch
+    // therefore checks writability for data-tree DIRECTORIES only.
+    //
+    // (An earlier version of this comment claimed 'data' mode "already reports a softened
+    // not-writable for data trees". It did not — the check did not exist, and 22 assembly
+    // dirs at 2755 were invisible to the dashboard because of it. Do not trust a comment
+    // that says a check exists; grep for the check.)
     static $writable = [
         'Logs Directory'                  => 1,  // error.log, login_attempts.json
         'Site Configuration Files'        => 1,  // config/config_editable.json (admin UI)
@@ -213,6 +217,23 @@ function moop_permission_is_data_tree(string $name): bool {
 }
 
 /**
+ * Does the WEB SERVER build things inside this directory? If so it needs write on the
+ * DIRECTORY itself — makeblastdb, samtools faidx and assembly rename all create new
+ * files, and creating a file needs write on its parent, not on the file.
+ *
+ * Distinct from moop_permission_is_data_tree(), which answers "is this bulk data?" and is
+ * used to soften severity. The two questions look alike and are not: data/tracks IS a data
+ * tree but is read-only by design (verified 2026-07-16 — not one apache-owned file in it),
+ * so asking it to be writable is a false alarm. Reusing the other predicate here flagged
+ * exactly that.
+ */
+function moop_permission_needs_build_write(string $name): bool {
+    if (str_starts_with($name, 'Assembly Subdirectory:')) return true;
+    if (str_starts_with($name, 'Gene Set Subdirectory:')) return true;
+    return in_array($name, ['Organism Data Directories', 'Organism Directory'], true);
+}
+
+/**
  * Evidence that the web server has WRITTEN into a directory we classify read-only.
  *
  * Why this exists: the writable allowlist in moop_permission_check_mode() is the ONLY
@@ -342,6 +363,21 @@ function performPermissionCheck($path, $item, $web_group = 'www-data') {
         if ($any_exec && $result['type'] !== 'directory') {
             // Directories legitimately carry the traverse (x) bit; only flag executable FILES.
             $result['issues'][] = "Marked executable ($perms) — data files should not be executable";
+            $bump('medium');
+        }
+        // Data-tree DIRECTORIES must stay web-writable even though their FILES need not be:
+        // makeblastdb and samtools faidx create NEW files, which needs write on the
+        // directory. Nothing checked this until 2026-07-16 — 'data' mode tested readable /
+        // world-writable / exec and stopped, so 22 assembly dirs sat at 2755 (group r-x, no
+        // write) with the dashboard reporting a clean bill of health while every in-app index
+        // build there would fail. moop_permission_is_data_tree() was written for exactly this
+        // ("future-build concern, medium — not live breakage") but was only ever wired into
+        // the 'writable' branch, which these never reach.
+        if ($result['type'] === 'directory'
+            && moop_permission_needs_build_write($item['name'])
+            && !$result['is_writable']) {
+            $result['issues'][] = "Not writable by the web server ($web_group) — in-app builds"
+                . ' here (Build BLAST Index, samtools faidx, assembly rename) will fail';
             $bump('medium');
         }
         // Does the web server write here despite being classified read-only? Skip the data

@@ -72,8 +72,11 @@
         <br><small class="text-muted">Config, metadata, and organism files are checked for changes on every admin login and copied to <code><?= htmlspecialchars($site_data_backup['path']) ?></code>.</small>
         <?php if ($site_data_backup['is_git'] && !empty($site_data_backup['git'])): $g = $site_data_backup['git']; ?>
           <div class="mt-2 pt-2 border-top">
+            <?php // Git icon, not a second check-circle: this line sits inside an alert that
+                  // already leads with a ✓, so two ticks just read as "success success". The
+                  // green text carries the state; the icon should say WHAT this line is about. ?>
             <?php if ($g['clean']): ?>
-              <span class="text-success"><i class="fa fa-check-circle"></i>
+              <span class="text-success"><i class="fa fa-code-branch"></i>
                 <strong>All committed<?= $g['has_upstream'] ? ' &amp; pushed' : '' ?></strong></span>
               <small class="text-muted ms-1"><?= (int) $g['commits'] ?> commit<?= $g['commits'] == 1 ? '' : 's' ?>
                 &middot; last <?= htmlspecialchars($g['last_commit']) ?><?= $g['has_upstream'] ? '' : ' &middot; no remote configured' ?></small>
@@ -169,7 +172,7 @@
         <?= htmlspecialchars(implode(', ', $labels)) ?><?php if ($below > 0): ?> &middot; <?= $below ?> lower-priority <?= $below === 1 ? 'area' : 'areas' ?><?php endif; ?>
       </span>
       <span class="d-block small text-muted fst-italic mt-1">
-        <i class="fa fa-clock-o"></i>
+        <i class="fa fa-clock"></i>
         <?php if ($scanned): ?>Scanned <?= htmlspecialchars($scanned) ?><?php else: ?>Cached scan<?php endif; ?>
         &middot; the Permission Manager re-checks live.
       </span>
@@ -204,7 +207,7 @@
 
       <div class="d-flex align-items-center justify-content-between gap-3">
         <div class="small text-muted">
-          <i class="fa fa-clock-o me-1"></i>
+          <i class="fa fa-clock me-1"></i>
           Health checks above are cached<?php if ($scanned): ?> — last run
           <strong><?= htmlspecialchars($scanned) ?></strong><?php endif; ?>,
           so a recent fix may still be listed.
@@ -215,7 +218,7 @@
         </div>
         <div class="flex-shrink-0">
           <button type="button" id="rerunHousekeepingBtn" class="btn btn-sm btn-outline-secondary">
-            <i class="fa fa-refresh"></i> Run housekeeping now
+            <i class="fa fa-sync"></i> Run housekeeping now
           </button>
         </div>
       </div>

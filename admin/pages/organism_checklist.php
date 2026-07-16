@@ -517,9 +517,25 @@
 
             $issues = [];
 
-            // Check permissions - should be 2775 (with SGID bit)
-            if ($perms !== '2775') {
-                $issues[] = "Permissions are $perms, should be 2775";
+            // Judge by IMPACT, not by an exact mode string — same rule the dashboard and
+            // the Filesystem Permissions page use (lib/permission_check.php). The old test
+            // here was `$perms !== '2775'`, which is wrong in both directions: it flags an
+            // apache-owned 2755 directory the web CAN write, and it would pass a 2775
+            // directory whose SELinux label blocks writes anyway.
+            //
+            // What actually matters: can the web server CREATE files here? makeblastdb and
+            // samtools faidx write new files, and creating a file needs write on the parent
+            // directory, not on the file.
+            if (!is_writable($org_dir)) {
+                $issues[] = "The web server ($expected_group) cannot write here — "
+                          . "Build BLAST Index and index generation will fail ($perms)";
+            }
+
+            // SGID keeps new files in the web group. Without it, files created here inherit
+            // the creator's group and the next tool along cannot read them.
+            if (!($perms_full[0] === '2')) {
+                $issues[] = "Missing the SGID bit ($perms) — new files here will not inherit "
+                          . "the $expected_group group";
             }
 
             // Check group matches the web server group
