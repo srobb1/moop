@@ -15,21 +15,63 @@ $docs_path = $config->getPath('docs_path');
 
 $registry = [];
 
-// Directories to scan
+// ── What to scan ────────────────────────────────────────────────────────────────────
 //
-// includes/ was missing until 2026-07-16, which hid 23 functions — among them the ENTIRE
+// Two DIFFERENT things, kept separate because conflating them caused three bugs:
+//
+//   $scanDirs      — directories of MOOP code, scanned RECURSIVELY. lib/jbrowse/,
+//                    admin/api/, admin/pages/ and tools/pages/ hold 104 PHP files that
+//                    were never scanned, because the old code globbed '$dir/*.php'
+//                    (top level only). Every function in them — the JBrowse layer, every
+//                    admin API endpoint — was absent from the registry.
+//
+//   $rootPhpFiles  — the top-level scripts (login.php, index.php, setup.php...). The old
+//                    list said `__DIR__ . '/..'`, meaning "also the root". For the
+//                    definition pass that behaved as top-level-only (glob), but the usage
+//                    pass walked it RECURSIVELY — through organisms/ (thousands of files,
+//                    hundreds of GB), vendor/ and data/, hunting PHP call sites that
+//                    cannot be there. It died on data/tracks/bed, which is labelled
+//                    user_home_t and unreadable to httpd_t, and the admin saw only
+//                    "Failed to generate php registry". Naming the intent removes both
+//                    the fatal and the pointless walk — no prune list to maintain.
+//
+// includes/ was missing entirely until 2026-07-16, hiding 23 functions including the whole
 // access-control layer (is_logged_in, has_access, get_access_level, has_assembly_access,
-// csrf_input_field: 18 functions in access_control.php) and genes_gff_filename(). Those
-// are the functions CLAUDE.md tells every developer to use, and the registry claimed they
-// did not exist. A registry that silently omits a directory is worse than no registry:
-// "not in the registry" reads as "not available", which is how a helper gets rewritten.
+// csrf_input_field) and genes_gff_filename() — the functions CLAUDE.md tells every
+// developer to use. A registry that silently omits a directory is worse than none:
+// "not in the registry" reads as "does not exist", which is how a helper gets rewritten.
 $scanDirs = [
     __DIR__ . '/../lib',
     __DIR__ . '/../tools',
     __DIR__ . '/../admin',
     __DIR__ . '/../includes',
-    __DIR__ . '/..'
 ];
+$rootPhpFiles = glob(__DIR__ . '/../*.php') ?: [];
+
+/**
+ * Every PHP file the registry considers: $scanDirs recursively, plus the top-level
+ * scripts. CATCH_GET_CHILD skips a directory that cannot be opened rather than letting
+ * one unreadable path abort the whole run.
+ *
+ * @return list<string> absolute paths
+ */
+function moop_registry_php_files(array $scanDirs, array $rootPhpFiles): array {
+    $out = $rootPhpFiles;
+    foreach ($scanDirs as $dir) {
+        if (!is_dir($dir)) continue;
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::LEAVES_ONLY,
+            RecursiveIteratorIterator::CATCH_GET_CHILD
+        );
+        foreach ($it as $f) {
+            if ($f->isFile() && strtolower($f->getExtension()) === 'php') {
+                $out[] = $f->getPathname();
+            }
+        }
+    }
+    return array_values(array_unique($out));
+}
 
 // File patterns to exclude
 $excludePatterns = ['.backup', 'generate_registry', 'function_registry'];
@@ -334,24 +376,26 @@ function extractFunctions($filePath, $allFunctionNames = []) {
  * Find function usages in codebase
  */
 function findFunctionUsages($funcName, $scanDirs, $definitionFile) {
+    global $rootPhpFiles;
     $usages = [];
     $seen = [];
     $searchPattern = '/\b' . preg_quote($funcName, '/') . '\s*\(/';
     $excludeDirs = ['docs', 'logs', 'notes', 'not_used', '.git'];
-    
-    foreach ($scanDirs as $dir) {
-        if (!is_dir($dir)) continue;
-        
-        $files = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($dir),
-            RecursiveIteratorIterator::LEAVES_ONLY
-        );
-        
-        foreach ($files as $file) {
-            if (!$file->isFile() || $file->getExtension() !== 'php') continue;
-            
-            $filePath = $file->getRealPath();
-            
+
+    // Cached: the same file list serves every function, and there are hundreds.
+    static $allFiles = null;
+    if ($allFiles === null) {
+        $allFiles = moop_registry_php_files($scanDirs, $rootPhpFiles ?: []);
+    }
+
+    {
+        $files = $allFiles;
+
+        foreach ($files as $filePath) {
+            // $filePath is an absolute path string (moop_registry_php_files already
+            // filtered to real .php files), not an SplFileInfo.
+            $filePath = realpath($filePath) ?: $filePath;
+
             // Skip excluded directories
             $skip = false;
             foreach ($excludeDirs as $excludeDir) {
@@ -408,10 +452,11 @@ echo "🔍 Scanning directories (pass 1: collecting function names)...\n";
 $allFunctionNames = [];
 $tempRegistry = [];
 
-foreach ($scanDirs as $dir) {
-    if (!is_dir($dir)) continue;
-    
-    $files = glob($dir . '/*.php');
+// Recursive over the code dirs + the top-level scripts. The old form globbed
+// '$dir/*.php', which silently skipped lib/jbrowse/, admin/api/, admin/pages/ and
+// tools/pages/ — 104 PHP files whose functions were absent from the registry.
+foreach ([null] as $_) {
+    $files = moop_registry_php_files($scanDirs, $rootPhpFiles);
     foreach ($files as $file) {
         $fileName = basename($file);
         
@@ -440,10 +485,11 @@ foreach ($scanDirs as $dir) {
 echo "🔍 Scanning directories (pass 2: extracting dependencies)...\n";
 $registry = [];
 
-foreach ($scanDirs as $dir) {
-    if (!is_dir($dir)) continue;
-    
-    $files = glob($dir . '/*.php');
+// Recursive over the code dirs + the top-level scripts. The old form globbed
+// '$dir/*.php', which silently skipped lib/jbrowse/, admin/api/, admin/pages/ and
+// tools/pages/ — 104 PHP files whose functions were absent from the registry.
+foreach ([null] as $_) {
+    $files = moop_registry_php_files($scanDirs, $rootPhpFiles);
     foreach ($files as $file) {
         $fileName = basename($file);
         
