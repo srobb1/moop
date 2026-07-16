@@ -163,12 +163,19 @@ foreach ($checks as $check) {
 }
 
 foreach ($grouped as $group_name => $items):
+    $failing = array_values(array_filter($items, fn($i) => !empty($i['issues'])));
+    $total   = count($items);
+    // High-cardinality rules (one rule, many paths — organism.json x85, organism.sqlite x85)
+    // list ONLY what is wrong. A wall of 80 passing rows is the "how many files exist"
+    // noise the impact rewrite removed; the count should mean "how many things are wrong".
+    // Small groups still list every path so a clean single check stays visible.
+    $to_show = ($total > 5) ? $failing : $items;
 ?>
 <div class="card mb-3">
     <div class="card-header">
         <h6 class="mb-0">
             <?php
-            $has_issues = count(array_filter($items, fn($i) => !empty($i['issues']))) > 0;
+            $has_issues = count($failing) > 0;
             if ($has_issues) {
                 echo '<i class="fa fa-exclamation-triangle text-warning"></i> ';
             } else {
@@ -176,10 +183,18 @@ foreach ($grouped as $group_name => $items):
             }
             ?>
             <?= htmlspecialchars($group_name) ?>
+            <?php if ($total > 5): ?>
+                <small class="text-muted fw-normal">
+                    — <?= $total ?> checked<?= $has_issues ? ', ' . count($failing) . ' with issues' : ', all clean' ?>
+                </small>
+            <?php endif; ?>
         </h6>
     </div>
     <div class="card-body">
-        <?php foreach ($items as $check): ?>
+        <?php if ($total > 5 && !$has_issues): ?>
+        <p class="mb-0 text-success"><i class="fa fa-check-circle"></i> All <?= $total ?> pass.</p>
+        <?php endif; ?>
+        <?php foreach ($to_show as $check): ?>
         <div class="mb-3">
             <p class="mb-2">
                 <strong><?= htmlspecialchars($check['path']) ?></strong>
@@ -192,12 +207,20 @@ foreach ($grouped as $group_name => $items):
             
             <!-- Current Status -->
             <div class="perm-grid">
+                <?php
+                // Judge by IMPACT, not by an exact mode string: 660 and 640 pass fine, and
+                // 644 (world-readable) is wrong for restricted data. Colour follows the
+                // check's own verdict; the caption states the rule its mode actually applies.
+                $mode_of      = $check['check_mode'] ?? 'data';
+                $clean        = empty($check['issues']);
+                $checks_group = ($mode_of === 'writable');
+                ?>
                 <div class="perm-item">
                     <strong>Permissions</strong>
-                    <div class="perm-value <?= $check['current_perms'] === $check['required_perms'] ? 'text-success' : 'text-danger' ?>">
-                        <?= $check['current_perms'] ?? 'N/A' ?>
+                    <div class="perm-value <?= $clean ? 'text-success' : 'text-danger' ?>">
+                        <?= htmlspecialchars($check['current_perms'] ?? 'N/A') ?>
                     </div>
-                    <small class="text-muted">Should be: <?= $check['required_perms'] ?></small>
+                    <small class="text-muted"><?= htmlspecialchars(moop_permission_expectation($mode_of, $check['type'] ?? 'file')) ?></small>
                 </div>
                 <div class="perm-item">
                     <strong>Owner</strong>
@@ -205,10 +228,16 @@ foreach ($grouped as $group_name => $items):
                 </div>
                 <div class="perm-item">
                     <strong>Group</strong>
-                    <div class="perm-value <?= ($check['current_group'] ?? '') === $check['required_group'] ? 'text-success' : 'text-danger' ?>">
+                    <div class="perm-value <?= (!$checks_group || ($check['current_group'] ?? '') === $check['required_group']) ? 'text-success' : 'text-danger' ?>">
                         <?= htmlspecialchars($check['current_group'] ?? 'N/A') ?>
                     </div>
-                    <small class="text-muted">Should be: <?= htmlspecialchars($check['required_group']) ?></small>
+                    <small class="text-muted">
+                        <?php if ($checks_group): ?>
+                            Should be: <?= htmlspecialchars($check['required_group']) ?>
+                        <?php else: ?>
+                            Any group the web server can read through
+                        <?php endif; ?>
+                    </small>
                 </div>
             </div>
             
@@ -223,25 +252,18 @@ foreach ($grouped as $group_name => $items):
                 </ul>
             </div>
             
-            <!-- Fix Commands -->
+            <!-- Fix Commands — derived from the issues actually found, not a blanket chmod -->
+            <?php $fix_cmds = moop_permission_fix_commands($check, $moop_owner); ?>
+            <?php if ($fix_cmds): ?>
             <div class="mt-2">
                 <p class="mb-2"><strong>To fix, run:</strong></p>
                 <div class="fix-command">
-                    <?php if ($check['type'] === 'directory'): ?>
-                    <!-- For directories, create if missing, then fix permissions -->
-                    <?php if (!$check['exists']): ?>
-                    sudo mkdir -p <?= escapeshellarg($check['path']) ?> && \<br>
-                    <?php endif; ?>
-                    sudo chown -R <?= htmlspecialchars($moop_owner) ?>:<?= htmlspecialchars($check['required_group']) ?> <?= escapeshellarg($check['path']) ?> && \<br>
-                    sudo chmod -R 775 <?= escapeshellarg($check['path']) ?> && \<br>
-                    sudo chmod <?= $check['required_perms'] ?> <?= escapeshellarg($check['path']) ?>
-                    <?php else: ?>
-                    <!-- For files, single commands -->
-                    sudo chmod <?= $check['required_perms'] ?> <?= escapeshellarg($check['path']) ?> && \<br>
-                    sudo chown <?= htmlspecialchars($moop_owner) ?>:<?= htmlspecialchars($check['required_group']) ?> <?= escapeshellarg($check['path']) ?>
-                    <?php endif; ?>
+                    <?php foreach ($fix_cmds as $i => $cmd): ?>
+                    <?= htmlspecialchars($cmd) ?><?= $i < count($fix_cmds) - 1 ? ' && \\' : '' ?><br>
+                    <?php endforeach; ?>
                 </div>
             </div>
+            <?php endif; ?>
             <?php endif; ?>
             
             <!-- Why This Matters -->
@@ -275,14 +297,22 @@ foreach ($grouped as $group_name => $items):
             <?php foreach ($assembly_subdir_issues as $issue): ?>
             <div class="alert alert-warning mb-2">
                 <strong><?= htmlspecialchars($issue['path']) ?></strong><br>
-                <small>Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>) | Required: 2775 (group: <?= htmlspecialchars($web_group) ?>)</small>
+                <small>
+                    Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>)
+                    <?php if (!empty($issue['issues'])): ?>
+                        — <?= htmlspecialchars(implode('; ', $issue['issues'])) ?>
+                    <?php endif; ?>
+                </small>
             </div>
             <?php endforeach; ?>
         </div>
         <p class="mb-2"><strong>To fix all assembly directories, run:</strong></p>
         <div class="fix-command">
-            sudo chmod -R 2775 <?= htmlspecialchars($organism_data) ?><br>
-            sudo chgrp -R <?= htmlspecialchars($web_group) ?> <?= htmlspecialchars($organism_data) ?>
+            <?php // NOT `chmod -R 2775`: that sets FILES to 775 (executable) too, which is how
+                  // executable organism.json/organism.sqlite files got created. Split dirs/files. ?>
+            sudo chgrp -R <?= htmlspecialchars($web_group) ?> <?= escapeshellarg($organism_data) ?><br>
+            sudo find <?= escapeshellarg($organism_data) ?> -type d -exec chmod 2775 {} +<br>
+            sudo find <?= escapeshellarg($organism_data) ?> -type f -exec chmod a-x {} +
         </div>
         <?php endif; ?>
 
@@ -293,27 +323,34 @@ foreach ($grouped as $group_name => $items):
             <?php foreach ($fasta_file_issues as $issue): ?>
             <div class="alert alert-warning mb-2">
                 <strong><?= htmlspecialchars($issue['path']) ?></strong><br>
-                <small>Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>) | Required: 644 (group: <?= htmlspecialchars($web_group) ?>)</small>
+                <small>
+                    Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>)
+                    <?php if (!empty($issue['issues'])): ?>
+                        — <?= htmlspecialchars(implode('; ', $issue['issues'])) ?>
+                    <?php endif; ?>
+                </small>
             </div>
             <?php endforeach; ?>
         </div>
         <p class="mb-2"><strong>To fix all FASTA files, run:</strong></p>
         <div class="fix-command">
-            <?php 
+            <?php
             $sequence_types = $config->getSequenceTypes();
             $patterns = [];
             foreach ($sequence_types as $seq_config) {
                 $pattern = $seq_config['pattern'] ?? '';
                 if (!empty($pattern)) {
-                    $basename = basename($pattern);
-                    // Extract the filename pattern (e.g., "*.fa" from "protein.aa.fa")
-                    $patterns[] = '-name "' . $basename . '"';
+                    $patterns[] = '-name ' . escapeshellarg(basename($pattern));
                 }
             }
-            $find_patterns = implode(' -o ', $patterns);
+            // Parenthesise: with -o, an unparenthesised -exec binds only to the LAST -name.
+            $find_patterns = $patterns ? '\( ' . implode(' -o ', $patterns) . ' \)' : '';
             ?>
-            sudo find <?= htmlspecialchars($organism_data) ?> <?= $find_patterns ?> | xargs sudo chmod 644<br>
-            sudo find <?= htmlspecialchars($organism_data) ?> <?= $find_patterns ?> | xargs sudo chgrp <?= htmlspecialchars($web_group) ?>
+            <?php // NOT `chmod 644`: 644 is WORLD-readable, which is wrong for restricted gene
+                  // sets. FASTA only needs to be group-readable, not world-writable, not executable.
+                  // -exec …{} + instead of xargs: filenames here contain spaces and colons. ?>
+            sudo find <?= escapeshellarg($organism_data) ?> <?= $find_patterns ?> -exec chgrp <?= htmlspecialchars($web_group) ?> {} +<br>
+            sudo find <?= escapeshellarg($organism_data) ?> <?= $find_patterns ?> -exec chmod g+r,o-w,a-x {} +
         </div>
         <?php endif; ?>
 

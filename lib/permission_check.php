@@ -70,8 +70,81 @@ function moop_permission_check_mode(string $name): string {
     if (isset($writable[$name])) return 'writable';
 
     // Default: read-only served content (FASTA/genome/SQLite, the organism tree,
-    // top-level images/, banners, docs, data/tracks, jbrowse2/ app dir).
+    // top-level images/, docs, data/tracks, jbrowse2/ app dir).
     return 'data';
+}
+
+/**
+ * Plain statement of what a check_mode actually requires.
+ *
+ * Replaces the old "Should be: 644" column, which was a fossil of the exact-mode
+ * checker: it told admins to make restricted data world-readable, and painted rows
+ * red for modes that pass perfectly well by impact (660, 640, ...).
+ */
+function moop_permission_expectation(string $mode, string $type): string {
+    $is_dir = ($type === 'directory');
+    switch ($mode) {
+        case 'secret':
+            return 'Readable by the web server; not accessible to any other user on the host';
+        case 'writable':
+            return $is_dir
+                ? 'Writable by the web server; SGID so new files inherit the group; not world-writable'
+                : 'Writable by the web server; not world-writable; not executable';
+        default:
+            return $is_dir
+                ? 'Readable and traversable by the web server; not world-writable'
+                : 'Readable by the web server; not world-writable; not executable';
+    }
+}
+
+/**
+ * Targeted remediation for the issues a check actually found.
+ *
+ * Deliberately NOT a blanket `chmod <required_perms>`: that is what the page used to
+ * print, and it recommended 644 (world-readable) on restricted data — the exact stale
+ * advice the impact rewrite removed. Only suggest what is actually wrong.
+ *
+ * @return list<string>
+ */
+function moop_permission_fix_commands(array $check, string $moop_owner): array {
+    $path = (string)($check['path'] ?? '');
+    if ($path === '') return [];
+
+    $mode   = (string)($check['check_mode'] ?? 'data');
+    $is_dir = (($check['type'] ?? 'file') === 'directory');
+    $q      = escapeshellarg($path);
+    $R      = $is_dir ? '-R ' : '';
+    $bits   = octdec((string)($check['current_perms'] ?? '0'));
+    $group  = (string)($check['required_group'] ?? '');
+    $cmds   = [];
+
+    // A wrong SELinux label cannot be fixed with chmod — say so first, it is the real gate.
+    foreach (($check['issues'] ?? []) as $issue) {
+        if (strpos((string)$issue, 'SELinux label') !== false) {
+            $cmds[] = 'sudo scripts/fix_moop_selinux.sh   # label is the real gate — chmod will not help';
+            break;
+        }
+    }
+
+    if (empty($check['exists'])) {
+        if ($is_dir) $cmds[] = "sudo mkdir -p $q";
+    }
+    if ($mode === 'writable') {
+        if ($group !== '' && (string)($check['current_group'] ?? '') !== $group) {
+            $cmds[] = 'sudo chgrp ' . $R . escapeshellarg($group) . " $q";
+        }
+        if (empty($check['is_writable'])) {
+            $cmds[] = $is_dir ? "sudo chmod -R g+rwX $q && sudo chmod g+s $q" : "sudo chmod g+rw $q";
+        }
+    } elseif ($mode === 'secret') {
+        if (empty($check['is_readable']) || ($bits & 0007) !== 0) $cmds[] = "sudo chmod 640 $q";
+    } else {
+        if (empty($check['is_readable'])) $cmds[] = "sudo chmod {$R}g+rX $q";
+    }
+    if (($bits & 0002) === 0002) $cmds[] = "sudo chmod {$R}o-w $q";
+    if (!$is_dir && ($bits & 0111) !== 0) $cmds[] = "sudo chmod a-x $q";
+
+    return $cmds;
 }
 
 /**
@@ -264,6 +337,13 @@ function performPermissionCheck($path, $item, $web_group = 'www-data') {
             $result['issues'][] = "World-writable ($perms)";
             $bump('high');
         }
+        if ($any_exec && $result['type'] !== 'directory') {
+            // Same rule as the 'data' branch: directories legitimately carry the traverse (x)
+            // bit, files never do. A file that is BOTH web-writable and executable is strictly
+            // worse than a read-only one, so this matters more here, not less.
+            $result['issues'][] = "Marked executable ($perms) — data files should not be executable";
+            $bump('medium');
+        }
     }
 
     $result['severity'] = empty($result['issues']) ? 'low' : $sev;
@@ -372,7 +452,7 @@ function moop_build_permission_items($config, array $ctx): array {
             'name' => 'Organism Metadata Files',
             'description' => 'JSON files describing each organism (genus, species, images, etc.)',
             'type' => 'file_pattern',
-            'pattern' => 'organisms/*/organism.json',
+            'pattern' => $organism_data . '/*/organism.json',
             'required_perms' => '664',
             'required_owner' => $moop_owner,
             'required_group' => $web_group,
@@ -416,12 +496,11 @@ function moop_build_permission_items($config, array $ctx): array {
             'name' => 'SQLite Database Files',
             'description' => 'Database files containing feature, annotation, and genome data',
             'type' => 'file_pattern',
-            'pattern' => 'organisms/*/organism.sqlite',
+            'pattern' => $organism_data . '/*/organism.sqlite',
             'required_perms' => '644',
             'required_owner' => $moop_owner,
             'required_group' => $web_group,
-            'reason' => 'Web server reads data; files are pre-built and not modified',
-            'why_write' => 'Database files must be readable by web server but typically not written to',
+            'reason' => 'Web server reads data; the app opens every SQLite connection read-only (PDO::SQLITE_OPEN_READONLY), so these must be readable but never need to be web-writable',
         ],
 
         // Logs Directory - Write Required
@@ -659,6 +738,13 @@ function moop_collect_permission_checks($config): array {
     foreach ($permission_items as $item) {
         if ($item['type'] === 'directory' || ($item['type'] === 'file' && !isset($item['pattern']))) {
             foreach ($item['paths'] ?? [] as $path) {
+                $checks[] = performPermissionCheck($path, $item, $web_group);
+            }
+        } elseif ($item['type'] === 'file_pattern' && !empty($item['pattern'])) {
+            // Glob-expanded rules (organism.json, organism.sqlite). Until 2026-07-16 this
+            // branch did not exist, so both rules were declared but never actually ran —
+            // organism.json writability and DB readability went unverified.
+            foreach (glob($item['pattern']) as $path) {
                 $checks[] = performPermissionCheck($path, $item, $web_group);
             }
         }
