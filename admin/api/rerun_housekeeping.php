@@ -27,8 +27,11 @@ header('Content-Type: application/json');
 // answer beats returning immediately with nothing to show.
 @set_time_limit(120);
 
+// housekeeping_run_tasks() does the work inline and ignores the interval — the throttle
+// is for the automatic path, and the admin has explicitly asked. It still honours the
+// lock, so this cannot stampede a background run already in flight.
 $started = microtime(true);
-$result  = run_housekeeping(true);   // force: skip the throttle, still honour the lock
+$result  = housekeeping_run_tasks();
 $elapsed = (int) round((microtime(true) - $started) * 1000);
 
 if (!$result['ran']) {

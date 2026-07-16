@@ -65,7 +65,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_protect(/* json_response: */ isset($_SERVER['HTTP_X_CSRF_TOKEN']) || isset($_SERVER['HTTP_X_REQUESTED_WITH']));
 }
 
-// Run lightweight maintenance tasks (once per session, non-blocking)
+// Kick off maintenance tasks. Genuinely non-blocking: this hydrates the session from the
+// last run's cached status, then — at most once per HOUSEKEEPING_MIN_INTERVAL — spawns a
+// DETACHED background process and returns in ~1ms. It does not run the tasks here.
+//
+// (Until 2026-07-16 this comment claimed "once per session, non-blocking" while the tasks
+// ran INLINE, so every ~4h one admin silently paid ~4.5s on a page load. Both halves of
+// that comment were false, which is probably why the cost went unnoticed for so long.)
 run_housekeeping();
 
 ?>

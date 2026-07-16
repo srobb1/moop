@@ -189,6 +189,20 @@
        RUNS them — so it cannot drift out of date. -->
   <div class="card mb-4">
     <div class="card-body py-2">
+      <?php if (function_exists('housekeeping_is_running') && housekeeping_is_running()): ?>
+      <!-- A background run is in flight RIGHT NOW. The numbers on this page were rendered
+           before it finishes, so say so plainly rather than let the admin wonder why their
+           fix is still listed. This is the honest face of the async trade-off. -->
+      <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-2" role="status">
+        <span class="spinner-border spinner-border-sm flex-shrink-0"></span>
+        <div class="small">
+          <strong>Housekeeping is running in the background.</strong>
+          The figures on this page were taken before it started —
+          <a href="">reload</a> in a few seconds for the updated numbers.
+        </div>
+      </div>
+      <?php endif; ?>
+
       <div class="d-flex align-items-center justify-content-between gap-3">
         <div class="small text-muted">
           <i class="fa fa-clock-o me-1"></i>
@@ -210,11 +224,16 @@
       <div class="collapse" id="housekeepingTasks">
         <hr class="my-2">
         <p class="small text-muted mb-2">
-          <strong>Housekeeping is not a scheduled job — there is no cron.</strong> These tasks run
-          when an <em>admin loads an admin page</em>, and no more often than once every
-          <?= $iv_hrs ?> hours (so at most <?= (int) floor(24 / max(1, $iv_hrs)) ?>× a day).
-          If nobody visits the admin area, <strong>they do not run at all</strong> — which is why
-          this button exists, and why a card can sit stale far longer than <?= $iv_hrs ?> hours.
+          <strong>There is no cron to set up.</strong> These tasks run when an
+          <em>admin loads an admin page</em>, and no more often than once every
+          <?= $iv_hrs ?> hour<?= $iv_hrs === 1 ? '' : 's' ?>
+          (at most <?= (int) floor(24 / max(1, $iv_hrs)) ?>× a day). They run
+          <strong>in the background</strong> and never slow the page down — the visit that
+          triggers a run still shows the previous figures, and the new ones appear on your
+          next visit.
+          If nobody visits the admin area, <strong>they do not run at all</strong> — which is
+          why this button exists, and why a card can sit stale longer than
+          <?= $iv_hrs ?> hour<?= $iv_hrs === 1 ? '' : 's' ?>.
         </p>
         <?php foreach (housekeeping_task_registry() as $_t): ?>
         <div class="mb-2">

@@ -22,7 +22,13 @@
  *   at most once per HOUSEKEEPING_MIN_INTERVAL.
  */
 
-define('HOUSEKEEPING_MIN_INTERVAL', 4 * 3600); // re-run at most every 4 hours
+// Re-run at most once an hour. This was 4h while the tasks ran INLINE in the admin
+// request — a long interval was the only thing limiting how often someone ate the ~4.5s
+// cost. Now that the run is spawned into the background (run_housekeeping()), the cost is
+// invisible, so the interval can be tightened purely on freshness. The expensive task is
+// ~4.4s once an hour: about 105 seconds of CPU a day, and every other task is
+// fingerprint-gated and no-ops when nothing changed.
+define('HOUSEKEEPING_MIN_INTERVAL', 3600);
 
 // environment_check and permission_check call getWebServerUser(). That function lives in
 // functions_system.php, which nothing here loaded — it happened to be in scope only
@@ -135,50 +141,141 @@ function housekeeping_task_registry(): array {
     ];
 }
 
+/** Absolute path to the marker file whose mtime records the last run. */
+function housekeeping_marker_file(): string {
+    return ConfigManager::getInstance()->getPath('site_path') . '/logs/.housekeeping_last_run';
+}
+
+/** Absolute path to the PID lock held for the duration of a run. */
+function housekeeping_lock_file(): string {
+    return ConfigManager::getInstance()->getPath('site_path') . '/logs/.housekeeping_lock';
+}
+
 /**
- * Run all housekeeping tasks (at most once per HOUSEKEEPING_MIN_INTERVAL).
+ * Is a run in flight right now? Reads the PID lock and checks the process is alive, so a
+ * lock left behind by a crashed request does not wedge housekeeping forever.
  *
- * @param bool $force Skip the interval throttle and run now. Used by the admin
- *                    dashboard's "Run now" button, for when you have just fixed
- *                    something and do not want to wait up to 4h to see the card
- *                    clear. The LOCK is still honoured even when forcing — a forced
- *                    run must not stampede a run already in flight.
- * @return array{ran:bool, reason:?string, tasks:list<array{name:string,ok:bool,ms:int,error:?string}>}
- *         Per-task results so callers can report what actually happened rather than
- *         just spinning. Existing callers may ignore the return value.
+ * The dashboard uses this to tell the admin "running in the background — your numbers
+ * will be current next visit", which is the honest way to present the async trade.
  */
-function run_housekeeping(bool $force = false): array {
-    $result = ['ran' => false, 'reason' => null, 'tasks' => []];
+function housekeeping_is_running(): bool {
+    $lock = housekeeping_lock_file();
+    if (!file_exists($lock)) return false;
+    $pid = (int) trim((string) @file_get_contents($lock));
+    return $pid > 0 && file_exists("/proc/$pid");
+}
 
-    $config      = ConfigManager::getInstance();
-    $logs_dir    = $config->getPath('site_path') . '/logs';
-    $marker_file = "$logs_dir/.housekeeping_last_run";
-    $lock_file   = "$logs_dir/.housekeeping_lock";
+/** Has HOUSEKEEPING_MIN_INTERVAL elapsed since the last run? */
+function housekeeping_is_due(): bool {
+    $last = @filemtime(housekeeping_marker_file()) ?: 0;
+    return (time() - $last) >= HOUSEKEEPING_MIN_INTERVAL;
+}
 
+/**
+ * Seconds since the last run started, or null if it has never run.
+ */
+function housekeeping_age_seconds(): ?int {
+    $last = @filemtime(housekeeping_marker_file()) ?: 0;
+    return $last ? max(0, time() - $last) : null;
+}
+
+/**
+ * AUTO PATH — called from admin_init.php on every admin page load.
+ *
+ * Hydrates the session cheaply, then, if due, launches the work in a DETACHED BACKGROUND
+ * PROCESS and returns immediately. It must never block: this sits in the request path of
+ * every admin page, and the work is ~4.5s (permission_check alone is ~4.4s of it). Before
+ * 2026-07-16 this ran the tasks INLINE, so every ~4h one unlucky admin paid 4.5 seconds
+ * for a page they just wanted to glance at — and admin_init.php's comment claimed it was
+ * "non-blocking", which is presumably why nobody noticed.
+ *
+ * Verified from a real web request: proc_open is available under php-fpm, the parent
+ * returns in ~1ms, the child SURVIVES the request ending, runs as the web user, and
+ * inherits php-fpm's mount namespace — that last point matters, because clean_temp_files
+ * targets sys_get_temp_dir() and php-fpm has PrivateTmp=yes. A cron job would see a
+ * DIFFERENT /tmp and silently clean nothing; a spawned child sees the right one.
+ *
+ * Do NOT call proc_close() on the handle: it WAITS for the child to exit, which would
+ * reintroduce exactly the block this removes (measured: 1ms without, 2020ms with).
+ */
+function run_housekeeping(): void {
     // Cheap, unthrottled: every request's session gets the latest known status,
-    // regardless of whether the tasks below actually run on this tick.
+    // regardless of whether a run is launched on this tick.
     housekeeping_hydrate_session_from_status();
 
-    $last_run = @filemtime($marker_file) ?: 0;
-    if (!$force && (time() - $last_run) < HOUSEKEEPING_MIN_INTERVAL) {
-        $result['reason'] = 'throttled';
+    if (!housekeeping_is_due())   return;
+    if (housekeeping_is_running()) return;
+
+    // Touch the marker BEFORE spawning so concurrent admin requests do not each launch a
+    // child. The child also claims the lock, which closes the remaining race.
+    $logs_dir = ConfigManager::getInstance()->getPath('site_path') . '/logs';
+    if (!is_dir($logs_dir)) @mkdir($logs_dir, 0755, true);
+    @touch(housekeeping_marker_file());
+
+    housekeeping_spawn_background();
+}
+
+/**
+ * Launch scripts/run_housekeeping.php detached. Returns true if the spawn was accepted.
+ *
+ * Invokes a real script file rather than an inline `php -r` string — nested quoting there
+ * is fragile enough that it silently produced a child which never ran during testing.
+ */
+function housekeeping_spawn_background(): bool {
+    $script = ConfigManager::getInstance()->getPath('site_path') . '/scripts/run_housekeeping.php';
+    if (!file_exists($script)) {
+        error_log('MOOP housekeeping: cannot spawn — missing ' . $script);
+        return false;
+    }
+
+    $php = PHP_BINARY ?: 'php';
+    // PHP_BINARY under php-fpm is the fpm binary, which cannot run scripts. Fall back to
+    // a plain CLI php on PATH.
+    if (str_contains($php, 'php-fpm') || !is_executable($php)) {
+        $php = trim((string) @shell_exec('command -v php 2>/dev/null')) ?: 'php';
+    }
+
+    $cmd = escapeshellarg($php) . ' ' . escapeshellarg($script) . ' --spawned';
+    $descriptors = [
+        0 => ['file', '/dev/null', 'r'],
+        1 => ['file', '/dev/null', 'w'],
+        2 => ['file', '/dev/null', 'w'],
+    ];
+    $proc = @proc_open(['/bin/sh', '-c', $cmd], $descriptors, $pipes);
+    if (!is_resource($proc)) {
+        error_log('MOOP housekeeping: proc_open failed — falling back to inline run');
+        housekeeping_run_tasks();   // better slow than never
+        return false;
+    }
+    // Deliberately NO proc_close(): it blocks until the child exits.
+    return true;
+}
+
+/**
+ * DOES THE WORK, inline and synchronously. Honours the lock (never stampede a run already
+ * in flight) but does NOT check the interval — callers decide that.
+ *
+ * Called by: scripts/run_housekeeping.php (the background child) and
+ * admin/api/rerun_housekeeping.php (the dashboard's "Run now" button, where blocking is
+ * correct — the admin asked and is waiting for the answer).
+ *
+ * @return array{ran:bool, reason:?string, tasks:list<array{name:string,ok:bool,ms:int,error:?string}>}
+ */
+function housekeeping_run_tasks(): array {
+    $result = ['ran' => false, 'reason' => null, 'tasks' => []];
+
+    $logs_dir  = ConfigManager::getInstance()->getPath('site_path') . '/logs';
+    $lock_file = housekeeping_lock_file();
+
+    if (housekeeping_is_running()) {
+        $result['reason'] = 'already_running';
         return $result;
     }
 
-    // Claim the run so concurrent admin requests don't all fire it at once.
-    if (file_exists($lock_file)) {
-        $pid = (int)trim(@file_get_contents($lock_file));
-        if ($pid > 0 && file_exists("/proc/$pid")) {
-            $result['reason'] = 'already_running';
-            return $result; // another request is already running housekeeping
-        }
-        // stale lock left by a crashed request — reclaim it
-    }
     if (!is_dir($logs_dir)) @mkdir($logs_dir, 0755, true);
-    @file_put_contents($lock_file, (string)getmypid());
-    // Touch the marker before running tasks so a slow task can't cause a pile-up
-    // of concurrent housekeeping runs triggered by other requests mid-flight.
-    @touch($marker_file);
+    @file_put_contents($lock_file, (string) getmypid());
+    // Touch the marker before running: a slow task must not let other requests pile up.
+    @touch(housekeeping_marker_file());
 
     $tasks = housekeeping_task_registry();
 
