@@ -13,10 +13,17 @@ organisms. It integrates with **JBrowse2** (genome browser) and **Galaxy**
 (bioinformatics workflows). Access to data is controlled: not all organisms or
 assemblies are public.
 
-- Web root: `/var/www/html/moop/` (symlinked from `/data/moop/`)
-- Users file: `/data/users.json` (intentionally outside web root)
+- Web root: `/var/www/html/moop/`
+- Users file: `/var/www/html/users.json` — bcrypt-hashed passwords. **It is INSIDE the
+  served document root** (`/var/www/html`), which is not where you would want it. It is
+  not reachable today for two reasons: it is mode `600` (the web server user cannot read
+  it), and `docs/nginx|apache/moop-security.conf` denies it by name. The deny rule is the
+  one to rely on — the mode is protection by accident. Verified 2026-07-16: requesting
+  `/users.json` returns 404 (the rule), where it previously returned 403 (unreadable).
+  Moving it outside the docroot would be better still; the path comes from config.
 - Organism data: `/var/www/html/moop/organisms/{organism}/{assembly}/`
 - SQLite databases: one per organism at `organisms/{organism}/organism.sqlite`
+  (opened **read-only** — `PDO::SQLITE_OPEN_READONLY`; the web workload is queries only)
 
 ---
 
@@ -50,9 +57,11 @@ moop/
 │   ├── functions_database.php  PDO/SQLite query helpers
 │   ├── functions_validation.php Input validation helpers
 │   ├── functions_login_protection.php  Brute-force login protection
-│   ├── functions_system.php    handleAdminAjax(), file permission helpers
-│   ├── housekeeping.php        Maintenance tasks that run once per admin session
-│   └── JBrowse/            JBrowse track management classes
+│   ├── functions_system.php    handleAdminAjax(), getWebServerUser(), permission helpers
+│   ├── permission_check.php    Impact-based filesystem/SELinux checks (dashboard + manager)
+│   ├── cache_paths.php         Resolves cache_path (caches live outside organisms/)
+│   ├── housekeeping.php        Maintenance tasks — see §9 (interval-throttled, not per-session)
+│   └── jbrowse/            JBrowse track management classes (lowercase — case matters)
 ├── tools/              Public/authenticated user-facing pages (controllers)
 │   ├── tool_init.php       Bootstrap for all tool pages (ONE include at top)
 │   ├── display-template.php  Calls render_display_page() from layout.php
@@ -204,15 +213,77 @@ Never use `$dbh->query()` with user-supplied values interpolated in.
 
 ### 9. Housekeeping — Automatic Maintenance Tasks
 
-`lib/housekeeping.php` runs lightweight maintenance tasks once per admin session
-(called from `admin_init.php`). No cron jobs or external setup required.
+`lib/housekeeping.php` runs maintenance tasks from `admin_init.php`. No cron jobs or
+external setup required.
+
+**Throttled by INTERVAL, not by session.** `HOUSEKEEPING_MIN_INTERVAL` is 4 hours; results
+persist to `logs/.housekeeping_status.json` and are hydrated cheaply into `$_SESSION` on
+every admin page load. A long-lived session would otherwise outlive the interval and never
+re-run.
+
+**This means dashboard health cards can be up to 4 hours stale.** That is by design —
+expensive sweeps (the permission scan, the organism-tree walk) must never run on every
+dashboard load. The dashboard is a router ("N issues → go look"), and the linked manager
+page re-checks live. Say when a cached figure was taken; the permission card does.
 
 **Adding a new housekeeping task:**
 1. Write a function in `lib/housekeeping.php` (keep it fast — no network calls)
 2. Add it to the `$tasks` array in `run_housekeeping()`
 
-Current tasks:
-- `housekeeping_clean_temp_files` — deletes stale BLAST/MAFFT temp files (>24h old)
+Current tasks (`run_housekeeping()`):
+- `clean_temp_files` — deletes stale BLAST/MAFFT temp files (>24h old)
+- `ensure_cache_dir` — creates/repairs the `cache_path` directory
+- `snapshot_site_data` — copies changed site data to the backup directory
+- `environment_check` — PHP extensions, JWT keys, CLI tools, composer deps
+- `permission_check` — filesystem/SELinux impact scan → the dashboard pointer
+- `refresh_annotation_caches`
+- `refresh_organism_cache` — only if stale
+- `ncbi_taxonomy_update`
+
+### 10. Filesystem, SELinux, and the No-Exec Guard — read before touching permissions
+
+**MOOP writes into directories it also serves over HTTP** (caches, generated BLAST/`.fai`
+indexes, uploaded images). That is safe only because the web server **refuses to execute
+`.php` inside them** — `docs/nginx/moop-security.conf`, or `docs/apache/moop-security.conf`
+for Apache. Without that guard, one file-write bug is a persistent webshell. Deploy it on
+any new host; `setup-check.php` verifies it.
+
+- **`organisms/` is writable by design.** The web builds indexes in place. Making it
+  read-only was tried, broke that, and the `index/`-subdir plan to work around it was
+  **evaluated and declined** — see `notes/MOOP_INDEXES_PLAN.md` before re-litigating.
+- **`jbrowse2/` must stay read-only.** It is the browser app's own JavaScript, which every
+  user's browser runs — and the guard blocks `.php`, not `.js`. Update it from the CLI
+  (`npx @jbrowse/cli upgrade`), never via the web server. This is the one tree where the
+  filesystem is the real defense.
+- **Under SELinux the label — not the Unix mode — decides.** A directory can look perfectly
+  writable at `2775` and still be unwritable. `chmod` will not fix it; run
+  `sudo scripts/fix_moop_selinux.sh` (RHEL family only; Debian/Ubuntu use AppArmor and do
+  not need it).
+- **Judge permissions by IMPACT, not an exact mode.** `640`/`660` pass. `644` is
+  world-readable — never required, and wrong for restricted data. Never world-writable;
+  files never executable (directories need the traverse bit). `lib/permission_check.php`
+  implements this.
+- **The writable allowlist is hand-maintained** (`moop_permission_check_mode()`), and the
+  SELinux label check runs **only** for `writable` paths. A missing entry means no check,
+  and the feature dies **silently** — that is exactly how banner upload and organism image
+  upload stayed broken for three days in July 2026. If you add code that writes somewhere
+  new, add the path to that allowlist and to `scripts/fix_moop_selinux.sh`.
+
+**Gotchas that will cost you an afternoon:**
+- **Edited PHP files save as `640 smr:smr`, which php-fpm cannot read → site-wide 500.**
+  `chmod 644` any web-served file you edit. The real error is in
+  `/var/log/php-fpm/www-error.log` (root-only) — it is not an opcache problem.
+- **php-fpm has `PrivateTmp`.** Anything exec'd from a web request gets its own `/tmp`,
+  invisible from your shell. "It works in my terminal" proves nothing; pass an explicit
+  temp/cache dir.
+- **A 404 never proves a deny rule works.** Files unreadable to the web user 404/403 by
+  accident. Test with a real `.php` that *would* execute, plus a control copy in a normal
+  location.
+- **`is_writable()` is owner-biased.** From a CLI shell it answers for *you*, not for
+  `apache` — wrong in both directions. Predict the web user's view from mode bits + numeric
+  ids (`setup-check.php::webCanWrite()`), or read the housekeeping-persisted result.
+
+Full detail: `docs/SELINUX_AND_HARDENING.md`.
 
 ---
 
@@ -237,7 +308,8 @@ The following were added/fixed; keep these patterns:
 ### Add a new organism
 Use the Admin Dashboard → Manage Organisms, or place data in
 `organisms/{OrganismName}/{AccessionID}/` following the structure in
-`ORGANISM_DISPLAY_README.md`.
+`organisms/ORGANISM_DISPLAY_README.md` (it lives in the data tree, not the repo root).
+For the JBrowse2 side, see `docs/JBrowse2/SETUP_NEW_ORGANISM.md`.
 
 ### Add a new tool to the tool menu
 Edit `config/tools_config.php` — each entry defines which pages the tool
@@ -251,7 +323,9 @@ Or call the API endpoint `admin/api/generate_blast_indexes.php` via POST.
 Admin Dashboard → Manage Site Configuration. Changes go to `config/config_editable.json`.
 
 ### Add a new user or change access
-Admin Dashboard → Manage Users. User data is stored in `/data/users.json`.
+Admin Dashboard → Manage Users. User data is stored in `/var/www/html/users.json`
+(see the note at the top — it lives inside the document root and is denied by name in
+the web-server security config).
 
 ---
 
@@ -260,12 +334,14 @@ Admin Dashboard → Manage Users. User data is stored in `/data/users.json`.
 The moop git repo contains only application code — everything needed to set up
 a new MOOP site from scratch. Site-specific data is versioned separately.
 
-**App repo** (`/data/moop/`):
+**App repo** (`/var/www/html/moop/`):
 - PHP source, JS, CSS, templates, docs
 - `.example` template files for config and metadata
 - `composer.json` (but not `vendor/` or `composer.phar` — run `composer install`)
 
-**Site-data backup directory** (`site_data_path` in `site_config.php`, default `/data/moop-site-data/`):
+**Site-data backup directory** (`site_data_path`; `site_config.php` ships
+`/var/www/html/moop-site-data`, and this deployment overrides it to `/var/www/moop-site-data`
+via `config_editable.json` — read it through ConfigManager, never from `site_config.php`):
 - `config/config_editable.json` — admin-edited settings
 - `config/secrets.php` — API keys
 - `metadata/*.json` — groups, annotations, taxonomy tree
@@ -273,7 +349,8 @@ a new MOOP site from scratch. Site-specific data is versioned separately.
 - **Keep this directory private** — it contains credentials
 
 **How snapshots work:**
-- `lib/housekeeping.php` → `housekeeping_snapshot_site_data()` runs once per admin session
+- `lib/housekeeping.php` → `housekeeping_snapshot_site_data()` runs on the housekeeping
+  interval (§9 — at most once every 4h, not once per session)
 - Auto-creates the backup directory if it doesn't exist
 - Copies changed files to the backup directory
 - Git is NOT required — if the directory is a git repo, changes are auto-committed as a bonus
@@ -286,28 +363,48 @@ a new MOOP site from scratch. Site-specific data is versioned separately.
 4. Site-data backup directory is created automatically on first admin login
 5. **Cache directory** — the `cache_path` setting (Admin → Site Configuration) names where
    the app writes regenerable caches. Leave it empty to keep caches inside `organisms/`
-   (works out of the box). To keep `organisms/` read-only to the web server, point it at a
-   directory **outside the document root** (e.g. `/var/www/moop-cache`). On a hardened
-   (SELinux) host that directory needs `apache:apache`, mode `2775`, and an
-   `httpd_sys_rw_content_t` rule — `scripts/fix_moop_selinux.sh` creates and labels it. See
-   `docs/SELINUX_AND_HARDENING.md`.
+   (works out of the box). Better: point it at a directory **outside the document root**
+   (e.g. `/var/www/moop-cache`), so `organisms/` holds shipped-in data only — regenerable
+   caches do not belong in the data tree. On a hardened (SELinux) host that directory needs
+   `apache:apache`, mode `2775`, and an `httpd_sys_rw_content_t` rule;
+   `scripts/fix_moop_selinux.sh` creates and labels it. See `docs/SELINUX_AND_HARDENING.md`.
+   (This is about **separation**, not locking down `organisms/` — that tree is writable by
+   design; see §10.)
+6. **Web-server security config** — deploy `docs/nginx/moop-security.conf` or
+   `docs/apache/moop-security.conf`. Not optional; see §10.
 
 ---
 
-## Known Issues / TODO (from March 2026 review)
+## Known Issues / TODO
 
-See `notes/IMPROVEMENT_ROADMAP.md` for the full list. Top remaining items:
+Planning docs live in `notes/`. Verified against the tree on 2026-07-16 — several
+long-standing entries here had already been fixed, and one contradicted §9 of this file.
 
-- **RESOLVED:** `page-setup.php` deleted — removed broken CSS URL bug and dual DataTables loading
-- **DONE (2026-07-08):** HTTP security headers now set in nginx (port-80 server block):
-  `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` are
-  enforced; `Content-Security-Policy` is **Report-Only** (with `'unsafe-inline'`) pending a
-  future refactor of ~154 inline event handlers (onclick/onchange/...) to `addEventListener`
-  + per-request nonces before it can be enforced. MOOP is served over HTTP (port 80), so HSTS
-  is N/A until a real HTTPS vhost exists.
+**Open:**
 - **Medium:** JWT tokens passed as URL query parameter in JBrowse track requests
-  (visible in server logs) — architectural constraint from JBrowse2
-- **Medium:** BLAST temp files accumulate — add cron: `find /tmp -name 'blast_*' -mtime +1 -delete`
-- **Low:** `getBlastDatabases()` in `blast_functions.php` uses `global $sequence_types` — pass as param
-- **Low:** Backup files (`.bak`, `.backup`) in production — delete and rely on git
-- **Low:** No SRI hashes on CDN `<script>` tags
+  (visible in server logs) — architectural constraint from JBrowse2. Two routes exist:
+  `notes/TRACKS_PROXY_PLAN.md` (simpler) and an `Authorization`-header variant.
+- **Medium:** `Content-Security-Policy` is **Report-Only** (with `'unsafe-inline'`), pending
+  a refactor of ~154 inline event handlers (`onclick`/`onchange`/...) to `addEventListener`
+  + per-request nonces before it can be enforced.
+- **Low:** The Apache no-exec guard (`docs/apache/moop-security.conf`) ships **unverified** —
+  written against a working nginx deployment, never run on Apache. Its VERIFY block has the
+  exec test; settle it on the first Apache host.
+- **Low:** `users.json` sits inside the document root (see the top of this file). Denied by
+  name in the web-server config, but moving it out would be better.
+- **Low:** Two sources of truth decide "does the web write here" — a rule's `why_write` and
+  the allowlist in `moop_permission_check_mode()`. They drift, and drift fails silently
+  (§10). Deriving `check_mode` from `why_write` would make that class impossible, but
+  `why_write` is used inconsistently today (some read-only rules use it to explain *reads*),
+  so it needs a cleanup pass first.
+
+**Done — do not re-open:**
+- `page-setup.php` deleted (broken CSS URL + dual DataTables loading).
+- HTTP security headers in nginx (2026-07-08): `X-Frame-Options`, `X-Content-Type-Options`,
+  `Referrer-Policy`, `Permissions-Policy` enforced. HSTS is N/A while MOOP is HTTP-only.
+- BLAST temp files — `housekeeping_clean_temp_files` handles this (§9); **no cron needed**.
+  (This file previously listed both the task and a TODO to add a cron for it.)
+- `getBlastDatabases()` no longer uses `global $sequence_types`.
+- No `.bak`/`.backup` files remain in the tree.
+- SRI hashes — **moot**: there are no CDN `<script>` tags. Bootstrap/jQuery are self-hosted
+  from `/moop/css/` and `/moop/js/`, so there is nothing to hash.
