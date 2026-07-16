@@ -339,12 +339,12 @@ foreach ($registry as $jsFile => $funcs) {
 
 // Find function usages in JS and PHP files
 echo "🔍 Scanning for function usages...\n";
-$scanDirs = [
-    __DIR__ . '/../js',
-    __DIR__ . '/../admin',
-    __DIR__ . '/../tools',
-    __DIR__ . '/..'
-];
+
+// ($scanDirs used to be declared here and was never read — the usage scan below builds
+// its own file lists with glob(). Removed rather than left lying around: it contained the
+// same `__DIR__ . '/..'` document-root entry that made the PHP generator walk organisms/
+// and die on an unreadable directory. Dead code that looks authoritative is how the next
+// person reintroduces the bug — they wire up the list that is already sitting there.)
 
 foreach ($registry as $jsFile => &$functions) {
     foreach ($functions as &$func) {
