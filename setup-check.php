@@ -120,6 +120,69 @@ function detectWebUser() {
 /**
  * Check if a CLI tool is available via `which`.
  */
+/**
+ * Numeric uid/gid for the web server account. Cached; resolved without posix.
+ *
+ * The posix extension is NOT loaded in this PHP CLI (verified 2026-07-16), so
+ * posix_getpwnam() and friends are unavailable here even though the same functions
+ * work under php-fpm. Fall back to id/getent.
+ *
+ * @return array{uid:?int, gid:?int}
+ */
+function webUserIds($web_user, $web_group) {
+    static $ids = null;
+    if ($ids !== null) return $ids;
+
+    $uid = $gid = null;
+    if (function_exists('posix_getpwnam')) {
+        $p = @posix_getpwnam($web_user);
+        if (is_array($p)) $uid = (int) $p['uid'];
+        $g = @posix_getgrnam($web_group);
+        if (is_array($g)) $gid = (int) $g['gid'];
+    }
+    if ($uid === null) {
+        $o = [];
+        @exec('id -u ' . escapeshellarg($web_user) . ' 2>/dev/null', $o);
+        if (!empty($o[0]) && ctype_digit(trim($o[0]))) $uid = (int) trim($o[0]);
+    }
+    if ($gid === null) {
+        $o = [];
+        @exec('getent group ' . escapeshellarg($web_group) . ' 2>/dev/null', $o);
+        if (!empty($o[0])) {
+            $parts = explode(':', $o[0]);
+            if (isset($parts[2]) && ctype_digit($parts[2])) $gid = (int) $parts[2];
+        }
+    }
+    return $ids = ['uid' => $uid, 'gid' => $gid];
+}
+
+/**
+ * Can the WEB SERVER write here? — not "can whoever ran this script write here".
+ *
+ * is_writable() answers for the current process. Run as the deploy user (the normal case
+ * for a preflight) it is owner-biased and wrong in BOTH directions: it says "no" for a
+ * directory apache owns and can write (observed on archived_gene_sets, apache:apache 755)
+ * and "yes" for one only the deploy user can write. Predict apache's DAC view from the
+ * raw mode bits and numeric ids instead.
+ *
+ * DAC only. On an enforcing host the SELinux label can still block a write that passes
+ * here — that is what the SELinux section checks, and it is the more common failure.
+ */
+function webCanWrite($path, $web_user, $web_group) {
+    $st = @stat($path);
+    if ($st === false) return false;
+
+    $mode = $st['mode'];
+    $ids  = webUserIds($web_user, $web_group);
+
+    if ($ids['uid'] !== null && $st['uid'] === $ids['uid'] && ($mode & 0200)) return true; // owner
+    if ($ids['gid'] !== null && $st['gid'] === $ids['gid'] && ($mode & 0020)) return true; // group
+    if ($mode & 0002) return true;                                                         // world
+    // Ids unresolvable (no posix, no id/getent): fall back rather than cry wolf.
+    if ($ids['uid'] === null && $ids['gid'] === null) return is_writable($path);
+    return false;
+}
+
 function toolExists($tool) {
     $output = [];
     $ret = 1;
@@ -153,6 +216,38 @@ $config = @require $config_file;
 if (!is_array($config)) {
     echo "\n" . C_RED . "FATAL: config/site_config.php did not return a valid config array." . C_RESET . "\n";
     exit(1);
+}
+
+// Merge the admin-editable overrides, exactly as ConfigManager does at runtime
+// (includes/ConfigManager.php:112 — override only when set and non-empty, so an empty
+// value falls back to the shipped default).
+//
+// Without this, the preflight validates the SHIPPED DEFAULTS rather than the live
+// config, and reports on paths the site does not use. Observed 2026-07-16: it looked
+// for site_data_path at /var/www/html/moop-site-data (the stale default) while the
+// real, admin-configured directory is /var/www/moop-site-data — a confident FAIL about
+// a directory that is not supposed to exist. CLAUDE.md's rule ("never read
+// site_config.php directly") exists for exactly this reason.
+$editable_file = "$base/config/config_editable.json";
+if (is_readable($editable_file)) {
+    $editable = json_decode((string) @file_get_contents($editable_file), true);
+    if (is_array($editable)) {
+        foreach ($editable as $key => $value) {
+            if ($value === '' || $value === null) continue;
+            if (in_array($key, ['sequence_types', 'jbrowse2'], true)
+                && is_array($value) && is_array($config[$key] ?? null)) {
+                foreach ($value as $sub_key => $sub_value) {
+                    if ($key === 'sequence_types' && isset($config[$key][$sub_key]) && is_array($sub_value)) {
+                        $config[$key][$sub_key] = array_merge($config[$key][$sub_key], $sub_value);
+                    } else {
+                        $config[$key][$sub_key] = $sub_value;
+                    }
+                }
+            } else {
+                $config[$key] = $value;
+            }
+        }
+    }
 }
 
 $web = detectWebUser();
@@ -340,21 +435,45 @@ foreach ($example_files as $target) {
 
 section("Directory Structure & Permissions");
 
+// Directories php-fpm must be able to WRITE. Mirrors the table in
+// docs/SELINUX_AND_HARDENING.md §55 and RW_DIRS in scripts/fix_moop_selinux.sh — keep
+// the three in step. Do NOT add a directory here just because it must exist: this list
+// drives both a chmod 2775 recommendation and the SELinux label check below, so a wrong
+// entry tells the admin to loosen something that should stay locked.
 $writable_dirs = [
     'logs'                      => "$base/logs",
     'data/genomes'              => $config['jbrowse2']['genomes_directory'] ?? "$base/data/genomes",
-    'data/tracks'               => $config['jbrowse2']['tracks_directory'] ?? "$base/data/tracks",
     'images'                    => "$base/images",
     'metadata'                  => $config['metadata_path'] ?? "$base/metadata",
     'metadata/change_log'       => ($config['metadata_path'] ?? "$base/metadata") . '/change_log',
     'metadata/jbrowse2-configs' => ($config['metadata_path'] ?? "$base/metadata") . '/jbrowse2-configs',
     'config'                    => "$base/config",
-    'certs'                     => $config['jbrowse2']['certs_directory'] ?? "$base/certs",
     'organisms'                 => $config['organism_data'] ?? "$base/organisms",
+    'archived_gene_sets'        => "$base/archived_gene_sets",
+];
+if (!empty($config['cache_path'])) {
+    $writable_dirs['cache_path'] = $config['cache_path'];
+}
+if (!empty($config['site_data_path'])) {
+    $writable_dirs['site_data_path'] = $config['site_data_path'];
+}
+
+// Directories that must EXIST but are read-only to the web server. Verified 2026-07-16:
+// neither contains a single apache-owned file, the §55 writable table lists neither, and
+// permission_check.php classifies them 'data' and 'secret'. They were previously in the
+// writable list, which produced two bad recommendations — most alarmingly `chmod 2775`
+// on the directory holding the JWT private key.
+$readonly_dirs = [
+    'data/tracks' => $config['jbrowse2']['tracks_directory'] ?? "$base/data/tracks",
+    'certs'       => $config['jbrowse2']['certs_directory'] ?? "$base/certs",
 ];
 
 // Normalize trailing slashes from config values
 foreach ($writable_dirs as $label => &$path) {
+    $path = rtrim($path, '/');
+}
+unset($path);
+foreach ($readonly_dirs as $label => &$path) {
     $path = rtrim($path, '/');
 }
 unset($path);
@@ -365,12 +484,103 @@ foreach ($writable_dirs as $label => $path) {
              "mkdir -p " . escapeshellarg($path) .
              " && sudo chown $web_user:$web_group " . escapeshellarg($path) .
              " && sudo chmod 2775 " . escapeshellarg($path));
-    } elseif (!is_writable($path)) {
-        fail("$label/ exists but is not writable",
-             "sudo chown $web_user:$web_group " . escapeshellarg($path) .
+    } elseif (!webCanWrite($path, $web_user, $web_group)) {
+        fail("$label/ exists but $web_user cannot write to it",
+             "sudo chgrp $web_group " . escapeshellarg($path) .
              " && sudo chmod 2775 " . escapeshellarg($path));
     } else {
-        pass("$label/ writable");
+        pass("$label/ writable by $web_user");
+    }
+}
+
+// Read-only directories: they must exist and be readable, but must NOT be loosened.
+foreach ($readonly_dirs as $label => $path) {
+    if (!is_dir($path)) {
+        fail("$label/ does not exist ($path)", "mkdir -p " . escapeshellarg($path));
+    } elseif (!is_readable($path)) {
+        fail("$label/ exists but is not readable",
+             "sudo chgrp $web_group " . escapeshellarg($path) . " && sudo chmod g+rX " . escapeshellarg($path));
+    } else {
+        pass("$label/ present (read-only — the web server only reads here)");
+    }
+}
+
+// ── Section 5b: SELinux ─────────────────────────────────────────────────────
+//
+// This is how an admin finds out fix_moop_selinux.sh exists. The admin dashboard
+// points at it too, but that pointer is useless in the case that matters most: a
+// hardening run has just relabelled the docroot, the site is throwing 500s, and you
+// cannot load the dashboard to read its advice. This check runs from a shell, so it
+// still works when the web server does not.
+//
+// It also corrects a false-green directly above: is_writable() sees only DAC. Run as
+// the owner it returns true for a directory php-fpm CANNOT write, because on an
+// enforcing host the SELinux label — not the Unix mode — is the real gate. Three MOOP
+// features (banner upload, organism image upload, JBrowse text-index) died silently
+// that way in July 2026 and nothing reported it for three days.
+
+$selinux_enforcing = is_readable('/sys/fs/selinux/enforce')
+    && trim((string) @file_get_contents('/sys/fs/selinux/enforce')) === '1';
+
+if ($selinux_enforcing) {
+    section("SELinux (Enforcing)");
+
+    $selinux_type = function ($path) {
+        $out = [];
+        @exec('ls -dZ ' . escapeshellarg($path) . ' 2>/dev/null', $out);
+        if (empty($out[0]) || !preg_match('/:([a-z_]+_t):/', $out[0], $m)) return null;
+        return $m[1];
+    };
+
+    // Every directory the web server writes needs the read-write type. Report the bad
+    // ones as ONE finding — a list of ten identical failures is noise, and the remedy
+    // is a single command regardless of how many paths are wrong.
+    $mislabelled = [];
+    foreach ($writable_dirs as $label => $path) {
+        if (!is_dir($path)) continue;
+        $type = $selinux_type($path);
+        if ($type !== null && $type !== 'httpd_sys_rw_content_t') {
+            $mislabelled[] = "$label ($type)";
+        }
+    }
+
+    if ($mislabelled) {
+        fail("SELinux label blocks writes to: " . implode(', ', $mislabelled),
+             "sudo $base/scripts/fix_moop_selinux.sh\n" .
+             "         (These directories look writable to `ls` but php-fpm cannot write them.\n" .
+             "          The label is the real gate — chmod will NOT fix this.)");
+    } else {
+        pass("Writable directories carry httpd_sys_rw_content_t");
+    }
+
+    // The writable trees are served over HTTP, so they are only safe because nginx
+    // refuses to execute .php inside them. Deployed is not the same as in force.
+    $guard = '/etc/nginx/default.d/moop-security.conf';
+    if (!file_exists($guard)) {
+        fail("nginx no-exec guard is not deployed ($guard)",
+             "sudo cp $base/docs/nginx/moop-security.conf $guard && \\\n" .
+             "         sudo chmod 644 $guard && sudo nginx -t && sudo systemctl reload nginx\n" .
+             "         (Without it, a writable+served data tree can execute an uploaded .php.)");
+    } elseif (file_exists("$base/docs/nginx/moop-security.conf")
+              && md5_file($guard) !== md5_file("$base/docs/nginx/moop-security.conf")) {
+        warn("Deployed nginx guard differs from docs/nginx/moop-security.conf",
+             "It may predate a rule that closes a hole. Re-deploy:\n" .
+             "         sudo cp $base/docs/nginx/moop-security.conf $guard && sudo nginx -t && sudo systemctl reload nginx");
+    } else {
+        pass("nginx no-exec guard deployed and current");
+    }
+
+    if (toolExists('getsebool')) {
+        $out = [];
+        @exec('getsebool httpd_can_network_connect 2>/dev/null', $out);
+        if (!empty($out[0]) && strpos($out[0], 'on') !== false) {
+            pass("httpd_can_network_connect is on");
+        } else {
+            fail("httpd_can_network_connect is off — php-fpm cannot make outbound connections",
+                 "sudo setsebool -P httpd_can_network_connect on\n" .
+                 "         (Blocks the Google Sheets track sync with errors that look nothing\n" .
+                 "          like a permissions problem.)");
+        }
     }
 }
 

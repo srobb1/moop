@@ -51,10 +51,70 @@ RW_DIRS=(
 # Do NOT "re-tighten" this to read-only without reading notes/MOOP_INDEXES_PLAN.md first — the
 # index/-subdir plan that would have required it was evaluated and declined.
 
-echo "== 0. Remove a historical typo'd rule ('configs' — no such directory) =="
+# ── 0. The guard MUST exist before we make anything writable ──────────────────
+# This script's whole promise is "safe writable trees". The trees below are served
+# over HTTP, so the ONLY thing making them safe to write is the nginx rule denying
+# .php inside them: without it, one file-write bug becomes a persistent webshell.
+# The two halves are coupled, so verify the protective half BEFORE applying the
+# dangerous half — the same guard-first ordering the tracks proxy needed.
+echo "== 0. Verify the nginx execution-layer guard =="
+NGINX_GUARD=/etc/nginx/default.d/moop-security.conf
+NGINX_CANON="$MOOP/docs/nginx/moop-security.conf"
+
+if [[ "${SKIP_NGINX_CHECK:-0}" == "1" ]]; then
+    echo "  SKIPPED (SKIP_NGINX_CHECK=1) — writable trees will NOT be protected from .php execution"
+elif [[ ! -f "$NGINX_CANON" ]]; then
+    echo "  WARN: canonical copy missing ($NGINX_CANON) — cannot verify; continuing"
+elif [[ ! -f "$NGINX_GUARD" ]]; then
+    cat >&2 <<MSG
+
+  REFUSING TO RUN — the nginx no-exec guard is NOT deployed.
+
+  This script makes data trees writable by the web server. Those trees are served
+  over HTTP, so without the guard a single file-write bug becomes a webshell
+  (persistent remote code execution). Deploy it FIRST, then re-run this script:
+
+    sudo cp $NGINX_CANON $NGINX_GUARD
+    sudo chmod 644 $NGINX_GUARD
+    sudo nginx -t && sudo systemctl reload nginx
+
+  Override with SKIP_NGINX_CHECK=1 only if you know exactly why.
+
+MSG
+    exit 1
+elif ! diff -q "$NGINX_CANON" "$NGINX_GUARD" >/dev/null 2>&1; then
+    cat >&2 <<MSG
+
+  REFUSING TO RUN — the deployed nginx guard DIFFERS from the canonical copy.
+
+    deployed:  $NGINX_GUARD
+    canonical: $NGINX_CANON
+
+  The deployed copy may predate a rule that closes a real hole — the .php deny was
+  extended to images/, jbrowse2/ and archived_gene_sets/ on 2026-07-16, and before
+  that images/ was writable AND executing PHP. Re-deploy, then re-run:
+
+    sudo cp $NGINX_CANON $NGINX_GUARD && sudo nginx -t && sudo systemctl reload nginx
+
+  Override with SKIP_NGINX_CHECK=1 only if you know exactly why.
+
+MSG
+    exit 1
+else
+    echo "  deployed, matches canonical: $NGINX_GUARD"
+    # Deployed is not the same as IN FORCE — nginx only picks it up on reload.
+    if nginx -T 2>/dev/null | grep -q '/moop/organisms/'; then
+        echo "  in force (present in nginx's running config)"
+    else
+        echo "  WARN: on disk but NOT in nginx's running config — it has not been reloaded:"
+        echo "        sudo nginx -t && sudo systemctl reload nginx"
+    fi
+fi
+
+echo "== 1. Remove a historical typo'd rule ('configs' — no such directory) =="
 semanage fcontext -d "$MOOP/configs(/.*)?" 2>/dev/null && echo "  removed" || echo "  not present (fine)"
 
-echo "== 1. Create the cache directory if missing (apache-owned, SGID) =="
+echo "== 2. Create the cache directory if missing (apache-owned, SGID) =="
 if [[ ! -d "$CACHE" ]]; then
     mkdir -p "$CACHE"
     echo "  created $CACHE"
@@ -62,7 +122,7 @@ fi
 chown apache:apache "$CACHE"
 chmod 2775 "$CACHE"   # SGID: new cache files inherit group apache (php-fpm + CLI both read/write)
 
-echo "== 2. Persistent read-write SELinux rules (recursive) =="
+echo "== 3. Persistent read-write SELinux rules (recursive) =="
 for d in "${RW_DIRS[@]}"; do
     [[ -d "$d" ]] || { echo "  SKIP (missing): $d"; continue; }
     spec="${d}(/.*)?"
@@ -71,21 +131,21 @@ for d in "${RW_DIRS[@]}"; do
     echo "  rw  $spec"
 done
 
-echo "== 3. Clean up the retired organism.json narrow rule (organisms/ is now writable) =="
+echo "== 4. Clean up the retired organism.json narrow rule (organisms/ is now writable) =="
 # organisms/ is fully writable via RW_DIRS above. Remove the Phase-1.5 narrow rule if present.
 semanage fcontext -d "$MOOP/organisms/[^/]+/organism\.json" 2>/dev/null && echo "  removed retired narrow rule" || echo "  not present (fine)"
 
-echo "== 4. Apply all labels now =="
+echo "== 5. Apply all labels now =="
 for d in "${RW_DIRS[@]}"; do
     [[ -d "$d" ]] && restorecon -R "$d"
 done
 echo "  relabelled"
 
-echo "== 5. Allow php-fpm outbound connections (Google Sheets sync) =="
+echo "== 6. Allow php-fpm outbound connections (Google Sheets sync) =="
 setsebool -P httpd_can_network_connect on
 echo "  httpd_can_network_connect -> $(getsebool httpd_can_network_connect | awk '{print $3}')"
 
-echo "== 6. Restore apache ownership under the JBrowse track configs =="
+echo "== 7. Restore apache ownership under the JBrowse track configs =="
 TRACKS="$MOOP/metadata/jbrowse2-configs/tracks"
 if [[ -d "$TRACKS" ]]; then
     chown -R apache:apache "$TRACKS"

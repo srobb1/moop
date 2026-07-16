@@ -434,9 +434,56 @@ history. See the README created inside the backup directory for instructions.
 
 See `lib/housekeeping.php` for details on what gets backed up.
 
+### SELinux and hardened hosts (RHEL / CentOS / Rocky)
+
+**Skip this only if `getenforce` says `Disabled` or `Permissive`.** On an Enforcing host
+this step is not optional, and skipping it produces the worst kind of failure: the site
+loads fine and then **silently cannot write anything** — no error on the page, nothing in
+sight. Three MOOP features were dead for three days this way in July 2026.
+
+SELinux labels the document root read-only by default, because the usual assumption is
+that a web app does not write into the directory it serves from. MOOP does (caches,
+generated indexes, uploads), so each writable directory needs an explicit rule:
+
+```bash
+# Deploy the nginx no-exec guard FIRST — the writable trees are only safe with it
+sudo cp docs/nginx/moop-security.conf /etc/nginx/default.d/moop-security.conf
+sudo chmod 644 /etc/nginx/default.d/moop-security.conf
+sudo nginx -t && sudo systemctl reload nginx
+
+# Then apply the SELinux rules, labels, and the cache directory (idempotent)
+sudo scripts/fix_moop_selinux.sh
+```
+
+That order matters, and the script enforces it: it refuses to run until the guard is
+deployed, because it makes data trees **writable**, and those trees are served over HTTP.
+Without the nginx rule denying `.php` inside them, one file-write bug becomes a webshell.
+
+Re-run `fix_moop_selinux.sh` after any host hardening run (SCAP/OpenSCAP), a rebuild, or
+a wiped policy store. It uses `semanage`, not `chcon`, so the rules are **persistent** —
+a future hardening run re-applies them instead of destroying them. You run it yourself
+with `sudo`; no IT round-trip is needed.
+
+Full background, including what to do when the site is already down:
+[`docs/SELINUX_AND_HARDENING.md`](docs/SELINUX_AND_HARDENING.md).
+
 ### Verifying Installation
 
-Check that all components are working:
+**Start here — this checks everything below automatically:**
+
+```bash
+php setup-check.php
+```
+
+The preflight validates PHP extensions, CLI tools, composer deps, writable directories,
+JWT keys, SELinux labels, and the nginx guard — and prints the exact fix command for
+anything wrong. It runs from a shell, so it still works when the site is too broken to
+load, which is when you need it most.
+
+Run it after installing, after upgrading, and any time something behaves oddly.
+
+<details>
+<summary>Manual checks (what the preflight does for you)</summary>
 
 ```bash
 # Verify PHP extensions
@@ -472,6 +519,8 @@ sudo systemctl status apache2
 # For Nginx:
 sudo systemctl status nginx
 ```
+
+</details>
 
 ### Initial Configuration
 
