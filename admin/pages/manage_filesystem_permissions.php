@@ -1,5 +1,11 @@
 <?php
 // Styles are loaded from manage-filesystem-permissions.css via page_styles in layout.php
+
+// Only talk about SELinux when SELinux is actually enforcing. On a host without it,
+// every mention below is noise pointing at a script that would do nothing — and the
+// label can't be the reason anything is broken. The checks themselves already skip
+// the label test when this is false (see performPermissionCheck).
+$selinux_on = function_exists('moop_selinux_enforcing') && moop_selinux_enforcing();
 ?>
 
 <div class="container py-4">
@@ -19,33 +25,35 @@
 <!-- About Section -->
 <div class="card mb-4 border-info">
     <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutPermissions">
-        <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Filesystem Permissions <i class="fa fa-chevron-down float-end"></i></h5>
+        <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Filesystem Permissions Manager <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
     <div class="collapse" id="aboutPermissions">
         <div class="card-body">
-            <p><strong>Purpose:</strong> Verify and manage file and directory permissions to ensure the web server can read and write files it needs while maintaining security.</p>
-            
+            <p><strong>Purpose:</strong> Check that the web server can read and write exactly the files it needs — and nothing more. This page reports what is actually wrong and gives you the command to fix it.</p>
+
             <p><strong>Why It Matters:</strong></p>
             <ul>
-                <li>The web server (<?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?>) needs specific permissions to function correctly</li>
-                <li>Incorrect permissions can cause upload failures, configuration save errors, and feature breakdowns</li>
-                <li>Over-permissive files (777, 666) create security vulnerabilities</li>
-                <li>SGID bits on directories ensure new files automatically inherit the correct group ownership</li>
+                <li>The web server runs as <code><?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?></code> and reads data through its <strong>group</strong> — so a file never has to be world-readable to be served.</li>
+                <li>When a writable directory is wrong, features fail <strong>silently</strong>: banner uploads, config saves, and index builds just stop working, with no error on the page.</li>
+                <li>Over-permissive files are a real risk — world-writable (<code>777</code>, <code>666</code>) lets any local user overwrite data, and an <strong>executable data file</strong> has no legitimate reason to exist.</li>
+                <?php if ($selinux_on): ?>
+                <li><strong>Under SELinux (Enforcing), the label — not the Unix mode — is the real gate.</strong> A directory can look perfectly writable at <code>2775</code> and still be blocked. That is the single most common surprise here; <code>chmod</code> will not fix it.</li>
+                <?php endif; ?>
+                <li>SGID (the <code>s</code> in <code>drwxrwsr-x</code>) makes new files inherit the directory's group automatically, so writable areas stay writable as content is added.</li>
             </ul>
-            
-            <p><strong>Permission Levels:</strong></p>
+
+            <p><strong>How These Checks Judge:</strong></p>
             <ul>
-                <li><strong>640 / 660 / 644 (group-readable):</strong> Read-only data the web serves (FASTA, genomes, databases) — the web server reads via its group, so any of these work; world-readable is not required</li>
-                <li><strong>664 (rw-rw-r--):</strong> Configuration files edited by admins through the web interface</li>
-                <li><strong>2775 (drwxrwsr-x):</strong> Directories the web server writes into — SGID ensures new files inherit the correct group (needs the <code>httpd_sys_rw_content_t</code> SELinux label too)</li>
+                <li>By <strong>impact</strong>, not by matching an exact mode. <code>640</code> and <code>660</code> pass; they are not "wrong" for failing to be <code>644</code>.</li>
+                <li>Findings are grouped by <strong>category</strong>, so a count means "how many things are wrong", not "how many files exist".</li>
+                <li>See <strong>Best Practices</strong> below for the rules, and <strong>Permission Modes Reference</strong> for what each mode means.</li>
             </ul>
-            
+
             <p class="mb-0"><strong>What You Can Do Here:</strong></p>
             <ul class="mb-0">
-                <li>View current permissions for all system files and directories</li>
-                <li>Identify permission issues immediately with visual indicators</li>
-                <li>Get copy-paste commands to fix any permission problems</li>
-                <li>Understand why each permission is needed</li>
+                <li>See current permissions, ownership<?= $selinux_on ? ', and SELinux state' : '' ?> for everything MOOP touches</li>
+                <li>Fix one path with its own command, or take a whole section in a single paste</li>
+                <li>Understand why each path needs the access it does</li>
             </ul>
         </div>
     </div>
@@ -64,49 +72,17 @@
                 <li><strong>Data files just need to be group-readable</strong> — FASTA, genomes, and databases at <code>640</code>, <code>660</code>, <code>664</code>, or <code>644</code> all work. <strong>World-readable (<code>644</code>) is not required, and is worse for restricted data</strong> — don't "fix" a <code>660</code> file up to <code>644</code>.</li>
                 <li><strong>Never world-writable</strong> (<code>777</code>, <code>666</code>, or any <code>o+w</code>), and <strong>files should not be executable</strong> — those are the perms that genuinely matter. Directories are different: they need the traverse (<code>x</code>) bit.</li>
                 <li><strong>The web server writes to a specific set of directories</strong> — logs, config, metadata, <code>data/genomes</code>, the image caches (<code>wikimedia</code>, <code>ncbi_taxonomy</code>), <code>images/banners</code>, <code>archived_gene_sets</code>, the cache dir, and the <code>organisms/</code> tree. These use SGID <code>2775</code> so new files inherit the <code><?= htmlspecialchars($web_group) ?></code> group. Everything else — top-level <code>images/</code>, <code>docs/</code>, <code>data/tracks</code>, and the <code>jbrowse2/</code> app — is <strong>read-only served content</strong>.</li>
+                <?php if ($selinux_on): ?>
                 <li><strong>Under SELinux (Enforcing), the label is the real gate.</strong> A directory can look writable (<code>2775</code>) yet be blocked because its SELinux type is <code>httpd_sys_content_t</code>. Writable dirs need <code>httpd_sys_rw_content_t</code>; apply it with <code>scripts/fix_moop_selinux.sh</code> (see <code>docs/SELINUX_AND_HARDENING.md</code>), not <code>chmod</code>.</li>
+                <?php endif; ?>
                 <li><strong>Use 664 for config/metadata files</strong> the admin UI edits (so the web group can write them).</li>
-                <li><strong>The <code>organisms/</code> tree is writable — deliberately.</strong> The web builds BLAST/<code>.fai</code> indexes in place, so it needs write. That is safe because nginx refuses to execute any <code>.php</code> in the data trees (the execution layer), not because the files are locked down. If a web build or rename fails, check the SELinux label here, not just the Unix mode.</li>
+                <li><strong>The <code>organisms/</code> tree is writable — deliberately.</strong> The web builds BLAST/<code>.fai</code> indexes in place, so it needs write. That is safe because nginx refuses to execute any <code>.php</code> in the data trees (the execution layer), not because the files are locked down.<?php if ($selinux_on): ?> If a web build or rename fails, check the SELinux label here, not just the Unix mode.<?php endif; ?></li>
                 <li><strong><code>jbrowse2/</code> must stay read-only.</strong> It is the browser app's own JavaScript, which every user's browser runs — and the nginx rule blocks <code>.php</code>, not <code>.js</code>. Update it from the CLI (<code>npx @jbrowse/cli upgrade</code>), never via the web server.</li>
                 <li><strong>Check regularly:</strong> the admin dashboard surfaces a pointer here when something needs attention.</li>
             </ul>
         </div>
     </div>
 </div>
-
-<!-- Permission Summary -->
-<div class="card mb-4">
-    <div class="card-header bg-light">
-        <h5 class="mb-0"><i class="fa fa-check-square"></i> Permission Checklist</h5>
-    </div>
-    <div class="card-body">
-        <?php 
-        $all_checks = array_merge($checks, $assembly_subdir_issues, $fasta_file_issues);
-        $total = count($all_checks);
-        $ok = count(array_filter($all_checks, fn($c) => empty($c['issues'])));
-        $warning = $total - $ok;
-        ?>
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <div class="card border-success">
-                    <div class="card-body text-center">
-                        <h3 class="text-success"><?= $ok ?>/<?= $total ?></h3>
-                        <p class="mb-0 small">Correct Permissions</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card border-warning">
-                    <div class="card-body text-center">
-                        <h3 class="text-warning"><?= $warning ?></h3>
-                        <p class="mb-0 small">Issues Found</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 
 <!-- Quick Reference — reference material, collapsed by default like About/Best Practices -->
 <div class="card mb-4">
@@ -154,7 +130,7 @@
                     <td><code>2775</code></td>
                     <td>drwxrwsr-x</td>
                     <td>Directories the web writes into</td>
-                    <td>SGID (2) + owner/group write. The <code>s</code> ensures new files inherit the directory's group. Needs the <code>httpd_sys_rw_content_t</code> SELinux label too.</td>
+                    <td>SGID (2) + owner/group write. The <code>s</code> ensures new files inherit the directory's group.<?php if ($selinux_on): ?> Needs the <code>httpd_sys_rw_content_t</code> SELinux label too.<?php endif; ?></td>
                 </tr>
                 <tr>
                     <td><code>755</code></td>
@@ -173,6 +149,41 @@
     </div>
     </div>
 </div>
+
+<!-- Permission Summary -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="fa fa-check-square"></i> Permission Checklist</h5>
+    </div>
+    <div class="card-body">
+        <?php 
+        $all_checks = array_merge($checks, $assembly_subdir_issues, $fasta_file_issues);
+        $total = count($all_checks);
+        $ok = count(array_filter($all_checks, fn($c) => empty($c['issues'])));
+        $warning = $total - $ok;
+        ?>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h3 class="text-success"><?= $ok ?>/<?= $total ?></h3>
+                        <p class="mb-0 small">Correct Permissions</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h3 class="text-warning"><?= $warning ?></h3>
+                        <p class="mb-0 small">Issues Found</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 
 
     <!-- Detailed Permission Groups -->
