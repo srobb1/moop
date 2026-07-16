@@ -69,39 +69,66 @@ Every directory below contains files created by the `apache` user (verified empi
 | `/var/www/html/moop/archived_gene_sets` | gene-set archive output |
 | `/var/www/moop-site-data` | site-data backup (config, secrets, users.json) |
 | `/var/www/moop-cache` | generated caches — see the `cache_path` section below |
+| `/var/www/html/moop/organisms` | organism data + the BLAST/`.fai` indexes the web builds in-tree — see below |
 
-### organisms/ is read-only except organism.json (2026-07-14)
+### organisms/ is writable — and why that is safe (settled 2026-07-16)
 
-`organisms/` — the largest and most valuable tree (genomes, SQLite databases, FASTA,
-BLAST indexes) — is deliberately **not** in the table above. It used to need to be
-writable only because the app scattered regenerable caches inside it
-(`.organism_cache.json`, `annotation_sources_cache.json`, `chr_names_cache.json`,
-`annotated_feature_types.json`, and the `.organism_cache_lock`). Those now live under
-`cache_path` (see below), so the tree can be **read-only to the web server**, with a
-single narrow exception for `organism.json`, which the admin UI edits in place:
+`organisms/` is the largest and most valuable tree (genomes, SQLite databases, FASTA,
+BLAST indexes), so its presence in the writable table above deserves an explanation.
+**This is the intended end state, not a pending TODO.**
 
-```bash
-semanage fcontext -d "/var/www/html/moop/organisms(/.*)?"                                    # no recursive rw
-semanage fcontext -a -t httpd_sys_rw_content_t "/var/www/html/moop/organisms/[^/]+/organism\.json"
-restorecon -R /var/www/html/moop/organisms
-```
+The obvious instinct is to make this tree read-only to the web server, and we tried
+exactly that in July 2026. It failed on contact with reality, in two ways:
 
-A compromised php-fpm then cannot write anywhere in the data tree. **One caveat:** the
-admin "Generate organism JSON" button *creates* an `organism.json` for an organism that
-lacks one, which needs directory write. Sites that build `organism.json` on a compute
-server and ship it in never hit this; if you do need it, temporarily
-`chcon -t httpd_sys_rw_content_t` the organism's directory, generate, then `restorecon`.
+1. It **blocked the app's own index building** — the admin "Build BLAST Index" button and
+   the `samtools faidx` step of assembly registration both write next to the FASTA they
+   index. `makeblastdb` creates *new* files, which needs write on the **directory**, not
+   just the file, so no file-level exception can rescue it.
+2. It made SQLite log a `{ write }` denial on **every database open** — PDO opens
+   read-write by default and falls back to read-only, so the site "worked" while emitting
+   ~740 AVC denials per minute. (The opens are now genuinely read-only — see below — but
+   that alone did not make read-only worth it.)
+
+**The webshell risk is closed at the execution layer instead, which is where it belongs.**
+`docs/nginx/moop-security.conf` (deployed to `/etc/nginx/default.d/`) denies HTTP to
+`/moop/organisms/` wholesale and denies `.php` under `/moop/data/`. A `.php` file written
+anywhere in the writable data trees therefore **cannot execute** — verified by direct test
+on 2026-07-16: a real mode-644 `.php` placed in `data/genomes/` returned 404 and did not
+run, while the identical file in the document root executed normally. That control matters:
+it proves the nginx rule is what blocks execution, not the incidental fact that the tree's
+files are mode 660 and unreadable to the nginx user. Do not rely on that accident.
+
+Making the tree read-only would add only **data-tampering** protection, and only against an
+attacker who already has app-level arbitrary file write — and it would not even cover the
+realistic corruption vector, since a SELinux rule on `httpd_t` does nothing about a CLI
+loader or pipeline bug running as an unconfined user. The plan to restructure indexes into
+a writable `index/` subdir so the tree could be tightened again was evaluated and
+**declined**; see `notes/MOOP_INDEXES_PLAN.md` for the full rationale and the specific
+conditions that would justify revisiting it.
+
+**Related, and worth keeping:** the app opens every SQLite database **read-only**
+(`PDO::SQLITE_OPEN_READONLY`), because the web workload is queries only. That is correct on
+its own merits regardless of the tree's label, and it is what ended the AVC flood.
+
+Two things that used to be true here and are **no longer**:
+
+- The narrow `organisms/[^/]+/organism\.json` read-write rule is **retired**;
+  `fix_moop_selinux.sh` removes it. The whole tree is writable, so it is redundant.
+- The "Generate organism JSON needs a temporary `chcon`" caveat is **moot** for the same
+  reason.
 
 ### The cache directory (`cache_path`)
 
 The app writes regenerable caches (organism scan, annotation counts, chromosome-name
 lists, annotated feature types) to the directory named by the `cache_path` config value
 (Admin → Site Configuration). Point it **outside the document root** — the shipped
-default on this deployment is `/var/www/moop-cache` — so `organisms/` can stay read-only.
+default on this deployment is `/var/www/moop-cache`. This keeps `organisms/` to
+shipped-in data only, which is a clean separation worth having on its own: regenerable
+caches do not belong in the data tree, whatever that tree's SELinux label is.
 It needs `apache:apache`, mode `2775` (SGID, so both php-fpm and CLI scripts can write),
 and a persistent `httpd_sys_rw_content_t` rule. `scripts/fix_moop_selinux.sh` creates and
 labels it. Leaving `cache_path` empty is also valid — caches then fall back into the
-`organisms/` tree (legacy behaviour), and you would keep that tree writable instead.
+`organisms/` tree (legacy behaviour).
 
 Plus one boolean:
 
@@ -139,9 +166,9 @@ semanage fcontext -a -t httpd_sys_rw_content_t "/var/www/html/moop/metadata"
 ## `scripts/fix_moop_selinux.sh`
 
 Applies everything above in one idempotent, root-only pass: creates and labels the cache
-directory, adds the recursive read-write rules, applies the `organisms/` read-only + narrow
-`organism.json` rule, relabels, sets the `httpd_can_network_connect` boolean, and restores
-`apache` ownership under the JBrowse track configs. **You run it yourself with `sudo`** —
+directory, adds the recursive read-write rules (including `organisms/`), removes the retired
+narrow `organism.json` rule, relabels, sets the `httpd_can_network_connect` boolean, and
+restores `apache` ownership under the JBrowse track configs. **You run it yourself with `sudo`** —
 no IT round-trip is needed for SELinux rules or labels; only the central hardening *job*
 (which profile, when it runs) is IT's.
 
@@ -156,8 +183,29 @@ Check before assuming you need it:
 ```bash
 getsebool httpd_can_network_connect                    # expect: on
 ls -ldZ /var/www/moop-cache                            # expect: httpd_sys_rw_content_t
-ls -ldZ /var/www/html/moop/organisms                   # expect: httpd_sys_content_t (read-only)
+ls -ldZ /var/www/html/moop/organisms                   # expect: httpd_sys_rw_content_t (writable — see above)
 ```
+
+### The nginx rules are not optional
+
+The script does **not** deploy them, and the writable data trees are only safe because they
+exist. On a new deployment or a rebuilt host, copy `docs/nginx/moop-security.conf` to
+`/etc/nginx/default.d/moop-security.conf`, then `nginx -t && systemctl reload nginx`.
+
+Verify it is actually in force — do not just check that the file exists, and do not trust a
+404 on a path that does not exist (`organisms/` also 404s for an unrelated reason):
+
+```bash
+# The real test: a file that WOULD execute, in a place it must not.
+echo '<?php echo "EXECTEST"; ?>' > /var/www/html/moop/data/genomes/_exectest.php
+chmod 644 /var/www/html/moop/data/genomes/_exectest.php
+curl -s -o /dev/null -w '%{http_code}\n' http://<host>/moop/data/genomes/_exectest.php  # expect: 404
+rm -f /var/www/html/moop/data/genomes/_exectest.php
+```
+
+**Gotcha:** the deployed `/etc/nginx/default.d/moop-security.conf` is mode `640 root:root`, so
+it greps as *absent* from an unprivileged shell — the config looks missing when it is fine.
+nginx reads its config as root. Check with `sudo`.
 
 ---
 
@@ -168,7 +216,14 @@ ls -ldZ /var/www/html/moop/organisms                   # expect: httpd_sys_conte
   `Restart=on-failure` drop-in. nginx is now supervised, confined (`httpd_t`, was
   `unconfined_t`), and comes back after reboots and mass service restarts. The stale TLS key
   label (`user_tmp_t` → `cert_t`) was fixed first so confined nginx could read it.
-- **Writable surface reduced** (2026-07-14). The regenerable caches were moved out of the
-  data tree into `cache_path` (`/var/www/moop-cache`), so `organisms/` — the SQLite
-  databases and all genome data — is now read-only to the web server (see the
-  organism.json section above). This is the largest single reduction in writable surface.
+- **Caches moved out of the data tree** (2026-07-14). The regenerable caches now live in
+  `cache_path` (`/var/www/moop-cache`) instead of being scattered through `organisms/`, so
+  that tree holds shipped-in data only. Worth keeping for the separation alone.
+- **Webshell risk closed at the execution layer** (2026-07-14, re-verified 2026-07-16). The
+  attempt to make `organisms/` read-only was reverted — it blocked the app's own index
+  building and flooded the audit log. The nginx no-exec rules on the data trees close the
+  serious threat (persistent RCE) without breaking anything; see the `organisms/` section
+  above. The follow-on plan to restructure indexes so the tree could be tightened again was
+  evaluated and declined (`notes/MOOP_INDEXES_PLAN.md`).
+- **SQLite opens are read-only** (2026-07-15). `PDO::SQLITE_OPEN_READONLY` on every file
+  database; the web workload is queries only. Ended the ~740 AVC denials/minute.

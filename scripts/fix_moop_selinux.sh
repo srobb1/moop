@@ -23,8 +23,7 @@ MOOP=/var/www/html/moop
 CACHE=/var/www/moop-cache
 
 # Directories the web server (php-fpm as apache) must be able to WRITE.
-# NOTE: organisms/ is deliberately NOT here — it is read-only except organism.json
-# (handled separately below). Its regenerable caches live in $CACHE instead.
+# organisms/ IS in this list, deliberately — see the note below it.
 RW_DIRS=(
     "$MOOP/logs"                    # error.log, login_attempts.json
     "$MOOP/config"                  # config_editable.json (admin UI)
@@ -37,12 +36,15 @@ RW_DIRS=(
     "$CACHE"                        # generated caches (organism scan, annotation counts, ...)
     "$MOOP/organisms"               # organism data + in-tree BLAST/.fai indexes the web builds
 )
-# NOTE (2026-07-14): organisms/ is WRITABLE. It briefly was read-only, but that blocked
-# in-app index building AND made SQLite log a { write } denial on every DB open (PDO opens
-# read-write, falls back to read-only). The webshell risk from a writable data tree is instead
-# closed at the EXECUTION layer by nginx (docs/nginx/moop-security.conf denies /moop/organisms/
-# and .php under /moop/data/). Phase 2 (notes/MOOP_INDEXES_PLAN.md) will re-tighten to read-only
-# with an index/ subdir + read-only DB connections; until then, keep organisms/ writable.
+# WHY organisms/ is writable (settled 2026-07-16 — this is the intended end state, not a TODO):
+# It was briefly read-only, which blocked in-app BLAST/.fai index building AND made SQLite log a
+# { write } denial on every DB open (PDO opened read-write and fell back to read-only — ~740
+# denials/min of audit spam). The webshell risk from a writable data tree is closed at the
+# EXECUTION layer instead, by nginx: docs/nginx/moop-security.conf denies HTTP to /moop/organisms/
+# and .php under /moop/data/, so a .php written into a data tree cannot run. Verified by direct
+# test 2026-07-16 (a real .php in data/genomes/ 404s; the same file in the docroot executes).
+# Do NOT "re-tighten" this to read-only without reading notes/MOOP_INDEXES_PLAN.md first — the
+# index/-subdir plan that would have required it was evaluated and declined.
 
 echo "== 0. Remove a historical typo'd rule ('configs' — no such directory) =="
 semanage fcontext -d "$MOOP/configs(/.*)?" 2>/dev/null && echo "  removed" || echo "  not present (fine)"
