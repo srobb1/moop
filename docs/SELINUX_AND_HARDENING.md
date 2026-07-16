@@ -66,6 +66,7 @@ Every directory below contains files created by the `apache` user (verified empi
 | `/var/www/html/moop/data/genomes` | `annotations.gff3.gz` + tabix indexes, regenerated on re-prep |
 | `/var/www/html/moop/images/wikimedia` | cached remote images |
 | `/var/www/html/moop/images/ncbi_taxonomy` | cached remote images |
+| `/var/www/html/moop/images/banners` | banner upload/delete via Admin → Site Configuration |
 | `/var/www/html/moop/archived_gene_sets` | gene-set archive output |
 | `/var/www/moop-site-data` | site-data backup (config, secrets, users.json) |
 | `/var/www/moop-cache` | generated caches — see the `cache_path` section below |
@@ -116,6 +117,27 @@ Two things that used to be true here and are **no longer**:
   `fix_moop_selinux.sh` removes it. The whole tree is writable, so it is redundant.
 - The "Generate organism JSON needs a temporary `chcon`" caveat is **moot** for the same
   reason.
+
+### jbrowse2/ stays read-only — do not add it to the table
+
+`jbrowse2/` is the browser application's own JS/CSS/HTML. The web server only reads it, and
+it must stay that way: **every user's browser executes that JavaScript**, so a write bug
+there would mean injected JS on every page. The nginx no-exec rules do **not** help — they
+deny `.php`, not `.js`. This is the one tree where the filesystem layer is the real defense,
+which is the opposite of the `organisms/` case above.
+
+It briefly looked like it needed write, because `admin/api/jbrowse_text_index.php` creates
+`jbrowse2/{organism}/{assembly}/trix/` at runtime. Resolved 2026-07-16 by checking what was
+actually there: the only trix files on the box were two orphaned sets from April, and **no
+track config referenced them** — a leftover from working out dynamic config generation, not
+a live feature. They were deleted, and `setup.php` no longer creates a `jbrowse2/trix`
+directory (it used to `mkdir` it `02775` on every fresh install — writable space carved into
+the app's code tree that nothing used).
+
+**Consequence:** the admin "text index" button is dormant. Nothing depends on it — no track
+uses `TrixTextSearchAdapter`. If JBrowse name-search is wanted later, put the trix output
+somewhere already writable and browser-fetchable (`data/genomes/` is the natural home) rather
+than making the app tree writable.
 
 ### The cache directory (`cache_path`)
 

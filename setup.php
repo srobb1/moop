@@ -236,7 +236,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'config'                    => "$base/config",
         'certs'                     => rtrim($config['jbrowse2']['certs_directory'] ?? "$base/certs", '/'),
         'organisms'                 => rtrim($config['organism_data'] ?? "$base/organisms", '/'),
-        'jbrowse2/trix (legacy)'    => "$base/jbrowse2/trix",
     ];
 
     foreach ($dirs as $label => $path) {

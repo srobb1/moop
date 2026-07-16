@@ -351,8 +351,6 @@ $writable_dirs = [
     'config'                    => "$base/config",
     'certs'                     => $config['jbrowse2']['certs_directory'] ?? "$base/certs",
     'organisms'                 => $config['organism_data'] ?? "$base/organisms",
-    'jbrowse2/trix (legacy)'    => "$base/jbrowse2/trix",
-    'jbrowse2 (app dir)'        => "$base/jbrowse2",
 ];
 
 // Normalize trailing slashes from config values

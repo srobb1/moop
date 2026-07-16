@@ -42,8 +42,14 @@ function moop_permission_check_mode(string $name): string {
 
     // 'writable' — the ONLY paths the web server (apache/httpd_t) legitimately writes,
     // straight from the table in docs/SELINUX_AND_HARDENING.md §55. Everything else is
-    // read-only served content — including the whole organisms/ tree except organism.json
-    // (§73) and, in Phase 2, the index/ subdir.
+    // read-only served content.
+    //
+    // NOTE on organisms/: the tree IS writable to apache by design (§73 — the web builds
+    // BLAST/.fai indexes in place), but its entries stay 'data' here deliberately. The
+    // *directories* need apache write (makeblastdb creates new files); the FASTA/SQLite
+    // *files* do not, and should stay unwritable. 'data' mode already reports a softened
+    // "not writable" for data trees (see moop_permission_is_data_tree), which is the
+    // right signal for "a build button may fail" without demanding writable data files.
     static $writable = [
         'Logs Directory'                  => 1,  // error.log, login_attempts.json
         'Site Configuration Files'        => 1,  // config/config_editable.json (admin UI)
@@ -58,7 +64,8 @@ function moop_permission_check_mode(string $name): string {
         'Organism Cache File'             => 1,  // under cache_path
         'NCBI Taxonomy Images Cache'      => 1,  // images/ncbi_taxonomy (php downloads)
         'Wikimedia Images Cache'          => 1,  // images/wikimedia (php downloads)
-        'Organism Metadata Files'         => 1,  // organisms/*/organism.json — narrow exception (§73)
+        'Banner Images Directory'         => 1,  // images/banners — admin UI uploads/deletes
+        'Organism Metadata Files'         => 1,  // organisms/*/organism.json — admin UI edits in place
     ];
     if (isset($writable[$name])) return 'writable';
 
@@ -126,7 +133,7 @@ function moop_permission_is_data_tree(string $name): bool {
     if (str_starts_with($name, 'Gene Set Subdirectory:')) return true;
     return in_array($name, [
         'Organism Data Directories', 'Organism Directory', 'Genome Data Directory',
-        'JBrowse2 App Directory', 'Track Data Directory',
+        'Track Data Directory',
     ], true);
 }
 
@@ -501,18 +508,16 @@ function moop_build_permission_items($config, array $ctx): array {
             'sgid_bit' => true,
         ],
 
-        // JBrowse2 App Directory (parent of all trix index subdirectories)
+        // JBrowse2 App Directory — the browser app's own code. Read-only.
         [
             'name' => 'JBrowse2 App Directory',
-            'description' => 'Root of the JBrowse2 installation; Apache creates per-assembly trix index subdirectories here',
+            'description' => 'Root of the JBrowse2 installation — the browser app\'s own JS/CSS/HTML, served to the client. Static code, not data: the web server only reads it.',
             'type' => 'directory',
             'paths' => [$site_path . '/jbrowse2'],
-            'required_perms' => '2775',
+            'required_perms' => '755',
             'required_owner' => $moop_owner,
             'required_group' => $web_group,
-            'reason' => 'SGID (Set-Group-ID) bit ensures that {organism}/{assembly}/trix/ subdirectories created by Apache automatically inherit the ' . $web_group . ' group; without it Apache cannot create per-assembly trix directories',
-            'why_write' => 'jbrowse text-index writes per-assembly trix files to jbrowse2/{organism}/{assembly}/trix/ — Apache must be able to create those subdirectories at runtime',
-            'sgid_bit' => true,
+            'reason' => 'Served static assets — the web server needs read+traverse only. This tree must NOT be web-writable: it is fetched and executed by every user\'s browser, so a write bug here would mean injected JavaScript on every page, which the nginx no-exec rules cannot prevent (they stop .php, not .js).',
         ],
 
         // JBrowse2 Track Config Directory
