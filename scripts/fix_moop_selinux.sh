@@ -50,6 +50,14 @@ RW_DIRS=(
     # Safe despite being served: nginx denies .php under /moop/images/ (moop-security.conf).
     "$MOOP/images"
     "$MOOP/archived_gene_sets"      # gene-set archives
+    # docs/ holds function_registry.json + function_registry_js.json, which the admin
+    # "Generate/update registry" button REWRITES (tools/generate_registry_json.php). The
+    # rest of docs/ is git-tracked source, so this is a generated artefact living in a
+    # source tree — worth moving one day, but until then the tree must be web-writable or
+    # the button just reports "Failed to generate php registry". Its DAC was already fine
+    # (2775 smr:apache); only the SELinux label blocked it. Safe because nginx now denies
+    # .php under /moop/docs/ (moop-security.conf) — verified it executed before that rule.
+    "$MOOP/docs"
     /var/www/moop-site-data         # site-data backup (config, secrets, users.json)
     "$CACHE"                        # generated caches (organism scan, annotation counts, ...)
     "$MOOP/organisms"               # organism data + in-tree BLAST/.fai indexes the web builds

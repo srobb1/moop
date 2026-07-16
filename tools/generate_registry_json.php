@@ -16,10 +16,18 @@ $docs_path = $config->getPath('docs_path');
 $registry = [];
 
 // Directories to scan
+//
+// includes/ was missing until 2026-07-16, which hid 23 functions — among them the ENTIRE
+// access-control layer (is_logged_in, has_access, get_access_level, has_assembly_access,
+// csrf_input_field: 18 functions in access_control.php) and genes_gff_filename(). Those
+// are the functions CLAUDE.md tells every developer to use, and the registry claimed they
+// did not exist. A registry that silently omits a directory is worse than no registry:
+// "not in the registry" reads as "not available", which is how a helper gets rewritten.
 $scanDirs = [
     __DIR__ . '/../lib',
     __DIR__ . '/../tools',
     __DIR__ . '/../admin',
+    __DIR__ . '/../includes',
     __DIR__ . '/..'
 ];
 
@@ -250,8 +258,19 @@ function extractFunctions($filePath, $allFunctionNames = []) {
         }
     }
     
-    // Match PHP function definitions
-    if (preg_match_all('/^\s*(?:public\s+)?(?:static\s+)?function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*\{/m', $phpContent, $matches, PREG_OFFSET_CAPTURE)) {
+    // Match PHP function definitions.
+    //
+    // The `(?::\s*[?\w\\\\|]+\s*)?` before the brace matches a RETURN TYPE. Without it the
+    // regex required `)` to be followed straight by `{`, so every function declared
+    // `function f(): string {` was invisible — 152 of them as of 2026-07-16, including
+    // genes_gff_filename(). The count the registry printed was confidently wrong.
+    //
+    // The parameter list is `[^)]*`, which cannot match a default value containing `)`.
+    // Left as-is deliberately: a real fix needs a parser, not a bigger regex, and this is
+    // documentation tooling — but it is why a rare function may still go missing.
+    if (preg_match_all(
+        '/^\s*(?:public\s+|private\s+|protected\s+)?(?:static\s+)?function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*(?::\s*[?\w\\\\|]+\s*)?\{/m',
+        $phpContent, $matches, PREG_OFFSET_CAPTURE)) {
         foreach ($matches[0] as $idx => $match) {
             $funcName = $matches[1][$idx][0];
             $startPos = $match[1];

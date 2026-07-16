@@ -68,6 +68,8 @@ function moop_permission_check_mode(string $name): string {
         'Organism Cache File'             => 1,  // under cache_path
         'Images Directory'                => 1,  // images/ — organism images upload HERE, flat
                                                 //   (handle_image_upload.php -> absolute_images_path)
+        'Documentation Directory'         => 1,  // docs/ — the admin "Generate registry" button
+                                                //   rewrites function_registry.json here
         'NCBI Taxonomy Images Cache'      => 1,  // images/ncbi_taxonomy (php downloads)
         'Wikimedia Images Cache'          => 1,  // images/wikimedia (php downloads)
         'Banner Images Directory'         => 1,  // images/banners — admin UI uploads/deletes
