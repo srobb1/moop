@@ -51,6 +51,29 @@
     </div>
 </div>
 
+<!-- Best Practices — reference material, collapsed by default so the checklist leads -->
+<div class="card mb-4 border-success">
+    <div class="card-header bg-success bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#bestPractices">
+        <h5 class="mb-0"><i class="fa fa-star"></i> Best Practices <i class="fa fa-chevron-down float-end"></i></h5>
+    </div>
+    <div class="collapse" id="bestPractices">
+        <div class="card-body">
+            <p class="mb-2">These checks judge permissions by <strong>impact</strong>, not by an exact mode string. The web server runs as <code><?= htmlspecialchars($web_group) ?></code> and reads data through its <strong>group</strong>, so a file does not need to be world-readable to be served.</p>
+            <ul>
+                <li><strong>Owner should be <code><?= htmlspecialchars($moop_owner) ?></code>, group <code><?= htmlspecialchars($web_group) ?></code></strong> (detected from the system). The web server reads via the group.</li>
+                <li><strong>Data files just need to be group-readable</strong> — FASTA, genomes, and databases at <code>640</code>, <code>660</code>, <code>664</code>, or <code>644</code> all work. <strong>World-readable (<code>644</code>) is not required, and is worse for restricted data</strong> — don't "fix" a <code>660</code> file up to <code>644</code>.</li>
+                <li><strong>Never world-writable</strong> (<code>777</code>, <code>666</code>, or any <code>o+w</code>), and <strong>files should not be executable</strong> — those are the perms that genuinely matter. Directories are different: they need the traverse (<code>x</code>) bit.</li>
+                <li><strong>The web server writes to a specific set of directories</strong> — logs, config, metadata, <code>data/genomes</code>, the image caches (<code>wikimedia</code>, <code>ncbi_taxonomy</code>), <code>images/banners</code>, <code>archived_gene_sets</code>, the cache dir, and the <code>organisms/</code> tree. These use SGID <code>2775</code> so new files inherit the <code><?= htmlspecialchars($web_group) ?></code> group. Everything else — top-level <code>images/</code>, <code>docs/</code>, <code>data/tracks</code>, and the <code>jbrowse2/</code> app — is <strong>read-only served content</strong>.</li>
+                <li><strong>Under SELinux (Enforcing), the label is the real gate.</strong> A directory can look writable (<code>2775</code>) yet be blocked because its SELinux type is <code>httpd_sys_content_t</code>. Writable dirs need <code>httpd_sys_rw_content_t</code>; apply it with <code>scripts/fix_moop_selinux.sh</code> (see <code>docs/SELINUX_AND_HARDENING.md</code>), not <code>chmod</code>.</li>
+                <li><strong>Use 664 for config/metadata files</strong> the admin UI edits (so the web group can write them).</li>
+                <li><strong>The <code>organisms/</code> tree is writable — deliberately.</strong> The web builds BLAST/<code>.fai</code> indexes in place, so it needs write. That is safe because nginx refuses to execute any <code>.php</code> in the data trees (the execution layer), not because the files are locked down. If a web build or rename fails, check the SELinux label here, not just the Unix mode.</li>
+                <li><strong><code>jbrowse2/</code> must stay read-only.</strong> It is the browser app's own JavaScript, which every user's browser runs — and the nginx rule blocks <code>.php</code>, not <code>.js</code>. Update it from the CLI (<code>npx @jbrowse/cli upgrade</code>), never via the web server.</li>
+                <li><strong>Check regularly:</strong> the admin dashboard surfaces a pointer here when something needs attention.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
 <!-- Permission Summary -->
 <div class="card mb-4">
     <div class="card-header bg-light">
@@ -84,26 +107,6 @@
     </div>
 </div>
 
-
-    <!-- Summary & Best Practices -->
-<div class="card mb-4 border-success">
-    <div class="card-header bg-success bg-opacity-10">
-        <h5 class="mb-0"><i class="fa fa-star"></i> Best Practices</h5>
-    </div>
-     <div class="card-body">
-        <p class="mb-2">These checks judge permissions by <strong>impact</strong>, not by an exact mode string. The web server runs as <code><?= htmlspecialchars($web_group) ?></code> and reads data through its <strong>group</strong>, so a file does not need to be world-readable to be served.</p>
-        <ul>
-            <li><strong>Owner should be <code><?= htmlspecialchars($moop_owner) ?></code>, group <code><?= htmlspecialchars($web_group) ?></code></strong> (detected from the system). The web server reads via the group.</li>
-            <li><strong>Data files just need to be group-readable</strong> — FASTA, genomes, and databases at <code>640</code>, <code>660</code>, <code>664</code>, or <code>644</code> all work. <strong>World-readable (<code>644</code>) is not required, and is worse for restricted data</strong> — don't "fix" a <code>660</code> file up to <code>644</code>.</li>
-            <li><strong>Never world-writable</strong> (<code>777</code>, <code>666</code>, or any <code>o+w</code>), and <strong>data files should not be executable</strong> — those are the perms that genuinely matter.</li>
-            <li><strong>Only a specific set of directories is writable by the web server</strong> — logs, config, metadata, <code>data/genomes</code>, the image caches (<code>wikimedia</code>, <code>ncbi_taxonomy</code>), and the cache dir. These use SGID <code>2775</code> so new files inherit the <code><?= htmlspecialchars($web_group) ?></code> group. Everything else — including the whole <code>organisms/</code> tree, uploaded images, and <code>docs/</code> — is <strong>read-only served content</strong>.</li>
-            <li><strong>Under SELinux (Enforcing), the label is the real gate.</strong> A directory can look writable (<code>2775</code>) yet be blocked because its SELinux type is <code>httpd_sys_content_t</code>. Writable dirs need <code>httpd_sys_rw_content_t</code>; apply it with <code>scripts/fix_moop_selinux.sh</code> (see <code>docs/SELINUX_AND_HARDENING.md</code>), not <code>chmod</code>.</li>
-            <li><strong>Use 664 for config/metadata files</strong> the admin UI edits (so the web group can write them).</li>
-            <li><strong>The <code>organisms/</code> tree is read-only</strong> except <code>organism.json</code> (and, once the index refactor ships, a writable <code>index/</code> subdir for BLAST indexes). BLAST-index builds and renames are handled there — not by loosening the whole tree. If a web build/rename fails, check the SELinux label here, not just the Unix mode.</li>
-            <li><strong>Check regularly:</strong> the admin dashboard now surfaces a pointer here when something needs attention.</li>
-        </ul>
-    </div>
-</div>
 
 <!-- Quick Reference -->
 <div class="card mb-4">
@@ -266,25 +269,51 @@ foreach ($grouped as $group_name => $items):
             <?php endif; ?>
             <?php endif; ?>
             
-            <!-- Why This Matters -->
+            <!-- Why This Matters. why_write is absent on read-only rules (jbrowse2/, SQLite) —
+                 they are never written by the web server, so there is nothing to explain. -->
             <div class="mt-3 p-3 bg-light rounded border-left border-info">
                 <strong><i class="fa fa-lightbulb"></i> Why:</strong>
-                <p class="mb-0"><?= htmlspecialchars($check['reason']) ?></p>
+                <p class="mb-0"><?= htmlspecialchars($check['reason'] ?? '') ?></p>
+                <?php if (!empty($check['why_write'])): ?>
                 <p class="mb-0 mt-2"><strong>Write Access:</strong> <?= htmlspecialchars($check['why_write']) ?></p>
+                <?php endif; ?>
             </div>
-            
+
             <!-- SGID Info -->
-            <?php if ($check['sgid_bit']): ?>
+            <?php if (!empty($check['sgid_bit'])): ?>
             <div class="sticky-bit">
                 <strong><i class="fa fa-sticky-note"></i> SGID (Set-Group-ID) - 2775</strong>
                 <p class="mb-0 small mt-2">This directory uses SGID to auto-assign the group. Any new files created here automatically get <code><?= htmlspecialchars($check['required_group']) ?></code> as their group, displayed as lowercase <code>s</code> in the permissions: <code>drwxrwsr-x</code>.</p>
             </div>
             <?php endif; ?>
         </div>
-        <?php if ($check !== end($items)): ?>
+        <?php if ($check !== end($to_show)): ?>
         <hr class="my-2">
         <?php endif; ?>
         <?php endforeach; ?>
+
+        <?php
+        // Every fix in this section as one paste, so a 5-file problem is one command
+        // block instead of five copy-pastes. Mirrors the Assembly/FASTA sections below.
+        // Deduped: a shared remedy (e.g. fix_moop_selinux.sh) should appear once.
+        $group_cmds = [];
+        foreach ($failing as $f) {
+            foreach (moop_permission_fix_commands($f, $moop_owner) as $c) {
+                $group_cmds[] = $c;
+            }
+        }
+        $group_cmds = array_values(array_unique($group_cmds));
+        ?>
+        <?php if (count($failing) > 1 && $group_cmds): ?>
+        <div class="mt-3 pt-3 border-top">
+            <p class="mb-2"><strong>Fix all <?= count($failing) ?> in this section at once:</strong></p>
+            <div class="fix-command">
+                <?php foreach ($group_cmds as $c): ?>
+                <?= htmlspecialchars($c) ?><br>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
     
     <!-- Assembly Subdirectory Check -->
