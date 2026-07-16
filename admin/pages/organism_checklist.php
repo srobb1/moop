@@ -425,7 +425,18 @@
         <!-- FAI Index Status Check -->
         <div class="mt-4">
           <?php
-          // Check for missing genome.fa.fai indexes
+          // Check for missing FAI indexes.
+          //
+          // The genome filename comes from config (Manage Site Configuration), not a
+          // literal — same reason the structure box above is generated rather than typed.
+          //
+          // Correctly guarded on the FASTA existing, and that guard matters: 25 of 96
+          // assemblies here have no genome at all. They are sequence-only sets — no
+          // reference genome, therefore no genes.gff and no JBrowse registration. Verified
+          // consistent 2026-07-16: ZERO assemblies have annotations without a genome, so
+          // "missing genome.fa" is a category, not a fault. Flagging a missing index for a
+          // genome that is not supposed to exist would be 25 phantom warnings.
+          $genome_pattern = genome_fasta_filename();
           $fai_issues = [];
           foreach ($organisms_in_system as $org) {
               $org_dir = "$organism_data/$org";
@@ -434,7 +445,7 @@
                       if ($item === '.' || $item === '..') continue;
                       $asm_dir = "$org_dir/$item";
                       if (!is_dir($asm_dir)) continue;
-                      $fasta   = "$asm_dir/genome.fa";
+                      $fasta   = "$asm_dir/$genome_pattern";
                       $fai     = "$fasta.fai";
                       if (file_exists($fasta) && !file_exists($fai)) {
                           $fai_issues[] = [

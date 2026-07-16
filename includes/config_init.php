@@ -63,4 +63,37 @@ function genes_gff_filename(): string {
     return ConfigManager::getInstance()->getString('genes_gff_filename', 'genes.gff');
 }
 
+/**
+ * Filename for a configured sequence type, e.g. sequence_filename('genome') => 'genome.fa'.
+ *
+ * The same idea as genes_gff_filename() above, for the sequence FASTAs. These names are
+ * admin-editable (Manage Site Configuration → sequence types), so nothing should hardcode
+ * them or reach into the config array by hand.
+ *
+ * Callers currently do `$config->getSequenceTypes()[$k]['pattern']` inline in six places,
+ * which is what this replaces. Worth noting one of them, functions_data.php:305, resolves
+ * "is this the genome?" as `strpos($seq_config['pattern'], 'genome') !== false` — sniffing
+ * the FILENAME for the word "genome". Rename the pattern in Site Configuration and that
+ * silently stops recognising the genome. Ask by KEY, not by what the file happens to be
+ * called.
+ *
+ * @param  string      $type Key from sequence_types: 'genome', 'protein', 'transcript', 'cds'
+ * @return string|null The configured filename, or null if that type is not configured
+ *                     (types can be turned off, so callers must handle null).
+ */
+function sequence_filename(string $type): ?string {
+    $types = ConfigManager::getInstance()->getSequenceTypes();
+    $pattern = $types[$type]['pattern'] ?? '';
+    return $pattern !== '' ? $pattern : null;
+}
+
+/**
+ * Filename of the reference genome FASTA, which lives at the ASSEMBLY level and is shared
+ * across that assembly's gene sets. Convenience wrapper — the genome is asked for far more
+ * often than the other types, and it is the one whose location differs.
+ */
+function genome_fasta_filename(): string {
+    return sequence_filename('genome') ?? 'genome.fa';
+}
+
 ?>
