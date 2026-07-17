@@ -868,7 +868,12 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         'checks' => $checks,
         'all_pass' => $all_pass,
         'pass_count' => $pass_count,
-        'total_count' => $total_count
+        'total_count' => $total_count,
+        // Non-failing signal: does any assembly carry a reference genome (genome.fa)?
+        // Transcriptome/proteome-only organisms legitimately have none — the UI shows this
+        // as a neutral "Transcriptome only" tag, NOT a failed check. $any_genome_fa is set
+        // in check #4 above; guard for the no-assemblies case.
+        'has_genome' => $any_genome_fa ?? false,
     ];
 }
 

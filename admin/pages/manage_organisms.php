@@ -384,7 +384,7 @@
           <button class="btn btn-sm btn-outline-secondary" data-filter="fai">Missing FAI (<?= $filter_counts['fai'] ?>)</button>
         <?php endif; ?>
         <?php if ($filter_counts['missing-genome-fa'] > 0): ?>
-          <button class="btn btn-sm btn-outline-info" data-filter="missing-genome-fa">Missing genome.fa (<?= $filter_counts['missing-genome-fa'] ?>)</button>
+          <button class="btn btn-sm btn-outline-secondary" data-filter="missing-genome-fa" title="Organisms with no reference genome (genome.fa) — transcriptome/proteome data only. A valid data shape, not an error.">Transcriptome only (<?= $filter_counts['missing-genome-fa'] ?>)</button>
         <?php endif; ?>
         <?php if ($filter_counts['missing-other-fasta'] > 0): ?>
           <button class="btn btn-sm btn-outline-info" data-filter="missing-other-fasta">Missing other FASTA (<?= $filter_counts['missing-other-fasta'] ?>)</button>
@@ -524,7 +524,10 @@
                  <?php endif; ?>
                </td>
                <td>
-                 <span class="badge bg-secondary"><?= count($data['assemblies']) ?> assemblies</span>
+                 <span class="badge bg-secondary"><?= count($data['assemblies']) ?> <?= count($data['assemblies']) === 1 ? 'assembly' : 'assemblies' ?></span>
+                 <?php if (!empty($row_gaps['genome_fa'])): ?>
+                   <span class="badge rounded-pill bg-light text-secondary border" title="No reference genome (genome.fa) — transcriptome / proteome data only. A valid data shape, not an error."><i class="fa fa-dna"></i> Transcriptome only</span>
+                 <?php endif; ?>
                  <?php if (!empty($data['assemblies'])): ?>
                    <div class="mt-1">
                      <?php foreach ($data['assemblies'] as $assembly): ?>
