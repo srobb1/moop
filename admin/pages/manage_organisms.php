@@ -403,7 +403,6 @@
          <thead>
            <tr>
              <th>Organism</th>
-             <th>Common Name</th>
              <th>Groups</th>
              <th>Assemblies</th>
              <th>Health</th>
@@ -442,17 +441,23 @@
                  data-issues="<?= implode(' ', $row_issues) ?>"
                  <?= $is_stale ? 'class="table-warning"' : '' ?>>
                <td>
-               <strong>
-                 <a href="../tools/organism.php?organism=<?= urlencode($organism) ?>" target="_blank" title="View organism page">
-                   <?= htmlspecialchars($organism) ?>
+                 <?php
+                   // Display the pretty scientific name as the link; fall back to the directory
+                   // name (underscores → spaces) if genus/species metadata is missing.
+                   $pretty_name = (!empty($data['info']['genus']) && !empty($data['info']['species']))
+                                ? $data['info']['genus'] . ' ' . $data['info']['species']
+                                : str_replace('_', ' ', $organism);
+                 ?>
+                 <a href="../tools/organism.php?organism=<?= urlencode($organism) ?>" target="_blank"
+                    class="fw-semibold fst-italic" title="<?= htmlspecialchars($organism) ?> — view organism page">
+                   <?= htmlspecialchars($pretty_name) ?>
                    <i class="fa fa-external-link-alt" style="font-size: 0.85em; margin-left: 0.25em;"></i>
                  </a>
-               </strong>
-               <?php if ($is_stale): ?>
-                 <span class="badge bg-warning text-dark ms-1" title="Files changed since last cache refresh"><i class="fa fa-clock"></i> Stale</span>
-               <?php endif; ?>
-                 <?php if (isset($data['info']['genus']) && isset($data['info']['species'])): ?>
-                   <br><small class="text-muted"><em><?= htmlspecialchars($data['info']['genus']) ?> <?= htmlspecialchars($data['info']['species']) ?></em></small>
+                 <?php if ($is_stale): ?>
+                   <span class="badge bg-warning text-dark ms-1" title="Files changed since last cache refresh"><i class="fa fa-clock"></i> Stale</span>
+                 <?php endif; ?>
+                 <?php if (!empty($data['info']['common_name'])): ?>
+                   <br><small class="text-muted"><?= htmlspecialchars($data['info']['common_name']) ?></small>
                  <?php endif; ?>
                  <br>
                  <button class="btn btn-sm btn-outline-secondary" type="button" onclick="togglePath(this, '<?= htmlspecialchars($data['path']) ?>', '<?= htmlspecialchars($organism) ?>')">
@@ -463,15 +468,6 @@
                          title="Force rescan this organism only">
                    <i class="fa fa-sync-alt"></i> Rescan
                  </button>
-               </td>
-               <td>
-                 <?php 
-                   if (isset($data['info']['common_name'])) {
-                       echo htmlspecialchars($data['info']['common_name']);
-                   } else {
-                       echo '<span class="text-muted">-</span>';
-                   }
-                 ?>
                </td>
                <?php
                  $safe_groups_id = 'groups-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism);
@@ -496,7 +492,7 @@
                <td>
                  <span class="badge bg-secondary"><?= count($data['assemblies']) ?> <?= count($data['assemblies']) === 1 ? 'assembly' : 'assemblies' ?></span>
                  <?php if (!empty($row_gaps['genome_fa'])): ?>
-                   <span class="badge rounded-pill bg-light text-secondary border" title="No reference genome (genome.fa) — transcriptome / proteome data only. A valid data shape, not an error."><i class="fa fa-dna"></i> Transcriptome only</span>
+                   <span class="badge rounded-pill bg-light text-secondary border" title="No reference genome (genome.fa) — transcriptome / proteome data only. A valid data shape, not an error.">Transcriptome only</span>
                  <?php endif; ?>
                  <?php if (!empty($data['assemblies'])): ?>
                    <div class="mt-1">
@@ -506,19 +502,23 @@
                          $asm_fasta = $data['fasta_validation']['assemblies'][$assembly] ?? null;
                          $is_missing = isset($data['fasta_validation']['missing_files'][$assembly]);
                          
-                         // Check if assembly directory name matches database
+                         // Check if the assembly directory name matches the database; capture the
+                         // matched genome record so the chip can show the canonical "Name (Accession)".
                          $has_name_mismatch = false;
+                         $matched_genome = null;
                          $assembly_validation = $data['assembly_validation'];
                          if ($assembly_validation) {
-                           $matching = false;
                            foreach ($assembly_validation['genomes'] as $genome) {
                              if ($assembly === $genome['genome_name'] || $assembly === $genome['genome_accession']) {
-                               $matching = true;
+                               $matched_genome = $genome;
                                break;
                              }
                            }
-                           $has_name_mismatch = !$matching;
+                           $has_name_mismatch = ($matched_genome === null);
                          }
+                         $asm_display = $matched_genome
+                                      ? assembly_label($matched_genome['genome_name'] ?? '', $matched_genome['genome_accession'] ?? '')
+                                      : $assembly;
                          
                          // Check if BLAST indexes are missing for FASTA files.
                          // BLAST indexes now live in gene_set subdirs; aggregate across all gene_sets.
@@ -550,19 +550,20 @@
                          
                          // Determine badge style
                          // Priority: name mismatch > missing blast indexes > missing fai > missing fasta files
-                         $badge_class = 'bg-success';
+                         // Light, low-saturation fills — assembly state is now owned by the Health
+                         // column, so the chip is mostly a name / nav element. Keep the legend's
+                         // colour convention, just pale: cyan = missing FASTA, amber = name mismatch.
+                         $badge_class = 'bg-light';
                          if ($has_name_mismatch) {
-                             $badge_class = 'bg-warning';
-                         } elseif ($has_missing_blast_indexes) {
-                             $badge_class = 'bg-secondary';
-                         } elseif ($has_missing_fai) {
-                             $badge_class = 'bg-secondary';
+                             $badge_class = 'bg-warning-subtle';
+                         } elseif ($has_missing_blast_indexes || $has_missing_fai) {
+                             $badge_class = 'bg-secondary-subtle';
                          } elseif ($is_missing) {
-                             $badge_class = 'bg-info';
+                             $badge_class = 'bg-info-subtle';
                          }
                        ?>
-                       <button class="btn btn-sm d-block w-100 text-start mb-1 <?= $badge_class ?> text-white" onclick="openOrganismModal('asm', <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($assembly)) ?>)">
-                         <i class="fa fa-folder"></i> <?= htmlspecialchars($assembly) ?>
+                       <button class="btn btn-sm d-block w-100 text-start mb-1 border text-dark <?= $badge_class ?>" onclick="openOrganismModal('asm', <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($assembly)) ?>)">
+                         <i class="fa fa-folder text-muted"></i> <?= htmlspecialchars($asm_display) ?>
                        </button>
                      <?php endforeach; ?>
                    </div>
