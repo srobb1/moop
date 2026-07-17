@@ -774,6 +774,11 @@ async function openOrganismModal(type, organism, assembly) {
         if (!resp.ok) throw new Error(`Server error ${resp.status}`);
         modalEl.innerHTML = await resp.text();
 
+        // Enable click-to-open info popovers on section headers (the (i) icons that
+        // replaced the old "Required:" boxes). Bootstrap's data-api does not auto-init
+        // popovers, so wire them up explicitly after injecting the modal HTML.
+        modalEl.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el));
+
         // Re-apply Bootstrap modal behaviour after innerHTML replacement
         bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
 

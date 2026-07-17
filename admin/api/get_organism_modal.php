@@ -71,6 +71,18 @@ switch ($type) {
         break;
 }
 
+/**
+ * Small (i) info icon whose native tooltip carries a section's "what's required" note,
+ * replacing the bulky blue alert boxes so each modal's actual data reads first.
+ */
+function req_info(string $text): string {
+    return '<a role="button" tabindex="0" class="text-info ms-1" style="cursor:pointer; font-weight:normal;"'
+         . ' data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top"'
+         . ' data-bs-title="What this section needs"'
+         . ' data-bs-content="' . htmlspecialchars($text, ENT_QUOTES) . '">'
+         . '<i class="fa fa-info-circle"></i></a>';
+}
+
 // ---------------------------------------------------------------------------
 
 function render_db_modal($organism, $data, $organism_data) {
@@ -105,10 +117,7 @@ function render_db_modal($organism, $data, $organism_data) {
         </div>
       </div>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-info-circle"></i> Database File</h6>
-      <div class="alert alert-info small mb-3">
-        <strong>Required:</strong> A valid SQLite database file named <code>organism.sqlite</code> must exist in the organism directory with read permissions for the web server.
-      </div>
+      <h6 class="fw-bold mb-2"><i class="fa fa-info-circle"></i> Database File <?= req_info('A valid SQLite database file named organism.sqlite must exist in the organism directory, readable by the web server.') ?></h6>
       <div class="card mb-3">
         <div class="card-body small">
           <p class="mb-1"><strong>Path:</strong> <?= htmlspecialchars($data['db_file'] ?? 'N/A') ?></p>
@@ -119,10 +128,7 @@ function render_db_modal($organism, $data, $organism_data) {
         </div>
       </div>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-check-square"></i> Database Validity</h6>
-      <div class="alert alert-info small mb-3">
-        <strong>Required:</strong> Database must be a valid SQLite3 file with proper structure. It should contain all required tables from the schema.
-      </div>
+      <h6 class="fw-bold mb-2"><i class="fa fa-check-square"></i> Database Validity <?= req_info('Must be a valid SQLite3 file with the proper structure — all required tables from the schema present.') ?></h6>
       <div class="card mb-3">
         <div class="card-body small">
           <p class="mb-1">
@@ -140,10 +146,7 @@ function render_db_modal($organism, $data, $organism_data) {
         </div>
       </div>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-table"></i> Database Tables</h6>
-      <div class="alert alert-info small mb-3">
-        <strong>Required Tables:</strong> organism, genome, gene_set, feature, annotation_source, annotation, feature_annotation.
-      </div>
+      <h6 class="fw-bold mb-2"><i class="fa fa-table"></i> Database Tables <?= req_info('Required tables: organism, genome, gene_set, feature, annotation_source, annotation, feature_annotation.') ?></h6>
       <div class="card mb-3">
         <div class="card-body small">
           <?php if (!empty($validation['tables_present'])): ?>
@@ -324,10 +327,7 @@ function render_db_modal($organism, $data, $organism_data) {
       </div>
 
       <?php if ($assembly_validation): ?>
-        <h6 class="fw-bold mb-2"><i class="fa fa-folder"></i> Assembly Validation</h6>
-        <div class="alert alert-info small mb-3">
-          <strong>Required:</strong> For each genome record in the database, at least one directory must exist in the organism folder with a name matching either the <code>genome_name</code> or <code>genome_accession</code> value from the database.
-        </div>
+        <h6 class="fw-bold mb-2"><i class="fa fa-folder"></i> Assembly Validation <?= req_info('For each genome record in the database, a directory must exist in the organism folder whose name matches the genome_name or genome_accession.') ?></h6>
         <div class="card mb-3 <?= $assembly_validation['valid'] ? 'border-success' : 'border-danger border-2' ?>">
           <div class="card-body small">
             <?php if ($assembly_validation['valid'] && empty($assembly_validation['mismatches'])): ?>
@@ -525,10 +525,7 @@ function render_metadata_modal($organism, $data, $organism_data) {
           $organism
       ); ?>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-check-square"></i> Required Fields</h6>
-      <div class="alert alert-info small mb-3">
-        <strong>Required:</strong> All fields must be present and non-empty: genus, species, common_name, taxon_id
-      </div>
+      <h6 class="fw-bold mb-2"><i class="fa fa-check-square"></i> Required Fields <?= req_info('All fields must be present and non-empty: genus, species, common_name, taxon_id.') ?></h6>
       <div class="card mb-3">
         <div class="card-body small">
           <?php if (!empty($json_val['errors'])): ?>
@@ -839,10 +836,7 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
       </div>
 
       <?php if ($assembly_validation): ?>
-        <h6 class="fw-bold mb-2"><i class="fa fa-database"></i> Database Directory Matching</h6>
-        <div class="alert alert-info small mb-3">
-          <strong>Required:</strong> Assembly directory name must match either the <code>genome_name</code> or <code>genome_accession</code> from the database.
-        </div>
+        <h6 class="fw-bold mb-2"><i class="fa fa-database"></i> Database Directory Matching <?= req_info('The assembly directory name must match either the genome_name or genome_accession from the database.') ?></h6>
         <div class="card mb-3 <?= $has_db_mismatch ? 'border-danger border-2' : 'border-success' ?>">
           <div class="card-body small">
             <?php
@@ -1077,10 +1071,7 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
         <?php endforeach; ?>
       <?php endif; ?>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-dna"></i> Genome FAI Index</h6>
-      <div class="alert alert-info small mb-3">
-        <strong>Required:</strong> A <code>genome.fa.fai</code> samtools index is needed for the SVG gene model sequence viewer to fetch region sequences.
-      </div>
+      <h6 class="fw-bold mb-2"><i class="fa fa-dna"></i> Genome FAI Index <?= req_info('A genome.fa.fai samtools index lets the SVG gene-model sequence viewer fetch region sequences.') ?></h6>
       <?php $fai_border = (!$fai_info['genome_fa_exists'] || $fai_info['fai_exists']) ? 'border-success' : 'border-warning border-2'; ?>
       <div class="card mb-3 <?= $fai_border ?>">
         <div class="card-body small">
