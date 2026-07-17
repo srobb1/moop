@@ -75,8 +75,8 @@
   </div>
 
   <!-- Information Panel -->
-  <div class="card mb-4">
-    <div class="card-header bg-info text-white d-flex align-items-center" role="button"
+  <div class="card mb-4 border-info">
+    <div class="card-header bg-info bg-opacity-10 d-flex align-items-center" role="button"
          data-bs-toggle="collapse" data-bs-target="#orgDataMgmtBody"
          aria-expanded="false" aria-controls="orgDataMgmtBody" style="cursor:pointer;">
       <h5 class="mb-0"><i class="fa fa-info-circle"></i> Organism Data Management</h5>
@@ -294,14 +294,14 @@
   </div>
 
   <!-- Current Organisms Table -->
-  <div class="card">
-    <div class="card-header bg-primary text-white">
+  <div class="card border-primary">
+    <div class="card-header bg-primary bg-opacity-10">
       <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
         <div>
           <h5 class="mb-0">
             <i class="fa fa-list"></i> Current Organisms (<span id="organismCount"><?= count($organisms) ?></span>)
           </h5>
-          <small class="fw-normal opacity-75" style="font-size:0.72rem;">
+          <small class="fw-normal text-muted" style="font-size:0.72rem;">
             <?php if ($cache_generated): ?>
               cached <span id="cacheAge" data-generated="<?= htmlspecialchars($cache_generated) ?>"></span>
             <?php else: ?>
@@ -313,20 +313,20 @@
           </small>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-          <span id="refreshStatus" class="text-white-50 small" style="display:none;"></span>
-          <span id="syncTaxonomyStatus" class="text-white-50 small" style="display:none;"></span>
-          <button id="rescanBtn" class="btn btn-sm btn-light" onclick="rescanOrganisms(this)" title="Rescan only organisms whose files changed since last cache">
+          <span id="refreshStatus" class="text-muted small" style="display:none;"></span>
+          <span id="syncTaxonomyStatus" class="text-muted small" style="display:none;"></span>
+          <button id="rescanBtn" class="btn btn-sm btn-primary" onclick="rescanOrganisms(this)" title="Rescan only organisms whose files changed since last cache">
             <i class="fa fa-sync-alt"></i> Refresh Cache
           </button>
-          <button id="forceRescanBtn" class="btn btn-sm btn-outline-light" onclick="forceRescanOrganisms()" title="Rescan all organisms regardless of cache state — use when the cache seems wrong">
+          <button id="forceRescanBtn" class="btn btn-sm btn-outline-secondary" onclick="forceRescanOrganisms()" title="Rescan all organisms regardless of cache state — use when the cache seems wrong">
             <i class="fa fa-redo"></i> Force Full Rescan
           </button>
-          <button id="syncTaxonomyBtn" class="btn btn-sm btn-outline-light"
+          <button id="syncTaxonomyBtn" class="btn btn-sm btn-outline-secondary"
                   onclick="syncNcbiTaxonomy(this, document.getElementById('syncTaxonomyStatus'))"
                   title="Download NCBI taxonomy dump and populate lineage cache — eliminates per-organism API calls">
             <i class="fa fa-download"></i> Sync NCBI Taxonomy
           </button>
-          <button class="btn btn-sm btn-outline-light" data-bs-toggle="collapse" data-bs-target="#taskHelpPanel"
+          <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#taskHelpPanel"
                   title="When to run each task">
             <i class="fa fa-info-circle"></i>
           </button>
