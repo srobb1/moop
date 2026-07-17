@@ -26,7 +26,11 @@ const COLOR_RESET = "\033[0m";
 $config_data = require __DIR__ . '/config/site_config.php';
 require_once __DIR__ . '/lib/functions_json.php';
 $root_path = $config_data['root_path'];
-$users_file = $root_path . '/users.json';
+// Honor the configured location. users.json lives OUTSIDE the document root (see
+// site_config.php) — writing it to $root_path/users.json here would create a second,
+// docroot copy the app no longer reads, silently splitting the user list. Fall back to
+// the legacy path only if the key is somehow unset.
+$users_file = $config_data['users_file'] ?? ($root_path . '/users.json');
 
 echo COLOR_GREEN . "========================================" . COLOR_RESET . "\n";
 echo COLOR_GREEN . "MOOP Admin User Setup" . COLOR_RESET . "\n";

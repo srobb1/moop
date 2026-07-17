@@ -64,7 +64,7 @@ class ConfigManager
      * Editable configuration keys - whitelisted keys that can be edited via admin UI
      * Used in both initialize() and saveEditableConfig() to ensure consistency
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'turnstile', 'footer'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer'];
 
     /**
      * Private constructor - use getInstance() instead

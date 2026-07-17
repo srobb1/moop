@@ -14,13 +14,16 @@ organisms. It integrates with **JBrowse2** (genome browser) and **Galaxy**
 assemblies are public.
 
 - Web root: `/var/www/html/moop/`
-- Users file: `/var/www/html/users.json` — bcrypt-hashed passwords. **It is INSIDE the
-  served document root** (`/var/www/html`), which is not where you would want it. It is
-  not reachable today for two reasons: it is mode `600` (the web server user cannot read
-  it), and `docs/nginx|apache/moop-security.conf` denies it by name. The deny rule is the
-  one to rely on — the mode is protection by accident. Verified 2026-07-16: requesting
-  `/users.json` returns 404 (the rule), where it previously returned 403 (unreadable).
-  Moving it outside the docroot would be better still; the path comes from config.
+- Users file: `/var/www/moop-private/users.json` — bcrypt-hashed passwords. **Moved OUTSIDE
+  the served document root on 2026-07-17** (it previously sat at `/var/www/html/users.json`,
+  inside `/var/www/html`). php-fpm (`httpd_t`) both reads and writes it (Manage Users), so it
+  needs SELinux `httpd_sys_rw_content_t` + a persistent `semanage` rule — see
+  `scripts/fix_moop_selinux.sh`. A plain `chmod` will NOT make it writable; under SELinux the
+  label decides — a read-only `httpd_sys_content_t` label (what a `mv` from the docroot leaves
+  behind) is exactly what 500'd Manage Users on 2026-07-17. The path is config-driven:
+  `site_config.php` default, overridable via the `users_file` key in `config_editable.json`.
+  The old docroot deny rules in `docs/nginx|apache/moop-security.conf` are kept as
+  defense-in-depth against a stray copy ever landing back in the docroot.
 - Organism data: `/var/www/html/moop/organisms/{organism}/{assembly}/`
 - SQLite databases: one per organism at `organisms/{organism}/organism.sqlite`
   (opened **read-only** — `PDO::SQLITE_OPEN_READONLY`; the web workload is queries only)
@@ -323,9 +326,9 @@ Or call the API endpoint `admin/api/generate_blast_indexes.php` via POST.
 Admin Dashboard → Manage Site Configuration. Changes go to `config/config_editable.json`.
 
 ### Add a new user or change access
-Admin Dashboard → Manage Users. User data is stored in `/var/www/html/users.json`
-(see the note at the top — it lives inside the document root and is denied by name in
-the web-server security config).
+Admin Dashboard → Manage Users. User data is stored in `/var/www/moop-private/users.json`
+(see the note at the top — it lives OUTSIDE the document root; the path is config-driven via
+the `users_file` key, `site_config.php` default overridable in `config_editable.json`).
 
 ---
 
@@ -393,8 +396,9 @@ long-standing entries here had already been fixed, and one contradicted §9 of t
 - **Low:** The Apache no-exec guard (`docs/apache/moop-security.conf`) ships **unverified** —
   written against a working nginx deployment, never run on Apache. Its VERIFY block has the
   exec test; settle it on the first Apache host.
-- **Low:** `users.json` sits inside the document root (see the top of this file). Denied by
-  name in the web-server config, but moving it out would be better.
+- **Done (2026-07-17):** `users.json` moved OUT of the document root to
+  `/var/www/moop-private/` — config-driven (`users_file`), SELinux `httpd_sys_rw_content_t`.
+  See the top-of-file note. Docroot deny rules kept as defense-in-depth. Do not re-open.
 - **Low:** Two sources of truth decide "does the web write here" — a rule's `why_write` and
   the allowlist in `moop_permission_check_mode()`. They drift, and drift fails silently
   (§10). Deriving `check_mode` from `why_write` would make that class impossible, but

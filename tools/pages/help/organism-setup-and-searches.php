@@ -387,7 +387,7 @@
         </ul>
 
         <h6 class="mt-3">Configuration File:</h6>
-        <p><code>/var/www/html/users.json</code></p>
+        <p><code>/var/www/moop-private/users.json</code> <small class="text-muted">(outside the web root; path is set by <code>users_file</code> in config)</small></p>
         <pre class="bg-light p-3 rounded"><code>{
   "collaborator_name": {
     "password": "$2y$10$...",

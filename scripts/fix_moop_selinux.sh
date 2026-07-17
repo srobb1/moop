@@ -59,6 +59,10 @@ RW_DIRS=(
     # .php under /moop/docs/ (moop-security.conf) — verified it executed before that rule.
     "$MOOP/docs"
     /var/www/moop-site-data         # site-data backup (config, secrets, users.json)
+    /var/www/moop-private           # users.json (bcrypt hashes) — LIVE file, outside docroot,
+                                    # NOT web-served; php-fpm reads+writes it via Manage Users.
+                                    # Without this rule a relabel reverts it to httpd_sys_content_t
+                                    # (read-only) and Manage Users 500s — happened 2026-07-17.
     "$CACHE"                        # generated caches (organism scan, annotation counts, ...)
     "$MOOP/organisms"               # organism data + in-tree BLAST/.fai indexes the web builds
 )

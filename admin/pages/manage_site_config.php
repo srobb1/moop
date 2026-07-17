@@ -928,8 +928,8 @@
                             </tr>
                             <tr>
                                 <td><code>users_file</code></td>
-                                <td><code><?= htmlspecialchars($root_path) ?>/users.json</code></td>
-                                <td>Path to user credentials file. Change only if using a different user storage location.</td>
+                                <td><code><?= htmlspecialchars($config->getPath('users_file')) ?></code></td>
+                                <td>Path to the user credentials file. Kept <strong>outside</strong> the document root (it holds bcrypt hashes); set in <code>site_config.php</code>.</td>
                             </tr>
                         </tbody>
                     </table>

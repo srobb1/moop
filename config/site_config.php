@@ -92,7 +92,12 @@ return [
     ],
     
     // ======== OPTIONAL: Files ========
-    'users_file' => "$root_path/users.json",
+    // users.json lives OUTSIDE the document root — it holds bcrypt password hashes and
+    // per-user access lists, so it must never sit in a web-served tree. php-fpm (httpd_t)
+    // reads AND writes it (Manage Users), so the file needs SELinux httpd_sys_rw_content_t
+    // and a persistent semanage rule — see scripts/fix_moop_selinux.sh. Do NOT move it back
+    // under $root_path.
+    'users_file' => '/var/www/moop-private/users.json',
     'error_log_file' => "$site_path/logs/error.log",
 
     // ======== SITE DATA BACKUP ========
