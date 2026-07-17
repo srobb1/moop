@@ -15,13 +15,19 @@
     </div>
   <?php endif; ?>
 
-  <!-- File permission warning -->
-  <?php if ($file_write_error): ?>
-    <div class="alert alert-danger">
-      <i class="fa fa-exclamation-triangle"></i>
-      <strong>Cannot save changes:</strong> <?= htmlspecialchars($file_write_error) ?>
-    </div>
-  <?php endif; ?>
+  <!-- File permission warning — render through the shared helper (as manage_groups does).
+       getFileWriteError() returns an ARRAY (or null), never a string, so the old
+       htmlspecialchars($file_write_error) was a TypeError → 500 the moment the users
+       file became non-writable by the web server. generatePermissionAlert() returns ''
+       when the file is readable+writable, so the healthy case renders nothing as before. -->
+  <?php
+    echo generatePermissionAlert(
+        $config->getPath('users_file'),
+        'Cannot Save User Changes',
+        'The users file is not writable by the web server, so creating, editing, and deleting users is disabled until this is fixed.',
+        'file'
+    );
+  ?>
 
   <!-- ══════════════════════════════════════════════════════
        SECTION 1: EXISTING USERS TABLE
