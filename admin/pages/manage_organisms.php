@@ -374,33 +374,29 @@
       <div class="mb-3 d-flex flex-wrap gap-2 align-items-center" id="statusFilterBar">
         <span class="text-muted small fw-bold me-1">Filter:</span>
         <button class="btn btn-sm btn-outline-secondary active" data-filter="all">All (<?= count($organisms) ?>)</button>
-        <?php if ($filter_counts['needs-attention'] > 0): ?>
-          <button class="btn btn-sm btn-outline-warning" data-filter="needs-attention">Needs Attention (<?= $filter_counts['needs-attention'] ?>)</button>
-        <?php endif; ?>
-        <?php if ($filter_counts['blast'] > 0): ?>
-          <button class="btn btn-sm btn-outline-secondary" data-filter="blast">Missing BLAST (<?= $filter_counts['blast'] ?>)</button>
-        <?php endif; ?>
-        <?php if ($filter_counts['fai'] > 0): ?>
-          <button class="btn btn-sm btn-outline-secondary" data-filter="fai">Missing FAI (<?= $filter_counts['fai'] ?>)</button>
-        <?php endif; ?>
-        <?php if ($filter_counts['missing-genome-fa'] > 0): ?>
-          <button class="btn btn-sm btn-outline-secondary" data-filter="missing-genome-fa" title="Organisms with no reference genome (genome.fa) — transcriptome/proteome data only. A valid data shape, not an error.">Transcriptome only (<?= $filter_counts['missing-genome-fa'] ?>)</button>
-        <?php endif; ?>
-        <?php if ($filter_counts['missing-other-fasta'] > 0): ?>
-          <button class="btn btn-sm btn-outline-info" data-filter="missing-other-fasta">Missing other FASTA (<?= $filter_counts['missing-other-fasta'] ?>)</button>
-        <?php endif; ?>
-        <?php if ($filter_counts['groups'] > 0): ?>
-          <button class="btn btn-sm btn-outline-danger" data-filter="groups">Not in Groups (<?= $filter_counts['groups'] ?>)</button>
-        <?php endif; ?>
-        <?php if ($filter_counts['tree'] > 0): ?>
-          <button class="btn btn-sm btn-outline-danger" data-filter="tree">Not in Tree (<?= $filter_counts['tree'] ?>)</button>
-        <?php endif; ?>
-        <?php if ($filter_counts['metadata'] > 0): ?>
-          <button class="btn btn-sm btn-outline-danger" data-filter="metadata">Metadata Incomplete (<?= $filter_counts['metadata'] ?>)</button>
-        <?php endif; ?>
-        <?php if ($filter_counts['stale'] > 0): ?>
-          <button class="btn btn-sm btn-outline-warning" data-filter="stale">Stale (<?= $filter_counts['stale'] ?>)</button>
-        <?php endif; ?>
+        <?php
+          // Every filter is shown, always, with its count — even 0. A 0-count filter is
+          // disabled + muted so the full set of data-completeness lenses stays visible at
+          // a glance without cluttering the bar with clickable dead ends.
+          $filter_defs = [
+            ['needs-attention',     'Needs Attention',      'warning',   'Any organism that is not fully complete'],
+            ['missing-genome-fa',   'Missing genome FASTA', 'info',      'No reference genome (genome.fa). Often expected — transcriptome/proteome-only organisms have none.'],
+            ['missing-other-fasta', 'Missing other FASTA',  'info',      'A gene-set FASTA (protein / transcript / CDS) is missing'],
+            ['blast',               'Missing BLAST',        'secondary', 'One or more BLAST indexes are missing'],
+            ['fai',                 'Missing FAI',          'secondary', 'genome.fa is present but its .fai index is missing'],
+            ['groups',              'Not in Groups',        'danger',    'Assembly is not in any group — invisible to users'],
+            ['tree',                'Not in Tree',          'danger',    'Not in the taxonomy tree — hidden from the homepage organism selector'],
+            ['metadata',            'Metadata Incomplete',  'danger',    'organism.json is missing required fields or is not writable'],
+            ['stale',               'Stale',                'warning',   'Files changed since the last cache refresh'],
+          ];
+          foreach ($filter_defs as [$key, $label, $style, $title]):
+            $n = $filter_counts[$key] ?? 0;
+        ?>
+          <button class="btn btn-sm btn-outline-<?= $n === 0 ? 'secondary' : $style ?>" data-filter="<?= $key ?>"
+                  title="<?= htmlspecialchars($title) ?>"<?= $n === 0 ? ' disabled' : '' ?>>
+            <?= htmlspecialchars($label) ?> (<?= $n ?>)
+          </button>
+        <?php endforeach; ?>
       </div>
 
       <table id="organismsTable" class="table table-striped table-hover">
