@@ -408,12 +408,9 @@
            <tr>
              <th>Organism</th>
              <th>Common Name</th>
-             <th>Tree Status</th>
              <th>Groups</th>
              <th>Assemblies</th>
-             <th>DB Status</th>
-             <th>Metadata Status</th>
-             <th>Status</th>
+             <th>Health</th>
            </tr>
          </thead>
          <tbody>
@@ -480,47 +477,24 @@
                    }
                  ?>
                </td>
-               <td>
-                 <?php
-                   $in_taxonomy_tree = $data['in_taxonomy_tree'] ?? isAssemblyInTaxonomyTree($organism, '', $taxonomy_tree_file);
-                 ?>
-                 <?php if ($in_taxonomy_tree): ?>
-                   <span class="btn btn-sm btn-outline-success disabled">
-                     <i class="fa fa-check-circle"></i> Complete
-                   </span>
-                 <?php else: ?>
-                   <span class="btn btn-sm btn-outline-warning disabled" title="Run Refresh Cache to rebuild the taxonomy tree">
-                     <i class="fa fa-times-circle"></i> Missing
-                   </span>
-                 <?php endif; ?>
-               </td>
                <?php
                  $safe_groups_id = 'groups-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism);
                  $in_groups = $row_checks['assemblies_in_groups'] ?? false;
                  $org_group_list = $organism_groups_lookup[$organism] ?? [];
                ?>
                <td id="<?= $safe_groups_id ?>">
-                 <?php if ($in_groups): ?>
-                   <span class="btn btn-sm btn-outline-success disabled">
-                     <i class="fa fa-check-circle"></i> OK
-                   </span>
-                   <?php if (!empty($org_group_list)): ?>
-                     <div class="mt-1">
-                       <?php foreach ($org_group_list as $og): ?>
-                         <span class="badge bg-secondary"><?= htmlspecialchars($og) ?></span>
-                       <?php endforeach; ?>
-                     </div>
-                   <?php endif; ?>
-                 <?php else: ?>
-                   <span class="btn btn-sm btn-outline-warning disabled">
-                     <i class="fa fa-times-circle"></i> Missing
-                   </span>
-                   <div class="mt-1">
-                     <button class="btn btn-sm btn-outline-primary"
-                             onclick="openQuickAddGroupModal(<?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($safe_groups_id)) ?>)">
-                       <i class="fa fa-plus"></i> Add to Group
-                     </button>
+                 <?php if (!empty($org_group_list)): ?>
+                   <div class="d-flex flex-wrap gap-1">
+                     <?php foreach ($org_group_list as $og): ?>
+                       <span class="badge bg-secondary"><?= htmlspecialchars($og) ?></span>
+                     <?php endforeach; ?>
                    </div>
+                 <?php endif; ?>
+                 <?php if (!$in_groups): ?>
+                   <button class="btn btn-sm btn-outline-primary mt-1"
+                           onclick="openQuickAddGroupModal(<?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($safe_groups_id)) ?>)">
+                     <i class="fa fa-plus"></i> Add to Group
+                   </button>
                  <?php endif; ?>
                </td>
                <td>
@@ -599,93 +573,57 @@
                  <?php endif; ?>
                </td>
                <td>
-                 <?php if ($data['db_validation']): 
-                     $validation = $data['db_validation'];
-                     $asm_validation = $data['assembly_validation'];
-                     
-                     // Check if there are assembly issues
-                     $has_assembly_issues = $asm_validation && (!$asm_validation['valid'] || !empty($asm_validation['mismatches']));
-                     
-                     if ($validation['readable'] && $validation['database_valid'] && !empty($validation['tables_present']) && !$has_assembly_issues): ?>
-                       <button class="btn btn-sm btn-outline-success" onclick="openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                         <i class="fa fa-check-circle"></i> Ready
-                       </button>
-                     <?php elseif ($validation['readable'] && $validation['database_valid'] && !empty($validation['tables_present']) && $has_assembly_issues): ?>
-                       <button class="btn btn-sm btn-outline-warning" onclick="openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                         <i class="fa fa-exclamation-triangle"></i> Incomplete
-                       </button>
-                     <?php elseif (!$validation['readable']): ?>
-                       <button class="btn btn-sm btn-outline-danger" onclick="openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                         <i class="fa fa-lock"></i> Unreadable
-                       </button>
-                     <?php elseif (!$validation['database_valid']): ?>
-                       <button class="btn btn-sm btn-outline-danger" onclick="openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                         <i class="fa fa-times-circle"></i> Invalid
-                       </button>
-                       </button>
-                     <?php else: ?>
-                       <button class="btn btn-sm btn-outline-warning" onclick="openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                         <i class="fa fa-exclamation-triangle"></i> Issues
-                       </button>
-                     <?php endif; ?>
-                 <?php else: ?>
-                   <span class="text-muted">-</span>
-                 <?php endif; ?>
-               </td>
-               <td>
-                 <?php 
-                   $json_val = $data['json_validation'];
-                   if ($json_val['exists'] && $json_val['readable'] && $json_val['valid_json'] && $json_val['has_required_fields'] && $json_val['writable']): ?>
-                     <button class="btn btn-sm btn-outline-success" onclick="openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                       <i class="fa fa-check-circle"></i> Complete
-                     </button>
-                   <?php elseif ($json_val['exists'] && $json_val['readable'] && $json_val['valid_json'] && $json_val['has_required_fields'] && !$json_val['writable']): ?>
-                     <button class="btn btn-sm btn-outline-warning" onclick="openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                       <i class="fa fa-lock"></i> Not Writable
-                     </button>
-                   <?php elseif (!$json_val['exists']): ?>
-                     <button class="btn btn-sm btn-outline-danger" onclick="openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                       <i class="fa fa-times-circle"></i> Missing
-                     </button>
-                   <?php elseif (!$json_val['readable']): ?>
-                     <button class="btn btn-sm btn-outline-danger" onclick="openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                       <i class="fa fa-lock"></i> Unreadable
-                     </button>
-                   <?php elseif (!$json_val['valid_json']): ?>
-                     <button class="btn btn-sm btn-outline-danger" onclick="openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                       <i class="fa fa-times-circle"></i> Invalid JSON
-                     </button>
-                   <?php elseif (!$json_val['has_required_fields']): ?>
-                     <button class="btn btn-sm btn-outline-warning" onclick="openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                       <i class="fa fa-exclamation-triangle"></i> Incomplete
-                     </button>
-                   <?php else: ?>
-                     <button class="btn btn-sm btn-outline-warning" onclick="openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                       <i class="fa fa-exclamation-triangle"></i> Issues
-                     </button>
-                   <?php endif; ?>
-               </td>
-               <td>
                  <?php
-                   // Get comprehensive status (pre-computed in cache, fallback to live)
+                   // ── Consolidated Health cell (replaces the old Tree/DB/Metadata/Status columns) ──
                    $status = $data['overall_status'] ?? getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree_file, $sequence_types);
-                   $pass_count = $status['pass_count'];
-                   $total_count = $status['total_count'];
-                   $safe_org_id = preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism);
+                   $hstate = $status['all_pass']       ? ['success', 'check-circle',        'Complete']
+                           : ($status['pass_count'] > 0 ? ['warning', 'exclamation-triangle', 'Incomplete']
+                                                        : ['danger',  'times-circle',         'Critical']);
+                   // DB inspector tint (mirrors the old DB Status column's states)
+                   $db_class = 'secondary';
+                   if ($data['db_validation']) {
+                       $v = $data['db_validation']; $ai = $data['assembly_validation'];
+                       $db_bad_dirs = $ai && (!$ai['valid'] || !empty($ai['mismatches']));
+                       if ($v['readable'] && $v['database_valid'] && !empty($v['tables_present']) && !$db_bad_dirs) $db_class = 'success';
+                       elseif (!$v['readable'] || !$v['database_valid'])                                          $db_class = 'danger';
+                       else                                                                                       $db_class = 'warning';
+                   }
+                   // Metadata inspector tint
+                   $jv = $data['json_validation'];
+                   $meta_ok = $jv['exists'] && $jv['readable'] && $jv['valid_json'] && $jv['has_required_fields'] && $jv['writable'];
+                   $meta_class = $meta_ok ? 'success' : ((!$jv['exists'] || !$jv['readable'] || !$jv['valid_json']) ? 'danger' : 'warning');
+                   // Specific problems to spell out. The neutral "Transcriptome only" tag lives in
+                   // the Assemblies cell, so 'missing-genome-fa' is intentionally NOT listed here.
+                   $issue_labels = [
+                     'no-assemblies'       => ['No assemblies',          'danger'],
+                     'no-fasta'            => ['No FASTA',               'danger'],
+                     'no-database'         => ['No database',            'danger'],
+                     'db-invalid'          => ['DB invalid',             'danger'],
+                     'dir-mismatch'        => ['Dir / DB mismatch',      'warning'],
+                     'blast'               => ['No BLAST index',         'warning'],
+                     'fai'                 => ['No FAI index',           'warning'],
+                     'groups'              => ['Not in any group',       'warning'],
+                     'tree'                => ['Not in taxonomy tree',   'warning'],
+                     'metadata'            => ['Metadata incomplete',    'warning'],
+                     'missing-other-fasta' => ['Missing gene-set FASTA', 'warning'],
+                     'stale'               => ['Stale — rescan',         'warning'],
+                   ];
+                   $visible_issues = array_values(array_filter($row_issues, fn($i) => isset($issue_labels[$i])));
                  ?>
-                 <?php if ($status['all_pass']): ?>
-                   <button class="btn btn-sm btn-outline-success" onclick="openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                     <i class="fa fa-check-circle"></i> Complete <span class="badge bg-success"><?= $total_count ?></span>
-                   </button>
-                 <?php elseif ($pass_count > 0): ?>
-                   <button class="btn btn-sm btn-outline-warning" onclick="openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                     <i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-warning text-dark"><?= $pass_count ?></span>
-                   </button>
-                 <?php else: ?>
-                   <button class="btn btn-sm btn-outline-danger" onclick="openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)">
-                     <i class="fa fa-times-circle"></i> Critical <span class="badge bg-danger">0</span>
-                   </button>
+                 <button class="btn btn-sm btn-outline-<?= $hstate[0] ?>" onclick="openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)" title="Open the setup checklist">
+                   <i class="fa fa-<?= $hstate[1] ?>"></i> <?= $hstate[2] ?>
+                 </button>
+                 <?php if ($visible_issues): ?>
+                   <div class="mt-1 d-flex flex-wrap gap-1">
+                     <?php foreach ($visible_issues as $iss): [$lbl, $sev] = $issue_labels[$iss]; ?>
+                       <span class="badge bg-<?= $sev === 'danger' ? 'danger' : 'warning text-dark' ?>"><?= htmlspecialchars($lbl) ?></span>
+                     <?php endforeach; ?>
+                   </div>
                  <?php endif; ?>
+                 <div class="mt-1 d-flex gap-1">
+                   <button class="btn btn-sm btn-outline-<?= $db_class ?> px-2 py-0" onclick="openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)" title="Database details &amp; row counts"><i class="fa fa-database"></i></button>
+                   <button class="btn btn-sm btn-outline-<?= $meta_class ?> px-2 py-0" onclick="openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)" title="Metadata &amp; editor"><i class="fa fa-file-alt"></i></button>
+                 </div>
                </td>
              </tr>
            <?php endforeach; ?>
