@@ -75,10 +75,10 @@ switch ($type) {
  * Small (i) info icon whose native tooltip carries a section's "what's required" note,
  * replacing the bulky blue alert boxes so each modal's actual data reads first.
  */
-function req_info(string $text): string {
+function req_info(string $text, string $title = 'What this section needs'): string {
     return '<a role="button" tabindex="0" class="text-info ms-1" style="cursor:pointer; font-weight:normal;"'
          . ' data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top"'
-         . ' data-bs-title="What this section needs"'
+         . ' data-bs-title="' . htmlspecialchars($title, ENT_QUOTES) . '"'
          . ' data-bs-content="' . htmlspecialchars($text, ENT_QUOTES) . '">'
          . '<i class="fa fa-info-circle"></i></a>';
 }
@@ -173,9 +173,7 @@ function render_db_modal($organism, $data, $organism_data) {
       </div>
 
       <h6 class="fw-bold mb-2"><i class="fa fa-sitemap"></i> Feature Types and Counts</h6>
-      <div class="alert alert-info small mb-3">
-        <strong>Summary:</strong> Shows the count of each feature type in the database.
-      </div>
+      <p class="small text-muted mb-2">Shows the count of each feature type in the database.</p>
       <div class="card mb-3">
         <div class="card-body small">
           <?php if (!empty($validation['feature_counts'])): ?>
@@ -193,10 +191,7 @@ function render_db_modal($organism, $data, $organism_data) {
         </div>
       </div>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-layer-group"></i> Gene Sets</h6>
-      <div class="alert alert-info small mb-3">
-        Each genome assembly in the database should have at least one gene set, and each gene set should have a corresponding subdirectory inside the assembly directory on disk.
-      </div>
+      <h6 class="fw-bold mb-2"><i class="fa fa-layer-group"></i> Gene Sets <?= req_info('Each genome assembly should have at least one gene set, and each gene set should have a corresponding subdirectory inside the assembly directory on disk.', 'About gene sets') ?></h6>
       <?php
         // Live query: get gene_sets from DB grouped by genome
         $gene_sets_by_genome = [];
@@ -293,10 +288,7 @@ function render_db_modal($organism, $data, $organism_data) {
         <?php endforeach; ?>
       <?php endif; ?>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-exclamation-triangle"></i> Data Quality</h6>
-      <div class="alert alert-info small mb-3">
-        <strong>Check:</strong> Database records should have valid relationships and complete data. This checks for orphaned annotations, missing accessions, and features without proper organism links.
-      </div>
+      <h6 class="fw-bold mb-2"><i class="fa fa-exclamation-triangle"></i> Data Quality <?= req_info('Database records should have valid relationships and complete data — this checks for orphaned annotations, missing accessions, and features without proper organism links.', 'Data quality check') ?></h6>
       <div class="card mb-3 <?= empty($validation['data_issues']) ? 'border-success' : 'border-danger border-2' ?>">
         <div class="card-body small">
           <?php if (empty($validation['data_issues'])): ?>
@@ -584,9 +576,7 @@ function render_metadata_modal($organism, $data, $organism_data) {
         <hr class="my-4">
 
         <h5 class="mb-3"><i class="fa fa-sitemap"></i> Feature Types</h5>
-        <div class="alert alert-info small mb-3">
-          <strong>Note:</strong> Define which feature types are parents (typically genes) and which are children (transcripts, proteins, etc.)
-        </div>
+        <p class="small text-muted mb-3">Define which feature types are parents (typically genes) and which are children (transcripts, proteins, etc.).</p>
 
         <input type="hidden" name="parents_json" id="parents-json-<?= $org_safe ?>">
         <input type="hidden" name="children_json" id="children-json-<?= $org_safe ?>">
@@ -631,13 +621,13 @@ function render_metadata_modal($organism, $data, $organism_data) {
         <hr class="my-4">
 
         <h5 class="mb-3"><i class="fa fa-image"></i> Images</h5>
-        <div class="alert alert-info small mb-3">
-          <strong>Note:</strong> If no images are provided here, the image from
+        <p class="small text-muted mb-3">
+          If no images are provided here, the image from
           <a href="https://www.ncbi.nlm.nih.gov/datasets/taxonomy/<?= htmlspecialchars($data['info']['taxon_id'] ?? '') ?>/" target="_blank">
             NCBI Taxonomy (ID: <?= htmlspecialchars($data['info']['taxon_id'] ?? '[taxon_id]') ?>)
           </a>
           will be used as the default.
-        </div>
+        </p>
         <div id="images-container-<?= $org_safe ?>">
           <?php
             $images = $data['info']['images'] ?? [['file' => '', 'caption' => '']];
