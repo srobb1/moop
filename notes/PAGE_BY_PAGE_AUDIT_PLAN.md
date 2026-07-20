@@ -1,6 +1,10 @@
 # Page-by-Page UI/Consistency Audit — Findings & Plan
 
-Status: **findings verified against the live site, none fixed yet** (2026-07-10).
+Status: **findings verified against the live site; most of A–D fixed across later sprints**
+(last updated 2026-07-17 — see the `[x]`/`[ ]` marks on each item). This doc covers the
+**public/tool** pages. The parallel **admin-page** truth/UX pass (Manage Organisms, its modals,
+Manage Users, users.json relocation) is tracked separately — see the `project_admin_page_audit`
+and `project_manage_organisms_overhaul` memories — and it advanced #8 below.
 
 Method: headless Chrome walk of every public/tool page from `172.16.2.52` (IP_IN_RANGE
 auto-login), plus a PHP harness for the access-control assertion. 15 pages at desktop +
@@ -384,8 +388,10 @@ CLAUDE.md access-control section (contradicted by #3).
       back to bare — not bugs.
       **Deliberately NOT changed (out of scope / lower priority):** `retrieve_sequences.php:161`
       (`$assembly_name` is an internal var passed to sequences_display, not a user label) and its
-      hidden form input (:64); admin `manage_organisms.php` (no simple label display — comparisons
-      only); the browser `<title>` tag in `tools/assembly.php:70` (tab title, conventionally the short
+      hidden form input (:64); ~~admin `manage_organisms.php` (no simple label display — comparisons
+      only)~~ — **UPDATE 2026-07-17: DONE.** The Manage Organisms overhaul now routes the assembly
+      chips and the assembly modal's title + Name field through `assembly_label()` (`Name (Accession)`);
+      the browser `<title>` tag in `tools/assembly.php:70` (tab title, conventionally the short
       name); JS sites (mostly use accession as a KEY or are admin chips like manage-users.js — no
       user-facing "Name (Accession)" label rendered in JS). If a JS label surface appears later, add a
       JS twin of `assembly_label()`. Organism-page instances still fold into the section J design pass.
