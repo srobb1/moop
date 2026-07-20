@@ -718,7 +718,7 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
     $assembly_path       = $data['path'] . '/' . $assembly;
 
     // FAI check (assembly-level)
-    $genome_fa_path = $assembly_path . '/genome.fa';
+    $genome_fa_path = $assembly_path . '/' . genome_fasta_filename();
     $fai_info = $data['fai_validation'][$assembly] ?? [
         'genome_fa_exists' => file_exists($genome_fa_path),
         'fai_exists'       => file_exists($genome_fa_path . '.fai'),

@@ -74,7 +74,7 @@ $fasta = null;
 $fai   = null;
 
 // 1. Organism data directory (preferred)
-$org_fasta = "$organism_data/$organism_name/$assembly/genome.fa";
+$org_fasta = "$organism_data/$organism_name/$assembly/" . genome_fasta_filename();
 $org_fai   = "$org_fasta.fai";
 if (file_exists($org_fasta) && file_exists($org_fai)) {
     $fasta = $org_fasta;
@@ -96,7 +96,7 @@ if (!$fasta) {
     http_response_code(404);
     echo json_encode([
         'error' => 'No indexed genome FASTA found for this assembly. '
-                 . 'Run: samtools faidx organisms/' . $organism_name . '/' . $assembly . '/genome.fa'
+                 . 'Run: samtools faidx organisms/' . $organism_name . '/' . $assembly . '/' . genome_fasta_filename()
     ]);
     exit;
 }

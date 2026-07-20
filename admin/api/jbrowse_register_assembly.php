@@ -61,9 +61,10 @@ if (file_exists($assembly_json)) {
     exit;
 }
 
-$source_fasta = "$source_dir/genome.fa";
+$genome_file  = genome_fasta_filename();
+$source_fasta = "$source_dir/$genome_file";
 if (!file_exists($source_fasta)) {
-    echo json_encode(['success' => false, 'error' => "genome.fa not found in $source_dir"]);
+    echo json_encode(['success' => false, 'error' => "$genome_file not found in $source_dir"]);
     exit;
 }
 

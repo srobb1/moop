@@ -870,8 +870,9 @@ function moopmartStreamGenomicFasta(
     int $flank_bp,
     $handle
 ): void {
-    $fasta = "$assembly_dir/genome.fa";
-    $fai   = "$assembly_dir/genome.fa.fai";
+    $genome_file = genome_fasta_filename();
+    $fasta = "$assembly_dir/$genome_file";
+    $fai   = "$assembly_dir/$genome_file.fai";
     if (!file_exists($fasta) || !file_exists($fai)) return;
 
     // Pre-load all exon coords in one GFF pass for the exons mode

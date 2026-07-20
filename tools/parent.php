@@ -343,8 +343,10 @@ if ($tabix_available || $gff_available) {
     }
 }
 
-// Check whether genomic sequence fetch is available (genome.fa stays at assembly level)
-$genome_seq_available = file_exists("$assembly_dir_base/genome.fa") && file_exists("$assembly_dir_base/genome.fa.fai");
+// Check whether genomic sequence fetch is available (the genome FASTA stays at assembly level)
+$genome_fasta_file    = genome_fasta_filename();
+$genome_seq_available = file_exists("$assembly_dir_base/$genome_fasta_file")
+                     && file_exists("$assembly_dir_base/$genome_fasta_file.fai");
 
 $family_feature_ids = [$feature_id];
 $retrieve_these_seqs = [$feature_uniquename];

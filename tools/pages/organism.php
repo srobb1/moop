@@ -218,7 +218,7 @@
               <h6 class="text-muted mb-3" style="font-weight: 600;">Assemblies</h6>
               <div class="chip-container">
                 <?php foreach ($accessible_assemblies as $assembly):
-                    $has_genome_fa = file_exists("$organism_data/$organism_name/$assembly/genome.fa");
+                    $has_genome_fa = file_exists("$organism_data/$organism_name/$assembly/" . genome_fasta_filename());
                 ?>
                   <a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>"
                      class="assembly-chip">

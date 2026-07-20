@@ -251,7 +251,7 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
         // Pre-compute FAI validation per assembly
         $fai_by_assembly = [];
         foreach ($org_info['assemblies'] as $assembly) {
-            $genome_fa = $org_path . '/' . $assembly . '/genome.fa';
+            $genome_fa = $org_path . '/' . $assembly . '/' . genome_fasta_filename();
             $fai_by_assembly[$assembly] = [
                 'genome_fa_exists' => file_exists($genome_fa),
                 'fai_exists'       => file_exists($genome_fa . '.fai'),

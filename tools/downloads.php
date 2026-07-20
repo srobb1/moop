@@ -117,14 +117,27 @@ foreach ($unique_sources as $source) {
 
         $size = (int) filesize($fpath);
 
-        // Determine display color class from sequence type patterns
+        // Determine display color class from the CONFIGURED sequence-type patterns.
+        // These four filenames used to be hardcoded here, which made this comment untrue:
+        // renaming a pattern in Site Configuration left the matching files uncoloured.
+        // The colour per type stays local — it is a download-list text colour, deliberately
+        // not the badge background in sequence_types[*]['color'].
+        static $seq_type_colors = [
+            'protein'    => 'feature-color-protein',
+            'transcript' => 'feature-color-mrna',
+            'cds'        => 'feature-color-gene',
+            'genome'     => 'text-assembly',
+        ];
         $color_class = '';
         $fname_lower = strtolower($fname);
-        if (str_contains($fname_lower, 'protein.aa.fa'))      $color_class = 'feature-color-protein';
-        elseif (str_contains($fname_lower, 'transcript.nt.fa')) $color_class = 'feature-color-mrna';
-        elseif (str_contains($fname_lower, 'cds.nt.fa'))      $color_class = 'feature-color-gene';
-        elseif (str_contains($fname_lower, 'genome.fa'))       $color_class = 'text-assembly';
-        elseif (in_array($ext, ['gff', 'gff3', 'gtf']))       $color_class = 'text-success';
+        foreach (ConfigManager::getInstance()->getSequenceTypes() as $seq_type => $seq_config) {
+            $pattern = strtolower($seq_config['pattern'] ?? '');
+            if ($pattern !== '' && isset($seq_type_colors[$seq_type]) && str_contains($fname_lower, $pattern)) {
+                $color_class = $seq_type_colors[$seq_type];
+                break;
+            }
+        }
+        if ($color_class === '' && in_array($ext, ['gff', 'gff3', 'gtf'])) $color_class = 'text-success';
 
         $files[] = [
             'name'        => $fname,

@@ -101,7 +101,7 @@ foreach ($organisms as $org => $assemblies) {
     foreach ($assemblies as $asm) {
         $registered = isset($registered_assemblies[$org]) && in_array($asm, $registered_assemblies[$org]);
         if (!$registered) {
-            $has_genome = file_exists($config->getPath('organism_data') . "/$org/$asm/genome.fa");
+            $has_genome = file_exists($config->getPath('organism_data') . "/$org/$asm/" . genome_fasta_filename());
             $unregistered_assemblies[] = [
                 'organism' => $org,
                 'assembly' => $asm,

@@ -541,8 +541,8 @@
                          // Check if FAI index is missing
                          $has_missing_fai = false;
                          $fai_info_badge  = $data['fai_validation'][$assembly] ?? [
-                           'genome_fa_exists' => file_exists($assembly_path . '/genome.fa'),
-                           'fai_exists'       => file_exists($assembly_path . '/genome.fa.fai'),
+                           'genome_fa_exists' => file_exists($assembly_path . '/' . genome_fasta_filename()),
+                           'fai_exists'       => file_exists($assembly_path . '/' . genome_fasta_filename() . '.fai'),
                          ];
                          if ($fai_info_badge['genome_fa_exists'] && !$fai_info_badge['fai_exists']) {
                            $has_missing_fai = true;

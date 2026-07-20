@@ -357,10 +357,11 @@ if ($output_format === 'tsv') {
             $gs_label     = $gs_name ? "$org / $assembly / $gs_name" : "$org / $assembly";
 
             if (in_array($fasta_mode, $genomic_modes)) {
-                $fasta = "$assembly_dir/genome.fa";
-                $fai   = "$assembly_dir/genome.fa.fai";
+                $genome_file = genome_fasta_filename();
+                $fasta = "$assembly_dir/$genome_file";
+                $fai   = "$assembly_dir/$genome_file.fai";
                 if (!file_exists($fasta) || !file_exists($fai)) {
-                    $missing = !file_exists($fasta) ? 'genome.fa' : 'genome.fa.fai';
+                    $missing = !file_exists($fasta) ? $genome_file : "$genome_file.fai";
                     $skipped_datasets[] = "$gs_label (missing $missing)";
                     continue;
                 }

@@ -300,19 +300,22 @@ function getAssemblyFastaFiles($organism_name, $assembly_name) {
         return $fasta_files;
     }
 
-    // genome.fa stays at assembly level (not in a gene_set subdir)
-    foreach ($sequence_types as $type => $seq_config) {
-        if (strpos($seq_config['pattern'], 'genome') !== false) {
-            if (file_exists("$assembly_dir/genome.fa")) {
-                $fasta_files[$type] = [
-                    'path'     => "$organism_name/$assembly_name/genome.fa",
-                    'label'    => $seq_config['label'],
-                    'color'    => $seq_config['color'],
-                    'gene_set' => '',
-                    'seq_type' => $type,
-                ];
-            }
-            break;
+    // The genome FASTA stays at assembly level (not in a gene_set subdir).
+    // Identified by its config KEY, not by sniffing the filename for the word "genome":
+    // this used to test strpos($seq_config['pattern'], 'genome') and then hardcode
+    // "genome.fa" anyway, so renaming the pattern in Site Configuration dropped the
+    // genome out of this list entirely.
+    if (isset($sequence_types['genome'])) {
+        $seq_config  = $sequence_types['genome'];
+        $genome_file = genome_fasta_filename();
+        if (file_exists("$assembly_dir/$genome_file")) {
+            $fasta_files['genome'] = [
+                'path'     => "$organism_name/$assembly_name/$genome_file",
+                'label'    => $seq_config['label'],
+                'color'    => $seq_config['color'],
+                'gene_set' => '',
+                'seq_type' => 'genome',
+            ];
         }
     }
 
@@ -801,7 +804,7 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         foreach ($data['assemblies'] as $assembly) {
             $fai_info = $data['fai_validation'][$assembly] ?? null;
             if (!$fai_info) {
-                $genome_fa = $data['path'] . '/' . $assembly . '/genome.fa';
+                $genome_fa = $data['path'] . '/' . $assembly . '/' . genome_fasta_filename();
                 $fai_info  = [
                     'genome_fa_exists' => file_exists($genome_fa),
                     'fai_exists'       => file_exists($genome_fa . '.fai'),

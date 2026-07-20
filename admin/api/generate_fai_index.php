@@ -36,10 +36,11 @@ if (!$assembly_dir || strpos($assembly_dir, $organism_data) !== 0) {
     exit;
 }
 
-$fasta = "$assembly_dir/genome.fa";
+$genome_file = genome_fasta_filename();
+$fasta = "$assembly_dir/$genome_file";
 if (!file_exists($fasta)) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'genome.fa not found in assembly directory']);
+    echo json_encode(['success' => false, 'message' => "$genome_file not found in assembly directory"]);
     exit;
 }
 
