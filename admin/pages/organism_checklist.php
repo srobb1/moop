@@ -177,8 +177,9 @@
               <i class="fa fa-magic"></i> <strong>You only need four fields.</strong>
               Give MOOP <code>genus</code>, <code>species</code>, <code>common_name</code> and
               <code>taxon_id</code>, and it fills in the rest by itself: it writes a description from the
-              organism's taxonomic lineage plus the Wikipedia extract (credited, with a link), and fetches
-              a Wikipedia image — cached locally in <code>images/wikimedia/</code>, so it downloads once.
+              organism's taxonomic lineage plus the Wikipedia extract (credited, with a link), and finds
+              an image — trying a cached NCBI taxonomy image (<code>images/ncbi_taxonomy/{taxon_id}.jpg</code>)
+              first, then falling back to Wikipedia, cached in <code>images/wikimedia/</code> so it downloads once.
               Add <code>html_p</code> or <code>images</code> only when you want to override that.
             </div>
 
@@ -193,9 +194,10 @@
             <p class="mb-2"><strong>Optional Fields:</strong></p>
             <ul class="mb-3">
               <li><code>images</code> - Array of image objects with filename and caption.
-                  <strong>Leave it out and MOOP fetches an image from Wikipedia</strong> for you, caching it
-                  in <code>images/wikimedia/</code> so it is only downloaded once. Supply this field only
-                  when you want a specific image instead.</li>
+                  <strong>Leave it out and MOOP finds an image for you</strong>, in this order: a cached
+                  NCBI taxonomy image at <code>images/ncbi_taxonomy/{taxon_id}.jpg</code> if one is already
+                  there, otherwise Wikipedia — downloaded once and cached in <code>images/wikimedia/</code>.
+                  Supply this field only when you want a specific image instead.</li>
               <li><code>html_p</code> - Array of HTML content paragraphs.
                   <strong>Leave it out and MOOP writes the description itself</strong>: a summary built from
                   the organism's taxonomic lineage (from <code>taxon_id</code>), plus the Wikipedia extract,
@@ -210,12 +212,37 @@
                   <code>{"type":null,"value":null}</code> when unused.</li>
             </ul>
 
-            <p class="mb-2"><strong>Example organism.json:</strong></p>
+            <p class="mb-2"><strong>Example organism.json</strong> — the normal case, all four required fields:</p>
             <pre class="bg-light p-3 rounded code-example">{
   "genus": "Lasiurus",
   "species": "cinereus",
   "common_name": "Hoary bat",
+  "taxon_id": "257879"
+}</pre>
+            <small class="text-muted d-block mb-3">
+              That is genuinely all you need. MOOP writes the description and finds an image itself
+              (see above), and the loader adds <code>feature_types</code> and
+              <code>subclassification</code> — every organism on this deployment has those two, but
+              you do not type them by hand.
+            </small>
+
+            <p class="mb-2">
+              <a class="text-decoration-none" data-bs-toggle="collapse" href="#organismJsonOverride" role="button">
+                <i class="fa fa-chevron-down small"></i> <strong>Overriding the automatic image or description</strong>
+              </a>
+            </p>
+            <div class="collapse" id="organismJsonOverride">
+              <p class="small text-muted mb-2">
+                Add <code>images</code> or <code>html_p</code> <em>only</em> when the automatic choice is
+                wrong for this organism. Supplying either one switches that piece off — MOOP will not
+                merge its own content with yours.
+              </p>
+              <pre class="bg-light p-3 rounded code-example">{
+  "genus": "Lasiurus",
+  "species": "cinereus",
+  "common_name": "Hoary bat",
   "taxon_id": "257879",
+
   "images": [
     {
       "file": "Lasiurus_cinereus.jpg",
@@ -230,7 +257,9 @@
     }
   ]
 }</pre>
-            <small class="text-muted"><strong>Note:</strong> Images should be placed in <code>/moop/images/</code>. Complete and review this metadata in <strong>Step 3</strong>.</small>
+              <small class="text-muted"><strong>Note:</strong> Images you supply go in <code>/moop/images/</code>.</small>
+            </div>
+            <small class="text-muted d-block mt-2">Complete and review this metadata in <strong>Step 3</strong>.</small>
           </div>
         </div>
 
