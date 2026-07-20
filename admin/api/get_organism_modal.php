@@ -622,11 +622,13 @@ function render_metadata_modal($organism, $data, $organism_data) {
 
         <h5 class="mb-3"><i class="fa fa-image"></i> Images</h5>
         <p class="small text-muted mb-3">
-          If no images are provided here, the image from
-          <a href="https://www.ncbi.nlm.nih.gov/datasets/taxonomy/<?= htmlspecialchars($data['info']['taxon_id'] ?? '') ?>/" target="_blank">
-            NCBI Taxonomy (ID: <?= htmlspecialchars($data['info']['taxon_id'] ?? '[taxon_id]') ?>)
-          </a>
-          will be used as the default.
+          <strong>Leave this empty and MOOP finds an image itself</strong> — you only need to fill it in
+          to override that choice. It tries, in order: a cached
+          <a href="https://www.ncbi.nlm.nih.gov/datasets/taxonomy/<?= htmlspecialchars($data['info']['taxon_id'] ?? '') ?>/" target="_blank">NCBI
+          Taxonomy (ID: <?= htmlspecialchars($data['info']['taxon_id'] ?? '[taxon_id]') ?>)</a>
+          image at <code>images/ncbi_taxonomy/<?= htmlspecialchars($data['info']['taxon_id'] ?? '[taxon_id]') ?>.jpg</code>
+          if one is already present, then Wikipedia — downloaded once and cached in
+          <code>images/wikimedia/</code>.
         </p>
         <div id="images-container-<?= $org_safe ?>">
           <?php
@@ -656,6 +658,11 @@ function render_metadata_modal($organism, $data, $organism_data) {
         </button>
 
         <h5 class="mb-3"><i class="fa fa-paragraph"></i> HTML Paragraphs</h5>
+        <p class="small text-muted mb-3">
+          <strong>Leave this empty and MOOP writes the description itself</strong> — a summary built from
+          the organism's taxonomic lineage (via <code>taxon_id</code>) plus the Wikipedia extract, credited
+          with a link back to the article. Add paragraphs here only to replace that text.
+        </p>
         <div id="paragraphs-container-<?= $org_safe ?>">
           <?php
             $paragraphs = $data['info']['html_p'] ?? [['text' => '', 'style' => '', 'class' => '']];
