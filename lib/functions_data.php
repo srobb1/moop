@@ -93,7 +93,7 @@ function getPublicGroupCards($group_data) {
 
     // Find all groups that contain at least one public assembly
     foreach ($group_data as $data) {
-        if (in_array('PUBLIC', $data['groups'])) {
+        if (groups_include_public($data['groups'])) {
             foreach ($data['groups'] as $group) {
                 if (!isset($public_groups[$group])) {
                     $public_groups[$group] = [

@@ -445,7 +445,7 @@ function getTaxonomyTreeUserAccess($group_data) {
         
         // Add public organisms
         foreach ($group_data as $data) {
-            if (in_array('PUBLIC', $data['groups'])) {
+            if (groups_include_public($data['groups'])) {
                 $organism = $data['organism'];
                 if (!isset($taxonomy_user_access[$organism])) {
                     $taxonomy_user_access[$organism] = true;
@@ -455,7 +455,7 @@ function getTaxonomyTreeUserAccess($group_data) {
     } else {
         // Public users: get organisms in PUBLIC group
         foreach ($group_data as $data) {
-            if (in_array('PUBLIC', $data['groups'])) {
+            if (groups_include_public($data['groups'])) {
                 $organism = $data['organism'];
                 if (!isset($taxonomy_user_access[$organism])) {
                     $taxonomy_user_access[$organism] = true;

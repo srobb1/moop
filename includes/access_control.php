@@ -86,8 +86,38 @@ function get_username() {
 }
 
 /**
+ * Does this entry's group list contain the magic PUBLIC group?
+ *
+ * `PUBLIC` is a group NAME with special meaning: its presence in an entry's groups is what
+ * makes an assembly visible to unauthenticated visitors. Group names are free text — Manage
+ * Groups only trim()s them — so an admin creating "Public" or "public" would previously have
+ * produced a group that looked right in the UI and in the JSON but matched none of the
+ * case-sensitive in_array('PUBLIC', ...) checks, silently publishing nothing.
+ *
+ * Defined here rather than in lib/functions_access.php because this file is loaded on every
+ * request and carries no includes of its own. PHP resolves function names at CALL time, so
+ * the lib/ callers below resolve it fine regardless of include order.
+ *
+ * @param  mixed $groups The entry's `groups` value (array; anything else is treated as empty)
+ * @return bool
+ */
+if (!function_exists('groups_include_public')) {
+function groups_include_public($groups) {
+    if (!is_array($groups)) {
+        return false;
+    }
+    foreach ($groups as $g) {
+        if (strtoupper(trim((string)$g)) === 'PUBLIC') {
+            return true;
+        }
+    }
+    return false;
+}
+}
+
+/**
  * Check if an organism belongs to a public group
- * 
+ *
  * @param string $organism_name The organism name
  * @return bool True if organism is in a public group
  */
@@ -108,7 +138,7 @@ function is_public_organism($organism_name) {
     
     foreach ($groups_data as $entry) {
         if ($entry['organism'] === $organism_name) {
-            if (isset($entry['groups']) && in_array('PUBLIC', $entry['groups'])) {
+            if (groups_include_public($entry['groups'] ?? null)) {
                 return true;
             }
         }
@@ -142,7 +172,7 @@ function is_public_assembly($organism_name, $assembly_name) {
     
     foreach ($groups_data as $entry) {
         if ($entry['organism'] === $organism_name && $entry['assembly'] === $assembly_name) {
-            if (isset($entry['groups']) && in_array('PUBLIC', $entry['groups'])) {
+            if (groups_include_public($entry['groups'] ?? null)) {
                 return true;
             }
         }
@@ -179,7 +209,7 @@ function is_public_gene_set($organism_name, $assembly_name, $gene_set) {
         if ($entry['organism'] === $organism_name &&
             $entry['assembly'] === $assembly_name &&
             ($entry['gene_set'] ?? '') === $gene_set) {
-            return isset($entry['groups']) && in_array('PUBLIC', $entry['groups']);
+            return groups_include_public($entry['groups'] ?? null);
         }
     }
 
@@ -209,7 +239,7 @@ function is_public_group($group_name) {
     }
     
     foreach ($groups_data as $entry) {
-        if (in_array($group_name, $entry['groups']) && in_array('PUBLIC', $entry['groups'])) {
+        if (in_array($group_name, $entry['groups']) && groups_include_public($entry['groups'])) {
             return true;
         }
     }
