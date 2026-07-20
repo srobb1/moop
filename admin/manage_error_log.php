@@ -16,13 +16,18 @@ include_once __DIR__ . '/../includes/layout.php';
 $siteTitle = $config->getString('siteTitle');
 $site = $config->getString('site');
 
-// Handle clear log action
+// Handle clear log action.
+//
+// This truncates the error log, so it must be a POST — admin_init.php runs csrf_protect() on
+// every POST, and only on POST. It used to be a GET link (?action=clear&confirm=1), which meant
+// any page that could make an admin's browser issue that request (an <img src>, a link they
+// were tricked into) wiped the log with no token check; the onclick confirm() is client-side
+// only and a forged request never runs it. See the audit note in error_log.php.
 $cleared = false;
-if (isset($_GET['action']) && $_GET['action'] === 'clear' && isset($_GET['confirm']) && $_GET['confirm'] === '1') {
-    if (clearErrorLog()) {
-        $cleared = true;
-    }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'clear') {
+    $cleared = clearErrorLog();
 }
+// getErrorLog() runs just below, so a successful clear is reflected without a re-read here.
 
 // Get all errors from log
 $all_errors = getErrorLog(500); // Get more for filtering

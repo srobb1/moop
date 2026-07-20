@@ -31,7 +31,14 @@
     <div class="row">
         <div class="col-md-12">
             <h1><i class="fas fa-exclamation-triangle"></i> Error Log Viewer</h1>
-            <p class="text-muted">Last 100 logged errors</p>
+            <p class="text-muted">
+                <?php $shown = count($all_errors); ?>
+                <?= $shown === 0
+                    ? 'No errors logged'
+                    : 'Showing the ' . number_format($shown) . ' most recent logged error' . ($shown === 1 ? '' : 's') ?>
+                <?php /* The controller fetches up to 500 (getErrorLog(500)); this text used to
+                         say a flat "Last 100", which was wrong in both directions. */ ?>
+            </p>
         </div>
     </div>
 
@@ -143,9 +150,18 @@
                 Showing <strong><?= count($errors) ?></strong> of <strong><?= count($all_errors) ?></strong> logged errors
             </p>
             <?php if (!empty($errors)): ?>
-                <a href="?action=clear&confirm=1" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to clear the entire error log?');">
-                    <i class="fas fa-trash"></i> Clear Log
-                </a>
+                <!-- POST, not a GET link: clearing truncates the log, so it goes through
+                     csrf_protect() (POST-only). A GET version was CSRF-able — a forged request
+                     from another page wiped the log, and the confirm() below never ran because
+                     it is client-side only. -->
+                <form method="post" action="manage_error_log.php" style="display:inline;"
+                      onsubmit="return confirm('Are you sure you want to clear the entire error log?');">
+                    <?= csrf_input_field() ?>
+                    <input type="hidden" name="action" value="clear">
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash"></i> Clear Log
+                    </button>
+                </form>
             <?php endif; ?>
         </div>
     </div>
