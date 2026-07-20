@@ -3,14 +3,17 @@
  * REGISTRY TEMPLATE
  * 
  * Shared template for registry display pages for consistency and DRY principle.
- * 
- * Used by:
- * - tools/registry.php (PHP Function Registry)
- * - tools/js_registry.php (JavaScript Registry)
- * 
+ *
+ * Used by (verified 2026-07-20 — these are the only two includers in the tree):
+ * - admin/manage_registry.php    (PHP Function Registry)
+ * - admin/manage_js_registry.php (JavaScript Registry)
+ *
+ * This docblock previously named `tools/registry.php` and `tools/js_registry.php`.
+ * Neither file exists; the registries are admin pages and live beside this template.
+ *
  * How It Works:
  * ─────────────
- * 1. Child page (e.g., tools/registry.php) includes this file
+ * 1. Child page (e.g., admin/manage_registry.php) includes this file
  * 2. Child page sets up the context/data specific to that registry
  * 3. Child page defines $display_config with:
  *    - title: Page title
@@ -31,9 +34,9 @@
  * 
  * Example Usage:
  * ───────────────
- * In tools/registry.php:
- *   include_once __DIR__ . '/tool_init.php';
- *   
+ * In admin/manage_registry.php:
+ *   include_once __DIR__ . '/admin_init.php';
+ *
  *   $display_config = [
  *       'title' => 'PHP Function Registry',
  *       'content_file' => __DIR__ . '/pages/registry.php',
