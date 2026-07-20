@@ -1,7 +1,8 @@
 # Error Log Viewer — Improvements Plan
 
-Status: **not started** (2026-07-10). Based on a live admin review of
-`admin/manage_error_log.php` + `admin/pages/error_log.php` + `lib/functions_errorlog.php`.
+Status: **item 9 DONE (2026-07-20, commit ddc293d); items 1–8 not started.** Based on a live
+admin review of `admin/manage_error_log.php` + `admin/pages/error_log.php` +
+`lib/functions_errorlog.php`.
 
 ## Why (assessment)
 
@@ -62,9 +63,12 @@ very top, above everything, regardless of recency or severity.**
       problems without visiting: "N errors (M critical)", with **permission problems called out
       first**. Ties into the pending dashboard-bubbling request (organism checklist + filesystem
       perms → data-health card).
-- [ ] **9. Quick polish fixes (do first):**
-  - [ ] header "Last 100 logged errors" → reflect the real count/limit.
-  - [ ] Clear Log → POST form with `csrf_input_field()` instead of a GET link.
+- [x] **9. Quick polish fixes (do first): DONE 2026-07-20 (ddc293d).**
+  - [x] header "Last 100 logged errors" → now reflects the real count ("Showing the N most
+        recent logged errors", "No errors logged" when empty).
+  - [x] Clear Log → POST form with `csrf_input_field()`; controller clears only on POST with
+        `action=clear`. The CSRF-able GET was verified fixed live (old GET no-ops, tokenless
+        POST 403s, valid POST clears).
 
 ## Suggested order
 
