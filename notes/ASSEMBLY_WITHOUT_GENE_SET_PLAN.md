@@ -1,7 +1,14 @@
 # Assemblies with no gene set — design a real path instead of inventing `v1`
 
-Status: **note only, nothing implemented.** Raised by the user 2026-07-20 during the
-manage_groups audit: *"we should make a new path when an organism does not have a gene set."*
+Status: **note only, nothing implemented. Deliberately deferred — do not start this without
+the user.** Raised by the user 2026-07-20 during the manage_groups audit: *"we should make a
+new path when an organism does not have a gene set."*
+
+**The user's framing, which is the point of the whole note:** the site now *requires* a
+gene-set level of organization, so **inventing a fake gene set is probably not good**. That is
+the argument against the current behaviour and against option (C) below — if gene-set level
+organization is load-bearing, then a fabricated gene set is not a harmless placeholder, it is a
+fake row in the layer everything else keys off. The user wants to go over this properly later.
 
 Related: `project_admin_page_audit` memory (THE METHOD), `plan_gene_set_pages`,
 `project_gene_set_refactor` (the gene_set layer this all sits on).
@@ -113,6 +120,12 @@ order.
 **Leaning (B) for the three invention sites regardless of the wider decision**, since it is
 contained and stops the UI offering the admin a broken action. (A) is the fuller answer for the
 read-side defaults and can follow.
+
+But note the user's framing points at a question upstream of A/B/C: **if gene-set level
+organization is now required, is an assembly with no gene set a valid state to display and
+operate on at all, or is it an incomplete-setup state that only the Organism Checklist should
+surface?** Answer that first — it decides whether (A) is even wanted, or whether (B) plus a
+clear "needs a gene set" pointer is the whole answer. Do not pick from A/B/C in isolation.
 
 ## Before implementing
 
