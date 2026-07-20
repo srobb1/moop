@@ -351,15 +351,22 @@ $data = [
     'messageType' => $messageType,
     'config' => $config,
     'config_file' => $config_file,
+    // jQuery UI is vendored locally, like every other third-party library (js/vendor/).
+    // It used to load from code.jquery.com, which was the only CDN dependency left in the
+    // served app: a request the browser may not be able to make on an internal network, with
+    // no SRI, and one the Content-Security-Policy already reports as a violation
+    // (script-src 'self' does not include code.jquery.com) — so enforcing the CSP would have
+    // silently killed this page's reordering UI. The stylesheet is not vendored because the
+    // page uses no `ui-` classes; its single live rule now lives in css/manage-annotations.css.
     'page_styles' => [
-        'https://code.jquery.com/ui/1.14.0/themes/base/jquery-ui.css'
+        '/' . $site . '/css/manage-annotations.css'
     ],
     'inline_scripts' => [
         "window.allSections = " . json_encode($annotation_config['analysis_order']) . ";",
         "window.originalOrder = [...window.allSections];"
     ],
     'page_script' => [
-        'https://code.jquery.com/ui/1.14.0/jquery-ui.min.js',
+        '/' . $site . '/js/vendor/jquery-ui.min.js',
         '/' . $site . '/js/admin-utilities.js',
         '/' . $site . '/js/modules/manage-annotations.js'
     ],

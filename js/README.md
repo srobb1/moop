@@ -10,7 +10,7 @@ This directory contains all client-side JavaScript for MOOP. The organization st
 |-----------|---------|------------|
 | **Root** (`*.js`) | Page-specific scripts | Loaded inline in controllers for specific pages |
 | **modules/** | Shared feature modules | Included when multiple pages need same functionality |
-| **CDN URLs** | Third-party libraries | Loaded from external CDN in `head-resources.php` |
+| **vendor/** | Third-party libraries | Self-hosted (never CDN); loaded in `layout.php` or a page's `page_script` |
 
 ---
 
@@ -141,38 +141,43 @@ function initializePage() {
 - Utility functions shared across tools
 - Reusable UI widgets
 
-### Method 3: CDN URLs (External libraries)
+### Method 3: `js/vendor/` (Third-party libraries — self-hosted, NOT CDN)
 
-**When to use:** Third-party libraries (Bootstrap, jQuery, jszip, etc.)
+**When to use:** Third-party libraries (jQuery, Bootstrap, DataTables, jszip, jQuery UI…)
 
-**Location:** `/includes/head-resources.php` or `/includes/page-setup.php`
+**Location:** `js/vendor/`, loaded by `includes/layout.php`.
+
+> **Corrected 2026-07-20.** This section used to say third-party libraries were loaded from a
+> CDN via `head-resources.php` or `page-setup.php`. That was wrong on every count: every
+> library is vendored under `js/vendor/`, they are loaded from `layout.php`, and
+> `page-setup.php` was deleted. The last real CDN dependency in the served app —
+> jQuery UI on Manage Annotations — was vendored the same day.
 
 ```php
-<head>
-    <!-- Bootstrap CSS from CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- jQuery from CDN -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    
-    <!-- jszip for Excel export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-</head>
+// includes/layout.php — loaded on every page
+<script src="/<?= $site ?>/js/vendor/jquery.min.js"></script>
+<script src="/<?= $site ?>/js/vendor/bootstrap.bundle.min.js"></script>
+
+// A library only ONE page needs goes in that page's page_script instead:
+'page_script' => [
+    '/' . $site . '/js/vendor/jquery-ui.min.js',
+    '/' . $site . '/js/modules/manage-annotations.js',
+],
 ```
 
-**Why use CDN:**
-- ✅ No local files to maintain
-- ✅ Browser caching across many websites
-- ✅ CDN fast globally distributed
-- ✅ Automatic updates from provider
-- ✅ Saves disk space
-- ✅ Industry standard for libraries
+**Why self-hosted rather than CDN — these are the deployment's actual constraints:**
+- ✅ **The browser may have no internet.** MOOP runs on an internal network; that the *server*
+  can reach a CDN says nothing about the admin's browser.
+- ✅ **The Content-Security-Policy is `script-src 'self'`.** A CDN script is already a
+  reported violation and would be blocked outright once the CSP is enforced.
+- ✅ **No SRI to maintain.** A CDN `<script>` without `integrity=` trusts a third party with
+  code execution on an authenticated admin page.
+- ✅ Version is pinned by the file on disk and cannot change under you.
 
-**When NOT to use CDN:**
-- ❌ Offline-only environments
-- ❌ Proprietary libraries
-- ❌ Performance-critical custom code
-- ❌ Code that needs frequent updates
+**Adding one:** download it into `js/vendor/`, verify the checksum against upstream, `chmod
+644`, and reference it from `layout.php` (global) or a page's `page_script` (single page).
+If it is only needed for one widget, check whether its stylesheet is needed at all — jQuery
+UI's 35 KB base theme was replaced by the single rule the page actually used.
 
 ---
 
@@ -198,9 +203,9 @@ New JavaScript needed?
 │       └─→ Example: utilities.js
 │
 └─→ Third-party library?
-    └─→ Add to head-resources.php
-    └─→ Load from CDN
-    └─→ Example: Bootstrap, jQuery, jszip
+    └─→ Download into js/vendor/ (self-hosted — never a CDN)
+    └─→ Load from layout.php (all pages) or page_script (one page)
+    └─→ Example: Bootstrap, jQuery, jszip, jQuery UI
 ```
 
 ---

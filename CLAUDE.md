@@ -413,5 +413,14 @@ long-standing entries here had already been fixed, and one contradicted §9 of t
   (This file previously listed both the task and a TODO to add a cron for it.)
 - `getBlastDatabases()` no longer uses `global $sequence_types`.
 - No `.bak`/`.backup` files remain in the tree.
-- SRI hashes — **moot**: there are no CDN `<script>` tags. Bootstrap/jQuery are self-hosted
-  from `/moop/css/` and `/moop/js/`, so there is nothing to hash.
+- SRI hashes — **moot for the served app, but the old claim here was wrong.** This file used to
+  state flatly that there were no CDN `<script>` tags. `admin/manage_annotations.php` was
+  loading jQuery UI (JS **and** CSS) from `code.jquery.com` with no `integrity=`, which is also
+  a `script-src 'self'` CSP violation — so enforcing the CSP would have silently killed that
+  page's reorder UI. Vendored to `js/vendor/jquery-ui.min.js` on 2026-07-20 (checksum verified
+  against upstream); its stylesheet was replaced by the one rule the page actually used
+  (`css/manage-annotations.css`). **Now true:** every third-party library in the served app is
+  self-hosted under `js/vendor/` and `css/`, so there is nothing to hash.
+  One deliberate exception: `setup.php` pulls Bootstrap CSS from jsDelivr. It self-disables
+  (403) once `config/config_editable.json` exists, so it is unreachable on a configured
+  deployment — but on an air-gapped host the installer will render unstyled.

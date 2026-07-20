@@ -235,13 +235,16 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
                 - Add 'page_script' key to the $data array passed to render_display_page()
                 - Value can be a STRING or ARRAY:
                   * String: '/moop/js/my-script.js'
-                  * Array: ['/moop/js/jquery-ui.js', '/moop/js/my-script.js']
-                
+                  * Array: ['/moop/js/vendor/jquery-ui.min.js', '/moop/js/my-script.js']
+
+                Third-party libraries are self-hosted under js/vendor/ — never a CDN.
+                See js/README.md for why (internal network, CSP script-src 'self', SRI).
+
                 Example in admin/manage_annotations.php:
                     $data = [
                         'annotations' => $annotations,
                         'page_script' => [
-                            '/' . $config->getString('site') . '/js/jquery-ui.min.js',
+                            '/' . $config->getString('site') . '/js/vendor/jquery-ui.min.js',
                             '/' . $config->getString('site') . '/js/modules/manage-annotations.js'
                         ],
                     ];

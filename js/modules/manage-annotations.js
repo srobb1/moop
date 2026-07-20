@@ -36,13 +36,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
-  // Make annotation types sortable - auto-save on stop
+  // Make annotation types sortable - auto-save on stop.
+  //
+  // Guarded because .sortable() comes from jQuery UI, not jQuery. If it is ever missing, the
+  // bare call throws a TypeError, and since everything here runs inside one DOMContentLoaded
+  // handler that abort takes the move-up/move-down buttons below down with it — losing the
+  // drag handle AND its keyboard-accessible fallback, with nothing but a console error. Now
+  // drag-to-reorder degrades on its own and the buttons keep working.
   if ($('#sortable-annotation-types').length) {
-      $('#sortable-annotation-types').sortable({
-          handle: '.fa-grip-vertical',
-          items: '.card',
-          stop: function() { saveTypeOrder(); }
-      });
+      if (typeof $.fn.sortable === 'function') {
+          $('#sortable-annotation-types').sortable({
+              handle: '.fa-grip-vertical',
+              items: '.card',
+              stop: function() { saveTypeOrder(); }
+          });
+      } else {
+          console.error('jQuery UI did not load — drag-to-reorder is unavailable. ' +
+                        'Use the move up/down buttons. Expected /js/vendor/jquery-ui.min.js.');
+          $('#sortable-annotation-types').find('.fa-grip-vertical').hide();
+      }
   }
 
   // Move-up / move-down buttons

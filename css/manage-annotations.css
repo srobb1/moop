@@ -1,0 +1,17 @@
+/*
+ * Manage Annotations — page-specific styles
+ *
+ * This page previously pulled the full jQuery UI base theme from
+ * https://code.jquery.com/ui/1.14.0/themes/base/jquery-ui.css — 35 KB, 374 rules, and six
+ * ui-icons_*.png sprites. The page uses NO `ui-` classes anywhere in its markup, so the only
+ * rule of that stylesheet it ever applied is the one reproduced below: jQuery UI's sortable
+ * adds `.ui-sortable-handle` to the drag handle at runtime, and that class needs
+ * `touch-action: none` or dragging is swallowed by touch scrolling on touch devices.
+ *
+ * Copying the one live rule keeps the behaviour, drops an external request the browser may not
+ * be able to make (this is an internal-network deployment), and avoids shipping six sprite
+ * images that nothing renders. jQuery UI's JavaScript IS vendored — js/vendor/jquery-ui.min.js.
+ */
+.ui-sortable-handle {
+    touch-action: none;
+}

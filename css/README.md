@@ -296,13 +296,16 @@ jQuery(document).ready(function() {
 ## JavaScript Load Order (In Body)
 
 ```
-1. jQuery (CDN) - Required by DataTables/legacy code
-2. Bootstrap JS (CDN) - Modals, dropdowns, etc.
-3. DataTables JS & plugins (CDN)
+1. jQuery (js/vendor/) - Required by DataTables/legacy code
+2. Bootstrap JS (js/vendor/) - Modals, dropdowns, etc.
+3. DataTables JS & plugins (js/vendor/)
 4. Inline scripts (config variables)
 5. Page module scripts (shared utilities first)
 6. Page-specific scripts (page functionality last)
 ```
+
+> Corrected 2026-07-20: these were labelled "(CDN)". Every third-party library is self-hosted
+> under `js/vendor/` and loaded by `includes/layout.php` — see `js/README.md` for why.
 
 **Why this order:**
 - jQuery loads first (dependency for others)
