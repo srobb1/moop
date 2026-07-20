@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "generated": "2026-07-16 21:47:32",
+        "generated": "2026-07-20 18:14:32",
         "totalFunctions": 369,
         "totalFiles": 42,
         "duplicates": 0
@@ -107,17 +107,17 @@
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 813,
+                            "line": 818,
                             "context": "refreshOrganismCache(btn, document.getElementById('refreshStatus'), false, btn?.innerHTML);"
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 818,
+                            "line": 823,
                             "context": "refreshOrganismCache(btn, document.getElementById('refreshStatus'), true, btn?.innerHTML);"
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 824,
+                            "line": 829,
                             "context": "refreshOrganismCache(btn, statusEl, false, label, organism);"
                         }
                     ],
@@ -1595,7 +1595,7 @@
                         },
                         {
                             "file": "admin/api/jbrowse_list_tracks.php",
-                            "line": 153,
+                            "line": 157,
                             "context": "'checkbox' => '<input type=\"checkbox\" name=\"trackSelect\" value=\"' . htmlspecialchars($trackId) . '\" data-organism=\"' . htmlspecialchars($organism) . '\" data-assembly=\"' . htmlspecialchars($assembly) . '\" onchange=\"updateBulkButtons()\">',"
                         }
                     ],
@@ -1716,7 +1716,7 @@
                     "usages": [
                         {
                             "file": "admin/api/jbrowse_list_tracks.php",
-                            "line": 162,
+                            "line": 166,
                             "context": "<button class=\"btn btn-outline-primary btn-sm\" onclick=\"viewTrack(\\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($organism, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($assembly, ENT_QUOTES) . '\\')\" title=\"View Details\">"
                         }
                     ],
@@ -1745,7 +1745,7 @@
                     "usages": [
                         {
                             "file": "admin/api/jbrowse_list_tracks.php",
-                            "line": 145,
+                            "line": 149,
                             "context": "? '<button class=\"btn btn-outline-warning btn-sm\" onclick=\"rebuildGff(\\'' . htmlspecialchars($organism, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($assembly, ENT_QUOTES) . '\\', this)\" title=\"Rebuild bgzip + tabix index\"><i class=\"fa fa-wrench\"></i></button>'"
                         }
                     ],
@@ -1773,7 +1773,7 @@
                     "usages": [
                         {
                             "file": "admin/api/jbrowse_list_tracks.php",
-                            "line": 149,
+                            "line": 153,
                             "context": "? '<button class=\"btn btn-outline-info btn-sm\" onclick=\"indexTrackNames(\\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($organism, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($assembly, ENT_QUOTES) . '\\', this)\" title=\"Build text search index (jbrowse text-index)\"><i class=\"fa fa-search-plus\"></i></button>'"
                         }
                     ],
@@ -1868,7 +1868,7 @@
                     "usages": [
                         {
                             "file": "admin/api/jbrowse_list_tracks.php",
-                            "line": 167,
+                            "line": 171,
                             "context": "<button class=\"btn btn-outline-danger btn-sm\" onclick=\"deleteTrack(\\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($organism, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($assembly, ENT_QUOTES) . '\\')\" title=\"Delete\">"
                         }
                     ],
@@ -2508,22 +2508,22 @@
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 893,
+                            "line": 898,
                             "context": "' to <strong>' + escapeHtml(data.group) + '</strong>.</div>';"
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 902,
+                            "line": 907,
                             "context": "escapeHtml(data.error || 'Unknown error') + '</div>';"
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 910,
+                            "line": 915,
                             "context": "'<div class=\"alert alert-danger py-1 px-2 small mb-0\">Request failed: ' + escapeHtml(String(err)) + '</div>';"
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 920,
+                            "line": 925,
                             "context": "'<div class=\"mt-1\"><span class=\"badge bg-secondary\">' + escapeHtml(groupName) + '</span></div>';"
                         },
                         {
@@ -2769,7 +2769,7 @@
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 781,
+                            "line": 719,
                             "context": "<li><code>genome.fa</code> - Reference genome assembly (shared across gene sets)</li>"
                         }
                     ],
@@ -4124,7 +4124,7 @@
                         },
                         {
                             "file": "admin/pages/organism_checklist.php",
-                            "line": 911,
+                            "line": 1050,
                             "context": "const errorText = await response.text();"
                         }
                     ],
@@ -5982,22 +5982,22 @@
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 893,
+                            "line": 898,
                             "context": "' to <strong>' + escapeHtml(data.group) + '</strong>.</div>';"
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 902,
+                            "line": 907,
                             "context": "escapeHtml(data.error || 'Unknown error') + '</div>';"
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 910,
+                            "line": 915,
                             "context": "'<div class=\"alert alert-danger py-1 px-2 small mb-0\">Request failed: ' + escapeHtml(String(err)) + '</div>';"
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 920,
+                            "line": 925,
                             "context": "'<div class=\"mt-1\"><span class=\"badge bg-secondary\">' + escapeHtml(groupName) + '</span></div>';"
                         },
                         {
@@ -6912,7 +6912,7 @@
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 785,
+                            "line": 790,
                             "context": "attachImageUploadHandler(item, organism);"
                         }
                     ],
@@ -7659,23 +7659,18 @@
                         },
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 755,
+                            "line": 761,
                             "context": "function renderAssemblySelector(containerEl, selectedAccess, onUpdate) {"
                         },
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 916,
+                            "line": 922,
                             "context": "if (containerEl) renderAssemblySelector(containerEl, selectedAccess, () => syncSelection(hiddenId, previewId, selectedAccess));"
                         },
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 949,
+                            "line": 955,
                             "context": "if (containerEl) renderAssemblySelector(containerEl, selectedAccess, () => syncSelection(hiddenId, previewId, selectedAccess));"
-                        },
-                        {
-                            "file": "admin/pages/manage_users.php",
-                            "line": 1013,
-                            "context": "renderAssemblySelector(containerEl, acc, onUpdate);"
                         },
                         {
                             "file": "admin/pages/manage_users.php",
@@ -7684,42 +7679,47 @@
                         },
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 1085,
+                            "line": 1025,
                             "context": "renderAssemblySelector(containerEl, acc, onUpdate);"
                         },
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 1097,
+                            "line": 1091,
+                            "context": "renderAssemblySelector(containerEl, acc, onUpdate);"
+                        },
+                        {
+                            "file": "admin/pages/manage_users.php",
+                            "line": 1103,
                             "context": "renderAssemblySelector(containerEl, createSelectedAccess, onUpdate);"
                         },
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 1106,
+                            "line": 1112,
                             "context": "renderAssemblySelector(containerEl, createSelectedAccess, onUpdate);"
                         },
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 1142,
+                            "line": 1148,
                             "context": "renderAssemblySelector(containerEl, editSelectedAccess, onUpdate);"
                         },
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 1192,
+                            "line": 1198,
                             "context": "renderAssemblySelector(containerEl, editSelectedAccess, onUpdate);"
                         },
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 1234,
+                            "line": 1240,
                             "context": "renderAssemblySelector(containerEl, editSelectedAccess, onUpdate);"
                         },
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 1260,
+                            "line": 1266,
                             "context": "renderAssemblySelector(containerEl, editSelectedAccess, onUpdate);"
                         },
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 1296,
+                            "line": 1302,
                             "context": "if (containerEl) renderAssemblySelector(containerEl, createSelectedAccess, () => syncSelection('create-selected-assemblies-hidden', 'create-selected-preview', createSelectedAccess));"
                         }
                     ],
@@ -9362,22 +9362,22 @@
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 893,
+                            "line": 898,
                             "context": "' to <strong>' + escapeHtml(data.group) + '</strong>.</div>';"
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 902,
+                            "line": 907,
                             "context": "escapeHtml(data.error || 'Unknown error') + '</div>';"
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 910,
+                            "line": 915,
                             "context": "'<div class=\"alert alert-danger py-1 px-2 small mb-0\">Request failed: ' + escapeHtml(String(err)) + '</div>';"
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 920,
+                            "line": 925,
                             "context": "'<div class=\"mt-1\"><span class=\"badge bg-secondary\">' + escapeHtml(groupName) + '</span></div>';"
                         },
                         {
@@ -9501,7 +9501,7 @@
                         },
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 438,
+                            "line": 430,
                             "context": "<button class=\"btn btn-warning btn-sm\" onclick=\"fixDatabasePermissions(event, '<?= $org_safe ?>')\">"
                         }
                     ],
@@ -9534,7 +9534,7 @@
                     "usages": [
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 706,
+                            "line": 700,
                             "context": "<button type=\"button\" class=\"btn btn-success\" onclick=\"saveMetadata(event, '<?= $org_safe ?>')\">"
                         }
                     ],
@@ -9565,7 +9565,7 @@
                     "usages": [
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 667,
+                            "line": 656,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-primary mb-4\" onclick=\"addMetadataImage('<?= $org_safe ?>')\">"
                         }
                     ],
@@ -9599,7 +9599,7 @@
                         },
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 650,
+                            "line": 639,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataImage('<?= $org_safe ?>', <?= $idx ?>)\" style=\"float: right;\">Remove</button>"
                         }
                     ],
@@ -9628,7 +9628,7 @@
                     "usages": [
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 700,
+                            "line": 694,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-primary mb-4\" onclick=\"addMetadataParagraph('<?= $org_safe ?>')\">"
                         }
                     ],
@@ -9662,7 +9662,7 @@
                         },
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 678,
+                            "line": 672,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger remove-btn\" onclick=\"removeMetadataParagraph('<?= $org_safe ?>', <?= $idx ?>)\" style=\"float: right;\">Remove</button>"
                         }
                     ],
@@ -9699,7 +9699,7 @@
                         },
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 915,
+                            "line": 912,
                             "context": "<button class=\"btn btn-info btn-sm w-100\" onclick=\"renameAssemblyDirectory(event, '<?= htmlspecialchars($organism) ?>', '<?= htmlspecialchars($safe_asm_id) ?>')\">"
                         }
                     ],
@@ -9737,7 +9737,7 @@
                         },
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 410,
+                            "line": 402,
                             "context": "<button class=\"btn btn-info btn-sm\" onclick=\"renameGeneSetDirectory(event, <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($mismatch['assembly_dir'])) ?>, '<?= $gs_safe_id ?>')\">"
                         }
                     ],
@@ -9775,7 +9775,7 @@
                         },
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 944,
+                            "line": 941,
                             "context": "<button class=\"btn btn-danger btn-sm w-100\" onclick=\"deleteAssemblyDirectory(event, '<?= htmlspecialchars($organism) ?>', '<?= htmlspecialchars($safe_asm_id) ?>')\">"
                         }
                     ],
@@ -9806,7 +9806,7 @@
                     "usages": [
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 1147,
+                            "line": 1098,
                             "context": "<button type=\"button\" class=\"btn btn-danger\" onclick=\"deleteCurrentAssemblyDirectory(event, '<?= htmlspecialchars($organism) ?>', '<?= htmlspecialchars($safe_asm_id) ?>')\">"
                         }
                     ],
@@ -9836,12 +9836,12 @@
                     "usages": [
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 611,
+                            "line": 598,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-outline-primary mt-2\" onclick=\"addFeatureTag('<?= $org_safe ?>', 'parent')\">"
                         },
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 628,
+                            "line": 615,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-outline-info mt-2\" onclick=\"addFeatureTag('<?= $org_safe ?>', 'child')\">"
                         }
                     ],
@@ -9870,12 +9870,12 @@
                         },
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 606,
+                            "line": 593,
                             "context": "<?= htmlspecialchars($feature) ?> <i class=\"fa fa-times\" style=\"cursor: pointer;\" onclick=\"removeFeatureTag(this, '<?= $org_safe ?>')\"></i>"
                         },
                         {
                             "file": "admin/api/get_organism_modal.php",
-                            "line": 623,
+                            "line": 610,
                             "context": "<?= htmlspecialchars($feature) ?> <i class=\"fa fa-times\" style=\"cursor: pointer;\" onclick=\"removeFeatureTag(this, '<?= $org_safe ?>')\"></i>"
                         }
                     ],
@@ -9903,7 +9903,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 465,
+                            "line": 463,
                             "context": "<button class=\"btn btn-sm btn-outline-secondary\" type=\"button\" onclick=\"togglePath(this, '<?= htmlspecialchars($data['path']) ?>', '<?= htmlspecialchars($organism) ?>')\">"
                         }
                     ],
@@ -9949,7 +9949,7 @@
                         },
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 785,
+                            "line": 790,
                             "context": "attachImageUploadHandler(item, organism);"
                         }
                     ],
@@ -9962,13 +9962,12 @@
                     "name": "openOrganismModal",
                     "line": 743,
                     "comment": "",
-                    "code": "{\n    const modalEl = document.getElementById('dynamicModal');\n    if (!modalEl) return;\n\n    // Show loading state immediately\n    modalEl.innerHTML = `\n        <div class=\"modal-dialog modal-lg\">\n            <div class=\"modal-content\">\n                <div class=\"modal-body text-center py-5\">\n                    <div class=\"spinner-border text-primary\" role=\"status\">\n                        <span class=\"visually-hidden\">Loading...</span>\n                    </div>\n                    <p class=\"mt-3 mb-0 text-muted\">Loading...</p>\n                </div>\n            </div>\n        </div>`;\n\n    let bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);\n    bsModal.show();\n\n    try {\n        const csrf = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';\n        const resp = await fetch(`${sitePath}/admin/api/get_organism_modal.php`, {\n            method: 'POST',\n            headers: {\n                'Content-Type': 'application/x-www-form-urlencoded',\n                'X-CSRF-Token': csrf\n            },\n            body: new URLSearchParams({ type, organism, assembly: assembly || '' })\n        });\n\n        if (!resp.ok) throw new Error(`Server error ${resp.status}`);\n        modalEl.innerHTML = await resp.text();\n\n        // Re-apply Bootstrap modal behaviour after innerHTML replacement\n        bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);\n\n        // Wire up image upload handlers for the metadata modal\n        if (type === 'metadata') {\n            const container = document.getElementById('images-container-' + organism);\n            if (container) {\n                container.querySelectorAll('.image-item').forEach(item => {\n                    attachImageUploadHandler(item, organism);\n                });\n            }\n        }\n    } catch (err) {\n        modalEl.innerHTML = `\n            <div class=\"modal-dialog\">\n                <div class=\"modal-content\">\n                    <div class=\"m",
+                    "code": "{\n    const modalEl = document.getElementById('dynamicModal');\n    if (!modalEl) return;\n\n    // Show loading state immediately\n    modalEl.innerHTML = `\n        <div class=\"modal-dialog modal-lg\">\n            <div class=\"modal-content\">\n                <div class=\"modal-body text-center py-5\">\n                    <div class=\"spinner-border text-primary\" role=\"status\">\n                        <span class=\"visually-hidden\">Loading...</span>\n                    </div>\n                    <p class=\"mt-3 mb-0 text-muted\">Loading...</p>\n                </div>\n            </div>\n        </div>`;\n\n    let bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);\n    bsModal.show();\n\n    try {\n        const csrf = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';\n        const resp = await fetch(`${sitePath}/admin/api/get_organism_modal.php`, {\n            method: 'POST',\n            headers: {\n                'Content-Type': 'application/x-www-form-urlencoded',\n                'X-CSRF-Token': csrf\n            },\n            body: new URLSearchParams({ type, organism, assembly: assembly || '' })\n        });\n\n        if (!resp.ok) throw new Error(`Server error ${resp.status}`);\n        modalEl.innerHTML = await resp.text();\n\n        // Enable click-to-open info popovers on section headers (the (i) icons that\n        // replaced the old \"Required:\" boxes). Bootstrap's data-api does not auto-init\n        // popovers, so wire them up explicitly after injecting the modal HTML.\n        modalEl.querySelectorAll('[data-bs-toggle=\"popover\"]').forEach(el => new bootstrap.Popover(el));\n\n        // Re-apply Bootstrap modal behaviour after innerHTML replacement\n        bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);\n\n        // Wire up image upload handlers for the metadata modal\n        if (type === 'metadata') {\n            const container = document.getElementById('images-container-' + organism);\n            if (co",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
                     "internalCalls": [
-                        "text",
-                        "attachImageUploadHandler"
+                        "text"
                     ],
                     "category": "admin",
                     "tags": [
@@ -9980,87 +9979,27 @@
                         "loops",
                         "error-handling"
                     ],
-                    "usageCount": 16,
+                    "usageCount": 4,
                     "usages": [
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 591,
-                            "context": "<button class=\"btn btn-sm d-block w-100 text-start mb-1 <?= $badge_class ?> text-white\" onclick=\"openOrganismModal('asm', <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($assembly)) ?>)\">"
+                            "line": 565,
+                            "context": "<button class=\"btn btn-sm d-block w-100 text-start mb-1 border text-dark <?= $badge_class ?>\" onclick=\"openOrganismModal('asm', <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($assembly)) ?>)\">"
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 607,
-                            "context": "<button class=\"btn btn-sm btn-outline-success\" onclick=\"openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
+                            "line": 610,
+                            "context": "<button class=\"btn btn-sm btn-outline-<?= $hstate[0] ?>\" onclick=\"openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)\" title=\"Open the setup checklist\">"
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 611,
-                            "context": "<button class=\"btn btn-sm btn-outline-warning\" onclick=\"openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
+                            "line": 621,
+                            "context": "<button class=\"btn btn-sm btn-outline-<?= $db_class ?> px-2 py-0\" onclick=\"openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)\" title=\"Database details &amp; row counts\"><i class=\"fa fa-database\"></i></button>"
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 615,
-                            "context": "<button class=\"btn btn-sm btn-outline-danger\" onclick=\"openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_organisms.php",
-                            "line": 619,
-                            "context": "<button class=\"btn btn-sm btn-outline-danger\" onclick=\"openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_organisms.php",
-                            "line": 624,
-                            "context": "<button class=\"btn btn-sm btn-outline-warning\" onclick=\"openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_organisms.php",
-                            "line": 636,
-                            "context": "<button class=\"btn btn-sm btn-outline-success\" onclick=\"openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_organisms.php",
-                            "line": 640,
-                            "context": "<button class=\"btn btn-sm btn-outline-warning\" onclick=\"openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_organisms.php",
-                            "line": 644,
-                            "context": "<button class=\"btn btn-sm btn-outline-danger\" onclick=\"openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_organisms.php",
-                            "line": 648,
-                            "context": "<button class=\"btn btn-sm btn-outline-danger\" onclick=\"openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_organisms.php",
-                            "line": 652,
-                            "context": "<button class=\"btn btn-sm btn-outline-danger\" onclick=\"openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_organisms.php",
-                            "line": 656,
-                            "context": "<button class=\"btn btn-sm btn-outline-warning\" onclick=\"openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_organisms.php",
-                            "line": 660,
-                            "context": "<button class=\"btn btn-sm btn-outline-warning\" onclick=\"openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_organisms.php",
-                            "line": 674,
-                            "context": "<button class=\"btn btn-sm btn-outline-success\" onclick=\"openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_organisms.php",
-                            "line": 678,
-                            "context": "<button class=\"btn btn-sm btn-outline-warning\" onclick=\"openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
-                        },
-                        {
-                            "file": "admin/pages/manage_organisms.php",
-                            "line": 682,
-                            "context": "<button class=\"btn btn-sm btn-outline-danger\" onclick=\"openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)\">"
+                            "line": 622,
+                            "context": "<button class=\"btn btn-sm btn-outline-<?= $meta_class ?> px-2 py-0\" onclick=\"openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)\" title=\"Metadata &amp; editor\"><i class=\"fa fa-file-alt\"></i></button>"
                         }
                     ],
                     "phpFilesCount": 1,
@@ -10070,7 +10009,7 @@
                 },
                 {
                     "name": "rescanOrganisms",
-                    "line": 810,
+                    "line": 815,
                     "comment": "",
                     "code": "{\n  const btn = clickedBtn || document.getElementById('rescanBtn');\n  refreshOrganismCache(btn, document.getElementById('refreshStatus'), false, btn?.innerHTML);\n}",
                     "parameters": [],
@@ -10090,7 +10029,7 @@
                         {
                             "file": "admin/pages/manage_organisms.php",
                             "line": 318,
-                            "context": "<button id=\"rescanBtn\" class=\"btn btn-sm btn-light\" onclick=\"rescanOrganisms(this)\" title=\"Rescan only organisms whose files changed since last cache\">"
+                            "context": "<button id=\"rescanBtn\" class=\"btn btn-sm btn-primary\" onclick=\"rescanOrganisms(this)\" title=\"Rescan only organisms whose files changed since last cache\">"
                         }
                     ],
                     "phpFilesCount": 1,
@@ -10100,7 +10039,7 @@
                 },
                 {
                     "name": "forceRescanOrganisms",
-                    "line": 815,
+                    "line": 820,
                     "comment": "",
                     "code": "{\n  const btn = document.getElementById('forceRescanBtn');\n  refreshOrganismCache(btn, document.getElementById('refreshStatus'), true, btn?.innerHTML);\n}",
                     "parameters": [],
@@ -10120,7 +10059,7 @@
                         {
                             "file": "admin/pages/manage_organisms.php",
                             "line": 321,
-                            "context": "<button id=\"forceRescanBtn\" class=\"btn btn-sm btn-outline-light\" onclick=\"forceRescanOrganisms()\" title=\"Rescan all organisms regardless of cache state \u2014 use when the cache seems wrong\">"
+                            "context": "<button id=\"forceRescanBtn\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"forceRescanOrganisms()\" title=\"Rescan all organisms regardless of cache state \u2014 use when the cache seems wrong\">"
                         }
                     ],
                     "phpFilesCount": 1,
@@ -10130,7 +10069,7 @@
                 },
                 {
                     "name": "rescanSingleOrganism",
-                    "line": 820,
+                    "line": 825,
                     "comment": "",
                     "code": "{\n  const statusEl = document.getElementById('refreshStatus');\n  const label = btn ? btn.innerHTML : '<i class=\"fa fa-sync-alt\"></i>';\n  refreshOrganismCache(btn, statusEl, false, label, organism);\n}",
                     "parameters": [],
@@ -10149,7 +10088,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 469,
+                            "line": 467,
                             "context": "onclick=\"rescanSingleOrganism(this, <?= htmlspecialchars(json_encode($organism)) ?>)\""
                         }
                     ],
@@ -10160,7 +10099,7 @@
                 },
                 {
                     "name": "openQuickAddGroupModal",
-                    "line": 831,
+                    "line": 836,
                     "comment": "",
                     "code": "{\n  _quickAddOrganism = organism;\n  _quickAddCellId   = cellId;\n\n  document.getElementById('quickAddOrgName').textContent = organism;\n  document.getElementById('quickAddGroupName').value = '';\n\n  const resultDiv = document.getElementById('quickAddResult');\n  resultDiv.style.display = 'none';\n  resultDiv.innerHTML = '';\n\n  const btn = document.getElementById('quickAddSubmitBtn');\n  btn.disabled = false;\n  btn.innerHTML = '<i class=\"fa fa-plus\"></i> Add Group';\n\n  // Populate datalist with existing groups\n  const dl = document.getElementById('quickAddGroupList');\n  dl.innerHTML = '';\n  (window.existingGroups || []).forEach(g => {\n    const opt = document.createElement('option');\n    opt.value = g;\n    dl.appendChild(opt);\n  });\n\n  new bootstrap.Modal(document.getElementById('quickAddGroupModal')).show();\n  setTimeout(() => document.getElementById('quickAddGroupName').focus(), 300);\n}",
                     "parameters": [],
@@ -10180,7 +10119,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 520,
+                            "line": 487,
                             "context": "onclick=\"openQuickAddGroupModal(<?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($safe_groups_id)) ?>)\">"
                         }
                     ],
@@ -10191,7 +10130,7 @@
                 },
                 {
                     "name": "submitQuickAddGroup",
-                    "line": 859,
+                    "line": 864,
                     "comment": "",
                     "code": "{\n  const groupName = document.getElementById('quickAddGroupName').value.trim();\n  const resultDiv = document.getElementById('quickAddResult');\n  const btn       = document.getElementById('quickAddSubmitBtn');\n\n  if (!groupName) {\n    resultDiv.innerHTML = '<div class=\"alert alert-warning py-1 px-2 small mb-0\">Enter a group name.</div>';\n    resultDiv.style.display = '';\n    return;\n  }\n\n  btn.disabled = true;\n  btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Adding\u2026';\n\n  const tok = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';\n\n  fetch(sitePath + '/admin/api/quick_add_group.php', {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/x-www-form-urlencoded',\n      'X-CSRF-Token': tok\n    },\n    body: 'organism=' + encodeURIComponent(_quickAddOrganism) +\n          '&group_name=' + encodeURIComponent(groupName)\n  })\n  .then(r => r.json())\n  .then(data => {\n    btn.disabled = false;\n    btn.innerHTML = '<i class=\"fa fa-plus\"></i> Add Group';\n    if (data.success) {\n      resultDiv.innerHTML =\n        '<div class=\"alert alert-success py-1 px-2 small mb-0\"><i class=\"fa fa-check\"></i> ' +\n        'Added ' + data.added + ' entr' + (data.added === 1 ? 'y' : 'ies') +\n        ' to <strong>' + escapeHtml(data.group) + '</strong>.</div>';\n      resultDiv.style.display = '';\n      _updateGroupsCell(_quickAddCellId, _quickAddOrganism, data.group);\n      setTimeout(() => {\n        bootstrap.Modal.getInstance(document.getElementById('quickAddGroupModal'))?.hide();\n      }, 1400);\n    } else {\n      resultDiv.innerHTML =\n        '<div class=\"alert alert-danger py-1 px-2 small mb-0\"><i class=\"fa fa-times\"></i> ' +\n        escapeHtml(data.error || 'Unknown error') + '</div>';\n      resultDiv.style.display = '';\n    }\n  })\n  .catch(err => {\n    btn.disabled = false;\n    btn.innerHTML = '<i class=\"fa fa-plus\"></i> Add Group';\n    resultDiv.innerHTML =\n      '<div class=\"alert alert-danger py-1 px-2 small mb-0\">Request failed: ' + escapeHtml",
                     "parameters": [],
@@ -10214,12 +10153,12 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 739,
+                            "line": 677,
                             "context": "onkeydown=\"if(event.key==='Enter') submitQuickAddGroup()\">"
                         },
                         {
                             "file": "admin/pages/manage_organisms.php",
-                            "line": 745,
+                            "line": 683,
                             "context": "<button type=\"button\" class=\"btn btn-primary btn-sm\" id=\"quickAddSubmitBtn\" onclick=\"submitQuickAddGroup()\">"
                         }
                     ],
@@ -10230,7 +10169,7 @@
                 },
                 {
                     "name": "_updateGroupsCell",
-                    "line": 914,
+                    "line": 919,
                     "comment": "",
                     "code": "{\n  const cell = document.getElementById(cellId);\n  if (cell) {\n    cell.innerHTML =\n      '<span class=\"btn btn-sm btn-outline-success disabled\"><i class=\"fa fa-check-circle\"></i> OK</span>' +\n      '<div class=\"mt-1\"><span class=\"badge bg-secondary\">' + escapeHtml(groupName) + '</span></div>';\n  }\n  // Remove 'groups' from data-issues on the row so the filter updates\n  const table = document.getElementById('organismsTable');\n  if (!table) return;\n  table.querySelectorAll('tbody tr').forEach(row => {\n    const issues = (row.dataset.issues || '').split(' ').filter(i => i !== 'groups');\n    // Match on organism name in data or by scanning the first cell link\n    const link = row.querySelector('td:first-child a');\n    if (link && link.textContent.trim().startsWith(organism)) {\n      row.dataset.issues = issues.join(' ');\n      const noIssues = issues.every(i => i === '');\n      if (noIssues) row.dataset.status = 'complete';\n    }\n  });\n}",
                     "parameters": [],
@@ -10251,7 +10190,7 @@
                     "usages": [
                         {
                             "file": "js/modules/organism-management.js",
-                            "line": 895,
+                            "line": 900,
                             "context": "_updateGroupsCell(_quickAddCellId, _quickAddOrganism, data.group);"
                         }
                     ],
@@ -10262,7 +10201,7 @@
                 },
                 {
                     "name": "issues",
-                    "line": 926,
+                    "line": 931,
                     "comment": "",
                     "code": "{\n      row.dataset.issues = issues.join(' ');\n      const noIssues = issues.every(i => i === '');\n      if (noIssues) row.dataset.status = 'complete';\n    }",
                     "parameters": [],
@@ -12238,7 +12177,7 @@
                         },
                         {
                             "file": "admin/pages/manage_users.php",
-                            "line": 1218,
+                            "line": 1224,
                             "context": "if (!Object.prototype.hasOwnProperty.call(allOrganisms[org] || {}, asm)) staleList.push({ org, asm });"
                         }
                     ],
@@ -12404,7 +12343,7 @@
                         },
                         {
                             "file": "admin/pages/organism_checklist.php",
-                            "line": 911,
+                            "line": 1050,
                             "context": "const errorText = await response.text();"
                         }
                     ],
@@ -15419,7 +15358,7 @@
         {
             "name": "issues",
             "file": "js/modules/organism-management.js",
-            "line": 926
+            "line": 931
         },
         {
             "name": "filterActive",
