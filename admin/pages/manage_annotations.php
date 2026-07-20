@@ -120,17 +120,21 @@
                   <span class="badge text-white bg-<?= ($type_config['color'] ?? 'secondary') ?>" style="margin-left: 8px;">
                     <?= htmlspecialchars($type_name) ?>
                   </span>
-                  <span class="badge bg-<?= ($type_config['in_database'] ?? false) ? 'success' : 'warning' ?>" style="margin-left: 4px;">
-                    <?= ($type_config['in_database'] ?? false) ? 'In Use' : 'Not In Use' ?>
+                  <?php $in_db = $type_config['in_database'] ?? false; ?>
+                  <span class="badge bg-<?= $in_db ? 'success' : 'secondary' ?>" style="margin-left: 4px;"
+                        title="<?= $in_db
+                            ? 'At least one loaded database currently contains this annotation type.'
+                            : 'No loaded database contains this type yet. This is normal for a section you have configured ahead of the data (e.g. Mapping, Aliases, Publications) — not an error.' ?>">
+                    <?= $in_db ? 'In database' : 'Awaiting data' ?>
                   </span>
                 </h6>
                 <div style="font-size: 0.85rem;">
                   <small class="text-muted">
-                    DB Type: 
-                    <?php if ($type_config['in_database'] ?? false): ?>
+                    DB Type:
+                    <?php if ($in_db): ?>
                       <code><?= htmlspecialchars($type_name) ?></code>
                     <?php else: ?>
-                      <span class="text-danger"><strong>Not in DB</strong></span>
+                      <span class="text-muted"><em>not present in any loaded database yet</em></span>
                     <?php endif; ?>
                   </small>
                 </div>
