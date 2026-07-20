@@ -125,10 +125,19 @@ organisms_missing_data/
 /moop/
 smallscreen.png
 
-# Self-hosted vendor assets (downloaded, not committed)
-js/vendor/
-css/fontawesome/
-css/bootstrap.min.css
-css/datatables/dataTables.bootstrap5.min.css
-css/datatables/buttons.bootstrap5.min.css
-css/datatables/colReorder.dataTables.min.css
+# Self-hosted vendor assets are COMMITTED, deliberately — see js/README.md.
+#
+# They used to be ignored ("downloaded, not committed") with nothing to download them, so a
+# fresh clone had no jQuery, Bootstrap, DataTables or icons and every page was broken. The
+# rules were also only half-effective: css/bootstrap.min.css and css/datatables/* had been
+# committed BEFORE the rules were added, so git kept tracking them and the tree was already
+# inconsistent.
+#
+# Committing them is the right trade here: ~900 KB against a repo that is already tens of MB,
+# files that never change, no JS build pipeline or package manager to defer to, deployment onto
+# an internal network where the installer may have no route to the internet, and pinned
+# versions old enough (Font Awesome 5.7.0, 2019) that upstream URLs are a real liability.
+# All are MIT / SIL OFL / CC BY, so redistribution is permitted.
+#
+# scripts/fetch_vendor_assets.sh records where each file came from and verifies it; it is for
+# auditing and upgrading, NOT a required deployment step.

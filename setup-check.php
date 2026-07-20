@@ -428,6 +428,57 @@ if (file_exists("$base/vendor/autoload.php")) {
          $composer_cmd);
 }
 
+// ── Section 3b: Front-end vendor assets ─────────────────────────────────────
+//
+// These are committed, so this normally passes. It exists because it did NOT for a long time:
+// js/vendor/ and css/fontawesome/ were gitignored with nothing to fetch them, so a fresh clone
+// had no jQuery, Bootstrap, DataTables or icons — every page broken — and this script happily
+// reported all-clear, because the check above only covers Composer's PHP packages. A missing
+// file here is invisible server-side: PHP runs fine and the page 200s, it just cannot work in
+// a browser.
+
+section("Front-end Vendor Assets");
+
+$vendor_assets = [
+    'js/vendor/jquery.min.js',
+    'js/vendor/jquery-ui.min.js',
+    'js/vendor/bootstrap.bundle.min.js',
+    'js/vendor/jquery.dataTables.min.js',
+    'js/vendor/dataTables.bootstrap5.min.js',
+    'js/vendor/dataTables.buttons.min.js',
+    'js/vendor/buttons.bootstrap5.min.js',
+    'js/vendor/buttons.html5.min.js',
+    'js/vendor/buttons.print.min.js',
+    'js/vendor/buttons.colVis.min.js',
+    'js/vendor/dataTables.colReorder.min.js',
+    'js/vendor/jszip.min.js',
+    'css/bootstrap.min.css',
+    'css/datatables/dataTables.bootstrap5.min.css',
+    'css/datatables/buttons.bootstrap5.min.css',
+    'css/datatables/colReorder.dataTables.min.css',
+    'css/fontawesome/all.css',
+    'css/fontawesome/webfonts/fa-solid-900.woff2',
+    'css/fontawesome/webfonts/fa-regular-400.woff2',
+    'css/fontawesome/webfonts/fa-brands-400.woff2',
+];
+
+$missing_assets = [];
+foreach ($vendor_assets as $rel) {
+    if (!file_exists("$base/$rel") || filesize("$base/$rel") === 0) {
+        $missing_assets[] = $rel;
+    }
+}
+
+if (empty($missing_assets)) {
+    pass(count($vendor_assets) . " front-end vendor assets present");
+} else {
+    fail(count($missing_assets) . " front-end vendor asset(s) missing or empty — "
+         . "pages will render but jQuery/Bootstrap/DataTables/icons will not load: "
+         . implode(', ', array_slice($missing_assets, 0, 4))
+         . (count($missing_assets) > 4 ? ' …' : ''),
+         'scripts/fetch_vendor_assets.sh');
+}
+
 // ── Section 4: Configuration Files ──────────────────────────────────────────
 
 section("Configuration Files");
