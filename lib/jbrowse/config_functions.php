@@ -6,6 +6,10 @@
  * Used by config.php and other config endpoints.
  */
 
+// Access-level ladder + case-insensitive normalisation used by loadFilteredTracks().
+// Required explicitly rather than relying on the caller having loaded it first.
+require_once __DIR__ . '/../functions_access.php';
+
 /**
  * Parse assembly name into organism and assembly components
  * 
@@ -82,31 +86,26 @@ function loadSyntenyTracks($assembly1, $assembly2, $user_access_level)
     
     $filtered_tracks = [];
 
-    $access_hierarchy = [
-        'ADMIN' => 4,
-        'IP_IN_RANGE' => 3,
-        'COLLABORATOR' => 2,
-        'PUBLIC' => 1
-    ];
-    
-    $user_level_value = $access_hierarchy[$user_access_level] ?? 0;
-    
+    // Levels are compared case-insensitively — track JSONs store 'Public', the ladder is
+    // keyed 'PUBLIC'. See required_/granted_access_level_value() in lib/functions_access.php.
+    $user_level_value = granted_access_level_value($user_access_level);
+
     foreach ($track_files as $track_file) {
         $track_def = loadJsonFile($track_file, []);
 
         if (!$track_def) continue;
-        
+
         // Get track access level
         $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
-        $track_level_value = $access_hierarchy[$track_access_level] ?? 1;
-        
+        $track_level_value = required_access_level_value($track_access_level);
+
         // Check if user has access
         if ($user_level_value < $track_level_value) {
             continue;
         }
-        
+
         // COLLABORATOR check: Must have access to at least one of the assemblies
-        if ($user_access_level === 'COLLABORATOR' && $track_level_value >= 2) {
+        if (normalize_access_level($user_access_level) === 'COLLABORATOR' && $track_level_value >= 2) {
             $user_access = $_SESSION['access'] ?? [];
             
             // Parse assembly names

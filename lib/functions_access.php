@@ -16,6 +16,70 @@ require_once __DIR__ . '/functions_filesystem.php';
  * @return array - [genome_id, genome_name, genome_accession] or [null, null, $assembly] on error
  */
 /**
+ * Canonical access-level name, upper-cased — "Public" and "PUBLIC" are the same level.
+ *
+ * Track JSONs disagree about case: 11 of the 12 TrackTypes default to the literal
+ * 'Public', while the access hierarchy everywhere is keyed 'PUBLIC'. On the live tree
+ * that is 1124 'Public' vs 76 'PUBLIC' vs 43 'COLLABORATOR'. Nothing normalised, so
+ * every hierarchy lookup on a 'Public' track MISSED and fell through to the numeric
+ * default — which happened to be 1 (= PUBLIC), i.e. it was right by coincidence, not
+ * by design. The Google Sheet ACCESS column is free text (trim() only), so a curator
+ * typing 'Collaborator' would have produced the same miss and published a restricted
+ * track to anonymous users.
+ *
+ * @param  string|null $level Raw access level as stored/entered
+ * @return string             Upper-cased level, or '' when absent
+ */
+function normalize_access_level($level) {
+    return strtoupper(trim((string)($level ?? '')));
+}
+
+/**
+ * The access-level ladder. PUBLIC is the floor, ADMIN the ceiling.
+ *
+ * @return array<string,int>
+ */
+function access_level_hierarchy() {
+    return [
+        'ADMIN'        => 4,
+        'IP_IN_RANGE'  => 3,
+        'COLLABORATOR' => 2,
+        'PUBLIC'       => 1,
+    ];
+}
+
+/**
+ * Rank REQUIRED to see a resource (a track, an assembly).
+ *
+ * Unknown/empty FAILS CLOSED to 4 (ADMIN-only): a typo'd level should become visible to
+ * the one person who can fix it, never to the whole internet.
+ *
+ * Use this for the thing being protected — never for the person asking.
+ *
+ * @param  string|null $level
+ * @return int  unknown => 4
+ */
+function required_access_level_value($level) {
+    return access_level_hierarchy()[normalize_access_level($level)] ?? 4;
+}
+
+/**
+ * Rank GRANTED to a requester (the logged-in user).
+ *
+ * Unknown/empty FAILS CLOSED to 0 — below PUBLIC, so it satisfies nothing. Note this is
+ * the OPPOSITE fallback to required_access_level_value(): "unknown" must mean
+ * least-privilege on both sides, which is a high number for a resource and a low one for
+ * a person. Sharing one fallback between the two would hand an unrecognised user level
+ * full ADMIN rank.
+ *
+ * @param  string|null $level
+ * @return int  unknown => 0
+ */
+function granted_access_level_value($level) {
+    return access_level_hierarchy()[normalize_access_level($level)] ?? 0;
+}
+
+/**
  * Canonical assembly display label — "Name (Accession)".
  *
  * The one place assembly labels are formatted, so the three historical forms

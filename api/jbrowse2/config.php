@@ -274,32 +274,28 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
 
     // Access level hierarchy (higher number = more access)
     // PUBLIC (1) < COLLABORATOR (2) < IP_IN_RANGE (3) < ADMIN (4)
-    $access_hierarchy = [
-        'ADMIN' => 4,
-        'IP_IN_RANGE' => 3,
-        'COLLABORATOR' => 2,
-        'PUBLIC' => 1
-    ];
-    
-    $user_level_value = $access_hierarchy[$user_access_level] ?? 0;
-    
+    // Compared case-insensitively: track JSONs store 'Public' (11 of 12 TrackTypes default
+    // to that literal) while the ladder is keyed 'PUBLIC'. Unknown levels fail CLOSED.
+    // Single source of truth: lib/functions_access.php.
+    $user_level_value = granted_access_level_value($user_access_level);
+
     foreach ($track_files as $track_file) {
         $track_def = loadJsonFile($track_file, []);
 
         if (!$track_def) continue;
-        
+
         // Get track access level from metadata
         $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
-        $track_level_value = $access_hierarchy[$track_access_level] ?? 1;
-        
+        $track_level_value = required_access_level_value($track_access_level);
+
         // PERMISSION CHECK: User must have sufficient access level
         // Example: PUBLIC user (1) cannot see COLLABORATOR tracks (2)
         if ($user_level_value < $track_level_value) {
             continue;
         }
-        
+
         // COLLABORATOR-SPECIFIC CHECK: Must have explicit assembly access
-        if ($user_access_level === 'COLLABORATOR' && $track_level_value >= 2) {
+        if (normalize_access_level($user_access_level) === 'COLLABORATOR' && $track_level_value >= 2) {
             $user_access = $_SESSION['access'] ?? [];
             if (!isset($user_access[$organism][$assembly])) {
                 continue;
@@ -500,16 +496,20 @@ function addTokenToAdapterUrls($adapter, $organism, $assembly, $track_access_lev
  * Check if user can access assembly
  */
 function canUserAccessAssembly($user_level, $assembly_level, $organism, $assembly_id) {
+    // Levels compared case-insensitively (lib/functions_access.php).
+    $user_level     = normalize_access_level($user_level);
+    $assembly_level = normalize_access_level($assembly_level);
+
     // Admin and IP_IN_RANGE see everything
     if ($user_level === 'ADMIN' || $user_level === 'IP_IN_RANGE') {
         return true;
     }
-    
+
     // Public assemblies visible to all
     if ($assembly_level === 'PUBLIC') {
         return true;
     }
-    
+
     // Collaborator needs specific assembly access
     if ($user_level === 'COLLABORATOR') {
         if ($organism && $assembly_id) {

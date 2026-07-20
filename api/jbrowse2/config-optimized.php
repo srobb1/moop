@@ -262,32 +262,26 @@ function getTrackReferences($organism, $assembly, $user_access_level) {
     
     // Access level hierarchy (higher number = more access)
     // PUBLIC (1) < COLLABORATOR (2) < IP_IN_RANGE (3) < ADMIN (4)
-    $access_hierarchy = [
-        'ADMIN' => 4,
-        'IP_IN_RANGE' => 3,
-        'COLLABORATOR' => 2,
-        'PUBLIC' => 1
-    ];
-    
-    $user_level_value = $access_hierarchy[$user_access_level] ?? 0;
+    // Case-insensitive; unknown levels fail CLOSED. See lib/functions_access.php.
+    $user_level_value = granted_access_level_value($user_access_level);
     $track_refs = [];
-    
+
     foreach ($track_files as $track_file) {
         $track_def = loadJsonFile($track_file, []);
-        
+
         if (!$track_def) continue;
-        
+
         // Get track access level
         $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
-        $track_level_value = $access_hierarchy[$track_access_level] ?? 1;
-        
+        $track_level_value = required_access_level_value($track_access_level);
+
         // Check if user has sufficient access
         if ($user_level_value < $track_level_value) {
             continue;
         }
-        
+
         // Special check for COLLABORATOR
-        if ($user_access_level === 'COLLABORATOR' && $track_level_value >= 2) {
+        if (normalize_access_level($user_access_level) === 'COLLABORATOR' && $track_level_value >= 2) {
             $user_access = $_SESSION['access'] ?? [];
             if (!isset($user_access[$organism][$assembly])) {
                 continue;
@@ -427,13 +421,8 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
     // Per-track access must be enforced here too. This endpoint serves tracks one at a
     // time, so it cannot rely on the filtering done in getTrackReferences() — without
     // its own check it would hand out restricted tracks that the config listing hides.
-    $access_hierarchy = [
-        'ADMIN' => 4,
-        'IP_IN_RANGE' => 3,
-        'COLLABORATOR' => 2,
-        'PUBLIC' => 1
-    ];
-    $user_level_value = $access_hierarchy[$user_access_level] ?? 0;
+    // Case-insensitive; unknown levels fail CLOSED. See lib/functions_access.php.
+    $user_level_value = granted_access_level_value($user_access_level);
 
     // Find track file
     $tracks_dir = __DIR__ . "/../../metadata/jbrowse2-configs/tracks";
@@ -444,7 +433,7 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
 
         if ($track_def && $track_def['trackId'] === $track_id) {
             $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
-            $track_level_value  = $access_hierarchy[$track_access_level] ?? 1;
+            $track_level_value  = required_access_level_value($track_access_level);
 
             if ($user_level_value < $track_level_value) {
                 http_response_code(403);
@@ -452,7 +441,7 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
                 exit;
             }
 
-            if ($user_access_level === 'COLLABORATOR' && $track_level_value >= 2) {
+            if (normalize_access_level($user_access_level) === 'COLLABORATOR' && $track_level_value >= 2) {
                 $user_access = $_SESSION['access'] ?? [];
                 if (!isset($user_access[$organism][$assembly])) {
                     http_response_code(403);
@@ -578,14 +567,18 @@ function addTokenToAdapterUrls($adapter, $organism, $assembly, $track_access_lev
 }
 
 function canUserAccessAssembly($user_level, $assembly_level, $organism, $assembly_id) {
+    // Levels compared case-insensitively (lib/functions_access.php).
+    $user_level     = normalize_access_level($user_level);
+    $assembly_level = normalize_access_level($assembly_level);
+
     if ($user_level === 'ADMIN' || $user_level === 'IP_IN_RANGE') {
         return true;
     }
-    
+
     if ($assembly_level === 'PUBLIC') {
         return true;
     }
-    
+
     if ($user_level === 'COLLABORATOR') {
         if ($organism && $assembly_id) {
             $user_access = $_SESSION['access'] ?? [];

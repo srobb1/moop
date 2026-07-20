@@ -46,7 +46,9 @@ if (is_dir($tracks_dir)) {
         if ($filterOrganism && $organism !== $filterOrganism) continue;
         if ($filterAssembly && $assembly !== $filterAssembly) continue;
         if ($filterType && ($track['type'] ?? '') !== $filterType) continue;
-        if ($filterAccess && ($track['metadata']['access_level'] ?? 'PUBLIC') !== $filterAccess) continue;
+        // Access levels compare case-insensitively — track JSONs store both 'Public' and
+        // 'PUBLIC' for the same level, and the filter dropdown offers the normalised name.
+        if ($filterAccess && normalize_access_level($track['metadata']['access_level'] ?? 'PUBLIC') !== normalize_access_level($filterAccess)) continue;
         
         // Apply search
         if ($searchValue) {
@@ -86,8 +88,10 @@ foreach ($paginatedTracks as $item) {
     $trackId = $track['trackId'] ?? '';
     $name = $track['name'] ?? 'Unknown';
     $type = $track['type'] ?? 'Unknown';
-    $access = $track['metadata']['access_level'] ?? 'PUBLIC';
-    
+    // Normalised once, so the badge text, the badge colour lookup and the
+    // public-source warning below all agree regardless of how the level was written.
+    $access = normalize_access_level($track['metadata']['access_level'] ?? 'PUBLIC');
+
     // Determine source and validate
     $source = 'Local';
     $status = '✓';

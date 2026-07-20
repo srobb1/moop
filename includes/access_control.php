@@ -229,7 +229,15 @@ if (!function_exists('has_access')) {
 function has_access($required_level = 'PUBLIC', $resource_name = null) {
     $access_level = get_access_level();
     $user_access = get_user_access();
-    
+
+    // Level names are case-insensitive. $required_level is caller-supplied, and the
+    // IP_IN_RANGE branch below decides on `!== 'ADMIN'` — so a caller writing
+    // has_access('admin') would otherwise hand the whole trusted subnet admin rights.
+    // Normalised inline (not via lib/functions_access.php) to keep this file, which is
+    // loaded on every request, free of includes it does not already have.
+    $required_level = strtoupper(trim((string)$required_level));
+    $access_level   = strtoupper(trim((string)$access_level));
+
     // ADMIN can do everything, including satisfy an ADMIN requirement.
     if ($access_level === 'ADMIN') {
         return true;

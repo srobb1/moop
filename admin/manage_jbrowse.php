@@ -151,11 +151,17 @@ if (is_dir($tracks_dir)) {
     $track_files = glob($tracks_dir . '/*/*/*/*json') ?: [];
     $track_stats['total'] = count($track_files);
 
+    // Bump STATS_CACHE_VERSION whenever the aggregation below changes. The cache key is
+    // otherwise only (mtime, total), neither of which moves when the CODE changes — so a
+    // logic fix would keep serving the old numbers indefinitely. v2 = access levels
+    // normalised to upper case.
+    $stats_cache_version = 2;
     $stats_cache_file = dirname($tracks_dir) . '/track_stats_cache.json';
     $newest_mtime = $track_files ? max(array_map('filemtime', $track_files)) : 0;
     $cached = loadJsonFile($stats_cache_file, null);
 
-    if ($cached && ($cached['mtime'] ?? 0) === $newest_mtime && ($cached['total'] ?? -1) === $track_stats['total']) {
+    if ($cached && ($cached['v'] ?? 1) === $stats_cache_version
+        && ($cached['mtime'] ?? 0) === $newest_mtime && ($cached['total'] ?? -1) === $track_stats['total']) {
         $track_stats = $cached['stats'];
         $track_stats['total'] = count($track_files);
     } else {
@@ -166,7 +172,9 @@ if (is_dir($tracks_dir)) {
             $type = $track['type'] ?? 'Unknown';
             $track_stats['by_type'][$type] = ($track_stats['by_type'][$type] ?? 0) + 1;
 
-            $access = $track['metadata']['access_level'] ?? 'PUBLIC';
+            // Normalised: track JSONs mix 'Public' and 'PUBLIC' for the same level, which
+            // otherwise renders as two separate filter buttons with two separate counts.
+            $access = normalize_access_level($track['metadata']['access_level'] ?? 'PUBLIC');
             $track_stats['by_access'][$access] = ($track_stats['by_access'][$access] ?? 0) + 1;
 
             if (isset($track['adapter']['gffGzLocation']['uri']) ||
@@ -184,7 +192,7 @@ if (is_dir($tracks_dir)) {
                 }
             }
         }
-        file_put_contents($stats_cache_file, json_encode(['mtime' => $newest_mtime, 'total' => $track_stats['total'], 'stats' => $track_stats]));
+        file_put_contents($stats_cache_file, json_encode(['v' => $stats_cache_version, 'mtime' => $newest_mtime, 'total' => $track_stats['total'], 'stats' => $track_stats]));
     }
 }
 
