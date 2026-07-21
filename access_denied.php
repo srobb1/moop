@@ -30,7 +30,8 @@
  * - Display content (tools/pages/access_denied.php does that)
  */
 
-session_start();
+require_once __DIR__ . '/includes/session_init.php';
+moop_session_start();
 include_once __DIR__ . '/includes/config_init.php';
 include_once __DIR__ . '/includes/access_control.php';
 include_once __DIR__ . '/includes/layout.php';

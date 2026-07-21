@@ -7,7 +7,8 @@
  * users are redirected to login and returned to their original JBrowse2 URL afterward.
  */
 
-session_start();
+require_once __DIR__ . '/includes/session_init.php';
+moop_session_start();
 require_once __DIR__ . '/includes/config_init.php';
 require_once __DIR__ . '/includes/access_control.php';
 

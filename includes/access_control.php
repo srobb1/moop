@@ -4,8 +4,9 @@
  * Include this file on every page that needs access control
  */
 
+require_once __DIR__ . '/session_init.php';
 if (!isset($_SESSION)) {
-    session_start();
+    moop_session_start();
 }
 
 include_once __DIR__ . '/config_init.php';

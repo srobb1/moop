@@ -10,7 +10,8 @@
 // Start output buffering FIRST to catch any stray output from includes
 ob_start();
 
-session_start();
+require_once __DIR__ . '/../includes/session_init.php';
+moop_session_start();
 
 // Get parameters
 $organism = trim($_GET['organism'] ?? '');

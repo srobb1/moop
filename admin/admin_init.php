@@ -23,8 +23,9 @@
  */
 
 // Start session if not already started
+require_once __DIR__ . '/../includes/session_init.php';
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+    moop_session_start();
 }
 
 // Load configuration system
