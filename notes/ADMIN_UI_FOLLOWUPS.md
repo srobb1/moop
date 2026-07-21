@@ -162,3 +162,62 @@ tracks card").
 allow exactly one deviation — a danger variant for cards that represent an actual problem. Do the
 sweep in one pass so the pages cannot drift apart again, the same reasoning as the single
 definition for registry sources and sequence file names.
+
+---
+
+## 5. `tools/pages/registry.php` and `tools/pages/js_registry.php` are almost certainly obsolete
+
+Found 2026-07-21 while checking whether the tools pages needed the admin card sweep. These two are
+the ONLY tools pages not following the tools header convention — `js_registry.php` still carries the
+full pre-sweep admin rainbow (`bg-info`, `bg-primary`, `bg-secondary`, `bg-success`, `bg-dark`).
+They never drifted back into line because **nothing renders them**:
+
+| check | result |
+|---|---|
+| `tools/registry.php` controller | does not exist — URL 404s |
+| `tools/js_registry.php` controller | does not exist — URL 404s |
+| direct hit on `tools/pages/registry.php` | 500 |
+| real code references | **none** |
+| last modified | December 2025 |
+
+The one apparent reference is a **docblock example** in `admin/registry-template.php`
+(`'content_file' => __DIR__ . '/pages/registry.php'`) — `__DIR__` there is `admin/`, and
+`admin/pages/registry.php` does not exist either. That same docblock already carries a note saying
+the tools-side registry files do not exist.
+
+Almost certainly leftovers from when the registries moved to `admin/` (which produced
+`admin/manage_registry.php` and `admin/manage_js_registry.php`, both audited 2026-07-21 and working).
+
+**Suggested:** delete both. They are recoverable from git, and a stale copy of a page that still
+exists elsewhere is the `#19`-class hazard — someone edits the wrong file and cannot see why nothing
+changes. Confirm first that no deployment has its own controller for them.
+
+---
+
+## 6. Tools page styling is consistent by hand, not by stylesheet
+
+The tools pages DO look consistent — solid teal header with white text — but that consistency is
+maintained by copied literals rather than enforced anywhere:
+
+```
+24  inline style="background-color: #..."  declarations across tools/pages/
+ 8  uses of a shared semantic class (bg-search-results, bg-tools, organism-header)
+
+ 5  distinct hardcoded hex values:
+    #0891b2 (x11)  #0f766e (x5)  #e11d48 (x3)  #6366f1 (x3)  #d97706 (x1)
+```
+
+This is the same fragility that produced the admin card drift — it simply has not broken yet,
+because the copies happen to still agree. Changing the site's teal today means finding 24 inline
+declarations across 15 files, and missing one is invisible until someone notices two slightly
+different headers.
+
+Note the tools look (solid fill, white text) is deliberately BOLDER than the admin look settled on
+in b2a2474 (pale wash, dark text, accent rule), and that distinction is worth keeping — public pages
+announce, admin pages get out of the way. This item is about where the values live, not about making
+the two match.
+
+**Suggested:** promote the five colours to CSS custom properties in `css/moop.css` alongside the
+existing `.bg-search-results` / `.bg-tools`, and replace the inline styles with semantic classes.
+Same reasoning as `css/admin-cards.css`, `lib/registry_sources.php` and the sequence file-name
+helper: one definition, so drift is impossible rather than merely unlikely.
