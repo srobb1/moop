@@ -462,24 +462,35 @@ function deleteAssemblyDirectory($organism_dir, $dir_name) {
 
 /**
  * Recursively remove directory
- * 
+ *
  * Helper function to delete a directory and all its contents
- * 
+ *
+ * Symlinks are unlinked, never followed. This matters: MOOP's derived trees are built
+ * from symlinks into the real organism data (data/genomes/*​/reference.fasta →
+ * organisms/.../genome.fa, and the JBrowse GFF links), and is_dir() follows symlinks.
+ * Without the is_link() check first, removing a derived directory that happened to hold
+ * a symlink to a DIRECTORY would recurse through it and delete the source data.
+ *
  * @param string $dir - Directory path
  * @return bool - True if successful
  */
 function rrmdir($dir) {
-    if (!is_dir($dir)) {
+    if (!is_dir($dir) || is_link($dir)) {
         return false;
     }
-    
+
     $items = scandir($dir);
     foreach ($items as $item) {
         if ($item === '.' || $item === '..') {
             continue;
         }
         $path = $dir . '/' . $item;
-        if (is_dir($path)) {
+        if (is_link($path)) {
+            // Remove the link itself — never traverse into its target.
+            if (!@unlink($path)) {
+                return false;
+            }
+        } elseif (is_dir($path)) {
             if (!rrmdir($path)) {
                 return false;
             }
@@ -489,7 +500,7 @@ function rrmdir($dir) {
             }
         }
     }
-    
+
     return @rmdir($dir);
 }
 
