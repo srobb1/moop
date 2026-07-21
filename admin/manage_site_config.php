@@ -442,10 +442,13 @@ $data = [
     'metadata_path' => $metadata_path,
     'config_file' => $config_file,
     'page_styles' => [
+        // parent-nav.css supplies the sticky section-nav; the same pair the gene page uses.
+        '/' . $site . '/css/parent-nav.css',
         '/' . $site . '/css/manage-site-config.css'
     ],
     'page_script' => [
         '/' . $site . '/js/admin-utilities.js',
+        '/' . $site . '/js/modules/parent-nav.js',
         '/' . $site . '/js/modules/manage-site-config.js'
     ],
 ];

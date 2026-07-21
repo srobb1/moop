@@ -76,15 +76,41 @@
                 </div>
             <?php endif; ?>
 
+            <!-- Section navigation — sidebar (wide) / jump-to bar (narrow). The TOC is built
+                 at runtime by js/modules/parent-nav.js from the [data-nav-label] sections below,
+                 the same module the gene page uses, so the two pages behave identically. -->
+            <div class="pnav-jumpbar">
+              <button class="pnav-jb-btn" id="pnavJbBtn" type="button" aria-expanded="false" aria-controls="pnavJbDd">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M2 4h12v1.6H2zM2 7.2h12v1.6H2zM2 10.4h8V12H2z"/></svg>
+                Jump to
+                <svg class="pnav-jb-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+              </button>
+              <span class="pnav-jb-current" id="pnavJbCurrent">Site Title</span>
+              <div class="pnav-jb-dd" id="pnavJbDd"></div>
+            </div>
+
+            <div class="pnav-layout">
+              <aside class="pnav-side" aria-label="Jump to">
+                <div class="pnav-side-head">
+                  <span class="pnav-side-title">Jump to</span>
+                  <button class="pnav-toggle" id="pnavToggle" type="button" aria-label="Collapse navigation" aria-expanded="true" title="Collapse (content goes full width)">
+                    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+                  </button>
+                </div>
+                <div class="pnav-scroll" id="pnavToc"></div>
+              </aside>
+
+              <div class="pnav-main">
+
             <!-- Configuration Cards -->
             <form method="post" id="configForm" enctype="multipart/form-data">
                 <?= csrf_input_field() ?>
                 <input type="hidden" name="action" value="save_config">
                 
                 <!-- Site Title Card -->
-                <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fa fa-heading"></i> Site Title</h5>
+                <div class="card cfg-card mb-3" id="pnav-site-title" data-nav-label="Site Title">
+                    <div class="card-header cfg-head">
+                        <h5 class="mb-0"><i class="fa fa-heading"></i> <?= htmlspecialchars($editable_config['siteTitle']['label']) ?></h5>
                     </div>
                     <div class="card-body">
                         <label for="siteTitle" class="form-label">
@@ -105,9 +131,9 @@
                 </div>
 
                 <!-- Admin Email Card -->
-                <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fa fa-envelope"></i> Admin Email</h5>
+                <div class="card cfg-card mb-3" id="pnav-admin-email" data-nav-label="Administrator Email">
+                    <div class="card-header cfg-head">
+                        <h5 class="mb-0"><i class="fa fa-envelope"></i> <?= htmlspecialchars($editable_config['admin_email']['label']) ?></h5>
                     </div>
                     <div class="card-body">
                         <label for="admin_email" class="form-label">
@@ -128,9 +154,9 @@
                 </div>
 
                 <!-- Sequence Types Card -->
-                <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fa fa-dna"></i> Sequence Types</h5>
+                <div class="card cfg-card mb-3" id="pnav-sequence-types" data-nav-label="Sequence File Types">
+                    <div class="card-header cfg-head">
+                        <h5 class="mb-0"><i class="fa fa-dna"></i> <?= htmlspecialchars($editable_config['sequence_types']['label']) ?></h5>
                     </div>
                     <div class="card-body">
                         <p class="text-muted small mb-3">
@@ -209,9 +235,9 @@
                 </div>
 
                 <!-- Header Image Card -->
-                <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fa fa-image"></i> Header Banner Image</h5>
+                <div class="card cfg-card mb-3" id="pnav-banner" data-nav-label="Header Banner Image">
+                    <div class="card-header cfg-head">
+                        <h5 class="mb-0"><i class="fa fa-image"></i> <?= htmlspecialchars($editable_config['header_img']['label']) ?></h5>
                     </div>
                     <div class="card-body">
                         <p class="text-muted small mb-3">
@@ -292,9 +318,9 @@
                 </div>
 
                 <!-- Favicon Card -->
-                <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fa fa-icon"></i> Favicon</h5>
+                <div class="card cfg-card mb-3" id="pnav-favicon" data-nav-label="Favicon Image">
+                    <div class="card-header cfg-head">
+                        <h5 class="mb-0"><i class="fa fa-star"></i> <?= htmlspecialchars($editable_config['favicon_filename']['label']) ?></h5>
                     </div>
                     <div class="card-body">
                         <!-- Current Favicon Preview -->
@@ -350,9 +376,9 @@
                 </div>
                 
                 <!-- Auto-Login IP Ranges Card -->
-                <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fa fa-network-wired"></i> Auto-Login IP Ranges</h5>
+                <div class="card cfg-card mb-3" id="pnav-ip-ranges" data-nav-label="Auto-Login IP Ranges">
+                    <div class="card-header cfg-head">
+                        <h5 class="mb-0"><i class="fa fa-network-wired"></i> <?= htmlspecialchars($editable_config['auto_login_ip_ranges']['label']) ?></h5>
                     </div>
                     <div class="card-body">
                         <div class="alert alert-warning mb-3">
@@ -414,9 +440,9 @@
                 </div>
 
                 <!-- Cloudflare Turnstile -->
-                <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fa fa-shield-alt"></i> Bot Protection (Cloudflare Turnstile)</h5>
+                <div class="card cfg-card mb-3" id="pnav-turnstile" data-nav-label="Cloudflare Turnstile">
+                    <div class="card-header cfg-head">
+                        <h5 class="mb-0"><i class="fa fa-shield-alt"></i> <?= htmlspecialchars($editable_config['turnstile']['label']) ?></h5>
                     </div>
                     <div class="card-body">
                         <p class="text-muted small mb-3">When enabled, all visitors must pass a Cloudflare Turnstile challenge once per session before accessing the site. Usually invisible to real users.</p>
@@ -434,8 +460,8 @@
                 </div>
 
                 <!-- BLAST CPU Threads -->
-                <div class="card card-config">
-                    <div class="card-header bg-light">
+                <div class="card cfg-card mb-3" id="pnav-blast-threads" data-nav-label="BLAST CPU Threads">
+                    <div class="card-header cfg-head">
                         <h5 class="mb-0"><i class="fa fa-microchip"></i> <?= htmlspecialchars($editable_config['blast_num_threads']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -454,8 +480,8 @@
                 </div>
 
                 <!-- BLAST Sample Sequences -->
-                <div class="card card-config">
-                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <div class="card cfg-card mb-3" id="pnav-blast-samples" data-nav-label="BLAST Sample Sequences">
+                    <div class="card-header cfg-head d-flex justify-content-between align-items-center">
                         <div>
                             <h5 class="mb-0">
                                 <i class="fa fa-flask"></i>
@@ -506,8 +532,8 @@
                 </div>
 
                 <!-- Sample Feature IDs -->
-                <div class="card card-config">
-                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <div class="card cfg-card mb-3" id="pnav-sample-ids" data-nav-label="Sample Feature IDs">
+                    <div class="card-header cfg-head d-flex justify-content-between align-items-center">
                         <div>
                             <h5 class="mb-0">
                                 <i class="fa fa-bookmark"></i>
@@ -543,8 +569,8 @@
                 </div>
 
                 <!-- Site Data Backup Path -->
-                <div class="card card-config">
-                    <div class="card-header bg-light">
+                <div class="card cfg-card mb-3" id="pnav-backup-path" data-nav-label="Site Data Backup Path">
+                    <div class="card-header cfg-head">
                         <h5 class="mb-0"><i class="fa fa-save"></i> <?= htmlspecialchars($editable_config['site_data_path']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -568,8 +594,8 @@
                 </div>
 
                 <!-- Cache Directory -->
-                <div class="card card-config">
-                    <div class="card-header bg-light">
+                <div class="card cfg-card mb-3" id="pnav-cache-path" data-nav-label="Cache Directory">
+                    <div class="card-header cfg-head">
                         <h5 class="mb-0"><i class="fa fa-database"></i> <?= htmlspecialchars($editable_config['cache_path']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -592,8 +618,8 @@
                 </div>
 
                 <!-- Footer Settings Card -->
-                <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-primary text-white">
+                <div class="card cfg-card mb-3" id="pnav-footer" data-nav-label="Footer">
+                    <div class="card-header cfg-head">
                         <h5 class="mb-0"><i class="fa fa-shoe-prints"></i> Footer</h5>
                     </div>
                     <div class="card-body">
@@ -680,20 +706,28 @@
                     </div>
                 </div>
 
-                <!-- Submit Buttons -->
-                <div class="d-flex gap-2 mb-4">
-                    <button type="submit" class="btn btn-primary btn-lg" id="saveBtn" <?= !$file_writable ? 'disabled' : '' ?>>
-                        <i class="fa fa-save"></i> Save Changes
-                    </button>
-                    <button type="reset" class="btn btn-secondary btn-lg">
+                <!-- Sticky save bar: stays in view rather than sitting below ~600 lines of
+                     form. js/modules/manage-site-config.js toggles .is-dirty and the note. -->
+                <div class="cfg-savebar" id="cfgSaveBar">
+                    <span class="cfg-dirty-note" id="cfgDirtyNote">
+                        <?php if (!$file_writable): ?>
+                            <i class="fa fa-lock"></i> Configuration file is not writable — saving is disabled.
+                        <?php else: ?>
+                            No unsaved changes
+                        <?php endif; ?>
+                    </span>
+                    <button type="reset" class="btn btn-outline-secondary" id="resetBtn">
                         <i class="fa fa-undo"></i> Reset
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn" <?= !$file_writable ? 'disabled' : '' ?>>
+                        <i class="fa fa-save"></i> Save Changes
                     </button>
                 </div>
             </form>
 
             <!-- Change History -->
-            <div class="card mt-4">
-                <div class="card-header bg-light">
+            <div class="card cfg-card mt-4" id="pnav-recent-changes" data-nav-label="Recent Changes">
+                <div class="card-header cfg-head">
                     <h5 class="mb-0"><i class="fa fa-history"></i> Recent Changes</h5>
                 </div>
                 <div class="card-body">
@@ -717,6 +751,9 @@
                     <?php endif; ?>
                 </div>
             </div>
+
+              </div><!-- /.pnav-main -->
+            </div><!-- /.pnav-layout -->
         </div>
     </div>
 
@@ -724,7 +761,7 @@
 <div class="modal fade" id="structuralSettingsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header cfg-head">
                 <h5 class="modal-title"><i class="fa fa-lock"></i> Structural Settings Tutorial</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
