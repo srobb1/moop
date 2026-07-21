@@ -125,7 +125,15 @@ is easy to get right, "nothing to report" much less so. Worth checking both stat
 
 ---
 
-## 4. Admin card headers use four competing idioms
+## 4. Admin card headers use four competing idioms — ✅ DONE 2026-07-21 (commit b2a2474)
+
+**Resolved.** 81 headers across 16 files unified on `.adm-head` in `css/admin-cards.css`, loaded
+globally from `head-resources.php`. Colour kept only for state: 3 danger (broken registrations,
+orphaned in database, JBrowse not installed) and 6 warn (data health, environment issues, stale
+entries, stale assembly refs, unused functions x2). `cfg-card`/`cfg-head` were promoted to the
+shared classes rather than left page-local. `tools/pages/` deliberately untouched.
+
+Original finding:
 
 Raised by the user looking at Manage JBrowse: is its card styling different **by design**?
 Checked across the admin pages — it is not design, it is accumulation. Four idioms coexist:
