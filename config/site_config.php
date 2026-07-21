@@ -245,6 +245,7 @@ AATGCGTCCACAACAGTTATCAATCAA',
         'jbrowse_label'         => 'Genome Browser',
         'jbrowse_hsp_min_score' => 0,      // min bit-score for HSPs to be drawn connected; 0 = all connected
         'jbrowse_hsp_max_span'  => 500000, // bp; if total HSP span exceeds this, HSPs drawn standalone (not connected)
+        'jbrowse_hsp_max_link'  => 10,     // top N HSPs by score included in the hit-level browser link
         'external'              => [],
         'per_db_external'       => [], // keyed by "organism|assembly|seq_type"; each value = [{label, url_template}, ...]
     ],

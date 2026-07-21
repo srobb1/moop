@@ -129,6 +129,47 @@ ok(buildConfigFingerprint(null, $groups) === $cfp2, 'config fingerprint is deter
 @unlink($db); @unlink($groups); @rmdir("$tmp/OrgA"); @rmdir($tmp);
 
 // ----------------------------------------------------------------------------
+group('editable config — admin-page settings actually reach the app');
+
+// ConfigManager merges config_editable.json over site_config.php defaults, but ONLY for
+// keys in its $editableConfigKeys whitelist. A settings page whose key is missing from
+// that list writes to disk and is then silently ignored — the page reports a clean save
+// while nothing changes. That is exactly what happened to blast_linkouts.
+$cfgtmp = sys_get_temp_dir() . '/moop_cfgtest_' . getmypid();
+@mkdir($cfgtmp);
+copy("$BASE/config/site_config.php",  "$cfgtmp/site_config.php");
+copy("$BASE/config/tools_config.php", "$cfgtmp/tools_config.php");
+file_put_contents("$cfgtmp/config_editable.json", json_encode([
+    'blast_linkouts' => [
+        'gene_page_label' => 'SMOKE_LABEL',
+        'external'        => [['label' => 'SmokeLink', 'url_template' => 'https://example.org/{fasta_id}']],
+    ],
+], JSON_PRETTY_PRINT));
+
+// A second, non-singleton instance so the live config loaded above is left untouched.
+$cm2 = (new ReflectionClass('ConfigManager'))->newInstanceWithoutConstructor();
+$cm2->initialize("$cfgtmp/site_config.php", "$cfgtmp/tools_config.php");
+$bl = $cm2->getArray('blast_linkouts', []);
+
+ok(($bl['gene_page_label'] ?? null) === 'SMOKE_LABEL',
+   'a saved blast_linkouts label overrides the site_config default');
+ok(count($bl['external'] ?? []) === 1,
+   'saved external BLAST linkouts are loaded, not discarded');
+ok(($bl['jbrowse_hsp_max_link'] ?? null) === 10,
+   'sub-keys the admin never saved keep their site_config default (deep merge)');
+
+// saveEditableConfig() rebuilds the file from the same whitelist, so an unlisted key is
+// deleted the next time any other admin settings page is saved.
+$saved = $cm2->saveEditableConfig(['siteTitle' => 'Smoke Title'], $cfgtmp);
+$after = json_decode(file_get_contents("$cfgtmp/config_editable.json"), true);
+ok(!empty($saved['success']),
+   'saving unrelated site settings succeeds');
+ok(($after['blast_linkouts']['gene_page_label'] ?? null) === 'SMOKE_LABEL',
+   'saving unrelated site settings preserves blast_linkouts');
+
+array_map('unlink', glob("$cfgtmp/*") ?: []); @rmdir($cfgtmp);
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

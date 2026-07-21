@@ -64,7 +64,7 @@ class ConfigManager
      * Editable configuration keys - whitelisted keys that can be edited via admin UI
      * Used in both initialize() and saveEditableConfig() to ensure consistency
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -119,7 +119,7 @@ class ConfigManager
                     // Only override if value is set AND non-empty (preserve site_config defaults for empty values)
                     if (isset($editable_config[$key]) && ($editable_config[$key] !== '' && $editable_config[$key] !== null)) {
                         // Special handling for nested arrays - deep merge to preserve defaults
-                        if (in_array($key, ['sequence_types', 'jbrowse2']) && is_array($editable_config[$key]) && is_array($this->config[$key] ?? [])) {
+                        if (in_array($key, ['sequence_types', 'jbrowse2', 'blast_linkouts']) && is_array($editable_config[$key]) && is_array($this->config[$key] ?? [])) {
                             foreach ($editable_config[$key] as $sub_key => $sub_value) {
                                 if ($key === 'sequence_types' && isset($this->config[$key][$sub_key])) {
                                     $this->config[$key][$sub_key] = array_merge($this->config[$key][$sub_key], $sub_value);
@@ -598,7 +598,7 @@ class ConfigManager
                     }
                 }
 
-                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'blast_sample_sequences' || $key === 'turnstile' || $key === 'footer') {
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);
