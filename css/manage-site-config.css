@@ -7,3 +7,106 @@
 .modal-body .nav-tabs .nav-link.active {
     color: #212529 !important;
 }
+
+/* ---------------------------------------------------------------------------
+   Section cards
+   ---------------------------------------------------------------------------
+   Every setting on this page is a peer, so they all get one treatment. The page
+   previously mixed solid `bg-primary text-white` headers with `bg-light` ones,
+   which read as two tiers of importance that did not exist — and put the two
+   highest-consequence settings (cache and backup paths) in the quieter tier.
+
+   A tinted wash with a left accent rule, rather than a heavy solid block.
+   -------------------------------------------------------------------------- */
+:root {
+    --cfg-accent: #0891b2;          /* MOOP teal — matches css/parent-nav.css */
+    --cfg-accent-strong: #067d94;
+    --cfg-wash: rgba(8, 145, 178, 0.07);
+    --cfg-border: rgba(8, 145, 178, 0.22);
+}
+
+.cfg-card {
+    border: 1px solid var(--cfg-border);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    overflow: hidden;
+}
+
+.cfg-head {
+    background: var(--cfg-wash);
+    border-bottom: 1px solid var(--cfg-border);
+    border-left: 3px solid var(--cfg-accent);
+    color: #0f2b33;
+}
+
+.cfg-head h5,
+.cfg-head .modal-title {
+    color: #0f2b33;
+    font-size: 1.02rem;
+    font-weight: 600;
+}
+
+.cfg-head .fa {
+    color: var(--cfg-accent-strong);
+}
+
+/* The tutorial modal keeps a close button that was styled for a dark header. */
+.modal-header.cfg-head .btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(40%);
+}
+
+/* ---------------------------------------------------------------------------
+   Sticky save bar
+   ---------------------------------------------------------------------------
+   The Save button used to sit at the very bottom of a ~600-line form, so editing
+   the first field meant scrolling past twelve sections to commit it — and there
+   was nothing to indicate unsaved work. The bar stays in view and reports state.
+   -------------------------------------------------------------------------- */
+/* The bar is inside the form, so it un-sticks at the form's end and Recent Changes
+   renders below it — nothing gets trapped. This is just breathing room. */
+.pnav-main {
+    padding-bottom: 1.5rem;
+}
+
+.cfg-savebar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 0.7rem 0.9rem;
+    margin-top: 1rem;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid var(--cfg-border);
+    border-radius: 8px;
+    box-shadow: 0 -2px 10px rgba(16, 24, 40, 0.07);
+}
+
+.cfg-savebar .cfg-dirty-note {
+    margin-right: auto;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.cfg-savebar.is-dirty {
+    border-color: rgba(202, 138, 4, 0.45);
+    background: rgba(254, 249, 231, 0.97);
+}
+
+.cfg-savebar.is-dirty .cfg-dirty-note {
+    color: #854d0e;
+    font-weight: 600;
+}
+
+@media (max-width: 575.98px) {
+    .cfg-savebar {
+        flex-wrap: wrap;
+        justify-content: stretch;
+    }
+    .cfg-savebar .cfg-dirty-note {
+        width: 100%;
+        margin-bottom: 0.4rem;
+    }
+}

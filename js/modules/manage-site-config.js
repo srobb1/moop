@@ -268,3 +268,58 @@
         });
     });
 })();
+
+/**
+ * Unsaved-change tracking for the sticky save bar.
+ *
+ * This page is one form covering thirteen settings sections. The Save button used to sit
+ * at the very bottom of it with nothing tracking state, so an edit to the first field could
+ * be lost silently by navigating away. The bar reports whether there is anything to save,
+ * and the browser confirms before discarding it.
+ */
+(function () {
+    'use strict';
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('configForm');
+        const bar  = document.getElementById('cfgSaveBar');
+        const note = document.getElementById('cfgDirtyNote');
+        const save = document.getElementById('saveBtn');
+        const reset = document.getElementById('resetBtn');
+        if (!form || !bar || !note) return;
+
+        // If the config file is unwritable the button is server-side disabled and the note
+        // already explains why — leave that message alone rather than overwriting it.
+        if (save && save.disabled) return;
+
+        let dirty = false;
+        let submitting = false;
+
+        function setDirty(isDirty) {
+            if (isDirty === dirty) return;
+            dirty = isDirty;
+            bar.classList.toggle('is-dirty', dirty);
+            note.innerHTML = dirty
+                ? '<i class="fa fa-exclamation-circle"></i> Unsaved changes'
+                : 'No unsaved changes';
+        }
+
+        form.addEventListener('input',  function () { setDirty(true); });
+        form.addEventListener('change', function () { setDirty(true); });
+
+        form.addEventListener('submit', function () { submitting = true; });
+
+        if (reset) {
+            reset.addEventListener('click', function () {
+                // reset happens after this handler; clear the flag on the next tick
+                window.setTimeout(function () { setDirty(false); }, 0);
+            });
+        }
+
+        window.addEventListener('beforeunload', function (e) {
+            if (!dirty || submitting) return;
+            e.preventDefault();
+            e.returnValue = '';   // required for the browser to show its own prompt
+            return '';
+        });
+    });
+})();
