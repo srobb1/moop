@@ -387,6 +387,20 @@ Planning docs live in `notes/`. Verified against the tree on 2026-07-16 — seve
 long-standing entries here had already been fixed, and one contradicted §9 of this file.
 
 **Open:**
+- **High (blocked on IT, not on code): no usable HTTPS hostname, so real traffic is plain
+  `http://` — logins and session cookies cross the network in cleartext.** HTTPS *is*
+  configured and works: nginx listens on 443 with a valid GoDaddy `*.stowers.org` wildcard
+  cert (to 2026-10-14), and **both vhosts use `server_name _;`, so the server already answers
+  to any hostname — no vhost work is needed.** What is missing is DNS: the site is reached by
+  IP (`https://172.16.2.52` fails cert validation, since the wildcard covers names, not IPs),
+  and `simrbasenew.stowers.org` resolves only to `::1` from a local hosts entry. Consequently
+  the session cookie's `Secure` flag — set in `includes/session_init.php` — is deliberately
+  **conditional on `$_SERVER['HTTPS']` and therefore inactive for real users**. Do not "fix"
+  that by making it unconditional; that would silently log every http:// user out. The order
+  is: (1) IT creates an A record for the host, (2) confirm the cert validates under that name,
+  (3) add `return 301 https://$host$request_uri;` to the port-80 server block, (4) make
+  `Secure` unconditional. Steps 3–4 are ours and small. Until then, CSRF tokens — not the
+  cookie flags — are what actually protect the admin endpoints.
 - **Medium:** JWT tokens passed as URL query parameter in JBrowse track requests
   (visible in server logs) — architectural constraint from JBrowse2. Two routes exist:
   `notes/TRACKS_PROXY_PLAN.md` (simpler) and an `Authorization`-header variant.
@@ -408,7 +422,20 @@ long-standing entries here had already been fixed, and one contradicted §9 of t
 **Done — do not re-open:**
 - `page-setup.php` deleted (broken CSS URL + dual DataTables loading).
 - HTTP security headers in nginx (2026-07-08): `X-Frame-Options`, `X-Content-Type-Options`,
-  `Referrer-Policy`, `Permissions-Policy` enforced. HSTS is N/A while MOOP is HTTP-only.
+  `Referrer-Policy`, `Permissions-Policy` enforced. HSTS is still **not** appropriate — not
+  because MOOP is "HTTP-only" (that claim was wrong; 443 works and serves a valid cert), but
+  because there is no DNS hostname yet, so http:// is still the working entry point and HSTS
+  would strand users. Revisit with the DNS item above.
+- Session cookie attributes (2026-07-21): `HttpOnly` + `SameSite=Lax` always, `Secure` when
+  the request arrived over HTTPS. Set in **one** place — `includes/session_init.php`. Every
+  entry point that starts a session must call `moop_session_start()`, never `session_start()`
+  directly: `session_set_cookie_params()` has no effect after the session begins, so a direct
+  call silently issues a cookie with none of these protections.
+- Admin API CSRF (2026-07-21): all `admin/api/*.php` endpoints bootstrap via `admin_init.php`
+  (auth **+** CSRF). `admin_access_check.php` alone checks the role but not the token, which
+  left seven JBrowse endpoints authenticated but forgeable. Note `js/modules/csrf.js` wraps
+  `window.fetch` globally and covers jQuery via `ajaxSetup`, so callers need no change — the
+  browser already sends the token; only the server has to check it.
 - BLAST temp files — `housekeeping_clean_temp_files` handles this (§9); **no cron needed**.
   (This file previously listed both the task and a TODO to add a cron for it.)
 - `getBlastDatabases()` no longer uses `global $sequence_types`.
