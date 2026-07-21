@@ -18,8 +18,8 @@
   <h2><i class="fa fa-dna"></i> JBrowse Track Management</h2>
 
   <!-- About Section -->
-  <div class="card mb-4 border-info">
-    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutJBrowse">
+  <div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutJBrowse">
       <h5 class="mb-0"><i class="fa fa-info-circle"></i> About JBrowse Management <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
     <div class="collapse" id="aboutJBrowse">
@@ -80,7 +80,7 @@
   <!-- Broken registrations — source data gone. Opens expanded: this is live breakage. -->
   <?php if (!empty($orphaned_registrations)): ?>
   <div class="card mb-4 border-danger" id="orphaned-registrations">
-    <div class="card-header bg-danger bg-opacity-10">
+    <div class="card-header adm-head-danger">
       <h5 class="mb-0">
         <i class="fa fa-unlink text-danger"></i> Broken Registrations
         <span class="badge bg-danger ms-2"><?= count($orphaned_registrations) ?></span>
@@ -141,8 +141,8 @@
 
   <!-- Register Assemblies (collapsible, starts closed) -->
   <?php if (!empty($unregistered_assemblies)): ?>
-  <div class="card mb-4 border-primary">
-    <div class="card-header bg-primary bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#registerAssemblies">
+  <div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#registerAssemblies">
       <h5 class="mb-0">
         <i class="fa fa-plus-circle"></i> Register Assemblies in JBrowse
         <span class="badge bg-primary ms-2"><?php echo count($unregistered_assemblies); ?></span>
@@ -209,8 +209,8 @@
   $unprepped_gs      = array_filter($gene_sets_info, fn($r) => !$r['gff_prepped']);
   ?>
   <?php if ($has_any_gene_sets): ?>
-  <div class="card mb-4 border-success">
-    <div class="card-header bg-success bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#geneSetTracks">
+  <div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#geneSetTracks">
       <h5 class="mb-0">
         <i class="fa fa-dna"></i> Gene Annotation Tracks
         <?php if (!empty($unregistered_gs)): ?>
@@ -304,8 +304,8 @@
   <?php endif; ?>
 
   <!-- Register Google Sheets Track Source (starts open) -->
-  <div class="card mb-4 border-warning">
-    <div class="card-header bg-warning bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#sheetRegistration">
+  <div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#sheetRegistration">
       <h5 class="mb-0">
         <i class="fa fa-table"></i> Register Google Sheets Track Source
         <i class="fa fa-chevron-down float-end"></i>
@@ -373,8 +373,8 @@
   </div>
 
   <!-- Sync Tracks (starts closed) -->
-  <div class="card mb-4 border-success">
-    <div class="card-header bg-success bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#syncTracks">
+  <div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#syncTracks">
       <h5 class="mb-0">
         <i class="fa fa-sync"></i> Sync Tracks from Google Sheets
         <i class="fa fa-chevron-down float-end"></i>
@@ -453,8 +453,8 @@
   </div>
 
   <!-- Tracks Server Configuration -->
-  <div class="card mb-4 border-dark">
-    <div class="card-header bg-dark bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#tracksServerConfig">
+  <div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#tracksServerConfig">
       <h5 class="mb-0">
         <i class="fa fa-server"></i> Tracks Server Configuration
         <span id="tracksServerBadge" class="badge bg-secondary ms-2">Loading...</span>
@@ -550,8 +550,8 @@
   </div>
 
   <!-- Track Listing -->
-  <div class="card mb-4 border-secondary">
-    <div class="card-header bg-secondary bg-opacity-10">
+  <div class="card mb-4">
+    <div class="card-header adm-head">
       <h5 class="mb-0"><i class="fa fa-list"></i> Track Listing</h5>
     </div>
     <div class="card-body">

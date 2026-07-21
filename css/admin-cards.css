@@ -1,0 +1,102 @@
+/* ===========================================================================
+   Admin section cards — ONE treatment, shared by every admin page.
+   ===========================================================================
+   Admin card headers had drifted into four idioms: `bg-X bg-opacity-10`,
+   `bg-X-subtle`, solid fills (`bg-primary text-white`, `bg-light`), and a
+   page-local set on Manage Site Configuration. manage_jbrowse.php was the
+   clearest symptom — eight cards in seven different colours, so colour
+   signalled nothing, and the one card that genuinely needed to stand out (a
+   broken JBrowse registration) was lost among them.
+
+   THE RULE: every section card gets the same quiet teal wash. Colour is
+   reserved for STATE, never for identity. Use .adm-head-danger only when the
+   card means something is broken, and .adm-head-warn only when it needs
+   attention. A card is not red because it is about tracks.
+
+   Loaded globally from includes/head-resources.php rather than per-page
+   `page_styles`, because a per-page opt-in is exactly how the styling drifted
+   apart in the first place — a new admin page would simply forget it.
+   ========================================================================== */
+
+:root {
+    --adm-accent: #0891b2;          /* MOOP teal */
+    --adm-accent-strong: #067d94;
+    --adm-wash: rgba(8, 145, 178, 0.07);
+    --adm-border: rgba(8, 145, 178, 0.22);
+}
+
+.adm-card {
+    border: 1px solid var(--adm-border);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    overflow: hidden;
+}
+
+.adm-head {
+    background: var(--adm-wash);
+    border-bottom: 1px solid var(--adm-border);
+    border-left: 3px solid var(--adm-accent);
+    color: #0f2b33;
+}
+
+.adm-head h4,
+.adm-head h5,
+.adm-head h6,
+.adm-head .card-title,
+.adm-head .modal-title {
+    color: #0f2b33;
+    font-size: 1.02rem;
+    font-weight: 600;
+    margin-bottom: 0;
+}
+
+.adm-head .fa {
+    color: var(--adm-accent-strong);
+}
+
+/* Some headers previously used a solid fill with .text-white on the header or
+   its heading. Once the fill is a pale wash, white text is invisible — override
+   rather than hunt every inline utility class across 15 pages. */
+.adm-head.text-white,
+.adm-head .text-white {
+    color: #0f2b33 !important;
+}
+
+/* ── State variants — these have to be earned ─────────────────────────────── */
+
+.adm-head-danger {
+    background: rgba(220, 53, 69, 0.08);
+    border-bottom: 1px solid rgba(220, 53, 69, 0.25);
+    border-left: 3px solid #dc3545;
+    color: #58151c;
+}
+
+.adm-head-danger h4,
+.adm-head-danger h5,
+.adm-head-danger h6,
+.adm-head-danger .card-title { color: #58151c; }
+.adm-head-danger .fa { color: #b02a37; }
+
+.adm-head-warn {
+    background: rgba(255, 193, 7, 0.12);
+    border-bottom: 1px solid rgba(255, 193, 7, 0.35);
+    border-left: 3px solid #ffc107;
+    color: #5c4400;
+}
+
+.adm-head-warn h4,
+.adm-head-warn h5,
+.adm-head-warn h6,
+.adm-head-warn .card-title { color: #5c4400; }
+.adm-head-warn .fa { color: #997404; }
+
+/* Collapsible headers keep their affordance without needing a colour. */
+.adm-head[data-bs-toggle="collapse"],
+.adm-head-warn[data-bs-toggle="collapse"],
+.adm-head-danger[data-bs-toggle="collapse"] {
+    cursor: pointer;
+}
+
+.adm-head[data-bs-toggle="collapse"]:hover {
+    background: rgba(8, 145, 178, 0.12);
+}

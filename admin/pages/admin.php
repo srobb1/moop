@@ -20,8 +20,8 @@
   <h2><i class="fa fa-tools"></i> Admin Tools</h2>
   
   <!-- About Section -->
-  <div class="card mb-4 border-info">
-    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutAdminTools">
+  <div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutAdminTools">
       <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Admin Tools <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
     <div class="collapse" id="aboutAdminTools">
@@ -148,7 +148,7 @@
   <!-- Environment Warnings -->
   <?php if (!empty($_SESSION['env_warnings'])): ?>
   <div class="card mb-4 border-warning">
-    <div class="card-header bg-warning bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#envWarnings">
+    <div class="card-header adm-head-warn" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#envWarnings">
       <h5 class="mb-0">
         <i class="fa fa-exclamation-triangle text-warning"></i>
         Environment Issues (<?= count($_SESSION['env_warnings']) ?>)
@@ -395,8 +395,8 @@
 
     <div class="row">
       <div class="col-md-6 mb-3">
-        <div class="card h-100 border-success">
-          <div class="card-header bg-success bg-opacity-10">
+        <div class="card h-100">
+          <div class="card-header adm-head">
             <h5 class="card-title mb-0"><i class="fa fa-clipboard-list"></i> New Organism Setup Checklist</h5>
           </div>
           <div class="card-body">
@@ -437,8 +437,8 @@
       </div>
       
       <div class="col-md-6 mb-3">
-        <div class="card h-100 border-primary">
-          <div class="card-header bg-primary bg-opacity-10">
+        <div class="card h-100">
+          <div class="card-header adm-head">
             <h5 class="card-title mb-0"><i class="fa fa-dna"></i> JBrowse Track Management</h5>
           </div>
           <div class="card-body">
@@ -449,8 +449,8 @@
       </div>
 
       <div class="col-md-6 mb-3">
-        <div class="card h-100 border-primary">
-          <div class="card-header bg-primary bg-opacity-10">
+        <div class="card h-100">
+          <div class="card-header adm-head">
             <h5 class="card-title mb-0"><i class="fa fa-external-link-alt"></i> BLAST Linkouts</h5>
           </div>
           <div class="card-body">

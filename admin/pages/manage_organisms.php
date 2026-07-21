@@ -18,8 +18,8 @@
   <h2><i class="fa fa-dna"></i> Manage Organisms</h2>
 
   <!-- About Section -->
-  <div class="card mb-4 border-info">
-    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutOrganismManagement">
+  <div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutOrganismManagement">
       <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Organism Management <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
     <div class="collapse" id="aboutOrganismManagement">
@@ -75,8 +75,8 @@
   </div>
 
   <!-- Information Panel -->
-  <div class="card mb-4 border-info">
-    <div class="card-header bg-info bg-opacity-10 d-flex align-items-center" role="button"
+  <div class="card mb-4">
+    <div class="card-header adm-head d-flex align-items-center" role="button"
          data-bs-toggle="collapse" data-bs-target="#orgDataMgmtBody"
          aria-expanded="false" aria-controls="orgDataMgmtBody" style="cursor:pointer;">
       <h5 class="mb-0"><i class="fa fa-info-circle"></i> Organism Data Management</h5>
@@ -233,7 +233,7 @@
 
   <!-- Legend & Status Guide — compact, collapsed by default, sits directly above the table -->
   <div class="card mb-2">
-    <div class="card-header bg-light d-flex align-items-center py-2" role="button"
+    <div class="card-header adm-head d-flex align-items-center py-2" role="button"
          data-bs-toggle="collapse" data-bs-target="#legendContent"
          aria-expanded="false" aria-controls="legendContent" style="cursor:pointer;">
       <i class="fa fa-book text-muted me-2"></i>
@@ -294,8 +294,8 @@
   </div>
 
   <!-- Current Organisms Table -->
-  <div class="card border-primary">
-    <div class="card-header bg-primary bg-opacity-10">
+  <div class="card">
+    <div class="card-header adm-head">
       <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
         <div>
           <h5 class="mb-0">
@@ -631,7 +631,7 @@
 
   <!-- Quick Actions -->
   <div class="card mt-4 mb-5">
-    <div class="card-header bg-secondary text-white">
+    <div class="card-header adm-head">
       <h5 class="mb-0"><i class="fa fa-bolt"></i> Quick Actions</h5>
     </div>
     <div class="card-body">

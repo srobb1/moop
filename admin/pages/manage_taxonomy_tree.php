@@ -13,8 +13,8 @@
             <h2><i class="fa fa-project-diagram"></i> Manage Taxonomy Tree</h2>
             
             <!-- About Section -->
-            <div class="card mb-4 border-info">
-                <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutTaxonomyTree">
+            <div class="card mb-4">
+                <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutTaxonomyTree">
                     <h5 class="mb-0"><i class="fa fa-info-circle"></i> About the Taxonomy Tree <i class="fa fa-chevron-down float-end"></i></h5>
                 </div>
                 <div class="collapse" id="aboutTaxonomyTree">
@@ -136,7 +136,7 @@
     <div class="row mt-4">
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header adm-head">
                     <h5 class="mb-0"><i class="fa fa-magic"></i> Auto-Generate Tree</h5>
                 </div>
                 <div class="card-body">
@@ -220,7 +220,7 @@
         
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
+                <div class="card-header adm-head">
                     <h5 class="mb-0"><i class="fa fa-edit"></i> Manual Editor</h5>
                 </div>
                 <div class="card-body">
@@ -252,7 +252,7 @@
     <div class="row mt-4">
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
+                <div class="card-header adm-head">
                     <h5 class="mb-0"><i class="fa fa-eye"></i> Current Tree Preview</h5>
                 </div>
                 <div class="card-body">

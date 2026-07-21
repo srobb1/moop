@@ -28,8 +28,8 @@
   <h2><i class="fa fa-clipboard-list"></i> New Organism Setup Checklist</h2>
 
   <!-- About Section -->
-  <div class="card mb-4 border-info">
-    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutChecklist" role="button" tabindex="0">
+  <div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutChecklist" role="button" tabindex="0">
       <h5 class="mb-0"><i class="fa fa-info-circle"></i> About This Checklist <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
     <div class="collapse" id="aboutChecklist">
@@ -75,8 +75,8 @@
     ?>
 
     <!-- Step 1: Copy Files -->
-    <div class="card mb-3 border-primary">
-      <div class="card-header bg-primary bg-opacity-10">
+    <div class="card mb-3">
+      <div class="card-header adm-head">
         <h5 class="mb-0">
           <span class="badge bg-primary me-2">Step 1</span>
           Copy Files to Organism Directory
@@ -554,8 +554,8 @@
     </div>
 
     <!-- Step 2: Check File Permissions -->
-    <div class="card mb-3 border-primary">
-      <div class="card-header bg-primary bg-opacity-10">
+    <div class="card mb-3">
+      <div class="card-header adm-head">
         <h5 class="mb-0">
           <span class="badge bg-primary me-2">Step 2</span>
           Check File Permissions
@@ -685,8 +685,8 @@
     </div>
 
     <!-- Step 3: Check Organism Status -->
-    <div class="card mb-3 border-primary">
-      <div class="card-header bg-primary bg-opacity-10">
+    <div class="card mb-3">
+      <div class="card-header adm-head">
         <h5 class="mb-0">
           <span class="badge bg-primary me-2">Step 3</span>
           Check Organism Status & Configure Metadata
@@ -830,8 +830,8 @@
     </div>
 
     <!-- Step 4: Verify Homepage Selector -->
-    <div class="card mb-3 border-primary">
-      <div class="card-header bg-primary bg-opacity-10">
+    <div class="card mb-3">
+      <div class="card-header adm-head">
         <h5 class="mb-0">
           <span class="badge bg-primary me-2">Step 4</span>
           Verify Organism Appears in Homepage Selector
@@ -890,8 +890,8 @@
     </div>
 
     <!-- Step 5: Assign to Groups -->
-    <div class="card mb-3 border-primary">
-      <div class="card-header bg-primary bg-opacity-10">
+    <div class="card mb-3">
+      <div class="card-header adm-head">
         <h5 class="mb-0">
           <span class="badge bg-primary me-2">Step 5</span>
           Assign to Groups & Control Access
@@ -967,8 +967,8 @@
     </div>
 
     <!-- Step 6: Manage User Access -->
-    <div class="card mb-3 border-primary">
-      <div class="card-header bg-primary bg-opacity-10">
+    <div class="card mb-3">
+      <div class="card-header adm-head">
         <h5 class="mb-0">
           <span class="badge bg-primary me-2">Step 6</span>
           Manage User Access (If Non-Public Assembly)

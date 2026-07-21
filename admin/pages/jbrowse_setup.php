@@ -4,7 +4,7 @@
       
       <!-- Main Setup Card -->
       <div class="card border-warning shadow-lg">
-        <div class="card-header bg-warning bg-opacity-10">
+        <div class="card-header adm-head-danger">
           <h3 class="mb-0">
             <i class="fa fa-exclamation-triangle text-warning"></i> 
             JBrowse2 Not Installed
@@ -113,7 +113,7 @@
       
       <!-- Status Check Details -->
       <div class="card mt-4">
-        <div class="card-header">
+        <div class="card-header adm-head">
           <h5 class="mb-0"><i class="fa fa-search"></i> Installation Status Details</h5>
         </div>
         <div class="card-body">

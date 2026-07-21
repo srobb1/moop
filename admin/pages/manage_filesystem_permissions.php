@@ -23,8 +23,8 @@ $selinux_on = function_exists('moop_selinux_enforcing') && moop_selinux_enforcin
 <p class="text-muted">Manage file and directory permissions for system reliability</p>
 
 <!-- About Section -->
-<div class="card mb-4 border-info">
-    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutPermissions">
+<div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutPermissions">
         <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Filesystem Permissions Manager <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
     <div class="collapse" id="aboutPermissions">
@@ -60,8 +60,8 @@ $selinux_on = function_exists('moop_selinux_enforcing') && moop_selinux_enforcin
 </div>
 
 <!-- Best Practices — reference material, collapsed by default so the checklist leads -->
-<div class="card mb-4 border-success">
-    <div class="card-header bg-success bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#bestPractices">
+<div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#bestPractices">
         <h5 class="mb-0"><i class="fa fa-star"></i> Best Practices <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
     <div class="collapse" id="bestPractices">
@@ -86,7 +86,7 @@ $selinux_on = function_exists('moop_selinux_enforcing') && moop_selinux_enforcin
 
 <!-- Quick Reference — reference material, collapsed by default like About/Best Practices -->
 <div class="card mb-4">
-    <div class="card-header bg-light" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#modesReference">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#modesReference">
         <h5 class="mb-0"><i class="fa fa-book"></i> Permission Modes Reference <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
     <div class="collapse" id="modesReference">
@@ -152,7 +152,7 @@ $selinux_on = function_exists('moop_selinux_enforcing') && moop_selinux_enforcin
 
 <!-- Permission Summary -->
 <div class="card mb-4">
-    <div class="card-header bg-light">
+    <div class="card-header adm-head">
         <h5 class="mb-0"><i class="fa fa-check-square"></i> Permission Checklist</h5>
     </div>
     <div class="card-body">
@@ -207,7 +207,7 @@ foreach ($grouped as $group_name => $items):
     $to_show = ($total > 5) ? $failing : $items;
 ?>
 <div class="card mb-3">
-    <div class="card-header">
+    <div class="card-header adm-head">
         <h6 class="mb-0">
             <?php
             $has_issues = count($failing) > 0;

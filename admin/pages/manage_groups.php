@@ -74,8 +74,8 @@
   </div>
   
   <!-- About Section -->
-  <div class="card mb-4 border-info">
-    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutOrganismGroups">
+  <div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutOrganismGroups">
       <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Organism Groups <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
     <div class="collapse" id="aboutOrganismGroups">
@@ -193,8 +193,8 @@
 
   <?php if (!empty($unrepresented_organisms)): ?>
     <hr class="my-5">
-    <div class="card border-info mb-4" id="new-assemblies">
-      <div class="card-header bg-info-subtle d-flex flex-wrap align-items-center gap-2">
+    <div class="card mb-4" id="new-assemblies">
+      <div class="card-header adm-head d-flex flex-wrap align-items-center gap-2">
         <span class="badge bg-info text-dark fs-6">🏷️ Assemblies Without Groups (<?= count($unrepresented_tuples) ?>)</span>
         <span class="text-muted small">— present on disk, but not yet assigned to any group</span>
         <button type="button" class="btn btn-success btn-sm ms-auto" id="bulk-add-btn" style="display:none;" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : 'data-bs-toggle="modal" data-bs-target="#bulkAddModal"' ?>>
@@ -251,7 +251,7 @@
   <?php if (!empty($stale_entries)): ?>
     <hr class="my-5">
     <div class="card border-warning mb-4">
-      <div class="card-header bg-warning-subtle d-flex flex-wrap align-items-center gap-2">
+      <div class="card-header adm-head-warn d-flex flex-wrap align-items-center gap-2">
         <span class="badge bg-warning text-dark fs-6">⚠️ Stale Entries (<?= count($stale_entries) ?>)</span>
         <span class="text-muted small">— listed in the groups file, but the directory is missing on disk</span>
         <button type="button" class="btn btn-danger btn-sm ms-auto delete-all-stale-btn" data-stale-count="<?= count($stale_entries) ?>" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
@@ -306,7 +306,7 @@
   <?php if (!empty($db_orphaned_tuples)): ?>
     <hr class="my-5">
     <div class="card border-danger mb-4" id="db-orphaned-section">
-      <div class="card-header bg-danger-subtle d-flex flex-wrap align-items-center gap-2" id="db-orphaned">
+      <div class="card-header adm-head-danger d-flex flex-wrap align-items-center gap-2" id="db-orphaned">
         <span class="badge bg-danger fs-6" id="db-orphaned-count">🔗 Orphaned in Database (<?= count($db_orphaned_tuples) ?>)</span>
         <span class="text-muted small">— files on disk, but the gene set no longer exists in the database</span>
       </div>

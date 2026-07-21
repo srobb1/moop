@@ -8,52 +8,10 @@
     color: #212529 !important;
 }
 
-/* ---------------------------------------------------------------------------
-   Section cards
-   ---------------------------------------------------------------------------
-   Every setting on this page is a peer, so they all get one treatment. The page
-   previously mixed solid `bg-primary text-white` headers with `bg-light` ones,
-   which read as two tiers of importance that did not exist — and put the two
-   highest-consequence settings (cache and backup paths) in the quieter tier.
-
-   A tinted wash with a left accent rule, rather than a heavy solid block.
-   -------------------------------------------------------------------------- */
-:root {
-    --cfg-accent: #0891b2;          /* MOOP teal — matches css/parent-nav.css */
-    --cfg-accent-strong: #067d94;
-    --cfg-wash: rgba(8, 145, 178, 0.07);
-    --cfg-border: rgba(8, 145, 178, 0.22);
-}
-
-.cfg-card {
-    border: 1px solid var(--cfg-border);
-    border-radius: 8px;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-    overflow: hidden;
-}
-
-.cfg-head {
-    background: var(--cfg-wash);
-    border-bottom: 1px solid var(--cfg-border);
-    border-left: 3px solid var(--cfg-accent);
-    color: #0f2b33;
-}
-
-.cfg-head h5,
-.cfg-head .modal-title {
-    color: #0f2b33;
-    font-size: 1.02rem;
-    font-weight: 600;
-}
-
-.cfg-head .fa {
-    color: var(--cfg-accent-strong);
-}
-
-/* The tutorial modal keeps a close button that was styled for a dark header. */
-.modal-header.cfg-head .btn-close-white {
-    filter: invert(1) grayscale(100%) brightness(40%);
-}
+/* Section-card styling now lives in css/admin-cards.css (.adm-card / .adm-head),
+   shared by every admin page. It started here, page-local, which is precisely how the
+   admin pages ended up with four different card idioms — so it was promoted rather than
+   copied. What remains below is genuinely specific to this page. */
 
 /* ---------------------------------------------------------------------------
    Sticky save bar

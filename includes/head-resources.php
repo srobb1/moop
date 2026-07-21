@@ -47,6 +47,12 @@ $site = $config->getString('site');
     <!-- Loading Indicator Styles (for database scanning operations) -->
     <link rel="stylesheet" href="/<?= $site ?>/css/loading-indicator.css">
 
+    <!-- Admin section cards. Loaded globally rather than via each admin page's page_styles:
+         a per-page opt-in is how the card styling drifted into four different idioms in the
+         first place, and a new admin page would simply forget it. Class-scoped (.adm-*), so
+         it costs public pages nothing but the request. -->
+    <link rel="stylesheet" href="/<?= $site ?>/css/admin-cards.css">
+
     <!-- Optional custom CSS if defined in config -->
     <?php
       $custom_css_path = $config->getPath('custom_css_path', '');

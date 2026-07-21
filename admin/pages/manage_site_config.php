@@ -11,8 +11,8 @@
             <p class="text-muted">Edit site-wide settings and appearance</p>
             
             <!-- About Section -->
-            <div class="card mb-4 border-info">
-                <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutSiteConfig">
+            <div class="card mb-4">
+                <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutSiteConfig">
                     <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Site Configuration <i class="fa fa-chevron-down float-end"></i></h5>
                 </div>
                 <div class="collapse" id="aboutSiteConfig">
@@ -108,8 +108,8 @@
                 <input type="hidden" name="action" value="save_config">
                 
                 <!-- Site Title Card -->
-                <div class="card cfg-card mb-3" id="pnav-site-title" data-nav-label="Site Title">
-                    <div class="card-header cfg-head">
+                <div class="card adm-card mb-3" id="pnav-site-title" data-nav-label="Site Title">
+                    <div class="card-header adm-head">
                         <h5 class="mb-0"><i class="fa fa-heading"></i> <?= htmlspecialchars($editable_config['siteTitle']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -131,8 +131,8 @@
                 </div>
 
                 <!-- Admin Email Card -->
-                <div class="card cfg-card mb-3" id="pnav-admin-email" data-nav-label="Administrator Email">
-                    <div class="card-header cfg-head">
+                <div class="card adm-card mb-3" id="pnav-admin-email" data-nav-label="Administrator Email">
+                    <div class="card-header adm-head">
                         <h5 class="mb-0"><i class="fa fa-envelope"></i> <?= htmlspecialchars($editable_config['admin_email']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -154,8 +154,8 @@
                 </div>
 
                 <!-- Sequence Types Card -->
-                <div class="card cfg-card mb-3" id="pnav-sequence-types" data-nav-label="Sequence File Types">
-                    <div class="card-header cfg-head">
+                <div class="card adm-card mb-3" id="pnav-sequence-types" data-nav-label="Sequence File Types">
+                    <div class="card-header adm-head">
                         <h5 class="mb-0"><i class="fa fa-dna"></i> <?= htmlspecialchars($editable_config['sequence_types']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -273,8 +273,8 @@
                 </div>
 
                 <!-- Header Image Card -->
-                <div class="card cfg-card mb-3" id="pnav-banner" data-nav-label="Header Banner Images">
-                    <div class="card-header cfg-head">
+                <div class="card adm-card mb-3" id="pnav-banner" data-nav-label="Header Banner Images">
+                    <div class="card-header adm-head">
                         <h5 class="mb-0"><i class="fa fa-image"></i> <?= htmlspecialchars($editable_config['header_img']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -375,8 +375,8 @@
                 </div>
 
                 <!-- Favicon Card -->
-                <div class="card cfg-card mb-3" id="pnav-favicon" data-nav-label="Favicon Image">
-                    <div class="card-header cfg-head">
+                <div class="card adm-card mb-3" id="pnav-favicon" data-nav-label="Favicon Image">
+                    <div class="card-header adm-head">
                         <h5 class="mb-0"><i class="fa fa-star"></i> <?= htmlspecialchars($editable_config['favicon_filename']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -433,8 +433,8 @@
                 </div>
                 
                 <!-- Auto-Login IP Ranges Card -->
-                <div class="card cfg-card mb-3" id="pnav-ip-ranges" data-nav-label="Auto-Login IP Ranges">
-                    <div class="card-header cfg-head">
+                <div class="card adm-card mb-3" id="pnav-ip-ranges" data-nav-label="Auto-Login IP Ranges">
+                    <div class="card-header adm-head">
                         <h5 class="mb-0"><i class="fa fa-network-wired"></i> <?= htmlspecialchars($editable_config['auto_login_ip_ranges']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -497,8 +497,8 @@
                 </div>
 
                 <!-- Cloudflare Turnstile -->
-                <div class="card cfg-card mb-3" id="pnav-turnstile" data-nav-label="Cloudflare Turnstile">
-                    <div class="card-header cfg-head">
+                <div class="card adm-card mb-3" id="pnav-turnstile" data-nav-label="Cloudflare Turnstile">
+                    <div class="card-header adm-head">
                         <h5 class="mb-0"><i class="fa fa-shield-alt"></i> <?= htmlspecialchars($editable_config['turnstile']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -517,8 +517,8 @@
                 </div>
 
                 <!-- BLAST CPU Threads -->
-                <div class="card cfg-card mb-3" id="pnav-blast-threads" data-nav-label="BLAST CPU Threads">
-                    <div class="card-header cfg-head">
+                <div class="card adm-card mb-3" id="pnav-blast-threads" data-nav-label="BLAST CPU Threads">
+                    <div class="card-header adm-head">
                         <h5 class="mb-0"><i class="fa fa-microchip"></i> <?= htmlspecialchars($editable_config['blast_num_threads']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -537,8 +537,8 @@
                 </div>
 
                 <!-- BLAST Sample Sequences -->
-                <div class="card cfg-card mb-3" id="pnav-blast-samples" data-nav-label="BLAST Sample Sequences">
-                    <div class="card-header cfg-head d-flex justify-content-between align-items-center">
+                <div class="card adm-card mb-3" id="pnav-blast-samples" data-nav-label="BLAST Sample Sequences">
+                    <div class="card-header adm-head d-flex justify-content-between align-items-center">
                         <div>
                             <h5 class="mb-0">
                                 <i class="fa fa-flask"></i>
@@ -589,8 +589,8 @@
                 </div>
 
                 <!-- Sample Feature IDs -->
-                <div class="card cfg-card mb-3" id="pnav-sample-ids" data-nav-label="Sample Feature IDs">
-                    <div class="card-header cfg-head d-flex justify-content-between align-items-center">
+                <div class="card adm-card mb-3" id="pnav-sample-ids" data-nav-label="Sample Feature IDs">
+                    <div class="card-header adm-head d-flex justify-content-between align-items-center">
                         <div>
                             <h5 class="mb-0">
                                 <i class="fa fa-bookmark"></i>
@@ -626,8 +626,8 @@
                 </div>
 
                 <!-- Site Data Backup Path -->
-                <div class="card cfg-card mb-3" id="pnav-backup-path" data-nav-label="Site Data Backup Path">
-                    <div class="card-header cfg-head">
+                <div class="card adm-card mb-3" id="pnav-backup-path" data-nav-label="Site Data Backup Path">
+                    <div class="card-header adm-head">
                         <h5 class="mb-0"><i class="fa fa-save"></i> <?= htmlspecialchars($editable_config['site_data_path']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -651,8 +651,8 @@
                 </div>
 
                 <!-- Cache Directory -->
-                <div class="card cfg-card mb-3" id="pnav-cache-path" data-nav-label="Cache Directory">
-                    <div class="card-header cfg-head">
+                <div class="card adm-card mb-3" id="pnav-cache-path" data-nav-label="Cache Directory">
+                    <div class="card-header adm-head">
                         <h5 class="mb-0"><i class="fa fa-database"></i> <?= htmlspecialchars($editable_config['cache_path']['label']) ?></h5>
                     </div>
                     <div class="card-body">
@@ -675,8 +675,8 @@
                 </div>
 
                 <!-- Footer Settings Card -->
-                <div class="card cfg-card mb-3" id="pnav-footer" data-nav-label="Footer">
-                    <div class="card-header cfg-head">
+                <div class="card adm-card mb-3" id="pnav-footer" data-nav-label="Footer">
+                    <div class="card-header adm-head">
                         <h5 class="mb-0"><i class="fa fa-shoe-prints"></i> Footer</h5>
                     </div>
                     <div class="card-body">
@@ -783,8 +783,8 @@
             </form>
 
             <!-- Change History -->
-            <div class="card cfg-card mt-4" id="pnav-recent-changes" data-nav-label="Recent Changes">
-                <div class="card-header cfg-head">
+            <div class="card adm-card mt-4" id="pnav-recent-changes" data-nav-label="Recent Changes">
+                <div class="card-header adm-head">
                     <h5 class="mb-0"><i class="fa fa-history"></i> Recent Changes</h5>
                 </div>
                 <div class="card-body">

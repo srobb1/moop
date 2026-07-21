@@ -16,8 +16,8 @@
     <h2><i class="fa fa-code"></i> PHP Function Registry</h2>
     
     <!-- Info Card -->
-    <div class="card mb-4 border-info">
-        <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutRegistry">
+    <div class="card mb-4">
+        <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutRegistry">
             <h5 class="mb-0"><i class="fa fa-info-circle"></i> About This Registry <i class="fa fa-chevron-down float-end"></i></h5>
         </div>
         <div class="collapse" id="aboutRegistry">
@@ -35,7 +35,7 @@
     
     <!-- Control Panel -->
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header adm-head">
             <h5 class="mb-0"><i class="fa fa-cog"></i> Registry Controls</h5>
         </div>
         <div class="card-body">
@@ -71,7 +71,7 @@
     
     <!-- Statistics -->
     <div class="card mb-4">
-        <div class="card-header bg-success text-white">
+        <div class="card-header adm-head">
             <h5 class="mb-0"><i class="fa fa-bar-chart"></i> Statistics</h5>
         </div>
         <div class="card-body">
@@ -106,7 +106,7 @@
     
     <!-- Search & Filter -->
     <div class="card mb-4">
-        <div class="card-header bg-secondary text-white">
+        <div class="card-header adm-head">
             <h5 class="mb-0"><i class="fa fa-search"></i> Search & Filter</h5>
         </div>
         <div class="card-body">
@@ -200,7 +200,7 @@
     <?php else: ?>
         <!-- Registry Content -->
         <div class="card mb-4">
-            <div class="card-header bg-dark text-white" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="card-header adm-head" style="display: flex; justify-content: space-between; align-items: center;">
                 <h5 class="mb-0"><i class="fa fa-list"></i> Functions</h5>
                 <button class="btn btn-sm btn-light" id="toggleAllFilesBtn" title="Toggle all sections">
                     <i class="fa fa-folder-open"></i> Toggle All
@@ -214,7 +214,7 @@
         <?php if (!empty($registry['unused'])): ?>
         <!-- Unused Functions Alert -->
         <div class="card mb-4 border-danger">
-            <div class="card-header bg-danger text-white" style="cursor: pointer;" id="unusedSectionHeader">
+            <div class="card-header adm-head-warn" style="cursor: pointer;" id="unusedSectionHeader">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h5 class="mb-0"><i class="fa fa-exclamation-circle"></i> ⚠️ <?php echo count($registry['unused']); ?> Unused Function(s) Found</h5>
                     <span class="unused-arrow">▶</span>

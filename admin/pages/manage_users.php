@@ -33,7 +33,7 @@
        SECTION 1: EXISTING USERS TABLE
   ══════════════════════════════════════════════════════ -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <div class="card-header adm-head d-flex justify-content-between align-items-center">
       <h4 class="mb-0"><i class="fa fa-users"></i> User Accounts</h4>
       <span class="badge bg-light text-dark fs-6"><?= count($users) ?> user<?= count($users) !== 1 ? 's' : '' ?></span>
     </div>
@@ -125,8 +125,8 @@
   <!-- ══════════════════════════════════════════════════════
        SECTION 2: CREATE NEW USER FORM
   ══════════════════════════════════════════════════════ -->
-  <div class="card shadow-sm mb-4 border-success">
-    <div class="card-header bg-success text-white">
+  <div class="card shadow-sm mb-4">
+    <div class="card-header adm-head">
       <h4 class="mb-0"><i class="fa fa-user-plus"></i> Create New User</h4>
     </div>
     <div class="card-body">
@@ -246,7 +246,7 @@
   ══════════════════════════════════════════════════════ -->
   <?php if (!empty($stale_entries_audit)): ?>
   <div class="card shadow-sm mb-4 border-warning">
-    <div class="card-header bg-warning text-dark" style="cursor:pointer;" data-bs-target="#stale-audit" id="stale-audit-header">
+    <div class="card-header adm-head-warn" style="cursor:pointer;" data-bs-target="#stale-audit" id="stale-audit-header">
       <h5 class="mb-0">
         <i class="fa fa-exclamation-triangle"></i> Stale Assembly References
         <span class="badge bg-danger ms-2"><?= count($stale_entries_audit) ?></span>
@@ -376,7 +376,7 @@
 
           <!-- Password change (optional) -->
           <div class="card bg-light border mb-3">
-            <div class="card-header py-2">
+            <div class="card-header adm-head py-2">
               <i class="fa fa-lock"></i> <strong>Change Password</strong>
               <span class="text-muted ms-2 fw-normal small">— leave both fields blank to keep the current password</span>
             </div>

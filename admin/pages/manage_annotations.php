@@ -11,8 +11,8 @@
   <h2><i class="fa fa-tags"></i> Manage Annotation Sections</h2>
 
   <!-- About Section -->
-  <div class="card mb-4 border-info">
-    <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutAnnotationTypes">
+  <div class="card mb-4">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutAnnotationTypes">
       <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Annotation Types <i class="fa fa-chevron-down float-end"></i></h5>
     </div>
     <div class="collapse" id="aboutAnnotationTypes">
@@ -94,7 +94,7 @@
   <!-- PHASE 3: Annotation Type Configuration -->
   <?php if (!empty($annotation_config['annotation_types'])): ?>
   <div class="card mb-4">
-    <div class="card-header bg-secondary text-white">
+    <div class="card-header adm-head">
       <h5 class="mb-0"><i class="fa fa-cog"></i> Configure Annotation Types</h5>
     </div>
     <div class="card-body">

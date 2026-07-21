@@ -27,8 +27,8 @@
       <p class="text-muted">Configure which buttons appear on each BLAST result hit. Changes take effect immediately for new searches.</p>
 
       <!-- About -->
-      <div class="card mb-4 border-info">
-        <div class="card-header bg-info bg-opacity-10" style="cursor:pointer;"
+      <div class="card mb-4">
+        <div class="card-header adm-head" style="cursor:pointer;"
              data-bs-toggle="collapse" data-bs-target="#aboutBlastLinkouts">
           <h5 class="mb-0">
             <i class="fa fa-info-circle"></i> About BLAST Linkouts
@@ -61,7 +61,7 @@
 
         <!-- Built-in linkouts -->
         <div class="card mb-4">
-          <div class="card-header"><strong>Built-in Linkouts</strong></div>
+          <div class="card-header adm-head"><strong>Built-in Linkouts</strong></div>
           <div class="card-body p-0">
 
             <!-- Gene Page -->
@@ -132,7 +132,7 @@
 
         <!-- Global external linkouts -->
         <div class="card mb-4">
-          <div class="card-header d-flex justify-content-between align-items-center">
+          <div class="card-header adm-head d-flex justify-content-between align-items-center">
             <div>
               <strong>Global External Linkouts</strong>
               <span class="text-muted ms-2 small">— Apply to every BLAST hit regardless of database</span>
@@ -177,7 +177,7 @@
 
         <!-- Per-database external linkouts -->
         <div class="card mb-4">
-          <div class="card-header d-flex justify-content-between align-items-center">
+          <div class="card-header adm-head d-flex justify-content-between align-items-center">
             <div>
               <strong>Per-Database External Linkouts</strong>
               <span class="text-muted ms-2 small">— Apply only to a specific organism / assembly / database</span>
@@ -239,7 +239,7 @@
 
       <!-- Feature coordinate index (outside form — AJAX buttons) -->
       <div class="card mt-4 mb-4">
-        <div class="card-header">
+        <div class="card-header adm-head">
           <strong>Feature Coordinate Index</strong>
           <span class="text-muted ms-2 small">— Required for Genome Browser linkouts on feature BLAST databases (protein / mRNA / CDS). Stored as <code>feature_coords.tsv</code> in each gene set directory. Generated automatically when registering an assembly in JBrowse.</span>
         </div>

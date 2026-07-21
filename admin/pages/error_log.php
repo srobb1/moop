@@ -50,8 +50,8 @@
     <?php endif; ?>
 
     <!-- About Section -->
-    <div class="card mb-4 border-info">
-        <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutErrorLog">
+    <div class="card mb-4">
+        <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutErrorLog">
             <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Error Log Viewer <i class="fa fa-chevron-down float-end"></i></h5>
         </div>
         <div class="collapse" id="aboutErrorLog">
@@ -96,7 +96,7 @@
 
     <!-- Filter Panel -->
     <div class="card mb-4">
-        <div class="card-header bg-light">
+        <div class="card-header adm-head">
             <h5 class="mb-0"><i class="fa fa-filter"></i> Filter & Search</h5>
         </div>
         <div class="card-body">

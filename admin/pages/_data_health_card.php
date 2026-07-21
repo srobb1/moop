@@ -47,7 +47,7 @@ if ($has_health_issues):
     $_after_no_db        = $_p_nit;
 ?>
 <div class="card mb-4 border-warning">
-  <div class="card-header bg-warning bg-opacity-10">
+  <div class="card-header adm-head-warn">
     <h5 class="mb-0"><i class="fa fa-exclamation-triangle text-warning"></i> Data Health Issues</h5>
   </div>
   <div class="card-body p-0">
