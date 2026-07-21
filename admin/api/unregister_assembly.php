@@ -47,8 +47,25 @@ foreach (['organism' => $organism, 'assembly' => $assembly] as $param => $val) {
 
 // Re-check against live state: only a registration that is orphaned RIGHT NOW may be removed.
 $organism_data = $config->getPath('organism_data');
-$is_orphaned   = false;
-foreach (getOrphanedJBrowseRegistrations($organism_data) as $o) {
+$orphans       = getOrphanedJBrowseRegistrations($organism_data);
+
+// If EVERY registration looks orphaned, the organisms tree is unreachable (unmounted share,
+// wrong organism_data path) rather than the assemblies being individually broken. Refuse:
+// the registrations are almost certainly fine, and removing them would mean rebuilding all
+// of them once the data comes back.
+$total = countJBrowseRegistrations();
+if ($total > 1 && count($orphans) === $total) {
+    echo json_encode([
+        'success' => false,
+        'error'   => "All $total JBrowse registrations report missing source data, which points at the "
+                   . 'organism data directory being unavailable rather than at this assembly. '
+                   . 'Nothing was changed — check that the data directory is mounted and readable first.',
+    ]);
+    exit;
+}
+
+$is_orphaned = false;
+foreach ($orphans as $o) {
     if ($o['organism'] === $organism && $o['assembly'] === $assembly) {
         $is_orphaned = true;
         break;

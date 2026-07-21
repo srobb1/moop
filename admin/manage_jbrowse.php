@@ -98,6 +98,10 @@ if (is_dir($assemblies_meta_dir)) {
 // Registrations whose source data was renamed/removed outside MOOP — these still appear
 // in the served JBrowse config but their reference.fasta no longer resolves.
 $orphaned_registrations = getOrphanedJBrowseRegistrations($organisms_dir);
+// All registrations orphaned at once means the organisms tree is unreachable, not that
+// every assembly broke — surface that instead of offering to unregister all of them.
+$_jb_reg_total = countJBrowseRegistrations();
+$orphans_systemic = ($_jb_reg_total > 1 && count($orphaned_registrations) === $_jb_reg_total);
 
 // Compute assemblies that exist on disk but aren't registered yet
 $unregistered_assemblies = [];
@@ -210,6 +214,7 @@ $data = [
     'registered_count' => $registered_count,
     'unregistered_assemblies' => $unregistered_assemblies,
     'orphaned_registrations' => $orphaned_registrations,
+    'orphans_systemic' => $orphans_systemic,
     'gene_sets_info' => $gene_sets_info,
     'inline_scripts' => [
         'const jbrowseOrganisms = '        . json_encode($organisms)               . ';',

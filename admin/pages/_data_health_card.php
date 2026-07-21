@@ -19,6 +19,7 @@ $health_alerts = ($health_alerts ?? []) + [
 $orphaned_gene_set_tuples = $orphaned_gene_set_tuples ?? [];
 $orphaned_assembly_tuples = $orphaned_assembly_tuples ?? [];
 $orphaned_jbrowse_registrations = $orphaned_jbrowse_registrations ?? [];
+$orphaned_jbrowse_systemic      = $orphaned_jbrowse_systemic ?? false;
 $no_database_organisms    = $no_database_organisms ?? [];
 $cache_stale        = $cache_stale ?? false;
 $cache_changed_orgs = $cache_changed_orgs ?? [];
@@ -140,6 +141,19 @@ if ($has_health_issues):
     <?php endif; ?>
     <?php if ($health_alerts['orphaned_jbrowse'] > 0): ?>
     <div class="alert alert-danger mb-0 border-0 rounded-0 <?= $_after_orphaned_jb ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
+      <?php if ($orphaned_jbrowse_systemic): ?>
+      <div>
+        <i class="fa fa-plug-circle-exclamation me-2"></i>
+        <strong>Organism data appears to be unavailable.</strong>
+        All <?= $health_alerts['orphaned_jbrowse'] ?> JBrowse registrations report missing source
+        data at once, which points at the <code>organisms/</code> directory itself rather than at
+        <?= $health_alerts['orphaned_jbrowse'] ?> separate assemblies — typically an unmounted share
+        or a wrong <code>organism_data</code> path. Check that the data directory is mounted and
+        readable <strong>before</strong> unregistering anything: the registrations are probably fine,
+        and removing them would mean rebuilding all of them once the data is back.
+      </div>
+      <a href="manage_filesystem_permissions.php" class="btn btn-sm btn-danger flex-shrink-0">Check Filesystem</a>
+      <?php else: ?>
       <div>
         <i class="fa fa-unlink me-2"></i>
         <strong><?= $health_alerts['orphaned_jbrowse'] ?> JBrowse registration<?= $health_alerts['orphaned_jbrowse'] > 1 ? 's' : '' ?></strong>
@@ -156,6 +170,7 @@ if ($has_health_issues):
         <?php endforeach; ?>
       </div>
       <a href="manage_jbrowse.php#orphaned-registrations" class="btn btn-sm btn-danger flex-shrink-0">Review &amp; Unregister</a>
+      <?php endif; ?>
     </div>
     <?php endif; ?>
     <?php if ($health_alerts['no_database'] > 0): ?>

@@ -87,6 +87,16 @@
       </h5>
     </div>
     <div class="card-body">
+      <?php if (!empty($orphans_systemic)): ?>
+      <div class="alert alert-danger">
+        <strong><i class="fa fa-plug-circle-exclamation"></i> Do not unregister these yet.</strong>
+        Every registration is reporting missing source data at the same time, which points at the
+        <code>organisms/</code> directory being unavailable — an unmounted share or a wrong
+        <code>organism_data</code> path — rather than at these assemblies individually. They are
+        probably fine. Unregistering would mean rebuilding all of them once the data is back, so
+        the buttons below are disabled until the data directory is readable again.
+      </div>
+      <?php endif; ?>
       <p class="text-muted">
         <i class="fa fa-exclamation-triangle text-danger"></i>
         These assemblies are registered in JBrowse, but the source data they were built from
@@ -116,7 +126,8 @@
             <td>
               <button class="btn btn-sm btn-outline-danger unregister-assembly-btn"
                       data-organism="<?= htmlspecialchars($o['organism']) ?>"
-                      data-assembly="<?= htmlspecialchars($o['assembly']) ?>">
+                      data-assembly="<?= htmlspecialchars($o['assembly']) ?>"
+                      <?= !empty($orphans_systemic) ? 'disabled title="Disabled while the organism data directory looks unavailable"' : '' ?>>
                 <i class="fa fa-unlink"></i> Unregister
               </button>
             </td>

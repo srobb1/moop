@@ -1016,6 +1016,11 @@ function getNoDatabaseOrganisms(string $organism_data_path): array {
  * @param string $organism_data_path Path to organisms directory
  * @return array List of ['organism','assembly','reason','detail']
  */
+function countJBrowseRegistrations(): int {
+    $dir = ConfigManager::getInstance()->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
+    return is_dir($dir) ? count(glob("$dir/*.json") ?: []) : 0;
+}
+
 function getOrphanedJBrowseRegistrations(string $organism_data_path): array {
     $config        = ConfigManager::getInstance();
     $metadata_path = $config->getPath('metadata_path');
@@ -1070,6 +1075,7 @@ function getOrphanedJBrowseRegistrations(string $organism_data_path): array {
  * @return array{
  *   health_alerts: array{ungrouped:int,not_in_tree:int,stale_groups:int,new_gene_sets:int,orphaned_gene_sets:int,orphaned_assemblies:int,orphaned_jbrowse:int,no_database:int},
  *   orphaned_jbrowse_registrations: array,
+ *   orphaned_jbrowse_systemic: bool,
  *   orphaned_gene_set_tuples: array,
  *   orphaned_assembly_tuples: array,
  *   no_database_organisms: array,
@@ -1110,6 +1116,13 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     $orphaned_jbrowse_registrations = getOrphanedJBrowseRegistrations($organism_data_path);
     $health_alerts['orphaned_jbrowse'] = count($orphaned_jbrowse_registrations);
 
+    // If EVERY registration reports missing source data, the organisms tree itself is
+    // unreachable — an unmounted share or a wrong organism_data path. That is one
+    // infrastructure problem, not N broken assemblies, and listing them all as separate
+    // failures buries the actual cause under a wall of red.
+    $_jb_total = countJBrowseRegistrations();
+    $orphaned_jbrowse_systemic = ($_jb_total > 1 && count($orphaned_jbrowse_registrations) === $_jb_total);
+
     // Organism dirs with assembly data on disk but no organism.sqlite (never loaded).
     $no_database_organisms = getNoDatabaseOrganisms($organism_data_path);
     $health_alerts['no_database'] = count($no_database_organisms);
@@ -1140,6 +1153,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
         'orphaned_gene_set_tuples' => $orphaned_gene_set_tuples,
         'orphaned_assembly_tuples' => $orphaned_assembly_tuples,
         'orphaned_jbrowse_registrations' => $orphaned_jbrowse_registrations,
+        'orphaned_jbrowse_systemic'      => $orphaned_jbrowse_systemic,
         'no_database_organisms'    => $no_database_organisms,
         'new_gene_set_tuples'      => $new_gene_set_tuples,
     ];

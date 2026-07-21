@@ -129,6 +129,35 @@ ok(buildConfigFingerprint(null, $groups) === $cfp2, 'config fingerprint is deter
 @unlink($db); @unlink($groups); @rmdir("$tmp/OrgA"); @rmdir($tmp);
 
 // ----------------------------------------------------------------------------
+group('JBrowse reconciliation — orphan detection vs. an unavailable data directory');
+
+// getOrphanedJBrowseRegistrations() walks the derived JBrowse artifacts back to their
+// source. It takes the organisms path as an argument, so an unreachable data directory
+// can be simulated without touching the real one.
+$_jb_total = countJBrowseRegistrations();
+if ($_jb_total < 2) {
+    ok(true, 'skipped — needs at least 2 JBrowse registrations on this deployment');
+} else {
+    $_org_path = ConfigManager::getInstance()->getPath('organism_data');
+
+    // Healthy: source data present. Any orphan here is a real finding, not a false positive.
+    $_orphans_ok = getOrphanedJBrowseRegistrations($_org_path);
+    ok(count($_orphans_ok) < $_jb_total,
+       'with data present, not every registration is reported orphaned');
+
+    // Unavailable data directory (unmounted share, wrong organism_data path): every
+    // registration looks broken at once. That is ONE infrastructure problem, and the
+    // systemic flag is what stops the UI offering to unregister all of them.
+    $_orphans_gone = getOrphanedJBrowseRegistrations('/nonexistent/mount/organisms');
+    ok(count($_orphans_gone) === $_jb_total,
+       'with the data directory unavailable, every registration is detected');
+    ok(($_jb_total > 1 && count($_orphans_gone) === $_jb_total) === true,
+       'that case is flagged as systemic, not as N separate broken assemblies');
+    ok(($_jb_total > 1 && count($_orphans_ok) === $_jb_total) === false,
+       'the healthy case is NOT flagged as systemic');
+}
+
+// ----------------------------------------------------------------------------
 group('editable config — admin-page settings actually reach the app');
 
 // ConfigManager merges config_editable.json over site_config.php defaults, but ONLY for

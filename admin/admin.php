@@ -68,6 +68,7 @@ $health_alerts             = $_health['health_alerts'];
 $_orphaned_gene_set_tuples = $_health['orphaned_gene_set_tuples'];
 $_orphaned_assembly_tuples = $_health['orphaned_assembly_tuples'];
 $_orphaned_jbrowse_regs    = $_health['orphaned_jbrowse_registrations'];
+$_orphaned_jbrowse_systemic = $_health['orphaned_jbrowse_systemic'];
 $_no_database_organisms    = $_health['no_database_organisms'];
 $_new_gene_set_tuples      = $_health['new_gene_set_tuples'];
 unset($_raw_cache_data, $_health);
@@ -86,6 +87,7 @@ $data = [
     'orphaned_gene_set_tuples' => $_orphaned_gene_set_tuples,
     'orphaned_assembly_tuples' => $_orphaned_assembly_tuples,
     'orphaned_jbrowse_registrations' => $_orphaned_jbrowse_regs,
+    'orphaned_jbrowse_systemic' => $_orphaned_jbrowse_systemic,
     'no_database_organisms' => $_no_database_organisms,
     // Per CLAUDE.md §6: JS logic belongs in js/modules/, not inline. (The organism-cache
     // widget below predates that rule.)
