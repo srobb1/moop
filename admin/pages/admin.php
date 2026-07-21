@@ -106,20 +106,22 @@
               ?></small>
               <br><small class="text-muted d-block mt-1">
                 <?php
-                  // Show the command that matches the CURRENT state, not one fixed chain.
-                  // The old suggestion was always "add && commit && push". When there is nothing
-                  // to commit but something to push — which happens whenever the files were already
-                  // committed — `git commit` exits non-zero, `&&` short-circuits, and the push is
-                  // silently skipped. The admin sees "nothing to commit, working tree clean",
-                  // reasonably concludes they are done, and the badge still says not synced.
-                  $_cd = "cd " . $site_data_backup['path'];
-                  if ($g['uncommitted'] > 0) {
-                      $_cmd = $_cd . " && git add -A && git commit -m \"Site data backup\"";
-                      // `;` not `&&` before push, so a no-op commit cannot swallow the push.
-                      if ($g['has_upstream']) $_cmd .= " ; git push";
-                  } else {
-                      $_cmd = $_cd . " && git push";   // nothing to commit, only to publish
-                  }
+                  // ONE command that is correct in every state, rather than one chosen from the
+                  // state at render time — housekeeping copies files in the background, so the
+                  // state can change between this page rendering and the admin running the command.
+                  //
+                  // The original was "cd … && git add -A && git commit && git push", which silently
+                  // skipped the push whenever there was nothing to commit: git commit exits non-zero
+                  // and && short-circuits. The admin sees "nothing to commit, working tree clean",
+                  // concludes they are done, and the badge still says not synced.
+                  //
+                  // `|| true` on the commit is what fixes it, NOT dropping the commit or using `;`.
+                  // A bare `;` before push would also run the push if the `cd` itself failed, i.e.
+                  // in whatever directory the shell happened to be in.
+                  $_cmd = "cd " . $site_data_backup['path']
+                        . " && git add -A"
+                        . " && (git commit -m \"Site data backup\" || true)"
+                        . ($g['has_upstream'] ? " && git push" : "");
                 ?>
                 <code style="font-size: 0.85em;"><?= htmlspecialchars($_cmd) ?></code>
               </small>
