@@ -700,21 +700,37 @@ function getAnnotationSourcesByType($dbFile) {
  */
 function getAnnotationTypesFromDB($dbFile) {
     try {
-        $query = "SELECT DISTINCT ans.annotation_type,
+        // TRIM the type. It is a GROUPING KEY — whatever distinct values come back here
+        // become the annotation types the whole site knows about — so a stray space in one
+        // loaded row silently invents a whole extra type. That happened: one source row in
+        // Chamaeleo_calyptratus stored "Gene Ontology " and Manage Annotations grew a second,
+        // near-empty Gene Ontology card beside the real one.
+        //
+        // Trimming and grouping on the trimmed value fixes it for every organism at once and
+        // makes the class impossible, rather than relying on every future load being careful.
+        // A sweep at the time found 1,207 rows across 71 of 85 organisms already carrying
+        // leading/trailing whitespace in annotation_source_name, so that care demonstrably
+        // is not reliable; it only escaped notice there because a display name does not group
+        // anything. COUNTs are summed across rows that differ only by whitespace.
+        $query = "SELECT TRIM(ans.annotation_type) AS annotation_type,
                          COUNT(DISTINCT a.annotation_id) as annotation_count,
                          COUNT(DISTINCT fa.feature_id) as feature_count
                   FROM annotation_source ans
                   LEFT JOIN annotation a ON ans.annotation_source_id = a.annotation_source_id
                   LEFT JOIN feature_annotation fa ON a.annotation_id = fa.annotation_id
-                  WHERE ans.annotation_type IS NOT NULL AND ans.annotation_type != ''
-                  GROUP BY ans.annotation_type
-                  ORDER BY feature_count DESC, ans.annotation_type ASC";
-        
+                  WHERE ans.annotation_type IS NOT NULL AND TRIM(ans.annotation_type) != ''
+                  GROUP BY TRIM(ans.annotation_type)
+                  ORDER BY feature_count DESC, TRIM(ans.annotation_type) ASC";
+
         $results = fetchData($query, $dbFile, []);
-        
+
         $types = [];
         foreach ($results as $row) {
-            $types[$row['annotation_type']] = [
+            // Defensive: trim again in PHP so a database without TRIM() support, or a value
+            // carrying a non-space whitespace character, still cannot create a phantom type.
+            $type = trim((string)$row['annotation_type']);
+            if ($type === '') continue;
+            $types[$type] = [
                 'annotation_count' => (int)$row['annotation_count'],
                 'feature_count' => (int)$row['feature_count']
             ];
