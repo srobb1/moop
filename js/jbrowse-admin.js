@@ -807,3 +807,74 @@ $(document).ready(function() {
         });
     });
 });
+
+// ---------------------------------------------------------------------------
+// Unregister a broken JBrowse registration (source data renamed/removed).
+//
+// Note the X-CSRF-Token header: unregister_assembly.php bootstraps via admin_init.php,
+// which enforces CSRF on every POST. Several older endpoints in this file post without
+// one because they bootstrap via admin_access_check.php instead, which does not.
+// ---------------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.unregister-assembly-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const organism = btn.dataset.organism;
+            const assembly = btn.dataset.assembly;
+
+            if (!confirm(
+                `Unregister ${organism} / ${assembly} from JBrowse?\n\n` +
+                `This removes only what registration created (the data/genomes link ` +
+                `directory and the registry entry).\n\n` +
+                `Nothing under organisms/ is touched, and existing track configuration is kept.`
+            )) return;
+
+            const row = document.getElementById('orphan-' + organism + '_' + assembly);
+            const original = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Removing…';
+
+            const formData = new FormData();
+            formData.append('organism', organism);
+            formData.append('assembly', assembly);
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+            fetch(`/${siteUrl}/admin/api/unregister_assembly.php`, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRF-Token': csrfToken }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(t => {
+                        throw new Error(`HTTP ${response.status}: ${t.substring(0, 200)}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    const removed = (data.removed || []).join(', ') || 'nothing';
+                    const kept = (data.kept || []).length ? ` — kept: ${data.kept.join(', ')}` : '';
+                    if (row) {
+                        row.style.opacity = '0.5';
+                        row.cells[row.cells.length - 1].innerHTML =
+                            '<span class="text-success"><i class="fa fa-check"></i> Unregistered</span>';
+                        row.cells[2].innerHTML =
+                            `<small class="text-success">Removed: ${removed}${kept}</small>`;
+                    }
+                    setTimeout(() => window.location.reload(), 2500);
+                } else {
+                    alert('Could not unregister: ' + (data.error || data.message || 'unknown error'));
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                }
+            })
+            .catch(error => {
+                alert('Request failed: ' + error.message);
+                btn.disabled = false;
+                btn.innerHTML = original;
+            });
+        });
+    });
+});

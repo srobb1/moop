@@ -8,6 +8,8 @@
  * - $registered_assemblies  array of organism => [assemblies] registered in JBrowse
  * - $registered_count       int
  * - $unregistered_assemblies array of ['organism','assembly','has_genome']
+ * - $orphaned_registrations array of ['organism','assembly','reason','detail'] — registered
+ *                           in JBrowse but the source data under organisms/ is gone
  * - $track_stats            ['total','by_type','by_access','warnings']
  */
 ?>
@@ -74,6 +76,57 @@
       </div>
     </div>
   </div>
+
+  <!-- Broken registrations — source data gone. Opens expanded: this is live breakage. -->
+  <?php if (!empty($orphaned_registrations)): ?>
+  <div class="card mb-4 border-danger" id="orphaned-registrations">
+    <div class="card-header bg-danger bg-opacity-10">
+      <h5 class="mb-0">
+        <i class="fa fa-unlink text-danger"></i> Broken Registrations
+        <span class="badge bg-danger ms-2"><?= count($orphaned_registrations) ?></span>
+      </h5>
+    </div>
+    <div class="card-body">
+      <p class="text-muted">
+        <i class="fa fa-exclamation-triangle text-danger"></i>
+        These assemblies are registered in JBrowse, but the source data they were built from
+        is gone — renamed or removed outside MOOP. The genome browser still lists them and
+        their reference sequence returns <strong>404</strong> for every user who opens them.
+        <br>
+        Unregistering removes only what registration created (the <code>data/genomes/</code>
+        link directory and the registry entry). <strong>Nothing under <code>organisms/</code>
+        is touched</strong>, and any existing track configuration is kept — so if the data
+        still exists under a different name, register that name below and the tracks remain.
+      </p>
+      <table class="table table-sm table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Organism</th>
+            <th>Registered as</th>
+            <th>Problem</th>
+            <th style="width:130px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($orphaned_registrations as $o): ?>
+          <tr id="orphan-<?= htmlspecialchars($o['organism'] . '_' . $o['assembly']) ?>">
+            <td class="small"><?= htmlspecialchars($o['organism']) ?></td>
+            <td class="small"><code><?= htmlspecialchars($o['assembly']) ?></code></td>
+            <td class="small text-muted"><?= htmlspecialchars($o['detail']) ?></td>
+            <td>
+              <button class="btn btn-sm btn-outline-danger unregister-assembly-btn"
+                      data-organism="<?= htmlspecialchars($o['organism']) ?>"
+                      data-assembly="<?= htmlspecialchars($o['assembly']) ?>">
+                <i class="fa fa-unlink"></i> Unregister
+              </button>
+            </td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <?php endif; ?>
 
   <!-- Register Assemblies (collapsible, starts closed) -->
   <?php if (!empty($unregistered_assemblies)): ?>

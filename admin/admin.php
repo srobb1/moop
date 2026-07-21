@@ -26,7 +26,7 @@ $organism_data = $config->getPath('organism_data');
 $cache_file    = moop_organism_cache_file();
 $lock_file     = moop_organism_cache_lock_file();
 $cache_info    = ['generated' => null, 'organism_count' => 0, 'refreshing' => false];
-$health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'no_database' => 0];
+$health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0];
 $_raw_cache_data = [];
 $cache_stale = false;      // true when live data fingerprints differ from the cache's
 $cache_changed_orgs = [];  // organisms whose data changed since the cache was built
@@ -67,6 +67,7 @@ $_health = computeDataHealthAlerts($organism_data);
 $health_alerts             = $_health['health_alerts'];
 $_orphaned_gene_set_tuples = $_health['orphaned_gene_set_tuples'];
 $_orphaned_assembly_tuples = $_health['orphaned_assembly_tuples'];
+$_orphaned_jbrowse_regs    = $_health['orphaned_jbrowse_registrations'];
 $_no_database_organisms    = $_health['no_database_organisms'];
 $_new_gene_set_tuples      = $_health['new_gene_set_tuples'];
 unset($_raw_cache_data, $_health);
@@ -84,6 +85,7 @@ $data = [
     'new_gene_set_tuples' => $_new_gene_set_tuples,
     'orphaned_gene_set_tuples' => $_orphaned_gene_set_tuples,
     'orphaned_assembly_tuples' => $_orphaned_assembly_tuples,
+    'orphaned_jbrowse_registrations' => $_orphaned_jbrowse_regs,
     'no_database_organisms' => $_no_database_organisms,
     // Per CLAUDE.md §6: JS logic belongs in js/modules/, not inline. (The organism-cache
     // widget below predates that rule.)

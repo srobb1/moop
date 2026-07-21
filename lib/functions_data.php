@@ -992,6 +992,74 @@ function getNoDatabaseOrganisms(string $organism_data_path): array {
 }
 
 /**
+ * Return every JBrowse assembly registration whose source data is gone.
+ *
+ * Every other data-health check in this file walks OUTWARD from the organisms tree or the
+ * database. This one walks the other way — from the derived JBrowse artifacts back to their
+ * source — because that is the only direction that catches source data being renamed or
+ * removed OUTSIDE MOOP. Registration builds a data/genomes/{org}/{asm}/ directory holding a
+ * reference.fasta symlink into organisms/; an admin never creates those by hand and has no
+ * reason to know they exist, so nothing prompts them to clean up after a rename.
+ *
+ * The check is deliberately on the ARTIFACT, not on names: a registration is broken if its
+ * reference.fasta no longer resolves, whatever the cause (directory renamed, genome.fa
+ * deleted underneath it, source tree unmounted). A dangling symlink serves HTTP 404 to
+ * every user who opens that assembly in the genome browser.
+ *
+ * Reads ~69 small JSON files + two stat calls each (~2ms), same cost class as the other
+ * checks here, so it can run on every dashboard / Manage Organisms load.
+ *
+ * NOTE: report-only, by design. This must never auto-remove a registration — a temporarily
+ * absent source (unmounted share, mid-flight rsync, half-finished load) is indistinguishable
+ * from a deliberate deletion, and acting on it would destroy a working setup.
+ *
+ * @param string $organism_data_path Path to organisms directory
+ * @return array List of ['organism','assembly','reason','detail']
+ */
+function getOrphanedJBrowseRegistrations(string $organism_data_path): array {
+    $config        = ConfigManager::getInstance();
+    $metadata_path = $config->getPath('metadata_path');
+    $site_path     = $config->getPath('site_path');
+
+    $assemblies_dir = "$metadata_path/jbrowse2-configs/assemblies";
+    if (!is_dir($assemblies_dir)) return [];
+
+    $orphans = [];
+    foreach (glob("$assemblies_dir/*.json") ?: [] as $json_file) {
+        $def = loadJsonFile($json_file, []);
+        $org = $def['organism']   ?? '';
+        $asm = $def['assemblyId'] ?? '';
+        if ($org === '' || $asm === '') continue;   // malformed; not a source-data problem
+
+        $source_dir = "$organism_data_path/$org/$asm";
+        $reference  = "$site_path/data/genomes/$org/$asm/reference.fasta";
+
+        if (!is_dir($source_dir)) {
+            // Most common cause: the assembly directory was renamed after registration.
+            // Show what the organism directory actually holds so the fix is obvious.
+            $actual = array_map('basename', glob("$organism_data_path/$org/*", GLOB_ONLYDIR) ?: []);
+            $orphans[] = [
+                'organism' => $org,
+                'assembly' => $asm,
+                'reason'   => 'no_source_directory',
+                'detail'   => $actual
+                    ? 'organisms/' . $org . '/ now contains: ' . implode(', ', $actual)
+                    : 'organisms/' . $org . '/ has no assembly directories',
+            ];
+        } elseif (!file_exists($reference)) {
+            // Source directory is there but the genome link is dead — JBrowse 404s.
+            $orphans[] = [
+                'organism' => $org,
+                'assembly' => $asm,
+                'reason'   => 'broken_genome_link',
+                'detail'   => 'data/genomes/' . $org . '/' . $asm . '/reference.fasta does not resolve',
+            ];
+        }
+    }
+    return $orphans;
+}
+
+/**
  * Compute the "data health" alerts shown on BOTH the admin dashboard and the manage
  * organisms page. Single source of truth so the two pages never drift. Reads the
  * organism cache (.organism_cache.json) for taxonomy membership + which assemblies
@@ -1000,7 +1068,8 @@ function getNoDatabaseOrganisms(string $organism_data_path): array {
  *
  * @param string $organism_data_path
  * @return array{
- *   health_alerts: array{ungrouped:int,not_in_tree:int,stale_groups:int,new_gene_sets:int,orphaned_gene_sets:int,orphaned_assemblies:int,no_database:int},
+ *   health_alerts: array{ungrouped:int,not_in_tree:int,stale_groups:int,new_gene_sets:int,orphaned_gene_sets:int,orphaned_assemblies:int,orphaned_jbrowse:int,no_database:int},
+ *   orphaned_jbrowse_registrations: array,
  *   orphaned_gene_set_tuples: array,
  *   orphaned_assembly_tuples: array,
  *   no_database_organisms: array,
@@ -1013,7 +1082,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     $cache_file    = moop_organism_cache_file();
     $groups_file   = "$metadata_path/organism_assembly_groups.json";
 
-    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'no_database' => 0];
+    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0];
 
     // Cache-driven: taxonomy-tree membership + the list of assemblies per organism.
     $cache_data = [];
@@ -1035,6 +1104,11 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     // Whole assembly dirs on disk with no matching genome row (rename/reload leftovers).
     $orphaned_assembly_tuples = getOrphanedAssemblyTuples($organism_data_path);
     $health_alerts['orphaned_assemblies'] = count($orphaned_assembly_tuples);
+
+    // JBrowse registrations whose source data was renamed/removed outside MOOP. Walks the
+    // derived artifacts back to source — the one direction no other check here covers.
+    $orphaned_jbrowse_registrations = getOrphanedJBrowseRegistrations($organism_data_path);
+    $health_alerts['orphaned_jbrowse'] = count($orphaned_jbrowse_registrations);
 
     // Organism dirs with assembly data on disk but no organism.sqlite (never loaded).
     $no_database_organisms = getNoDatabaseOrganisms($organism_data_path);
@@ -1065,6 +1139,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
         'health_alerts'            => $health_alerts,
         'orphaned_gene_set_tuples' => $orphaned_gene_set_tuples,
         'orphaned_assembly_tuples' => $orphaned_assembly_tuples,
+        'orphaned_jbrowse_registrations' => $orphaned_jbrowse_registrations,
         'no_database_organisms'    => $no_database_organisms,
         'new_gene_set_tuples'      => $new_gene_set_tuples,
     ];

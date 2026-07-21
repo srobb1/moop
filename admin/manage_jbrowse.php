@@ -95,6 +95,10 @@ if (is_dir($assemblies_meta_dir)) {
     }
 }
 
+// Registrations whose source data was renamed/removed outside MOOP — these still appear
+// in the served JBrowse config but their reference.fasta no longer resolves.
+$orphaned_registrations = getOrphanedJBrowseRegistrations($organisms_dir);
+
 // Compute assemblies that exist on disk but aren't registered yet
 $unregistered_assemblies = [];
 foreach ($organisms as $org => $assemblies) {
@@ -205,6 +209,7 @@ $data = [
     'registered_assemblies' => $registered_assemblies,
     'registered_count' => $registered_count,
     'unregistered_assemblies' => $unregistered_assemblies,
+    'orphaned_registrations' => $orphaned_registrations,
     'gene_sets_info' => $gene_sets_info,
     'inline_scripts' => [
         'const jbrowseOrganisms = '        . json_encode($organisms)               . ';',

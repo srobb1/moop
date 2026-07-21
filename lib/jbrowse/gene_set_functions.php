@@ -321,6 +321,89 @@ function archiveGeneSet(string $organism, string $assembly, string $gene_set, Co
 }
 
 /**
+ * Unregister an assembly from JBrowse: remove every artifact that registration created,
+ * and nothing else. The inverse of admin/api/jbrowse_register_assembly.php, in the same
+ * spirit as archiveGeneSet() one level up the hierarchy.
+ *
+ * CRITICAL DIFFERENCE FROM archiveGeneSet(): this NEVER touches organisms/. Registration
+ * only ever creates derived artifacts (a data/genomes/ directory holding a symlink into
+ * organisms/, plus a registry JSON), so unregistering only ever removes derived artifacts.
+ * The source data is left exactly as it is — that is what makes this safe to offer as a
+ * one-click admin action, and re-registering afterwards is cheap.
+ *
+ * Intended for the registrations reported by getOrphanedJBrowseRegistrations(): source data
+ * renamed or removed outside MOOP, leaving a dangling reference.fasta that serves HTTP 404.
+ *
+ * Track JSONs are preserved if any exist — those represent real curation work, and an
+ * assembly can be re-registered under the correct name without rebuilding them. Only the
+ * empty directory skeleton is cleaned up.
+ *
+ * @return array ['success'=>bool, 'error'=>string?, 'removed'=>string[], 'kept'=>string[]]
+ */
+function unregisterAssembly(string $organism, string $assembly, ConfigManager $config): array {
+    $site_path     = $config->getPath('site_path');
+    $metadata_path = $config->getPath('metadata_path');
+
+    $assembly_json = "$metadata_path/jbrowse2-configs/assemblies/{$organism}_{$assembly}.json";
+    if (!file_exists($assembly_json)) {
+        return ['success' => false, 'error' => "Not registered: {$organism}_{$assembly}"];
+    }
+
+    $removed = [];
+    $kept    = [];
+
+    // 1. The registry entry — this is what puts the assembly in the served JBrowse config,
+    //    so remove it first: after this the browser stops offering the broken assembly.
+    if (@unlink($assembly_json)) {
+        $removed[] = "assembly registration ({$organism}_{$assembly}.json)";
+    } else {
+        return ['success' => false, 'error' => "Could not remove $assembly_json"];
+    }
+
+    // 2. The derived genome directory: the reference.fasta symlink and its .fai index.
+    //    rrmdir() unlinks symlinks rather than following them, so the organisms/ genome
+    //    this points at is never at risk.
+    $genomes_dir = "$site_path/data/genomes/$organism/$assembly";
+    if (is_dir($genomes_dir)) {
+        if (rrmdir($genomes_dir)) {
+            $removed[] = "data/genomes/$organism/$assembly/";
+        } else {
+            $kept[] = "data/genomes/$organism/$assembly/ (could not remove — check permissions)";
+        }
+        @rmdir(dirname($genomes_dir));   // organism dir, only if now empty
+    }
+
+    // 3. Track JSONs are curation work — keep them if there are any, and only tidy up the
+    //    empty directory skeleton that registration/gene-set prep leaves behind.
+    $tracks_dir = "$metadata_path/jbrowse2-configs/tracks/$organism/$assembly";
+    if (is_dir($tracks_dir)) {
+        $track_files = glob("$tracks_dir/*/*.json") ?: [];
+        if ($track_files) {
+            $kept[] = count($track_files) . " track JSON(s) under jbrowse2-configs/tracks/$organism/$assembly/";
+        } elseif (rrmdir($tracks_dir)) {
+            $removed[] = "empty track directory (tracks/$organism/$assembly/)";
+            @rmdir(dirname($tracks_dir));
+        }
+    }
+
+    // 4. Trix search index, if this assembly ever had one built.
+    $trix_dir = "$site_path/jbrowse2/$organism/$assembly";
+    if (is_dir($trix_dir) && rrmdir($trix_dir)) {
+        $removed[] = "jbrowse2/$organism/$assembly/ (trix search index)";
+        @rmdir(dirname($trix_dir));
+    }
+
+    // 5. A registered Google Sheet track source for this assembly is no longer reachable.
+    $sheet_dir = "$metadata_path/jbrowse2-configs/sheets/$organism/$assembly";
+    if (is_dir($sheet_dir) && rrmdir($sheet_dir)) {
+        $removed[] = "registered Google Sheet source (sheets/$organism/$assembly/)";
+        @rmdir(dirname($sheet_dir));
+    }
+
+    return ['success' => true, 'removed' => $removed, 'kept' => $kept];
+}
+
+/**
  * Run jbrowse text-index for a specific gene set and update its track JSON.
  * Trix files go in jbrowse2/{organism}/{assembly}/{gene_set}/trix/.
  *
