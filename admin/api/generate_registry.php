@@ -33,13 +33,23 @@ if (!file_exists($generator_path)) {
     exit;
 }
 
-// Run the generator via CLI
-$command = 'php ' . escapeshellarg($generator_path) . ' 2>&1';
-$output = shell_exec($command);
-$returnCode = $output ? 0 : 1;
+// Run the generator via CLI.
+//
+// exec() rather than shell_exec() so the generator's EXIT STATUS is actually available.
+// This used to infer success as `$output ? 0 : 1` — i.e. "it printed something, so it
+// worked" — and then decide by substring-matching the output for "error"/"failed". That
+// happened to behave correctly only because PHP fatals contain the word "error" and the
+// generators' own failure path prints "Error writing JSON file". A successful run whose
+// output merely mentioned the word would have been reported as a failure, and a generator
+// that exited non-zero while printing a normal-looking message would have been reported as
+// a success. The exit status answers the question directly.
+$command    = 'php ' . escapeshellarg($generator_path) . ' 2>&1';
+$outputLines = [];
+$returnCode  = 1;
+exec($command, $outputLines, $returnCode);
+$output = implode("\n", $outputLines);
 
-// Check if generation was successful
-if ($returnCode === 0 && stripos($output, 'error') === false && stripos($output, 'failed') === false) {
+if ($returnCode === 0) {
     echo json_encode([
         'success' => true,
         'message' => ucfirst($type) . ' registry generated successfully!',
@@ -48,7 +58,7 @@ if ($returnCode === 0 && stripos($output, 'error') === false && stripos($output,
 } else {
     echo json_encode([
         'success' => false,
-        'message' => 'Failed to generate ' . $type . ' registry',
+        'message' => 'Failed to generate ' . $type . ' registry (exit code ' . $returnCode . ')',
         'output' => $output
     ]);
 }
