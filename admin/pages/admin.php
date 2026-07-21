@@ -70,7 +70,21 @@
         last run: <?= htmlspecialchars($site_data_backup['last_run']) ?>,
         <?= $site_data_backup['files_copied'] ?> file(s) updated
         <br><small class="text-muted">Config, metadata, and organism files are checked for changes on every admin login and copied to <code><?= htmlspecialchars($site_data_backup['path']) ?></code>.</small>
-        <?php if ($site_data_backup['is_git'] && !empty($site_data_backup['git'])): $g = $site_data_backup['git']; ?>
+        <?php
+          // Recomputed LIVE on every load, not read from the housekeeping snapshot.
+          // Everything else on this page is precomputed because it is expensive — the
+          // permission sweep and the organism-tree walk cost hundreds of ms. This costs
+          // ~10ms (git status --porcelain 5ms + ahead count 4ms), so it never needed to
+          // inherit a 4-hour staleness. It did, and the result was a badge that still read
+          // "3 files to commit" after an admin had committed and pushed, with no way to
+          // tell whether the number was stale or the push had failed. A figure this cheap
+          // should simply be true.
+          $g = null;
+          if (!empty($site_data_backup['is_git']) && function_exists('housekeeping_git_status')) {
+              $g = housekeeping_git_status($site_data_backup['path']);
+          }
+        ?>
+        <?php if ($site_data_backup['is_git'] && !empty($g)): ?>
           <div class="mt-2 pt-2 border-top">
             <?php // Git icon, not a second check-circle: this line sits inside an alert that
                   // already leads with a ✓, so two ticks just read as "success success". The
@@ -91,7 +105,23 @@
                 echo htmlspecialchars(implode(', ', $bits));
               ?></small>
               <br><small class="text-muted d-block mt-1">
-                <code style="font-size: 0.85em;">cd <?= htmlspecialchars($site_data_backup['path']) ?> &amp;&amp; git add -A &amp;&amp; git commit -m "Site data backup"<?= $g['has_upstream'] ? ' &amp;&amp; git push' : '' ?></code>
+                <?php
+                  // Show the command that matches the CURRENT state, not one fixed chain.
+                  // The old suggestion was always "add && commit && push". When there is nothing
+                  // to commit but something to push — which happens whenever the files were already
+                  // committed — `git commit` exits non-zero, `&&` short-circuits, and the push is
+                  // silently skipped. The admin sees "nothing to commit, working tree clean",
+                  // reasonably concludes they are done, and the badge still says not synced.
+                  $_cd = "cd " . $site_data_backup['path'];
+                  if ($g['uncommitted'] > 0) {
+                      $_cmd = $_cd . " && git add -A && git commit -m \"Site data backup\"";
+                      // `;` not `&&` before push, so a no-op commit cannot swallow the push.
+                      if ($g['has_upstream']) $_cmd .= " ; git push";
+                  } else {
+                      $_cmd = $_cd . " && git push";   // nothing to commit, only to publish
+                  }
+                ?>
+                <code style="font-size: 0.85em;"><?= htmlspecialchars($_cmd) ?></code>
               </small>
             <?php endif; ?>
           </div>
