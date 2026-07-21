@@ -4,25 +4,12 @@
  * Renders registry from JSON data with search, filtering, and toggle functionality
  */
 
-$config = ConfigManager::getInstance();
-$docs_path = $config->getPath('docs_path');
-$json_registry = $docs_path . '/js_function_registry.json';
-
-// Load JSON registry
-$registry = null;
-$lastUpdate = 'Never';
-$registryStatus = [];
-if (file_exists($json_registry)) {
-    $json_content = file_get_contents($json_registry);
-    $registry = json_decode($json_content, true);
-    
-    // Get registry status (includes staleness check)
-    require_once __DIR__ . '/../../lib/functions_filesystem.php';
-    $registryStatus = getRegistryLastUpdate($json_registry, $json_registry);
-    $lastUpdate = $registryStatus['timestamp'];
-    $isStale = $registryStatus['isStale'];
-    $statusMessage = $registryStatus['status'];
-}
+// $registry, $lastUpdate, $isStale and $statusMessage are supplied by the controller
+// (admin/manage_js_registry.php) via $data. This file used to load and json_decode the
+// ~950KB registry a second time and recompute the status itself, which both duplicated the
+// controller's work on every page load and put controller logic in a display file.
+$isStale       = $isStale       ?? false;
+$statusMessage = $statusMessage ?? '';
 ?>
 
 

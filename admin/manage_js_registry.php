@@ -27,7 +27,7 @@ if (file_exists($json_registry)) {
     
     // Get registry status (includes staleness check)
     require_once __DIR__ . '/../lib/functions_filesystem.php';
-    $registryStatus = getRegistryLastUpdate($json_registry, $json_registry);
+    $registryStatus = getRegistryLastUpdate($json_registry, 'js');
     $lastUpdate = $registryStatus['timestamp'];
     $isStale = $registryStatus['isStale'];
     $statusMessage = $registryStatus['status'];
@@ -42,6 +42,9 @@ $data = [
     'config' => $config,
     'registry' => $registry,
     'lastUpdate' => $lastUpdate,
+    'registryStatus' => $registryStatus,
+    'isStale' => $registryStatus['isStale'] ?? false,
+    'statusMessage' => $registryStatus['status'] ?? '',
 ];
 
 // Configure display
