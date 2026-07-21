@@ -711,11 +711,14 @@ class ConfigManager
                 'description' => 'Available sequence file types for searches. Customize labels and badge colors as needed.',
                 'type' => 'sequence_types',
                 'current_value' => $this->getSequenceTypes(),
-                'note' => 'File patterns are read-only and match files in organism directories. Badge colors use Bootstrap CSS classes (e.g., bg-info, bg-success, bg-warning)',
+                'note' => 'The file name is exact, not a wildcard: every organism must name this sequence type\'s file exactly this, in every gene-set directory. Badge colors use Bootstrap CSS classes (e.g., bg-info, bg-success, bg-warning)',
             ],
             'header_img' => [
-                'label' => 'Header Banner Image',
-                'description' => 'Main banner image displayed at top of pages',
+                'label' => 'Header Banner Images',
+                'description' => 'Every image in images/banners/ is a banner. The home page always '
+                    . 'shows the one selected below, so the front door stays consistent; every '
+                    . 'other page picks one at random on each load, so visitors see the collection '
+                    . 'as they move around. Upload more to add them to the rotation.',
                 'type' => 'file_upload',
                 'current_value' => $this->getString('header_img', ''),
                 'upload_info' => [

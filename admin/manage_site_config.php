@@ -164,15 +164,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Parse sequence types from form
         if (isset($_POST['sequence_types']) && is_array($_POST['sequence_types'])) {
+            // Every submitted type is saved. There used to be an "Enabled" checkbox gating
+            // this, but it could not disable anything: an unchecked type was simply omitted
+            // from config_editable.json, and ConfigManager deep-merges sequence_types, so
+            // the type came straight back from the site_config.php defaults on the next
+            // request. All unchecking actually did was silently discard that row's label,
+            // colour and file name. The checkbox is gone; see admin/pages/manage_site_config.php.
             $sequence_types = [];
             foreach ($_POST['sequence_types'] as $seq_type => $seq_data) {
-                if (!empty($seq_data['enabled'])) {
-                    $sequence_types[$seq_type] = [
-                        'pattern' => $seq_data['pattern'] ?? '',
-                        'label' => $seq_data['label'] ?? $seq_type,
-                        'color' => $seq_data['color'] ?? 'bg-secondary',
-                    ];
-                }
+                $sequence_types[$seq_type] = [
+                    'pattern' => $seq_data['pattern'] ?? '',
+                    'label'   => $seq_data['label'] ?? $seq_type,
+                    'color'   => $seq_data['color'] ?? 'bg-secondary',
+                ];
             }
             $data['sequence_types'] = $sequence_types;
         }
@@ -384,6 +388,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = $result['message'];
                 // Reload config to show updated values
                 $editable_config = $config->getEditableConfigMetadata();
+
+                // A sequence-type pattern that matches nothing is not an error the save can
+                // detect — the file just stops being found everywhere. Say so explicitly
+                // rather than reporting a clean save over a site that has gone quiet.
+                $_dead = [];
+                foreach (($editable_config['sequence_types']['current_value'] ?? []) as $_st => $_sc) {
+                    $_pat = $_sc['pattern'] ?? '';
+                    if ($_pat !== '' && moop_count_pattern_matches($config->getPath('organism_data'), $_pat) === 0) {
+                        $_dead[] = $_st . ' (' . $_pat . ')';
+                    }
+                }
+                if ($_dead) {
+                    $error = 'Saved, but these sequence-type patterns now match no files on disk: '
+                           . implode(', ', $_dead)
+                           . '. Those sequence types will not appear anywhere on the site until the pattern matches again.';
+                }
             } else {
                 $error = $result['message'];
             }
@@ -394,6 +414,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get editable config metadata
 $editable_config = $config->getEditableConfigMetadata();
 $footer_config   = $editable_config['footer']['current_value'];
+
+/**
+ * How many files on disk a sequence-type pattern actually matches.
+ *
+ * The pattern decides which files the site can find at all — BLAST database discovery
+ * (lib/blast_functions.php) and FASTA downloads (lib/fasta_download_handler.php) both key
+ * off it. A typo does not error; it silently reduces the match set to zero, which looks
+ * exactly like "this organism has no protein data". Showing the live count next to the
+ * field is what turns that from an invisible change into an obvious one. ~8ms for all four.
+ */
+function moop_count_pattern_matches(string $organisms_dir, string $pattern): int {
+    $pattern = trim($pattern);
+    if ($pattern === '' || strpbrk($pattern, '/') !== false) return 0;
+    return count(glob("$organisms_dir/*/*/*/$pattern") ?: [])
+         + count(glob("$organisms_dir/*/*/$pattern") ?: []);
+}
+
+$sequence_type_matches = [];
+foreach (($editable_config['sequence_types']['current_value'] ?? []) as $_st => $_sc) {
+    $sequence_type_matches[$_st] = moop_count_pattern_matches($organism_data, $_sc['pattern'] ?? '');
+}
 
 // Get list of banner images in banners directory
 $banner_images = [];
@@ -441,6 +482,7 @@ $data = [
     'organism_data' => $organism_data,
     'metadata_path' => $metadata_path,
     'config_file' => $config_file,
+    'sequence_type_matches' => $sequence_type_matches,
     'page_styles' => [
         // parent-nav.css supplies the sticky section-nav; the same pair the gene page uses.
         '/' . $site . '/css/parent-nav.css',

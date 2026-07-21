@@ -110,3 +110,58 @@
         margin-bottom: 0.4rem;
     }
 }
+
+/* ---------------------------------------------------------------------------
+   Quiet notes
+   ---------------------------------------------------------------------------
+   Reference details — recommended image size, accepted formats, tips — were
+   rendered as `alert alert-info`, i.e. saturated blue panels competing with the
+   actual controls. They are things to consult once, not to be drawn to on every
+   visit, so they read as quiet marginalia instead.
+   -------------------------------------------------------------------------- */
+.cfg-note {
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #5b6670;
+    background: #f7f9fa;
+    border: 1px solid #e4e9ec;
+    border-radius: 6px;
+}
+
+.cfg-note:last-child {
+    margin-bottom: 0;
+}
+
+.cfg-note strong {
+    color: #3f4a52;
+    font-weight: 600;
+}
+
+.cfg-note .fa {
+    color: #9aa5ad;
+    margin-right: 0.15rem;
+}
+
+/* Sequence file types: compact "files found" indicator. Previously this was a caption
+   under the file-name input, which wrapped and made the row hard to scan. */
+.cfg-match-ok,
+.cfg-match-none {
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.cfg-match-ok {
+    color: #157347;
+}
+
+.cfg-match-none {
+    color: #b02a37;
+}
+
+.cfg-match-ok .fa,
+.cfg-match-none .fa {
+    margin-right: 0.2rem;
+}

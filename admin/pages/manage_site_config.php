@@ -167,23 +167,16 @@
                             <table class="table table-sm table-bordered">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="width: 60px;">Enabled</th>
-                                        <th style="width: 22%;">Type</th>
-                                        <th style="width: 22%;">Display Label</th>
-                                        <th style="width: 22%;">Badge Color</th>
-                                        <th style="width: 24%; white-space: nowrap;">Pattern</th>
+                                        <th style="width: 14%;">Type</th>
+                                        <th style="width: 16%;">Display Label</th>
+                                        <th style="width: 24%;">Badge Color</th>
+                                        <th style="width: 32%;">File Name</th>
+                                        <th style="width: 14%; white-space: nowrap;">Files Found</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($editable_config['sequence_types']['current_value'] as $seq_type => $seq_config): ?>
                                     <tr>
-                                        <td class="text-center">
-                                            <input type="checkbox" 
-                                                   name="sequence_types[<?= htmlspecialchars($seq_type) ?>][enabled]" 
-                                                   value="1" 
-                                                   class="form-check-input" 
-                                                   checked>
-                                        </td>
                                         <td>
                                             <code><?= htmlspecialchars($seq_type) ?></code>
                                         </td>
@@ -216,10 +209,25 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <code class="small"><?= htmlspecialchars($seq_config['pattern'] ?? '') ?></code>
-                                            <input type="hidden" 
-                                                   name="sequence_types[<?= htmlspecialchars($seq_type) ?>][pattern]" 
-                                                   value="<?= htmlspecialchars($seq_config['pattern'] ?? '') ?>">
+                                            <?php $_m = $sequence_type_matches[$seq_type] ?? 0; ?>
+                                            <input type="text"
+                                                   class="form-control form-control-sm font-monospace"
+                                                   name="sequence_types[<?= htmlspecialchars($seq_type) ?>][pattern]"
+                                                   value="<?= htmlspecialchars($seq_config['pattern'] ?? '') ?>"
+                                                   aria-describedby="patmatch-<?= htmlspecialchars($seq_type) ?>"
+                                                   required>
+                                        </td>
+                                        <td class="text-nowrap align-middle">
+                                            <?php if ($_m > 0): ?>
+                                                <span id="patmatch-<?= htmlspecialchars($seq_type) ?>" class="cfg-match-ok">
+                                                    <i class="fa fa-check-circle"></i> <?= number_format($_m) ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span id="patmatch-<?= htmlspecialchars($seq_type) ?>" class="cfg-match-none"
+                                                      title="No file with this name exists in any gene-set directory">
+                                                    <i class="fa fa-exclamation-circle"></i> none
+                                                </span>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
@@ -228,14 +236,44 @@
                         </div>
                         <small class="form-text text-muted d-block mt-2">
                             <i class="fa fa-info-circle"></i> 
-                            <strong>File patterns:</strong> Read-only and match files in organism directories<br>
+                            <strong>File names:</strong> see the explanation below the table.<br>
                             <strong>Badge colors:</strong> Use Bootstrap CSS classes (e.g., bg-info, bg-success, bg-warning, bg-danger). Preview updates as you type.
                         </small>
+
+                        <div class="alert alert-light border mt-3 mb-0 small">
+                            <p class="mb-2"><strong><i class="fa fa-circle-info"></i> What the file name means</strong></p>
+                            <p class="mb-2">
+                                This is the <strong>exact file name</strong> that every organism must use for this
+                                sequence type. It is not a search pattern and not a wildcard — the site looks for
+                                this precise name inside each gene-set directory, and finds nothing else.
+                            </p>
+                            <p class="mb-1">With the file name <code>protein.aa.fa</code>, every organism needs:</p>
+                            <ul class="mb-2">
+                                <li><code>organisms/<em>Organism</em>/<em>Assembly</em>/<em>GeneSet</em>/protein.aa.fa</code>
+                                    &nbsp;<span class="text-success fw-semibold">found</span></li>
+                                <li><code>&hellip;/<em>GeneSet</em>/Nvec.protein.aa.fa</code>
+                                    &nbsp;<span class="text-danger fw-semibold">not found</span> — prefixes are a different name</li>
+                                <li><code>&hellip;/<em>GeneSet</em>/protein.fa</code>
+                                    &nbsp;<span class="text-danger fw-semibold">not found</span></li>
+                            </ul>
+                            <p class="mb-2">
+                                <i class="fa fa-triangle-exclamation text-warning"></i>
+                                Changing this changes what the site looks for <strong>everywhere at once</strong> —
+                                BLAST databases, FASTA downloads and sequence search all use it. It does not rename
+                                anything on disk, so a new name only works once every organism's files already use it.
+                            </p>
+                            <p class="mb-0">
+                                <strong>Files Found</strong> is how many files match that name right now, across every
+                                organism, assembly and gene set. If a change takes a count to zero, that sequence type
+                                disappears from the whole site &mdash; the files are still there, but nothing looks for
+                                them any more.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Header Image Card -->
-                <div class="card cfg-card mb-3" id="pnav-banner" data-nav-label="Header Banner Image">
+                <div class="card cfg-card mb-3" id="pnav-banner" data-nav-label="Header Banner Images">
                     <div class="card-header cfg-head">
                         <h5 class="mb-0"><i class="fa fa-image"></i> <?= htmlspecialchars($editable_config['header_img']['label']) ?></h5>
                     </div>
@@ -244,10 +282,28 @@
                             <?= htmlspecialchars($editable_config['header_img']['description']) ?>
                         </p>
                         
-                        <div class="alert alert-info mb-3">
+                        <div class="cfg-note mb-3">
                             <strong>Recommended:</strong> <?= $editable_config['header_img']['upload_info']['recommended_dimensions'] ?> <br>
                             <strong>Accepted:</strong> <?= implode(', ', array_map('strtoupper', $editable_config['header_img']['upload_info']['allowed_types'])) ?> <br>
                             <strong>Max size:</strong> <?= $editable_config['header_img']['upload_info']['max_size_mb'] ?> MB
+                        </div>
+
+                        <div class="alert alert-light border small mb-3">
+                            <p class="mb-2"><strong><i class="fa fa-shuffle"></i> How the banner is chosen</strong></p>
+                            <ul class="mb-2">
+                                <li><strong>The home page always shows the image selected below</strong>, so the
+                                    site's front door looks the same on every visit.</li>
+                                <li><strong>Every other page picks one at random per page load</strong> from the
+                                    images in <code>images/banners/</code> — not a sequence, and not the order
+                                    shown here. Reloading usually shows a different one.</li>
+                                <li><strong>Uploading adds an image to the rotation</strong>; deleting removes it.
+                                    There is no per-image setting and no ordering.</li>
+                            </ul>
+                            <p class="mb-0">
+                                <?php $_bn = count($banner_images ?? []); ?>
+                                <i class="fa fa-circle-info"></i>
+                                <strong><?= $_bn ?> image<?= $_bn === 1 ? '' : 's' ?></strong> in the rotation.
+                            </p>
                         </div>
                         
                         <div class="mb-4">
@@ -265,13 +321,14 @@
                         <?php if (!empty($banner_images)): ?>
                         <div>
                             <label class="form-label"><strong>Available Banner Images:</strong></label>
-                            <p class="text-muted small mb-3">Select fallback image to use if banner directory is empty.</p>
+                            <p class="text-muted small mb-3">Every image below is in the rotation shown on ordinary pages.
+                                Choose one to pin as the <strong>home page banner</strong>.</p>
                             
                             <div class="table-responsive">
                                 <table class="table table-sm table-bordered">
                                     <thead class="table-light">
                                         <tr>
-                                            <th style="width: 60px;">Use as<br>Fallback</th>
+                                            <th style="width: 90px;">Home page<br>banner</th>
                                             <th style="width: 150px;">Preview</th>
                                             <th>Filename</th>
                                             <th style="width: 80px;">Action</th>
@@ -295,7 +352,7 @@
                                             <td>
                                                 <code><?= htmlspecialchars($banner_file) ?></code>
                                                 <?php if ($editable_config['header_img']['current_value'] === $banner_file): ?>
-                                                <br><span class="badge bg-primary">Current Fallback</span>
+                                                <br><span class="badge bg-info text-dark">Home page banner</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-center">
@@ -491,7 +548,7 @@
                     </div>
                     <div class="card-body">
                         <?php if ($editable_config['blast_sample_sequences']['note']): ?>
-                            <div class="alert alert-info mb-3">
+                            <div class="cfg-note mb-3">
                                 <i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($editable_config['blast_sample_sequences']['note']) ?>
                             </div>
                         <?php endif; ?>
@@ -543,7 +600,7 @@
                     </div>
                     <div class="card-body">
                         <?php if ($editable_config['sample_feature_ids']['note']): ?>
-                            <div class="alert alert-info mb-3">
+                            <div class="cfg-note mb-3">
                                 <i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($editable_config['sample_feature_ids']['note']) ?>
                             </div>
                         <?php endif; ?>
@@ -838,7 +895,7 @@
                             <li>Verify file permissions are correct (see Filesystem Permissions admin page)</li>
                         </ol>
 
-                        <div class="alert alert-info small mb-0">
+                        <div class="cfg-note small mb-0">
                             <i class="fa fa-lightbulb"></i> <strong>Tip:</strong> All URLs and paths will automatically update based on this setting. You can run multiple MOOP instances with different site directories on the same server.
                         </div>
                     </div>
@@ -907,7 +964,7 @@
                             <li>Verify permissions on the Filesystem Permissions admin page</li>
                         </ol>
 
-                        <div class="alert alert-info small mb-0">
+                        <div class="cfg-note small mb-0">
                             <i class="fa fa-lightbulb"></i> <strong>Tip:</strong> This directory should have SGID permissions (2775) so new backups and change logs automatically get the correct group ownership.
                         </div>
                     </div>
