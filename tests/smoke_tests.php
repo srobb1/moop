@@ -129,6 +129,58 @@ ok(buildConfigFingerprint(null, $groups) === $cfp2, 'config fingerprint is deter
 @unlink($db); @unlink($groups); @rmdir("$tmp/OrgA"); @rmdir($tmp);
 
 // ----------------------------------------------------------------------------
+group('function registries — each watches its own language, not the other');
+
+// A registry's staleness is only meaningful if it watches exactly the files its generator
+// reads. Both registries used to share one *.php-only scan, so the JavaScript registry
+// reported staleness from PHP timestamps: a .js edit left it claiming to be up to date,
+// and any .php edit made it claim JavaScript had changed. Hermetic: a synthetic tree.
+require_once "$BASE/lib/registry_sources.php";
+
+$rt = sys_get_temp_dir() . '/moop_regsrc_' . getmypid();
+foreach (['js/modules', 'js/vendor', 'lib/jbrowse', 'includes', 'admin/api', 'docs'] as $d) {
+    @mkdir("$rt/$d", 0777, true);
+}
+file_put_contents("$rt/js/app.js", '//');              // in
+file_put_contents("$rt/js/modules/mod.js", '//');      // in
+file_put_contents("$rt/js/vendor/jquery.js", '//');    // out — not recursive, third-party
+file_put_contents("$rt/js/thing.min.js", '//');        // out — minified
+file_put_contents("$rt/lib/helper.php", '<?php');      // in
+file_put_contents("$rt/lib/jbrowse/deep.php", '<?php');// in — recursion matters
+file_put_contents("$rt/includes/inc.php", '<?php');    // in
+file_put_contents("$rt/admin/api/ep.php", '<?php');    // in
+file_put_contents("$rt/root.php", '<?php');            // in — top-level script
+file_put_contents("$rt/docs/function_registry.json", '{}'); // out — generated output
+
+$js_files  = array_map('basename', moop_registry_source_files('js',  $rt));
+$php_files = array_map('basename', moop_registry_source_files('php', $rt));
+sort($js_files);
+
+ok($js_files === ['app.js', 'mod.js'],
+   'JS registry watches js/ and js/modules/ only — not vendor/, not *.min.js');
+ok(in_array('deep.php', $php_files) && in_array('inc.php', $php_files) && in_array('ep.php', $php_files),
+   'PHP registry recurses lib/, includes/ and admin/api/');
+ok(in_array('root.php', $php_files), 'PHP registry includes top-level scripts');
+ok(!in_array('function_registry.json', $php_files), 'PHP registry excludes its own generated output');
+
+// The bug this whole group exists for: the two sets must not bleed into each other.
+$js_has_php  = array_filter($js_files,  fn($f) => substr($f, -4) === '.php');
+$php_has_js  = array_filter($php_files, fn($f) => substr($f, -3) === '.js');
+ok(empty($js_has_php), 'no PHP file can make the JavaScript registry look stale');
+ok(empty($php_has_js), 'no JavaScript file can make the PHP registry look stale');
+
+// Depth-first cleanup: files first, then directories from the deepest up.
+foreach (["$rt/*/*/*", "$rt/*/*", "$rt/*"] as $pattern) {
+    foreach (glob($pattern) ?: [] as $path) {
+        if (is_file($path)) unlink($path);
+    }
+}
+foreach (['js/modules','js/vendor','lib/jbrowse','admin/api','js','lib','includes','admin','docs'] as $d) {
+    @rmdir("$rt/$d");
+}
+@rmdir($rt);
+
+// ----------------------------------------------------------------------------
 group('JBrowse reconciliation — orphan detection vs. an unavailable data directory');
 
 // getOrphanedJBrowseRegistrations() walks the derived JBrowse artifacts back to their

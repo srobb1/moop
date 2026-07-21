@@ -24,7 +24,7 @@ if (file_exists($json_registry)) {
     
     // Get registry status (includes staleness check)
     require_once __DIR__ . '/../lib/functions_filesystem.php';
-    $registryStatus = getRegistryLastUpdate($json_registry, $json_registry);
+    $registryStatus = getRegistryLastUpdate($json_registry, 'php');
     $lastUpdate = $registryStatus['timestamp'];
     $isStale = $registryStatus['isStale'];
     $statusMessage = $registryStatus['status'];

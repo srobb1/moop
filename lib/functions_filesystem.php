@@ -622,101 +622,59 @@ function getDirectoryError($dirpath) {
 }
 
 /**
- * Get the last update time from registry files
- * 
- * Attempts to extract "Generated:" timestamp from HTML file first,
- * then falls back to file modification time. Also checks if any PHP files
- * in the codebase are newer than the registry, indicating it needs updating.
- * 
- * @param string $htmlFile - Path to HTML registry file
- * @param string $mdFile - Path to Markdown registry file (fallback)
- * @param string $scanDirBase - Base path for scanning PHP files (defaults to parent of lib/)
- * @return array - Array with keys:
- *                 'timestamp' => Last update timestamp in format 'Y-m-d H:i:s' or 'Never'
- *                 'isStale' => Boolean indicating if registry needs updating
- *                 'status' => String message ('Up to date' or 'You should update')
+ * Is a generated function registry out of date?
+ *
+ * Staleness is decided by comparing the registry against EXACTLY the files its generator
+ * reads — see moop_registry_source_files() in lib/registry_sources.php, which is the single
+ * definition of that set.
+ *
+ * This previously scanned only *.php, for both registries, from its own hardcoded directory
+ * list. The JavaScript registry consequently reported staleness from PHP timestamps: a .js
+ * edit left it claiming "Up to date", while any .php edit made it claim JavaScript had
+ * changed. It also recursed the whole site root, walking organisms/ and jbrowse2/ looking
+ * for PHP files that are not part of any registry.
+ *
+ * @param string $registryFile Path to the generated registry (JSON)
+ * @param string $type         'php' or 'js' — which registry this is
+ * @return array{timestamp:string,isStale:bool,status:string,newestSource:?string,sourceCount:int}
  */
-function getRegistryLastUpdate($htmlFile, $mdFile, $scanDirBase = null) {
-    $lastUpdate = 'Never';
+function getRegistryLastUpdate($registryFile, $type = 'php') {
+    require_once __DIR__ . '/registry_sources.php';
+
+    $lastUpdate     = 'Never';
     $lastUpdateTime = 0;
-    $isStale = false;
-    
-    // Try to get from HTML file first (has "Generated:" timestamp)
-    if (file_exists($htmlFile) && is_readable($htmlFile)) {
-        $content = file_get_contents($htmlFile);
-        // Look for "Generated: YYYY-MM-DD HH:MM:SS" in the HTML
-        if (preg_match('/Generated:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/', $content, $matches)) {
-            $lastUpdate = $matches[1];
+
+    // Prefer a "Generated: YYYY-MM-DD HH:MM:SS" stamp inside the file, else its mtime.
+    if (file_exists($registryFile) && is_readable($registryFile)) {
+        $content = file_get_contents($registryFile);
+        if (preg_match('/Generated:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/', $content, $m)) {
+            $lastUpdate     = $m[1];
             $lastUpdateTime = strtotime($lastUpdate);
+        } else {
+            $lastUpdateTime = filemtime($registryFile);
+            $lastUpdate     = date('Y-m-d H:i:s', $lastUpdateTime);
         }
     }
-    
-    // Fallback to file modification time
-    if ($lastUpdateTime === 0) {
-        if (file_exists($htmlFile)) {
-            $lastUpdateTime = filemtime($htmlFile);
-            $lastUpdate = date('Y-m-d H:i:s', $lastUpdateTime);
-        } elseif (file_exists($mdFile)) {
-            $lastUpdateTime = filemtime($mdFile);
-            $lastUpdate = date('Y-m-d H:i:s', $lastUpdateTime);
-        }
-    }
-    
-    // Check if any PHP files are newer than the registry (only if registry exists)
+
+    $isStale       = false;
+    $newest_source = null;
+    $source_count  = 0;
+
     if ($lastUpdateTime > 0) {
-        if ($scanDirBase === null) {
-            // Default to parent directory of lib/
-            $scanDirBase = dirname(dirname(__FILE__));
-        }
-        
-        $scanDirs = [
-            $scanDirBase . '/lib',
-            $scanDirBase . '/tools',
-            $scanDirBase . '/admin',
-            $scanDirBase
-        ];
-        
-        foreach ($scanDirs as $dir) {
-            if (!is_dir($dir)) continue;
-            
-            try {
-                $files = new RecursiveIteratorIterator(
-                    new RecursiveDirectoryIterator($dir),
-                    RecursiveIteratorIterator::LEAVES_ONLY
-                );
-                
-                foreach ($files as $file) {
-                    if (!$file->isFile() || $file->getExtension() !== 'php') continue;
-                    
-                    $filePath = $file->getRealPath();
-                    
-                    // Skip excluded files and directories
-                    $excludePatterns = ['docs/', 'logs/', 'notes/', 'not_used/', '.git/', 'generate_registry'];
-                    $skip = false;
-                    foreach ($excludePatterns as $pattern) {
-                        if (strpos($filePath, $pattern) !== false) {
-                            $skip = true;
-                            break;
-                        }
-                    }
-                    if ($skip) continue;
-                    
-                    $fileTime = filemtime($filePath);
-                    if ($fileTime > $lastUpdateTime) {
-                        $isStale = true;
-                        break 2;
-                    }
-                }
-            } catch (Exception $e) {
-                error_log("Error checking PHP file timestamps: " . $e->getMessage());
-            }
+        $newest        = moop_registry_newest_source($type);
+        $source_count  = $newest['count'];
+        if ($newest['time'] > $lastUpdateTime) {
+            $isStale       = true;
+            $newest_source = $newest['file'] ? basename($newest['file']) : null;
         }
     }
-    
+
     return [
-        'timestamp' => $lastUpdate,
-        'isStale' => $isStale,
-        'status' => $isStale ? 'You should update' : 'Up to date'
+        'timestamp'    => $lastUpdate,
+        'isStale'      => $isStale,
+        'status'       => $isStale ? 'You should update' : 'Up to date',
+        'newestSource' => $newest_source,
+        'sourceCount'  => $source_count,
     ];
 }
 
