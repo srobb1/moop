@@ -55,6 +55,13 @@
     </div>
   </div>
   
+  <!-- Everything from here to the housekeeping card answers "is the site healthy and how
+       current are these figures" — backup state, data-health alerts, environment and
+       permission warnings, cache freshness, and the control that refreshes them. It had no
+       heading while every other group on this page does, so the cards read as loose items
+       above the first real section rather than as a group of their own. -->
+  <h3 class="mb-3"><i class="fa fa-heartbeat"></i> System Status</h3>
+
   <!-- Site Data Backup Status -->
   <?php if ($site_data_backup !== null): ?>
     <?php if ($site_data_backup['status'] === 'error'): ?>
