@@ -63,7 +63,7 @@ moop/
 │   ├── functions_system.php    handleAdminAjax(), getWebServerUser(), permission helpers
 │   ├── permission_check.php    Impact-based filesystem/SELinux checks (dashboard + manager)
 │   ├── cache_paths.php         Resolves cache_path (caches live outside organisms/)
-│   ├── housekeeping.php        Maintenance tasks — see §9 (interval-throttled, not per-session)
+│   ├── housekeeping.php        Maintenance tasks — see §10 (interval-throttled, not per-session)
 │   └── jbrowse/            JBrowse track management classes (lowercase — case matters)
 ├── tools/              Public/authenticated user-facing pages (controllers)
 │   ├── tool_init.php       Bootstrap for all tool pages (ONE include at top)
@@ -181,7 +181,35 @@ The special group name `PUBLIC` makes an assembly visible to unauthenticated use
 - Include `admin_init.php` — CSRF is verified automatically
 - jQuery will send the token as `X-CSRF-Token` header automatically
 
-### 6. JavaScript Conventions
+### 6. Admin page styling — use the shared card classes
+
+Admin section cards use **one** treatment, defined in `css/admin-cards.css` and loaded globally
+from `includes/head-resources.php` (NOT per-page `page_styles` — a per-page opt-in is exactly how
+this drifted before, because a new page simply forgets it).
+
+```html
+<div class="card adm-card mb-3">
+  <div class="card-header adm-head"><h5 class="mb-0">Section title</h5></div>
+```
+
+- `.adm-head` — the default. Quiet teal wash, dark text, left accent rule.
+- `.adm-head-warn` / `.adm-head-danger` — **only** when the card reports something that needs
+  attention or is actually broken, and typically only when the card renders conditionally on that
+  state. A card is not red because it is about tracks.
+
+Do NOT reach for `bg-primary text-white`, `bg-info bg-opacity-10`, `bg-warning-subtle` or a new
+page-local class. Those four idioms coexisted across the admin pages until 2026-07-21 (commit
+b2a2474 unified 81 headers across 16 files); `manage_jbrowse.php` alone had eight cards in seven
+colours, so colour signalled nothing and the one genuinely broken-state card was lost among them.
+If a card needs something the shared classes lack, **add it to `css/admin-cards.css`** so every page
+gets it — do not start a fifth idiom in a page-local stylesheet. That is how `cfg-head` happened.
+
+**`tools/` pages are deliberately different** — solid teal fill with white text, bolder than the
+admin wash, because public pages announce while admin pages get out of the way. Do not "unify" the
+two. Note the tools colours are still 24 inline hex literals rather than shared classes; the plan to
+promote them is in `notes/ADMIN_UI_FOLLOWUPS.md` §6.
+
+### 7. JavaScript Conventions
 
 - JS goes in `js/modules/` (per-feature) or `js/` (page-specific)
 - Never embed JS logic in PHP files — use inline_scripts only for PHP→JS variable passing
@@ -195,7 +223,7 @@ The special group name `PUBLIC` makes an assembly visible to unauthenticated use
 - Load page-specific JS via `page_script` in the `$data` array
 - All pages get: jQuery, Bootstrap, DataTables, and `js/modules/csrf.js` automatically
 
-### 7. Shell Command Safety
+### 8. Shell Command Safety
 
 All shell commands use `escapeshellarg()` on every argument. Examples:
 ```php
@@ -204,7 +232,7 @@ exec($cmd, $output, $return_code);
 ```
 Never interpolate user input directly into shell strings.
 
-### 8. Database Queries — Always Use Prepared Statements
+### 9. Database Queries — Always Use Prepared Statements
 
 ```php
 $dbh  = new PDO('sqlite:' . $db_file);
@@ -214,7 +242,7 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ```
 Never use `$dbh->query()` with user-supplied values interpolated in.
 
-### 9. Housekeeping — Automatic Maintenance Tasks
+### 10. Housekeeping — Automatic Maintenance Tasks
 
 `lib/housekeeping.php` runs maintenance tasks from `admin_init.php`. No cron jobs or
 external setup required.
@@ -243,7 +271,7 @@ Current tasks (`run_housekeeping()`):
 - `refresh_organism_cache` — only if stale
 - `ncbi_taxonomy_update`
 
-### 10. Filesystem, SELinux, and the No-Exec Guard — read before touching permissions
+### 11. Filesystem, SELinux, and the No-Exec Guard — read before touching permissions
 
 **MOOP writes into directories it also serves over HTTP** (caches, generated BLAST/`.fai`
 indexes, uploaded images). That is safe only because the web server **refuses to execute
@@ -353,7 +381,7 @@ via `config_editable.json` — read it through ConfigManager, never from `site_c
 
 **How snapshots work:**
 - `lib/housekeeping.php` → `housekeeping_snapshot_site_data()` runs on the housekeeping
-  interval (§9 — at most once every 4h, not once per session)
+  interval (§10 — at most once every 4h, not once per session)
 - Auto-creates the backup directory if it doesn't exist (and writes a README into it)
 - Copies changed files to the backup directory
 - Git is NOT required, and **MOOP never commits**. If the directory is a git repo, MOOP
@@ -375,16 +403,16 @@ via `config_editable.json` — read it through ConfigManager, never from `site_c
    `apache:apache`, mode `2775`, and an `httpd_sys_rw_content_t` rule;
    `scripts/fix_moop_selinux.sh` creates and labels it. See `docs/SELINUX_AND_HARDENING.md`.
    (This is about **separation**, not locking down `organisms/` — that tree is writable by
-   design; see §10.)
+   design; see §11.)
 6. **Web-server security config** — deploy `docs/nginx/moop-security.conf` or
-   `docs/apache/moop-security.conf`. Not optional; see §10.
+   `docs/apache/moop-security.conf`. Not optional; see §11.
 
 ---
 
 ## Known Issues / TODO
 
 Planning docs live in `notes/`. Verified against the tree on 2026-07-16 — several
-long-standing entries here had already been fixed, and one contradicted §9 of this file.
+long-standing entries here had already been fixed, and one contradicted §10 of this file.
 
 **Open:**
 - **High (blocked on IT, not on code): no usable HTTPS hostname, so real traffic is plain
@@ -415,7 +443,7 @@ long-standing entries here had already been fixed, and one contradicted §9 of t
   See the top-of-file note. Docroot deny rules kept as defense-in-depth. Do not re-open.
 - **Low:** Two sources of truth decide "does the web write here" — a rule's `why_write` and
   the allowlist in `moop_permission_check_mode()`. They drift, and drift fails silently
-  (§10). Deriving `check_mode` from `why_write` would make that class impossible, but
+  (§11). Deriving `check_mode` from `why_write` would make that class impossible, but
   `why_write` is used inconsistently today (some read-only rules use it to explain *reads*),
   so it needs a cleanup pass first.
 
@@ -436,7 +464,7 @@ long-standing entries here had already been fixed, and one contradicted §9 of t
   left seven JBrowse endpoints authenticated but forgeable. Note `js/modules/csrf.js` wraps
   `window.fetch` globally and covers jQuery via `ajaxSetup`, so callers need no change — the
   browser already sends the token; only the server has to check it.
-- BLAST temp files — `housekeeping_clean_temp_files` handles this (§9); **no cron needed**.
+- BLAST temp files — `housekeeping_clean_temp_files` handles this (§10); **no cron needed**.
   (This file previously listed both the task and a TODO to add a cron for it.)
 - `getBlastDatabases()` no longer uses `global $sequence_types`.
 - No `.bak`/`.backup` files remain in the tree.

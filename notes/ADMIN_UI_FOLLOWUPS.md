@@ -217,7 +217,37 @@ in b2a2474 (pale wash, dark text, accent rule), and that distinction is worth ke
 announce, admin pages get out of the way. This item is about where the values live, not about making
 the two match.
 
-**Suggested:** promote the five colours to CSS custom properties in `css/moop.css` alongside the
-existing `.bg-search-results` / `.bg-tools`, and replace the inline styles with semantic classes.
+### The plan (surveyed 2026-07-21, not yet done)
+
+Full inventory — **24 declarations, 6 distinct values.** They are NOT arbitrary; they track the
+entity a page is about, which is why this must be a 1:1 lift-and-shift and not a re-design:
+
+| value | n | where it is used | apparent meaning |
+|---|---|---|---|
+| `#0891b2` | 11 | blast, downloads, jbrowse2, moopmart, multi_organism, retrieve_sequences, search | tool page header (MOOP teal) |
+| `#0f766e` | 5 | groups, multi_organism, organism | organism-level header (dark teal) |
+| `#e11d48` | 3 | assembly (x1), gene_set (x2) | assembly / gene-set header (rose) |
+| `#6366f1` | 3 | blast, downloads, retrieve_sequences | secondary section within a tool (indigo) |
+| `#d97706` | 1 | assembly | amber accent |
+| `#475569` | 1 | gene_set | slate accent |
+
+**Do it as a pure value-move, in this order:**
+
+1. Add the six values as custom properties in `css/moop.css`, beside the existing
+   `.bg-search-results` / `.bg-tools`, which are already the right idea.
+2. Add one semantic class per value. **Name for the role as currently used** (e.g. a tool-page
+   header, an organism header), not for the colour, and not for a new taxonomy invented on the
+   spot — the existing usage is the specification.
+3. Replace the 24 inline `style="background-color: #…"` with those classes, one hex at a time,
+   checking the affected pages after each.
+4. Expect **zero visual change**. Any visible difference means a mapping was wrong, and that is
+   the signal to stop rather than adjust the colour to match.
+
+**Do not** merge this with the admin look. Tools headers are solid fill + white text and are
+deliberately bolder than the admin pale wash settled in b2a2474; public pages announce, admin pages
+get out of the way. This item is only about where the values live.
+
 Same reasoning as `css/admin-cards.css`, `lib/registry_sources.php` and the sequence file-name
-helper: one definition, so drift is impossible rather than merely unlikely.
+helper: one definition, so drift is impossible rather than merely unlikely. Roughly 30-40 minutes
+including per-page verification — attempted 2026-07-21 and deliberately deferred rather than rushed,
+because the naming in step 2 is the part that is expensive to get wrong.
