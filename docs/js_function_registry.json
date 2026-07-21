@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "generated": "2026-07-20 18:14:32",
-        "totalFunctions": 369,
+        "generated": "2026-07-21 16:23:17",
+        "totalFunctions": 371,
         "totalFiles": 42,
         "duplicates": 0
     },
@@ -1365,7 +1365,7 @@
         },
         {
             "name": "js/jbrowse-admin.js",
-            "count": 24,
+            "count": 26,
             "functions": [
                 {
                     "name": "initJBrowseAdmin",
@@ -1518,17 +1518,17 @@
                         },
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 507,
+                            "line": 571,
                             "context": "<select class=\"form-select\" id=\"filterAssembly\" onchange=\"filterTracks()\" disabled>"
                         },
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 513,
+                            "line": 577,
                             "context": "<select class=\"form-select\" id=\"filterType\" onchange=\"filterTracks()\">"
                         },
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 522,
+                            "line": 586,
                             "context": "<select class=\"form-select\" id=\"filterAccess\" onchange=\"filterTracks()\">"
                         }
                     ],
@@ -1560,7 +1560,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 536,
+                            "line": 600,
                             "context": "<th><input type=\"checkbox\" id=\"selectAll\" onchange=\"toggleSelectAll()\"></th>"
                         }
                     ],
@@ -1595,7 +1595,7 @@
                         },
                         {
                             "file": "admin/api/jbrowse_list_tracks.php",
-                            "line": 157,
+                            "line": 159,
                             "context": "'checkbox' => '<input type=\"checkbox\" name=\"trackSelect\" value=\"' . htmlspecialchars($trackId) . '\" data-organism=\"' . htmlspecialchars($organism) . '\" data-assembly=\"' . htmlspecialchars($assembly) . '\" onchange=\"updateBulkButtons()\">',"
                         }
                     ],
@@ -1659,7 +1659,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 294,
+                            "line": 358,
                             "context": "<button type=\"button\" class=\"btn btn-outline-primary\" onclick=\"testSheet()\">"
                         }
                     ],
@@ -1692,7 +1692,7 @@
                         },
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 300,
+                            "line": 364,
                             "context": "<button type=\"button\" class=\"btn btn-outline-secondary\" onclick=\"clearSheetForm()\">"
                         }
                     ],
@@ -1716,7 +1716,7 @@
                     "usages": [
                         {
                             "file": "admin/api/jbrowse_list_tracks.php",
-                            "line": 166,
+                            "line": 168,
                             "context": "<button class=\"btn btn-outline-primary btn-sm\" onclick=\"viewTrack(\\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($organism, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($assembly, ENT_QUOTES) . '\\')\" title=\"View Details\">"
                         }
                     ],
@@ -1745,7 +1745,7 @@
                     "usages": [
                         {
                             "file": "admin/api/jbrowse_list_tracks.php",
-                            "line": 149,
+                            "line": 151,
                             "context": "? '<button class=\"btn btn-outline-warning btn-sm\" onclick=\"rebuildGff(\\'' . htmlspecialchars($organism, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($assembly, ENT_QUOTES) . '\\', this)\" title=\"Rebuild bgzip + tabix index\"><i class=\"fa fa-wrench\"></i></button>'"
                         }
                     ],
@@ -1773,7 +1773,7 @@
                     "usages": [
                         {
                             "file": "admin/api/jbrowse_list_tracks.php",
-                            "line": 153,
+                            "line": 155,
                             "context": "? '<button class=\"btn btn-outline-info btn-sm\" onclick=\"indexTrackNames(\\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($organism, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($assembly, ENT_QUOTES) . '\\', this)\" title=\"Build text search index (jbrowse text-index)\"><i class=\"fa fa-search-plus\"></i></button>'"
                         }
                     ],
@@ -1868,7 +1868,7 @@
                     "usages": [
                         {
                             "file": "admin/api/jbrowse_list_tracks.php",
-                            "line": 171,
+                            "line": 173,
                             "context": "<button class=\"btn btn-outline-danger btn-sm\" onclick=\"deleteTrack(\\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($organism, ENT_QUOTES) . '\\', \\'' . htmlspecialchars($assembly, ENT_QUOTES) . '\\')\" title=\"Delete\">"
                         }
                     ],
@@ -1901,7 +1901,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 557,
+                            "line": 621,
                             "context": "<button class=\"btn btn-sm btn-outline-danger\" onclick=\"deleteSelected()\" disabled id=\"bulkDeleteBtn\">"
                         }
                     ],
@@ -1925,7 +1925,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 554,
+                            "line": 618,
                             "context": "<button class=\"btn btn-sm btn-outline-primary\" onclick=\"generateSelectedConfigs()\" disabled id=\"bulkGenerateBtn\">"
                         }
                     ],
@@ -1959,7 +1959,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 122,
+                            "line": 186,
                             "context": "onclick=\"registerAssembly(this.dataset.organism, this.dataset.assembly, this)\">"
                         }
                     ],
@@ -2001,7 +2001,7 @@
                         },
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 477,
+                            "line": 541,
                             "context": "<button type=\"button\" class=\"btn btn-outline-secondary\" onclick=\"loadTracksServerConfig()\">"
                         }
                     ],
@@ -2032,7 +2032,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 416,
+                            "line": 480,
                             "context": "<button class=\"btn btn-sm btn-outline-secondary mt-2\" onclick=\"testJWT()\">"
                         }
                     ],
@@ -2061,7 +2061,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 426,
+                            "line": 490,
                             "context": "<button class=\"btn btn-sm btn-outline-primary\" onclick=\"showJWTPublicKey()\">"
                         }
                     ],
@@ -2090,7 +2090,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_jbrowse.php",
-                            "line": 429,
+                            "line": 493,
                             "context": "<button class=\"btn btn-sm btn-outline-success\" onclick=\"copyJWTPublicKey()\">"
                         }
                     ],
@@ -2104,6 +2104,42 @@
                     "line": 86,
                     "comment": "",
                     "code": "{}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [],
+                    "usageCount": 0,
+                    "usages": [],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "removed",
+                    "line": 858,
+                    "comment": "",
+                    "code": "{data.kept.join(', ')}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [],
+                    "usageCount": 0,
+                    "usages": [],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "admin/manage_jbrowse.php"
+                    ]
+                },
+                {
+                    "name": "kept",
+                    "line": 859,
+                    "comment": "",
+                    "code": "{data.kept.join(', ')}",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -2764,7 +2800,7 @@
                         },
                         {
                             "file": "admin/api/jbrowse_sync_tracks.php",
-                            "line": 132,
+                            "line": 134,
                             "context": "$summary = count($results) . \" assembly(ies) processed\";"
                         },
                         {
@@ -3289,37 +3325,37 @@
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 140,
+                            "line": 127,
                             "context": "onkeyup=\"filterRegistry()\""
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 147,
+                            "line": 134,
                             "context": "<select id=\"categoryFilter\" class=\"form-select form-select-sm\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 163,
+                            "line": 150,
                             "context": "<select id=\"typeFilter\" class=\"form-select form-select-sm\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 181,
+                            "line": 168,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchAll\" value=\"all\" checked onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 185,
+                            "line": 172,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchName\" value=\"name\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 189,
+                            "line": 176,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchCode\" value=\"code\" onchange=\"filterRegistry()\">"
                         },
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 193,
+                            "line": 180,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchComment\" value=\"comment\" onchange=\"filterRegistry()\">"
                         },
                         {
@@ -3401,7 +3437,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 200,
+                            "line": 187,
                             "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">"
                         },
                         {
@@ -3443,7 +3479,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 70,
+                            "line": 57,
                             "context": "<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">"
                         },
                         {
@@ -3491,7 +3527,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 65,
+                            "line": 52,
                             "context": "<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"js\">"
                         },
                         {
@@ -3980,12 +4016,17 @@
                         "state-modifying",
                         "validation"
                     ],
-                    "usageCount": 29,
+                    "usageCount": 30,
                     "usages": [
                         {
                             "file": "js/jbrowse-admin.js",
                             "line": 543,
                             "context": "return response.text().then(t => { throw new Error(`HTTP ${response.status}: ${t.substring(0, 200)}`); });"
+                        },
+                        {
+                            "file": "js/jbrowse-admin.js",
+                            "line": 850,
+                            "context": "return response.text().then(t => {"
                         },
                         {
                             "file": "js/search-display.js",
@@ -4069,7 +4110,7 @@
                         },
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 96,
+                            "line": 108,
                             "context": "$('#editTypeDescName').text(typeName);"
                         },
                         {
@@ -4168,7 +4209,7 @@
                         },
                         {
                             "file": "admin/api/jbrowse_register_sheet.php",
-                            "line": 48,
+                            "line": 50,
                             "context": "$content = $parser->download($sheetId, $gid);"
                         }
                     ],
@@ -6574,57 +6615,57 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 217,
+                            "line": 221,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_primary_<?= htmlspecialchars($type_name) ?>\" value=\"primary\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'primary' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 220,
+                            "line": 224,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_secondary_<?= htmlspecialchars($type_name) ?>\" value=\"secondary\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'secondary' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 223,
+                            "line": 227,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_success_<?= htmlspecialchars($type_name) ?>\" value=\"success\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'success' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 226,
+                            "line": 230,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_danger_<?= htmlspecialchars($type_name) ?>\" value=\"danger\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'danger' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 229,
+                            "line": 233,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_warning_<?= htmlspecialchars($type_name) ?>\" value=\"warning\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'warning' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 232,
+                            "line": 236,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_info_<?= htmlspecialchars($type_name) ?>\" value=\"info\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'info' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 235,
+                            "line": 239,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_light_<?= htmlspecialchars($type_name) ?>\" value=\"light\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'light' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 238,
+                            "line": 242,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_dark_<?= htmlspecialchars($type_name) ?>\" value=\"dark\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'dark' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 241,
+                            "line": 245,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_indigo_<?= htmlspecialchars($type_name) ?>\" value=\"indigo\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'indigo' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 244,
+                            "line": 248,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_purple_<?= htmlspecialchars($type_name) ?>\" value=\"purple\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'purple' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         },
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 247,
+                            "line": 251,
                             "context": "<input type=\"radio\" class=\"btn-check color-radio\" name=\"color_<?= htmlspecialchars($type_name) ?>\" id=\"color_pink_<?= htmlspecialchars($type_name) ?>\" value=\"pink\" data-type=\"<?= htmlspecialchars($type_name) ?>\" <?= ($type_config['color'] ?? 'secondary') === 'pink' ? 'checked' : '' ?> onchange=\"submitColorForm(this)\">"
                         }
                     ],
@@ -6635,7 +6676,7 @@
                 },
                 {
                     "name": "saveTypeOrder",
-                    "line": 119,
+                    "line": 131,
                     "comment": "",
                     "code": "{\n    const newOrder = [];\n    $('#sortable-annotation-types .card').each(function() {\n        const type = $(this).data('type');\n        if (type) {\n            newOrder.push(type);\n        }\n    });\n    \n    \n    if (newOrder.length === 0) {\n        return;\n    }\n    \n    const csrfToken = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';\n    fetch('manage_annotations.php', {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/x-www-form-urlencoded',\n            'X-CSRF-Token': csrfToken,\n        },\n        body: new URLSearchParams({\n            'update_type_order': '1',\n            'type_order_data': JSON.stringify(newOrder)\n        })\n    })\n    .then(response => {\n        if (response.ok) {\n            // Show brief success message\n            showSaveNotification('Order saved successfully');\n        } else {\n            showSaveNotification('Error saving order. Please try again.', 'danger');\n        }\n    })\n    .catch(error => {\n        showSaveNotification('Error saving order: ' + error.message, 'danger');\n    });\n}",
                     "parameters": [],
@@ -6658,17 +6699,17 @@
                     "usages": [
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 44,
+                            "line": 51,
                             "context": "stop: function() { saveTypeOrder(); }"
                         },
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 52,
+                            "line": 64,
                             "context": "if (prev.length) { card.insertBefore(prev); saveTypeOrder(); }"
                         },
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 56,
+                            "line": 68,
                             "context": "if (next.length) { card.insertAfter(next); saveTypeOrder(); }"
                         }
                     ],
@@ -6679,7 +6720,7 @@
                 },
                 {
                     "name": "showSaveNotification",
-                    "line": 159,
+                    "line": 171,
                     "comment": "",
                     "code": "{\n    const alertDiv = $('<div>')\n        .addClass('alert alert-' + type + ' alert-dismissible fade show')\n        .attr('role', 'alert')\n        .html(message + '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>');\n    \n    // Insert at top of page and auto-dismiss after 3 seconds\n    $('main, .container, body').first().prepend(alertDiv);\n    setTimeout(() => {\n        alertDiv.fadeOut(300, function() { $(this).remove(); });\n    }, 3000);\n}",
                     "parameters": [],
@@ -6695,17 +6736,17 @@
                     "usages": [
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 149,
+                            "line": 161,
                             "context": "showSaveNotification('Order saved successfully');"
                         },
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 151,
+                            "line": 163,
                             "context": "showSaveNotification('Error saving order. Please try again.', 'danger');"
                         },
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 155,
+                            "line": 167,
                             "context": "showSaveNotification('Error saving order: ' + error.message, 'danger');"
                         }
                     ],
@@ -6716,7 +6757,7 @@
                 },
                 {
                     "name": "toggleTypeDetails",
-                    "line": 173,
+                    "line": 185,
                     "comment": "",
                     "code": "{\n  const details = document.getElementById('details-' + typeName);\n  const button = document.querySelector(`[data-type=\"${typeName}\"].expand-type-btn`);\n  if (details) {\n    if (details.style.display === 'none') {\n      details.style.display = 'block';\n      button.querySelector('i').className = 'fa fa-chevron-up';\n    } else {\n      details.style.display = 'none';\n      button.querySelector('i').className = 'fa fa-chevron-down';\n    }\n  }\n}",
                     "parameters": [],
@@ -6733,7 +6774,7 @@
                     "usages": [
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 216,
+                            "line": 228,
                             "context": "toggleTypeDetails(typeName);"
                         }
                     ],
@@ -6744,7 +6785,7 @@
                 },
                 {
                     "name": "deleteType",
-                    "line": 188,
+                    "line": 200,
                     "comment": "",
                     "code": "{\n  if (confirm('Delete annotation type \"' + typeName + '\"? This cannot be undone.')) {\n    const form = document.createElement('form');\n    form.method = 'POST';\n    \n    const typeInput = document.createElement('input');\n    typeInput.type = 'hidden';\n    typeInput.name = 'type_name';\n    typeInput.value = typeName;\n    form.appendChild(typeInput);\n    \n    const deleteInput = document.createElement('input');\n    deleteInput.type = 'hidden';\n    deleteInput.name = 'delete_annotation_type';\n    deleteInput.value = '1';\n    form.appendChild(deleteInput);\n    \n    document.body.appendChild(form);\n    form.submit();\n  }\n}",
                     "parameters": [],
@@ -6760,7 +6801,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_annotations.php",
-                            "line": 203,
+                            "line": 207,
                             "context": "<button type=\"button\" class=\"btn btn-sm btn-danger mt-2\" onclick=\"deleteType('<?= htmlspecialchars($type_name) ?>')\">"
                         }
                     ],
@@ -11967,7 +12008,7 @@
                         },
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 125,
+                            "line": 137,
                             "context": "newOrder.push(type);"
                         },
                         {
@@ -12199,12 +12240,17 @@
                     "tags": [
                         "asynchronous"
                     ],
-                    "usageCount": 29,
+                    "usageCount": 30,
                     "usages": [
                         {
                             "file": "js/jbrowse-admin.js",
                             "line": 543,
                             "context": "return response.text().then(t => { throw new Error(`HTTP ${response.status}: ${t.substring(0, 200)}`); });"
+                        },
+                        {
+                            "file": "js/jbrowse-admin.js",
+                            "line": 850,
+                            "context": "return response.text().then(t => {"
                         },
                         {
                             "file": "js/search-display.js",
@@ -12288,7 +12334,7 @@
                         },
                         {
                             "file": "js/modules/manage-annotations.js",
-                            "line": 96,
+                            "line": 108,
                             "context": "$('#editTypeDescName').text(typeName);"
                         },
                         {
@@ -13607,12 +13653,11 @@
                             "context": "loadRegistry();"
                         }
                     ],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -13643,12 +13688,11 @@
                             "context": "updateStats();"
                         }
                     ],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -13676,7 +13720,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 65,
+                            "line": 52,
                             "context": "<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"js\">"
                         },
                         {
@@ -13695,12 +13739,11 @@
                             "context": "<button class=\"btn btn-warning btn-sm\" onclick=\"generateRegistry()\"><i class=\"fa fa-refresh\"></i> Regenerate</button>"
                         }
                     ],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -13731,12 +13774,11 @@
                             "context": "filterFunctions();"
                         }
                     ],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -13769,12 +13811,11 @@
                             "context": "toggleFile(this);"
                         }
                     ],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -13807,12 +13848,11 @@
                             "context": "toggleAll();"
                         }
                     ],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -13832,12 +13872,11 @@
                     "tags": [],
                     "usageCount": 0,
                     "usages": [],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -13870,12 +13909,11 @@
                             "context": "<button class=\"btn btn-primary btn-sm\" onclick=\"expandAllFiles()\"><i class=\"fa fa-expand\"></i> Expand All</button>"
                         }
                     ],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -13908,12 +13946,11 @@
                             "context": "<button class=\"btn btn-primary btn-sm\" onclick=\"collapseAllFiles()\"><i class=\"fa fa-compress\"></i> Collapse All</button>"
                         }
                     ],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -13941,12 +13978,11 @@
                             "context": "toggleCode(header);"
                         }
                     ],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -13972,12 +14008,11 @@
                             "context": "funcHeader.onclick = function() { toggleFunctionCode(this); };"
                         }
                     ],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -14004,7 +14039,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 70,
+                            "line": 57,
                             "context": "<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">"
                         },
                         {
@@ -14023,12 +14058,11 @@
                             "context": "<button class=\"btn btn-info btn-sm\" onclick=\"downloadRegistry()\"><i class=\"fa fa-download\"></i> Download JSON</button>"
                         }
                     ],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -14050,12 +14084,11 @@
                     ],
                     "usageCount": 0,
                     "usages": [],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -14081,7 +14114,7 @@
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
-                            "line": 200,
+                            "line": 187,
                             "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">"
                         },
                         {
@@ -14100,12 +14133,11 @@
                             "context": "<button class=\"btn btn-secondary btn-sm\" onclick=\"clearSearch()\"><i class=\"fa fa-times\"></i> Clear</button>"
                         }
                     ],
-                    "phpFilesCount": 6,
+                    "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
                         "admin/manage_registry.php",
                         "admin/registry-template.php",
-                        "admin/pages/manage_js_registry.php",
                         "tools/generate_js_registry_json.php",
                         "tools/generate_registry_json.php"
                     ]
@@ -15149,6 +15181,16 @@
             "name": "nameMap",
             "file": "js/jbrowse-admin.js",
             "line": 86
+        },
+        {
+            "name": "removed",
+            "file": "js/jbrowse-admin.js",
+            "line": 858
+        },
+        {
+            "name": "kept",
+            "file": "js/jbrowse-admin.js",
+            "line": 859
         },
         {
             "name": "loadSpecificAssembly",
