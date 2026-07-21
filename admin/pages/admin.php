@@ -183,6 +183,7 @@
   </div>
   <?php endif; ?>
 
+
   <!-- Housekeeping freshness + manual re-run.
        Sits with the health cards above because it is what refreshes them, and stays
        visible when they are all clean — "did my fix work?" is exactly when you want it.
@@ -205,12 +206,87 @@
       </div>
       <?php endif; ?>
 
+    <!-- Organism cache freshness. Sits with the housekeeping card below rather than under
+         Data Management: both answer "how current are the figures on this page", and the
+         cache status alone above a row of navigation cards read as an orphan. Element IDs
+         are unchanged — the refresh JS in admin/admin.php looks everything up by id. -->
+    <?php
+      $generated   = $cache_info['generated'] ?? null;
+      $org_count   = $cache_info['organism_count'] ?? 0;
+      $refreshing  = $cache_info['refreshing'] ?? false;
+      $stale       = ($cache_stale ?? false) && !$refreshing;
+      $changed     = $cache_changed_orgs ?? [];
+      $age_str     = 'never built';
+      if ($generated) {
+          $sec = time() - strtotime($generated);
+          if ($sec < 60)        $age_str = $sec . 's ago';
+          elseif ($sec < 3600)  $age_str = floor($sec/60) . 'm ago';
+          elseif ($sec < 86400) $age_str = floor($sec/3600) . 'h ago';
+          else                  $age_str = floor($sec/86400) . 'd ago';
+      }
+      // The "cache out of date" warning + changed-organism list live in the Data Health
+      // card above; this widget just shows status + the refresh control + progress bar.
+      $alert_class = !$generated ? 'alert-warning' : 'alert-secondary';
+    ?>
+    <div class="<?= $alert_class === 'alert-warning' ? 'alert alert-warning' : '' ?> mb-2">
+      <div class="d-flex align-items-center justify-content-between gap-3">
+        <div>
+          <i class="fa fa-sync-alt me-2"></i>
+          <strong>Organism Cache</strong> —
+          <span id="dashCacheSummary">
+            <?php if ($refreshing): ?>
+              <span class="text-primary"><i class="fa fa-spinner fa-spin"></i> Refresh in progress…</span>
+            <?php elseif (!$generated): ?>
+              Cache not built yet — organism data may not be visible
+            <?php elseif ($stale): ?>
+              <?= $org_count ?> organisms, built <strong><?= htmlspecialchars($age_str) ?></strong>
+            <?php else: ?>
+              <i class="fa fa-check text-success"></i> Up to date — <?= $org_count ?> organisms, built <strong><?= htmlspecialchars($age_str) ?></strong>
+            <?php endif; ?>
+          </span>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+          <button id="dashRefreshBtn"
+                  class="btn btn-sm <?= (!$generated || $stale) ? 'btn-warning' : 'btn-outline-secondary' ?>"
+                  onclick="startOrganismCacheRefresh(this)"
+                  <?= $refreshing ? 'disabled' : '' ?>>
+            <i class="fa fa-sync-alt"></i> <?= $refreshing ? 'Refreshing…' : 'Update Cache' ?>
+          </button>
+          <a href="manage_organisms.php" class="btn btn-sm btn-outline-primary">
+            <i class="fa fa-list"></i> View Organisms
+          </a>
+        </div>
+      </div>
+      <div id="dashCacheProgressWrap" class="mt-2" style="display: <?= $refreshing ? 'block' : 'none' ?>;">
+        <div class="progress" style="height: 6px;">
+          <div id="dashCacheProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+        </div>
+        <small class="text-muted" id="dashCacheProgressText">Checking status…</small>
+      </div>
+    </div>
+
+      <?php
+        // Whether ANY health card actually rendered above. When everything is clean they are
+        // all hidden, and the old wording ("Health checks above are cached") pointed at an
+        // empty page — exactly the state an admin is in when checking whether a fix landed.
+        // $has_health_issues is set by _data_health_card.php and stays in scope after it.
+        $_cards_shown = !empty($has_health_issues)
+                     || !empty($_SESSION['perm_summary']['findings'])
+                     || !empty($_SESSION['env_warnings']);
+      ?>
       <div class="d-flex align-items-center justify-content-between gap-3">
         <div class="small text-muted">
           <i class="fa fa-clock me-1"></i>
+          <?php if ($_cards_shown): ?>
           Health checks above are cached<?php if ($scanned): ?> — last run
           <strong><?= htmlspecialchars($scanned) ?></strong><?php endif; ?>,
           so a recent fix may still be listed.
+          <?php else: ?>
+          <i class="fa fa-check-circle text-success"></i>
+          All health checks passed<?php if ($scanned): ?> as of
+          <strong><?= htmlspecialchars($scanned) ?></strong><?php endif; ?>.
+          Results are cached, so a problem introduced since then may not be listed yet.
+          <?php endif; ?>
           <a class="ms-1" data-bs-toggle="collapse" href="#housekeepingTasks" role="button"
              aria-expanded="false" aria-controls="housekeepingTasks" style="cursor:pointer;">
             What runs? <i class="fa fa-chevron-down small"></i>
@@ -277,60 +353,6 @@
   <div class="mt-5">
     <h3 class="mb-3"><i class="fa fa-database"></i> Data Management</h3>
 
-    <?php
-      $generated   = $cache_info['generated'] ?? null;
-      $org_count   = $cache_info['organism_count'] ?? 0;
-      $refreshing  = $cache_info['refreshing'] ?? false;
-      $stale       = ($cache_stale ?? false) && !$refreshing;
-      $changed     = $cache_changed_orgs ?? [];
-      $age_str     = 'never built';
-      if ($generated) {
-          $sec = time() - strtotime($generated);
-          if ($sec < 60)        $age_str = $sec . 's ago';
-          elseif ($sec < 3600)  $age_str = floor($sec/60) . 'm ago';
-          elseif ($sec < 86400) $age_str = floor($sec/3600) . 'h ago';
-          else                  $age_str = floor($sec/86400) . 'd ago';
-      }
-      // The "cache out of date" warning + changed-organism list live in the Data Health
-      // card above; this widget just shows status + the refresh control + progress bar.
-      $alert_class = !$generated ? 'alert-warning' : 'alert-secondary';
-    ?>
-    <div class="alert <?= $alert_class ?> mb-4">
-      <div class="d-flex align-items-center justify-content-between gap-3">
-        <div>
-          <i class="fa fa-sync-alt me-2"></i>
-          <strong>Organism Cache</strong> —
-          <span id="dashCacheSummary">
-            <?php if ($refreshing): ?>
-              <span class="text-primary"><i class="fa fa-spinner fa-spin"></i> Refresh in progress…</span>
-            <?php elseif (!$generated): ?>
-              Cache not built yet — organism data may not be visible
-            <?php elseif ($stale): ?>
-              <?= $org_count ?> organisms, built <strong><?= htmlspecialchars($age_str) ?></strong>
-            <?php else: ?>
-              <i class="fa fa-check text-success"></i> Up to date — <?= $org_count ?> organisms, built <strong><?= htmlspecialchars($age_str) ?></strong>
-            <?php endif; ?>
-          </span>
-        </div>
-        <div class="d-flex align-items-center gap-2 flex-shrink-0">
-          <button id="dashRefreshBtn"
-                  class="btn btn-sm <?= (!$generated || $stale) ? 'btn-warning' : 'btn-outline-secondary' ?>"
-                  onclick="startOrganismCacheRefresh(this)"
-                  <?= $refreshing ? 'disabled' : '' ?>>
-            <i class="fa fa-sync-alt"></i> <?= $refreshing ? 'Refreshing…' : 'Update Cache' ?>
-          </button>
-          <a href="manage_organisms.php" class="btn btn-sm btn-outline-primary">
-            <i class="fa fa-list"></i> View Organisms
-          </a>
-        </div>
-      </div>
-      <div id="dashCacheProgressWrap" class="mt-2" style="display: <?= $refreshing ? 'block' : 'none' ?>;">
-        <div class="progress" style="height: 6px;">
-          <div id="dashCacheProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-        </div>
-        <small class="text-muted" id="dashCacheProgressText">Checking status…</small>
-      </div>
-    </div>
 
     <div class="row">
       <div class="col-md-6 mb-3">
