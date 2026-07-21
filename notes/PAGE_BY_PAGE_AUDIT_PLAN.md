@@ -364,7 +364,11 @@ CLAUDE.md access-control section (contradicted by #3).
       Uppercasing a scientific name is both inconsistent and taxonomically wrong.
       **Fix:** drop `text-uppercase` from that span; keep the `<em>` italic.
 
-- [ ] **#7 Three separate help mechanisms coexist** — (a) JS `info-icon`→modal on 7 pages
+- [ ] **#7 Three separate help mechanisms coexist — MOSTLY RESOLVED, verified 2026-07-21.**
+      The doc listed the JS `info-icon`→modal on **7** pages; only **`tools/pages/organism.php`**
+      still uses it (4 occurrences). assembly, gene_set, groups, multi_organism, search and
+      moopmart are all clean. What remains is finishing that one page, not a 7-page migration.
+      Original text: — (a) JS `info-icon`→modal on 7 pages
       (organism, assembly, gene_set, groups, multi_organism, search, moopmart — modal confirmed to
       open); (b) Bootstrap `popover` on search/blast/downloads/moopmart; (c) plain `title=`
       tooltips. `tools/pages/parent.php` — a heavily used page — uses none of the guided-help
@@ -435,7 +439,10 @@ CLAUDE.md access-control section (contradicted by #3).
 
 ## G. Needs investigation (not yet confirmed a bug)
 
-- [ ] **#12 `jbrowse2.php` throws real JS errors** — `no session model found` + a
+- [x] **#12 `jbrowse2.php` throws real JS errors** — **NOT REPRODUCIBLE 2026-07-21.** Loaded both
+      `jbrowse2.php` and `jbrowse2.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1`
+      in a headless browser: zero pageerrors, zero console errors, neither `no session model found`
+      nor the `LinearBasicDisplay` union mismatch. Fixed somewhere along the way. Original text: — `no session model found` + a
       mobx-state-tree union mismatch on `LinearBasicDisplay`. Page returns 200; these are config
       errors, not the known tracks/CORS/network issue. Couldn't fully isolate from the headless
       env. **Next:** check whether the default session's display type is malformed for this
@@ -463,7 +470,9 @@ CLAUDE.md access-control section (contradicted by #3).
 
 The organism page (`tools/pages/organism.php`) needs a design pass mirroring the parent-page work in
 section I. Candidates (confirm specifics with the user when we get to it):
-- [ ] **Heading level:** the page title is an `<h2 class="fw-bold mb-1">` ("Starlet Sea Anemone",
+- [x] **Heading level — DONE (verified 2026-07-21).** `tools/pages/organism.php:126` is now
+      `<h1 class="fw-bold mb-1 h2" style="color: #0f766e;">` — a real `<h1>` kept visually at h2
+      size, in the teal accent. Original text: the page title is an `<h2 class="fw-bold mb-1">` ("Starlet Sea Anemone",
       line ~126) — should be the page's single `<h1>` (ties into audit #9 heading hierarchy).
 - [ ] **Header/overview card treatment:** apply the readable header pattern from the gene page
       (clear title hierarchy; ID/short-identifier vs descriptive-name split where relevant) instead
@@ -626,7 +635,8 @@ the dashboard stays a router, not a wall of detail. Mirrors the existing
   admin session via `housekeeping_git_status()` (local read-only git; graceful fallback to the old
   "Git available" badge). Confirmed git runs fine under httpd_t (card shows live numbers).
 
-- [ ] Other candidates, same badge+link pattern, priority order: **site-data backup status**
+- [ ] Other candidates, same badge+link pattern. **Site-data backup status is DONE (2026-07-21)** —
+      it renders in the new System Status section with a live git badge. Remaining:
   (`$_SESSION['site_data_backup']` already populated — just surface failures/staleness);
   **error-log activity** ("N errors in 24h", see ERROR_LOG_IMPROVEMENTS_PLAN.md); **account
   lockouts** (`logs/login_attempts.json`); **cache/refresh health** (organism cache stale or

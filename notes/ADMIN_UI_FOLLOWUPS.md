@@ -122,3 +122,35 @@ The 1,207 display-name rows are worth a cleanup sweep too, though they are cosme
 Two of these were only visible because the page was checked in its **healthy** state. A page that
 tells the truth while something is broken can still talk nonsense once it is fixed — "N issues found"
 is easy to get right, "nothing to report" much less so. Worth checking both states.
+
+---
+
+## 4. Admin card headers use four competing idioms
+
+Raised by the user looking at Manage JBrowse: is its card styling different **by design**?
+Checked across the admin pages — it is not design, it is accumulation. Four idioms coexist:
+
+| idiom | example | pages |
+|---|---|---|
+| `bg-X bg-opacity-10` | `card-header bg-info bg-opacity-10` | manage_jbrowse, manage_organisms, manage_annotations |
+| `bg-X-subtle` | `card-header bg-danger-subtle` | manage_groups |
+| solid fill | `card-header bg-secondary text-white`, `bg-light` | manage_organisms, manage_annotations |
+| `cfg-head` (teal wash + accent rule) | `card-header cfg-head` | manage_site_config only |
+
+`manage_jbrowse.php` is the clearest case: **eight cards, seven different colours** — danger, dark,
+info, primary, secondary, success (x2), warning, all at `bg-opacity-10`. Colour there is not
+carrying meaning; when nearly every card is a different colour, none of them signals anything. The
+one place it *should* signal — the Broken Registrations card being red — is lost in the rainbow.
+
+Honest note: the `cfg-head` idiom is **mine**, added on 2026-07-21 during the Manage Site
+Configuration pass. It fixed that page (which had its own two-tier split) but made the site-wide
+inconsistency worse by adding a fourth style rather than a shared one. If it is the direction we
+want — it matches the stated teal/soft-wash preference — it should move out of
+`css/manage-site-config.css` into a shared stylesheet and be applied across the admin pages, with
+colour reserved for genuine severity (a red header meaning "this is broken", not "this is the
+tracks card").
+
+**Suggested approach:** pick one idiom, promote `.cfg-head` to a shared `admin-cards.css`, and
+allow exactly one deviation — a danger variant for cards that represent an actual problem. Do the
+sweep in one pass so the pages cannot drift apart again, the same reasoning as the single
+definition for registry sources and sequence file names.
