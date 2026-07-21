@@ -115,7 +115,7 @@ if ($has_prepopulated_sequences) {
                 foreach ($search_dirs as $gs_dir) {
                     foreach ($sequence_types as $seq_type => $seq_config) {
                         if (strpos($seq_config['pattern'], 'genome') !== false) continue;
-                        $files = glob("$gs_dir/*{$seq_config['pattern']}");
+                        $files = glob("$gs_dir/{$seq_config['pattern']}");
                         if (!empty($files)) {
                             $fasta_files_found = true;
                             $available_sequences[$seq_type] = [

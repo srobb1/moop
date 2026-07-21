@@ -85,8 +85,11 @@ if (!is_dir($assembly_dir)) {
     die('Error: Assembly directory not found.');
 }
 
-$pattern = $sequence_types[$type]['pattern'];
-$files = glob("$assembly_dir/$pattern");
+// Ask by TYPE, via the shared helper, rather than reaching into the config array — the
+// file name is admin-editable (Manage Site Configuration -> Sequence File Types) and this
+// is the one place that looks up a single named type rather than iterating all of them.
+$filename = sequence_filename($type);
+$files    = $filename !== null ? glob("$assembly_dir/$filename") : [];
 
 if (empty($files)) {
     http_response_code(404);

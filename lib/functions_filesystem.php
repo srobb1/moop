@@ -294,7 +294,7 @@ function validateAssemblyFastaFiles($organism_dir, $sequence_types) {
             $found_file = null;
 
             // Check directly in the assembly dir (e.g. genome.fa lives here)
-            $direct = glob("$full_path/*$pattern");
+            $direct = glob("$full_path/$pattern");
             if (!empty($direct)) {
                 $found_file = basename($direct[0]);
             }
@@ -302,7 +302,7 @@ function validateAssemblyFastaFiles($organism_dir, $sequence_types) {
             // If not found at assembly level, check inside each gene_set subdir
             if ($found_file === null) {
                 foreach ($gene_set_dirs as $gs) {
-                    $files = glob("$full_path/$gs/*$pattern");
+                    $files = glob("$full_path/$gs/$pattern");
                     if (!empty($files)) {
                         $found_file = basename($files[0]);
                         break;

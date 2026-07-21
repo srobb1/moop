@@ -763,7 +763,7 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
     $asm_level_files = [];   // [type => ['config'=>..., 'file'=>string]]
     $gs_level_types  = [];   // [type => config]  — checked per gene_set
     foreach ($sequence_types as $type => $config) {
-        $direct = glob("$assembly_path/*{$config['pattern']}") ?: [];
+        $direct = glob("$assembly_path/{$config['pattern']}") ?: [];
         if (!empty($direct)) {
             $asm_level_files[$type] = ['config' => $config, 'file' => basename($direct[0])];
         } else {
@@ -776,7 +776,7 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
     foreach ($gene_set_dirs_live as $gs) {
         $gs_fasta_status[$gs] = [];
         foreach ($gs_level_types as $type => $config) {
-            $files = glob("$assembly_path/$gs/*{$config['pattern']}") ?: [];
+            $files = glob("$assembly_path/$gs/{$config['pattern']}") ?: [];
             $gs_fasta_status[$gs][$type] = !empty($files)
                 ? ['found' => true,  'file' => basename($files[0])]
                 : ['found' => false, 'file' => null];
@@ -1022,7 +1022,7 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
                     <?php else: ?>
                       <span class="badge bg-danger"><i class="fa fa-times"></i></span>
                       <strong><?= htmlspecialchars($gs_level_types[$type]['label'] ?? $type) ?>:</strong>
-                      <small class="text-muted">Missing — expected pattern: *<?= htmlspecialchars($gs_level_types[$type]['pattern']) ?></small>
+                      <small class="text-muted">Missing — expected file: <?= htmlspecialchars($gs_level_types[$type]['pattern']) ?></small>
                     <?php endif; ?>
                   </li>
                 <?php endforeach; ?>

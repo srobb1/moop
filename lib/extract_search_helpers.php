@@ -331,7 +331,7 @@ function extractSequencesForAllTypes(
     foreach ($sequence_types as $seq_type => $config) {
         if ($seq_type === 'genome') continue;
         if (empty($buckets[$seq_type])) continue;
-        $files = glob("$assembly_dir/*{$config['pattern']}");
+        $files = glob("$assembly_dir/{$config['pattern']}");
         if (!empty($files)) {
             $run_extract($seq_type, $files[0], $buckets[$seq_type]);
         }
@@ -341,7 +341,7 @@ function extractSequencesForAllTypes(
     if (!empty($untyped)) {
         foreach ($sequence_types as $seq_type => $config) {
             if ($seq_type === 'genome') continue;
-            $files = glob("$assembly_dir/*{$config['pattern']}");
+            $files = glob("$assembly_dir/{$config['pattern']}");
             if (!empty($files)) {
                 $run_extract($seq_type, $files[0], $untyped);
             }
@@ -520,7 +520,7 @@ function getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_type
     
     foreach ($accessible_sources as $source) {
         foreach ($sequence_types as $seq_type => $config) {
-            $files = glob($source['path'] . "/*{$config['pattern']}");
+            $files = glob($source['path'] . "/{$config['pattern']}");
             if (!empty($files)) {
                 $available_types[$seq_type] = $config['label'];
             }
