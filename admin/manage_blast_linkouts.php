@@ -38,6 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $linkout_config['jbrowse_hsp_max_span']  = max(1, (int)($_POST['jbrowse_hsp_max_span']  ?? 500000));
     $linkout_config['jbrowse_hsp_max_link']  = max(1, (int)($_POST['jbrowse_hsp_max_link']  ?? 10));
 
+    // Rows that fail validation are dropped — tell the admin which ones, rather than
+    // reporting a clean save for settings that were silently discarded.
+    $rejected = [];
+
     // Global external linkouts
     $labels    = $_POST['ext_label']    ?? [];
     $templates = $_POST['ext_template'] ?? [];
@@ -45,8 +49,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($labels as $i => $label) {
         $label    = trim($label);
         $template = trim($templates[$i] ?? '');
-        if ($label === '' || $template === '') continue;
-        if (!str_starts_with($template, 'http')) continue;
+        if ($label === '' && $template === '') continue;  // untouched blank row
+        if ($label === '' || $template === '') {
+            $rejected[] = 'Global linkout #' . ($i + 1) . ' needs both a label and a URL.';
+            continue;
+        }
+        if (!preg_match('#^https?://#i', $template)) {
+            $rejected[] = 'Global linkout "' . $label . '" — URL must start with http:// or https://.';
+            continue;
+        }
         $linkout_config['external'][] = ['label' => $label, 'url_template' => $template];
     }
 
@@ -59,10 +70,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $key      = trim($key);
         $label    = trim($pdb_labels[$i] ?? '');
         $template = trim($pdb_urls[$i]   ?? '');
-        if ($key === '' || $label === '' || $template === '') continue;
-        if (!str_starts_with($template, 'http')) continue;
+        if ($key === '' && $label === '' && $template === '') continue;  // untouched blank row
+        $who = $label !== '' ? '"' . $label . '"' : '#' . ($i + 1);
+        if ($key === '') {
+            $rejected[] = 'Per-database linkout ' . $who . ' — no database selected.';
+            continue;
+        }
+        if ($label === '' || $template === '') {
+            $rejected[] = 'Per-database linkout ' . $who . ' needs both a label and a URL.';
+            continue;
+        }
+        if (!preg_match('#^https?://#i', $template)) {
+            $rejected[] = 'Per-database linkout ' . $who . ' — URL must start with http:// or https://.';
+            continue;
+        }
         // Validate key: exactly two pipe separators → organism|assembly|seq_type
-        if (substr_count($key, '|') !== 2) continue;
+        if (substr_count($key, '|') !== 2) {
+            $rejected[] = 'Per-database linkout ' . $who . ' — unrecognized database "' . $key . '".';
+            continue;
+        }
         $per_db[$key][] = ['label' => $label, 'url_template' => $template];
     }
     $linkout_config['per_db_external'] = $per_db;
@@ -73,9 +99,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $current['blast_linkouts'] = $linkout_config;
 
-    if (file_put_contents($editable_config_file, json_encode($current, JSON_PRETTY_PRINT)) !== false) {
-        $message     = 'Linkout settings saved.';
-        $messageType = 'success';
+    $json = json_encode($current, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    if ($json !== false && file_put_contents($editable_config_file, $json) !== false) {
+        if ($rejected) {
+            $message     = 'Saved, but ' . count($rejected) . ' linkout(s) were not saved — '
+                         . implode(' ', $rejected);
+            $messageType = 'warning';
+        } else {
+            $message     = 'Linkout settings saved.';
+            $messageType = 'success';
+        }
     } else {
         $message     = 'Failed to write config file — check permissions.';
         $messageType = 'danger';
@@ -109,18 +142,39 @@ foreach ($all_orgs as $org_name => $assemblies) {
     }
 }
 
-// Build feature_coords.tsv status for each JBrowse-registered assembly, per gene set
-$feature_coord_status = [];
+// Build feature_coords.tsv status for each JBrowse-registered assembly, per gene set.
+// A registration whose organisms/ directory is missing gets NO row, so it would otherwise
+// vanish from this table entirely — collect those separately and report them.
+$feature_coord_status  = [];
+$orphan_registrations  = [];
 $assemblies_meta_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
 if (is_dir($assemblies_meta_dir)) {
     foreach (glob($assemblies_meta_dir . '/*.json') ?: [] as $jf) {
         $jd = loadJsonFile($jf, []);
-        if (empty($jd)) continue;
+        if (empty($jd)) {
+            $orphan_registrations[] = ['file' => basename($jf), 'reason' => 'unreadable or empty JSON'];
+            continue;
+        }
         $org = $jd['organism'] ?? '';
         $asm = $jd['assemblyId'] ?? '';
-        if ($org === '' || $asm === '') continue;
+        if ($org === '' || $asm === '') {
+            $orphan_registrations[] = ['file' => basename($jf), 'reason' => 'missing "organism" or "assemblyId"'];
+            continue;
+        }
         $asm_path = $organisms_dir . '/' . $org . '/' . $asm;
-        if (!is_dir($asm_path)) continue;
+        if (!is_dir($asm_path)) {
+            // Show what the organism directory actually holds — the usual cause is a
+            // registration made under a different assembly name than the data uses.
+            $actual = array_map('basename', glob($organisms_dir . '/' . $org . '/*', GLOB_ONLYDIR) ?: []);
+            $orphan_registrations[] = [
+                'file'     => basename($jf),
+                'organism' => $org,
+                'assembly' => $asm,
+                'reason'   => 'no directory at organisms/' . $org . '/' . $asm,
+                'actual'   => $actual,
+            ];
+            continue;
+        }
         foreach (glob($asm_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
             $gene_set = basename($gs_dir);
             $tsv = $gs_dir . '/feature_coords.tsv';
@@ -158,6 +212,7 @@ echo render_display_page(__DIR__ . '/pages/manage_blast_linkouts.php', [
     'db_options'           => $db_options,
     'per_db_rows'          => $per_db_rows,
     'feature_coord_status' => $feature_coord_status,
+    'orphan_registrations' => $orphan_registrations,
     'message'              => $message,
     'messageType'          => $messageType,
 ], 'Manage BLAST Linkouts');

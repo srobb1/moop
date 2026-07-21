@@ -7,8 +7,9 @@
  *   $db_options            ['org|asm|seq_type' => ['key','display',...], ...]
  *   $per_db_rows           Flat list: [['key','label','url_template'], ...]
  *   $feature_coord_status  Per-assembly feature_coords.tsv status rows
+ *   $orphan_registrations  JBrowse registrations with no matching organisms/ directory
  *   $message               Flash message string
- *   $messageType           Bootstrap contextual type (success / danger)
+ *   $messageType           Bootstrap contextual type (success / warning / danger)
  */
 ?>
 
@@ -243,6 +244,37 @@
           <span class="text-muted ms-2 small">— Required for Genome Browser linkouts on feature BLAST databases (protein / mRNA / CDS). Stored as <code>feature_coords.tsv</code> in each gene set directory. Generated automatically when registering an assembly in JBrowse.</span>
         </div>
         <div class="card-body p-0">
+
+          <?php if (!empty($orphan_registrations)): ?>
+            <div class="alert alert-warning rounded-0 border-0 border-bottom mb-0">
+              <h6 class="alert-heading">
+                <i class="fa fa-triangle-exclamation"></i>
+                <?= count($orphan_registrations) ?> JBrowse
+                <?= count($orphan_registrations) === 1 ? 'registration is' : 'registrations are' ?>
+                not listed below
+              </h6>
+              <p class="small mb-2">
+                These assemblies are registered in JBrowse but have no matching directory under
+                <code>organisms/</code>, so no feature coordinate index can be built for them and
+                BLAST linkouts will not work. Usually the registration was made under a different
+                assembly name than the data actually uses.
+              </p>
+              <ul class="small mb-0">
+                <?php foreach ($orphan_registrations as $o): ?>
+                <li>
+                  <code><?= htmlspecialchars($o['file']) ?></code> — <?= htmlspecialchars($o['reason']) ?>
+                  <?php if (!empty($o['actual'])): ?>
+                    <br><span class="text-muted">
+                      <code>organisms/<?= htmlspecialchars($o['organism']) ?>/</code> actually contains:
+                      <?= htmlspecialchars(implode(', ', $o['actual'])) ?>
+                    </span>
+                  <?php endif; ?>
+                </li>
+                <?php endforeach; ?>
+              </ul>
+            </div>
+          <?php endif; ?>
+
           <?php if (empty($feature_coord_status)): ?>
             <p class="text-muted small p-3 mb-0">No JBrowse-registered assemblies found.</p>
           <?php else: ?>
