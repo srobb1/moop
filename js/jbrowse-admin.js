@@ -811,9 +811,10 @@ $(document).ready(function() {
 // ---------------------------------------------------------------------------
 // Unregister a broken JBrowse registration (source data renamed/removed).
 //
-// Note the X-CSRF-Token header: unregister_assembly.php bootstraps via admin_init.php,
-// which enforces CSRF on every POST. Several older endpoints in this file post without
-// one because they bootstrap via admin_access_check.php instead, which does not.
+// The X-CSRF-Token header here is belt-and-braces: js/modules/csrf.js wraps window.fetch
+// globally and adds the token to every non-GET request, and it skips any request that
+// already carries one. Setting it explicitly keeps this call working even if that module
+// fails to load.
 // ---------------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.unregister-assembly-btn').forEach(function (btn) {

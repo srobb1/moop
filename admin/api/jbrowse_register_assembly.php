@@ -11,8 +11,10 @@
  *   assembly  - assembly ID (e.g. GCA_004027475.1)
  */
 
-require_once __DIR__ . '/../../includes/config_init.php';
-require_once __DIR__ . '/../../admin/admin_access_check.php';
+// admin_init.php rather than admin_access_check.php: it performs the same admin-role
+// check AND verifies the CSRF token on POST. Using the bare access check left this
+// endpoint authenticated but forgeable.
+require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/../../lib/jbrowse/gene_set_functions.php';
 
 set_time_limit(300);
