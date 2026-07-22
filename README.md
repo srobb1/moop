@@ -174,7 +174,7 @@ repo, committing stays manual by design.
 | Change site title / logo / favicon | Admin → Manage Site Configuration |
 | Rebuild BLAST indexes | Admin → Organism Checklist → Build BLAST Index |
 | Add tracks to the genome browser | [JBrowse2 Admin Guide](docs/JBrowse2/ADMIN_GUIDE.md) |
-| Link BLAST hits to JBrowse or an external site | Admin → Manage BLAST Linkouts |
+| Link BLAST hits to JBrowse or an external site | Admin → Manage BLAST Linkouts ([guide](docs/BLAST_LINKOUTS.md)) |
 | See what a public visitor sees | "View as public" in the navbar |
 | Check the health of an install | `php setup-check.php` |
 | Warm the organism cache | `php scripts/warm_organism_cache.php` (`--force` to rescan) |
@@ -260,9 +260,12 @@ Details: [Security](docs/JBrowse2/technical/SECURITY.md).
 ### Linking BLAST hits into the browser
 
 BLAST results can carry configurable linkouts — to the gene page, straight into JBrowse at
-the hit coordinates, or to an external database. Configure them in **Admin → Manage BLAST
-Linkouts**; they are per-registration and take effect immediately, with the coordinate
-index built at registration time.
+the hit coordinates, or out to an external database with the hit ID substituted into a URL
+template. Configure them in **Admin → Manage BLAST Linkouts**.
+
+Gene-page and browser links need a per-gene-set coordinate index (`feature_coords.tsv`),
+built when the assembly is registered — there is no lazy fallback, deliberately, so a BLAST
+search never triggers a file scan. Full guide: **[BLAST linkouts](docs/BLAST_LINKOUTS.md)**.
 
 ### Updating JBrowse2
 
@@ -272,14 +275,20 @@ npx @jbrowse/cli upgrade
 cat version.txt          # confirm the new version
 ```
 
-This replaces the web app in place and preserves MOOP's configuration. **Run it from the
-CLI, never through the web server** — see the read-only note above. Afterwards, load a
-browser view and confirm tracks still render before considering it done.
+This replaces the web app in place. MOOP's own configuration is safe because it lives
+outside `jbrowse2/` — the plugin list is `config/jbrowse2_plugins.json`, and assemblies and
+tracks are generated per request.
+
+**Run it from the CLI, never through the web server** — see the read-only note above.
+Afterwards check `git status jbrowse2/` for anything of ours that was replaced, confirm
+tracks still render, and confirm the auth gateway still redirects a logged-out user.
+Full checklist: **[Upgrading JBrowse2](docs/JBrowse2/UPGRADING.md)**.
 
 ### JBrowse2 documentation
 
 - [Documentation index](docs/JBrowse2/_DOCUMENTATION_INDEX.md) — start here; there is a lot
 - [Admin guide](docs/JBrowse2/ADMIN_GUIDE.md) — tracks, assemblies, permissions
+- [Upgrading JBrowse2](docs/JBrowse2/UPGRADING.md) — what survives an upgrade, and what to check after
 - [User guide](docs/JBrowse2/USER_GUIDE.md) — for the people using the browser
 - [Setting up a new organism](docs/JBrowse2/SETUP_NEW_ORGANISM.md) — files in, files out
 - [Track formats reference](docs/JBrowse2/reference/TRACK_FORMATS_REFERENCE.md)
