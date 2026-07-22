@@ -262,6 +262,13 @@ reads like one, and it works against the goal the schema is built around. Where 
 creates a staleness risk, the answer is regeneration discipline (proactive build + a rebuild
 control), not schema growth.
 
+**Measured, on this host:** 85 databases totalling 66 GB against ~12 GB of page cache, so
+most data is cold most of the time — and cold is what dominates. The same `COUNT(*)` took
+**7,051 ms cold and 2 ms warm**. Every megabyte added to a database competes for that cache
+and evicts something a user is about to need. Before optimising SQL, check you are not
+actually measuring the disk. Numbers, fast/slow query shapes and the cross-organism fan-out
+cost: `notes/QUERY_PERFORMANCE.md`.
+
 ### 10. Housekeeping — Automatic Maintenance Tasks
 
 `lib/housekeeping.php` runs maintenance tasks from `admin_init.php`. No cron jobs or
