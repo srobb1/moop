@@ -242,6 +242,26 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ```
 Never use `$dbh->query()` with user-supplied values interpolated in.
 
+**Keep the schema lean — this is a deliberate choice, not an unfinished one.**
+MOOP's data model optimises for a specific goal: many small per-organism databases that load
+quickly and can be rebuilt independently as gene sets are updated. That is a different design
+point from a fully normalised, general-purpose genomic schema — which buys interoperability
+and expressiveness at the cost of size and load time. Both are reasonable; MOOP has
+deliberately chosen the small-and-rebuildable end, and the schema should be read in that
+light. See also `decision_one_db_per_organism` — one SQLite DB per organism, confirmed, not
+to be re-litigated.
+
+The practical rule: **bulk, per-feature data that is regenerable from source files does not
+belong in the database.** The worked example is feature coordinates, which live in
+`{gene_set}/feature_coords.tsv`, not in SQLite (`lib/moopmart_functions.php:654` says so
+outright). It is regenerated from the GFF at JBrowse registration, costs nothing when unused,
+and keeps `organism.sqlite` small.
+
+So do **not** propose "just add a column" for that class of data as a simplification — it
+reads like one, and it works against the goal the schema is built around. Where a flat file
+creates a staleness risk, the answer is regeneration discipline (proactive build + a rebuild
+control), not schema growth.
+
 ### 10. Housekeeping — Automatic Maintenance Tasks
 
 `lib/housekeeping.php` runs maintenance tasks from `admin_init.php`. No cron jobs or

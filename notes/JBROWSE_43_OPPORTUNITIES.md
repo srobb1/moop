@@ -63,21 +63,27 @@ linking. That is true **for one of the three consumers only.** Checked against t
 | Gene-page linkout (`:936`) | `gene_id` — the hit-ID→gene mapping, *not* coordinates | No. This is a MOOP fact about our own pages |
 | MOOPmart (`moopmart_functions.php:314`) | coordinates, for range **filtering** | No. Server-side filtering; JBrowse is not involved |
 
-So the file cannot simply go away. The honest framing is narrower and more useful:
+So the file cannot simply go away.
 
-**The real question is not "drop the file" but "why are coordinates not in the database?"**
-`lib/moopmart_functions.php:654` says it outright — *"coords are in feature_coords.tsv, not
-the DB"*. That is the actual design decision, and the TSV exists to work around it. If
-coordinates lived in SQLite:
+### DECIDED 2026-07-22: keep the file. Coordinates stay OUT of the database.
 
-- MOOPmart range filtering becomes a SQL predicate instead of a TSV join
-- the gene-page mapping is a column, not a lookup table
-- the JBrowse linkout can use coordinates *or* names, freely
-- the per-gene-set regeneration step, and its staleness-vs-GFF failure mode, disappear
+`lib/moopmart_functions.php:654` states it plainly — *"coords are in feature_coords.tsv, not
+the DB"*. That is **deliberate, not an oversight**, and the obvious-looking "improvement" of
+moving coordinates into SQLite is the wrong direction here.
 
-That is a loader-side change (moop-dbtools) plus a schema addition, not a quick win — but it
-is the change that would actually retire the file. Worth scoping properly rather than
-chasing the linkout alone.
+MOOP's schema optimises for many small per-organism databases that load quickly and can be
+rebuilt independently when a gene set changes. Keeping them small is the point, and it is a
+considered tradeoff against the expressiveness a larger, more normalised schema would give.
+
+Coordinates are **bulk, per-feature, regenerable-from-GFF positional data** — precisely the
+category that grows a database fastest while adding nothing a flat file cannot serve just as
+well. A TSV beside the gene set is the cheaper home: it rebuilds from the GFF, costs nothing
+when unused, and keeps `organism.sqlite` fast to load.
+
+**So do not propose "just add a coordinates column" as a simplification.** It reads like one
+and is not. The staleness-vs-GFF failure mode is a real cost, and the right mitigation is
+regeneration discipline (already: proactive build at registration + a rebuild button on
+Manage BLAST Linkouts), not schema growth.
 
 ⚠️ If the JBrowse linkout **does** move to name-based `&loc=`, it gains a dependency on the
 `jbrowse text-index` (trix) being built and current for that assembly. Today a missing index
