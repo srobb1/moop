@@ -169,6 +169,31 @@ if (file_exists($desc_file)) {
     }
 }
 
+// Fallback: if this viewer has nothing manually featured to show (e.g. a public
+// visitor whose only groups are the ones holding public gene sets, none of which
+// an admin has marked featured), promote the groups that DO contain public gene
+// sets — so the prominent showcase is never empty when there is public content.
+// Manual `featured` always wins; this only fills an otherwise-blank section.
+if (empty($featured_groups)) {
+    $groups_with_public = [];
+    foreach ($group_data as $entry) {
+        if (entry_is_public($entry)) {
+            foreach (($entry['groups'] ?? []) as $g) {
+                if (strtoupper(trim((string)$g)) === 'PUBLIC') continue; // legacy keyword, not a real group
+                $groups_with_public[$g] = true;
+            }
+        }
+    }
+    foreach ($cards_to_display as $group_name => $card) {
+        if (isset($groups_with_public[$group_name])) {
+            $featured_groups[] = [
+                'name' => $group_name,
+                'url'  => "/$site/tools/groups.php?group=" . urlencode($group_name),
+            ];
+        }
+    }
+}
+
 // Render page using layout system
 echo render_display_page(
     __DIR__ . '/tools/pages/index.php',
