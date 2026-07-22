@@ -115,6 +115,34 @@ is about to need.
 
 ---
 
+## Why this was hard to track down
+
+Worth recording, because the difficulty is structural and will recur.
+
+**Investigating the problem destroys it.** The first run of a query pulls its pages into
+cache; every run after that is fast. So the sequence is always:
+
+1. A user reports a page or search being slow.
+2. You open a shell and run the query. **2 ms.** Nothing looks wrong.
+3. You run it again to be sure. Faster still.
+4. You conclude the query is fine and go looking somewhere else.
+
+You were measuring your own warm-up. And it is worse than a plain Heisenbug, because the
+*fast* reading is the reproducible one — you can demonstrate "it's fine" on demand, all day,
+and never see the 7 seconds the user saw.
+
+What made it visible here was **timing the same query on a database that had not been touched
+yet in the session, then immediately again** — cold and warm, back to back, in one run. Either
+measurement alone is misleading; only the pair shows the effect.
+
+Two corollaries for anyone chasing a "slow query" report in future:
+
+- **A single timing is worthless** unless you state whether the data was cold. Always report
+  both, or say which one you measured.
+- **Explanations that fit the fast reading are traps.** "It must be the network", "it must be
+  PHP", "it must be the browser" all become attractive precisely because the query keeps
+  measuring fast. The query really is fast — the *second* time.
+
 ## Practical rules
 
 1. **Never `COUNT(*)` a large table on a page load.** Cache it via housekeeping, or count
