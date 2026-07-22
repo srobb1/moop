@@ -486,7 +486,17 @@
           </div>
         </div>
       </div>
-      
+
+      <div class="col-md-6 mb-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title"><i class="fa fa-book"></i> Manage Glossary</h5>
+            <p class="card-text">Define the dashed-underline help terms shown across the site.</p>
+            <a href="manage_glossary.php" class="btn btn-success">Go to Manage Glossary</a>
+          </div>
+        </div>
+      </div>
+
       <div class="col-md-6 mb-3">
         <div class="card h-100">
           <div class="card-header adm-head">
