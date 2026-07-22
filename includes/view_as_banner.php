@@ -23,7 +23,7 @@ $vab_return = $_SERVER['REQUEST_URI'] ?? ('/' . $vab_site . '/index.php');
       <i class="fa fa-eye" aria-hidden="true"></i>
       <span>
         <strong>Previewing as a public visitor.</strong>
-        You are seeing only data in the <code>PUBLIC</code> group — your administrator access is paused.
+        You are seeing only gene sets marked <strong>Public</strong> — your administrator access is paused.
       </span>
     </div>
     <form method="post" action="/<?= htmlspecialchars($vab_site) ?>/view_as.php" class="m-0">

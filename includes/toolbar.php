@@ -75,29 +75,25 @@ $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
           <span class="<?= $badge_class ?>"><?= htmlspecialchars($access_text) ?></span>
         </li>
 
-        <?php if (moop_viewing_as_public()): ?>
-        <!-- Second exit from the public preview. The banner above the navbar scrolls away on a
-             long page; this one is in the sticky bar, so the way out is always on screen. -->
+        <?php if (moop_viewing_as_public() || moop_session_is_admin()):
+          // One toggle for both directions. While previewing, moop_session_is_admin()
+          // is (correctly) false — the accessors lie — so moop_viewing_as_public() is
+          // what keeps this control on screen so the admin can always switch back.
+          $va_previewing = moop_viewing_as_public(); ?>
         <li class="nav-item">
-          <form method="post" action="/<?= $site ?>/view_as.php" class="m-0 d-inline">
+          <form method="post" action="/<?= $site ?>/view_as.php" class="m-0">
             <?= csrf_input_field() ?>
-            <input type="hidden" name="action" value="leave">
+            <input type="hidden" name="action" value="<?= $va_previewing ? 'leave' : 'enter' ?>">
             <input type="hidden" name="return" value="<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '') ?>">
-            <button type="submit" class="btn btn-sm btn-warning">
-              <i class="fa fa-eye me-1"></i>Leave preview
-            </button>
-          </form>
-        </li>
-        <?php elseif (moop_session_is_admin()): ?>
-        <li class="nav-item">
-          <form method="post" action="/<?= $site ?>/view_as.php" class="m-0 d-inline">
-            <?= csrf_input_field() ?>
-            <input type="hidden" name="action" value="enter">
-            <input type="hidden" name="return" value="<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '') ?>">
-            <button type="submit" class="btn btn-sm btn-outline-light"
-                    title="See this page as an unauthenticated visitor sees it">
-              <i class="fa fa-eye me-1"></i>View as public
-            </button>
+            <div class="form-check form-switch m-0 d-flex align-items-center gap-2"
+                 title="See this page as an unauthenticated visitor sees it">
+              <input class="form-check-input" type="checkbox" role="switch" id="viewAsToggle"
+                     <?= $va_previewing ? 'checked' : '' ?> onchange="this.form.submit()">
+              <label class="form-check-label small text-nowrap <?= $va_previewing ? 'text-warning fw-semibold' : 'text-white' ?>"
+                     for="viewAsToggle">
+                <i class="fa fa-eye me-1"></i>View as public
+              </label>
+            </div>
           </form>
         </li>
         <?php endif; ?>
