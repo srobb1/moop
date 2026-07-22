@@ -19,17 +19,11 @@
       </div>
       <div class="modal-body">
 
-        <p class="mb-3">
-          An <strong>annotation</strong> is a functional description attached to a genomic feature —
-          for example, a gene name, protein function, GO term, or database cross-reference.
-          Most annotations are added by running bioinformatic analysis tools such as
-          BLAST or InterProScan.
-        </p>
-
         <p class="text-muted mb-4">
-          Annotations are grouped by type below.
-          Select only the types relevant to your query — for example, choose <em>Gene Ontology</em>
-          to find genes by GO term, or <em>Domains</em> to search protein domain annotations.
+          Each annotation carries a <strong>type</strong> — the kind of description it is, and
+          usually where it came from. Select only the types relevant to your query — for example,
+          choose <em>Gene Ontology</em> to find genes by GO term, or <em>Domains</em> to search
+          protein domain annotations.
         </p>
 
         <div class="row g-3">

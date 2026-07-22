@@ -16,15 +16,8 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
 
   <!-- Header -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
+    <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
       <?= page_title('Search Features by Annotation') ?>
-      <button type="button" class="btn btn-link p-0 text-white"
-              style="font-size:1rem; opacity:0.85; line-height:1;"
-              data-bs-toggle="popover" data-bs-placement="left" data-bs-trigger="focus" data-bs-html="true"
-              data-bs-title="What is an annotation?"
-              data-bs-content="An annotation is a functional description attached to a genomic feature — for example, a gene name, protein function, GO term, or database cross-reference. Most annotations are added by running bioinformatic analysis tools such as BLAST or InterProScan. This tool searches those descriptions to help you find specific genes, mRNAs, or other features across one or more organisms.">
-        <i class="fa fa-info-circle"></i>
-      </button>
     </div>
     <div class="card-body py-2">
       <p class="text-muted small mb-0">Find specific <?= gloss('feature', 'features') ?> — genes, mRNAs, or proteins — by ID or keyword, matched against their <?= gloss('annotation', 'annotations') ?> across one or more organisms. Use <a href="moopmart.php" class="text-decoration-none">MOOPmart</a> to bulk-download many features at once.</p>
