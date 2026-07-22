@@ -34,6 +34,10 @@ require_once __DIR__ . '/../lib/functions_json.php';
 // generated caches live without each rebuilding the path inline.
 require_once __DIR__ . '/../lib/cache_paths.php';
 
+// Glossary term definitions + the gloss() inline-help helper. Loaded at the same
+// early choke point so gloss() is in scope for any view file that renders a term.
+require_once __DIR__ . '/../lib/glossary.php';
+
 // Load the ConfigManager class
 require_once __DIR__ . '/ConfigManager.php';
 

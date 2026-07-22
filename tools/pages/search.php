@@ -27,7 +27,7 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
       </button>
     </div>
     <div class="card-body py-2">
-      <p class="text-muted small mb-0">Find specific genes, mRNAs, or other features by ID or keyword across one or more organisms. Use <a href="moopmart.php" class="text-decoration-none">MOOPmart</a> to bulk-download many features at once.</p>
+      <p class="text-muted small mb-0">Find specific <?= gloss('feature', 'features') ?> — genes, mRNAs, or proteins — by ID or keyword, matched against their <?= gloss('annotation', 'annotations') ?> across one or more organisms. Use <a href="moopmart.php" class="text-decoration-none">MOOPmart</a> to bulk-download many features at once.</p>
     </div>
   </div>
 
@@ -149,7 +149,7 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
     <div class="card mb-3 shadow-sm">
       <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
         <span class="step-badge me-2">3</span>
-        <span class="fw-semibold me-auto" style="font-size:0.9rem;">Select annotation types to search</span>
+        <span class="fw-semibold me-auto" style="font-size:0.9rem;">Select <?= gloss('annotation type', 'annotation types') ?> to search</span>
         <button type="button" class="btn btn-link btn-sm p-0 ms-1" style="color:rgba(255,255,255,0.7);"
                 data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="About annotation types">
           <i class="fa fa-info-circle"></i>

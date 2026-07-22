@@ -717,3 +717,21 @@ footer .footer-meta {
   background-color: #2563eb !important;
   border-color: #2563eb !important;
 }
+
+/* ── Glossary terms ─────────────────────────────────────────────────────────
+   A defined word, dashed-underlined, showing its definition on hover/focus.
+   The affordance sits ON the word (not in a separate icon), so a reader who
+   knows the concept by another name confirms it in place. currentColor keeps
+   the dash visible on any background — dark text or a teal header alike. */
+.gloss {
+  border-bottom: 1px dashed currentColor;
+  cursor: help;
+  text-decoration: none;
+}
+.gloss:hover,
+.gloss:focus {
+  border-bottom-style: solid;
+  outline: none;
+}
+/* Give the definition room to read as a sentence, not a cramped tooltip. */
+.popover { max-width: 320px; }
