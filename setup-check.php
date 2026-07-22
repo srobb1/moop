@@ -241,6 +241,34 @@ if (!is_array($config)) {
     exit(1);
 }
 
+// ── Which installation are we actually reporting on? ───────────────────────
+//
+// Nearly every check below resolves its target from $config, not from $base. If the
+// config describes a DIFFERENT deployment, this script inspects THAT one and reports
+// PASS for directories, keys and users files that do not exist in the tree it was run
+// from. Observed 2026-07-22 from a fresh clone on a host with a live MOOP: 29 checks
+// passed — organisms/, certs/, both JWT keys, users file, data/tracks/.htaccess — all
+// belonging to the OTHER install. A preflight that green-lights the wrong deployment is
+// worse than no preflight, so say plainly which one is being examined.
+$sc_configured = rtrim($config['root_path'] ?? '', '/') . '/' . trim($config['site'] ?? '', '/');
+$sc_conf_real  = realpath($sc_configured);
+$sc_base_real  = realpath($base);
+$sc_mismatch   = ($sc_conf_real === false || $sc_base_real === false || $sc_conf_real !== $sc_base_real);
+
+echo "Inspecting install: " . ($sc_conf_real ?: $sc_configured) . "\n";
+if ($sc_mismatch) {
+    echo "\n" . C_RED . "WARNING: config points at a DIFFERENT directory than this script."
+        . C_RESET . "\n";
+    echo "  Script running in : " . ($sc_base_real ?: $base) . "\n";
+    echo "  Config points at  : " . ($sc_conf_real ?: $sc_configured) . "\n";
+    echo "  Results below describe the CONFIGURED install, not this tree — passes here do\n";
+    echo "  NOT mean this copy is ready. config/site_config.php derives the location from\n";
+    echo "  its own path, so check config/site_paths.php or MOOP_ROOT_PATH / MOOP_SITE.\n";
+    // Counted as a failure so it cannot be lost in a wall of passes, and so the exit
+    // status is non-zero for anything scripting this.
+    $fails++;
+}
+
 // Merge the admin-editable overrides, exactly as ConfigManager does at runtime
 // (includes/ConfigManager.php:112 — override only when set and non-empty, so an empty
 // value falls back to the shipped default).

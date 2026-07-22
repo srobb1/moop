@@ -76,6 +76,38 @@ $config = @require $config_file;
 if (!is_array($config)) {
     die('FATAL: config/site_config.php did not return a valid config array.');
 }
+
+// ── Containment guard: is this config describing THIS installation? ─────────
+//
+// Every write below targets a path taken from $config (users_file, organism_data,
+// metadata_path, certs, data/genomes, data/tracks). The `?? "$base/..."` fallbacks on
+// those lines never fire, because site_config.php always defines the keys. So if the
+// config describes a DIFFERENT deployment, this installer silently sets up that one:
+// it would add its new admin to the other site's users.json and chmod it 0600, which
+// php-fpm cannot read — breaking login on a live site while reporting success here.
+//
+// The security gate above only checks THIS tree's config_editable.json, so a fresh
+// clone sails past it. This is the check that actually matters.
+$configured_site_path = rtrim($config['root_path'] ?? '', '/') . '/' . trim($config['site'] ?? '', '/');
+$configured_real      = realpath($configured_site_path);
+$base_real            = realpath($base);
+
+if ($configured_real === false || $base_real === false || $configured_real !== $base_real) {
+    http_response_code(500);
+    die(
+        "FATAL: this installer would configure a DIFFERENT installation.\n\n"
+        . "  Installer is running in : " . ($base_real ?: $base) . "\n"
+        . "  Config points at        : " . ($configured_real ?: $configured_site_path) . "\n\n"
+        . "Running setup here would write to the other deployment's files — including its\n"
+        . "users file — and could break a site that is currently working.\n\n"
+        . "config/site_config.php derives the location from its own path, so this normally\n"
+        . "matches automatically. If you have a config/site_paths.php (or MOOP_ROOT_PATH /\n"
+        . "MOOP_SITE set in the environment), correct it so root_path + site name the\n"
+        . "directory this code actually lives in.\n"
+    );
+}
+unset($configured_site_path, $configured_real, $base_real);
+
 require_once "$base/lib/distro_detect.php";
 require_once "$base/lib/functions_json.php";
 

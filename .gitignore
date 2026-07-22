@@ -27,6 +27,8 @@ data/tracks/*
 # ── Site-specific config (managed by admin UI) ───────────────
 config/config_editable.json
 config/secrets.php
+# Optional per-deployment location override; untracked so it never conflicts on pull.
+config/site_paths.php
 
 # ── Site-specific metadata (managed by admin UI) ─────────────
 # Keep .example templates and README, ignore actual data files

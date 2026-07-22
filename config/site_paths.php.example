@@ -1,0 +1,36 @@
+<?php
+/**
+ * Deployment location override.  TEMPLATE — OPTIONAL.
+ *
+ * You almost certainly do NOT need this file.
+ *
+ * config/site_config.php derives the deployment location from its own path
+ * (`dirname(__DIR__)`), so a clone is correct wherever you put it:
+ *
+ *     /var/www/html/moop        -> root_path /var/www/html, site "moop"
+ *     /srv/www/cuttingclass     -> root_path /srv/www,      site "cuttingclass"
+ *
+ * Create this file (copy to `config/site_paths.php`) only when that derivation is
+ * wrong for your layout — for example a symlinked document root, or a container where
+ * the served path differs from the path on disk.
+ *
+ * SETUP:
+ *   cp config/site_paths.php.example config/site_paths.php
+ *
+ * `config/site_paths.php` is NOT committed (.gitignore), which is the point: it lets a
+ * deployment set its own location without editing a tracked file that would then
+ * conflict on every `git pull`.
+ *
+ * MOOP_ROOT_PATH / MOOP_SITE environment variables override this file.
+ *
+ * 'site' is the directory name and is also the URL prefix — site "moop" serves at
+ * /moop/..., so changing it changes every generated URL. Keep the two in step:
+ * root_path . '/' . site must be the directory this code actually lives in, or
+ * setup.php will refuse to run (it checks exactly that, to stop a second deployment
+ * writing into a first one).
+ */
+
+return [
+    'root_path' => '/var/www/html',
+    'site'      => 'moop',
+];

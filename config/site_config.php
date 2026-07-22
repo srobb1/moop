@@ -25,10 +25,51 @@
  * - All URLs use /site as the web root (e.g., /moop/images, /simrbase/images)
  */
 
-// Calculate derived paths from root_path and site (no need to edit these)
-$root_path = '/var/www/html';
-$site = 'moop';  // CHANGE THIS to deploy for a different site directory
-$site_path = "$root_path/$site";
+// ── Where this deployment lives ─────────────────────────────────────────────
+//
+// DERIVED FROM THIS FILE'S LOCATION, so a clone is correct wherever it is put.
+// This file sits at <site_path>/config/site_config.php, so:
+//     dirname(__DIR__)  = <site_path>   e.g. /var/www/html/moop
+//
+// These were hardcoded ('/var/www/html' + 'moop') until 2026-07-22. That made every
+// path in a SECOND clone on the same host resolve back to the FIRST installation —
+// including users_file — so running setup.php from a fresh clone would add an admin to
+// the live site's users.json and chmod it 0600, breaking login site-wide. Deriving them
+// makes that impossible by construction rather than by remembering to edit a file.
+//
+// Values are unchanged for a deployment at /var/www/html/moop; this is a no-op there.
+//
+// To override (symlinked docroot, container, unusual layout) create config/site_paths.php
+// — untracked, so it never conflicts on pull. See config/site_paths.php.example.
+// MOOP_ROOT_PATH / MOOP_SITE environment variables win over both.
+$site_path = dirname(__DIR__);
+$root_path = dirname($site_path);
+$site      = basename($site_path);
+
+$site_paths_file = __DIR__ . '/site_paths.php';
+if (file_exists($site_paths_file)) {
+    $site_paths = require $site_paths_file;
+    if (is_array($site_paths)) {
+        $root_path = $site_paths['root_path'] ?? $root_path;
+        $site      = $site_paths['site']      ?? $site;
+        $site_path = "$root_path/$site";
+    }
+    unset($site_paths);
+}
+unset($site_paths_file);
+
+$env_root = getenv('MOOP_ROOT_PATH');
+$env_site = getenv('MOOP_SITE');
+if (is_string($env_root) && $env_root !== '') {
+    $root_path = rtrim($env_root, '/');
+    $site_path = "$root_path/$site";
+}
+if (is_string($env_site) && $env_site !== '') {
+    $site      = trim($env_site, '/');
+    $site_path = "$root_path/$site";
+}
+unset($env_root, $env_site);
+
 $images_dir = 'images';
 
 // Load secrets (API keys, credentials)
@@ -97,7 +138,14 @@ return [
     // reads AND writes it (Manage Users), so the file needs SELinux httpd_sys_rw_content_t
     // and a persistent semanage rule — see scripts/fix_moop_selinux.sh. Do NOT move it back
     // under $root_path.
-    'users_file' => '/var/www/moop-private/users.json',
+    //
+    // Derived as <parent of root_path>/<site>-private/users.json, which for a deployment at
+    // /var/www/html/moop is /var/www/moop-private/users.json — the existing location, so this
+    // is a no-op here. It was an absolute literal until 2026-07-22, which meant a SECOND
+    // deployment on the same host pointed its users file at the FIRST one: setup.php would
+    // add its new admin to the live site's users.json and chmod it 0600, which php-fpm cannot
+    // read, breaking login on a working site. Per-site by derivation instead.
+    'users_file' => dirname($root_path) . '/' . $site . '-private/users.json',
     'error_log_file' => "$site_path/logs/error.log",
 
     // ======== SITE DATA BACKUP ========
