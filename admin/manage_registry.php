@@ -3,7 +3,7 @@
  * MANAGE REGISTRY - Admin Controller
  * 
  * Displays the interactive PHP function registry with admin authentication.
- * Uses registry-template.php for consistent layout with tools/registry.php
+ * Uses registry-template.php for consistent layout with the JavaScript registry.
  */
 
 ob_start();

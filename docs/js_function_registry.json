@@ -1,8 +1,8 @@
 {
     "metadata": {
-        "generated": "2026-07-21 16:23:17",
-        "totalFunctions": 371,
-        "totalFiles": 42,
+        "generated": "2026-07-22 20:42:52",
+        "totalFunctions": 373,
+        "totalFiles": 41,
         "duplicates": 0
     },
     "files": [
@@ -14,7 +14,7 @@
                     "name": "syncNcbiTaxonomy",
                     "line": 62,
                     "comment": "/**\n * NCBI taxonomy dump sync \u2014 downloads new_taxdump.tar.gz, extracts lineage\n * for all MOOP organisms into taxonomy_lineage_cache.json (~60 s).\n * After this runs, warm_organism_cache makes no NCBI network calls.\n */",
-                    "code": "{\n  const sitePath  = window.sitePath || '/moop';\n  const endpoint  = sitePath + '/admin/api/sync_ncbi_taxonomy.php';\n  const csrfToken = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';\n  const label     = btn ? btn.innerHTML : '';\n\n  if (btn)      { btn.disabled = true; btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Starting\u2026'; }\n  if (statusEl) { statusEl.textContent = 'Connecting to NCBI\u2026'; statusEl.style.display = ''; }\n\n  fetch(endpoint, { method: 'POST', headers: { 'X-CSRF-Token': csrfToken } })\n    .then(r => r.json())\n    .then(data => {\n      if (data.error) {\n        if (btn)      { btn.disabled = false; btn.innerHTML = label; }\n        if (statusEl) statusEl.textContent = 'Error: ' + data.error;\n        return;\n      }\n      if (btn) btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Downloading\u2026';\n      const startedAt = Date.now();\n      const poll = setInterval(() => {\n        fetch(endpoint + '?status=1')\n          .then(r => r.json())\n          .then(s => {\n            const elapsed = Math.round((Date.now() - startedAt) / 1000);\n            if (elapsed > 5 && btn) btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Scanning\u2026';\n            if (statusEl) statusEl.textContent = 'Running\u2026 ' + elapsed + 's';\n            if (s.status === 'idle' && elapsed >= 2) {\n              clearInterval(poll);\n              if (btn)      { btn.disabled = false; btn.innerHTML = label; }\n              if (statusEl) statusEl.textContent = s.count\n                ? '\u2713 ' + s.count + ' lineages cached'\n                : '\u2713 Done';\n              const ageEl = document.getElementById('taxonomySyncAge');\n              if (ageEl && s.generated) {\n                ageEl.textContent = 'just now';\n                ageEl.dataset.generated = s.generated;\n              }\n            }\n          })\n          .catch(() => clearInterval(poll));\n      }, 3000);\n    })\n    .catch(err => {\n      if (btn)      { btn.disabled = false; btn.innerHTML",
+                    "code": "{\n  const sitePath  = window.sitePath;\n  const endpoint  = sitePath + '/admin/api/sync_ncbi_taxonomy.php';\n  const csrfToken = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';\n  const label     = btn ? btn.innerHTML : '';\n\n  if (btn)      { btn.disabled = true; btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Starting\u2026'; }\n  if (statusEl) { statusEl.textContent = 'Connecting to NCBI\u2026'; statusEl.style.display = ''; }\n\n  fetch(endpoint, { method: 'POST', headers: { 'X-CSRF-Token': csrfToken } })\n    .then(r => r.json())\n    .then(data => {\n      if (data.error) {\n        if (btn)      { btn.disabled = false; btn.innerHTML = label; }\n        if (statusEl) statusEl.textContent = 'Error: ' + data.error;\n        return;\n      }\n      if (btn) btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Downloading\u2026';\n      const startedAt = Date.now();\n      const poll = setInterval(() => {\n        fetch(endpoint + '?status=1')\n          .then(r => r.json())\n          .then(s => {\n            const elapsed = Math.round((Date.now() - startedAt) / 1000);\n            if (elapsed > 5 && btn) btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Scanning\u2026';\n            if (statusEl) statusEl.textContent = 'Running\u2026 ' + elapsed + 's';\n            if (s.status === 'idle' && elapsed >= 2) {\n              clearInterval(poll);\n              if (btn)      { btn.disabled = false; btn.innerHTML = label; }\n              if (statusEl) statusEl.textContent = s.count\n                ? '\u2713 ' + s.count + ' lineages cached'\n                : '\u2713 Done';\n              const ageEl = document.getElementById('taxonomySyncAge');\n              if (ageEl && s.generated) {\n                ageEl.textContent = 'just now';\n                ageEl.dataset.generated = s.generated;\n              }\n            }\n          })\n          .catch(() => clearInterval(poll));\n      }, 3000);\n    })\n    .catch(err => {\n      if (btn)      { btn.disabled = false; btn.innerHTML = label; }",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -57,7 +57,7 @@
                     "name": "refreshOrganismCache",
                     "line": 119,
                     "comment": "/**\n * Background organism cache refresh \u2014 POSTs to the refresh endpoint,\n * polls until the background scan finishes, then reloads the page.\n *\n * @param {HTMLElement|null} btn      - Button to disable/update while running\n * @param {HTMLElement|null} statusEl - Element to show elapsed-time status text\n * @param {boolean}          force    - Pass true to force NCBI re-fetch (--force flag)\n * @param {string}           label    - Idle label restored on the button after failure\n */",
-                    "code": "{\n  const sitePath = window.sitePath || '/moop';\n  const endpoint = sitePath + '/admin/api/refresh_organism_cache.php';\n  const csrfToken = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';\n\n  if (btn) { btn.disabled = true; btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Starting\u2026'; }\n  if (statusEl) { statusEl.textContent = 'Starting\u2026'; statusEl.style.display = ''; }\n\n  const bodyParams = {};\n  if (force) bodyParams.force = '1';\n  if (organism) bodyParams.organism = organism;\n  const body = new URLSearchParams(bodyParams);\n\n  fetch(endpoint, { method: 'POST', headers: { 'X-CSRF-Token': csrfToken }, body })\n    .then(r => r.json())\n    .then(data => {\n      if (data.error) {\n        if (btn) { btn.disabled = false; btn.innerHTML = label; }\n        if (statusEl) statusEl.textContent = 'Error: ' + data.error;\n        return;\n      }\n      if (btn) btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Running\u2026';\n      const startedAt = Date.now();\n      const poll = setInterval(() => {\n        fetch(endpoint + '?status=1')\n          .then(r => r.json())\n          .then(s => {\n            const elapsed = Math.round((Date.now() - startedAt) / 1000);\n            if (s.progress) {\n              const p = s.progress;\n              const prefix = p.total > 1 ? `[${p.current}/${p.total}] ` : '';\n              if (statusEl) statusEl.textContent = `${prefix}${p.step}: ${p.organism}`;\n            } else {\n              if (statusEl) statusEl.textContent = 'Running\u2026 ' + elapsed + 's';\n            }\n            if (s.status === 'idle' && elapsed >= 1) {\n              clearInterval(poll);\n              if (statusEl) statusEl.textContent = 'Done \u2014 reloading\u2026';\n              window.location.reload();\n            }\n          })\n          .catch(() => {\n            clearInterval(poll);\n            if (btn) { btn.disabled = false; btn.innerHTML = label; }\n            if (statusEl) statusEl.textContent = 'Poll error \u2014 refresh the page to check statu",
+                    "code": "{\n  const sitePath = window.sitePath;\n  const endpoint = sitePath + '/admin/api/refresh_organism_cache.php';\n  const csrfToken = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';\n\n  if (btn) { btn.disabled = true; btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Starting\u2026'; }\n  if (statusEl) { statusEl.textContent = 'Starting\u2026'; statusEl.style.display = ''; }\n\n  const bodyParams = {};\n  if (force) bodyParams.force = '1';\n  if (organism) bodyParams.organism = organism;\n  const body = new URLSearchParams(bodyParams);\n\n  fetch(endpoint, { method: 'POST', headers: { 'X-CSRF-Token': csrfToken }, body })\n    .then(r => r.json())\n    .then(data => {\n      if (data.error) {\n        if (btn) { btn.disabled = false; btn.innerHTML = label; }\n        if (statusEl) statusEl.textContent = 'Error: ' + data.error;\n        return;\n      }\n      if (btn) btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Running\u2026';\n      const startedAt = Date.now();\n      const poll = setInterval(() => {\n        fetch(endpoint + '?status=1')\n          .then(r => r.json())\n          .then(s => {\n            const elapsed = Math.round((Date.now() - startedAt) / 1000);\n            if (s.progress) {\n              const p = s.progress;\n              const prefix = p.total > 1 ? `[${p.current}/${p.total}] ` : '';\n              if (statusEl) statusEl.textContent = `${prefix}${p.step}: ${p.organism}`;\n            } else {\n              if (statusEl) statusEl.textContent = 'Running\u2026 ' + elapsed + 's';\n            }\n            if (s.status === 'idle' && elapsed >= 1) {\n              clearInterval(poll);\n              if (statusEl) statusEl.textContent = 'Done \u2014 reloading\u2026';\n              window.location.reload();\n            }\n          })\n          .catch(() => {\n            clearInterval(poll);\n            if (btn) { btn.disabled = false; btn.innerHTML = label; }\n            if (statusEl) statusEl.textContent = 'Poll error \u2014 refresh the page to check status.';",
                     "parameters": [
                         {
                             "name": "btn",
@@ -591,13 +591,13 @@
         },
         {
             "name": "js/groups-display.js",
-            "count": 3,
+            "count": 4,
             "functions": [
                 {
                     "name": "handleToolClick",
                     "line": 19,
                     "comment": "/**\n * Handle tool button clicks on the group page.\n * POSTs the live selectedOrganisms list to the tool URL in a new tab,\n * so unchecked organisms are excluded and URL length is never an issue.\n */",
-                    "code": "{\n    if (!selectedOrganisms || selectedOrganisms.length === 0) {\n        alert('Please select at least one organism');\n        return;\n    }\n\n    const toolBtn = document.getElementById(`tool-btn-${toolId}`);\n    if (!toolBtn) return;\n\n    const toolPath = toolBtn.getAttribute('data-tool-path');\n    if (!toolPath) return;\n\n    const siteName = typeof sitePath !== 'undefined' ? sitePath.replace(/^\\//,'').split('/')[0] : 'moop';\n\n    const form = document.createElement('form');\n    form.method = 'POST';\n    form.action = `/${siteName}${toolPath}`;\n    form.target = '_blank';\n\n    selectedOrganisms.forEach(org => {\n        const input = document.createElement('input');\n        input.type = 'hidden';\n        input.name = 'organisms[]';\n        input.value = org;\n        form.appendChild(input);\n    });\n\n    document.body.appendChild(form);\n    form.submit();\n    document.body.removeChild(form);\n}",
+                    "code": "{\n    if (!selectedOrganisms || selectedOrganisms.length === 0) {\n        alert('Please select at least one organism');\n        return;\n    }\n\n    const toolBtn = document.getElementById(`tool-btn-${toolId}`);\n    if (!toolBtn) return;\n\n    const toolPath = toolBtn.getAttribute('data-tool-path');\n    if (!toolPath) return;\n\n    const siteName = (typeof sitePath !== 'undefined' ? sitePath : window.sitePath).replace(/^\\//,'').split('/')[0];\n\n    const form = document.createElement('form');\n    form.method = 'POST';\n    form.action = `/${siteName}${toolPath}`;\n    form.target = '_blank';\n\n    selectedOrganisms.forEach(org => {\n        const input = document.createElement('input');\n        input.type = 'hidden';\n        input.name = 'organisms[]';\n        input.value = org;\n        form.appendChild(input);\n    });\n\n    document.body.appendChild(form);\n    form.submit();\n    document.body.removeChild(form);\n}",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -663,12 +663,30 @@
                     "phpFiles": [
                         "tools/groups.php"
                     ]
+                },
+                {
+                    "name": "siteName",
+                    "line": 32,
+                    "comment": "",
+                    "code": "{siteName}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "general",
+                    "tags": [],
+                    "usageCount": 0,
+                    "usages": [],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "tools/groups.php"
+                    ]
                 }
             ]
         },
         {
             "name": "js/index.js",
-            "count": 18,
+            "count": 20,
             "functions": [
                 {
                     "name": "groupColor",
@@ -1029,7 +1047,7 @@
                     "name": "updateSelectedList",
                     "line": 125,
                     "comment": "",
-                    "code": "{\n    const listEl  = document.getElementById('selected-organisms-list');\n    const countEl = document.getElementById('selected-count');\n    if (!listEl) return;\n\n    countEl.textContent = selectedOrganisms.size;\n\n    // Enable/disable tool buttons and show/hide hint\n    const hasSelection = selectedOrganisms.size > 0;\n    document.querySelectorAll('[id^=\"tool-btn-\"]').forEach(btn => {\n        btn.disabled = !hasSelection;\n    });\n    const wrapper = document.getElementById('tools-card-wrapper');\n    if (wrapper) wrapper.classList.toggle('tools-locked', !hasSelection);\n    const clearBtn = document.getElementById('clear-all-organisms');\n    if (clearBtn) clearBtn.style.display = hasSelection ? '' : 'none';\n\n    const card = document.getElementById('selected-organisms-card');\n    if (card) card.classList.toggle('selection-empty', !hasSelection);\n\n    if (selectedOrganisms.size === 0) {\n        listEl.innerHTML = '<div class=\"text-muted small px-1\" style=\"opacity:0.6;\">Your selected organisms will appear here.</div>';\n        return;\n    }\n\n    const site = typeof sitePath !== 'undefined' ? sitePath.replace(/^\\//, '').split('/')[0] : 'moop';\n    listEl.innerHTML = Array.from(selectedOrganisms).map(org => {\n        const info    = orgDataMap[org];\n        const name    = info ? `<em>${escHtml(info.display_name)}</em>` : escHtml(org.replace(/_/g, ' '));\n        const common  = info?.common_name\n            ? ` <span class=\"text-muted\">\u00b7 ${escHtml(info.common_name)}</span>` : '';\n        const pageUrl = `/${site}/tools/organism.php?organism=${encodeURIComponent(org)}`;\n        return `<div class=\"selected-org-item d-flex align-items-center justify-content-between\">\n            <span class=\"selected-org-name\">${name}${common}</span>\n            <span class=\"selected-org-actions ms-2 flex-shrink-0 text-nowrap\">\n                <a href=\"${pageUrl}\" target=\"_blank\" class=\"btn btn-link btn-sm p-0 me-1\" title=\"Open organism page\">\n                    <i class=\"fas fa-external",
+                    "code": "{\n    const listEl  = document.getElementById('selected-organisms-list');\n    const countEl = document.getElementById('selected-count');\n    if (!listEl) return;\n\n    countEl.textContent = selectedOrganisms.size;\n\n    // Enable/disable tool buttons and show/hide hint\n    const hasSelection = selectedOrganisms.size > 0;\n    document.querySelectorAll('[id^=\"tool-btn-\"]').forEach(btn => {\n        btn.disabled = !hasSelection;\n    });\n    const wrapper = document.getElementById('tools-card-wrapper');\n    if (wrapper) wrapper.classList.toggle('tools-locked', !hasSelection);\n    const clearBtn = document.getElementById('clear-all-organisms');\n    if (clearBtn) clearBtn.style.display = hasSelection ? '' : 'none';\n\n    const card = document.getElementById('selected-organisms-card');\n    if (card) card.classList.toggle('selection-empty', !hasSelection);\n\n    if (selectedOrganisms.size === 0) {\n        listEl.innerHTML = '<div class=\"text-muted small px-1\" style=\"opacity:0.6;\">Your selected organisms will appear here.</div>';\n        return;\n    }\n\n    const site = (typeof sitePath !== 'undefined' ? sitePath : window.sitePath).replace(/^\\//, '').split('/')[0];\n    listEl.innerHTML = Array.from(selectedOrganisms).map(org => {\n        const info    = orgDataMap[org];\n        const name    = info ? `<em>${escHtml(info.display_name)}</em>` : escHtml(org.replace(/_/g, ' '));\n        const common  = info?.common_name\n            ? ` <span class=\"text-muted\">\u00b7 ${escHtml(info.common_name)}</span>` : '';\n        const pageUrl = `/${site}/tools/organism.php?organism=${encodeURIComponent(org)}`;\n        return `<div class=\"selected-org-item d-flex align-items-center justify-content-between\">\n            <span class=\"selected-org-name\">${name}${common}</span>\n            <span class=\"selected-org-actions ms-2 flex-shrink-0 text-nowrap\">\n                <a href=\"${pageUrl}\" target=\"_blank\" class=\"btn btn-link btn-sm p-0 me-1\" title=\"Open organism page\">\n                    <i class=\"fas",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -1082,7 +1100,7 @@
                     "name": "handleToolClick",
                     "line": 174,
                     "comment": "",
-                    "code": "{\n    if (selectedOrganisms.size === 0) {\n        alert('Please select at least one organism');\n        return;\n    }\n    const btn = document.getElementById(`tool-btn-${toolId}`);\n    if (!btn) return;\n    const toolPath = btn.getAttribute('data-tool-path');\n    if (!toolPath) return;\n\n    const site = typeof sitePath !== 'undefined' ? sitePath.replace(/^\\//,'').split('/')[0] : 'moop';\n    const form = document.createElement('form');\n    form.method = 'POST';\n    form.action = `/${site}${toolPath}`;\n    form.target = '_blank';\n\n    Array.from(selectedOrganisms).forEach(org => {\n        const inp = document.createElement('input');\n        inp.type  = 'hidden';\n        inp.name  = 'organisms[]';\n        inp.value = org;\n        form.appendChild(inp);\n    });\n\n    document.body.appendChild(form);\n    form.submit();\n    document.body.removeChild(form);\n}",
+                    "code": "{\n    if (selectedOrganisms.size === 0) {\n        alert('Please select at least one organism');\n        return;\n    }\n    const btn = document.getElementById(`tool-btn-${toolId}`);\n    if (!btn) return;\n    const toolPath = btn.getAttribute('data-tool-path');\n    if (!toolPath) return;\n\n    const site = (typeof sitePath !== 'undefined' ? sitePath : window.sitePath).replace(/^\\//,'').split('/')[0];\n    const form = document.createElement('form');\n    form.method = 'POST';\n    form.action = `/${site}${toolPath}`;\n    form.target = '_blank';\n\n    Array.from(selectedOrganisms).forEach(org => {\n        const inp = document.createElement('input');\n        inp.type  = 'hidden';\n        inp.name  = 'organisms[]';\n        inp.value = org;\n        form.appendChild(inp);\n    });\n\n    document.body.appendChild(form);\n    form.submit();\n    document.body.removeChild(form);\n}",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -1347,6 +1365,48 @@
                     "line": 70,
                     "comment": "",
                     "code": "{escHtml(o.common_name)}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "general",
+                    "tags": [],
+                    "usageCount": 0,
+                    "usages": [],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "tools/pages/index.php",
+                        "tools/pages/moopmart.php"
+                    ]
+                },
+                {
+                    "name": "site",
+                    "line": 151,
+                    "comment": "",
+                    "code": "{\n        const info    = orgDataMap[org];\n        const name    = info ? `<em>${escHtml(info.display_name)}</em>` : escHtml(org.replace(/_/g, ' '));\n        const common  = info?.common_name\n            ? ` <span class=\"text-muted\">\u00b7 ${escHtml(info.common_name)}</span>` : '';\n        const pageUrl = `/${site}/tools/organism.php?organism=${encodeURIComponent(org)}`;\n        return `<div class=\"selected-org-item d-flex align-items-center justify-content-between\">\n            <span class=\"selected-org-name\">${name}${common}</span>\n            <span class=\"selected-org-actions ms-2 flex-shrink-0 text-nowrap\">\n                <a href=\"${pageUrl}\" target=\"_blank\" class=\"btn btn-link btn-sm p-0 me-1\" title=\"Open organism page\">\n                    <i class=\"fas fa-external-link-alt text-info\"></i>\n                </a>\n                <button class=\"btn btn-link btn-sm p-0 text-danger remove-org-btn\"\n                        data-org=\"${escHtml(org)}\" title=\"Remove\">\n                    <i class=\"fas fa-times\"></i>\n                </button>\n            </span>\n        </div>`;\n    }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [
+                        "escHtml"
+                    ],
+                    "category": "general",
+                    "tags": [
+                        "state-modifying"
+                    ],
+                    "usageCount": 0,
+                    "usages": [],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "tools/pages/index.php",
+                        "tools/pages/moopmart.php"
+                    ]
+                },
+                {
+                    "name": "site",
+                    "line": 185,
+                    "comment": "",
+                    "code": "{site}",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -2281,7 +2341,7 @@
                     "name": "displayNoAssemblies",
                     "line": 138,
                     "comment": "/**\n     * Display when no assemblies are available\n     */\n   ",
-                    "code": "{\n        const container = document.querySelector(CONFIG.containerSelector);\n        \n        const userInfo = window.moopUserInfo;\n        let message = '';\n\n        if (userInfo.logged_in) {\n            message = `\n                <div class=\"access-denied\">\n                    <h4>No Assemblies Available</h4>\n                    <p>Your account doesn't have access to any assemblies yet.</p>\n                    <p class=\"text-muted\">Contact an administrator for access.</p>\n                </div>\n            `;\n        } else {\n            message = `\n                <div class=\"access-denied\">\n                    <h4>Public Assemblies Not Available</h4>\n                    <p>There are currently no public assemblies available for browsing.</p>\n                    <p class=\"text-muted\">\n                        <a href=\"/moop/login.php\">Log in</a> to access additional data.\n                    </p>\n                </div>\n            `;\n        }\n\n        container.innerHTML = message;\n        document.querySelector(CONFIG.countSelector).textContent = '0 Available';\n    }",
+                    "code": "{\n        const container = document.querySelector(CONFIG.containerSelector);\n        \n        const userInfo = window.moopUserInfo;\n        let message = '';\n\n        if (userInfo.logged_in) {\n            message = `\n                <div class=\"access-denied\">\n                    <h4>No Assemblies Available</h4>\n                    <p>Your account doesn't have access to any assemblies yet.</p>\n                    <p class=\"text-muted\">Contact an administrator for access.</p>\n                </div>\n            `;\n        } else {\n            message = `\n                <div class=\"access-denied\">\n                    <h4>Public Assemblies Not Available</h4>\n                    <p>There are currently no public assemblies available for browsing.</p>\n                    <p class=\"text-muted\">\n                        <a href=\"${window.sitePath}/login.php\">Log in</a> to access additional data.\n                    </p>\n                </div>\n            `;\n        }\n\n        container.innerHTML = message;\n        document.querySelector(CONFIG.countSelector).textContent = '0 Available';\n    }",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -2629,22 +2689,22 @@
                         },
                         {
                             "file": "setup.php",
-                            "line": 723,
+                            "line": 755,
                             "context": "function escapeHtml(str) {"
                         },
                         {
                             "file": "setup.php",
-                            "line": 788,
+                            "line": 820,
                             "context": "html += `<div class=\"step-result ${cls}\"><strong>${icon}</strong> ${escapeHtml(label)} &mdash; ${escapeHtml(result.message)}</div>`;"
                         },
                         {
                             "file": "setup.php",
-                            "line": 800,
+                            "line": 832,
                             "context": "? `<div class=\"alert alert-danger mt-3\">${escapeHtml(data.error)}</div>`"
                         },
                         {
                             "file": "setup.php",
-                            "line": 805,
+                            "line": 837,
                             "context": "resultsBody.innerHTML = `<div class=\"alert alert-danger\">Request failed: ${escapeHtml(err.message)}</div>`;"
                         }
                     ],
@@ -2655,7 +2715,7 @@
                     "name": "loadSpecificAssembly",
                     "line": 258,
                     "comment": "",
-                    "code": "{\n        try {\n            updateUserStatus();\n            \n            const container = document.getElementById('assembly-list-container');\n            if (!container) {\n                console.error('Container not found');\n                return;\n            }\n            \n            // Show loading state\n            container.innerHTML = `\n                <div class=\"text-center\">\n                    <div class=\"spinner-border\" role=\"status\">\n                        <span class=\"visually-hidden\">Loading...</span>\n                    </div>\n                    <p class=\"mt-3\">Loading JBrowse2 viewer for ${escapeHtml(assemblyName)}...</p>\n                </div>\n            `;\n            \n            // Load configuration from API\n            const userInfo = window.moopUserInfo;\n            const response = await fetch('/moop/api/jbrowse2/get-config.php');\n            \n            if (!response.ok) {\n                throw new Error(`Failed to load config: ${response.status}`);\n            }\n            \n            const config = await response.json();\n            \n            // Find the requested assembly\n            const assembly = (config.assemblies || []).find(a => a.name === assemblyName);\n            \n            if (!assembly) {\n                container.innerHTML = `\n                    <div class=\"alert alert-danger\" role=\"alert\">\n                        <strong>Assembly not found:</strong> ${escapeHtml(assemblyName)}\n                    </div>\n                `;\n                return;\n            }\n            \n            // Check access level\n            if (assembly.accessLevel === 'Admin' && userInfo.access_level !== 'Admin') {\n                container.innerHTML = `\n                    <div class=\"alert alert-warning\" role=\"alert\">\n                        <strong>Access Denied:</strong> This assembly requires admin access.\n                    </div>\n                `;\n                return;\n            }\n            \n            // Display JB",
+                    "code": "{\n        try {\n            updateUserStatus();\n            \n            const container = document.getElementById('assembly-list-container');\n            if (!container) {\n                console.error('Container not found');\n                return;\n            }\n            \n            // Show loading state\n            container.innerHTML = `\n                <div class=\"text-center\">\n                    <div class=\"spinner-border\" role=\"status\">\n                        <span class=\"visually-hidden\">Loading...</span>\n                    </div>\n                    <p class=\"mt-3\">Loading JBrowse2 viewer for ${escapeHtml(assemblyName)}...</p>\n                </div>\n            `;\n            \n            // Load configuration from API\n            const userInfo = window.moopUserInfo;\n            const response = await fetch(window.sitePath + '/api/jbrowse2/get-config.php');\n            \n            if (!response.ok) {\n                throw new Error(`Failed to load config: ${response.status}`);\n            }\n            \n            const config = await response.json();\n            \n            // Find the requested assembly\n            const assembly = (config.assemblies || []).find(a => a.name === assemblyName);\n            \n            if (!assembly) {\n                container.innerHTML = `\n                    <div class=\"alert alert-danger\" role=\"alert\">\n                        <strong>Assembly not found:</strong> ${escapeHtml(assemblyName)}\n                    </div>\n                `;\n                return;\n            }\n            \n            // Check access level\n            if (assembly.accessLevel === 'Admin' && userInfo.access_level !== 'Admin') {\n                container.innerHTML = `\n                    <div class=\"alert alert-warning\" role=\"alert\">\n                        <strong>Access Denied:</strong> This assembly requires admin access.\n                    </div>\n                `;\n                return;\n            }",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -2694,7 +2754,7 @@
                         "ajax",
                         "state-modifying"
                     ],
-                    "usageCount": 8,
+                    "usageCount": 7,
                     "usages": [
                         {
                             "file": "js/assembly-display.js",
@@ -2714,11 +2774,6 @@
                         {
                             "file": "js/jbrowse2-loader.js",
                             "line": 366,
-                            "context": "init();"
-                        },
-                        {
-                            "file": "js/jbrowse2-view-loader.js",
-                            "line": 117,
                             "context": "init();"
                         },
                         {
@@ -2835,138 +2890,6 @@
             ]
         },
         {
-            "name": "js/jbrowse2-view-loader.js",
-            "count": 3,
-            "functions": [
-                {
-                    "name": "fetchAssemblyConfig",
-                    "line": 14,
-                    "comment": "",
-                    "code": "{\n        try {\n            const site = window.moopSite || 'moop';\n            const url = `/${site}/api/jbrowse2/get-config.php?assembly=${encodeURIComponent(assemblyName)}`;\n            \n            console.log('Fetching from:', url);\n            const response = await fetch(url, {\n                credentials: 'include'\n            });\n            \n            if (!response.ok) {\n                console.error('API response:', response.status, response.statusText);\n                return null;\n            }\n            \n            const data = await response.json();\n            console.log('Config response:', data);\n            return data;\n        } catch (error) {\n            console.error('Error fetching assembly config:', error);\n            return null;\n        }\n    }",
-                    "parameters": [],
-                    "returnType": "void",
-                    "returnDescription": "",
-                    "internalCalls": [],
-                    "category": "general",
-                    "tags": [
-                        "asynchronous",
-                        "ajax",
-                        "event-listener",
-                        "state-modifying",
-                        "error-handling"
-                    ],
-                    "usageCount": 1,
-                    "usages": [
-                        {
-                            "file": "js/jbrowse2-view-loader.js",
-                            "line": 78,
-                            "context": "const config = await fetchAssemblyConfig(assemblyName);"
-                        }
-                    ],
-                    "phpFilesCount": 1,
-                    "phpFiles": [
-                        "tools/pages/jbrowse2-view.php"
-                    ]
-                },
-                {
-                    "name": "interceptConfigFetch",
-                    "line": 41,
-                    "comment": "/**\n     * Intercept fetch for config.json to return our dynamic config\n     */\n   ",
-                    "code": "{\n        const originalFetch = window.fetch;\n        window.fetch = function(url, options) {\n            // If fetching config.json, return our dynamic config\n            if (typeof url === 'string' && url.includes('config.json')) {\n                console.log('Intercepting config.json request, returning dynamic config');\n                return Promise.resolve(\n                    new Response(JSON.stringify(configData), {\n                        status: 200,\n                        headers: { 'Content-Type': 'application/json' }\n                    })\n                );\n            }\n            // For all other requests, use original fetch\n            return originalFetch.apply(this, arguments);\n        };\n    }",
-                    "parameters": [],
-                    "returnType": "void",
-                    "returnDescription": "",
-                    "internalCalls": [],
-                    "category": "general",
-                    "tags": [
-                        "asynchronous",
-                        "ajax",
-                        "state-modifying"
-                    ],
-                    "usageCount": 1,
-                    "usages": [
-                        {
-                            "file": "js/jbrowse2-view-loader.js",
-                            "line": 104,
-                            "context": "interceptConfigFetch(jbrowse2Config);"
-                        }
-                    ],
-                    "phpFilesCount": 1,
-                    "phpFiles": [
-                        "tools/pages/jbrowse2-view.php"
-                    ]
-                },
-                {
-                    "name": "init",
-                    "line": 62,
-                    "comment": "",
-                    "code": "{\n        try {\n            const assemblyName = window.moopAssembly;\n            const userInfo = window.moopUserInfo || { logged_in: false };\n            \n            console.log('JBrowse2 View Loader: Initializing');\n            console.log('Assembly:', assemblyName);\n            console.log('User:', userInfo.username || 'Guest');\n\n            if (!assemblyName) {\n                console.error('No assembly specified');\n                return;\n            }\n\n            // Fetch assembly configuration from API\n            console.log('Fetching JBrowse2 config for assembly:', assemblyName);\n            const config = await fetchAssemblyConfig(assemblyName);\n            \n            if (!config) {\n                console.error('Assembly not found or access denied');\n                return;\n            }\n\n            console.log('Config loaded:', config);\n\n            // Build the full JBrowse2 config from assembly definition\n            const jbrowse2Config = {\n                assemblies: [config],\n                defaultSession: {\n                    name: 'Default',\n                    view: {\n                        id: 'linear-genome-view',\n                        type: 'LinearGenomeView',\n                        offsetPx: 0,\n                        bpPerPx: 1,\n                        minimumBlockWidth: 1,\n                        tracks: []\n                    }\n                }\n            };\n\n            // Intercept JBrowse2's config.json fetch to return our dynamic config\n            interceptConfigFetch(jbrowse2Config);\n            \n            console.log('JBrowse2 View Loader: Ready');\n\n        } catch (error) {\n            console.error('Error initializing JBrowse2 View:', error);\n        }\n    }",
-                    "parameters": [],
-                    "returnType": "void",
-                    "returnDescription": "",
-                    "internalCalls": [
-                        "fetchAssemblyConfig",
-                        "interceptConfigFetch"
-                    ],
-                    "category": "general",
-                    "tags": [
-                        "asynchronous",
-                        "ajax",
-                        "event-listener",
-                        "state-modifying",
-                        "error-handling"
-                    ],
-                    "usageCount": 8,
-                    "usages": [
-                        {
-                            "file": "js/assembly-display.js",
-                            "line": 25,
-                            "context": "searchManager.init();"
-                        },
-                        {
-                            "file": "js/gene_set-display.js",
-                            "line": 22,
-                            "context": "searchManager.init();"
-                        },
-                        {
-                            "file": "js/groups-display.js",
-                            "line": 78,
-                            "context": "searchManager.init();"
-                        },
-                        {
-                            "file": "js/jbrowse2-loader.js",
-                            "line": 366,
-                            "context": "init();"
-                        },
-                        {
-                            "file": "js/jbrowse2-view-loader.js",
-                            "line": 117,
-                            "context": "init();"
-                        },
-                        {
-                            "file": "js/multi-organism-search.js",
-                            "line": 65,
-                            "context": "searchManager.init();"
-                        },
-                        {
-                            "file": "js/organism-display.js",
-                            "line": 38,
-                            "context": "searchManager.init();"
-                        },
-                        {
-                            "file": "js/modules/annotation-search.js",
-                            "line": 42,
-                            "context": "init() {"
-                        }
-                    ],
-                    "phpFilesCount": 1,
-                    "phpFiles": [
-                        "tools/pages/jbrowse2-view.php"
-                    ]
-                }
-            ]
-        },
-        {
             "name": "js/loading-indicator.js",
             "count": 2,
             "functions": [
@@ -3052,7 +2975,7 @@
                         "state-modifying",
                         "loops"
                     ],
-                    "usageCount": 4,
+                    "usageCount": 3,
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
@@ -3068,11 +2991,6 @@
                             "file": "js/manage-registry.js",
                             "line": 677,
                             "context": "renderRegistry();"
-                        },
-                        {
-                            "file": "tools/pages/registry.php",
-                            "line": 56,
-                            "context": "<!-- Populated by renderRegistry() JavaScript function -->"
                         }
                     ],
                     "phpFilesCount": 2,
@@ -3245,19 +3163,8 @@
                         "state-modifying",
                         "loops"
                     ],
-                    "usageCount": 2,
-                    "usages": [
-                        {
-                            "file": "tools/pages/js_registry.php",
-                            "line": 96,
-                            "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"expandAllFiles()\">"
-                        },
-                        {
-                            "file": "tools/pages/registry.php",
-                            "line": 36,
-                            "context": "<button class=\"btn btn-primary btn-sm\" onclick=\"expandAllFiles()\"><i class=\"fa fa-expand\"></i> Expand All</button>"
-                        }
-                    ],
+                    "usageCount": 0,
+                    "usages": [],
                     "phpFilesCount": 2,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
@@ -3280,19 +3187,8 @@
                         "state-modifying",
                         "loops"
                     ],
-                    "usageCount": 2,
-                    "usages": [
-                        {
-                            "file": "tools/pages/js_registry.php",
-                            "line": 99,
-                            "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"collapseAllFiles()\">"
-                        },
-                        {
-                            "file": "tools/pages/registry.php",
-                            "line": 37,
-                            "context": "<button class=\"btn btn-primary btn-sm\" onclick=\"collapseAllFiles()\"><i class=\"fa fa-compress\"></i> Collapse All</button>"
-                        }
-                    ],
+                    "usageCount": 0,
+                    "usages": [],
                     "phpFilesCount": 2,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
@@ -3316,7 +3212,7 @@
                         "loops",
                         "validation"
                     ],
-                    "usageCount": 18,
+                    "usageCount": 17,
                     "usages": [
                         {
                             "file": "js/manage-registry.js",
@@ -3402,11 +3298,6 @@
                             "file": "admin/pages/manage_registry.php",
                             "line": 180,
                             "context": "<input class=\"form-check-input\" type=\"radio\" name=\"searchMode\" id=\"searchReturns\" value=\"returns\" onchange=\"filterRegistry()\">"
-                        },
-                        {
-                            "file": "tools/pages/registry.php",
-                            "line": 35,
-                            "context": "<input type=\"text\" id=\"searchInput\" class=\"form-control\" placeholder=\"Search functions...\" onkeyup=\"filterRegistry()\">"
                         }
                     ],
                     "phpFilesCount": 2,
@@ -3433,7 +3324,7 @@
                         "state-modifying",
                         "validation"
                     ],
-                    "usageCount": 4,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
@@ -3444,16 +3335,6 @@
                             "file": "admin/pages/manage_registry.php",
                             "line": 187,
                             "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">"
-                        },
-                        {
-                            "file": "tools/pages/js_registry.php",
-                            "line": 102,
-                            "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">"
-                        },
-                        {
-                            "file": "tools/pages/registry.php",
-                            "line": 38,
-                            "context": "<button class=\"btn btn-secondary btn-sm\" onclick=\"clearSearch()\"><i class=\"fa fa-times\"></i> Clear</button>"
                         }
                     ],
                     "phpFilesCount": 2,
@@ -3475,7 +3356,7 @@
                     "tags": [
                         "state-modifying"
                     ],
-                    "usageCount": 4,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
@@ -3486,16 +3367,6 @@
                             "file": "admin/pages/manage_registry.php",
                             "line": 49,
                             "context": "<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">"
-                        },
-                        {
-                            "file": "tools/pages/js_registry.php",
-                            "line": 46,
-                            "context": "<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">"
-                        },
-                        {
-                            "file": "tools/pages/registry.php",
-                            "line": 39,
-                            "context": "<button class=\"btn btn-info btn-sm\" onclick=\"downloadRegistry()\"><i class=\"fa fa-download\"></i> Download JSON</button>"
                         }
                     ],
                     "phpFilesCount": 2,
@@ -3508,7 +3379,7 @@
                     "name": "generateRegistry",
                     "line": 588,
                     "comment": "/**\n * Generate registry by calling backend API\n */",
-                    "code": "{\n    const btn = document.getElementById('generateBtn');\n    const msg = document.getElementById('registryMessage');\n    \n    if (!btn) return;\n    \n    // Get registry type from button data attribute (default to 'php')\n    const registryType = btn.getAttribute('data-registry-type') || 'php';\n    \n    btn.disabled = true;\n    btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Generating...';\n    \n    // Call the backend API to generate registry\n    fetch('/moop/admin/api/generate_registry.php', {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/json'\n        },\n        body: JSON.stringify({ type: registryType })\n    })\n    .then(response => response.json())\n    .then(data => {\n        btn.disabled = false;\n        btn.innerHTML = '<i class=\"fa fa-refresh\"></i> Generate/Update Registry';\n        \n        if (data.success) {\n            // Show success message\n            if (msg) {\n                msg.innerHTML = '<div class=\"alert alert-success alert-dismissible fade show\" role=\"alert\">' +\n                    '<i class=\"fa fa-check-circle\"></i> ' + data.message +\n                    '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' +\n                    '</div>';\n            }\n            \n            // Reload page after 2 seconds to show updated status\n            setTimeout(() => {\n                location.reload();\n            }, 2000);\n        } else {\n            // Show error message\n            if (msg) {\n                msg.innerHTML = '<div class=\"alert alert-danger alert-dismissible fade show\" role=\"alert\">' +\n                    '<i class=\"fa fa-exclamation-circle\"></i> ' + data.message +\n                    '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' +\n                    '</div>';\n            }\n        }\n    })\n    .catch(error => {\n        btn.disabled = false;\n        btn.innerHTML = '<i class=\"fa fa-refresh\"></i> Generate/Update Registry';",
+                    "code": "{\n    const btn = document.getElementById('generateBtn');\n    const msg = document.getElementById('registryMessage');\n    \n    if (!btn) return;\n    \n    // Get registry type from button data attribute (default to 'php')\n    const registryType = btn.getAttribute('data-registry-type') || 'php';\n    \n    btn.disabled = true;\n    btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Generating...';\n    \n    // Call the backend API to generate registry\n    fetch(window.sitePath + '/admin/api/generate_registry.php', {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/json'\n        },\n        body: JSON.stringify({ type: registryType })\n    })\n    .then(response => response.json())\n    .then(data => {\n        btn.disabled = false;\n        btn.innerHTML = '<i class=\"fa fa-refresh\"></i> Generate/Update Registry';\n        \n        if (data.success) {\n            // Show success message\n            if (msg) {\n                msg.innerHTML = '<div class=\"alert alert-success alert-dismissible fade show\" role=\"alert\">' +\n                    '<i class=\"fa fa-check-circle\"></i> ' + data.message +\n                    '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' +\n                    '</div>';\n            }\n            \n            // Reload page after 2 seconds to show updated status\n            setTimeout(() => {\n                location.reload();\n            }, 2000);\n        } else {\n            // Show error message\n            if (msg) {\n                msg.innerHTML = '<div class=\"alert alert-danger alert-dismissible fade show\" role=\"alert\">' +\n                    '<i class=\"fa fa-exclamation-circle\"></i> ' + data.message +\n                    '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>' +\n                    '</div>';\n            }\n        }\n    })\n    .catch(error => {\n        btn.disabled = false;\n        btn.innerHTML = '<i class=\"fa fa-refresh\"></i> Generate/Update Registry';",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -3523,7 +3394,7 @@
                         "error-handling",
                         "validation"
                     ],
-                    "usageCount": 4,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
@@ -3534,16 +3405,6 @@
                             "file": "admin/pages/manage_registry.php",
                             "line": 44,
                             "context": "<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"php\">"
-                        },
-                        {
-                            "file": "tools/pages/js_registry.php",
-                            "line": 41,
-                            "context": "<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"js\">"
-                        },
-                        {
-                            "file": "tools/pages/registry.php",
-                            "line": 40,
-                            "context": "<button class=\"btn btn-warning btn-sm\" onclick=\"generateRegistry()\"><i class=\"fa fa-refresh\"></i> Regenerate</button>"
                         }
                     ],
                     "phpFilesCount": 2,
@@ -4644,7 +4505,7 @@
                     "name": "search",
                     "line": 89,
                     "comment": "",
-                    "code": "{\n        const input = document.getElementById('fs-input');\n        if (!input) return;\n        const q = input.value.trim();\n        if (!q) { setStatus('Enter a feature ID to search.'); return; }\n\n        const btn  = document.getElementById('fs-go');\n        const wrap = document.getElementById('fs-results');\n\n        if (btn)  { btn.disabled = true; btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i>'; }\n        if (wrap) wrap.innerHTML = '';\n        setStatus('Searching\u2026');\n\n        const site = (typeof moopSite !== 'undefined') ? moopSite : '/moop';\n        fetch(`${site}/api/feature_search.php?q=${encodeURIComponent(q)}`)\n            .then(r => r.json())\n            .then(data => {\n                if (data.error) { setStatus(data.error, true); return; }\n                renderResults(data.results || []);\n            })\n            .catch(() => setStatus('Search failed. Please try again.', true))\n            .finally(() => {\n                if (btn) { btn.disabled = false; btn.innerHTML = 'Go'; }\n            });\n    }",
+                    "code": "{\n        const input = document.getElementById('fs-input');\n        if (!input) return;\n        const q = input.value.trim();\n        if (!q) { setStatus('Enter a feature ID to search.'); return; }\n\n        const btn  = document.getElementById('fs-go');\n        const wrap = document.getElementById('fs-results');\n\n        if (btn)  { btn.disabled = true; btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i>'; }\n        if (wrap) wrap.innerHTML = '';\n        setStatus('Searching\u2026');\n\n        const site = (typeof moopSite !== 'undefined') ? moopSite : window.sitePath;\n        fetch(`${site}/api/feature_search.php?q=${encodeURIComponent(q)}`)\n            .then(r => r.json())\n            .then(data => {\n                if (data.error) { setStatus(data.error, true); return; }\n                renderResults(data.results || []);\n            })\n            .catch(() => setStatus('Search failed. Please try again.', true))\n            .finally(() => {\n                if (btn) { btn.disabled = false; btn.innerHTML = 'Go'; }\n            });\n    }",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -4742,7 +4603,7 @@
                         "event-listener",
                         "state-modifying"
                     ],
-                    "usageCount": 8,
+                    "usageCount": 7,
                     "usages": [
                         {
                             "file": "js/assembly-display.js",
@@ -4762,11 +4623,6 @@
                         {
                             "file": "js/jbrowse2-loader.js",
                             "line": 366,
-                            "context": "init();"
-                        },
-                        {
-                            "file": "js/jbrowse2-view-loader.js",
-                            "line": 117,
                             "context": "init();"
                         },
                         {
@@ -4947,7 +4803,7 @@
                     "name": "fetchCachedSeq",
                     "line": 377,
                     "comment": "",
-                    "code": "{\n        const cacheKey = `${seqname}:${start}:${end}:${strand}`;\n        if (seqCache.has(cacheKey)) return Promise.resolve(seqCache.get(cacheKey));\n        const site   = (typeof moopSite !== 'undefined') ? moopSite : '/moop';\n        const params = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, seqname, start, end, strand });\n        return fetch(`${site}/api/get_sequence.php?${params}`)\n            .then(r => r.json())\n            .then(data => {\n                if (data.error) throw new Error(data.error);\n                seqCache.set(cacheKey, data);\n                return data;\n            });\n    }",
+                    "code": "{\n        const cacheKey = `${seqname}:${start}:${end}:${strand}`;\n        if (seqCache.has(cacheKey)) return Promise.resolve(seqCache.get(cacheKey));\n        const site   = (typeof moopSite !== 'undefined') ? moopSite : window.sitePath;\n        const params = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, seqname, start, end, strand });\n        return fetch(`${site}/api/get_sequence.php?${params}`)\n            .then(r => r.json())\n            .then(data => {\n                if (data.error) throw new Error(data.error);\n                seqCache.set(cacheKey, data);\n                return data;\n            });\n    }",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -5115,7 +4971,7 @@
                     "name": "showGffModal",
                     "line": 581,
                     "comment": "",
-                    "code": "{\n        ensureModal();\n\n        const modalEl = document.getElementById('seq-region-modal');\n        const modal   = bootstrap.Modal.getOrCreateInstance(modalEl);\n\n        document.getElementById('seq-region-modal-label').textContent = 'Gene GFF3';\n        document.getElementById('seq-region-loading').style.display = 'block';\n        document.getElementById('seq-region-content').style.display  = 'none';\n        document.getElementById('seq-region-error').style.display    = 'none';\n\n        modal.show();\n\n        const site    = (typeof moopSite !== 'undefined') ? moopSite : '/moop';\n        const geneSet = (typeof moopGeneSet !== 'undefined') ? moopGeneSet : 'v1';\n        const params  = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, gene_set: geneSet, uniquename: gene.id });\n\n        fetch(`${site}/api/get_gff.php?${params}`)\n            .then(r => {\n                if (!r.ok) return r.text().then(t => { throw new Error(t.replace(/^#\\s*Error:\\s*/m, '').trim()); });\n                return r.text();\n            })\n            .then(gffText => {\n                const featureCount = gffText.split('\\n').filter(l => l && !l.startsWith('#')).length;\n\n                document.getElementById('seq-region-meta').innerHTML = `\n                    <dt class=\"col-sm-3\">Type</dt><dd class=\"col-sm-9\"><strong>GFF3</strong></dd>\n                    <dt class=\"col-sm-3\">Gene</dt><dd class=\"col-sm-9\">${gene.id || gene.seqname}</dd>\n                    <dt class=\"col-sm-3\">Locus</dt><dd class=\"col-sm-9\">${gene.seqname}:${gene.start.toLocaleString()}\u2013${gene.end.toLocaleString()}</dd>\n                    <dt class=\"col-sm-3\">Features</dt><dd class=\"col-sm-9\">${featureCount} lines</dd>`;\n\n                document.getElementById('seq-region-sequence').textContent = gffText;\n\n                currentRegion   = { type: 'GFF', id: gene.id, seqname: gene.seqname, start: gene.start, end: gene.end, strand: gene.strand };\n                currentSequence = null;",
+                    "code": "{\n        ensureModal();\n\n        const modalEl = document.getElementById('seq-region-modal');\n        const modal   = bootstrap.Modal.getOrCreateInstance(modalEl);\n\n        document.getElementById('seq-region-modal-label').textContent = 'Gene GFF3';\n        document.getElementById('seq-region-loading').style.display = 'block';\n        document.getElementById('seq-region-content').style.display  = 'none';\n        document.getElementById('seq-region-error').style.display    = 'none';\n\n        modal.show();\n\n        const site    = (typeof moopSite !== 'undefined') ? moopSite : window.sitePath;\n        const geneSet = (typeof moopGeneSet !== 'undefined') ? moopGeneSet : 'v1';\n        const params  = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, gene_set: geneSet, uniquename: gene.id });\n\n        fetch(`${site}/api/get_gff.php?${params}`)\n            .then(r => {\n                if (!r.ok) return r.text().then(t => { throw new Error(t.replace(/^#\\s*Error:\\s*/m, '').trim()); });\n                return r.text();\n            })\n            .then(gffText => {\n                const featureCount = gffText.split('\\n').filter(l => l && !l.startsWith('#')).length;\n\n                document.getElementById('seq-region-meta').innerHTML = `\n                    <dt class=\"col-sm-3\">Type</dt><dd class=\"col-sm-9\"><strong>GFF3</strong></dd>\n                    <dt class=\"col-sm-3\">Gene</dt><dd class=\"col-sm-9\">${gene.id || gene.seqname}</dd>\n                    <dt class=\"col-sm-3\">Locus</dt><dd class=\"col-sm-9\">${gene.seqname}:${gene.start.toLocaleString()}\u2013${gene.end.toLocaleString()}</dd>\n                    <dt class=\"col-sm-3\">Features</dt><dd class=\"col-sm-9\">${featureCount} lines</dd>`;\n\n                document.getElementById('seq-region-sequence').textContent = gffText;\n\n                currentRegion   = { type: 'GFF', id: gene.id, seqname: gene.seqname, start: gene.start, end: gene.end, strand: gene.strand };\n                currentSequence = null;",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -6108,22 +5964,22 @@
                         },
                         {
                             "file": "setup.php",
-                            "line": 723,
+                            "line": 755,
                             "context": "function escapeHtml(str) {"
                         },
                         {
                             "file": "setup.php",
-                            "line": 788,
+                            "line": 820,
                             "context": "html += `<div class=\"step-result ${cls}\"><strong>${icon}</strong> ${escapeHtml(label)} &mdash; ${escapeHtml(result.message)}</div>`;"
                         },
                         {
                             "file": "setup.php",
-                            "line": 800,
+                            "line": 832,
                             "context": "? `<div class=\"alert alert-danger mt-3\">${escapeHtml(data.error)}</div>`"
                         },
                         {
                             "file": "setup.php",
-                            "line": 805,
+                            "line": 837,
                             "context": "resultsBody.innerHTML = `<div class=\"alert alert-danger\">Request failed: ${escapeHtml(err.message)}</div>`;"
                         }
                     ],
@@ -7462,7 +7318,7 @@
         },
         {
             "name": "js/modules/manage-site-config.js",
-            "count": 2,
+            "count": 3,
             "functions": [
                 {
                     "name": "isHexColor",
@@ -7483,9 +7339,10 @@
                             "context": "if (isHexColor(colorValue)) {"
                         }
                     ],
-                    "phpFilesCount": 1,
+                    "phpFilesCount": 2,
                     "phpFiles": [
-                        "admin/manage_site_config.php"
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php"
                     ]
                 },
                 {
@@ -7521,9 +7378,48 @@
                             "context": "updateBadgeColor(this);"
                         }
                     ],
-                    "phpFilesCount": 1,
+                    "phpFilesCount": 2,
                     "phpFiles": [
-                        "admin/manage_site_config.php"
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php"
+                    ]
+                },
+                {
+                    "name": "setDirty",
+                    "line": 297,
+                    "comment": "",
+                    "code": "{\n            if (isDirty === dirty) return;\n            dirty = isDirty;\n            bar.classList.toggle('is-dirty', dirty);\n            note.innerHTML = dirty\n                ? '<i class=\"fa fa-exclamation-circle\"></i> Unsaved changes'\n                : 'No unsaved changes';\n        }",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "admin",
+                    "tags": [
+                        "dom-manipulation",
+                        "state-modifying"
+                    ],
+                    "usageCount": 3,
+                    "usages": [
+                        {
+                            "file": "js/modules/manage-site-config.js",
+                            "line": 306,
+                            "context": "form.addEventListener('input',  function () { setDirty(true); });"
+                        },
+                        {
+                            "file": "js/modules/manage-site-config.js",
+                            "line": 307,
+                            "context": "form.addEventListener('change', function () { setDirty(true); });"
+                        },
+                        {
+                            "file": "js/modules/manage-site-config.js",
+                            "line": 314,
+                            "context": "window.setTimeout(function () { setDirty(false); }, 0);"
+                        }
+                    ],
+                    "phpFilesCount": 2,
+                    "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php"
                     ]
                 }
             ]
@@ -9488,22 +9384,22 @@
                         },
                         {
                             "file": "setup.php",
-                            "line": 723,
+                            "line": 755,
                             "context": "function escapeHtml(str) {"
                         },
                         {
                             "file": "setup.php",
-                            "line": 788,
+                            "line": 820,
                             "context": "html += `<div class=\"step-result ${cls}\"><strong>${icon}</strong> ${escapeHtml(label)} &mdash; ${escapeHtml(result.message)}</div>`;"
                         },
                         {
                             "file": "setup.php",
-                            "line": 800,
+                            "line": 832,
                             "context": "? `<div class=\"alert alert-danger mt-3\">${escapeHtml(data.error)}</div>`"
                         },
                         {
                             "file": "setup.php",
-                            "line": 805,
+                            "line": 837,
                             "context": "resultsBody.innerHTML = `<div class=\"alert alert-danger\">Request failed: ${escapeHtml(err.message)}</div>`;"
                         }
                     ],
@@ -10392,8 +10288,10 @@
                             "context": "highlighted = highlighted.replace(new RegExp(esc(term), 'gi'), HL);"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10425,8 +10323,10 @@
                             "context": "var leaf = mk(sec, typeLabel(sec), 2);"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10452,8 +10352,10 @@
                             "context": "var sc = splitChild(badge ? badge.textContent : \"Feature\");"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10494,8 +10396,10 @@
                             "context": "var leaf = mk(sec, typeLabel(sec), 2);"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10530,8 +10434,10 @@
                             "context": "directSections(el, null).forEach(function (sec) {         // gene-level types"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10566,8 +10472,10 @@
                             "context": "directCards(el, null).forEach(function (card) {           // per-transcript cards"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10608,8 +10516,10 @@
                             "context": "var child = buildCard(card, 2);"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10643,8 +10553,10 @@
                             "context": "var html = renderList(roots);"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10681,8 +10593,10 @@
                             "context": "if (jbDd) wireCarets(jbDd);"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10702,8 +10616,10 @@
                     ],
                     "usageCount": 0,
                     "usages": [],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10732,8 +10648,10 @@
                             "context": "expandAncestors(node.el);"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10761,8 +10679,10 @@
                             "context": "goTo(a.getAttribute(\"data-key\"));"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10799,8 +10719,10 @@
                             "context": "if (jbDd) wireLinks(jbDd, true);"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10845,8 +10767,10 @@
                             "context": "setActive(order[0]);"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10877,8 +10801,10 @@
                             "context": "updateSpy();"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10898,8 +10824,10 @@
                     ],
                     "usageCount": 0,
                     "usages": [],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10931,8 +10859,10 @@
                             "context": "reflect();"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10963,8 +10893,10 @@
                             "context": "if (!jbDd.contains(e.target) && !jbBtn.contains(e.target)) closeDropdown();"
                         }
                     ],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -10985,8 +10917,10 @@
                     ],
                     "usageCount": 0,
                     "usages": [],
-                    "phpFilesCount": 2,
+                    "phpFilesCount": 4,
                     "phpFiles": [
+                        "admin/manage_site_config.php",
+                        "admin/pages/manage_site_config.php",
                         "tools/parent.php",
                         "tools/pages/parent.php"
                     ]
@@ -11190,7 +11124,7 @@
                     "name": "fetchSeq",
                     "line": 64,
                     "comment": "",
-                    "code": "{\n        const key = `${seqname}:${start}:${end}:${strand}`;\n        if (_seqCache.has(key)) return Promise.resolve(_seqCache.get(key));\n        const site   = (typeof moopSite !== 'undefined') ? moopSite : '/moop';\n        const params = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, seqname, start, end, strand });\n        return fetch(`${site}/api/get_sequence.php?${params}`)\n            .then(r => r.json())\n            .then(data => { if (data.error) throw new Error(data.error); _seqCache.set(key, data); return data; });\n    }",
+                    "code": "{\n        const key = `${seqname}:${start}:${end}:${strand}`;\n        if (_seqCache.has(key)) return Promise.resolve(_seqCache.get(key));\n        const site   = (typeof moopSite !== 'undefined') ? moopSite : window.sitePath;\n        const params = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, seqname, start, end, strand });\n        return fetch(`${site}/api/get_sequence.php?${params}`)\n            .then(r => r.json())\n            .then(data => { if (data.error) throw new Error(data.error); _seqCache.set(key, data); return data; });\n    }",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -11853,7 +11787,7 @@
                         "state-modifying",
                         "loops"
                     ],
-                    "usageCount": 8,
+                    "usageCount": 7,
                     "usages": [
                         {
                             "file": "js/assembly-display.js",
@@ -11873,11 +11807,6 @@
                         {
                             "file": "js/jbrowse2-loader.js",
                             "line": 366,
-                            "context": "init();"
-                        },
-                        {
-                            "file": "js/jbrowse2-view-loader.js",
-                            "line": 117,
                             "context": "init();"
                         },
                         {
@@ -13435,13 +13364,13 @@
         },
         {
             "name": "js/multi-organism-search.js",
-            "count": 3,
+            "count": 4,
             "functions": [
                 {
                     "name": "handleToolClick",
                     "line": 16,
                     "comment": "/**\n * Handle tool button clicks on the multi-organism page.\n * POSTs the live selectedOrganisms list to the tool URL in a new tab,\n * avoiding GET URL length limits and stale baked-in organism lists.\n */",
-                    "code": "{\n    if (!selectedOrganisms || selectedOrganisms.length === 0) {\n        alert('Please select at least one organism');\n        return;\n    }\n\n    const toolBtn = document.getElementById(`tool-btn-${toolId}`);\n    if (!toolBtn) return;\n\n    const toolPath = toolBtn.getAttribute('data-tool-path');\n    if (!toolPath) return;\n\n    const siteName = typeof sitePath !== 'undefined' ? sitePath.replace(/^\\//,'').split('/')[0] : 'moop';\n\n    const form = document.createElement('form');\n    form.method = 'POST';\n    form.action = `/${siteName}${toolPath}`;\n    form.target = '_blank';\n\n    selectedOrganisms.forEach(org => {\n        const input = document.createElement('input');\n        input.type = 'hidden';\n        input.name = 'organisms[]';\n        input.value = org;\n        form.appendChild(input);\n    });\n\n    document.body.appendChild(form);\n    form.submit();\n    document.body.removeChild(form);\n}",
+                    "code": "{\n    if (!selectedOrganisms || selectedOrganisms.length === 0) {\n        alert('Please select at least one organism');\n        return;\n    }\n\n    const toolBtn = document.getElementById(`tool-btn-${toolId}`);\n    if (!toolBtn) return;\n\n    const toolPath = toolBtn.getAttribute('data-tool-path');\n    if (!toolPath) return;\n\n    const siteName = (typeof sitePath !== 'undefined' ? sitePath : window.sitePath).replace(/^\\//,'').split('/')[0];\n\n    const form = document.createElement('form');\n    form.method = 'POST';\n    form.action = `/${siteName}${toolPath}`;\n    form.target = '_blank';\n\n    selectedOrganisms.forEach(org => {\n        const input = document.createElement('input');\n        input.type = 'hidden';\n        input.name = 'organisms[]';\n        input.value = org;\n        form.appendChild(input);\n    });\n\n    document.body.appendChild(form);\n    form.submit();\n    document.body.removeChild(form);\n}",
                     "parameters": [],
                     "returnType": "void",
                     "returnDescription": "",
@@ -13503,6 +13432,24 @@
                             "context": "showInstructionModal(instruction);"
                         }
                     ],
+                    "phpFilesCount": 1,
+                    "phpFiles": [
+                        "tools/multi_organism.php"
+                    ]
+                },
+                {
+                    "name": "siteName",
+                    "line": 29,
+                    "comment": "",
+                    "code": "{siteName}",
+                    "parameters": [],
+                    "returnType": "void",
+                    "returnDescription": "",
+                    "internalCalls": [],
+                    "category": "search-filter",
+                    "tags": [],
+                    "usageCount": 0,
+                    "usages": [],
                     "phpFilesCount": 1,
                     "phpFiles": [
                         "tools/multi_organism.php"
@@ -13716,7 +13663,7 @@
                         "error-handling",
                         "validation"
                     ],
-                    "usageCount": 4,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
@@ -13727,16 +13674,6 @@
                             "file": "admin/pages/manage_registry.php",
                             "line": 44,
                             "context": "<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"php\">"
-                        },
-                        {
-                            "file": "tools/pages/js_registry.php",
-                            "line": 41,
-                            "context": "<button class=\"btn btn-primary w-100\" onclick=\"generateRegistry()\" id=\"generateBtn\" data-registry-type=\"js\">"
-                        },
-                        {
-                            "file": "tools/pages/registry.php",
-                            "line": 40,
-                            "context": "<button class=\"btn btn-warning btn-sm\" onclick=\"generateRegistry()\"><i class=\"fa fa-refresh\"></i> Regenerate</button>"
                         }
                     ],
                     "phpFilesCount": 5,
@@ -13896,19 +13833,8 @@
                         "state-modifying",
                         "loops"
                     ],
-                    "usageCount": 2,
-                    "usages": [
-                        {
-                            "file": "tools/pages/js_registry.php",
-                            "line": 96,
-                            "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"expandAllFiles()\">"
-                        },
-                        {
-                            "file": "tools/pages/registry.php",
-                            "line": 36,
-                            "context": "<button class=\"btn btn-primary btn-sm\" onclick=\"expandAllFiles()\"><i class=\"fa fa-expand\"></i> Expand All</button>"
-                        }
-                    ],
+                    "usageCount": 0,
+                    "usages": [],
                     "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
@@ -13933,19 +13859,8 @@
                         "state-modifying",
                         "loops"
                     ],
-                    "usageCount": 2,
-                    "usages": [
-                        {
-                            "file": "tools/pages/js_registry.php",
-                            "line": 99,
-                            "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"collapseAllFiles()\">"
-                        },
-                        {
-                            "file": "tools/pages/registry.php",
-                            "line": 37,
-                            "context": "<button class=\"btn btn-primary btn-sm\" onclick=\"collapseAllFiles()\"><i class=\"fa fa-compress\"></i> Collapse All</button>"
-                        }
-                    ],
+                    "usageCount": 0,
+                    "usages": [],
                     "phpFilesCount": 5,
                     "phpFiles": [
                         "admin/manage_js_registry.php",
@@ -14035,7 +13950,7 @@
                         "state-modifying",
                         "loops"
                     ],
-                    "usageCount": 4,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
@@ -14046,16 +13961,6 @@
                             "file": "admin/pages/manage_registry.php",
                             "line": 49,
                             "context": "<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">"
-                        },
-                        {
-                            "file": "tools/pages/js_registry.php",
-                            "line": 46,
-                            "context": "<button class=\"btn btn-info w-100\" onclick=\"downloadRegistry()\" title=\"Download as JSON\">"
-                        },
-                        {
-                            "file": "tools/pages/registry.php",
-                            "line": 39,
-                            "context": "<button class=\"btn btn-info btn-sm\" onclick=\"downloadRegistry()\"><i class=\"fa fa-download\"></i> Download JSON</button>"
                         }
                     ],
                     "phpFilesCount": 5,
@@ -14110,7 +14015,7 @@
                         "ajax",
                         "state-modifying"
                     ],
-                    "usageCount": 4,
+                    "usageCount": 2,
                     "usages": [
                         {
                             "file": "admin/pages/manage_js_registry.php",
@@ -14121,16 +14026,6 @@
                             "file": "admin/pages/manage_registry.php",
                             "line": 187,
                             "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">"
-                        },
-                        {
-                            "file": "tools/pages/js_registry.php",
-                            "line": 102,
-                            "context": "<button class=\"btn btn-sm btn-secondary\" onclick=\"clearSearch()\">"
-                        },
-                        {
-                            "file": "tools/pages/registry.php",
-                            "line": 38,
-                            "context": "<button class=\"btn btn-secondary btn-sm\" onclick=\"clearSearch()\"><i class=\"fa fa-times\"></i> Clear</button>"
                         }
                     ],
                     "phpFilesCount": 5,
@@ -15163,6 +15058,11 @@
             "line": 52
         },
         {
+            "name": "siteName",
+            "file": "js/groups-display.js",
+            "line": 32
+        },
+        {
             "name": "handleToolClick",
             "file": "js/index.js",
             "line": 174
@@ -15171,6 +15071,16 @@
             "name": "chain",
             "file": "js/index.js",
             "line": 70
+        },
+        {
+            "name": "site",
+            "file": "js/index.js",
+            "line": 151
+        },
+        {
+            "name": "site",
+            "file": "js/index.js",
+            "line": 185
         },
         {
             "name": "_gffActionSubmit",
@@ -15218,6 +15128,16 @@
             "line": 375
         },
         {
+            "name": "expandAllFiles",
+            "file": "js/manage-registry.js",
+            "line": 382
+        },
+        {
+            "name": "collapseAllFiles",
+            "file": "js/manage-registry.js",
+            "line": 398
+        },
+        {
             "name": "handleToolClick",
             "file": "js/multi-organism-search.js",
             "line": 16
@@ -15226,6 +15146,11 @@
             "name": "updateMultiSearchManager",
             "file": "js/multi-organism-search.js",
             "line": 49
+        },
+        {
+            "name": "siteName",
+            "file": "js/multi-organism-search.js",
+            "line": 29
         },
         {
             "name": "fixFilePermissions",
@@ -15241,6 +15166,16 @@
             "name": "toggleAllFiles",
             "file": "js/registry.js",
             "line": 224
+        },
+        {
+            "name": "expandAllFiles",
+            "file": "js/registry.js",
+            "line": 231
+        },
+        {
+            "name": "collapseAllFiles",
+            "file": "js/registry.js",
+            "line": 240
         },
         {
             "name": "toggleUnused",

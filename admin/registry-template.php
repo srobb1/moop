@@ -10,6 +10,7 @@
  *
  * This docblock previously named `tools/registry.php` and `tools/js_registry.php`.
  * Neither file exists; the registries are admin pages and live beside this template.
+ * The orphaned `tools/pages/` copies were deleted on 2026-07-22 — nothing included them.
  *
  * How It Works:
  * ─────────────
@@ -17,7 +18,7 @@
  * 2. Child page sets up the context/data specific to that registry
  * 3. Child page defines $display_config with:
  *    - title: Page title
- *    - content_file: Path to content file (pages/registry.php, etc.)
+ *    - content_file: Path to content file (pages/manage_registry.php, etc.)
  *    - page_script: Path to page-specific JS (js/registry.js, etc.)
  *    - inline_scripts: Array of JS code strings (optional)
  * 4. This template renders the page using layout.php
@@ -39,7 +40,7 @@
  *
  *   $display_config = [
  *       'title' => 'PHP Function Registry',
- *       'content_file' => __DIR__ . '/pages/registry.php',
+ *       'content_file' => __DIR__ . '/pages/manage_registry.php',
  *       'page_script' => '/' . $site . '/js/registry.js',
  *   ];
  *   

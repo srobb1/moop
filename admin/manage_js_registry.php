@@ -3,7 +3,7 @@
  * MANAGE JS REGISTRY - Admin Controller
  * 
  * Displays the interactive JavaScript function registry with admin authentication.
- * Uses registry-template.php for consistent layout with tools/registry.php
+ * Uses registry-template.php for consistent layout with the PHP function registry.
  */
 
 // Increase memory limit for large JSON parsing
