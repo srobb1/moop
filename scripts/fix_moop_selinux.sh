@@ -10,8 +10,10 @@
 #     document root this way), you do not need this script at all.
 #   * Assumes the RHEL web user `apache`. On Debian/Ubuntu it is `www-data` — another
 #     reason this script is not for those hosts.
-#   * Assumes MOOP at /var/www/html/moop and the cache at /var/www/moop-cache. Edit
-#     the two variables below if your paths differ.
+#   * Paths are DERIVED from this script's own location (it lives at <site>/scripts/), so
+#     it labels whichever deployment it was run from — no editing needed, and a second
+#     MOOP on the same host cannot relabel the first. Override MOOP / CACHE / SITE_DATA /
+#     PRIVATE / GUARD_NAME from the environment if your layout differs.
 #   * The nginx guard check assumes nginx. MOOP also supports Apache; the check is
 #     skipped there, with a warning, because the underlying risk still applies.
 #   * The 2026-07-13 incident this was written for is site-specific (a SCAP baseline
@@ -32,8 +34,22 @@
 set -euo pipefail
 [[ $EUID -eq 0 ]] || { echo "must run as root: sudo $0"; exit 1; }
 
-MOOP=/var/www/html/moop
-CACHE=/var/www/moop-cache
+# Derived from THIS SCRIPT'S location (it lives at <site>/scripts/), so a second MOOP on
+# the same host labels ITS OWN directories instead of silently relabelling the first one.
+# Hardcoding these was the same defect config/site_config.php had until 2026-07-22.
+# For /var/www/html/moop these produce exactly the previous values, so this is a no-op there:
+#   MOOP=/var/www/html/moop  SITE=moop  CACHE=/var/www/moop-cache
+#   SITE_DATA=/var/www/moop-site-data  PRIVATE=/var/www/moop-private
+# Override any of them from the environment if your layout differs, e.g.
+#   sudo CACHE=/srv/cache SITE_DATA=/srv/backup $0
+MOOP="${MOOP:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SITE="$(basename "$MOOP")"
+_PARENT="$(dirname "$(dirname "$MOOP")")"   # /var/www/html/moop -> /var/www
+
+CACHE="${CACHE:-$_PARENT/${SITE}-cache}"
+SITE_DATA="${SITE_DATA:-$_PARENT/${SITE}-site-data}"
+PRIVATE="${PRIVATE:-$_PARENT/${SITE}-private}"
+GUARD_NAME="${GUARD_NAME:-${SITE}-security.conf}"
 
 # Directories the web server (php-fpm as apache) must be able to WRITE.
 # organisms/ IS in this list, deliberately — see the note below it.
@@ -58,8 +74,8 @@ RW_DIRS=(
     # (2775 smr:apache); only the SELinux label blocked it. Safe because nginx now denies
     # .php under /moop/docs/ (moop-security.conf) — verified it executed before that rule.
     "$MOOP/docs"
-    /var/www/moop-site-data         # site-data backup (config, secrets, users.json)
-    /var/www/moop-private           # users.json (bcrypt hashes) — LIVE file, outside docroot,
+    "$SITE_DATA"                    # site-data backup (config, secrets, users.json)
+    "$PRIVATE"                      # users.json (bcrypt hashes) — LIVE file, outside docroot,
                                     # NOT web-served; php-fpm reads+writes it via Manage Users.
                                     # Without this rule a relabel reverts it to httpd_sys_content_t
                                     # (read-only) and Manage Users 500s — happened 2026-07-17.
@@ -83,7 +99,10 @@ RW_DIRS=(
 # The two halves are coupled, so verify the protective half BEFORE applying the
 # dangerous half — the same guard-first ordering the tracks proxy needed.
 echo "== 0. Verify the nginx execution-layer guard =="
-NGINX_GUARD=/etc/nginx/default.d/moop-security.conf
+# The DEPLOYED guard is named per-site ($GUARD_NAME), so two MOOPs on one host each get
+# their own file instead of the second overwriting the first's. The canonical source keeps
+# its repo filename — that one is per-checkout, not per-host.
+NGINX_GUARD="/etc/nginx/default.d/$GUARD_NAME"
 NGINX_CANON="$MOOP/docs/nginx/moop-security.conf"
 
 if [[ "${SKIP_NGINX_CHECK:-0}" == "1" ]]; then
@@ -93,7 +112,7 @@ elif [[ ! -d /etc/nginx ]]; then
     # SELinux setup over an nginx-specific file; the RISK is not nginx-specific, so
     # check for the Apache guard instead of waving it through.
     APACHE_CANON="$MOOP/docs/apache/moop-security.conf"
-    if [[ -f /etc/httpd/conf.d/moop-security.conf ]] || [[ -f /etc/apache2/conf-available/moop-security.conf ]]; then
+    if [[ -f "/etc/httpd/conf.d/$GUARD_NAME" ]] || [[ -f "/etc/apache2/conf-available/$GUARD_NAME" ]]; then
         echo "  nginx not detected; Apache guard is deployed — continuing"
         echo "  NOTE: verify it actually blocks execution (see the VERIFY block in $APACHE_CANON)."
     else
@@ -106,9 +125,9 @@ elif [[ ! -d /etc/nginx ]]; then
 
   For Apache, deploy the shipped rule:
 
-    RHEL:    sudo cp $APACHE_CANON /etc/httpd/conf.d/moop-security.conf
+    RHEL:    sudo cp $APACHE_CANON /etc/httpd/conf.d/$GUARD_NAME
              sudo apachectl configtest && sudo systemctl reload httpd
-    Debian:  sudo cp $APACHE_CANON /etc/apache2/conf-available/moop-security.conf
+    Debian:  sudo cp $APACHE_CANON /etc/apache2/conf-available/$GUARD_NAME
              sudo a2enconf moop-security && sudo systemctl reload apache2
 
   Continuing anyway — refusing here would block SELinux setup over a web-server file,
