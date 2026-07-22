@@ -4,12 +4,20 @@ MOOP ships a pre-built JBrowse2 in `jbrowse2/`. Upgrading replaces that build wi
 one from the JBrowse project.
 
 ```bash
-cd jbrowse2
-npx @jbrowse/cli upgrade
-cat version.txt
+cat jbrowse2/version.txt                                   # note where you are starting
+npx --yes @jbrowse/cli@latest upgrade /var/www/html/moop/jbrowse2
+cat jbrowse2/version.txt                                   # confirm it moved
 ```
 
-Check the current version first — `cat jbrowse2/version.txt`.
+**Pass the path explicitly.** The documented `cd jbrowse2 && jbrowse upgrade` form relies on
+the CLI defaulting to the current directory, and under `npx` it does not — it fails with
+`Error: No directory supplied` (seen on the 4.1.3 → 4.3.0 upgrade, 2026-07-22). Giving it
+the absolute path always works.
+
+**Do not use `--clean`.** It deletes old `.js`, `.map` and `LICENSE` files from the
+installation — and MOOP keeps its own `.js` inside this directory (see below), so a clean
+upgrade can silently remove ours. Without it, superseded chunks linger harmlessly; the
+build's own `index.html` only references the current ones.
 
 ---
 
@@ -74,13 +82,22 @@ The upgrade is not done when the command exits. Check:
    non-public assembly. You should land on the login page. The gateway is a web-server
    rewrite onto `index.html`, so an upgrade that changes how the entry point is served can
    break it. See the [per-site config template](../nginx/moop-site.conf.example).
-5. **Re-check file ownership.** The upgrade writes as *you*, and files you create are
-   typically mode 640 — which the web server cannot read. If pages 404 for assets that
-   clearly exist, this is why.
+5. **Fix permissions — this WILL bite you.** The release zip unpacks as mode `640`, and the
+   browser then 403s on every new asset while `index.html` itself still loads, so the page
+   comes up blank rather than obviously broken.
 
 ```bash
-chmod -R a+rX jbrowse2/          # readable by the web server, still not writable
+chmod -R a+rX jbrowse2/          # readable by any web server user, still not writable
 ```
+
+> **World-read, not group-read — and this is the part that wastes an afternoon.** On a
+> typical RHEL/nginx host there are **two different web users**: php-fpm runs as `apache`,
+> but **static files are served by nginx itself, running as `nginx`**. So `chgrp apache` +
+> `chmod g+rX` looks correct, passes every "can the web server read it" check you think to
+> write, and still 403s — because the user actually opening the file is `nginx`, which is not
+> in the `apache` group. That is exactly why the rest of this tree is `644`. Confirm your own
+> host with `ps -o user=,comm= -C nginx` and `grep ^user /etc/nginx/nginx.conf`; do not
+> assume "the web server user" is one user.
 
 ---
 

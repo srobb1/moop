@@ -178,7 +178,7 @@ repo, committing stays manual by design.
 | See what a public visitor sees | "View as public" in the navbar |
 | Check the health of an install | `php setup-check.php` |
 | Warm the organism cache | `php scripts/warm_organism_cache.php` (`--force` to rescan) |
-| Upgrade JBrowse2 | `cd jbrowse2 && npx @jbrowse/cli upgrade` |
+| Upgrade JBrowse2 | [Upgrading JBrowse2](docs/JBrowse2/UPGRADING.md) |
 
 **Organism cache** — Manage Organisms validates every database, FASTA, BLAST index and
 metadata file. Past ~50 organisms that scan can exceed the web server timeout, so results
@@ -270,10 +270,14 @@ search never triggers a file scan. Full guide: **[BLAST linkouts](docs/BLAST_LIN
 ### Updating JBrowse2
 
 ```bash
-cd jbrowse2
-npx @jbrowse/cli upgrade
-cat version.txt          # confirm the new version
+cat jbrowse2/version.txt                                    # where you are starting
+npx --yes @jbrowse/cli@latest upgrade /var/www/html/moop/jbrowse2
+chmod -R a+rX jbrowse2/                                     # the zip unpacks as 640
+cat jbrowse2/version.txt                                    # confirm it moved
 ```
+
+Pass the path explicitly — the `cd jbrowse2 && jbrowse upgrade` form fails under `npx`. And
+do **not** pass `--clean`: it deletes `.js` files, and MOOP keeps its own inside that tree.
 
 This replaces the web app in place. MOOP's own configuration is safe because it lives
 outside `jbrowse2/` — the plugin list is `config/jbrowse2_plugins.json`, and assemblies and
