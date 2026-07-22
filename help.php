@@ -15,18 +15,22 @@ $config = ConfigManager::getInstance();
 // Determine which help page to display
 $topic = $_GET['topic'] ?? null;
 
+// The landing page splits topics by audience (see tools/pages/help/landing.php).
+// The old flat dashboard.php grid is no longer linked from anywhere.
+$landing = __DIR__ . '/tools/pages/help/landing.php';
+
 if ($topic && preg_match('/^[a-z0-9\-]+$/', $topic)) {
     $content_file = __DIR__ . '/tools/pages/help/' . $topic . '.php';
     $page_title = 'Tutorial - Help';
 } else {
-    $content_file = __DIR__ . '/tools/pages/help/dashboard.php';
-    $page_title = 'Help - Tutorials';
+    $content_file = $landing;
+    $page_title = 'Help & Documentation';
 }
 
 // Check if content file exists
 if (!file_exists($content_file)) {
-    $content_file = __DIR__ . '/tools/pages/help/dashboard.php';
-    $page_title = 'Help - Tutorials';
+    $content_file = $landing;
+    $page_title = 'Help & Documentation';
 }
 
 // Prepare data for content file
