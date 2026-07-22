@@ -30,6 +30,5 @@
     "blast_sample_sequences": {
         "protein": "",
         "nucleotide": ""
-    },
-    "users_file": "/var/www/moop-private/users.json"
+    }
 }
