@@ -274,14 +274,15 @@ cost: `notes/QUERY_PERFORMANCE.md`.
 `lib/housekeeping.php` runs maintenance tasks from `admin_init.php`. No cron jobs or
 external setup required.
 
-**Throttled by INTERVAL, not by session.** `HOUSEKEEPING_MIN_INTERVAL` is 4 hours; results
+**Throttled by INTERVAL, not by session.** `HOUSEKEEPING_MIN_INTERVAL` is **1 hour**; results
 persist to `logs/.housekeeping_status.json` and are hydrated cheaply into `$_SESSION` on
 every admin page load. A long-lived session would otherwise outlive the interval and never
 re-run.
 
-**This means dashboard health cards can be up to 4 hours stale.** That is by design —
+**This means dashboard health cards can be up to an hour stale.** That is by design —
 expensive sweeps (the permission scan, the organism-tree walk) must never run on every
-dashboard load. The dashboard is a router ("N issues → go look"), and the linked manager
+dashboard load. (It was 4 hours while tasks ran inline in the admin request; the run is now
+spawned into the background, so the interval could tighten purely on freshness.) The dashboard is a router ("N issues → go look"), and the linked manager
 page re-checks live. Say when a cached figure was taken; the permission card does.
 
 **Adding a new housekeeping task:**
@@ -408,7 +409,7 @@ via `config_editable.json` — read it through ConfigManager, never from `site_c
 
 **How snapshots work:**
 - `lib/housekeeping.php` → `housekeeping_snapshot_site_data()` runs on the housekeeping
-  interval (§10 — at most once every 4h, not once per session)
+  interval (§10 — at most once an hour, not once per session)
 - Auto-creates the backup directory if it doesn't exist (and writes a README into it)
 - Copies changed files to the backup directory
 - Git is NOT required, and **MOOP never commits**. If the directory is a git repo, MOOP
