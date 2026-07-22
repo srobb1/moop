@@ -1,471 +1,323 @@
 # MOOP: Many Organisms One Platform
-__M__ any
-__O__ rganisms
-__O__ ne
-__P__ latform
 
-In Scottish English `moop` is a verb meaning to keep company or associate closely.
+__M__ any · __O__ rganisms · __O__ ne · __P__ latform
 
-Code to build a genome db that can work with multiple organisms
+*In Scottish English `moop` is a verb meaning to keep company or associate closely.*
 
-- One sqlite db for each organism enables adding new organsims quick and clean.
-- Searches can be built depending on need, a user can select a group of organisms, a single organism, or an assembly as the base for each search.
+A web platform for browsing genome assemblies, genes, and functional annotations across
+many organisms at once. Each organism gets its own SQLite database, so adding one is quick
+and touches nothing else. Searches can be scoped to a group of organisms, a single
+organism, or one assembly. It integrates [JBrowse2](https://jbrowse.org/jb2/) as a genome
+browser and Galaxy for workflows, with per-assembly access control so not everything has
+to be public.
 
-## Getting Started
+---
 
-### System Requirements
+## Contents
 
-**Required:**
-- **PHP** 7.4+ with extensions: `posix`, `json`, `sqlite3`, `openssl`, `curl`
-- **Web Server**: Apache (with `mod_rewrite` and `mod_headers`) or Nginx
-- **Node.js** 18+ and npm (for JBrowse CLI / text-index feature)
-- **samtools** + **bgzip** + **tabix** (htslib) — for genome and GFF indexing
-- **bigWigSummary** (UCSC kent tools) — for the Expression Explorer feature (querying RNA-seq BigWig signal over gene bodies)
-- **Disk Space**: Minimum 50GB for organism data (scales with number of organisms)
-- **Operating System**: Linux/Unix (for POSIX functions)
+- [Quick Start](#quick-start)
+- [Requirements](#requirements)
+- [After Installing](#after-installing)
+- [Common Tasks](#common-tasks)
+- [Genome Browser (JBrowse2)](#genome-browser-jbrowse2)
+- [Running a Second MOOP on One Host](#running-a-second-moop-on-one-host)
+- [Troubleshooting](#troubleshooting)
+- [Going Deeper](#going-deeper)
 
-See [docs/system-requirements.php](tools/pages/help/system-requirements.php) for detailed hardware sizing and capacity planning.
+---
 
-### Installation
+## Quick Start
 
-#### Prerequisites
+You need PHP and a web server already installed — see
+[Requirements](#requirements) if you do not have them yet. Everything else the installer
+handles.
 
-Install required dependencies before setting up MOOP:
-
-**1. Install PHP and required extensions:**
-```bash
-# Ubuntu/Debian
-sudo apt-get update
-sudo apt-get install -y php php-cli php-sqlite3 php-json php-curl php-xml
-
-# RHEL/CentOS/Rocky
-sudo dnf install -y php php-cli php-pdo php-json php-curl php-xml
-
-# Verify PHP version (7.4 or higher required)
-php --version
-
-# Verify extensions are enabled
-php -m | grep -E "sqlite3|json|posix|openssl|curl"
-```
-
-Extension notes:
-- `openssl` — required for JBrowse2 JWT track authentication (usually included with PHP)
-- `curl` — required for Galaxy integration (enabled by default; disable in `config/site_config.php` if not needed)
-- `posix` — used for file permission management; scripts handle gracefully if missing
-
-**2. Install web server:**
-```bash
-# Apache (recommended)
-sudo apt-get install -y apache2 libapache2-mod-php
-sudo a2enmod rewrite headers
-sudo systemctl restart apache2
-
-# OR Nginx (with PHP-FPM)
-sudo apt-get install -y nginx php-fpm
-sudo systemctl start php-fpm nginx
-
-# RHEL/CentOS/Rocky — Apache
-sudo dnf install -y httpd php
-sudo systemctl enable --now httpd
-
-# OR RHEL/CentOS/Rocky — Nginx (with PHP-FPM)
-sudo dnf install -y nginx php-fpm
-sudo systemctl enable --now nginx php-fpm
-```
-
-**3. Install SQLite3:**
-```bash
-# Ubuntu/Debian
-sudo apt-get install -y sqlite3
-
-# RHEL/CentOS/Rocky
-sudo dnf install -y sqlite
-
-# Verify installation
-sqlite3 --version
-```
-
-Note: The `php-sqlite3` extension (installed in step 1) is different from the `sqlite3` command-line tool. Both are required - the PHP extension allows PHP to interact with SQLite databases, while the command-line tool is used for database maintenance and debugging.
-
-**4. Install Composer (for PHP dependencies):**
-```bash
-# Download and install Composer globally
-curl -sS https://getcomposer.org/installer | php
-sudo mv composer.phar /usr/local/bin/composer
-```
-
-Composer installs the `firebase/php-jwt` library for JBrowse2 track authentication.
-
-**5. Install Node.js and npm (for JBrowse2 management):**
-```bash
-# Ubuntu/Debian (via NodeSource)
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# RHEL/CentOS/Rocky (via NodeSource)
-curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
-sudo dnf install -y nodejs
-
-# Without root — use nvm (works for any user, Node 20+):
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-source ~/.nvm/nvm.sh
-nvm install 20 && nvm use 20
-
-# Verify — must be 18+ for @jbrowse/cli
-node --version    # Should be v18+ (v20 recommended)
-npm --version
-```
-
-Node.js **v18 or newer** is required by `@jbrowse/cli`. Node.js is used to:
-- Run **`jbrowse text-index`** for feature name search in the admin UI
-- Upgrade JBrowse2 (see [Upgrading JBrowse2](#upgrading-jbrowse2) below)
-
-Install the JBrowse CLI to the project-local directory so the web server can find it:
-```bash
-# From the MOOP root:
-mkdir -p tools/jbrowse-cli
-npm install -g @jbrowse/cli --prefix tools/jbrowse-cli
-
-# Create a wrapper so the correct Node version is always used:
-cat > tools/jbrowse-cli/jbrowse-run.sh << 'EOF'
-#!/bin/bash
-exec "$(which node)" tools/jbrowse-cli/lib/node_modules/@jbrowse/cli/dist/bin.js "$@"
-EOF
-chmod 755 tools/jbrowse-cli/jbrowse-run.sh
-tools/jbrowse-cli/jbrowse-run.sh --version   # verify
-```
-
-The admin UI (Admin → JBrowse → Track Listing) will automatically use this installation.
-
-**6. Install BLAST+ suite:**
-```bash
-# Ubuntu/Debian
-sudo apt-get install -y ncbi-blast+
-
-# RHEL/CentOS/Rocky — BLAST+ is not in EPEL, install manually from NCBI
-# Check https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ for the latest version
-curl -O https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.17.0+-x64-linux.tar.gz
-tar xzf ncbi-blast-2.17.0+-x64-linux.tar.gz
-sudo cp ncbi-blast-2.17.0+/bin/* /usr/local/bin/
-
-# Verify installation
-blastn -version
-```
-
-**7. Install samtools and related tools (for JBrowse2):**
-```bash
-# Ubuntu/Debian
-sudo apt-get install -y samtools tabix
-
-# RHEL/CentOS/Rocky — not in EPEL, install from source
-# Install build dependencies first
-sudo dnf install -y gcc make zlib-devel bzip2-devel xz-devel curl-devel openssl-devel ncurses-devel
-
-# htslib (provides tabix and bgzip)
-curl -LO https://github.com/samtools/htslib/releases/download/1.21/htslib-1.21.tar.bz2
-tar xjf htslib-1.21.tar.bz2 && cd htslib-1.21 && ./configure && make && sudo make install && cd ..
-
-# samtools
-curl -LO https://github.com/samtools/samtools/releases/download/1.21/samtools-1.21.tar.bz2
-tar xjf samtools-1.21.tar.bz2 && cd samtools-1.21 && ./configure && make && sudo make install && cd ..
-
-# Verify installations
-samtools --version    # Should be 1.x or higher
-bgzip --version       # Part of tabix package
-tabix --version
-```
-
-**8. Install bigWigSummary (for Expression Explorer):**
-
-`bigWigSummary` is a UCSC kent tool that queries mean signal over a genomic interval from a local or remote BigWig file. It is required by the Expression Explorer to extract RNA-seq signal values over gene bodies.
+**1. Clone it into your document root.**
 
 ```bash
-# Download the precompiled static binary (no dependencies)
-sudo wget -q https://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigSummary \
-    -O /usr/local/bin/bigWigSummary
-sudo chmod +x /usr/local/bin/bigWigSummary
-
-# Verify installation
-bigWigSummary 2>&1 | head -1
-# Should print: bigWigSummary - Extract summary information from a bigWig file.
-```
-
-Note: `bigWigSummary` supports remote URLs (https://) directly, which is how MOOP
-queries BigWig files stored on a remote tracks server without downloading them.
-
-**9. Install additional utilities:**
-```bash
-# JSON processor (useful for working with JSON config files)
-sudo apt-get install -y jq
-
-# RHEL/CentOS/Rocky
-sudo dnf install -y jq
-
-# Verify
-jq --version
-```
-
-#### Setup MOOP
-
-**1. Identify your web server user/group:**
-
-Before cloning, determine the web server user so you can set permissions correctly.
-
-```bash
-# Check which web server is installed
-# Ubuntu/Debian
-dpkg -l | grep -E 'apache2|nginx'
-
-# RHEL/CentOS/Rocky
-rpm -q httpd nginx
-
-# If the web server is already running, check who it runs as
-ps aux | grep -E 'httpd|nginx|apache2|php-fpm' | head -5
-```
-
-Common web server user/group by platform:
-
-| Platform | Apache | Nginx |
-|----------|--------|-------|
-| Ubuntu/Debian | `www-data:www-data` | `www-data:www-data` |
-| RHEL/CentOS/Rocky | `apache:apache` | `nginx:nginx` |
-
-If your web server is not installed yet, install it first (see Prerequisites step 2 above),
-then come back to this step.
-
-**2. Set up the web root and clone the repository:**
-
-The deploy user (your login account) should own the files so you can run git
-and CLI scripts. The web server reads files via group membership.
-
-```bash
-# Replace WEB_GROUP with your web server group from step 1
-# (www-data, apache, or nginx)
-WEB_GROUP=apache   # <-- change this to match your system
-
-# Add your user to the web server group (log out and back in to take effect)
-sudo usermod -aG $WEB_GROUP $(whoami)
-
-# Make sure you can write to the web root
-sudo chown $(whoami):$WEB_GROUP /var/www/html
-
-# Clone the repository
 git clone https://github.com/srobb1/moop.git /var/www/html/moop
 cd /var/www/html/moop
-
-# Set group on all files so the web server can read them
-sudo chown -R $(whoami):$WEB_GROUP /var/www/html/moop
-chmod -R g+rX /var/www/html/moop
 ```
 
-**3. Install PHP dependencies:**
-```bash
-composer install
-```
+The directory name is yours to choose — MOOP derives both its filesystem paths and its URL
+prefix from where the code lives, so cloning to `/var/www/html/cuttingclass` gives you a
+site at `/cuttingclass/` with no configuration at all. It does need to sit **inside the
+document root** (`/var/www/html` here); anywhere else and the web server will not serve it
+without a vhost of its own.
 
-**4. Set up initial configuration files:**
-```bash
-# Copy example configs (then edit with your site-specific values)
-cp config/config_editable.json.example config/config_editable.json
-cp metadata/annotation_config.json.example metadata/annotation_config.json
-cp metadata/group_descriptions.json.example metadata/group_descriptions.json
-cp metadata/organism_assembly_groups.json.example metadata/organism_assembly_groups.json
-cp metadata/taxonomy_tree_config.json.example metadata/taxonomy_tree_config.json
-```
-
-These files will be customized through the Admin Dashboard after you log in.
-
-**5. Create required directories:**
-```bash
-# Create directories that the app writes to
-mkdir -p logs
-mkdir -p data/genomes
-mkdir -p data/tracks
-mkdir -p images
-mkdir -p metadata/change_log
-```
-
-**6. Generate JWT keys for JBrowse2 track authentication:**
-```bash
-mkdir -p certs
-openssl genrsa -out certs/jwt_private_key.pem 2048
-openssl rsa -in certs/jwt_private_key.pem -pubout -out certs/jwt_public_key.pem
-```
-
-These keys sign JWT tokens that authenticate requests for genome track data.
-Without them, JBrowse2 cannot load any tracks.
-
-**7. Set up the tracks security file:**
-
-The file `data/tracks/.htaccess` blocks direct access to track files, forcing
-all requests through the JWT authentication layer. This is critical — without
-it, anyone who knows a file path can bypass authentication entirely.
+**2. Check what is missing.**
 
 ```bash
-cat > data/tracks/.htaccess << 'HTACCESS'
-# SECURITY: Block direct access to track files
-# All track requests MUST go through /api/jbrowse2/tracks.php
-# which validates JWT tokens before serving files
-
-# Apache 2.2 style
-<IfVersion < 2.4>
-    Order Deny,Allow
-    Deny from all
-</IfVersion>
-
-# Apache 2.4+ style
-<IfVersion >= 2.4>
-    Require all denied
-</IfVersion>
-
-ErrorDocument 403 "Access denied. Track files must be accessed through the API endpoint with valid JWT token."
-HTACCESS
+php setup-check.php
 ```
 
-**8. Create the users file with your admin account:**
-```bash
-# Run the interactive setup script
-sudo php setup-admin.php
-```
+This names every unmet requirement and prints the exact command to fix it. Install what it
+asks for ([details per distro](docs/INSTALL.md)) and re-run until it is happy. It runs from
+a shell, so it still works when the site is too broken to load.
 
-This script will:
-- Prompt you for an admin username (default: `admin`)
-- Prompt you for a strong password (minimum 8 characters)
-- Securely hash the password using bcrypt
-- Create `users.json` with restricted permissions (600)
+**3. Run the installer in your browser.**
 
-Your password is only stored as a bcrypt hash in `users.json` — it is never committed to git.
-
-**9. Set up filesystem permissions:**
-
-Files should be owned by your deploy user with the web server group (set in step 1).
-This lets you run git and CLI tools normally while the web server reads via group access.
+Open `http://your-host/moop/setup.php`. It will ask for a one-time token:
 
 ```bash
-# Use the same WEB_GROUP from step 2 (www-data, apache, or nginx)
-WEB_GROUP=apache   # <-- change this to match your system
-
-# Ensure ownership: deploy user owns, web server group reads
-sudo chown -R $(whoami):$WEB_GROUP /var/www/html/moop
-chmod -R g+rX /var/www/html/moop
-
-# Directories the web server needs to WRITE to (setgid ensures new files inherit group)
-sudo chmod 2775 /var/www/html/moop/metadata
-sudo chmod 2775 /var/www/html/moop/metadata/change_log
-sudo chmod 2775 /var/www/html/moop/logs
-sudo chmod 2775 /var/www/html/moop/images
-sudo chmod 2775 /var/www/html/moop/data/genomes
-sudo chmod 2775 /var/www/html/moop/data/tracks
-sudo chmod 2775 /var/www/html/moop/config
-
-# JWT keys must be readable by web server but not world-readable
-sudo chmod 640 /var/www/html/moop/certs/*.pem
+cat .setup-token
 ```
 
-See [docs/current/admin/PERMISSIONS_GUIDE.md](docs/current/admin/PERMISSIONS_GUIDE.md) for complete permission setup.
+The installer creates the directories, copies the config templates, generates the JBrowse2
+JWT keys, runs `composer install`, and creates your admin account.
 
-**10. Configure web server (required for JBrowse2 auth + recommended security headers):**
+> It **self-disables** once `config/config_editable.json` exists, so it cannot be run
+> again on a configured site. Prefer to do it by hand?
+> See [manual setup](docs/INSTALL.md#manual-setup-without-the-installer).
 
-Edit your virtual host / server block config:
-
-- Apache Ubuntu/Debian: `/etc/apache2/sites-enabled/000-default.conf`
-- Apache RHEL/CentOS/Rocky: `/etc/httpd/conf.d/moop.conf` (create this file)
-- Nginx: your server block config file
-
-**Apache** — add inside `<VirtualHost>`:
-```apache
-# JBrowse2 session auth gateway (required)
-RewriteEngine On
-RewriteRule ^/moop/jbrowse2/index\.html$ /moop/auth_gateway.php [L,QSA]
-
-# Security headers (recommended)
-Header always set X-Frame-Options "SAMEORIGIN"
-Header always set X-Content-Type-Options "nosniff"
-Header always set Referrer-Policy "same-origin"
-```
-
-Enable required modules and restart:
-```bash
-# Ubuntu/Debian
-sudo a2enmod rewrite headers
-sudo systemctl restart apache2
-
-# RHEL/CentOS/Rocky (both modules enabled by default)
-sudo systemctl restart httpd
-```
-
-**Nginx** — add inside `server {}`:
-```nginx
-# JBrowse2 session auth gateway (required)
-location = /moop/jbrowse2/index.html {
-    rewrite ^ /moop/auth_gateway.php last;
-}
-
-# Security headers (recommended)
-add_header X-Frame-Options "SAMEORIGIN" always;
-add_header X-Content-Type-Options "nosniff" always;
-add_header Referrer-Policy "same-origin" always;
-```
-
-Reload after editing:
-```bash
-sudo systemctl reload nginx
-```
-
-See [JBrowse2 Session Authentication](#jbrowse2-session-authentication-web-server-config) for details on what the rewrite rule does.
-
-**11. Access the site:**
-- Visit: `http://localhost/moop/` (or your server URL)
-- Login with username `admin` and your chosen password
-- You'll be redirected to the main dashboard
-
-**12. Site data backups (automatic):**
-
-MOOP automatically backs up your configuration, metadata, and user accounts
-to a separate directory on each admin login. The backup path is configured
-via `site_data_path` in `config/site_config.php` (default: `/var/www/html/moop-site-data/`).
-
-The directory is created automatically on first admin login. No manual setup required.
-
-> **Keep this directory private** — it contains user accounts and may contain API keys.
-
-Optionally, you can initialize the backup directory as a git repo for version
-history. See the README created inside the backup directory for instructions.
-
-See `lib/housekeeping.php` for details on what gets backed up.
-
-### Stop the data directories executing code (all installs)
-
-MOOP writes into directories that are also served over HTTP — caches, generated indexes,
-uploaded images. That combination is only safe if the web server **refuses to execute
-`.php` inside them**; otherwise a single file-write bug in the app becomes a persistent
-webshell. This applies to **every install**, on any OS and any web server.
-
-**nginx** — MOOP ships the rule:
+**4. Deploy the two web-server files.** Not optional — see
+[why](#why-the-web-server-files-matter).
 
 ```bash
+# nginx
 sudo cp docs/nginx/moop-security.conf /etc/nginx/default.d/moop-security.conf
-sudo chmod 644 /etc/nginx/default.d/moop-security.conf
+sed 's#<site>#moop#g' docs/nginx/moop-site.conf.example \
+  | sudo tee /etc/nginx/default.d/moop-site.conf
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-**Apache**:
+For Apache, and for a site not called `moop`, see
+[Web server configuration](#web-server-configuration).
+
+**5. On RHEL/CentOS/Rocky with SELinux enforcing, label the writable directories.**
 
 ```bash
-# RHEL / CentOS / Rocky
-sudo cp docs/apache/moop-security.conf /etc/httpd/conf.d/moop-security.conf
-sudo apachectl configtest && sudo systemctl reload httpd
-
-# Debian / Ubuntu
-sudo cp docs/apache/moop-security.conf /etc/apache2/conf-available/moop-security.conf
-sudo a2enconf moop-security && sudo systemctl reload apache2
+getenforce                            # if this says Enforcing:
+sudo scripts/fix_moop_selinux.sh      # idempotent, safe to re-run
 ```
 
-⚠ The Apache rules are **not yet verified on a live Apache host** — they were written
-against a working nginx deployment. The directives are standard, but run the check below
-before trusting them, and please report corrections.
+Skip this on Debian/Ubuntu. Skipping it *on an enforcing host* gives you a site that loads
+perfectly and then silently cannot write anything — [see below](#troubleshooting).
 
-Verify it actually works — a 404 on a path that does not exist proves nothing:
+**6. Log in** at `http://your-host/moop/` with the admin account you just created.
+
+Then run `php setup-check.php` once more; it should come back clean.
+
+---
+
+## Requirements
+
+Only the first two are needed to reach the installer. The rest can come later — MOOP loses
+individual features rather than failing to start.
+
+| | Needed for |
+|---|---|
+| **PHP 7.4+** with `posix` `json` `sqlite3` `openssl` `curl` | everything |
+| **Apache** (`mod_rewrite`, `mod_headers`) or **nginx** + php-fpm | everything |
+| **Composer** | JBrowse2 track authentication |
+| **samtools**, **bgzip**, **tabix** | genome and GFF indexing |
+| **Node.js 18+** and `@jbrowse/cli` | feature-name search (`jbrowse text-index`) |
+| **BLAST+** | the BLAST tool |
+| **bigWigSummary** (UCSC kent) | Expression Explorer |
+| **Linux/Unix**, 50GB+ disk | POSIX functions; storage scales with organism count |
+
+**Install commands for every distro: [docs/INSTALL.md](docs/INSTALL.md).**
+Hardware sizing and capacity planning:
+[system requirements](tools/pages/help/system-requirements.php).
+
+---
+
+## After Installing
+
+**Set your site identity** — Admin → Manage Site Configuration. Site title, admin email,
+logo, sequence types. Saved to `config/config_editable.json`, effective immediately.
+
+**Add your first organism** — Admin → Organism Checklist walks you through it step by step,
+linking to the right management tool at each stage. The short version:
+
+```
+organisms/
+└── Genus_species/
+    ├── organism.json          organism metadata
+    ├── organism.sqlite        the database
+    └── assembly_name/
+        ├── genome.fa          reference genome
+        ├── genome.fa.fai      index — samtools faidx genome.fa
+        ├── cds.nt.fa
+        ├── protein.aa.fa
+        └── transcript.nt.fa
+```
+
+Build the `.fai` index once per assembly (`samtools faidx genome.fa`) — the SVG gene-model
+sequence viewer needs it. Creating the SQLite database is a separate toolkit:
+[moop-dbtools](https://github.com/MOOPGDB/moop-dbtools).
+
+**Decide what is public.** Access is per assembly, via
+`metadata/organism_assembly_groups.json`, managed in Admin → Manage Groups. The group name
+`PUBLIC` is what makes an assembly visible to visitors who are not logged in. **Nothing is
+public until you say so** — a fresh install shows an anonymous visitor an empty site, which
+looks like a broken one.
+
+To check what a visitor actually sees, use **View as public** in the navbar. On a host
+reached from a trusted IP range you are auto-logged-in on every request, so this is the
+only way to see the unauthenticated view.
+
+**Backups happen on their own.** Config, metadata, and user accounts are copied to
+`site_data_path` on the housekeeping interval; the directory is created on first admin
+login. It contains credentials — keep it private. MOOP never commits; if you make it a git
+repo, committing stays manual by design.
+
+---
+
+## Common Tasks
+
+| Task | Where |
+|---|---|
+| Add an organism | Admin → Organism Checklist |
+| Make an assembly public | Admin → Manage Groups (add the `PUBLIC` group) |
+| Add a user or change access | Admin → Manage Users |
+| Change site title / logo / favicon | Admin → Manage Site Configuration |
+| Rebuild BLAST indexes | Admin → Organism Checklist → Build BLAST Index |
+| Add tracks to the genome browser | [JBrowse2 Admin Guide](docs/JBrowse2/ADMIN_GUIDE.md) |
+| Link BLAST hits to JBrowse or an external site | Admin → Manage BLAST Linkouts |
+| See what a public visitor sees | "View as public" in the navbar |
+| Check the health of an install | `php setup-check.php` |
+| Warm the organism cache | `php scripts/warm_organism_cache.php` (`--force` to rescan) |
+| Upgrade JBrowse2 | `cd jbrowse2 && npx @jbrowse/cli upgrade` |
+
+**Organism cache** — Manage Organisms validates every database, FASTA, BLAST index and
+metadata file. Past ~50 organisms that scan can exceed the web server timeout, so results
+are cached in `organisms/.organism_cache.json` and invalidated automatically when data
+changes. Warm it from the CLI after a bulk import; the page's **Rescan** button is fine for
+smaller sites.
+
+---
+
+## Running a Second MOOP on One Host
+
+Supported, and it needs less than you would expect. MOOP derives its filesystem paths and
+URL prefix from wherever the code lives, so a second clone at
+`/var/www/html/cuttingclass` is served at `/cuttingclass/` — **no new vhost, no
+`server_name` change, no TLS work.** The existing server block's PHP handler already covers
+it.
+
+Two things are per-site:
+
+1. **The web-server files** — deploy both under a *per-site filename*
+   (`cuttingclass-security.conf`, `cuttingclass-site.conf`). The templates carry the exact
+   `sed` commands. Reusing the first site's filename overwrites its guard and leaves both
+   sites protected by only one of them.
+2. **SELinux labels**, if enforcing — `scripts/fix_moop_selinux.sh` derives its paths from
+   its own location, so run the *second* site's copy.
+
+`setup.php` refuses to run if the config it loads describes a different directory than the
+one it is running in, which stops a second install writing into the first one's files.
+
+> ⚠️ For a site whose auth-gateway rewrite is already inline in `nginx.conf`, do **not**
+> also deploy `moop-site.conf` — duplicate `location` blocks fail `nginx -t` and a reload
+> takes down the site that was working. Each template opens with the check for this.
+
+---
+
+## Genome Browser (JBrowse2)
+
+**Nothing to install — a pre-built JBrowse2 ships in `jbrowse2/`.** MOOP generates its
+configuration on the fly per organism and assembly, so there is no `config.json` to
+hand-edit.
+
+What you *do* have to do:
+
+1. **Deploy the auth-gateway rewrite** ([step 4](#quick-start)). Without it JBrowse is
+   served as plain static files and its access checks never run.
+2. **Register each assembly** — Admin → Manage JBrowse, or the checklist. This builds the
+   derived files under `data/genomes/{organism}/{assembly}/`, which nothing else creates.
+3. **Keep `jbrowse2/` read-only** and update it only from the CLI. It is JavaScript that
+   every visitor's browser executes, and the no-exec guard blocks `.php`, **not** `.js` —
+   this is the one tree where filesystem permissions are the real defence.
+
+### Where tracks live
+
+| | |
+|---|---|
+| `data/genomes/{organism}/{assembly}/` | reference genome + annotations, generated at registration |
+| `data/tracks/` | local track files — BigWig, BAM, VCF, CRAM |
+| `metadata/jbrowse2-configs/` | per-assembly and per-track JSON that MOOP generates |
+| `certs/` | the JWT keypair signing track URLs |
+
+Tracks can be **local or remote**, per track — a remote entry is just a URL in the track
+sheet, so a large collection can live on a separate host without copying anything. That
+host needs a CORS allowlist and its own token-checking endpoint; the setup is in
+[Tracks server setup](docs/JBrowse2/technical/TRACKS_SERVER_IT_SETUP.md), and local vs
+remote path handling in
+[Setting up a new organism](docs/JBrowse2/SETUP_NEW_ORGANISM.md#remote-track-server-support).
+
+Bulk track definitions are usually managed from a spreadsheet —
+[Google Sheets workflow](docs/JBrowse2/workflows/GOOGLE_SHEETS_WORKFLOW.md).
+
+### How track access is enforced
+
+Every track URL MOOP emits carries a JWT bound to that specific file.
+`api/jbrowse2/tracks.php` validates it before serving a byte, and direct access to
+`data/tracks/` is denied outright. So a copied track URL stops working, and a user cannot
+reach data their account is not entitled to.
+Details: [Security](docs/JBrowse2/technical/SECURITY.md).
+
+### Linking BLAST hits into the browser
+
+BLAST results can carry configurable linkouts — to the gene page, straight into JBrowse at
+the hit coordinates, or to an external database. Configure them in **Admin → Manage BLAST
+Linkouts**; they are per-registration and take effect immediately, with the coordinate
+index built at registration time.
+
+### Updating JBrowse2
+
+```bash
+cd jbrowse2
+npx @jbrowse/cli upgrade
+cat version.txt          # confirm the new version
+```
+
+This replaces the web app in place and preserves MOOP's configuration. **Run it from the
+CLI, never through the web server** — see the read-only note above. Afterwards, load a
+browser view and confirm tracks still render before considering it done.
+
+### JBrowse2 documentation
+
+- [Documentation index](docs/JBrowse2/_DOCUMENTATION_INDEX.md) — start here; there is a lot
+- [Admin guide](docs/JBrowse2/ADMIN_GUIDE.md) — tracks, assemblies, permissions
+- [User guide](docs/JBrowse2/USER_GUIDE.md) — for the people using the browser
+- [Setting up a new organism](docs/JBrowse2/SETUP_NEW_ORGANISM.md) — files in, files out
+- [Track formats reference](docs/JBrowse2/reference/TRACK_FORMATS_REFERENCE.md)
+- [Synteny and comparative tracks](docs/JBrowse2/reference/SYNTENY_TRACKS_GUIDE.md)
+- [Developer guide](docs/JBrowse2/DEVELOPER_GUIDE.md) · [API reference](docs/JBrowse2/reference/API_REFERENCE.md)
+
+---
+
+## Troubleshooting
+
+**Start here.** It checks everything below and prints the fix for whatever is wrong:
+
+```bash
+php setup-check.php
+```
+
+**A page 500s right after you edited a file.** Editors save as mode `640` owned by you, and
+php-fpm cannot read that. `chmod 644` the file. The real error is in the php-fpm error log
+(usually root-only) — it is not an opcache problem.
+
+**The site loads but nothing saves, with no error anywhere.** SELinux. On an enforcing host
+the label decides, not the Unix mode, so a directory can look perfectly writable at `2775`
+and not be. `chmod` will not fix it: run `sudo scripts/fix_moop_selinux.sh`. Three MOOP
+features were dead for three days this way in July 2026 — nothing reported it, because a
+denied write is not an error the app sees.
+
+**JBrowse2 shows a cryptic load error instead of a login prompt.** The auth-gateway rewrite
+is not active. On Apache, check `apachectl -M | grep rewrite` first — a missing
+`mod_rewrite` makes the rule do nothing, silently.
+
+**An anonymous visitor sees an empty site.** Expected until you put an assembly in the
+`PUBLIC` group. Confirm with "View as public" rather than guessing.
+
+**A logged-out visitor is immediately logged back in.** Auto-login by IP range. That is
+`auto_login_ip_ranges` doing its job; use "View as public" to see the visitor view.
+
+**Verifying the no-exec guard.** A 404 proves nothing — files the web user cannot read 404
+by accident. Use a file that *would* execute:
 
 ```bash
 echo '<?php echo "EXECTEST"; ?>' > images/wikimedia/_exectest.php
@@ -473,284 +325,61 @@ curl -s http://your-host/moop/images/wikimedia/_exectest.php   # want 404, NOT "
 rm -f images/wikimedia/_exectest.php
 ```
 
-### SELinux (RHEL / CentOS / Rocky only)
+---
 
-**Only relevant if `getenforce` reports `Enforcing`.** Debian/Ubuntu use AppArmor, which
-does not label the document root this way — skip this section entirely there.
+## Web server configuration
 
-On an Enforcing host this step is not optional, and skipping it produces the worst kind
-of failure: the site loads fine and then **silently cannot write anything** — no error on
-the page, nothing in the logs you would think to check. Three MOOP features were dead for
-three days this way in July 2026.
+MOOP ships both files it needs; deploy them rather than copying snippets, so there is one
+source of truth.
 
-SELinux labels the document root read-only by default, on the assumption that a web app
-does not write into the directory it serves from. MOOP does, so each writable directory
-needs an explicit rule:
+| File | Purpose |
+|---|---|
+| `docs/nginx/moop-security.conf` · `docs/apache/moop-security.conf` | the no-exec guard |
+| `docs/nginx/moop-site.conf.example` · `docs/apache/moop-site.conf.example` | JBrowse2 auth gateway |
 
 ```bash
-sudo scripts/fix_moop_selinux.sh     # idempotent; safe to re-run
+# Apache — RHEL/CentOS/Rocky
+sudo cp docs/apache/moop-security.conf /etc/httpd/conf.d/moop-security.conf
+sudo apachectl configtest && sudo systemctl reload httpd
+
+# Apache — Debian/Ubuntu
+sudo cp docs/apache/moop-security.conf /etc/apache2/conf-available/moop-security.conf
+sudo a2enconf moop-security && sudo systemctl reload apache2
 ```
 
-Deploy the no-exec guard above **first**: this script makes the data trees writable, and
-they are only safe once the guard is in place. On nginx the script enforces that order
-and refuses to run until the guard matches; on Apache it warns and continues.
+⚠ The **Apache** files pass a syntax check but have never been exercised on a host actually
+serving MOOP. The directives are standard; run the VERIFY block in each before trusting
+them, and please report corrections.
 
-Re-run it after any host hardening run (SCAP/OpenSCAP), a rebuild, or a wiped policy
-store. It uses `semanage`, not `chcon`, so the rules are **persistent** — a future
-hardening run re-applies them instead of destroying them. You run it yourself with
-`sudo`; no IT round-trip is needed.
+### Why the web server files matter
 
-The script assumes the RHEL web user `apache`, MOOP at `/var/www/html/moop`, and the
-cache at `/var/www/moop-cache`; edit the variables at the top if your paths differ.
+**The guard.** MOOP writes into directories it also serves over HTTP — caches, generated
+indexes, uploaded images. That is safe *only* while the web server refuses to execute
+`.php` inside them. Without it, one file-write bug becomes a persistent webshell. This
+applies to every install, on every OS and web server. File permissions are not a substitute:
+a data file that happens to be unreadable is protected by accident, not design.
 
-Full background, including what to do when the site is already down:
-[`docs/SELINUX_AND_HARDENING.md`](docs/SELINUX_AND_HARDENING.md). That document records a
-specific 2026-07-13 incident at one site — the SELinux **rules** are general, the story
-around them is not.
-
-### Verifying Installation
-
-**Start here — this checks everything below automatically:**
-
-```bash
-php setup-check.php
-```
-
-The preflight validates PHP extensions, CLI tools, composer deps, writable directories,
-JWT keys, SELinux labels, and the nginx guard — and prints the exact fix command for
-anything wrong. It runs from a shell, so it still works when the site is too broken to
-load, which is when you need it most.
-
-Run it after installing, after upgrading, and any time something behaves oddly.
-
-<details>
-<summary>Manual checks (what the preflight does for you)</summary>
-
-```bash
-# Verify PHP extensions
-php -m | grep -E "sqlite3|json|posix|openssl|curl"
-
-# Verify BLAST+ tools
-blastn -version
-
-# Verify samtools (for JBrowse2)
-samtools --version
-
-# Verify tabix (for JBrowse2)
-tabix --version
-
-# Verify bigWigSummary (for Expression Explorer)
-bigWigSummary 2>&1 | head -1
-
-# Verify JWT keys exist
-ls -la /var/www/html/moop/certs/*.pem
-
-# Verify tracks security
-curl -s -o /dev/null -w "%{http_code}" http://localhost/moop/data/tracks/
-# Should return 403 (access denied)
-
-# Verify JBrowse2 auth gateway redirects unauthenticated users to login
-curl -s -o /dev/null -w "%{http_code}" http://localhost/moop/jbrowse2/index.html
-# Should return 302 (redirect to login); 200 means the rewrite rule is not active
-
-# Check web server is running
-# For Apache:
-sudo systemctl status apache2
-
-# For Nginx:
-sudo systemctl status nginx
-```
-
-</details>
-
-### Initial Configuration
-
-Once logged in as admin:
-
-**1. Go to Site Configuration:**
-- Click the **Admin** menu (top navigation)
-- Select **Manage Site Configuration**
-
-**2. Update basic settings:**
-- **Site Title**: Change from "MOOP" to your organization name
-- **Admin Email**: Update to your email address
-- **Sequence Types**: Add custom sequence file types if needed
-
-All changes are saved to `config/config_editable.json` and take effect immediately.
-
-### Adding Your First Organism
-
-**Quick Start:**
-1. Visit: `http://localhost/moop/admin/organism_checklist.php`
-2. Follow the step-by-step checklist
-3. Each step links to detailed management tools for fine-grained configuration
-
-**Main Steps:**
-
-1. **Prepare organism data files:**
-   - FASTA sequence files (genome, proteins, etc.)
-   - SQLite database (one per organism) containing features, annotations, etc.
-
-2. **Copy to the web server** with proper directory structure:
-   ```
-   /var/www/html/moop/organisms/
-   └── Genus_species/
-       ├── organism.json              (organism metadata)
-       ├── organism.sqlite            (organism database)
-       └── assembly_name/             (assembly subdirectory)
-           ├── genome.fa              (reference genome FASTA)
-           ├── genome.fa.fai          (FASTA index — see step 3)
-           ├── cds.nt.fa              (CDS sequences)
-           ├── protein.aa.fa          (Protein sequences)
-           └── transcript.nt.fa       (Transcript sequences)
-   ```
-
-3. **Index the genome FASTA** — required for the SVG gene model sequence viewer:
-   ```bash
-   cd /var/www/html/moop/organisms/Genus_species/assembly_name
-   samtools faidx genome.fa
-   ```
-   This creates `genome.fa.fai` alongside `genome.fa`. Run once per assembly.
-
-4. **Create SQLite database** with your genomic data:
-   - See [moop-dbtools](https://github.com/MOOPGDB/moop-dbtools) for detailed instructions
-   - Includes guides for data analysis, feature loading, and database schema
-
-4. **Configure organism metadata** through the admin interface:
-   - Organism name, taxonomy, images
-   - Feature types and annotation settings
-   - Group assignments
-
-**Detailed Guides:**
-- [Organism Setup & Searches](tools/pages/help/organism-setup-and-searches.php) - comprehensive organism configuration
-- [Data Organization](tools/pages/help/organism-data-organization.php) - directory structure and file formats
-- [moop-dbtools](https://github.com/MOOPGDB/moop-dbtools) - creating and loading SQLite databases
+**The auth gateway.** JBrowse2 is a static JavaScript app. Without the rewrite the web
+server hands out `jbrowse2/index.html` directly, MOOP never sees the request, the session
+is never checked — and **non-public assemblies are exposed to anyone with the URL.** It
+also means a user following a saved JBrowse link with an expired session gets a login page
+and is returned to where they were going, instead of a load error.
 
 ---
 
-## Organism Cache
+## Going Deeper
 
-The **Manage Organisms** admin page validates every organism's database, FASTA
-files, BLAST indexes, and metadata. With many organisms (50+), this scan can
-take over a minute and may exceed the web server's timeout.
+**Setup and operations**
+- [Installing prerequisites](docs/INSTALL.md) — per-distro commands, manual setup
+- [SELinux and hardening](docs/SELINUX_AND_HARDENING.md) — required on enforcing hosts
+- [PHP version safety](docs/SETUP/PHP_VERSION_SAFETY.md)
 
-To avoid this, scan results are cached in `organisms/.organism_cache.json`.
-The cache is automatically invalidated when organism data changes (detected via
-file modification times and directory listings).
+**Organism data**
+- [Organism setup and searches](tools/pages/help/organism-setup-and-searches.php)
+- [Data organization](tools/pages/help/organism-data-organization.php) — layout and formats
+- [moop-dbtools](https://github.com/MOOPGDB/moop-dbtools) — building the SQLite databases
 
-### Warming the cache
-
-After adding organisms or on a fresh deployment, run the CLI script to build
-the cache before visiting the page in the browser:
-
-```bash
-php scripts/warm_organism_cache.php
-```
-
-Use `--force` to rescan even if the cache appears up to date:
-
-```bash
-php scripts/warm_organism_cache.php --force
-```
-
-The Manage Organisms page also has a **Rescan** button for manual refresh from
-the browser (works fine for smaller sites, but may time out with 50+ organisms).
-
----
-
-## JBrowse2 Genome Browser
-
-JBrowse2 is the integrated genome browser. A pre-built copy (v4.1.3) is
-included in the `jbrowse2/` directory. MOOP's PHP backend dynamically
-generates JBrowse2 configurations and authenticates track access via JWT tokens.
-
-### Key Directories
-
-| Path | Purpose |
-|------|---------|
-| `jbrowse2/` | JBrowse2 web app (pre-built, git-tracked) |
-| `data/genomes/` | Reference genomes and annotations (per organism/assembly) |
-| `data/tracks/` | Additional track files (BigWig, BAM, VCF, etc.) |
-| `certs/` | JWT private/public key pair for track authentication |
-| `api/jbrowse2/` | PHP endpoints: config generation, track serving |
-
-### How Track Authentication Works
-
-1. User visits a JBrowse2 view — MOOP generates a config with JWT-signed track URLs
-2. JBrowse2 requests track data via `api/jbrowse2/tracks.php?file=...&token=JWT`
-3. `tracks.php` validates the JWT and serves the file if authorized
-4. Direct access to `data/tracks/` is blocked by `.htaccess` (returns 403)
-
-### JBrowse2 Session Authentication (Web Server Config)
-
-When users open JBrowse2 in a new window and share or bookmark the URL, MOOP
-must check their session before JBrowse2 loads. Without this, an expired session
-shows a cryptic load error instead of a login prompt.
-
-Add the following to your web server config to route `jbrowse2/index.html`
-through MOOP's auth gateway (`auth_gateway.php`):
-
-**Apache** — add inside your `<VirtualHost>` block:
-
-- Ubuntu/Debian: `/etc/apache2/sites-enabled/000-default.conf`
-- RHEL/CentOS/Rocky: `/etc/httpd/conf.d/moop.conf`
-
-```apache
-RewriteEngine On
-RewriteRule ^/moop/jbrowse2/index\.html$ /moop/auth_gateway.php [L,QSA]
-```
-
-Enable `mod_rewrite` if not already active, then restart:
-```bash
-# Ubuntu/Debian
-sudo a2enmod rewrite
-sudo systemctl restart apache2
-
-# RHEL/CentOS/Rocky (mod_rewrite is enabled by default)
-sudo systemctl restart httpd
-```
-
-**Nginx** — add inside your `server {}` block:
-
-```nginx
-location = /moop/jbrowse2/index.html {
-    rewrite ^ /moop/auth_gateway.php last;
-}
-```
-
-Reload after editing:
-```bash
-sudo systemctl reload nginx
-```
-
-After this is in place: unauthenticated users who follow a saved JBrowse2 URL
-are redirected to the MOOP login page and returned to their original JBrowse2
-URL (with session state intact) after logging in.
-
-### Upgrading JBrowse2
-
-To upgrade JBrowse2 to a newer version:
-
-```bash
-cd /var/www/html/moop/jbrowse2
-
-# Upgrade in-place using the JBrowse CLI
-npx @jbrowse/cli upgrade
-
-# Verify the new version
-cat version.txt
-```
-
-This downloads the latest JBrowse2 web app build and replaces the files in
-the `jbrowse2/` directory. Your `config.json` is preserved. After upgrading,
-test that tracks load correctly in the browser.
-
-See the [JBrowse2 documentation](https://jbrowse.org/jb2/docs/) for release
-notes and upgrade guides.
-
-### JBrowse2 Documentation
-
-- [Admin Guide](docs/JBrowse2/ADMIN_GUIDE.md) — managing tracks, assemblies, and permissions
-- [Developer Guide](docs/JBrowse2/DEVELOPER_GUIDE.md) — architecture and API reference
-- [Security](docs/JBrowse2/technical/SECURITY.md) — JWT authentication details
-- [Setup New Organism](docs/JBrowse2/SETUP_NEW_ORGANISM.md) — adding genome data for JBrowse2
+**Development**
+- [CLAUDE.md](CLAUDE.md) — architecture, conventions, and the traps worth knowing
+- [System overview](docs/overview/SYSTEM_OVERVIEW.md)
+- [Galaxy integration](docs/Galaxy/GALAXY_INTEGRATION.md)
