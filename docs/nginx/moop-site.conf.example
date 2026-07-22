@@ -1,0 +1,79 @@
+# MOOP — per-site nginx config for a NEW deployment.  TEMPLATE.
+#
+# ⚠️  FOR A NEW SITE ONLY. Do NOT deploy this for a site whose auth-gateway rewrite is
+#     already inline in nginx.conf (the original /moop install here has it at both the
+#     :80 and :443 server blocks). Two `location = /<site>/jbrowse2/index.html` blocks in
+#     one server is a DUPLICATE LOCATION error: `nginx -t` fails and a reload takes the
+#     whole server down — including the site that was working. Check first:
+#
+#         grep -n 'jbrowse2/index.html' /etc/nginx/nginx.conf /etc/nginx/conf.d/*.conf
+#
+#     If a line comes back for your new site's prefix, it is already configured; either
+#     use that or remove it before deploying this file. Never both.
+#
+# ── WHAT A SECOND MOOP ACTUALLY NEEDS ───────────────────────────────────────────────
+#
+# Less than you would expect. A typical host serves MOOP as a SUBDIRECTORY of the
+# document root (`root /var/www/html;` with the app at /var/www/html/<site>), and the
+# server block's `location ~ \.php$` handler already catches every .php beneath it. So a
+# second deployment at /var/www/html/cuttingclass is SERVED THE MOMENT THE FILES EXIST:
+#
+#     no new server block · no new vhost · no server_name change · no TLS work
+#
+# Security headers, the CSP, and the php-fpm handler are all server-level and inherited.
+# Exactly two things are per-site:
+#
+#     1. the JBrowse2 auth-gateway rewrite  ← this file
+#     2. the no-exec guard                  ← docs/nginx/moop-security.conf, deployed
+#                                             separately under a per-site filename
+#
+# ── SETUP ───────────────────────────────────────────────────────────────────────────
+#
+#   Replace <site> with your site directory name (the same value config/site_config.php
+#   derives from the install path — "cuttingclass" for /var/www/html/cuttingclass).
+#
+#   1. This file:
+#        sed 's#<site>#cuttingclass#g' docs/nginx/moop-site.conf.example \
+#          | sudo tee /etc/nginx/default.d/cuttingclass-site.conf
+#
+#   2. The guard (separate file, same idea — see its own header):
+#        sed 's#/moop/#/cuttingclass/#g' docs/nginx/moop-security.conf \
+#          | sudo tee /etc/nginx/default.d/cuttingclass-security.conf
+#
+#   3. sudo nginx -t && sudo systemctl reload nginx
+#
+#   Both land in /etc/nginx/default.d/, which the :80 and :443 server blocks each pull in
+#   via `include /etc/nginx/default.d/*.conf;` — one copy covers both listeners.
+#
+#   Use PER-SITE FILENAMES. Deploying a second site's rules as moop-security.conf
+#   overwrites the first site's guard and leaves BOTH protected by only one of them.
+#   scripts/fix_moop_selinux.sh expects <site>-security.conf and checks for it.
+
+# ── JBrowse2 auth gateway (REQUIRED — this is an access control, not a nicety) ───────
+#
+# JBrowse2 is a static JavaScript app: without this rewrite, nginx serves its index.html
+# straight from disk and MOOP never sees the request. The session is never checked, so
+# NON-PUBLIC ASSEMBLIES ARE EXPOSED to anyone who knows the URL. auth_gateway.php checks
+# the session, and for a non-public assembly sends an unauthenticated visitor to log in
+# and returns them to the JBrowse URL they asked for.
+#
+# It must be an EXACT match (`location =`). A prefix match would swallow the rest of the
+# JBrowse app — its JS, CSS and workers are served normally from the same directory.
+
+location = /<site>/jbrowse2/index.html {
+    rewrite ^ /<site>/auth_gateway.php last;
+}
+
+# ── VERIFY (do this — a 404 or a redirect is not proof of anything) ──────────────────
+#
+#   Gateway is in front of JBrowse:  logged OUT, in a private window, open
+#       http://YOUR-HOST/<site>/jbrowse2/index.html?config=...&organism=X&assembly=Y
+#     naming a NON-PUBLIC assembly. You must land on the login page. Being shown the
+#     browser means the rewrite is not active and the gateway is being bypassed.
+#
+#   The rest of JBrowse still loads:  a logged-in user opens the same browser and sees
+#     tracks. If the app is blank, the rewrite is matching too much — check for `location =`.
+#
+#   The guard is the OTHER file's job. Test it with a real .php that would execute, plus a
+#   control copy in a normal location; a 404 can just mean the web user cannot read the
+#   file. See the VERIFY block in docs/nginx/moop-security.conf.

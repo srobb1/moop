@@ -1,0 +1,98 @@
+# MOOP — per-site Apache config for a NEW deployment.  TEMPLATE.
+# Apache equivalent of docs/nginx/moop-site.conf.example; keep the two in step.
+#
+# ⚠  SYNTAX verified, BEHAVIOUR not. `httpd -t` accepts this file (checked 2026-07-22 with
+#    mod_rewrite loaded), so it will not break an Apache that loads it. But no Apache host
+#    has ever SERVED MOOP, so nobody has confirmed the rewrite actually puts the gateway in
+#    front of JBrowse. Syntax-OK is not the same as working — a rewrite that silently never
+#    fires is exactly the failure this file warns about. Run the VERIFY steps below before
+#    trusting it, and please report corrections. Same standing caveat as
+#    docs/apache/moop-security.conf.
+#
+# ⚠  FOR A NEW SITE ONLY. Do not deploy this for a site that already has the auth-gateway
+#    rewrite configured (in a <VirtualHost>, an existing conf.d file, or an .htaccess).
+#    Two rewrites for the same URL are at best redundant and at worst a redirect loop.
+#    Check first:
+#
+#        grep -rn 'jbrowse2/index.html' /etc/httpd/conf* /etc/apache2 2>/dev/null
+#
+#    If your new site's prefix comes back, it is already configured — use that, not both.
+#
+# ── WHAT A SECOND MOOP ACTUALLY NEEDS ───────────────────────────────────────────────
+#
+# Less than you would expect. Where MOOP is a SUBDIRECTORY of the document root
+# (DocumentRoot /var/www/html, app at /var/www/html/<site>), Apache already serves and
+# executes PHP beneath it. A second deployment at /var/www/html/cuttingclass is SERVED
+# THE MOMENT THE FILES EXIST: no new VirtualHost, no ServerName change, no TLS work.
+#
+# Exactly two things are per-site:
+#     1. the JBrowse2 auth-gateway rewrite  ← this file
+#     2. the no-exec guard                  ← docs/apache/moop-security.conf, deployed
+#                                             separately under a per-site filename
+#
+# ── SETUP ───────────────────────────────────────────────────────────────────────────
+#
+#   Replace <site> with your site directory name (what config/site_config.php derives
+#   from the install path — "cuttingclass" for /var/www/html/cuttingclass).
+#
+#   1. This file:
+#        sed 's#<site>#cuttingclass#g' docs/apache/moop-site.conf.example > /tmp/cc-site.conf
+#      RHEL/CentOS/Rocky:
+#        sudo cp /tmp/cc-site.conf /etc/httpd/conf.d/cuttingclass-site.conf
+#        sudo apachectl configtest && sudo systemctl reload httpd
+#      Debian/Ubuntu:
+#        sudo cp /tmp/cc-site.conf /etc/apache2/conf-available/cuttingclass-site.conf
+#        sudo a2enconf cuttingclass-site && sudo apachectl configtest \
+#          && sudo systemctl reload apache2
+#
+#   2. The guard, the same way, from docs/apache/moop-security.conf with its /moop/ and
+#      /var/www/html/moop paths adjusted — see that file's header.
+#
+#   3. mod_rewrite must be enabled, or the rewrite below silently does nothing and the
+#      gateway is bypassed with no error anywhere:
+#        RHEL:    ensure `LoadModule rewrite_module modules/mod_rewrite.so` is present
+#        Debian:  sudo a2enmod rewrite && sudo systemctl reload apache2
+#      Confirm with: apachectl -M | grep rewrite
+#
+#   Use PER-SITE FILENAMES. Deploying a second site's rules as moop-security.conf
+#   overwrites the first site's guard and leaves BOTH protected by only one of them.
+
+# ── JBrowse2 auth gateway (REQUIRED — this is an access control, not a nicety) ───────
+#
+# JBrowse2 is a static JavaScript app: without this rewrite Apache serves its index.html
+# straight from disk and MOOP never sees the request. The session is never checked, so
+# NON-PUBLIC ASSEMBLIES ARE EXPOSED to anyone who knows the URL. auth_gateway.php checks
+# the session, and for a non-public assembly sends an unauthenticated visitor to log in
+# and returns them to the JBrowse URL they asked for.
+#
+# Anchored to index.html exactly: the rest of the JBrowse app (its JS, CSS and workers,
+# served from the same directory) must keep loading normally.
+# QSA preserves the ?config=...&organism=...&assembly=... query the gateway reads to
+# decide whether the requested assembly is public.
+
+RewriteEngine On
+RewriteRule ^/<site>/jbrowse2/index\.html$ /<site>/auth_gateway.php [L,QSA]
+
+# If the rule above does not fire, your Apache is likely matching per-directory (inside a
+# <Directory> or .htaccess), where the leading /<site> prefix is stripped. In that context
+# use the relative form instead — NOT both:
+#
+#   <Directory "/var/www/html/<site>/jbrowse2">
+#       RewriteEngine On
+#       RewriteRule ^index\.html$ /<site>/auth_gateway.php [L,QSA]
+#   </Directory>
+
+# ── VERIFY (do this — a 404 or a redirect is not proof of anything) ──────────────────
+#
+#   Gateway is in front of JBrowse:  logged OUT, in a private window, open
+#       http://YOUR-HOST/<site>/jbrowse2/index.html?config=...&organism=X&assembly=Y
+#     naming a NON-PUBLIC assembly. You must land on the login page. Being shown the
+#     browser means the rewrite never fired — check `apachectl -M | grep rewrite` first,
+#     since a missing mod_rewrite fails silently.
+#
+#   The rest of JBrowse still loads:  a logged-in user opens the same browser and sees
+#     tracks. A blank app means the rule is matching more than index.html.
+#
+#   The guard is the OTHER file's job. Test it with a real .php that would execute, plus a
+#   control copy in a normal location; a 404 can just mean the web user cannot read the
+#   file. See the VERIFY block in docs/apache/moop-security.conf.
