@@ -377,7 +377,7 @@
     function fetchCachedSeq(seqname, start, end, strand) {
         const cacheKey = `${seqname}:${start}:${end}:${strand}`;
         if (seqCache.has(cacheKey)) return Promise.resolve(seqCache.get(cacheKey));
-        const site   = (typeof moopSite !== 'undefined') ? moopSite : '/moop';
+        const site   = (typeof moopSite !== 'undefined') ? moopSite : window.sitePath;
         const params = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, seqname, start, end, strand });
         return fetch(`${site}/api/get_sequence.php?${params}`)
             .then(r => r.json())
@@ -591,7 +591,7 @@
 
         modal.show();
 
-        const site    = (typeof moopSite !== 'undefined') ? moopSite : '/moop';
+        const site    = (typeof moopSite !== 'undefined') ? moopSite : window.sitePath;
         const geneSet = (typeof moopGeneSet !== 'undefined') ? moopGeneSet : 'v1';
         const params  = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, gene_set: geneSet, uniquename: gene.id });
 

@@ -425,13 +425,13 @@ echo render_display_page(
         'gene_model' => $gene_model,
         'feature_loc' => $feature_loc,
         'genome_seq_available' => $genome_seq_available,
-        'page_styles' => ["/moop/css/parent.css", "/moop/css/parent-nav.css"],
+        'page_styles' => ["/$site/css/parent.css", "/$site/css/parent-nav.css"],
         'page_script' => [
-            "/moop/js/modules/collapse-handler.js",
-            "/moop/js/modules/parent-tools.js",
-            "/moop/js/modules/gene-model-viewer.js",
-            "/moop/js/modules/sequence-formatter.js",
-            "/moop/js/modules/parent-nav.js"
+            "/$site/js/modules/collapse-handler.js",
+            "/$site/js/modules/parent-tools.js",
+            "/$site/js/modules/gene-model-viewer.js",
+            "/$site/js/modules/sequence-formatter.js",
+            "/$site/js/modules/parent-nav.js"
         ],
         'inline_scripts' => [
             "const geneModelData = " . json_encode($gene_model) . ";",

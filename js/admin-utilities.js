@@ -61,7 +61,7 @@
  * After this runs, warm_organism_cache makes no NCBI network calls.
  */
 function syncNcbiTaxonomy(btn, statusEl) {
-  const sitePath  = window.sitePath || '/moop';
+  const sitePath  = window.sitePath;
   const endpoint  = sitePath + '/admin/api/sync_ncbi_taxonomy.php';
   const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const label     = btn ? btn.innerHTML : '';
@@ -118,7 +118,7 @@ function syncNcbiTaxonomy(btn, statusEl) {
  * @param {string}           label    - Idle label restored on the button after failure
  */
 function refreshOrganismCache(btn, statusEl, force = false, label = '<i class="fa fa-sync-alt"></i> Refresh Cache', organism = null) {
-  const sitePath = window.sitePath || '/moop';
+  const sitePath = window.sitePath;
   const endpoint = sitePath + '/admin/api/refresh_organism_cache.php';
   const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 

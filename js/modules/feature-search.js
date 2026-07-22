@@ -99,7 +99,7 @@
         if (wrap) wrap.innerHTML = '';
         setStatus('Searching…');
 
-        const site = (typeof moopSite !== 'undefined') ? moopSite : '/moop';
+        const site = (typeof moopSite !== 'undefined') ? moopSite : window.sitePath;
         fetch(`${site}/api/feature_search.php?q=${encodeURIComponent(q)}`)
             .then(r => r.json())
             .then(data => {

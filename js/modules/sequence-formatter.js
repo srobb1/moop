@@ -64,7 +64,7 @@
     function fetchSeq(seqname, start, end, strand) {
         const key = `${seqname}:${start}:${end}:${strand}`;
         if (_seqCache.has(key)) return Promise.resolve(_seqCache.get(key));
-        const site   = (typeof moopSite !== 'undefined') ? moopSite : '/moop';
+        const site   = (typeof moopSite !== 'undefined') ? moopSite : window.sitePath;
         const params = new URLSearchParams({ organism: moopOrganism, assembly: moopAssembly, seqname, start, end, strand });
         return fetch(`${site}/api/get_sequence.php?${params}`)
             .then(r => r.json())

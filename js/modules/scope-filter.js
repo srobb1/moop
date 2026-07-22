@@ -18,7 +18,7 @@
 
 class ScopeFilter {
     constructor(config) {
-        this.sitePath      = config.sitePath || window.sitePath || '/moop';
+        this.sitePath      = config.sitePath || window.sitePath;
         this.organisms     = config.organisms || [];
         this.selectedScope = config.selectedScope ? JSON.parse(JSON.stringify(config.selectedScope)) : null;
         this.hierarchy     = null;

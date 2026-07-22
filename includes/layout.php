@@ -190,6 +190,16 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
         - Easy to add/remove scripts site-wide
         - Page-specific scripts load last (can depend on libraries)
         -->
+        <!-- The URL prefix this deployment is served under ("/moop" here), from ConfigManager.
+             Set FIRST, before any module, for the same reason the CSRF token is a global meta
+             tag: a JS module must never carry its own copy of it. A dozen modules used to fall
+             back to a hardcoded '/moop' whenever a page forgot to pass sitePath — and that does
+             not fail visibly, it quietly builds URLs pointing at a DIFFERENT deployment.
+             Assigned as a window property, never `const sitePath`, because several pages still
+             declare their own `const sitePath` via inline_scripts and re-declaring a top-level
+             const is a SyntaxError that would take the whole page's JS down. -->
+        <script>window.sitePath = "/<?= htmlspecialchars($config->getString('site'), ENT_QUOTES) ?>";</script>
+
         <!-- Vendor JS — self-hosted, no external CDN dependency -->
         <script src="/<?= $config->getString('site') ?>/js/vendor/jquery.min.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/vendor/bootstrap.bundle.min.js"></script>

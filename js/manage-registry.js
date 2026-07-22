@@ -599,7 +599,7 @@ function generateRegistry() {
     btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating...';
     
     // Call the backend API to generate registry
-    fetch('/moop/admin/api/generate_registry.php', {
+    fetch(window.sitePath + '/admin/api/generate_registry.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

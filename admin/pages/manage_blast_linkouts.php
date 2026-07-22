@@ -417,7 +417,7 @@ document.querySelectorAll('.gen-feature-coords-btn').forEach(btn => {
       const csrfMeta = document.querySelector('meta[name="csrf-token"]');
       if (csrfMeta) fd.append('csrf_token', csrfMeta.content);
 
-      const res = await fetch('/moop/admin/api/generate_feature_coords.php', { method: 'POST', body: fd });
+      const res = await fetch(window.sitePath + '/admin/api/generate_feature_coords.php', { method: 'POST', body: fd });
       const data = await res.json();
 
       if (data.success) {

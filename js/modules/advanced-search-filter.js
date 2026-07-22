@@ -15,7 +15,7 @@ class AdvancedSearchFilter {
     constructor(config) {
         // Accept either organisms array or single organism for backwards compatibility
         this.organisms = config.organisms || (config.organism ? [config.organism] : []);
-        this.sitePath = config.sitePath || '/moop';
+        this.sitePath = config.sitePath || window.sitePath;
         this.onApply = config.onApply || (() => {});
         this.sourceTypes = {};
         // Initialize selectedSources from config or empty

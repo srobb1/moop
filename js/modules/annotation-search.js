@@ -26,7 +26,7 @@ class AnnotationSearch {
             extraAjaxParams: config.extraAjaxParams || {},
             noReadMoreButton: config.noReadMoreButton || false,
             noScopeFilter: config.noScopeFilter || false,
-            sitePath: config.sitePath || window.sitePath || '/moop'
+            sitePath: config.sitePath || window.sitePath
         };
 
         this.allResults = [];

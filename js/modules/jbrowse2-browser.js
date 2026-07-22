@@ -11,7 +11,7 @@
 (function () {
     'use strict';
 
-    const site = (typeof moopSite !== 'undefined') ? moopSite : '/moop';
+    const site = (typeof moopSite !== 'undefined') ? moopSite : window.sitePath;
 
     // ── URL builder ───────────────────────────────────────────────────────────
     function buildIframeUrl(organism, assembly, loc) {

@@ -13,7 +13,7 @@
      */
     async function fetchAssemblyConfig(assemblyName) {
         try {
-            const site = window.moopSite || 'moop';
+            const site = window.moopSite || (window.sitePath || '').replace(/^\//, '');
             const url = `/${site}/api/jbrowse2/get-config.php?assembly=${encodeURIComponent(assemblyName)}`;
             
             console.log('Fetching from:', url);

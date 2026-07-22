@@ -26,7 +26,7 @@ function handleToolClick(toolId) {
     const toolPath = toolBtn.getAttribute('data-tool-path');
     if (!toolPath) return;
 
-    const siteName = typeof sitePath !== 'undefined' ? sitePath.replace(/^\//,'').split('/')[0] : 'moop';
+    const siteName = (typeof sitePath !== 'undefined' ? sitePath : window.sitePath).replace(/^\//,'').split('/')[0];
 
     const form = document.createElement('form');
     form.method = 'POST';

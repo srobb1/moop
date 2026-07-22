@@ -366,7 +366,7 @@ function convertToTrackUris($track_refs, $organism, $assembly) {
             'name' => $ref['name'],
             'category' => $ref['category'],
             'assemblyNames' => ["{$organism}_{$assembly}"],
-            'uri' => "/moop/api/jbrowse2/config-optimized.php?track=" . urlencode($ref['trackId']) . 
+            'uri' => "/" . ConfigManager::getInstance()->getString('site') . "/api/jbrowse2/config-optimized.php?track=" . urlencode($ref['trackId']) .
                      "&organism=" . urlencode($organism) . 
                      "&assembly=" . urlencode($assembly)
         ];

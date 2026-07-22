@@ -10,7 +10,7 @@
 
     // Configuration
     const CONFIG = {
-        apiUrl: '/moop/api/jbrowse2/config.php',
+        apiUrl: window.sitePath + '/api/jbrowse2/config.php',
         containerSelector: '#assembly-list-container',
         countSelector: '#assembly-count',
         userStatusSelector: '#user-status'
@@ -155,7 +155,7 @@
                     <h4>Public Assemblies Not Available</h4>
                     <p>There are currently no public assemblies available for browsing.</p>
                     <p class="text-muted">
-                        <a href="/moop/login.php">Log in</a> to access additional data.
+                        <a href="${window.sitePath}/login.php">Log in</a> to access additional data.
                     </p>
                 </div>
             `;
@@ -277,7 +277,7 @@
             
             // Load configuration from API
             const userInfo = window.moopUserInfo;
-            const response = await fetch('/moop/api/jbrowse2/get-config.php');
+            const response = await fetch(window.sitePath + '/api/jbrowse2/get-config.php');
             
             if (!response.ok) {
                 throw new Error(`Failed to load config: ${response.status}`);
@@ -319,7 +319,7 @@
                     ></iframe>
                 </div>
                 <div style="margin-top: 1rem;">
-                    <a href="/moop/jbrowse2.php" class="btn btn-sm btn-secondary">
+                    <a href="${window.sitePath}/jbrowse2.php" class="btn btn-sm btn-secondary">
                         ← Back to Assembly List
                     </a>
                 </div>

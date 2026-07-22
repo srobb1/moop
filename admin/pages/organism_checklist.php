@@ -302,7 +302,7 @@
                 <ul class="mb-2">
                   <li>Create your own <code>organism.sqlite</code> file with gene/feature data</li>
                   <li>Or use an empty placeholder database to get started</li>
-                  <li>See the <a href="/moop/help.php?topic=organism-data-organization#database-schema" target="_blank"><strong>Database Schema section</strong></a> in the organism data organization help for detailed information on file format and structure</li>
+                  <li>See the <a href="/<?= htmlspecialchars($config->getString('site')) ?>/help.php?topic=organism-data-organization#database-schema" target="_blank"><strong>Database Schema section</strong></a> in the organism data organization help for detailed information on file format and structure</li>
                 </ul>
               </div>
             <?php endif; ?>

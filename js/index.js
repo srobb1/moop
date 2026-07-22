@@ -148,7 +148,7 @@ function updateSelectedList() {
         return;
     }
 
-    const site = typeof sitePath !== 'undefined' ? sitePath.replace(/^\//, '').split('/')[0] : 'moop';
+    const site = (typeof sitePath !== 'undefined' ? sitePath : window.sitePath).replace(/^\//, '').split('/')[0];
     listEl.innerHTML = Array.from(selectedOrganisms).map(org => {
         const info    = orgDataMap[org];
         const name    = info ? `<em>${escHtml(info.display_name)}</em>` : escHtml(org.replace(/_/g, ' '));
@@ -182,7 +182,7 @@ function handleToolClick(toolId) {
     const toolPath = btn.getAttribute('data-tool-path');
     if (!toolPath) return;
 
-    const site = typeof sitePath !== 'undefined' ? sitePath.replace(/^\//,'').split('/')[0] : 'moop';
+    const site = (typeof sitePath !== 'undefined' ? sitePath : window.sitePath).replace(/^\//,'').split('/')[0];
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = `/${site}${toolPath}`;
