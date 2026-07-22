@@ -58,15 +58,19 @@ if (empty($search_keywords) || empty($organism)) {
     exit;
 }
 
-// Check access: Admin has access to everything
-$is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+// Check access: Admin has access to everything.
+// Read the role through moop_session_is_admin() rather than $_SESSION['role'] directly, so
+// an admin using "View as PUBLIC" gets a visitor's search results here too. A raw read would
+// have quietly kept full search access during the preview — the worst possible outcome, since
+// the preview would then report that public users can find data they actually cannot.
+$is_admin = moop_session_is_admin();
 $user_has_group_access = has_access('COLLABORATOR', $group);
 $organism_is_public = is_public_organism($organism);
 $user_has_organism_access = has_access('COLLABORATOR', $organism);
 
 if (!$is_admin && !$user_has_group_access && !$organism_is_public && !$user_has_organism_access) {
     echo json_encode(['error' => 'Access denied', 'results' => [], 'debug' => [
-        'session_role' => $_SESSION['role'] ?? 'not set',
+        'session_role' => moop_session_role() ?? 'not set',
         'is_admin' => $is_admin
     ]]);
     exit;

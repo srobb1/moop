@@ -62,7 +62,7 @@ $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
         <li class="nav-item">
           <a class="nav-link" href="/<?= $site ?>/help.php">Help</a>
         </li>
-        <?php if (is_logged_in() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+        <?php if (is_logged_in() && moop_session_is_admin()): ?>
         <li class="nav-item">
           <a id="admin_tools_link" class="nav-link" href="/<?= $site ?>/admin/admin.php"><i class="fa fa-tools me-1"></i> Admin Tools</a>
         </li>
@@ -74,6 +74,34 @@ $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
         <li class="nav-item">
           <span class="<?= $badge_class ?>"><?= htmlspecialchars($access_text) ?></span>
         </li>
+
+        <?php if (moop_viewing_as_public()): ?>
+        <!-- Second exit from the public preview. The banner above the navbar scrolls away on a
+             long page; this one is in the sticky bar, so the way out is always on screen. -->
+        <li class="nav-item">
+          <form method="post" action="/<?= $site ?>/view_as.php" class="m-0 d-inline">
+            <?= csrf_input_field() ?>
+            <input type="hidden" name="action" value="leave">
+            <input type="hidden" name="return" value="<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '') ?>">
+            <button type="submit" class="btn btn-sm btn-warning">
+              <i class="fa fa-eye me-1"></i>Leave preview
+            </button>
+          </form>
+        </li>
+        <?php elseif (moop_session_is_admin()): ?>
+        <li class="nav-item">
+          <form method="post" action="/<?= $site ?>/view_as.php" class="m-0 d-inline">
+            <?= csrf_input_field() ?>
+            <input type="hidden" name="action" value="enter">
+            <input type="hidden" name="return" value="<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '') ?>">
+            <button type="submit" class="btn btn-sm btn-outline-light"
+                    title="See this page as an unauthenticated visitor sees it">
+              <i class="fa fa-eye me-1"></i>View as public
+            </button>
+          </form>
+        </li>
+        <?php endif; ?>
+
         <li class="nav-item">
           <?php if (get_access_level() === 'IP_IN_RANGE' || !is_logged_in()): ?>
             <a id="login_link" class="nav-link" href="/<?= $site ?>/login.php">Log In <i class="fa fa-sign-in-alt"></i></a>
@@ -87,7 +115,7 @@ $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
   </div>
 </nav>
 
-<?php if (is_logged_in() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+<?php if (is_logged_in() && moop_session_is_admin()): ?>
 <!-- Admin dashboard loading overlay. The dashboard's first load per session can be slow
      (once-per-session housekeeping snapshot + cold DB reads right after a data rebuild),
      so give the admin immediate feedback instead of a frozen page — otherwise it looks

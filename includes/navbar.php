@@ -13,6 +13,8 @@
  */
 ?>
 
+<?php include __DIR__ . '/view_as_banner.php'; ?>
+
 <?php include_once __DIR__ . '/banner.php'; ?>
 
 <?php

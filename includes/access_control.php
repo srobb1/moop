@@ -46,22 +46,73 @@ if (!empty($ip_ranges) && isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
     );
 }
 
-foreach ($ip_ranges as $range) {
-    $range_start = $range['start'] ?? null;
-    $range_end = $range['end'] ?? null;
-    
-    if ($range_start && $range_end) {
-        $start_long = ip2long($range_start);
-        $end_long = ip2long($range_end);
-        
-        if ($visitor_ip_long !== false && $visitor_ip_long >= $start_long && $visitor_ip_long <= $end_long) {
-            if (empty($_SESSION["logged_in"])) {
-                $_SESSION["logged_in"] = true;
-                $_SESSION["username"] = "IP_USER_" . $visitor_ip;
-                $_SESSION["access_level"] = 'IP_IN_RANGE';
-                $_SESSION["access"] = [];
+/**
+ * "View as PUBLIC" — an admin's only way to see what an unauthenticated visitor sees.
+ *
+ * WHY THIS EXISTS: auto_login_ip_ranges runs below on EVERY request, and logout.php only
+ * calls session_destroy() — so from inside a trusted subnet you are re-logged-in as
+ * IP_IN_RANGE on the very next request. There is no way to be logged out from an internal
+ * address, which means the PUBLIC path (what a visitor actually sees) is otherwise
+ * impossible to test on a deployment reached only from trusted IPs. Publishing a gene set
+ * without being able to verify it is publishing blind.
+ *
+ * HOW IT WORKS: the real identity stays in $_SESSION untouched; only the ACCESSORS below
+ * lie. That is what lets view_as.php verify "are you really an admin?" while the rest of
+ * the app sees a public visitor — an admin can always get back out.
+ *
+ * Toggled only via /view_as.php (POST + CSRF + real-admin check).
+ */
+function moop_viewing_as_public() {
+    return !empty($_SESSION['view_as_public']);
+}
+
+/**
+ * The REAL session identity, ignoring any active "view as PUBLIC" mode.
+ *
+ * Only view_as.php should need these — everything else must go through the normal
+ * accessors, or the preview would not be a faithful preview.
+ */
+function moop_real_access_level() {
+    return $_SESSION['access_level'] ?? 'PUBLIC';
+}
+
+function moop_real_username() {
+    return $_SESSION['username'] ?? '';
+}
+
+/**
+ * Is the REAL session an administrator?
+ *
+ * Deliberately checks both identity sources: the access level AND the users-file role.
+ * admin_access_check.php requires both to agree, so entering/leaving the preview must
+ * use the same bar — otherwise a non-admin could reach the toggle.
+ */
+function moop_real_is_admin() {
+    return moop_real_access_level() === 'ADMIN'
+        && ($_SESSION['role'] ?? null) === 'admin';
+}
+
+// The auto-login below would re-grant IP_IN_RANGE the moment a preview session lost its
+// logged_in flag, leaving the banner claiming "viewing as public" while the user quietly
+// had full data access — a preview that lies is worse than no preview.
+if (!moop_viewing_as_public()) {
+    foreach ($ip_ranges as $range) {
+        $range_start = $range['start'] ?? null;
+        $range_end = $range['end'] ?? null;
+
+        if ($range_start && $range_end) {
+            $start_long = ip2long($range_start);
+            $end_long = ip2long($range_end);
+
+            if ($visitor_ip_long !== false && $visitor_ip_long >= $start_long && $visitor_ip_long <= $end_long) {
+                if (empty($_SESSION["logged_in"])) {
+                    $_SESSION["logged_in"] = true;
+                    $_SESSION["username"] = "IP_USER_" . $visitor_ip;
+                    $_SESSION["access_level"] = 'IP_IN_RANGE';
+                    $_SESSION["access"] = [];
+                }
+                break;
             }
-            break;
         }
     }
 }
@@ -69,21 +120,56 @@ foreach ($ip_ranges as $range) {
 /**
  * Helper functions to access session data securely
  * These functions always read from $_SESSION (single source of truth)
+ *
+ * Each one answers as a PUBLIC visitor while "view as PUBLIC" is active. Everything that
+ * decides access — has_access(), has_assembly_access(), has_gene_set_access(),
+ * require_access(), admin_access_check.php — is built on these four, so overriding here
+ * covers the whole app rather than each call site.
  */
 function get_access_level() {
+    if (moop_viewing_as_public()) {
+        return 'PUBLIC';
+    }
     return $_SESSION["access_level"] ?? 'PUBLIC';
 }
 
 function get_user_access() {
+    if (moop_viewing_as_public()) {
+        return [];
+    }
     return $_SESSION["access"] ?? [];
 }
 
 function is_logged_in() {
+    if (moop_viewing_as_public()) {
+        return false;
+    }
     return $_SESSION["logged_in"] ?? false;
 }
 
 function get_username() {
+    if (moop_viewing_as_public()) {
+        return '';
+    }
     return $_SESSION["username"] ?? '';
+}
+
+/**
+ * The session's users-file role ('admin'), or null.
+ *
+ * $_SESSION['role'] is a SECOND identity source alongside access_level, and reading it raw
+ * bypasses the preview — the Admin Tools link and the annotation-search admin branch both
+ * did exactly that. Read it through here so "view as PUBLIC" cannot be half-applied.
+ */
+function moop_session_role() {
+    if (moop_viewing_as_public()) {
+        return null;
+    }
+    return $_SESSION['role'] ?? null;
+}
+
+function moop_session_is_admin() {
+    return moop_session_role() === 'admin';
 }
 
 /**
@@ -549,9 +635,14 @@ if (session_status() === PHP_SESSION_ACTIVE) {
 if (basename($_SERVER['SCRIPT_FILENAME'] ?? '') !== 'verify-human.php') {
     $config = ConfigManager::getInstance();
     $ts     = $config->getArray('turnstile', []);
+    // "View as PUBLIC" is exempt on purpose. The preview answers "what data does a visitor
+    // see", not "does the bot challenge work" — and this deployment is reachable only from
+    // internal addresses, so if the challenge could not reach Cloudflare the admin would be
+    // bounced into an unpassable redirect with no page left to click "Leave preview" on.
     if (!empty($ts['enabled'])
         && empty($_SESSION['human_verified'])
         && !is_logged_in()
+        && !moop_viewing_as_public()
     ) {
         $return = $_SERVER['REQUEST_URI'] ?? '/';
         header('Location: /' . $config->getString('site', 'moop') . '/verify-human.php?return=' . urlencode($return));
