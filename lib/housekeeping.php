@@ -70,6 +70,7 @@ function housekeeping_hydrate_session_from_status(): void {
     if (isset($all['site_data_backup'])) $_SESSION['site_data_backup'] = $all['site_data_backup'];
     if (isset($all['env_warnings']))     $_SESSION['env_warnings']     = $all['env_warnings'];
     if (isset($all['perm_summary']))     $_SESSION['perm_summary']     = $all['perm_summary'];
+    if (array_key_exists('jbrowse_version', $all)) $_SESSION['jbrowse_version'] = $all['jbrowse_version'];
 }
 
 /**
@@ -137,6 +138,12 @@ function housekeeping_task_registry(): array {
             'fn'    => 'housekeeping_check_ncbi_taxonomy_update',
             'label' => 'NCBI taxonomy update',
             'desc'  => 'Syncs the local NCBI taxonomy dump if it is more than 30 days old. Reads a local timestamp first, so no network call happens unless an update is actually due.',
+        ],
+        [
+            'name'  => 'jbrowse_version',
+            'fn'    => 'housekeeping_check_jbrowse_version',
+            'label' => 'JBrowse2 version',
+            'desc'  => 'Compares the bundled JBrowse2 against the latest upstream release. Reads the local version every run, but contacts GitHub at most once a week. Report-only — upgrading is a CLI job.',
         ],
     ];
 }
@@ -908,4 +915,79 @@ function housekeeping_check_ncbi_taxonomy_update() {
     } else {
         @unlink($lock_file);
     }
+}
+
+/**
+ * Is the bundled JBrowse2 behind the latest upstream release?
+ *
+ * NETWORK-GATED, following housekeeping_check_ncbi_taxonomy_update(): the local version is
+ * read on every run (a 6-byte file), but GitHub is contacted at most once every 7 days.
+ * Housekeeping runs hourly, so an ungated check would be ~168 pointless API calls a week
+ * against a project that releases every few weeks.
+ *
+ * Report-only by design. It never upgrades anything: upgrading has to happen from a shell
+ * (jbrowse2/ is the one tree where read-only-to-the-web-server is the real defence — see
+ * docs/JBrowse2/UPGRADING.md), and it needs a human to verify tracks still render afterwards.
+ *
+ * Failure is silent and non-sticky: a host with no outbound network, or GitHub being down,
+ * leaves the previously known result in place rather than raising an alarm the admin cannot
+ * act on. `latest` is simply absent until a check succeeds.
+ */
+function housekeeping_check_jbrowse_version() {
+    $config    = ConfigManager::getInstance();
+    $site_path = $config->getPath('site_path');
+    $version_file = $site_path . '/jbrowse2/version.txt';
+
+    // No JBrowse installed → nothing to report. Not an error; JBrowse is optional.
+    if (!file_exists($version_file)) {
+        $_SESSION['jbrowse_version'] = null;
+        housekeeping_persist_status('jbrowse_version', null);
+        return;
+    }
+
+    $current = trim((string)@file_get_contents($version_file));
+    if ($current === '') return;
+
+    // Reuse whatever the last successful check found; only the local version is refreshed.
+    $prev   = $_SESSION['jbrowse_version'] ?? [];
+    $latest = $prev['latest']     ?? null;
+    $when   = $prev['checked_at'] ?? null;
+
+    $due = !$when || (time() - (int)strtotime($when)) > (7 * 86400);
+
+    if ($due && function_exists('curl_init')) {
+        $ch = curl_init('https://api.github.com/repos/GMOD/jbrowse-components/releases/latest');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 8,
+            CURLOPT_CONNECTTIMEOUT => 4,
+            CURLOPT_USERAGENT      => 'MOOP-version-check',
+            CURLOPT_HTTPHEADER     => ['Accept: application/vnd.github+json'],
+        ]);
+        $body = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($code === 200 && $body) {
+            $data = json_decode($body, true);
+            $tag  = is_array($data) ? ($data['tag_name'] ?? '') : '';
+            // Releases are tagged "v4.3.0"; version.txt holds "4.3.0".
+            if (preg_match('/^v?(\d+\.\d+\.\d+)$/', trim($tag), $m)) {
+                $latest = $m[1];
+                $when   = date('c');
+            }
+        }
+        // Any other outcome: keep the previous $latest/$when. Silence is deliberate.
+    }
+
+    $result = [
+        'current'    => $current,
+        'latest'     => $latest,
+        'checked_at' => $when,
+        // version_compare handles 4.1.15 > 4.1.3 correctly; a string compare does not.
+        'outdated'   => ($latest !== null) && version_compare($current, $latest, '<'),
+    ];
+
+    $_SESSION['jbrowse_version'] = $result;
+    housekeeping_persist_status('jbrowse_version', $result);
 }

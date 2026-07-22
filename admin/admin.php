@@ -79,6 +79,10 @@ $data = [
     'config' => $config,
     'site' => $site,
     'site_data_backup' => $_SESSION['site_data_backup'] ?? null,
+    // Precomputed by housekeeping_check_jbrowse_version() and hydrated from
+    // logs/.housekeeping_status.json — never computed on dashboard load, because it can
+    // involve a network call. Null when JBrowse is not installed.
+    'jbrowse_version' => $_SESSION['jbrowse_version'] ?? null,
     'cache_info' => $cache_info,
     'cache_stale' => $cache_stale,
     'cache_changed_orgs' => $cache_changed_orgs,

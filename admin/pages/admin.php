@@ -245,6 +245,57 @@
       </div>
       <?php endif; ?>
 
+    <!-- JBrowse2 version. Same row as the organism cache and housekeeping freshness: all
+         three answer "how current is this install". Always visible, like the cache widget,
+         because "you are on the latest" is worth seeing — a card that only appears when
+         something is wrong cannot tell you the check is actually running.
+         Report-only: upgrading is a CLI job (docs/JBrowse2/UPGRADING.md), so there is no
+         button here. The figure is precomputed by housekeeping; GitHub is contacted at most
+         once a week, so `checked_at` is stated rather than implied. -->
+    <?php if (!empty($jbrowse_version['current'])): ?>
+      <?php
+        $jb_cur  = $jbrowse_version['current'];
+        $jb_new  = $jbrowse_version['latest']   ?? null;
+        $jb_when = $jbrowse_version['checked_at'] ?? null;
+        $jb_old  = !empty($jbrowse_version['outdated']);
+        $jb_age  = '';
+        if ($jb_when) {
+            $d = floor((time() - strtotime($jb_when)) / 86400);
+            $jb_age = $d < 1 ? 'today' : ($d == 1 ? 'yesterday' : $d . 'd ago');
+        }
+      ?>
+      <div class="<?= $jb_old ? 'alert alert-warning' : '' ?> mb-2">
+        <div class="d-flex align-items-center justify-content-between gap-3">
+          <div>
+            <i class="fa fa-dna me-2"></i>
+            <strong>JBrowse2</strong> —
+            <?php if ($jb_old): ?>
+              version <strong><?= htmlspecialchars($jb_cur) ?></strong>, but
+              <strong><?= htmlspecialchars($jb_new) ?></strong> is available
+            <?php elseif ($jb_new): ?>
+              <i class="fa fa-check text-success"></i> Up to date — version
+              <strong><?= htmlspecialchars($jb_cur) ?></strong>
+            <?php else: ?>
+              version <strong><?= htmlspecialchars($jb_cur) ?></strong>
+              <span class="text-muted">— latest release not checked yet</span>
+            <?php endif; ?>
+            <?php if ($jb_age): ?>
+              <span class="text-muted small">(checked <?= htmlspecialchars($jb_age) ?>)</span>
+            <?php endif; ?>
+          </div>
+          <div class="flex-shrink-0">
+            <a href="<?= $jb_old
+                        ? '../docs/JBrowse2/UPGRADING.md'
+                        : 'https://github.com/GMOD/jbrowse-components/releases' ?>"
+               class="btn btn-sm <?= $jb_old ? 'btn-warning' : 'btn-outline-secondary' ?>"
+               <?= $jb_old ? '' : 'target="_blank" rel="noopener"' ?>>
+              <i class="fa fa-book"></i> <?= $jb_old ? 'How to upgrade' : 'Release notes' ?>
+            </a>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
+
     <!-- Organism cache freshness. Sits with the housekeeping card below rather than under
          Data Management: both answer "how current are the figures on this page", and the
          cache status alone above a row of navigation cards read as an orphan. Element IDs
