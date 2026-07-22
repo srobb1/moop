@@ -80,22 +80,42 @@
     </div>
     <div class="collapse" id="aboutOrganismGroups">
       <div class="card-body">
-        <p><strong>Purpose:</strong> Organize how organisms are categorized and viewed using flexible multi-group tagging.</p>
-        
-        <p><strong>Why It Matters:</strong></p>
-        <ul>
-          <li>Organisms can belong to multiple groups (e.g., "Flatworms", "Invertebrates", "Sanchez Lab" simultaneously)</li>
-          <li>The special "Public" group makes organism assemblies visible to ALL visitors (including anonymous users)</li>
-          <li>Non-public assemblies are only visible to logged-in users with appropriate access</li>
-          <li>Groups organize organisms by taxonomy, research group, project, access level, or any dimension you choose</li>
-        </ul>
-        
-        <p><strong>How It Works:</strong> Each organism assembly gets one or more group tags. Organism assembly names are pulled from their directory names. Users see organisms based on:</p>
-        <ul>
-          <li><strong>Logged in:</strong> Their assigned groups + the Public group</li>
-          <li><strong>Not logged in:</strong> Only the Public group organisms</li>
-        </ul>
-        
+        <p><strong>Purpose:</strong> Groups organize how organisms are categorized and browsed —
+           by taxonomy, research group, project, or any dimension you choose. An assembly can
+           belong to several groups at once.</p>
+
+        <div class="alert alert-info">
+          <h6 class="fw-semibold"><i class="fa fa-lock me-1"></i>How visibility &amp; permissions work</h6>
+          <p class="mb-2">Two different questions decide who can see a gene set — keep them apart:</p>
+          <ul class="mb-2">
+            <li><strong>Is the data open to everyone?</strong> Flip the <strong>Visibility</strong>
+                toggle in the table below. <span class="text-success fw-semibold">Public</span> means
+                <em>anyone</em>, including logged-out visitors; <span class="text-muted fw-semibold">Restricted</span>
+                means only the people below. This is a property of the gene set, and it is set
+                <strong>here</strong>.</li>
+            <li><strong>Who else gets a key while it's restricted?</strong> That is about people and
+                networks, and is set elsewhere:
+              <ul class="mb-0">
+                <li><strong>Collaborators</strong> — specific logged-in users you grant access to
+                    specific organisms, in <a href="manage_users.php">Manage Users</a>.</li>
+                <li><strong>IP-range users</strong> — anyone on a trusted network is auto-logged-in
+                    with full data access, configured in
+                    <a href="manage_site_config.php">Site Configuration</a>.</li>
+                <li><strong>Admins</strong> — see everything.</li>
+              </ul>
+            </li>
+          </ul>
+          <p class="mb-0 small text-muted">Why the split? “Is this data public?” belongs with the
+            <em>data</em> (here). “What may this person see?” belongs with the <em>person</em>
+            (Manage Users) — otherwise you would edit every gene set to give one collaborator access.
+            The gene set decides if the door is open to all; Manage Users and Site Configuration hand
+            specific people a key when it is not.</p>
+        </div>
+
+        <p><strong>Groups do not control visibility.</strong> A group is just a label for browsing.
+           Making a gene set public no longer means adding it to a “Public” group — it keeps its real
+           groups (e.g. Bats) and simply flips to Public.</p>
+
         <p class="mb-0"><strong>What You Can Do:</strong></p>
         <ul class="mb-0">
           <li>Assign organisms to multiple groups at once</li>
@@ -135,6 +155,7 @@
         <th>Assembly</th>
         <th>Gene Set</th>
         <th>Groups</th>
+        <th>Visibility</th>
         <th>Status</th>
         <th>Action</th>
       </tr>
@@ -163,6 +184,20 @@
                 <span class="text-muted fst-italic small">no groups</span>
               <?php endif; ?>
             </span>
+          </td>
+          <td>
+            <?php if ($data['_fs_exists']):
+              $is_pub = ($data['public'] ?? false) === true; ?>
+              <div class="form-check form-switch mb-0" title="Public gene sets are visible to everyone; restricted ones only to collaborators and IP-range users.">
+                <input class="form-check-input gene-set-public-toggle" type="checkbox" role="switch"
+                       <?= $is_pub ? 'checked' : '' ?> <?= $file_write_error ? 'disabled' : '' ?>>
+                <label class="form-check-label small gene-set-public-label <?= $is_pub ? 'text-success fw-semibold' : 'text-muted' ?>">
+                  <?= $is_pub ? 'Public' : 'Restricted' ?>
+                </label>
+              </div>
+            <?php else: ?>
+              <span class="text-muted small">—</span>
+            <?php endif; ?>
           </td>
           <td>
             <?php if (!$data['_fs_exists']): ?>

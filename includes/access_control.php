@@ -203,6 +203,32 @@ function groups_include_public($groups) {
 }
 
 /**
+ * Whether a single organism_assembly_groups.json entry is public — visible to
+ * everyone at access level PUBLIC.
+ *
+ * Public is a per-gene-set PROPERTY OF THE DATA: the entry's own `public: true`
+ * flag, set via the visibility toggle on Manage Groups. A public gene set stays
+ * in whatever taxonomic groups it already belongs to — it does NOT join a "PUBLIC"
+ * group. The legacy "PUBLIC" group membership is still honoured so any older data
+ * keeps working, but new data uses the flag.
+ *
+ * FAIL-CLOSED: only a literal boolean `true` (or the legacy group) makes an entry
+ * public. A missing, string, or malformed flag means NOT public. This is the one
+ * place that decides it — every is_public_* check funnels through here.
+ *
+ * @param  array $entry One decoded organism_assembly_groups.json entry.
+ * @return bool
+ */
+if (!function_exists('entry_is_public')) {
+function entry_is_public($entry) {
+    if (is_array($entry) && ($entry['public'] ?? null) === true) {
+        return true;
+    }
+    return groups_include_public(is_array($entry) ? ($entry['groups'] ?? null) : null);
+}
+}
+
+/**
  * Check if an organism belongs to a public group
  *
  * @param string $organism_name The organism name
@@ -225,7 +251,7 @@ function is_public_organism($organism_name) {
     
     foreach ($groups_data as $entry) {
         if ($entry['organism'] === $organism_name) {
-            if (groups_include_public($entry['groups'] ?? null)) {
+            if (entry_is_public($entry)) {
                 return true;
             }
         }
@@ -259,7 +285,7 @@ function is_public_assembly($organism_name, $assembly_name) {
     
     foreach ($groups_data as $entry) {
         if ($entry['organism'] === $organism_name && $entry['assembly'] === $assembly_name) {
-            if (groups_include_public($entry['groups'] ?? null)) {
+            if (entry_is_public($entry)) {
                 return true;
             }
         }
@@ -296,7 +322,7 @@ function is_public_gene_set($organism_name, $assembly_name, $gene_set) {
         if ($entry['organism'] === $organism_name &&
             $entry['assembly'] === $assembly_name &&
             ($entry['gene_set'] ?? '') === $gene_set) {
-            return groups_include_public($entry['groups'] ?? null);
+            return entry_is_public($entry);
         }
     }
 
@@ -326,7 +352,7 @@ function is_public_group($group_name) {
     }
     
     foreach ($groups_data as $entry) {
-        if (in_array($group_name, $entry['groups']) && groups_include_public($entry['groups'])) {
+        if (in_array($group_name, $entry['groups']) && entry_is_public($entry)) {
             return true;
         }
     }

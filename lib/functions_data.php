@@ -62,6 +62,8 @@ function getAllGroupCards($group_data) {
     $group_organisms = [];
     foreach ($group_data as $data) {
         foreach ($data['groups'] as $group) {
+            // Legacy access keyword, not a real display group — never card it.
+            if (strtoupper(trim((string)$group)) === 'PUBLIC') continue;
             if (!isset($cards[$group])) {
                 $cards[$group] = [
                     'title' => $group,
@@ -93,8 +95,12 @@ function getPublicGroupCards($group_data) {
 
     // Find all groups that contain at least one public assembly
     foreach ($group_data as $data) {
-        if (groups_include_public($data['groups'])) {
+        if (entry_is_public($data)) {
             foreach ($data['groups'] as $group) {
+                // Never surface the legacy "PUBLIC" access group as a browsable card —
+                // public is a per-gene-set flag now, and public gene sets appear under
+                // their real (taxonomic) groups.
+                if (strtoupper(trim((string)$group)) === 'PUBLIC') continue;
                 if (!isset($public_groups[$group])) {
                     $public_groups[$group] = [
                         'title' => $group,

@@ -1019,3 +1019,47 @@ document.addEventListener('click', async function (e) {
     }
 });
 });
+
+// ── Gene-set visibility toggle (Public / Restricted) ────────────────────────
+// Saves on flip. csrf.js wraps window.fetch, so the token is attached for us.
+// Reverts the switch and explains if the server rejects the change.
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.gene-set-public-toggle').forEach(function (toggle) {
+    toggle.addEventListener('change', function () {
+      const row     = toggle.closest('tr');
+      const label   = row ? row.querySelector('.gene-set-public-label') : null;
+      const desired = toggle.checked;
+      toggle.disabled = true;
+
+      const fd = new FormData();
+      fd.append('organism', row.dataset.organism);
+      fd.append('assembly', row.dataset.assembly);
+      fd.append('gene_set', row.dataset.geneSet);
+
+      fetch('/' + sitePath.replace(/^\//, '') + '/admin/api/toggle_gene_set_public.php', {
+        method: 'POST',
+        body: fd
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          toggle.disabled = false;
+          if (data.success) {
+            toggle.checked = data.public;
+            if (label) {
+              label.textContent = data.public ? 'Public' : 'Restricted';
+              label.className = 'form-check-label small gene-set-public-label ' +
+                (data.public ? 'text-success fw-semibold' : 'text-muted');
+            }
+          } else {
+            toggle.checked = !desired; // revert on failure
+            alert('Could not change visibility: ' + (data.message || 'unknown error'));
+          }
+        })
+        .catch(function (err) {
+          toggle.disabled = false;
+          toggle.checked = !desired;
+          alert('Error: ' + err.message);
+        });
+    });
+  });
+});

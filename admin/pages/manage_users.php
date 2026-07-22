@@ -29,6 +29,13 @@
     );
   ?>
 
+  <p class="text-muted small">
+    <i class="fa fa-circle-info me-1"></i>
+    This page grants <strong>collaborators</strong> access to specific restricted organisms.
+    To make a gene set visible to <strong>everyone</strong> instead, use the Visibility toggle in
+    <a href="manage_groups.php">Manage Groups</a> — public data needs no user account at all.
+  </p>
+
   <!-- ══════════════════════════════════════════════════════
        SECTION 1: EXISTING USERS TABLE
   ══════════════════════════════════════════════════════ -->
