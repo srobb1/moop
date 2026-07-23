@@ -215,15 +215,34 @@
             }
         });
 
-        // Filter input
+        // Filter input. Always matches the FULL search text — organism, common name,
+        // group, assembly AND gene set — because that is what the placeholder promises.
+        // A match in the assembly/gene-set part is otherwise invisible in simple view
+        // (that text and the secondary rows are hidden), so a matched row is force-shown
+        // and, when the hit is only in the hidden detail, its detail is revealed. This is
+        // the behaviour the Annotation Search selector already had; MOOPmart lacked it.
         document.getElementById('mm-scope-filter')?.addEventListener('input', function () {
-            const q      = this.value.toLowerCase();
-            const detail = document.getElementById('mm-scope-detail')?.checked;
+            const q        = this.value.toLowerCase().trim();
+            const detailOn = document.getElementById('mm-scope-detail')?.checked;
             list.querySelectorAll('.mm-scope-row').forEach(row => {
-                const search = detail
-                    ? (row.dataset.search || '')
-                    : (row.dataset.searchSimple || '');
-                row.style.display = (!q || search.includes(q)) ? '' : 'none';
+                if (!q) {
+                    row.style.display = '';   // back to CSS (secondary rows hidden in simple)
+                    row.classList.remove('mm-scope-detail-forced');
+                    return;
+                }
+                const all    = row.dataset.search || '';
+                const simple = row.dataset.searchSimple || all;
+                const detail = row.dataset.searchDetail || '';
+                if (!all.includes(q)) {
+                    row.style.display = 'none';
+                    row.classList.remove('mm-scope-detail-forced');
+                    return;
+                }
+                // Show it — even a secondary row the simple view would normally collapse.
+                row.style.display = 'flex';
+                // Reveal the detail text when that is the only place the query matched.
+                row.classList.toggle('mm-scope-detail-forced',
+                    !detailOn && detail.includes(q) && !simple.includes(q));
             });
         });
 

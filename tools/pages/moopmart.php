@@ -766,6 +766,9 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 #mm-scope-list.mm-scope-detail-hidden .mm-scope-row-detail    { display: none; }
 #mm-scope-list.mm-scope-detail-hidden .mm-scope-row-secondary { display: none; }
 #mm-scope-list:not(.mm-scope-detail-hidden) .mm-scope-gs-count { display: none; }
+/* Filter matched the hidden assembly/gene-set text: reveal that one row's detail even in
+   simple view, so the user sees what their query matched. */
+#mm-scope-list.mm-scope-detail-hidden .mm-scope-row.mm-scope-detail-forced .mm-scope-row-detail { display: inline; }
 /* Darker border on FASTA type radio buttons */
 #mm-fasta-options .form-check-input[type="radio"] { border-color: #6c757d; }
 </style>
