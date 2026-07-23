@@ -107,7 +107,7 @@ function housekeeping_task_registry(): array {
             'name'  => 'snapshot_site_data',
             'fn'    => 'housekeeping_snapshot_site_data',
             'label' => 'Snapshot site data',
-            'desc'  => 'Copies changed site data (config_editable.json, secrets.php, metadata, organism.json files, users.json) to the backup directory. It does NOT commit: if that directory is a git repo, MOOP only reads its state for the dashboard badge — committing and pushing stay manual, by design.',
+            'desc'  => 'Copies changed site data (config_editable.json, secrets.php, metadata incl. glossary.json, organism.json files, users.json) to the backup directory. It does NOT commit: if that directory is a git repo, MOOP only reads its state for the dashboard badge — committing and pushing stay manual, by design.',
         ],
         [
             'name'  => 'environment_check',
@@ -463,6 +463,7 @@ function housekeeping_snapshot_site_data() {
         $site_path . '/metadata/group_descriptions.json'       => 'metadata/group_descriptions.json',
         $site_path . '/metadata/organism_assembly_groups.json'  => 'metadata/organism_assembly_groups.json',
         $site_path . '/metadata/taxonomy_tree_config.json'      => 'metadata/taxonomy_tree_config.json',
+        $site_path . '/metadata/glossary.json'                  => 'metadata/glossary.json',
         $users_file                                             => 'users.json',
     ];
 
@@ -498,6 +499,7 @@ access control configuration.
 | `metadata/group_descriptions.json` | Organism group definitions |
 | `metadata/organism_assembly_groups.json` | Which organisms belong to which groups |
 | `metadata/taxonomy_tree_config.json` | Taxonomy tree structure |
+| `metadata/glossary.json` | Admin-editable glossary term definitions |
 | `users.json` | User accounts and access levels |
 | `organisms/{name}/organism.json` | Per-organism metadata (one file per organism) |
 
