@@ -98,6 +98,27 @@ and which databases exist depends on the selected BLAST *program* (blastn/blastp
 list changes reactively from another control. Treat BLAST as a later evaluation, not part of
 the first cut.
 
+### ⚠️ HARD REQUIREMENT to preserve — context pre-filtering (source-list's "special stuff")
+
+The single-select system (BLAST, Retrieve) does context-aware pre-filtering based on where
+the user arrived from — `includes/source-selector-helpers.php::prepareSourceSelection()`:
+
+- **?assembly=** → pre-filter to that assembly, auto-select it.
+- **?organism=** → pre-filter to that organism, auto-select its first assembly.
+- **?group=** (e.g. a bat group) → pre-filter to the group, but do NOT auto-select — let
+  the user choose within it (`should_auto_select = false`).
+- **?organisms[]=** (multi list) → preserved.
+
+Plus the JS keeps the chosen line selected even after the user clears the filter that
+scoped it ("don't lose a selected line if I remove filters"). The multi system (MOOPmart,
+Search) does not have this today.
+
+The unified component MUST carry this — arriving from an organism/assembly/group page and
+landing pre-filtered + sensibly pre-selected is a real feature, not incidental. It applies
+to the multi pages too (Search already receives context params), so folding it in is an
+improvement there, not just parity. Build the context → {filter, auto-select} decision into
+the shared component from the start.
+
 ### Phasing — so the site is never half-converted
 
 1. **Phase 1 — multi.** Build the component with the `mode` arg, implement the multi path,
