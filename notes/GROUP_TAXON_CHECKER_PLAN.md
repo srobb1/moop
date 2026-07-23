@@ -80,6 +80,32 @@ Why this shape:
 **Secondary: the checker**, for gene sets added before the hint existed, and for the
 inverse cases the hint cannot see.
 
+## Idea: "make a group from this lineage" (user, 2026-07-23)
+
+The user wants a way to turn a taxonomy rank into a curated group — a checkbox or button,
+plausibly on the taxonomy page or in Manage Groups — so that the name then appears as a
+**group chip** on the organism pages of its members, alongside `Sea anemone` and the rest.
+Today a rank only ever shows up in the Taxonomy Lineage row, never as a group chip.
+
+Straightforward to build: create the group, then add its name to the `groups` array of
+every gene set currently under that rank.
+
+⚠️ **But note what promotion actually does, and say so in the UI.** The moment a rank
+becomes a curated group it stops tracking taxonomy — it is a hand-maintained snapshot, and
+it starts drifting the instant a new organism is loaded under that rank. Promoting
+`Cnidaria` would have produced exactly the Scolanthus gap, just sooner. So:
+
+- Promotion makes the inline hint and the checker **more** necessary, not less. Every
+  promoted group is a new opportunity for the drift described above.
+- The UI should be honest at the point of the click — something like "this copies the
+  current members into a group you maintain by hand; new organisms in this rank will not
+  be added automatically."
+- Worth considering instead: a **mirrored** group that stays derived from the rank and
+  simply renders as a chip. No drift by construction, because there is nothing to
+  maintain. It gives the user what they actually asked for — the chip — without creating
+  a second copy of the membership. Decide which of the two is wanted before building;
+  they look identical on screen and behave completely differently six months later.
+
 ## What the checker should do
 
 Find curated groups that disagree with taxonomy, so the admin can decide — it must
