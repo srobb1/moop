@@ -112,7 +112,6 @@ $display_config = [
     ),
     'content_file' => __DIR__ . '/pages/organism.php',
     'page_script' => [
-        '/' . $site . '/js/modules/search-utils.js',
         '/' . $site . '/js/organism-display.js'
     ],
     'inline_scripts' => [

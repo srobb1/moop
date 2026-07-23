@@ -69,7 +69,6 @@ $display_config = [
     'content_file' => __DIR__ . '/pages/multi_organism.php',
     'page_script' => [
         "/$site/js/modules/organism-utils.js",
-        "/$site/js/modules/search-utils.js",
         "/$site/js/multi-organism-search.js"
     ],
     'inline_scripts' => [

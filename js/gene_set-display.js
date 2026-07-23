@@ -6,7 +6,6 @@
  * - sitePath, organismName, assemblyAccession, geneSetName
  */
 
-initializeSearchInstructionsHandler();
 
 const searchManager = new AnnotationSearch({
     formSelector: '#geneSetSearchForm',

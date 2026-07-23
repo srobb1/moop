@@ -61,7 +61,6 @@ $display_config = [
     'title'        => htmlspecialchars($gene_set_name) . ' — ' . htmlspecialchars($genome_accession) . ' - ' . $siteTitle,
     'content_file' => __DIR__ . '/pages/gene_set.php',
     'page_script'  => [
-        "/$site/js/modules/search-utils.js",
         "/$site/js/gene_set-display.js",
     ],
     'inline_scripts' => [

@@ -107,7 +107,6 @@ $display_config = [
     'title'        => 'Search — ' . htmlspecialchars($siteTitle),
     'content_file' => __DIR__ . '/pages/search.php',
     'page_script'  => [
-        "/$site/js/modules/search-utils.js",
         "/$site/js/search-display.js",
     ],
     'page_styles'  => [

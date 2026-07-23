@@ -151,7 +151,7 @@ echo render_display_page(
         'annotation_source_types'  => $annotation_source_types,
         'annotation_source_names'  => $annotation_source_names,
         'siteTitle'               => $siteTitle,
-        'page_script'             => ["/$site/js/modules/search-utils.js", "/$site/js/modules/moopmart.js"],
+        'page_script'             => ["/$site/js/modules/moopmart.js"],
         'inline_scripts'          => [
             'const annotationSources = ' . json_encode($annotation_source_names) . ';',
             "const moopSite = '/$site';",

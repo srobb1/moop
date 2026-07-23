@@ -8,7 +8,6 @@
  */
 
 // Initialize search instructions handler
-initializeSearchInstructionsHandler();
 
 // Initialize organism instruction handlers when page is ready
 $(document).ready(function() {

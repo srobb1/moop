@@ -9,7 +9,6 @@
  */
 
 // Initialize search instructions handler
-initializeSearchInstructionsHandler();
 
 const searchManager = new AnnotationSearch({
     formSelector: '#assemblySearchForm',

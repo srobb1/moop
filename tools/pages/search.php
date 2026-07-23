@@ -31,8 +31,7 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
       <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
         <span class="step-badge me-2">1</span>
         <span class="fw-semibold" style="font-size:0.9rem;">Enter a gene ID or annotation keyword</span>
-        <i class="fa fa-info-circle search-instructions-trigger ms-2"
-           style="cursor:pointer; font-size:0.85rem; color:rgba(255,255,255,0.7);" data-help-type="basic"></i>
+        <?= help_modal_trigger('search-help', '', 'How to search') ?>
       </div>
       <div class="card-body py-3">
         <input type="text" class="form-control moop-input" id="searchKeywords"
@@ -294,3 +293,9 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
 <?php /* Shared results help — ONE home for the explanation, included by every page
         that renders a results table. Opened by the trigger on the section header above. */ ?>
 <?php include_once __DIR__ . '/../../includes/search_results_modal.php'; ?>
+
+<?php /* Shared search-box help — ONE home, included by every page with a search
+        box. 'multi' pages search several organisms at once and get the organism
+        selection card plus the per-organism phrasing of the result cap. */ ?>
+<?php $search_help_scope = 'single';
+      include __DIR__ . '/../../includes/search_help_modal.php'; ?>

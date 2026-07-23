@@ -13,7 +13,7 @@
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <div class="mb-2 fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <i class="fa fa-info-circle search-instructions-trigger" style="cursor:pointer; margin-left:0.4rem; font-size:0.85em;" data-help-type="group"></i></div>
+          <div class="mb-2 fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
           <form id="groupSearchForm">
             <div class="row align-items-center">
               <div class="col">
@@ -199,3 +199,9 @@
 <?php /* Shared results help — ONE home for the explanation, included by every page
         that renders a results table. Opened by the trigger on the section header above. */ ?>
 <?php include_once __DIR__ . '/../../includes/search_results_modal.php'; ?>
+
+<?php /* Shared search-box help — ONE home, included by every page with a search
+        box. 'multi' pages search several organisms at once and get the organism
+        selection card plus the per-organism phrasing of the result cap. */ ?>
+<?php $search_help_scope = 'multi';
+      include __DIR__ . '/../../includes/search_help_modal.php'; ?>

@@ -53,6 +53,9 @@ echo help_modal(
             ],
         ],
         [
+            // Narrowing what is ALREADY on screen. How to compose a better query — quoting,
+            // short terms, which fields are searched — belongs to the search-box modal
+            // (includes/search_help_modal.php) and is deliberately not restated here.
             'heading' => 'Narrowing to what you want',
             'cards'   => [
                 [
@@ -61,21 +64,14 @@ echo help_modal(
                              . 'Combine several to narrow further.',
                 ],
                 [
-                    'label' => 'Search an exact phrase',
-                    'text'  => 'Quote it — <code>"ABC transporter"</code> matches only that phrase.',
-                    'html'  => true,
-                ],
-                [
-                    'label' => 'Short terms are skipped',
-                    'text'  => 'Terms under three characters are ignored, so <code>P53 tumor</code> '
-                             . 'searches only for <em>tumor</em>. Quote it — <code>"P53"</code> — to '
-                             . 'search it anyway.',
-                    'html'  => true,
-                ],
-                [
                     'label' => 'Search fewer organisms',
                     'text'  => 'Every selected organism can contribute up to the limit. Fewer '
                              . 'organisms gives each one more room, and returns faster.',
+                ],
+                [
+                    'label' => 'Or change the search itself',
+                    'text'  => 'Too many results usually means the term is too broad. The (i) on the '
+                             . 'search box explains quoting, multi-word terms and annotation filters.',
                 ],
             ],
         ],

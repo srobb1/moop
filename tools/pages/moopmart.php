@@ -237,7 +237,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           <div class="collapse" id="mm-name-body">
             <div class="browse-select-panel">
               <p class="text-muted small mb-2">Partial match, case-insensitive. Searches the feature name field.
-                <i class="fa fa-info-circle search-instructions-trigger ms-1" style="cursor:pointer;" data-help-type="basic"></i>
+                <?= help_modal_trigger('search-help', '', 'How to search') ?>
               </p>
               <input type="text" id="mm-gene-name" class="form-control moop-input"
                      placeholder="e.g. BRCA1">
@@ -258,7 +258,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           <div class="collapse" id="mm-desc-body">
             <div class="browse-select-panel">
               <p class="text-muted small mb-2">Searches the feature description field. Partial match, case-insensitive.
-                <i class="fa fa-info-circle search-instructions-trigger ms-1" style="cursor:pointer;" data-help-type="basic"></i>
+                <?= help_modal_trigger('search-help', '', 'How to search') ?>
               </p>
               <input type="text" id="mm-gene-description" class="form-control moop-input"
                      placeholder="e.g. kinase">
@@ -306,7 +306,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                 <div class="col-sm-4">Annotation type</div>
                 <div class="col-sm-4">Accession <span class="text-muted">(exact)</span></div>
                 <div class="col-sm-4">Keyword
-                  <i class="fa fa-info-circle search-instructions-trigger ms-1" style="cursor:pointer; font-size:0.9em;" data-help-type="basic"></i>
+                  <?= help_modal_trigger('search-help', '', 'How to search') ?>
                 </div>
               </div>
 
@@ -644,3 +644,9 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 /* Darker border on FASTA type radio buttons */
 #mm-fasta-options .form-check-input[type="radio"] { border-color: #6c757d; }
 </style>
+
+<?php /* Shared search-box help — ONE home, included by every page with a search
+        box. 'multi' pages search several organisms at once and get the organism
+        selection card plus the per-organism phrasing of the result cap. */ ?>
+<?php $search_help_scope = 'single';
+      include __DIR__ . '/../../includes/search_help_modal.php'; ?>

@@ -862,9 +862,6 @@
         });
 
         // Search instructions trigger (same modal as annotation search)
-        if (typeof initializeSearchInstructionsHandler === 'function') {
-            initializeSearchInstructionsHandler();
-        }
 
         // Preview
         document.getElementById('mm-preview-btn')?.addEventListener('click', previewResults);

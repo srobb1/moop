@@ -22,7 +22,6 @@ $(document).ready(function () {
     });
     // Don't call init() — we handle form submit ourselves to inject scope + sources first.
     // Still want search-instructions handler wired up.
-    initializeSearchInstructionsHandler();
 
     // ── Scope tree ──────────────────────────────────────────────────────────
 
