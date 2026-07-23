@@ -414,34 +414,46 @@ function verifyOrganismDatabase($organism_name, $organism_data_dir) {
 }
 
 /**
- * Get all assemblies (genomes) for an organism from its database
- * Filters by user access permissions
- * 
- * @param string $organism_name - Organism name
+ * Get all assemblies (genomes) for an organism, keyed by accession with their
+ * display label. Filters by user access permissions.
+ *
+ * Returns the LABEL, not the bare accession, because every other page that names an
+ * assembly — assembly.php, gene_set.php, parent.php, source-list.php and the admin
+ * pages — renders assembly_label() "Name (Accession)". The organism page was the last
+ * place still showing a bare accession, which is the exact drift assembly_label()
+ * was introduced to end (audit #8). The old query already selected genome_name to
+ * sort by and then threw it away.
+ *
+ * Keyed by accession so callers still have the identifier for URLs and file paths;
+ * array_keys() gives the previous return value.
+ *
+ * @param string $organism_name     - Organism name
  * @param string $organism_data_dir - Path to organism data directory
- * @return array - Array of assembly accessions accessible to current user, or empty array if none
+ * @return array - [genome_accession => "Name (Accession)"] for assemblies the
+ *                 current user may see; empty array if none
  */
 function getOrganismAssemblies($organism_name, $organism_data_dir) {
     $db_path = getOrganismDatabase($organism_name, $organism_data_dir);
-    
+
     if (empty($db_path)) {
         return [];
     }
-    
+
     try {
         $dbh = getDbConnection($db_path);
 
-        $stmt = $dbh->query("SELECT genome_accession FROM genome ORDER BY genome_name ASC");
-        $genomes = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        
+        $stmt = $dbh->query("SELECT genome_accession, genome_name FROM genome ORDER BY genome_name ASC");
+        $genomes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
         // Filter by user access
         $accessible = [];
-        foreach ($genomes as $assembly) {
+        foreach ($genomes as $row) {
+            $assembly = $row['genome_accession'];
             if (has_assembly_access($organism_name, $assembly)) {
-                $accessible[] = $assembly;
+                $accessible[$assembly] = assembly_label($row['genome_name'] ?? '', $assembly);
             }
         }
-        
+
         return $accessible;
     } catch (PDOException $e) {
         return [];

@@ -164,7 +164,11 @@
                                  <div class="mt-4 pt-3 border-top">
                    <h6 class="text-muted mb-3" style="font-weight: 600;">
                      Taxonomy Lineage
-                     <i class="fa fa-info-circle info-icon taxonomy-lineage-trigger" data-instruction="<strong>Taxonomy Lineage Counts:</strong><br>The numbers next to each taxonomic rank show how many organisms within that taxonomic group are available in <?= htmlspecialchars($config->getString('siteTitle')) ?>. <strong>Click a rank</strong> to view all organisms in that group."></i>
+                     <?= field_help(
+                         'The number beside each rank is how many organisms in that group are in '
+                         . $config->getString('siteTitle') . '. Click a rank to see them.',
+                         'Taxonomy lineage counts'
+                     ) ?>
                    </h6>
                    <div class="breadcrumb clear-initial-trail">
                      <?php 
@@ -192,7 +196,11 @@
             <div class="mt-4 pt-3 border-top">
               <h6 class="text-muted mb-3" style="font-weight: 600;">
                 Member of Groups
-                <i class="fa fa-info-circle info-icon member-groups-trigger" data-instruction="<strong>Group Membership Counts:</strong><br>The numbers next to each group show how many organisms are members of that group. Groups are collections of organisms organized by research focus, taxonomy, or other criteria. <strong>Click a group</strong> to view all organisms in that group."></i>
+                <?= field_help(
+                    'Groups collect organisms by taxonomy or research focus. The number beside '
+                    . 'each one is how many organisms belong to it. Click a group to see them.',
+                    'Member of groups'
+                ) ?>
               </h6>
               <div class="chip-container">
                 <?php foreach ($organism_groups as $group_name => $group_info): ?>
@@ -215,14 +223,22 @@
           <?php
           if (!empty($accessible_assemblies)): ?>
             <div class="mt-4 pt-3 border-top">
-              <h6 class="text-muted mb-3" style="font-weight: 600;">Assemblies</h6>
+              <h6 class="text-muted mb-3" style="font-weight: 600;">
+                <?= gloss('assembly', 'Assemblies') ?>
+                <?= field_help(
+                    'Each chip is one genome build for this organism. A green tick means its '
+                    . 'genome sequence is available to download and search; a grey cross means '
+                    . 'only its gene models are. Click one to open it.',
+                    'Assemblies'
+                ) ?>
+              </h6>
               <div class="chip-container">
-                <?php foreach ($accessible_assemblies as $assembly):
+                <?php foreach ($accessible_assemblies as $assembly => $assembly_display):
                     $has_genome_fa = file_exists("$organism_data/$organism_name/$assembly/" . genome_fasta_filename());
                 ?>
                   <a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>"
                      class="assembly-chip">
-                    <?= htmlspecialchars($assembly) ?>
+                    <?= htmlspecialchars($assembly_display) ?>
                     <?php if ($has_genome_fa): ?>
                       <i class="fa fa-check-circle ms-1 text-success" title="Genome FASTA available"></i>
                     <?php else: ?>
