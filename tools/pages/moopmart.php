@@ -146,12 +146,38 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
   ?>
 
 
+  <?php
+  // Step 1 help, opened by the (i) on the header. Covers the whole selection mechanic —
+  // the filter, that an organism means all its gene sets, what the Details toggle narrows
+  // to, and the one-selection minimum. Grew past a single popover as the user added points,
+  // so it is a card modal like the other step overviews.
+  echo help_modal(
+      'mm-scope-help',
+      'How to select organisms',
+      [[
+          'heading' => '',
+          'cards'   => [
+              ['label' => 'Find them fast',
+               'text'  => 'Type in the box to filter by group, genus / species or common name, assembly, or gene set.'],
+              ['label' => 'Pick an organism',
+               'text'  => 'Selecting an organism includes all of its gene sets — the usual case.'],
+              ['label' => 'Or narrow with Details',
+               'text'  => 'Turn on the Details switch to expand each organism and choose a specific assembly or gene set instead.'],
+              ['label' => 'Pick at least one',
+               'text'  => 'You need at least one selection before the steps below will do anything.'],
+          ],
+      ]],
+      ['intro' => 'Choose which organisms — or specific gene sets — to pull features from.']
+  );
+  ?>
+
   <!-- ① Select Organisms -->
   <div class="card mb-3 shadow-sm">
     <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
       <span class="step-badge me-2">1</span>
-      <span class="fw-semibold me-auto" style="font-size:0.9rem;">Select organisms</span>
-      <div class="d-flex gap-1">
+      <span class="fw-semibold" style="font-size:0.9rem;">Select organisms</span>
+      <?= help_modal_trigger('mm-scope-help', '', 'How to select organisms') ?>
+      <div class="d-flex gap-1 ms-auto">
         <button type="button" class="btn btn-sm btn-outline-light py-0" id="mm-select-all">All</button>
         <button type="button" class="btn btn-sm btn-outline-light py-0" id="mm-clear-all">None</button>
       </div>
@@ -168,6 +194,15 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       <?php if (empty($scope_tree)): ?>
         <p class="text-muted small p-3">No accessible organisms found.</p>
       <?php else:
+        // How many gene-set rows each organism has, so a multi-gene-set organism shows one
+        // row in the simple view (with a "N gene sets" note) instead of N identical-looking
+        // rows — the extra rows only distinguish themselves once Details is on. See the
+        // representative-row logic below and the simple-view CSS at the bottom of the file.
+        $orgGsCount = [];
+        foreach ($scope_tree as $o => $asmList) {
+            $orgGsCount[$o] = array_sum(array_map('count', $asmList));
+        }
+        $seenOrg = [];
         $rowIdx = 0;
         foreach ($scope_tree as $organism => $assemblies):
           $info   = $organism_info[$organism] ?? [];
@@ -184,8 +219,14 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
               $searchSimple = strtolower("$label $cn " . implode(' ', $groups));
               $searchDetail = strtolower("$asm $an $gs");
               $search = $searchSimple . ' ' . $searchDetail;
+              // First row for this organism is the representative shown in simple view; the
+              // rest are hidden there and revealed by Details.
+              $isRep   = !isset($seenOrg[$organism]);
+              $seenOrg[$organism] = true;
+              $gsCount = $orgGsCount[$organism] ?? 1;
       ?>
-      <div class="org-select-row mm-scope-row"
+      <div class="org-select-row mm-scope-row<?= $isRep ? '' : ' mm-scope-row-secondary' ?>"
+           data-org="<?= htmlspecialchars($organism) ?>"
            data-search="<?= htmlspecialchars($search) ?>"
            data-search-simple="<?= htmlspecialchars($searchSimple) ?>"
            data-search-detail="<?= htmlspecialchars($searchDetail) ?>">
@@ -202,6 +243,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
         <span class="flex-grow-1 text-truncate" style="min-width:0;">
           <em><?= htmlspecialchars($label) ?></em>
           <?php if ($cn): ?><span class="text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($cn) ?></span><?php endif; ?>
+          <?php if ($isRep && $gsCount > 1): ?><span class="mm-scope-gs-count text-muted" style="font-size:0.78em;"> · <?= (int)$gsCount ?> gene sets</span><?php endif; ?>
           <span class="mm-scope-row-detail text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($asmDisplay) ?><?php if ($asmAccession): ?> <span style="font-size:0.9em;">(<?= htmlspecialchars($asmAccession) ?>)</span><?php endif; ?> › <?= htmlspecialchars($gs ?: '(default)') ?></span>
         </span>
         <span class="org-check flex-shrink-0"><i class="fas fa-check text-success"></i></span>
@@ -717,8 +759,13 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 </div>
 
 <style>
-/* Simple/detail toggle for organism scope list */
-#mm-scope-list.mm-scope-detail-hidden .mm-scope-row-detail { display: none; }
+/* Simple/detail toggle for organism scope list.
+   Simple view (detail-hidden): one row per organism — hide the per-gene-set detail text
+   and the secondary rows, show the "N gene sets" note so the collapse is legible.
+   Detail view: reveal every gene-set row and its detail, hide the now-redundant count. */
+#mm-scope-list.mm-scope-detail-hidden .mm-scope-row-detail    { display: none; }
+#mm-scope-list.mm-scope-detail-hidden .mm-scope-row-secondary { display: none; }
+#mm-scope-list:not(.mm-scope-detail-hidden) .mm-scope-gs-count { display: none; }
 /* Darker border on FASTA type radio buttons */
 #mm-fasta-options .form-check-input[type="radio"] { border-color: #6c757d; }
 </style>

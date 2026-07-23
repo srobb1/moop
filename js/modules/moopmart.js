@@ -176,14 +176,34 @@
         const list = document.getElementById('mm-scope-list');
         if (!list) return;
 
-        // Row click → toggle checkbox + selected state
+        // Row click → toggle selection.
+        // In SIMPLE view a row stands for a whole organism (the per-gene-set rows are
+        // collapsed to one), so clicking it selects or deselects ALL of that organism's
+        // gene sets together — which is what the help promises and what removes the
+        // "same organism listed twice" confusion. In DETAIL view each row is its own
+        // gene set and toggles just itself.
         list.addEventListener('click', function (e) {
             const row = e.target.closest('.mm-scope-row');
             if (!row) return;
             const cb = row.querySelector('.mm-gs-cb');
             if (!cb || e.target === cb) return;
-            cb.checked = !cb.checked;
-            row.classList.toggle('selected', cb.checked);
+
+            const detailOn = document.getElementById('mm-scope-detail')?.checked;
+            if (!detailOn) {
+                const org = cb.dataset.org;
+                const orgCbs = Array.from(list.querySelectorAll('.mm-gs-cb'))
+                    .filter(c => c.dataset.org === org);
+                // Toggle off only when every one of the organism's gene sets is already on;
+                // from a partial state (some picked in Detail view) a click selects them all.
+                const allOn = orgCbs.every(c => c.checked);
+                orgCbs.forEach(c => {
+                    c.checked = !allOn;
+                    c.closest('.mm-scope-row')?.classList.toggle('selected', !allOn);
+                });
+            } else {
+                cb.checked = !cb.checked;
+                row.classList.toggle('selected', cb.checked);
+            }
             updateScopeSummary();
             updateCoordState();
         });
