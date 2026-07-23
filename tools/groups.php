@@ -93,6 +93,33 @@ if ($is_taxonomy_group) {
     // Use taxonomy_rank as the display name everywhere (replaces $group_name in template)
     $group_name = $taxonomy_rank;
 } else {
+    // A ?group= name we do not hold. Two things can be going on, and they were
+    // previously indistinguishable — both produced an empty organism list and a page
+    // that looked broken.
+    //
+    //   1. It is a taxonomy rank, not a curated group. Someone hand-writing or sharing
+    //      a URL has no reason to know the difference (the lineage chips link to
+    //      ?taxonomy_rank=, the group chips to ?group=), so send them where they meant
+    //      to go rather than showing them nothing.
+    //   2. We simply have nothing filed under that name — which does NOT mean the name
+    //      is wrong. See taxonomyRankExists(): the tree only contains ranks our own
+    //      organisms sit under, so a real taxon like Primates is absent purely because
+    //      no organism here belongs to it.
+    //
+    // Curated groups are checked FIRST and win: names like Cnidaria are both a group
+    // and a rank, and the existing group page must keep its URL.
+    if (!groupNameExists($group_name, $group_data, $group_descriptions)) {
+        $taxonomy_tree_data = loadJsonFile("$metadata_path/taxonomy_tree_config.json", []);
+        if (taxonomyRankExists($group_name, $taxonomy_tree_data['tree'] ?? [])) {
+            header('Location: /' . $site . '/tools/groups.php?taxonomy_rank=' . urlencode($group_name), true, 302);
+            exit;
+        }
+        // Nothing under that name. Fall through with an empty list; the view says so
+        // plainly. No access check below — there is nothing here to protect, and
+        // demanding a login for a grouping we do not have would be a lie.
+        $group_unknown = true;
+    }
+
     // Manual group: Use existing logic
     // Find the description for this group
     $group_info = null;
@@ -102,13 +129,16 @@ if ($is_taxonomy_group) {
             break;
         }
     }
-    
+
     // Get organisms in this group that user has access to
     $group_organisms = getAccessibleOrganismsInGroup($group_name, $group_data);
 }
 
-// Access control: Only check manual groups (taxonomy groups are based on tree data)
-if (!$is_taxonomy_group && !is_public_group($group_name)) {
+// Access control: Only check manual groups (taxonomy groups are based on tree data).
+// Skipped for a name we hold nothing under — is_public_group() is false for any such
+// name, so this used to send a public visitor to access-denied for a grouping that
+// does not exist here, telling them they lacked permission for nothing.
+if (!$is_taxonomy_group && empty($group_unknown) && !is_public_group($group_name)) {
     require_access('COLLABORATOR', $group_name);
 }
 
@@ -137,6 +167,11 @@ $data = [
     'group_organisms' => $group_organisms,
     'organisms_list' => array_keys($group_organisms),  // For tool context
     'is_taxonomy_group' => $is_taxonomy_group,
+    // True when nothing at all is filed under this name — as opposed to a real group
+    // that is merely empty or invisible to this user. The view words the two the same
+    // way on purpose (see tools/pages/groups.php); this flag exists so it can avoid
+    // offering a search box for a grouping with nothing in it.
+    'group_unknown' => !empty($group_unknown),
     'config' => $config,
     'site' => $site,
     'images_path' => $images_path,

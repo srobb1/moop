@@ -210,9 +210,74 @@ function getGroupsForOrganism($organism_name, $group_data = null) {
 }
 
 /**
+ * Does a name exist as a curated group?
+ *
+ * A group is real if any assembly entry is filed under it, or if it has an in-use
+ * description — the second case matters because a freshly created group can have a
+ * description before anything has been assigned to it.
+ *
+ * Used to tell "this group is empty or hidden from you" apart from "there is no such
+ * group", which otherwise render identically: both produce an empty organism list.
+ *
+ * @param string $group_name
+ * @param array  $group_data         entries from getGroupData()
+ * @param array  $group_descriptions decoded group_descriptions.json
+ * @return bool
+ */
+function groupNameExists($group_name, $group_data, $group_descriptions = []) {
+    if ($group_name === '') {
+        return false;
+    }
+    foreach ($group_data as $entry) {
+        if (in_array($group_name, $entry['groups'] ?? [], true)) {
+            return true;
+        }
+    }
+    foreach ($group_descriptions as $desc) {
+        if (($desc['group_name'] ?? null) === $group_name && ($desc['in_use'] ?? false)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Does a name appear as a rank in THIS SITE'S taxonomy tree?
+ *
+ * Note carefully what a false answer means. The tree is built from the organisms this
+ * site actually holds, so it contains only the ranks those organisms sit under. A
+ * perfectly real taxon — Primates, Aves, Fungi — is absent purely because nothing here
+ * belongs to it. False therefore means "we have no organisms under that name", NOT
+ * "that is not a taxon". Never phrase a message to the user as though the name were
+ * invalid; they may well have typed a correct one.
+ *
+ * Deliberately separate from getOrganismsAtTaxonomyLevel(): that returns organisms
+ * filtered by access, so an empty result cannot distinguish "rank absent from the tree"
+ * from "rank present but nothing in it is visible to you".
+ *
+ * @param string $rank_name
+ * @param array  $tree_node Root of the taxonomy tree
+ * @return bool
+ */
+function taxonomyRankExists($rank_name, $tree_node) {
+    if ($rank_name === '' || empty($tree_node)) {
+        return false;
+    }
+    if (($tree_node['name'] ?? null) === $rank_name) {
+        return true;
+    }
+    foreach ($tree_node['children'] ?? [] as $child) {
+        if (taxonomyRankExists($rank_name, $child)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Get organisms at a specific taxonomy rank that user has access to
  * Traverses the taxonomy tree to find all organisms under a given taxonomic rank
- * 
+ *
  * @param string $rank_name Name of the taxonomy rank (e.g., 'Primates', 'Mammalia')
  * @param array $tree_node Root of taxonomy tree
  * @param array $group_data Array of organism/assembly/groups data

@@ -8,9 +8,20 @@
         <!-- Title Card -->
         <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0f766e;">
           <?= page_title($group_name) ?>
-          <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;">search limited to this group</span>
+          <?php if (!empty($group_organisms)): ?>
+            <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;">search limited to this group</span>
+          <?php endif; ?>
         </div>
 
+        <?php /* No search box when there is nothing to search. A form scoped to a grouping
+                holding no organisms can only ever return nothing, and a search that always
+                comes back empty reads as a broken site rather than as an empty grouping —
+                which is exactly what the message below is there to say plainly. */ ?>
+        <?php if (empty($group_organisms)): ?>
+        <div class="card-body bg-search-light text-muted small">
+          There is nothing in this grouping to search yet.
+        </div>
+        <?php else: ?>
         <!-- Search Section -->
         <div class="card-body bg-search-light">
           <div class="mb-2 fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
@@ -27,6 +38,7 @@
             </div>
           </form>
         </div>
+        <?php endif; ?>
       </div>
     </div>
 
@@ -122,15 +134,36 @@
             <?php endif; ?>
           </div>
           <?php if (!empty($group_organisms)): ?>
-            <button type="button" class="btn btn-sm btn-light toggleAllOrganisms" style="font-size:0.75rem;">
-              <span class="toggle-all-label">Deselect all</span>
-            </button>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+              <?php /* A filter earns its place only once the grid is too long to scan. Bats has 49;
+                       Corals has 1, and a filter box above a single card is noise. */ ?>
+              <?php if (count($group_organisms) > 8): ?>
+                <input type="text" id="organismFilter" class="form-control form-control-sm"
+                       placeholder="Filter organisms..." style="width:180px; font-size:0.8rem;"
+                       aria-label="Filter organisms by name">
+              <?php endif; ?>
+              <button type="button" class="btn btn-sm btn-light toggleAllOrganisms" style="font-size:0.75rem;">
+                <span class="toggle-all-label">Deselect all</span>
+              </button>
+            </div>
           <?php endif; ?>
         </div>
         <div class="card-body">
           <?php if (empty($group_organisms)): ?>
+            <?php /* One message for every empty case — a grouping we hold nothing under, a real
+                    group that is empty, and one whose organisms are all restricted. Deliberately
+                    NOT phrased as "no such group": the taxonomy tree only contains ranks our own
+                    organisms sit under, so a perfectly correct name like Primates lands here
+                    simply because nothing in this site belongs to it. Telling someone they typed
+                    something invalid, when they did not, is worse than saying we have nothing. */ ?>
             <div class="alert alert-info mb-0">
-              <i class="fa fa-info-circle"></i> No organisms are currently available in this group.
+              <i class="fa fa-info-circle"></i>
+              No organisms in <strong><?= htmlspecialchars($group_name) ?></strong> yet.
+              <div class="small text-muted mt-2">
+                Nothing in <?= htmlspecialchars($config->getString('siteTitle')) ?> is filed under
+                that name. Browse <a href="/<?= $site ?>/index.php">all organisms and groups</a>,
+                or <a href="/<?= $site ?>/tools/search.php">search across everything</a>.
+              </div>
             </div>
           <?php else: ?>
             <div class="row g-3" id="organismsGrid">
@@ -156,7 +189,7 @@
                   $image_src = getOrganismImagePath($organism_info, $images_path, $absolute_images_path);
                   $show_image = !empty($image_src);
                 ?>
-                <div class="col-md-6 col-lg-4">
+                <div class="col-md-6 col-lg-4 organism-card-col" data-filter-text="<?= htmlspecialchars(strtolower($organism . ' ' . $genus . ' ' . $species . ' ' . $common_name)) ?>">
                    <div class="organism-selector-card position-relative" data-organism="<?= htmlspecialchars($organism) ?>">
                      <!-- Selection bar with checkbox -->
                      <label class="organism-selection-bar">
