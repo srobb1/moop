@@ -699,15 +699,17 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           'Preview & Download'
       ) ?>
     </div>
-    <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
-      <button type="button" class="btn btn-outline-primary" id="mm-preview-btn">
-        <span id="mm-count-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
-        <i class="fa fa-eye me-1"></i> Preview
-      </button>
-      <button type="button" class="btn btn-tool-emerald" id="mm-dl-btn">
-        <i class="fa fa-download me-1"></i> <span id="mm-dl-label">Download TSV</span>
-      </button>
-      <div id="mm-count-result" class="small text-muted"></div>
+    <div class="card-body py-3">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <button type="button" class="btn mm-dl-primary" id="mm-dl-btn">
+          <i class="fa fa-download me-1"></i> <span id="mm-dl-label">Download TSV</span>
+        </button>
+        <button type="button" class="btn btn-link p-0 text-decoration-none mm-preview-link" id="mm-preview-btn">
+          <span id="mm-count-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+          <i class="fa fa-eye me-1"></i> preview first
+        </button>
+      </div>
+      <div id="mm-count-result" class="small text-muted mt-2"></div>
     </div>
   </div>
 
@@ -784,6 +786,13 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 .mm-seg .btn:hover { background: rgba(8,145,178,0.08); color: #0891b2; }
 .mm-seg .btn-check:checked + .btn { background: #0891b2; border-color: #0891b2; color: #fff; }
 .mm-seg .btn-check:focus-visible + .btn { box-shadow: 0 0 0 0.2rem rgba(8,145,178,0.35); }
+/* Step 4: Download is the primary action, in the site's action-button indigo (#6366f1) —
+   the same colour as Run BLAST and Retrieve Sequences — so final actions read alike across
+   tools. Teal is the section/accent colour, not the action colour. Preview is a quiet link. */
+.mm-dl-primary { background: #6366f1; border-color: #6366f1; color: #fff; font-weight: 600; }
+.mm-dl-primary:hover, .mm-dl-primary:focus { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+.mm-preview-link { color: #6366f1; }
+.mm-preview-link:hover { color: #4f46e5; }
 </style>
 
 <?php /* Shared search-box help — ONE home, included by every page with a search
