@@ -32,13 +32,7 @@
     <div class="card shadow-sm mb-4">
       <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
         <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-dna me-2"></i>Sequence Retrieval</span>
-        <button type="button" class="btn btn-link p-0 text-white"
-                style="font-size:1rem; opacity:0.85; line-height:1;"
-                data-bs-toggle="popover" data-bs-placement="left" data-bs-trigger="focus" data-bs-html="true"
-                data-bs-title="How to use Sequence Retrieval"
-                data-bs-content="<ol class='mb-0 ps-3'><li>Select an organism and assembly</li><li>Enter gene or feature IDs — one per line or comma-separated.<br><br><strong>Parent IDs are auto-expanded:</strong> entering a gene ID (e.g. <code>g24397</code>) automatically retrieves all its child transcripts (<code>g24397.t1</code>, <code>g24397.t2</code>, …). To target a specific transcript only, enter its ID directly.<br><br><strong>Subsequence ranges:</strong> append a coordinate range to extract just part of a sequence. All four formats are equivalent:<br><code>g24397.t1:1-500</code><br><code>g24397.t1:1..500</code><br><code>g24397.t1 1-500</code><br><code>g24397.t1 1..500</code><br>Note: if you enter ranged child IDs, the parent will not be auto-expanded.</li><li>Click <strong>Retrieve Sequences</strong> — results show all available sequence types (genomic, CDS, protein, flanking) for each ID</li><li>Copy or download individual sequences as needed</li></ol>">
-          <i class="fa fa-info-circle"></i>
-        </button>
+        <?= help_modal_trigger('retrieve-help', '', 'How to use Sequence Retrieval') ?>
       </div>
       <div class="card-body py-2">
         <p class="text-muted small mb-0">Look up sequences by feature ID across any accessible assembly. Enter gene or transcript IDs and retrieve genomic, CDS, protein, and flanking sequences.</p>
@@ -167,6 +161,55 @@
         <?php endif; ?>
     <?php endif; ?>
 </div>
+
+<?php
+// How-to help, opened by the (i) on the page header. Replaces a hand-rolled data-bs-html
+// popover that needed a per-page init (sequence-retrieval.js, now removed). Two sections:
+// the four steps, then the ID-entry rules that were the dense part of the old popover —
+// parent-ID auto-expansion and subsequence ranges. Those set 'html' => true for the <code>
+// examples. (A later refinement could move that second section to field_help() on the ID
+// box itself; kept here for now so this change only unifies the mechanism, not the design.)
+echo help_modal(
+    'retrieve-help',
+    'How to use Sequence Retrieval',
+    [
+        [
+            'heading' => 'Steps',
+            'cards'   => [
+                ['label' => '1. Pick an assembly', 'text' => 'Select an organism and one of its assemblies.'],
+                ['label' => '2. Enter IDs',        'text' => 'Gene or feature IDs, one per line or comma-separated. See "Entering IDs" below for how IDs expand.'],
+                ['label' => '3. Retrieve',         'text' => 'Results show every available sequence type — genomic, CDS, protein, flanking — for each ID.'],
+                ['label' => '4. Take what you need', 'text' => 'Copy or download individual sequences from the results.'],
+            ],
+        ],
+        [
+            'heading' => 'Entering IDs',
+            'cards'   => [
+                [
+                    'label' => 'Gene IDs expand automatically',
+                    'text'  => 'Enter a gene ID like <code>g24397</code> and you get all its transcripts '
+                             . '(<code>g24397.t1</code>, <code>g24397.t2</code>, …). Enter a single transcript '
+                             . 'ID to get just that one.',
+                    'html'  => true,
+                ],
+                [
+                    'label' => 'Extract part of a sequence',
+                    'text'  => 'Append a range — these four are equivalent:<br>'
+                             . '<code>g24397.t1:1-500</code> · <code>g24397.t1:1..500</code> · '
+                             . '<code>g24397.t1 1-500</code> · <code>g24397.t1 1..500</code>',
+                    'html'  => true,
+                ],
+                [
+                    'label' => 'A range turns off expansion',
+                    'text'  => 'Enter a ranged child ID and its parent is not auto-expanded — you get exactly the '
+                             . 'subsequence you asked for.',
+                ],
+            ],
+        ],
+    ],
+    ['intro' => 'Look up sequences by feature ID across any accessible assembly.']
+);
+?>
 
 <script>
 // Make sample feature IDs available to JavaScript

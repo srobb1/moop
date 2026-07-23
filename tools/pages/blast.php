@@ -24,13 +24,7 @@
     <div class="card shadow-sm mb-4">
       <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
         <?= page_title('BLAST Search', 'fa fa-dna') ?>
-        <button type="button" class="btn btn-link p-0 text-white"
-                style="font-size:1rem; opacity:0.85; line-height:1;"
-                data-bs-toggle="popover" data-bs-placement="left" data-bs-trigger="focus" data-bs-html="true"
-                data-bs-title="How to use BLAST"
-                data-bs-content="<ol class='mb-0 ps-3'><li>Paste a DNA or protein sequence (FASTA or plain text)</li><li>Select a BLAST program — the program determines which databases are available</li><li>Choose an organism and database to search against</li><li>Optionally adjust advanced parameters (e-value, max hits, scoring matrix, etc.)</li><li>Click <strong>Run BLAST</strong></li></ol>">
-          <i class="fa fa-info-circle"></i>
-        </button>
+        <?= help_modal_trigger('blast-help', '', 'How to use BLAST') ?>
       </div>
       <div class="card-body py-2">
         <p class="text-muted small mb-0">Search genome assemblies by sequence similarity. Paste a DNA or protein sequence, select a program and database, and run.</p>
@@ -351,6 +345,29 @@
         
     <?php endif; ?>
 </div>
+
+<?php
+// How-to-use help, opened by the (i) on the page header. A card modal rather than the
+// hand-rolled data-bs-html popover it replaces: the popover needed a per-page init
+// (blast-manager.js initPopovers, now removed), and a modal opens from the Bootstrap
+// data-api with none. Steps carry their number in the label so order survives the grid.
+echo help_modal(
+    'blast-help',
+    'How to use BLAST',
+    [[
+        'heading' => '',
+        'cards'   => [
+            ['label' => '1. Paste a sequence', 'text' => 'DNA or protein, in FASTA or as plain text.'],
+            ['label' => '2. Pick a program',   'text' => 'The program decides which databases you can search — blastn for nucleotide, blastp for protein, and so on.'],
+            ['label' => '3. Choose a database', 'text' => 'Select an organism and one of its databases to search against.'],
+            ['label' => '4. Adjust if needed',  'text' => 'Advanced options set e-value, maximum hits, scoring matrix and more. The defaults are fine for most searches.'],
+            ['label' => '5. Run BLAST',         'text' => 'Results list each hit with its alignment, and can link back to the gene page and genome browser.'],
+        ],
+    ]],
+    ['intro' => 'Search genome assemblies by sequence similarity, in five steps.']
+);
+?>
+
 <style>
 .adv-chevron { transition: transform 0.2s; }
 #advOptions.show ~ * .adv-chevron,

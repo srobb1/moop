@@ -189,21 +189,15 @@ function autoScrollToResults() {
     });
 }
 
-function initPopovers() {
-    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el, { sanitize: false }));
-}
-
 // Initialize on DOM ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
         initializeBlastManager();
         autoScrollToResults();
-        initPopovers();
     });
 } else {
     initializeBlastManager();
     autoScrollToResults();
-    initPopovers();
 }
 
 // Load sample sequence

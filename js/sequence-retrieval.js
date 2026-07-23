@@ -327,11 +327,9 @@ if (document.readyState === 'loading') {
         const shouldScroll = typeof scrollToResults !== 'undefined' ? scrollToResults : false;
         initializeSequenceRetrieval({ shouldScroll: shouldScroll });
         setTimeout(initializeCopyTooltips, 500);
-        document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el, { sanitize: false }));
     });
 } else {
     const shouldScroll = typeof scrollToResults !== 'undefined' ? scrollToResults : false;
     initializeSequenceRetrieval({ shouldScroll: shouldScroll });
     setTimeout(initializeCopyTooltips, 500);
-    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el, { sanitize: false }));
 }

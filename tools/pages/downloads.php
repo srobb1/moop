@@ -17,13 +17,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
       <?= page_title('Downloads', 'fas fa-download') ?>
-      <button type="button" class="btn btn-link p-0 text-white"
-              style="font-size:1rem; opacity:0.85; line-height:1;"
-              data-bs-toggle="popover" data-bs-placement="left" data-bs-trigger="focus" data-bs-html="true"
-              data-bs-title="How to use Downloads"
-              data-bs-content="Browse genome files organised by organism → assembly → gene set. Check individual files or use the checkboxes at each level to select everything within that group. When you have files selected, click <strong>Download Selected</strong> to fetch them all at once as a zip. Use <strong>Expand / Collapse All</strong> to navigate large trees quickly, and the filter box to narrow by organism name.">
-        <i class="fa fa-info-circle"></i>
-      </button>
+      <?= help_modal_trigger('downloads-help', '', 'How to use Downloads') ?>
     </div>
     <div class="card-body py-2">
       <p class="text-muted small mb-0">Browse and download genome sequence and annotation files for organisms you have access to.</p>
@@ -248,3 +242,22 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
 
   <?php endif; ?>
 </div>
+
+<?php
+// How-to help, opened by the (i) on the page header. Replaces a hand-rolled data-bs-html
+// popover that needed a per-page init (downloads.js, now removed).
+echo help_modal(
+    'downloads-help',
+    'How to use Downloads',
+    [[
+        'heading' => '',
+        'cards'   => [
+            ['label' => 'Browse the tree',    'text' => 'Files are organised organism → assembly → gene set. Expand a level to see what is inside.'],
+            ['label' => 'Select at any level', 'text' => 'Tick individual files, or the box at an organism, assembly or gene-set level to take everything within it.'],
+            ['label' => 'Download as a zip',   'text' => 'With files selected, Download Selected fetches them all at once in a single zip.'],
+            ['label' => 'Find things fast',    'text' => 'Expand / Collapse All moves through large trees quickly, and the filter box narrows by organism name.'],
+        ],
+    ]],
+    ['intro' => 'Browse and download genome sequence and annotation files.']
+);
+?>
