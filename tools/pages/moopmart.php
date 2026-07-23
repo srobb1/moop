@@ -657,7 +657,14 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
       <!-- FASTA options -->
       <div id="mm-fasta-options" class="d-none">
-        <div class="small fw-semibold text-muted mb-2">Sequence type</div>
+        <div class="small fw-semibold text-muted mb-2">Sequence type
+          <?= field_help(
+              'Pick one form of each feature\'s sequence. Genomic includes introns; mRNA, CDS and '
+              . 'protein are the usual forms. For Upstream or Downstream, set Flank size below to '
+              . 'choose how many bases of genomic sequence to pull before or after the gene.',
+              'Sequence type'
+          ) ?>
+        </div>
         <div class="d-flex flex-wrap gap-2 mb-3">
           <?php
           $fasta_modes = [
