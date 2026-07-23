@@ -113,7 +113,10 @@
           <div class="d-flex align-items-center gap-2">
             <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Organisms in <?= htmlspecialchars($group_name) ?></span>
             <?php if (!empty($group_organisms)): ?>
-              <i class="fa fa-info-circle organism-instructions-trigger" style="cursor:pointer; font-size:0.85em; opacity:0.8;" data-instruction="Check/uncheck organisms to modify which are included in the search. Click an organism card to visit its page for organism-specific information and single-organism searches."></i>
+              <?= field_help(
+                'Untick an organism to leave it out of the search. Click a card to open that organism\'s own page, where you can search it alone.',
+                'Selected organisms'
+            ) ?>
             <?php endif; ?>
           </div>
           <?php if (!empty($group_organisms)): ?>

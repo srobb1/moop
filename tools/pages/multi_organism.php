@@ -58,7 +58,10 @@
         <div class="card-header text-white d-flex align-items-center justify-content-between flex-wrap gap-2" style="background-color:#0f766e;">
           <div class="d-flex align-items-center gap-2">
             <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Selected Organisms</span>
-            <i class="fa fa-info-circle organism-instructions-trigger" style="cursor:pointer; font-size:0.85em; opacity:0.8;" data-instruction="Check/uncheck organisms to modify which are included in the search. Click an organism card to visit its page for organism-specific information and single-organism searches."></i>
+            <?= field_help(
+                'Untick an organism to leave it out of the search. Click a card to open that organism\'s own page, where you can search it alone.',
+                'Selected organisms'
+            ) ?>
           </div>
           <div class="d-flex gap-2 align-items-center flex-wrap">
             <input type="text" id="organismFilter" class="form-control form-control-sm" placeholder="Filter organisms..." style="width:180px; font-size:0.8rem;">
@@ -122,9 +125,7 @@
       </div>
     </div>
   </div>
-</div>
-
-</div>
+</div><!-- /.container -->
 
 <?php /* Shared results help — ONE home for the explanation, included by every page
         that renders a results table. Opened by the trigger on the section header above. */ ?>

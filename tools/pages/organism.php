@@ -80,7 +80,7 @@
   </div>
 
   <!-- Organism Header Section -->
-  <div class="row mb-4" id="organismHeader">
+  <div class="row mb-5" id="organismHeader">
     <?php 
     $image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path);
     $image_src = $image_data['image_path'];
@@ -253,6 +253,10 @@
       </div>
     </div>
   </div>
+  </div><!-- /#organismHeader.row — was never closed, so everything below (including
+             #organismContent) was nested INSIDE this Bootstrap row as a non-column
+             flex child. That is why the About box sat flush against the info box:
+             margins on a flex item in a .row do not behave like block margins. -->
 
   <!-- Description Section -->
   <div id="organismContent">
@@ -287,8 +291,8 @@
       </div>
     </div>
   <?php endif; ?>
-
-  
+  </div><!-- /#organismContent -->
+</div><!-- /.container -->
 
 <?php /* Shared results help — ONE home for the explanation, included by every page
         that renders a results table. Opened by the trigger on the section header above. */ ?>
