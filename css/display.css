@@ -1233,6 +1233,22 @@ a:hover .link-icon {
   pointer-events: none;
 }
 
+/* The "pick an organism first" reminder shows ONLY while the tools are locked. Default
+   hidden; the .tools-locked class the JS already toggles reveals it, so there is no second
+   piece of state to keep in sync. A soft amber note, not an alarm — it is guidance. */
+.tools-select-hint {
+  display: none;
+  align-items: center;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  background: rgba(212, 175, 55, 0.12);
+  border-left: 3px solid #d4af37;
+  color: #6c5410;
+}
+.tools-locked .tools-select-hint {
+  display: flex;
+}
+
 /* ── Index page: Organism Select / Taxon Select lists ───────────────────── */
 
 .org-select-list {

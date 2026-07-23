@@ -84,6 +84,16 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
         <?php endif; ?>
     </div>
     <div class="card-body p-2">
+        <?php if ($use_onclick_handler): ?>
+            <?php /* The "uh-oh, do this first" reminder. Tools are dimmed until an organism is
+                     picked (.tools-locked, toggled by js/index.js); this says WHY, so a new user
+                     is not left staring at greyed-out buttons. Shown only when locked, via CSS on
+                     the same class — no extra JS. Only the gated index/custom-selection case has
+                     it; organism and group pages already carry an organism in context. */ ?>
+            <div class="tools-select-hint small mb-2">
+                <i class="fa fa-arrow-up me-1"></i> Pick an organism above first — then these tools run on your selection.
+            </div>
+        <?php endif; ?>
         <div class="d-flex flex-wrap gap-2">
             <?php foreach ($tools as $tool_id => $tool): ?>
                 <?php if ($use_onclick_handler): ?>
