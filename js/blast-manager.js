@@ -108,7 +108,11 @@ function initializeBlastManager() {
             
             if (!selectedSource || !selectedDb) {
                 e.preventDefault();
-                alert('Please select both an assembly and a database.');
+                const hint = document.getElementById('blast-select-hint');
+                if (hint) {
+                    hint.style.display = 'flex';
+                    hint.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
                 return false;
             }
             

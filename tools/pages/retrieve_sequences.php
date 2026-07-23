@@ -139,6 +139,11 @@
                     <button type="submit" class="btn btn-lg fw-semibold text-white w-100" style="background-color:#6366f1; border-color:#6366f1;">
                         <i class="fa fa-eye me-1"></i>Retrieve Sequences
                     </button>
+                    <?php /* "uh-oh, do this first" for a missed assembly. Inline and soft, in place
+                             of a jarring browser alert(); js/sequence-retrieval.js toggles it. */ ?>
+                    <div id="retrieve-select-hint" class="tools-select-hint small mt-2" style="display:none;">
+                        <i class="fa fa-arrow-up me-1"></i> Select an assembly above before retrieving.
+                    </div>
                 </div>
             </div>
 

@@ -705,7 +705,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
         <h5 class="modal-title fw-bold"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Select all organisms?</h5>
       </div>
       <div class="modal-body">
-        This will select all <strong id="mm-select-all-count"></strong> gene sets across all organisms.
+        This will select all <strong id="mm-select-all-count"></strong> across all organisms.
         Searches across all organisms can take a while — consider selecting only the ones you need.
       </div>
       <div class="modal-footer py-2">

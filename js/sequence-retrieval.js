@@ -74,9 +74,13 @@ function initializeSequenceRetrieval(options = {}) {
                 form.querySelector('input[name="assembly"]').value = checked.dataset.assembly;
                 form.querySelector('input[name="gene_set"]').value = checked.dataset.geneSet || '';
             } else {
-                // No assembly selected - prevent submit and alert user
+                // No assembly selected — show the inline reminder instead of a browser alert.
                 e.preventDefault();
-                alert('Please select an assembly before searching.');
+                const hint = document.getElementById('retrieve-select-hint');
+                if (hint) {
+                    hint.style.display = 'flex';
+                    hint.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
                 return false;
             }
         });

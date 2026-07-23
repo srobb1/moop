@@ -298,6 +298,11 @@
                     <button type="submit" class="btn btn-lg fw-semibold text-white w-100" id="searchBtn" style="background-color:#6366f1; border-color:#6366f1;">
                         <i class="fa fa-search me-1"></i>Run BLAST
                     </button>
+                    <?php /* Inline "uh-oh" for a missed assembly/database, in place of a browser
+                             alert(); js/blast-manager.js toggles it. */ ?>
+                    <div id="blast-select-hint" class="tools-select-hint small mt-2" style="display:none;">
+                        <i class="fa fa-arrow-up me-1"></i> Select an organism and database above before running BLAST.
+                    </div>
                 </div>
             </div>
         </form>
