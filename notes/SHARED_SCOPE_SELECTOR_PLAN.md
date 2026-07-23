@@ -48,6 +48,40 @@ which is now the de-facto superset:
 So MOOPmart now has both behaviours and search.php has neither of the two fixes — the
 extraction should take MOOPmart's versions as the reference and retire search.php's copy.
 
+## Expanded scope (user, 2026-07-23): one selector for FOUR pages, single OR multi
+
+The user wants the same component everywhere a user picks organisms/gene sets, with a
+`mode: 'single' | 'multi'` argument:
+
+| Page | Leaf | Mode | Notes |
+|---|---|---|---|
+| MOOPmart | gene set | **multi** | reference for collapse + filter |
+| Annotation Search | gene set | **multi** | reference for force-reveal + highlight |
+| Retrieve Sequences | gene set | **single** | `selected_source` radio; same org→asm→gs tree — clean fit |
+| BLAST | **database** | **single** | different leaf (nucl/prot DB, and it depends on the chosen program) — the odd one |
+
+`single` mode is not just "cap at one" — it removes behaviours: no All/None (nothing to
+select-all to), no organism-row-selects-all-gene-sets collapse (you must land on one leaf),
+and picking one clears the previous (radio semantics). So the component takes `mode` and
+branches; the multi path is what MOOPmart/search need, the single path is radio-like.
+
+**BLAST is the hard one** and may not fit v1: its leaf is a BLAST database, not a gene set,
+and which databases exist depends on the selected BLAST *program* (blastn/blastp/…), so the
+list changes reactively from another control. Treat BLAST as a later evaluation, not part of
+the first cut.
+
+### Phasing — so the site is never half-converted
+
+1. **Phase 1 — multi.** Build the component with the `mode` arg, implement the multi path,
+   convert MOOPmart then Annotation Search, verify each, delete their copies. This is the
+   clear duplication and the biggest win. Commit per page.
+2. **Phase 2 — single.** Implement the single path, convert Retrieve Sequences (same tree,
+   just single-select). Commit.
+3. **Phase 3 — evaluate BLAST.** Decide whether the database-leaf + program-dependency fit
+   the component or stay bespoke. Do not force it.
+
+Design the API for `single|multi` from the start (Phase 1) so Phases 2–3 don't re-cut it.
+
 ## What the shared component looks like
 
 **PHP:** one partial, e.g. `includes/scope_selector.php`, that renders the list from
