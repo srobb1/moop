@@ -550,38 +550,64 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
         echo help_modal(
             'mm-cols-help',
             'About the TSV columns',
-            [[
-                'heading' => '',
-                'cards'   => [
-                    [
-                        'label'  => 'Inclusion Criteria',
-                        'accent' => true,
-                        'text'   => 'Why each feature is in your list — which Step 2 criterion pulled it in. '
-                                  . 'A feature matched By Feature IDs shows the ID you entered; one from By Annotation '
-                                  . 'shows the matching annotation; from By Location, the overlapping range. It is the '
-                                  . 'column for checking your list did what you meant — turn it on when a result surprises you.',
-                        'html'   => true,
-                    ],
-                    [
-                        'label' => 'Gene Set',
-                        'text'  => 'The named set of gene models the feature belongs to. One assembly can carry more '
-                                 . 'than one gene set, so this says which it came from.',
-                    ],
-                    [
-                        'label' => 'The rest',
-                        'text'  => 'Organism, Assembly, the Gene / mRNA / Protein IDs, Gene Name and Description, and '
-                                 . 'the coordinates (Chr, Start, Stop, Strand) are the feature\'s basic facts. Include '
-                                 . 'the ones you need and drag to reorder.',
+            [
+                [
+                    'heading' => 'Feature columns',
+                    'cards'   => [
+                        [
+                            'label'  => 'Inclusion Criteria',
+                            'accent' => true,
+                            'text'   => 'Why each feature is in your list — which Step 2 criterion pulled it in. '
+                                      . 'A feature matched By Feature IDs shows the ID you entered; one from By Annotation '
+                                      . 'shows the matching annotation; from By Location, the overlapping range. It is the '
+                                      . 'column for checking your list did what you meant — turn it on when a result surprises you.',
+                            'html'   => true,
+                        ],
+                        [
+                            'label' => 'Gene Set',
+                            'text'  => 'The named set of gene models the feature belongs to. One assembly can carry more '
+                                     . 'than one gene set, so this says which it came from.',
+                        ],
+                        [
+                            'label' => 'The rest',
+                            'text'  => 'Organism, Assembly, the Gene / mRNA / Protein IDs, Gene Name and Description, and '
+                                     . 'the coordinates (Chr, Start, Stop, Strand) are the feature\'s basic facts. Include '
+                                     . 'the ones you need and drag to reorder.',
+                        ],
                     ],
                 ],
-            ]],
-            ['intro' => 'Pick which columns the TSV has, and their order. Most are self-explanatory — these are the two worth a note.']
+                [
+                    'heading' => 'Annotation columns',
+                    'cards'   => [
+                        [
+                            'label' => 'Annotation Type',
+                            'text'  => 'The broad category — e.g. Gene Ontology, Domains, Homologs.',
+                        ],
+                        [
+                            'label' => 'Annotation Source',
+                            'text'  => 'The specific database within a type — e.g. Pfam or InterPro under Domains.',
+                        ],
+                        [
+                            'label' => 'Annotation ID',
+                            'text'  => 'The accession — e.g. GO:0006351 or IPR000719.',
+                        ],
+                        [
+                            'label' => 'Annotation Description',
+                            'text'  => 'The human-readable text of the annotation.',
+                        ],
+                    ],
+                ],
+            ],
+            ['intro' => 'Pick which columns the TSV has, and their order. Annotation columns only appear '
+                      . 'if you select annotation types below.']
         );
         ?>
 
         <!-- Annotation columns -->
         <div class="mb-3">
-          <div class="small fw-semibold text-muted mb-2">Annotation columns to include in TSV if Annotation types (below) are selected</div>
+          <div class="small fw-semibold text-muted mb-2">Annotation columns to include in TSV if Annotation types (below) are selected
+            <?= help_modal_trigger('mm-cols-help', '', 'About the TSV columns') ?>
+          </div>
           <div id="mm-ann-col-list" style="max-width:320px;">
             <?php
             $ann_cols = [
