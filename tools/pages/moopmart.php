@@ -309,7 +309,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           </div>
           <div class="collapse" id="mm-name-body">
             <div class="browse-select-panel">
-              <p class="text-muted small mb-2">Partial match, case-insensitive. Searches the feature name field.
+              <p class="text-muted small mb-2">Partial match, case-insensitive. Searches the <?= gloss('feature') ?> name field.
                 <?= help_modal_trigger('search-help', '', 'How to search') ?>
               </p>
               <input type="text" id="mm-gene-name" class="form-control moop-input"
@@ -330,7 +330,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           </div>
           <div class="collapse" id="mm-desc-body">
             <div class="browse-select-panel">
-              <p class="text-muted small mb-2">Searches the feature description field. Partial match, case-insensitive.
+              <p class="text-muted small mb-2">Searches the <?= gloss('feature') ?> description field. Partial match, case-insensitive.
                 <?= help_modal_trigger('search-help', '', 'How to search') ?>
               </p>
               <input type="text" id="mm-gene-description" class="form-control moop-input"
@@ -368,8 +368,8 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           <div class="collapse" id="mm-ann-filter-body">
             <div class="browse-select-panel">
               <p class="text-muted small mb-3">
-                Every feature must satisfy <strong>all</strong> criteria (AND).
-                Each row filters by annotation type, exact accession, or keyword — fill any combination.
+                Every <?= gloss('feature') ?> must satisfy <strong>all</strong> criteria (AND).
+                Each row filters by <?= gloss('annotation type') ?>, exact accession, or keyword — fill any combination.
                 <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted"
                         style="font-size:0.85rem; line-height:1; vertical-align:middle;"
                         data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="About annotation types">
