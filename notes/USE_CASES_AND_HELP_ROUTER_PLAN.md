@@ -79,3 +79,35 @@ follow-up once the use-case data model exists for a submission to slot into.
 
 Related: `notes/GROUP_TAXON_CHECKER_PLAN.md` (same "admin reviews a queue" shape for
 piece 3), the help toolkit in `lib/help_ui.php`.
+
+---
+
+## 4. Surface annotation-type availability in MOOPmart's "By Annotation" filter — NEXT
+
+User concern 2026-07-23: filtering By Annotation with a type + keyword can silently
+under-deliver when the selected organisms have **few or no** annotations of that type —
+the user has no signal, and it quietly shrinks their list.
+
+**The data already exists.** MOOPmart's Step 3 "Annotation types to include in TSV" panel
+already shows per-source count badges and hides zero-count sources, fed by
+`tools/get_annotation_sources_grouped.php` and driven by `refreshAnnotationCounts()` in
+`js/modules/moopmart.js` (marks `.mm-ann-zerocount`, recomputes on organism-selection
+change). The By Annotation FILTER dropdown (Step 2) is a plain native `<select>` with no
+counts — that is the gap.
+
+**This is the real substance behind the earlier "make the two dropdowns match" question.**
+A native `<select>` cannot render the badge PILLS (option elements are plain-text only), and
+the badge colour adds little to a single-select picker anyway. But the COUNT is what the
+user actually wants, and native options CAN carry it: render each option as
+`Source name (1,234)`, and disable or grey a `(0)`.
+
+Plan:
+- Extend `refreshAnnotationCounts()` to also rewrite the `.mm-ann-src-select` option labels
+  from the same `counts` map it already builds. ⚠️ The dropdown is cloned per criterion row
+  (`$ann_dropdown` HTML reused when adding rows), so update ALL current selects and re-apply
+  after a row is added.
+- Recompute on organism-selection change (same trigger already wired).
+- Zero-count options: append " (0)" and `disabled`, or a muted style, so the user sees the
+  type exists but is empty for this selection — not just an absent option.
+
+Contained JS change, no new endpoint. Good first task next session.
