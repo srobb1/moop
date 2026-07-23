@@ -791,15 +791,23 @@ footer .footer-meta {
 .help-modal .help-modal-sec {
   margin-bottom: 1.5rem;
 }
+/* Deliberately the same treatment as .adm-head in css/admin-cards.css — quiet teal
+   wash, dark text, 3px teal left accent, ~1rem semibold. This is already the site's
+   language for "this is a section heading", so help modals borrow it rather than
+   inventing a fourth one. Values are copied rather than @extended because moop.css
+   loads on every page and admin-cards.css owns those custom properties; if the admin
+   accent ever moves, both move together by intent, not by accident. */
 .help-modal .help-modal-section {
-  margin: 0 0 0.75rem;
-  padding: 0.4rem 0;
-  color: #0e7490;
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border-bottom: 1px solid rgba(8, 145, 178, 0.25);
+  margin: 0 0 0.9rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(8, 145, 178, 0.07);
+  border-bottom: 1px solid rgba(8, 145, 178, 0.22);
+  border-left: 3px solid #0891b2;
+  border-radius: 3px;
+  color: #0f2b33;
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 /* Quiet cards — the content is the help, the card is only there to give the eye a
@@ -808,10 +816,14 @@ footer .footer-meta {
   border: 1px solid rgba(8, 145, 178, 0.18);
   background: rgba(8, 145, 178, 0.03);
 }
+/* Card titles are deliberately quieter than the section heading above them. They used
+   to be BIGGER than it (0.9rem vs 0.78rem) and teal as well, so the hierarchy read
+   inverted — the topics outranked the section that contained them. Slate, not teal:
+   the competition was as much about colour as size. */
 .help-modal .help-card .card-title {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: #155e75;
+  color: #334155;
 }
 .help-modal .help-card .card-body {
   padding: 0.75rem 0.9rem;
