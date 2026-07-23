@@ -96,12 +96,13 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                            . 'selected in Step 1; enter a chromosome or scaffold and optional start/end.',
               ],
               [
-                  'label' => 'A worked example',
-                  'text'  => 'Fill <strong>By Chromosomal Location</strong> with <code>Chr1 : 1–20000</code> '
-                           . '<em>and</em> <strong>By Annotation</strong> with <em>histone deacetylase</em>, and your '
-                           . 'list is every feature on Chr1 in that range that <em>also</em> has a matching '
-                           . 'annotation — not one or the other, both.',
-                  'html'  => true,
+                  'label'  => 'A worked example',
+                  'accent' => true,
+                  'text'   => 'Fill <strong>By Chromosomal Location</strong> with <code>Chr1 : 1–20000</code> '
+                            . '<em>and</em> <strong>By Annotation</strong> with <em>histone deacetylase</em>, and your '
+                            . 'list is every feature on Chr1 in that range that <em>also</em> has a matching '
+                            . 'annotation — not one or the other, both.',
+                  'html'   => true,
               ],
           ],
       ]],
@@ -241,9 +242,13 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           <div class="collapse" id="mm-ids-body">
             <div class="browse-select-panel">
               <p class="text-muted small mb-2">
-                Paste gene IDs, mRNA IDs, or protein IDs — one per line or comma/space separated.
-                Each ID is resolved to its gene: a protein ID walks up to the parent mRNA, then the parent gene.
-                An <strong>Inclusion Criteria</strong> column in your output will show exactly which input ID each result came from.
+                Paste gene, mRNA or protein IDs.
+                <?= field_help(
+                    'One per line or comma/space separated. Each ID is resolved to its gene: a protein ID '
+                    . 'walks up to the parent mRNA, then the parent gene. An "Inclusion Criteria" column in '
+                    . 'your output shows exactly which input ID each result came from.',
+                    'Feature IDs'
+                ) ?>
               </p>
               <textarea id="mm-feature-ids" class="form-control moop-input" rows="4"
                         placeholder="e.g. gene1, mRNA1.1, XP_023382306.1&#10;or one per line"></textarea>

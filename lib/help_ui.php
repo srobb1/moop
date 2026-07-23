@@ -196,7 +196,11 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
             }
             $body = !empty($card['html']) ? $text : htmlspecialchars($text);
 
-            $h .= '<div class="col-md-6"><div class="card h-100 help-card"><div class="card-body">';
+            // An 'accent' card is set apart from its siblings — a worked example, a caveat —
+            // with a slightly different wash and border. Quiet on purpose: it should read as
+            // "this one is different in kind", not as an alert.
+            $card_cls = 'card h-100 help-card' . (!empty($card['accent']) ? ' help-card-accent' : '');
+            $h .= '<div class="col-md-6"><div class="' . $card_cls . '"><div class="card-body">';
             if ($label !== '') {
                 // Optional step number, rendered as the SAME .step-badge circle the page
                 // uses for its numbered steps (css/display.css). Passing 'num' makes a help

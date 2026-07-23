@@ -816,6 +816,17 @@ footer .footer-meta {
   border: 1px solid rgba(8, 145, 178, 0.18);
   background: rgba(8, 145, 178, 0.03);
 }
+/* An accent card is different in KIND from its neighbours — a worked example, a caveat.
+   A warm amber wash and left rule sets it apart from the teal cards without shouting; it
+   is a quiet "read this one differently", not a warning. */
+.help-modal .help-card-accent {
+  border: 1px solid rgba(180, 130, 20, 0.30);
+  border-left: 3px solid #b48214;
+  background: rgba(212, 175, 55, 0.08);
+}
+.help-modal .help-card-accent .card-title {
+  color: #7a5b12;
+}
 /* Card titles are deliberately quieter than the section heading above them. They used
    to be BIGGER than it (0.9rem vs 0.78rem) and teal as well, so the hierarchy read
    inverted — the topics outranked the section that contained them. Slate, not teal:
