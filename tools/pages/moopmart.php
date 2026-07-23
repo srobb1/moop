@@ -177,10 +177,9 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       <span class="step-badge me-2">1</span>
       <span class="fw-semibold" style="font-size:0.9rem;">Select organisms</span>
       <?= help_modal_trigger('mm-scope-help', '', 'How to select organisms') ?>
-      <div class="d-flex gap-1 ms-auto">
-        <button type="button" class="btn btn-sm btn-outline-light py-0" id="mm-select-all">All</button>
-        <button type="button" class="btn btn-sm btn-outline-light py-0" id="mm-clear-all">None</button>
-      </div>
+      <button type="button" class="btn btn-sm btn-light py-0 ms-auto mm-toggle-all">
+        <span class="mm-toggle-all-label">Select all</span>
+      </button>
     </div>
     <div class="px-2 pt-2 pb-1 border-bottom d-flex align-items-center gap-2">
       <input type="text" class="form-control form-control-sm moop-input" id="mm-scope-filter"

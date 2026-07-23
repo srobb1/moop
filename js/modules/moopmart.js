@@ -27,6 +27,11 @@
         const namesEl   = document.getElementById('mm-scope-names');
         if (!el) return;
         refreshAnnotationCounts();   // keep Step 3 availability counts in sync with the selection
+        // Toggle label states its next action (and thus the current all-selected state).
+        const allBoxes = document.querySelectorAll('.mm-gs-cb');
+        const allOn = allBoxes.length > 0 && Array.from(allBoxes).every(cb => cb.checked);
+        const toggleLabel = document.querySelector('.mm-toggle-all-label');
+        if (toggleLabel) toggleLabel.textContent = allOn ? 'Deselect all' : 'Select all';
         const checked = Array.from(document.querySelectorAll('.mm-gs-cb:checked'));
         if (!checked.length) {
             el.textContent = 'Select at least one organism above';
@@ -262,32 +267,41 @@
             document.getElementById('mm-scope-filter')?.dispatchEvent(new Event('input'));
         });
 
-        // All / None
-        document.getElementById('mm-select-all')?.addEventListener('click', function () {
-            const total   = list.querySelectorAll('.mm-gs-cb').length;
-            const countEl = document.getElementById('mm-select-all-count');
-            if (countEl) countEl.textContent = total + (total === 1 ? ' gene set' : ' gene sets');
-            const modalEl = document.getElementById('mm-select-all-modal');
-            const modal   = bootstrap.Modal.getOrCreateInstance(modalEl);
-            const confirmBtn = document.getElementById('mm-select-all-confirm');
-            confirmBtn.onclick = function () {
-                modal.hide();
-                list.querySelectorAll('.mm-gs-cb').forEach(cb => {
-                    cb.checked = true;
-                    cb.closest('.mm-scope-row')?.classList.add('selected');
-                });
-                updateScopeSummary();
-                updateCoordState();
-            };
-            modal.show();
-        });
-        document.getElementById('mm-clear-all')?.addEventListener('click', function () {
+        // One toggle instead of an All / None pair. Its label states what it will do next,
+        // so it doubles as a readout of whether everything is selected. Deselect is
+        // immediate; select-all still routes through the "this can take a while" warning.
+        function clearAllSources() {
             list.querySelectorAll('.mm-gs-cb').forEach(cb => {
                 cb.checked = false;
                 cb.closest('.mm-scope-row')?.classList.remove('selected');
             });
             updateScopeSummary();
             updateCoordState();
+        }
+        function selectAllSources() {
+            list.querySelectorAll('.mm-gs-cb').forEach(cb => {
+                cb.checked = true;
+                cb.closest('.mm-scope-row')?.classList.add('selected');
+            });
+            updateScopeSummary();
+            updateCoordState();
+        }
+        document.querySelector('.mm-toggle-all')?.addEventListener('click', function () {
+            const boxes = list.querySelectorAll('.mm-gs-cb');
+            const allOn = boxes.length > 0 && Array.from(boxes).every(cb => cb.checked);
+            if (allOn) {
+                clearAllSources();
+                return;
+            }
+            // Selecting all — confirm first, because searching every organism can be slow.
+            const countEl = document.getElementById('mm-select-all-count');
+            if (countEl) countEl.textContent = boxes.length + (boxes.length === 1 ? ' gene set' : ' gene sets');
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('mm-select-all-modal'));
+            document.getElementById('mm-select-all-confirm').onclick = function () {
+                modal.hide();
+                selectAllSources();
+            };
+            modal.show();
         });
 
         updateScopeSummary();
