@@ -301,10 +301,13 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
         <!-- By Annotation -->
         <?php
         // Build dropdown HTML for reuse by JS when adding new criteria rows
+        // data-type on each optgroup preserves the pristine type name: the JS availability
+        // counter rewrites the optgroup label to "Type (N)", so it needs the original to
+        // build from rather than re-parsing its own output.
         $ann_dropdown = '<select class="form-select form-select-sm moop-input mm-ann-src-select">'
                       . '<option value="">Any annotation type</option>';
         foreach ($annotation_source_types as $_type => $_td):
-            $ann_dropdown .= '<optgroup label="' . htmlspecialchars($_type) . '">';
+            $ann_dropdown .= '<optgroup label="' . htmlspecialchars($_type) . '" data-type="' . htmlspecialchars($_type, ENT_QUOTES) . '">';
             foreach ($_td['sources'] as $_src):
                 $ann_dropdown .= '<option value="' . htmlspecialchars($_src) . '">' . htmlspecialchars($_src) . '</option>';
             endforeach;

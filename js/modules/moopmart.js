@@ -54,6 +54,41 @@
 
     let annCountTimer = null;
     let annCountSeq   = 0;   // discard out-of-order responses
+    // Last computed availability, cached so a criterion row added AFTER counting still gets
+    // its dropdown labelled without re-fetching.
+    let lastAnnCounts     = null;   // { sourceName: n }
+    let lastAnnTypeTotals = null;   // { typeName: n }
+
+    // Write availability counts into the By-Annotation source dropdowns, so a user can see
+    // whether a type/source has many annotations or none for the organisms they picked —
+    // choosing an empty one silently shrinks their list, which is the whole reason for this.
+    // Options keep their value (the source name); only the visible text changes, and a
+    // zero-count source is disabled so it cannot be chosen unknowingly (unless already picked).
+    function applyAnnDropdownCounts() {
+        document.querySelectorAll('.mm-ann-src-select').forEach(sel => {
+            sel.querySelectorAll('optgroup').forEach(og => {
+                const type = og.dataset.type || og.label;
+                if (lastAnnTypeTotals) {
+                    const t = lastAnnTypeTotals[type] || 0;
+                    og.label = `${type} (${t.toLocaleString()})`;
+                } else {
+                    og.label = type;   // cleared — no selection
+                }
+                og.querySelectorAll('option').forEach(opt => {
+                    const src = opt.value;
+                    if (!src) return;                       // leave "Any annotation type"
+                    if (lastAnnCounts) {
+                        const n = lastAnnCounts[src] || 0;
+                        opt.textContent = `${src} (${n.toLocaleString()})`;
+                        opt.disabled = (n === 0 && !opt.selected);
+                    } else {
+                        opt.textContent = src;              // cleared
+                        opt.disabled = false;
+                    }
+                });
+            });
+        });
+    }
 
     // Update the per-source count badges in Step 3 to reflect the organisms selected
     // in Step 1. Counts are across ALL genes of those organisms (not the gene filter),
@@ -70,6 +105,8 @@
                 // No selection yet — clear counts and show the full list (subject to text filter)
                 badges.forEach(b => { b.textContent = ''; b.classList.add('d-none'); });
                 document.querySelectorAll('.mm-ann-item').forEach(it => it.classList.remove('mm-ann-zerocount'));
+                lastAnnCounts = null; lastAnnTypeTotals = null;
+                applyAnnDropdownCounts();   // reset dropdowns to plain source names
                 applyAnnVisibility();
                 if (summary) summary.textContent = '';
                 return;
@@ -83,8 +120,15 @@
                 .then(data => {
                     if (seq !== annCountSeq) return;   // superseded by a newer selection
                     const counts = {};
-                    Object.values(data.source_types || {}).forEach(td =>
-                        (td.sources || []).forEach(s => { counts[s.name] = (counts[s.name] || 0) + s.count; }));
+                    const typeTotals = {};
+                    Object.entries(data.source_types || {}).forEach(([typeName, td]) =>
+                        (td.sources || []).forEach(s => {
+                            counts[s.name] = (counts[s.name] || 0) + s.count;
+                            typeTotals[typeName] = (typeTotals[typeName] || 0) + s.count;
+                        }));
+                    lastAnnCounts = counts;
+                    lastAnnTypeTotals = typeTotals;
+                    applyAnnDropdownCounts();
                     badges.forEach(b => {
                         const n = counts[b.dataset.src] || 0;
                         // Mark sources with no annotations for this selection; applyAnnVisibility() hides them
@@ -269,6 +313,9 @@
                 '<div class="col-sm-3"><input type="text" class="form-control form-control-sm moop-input mm-ann-keyword" placeholder="e.g. transporter"></div>' +
                 '<div class="col-sm-1 text-end"><button type="button" class="btn btn-sm btn-outline-danger py-0 mm-remove-criterion" title="Remove"><i class="fa fa-times"></i></button></div>';
             container.appendChild(newRow);
+            // The cloned dropdown starts label-less; give it the counts already computed for
+            // the current organism selection so it matches the rows above it.
+            applyAnnDropdownCounts();
         });
 
         container.addEventListener('click', function (e) {
