@@ -34,37 +34,64 @@ function initializeOrganismSelection(allOrganisms, updateCallback) {
             selectedOrganisms = selectedOrganisms.filter(o => o !== organism);
         }
         
+        refreshToggleAllLabel();
+
         // Call update callback
         if (updateCallback) {
             updateCallback(selectedOrganisms);
         }
     });
     
-    // Handle "Select All" button — respects active filter
-    $(document).on('click', '.selectAllOrganisms', function() {
-        const filterActive = ($('#organismFilter').val() || '').trim().length > 0;
-        if (filterActive) {
-            $('.organism-card-col:visible .organism-checkbox').prop('checked', true);
-            $('.organism-card-col:visible .organism-selector-card').addClass('selected');
-            $('.organism-card-col:visible .organism-checkbox').each(function() {
-                const org = $(this).data('organism');
-                if (!selectedOrganisms.includes(org)) selectedOrganisms.push(org);
-            });
-        } else {
-            selectedOrganisms = [...allOrganisms];
-            $('.organism-checkbox').prop('checked', true);
-            $('.organism-selector-card').addClass('selected');
-        }
+    // One toggle instead of a Select All / Deselect All pair. Two buttons that were
+    // each valid only half the time read as unfinished, and one of them was always
+    // a no-op. The label states what the button will DO next, so it doubles as a
+    // readout of whether everything is currently selected.
+    $(document).on('click', '.toggleAllOrganisms', function() {
+        // "Everything" means everything VISIBLE — with a filter active the user is
+        // looking at a subset, and acting on hidden rows they cannot see would be
+        // surprising. Select All already respected the filter; deselect now does too.
+        //
+        // Scoped to .organism-selector-card, NOT the .organism-card-col wrapper: only
+        // multi_organism.php has that wrapper, so scoping to it silently did nothing
+        // on the groups page. The card exists on both, and jQuery :visible is false
+        // for a card whose wrapper the filter hid, so filtering is still respected.
+        const $cards = $('.organism-selector-card:visible');
+        const $boxes = $cards.find('.organism-checkbox');
+        const allOn  = $boxes.length > 0 && $boxes.filter(':not(:checked)').length === 0;
+
+        $boxes.prop('checked', !allOn);
+        $cards.toggleClass('selected', !allOn);
+
+        $boxes.each(function() {
+            const org = $(this).data('organism');
+            const has = selectedOrganisms.includes(org);
+            if (!allOn && !has) {
+                selectedOrganisms.push(org);
+            } else if (allOn && has) {
+                selectedOrganisms = selectedOrganisms.filter(o => o !== org);
+            }
+        });
+
+        refreshToggleAllLabel();
         if (updateCallback) updateCallback(selectedOrganisms);
     });
 
-    // Handle "Deselect All" button — always clears everything
-    $(document).on('click', '.deselectAllOrganisms', function() {
-        selectedOrganisms = [];
-        $('.organism-checkbox').prop('checked', false);
-        $('.organism-selector-card').removeClass('selected');
-        if (updateCallback) updateCallback(selectedOrganisms);
-    });
+    /**
+     * Keep the toggle's label describing its next action.
+     *
+     * Reads the visible checkboxes rather than selectedOrganisms, so it stays honest
+     * while a filter is narrowing what "all" refers to.
+     */
+    function refreshToggleAllLabel() {
+        const $boxes = $('.organism-selector-card:visible .organism-checkbox');
+        const allOn  = $boxes.length > 0 && $boxes.filter(':not(:checked)').length === 0;
+        $('.toggleAllOrganisms .toggle-all-label').text(allOn ? 'Deselect all' : 'Select all');
+
+        // Count in the section bar, where the user is while ticking boxes.
+        const $all = $('.organism-selector-card .organism-checkbox');
+        $('.organism-count-badge .oc-n').text($all.filter(':checked').length);
+        $('.organism-count-badge .oc-t').text($all.length);
+    }
 
     // Handle organism filter input
     $(document).on('input', '#organismFilter', function() {
@@ -73,12 +100,15 @@ function initializeOrganismSelection(allOrganisms, updateCallback) {
             const text = $(this).data('filter-text') || '';
             $(this).toggle(q === '' || text.includes(q));
         });
+        // "All" now refers to a different set, so the toggle may mean the opposite.
+        refreshToggleAllLabel();
     });
-    
+
     // Initialize visual state for already-checked boxes
     $('.organism-checkbox:checked').each(function() {
         $(this).closest('.organism-selector-card').addClass('selected');
     });
-    
+    refreshToggleAllLabel();
+
     return selectedOrganisms;
 }

@@ -85,9 +85,13 @@
     background-color: #b3d8ed;
 }
 
-/* Selection bar hover effect */
-.organism-selector-card:hover .organism-selection-bar {
-    background-color: #f5f5f5;
+/* Selection bar hover effect.
+   Scoped to :not(.selected) deliberately. This rule and the .selected rule above
+   have identical specificity, so plain source order let hover repaint a SELECTED
+   card's bar back to grey — hovering a ticked organism made it look as though
+   pointing at it had unticked it. Hover must never contradict state. */
+.organism-selector-card:not(.selected):hover .organism-selection-bar {
+    background-color: #ebebeb;
 }
 
 /* Card hover effects */
@@ -102,7 +106,101 @@
     text-decoration: none !important;
 }
 
+/* ---------------------------------------------------------------------------
+   Making the TWO actions on a card legible.
+
+   A card does two different things depending on where you click: the strip on
+   top toggles whether the organism is in the search, and the card below opens
+   that organism's page. Neither used to say so — the strip was an unlabelled
+   checkbox in a grey band, and the card gave no hint it was a link at all. The
+   fix is a word on the strip and a visible destination on the card, not more
+   explanatory text elsewhere.
+   --------------------------------------------------------------------------- */
+
+/* The strip reports STATE, not an instruction — "In search" / "Not in search" —
+   so a user scanning the grid can see at a glance which organisms are included
+   without reading anything twice. A fixed label like "Include in search" describes
+   the control but leaves the current state to be inferred from a tickbox; naming
+   the state costs the same words and answers the question directly.
+
+   Swapped in pure CSS off the .selected class the JS already maintains, so there is
+   no second place for the state to be tracked and get out of step. */
+.organism-selection-text {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #64748b;
+    pointer-events: none;   /* the whole strip is the label; never eat the click */
+    transition: color 0.2s ease;
+}
+.organism-selection-text .sel-on { display: none; }
+.organism-selection-text .sel-off { display: inline; }
+.organism-selector-card.selected .organism-selection-text .sel-on { display: inline; }
+.organism-selector-card.selected .organism-selection-text .sel-off { display: none; }
+
+.organism-selector-card.selected .organism-selection-text {
+    color: #0f2b33;
+}
+/* Out of the search reads as genuinely off, not merely unstyled. */
+.organism-selector-card:not(.selected) .organism-selection-text {
+    color: #94a3b8;
+}
+.organism-selector-card:not(.selected) .organism-card {
+    opacity: 0.62;
+}
+
+/* The card's destination, stated on the card itself. Always present so the
+   affordance survives touch (a hover-only hint is invisible on a phone), but
+   quiet until you are actually pointing at it. */
+.organism-card-go {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.15rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #0891b2;
+    opacity: 0.55;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.organism-card-go .fa {
+    font-size: 0.65rem;
+    transition: transform 0.2s ease;
+}
+.organism-selector-card:hover .organism-card-go {
+    opacity: 1;
+}
+.organism-selector-card:hover .organism-card-go .fa {
+    transform: translateX(3px);
+}
+
+/* Only the card lifts on hover, not the strip — the lift belongs to the thing
+   that navigates, so the two zones do not read as one control. */
+.organism-selector-card:hover .organism-selection-bar {
+    transform: none;
+}
+
 /* Add margin to card body to create space after selection bar */
 .organism-selector-card .organism-card .card-body {
     margin-top: 8px;
+}
+
+/* Count in the section bar: "3 of 49". Sits beside the section title because that
+   bar is what you are looking at while ticking cards — the same figure appears under
+   the search box ("Searching across N organisms"), which is the right place when you
+   are about to search but is off screen once you have scrolled into a long grid.
+   Both are recomputed from the checkboxes on every change, so unlike duplicated
+   prose the two cannot disagree. */
+.organism-count-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    white-space: nowrap;
 }

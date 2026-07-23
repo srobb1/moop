@@ -113,17 +113,18 @@
           <div class="d-flex align-items-center gap-2">
             <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Organisms in <?= htmlspecialchars($group_name) ?></span>
             <?php if (!empty($group_organisms)): ?>
-              <?= field_help(
-                'Untick an organism to leave it out of the search. Click a card to open that organism\'s own page, where you can search it alone.',
+              <span class="organism-count-badge"><span class="oc-n">0</span> of <span class="oc-t">0</span></span>
+            <?= field_help(
+                'Each card says whether that organism is In search or Not in search — click the bar to switch it. '
+                . 'Clicking the card itself opens that organism\'s own page instead.',
                 'Selected organisms'
             ) ?>
             <?php endif; ?>
           </div>
           <?php if (!empty($group_organisms)): ?>
-            <div class="btn-group" role="group">
-              <button type="button" class="btn btn-sm btn-outline-light selectAllOrganisms" style="font-size:0.75rem;">Select All</button>
-              <button type="button" class="btn btn-sm btn-outline-light deselectAllOrganisms" style="font-size:0.75rem;">Deselect All</button>
-            </div>
+            <button type="button" class="btn btn-sm btn-light toggleAllOrganisms" style="font-size:0.75rem;">
+              <span class="toggle-all-label">Deselect all</span>
+            </button>
           <?php endif; ?>
         </div>
         <div class="card-body">
@@ -161,6 +162,7 @@
                      <label class="organism-selection-bar">
                        <input type="checkbox" class="organism-checkbox" data-organism="<?= htmlspecialchars($organism) ?>" checked>
                        <span class="organism-selection-icon"></span>
+                    <span class="organism-selection-text"><span class="sel-on">In search</span><span class="sel-off">Not in search</span></span>
                      </label>
                      <!-- Clickable card that links to organism page -->
 <a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
@@ -181,6 +183,7 @@
                         <h5 class="card-title mb-2">
                           <em><?= htmlspecialchars($genus . ' ' . $species) ?></em>
                         </h5>
+                        <span class="organism-card-go">View organism <i class="fa fa-arrow-right"></i></span>
                         <?php if ($common_name): ?>
                           <p class="text-muted mb-0"><?= htmlspecialchars($common_name) ?></p>
                         <?php endif; ?>
