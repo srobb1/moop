@@ -1,8 +1,12 @@
 {
-    "annotation": "A functional description attached to a genomic feature — a gene name, protein function, GO term, or database cross-reference. Most are added by analysis tools such as BLAST or InterProScan.",
-    "annotation type": "A category of annotation, grouped by where it comes from — for example Gene Ontology terms, protein domains, or BLAST homology descriptions. You choose which types a search looks inside.",
-    "feature": "A sequence in the genome — a gene, mRNA, CDS, or protein. Annotations are attached to features.",
-    "gene set": "A named, versioned collection of gene models for one assembly. An assembly can carry more than one gene set as its annotation is revised.",
-    "assembly": "A specific genome-sequence build for an organism, identified by an accession (for example GCA_004027475.1).",
-    "GO term": "A Gene Ontology term — a standardized label for a gene product's molecular function, biological process, or cellular location (for example GO:0006351)."
+  "annotation": "A functional description attached to a genomic feature — a gene name, protein function, GO term, or database cross-reference. Most are added by analysis tools such as BLAST or InterProScan.",
+  "annotation type": "A category of annotation, grouped by where it comes from — for example Gene Ontology terms, protein domains, or BLAST homology descriptions. You choose which types a search looks inside.",
+  "feature": "A sequence in the genome — a gene, mRNA, CDS, or protein. Annotations are attached to features.",
+  "gene set": "A named, versioned collection of gene models for one assembly. An assembly can carry more than one gene set as its annotation is revised.",
+  "assembly": "A specific genome-sequence build for an organism, identified by an accession (for example GCA_004027475.1).",
+  "GO term": "A Gene Ontology term — a standardized label for a gene product's molecular function, biological process, or cellular location (for example GO:0006351).",
+  "mRNA": "Messenger RNA — a gene's spliced transcript: exons joined, introns removed, including the untranslated regions (UTRs).",
+  "CDS": "Coding sequence — the part of an mRNA that is translated into protein, without the untranslated regions.",
+  "protein": "The amino-acid sequence translated from a feature's coding sequence (CDS).",
+  "gene": "A stretch of DNA that encodes a functional product. A gene is transcribed into one or more mRNAs, which can be translated into proteins."
 }

@@ -283,7 +283,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           <div class="collapse" id="mm-ids-body">
             <div class="browse-select-panel">
               <p class="text-muted small mb-2">
-                Paste gene, <?= gloss('mRNA') ?> or <?= gloss('protein') ?> IDs.
+                Paste <?= gloss('gene') ?>, <?= gloss('mRNA') ?> or <?= gloss('protein') ?> IDs.
                 <?= field_help(
                     'One per line or comma/space separated. Each ID is resolved to its gene: a protein ID '
                     . 'walks up to the parent mRNA, then the parent gene. An "Inclusion Criteria" column in '
