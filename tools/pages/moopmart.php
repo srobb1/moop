@@ -13,7 +13,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
   <!-- Header -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
+    <div class="card-header text-white d-flex align-items-center gap-2" style="background-color:#0891b2;">
       <?= page_title('MOOPmart — Data Exporter') ?>
       <?= help_modal_trigger('mm-help', '', 'What MOOPmart does') ?>
     </div>
@@ -408,13 +408,13 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
              delegation, so a stopPropagation hack on a nested trigger would also swallow the
              modal; keeping the two controls separate is cleaner than reconciling them. */ ?>
     <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
-      <div class="d-flex align-items-center gap-2 me-auto cursor-pointer flex-grow-1"
+      <div class="d-flex align-items-center gap-2 cursor-pointer"
            data-bs-toggle="collapse" data-bs-target="#mm-design-body" aria-expanded="false" aria-controls="mm-design-body">
         <span class="step-badge me-2">3</span>
         <span class="fw-semibold" style="font-size:0.9rem;">Select Output Options</span>
       </div>
       <?= help_modal_trigger('mm-output-help', '', 'Output formats') ?>
-      <i class="fa fa-chevron-down ms-1 cursor-pointer" style="font-size:0.75rem; opacity:0.8; transition:transform 0.2s;" id="mm-design-chevron"
+      <i class="fa fa-chevron-down ms-auto cursor-pointer" style="font-size:0.75rem; opacity:0.8; transition:transform 0.2s;" id="mm-design-chevron"
          data-bs-toggle="collapse" data-bs-target="#mm-design-body" aria-controls="mm-design-body"></i>
     </div>
     <div class="collapse" id="mm-design-body">

@@ -30,7 +30,7 @@
 
     <!-- Page header -->
     <div class="card shadow-sm mb-4">
-      <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
+      <div class="card-header text-white d-flex align-items-center gap-2" style="background-color:#0891b2;">
         <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-dna me-2"></i>Sequence Retrieval</span>
         <?= help_modal_trigger('retrieve-help', '', 'How to use Sequence Retrieval') ?>
       </div>

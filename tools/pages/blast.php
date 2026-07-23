@@ -22,7 +22,7 @@
 <div class="container mt-5">
 
     <div class="card shadow-sm mb-4">
-      <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
+      <div class="card-header text-white d-flex align-items-center gap-2" style="background-color:#0891b2;">
         <?= page_title('BLAST Search', 'fa fa-dna') ?>
         <?= help_modal_trigger('blast-help', '', 'How to use BLAST') ?>
       </div>
