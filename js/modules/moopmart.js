@@ -848,20 +848,9 @@
             applyContextScope(scopeContext);
         }
 
-        // Popovers — close on outside click
-        const popovers = [];
-        document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
-            popovers.push(new bootstrap.Popover(el, { trigger: 'click' }));
-        });
-        document.addEventListener('click', e => {
-            popovers.forEach(pop => {
-                if (!pop._element.contains(e.target) && !document.querySelector('.popover')?.contains(e.target)) {
-                    pop.hide();
-                }
-            });
-        });
-
-        // Search instructions trigger (same modal as annotation search)
+        // Field-level help is now field_help(), initialised once globally by
+        // js/modules/field-help.js, and the how-to help is help_modal() which needs no
+        // init at all — so the page-local popover init that used to live here is gone.
 
         // Preview
         document.getElementById('mm-preview-btn')?.addEventListener('click', previewResults);

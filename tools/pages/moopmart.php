@@ -15,104 +15,135 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0891b2;">
       <?= page_title('MOOPmart — Data Exporter') ?>
-      <button type="button" class="btn btn-link p-0 text-white"
-              style="font-size:1rem; opacity:0.85; line-height:1;"
-              data-bs-toggle="modal" data-bs-target="#mm-help-modal">
-        <i class="fa fa-info-circle"></i>
-      </button>
+      <?= help_modal_trigger('mm-help', '', 'What MOOPmart does') ?>
     </div>
     <div class="card-body py-2">
       <p class="text-muted small mb-0">Export annotation data or sequences.</p>
     </div>
   </div>
 
-  <!-- Help Modal -->
-  <div class="modal fade" id="mm-help-modal" tabindex="-1" aria-labelledby="mm-help-modal-label" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header py-2" style="background:#0891b2; color:#fff;">
-          <h6 class="modal-title fw-semibold mb-0" id="mm-help-modal-label">What can MOOPmart do?</h6>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body small">
-          <p class="mb-3">MOOPmart lets you build a custom list of genomic features — genes, mRNAs, or other annotation types — across one or more assemblies, then enrich and download that list.</p>
+  <?php
+  // MOOPmart help modals, converted from two hand-built modals of <ul>/<h6> prose to the
+  // shared card modal (help_modal). They gain the consistent card treatment used across the
+  // site and, being help_modal()s, need no page init — see the removed popover block in
+  // js/modules/moopmart.js.
 
-          <h6 class="fw-semibold mb-1" style="color:#0891b2;">Build your list by…</h6>
-          <ul class="mb-3">
-            <li><strong>Feature IDs</strong> — paste a set of known gene or mRNA IDs</li>
-            <li><strong>Shared feature names</strong> — find features that share a common name across assemblies</li>
-            <li><strong>Annotation descriptions</strong> — e.g. all features with <em>"HDAC"</em> anywhere in their description</li>
-            <li><strong>Annotation IDs</strong> — e.g. all features with the Gene Ontology term <em>GO:0006351</em></li>
-            <li><strong>Genomic coordinates</strong> — all features within a specific chromosomal range</li>
-          </ul>
+  // Opened by the (i) on the page header. The "what is this tool" overview: what you can
+  // build a list from, what you can add to it, and how you take it away. The detailed
+  // mechanics of the five build methods live in the Step 2 modal below, not here — this
+  // stays a summary so the two do not restate each other.
+  echo help_modal(
+      'mm-help',
+      'What MOOPmart does',
+      [[
+          'heading' => '',
+          // One card per numbered step on the page, carrying the SAME .step-badge number, so
+          // the overview reads as a map of the four boxes below it. The per-step detail lives
+          // at each step's own (i) — this stays a walkthrough, not a repeat of it.
+          'cards'   => [
+              ['num' => '1', 'label' => 'Select organisms',
+               'text' => 'Pick one or more assemblies to pull features from. Filter the list to find them fast.'],
+              ['num' => '2', 'label' => 'Select genes',
+               'text' => 'Narrow to the features you want — by ID, name, description, annotation, or location. '
+                       . 'Every section is optional and they stack with AND.'],
+              ['num' => '3', 'label' => 'Output options',
+               'text' => 'Choose the format — a TSV spreadsheet or FASTA sequences — and which columns to include.'],
+              ['num' => '4', 'label' => 'Preview & download',
+               'text' => 'Check the first 100 matches, then download every matching feature.'],
+          ],
+      ]],
+      ['intro' => 'A four-step way to build a custom list of features across your assemblies and download it. '
+                . 'If you only need to look features up rather than export them, Annotation Search is simpler.']
+  );
 
-          <h6 class="fw-semibold mb-1" style="color:#0891b2;">Decorate your list with…</h6>
-          <ul class="mb-3">
-            <li>UniProt/Swiss-Prot homolog information</li>
-            <li>PFAM domain annotations</li>
-            <li>Gene Ontology terms</li>
-            <li>Any other annotation columns available for your assemblies</li>
-          </ul>
+  // Opened by the (i) on the Step 2 header. The five build methods in detail — one card per
+  // method, matching the five accordion sections directly below it on the page.
+  echo help_modal(
+      'mm-build-help',
+      'How to build your list',
+      [[
+          'heading' => '',
+          'cards'   => [
+              [
+                  'label' => 'By Feature IDs',
+                  'text'  => 'Paste IDs one per line or comma-separated. Each resolves up to its parent gene: '
+                           . 'a gene ID like <code>AT1G12345</code> directly, an mRNA <code>AT1G12345.1</code> or '
+                           . 'protein <code>XP_023382306.1</code> by walking up.',
+                  'html'  => true,
+              ],
+              [
+                  'label' => 'By Feature Name',
+                  'text'  => 'Partial, case-insensitive match on the name field. <code>HDAC</code> finds '
+                           . '<em>HDAC1</em>, <em>HDAC2</em>, <em>pHDAC3</em>.',
+                  'html'  => true,
+              ],
+              [
+                  'label' => 'By Feature Description',
+                  'text'  => 'Partial match on the description. <code>kinase</code> finds anything described as, '
+                           . 'say, a <em>serine/threonine-protein kinase</em>.',
+                  'html'  => true,
+              ],
+              [
+                  'label' => 'By Annotation',
+                  'text'  => 'Filter by attached annotations — GO, InterPro, BLAST hits. Each row is one criterion '
+                           . 'and all rows must match: an accession like <code>GO:0006351</code>, or a keyword like '
+                           . '<code>transcription factor</code>.',
+                  'html'  => true,
+              ],
+              [
+                  'label' => 'By Chromosomal Location',
+                  'text'  => 'Every feature overlapping a range. Available only when exactly one assembly is '
+                           . 'selected in Step 1; enter a chromosome or scaffold and optional start/end.',
+              ],
+              [
+                  'label' => 'A worked example',
+                  'text'  => 'Fill <strong>By Chromosomal Location</strong> with <code>Chr1 : 1–20000</code> '
+                           . '<em>and</em> <strong>By Annotation</strong> with <em>histone deacetylase</em>, and your '
+                           . 'list is every feature on Chr1 in that range that <em>also</em> has a matching '
+                           . 'annotation — not one or the other, both.',
+                  'html'  => true,
+              ],
+          ],
+      ]],
+      ['intro' => 'Each section is a different way to add features to the list you want to work with. '
+                . 'The criteria are additive (AND) — a feature has to match every section you fill in.']
+  );
 
-          <h6 class="fw-semibold mb-1" style="color:#0891b2;">Download as…</h6>
-          <ul class="mb-0">
-            <li><strong>TSV (spreadsheet)</strong> — choose and reorder the columns you want</li>
-            <li><strong>FASTA</strong> — pick the sequence type: genomic (with introns), mRNA, CDS, protein, or upstream/downstream flanking sequence</li>
-          </ul>
-        </div>
-        <div class="modal-footer py-2">
-          <a href="search.php" class="btn btn-sm btn-outline-secondary">Try Annotation Search first</a>
-          <button type="button" class="btn btn-sm text-white" style="background:#0891b2;" data-bs-dismiss="modal">Got it</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  // Opened by the (i) on the Step 3 header. Absorbs the old "Design your output" popover so the
+  // output-format detail has ONE home. The inline (i) beside the Wide/Long toggle stays as a
+  // short field_help for the one control; this modal is the fuller reference for all formats.
+  echo help_modal(
+      'mm-output-help',
+      'Output formats',
+      [[
+          'heading' => '',
+          'cards'   => [
+              [
+                  'label' => 'TSV',
+                  'text'  => 'A plain-text spreadsheet, columns separated by tabs. In Excel, use '
+                           . '<em>File → Open</em> (or <em>Data → From Text/CSV</em> if it lands in one column).',
+                  'html'  => true,
+              ],
+              [
+                  'label' => 'Wide vs Long',
+                  'text'  => 'Wide puts all of a feature\'s annotation values on one row, joined with "; ". '
+                           . 'Long gives one row per annotation — easier to filter in Excel.',
+              ],
+              [
+                  'label' => 'FASTA',
+                  'text'  => 'Standard sequence format. Each entry is a <code>&gt;header</code> line then the '
+                           . 'sequence — ready for BLAST, MUSCLE, Galaxy, or any text editor.',
+                  'html'  => true,
+              ],
+              [
+                  'label' => 'Choosing columns',
+                  'text'  => 'Pick which columns to include and their order, then Preview or Download in Step 4.',
+              ],
+          ],
+      ]]
+  );
+  ?>
 
-  <!-- Build Your List help modal -->
-  <div class="modal fade" id="mm-build-help-modal" tabindex="-1" aria-labelledby="mm-build-help-label" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header py-2" style="background:#0891b2; color:#fff;">
-          <h6 class="modal-title fw-semibold mb-0" id="mm-build-help-label">How to build your list</h6>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body small">
-
-          <p class="mb-3">Each section is a different way to filter genes. Leave a section empty to ignore it. Fill more than one and only genes that satisfy <strong>all</strong> of them will appear in your list.</p>
-
-          <h6 class="fw-semibold mb-1" style="color:#0891b2;">By Feature IDs</h6>
-          <p class="mb-1">Paste one or more IDs — gene IDs, mRNA IDs, or protein IDs — one per line or comma-separated. Each is resolved to its parent gene automatically.</p>
-          <ul class="mb-3">
-            <li><strong>Gene ID</strong> — matched directly: <code>AT1G12345</code></li>
-            <li><strong>mRNA ID</strong> — walks up to the parent gene: <code>AT1G12345.1</code></li>
-            <li><strong>Protein ID</strong> — walks up through mRNA to gene: <code>XP_023382306.1</code></li>
-          </ul>
-
-          <h6 class="fw-semibold mb-1" style="color:#0891b2;">By Feature Name</h6>
-          <p class="mb-3">Partial, case-insensitive match on the gene name field. For example, entering <code>HDAC</code> will find genes named <em>HDAC1</em>, <em>HDAC2</em>, <em>pHDAC3</em>, etc.</p>
-
-          <h6 class="fw-semibold mb-1" style="color:#0891b2;">By Feature Description</h6>
-          <p class="mb-3">Partial match on the gene description. For example, <code>kinase</code> finds any gene whose description contains that word, such as <em>serine/threonine-protein kinase</em>.</p>
-
-          <h6 class="fw-semibold mb-1" style="color:#0891b2;">By Annotation</h6>
-          <p class="mb-1">Filter by functional annotations attached to genes — GO terms, InterPro domains, BLAST hits, and more. Each row is one criterion; all rows must be satisfied (AND).</p>
-          <ul class="mb-3">
-            <li><strong>Annotation type</strong> — narrow to a specific database, e.g. <em>Gene Ontology</em> or <em>InterPro</em></li>
-            <li><strong>Accession (exact)</strong> — match a specific ID, e.g. <code>GO:0006351</code> or <code>IPR000719</code></li>
-            <li><strong>Keyword</strong> — partial match on the annotation description, e.g. <code>transcription factor</code></li>
-          </ul>
-          <p class="mb-3">Example: to find all genes with a kinase domain <em>and</em> a specific GO term, add two rows — one for <code>IPR000719</code> and one for <code>GO:0004672</code>.</p>
-
-          <h6 class="fw-semibold mb-1" style="color:#0891b2;">By Chromosomal Location</h6>
-          <p class="mb-0">Returns all genes whose coordinates overlap the specified range. Only available when exactly one assembly is selected in Step 1. Enter a chromosome or scaffold name and optional start/end positions.</p>
-
-        </div>
-        <div class="modal-footer py-2">
-          <button type="button" class="btn btn-sm text-white" style="background:#0891b2;" data-bs-dismiss="modal">Got it</button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- ① Select Organisms -->
   <div class="card mb-3 shadow-sm">
@@ -188,11 +219,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
     <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
       <span class="step-badge me-2">2</span>
       <span class="fw-semibold" style="font-size:0.9rem;">Select Genes</span>
-      <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline"
-              style="font-size:0.85rem; color:rgba(255,255,255,0.8);"
-              data-bs-toggle="modal" data-bs-target="#mm-build-help-modal">
-        <i class="fa fa-info-circle"></i>
-      </button>
+      <?= help_modal_trigger('mm-build-help', '', 'How to build your list') ?>
       <small class="ms-auto" style="color:rgba(255,255,255,0.75); font-size:0.78rem;">all sections optional</small>
     </div>
     <div class="card-body pt-2 pb-3">
@@ -370,15 +397,20 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
   <!-- ③ Design Your Output -->
   <div class="card mb-3 shadow-sm">
-    <div class="card-header py-2 d-flex align-items-center gap-2 cursor-pointer" style="background:#0891b2; color:#fff;"
-         data-bs-toggle="collapse" data-bs-target="#mm-design-body" aria-expanded="false" aria-controls="mm-design-body">
-      <span class="step-badge me-2">3</span>
-      <span class="fw-semibold me-auto" style="font-size:0.9rem;">Select Output Options</span>
-      <i class="fa fa-info-circle" style="cursor:pointer; color:rgba(255,255,255,0.7);"
-         data-bs-toggle="popover" data-bs-placement="left" data-bs-html="true"
-         data-bs-title="Design your output"
-         data-bs-content="Choose a <strong>format</strong> and which <strong>columns</strong> to include, then click Preview or Download in Step 4.<br><br><strong>TSV (Tab-Separated Values)</strong> — a plain-text spreadsheet where columns are separated by tab characters. To open in Excel: choose <em>File &rarr; Open</em>, select the downloaded file, and Excel will parse it automatically (or use <em>Data &rarr; From Text/CSV</em> if it opens as one column).<br><br><strong>Wide vs Long</strong> — Wide puts all annotation values for a feature on one row, joined with &#039;; &#039;. Long gives one row per annotation, which is easier to filter in Excel.<br><br><strong>FASTA</strong> — a standard sequence format used by bioinformatics tools. Each entry starts with a <code>&gt;header</code> line (containing the feature ID and organism), followed by the nucleotide or protein sequence on the next line. FASTA files can be opened in any text editor or loaded directly into tools like BLAST, MUSCLE, or Galaxy." onclick="event.stopPropagation();"></i>
-      <i class="fa fa-chevron-down ms-1" style="font-size:0.75rem; opacity:0.8; transition:transform 0.2s;" id="mm-design-chevron"></i>
+    <?php /* Only the title region is the collapse toggle, not the whole header — so the help
+             (i) beside it is a SIBLING of the toggle, not a child, and can be an ordinary
+             help_modal_trigger() with no event-propagation fight. A modal opens by document
+             delegation, so a stopPropagation hack on a nested trigger would also swallow the
+             modal; keeping the two controls separate is cleaner than reconciling them. */ ?>
+    <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
+      <div class="d-flex align-items-center gap-2 me-auto cursor-pointer flex-grow-1"
+           data-bs-toggle="collapse" data-bs-target="#mm-design-body" aria-expanded="false" aria-controls="mm-design-body">
+        <span class="step-badge me-2">3</span>
+        <span class="fw-semibold" style="font-size:0.9rem;">Select Output Options</span>
+      </div>
+      <?= help_modal_trigger('mm-output-help', '', 'Output formats') ?>
+      <i class="fa fa-chevron-down ms-1 cursor-pointer" style="font-size:0.75rem; opacity:0.8; transition:transform 0.2s;" id="mm-design-chevron"
+         data-bs-toggle="collapse" data-bs-target="#mm-design-body" aria-controls="mm-design-body"></i>
     </div>
     <div class="collapse" id="mm-design-body">
     <div class="card-body pt-3">
@@ -402,10 +434,11 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
             <input class="form-check-input" type="checkbox" role="switch" id="mm-ann-wide-switch" aria-label="Wide format">
           </div>
           <span id="mm-label-wide" class="small" style="color:#adb5bd; transition:color 0.15s;">Wide</span>
-          <i class="fa fa-info-circle text-muted ms-1" style="cursor:pointer; font-size:0.85rem;"
-             data-bs-toggle="popover" data-bs-placement="right" data-bs-html="true"
-             data-bs-title="Table layout"
-             data-bs-content="<strong>Long</strong> (default) — one row per mRNA per annotation. Gene and mRNA IDs repeat so every annotation has its own line — easiest to filter in Excel.<br><br><strong>Wide</strong> — one row per mRNA, all annotation values for each source joined with '; '"></i>
+          <?= field_help(
+              'Long (default): one row per annotation, gene and mRNA IDs repeating — easiest to filter in Excel. '
+              . 'Wide: one row per mRNA, a source\'s values joined with "; ".',
+              'Table layout'
+          ) ?>
         </div>
 
         <!-- Feature columns -->
@@ -570,10 +603,10 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
     <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
       <span class="step-badge me-2">4</span>
       <span class="fw-semibold" style="font-size:0.9rem;">Preview &amp; Download</span>
-      <i class="fa fa-info-circle ms-1" style="cursor:pointer; color:rgba(255,255,255,0.7);"
-         data-bs-toggle="popover" data-bs-placement="right" data-bs-html="true"
-         data-bs-title="Preview &amp; Download"
-         data-bs-content="Preview shows the first 100 matching features so you can verify your list before downloading. The download exports <strong>all</strong> matching features."></i>
+      <?= field_help(
+          'Preview shows the first 100 matching features so you can check your list. Download exports every matching feature, not just those 100.',
+          'Preview & Download'
+      ) ?>
     </div>
     <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
       <button type="button" class="btn btn-outline-primary" id="mm-preview-btn">

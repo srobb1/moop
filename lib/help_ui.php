@@ -198,7 +198,17 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
 
             $h .= '<div class="col-md-6"><div class="card h-100 help-card"><div class="card-body">';
             if ($label !== '') {
-                if (!empty($card['color'])) {
+                // Optional step number, rendered as the SAME .step-badge circle the page
+                // uses for its numbered steps (css/display.css). Passing 'num' makes a help
+                // card a visual echo of the step it describes, so the reader maps the help
+                // onto the workflow in front of them. 'num' and 'color' are mutually
+                // exclusive — a card is either a step or a badge, not both.
+                $num = isset($card['num']) ? trim((string)$card['num']) : '';
+                if ($num !== '') {
+                    $h .= '<h6 class="card-title mb-2 d-flex align-items-center gap-2">'
+                        . '<span class="step-badge">' . htmlspecialchars($num) . '</span>'
+                        . '<span>' . htmlspecialchars($label) . '</span></h6>';
+                } elseif (!empty($card['color'])) {
                     // Badge form — for when the page itself shows this same badge, so the
                     // eye can match the help to the thing it just looked at.
                     $h .= '<h6 class="card-title mb-2"><span class="badge bg-'
