@@ -38,6 +38,12 @@ require_once __DIR__ . '/../lib/cache_paths.php';
 // early choke point so gloss() is in scope for any view file that renders a term.
 require_once __DIR__ . '/../lib/glossary.php';
 
+// The other two on-page help affordances — field_help() for a single control and
+// help_modal() for a set of things. Loaded here beside gloss() for the same reason:
+// a view file must be able to call them without knowing what its controller included,
+// or pages go back to hand-writing their own popover markup.
+require_once __DIR__ . '/../lib/help_ui.php';
+
 // Load the ConfigManager class
 require_once __DIR__ . '/ConfigManager.php';
 

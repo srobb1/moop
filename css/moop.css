@@ -735,3 +735,97 @@ footer .footer-meta {
 }
 /* Give the definition room to read as a sentence, not a cramped tooltip. */
 .popover { max-width: 320px; }
+
+/* ---------------------------------------------------------------------------
+   On-page help — field_help() / help_modal_trigger() / help_modal()
+   (lib/help_ui.php). One treatment site-wide, so a reader learns the affordance
+   once instead of meeting a differently-coloured (i) on every page.
+   --------------------------------------------------------------------------- */
+
+/* A real <button> for accessibility, stripped back to look like the icon it is.
+   Inherits font-size so it never outgrows the label it sits beside.
+
+   NOTE: this sets no colour on purpose. The gold info icon is a site-wide decision
+   made at the top of this file — `.fa-info-circle { color: #d4af37 !important }` —
+   and that !important beats anything set here on the button, since the colour lands
+   on the <i> itself. Declaring a colour here would be dead code that reads as if it
+   worked. Every (i) on the site is gold; changing that is a one-line change to the
+   global rule, not something a single component should fight. */
+.field-help {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-left: 0.35rem;
+  font-size: inherit;
+  line-height: 1;
+  opacity: 0.85;
+  cursor: pointer;
+  vertical-align: baseline;
+}
+.field-help:hover,
+.field-help:focus-visible {
+  opacity: 1;
+}
+/* Keyboard users must still see where they are — the popover opens on focus, so
+   the ring is the only cue that the button itself is selected. */
+.field-help:focus-visible {
+  outline: 2px solid #0891b2;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.field-help-label {
+  font-size: 0.8rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Section headings are what make one rich modal scannable instead of a scroll to get
+   lost in — the reader skims five headings and stops at the one they came for.
+
+   NOT sticky, deliberately. Sticky headings were tried and reverted: content scrolls
+   UNDER a sticky element, so each card title ended up half-clipped behind the pinned
+   heading, which reads as a rendering bug and costs the help exactly the credibility
+   it needs. (They also stacked, three pinned at once, until each section got its own
+   .help-modal-sec containing block — that part is kept, since it also spaces the
+   sections.) The border and letter-spacing carry the scannability on their own. */
+.help-modal .help-modal-sec {
+  margin-bottom: 1.5rem;
+}
+.help-modal .help-modal-section {
+  margin: 0 0 0.75rem;
+  padding: 0.4rem 0;
+  color: #0e7490;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid rgba(8, 145, 178, 0.25);
+}
+
+/* Quiet cards — the content is the help, the card is only there to give the eye a
+   boundary to land on. Deliberately flatter than the admin .adm-card. */
+.help-modal .help-card {
+  border: 1px solid rgba(8, 145, 178, 0.18);
+  background: rgba(8, 145, 178, 0.03);
+}
+.help-modal .help-card .card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #155e75;
+}
+.help-modal .help-card .card-body {
+  padding: 0.75rem 0.9rem;
+}
+/* Bootstrap's default code colour is a loud pink that fights the teal and pulls the
+   eye away from the sentence. Inline code here marks a literal the user would type,
+   so it needs to read as "type this", not as an alert. */
+.help-modal .help-card code {
+  color: #155e75;
+  background: rgba(8, 145, 178, 0.10);
+  padding: 0.05em 0.3em;
+  border-radius: 3px;
+  /* Never break a literal across lines. These are things the user is meant to TYPE,
+     and "P5 / 3" split over two lines with the tint box severed reads as a rendering
+     fault rather than as an example. */
+  white-space: nowrap;
+}

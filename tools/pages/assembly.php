@@ -47,7 +47,7 @@
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-4">
       <div class="card-header bg-search-results">
-        <span class="fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-list me-1"></i> Search Results <i class="fa fa-info-circle search-results-help-trigger" style="cursor:pointer; margin-left:0.4rem; font-size:0.85em;" data-help-type="results"></i></span>
+        <span class="fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-list me-1"></i> Search Results <?= help_modal_trigger('search-results-help', '', 'Understanding your search results') ?></span>
       </div>
 
       <div class="card-body">
@@ -188,3 +188,7 @@
   <?php endif; ?>
 
 </div>
+
+<?php /* Shared results help — ONE home for the explanation, included by every page
+        that renders a results table. Opened by the trigger on the section header above. */ ?>
+<?php include_once __DIR__ . '/../../includes/search_results_modal.php'; ?>

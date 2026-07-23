@@ -6,6 +6,13 @@
 /**
  * Initialize search instructions info icon handler
  * Call this on pages that have .search-instructions-trigger elements
+ *
+ * Results help is no longer routed through here. It is now a declarative card modal
+ * (includes/search_results_modal.php, built with help_modal()) opened straight from
+ * the Bootstrap data-api, so it needs no handler, no init call, and cannot sit dead
+ * on a page that forgot to wire it up. The two handlers that served it — for
+ * .search-results-help-trigger and .search-hints-trigger — were removed along with
+ * the 446-word RESULTS_HELP string they rendered; neither selector exists any more.
  */
 function initializeSearchInstructionsHandler() {
     $(document).on('click', '.search-instructions-trigger', function(e) {
@@ -13,22 +20,6 @@ function initializeSearchInstructionsHandler() {
         const helpType = $(this).data('help-type') || 'basic';
         const instruction = SEARCH_HELP[helpType] || $(this).data('instruction');
         showSearchInstructionModal(instruction, 'Search Tips');
-    });
-    
-    // Handle search results help trigger
-    $(document).on('click', '.search-results-help-trigger', function(e) {
-        e.stopPropagation();
-        const helpType = $(this).data('help-type') || 'results';
-        const instruction = SEARCH_HELP[helpType] || $(this).data('instruction');
-        showSearchInstructionModal(instruction, 'Search Results Help');
-    });
-    
-    // Also handle search hints trigger (in results section)
-    $(document).on('click', '.search-hints-trigger', function(e) {
-        e.stopPropagation();
-        const helpType = $(this).data('help-type') || 'results';
-        const instruction = SEARCH_HELP[helpType] || $(this).data('instruction');
-        showSearchInstructionModal(instruction, 'Search Results Help');
     });
 }
 
