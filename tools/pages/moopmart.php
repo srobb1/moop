@@ -18,7 +18,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       <?= help_modal_trigger('mm-help', '', 'What MOOPmart does') ?>
     </div>
     <div class="card-body py-2">
-      <p class="text-muted small mb-0">Export annotation data or sequences.</p>
+      <p class="text-muted small mb-0">Export <?= gloss('annotation') ?> data or sequences.</p>
     </div>
   </div>
 
@@ -265,7 +265,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       <small class="ms-auto" style="color:rgba(255,255,255,0.75); font-size:0.78rem;">all sections optional</small>
     </div>
     <div class="card-body pt-2 pb-3">
-      <p class="text-muted small mb-3">Fill any section to narrow your list — sections combine with AND, so a feature must satisfy every filled section.</p>
+      <p class="text-muted small mb-3">Fill any section to narrow your list — sections combine with AND, so a <?= gloss('feature') ?> must satisfy every filled section.</p>
 
       <!-- Accordion sections -->
       <div class="d-flex flex-column gap-2">
@@ -283,7 +283,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           <div class="collapse" id="mm-ids-body">
             <div class="browse-select-panel">
               <p class="text-muted small mb-2">
-                Paste gene, mRNA or protein IDs.
+                Paste gene, <?= gloss('mRNA') ?> or <?= gloss('protein') ?> IDs.
                 <?= field_help(
                     'One per line or comma/space separated. Each ID is resolved to its gene: a protein ID '
                     . 'walks up to the parent mRNA, then the parent gene. An "Inclusion Criteria" column in '
