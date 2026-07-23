@@ -225,9 +225,9 @@
             const q        = this.value.toLowerCase().trim();
             const detailOn = document.getElementById('mm-scope-detail')?.checked;
             list.querySelectorAll('.mm-scope-row').forEach(row => {
+                row.classList.remove('mm-scope-detail-forced');
                 if (!q) {
                     row.style.display = '';   // back to CSS (secondary rows hidden in simple)
-                    row.classList.remove('mm-scope-detail-forced');
                     return;
                 }
                 const all    = row.dataset.search || '';
@@ -235,14 +235,23 @@
                 const detail = row.dataset.searchDetail || '';
                 if (!all.includes(q)) {
                     row.style.display = 'none';
-                    row.classList.remove('mm-scope-detail-forced');
                     return;
                 }
-                // Show it — even a secondary row the simple view would normally collapse.
+                const detailOnly = detail.includes(q) && !simple.includes(q);
+                if (detailOn) {
+                    row.style.display = '';   // detail view: every gene-set row shows normally
+                    return;
+                }
+                // Simple view. The representative row shows on any match. A SECONDARY row
+                // shows only when the query hit its own assembly/gene set (detail-only) —
+                // so searching an organism name keeps the collapse and does not re-expose
+                // the very duplicate rows the collapse hid.
+                if (row.classList.contains('mm-scope-row-secondary') && !detailOnly) {
+                    row.style.display = 'none';
+                    return;
+                }
                 row.style.display = 'flex';
-                // Reveal the detail text when that is the only place the query matched.
-                row.classList.toggle('mm-scope-detail-forced',
-                    !detailOn && detail.includes(q) && !simple.includes(q));
+                if (detailOnly) row.classList.add('mm-scope-detail-forced');
             });
         });
 
