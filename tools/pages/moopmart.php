@@ -265,7 +265,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       <small class="ms-auto" style="color:rgba(255,255,255,0.75); font-size:0.78rem;">all sections optional</small>
     </div>
     <div class="card-body pt-2 pb-3">
-      <p class="text-muted small mb-3">All sections are combined with AND — features must satisfy every filled section.</p>
+      <p class="text-muted small mb-3">Fill any section to narrow your list — sections combine with AND, so a feature must satisfy every filled section.</p>
 
       <!-- Accordion sections -->
       <div class="d-flex flex-column gap-2">
@@ -417,9 +417,18 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           </div>
           <div class="collapse" id="mm-loc-body">
             <div class="browse-select-panel">
-              <p class="small text-muted fst-italic mb-2" id="mm-coord-note">
-                Select exactly one assembly in Step 1 to enable location search.
-              </p>
+              <?php /* Note text (state) and (i) (the "why one assembly?") share one line, so the
+                       (i) sits with the note instead of floating. updateCoordState() swaps the
+                       note text but leaves the sibling (i) in place. */ ?>
+              <div class="d-flex align-items-baseline gap-1 mb-2">
+                <span class="small text-muted fst-italic" id="mm-coord-note">Select exactly one assembly in Step 1 to enable location search.</span>
+                <?= field_help(
+                    'Location search works on one assembly at a time. The chromosome and scaffold names '
+                    . 'are read from that assembly\'s own reference sequences — they differ between '
+                    . 'assemblies — so the field auto-fills only when exactly one is selected.',
+                    'Why one assembly?'
+                ) ?>
+              </div>
               <div class="row g-2">
                 <div class="col-sm-4">
                   <label class="form-label small mb-1">Chr / scaffold</label>
@@ -773,6 +782,26 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
   </div>
 </div>
 
+<!-- Large-unfiltered-export warning: no Step 2 filter across many organisms -->
+<div class="modal fade" id="mm-big-export-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-warning">
+      <div class="modal-header bg-warning bg-opacity-10 py-2">
+        <h5 class="modal-title fw-bold"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Export every feature?</h5>
+      </div>
+      <div class="modal-body">
+        No filters are set in Step 2, so this exports <strong>every feature</strong> across
+        <strong class="mm-be-orgs"></strong> organisms (<strong class="mm-be-gs"></strong> gene sets).
+        That can be a very large file. Preview first to see the total, or go ahead.
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning mm-be-confirm">Download anyway</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <style>
 /* Simple/detail toggle for organism scope list.
    Simple view (detail-hidden): one row per organism — hide the per-gene-set detail text
@@ -800,8 +829,11 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
    tools. Teal is the section/accent colour, not the action colour. Preview is a quiet link. */
 .mm-dl-primary { background: #6366f1; border-color: #6366f1; color: #fff; font-weight: 600; }
 .mm-dl-primary:hover, .mm-dl-primary:focus { background: #4f46e5; border-color: #4f46e5; color: #fff; }
-.mm-preview-link { color: #6366f1; }
-.mm-preview-link:hover { color: #4f46e5; }
+/* Preview link: muted text, but keep the eye icon in the action indigo so it still reads
+   as the same button family. */
+.mm-preview-link { color: #6c757d; }
+.mm-preview-link:hover { color: #495057; }
+.mm-preview-link .fa { color: #6366f1; }
 </style>
 
 <?php /* Shared search-box help — ONE home, included by every page with a search

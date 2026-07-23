@@ -957,6 +957,20 @@
         // Preview
         document.getElementById('mm-preview-btn')?.addEventListener('click', previewResults);
 
+        // True if ANY Step 2 section is filled — an ID list, a name, a description, an
+        // annotation criterion, or a chromosomal range. When none are, the export is every
+        // feature of the selected organisms, which is the case worth warning about at scale.
+        function hasStep2Filters() {
+            if (document.getElementById('mm-feature-ids')?.value?.trim()) return true;
+            if (document.getElementById('mm-gene-name')?.value?.trim()) return true;
+            if (document.getElementById('mm-gene-description')?.value?.trim()) return true;
+            if (document.getElementById('mm-coord-chr')?.value?.trim()) return true;
+            return Array.from(document.querySelectorAll('.mm-ann-criterion')).some(row =>
+                (row.querySelector('.mm-ann-src-select')?.value?.trim()) ||
+                (row.querySelector('.mm-ann-accession')?.value?.trim()) ||
+                (row.querySelector('.mm-ann-keyword')?.value?.trim()));
+        }
+
         // Download (single button, format from radio)
         document.getElementById('mm-dl-btn')?.addEventListener('click', function () {
             const result = document.getElementById('mm-count-result');
@@ -967,7 +981,23 @@
             const format    = outputFormat();
             const fastaMode = document.querySelector('input[name="mm-fasta-type"]:checked')?.value || 'gene';
             const flank     = document.getElementById('mm-flank-bp')?.value || '1000';
-            submitDownload({ output_format: format, fasta_mode: fastaMode, flank_bp: flank });
+            const go = () => submitDownload({ output_format: format, fasta_mode: fastaMode, flank_bp: flank });
+
+            // Guard the genuinely big case: every feature (no Step 2 filter) across many
+            // organisms. A few unfiltered organisms is a normal export and passes straight
+            // through; the confirm only fires when it would be large.
+            const BIG_EXPORT_ORGS = 10;
+            const orgCount = getSelectedOrganisms().length;
+            if (!hasStep2Filters() && orgCount >= BIG_EXPORT_ORGS) {
+                const modalEl = document.getElementById('mm-big-export-modal');
+                modalEl.querySelector('.mm-be-orgs').textContent = orgCount.toLocaleString();
+                modalEl.querySelector('.mm-be-gs').textContent = getSelectedSources().length.toLocaleString();
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modalEl.querySelector('.mm-be-confirm').onclick = () => { modal.hide(); go(); };
+                modal.show();
+                return;
+            }
+            go();
         });
 
         updateCoordState();
