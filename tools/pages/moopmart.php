@@ -557,7 +557,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                         [
                             'label'  => 'Inclusion Criteria',
                             'accent' => true,
-                            'text'   => 'Why each feature is in your list — which Step 2 criterion pulled it in. '
+                            'text'   => 'Why each feature is in your list — which Step <span class="mm-step-ref">2</span> criterion pulled it in. '
                                       . 'A feature matched By Feature IDs shows the ID you entered; one from By Annotation '
                                       . 'shows the matching annotation; from By Location, the overlapping range. It is the '
                                       . 'column for checking your list did what you meant — turn it on when a result surprises you.',
@@ -578,6 +578,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                 ],
                 [
                     'heading' => 'Annotation columns',
+                    'note'    => 'These appear in the export only if you select annotation types below.',
                     'cards'   => [
                         [
                             'label' => 'Annotation Type',
@@ -598,8 +599,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                     ],
                 ],
             ],
-            ['intro' => 'Pick which columns the TSV has, and their order. Annotation columns only appear '
-                      . 'if you select annotation types below.']
+            ['intro' => 'Pick which columns the TSV has, and their order.']
         );
         ?>
 
@@ -864,9 +864,10 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
    a "Step 1" mention visually links back to the actual step without dominating the line. */
 .mm-step-ref {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 1.35em; height: 1.35em; border-radius: 50%;
+  width: 1.5em; height: 1.5em; border-radius: 50%;
   background: #6366f1; color: #fff; font-weight: 700; font-style: normal;
-  font-size: 0.85em; line-height: 1; vertical-align: -0.2em;
+  font-size: 0.8em; line-height: 1; vertical-align: middle;
+  position: relative; top: -0.05em;
 }
 </style>
 

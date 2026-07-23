@@ -187,6 +187,13 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
             $h .= '<h6 class="help-modal-section">' . htmlspecialchars($heading) . '</h6>';
         }
 
+        // Optional one-line note under the heading — a caveat or scope statement that
+        // applies to the whole section rather than any one card.
+        $note = trim((string)($section['note'] ?? ''));
+        if ($note !== '') {
+            $h .= '<p class="text-muted small mb-3">' . htmlspecialchars($note) . '</p>';
+        }
+
         $h .= '<div class="row g-3">';
         foreach ($cards as $card) {
             $label = trim((string)($card['label'] ?? ''));
