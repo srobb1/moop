@@ -127,6 +127,52 @@ class AnnotationSearch {
     }
 
     /**
+     * Confirm a large cross-organism search before running it.
+     *
+     * A Bootstrap modal rather than the browser's confirm() — same reason the select-first
+     * reminders are inline now: a native dialog is jarring. The modal is built once and
+     * reused; the confirm button's handler is rebound each call so it runs the right
+     * continuation.
+     *
+     * @param {number}   n         organism count, shown to the user
+     * @param {function} onConfirm run when the user chooses to proceed
+     */
+    confirmLargeSearch(n, onConfirm) {
+        let modalEl = document.getElementById('large-search-modal');
+        if (!modalEl) {
+            modalEl = document.createElement('div');
+            modalEl.className = 'modal fade';
+            modalEl.id = 'large-search-modal';
+            modalEl.tabIndex = -1;
+            modalEl.setAttribute('aria-hidden', 'true');
+            modalEl.innerHTML =
+                '<div class="modal-dialog modal-dialog-centered"><div class="modal-content">' +
+                '<div class="modal-header py-2">' +
+                  '<h5 class="modal-title fw-bold"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Search every organism?</h5>' +
+                  '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                '</div>' +
+                '<div class="modal-body">' +
+                  'You are about to search across <strong class="ls-count"></strong> organisms. ' +
+                  'The search runs on every one, so this can take a while. You can narrow the selection ' +
+                  'first, or go ahead.' +
+                '</div>' +
+                '<div class="modal-footer py-2">' +
+                  '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Narrow it down</button>' +
+                  '<button type="button" class="btn btn-warning ls-confirm"></button>' +
+                '</div>' +
+                '</div></div>';
+            document.body.appendChild(modalEl);
+        }
+        modalEl.querySelector('.ls-count').textContent = n.toLocaleString();
+        const confirmBtn = modalEl.querySelector('.ls-confirm');
+        confirmBtn.textContent = `Search all ${n.toLocaleString()}`;
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        // Rebind cleanly so a stale continuation from a previous call cannot fire.
+        confirmBtn.onclick = () => { modal.hide(); onConfirm(); };
+        modal.show();
+    }
+
+    /**
      * Clear all applied filters
      */
     clearFilters() {
@@ -266,6 +312,21 @@ class AnnotationSearch {
 
         if (keywords.length < 3) {
             alert('Please enter at least 3 characters to search');
+            return;
+        }
+
+        // "Do you really want every organism?" — a cross-organism search fans out to every
+        // selected organism, and cold that is seconds per organism, so a large selection can
+        // be genuinely slow. Warn once before running it, and let the user narrow first. The
+        // guard keys on totalVar, which is 1 on the single-organism pages, so it only ever
+        // fires on the multi pages (groups / multi-organism / taxonomy). Confirmed once per
+        // page, so a user who accepts the cost is not nagged on every subsequent search.
+        const LARGE_SEARCH = 15;
+        if (this.config.totalVar >= LARGE_SEARCH && !this._largeSearchConfirmed) {
+            this.confirmLargeSearch(this.config.totalVar, () => {
+                this._largeSearchConfirmed = true;
+                this.handleSearch();
+            });
             return;
         }
 
