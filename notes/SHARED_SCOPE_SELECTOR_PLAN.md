@@ -48,6 +48,34 @@ which is now the de-facto superset:
 So MOOPmart now has both behaviours and search.php has neither of the two fixes — the
 extraction should take MOOPmart's versions as the reference and retire search.php's copy.
 
+## The actual landscape — THREE selector systems, not one (measured 2026-07-23)
+
+Before building anything, the real state of play:
+
+1. **Flat multi-select** — MOOPmart + Annotation Search. Leaf = gene set. These are
+   COPIES of each other (`mm-scope-*` vs `scope-*`), and have drifted (§ above).
+2. **Flat single-select** — BLAST + Retrieve Sequences. Leaf = gene set (BLAST's is a
+   database). This one is ALREADY a shared, parameterised component:
+   `includes/source-list.php` + `includes/source-selector-helpers.php` +
+   `js/modules/source-list-manager.js` (radios named `selected_source`,
+   `.fasta-source-line`, filter, auto-select-first, scroll-into-view, restore-selection).
+3. **Nested cascade tree** — Downloads. org-block → asm-block → gene-set block → FILE
+   checkboxes, with a checkbox at every level that cascades. Leaf = individual FILE.
+   A genuinely different UI paradigm (expandable tree, 4 levels), not a flat list.
+
+**Systems 1 and 2 are the same org→asm→gs hierarchy differing only in selection mode.**
+That is the real unification: one flat selector with `mode: single|multi` replaces the
+duplicated multi pair AND merges with the mature single component — 4 pages.
+
+**Downloads (3) is a different problem.** A flat list has one row per gene set; Downloads
+needs to expand a gene set into its files and select those. That is a tree with cascade,
+not a filterable flat list. The user's own question — "how would we subselect other
+files?" — is exactly why it does not fit the flat model. Recommendation: leave Downloads'
+tree as its own component (it can still share row rendering / the org→asm→gs data), and do
+not try to make one widget be flat-single, flat-multi AND nested-file-tree — that is a
+component that does three things poorly. Revisit a "file layer" as a deliberate, separate
+extension if ever wanted.
+
 ## Expanded scope (user, 2026-07-23): one selector for FOUR pages, single OR multi
 
 The user wants the same component everywhere a user picks organisms/gene sets, with a
