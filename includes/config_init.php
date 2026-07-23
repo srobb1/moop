@@ -68,6 +68,42 @@ function genes_gff_filename(): string {
 }
 
 /**
+ * The per-organism annotation-search row cap, from site configuration.
+ *
+ * ONE home for the number. It used to appear as a literal in five places — the
+ * cap test, two SQL LIMITs (necessarily cap+1), the "capped" flag in
+ * tools/annotation_search_ajax.php, and the help text quoted to the user — so it
+ * could not be changed safely, and the help would have gone on stating 2,500
+ * whatever the search actually did. Everything derives from here now, which is
+ * what lets the on-page help state the real number.
+ *
+ * Defined at this choke point rather than beside the queries because layout.php
+ * emits it to JS on every page, and admin pages do not load database_queries.php.
+ *
+ * Admin-editable: Site Configuration -> Search Results Limit.
+ */
+function moop_search_results_limit(): int {
+    static $limit = null;
+    if ($limit === null) {
+        $limit = ConfigManager::getInstance()->getInt('search_results_limit', 2500);
+        // A zero or negative cap would return nothing at all; fall back rather than
+        // let a bad config value silently empty every search on the site.
+        if ($limit < 1) {
+            $limit = 2500;
+        }
+    }
+    return $limit;
+}
+
+/**
+ * The SQL LIMIT for a capped search: one more row than the cap, so that
+ * "more results exist" is detectable without a second COUNT query.
+ */
+function moop_search_query_limit(): int {
+    return moop_search_results_limit() + 1;
+}
+
+/**
  * Filename for a configured sequence type, e.g. sequence_filename('genome') => 'genome.fa'.
  *
  * The same idea as genes_gff_filename() above, for the sequence FASTAs. These names are

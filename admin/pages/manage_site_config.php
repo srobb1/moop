@@ -516,6 +516,26 @@
                     </div>
                 </div>
 
+                <!-- Search Results Limit -->
+                <div class="card adm-card mb-3" id="pnav-search-limit" data-nav-label="Search Results Limit">
+                    <div class="card-header adm-head">
+                        <h5 class="mb-0"><i class="fa fa-list-ol"></i> <?= htmlspecialchars($editable_config['search_results_limit']['label']) ?></h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small"><?= htmlspecialchars($editable_config['search_results_limit']['description']) ?></p>
+                        <div style="max-width: 160px;">
+                            <input type="number"
+                                   id="search_results_limit"
+                                   name="search_results_limit"
+                                   class="form-control"
+                                   value="<?= (int)$editable_config['search_results_limit']['current_value'] ?>"
+                                   min="<?= (int)$editable_config['search_results_limit']['min'] ?>"
+                                   max="<?= (int)$editable_config['search_results_limit']['max'] ?>">
+                        </div>
+                        <small class="form-text text-muted"><?= htmlspecialchars($editable_config['search_results_limit']['note']) ?></small>
+                    </div>
+                </div>
+
                 <!-- BLAST CPU Threads -->
                 <div class="card adm-card mb-3" id="pnav-blast-threads" data-nav-label="BLAST CPU Threads">
                     <div class="card-header adm-head">

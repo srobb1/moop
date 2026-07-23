@@ -171,9 +171,10 @@ if (!empty($incomplete_records)) {
     ]);
 }
 
-// Check if results are capped at 2500
+// Check whether results hit the configured per-organism cap
 $result_count = count($formatted_results);
-$is_capped = $result_count >= 2500;
+$results_limit = moop_search_results_limit();
+$is_capped = $result_count >= $results_limit;
 
 echo json_encode([
     'organism' => $organism,
@@ -184,5 +185,9 @@ echo json_encode([
     'count' => $result_count,
     'search_type' => $uniquename_search ? 'Gene/Transcript ID' : ($quoted_search ? 'Quoted' : 'Keyword'),
     'warning' => $warning_message,
-    'capped' => $is_capped
+    'capped' => $is_capped,
+    // Sent so the results UI and its help can state the real cap rather than a
+    // number baked into the JavaScript, which would go stale the moment an admin
+    // changes it in Site Configuration.
+    'results_limit' => $results_limit
 ]);

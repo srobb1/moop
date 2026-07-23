@@ -64,7 +64,16 @@ class ConfigManager
      * Editable configuration keys - whitelisted keys that can be edited via admin UI
      * Used in both initialize() and saveEditableConfig() to ensure consistency
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer'];
+    /**
+     * Keys that config_editable.json is allowed to override.
+     *
+     * A key missing from this list is SILENTLY IGNORED on load: the admin page saves it
+     * to config_editable.json, saveEditableConfig() strips it back out (line ~506 uses
+     * this same list), and the setting simply never takes effect — no error anywhere.
+     * Adding a setting to the admin UI therefore means adding it HERE too, or the new
+     * control does nothing and looks like it worked.
+     */
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -762,6 +771,19 @@ class ConfigManager
                 'current_value' => (int)$this->getString('blast_num_threads', '2'),
                 'min' => 1,
                 'max' => 256,
+            ],
+            'search_results_limit' => [
+                'label' => 'Search Results Limit',
+                'description' => 'Maximum annotation-search results returned per organism. '
+                    . 'A cross-organism search fans out over every selected organism, so this '
+                    . 'caps what any one of them can contribute. Users are told when a search '
+                    . 'hits the cap and are prompted to narrow it.',
+                'type' => 'number',
+                'current_value' => (int)$this->getInt('search_results_limit', 2500),
+                'min' => 100,
+                'max' => 50000,
+                'note' => 'Raising this makes large searches slower to render in the browser, '
+                    . 'not just slower to run. The on-page help quotes whatever is set here.',
             ],
             'blast_sample_sequences' => [
                 'label' => 'BLAST Sample Sequences',

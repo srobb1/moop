@@ -204,6 +204,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // Parse the per-organism search results cap. Bounded rather than free —
+        // a value below the minimum would truncate ordinary searches, and one above
+        // it stalls the browser rendering the table, which reads to a user as the
+        // site being broken rather than as a setting being too high.
+        if (isset($_POST['search_results_limit'])) {
+            $limit = (int)$_POST['search_results_limit'];
+            if ($limit >= 100 && $limit <= 50000) {
+                $data['search_results_limit'] = $limit;
+            }
+        }
+
         // Parse Turnstile settings
         if (isset($_POST['turnstile']) && is_array($_POST['turnstile'])) {
             $current_secret = $config->getArray('turnstile', [])['secret_key'] ?? '';

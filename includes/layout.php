@@ -200,6 +200,12 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
              const is a SyntaxError that would take the whole page's JS down. -->
         <script>window.sitePath = "/<?= htmlspecialchars($config->getString('site'), ENT_QUOTES) ?>";</script>
 
+        <!-- The per-organism search cap, from site configuration, for the JS that has to
+             quote it back to the user. Emitted here for the same reason as sitePath above:
+             a help string carrying its own copy of the number goes stale silently the moment
+             an admin changes the setting, and a wrong number in help is worse than none. -->
+        <script>window.MOOP_SEARCH_RESULTS_LIMIT = <?= (int)moop_search_results_limit() ?>;</script>
+
         <!-- Vendor JS — self-hosted, no external CDN dependency -->
         <script src="/<?= $config->getString('site') ?>/js/vendor/jquery.min.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/vendor/bootstrap.bundle.min.js"></script>

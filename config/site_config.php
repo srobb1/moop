@@ -222,6 +222,18 @@ return [
         ]
     ],
     
+    // ======== SEARCH ========
+    // Maximum annotation-search rows returned per organism. The cap exists for
+    // performance: a cross-organism search fans out over every selected organism,
+    // so an uncapped common term ("kinase") would return tens of thousands of rows
+    // per organism and stall the browser rendering them.
+    //
+    // Read everywhere via moop_search_results_limit() (includes/config_init.php) —
+    // the query LIMIT, the "capped" flag on the AJAX response, and the on-page help
+    // text all derive from this one value, so raising it can never leave the help
+    // quoting a number the search no longer uses.
+    'search_results_limit' => 2500,
+
     // ======== GENE MODELS GFF FILENAME ========
     // Filename of the gene-models GFF inside each gene_set directory:
     //   organisms/{organism}/{assembly}/{gene_set}/{this}

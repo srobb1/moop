@@ -383,16 +383,16 @@ function appendScopeFilters(&$sql, &$params, $assembly_accession, $gene_set_name
 }
 
 /**
- * Execute a prepared FTS search and apply the shared 2,500-row cap + warning.
+ * Execute a prepared FTS search and apply the shared row cap + warning.
  *
- * The SQL is expected to SELECT one extra row than the cap (LIMIT 2501) so we can
- * detect "more results exist". Unlike the old LIKE path, DB errors are surfaced
- * (and logged) instead of being silently swallowed — a missing FTS index (an
+ * The SQL is expected to SELECT one extra row than the cap (moop_search_query_limit())
+ * so we can detect "more results exist". Unlike the old LIKE path, DB errors are
+ * surfaced (and logged) instead of being silently swallowed — a missing FTS index (an
  * organism.sqlite built without build_fts_index.sql) is reported clearly rather
  * than crashing the whole cross-organism search.
  */
 function runFtsSearch($dbFile, $sql, $params) {
-    $max_display = 2500;
+    $max_display = moop_search_results_limit();
     try {
         $dbh  = getDbConnection($dbFile);
         $stmt = $dbh->prepare($sql);
@@ -415,7 +415,7 @@ function runFtsSearch($dbFile, $sql, $params) {
         return [
             'results' => array_slice($rows, 0, $max_display),
             'capped'  => true,
-            'warning' => '2,500+ results found. Use Advanced Filter or add more search terms to refine.',
+            'warning' => number_format($max_display) . '+ results found. Use Advanced Filter or add more search terms to refine.',
         ];
     }
     return ['results' => $rows, 'capped' => false, 'warning' => null];
@@ -455,7 +455,7 @@ function searchFeaturesByNameDescription($search_term, $is_quoted_search, $dbFil
     $sql .= " ORDER BY name_match DESC,
                        bm25(feature_search, 10.0, 5.0),
                        f.feature_uniquename
-              LIMIT 2501";
+              LIMIT " . moop_search_query_limit();
 
     return runFtsSearch($dbFile, $sql, $params);
 }
@@ -512,7 +512,7 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
     $sql .= " ORDER BY name_match DESC,
                        bm25(feature_annotation_search, 10.0, 5.0, 2.0, 3.0),
                        f.feature_uniquename
-              LIMIT 2501";
+              LIMIT " . moop_search_query_limit();
 
     return runFtsSearch($dbFile, $sql, $params);
 }
