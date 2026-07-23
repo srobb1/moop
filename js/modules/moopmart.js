@@ -464,20 +464,17 @@
     // Step 3 — Wide / Long switch label colours
     // -------------------------------------------------------
 
-    function initWideLongSwitch() {
-        const sw      = document.getElementById('mm-ann-wide-switch');
-        const lblLong = document.getElementById('mm-label-long');
-        const lblWide = document.getElementById('mm-label-wide');
-        if (!sw) return;
+    // Long/Wide is a segmented pill now (name="mm-layout"); the selected radio is styled by
+    // CSS, so there is nothing to sync in JS. Kept as a no-op so the call site is untouched.
+    function initWideLongSwitch() {}
 
-        function updateLabels() {
-            const isWide = sw.checked;
-            if (lblLong) { lblLong.style.color = isWide ? '#adb5bd' : '#0891b2'; lblLong.style.fontWeight = isWide ? 'normal' : '600'; }
-            if (lblWide) { lblWide.style.color = isWide ? '#0891b2' : '#adb5bd'; lblWide.style.fontWeight = isWide ? '600' : 'normal'; }
-        }
-
-        sw.addEventListener('change', updateLabels);
-        updateLabels();
+    // Read the current table layout from the segmented pill.
+    function annLayout() {
+        return document.querySelector('input[name="mm-layout"]:checked')?.value === 'wide' ? 'wide' : 'long';
+    }
+    // Read the current output format from the segmented pill.
+    function outputFormat() {
+        return document.querySelector('input[name="mm-format"]:checked')?.value === 'fasta' ? 'fasta' : 'tsv';
     }
 
     // -------------------------------------------------------
@@ -485,27 +482,23 @@
     // -------------------------------------------------------
 
     function initFormatToggle() {
-        const sw        = document.getElementById('mm-format-switch');
+        const radios    = document.querySelectorAll('input[name="mm-format"]');
         const tsvOpts   = document.getElementById('mm-tsv-options');
         const fastaOpts = document.getElementById('mm-fasta-options');
         const dlLabel   = document.getElementById('mm-dl-label');
-        const lblTsv    = document.getElementById('mm-label-tsv');
-        const lblFasta  = document.getElementById('mm-label-fasta');
-        if (!sw) return;
+        if (!radios.length) return;
 
         function updateFormat() {
-            const isFasta = sw.checked;
+            const isFasta = outputFormat() === 'fasta';
             tsvOpts?.classList.toggle('d-none', isFasta);
             fastaOpts?.classList.toggle('d-none', !isFasta);
             if (dlLabel) dlLabel.textContent = isFasta ? 'Download FASTA' : 'Download TSV';
-            if (lblTsv)  { lblTsv.style.color  = isFasta ? '#adb5bd' : '#0891b2'; lblTsv.style.fontWeight  = isFasta ? 'normal' : '600'; }
-            if (lblFasta){ lblFasta.style.color = isFasta ? '#0891b2' : '#adb5bd'; lblFasta.style.fontWeight = isFasta ? '600' : 'normal'; }
             // Clear stale preview when switching formats
             document.getElementById('mm-results-section')?.classList.add('d-none');
             document.getElementById('mm-fasta-preview-section')?.classList.add('d-none');
         }
 
-        sw.addEventListener('change', updateFormat);
+        radios.forEach(r => r.addEventListener('change', updateFormat));
         updateFormat();
 
         // FASTA sequence type → show/hide flank input
@@ -617,7 +610,7 @@
         if (desc) fd.append('gene_description', desc);
 
         // Section: Wide/Long toggle
-        const annFormat = document.getElementById('mm-ann-wide-switch')?.checked ? 'wide' : 'long';
+        const annFormat = annLayout();
         fd.append('ann_format', annFormat);
 
         // Section: Annotation — repeatable criteria rows (AND between them)
@@ -686,7 +679,7 @@
         if (result) result.textContent = '';
 
         const csrf   = document.querySelector('meta[name="csrf-token"]')?.content || '';
-        const format = document.getElementById('mm-format-switch')?.checked ? 'fasta' : 'tsv';
+        const format = outputFormat();
 
         if (format === 'fasta') {
             const fastaMode = document.querySelector('input[name="mm-fasta-type"]:checked')?.value || 'gene';
@@ -971,7 +964,7 @@
                 if (result) { result.textContent = 'Select at least one organism in Step 1 first.'; result.className = 'small text-warning'; }
                 return;
             }
-            const format    = document.getElementById('mm-format-switch')?.checked ? 'fasta' : 'tsv';
+            const format    = outputFormat();
             const fastaMode = document.querySelector('input[name="mm-fasta-type"]:checked')?.value || 'gene';
             const flank     = document.getElementById('mm-flank-bp')?.value || '1000';
             submitDownload({ output_format: format, fasta_mode: fastaMode, flank_bp: flank });

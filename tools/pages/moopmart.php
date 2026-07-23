@@ -464,30 +464,35 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
     <div class="collapse" id="mm-design-body">
     <div class="card-body pt-3">
 
-      <!-- Format toggle -->
-      <div class="d-flex align-items-center gap-2 mb-4">
-        <span id="mm-label-tsv" class="small fw-semibold" style="color:#0891b2; transition:color 0.15s;"><i class="fa fa-file-alt me-1"></i>TSV</span>
-        <div class="form-check form-switch mb-0 mx-1">
-          <input class="form-check-input" type="checkbox" role="switch" id="mm-format-switch" aria-label="FASTA format">
+      <!-- Format: segmented pill (TSV | FASTA) -->
+      <div class="mb-4">
+        <div class="small fw-semibold text-muted mb-1">Output format</div>
+        <div class="btn-group btn-group-sm mm-seg" role="group" aria-label="Output format">
+          <input type="radio" class="btn-check" name="mm-format" id="mm-format-tsv" value="tsv" autocomplete="off" checked>
+          <label class="btn" for="mm-format-tsv"><i class="fa fa-file-alt me-1"></i>TSV</label>
+          <input type="radio" class="btn-check" name="mm-format" id="mm-format-fasta" value="fasta" autocomplete="off">
+          <label class="btn" for="mm-format-fasta"><i class="fa fa-dna me-1"></i>FASTA</label>
         </div>
-        <span id="mm-label-fasta" class="small" style="color:#adb5bd; transition:color 0.15s;"><i class="fa fa-dna me-1"></i>FASTA</span>
       </div>
 
       <!-- TSV options -->
       <div id="mm-tsv-options">
 
-        <!-- Wide / Long -->
-        <div class="mb-4 d-flex align-items-center gap-2">
-          <span id="mm-label-long" class="small fw-semibold" style="color:#0891b2; transition:color 0.15s;">Long</span>
-          <div class="form-check form-switch mb-0 mx-1">
-            <input class="form-check-input" type="checkbox" role="switch" id="mm-ann-wide-switch" aria-label="Wide format">
+        <!-- Table layout: segmented pill (Long | Wide) -->
+        <div class="mb-4">
+          <div class="small fw-semibold text-muted mb-1">Table layout
+            <?= field_help(
+                'Long (default): one row per annotation, gene and mRNA IDs repeating — easiest to filter in Excel. '
+                . 'Wide: one row per mRNA, a source\'s values joined with "; ".',
+                'Table layout'
+            ) ?>
           </div>
-          <span id="mm-label-wide" class="small" style="color:#adb5bd; transition:color 0.15s;">Wide</span>
-          <?= field_help(
-              'Long (default): one row per annotation, gene and mRNA IDs repeating — easiest to filter in Excel. '
-              . 'Wide: one row per mRNA, a source\'s values joined with "; ".',
-              'Table layout'
-          ) ?>
+          <div class="btn-group btn-group-sm mm-seg" role="group" aria-label="Table layout">
+            <input type="radio" class="btn-check" name="mm-layout" id="mm-layout-long" value="long" autocomplete="off" checked>
+            <label class="btn" for="mm-layout-long">Long</label>
+            <input type="radio" class="btn-check" name="mm-layout" id="mm-layout-wide" value="wide" autocomplete="off">
+            <label class="btn" for="mm-layout-wide">Wide</label>
+          </div>
         </div>
 
         <!-- Feature columns -->
@@ -773,6 +778,12 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 #mm-scope-list.mm-scope-detail-hidden .mm-scope-row.mm-scope-detail-forced .mm-scope-gs-count  { display: none; }
 /* Darker border on FASTA type radio buttons */
 #mm-fasta-options .form-check-input[type="radio"] { border-color: #6c757d; }
+/* Segmented pill toggles (Output format, Table layout) — the selected side fills teal.
+   Clearer than a slider, which leaves "which side is on?" to guesswork. */
+.mm-seg .btn { color: #0891b2; border-color: #0891b2; font-weight: 600; }
+.mm-seg .btn:hover { background: rgba(8,145,178,0.08); color: #0891b2; }
+.mm-seg .btn-check:checked + .btn { background: #0891b2; border-color: #0891b2; color: #fff; }
+.mm-seg .btn-check:focus-visible + .btn { box-shadow: 0 0 0 0.2rem rgba(8,145,178,0.35); }
 </style>
 
 <?php /* Shared search-box help — ONE home, included by every page with a search
