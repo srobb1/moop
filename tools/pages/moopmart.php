@@ -700,16 +700,18 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       ) ?>
     </div>
     <div class="card-body py-3">
-      <div class="d-flex align-items-center gap-3 flex-wrap">
-        <button type="button" class="btn mm-dl-primary" id="mm-dl-btn">
-          <i class="fa fa-download me-1"></i> <span id="mm-dl-label">Download TSV</span>
-        </button>
-        <button type="button" class="btn btn-link p-0 text-decoration-none mm-preview-link" id="mm-preview-btn">
+      <?php /* Preview first (a light link that reveals the count and the first 100 rows),
+               then the full-width Download as the committed action below it. */ ?>
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none mm-preview-link" id="mm-preview-btn">
           <span id="mm-count-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
-          <i class="fa fa-eye me-1"></i> preview first
+          <i class="fa fa-eye me-1"></i> Preview first
         </button>
+        <span id="mm-count-result" class="small text-muted"></span>
       </div>
-      <div id="mm-count-result" class="small text-muted mt-2"></div>
+      <button type="button" class="btn mm-dl-primary w-100" id="mm-dl-btn">
+        <i class="fa fa-download me-1"></i> <span id="mm-dl-label">Download TSV</span>
+      </button>
     </div>
   </div>
 
