@@ -130,9 +130,14 @@ if (!empty($sequence_ids_provided)) {
                 . ($available_gene_sets ? ' Available: ' . implode(', ', $available_gene_sets) . '.' : '');
         } elseif (!empty($uniquenames)) {
             $db_path = "$organism_data/$organism_name/organism.sqlite";
+            // Expand each selected feature to every sequence type it has — mRNA, CDS AND
+            // protein — the way the gene page and Retrieve Sequences do. A plain
+            // buildTypedIds() types each id as itself, and the results table hands us
+            // mRNAs, so the page could only ever show transcripts.
+            //
             // Scoped to this assembly + gene set: the same feature_uniquename can exist in
             // more than one gene set, and an unscoped lookup lets the last row win.
-            $typed_ids = buildTypedIds($uniquenames, $db_path, $assembly_name, $gene_set_name);
+            $typed_ids = expandFeaturesToAllSequenceTypes($uniquenames, $db_path, $assembly_name, $gene_set_name);
             $extract_result = extractSequencesForAllTypes($gene_set_dir, $typed_ids, $sequence_types);
             $displayed_content = $extract_result['content'];
             if (!empty($extract_result['errors'])) {

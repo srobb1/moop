@@ -240,6 +240,39 @@ Verified end to end: the FASTA POST now goes to
 `…?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2` and returns the
 selected sequences (`>NV2t021704001.1`, `>NV2t001882001.1`, `>NV2t011739005.1`).
 
+### Bug D — FASTA returned only mRNA, never CDS or protein
+
+User: *"can we return all the sequences not just the mRNA, can we return the CDS and the
+protein like we do on the parent page and the other retrieve seq tool?"*
+
+`extractSequencesForAllTypes()` buckets each id by ITS OWN `feature_type`. The results table
+hands it mRNAs, so only the mRNA bucket ever filled. The gene page and Retrieve Sequences get
+all three because they additionally pass an expanded parent→children map.
+
+Fixed with `expandFeaturesToAllSequenceTypes()` in `lib/extract_search_helpers.php`: it
+resolves whatever was selected to the mRNA layer (gene → its mRNAs; CDS → parent mRNA;
+protein → CDS → mRNA; mRNA → itself) and then walks down mRNA → CDS → protein. Selecting a
+gene yields all isoforms; selecting one isoform yields only that isoform's CDS and protein.
+Verified: 2 selected features now return 6 sequences across mRNA, CDS and Protein sections.
+
+**The user asked whether an existing function could be reused. It could not, and that is
+itself a finding.** `retrieve_sequences.php` does this expansion INLINE — roughly 60 lines of
+nested loops inside a `try/catch`, interleaved with range handling (`$ranges`,
+`$explicitly_listed_children`, `$parent_to_children`) — so there is no callable unit. The one
+shared function that looks right, `buildTypedIdsForGenes()`, takes only **genes** plus a
+numeric `gene_set_id`, so it does not fit an mRNA selection either.
+
+Worse, that inline block's failure path is `catch (Exception $e) { $parent_to_children = []; }`
+— a database error silently degrades to "this feature has no children", and the user gets
+fewer sequences with nothing to indicate why. That is the same shape as the defects above:
+silent, and invisible unless you go looking.
+
+**Follow-up worth doing:** replace the inline block in `retrieve_sequences.php` with
+`expandFeaturesToAllSequenceTypes()`. It is not a drop-in — the inline version also builds the
+range bookkeeping that `extractSequencesFromBlastDb()` consumes — so it wants its own pass with
+the range cases actually exercised, not a squeeze into another change. Doing it would leave one
+implementation of "expand a feature to its sequence types" instead of three.
+
 ### Still open
 
 - **A FASTA selection spanning several assembly/gene-set combinations is refused** with a
