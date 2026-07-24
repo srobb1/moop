@@ -7,6 +7,11 @@ use DBI;
 my $dbfile = shift;
 my $dbh = DBI->connect("dbi:SQLite:dbname=$dbfile", "", "", { RaiseError => 1, PrintError => 0, AutoCommit => 0 });
 
+# Foreign keys are OFF by default in SQLite, and it is a per-CONNECTION setting --
+# it cannot be baked into create_schema_sqlite.sql. Without this, every FOREIGN KEY
+# and ON DELETE CASCADE in the schema is decorative.
+$dbh->do("PRAGMA foreign_keys = ON");
+
 # Read the tab-delimited file
 my $feature_file = shift;   #tab delimited: Uniquename,This_Type,Parent_Uniquename,Parent_Type,This_Name,This_Description
 my $gene_set_name = shift // 'primary';
@@ -91,10 +96,13 @@ my $insert_gene_set_sql = $dbh->prepare("
 ");
 
 #Prepare the SQL for checking and inserting/updating features
+# Scoped by gene_set_id: feature_uniquename is unique PER GENE SET, not globally.
+# Looking up by uniquename alone would find another gene set's feature and the
+# UPDATE below would then reassign it -- silently moving features between sets.
 my $get_feature_sql = $dbh->prepare("
     SELECT feature_id, feature_name, feature_description, organism_id, feature_type, feature_uniquename, gene_set_id, parent_feature_id
     FROM feature
-    WHERE feature_uniquename = ?
+    WHERE feature_uniquename = ? AND gene_set_id = ?
 ");
 
 my $update_feature_sql = $dbh->prepare("
@@ -135,12 +143,21 @@ if (!$gene_set_id) {
 # close and reopen so that we don't miss the first feature line
 close FEATURES;
 open FEATURES, $feature_file or die "Cannot open file $feature_file: $! \n";
+
+my $inserted_rows      = 0;
+my $updated_rows       = 0;
+my $self_parent_rows   = 0;   # source rows whose parent == their own id
+my $self_parent_example;
+
 while (my $line = <FEATURES>) {
     chomp $line;
     next if $line =~ /^#/;
     my ($this_unique_name, $this_type, $parent_unique_name, $parent_type, $this_name, $this_description) = split /\t/, $line;
+    # Normalise every column to a defined, trimmed string. A short line would
+    # otherwise leave trailing columns undef and warn on every comparison below.
     foreach my $each ($this_unique_name, $this_type, $parent_unique_name, $parent_type, $this_name, $this_description) {
-      $each =~ s/^\s+|\s+$//g if defined $each;
+      $each = '' if !defined $each;
+      $each =~ s/^\s+|\s+$//g;
     }
 
     if ($this_name eq $this_unique_name  ){
@@ -150,39 +167,140 @@ while (my $line = <FEATURES>) {
       $this_description = '';
     }
 
-    # Check if the parent already exists
-    my $parent_feature_id = 'NULL';
-    if ($parent_unique_name eq ''){
-      $parent_unique_name = 'NULL';
-    }else{
-      $get_feature_sql->execute($parent_unique_name);
-      ($parent_feature_id) = $get_feature_sql->fetchrow_array;
-    }
+    # ------------------------------------------------------------------
+    # Resolve the parent.
+    #
+    # undef is the ONLY way to write a real SQL NULL through DBI. The string
+    # 'NULL' and the empty string are VALUES, not absences -- and SQLite stores
+    # either one happily in an INTEGER column, because text that will not
+    # coerce to a number is kept as text. That is what made every root feature
+    # unreachable: "WHERE parent_feature_id IS NULL" matched nothing at all.
+    #
+    # A feature must also never be its own parent. Some GFFs carry geneID= on
+    # the gene line pointing at itself; mapped straight to a parent column that
+    # becomes parent == self, and any recursive walk up the tree loops forever.
+    # ------------------------------------------------------------------
+    my $parent_feature_id = undef;   # undef => real SQL NULL => this is a root
 
-    # if parent does not exist but there is an actual parent_unique_name insert it
-    if (!$parent_feature_id and $parent_unique_name ne 'NULL'){
-        $insert_feature_sql->execute('', '', $organism_id, $parent_type, $parent_unique_name, $gene_set_id, '');
-        $parent_feature_id = $dbh->selectrow_array('SELECT last_insert_rowid()');
+    if ($parent_unique_name ne ''
+        && uc($parent_unique_name) ne 'NULL'
+        && $parent_unique_name ne $this_unique_name) {
+
+        $get_feature_sql->execute($parent_unique_name, $gene_set_id);
+        ($parent_feature_id) = $get_feature_sql->fetchrow_array;
+
+        # Parent is named but not loaded yet -> create it as a root itself.
+        if (!$parent_feature_id) {
+            $insert_feature_sql->execute('', '', $organism_id, $parent_type,
+                                         $parent_unique_name, $gene_set_id, undef);
+            $parent_feature_id = $dbh->selectrow_array('SELECT last_insert_rowid()');
+        }
+    }
+    elsif ($parent_unique_name ne '' && $parent_unique_name eq $this_unique_name) {
+        # Report rather than silently absorb: this is a defect in the source
+        # GFF/TSV, and it is worth knowing which gene sets carry it.
+        $self_parent_rows++;
+        $self_parent_example = $this_unique_name if !defined $self_parent_example;
     }
 
     # Check if the feature already exists
-    $get_feature_sql->execute($this_unique_name);
+    $get_feature_sql->execute($this_unique_name, $gene_set_id);
     my ($feature_id, $existing_name, $existing_description, $existing_organism_id, $existing_type, $existing_uniquename, $existing_gene_set_id, $existing_parent_id) = $get_feature_sql->fetchrow_array;
 
-    # If the feature exists, check for any differences and update if needed
+    # If the feature exists, check for any differences and update if needed.
+    #
+    # parent_feature_id MUST be part of this comparison. It is written by the
+    # UPDATE below, but it used not to be checked here -- so a corrected parent
+    # only got saved when some *other* column happened to change too, and a
+    # re-load over a bad database silently left the bad parents in place.
+    # Comparing with // -1 also makes an old 'NULL'/'' parent differ from a
+    # real undef, so re-loading repairs those rows.
     if ($feature_id) {
-        if ($existing_name ne $this_name || $existing_description ne $this_description || $existing_organism_id != $organism_id || $existing_type ne $this_type || $existing_gene_set_id != $gene_set_id) {
-            print "Updating: $this_name, $this_description, $organism_id, $this_type, $gene_set_id, $parent_feature_id\n";
+        my $parent_changed =
+            ($existing_parent_id   // -1) ne ($parent_feature_id // -1);
+
+        if ($parent_changed
+            || ($existing_name        // '') ne $this_name
+            || ($existing_description // '') ne $this_description
+            || ($existing_organism_id // -1) ne $organism_id
+            || ($existing_type        // '') ne $this_type
+            || ($existing_gene_set_id // -1) ne $gene_set_id) {
+            $updated_rows++;
             $update_feature_sql->execute($this_name, $this_description, $organism_id, $this_type, $gene_set_id, $parent_feature_id, $feature_id);
         }
     }else {
       # If the feature doesn't exist, insert it
+      $inserted_rows++;
       $insert_feature_sql->execute($this_name, $this_description, $organism_id, $this_type, $this_unique_name, $gene_set_id, $parent_feature_id);
     }
 }
 
-# Commit changes and disconnect
+# Commit changes
 $dbh->commit;
-$dbh->disconnect;
 
-print "Data loaded successfully!\n";
+print "Data loaded successfully!  inserted=$inserted_rows updated=$updated_rows\n";
+
+# ----------------------------------------------------------------------
+# Post-load integrity checks.
+#
+# These are cheap and they catch, at load time, the exact class of bug that
+# is otherwise invisible until a user gets a silently empty result: a root
+# feature that no "IS NULL" test can find, or a cycle that makes a recursive
+# walk up the tree run forever.
+#
+# They cover the WHOLE database, not just this load, so pre-existing damage
+# from an older loader shows up here too.
+# ----------------------------------------------------------------------
+my ($bad_parent_type) = $dbh->selectrow_array(
+    "SELECT COUNT(*) FROM feature
+      WHERE typeof(parent_feature_id) NOT IN ('integer','null')");
+
+my ($self_parents) = $dbh->selectrow_array(
+    "SELECT COUNT(*) FROM feature WHERE parent_feature_id = feature_id");
+
+my ($dangling) = $dbh->selectrow_array(
+    "SELECT COUNT(*) FROM feature c
+      WHERE c.parent_feature_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM feature p
+                         WHERE p.feature_id = c.parent_feature_id)");
+
+my ($roots) = $dbh->selectrow_array(
+    "SELECT COUNT(*) FROM feature WHERE parent_feature_id IS NULL");
+
+my ($total) = $dbh->selectrow_array("SELECT COUNT(*) FROM feature");
+
+print "\n--- integrity check ---\n";
+printf "  features                 %d\n", $total;
+printf "  roots (parent IS NULL)   %d\n", $roots;
+
+my @problems;
+push @problems, "the feature file produced NO features at all -- organism, genome and"
+    . " gene_set rows were still created, so this looks like a successful load"
+    . " while leaving nothing for annotations to attach to"
+    if !$total;
+push @problems, "$bad_parent_type feature(s) store a non-integer, non-NULL parent_feature_id"
+    . " (the string 'NULL' or '' -- these roots are unreachable by IS NULL)"
+    if $bad_parent_type;
+push @problems, "$self_parents feature(s) are their own parent (a recursive walk will not terminate)"
+    if $self_parents;
+push @problems, "$dangling feature(s) point at a parent_feature_id that does not exist"
+    if $dangling;
+push @problems, "0 roots -- nothing can bubble up to a top-level feature"
+    if !$roots && $total;
+push @problems, "$self_parent_rows source row(s) named themselves as their own parent"
+    . " and were loaded as roots instead (e.g. $self_parent_example)"
+    . " -- check for geneID=/Parent= pointing at the row's own ID"
+    if $self_parent_rows;
+
+if (@problems) {
+    print "  !! PROBLEMS FOUND\n";
+    foreach my $problem (@problems) {
+        print "     - $problem\n";
+    }
+    print "  !! The database loaded, but features above will not resolve correctly.\n";
+} else {
+    print "  OK - no parent/hierarchy problems found\n";
+}
+print "-----------------------\n";
+
+$dbh->disconnect;
