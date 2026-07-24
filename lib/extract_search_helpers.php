@@ -226,21 +226,38 @@ function buildTypedIds(array $uniquenames, string $db_path, string $assembly = '
  * @return array [$uniquename => $feature_type]
  */
 /**
- * Expand selected features to every sequence type they have — mRNA, CDS and protein.
+ * Expand selected features to every related feature that has a sequence.
  *
  * extractSequencesForAllTypes() buckets each id by ITS OWN feature_type, so handing it a
  * list of mRNAs yields mRNA sequences and nothing else. The search-results FASTA button
  * did exactly that, which is why it returned only transcripts while the gene page and
  * Retrieve Sequences return all three.
  *
- * Everything is resolved through the mRNA layer, because that is where MOOP's hierarchy
- * branches: gene -> mRNA -> CDS -> protein. Whatever the user picked, we find the mRNA(s)
- * it belongs to and then walk down. Selecting a gene therefore yields all of its isoforms;
- * selecting one isoform yields only that isoform's CDS and protein, which is what someone
- * who deliberately picked a single transcript expects.
+ * ---------------------------------------------------------------------------
+ * DELIBERATELY FEATURE-TYPE AGNOSTIC
  *
- * Scoped by assembly / gene set when given — a feature_uniquename is unique only within a
- * gene set (see buildTypedIds()).
+ * This walks the parent/child graph and never names a feature type. The rule is simply:
+ *
+ *     take every ANCESTOR and every DESCENDANT of what the user selected.
+ *
+ * On today's gene -> mRNA -> CDS -> protein hierarchy that produces exactly the right
+ * answer, and it keeps producing it if the hierarchy ever changes shape:
+ *
+ *   selected a gene     -> descendants = all isoforms and their CDS/proteins
+ *   selected one mRNA   -> descendants = that isoform's CDS/protein; ancestors = its gene
+ *   selected a protein  -> ancestors  = its CDS, mRNA and gene
+ *
+ * Note what this does NOT do: it never takes the descendants OF an ancestor. That is what
+ * keeps a single selected isoform from dragging in its sibling isoforms, and it falls out
+ * of the shape of the walk rather than from a special case.
+ *
+ * Types that have no per-feature FASTA (gene, exon, ...) cost nothing to include —
+ * extractSequencesForAllTypes() drops them via _fasta_key_for_type(). So this function
+ * does not need to know which types those are either.
+ *
+ * Scoped by assembly / gene set when given: a feature_uniquename is unique only within a
+ * gene set (see buildTypedIds()). The walk itself stays inside one gene set naturally,
+ * because parent and child rows share a gene_set_id.
  *
  * @return array uniquename => feature_type, ready for extractSequencesForAllTypes()
  */
@@ -254,10 +271,14 @@ function expandFeaturesToAllSequenceTypes(
         return [];
     }
 
+    // Depth guard: the hierarchy is a few levels deep, but a malformed parent chain must
+    // not spin forever. Visited-id tracking already breaks cycles; this bounds the rest.
+    $MAX_DEPTH = 20;
+
     try {
         $dbh = getDbConnection($db_path);
 
-        // --- Selected features, scoped ------------------------------------------------
+        // --- The selected features, scoped to this assembly / gene set ----------------
         $ph     = implode(',', array_fill(0, count($uniquenames), '?'));
         $sql    = "SELECT f.feature_id, f.feature_uniquename, f.feature_type, f.parent_feature_id
                      FROM feature f";
@@ -275,13 +296,32 @@ function expandFeaturesToAllSequenceTypes(
         $stmt = $dbh->prepare($sql);
         $stmt->execute($params);
         $selected = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        if (!$selected) return [];
+        if (!$selected) {
+            return buildTypedIds($uniquenames, $db_path, $assembly, $gene_set);
+        }
 
-        $typed     = [];   // uniquename => feature_type (the answer)
-        $mrna_ids  = [];   // feature_id of every mRNA we must walk down from
+        $typed   = [];   // uniquename => feature_type (the answer)
+        $seen    = [];   // feature_id => true, so a diamond or cycle cannot loop
+        $collect = function (array $rows) use (&$typed, &$seen) {
+            $new = [];
+            foreach ($rows as $r) {
+                if (isset($seen[$r['feature_id']])) continue;
+                $seen[$r['feature_id']] = true;
+                $typed[$r['feature_uniquename']] = $r['feature_type'];
+                $new[] = $r;
+            }
+            return $new;
+        };
 
-        // Fetch rows by feature_id, used to climb the tree.
-        $byId = function (array $ids) use ($dbh) {
+        $fetchChildren = function (array $parentIds) use ($dbh) {
+            if (!$parentIds) return [];
+            $p = implode(',', array_fill(0, count($parentIds), '?'));
+            $s = $dbh->prepare("SELECT feature_id, feature_uniquename, feature_type, parent_feature_id
+                                  FROM feature WHERE parent_feature_id IN ($p)");
+            $s->execute(array_values($parentIds));
+            return $s->fetchAll(PDO::FETCH_ASSOC);
+        };
+        $fetchByIds = function (array $ids) use ($dbh) {
             if (!$ids) return [];
             $p = implode(',', array_fill(0, count($ids), '?'));
             $s = $dbh->prepare("SELECT feature_id, feature_uniquename, feature_type, parent_feature_id
@@ -289,68 +329,22 @@ function expandFeaturesToAllSequenceTypes(
             $s->execute(array_values($ids));
             return $s->fetchAll(PDO::FETCH_ASSOC);
         };
-        // Fetch children of the given feature_ids, optionally restricted by type.
-        $childrenOf = function (array $ids, array $types) use ($dbh) {
-            if (!$ids) return [];
-            $p  = implode(',', array_fill(0, count($ids), '?'));
-            $tp = implode(',', array_fill(0, count($types), '?'));
-            $s  = $dbh->prepare("SELECT feature_id, feature_uniquename, feature_type, parent_feature_id
-                                   FROM feature
-                                  WHERE parent_feature_id IN ($p) AND feature_type IN ($tp)");
-            $s->execute(array_merge(array_values($ids), array_values($types)));
-            return $s->fetchAll(PDO::FETCH_ASSOC);
-        };
 
-        $MRNA = ['mRNA', 'transcript'];
-        $CDS  = ['cds', 'CDS'];
-        $PROT = ['protein', 'polypeptide'];
+        $frontier = $collect($selected);
 
-        // --- Resolve everything selected to the mRNA layer ----------------------------
-        $gene_ids = $cds_ids = $prot_ids = [];
-        foreach ($selected as $row) {
-            $type = $row['feature_type'];
-            if (in_array($type, $MRNA, true)) {
-                $mrna_ids[] = $row['feature_id'];
-            } elseif (in_array($type, $CDS, true)) {
-                $cds_ids[] = $row;
-            } elseif (in_array($type, $PROT, true)) {
-                $prot_ids[] = $row;
-            } else {
-                // gene (or anything else with mRNA children)
-                $gene_ids[] = $row['feature_id'];
-            }
-        }
-        // gene -> mRNA
-        foreach ($childrenOf($gene_ids, $MRNA) as $m) {
-            $mrna_ids[] = $m['feature_id'];
-        }
-        // CDS -> parent mRNA
-        foreach ($cds_ids as $c) {
-            if ($c['parent_feature_id']) $mrna_ids[] = $c['parent_feature_id'];
-        }
-        // protein -> parent CDS -> parent mRNA
-        $prot_parent_ids = array_filter(array_column($prot_ids, 'parent_feature_id'));
-        foreach ($byId($prot_parent_ids) as $c) {
-            if ($c['parent_feature_id']) $mrna_ids[] = $c['parent_feature_id'];
+        // --- Down: every descendant --------------------------------------------------
+        $level = $frontier;
+        for ($d = 0; $d < $MAX_DEPTH && $level; $d++) {
+            $level = $collect($fetchChildren(array_column($level, 'feature_id')));
         }
 
-        $mrna_ids = array_values(array_unique(array_filter($mrna_ids)));
-        if (!$mrna_ids) {
-            // Nothing resolved to an mRNA — fall back to the plain typed lookup so the
-            // caller still gets whatever the selected features are themselves.
-            return buildTypedIds($uniquenames, $db_path, $assembly, $gene_set);
-        }
-
-        // --- Walk down: mRNA -> CDS -> protein -----------------------------------------
-        foreach ($byId($mrna_ids) as $m) {
-            $typed[$m['feature_uniquename']] = $m['feature_type'];
-        }
-        $cds_rows = $childrenOf($mrna_ids, $CDS);
-        foreach ($cds_rows as $c) {
-            $typed[$c['feature_uniquename']] = $c['feature_type'];
-        }
-        foreach ($childrenOf(array_column($cds_rows, 'feature_id'), $PROT) as $p) {
-            $typed[$p['feature_uniquename']] = $p['feature_type'];
+        // --- Up: every ancestor of the SELECTED features only -------------------------
+        // Climbing from the selected rows (not from the descendants just gathered) is what
+        // keeps sibling branches out: we never descend again from anything found up here.
+        $level = $frontier;
+        for ($d = 0; $d < $MAX_DEPTH && $level; $d++) {
+            $parentIds = array_values(array_filter(array_column($level, 'parent_feature_id')));
+            $level = $collect($fetchByIds($parentIds));
         }
 
         return $typed;
@@ -360,6 +354,7 @@ function expandFeaturesToAllSequenceTypes(
         return buildTypedIds($uniquenames, $db_path, $assembly, $gene_set);
     }
 }
+
 
 function buildTypedIdsForGenes(array $gene_uniquenames, int $gene_set_id, string $db_path): array {
     $result = [];
