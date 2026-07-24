@@ -335,7 +335,7 @@
             // innerHTML so "Step 1" renders with the small step badge; content is static.
             note.innerHTML = single
                 ? ''
-                : 'Select exactly one assembly in Step <span class="mm-step-ref">1</span> to enable location search.';
+                : 'Select exactly one assembly in Step <span class="step-ref">1</span> to enable location search.';
         }
         if (!single) { lastChrSource = null; return; }
 

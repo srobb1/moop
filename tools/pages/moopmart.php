@@ -421,7 +421,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                        (i) sits with the note instead of floating. updateCoordState() swaps the
                        note text but leaves the sibling (i) in place. */ ?>
               <div class="d-flex align-items-baseline gap-1 mb-2">
-                <span class="small text-muted fst-italic" id="mm-coord-note">Select exactly one assembly in Step <span class="mm-step-ref">1</span> to enable location search.</span>
+                <span class="small text-muted fst-italic" id="mm-coord-note">Select exactly one assembly in Step <span class="step-ref">1</span> to enable location search.</span>
                 <?= field_help(
                     'Location search works on one assembly at a time. The chromosome and scaffold names '
                     . 'are read from that assembly\'s own reference sequences — they differ between '
@@ -557,7 +557,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                         [
                             'label'  => 'Inclusion Criteria',
                             'accent' => true,
-                            'text'   => 'Why each feature is in your list — which Step <span class="mm-step-ref">2</span> criterion pulled it in. '
+                            'text'   => 'Why each feature is in your list — which Step <span class="step-ref">2</span> criterion pulled it in. '
                                       . 'A feature matched By Feature IDs shows the ID you entered; one from By Annotation '
                                       . 'shows the matching annotation; from By Location, the overlapping range. It is the '
                                       . 'column for checking your list did what you meant — turn it on when a result surprises you.',
@@ -860,15 +860,8 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 .mm-preview-link { color: #6c757d; }
 .mm-preview-link:hover { color: #495057; }
 .mm-preview-link .fa { color: #6366f1; }
-/* Small inline "Step N" reference badge — the numbered-step circle, scaled to body text so
-   a "Step 1" mention visually links back to the actual step without dominating the line. */
-.mm-step-ref {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 1.5em; height: 1.5em; border-radius: 50%;
-  background: #6366f1; color: #fff; font-weight: 700; font-style: normal;
-  font-size: 0.8em; line-height: 1; vertical-align: middle;
-  position: relative; top: -0.05em;
-}
+/* .step-ref (the inline "Step N" badge) now lives in css/display.css — Annotation Search
+   needed it too, so it moved to the shared sheet rather than being copied. */
 </style>
 
 <?php /* Shared search-box help — ONE home, included by every page with a search

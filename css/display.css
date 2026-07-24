@@ -1225,6 +1225,30 @@ a:hover .link-icon {
   font-weight: 500;
 }
 
+/* Inline "Step N" reference — the numbered-step circle scaled to body text, so prose that
+   points back at a step ("Select organisms in Step 2") shows the same badge the reader is
+   being sent to instead of making them map a bare numeral. Sized in em so it tracks
+   whatever text it sits in. Was .mm-step-ref in the MOOPmart page <style>; promoted here
+   the moment a second page needed it, per CLAUDE.md section 6 — a page-local copy is how
+   the admin card headers ended up in four idioms. */
+.step-ref {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  background: #6366f1;
+  color: #fff;
+  font-weight: 700;
+  font-style: normal;
+  font-size: 0.8em;
+  line-height: 1;
+  vertical-align: middle;
+  position: relative;
+  top: -0.05em;
+}
+
 /* ── Tool card locked state (no organisms selected) ─────────────────────── */
 
 .tools-locked [id^="tool-btn-"] {
