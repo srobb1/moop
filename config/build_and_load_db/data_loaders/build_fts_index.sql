@@ -2,7 +2,7 @@
 -- MOOP full-text search index  (SQLite FTS5)
 -- ============================================================================
 -- Run this as the LAST step of building an organism.sqlite, AFTER every gene set
--- (import_genes_sqlite.pl) and every annotation source (load_annotations_fast.pl)
+-- (load_genes_sqlite.pl) and every annotation source (load_annotations_sqlite.pl)
 -- have been loaded:
 --
 --     sqlite3 organism.sqlite < build_fts_index.sql

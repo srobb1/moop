@@ -148,8 +148,8 @@
 │   ├── config_editable.json          # Editable site configuration (JSON)
 │   └── build_and_load_db/            # Database schema & load scripts
 │       ├── create_schema_sqlite.sql  # SQLite database schema creation
-│       ├── import_genes_sqlite.pl    # Perl script to import gene data
-│       ├── load_annotations_fast.pl  # Perl script to load annotations
+│       ├── load_genes_sqlite.pl    # Perl script to import gene data
+│       ├── load_annotations_sqlite.pl  # Perl script to load annotations
 │       └── setup_new_db_and_load_data_fast_per_org.sh # Bash setup script
 │
 ├── includes/                         # Shared includes

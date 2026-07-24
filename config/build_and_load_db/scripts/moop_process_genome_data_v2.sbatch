@@ -156,7 +156,7 @@ make_diamond_moop() {
     ln -s "$SPROT_DIR/tophit.tsv" tophit.tsv
   fi
   ls -l tophit.tsv
-  perl "$REPO/analysis_parsers/get_diamond_blast.moop.pl" tophit.tsv \
+  perl "$REPO/analysis_parsers/parse_DIAMOND_to_MOOP_TSV.pl" tophit.tsv \
     'UniProtKB/Swiss-Prot' "$VERSION" https://www.uniprot.org https://www.uniprot.org/uniprotkb/
 
   shopt -s nullglob
@@ -175,7 +175,7 @@ make_diamond_moop() {
       echo "$RESULTS/tophit.tsv does not exist"; continue
     fi
     ls -l tophit.tsv
-    perl "$REPO/analysis_parsers/get_diamond_blast.moop.pl" tophit.tsv \
+    perl "$REPO/analysis_parsers/parse_DIAMOND_to_MOOP_TSV.pl" tophit.tsv \
       "Ensembl $ORG" "$VERSION" https://www.ensembl.org/ "https://www.ensembl.org/Multi/Search/Results?q="
   done
   shopt -u nullglob
@@ -192,8 +192,8 @@ make_eggnog_moop() {
   DBVERSION=$(grep 'eggNOG DB version:' "$EDIR/version.txt" 2>/dev/null \
               | perl -pe 's/.*?eggNOG DB version: (\S+).*/$1/')
   VERSION="$MAPPERVERSION DB_$DBVERSION"
-  echo "perl $REPO/analysis_parsers/get_eggnog.moop.pl $EDIR/emapper.annotations $VERSION"
-  perl "$REPO/analysis_parsers/get_eggnog.moop.pl" "$EDIR/emapper.annotations" "$VERSION"
+  echo "perl $REPO/analysis_parsers/parse_EggNOG_to_MOOP_TSV.pl $EDIR/emapper.annotations $VERSION"
+  perl "$REPO/analysis_parsers/parse_EggNOG_to_MOOP_TSV.pl" "$EDIR/emapper.annotations" "$VERSION"
   source /home/smr/miniconda3/etc/profile.d/conda.sh
   conda activate goatools
   python3 "$REPO/analysis_parsers/reduce_eggnog_go.moop.py" EggNOG2GO.eggnog.moop.tsv
@@ -212,14 +212,14 @@ make_interproscan_moop() {
   else
     ln -s "$IDIR/iprscan_results.tsv" iprscan.tsv
   fi
-  perl "$REPO/analysis_parsers/get_interproscan.moop.pl" iprscan.tsv "$VERSION"
+  perl "$REPO/analysis_parsers/parse_InterProScan_to_MOOP_TSV.pl" iprscan.tsv "$VERSION"
 }
 has_data PANTHER.iprscan.moop.tsv \
   || { echo "Building InterProScan moop files"; make_interproscan_moop; }
 
 # ── ProtNLM ───────────────────────────────────────────────────────────────────
 make_protnlm_moop() {
-  perl "$REPO/analysis_parsers/get_protnlm.moop.pl" \
+  perl "$REPO/analysis_parsers/parse_ProtNLM_to_MOOP_TSV.pl" \
     "$ANALYSIS_DIR/protnlm/protnlm_pred_results.tsv"
 }
 has_data protnlm.moop.tsv \
@@ -254,7 +254,7 @@ if [ -d "$OMA_DIR/Output" ]; then
     OMA_VERSION=$(basename "$(dirname "$(realpath "$OMA_DIR/Output")")")
     echo "OMA species code: $OMA_CODE (version: $OMA_VERSION)"
 
-    ## getOMA_orthologs.moop.pl writes one file per *partner* org found in the
+    ## parse_OMA_orthologs_to_MOOP_TSV.pl writes one file per *partner* org found in the
     ## groups file (named "$PARTNER.$db.oma_orthologs.moop.tsv") — never one
     ## named after $OMA_CODE itself — so the skip-check has to look for any
     ## such file, not "${OMA_CODE}.*.oma_orthologs.moop.tsv" (which can never exist).
@@ -263,7 +263,7 @@ if [ -d "$OMA_DIR/Output" ]; then
     shopt -u nullglob
     if [ ${#existing_orthologs[@]} -eq 0 ]; then
       echo "Building OMA orthologs for $OMA_CODE"
-      perl "$REPO/analysis_parsers/getOMA_orthologs.moop.pl" \
+      perl "$REPO/analysis_parsers/parse_OMA_orthologs_to_MOOP_TSV.pl" \
         "$OMA_DIR/Output/OrthologousGroups.txt" "$OMA_CODE" "$OMA_VERSION"
     fi
 
@@ -293,7 +293,7 @@ if [ -d "$OMA_DIR/Output" ]; then
       fi
       has_data "${OTHERORG}."*".oma_pairs.moop.tsv" \
         || { echo "Building OMA pairs for $OMA_CODE vs $OTHERORG"
-             perl "$REPO/analysis_parsers/getOMA_pairs.moop.pl" \
+             perl "$REPO/analysis_parsers/parse_OMA_pairs_to_MOOP_TSV.pl" \
                "$PAIR_FILE" "$OMA_CODE" "$OTHERORG" "$THISORG_FIRST" "$OMA_VERSION"; }
     done
     shopt -u nullglob
@@ -301,7 +301,7 @@ if [ -d "$OMA_DIR/Output" ]; then
     if [ -s "$OMA_DIR/mapGO/go.tsv" ] && [ -s "$OMA_DIR/Output/Map-SeqNum-ID.txt" ] && [ -s "$OMA_DIR/Output/gene_function.gaf" ]; then
       has_data "${OMA_CODE}.OMA2GO.moop.tsv" \
         || { echo "Building OMA2GO for $OMA_CODE"
-             perl "$REPO/analysis_parsers/get_omago.moop.pl" "$OMA_CODE" "$OMA_VERSION" \
+             perl "$REPO/analysis_parsers/parse_OMA2GO_to_MOOP_TSV.pl" "$OMA_CODE" "$OMA_VERSION" \
                "$OMA_DIR/mapGO/go.tsv" "$OMA_DIR/Output/Map-SeqNum-ID.txt" "$OMA_DIR/Output/gene_function.gaf" \
                > "${OMA_CODE}.OMA2GO.moop.tsv.tmp" \
                && mv "${OMA_CODE}.OMA2GO.moop.tsv.tmp" "${OMA_CODE}.OMA2GO.moop.tsv" \
@@ -464,9 +464,9 @@ if $HAS_GFF; then
   fi
 
   if [[ "$GFF_SOURCE" == "refseq" ]]; then
-    perl "$SCRIPTS/rename_refseq_cds_fasta.pl" genes.gff cds.nt.fa
+    perl "$SCRIPTS/rename_RefSeq_cds_fasta.pl" genes.gff cds.nt.fa
   elif [[ "$GFF_SOURCE" == "ensembl" ]]; then
-    perl "$SCRIPTS/rename_ensembl_cds_fasta.pl" protein.aa.fa cds.nt.fa
+    perl "$SCRIPTS/rename_Ensembl_cds_fasta.pl" protein.aa.fa cds.nt.fa
   fi
 
   if [ -L protein.aa.fa ]; then
@@ -500,7 +500,7 @@ if $HAS_GFF; then
   has_data features.tsv || REBUILD=true
   if $REBUILD; then
     echo "Building features.tsv"
-    perl "$REPO/analysis_parsers/make_feature_table_from_gff.pl" genes.gff \
+    perl "$REPO/analysis_parsers/parse_GFF3_to_MOOP_TSV.pl" genes.gff \
       "$GENESET_DIR/metadata.yaml" cds.nt.fa protein.aa.fa > features.tsv.tmp \
       && mv features.tsv.tmp features.tsv \
       || { rm -f features.tsv.tmp; echo "ERROR: failed to build features.tsv"; exit 1; }
@@ -597,7 +597,7 @@ else
   has_data features.tsv || REBUILD=true
   if $REBUILD; then
     echo "Building features.tsv from transcript2gene.txt"
-    perl "$REPO/analysis_parsers/make_feature_table_from_transcript2gene.pl" \
+    perl "$REPO/analysis_parsers/parse_transcript2gene_to_MOOP_TSV.pl" \
       "$GENESET_DIR/transcript2gene.txt" geneNames.tsv "$GENESET_DIR/metadata.yaml" \
       "$GENESET_DIR/protein2gene.txt" "$GENESET_DIR/cds2gene.txt" > features.tsv.tmp \
       && mv features.tsv.tmp features.tsv \

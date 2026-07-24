@@ -32,7 +32,7 @@ else
 fi
 
 ls -l tophit.tsv
-perl $SCRIPTS/get_diamond_blast.moop.pl tophit.tsv 'UniProtKB/Swiss-Prot' $VERSION https://www.uniprot.org https://www.uniprot.org/uniprotkb/  
+perl $SCRIPTS/parse_DIAMOND_to_MOOP_TSV.pl tophit.tsv 'UniProtKB/Swiss-Prot' $VERSION https://www.uniprot.org https://www.uniprot.org/uniprotkb/  
 
 
 ## ENSEMBL BLAST
@@ -58,5 +58,5 @@ for RESULTS in $DATADIR/ENS_* ; do
   VERSION=`head -1 $RESULTS/db_version.txt`
   echo $RESULTS
   ls -l tophit.tsv
-  perl $SCRIPTS/get_diamond_blast.moop.pl tophit.tsv "Ensembl $ORG" $VERSION https://www.ensembl.org/ https://www.ensembl.org/Multi/Search/Results?q= 
+  perl $SCRIPTS/parse_DIAMOND_to_MOOP_TSV.pl tophit.tsv "Ensembl $ORG" $VERSION https://www.ensembl.org/ https://www.ensembl.org/Multi/Search/Results?q= 
 done

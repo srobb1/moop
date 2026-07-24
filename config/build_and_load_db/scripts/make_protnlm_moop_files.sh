@@ -7,5 +7,5 @@ SCRIPTS=$REPO/analysis_parsers
 
 # INTERPROSCAN
 DATADIR=~/sciproj/SBGENOMES/genomes/$THIS_ORG/current/analysis/protnlm
-perl $SCRIPTS/get_protnlm.moop.pl $DATADIR/protnlm_pred_results.tsv
+perl $SCRIPTS/parse_ProtNLM_to_MOOP_TSV.pl $DATADIR/protnlm_pred_results.tsv
 

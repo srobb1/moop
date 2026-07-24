@@ -160,8 +160,8 @@ return [
 
 **Contains:**
 - `create_schema_sqlite.sql` - SQLite schema definition
-- `import_genes_sqlite.pl` - Perl script to import gene data
-- `load_annotations_fast.pl` - Perl script to load annotations
+- `load_genes_sqlite.pl` - Perl script to import gene data
+- `load_annotations_sqlite.pl` - Perl script to load annotations
 - `setup_new_db_and_load_data_fast_per_org.sh` - Bash orchestration script
 
 **When used:**
@@ -376,8 +376,8 @@ config/
 ├── tools_config.php                 # Tool registry
 ├── build_and_load_db/               # Database setup scripts
 │   ├── create_schema_sqlite.sql     # Schema
-│   ├── import_genes_sqlite.pl       # Gene import
-│   ├── load_annotations_fast.pl     # Annotation import
+│   ├── load_genes_sqlite.pl       # Gene import
+│   ├── load_annotations_sqlite.pl     # Annotation import
 │   └── setup_new_db_and_load_data_fast_per_org.sh # Setup script
 └── README.md                        # This file
 

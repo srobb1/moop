@@ -6,7 +6,7 @@ Original theory was "cache rebuild scales with DB size" — that's real and
 worth fixing, but it turned out **not** to be why kc3/kc4 actually died.
 The real cause is a genuine infinite loop:
 
-`data_loaders/load_annotations_fast.pl`'s `find_annotation_target()` walks
+`data_loaders/load_annotations_sqlite.pl`'s `find_annotation_target()` walks
 `parent_feature_id` up from a protein to its mRNA, with **no cycle guard**:
 
 ```perl
@@ -16,12 +16,12 @@ while (defined $cur) {
 }
 ```
 
-For pvel.**kc4**, `analysis_parsers/make_feature_table_from_transcript2gene.pl`'s
+For pvel.**kc4**, `analysis_parsers/parse_transcript2gene_to_MOOP_TSV.pl`'s
 `resolve_parent()` assumes TransDecoder-style protein IDs
 (`transcript_id.p<N>`) and strips that suffix to find the parent transcript.
 kc4's protein IDs have **no `.pN` suffix at all** — they're identical to
 their transcript ID. So `resolve_parent()` resolves every protein's parent
-to *itself*. `data_loaders/import_genes_sqlite.pl` then does a get-or-insert
+to *itself*. `data_loaders/load_genes_sqlite.pl` then does a get-or-insert
 by `feature_uniquename` (UNIQUE indexed), so the protein row and mRNA row
 (same uniquename) collapse into **one row whose `parent_feature_id` is its
 own `feature_id`**. Verified in the actual data:
@@ -39,7 +39,7 @@ collisions) — it has no data bug of its own; it just never got the
 `organism.sqlite` flock because kc4 (or kc1) was holding it, and kc4 never
 let go because it was stuck in the infinite loop.
 
-The secondary, still-real issue: `load_annotations_fast.pl` was invoked
+The secondary, still-real issue: `load_annotations_sqlite.pl` was invoked
 once per annotation file (~35-46 per geneset) and rebuilt its full
 `feature`/`feature_annotation` cache from the whole (shared, per-organism)
 DB every single time. Fixed as part of this change too — real speedup, just
@@ -47,7 +47,7 @@ not the thing that was actually killing the jobs.
 
 ## What was changed
 
-1. **`data_loaders/load_annotations_fast.pl`**
+1. **`data_loaders/load_annotations_sqlite.pl`**
    - `find_annotation_target()` now tracks visited feature ids and breaks
      out (attaching the annotation to the starting feature, with a
      `warn`) instead of looping forever on a cycle. Memoized per starting
@@ -85,7 +85,7 @@ not the thing that was actually killing the jobs.
 ## Known follow-up NOT fixed here (needs a product decision, out of scope
    for this pass)
 
-`make_feature_table_from_transcript2gene.pl`'s `resolve_parent()` produces
+`parse_transcript2gene_to_MOOP_TSV.pl`'s `resolve_parent()` produces
 a duplicate/self-colliding uniquename whenever a T2G-path geneset's protein
 IDs aren't suffixed with `.p<N>` relative to their transcript ID (true for
 kc4; not true for kc1/kc3). Right now that means kc4's mRNA-level features
@@ -101,7 +101,7 @@ repo. Worth a follow-up conversation before touching it.
 
 ## Status
 
-- [x] load_annotations_fast.pl: cycle guard + multi-file batching + clean exit
+- [x] load_annotations_sqlite.pl: cycle guard + multi-file batching + clean exit
 - [x] setup_new_moopdb_and_load_data.sh: batched file loading
 - [x] syntax-checked
 - [x] functionally verified against scratch DB copies (correctness + no hang + no crash)

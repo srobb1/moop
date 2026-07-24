@@ -20,5 +20,5 @@ else
   ln -s $DATADIR/iprscan_results.tsv iprscan.tsv
 fi
 
-perl $SCRIPTS/get_interproscan.moop.pl iprscan.tsv $VERSION
+perl $SCRIPTS/parse_InterProScan_to_MOOP_TSV.pl iprscan.tsv $VERSION
 

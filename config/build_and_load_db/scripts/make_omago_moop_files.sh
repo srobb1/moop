@@ -16,8 +16,8 @@ cat $OMAX/HUMAN_MOUSE_CHICK_ANOCA/OMA.2.6.0/Output/gene_function.gaf  | grep CCA
 cat CCA3X.Map-SeqNum-ID.txt CCA3Y.Map-SeqNum-ID.txt > Map-SeqNum-ID.txt
 cat CCA3X.gene_function.gaf CCA3Y.gene_function.gaf > gene_function.gaf
 
-# get_omago.moop.pl: this script will try to open Map-SeqNum-ID.txt and gene_function.gaf
+# parse_OMA2GO_to_MOOP_TSV.pl: this script will try to open Map-SeqNum-ID.txt and gene_function.gaf
 MYORG=CCA3X
-perl $SCRIPTS/get_omago.moop.pl $MYORG Jul_2024 > $MYORG.OMA2GO.moop.tsv
+perl $SCRIPTS/parse_OMA2GO_to_MOOP_TSV.pl $MYORG Jul_2024 > $MYORG.OMA2GO.moop.tsv
 MYORG=CCA3Y
-perl $SCRIPTS/get_omago.moop.pl $MYORG Jul_2024 > $MYORG.OMA2GO.moop.tsv
+perl $SCRIPTS/parse_OMA2GO_to_MOOP_TSV.pl $MYORG Jul_2024 > $MYORG.OMA2GO.moop.tsv

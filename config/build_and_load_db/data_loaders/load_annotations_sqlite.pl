@@ -5,7 +5,7 @@ use DBI;
 use File::Basename;
 use POSIX qw(_exit);
 
-# Usage: perl load_annotations_fast.pl genes.sqlite annotations1.tsv [annotations2.tsv ...]
+# Usage: perl load_annotations_sqlite.pl genes.sqlite annotations1.tsv [annotations2.tsv ...]
 #
 # Loads one or more MOOP annotation TSVs into the shared per-organism
 # organism.sqlite. The feature / feature_annotation caches are built ONCE
@@ -138,9 +138,9 @@ my $count_not_found = 0;
 #
 # Memoized per starting feature, and guarded against cycles in
 # parent_feature_id (seen in the wild: T2G-path genesets whose protein IDs
-# have no ".p<N>" ORF suffix make make_feature_table_from_transcript2gene.pl
+# have no ".p<N>" ORF suffix make parse_transcript2gene_to_MOOP_TSV.pl
 # emit a protein row with the same uniquename as its own parent mRNA row,
-# which import_genes_sqlite.pl then collapses into one self-parented row —
+# which load_genes_sqlite.pl then collapses into one self-parented row —
 # parent_feature_id = feature_id. Without this guard that's an infinite
 # loop; every annotation row for such a feature hits it, so this can hang
 # forever within seconds of starting. On a cycle we just attach the

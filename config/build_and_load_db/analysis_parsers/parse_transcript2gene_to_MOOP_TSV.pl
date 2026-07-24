@@ -4,12 +4,12 @@ use warnings;
 
 # Build features.tsv for transcriptome-only genesets (no genome, no GFF).
 # Uses transcript2gene.txt for gene/transcript structure and geneNames.tsv for names.
-# Output format matches make_feature_table_from_gff.pl — no feature_coords.tsv
+# Output format matches parse_GFF3_to_MOOP_TSV.pl — no feature_coords.tsv
 # since there is no genome assembly.
 #
 # protein2gene.txt / cds2gene.txt (optional 4th/5th args) extend the lineage
 # with 'protein' and 'CDS' features, mirroring the gene -> mRNA -> CDS -> protein
-# chain make_feature_table_from_gff.pl builds when a GFF exists. Without a GFF,
+# chain parse_GFF3_to_MOOP_TSV.pl builds when a GFF exists. Without a GFF,
 # the *2gene.txt files are all we have to reconstruct that lineage, so each one
 # present is used to add its level. Protein/CDS IDs are matched to a transcript
 # by stripping a trailing ".p<N>" ORF suffix (TransDecoder-style naming) and
@@ -22,7 +22,7 @@ use warnings;
 # annotations (Diamond/EggNOG/InterProScan/ProtNLM all key by protein ID)
 # resolve to a feature at all in genesets with no GFF/GTF.
 #
-# Usage: make_feature_table_from_transcript2gene.pl transcript2gene.txt geneNames.tsv metadata.yaml [protein2gene.txt] [cds2gene.txt]
+# Usage: parse_transcript2gene_to_MOOP_TSV.pl transcript2gene.txt geneNames.tsv metadata.yaml [protein2gene.txt] [cds2gene.txt]
 
 my $USAGE = "Usage: $0 transcript2gene.txt geneNames.tsv metadata.yaml [protein2gene.txt] [cds2gene.txt]\n";
 my $t2g_file   = shift or die $USAGE;

@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use URI::Escape;
 
-# perl make_feature_table_from_ensembl_gff.pl genomic.gff metadata.yaml > features.tsv
+# perl parse_Ensembl_GFF_to_MOOP_TSV.pl genomic.gff metadata.yaml > features.tsv
 
 my $gff      = shift;
 my $metadata = shift;

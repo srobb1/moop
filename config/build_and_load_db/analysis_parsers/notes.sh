@@ -30,17 +30,17 @@ for MYORG in CCA3X CCA3Y; do
     mkdir -p $CWD/${MYORG}_OMA
   fi
   cd $CWD/${MYORG}_OMA
-  perl $SCRIPTS/getOMA_orthologs.moop.pl $OMA_DIR/Output/OrthologousGroups.txt $MYORG 
+  perl $SCRIPTS/parse_OMA_orthologs_to_MOOP_TSV.pl $OMA_DIR/Output/OrthologousGroups.txt $MYORG 
 done
 
 for MYORG in CCA3X CCA3Y; do
   for OTHERORG in ${ORGS[@]}; do
     if [ -e  $OMA_DIR/Output/PairwiseOrthologs/${MYORG}-$OTHERORG.txt ]; then
       
-      perl $SCRIPTS/getOMA_pairs.moop.pl $OMA_DIR/Output/PairwiseOrthologs/${MYORG}-$OTHERORG.txt $MYORG $OTHERORG 1
+      perl $SCRIPTS/parse_OMA_pairs_to_MOOP_TSV.pl $OMA_DIR/Output/PairwiseOrthologs/${MYORG}-$OTHERORG.txt $MYORG $OTHERORG 1
     fi
     if [ -e  $OMA_DIR/Output/PairwiseOrthologs/${OTHERORG}-${MYORG}.txt ];then 
-      perl $SCRIPTS/getOMA_pairs.moop.pl $OMA_DIR/Output/PairwiseOrthologs/$OTHERORG-${MYORG}.txt $MYORG $OTHERORG 0
+      perl $SCRIPTS/parse_OMA_pairs_to_MOOP_TSV.pl $OMA_DIR/Output/PairwiseOrthologs/$OTHERORG-${MYORG}.txt $MYORG $OTHERORG 0
     fi
   done
 
@@ -81,7 +81,7 @@ echo "## Annotation Accession URL: https://www.uniprot.org/uniprotkb/" >> swissp
 echo "## Annotation Type: Homologs" >> swissprot.metadata.txt
 echo "## ID Accession Accession_Description Score" >> swissprot.metadata.txt
 
-perl $SCRIPTS/get_diamond_blast.moop.pl $DATADIR/UNIPROT_sprot/tophit.tsv > swissprot.moop.txt
+perl $SCRIPTS/parse_DIAMOND_to_MOOP_TSV.pl $DATADIR/UNIPROT_sprot/tophit.tsv > swissprot.moop.txt
 perl $SCRIPTS/generate_annotation_load_file.pl $THIS_ORG.swissprot.moop.txt  swissprot.desc.txt swissprot.metadata.txt
 
 
@@ -106,12 +106,12 @@ done
 for RESULTS in $DATADIR/ENS_*/tophit.tsv ; do
   ORGSTRING=`realpath $RESULTS | perl -p -e 's/.+ENS_([^\/]+).+/$1/'`
   ORG=`echo $ORGSTRING | perl -pe 's/^(\w)/\u$1/' |  perl -pe 's/_(\w)/ \L$1/g'` 
-  perl $SCRIPTS/get_diamond_blast.moop.pl $RESULTS ensembl.metadata.txt > $ORGSTRING.ensembl.txt
+  perl $SCRIPTS/parse_DIAMOND_to_MOOP_TSV.pl $RESULTS ensembl.metadata.txt > $ORGSTRING.ensembl.txt
 done
 
 
 # INTERPROSCAN
 DATADIR=~/sciproj/SBGENOMES/genomes/Chamaeleo_calyptratus/current/analysis/interproscan
 VERSION=`cat $DATADIR/version.txt`
-perl $SCRIPTS/get_interproscan.moop.pl $DATADIR/iprscan_results.tsv $VERSION
+perl $SCRIPTS/parse_InterProScan_to_MOOP_TSV.pl $DATADIR/iprscan_results.tsv $VERSION
 

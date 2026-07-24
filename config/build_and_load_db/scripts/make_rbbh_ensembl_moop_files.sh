@@ -27,5 +27,5 @@ PRETTY_ORG="${PRETTY_ORG^}"
 #for ORG in HUMAN ANOLE MOUSE CHICK; do
   RESULTS=$RESULTS_DIR/$ORG
   echo "$RESULTS"
-  perl $SCRIPTS/get_rbbh.moop.pl $RESULTS "Ensembl $PRETTY_ORG" $VERSION https://www.ensembl.org/ https://www.ensembl.org/Multi/Search/Results?q=
+  perl $SCRIPTS/parse_RBBH_to_MOOP_TSV.pl $RESULTS "Ensembl $PRETTY_ORG" $VERSION https://www.ensembl.org/ https://www.ensembl.org/Multi/Search/Results?q=
 #done

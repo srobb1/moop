@@ -12,4 +12,4 @@ RESULTS=$RESULTS_DIR/$ORG
 VERSION=$ORG #`cat $RESULTS/version.txt`
 echo "$RESULTS"
 echo "$VERSION"
-perl $SCRIPTS/get_rbbh.moop.pl $RESULTS "RefSeq $ORG" $VERSION https://www.ncbi.nlm.nih.gov/ https://www.ncbi.nlm.nih.gov/search/all/?term=
+perl $SCRIPTS/parse_RBBH_to_MOOP_TSV.pl $RESULTS "RefSeq $ORG" $VERSION https://www.ncbi.nlm.nih.gov/ https://www.ncbi.nlm.nih.gov/search/all/?term=

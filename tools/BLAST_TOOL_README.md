@@ -123,8 +123,8 @@ Database files for each assembly:
 
 **Note:** SQLite databases (genes.sqlite, annotations.sqlite) are created separately for searching feature data via:
 - `create_schema_sqlite.sql` - SQLite schema
-- `import_genes_sqlite.pl` - Import gene data
-- `load_annotations_fast.pl` - Load annotations
+- `load_genes_sqlite.pl` - Import gene data
+- `load_annotations_sqlite.pl` - Load annotations
 
 These are used for feature search, not BLAST searches.
 

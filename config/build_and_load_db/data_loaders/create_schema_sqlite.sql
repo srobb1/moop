@@ -11,7 +11,7 @@
  *
  * It is a per-CONNECTION pragma -- it cannot be stored in the schema file, and
  * it must be set by every client that writes. The loaders do this; see
- * import_genes_sqlite.pl and load_annotations_fast.pl. Until 2026-07-24 nothing
+ * load_genes_sqlite.pl and load_annotations_sqlite.pl. Until 2026-07-24 nothing
  * set it anywhere, so deleting a gene silently left its mRNA/CDS/protein and
  * every annotation behind.
  * ---------------------------------------------------------------------------

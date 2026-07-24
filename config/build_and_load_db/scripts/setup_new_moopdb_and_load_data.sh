@@ -23,13 +23,13 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 SCRIPT_DIR=""
 for candidate in "$HERE" "$HERE/data_loaders" "$HERE/data_loader" \
                  "$HERE/../data_loaders" "$HERE/../data_loader"; do
-    if [ -f "$candidate/import_genes_sqlite.pl" ]; then
+    if [ -f "$candidate/load_genes_sqlite.pl" ]; then
         SCRIPT_DIR=$(cd "$candidate" && pwd)
         break
     fi
 done
 if [ -z "$SCRIPT_DIR" ]; then
-    echo "ERROR: cannot find import_genes_sqlite.pl near $HERE" >&2
+    echo "ERROR: cannot find load_genes_sqlite.pl near $HERE" >&2
     echo "       Looked in: . data_loaders data_loader ../data_loaders ../data_loader" >&2
     exit 1
 fi
@@ -63,7 +63,7 @@ if [ ! -e "$DB" ]; then
 fi
 
 echo "Loading gene set '$GENE_SET_NAME' for: $ORG"
-perl "$SCRIPT_DIR/import_genes_sqlite.pl" "$DB" "$FEATURES" "$GENE_SET_NAME"
+perl "$SCRIPT_DIR/load_genes_sqlite.pl" "$DB" "$FEATURES" "$GENE_SET_NAME"
 
 # Gate annotation loading on features actually existing.
 #
@@ -100,7 +100,7 @@ load_files() {
     fi
 
     ## Pass every matched file to a SINGLE perl invocation instead of one
-    ## invocation per file -- load_annotations_fast.pl builds its feature /
+    ## invocation per file -- load_annotations_sqlite.pl builds its feature /
     ## feature_annotation caches once per invocation by scanning the whole
     ## (shared, per-organism) DB, so calling it once per file made loading
     ## scale as O(files * db_size) instead of O(db_size + total_rows).
@@ -109,7 +109,7 @@ load_files() {
     ## a file that fails to load leaves the database in a state nobody inspects,
     ## and the site then shows fewer results with no error anywhere.
     printf '  %s\n' "${files[@]}"
-    perl "$SCRIPT_DIR/load_annotations_fast.pl" "$DB" "${files[@]}"
+    perl "$SCRIPT_DIR/load_annotations_sqlite.pl" "$DB" "${files[@]}"
 }
 
 # Load all annotation types

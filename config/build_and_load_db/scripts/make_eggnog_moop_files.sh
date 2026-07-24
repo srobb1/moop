@@ -16,8 +16,8 @@ DBVERSION=`cat $DATADIR/version.txt | grep 'eggNOG DB version:' | perl -p -e 's/
 VERSION="$MAPPERVERSION DB_$DBVERSION" 
 
 # ~/sciproj/SBGENOMES/genomes/Montipora_capitata/current/analysis/eggnog_mapper/emapper.annotations
-echo "perl $SCRIPTS/get_eggnog.moop.pl $DATADIR/emapper.annotations $VERSION"
-perl $SCRIPTS/get_eggnog.moop.pl $DATADIR/emapper.annotations $VERSION
+echo "perl $SCRIPTS/parse_EggNOG_to_MOOP_TSV.pl $DATADIR/emapper.annotations $VERSION"
+perl $SCRIPTS/parse_EggNOG_to_MOOP_TSV.pl $DATADIR/emapper.annotations $VERSION
 
 source /home/smr/miniconda3/etc/profile.d/conda.sh
 conda activate goatools
