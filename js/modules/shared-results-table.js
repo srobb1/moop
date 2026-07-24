@@ -73,7 +73,7 @@
 const RESULT_COLUMNS = [
     {
         key: 'select', label: 'Select', width: 120, variants: ['*'],
-        orderable: false, filter: false,
+        orderable: false, filter: false, exportable: false,
         render: () => '<input type="checkbox" class="row-select">'
     },
     {
@@ -95,6 +95,7 @@ const RESULT_COLUMNS = [
     },
     {
         key: 'feature_id', label: 'Feature ID', width: 280, variants: ['*'],
+        cssClass: 'dt-feature-id',   // located by class, not header text — see datatable-config.js
         render: (r, ctx) =>
             `<a href="${resultFeatureUrl(ctx, r.feature_uniquename)}" target="_blank">${r.feature_uniquename}</a>`
     },
@@ -223,8 +224,13 @@ function buildResultsTbody(variant, items, ctx) {
     let html = '<tbody>';
     items.forEach(item => {
         const r = item.result;
-        // data-genome-accession is read by the FASTA export in datatable-config.js.
-        html += `<tr data-genome-accession="${encodeURIComponent(r.genome_accession || '')}">`;
+        // Both attributes are read by the FASTA export in datatable-config.js. The gene set
+        // is REQUIRED, not decoration: sequences live in
+        // organisms/{organism}/{assembly}/{gene_set}/, so without it the retrieval endpoint
+        // fell back to a gene set named "v1" — of which zero exist anywhere in the data tree —
+        // and every per-table FASTA silently returned no sequences.
+        html += `<tr data-genome-accession="${encodeURIComponent(r.genome_accession || '')}"`
+              + ` data-gene-set="${encodeURIComponent(r.gene_set || '')}">`;
         cols.forEach(col => { html += `<td>${col.render(r, ctx, item)}</td>`; });
         html += '</tr>';
     });
@@ -233,11 +239,23 @@ function buildResultsTbody(variant, items, ctx) {
 
 /** DataTables columnDefs for a variant — targets are computed, never hand-numbered. */
 function resultsColumnDefs(variant) {
+    // The no-export marker is read at call time so this file does not depend on
+    // datatable-config.js having loaded first; the fallback keeps the literal in one
+    // conceptual place if load order ever changes.
+    const noExport = (typeof DataTableExportConfig !== 'undefined' && DataTableExportConfig.NO_EXPORT_CLASS)
+                   || 'dt-no-export';
+
     return resultColumnsFor(variant).map((col, idx) => {
         const def = { targets: idx };
         if (col.orderable === false) def.orderable = false;
         if (col.hidden)              def.visible   = false;
-        if (col.wrap)                def.className = 'wrap-text';
+
+        const classes = [];
+        if (col.wrap)               classes.push('wrap-text');
+        if (col.exportable === false) classes.push(noExport);
+        if (col.cssClass)           classes.push(col.cssClass);
+        if (classes.length)         def.className = classes.join(' ');
+
         return def;
     });
 }

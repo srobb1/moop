@@ -46,8 +46,31 @@ $site = $config->getString('site');
 // Get all parameters first for access check
 $organism_name      = trim($_POST['organism']  ?? $_GET['organism']  ?? '');
 $assembly_name      = trim($_POST['assembly']  ?? $_GET['assembly']  ?? '');
-$gene_set_name      = trim($_POST['gene_set']  ?? $_GET['gene_set']  ?? 'v1');
+$gene_set_name      = trim($_POST['gene_set']  ?? $_GET['gene_set']  ?? '');
 $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
+
+// Resolve the gene set against what actually exists on disk, rather than defaulting to a
+// literal 'v1'.
+//
+// This used to read `?? 'v1'`. Sequences are extracted from
+// organisms/{organism}/{assembly}/{gene_set}/, and there is not a single directory named
+// v1 anywhere in the data tree — so every caller that omitted gene_set (the FASTA button on
+// the search-results table omitted it always) built a path that could not exist, failed the
+// is_dir() check below, and rendered the page with no sequences and no explanation. See
+// notes/ASSEMBLY_WITHOUT_GENE_SET_PLAN.md — inventing 'v1' is a site-wide habit, and this is
+// one of the places it caused a user-visible failure.
+$organism_data_path = $config->getPath('organism_data');
+$assembly_dir       = "$organism_data_path/$organism_name/$assembly_name";
+$available_gene_sets = [];
+if ($organism_name !== '' && $assembly_name !== '' && is_dir($assembly_dir)) {
+    foreach (glob($assembly_dir . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
+        $available_gene_sets[] = basename($dir);
+    }
+}
+if ($gene_set_name === '' && count($available_gene_sets) === 1) {
+    // Unambiguous: the assembly carries exactly one gene set, so use it.
+    $gene_set_name = $available_gene_sets[0];
+}
 
 // Assembly MUST be specified - it's a security requirement
 if (empty($assembly_name)) {
@@ -96,11 +119,20 @@ if (!empty($sequence_ids_provided)) {
     if (empty($extraction_errors)) {
         $gene_set_dir = "$organism_data/$organism_name/$assembly_name/$gene_set_name";
 
-        if (!is_dir($gene_set_dir)) {
-            $extraction_errors[] = "Gene set directory not found for $assembly_name/$gene_set_name.";
+        if ($gene_set_name === '') {
+            // Say which gene sets exist instead of failing on a fabricated path.
+            $extraction_errors[] = $available_gene_sets
+                ? 'This assembly has more than one gene set (' . implode(', ', $available_gene_sets)
+                  . '). Choose one to download sequences from.'
+                : "No gene sets found for assembly $assembly_name.";
+        } elseif (!is_dir($gene_set_dir)) {
+            $extraction_errors[] = "Gene set directory not found for $assembly_name/$gene_set_name."
+                . ($available_gene_sets ? ' Available: ' . implode(', ', $available_gene_sets) . '.' : '');
         } elseif (!empty($uniquenames)) {
             $db_path = "$organism_data/$organism_name/organism.sqlite";
-            $typed_ids = buildTypedIds($uniquenames, $db_path);
+            // Scoped to this assembly + gene set: the same feature_uniquename can exist in
+            // more than one gene set, and an unscoped lookup lets the last row win.
+            $typed_ids = buildTypedIds($uniquenames, $db_path, $assembly_name, $gene_set_name);
             $extract_result = extractSequencesForAllTypes($gene_set_dir, $typed_ids, $sequence_types);
             $displayed_content = $extract_result['content'];
             if (!empty($extract_result['errors'])) {

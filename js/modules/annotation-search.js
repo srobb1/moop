@@ -361,7 +361,6 @@ class AnnotationSearch {
         this.zeroResultOrganisms = [];
         this.warnings = [];
         this.cappedOrganisms = [];
-        this.pendingTableInits = [];
         this.cancelled = false;
         $('#searchResults').show();
         $('#resultsContainer').html('');
@@ -510,12 +509,11 @@ class AnnotationSearch {
         }
 
         $('#resultsContainer').append(tableHtml);
-
-        if (isUniquenameSearch) {
-            const tableId = '#resultsTable-' + organism.replace(/\s+/g, '-');
-            const selectId = '#selectCheckbox-' + organism.replace(/\s+/g, '-');
-            this.pendingTableInits.push({ tableId, selectId });
-        }
+        // No table init here: createOrganismResultsTable / createSimpleResultsTable each
+        // initialise their own DataTable. A second, dead init used to be queued from here
+        // against selectors like '#resultsTable-Organism_name' (hyphen) while the tables are
+        // created as '#resultsTable_Organism_name' (underscore), so it never matched anything
+        // and was masked by `retrieve: true` on the init.
     }
 
     cancel() {
@@ -593,11 +591,6 @@ class AnnotationSearch {
             $('#searchProgress').find('.download-all-results').on('click', () => this.downloadResults());
             $('#searchProgress').find('.download-fasta-results').on('click', () => this.downloadFasta());
         }
-
-        this.pendingTableInits.forEach(({ tableId, selectId }) => {
-            initializeResultsTable(tableId, selectId, true);
-        });
-        this.pendingTableInits = [];
 
         if (this.config.scrollToResults) {
             $('html, body').animate({ scrollTop: $('#searchResults').offset().top - 100 }, 'smooth');

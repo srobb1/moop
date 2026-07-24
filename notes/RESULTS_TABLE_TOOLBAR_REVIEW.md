@@ -186,12 +186,73 @@ selection spans assemblies. Grouping is the better behaviour and is not much mor
 - **Button construction rebuilds an `exportOptions` closure per button** and branches inside it
   on `buttonType`. With print gone this collapses to one shared options object.
 
-### Suggested sequencing
+### Status — all of Part 1 and Part 2 were done on 2026-07-23
 
-1. Fix Bug A + Bug B (correctness, and B is wrong data — worth doing before launch).
-2. Replace the `alert()`s with the inline hint.
-3. Remove print/PDF (own commit).
-4. Registry-derive the column lookups in `extractFeatureIds` / export exclusion.
+Everything above is FIXED. Kept as the record of what was wrong and why.
+
+- Print/PDF removed, including the `buttons.print.min.js` load in `includes/layout.php`.
+- Bug A and Bug B fixed by scoping every selection read to `dt`.
+- `alert()`s replaced by `DataTableExportConfig.notify()` — an inline amber note on the
+  table's own toolbar.
+- Export exclusion is class-driven (`NO_EXPORT_CLASS`), which also restored the gene page's
+  `Organism` column to its downloads; the feature-ID column is found by `FEATURE_ID_CLASS`
+  rather than by matching header text.
+- The dead double-init path in `annotation-search.js` (`pendingTableInits`) is deleted.
+
+### Bug C — the per-table FASTA button never returned sequences at all
+
+Found after the above, reported by the user: *"when I select and click FASTA, the form gets
+filled but I get no sequences."*
+
+`tools/retrieve_selected_sequences.php` read
+`$gene_set_name = trim($_POST['gene_set'] ?? $_GET['gene_set'] ?? 'v1')`, and
+`fastaExportAction()` sent only `organism` and `assembly` — never `gene_set`. So every request
+from the results table resolved to a gene set literally named `v1`, and the extraction
+directory became `organisms/{organism}/{assembly}/v1/`.
+
+**There are zero directories named `v1` anywhere in the data tree** (checked across all
+organisms; Nematostella's real gene sets are `NV2` and `RS_101`). The `is_dir()` check failed,
+`$displayed_content` stayed empty, and the page rendered with no sequences and no explanation.
+This path had never worked.
+
+`api/download_search_fasta.php` — the download-all FASTA in the results header — was
+unaffected, because it iterates the organism's real accessible sources instead of composing a
+path from a default. That is why only the per-table button was broken, and why it went unnoticed.
+
+Fixed in three layers:
+
+1. Result rows now carry `data-gene-set` alongside `data-genome-accession`.
+2. `fastaExportAction()` groups the selection by **assembly + gene set** (not assembly alone)
+   and sends `gene_set`.
+3. The endpoint no longer invents `v1`: it lists the assembly's real gene-set directories,
+   uses the single one when unambiguous, and otherwise reports which gene sets exist.
+
+Also fixed while here, and the user called it before the code was read: **`buildTypedIds()`
+was not scoped**. Its query was
+`SELECT feature_uniquename, feature_type FROM feature WHERE feature_uniquename IN (...)` — no
+gene-set or assembly filter — while the sibling `buildTypedIdsForGenes()` immediately below it
+filters `AND f.gene_set_id = ?` at all three levels. A uniquename is only unique within a gene
+set, so an organism with two gene sets could return several rows for one name and the last
+would silently win. It now takes optional `$assembly` / `$gene_set` and joins `gene_set` +
+`genome` when given; `retrieve_selected_sequences.php` passes both.
+
+Verified end to end: the FASTA POST now goes to
+`…?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2` and returns the
+selected sequences (`>NV2t021704001.1`, `>NV2t001882001.1`, `>NV2t011739005.1`).
+
+### Still open
+
+- **A FASTA selection spanning several assembly/gene-set combinations is refused** with a
+  message asking the user to narrow it, because `retrieve_selected_sequences.php` takes a
+  single assembly + gene set. Supporting it properly means teaching that endpoint to accept
+  pairs — worth doing, not done.
+- **The two remaining `buildTypedIds()` callers are still unscoped**:
+  `api/download_search_fasta.php:83` and `tools/retrieve_sequences.php:238`. Both have the
+  assembly and gene set in hand, so passing them is small; done as its own change rather than
+  bundled here.
+- **The wider `'v1'` habit** — `notes/ASSEMBLY_WITHOUT_GENE_SET_PLAN.md` records that a
+  fabricated `v1` is invented at ~48 sites while zero such directories exist. This fixed the
+  one that was breaking a user-facing feature; the rest are still latent.
 
 Related: `js/modules/shared-results-table.js` (the column registry and why it exists),
 `notes/SHARED_SCOPE_SELECTOR_PLAN.md` (the same "one component, many pages" argument applied to

@@ -269,6 +269,44 @@ and evicts something a user is about to need. Before optimising SQL, check you a
 actually measuring the disk. Numbers, fast/slow query shapes and the cross-organism fan-out
 cost: `notes/QUERY_PERFORMANCE.md`.
 
+### 9b. Say so when the code is bad — the user wants to know
+
+**Standing instruction from the user (2026-07-23): "if you ever come across poorly written
+code like this, please let me know. I want good, stable, functioning code."**
+
+So when you are working near code that is fragile, duplicated, or quietly wrong, **report it
+even when it is not what you were asked to do**. Do not silently work around it, and do not
+"fix" it invisibly inside an unrelated change. Say what is wrong, what it breaks, and what
+fixing it would cost — then let the user decide. They have consistently chosen the real fix
+over the patch when given the choice.
+
+What prompted this: the results-table work on 2026-07-23. The table was hand-written three
+times with **positional** column identity (`data-column-index="6"`, `columnDefs targets: 6`),
+so adding two columns meant renumbering ~18 sites by hand. Reading it turned up four defects
+nobody had reported, three of them silent:
+
+- Turning on a hidden column via colvis produced a header with no cells under it, so every
+  later heading sat above the wrong data (`.export-only` CSS fighting DataTables visibility).
+  The user had noticed this one and assumed it was unfixable.
+- One organism's row selection satisfied another organism's export guard → a headers-only
+  CSV with no warning.
+- FASTA read the assembly from the first ticked row **anywhere on the page**, so it could
+  request one organism's features against another's assembly — wrong data, not a wrong-looking
+  page.
+- The gene page's `Organism` column, tagged `export-only` precisely so it would appear in
+  downloads, was dropped from every export by a hardcoded `idx === 0`.
+
+**The pattern behind all four: identity expressed positionally, and DOM reads done page-wide
+in a UI that renders the same component many times per page.** Both are worth flagging on
+sight. The fix in each case was to name things — a column registry keyed by `key`, export
+rules keyed by CSS class, every selection read scoped to its own DataTables instance
+(`$(dt.rows().nodes())`, never `$(...)` on the document).
+
+Corollary: **a workaround comment is a lead, not a conclusion.** "For print, only include
+visible columns so header and data stay aligned" documented a symptom of the colvis bug; once
+the real cause was fixed the restriction was pointless. When a comment explains why something
+is limited, check whether the reason still holds.
+
 ### 10. Housekeeping — Automatic Maintenance Tasks
 
 `lib/housekeeping.php` runs maintenance tasks from `admin_init.php`. No cron jobs or

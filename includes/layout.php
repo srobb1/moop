@@ -214,7 +214,10 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
         <script src="/<?= $config->getString('site') ?>/js/vendor/dataTables.buttons.min.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/vendor/buttons.bootstrap5.min.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/vendor/buttons.html5.min.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/vendor/buttons.print.min.js"></script>
+<?php /* buttons.print.min.js is deliberately NOT loaded: the Print/PDF button was removed
+         (it could not produce a PDF — pdfmake is not vendored — and a wide genomic table is
+         not a paper artefact). Copy/CSV/Excel cover taking the data away; Ctrl+P still
+         prints the page. See notes/RESULTS_TABLE_TOOLBAR_REVIEW.md. */ ?>
         <script src="/<?= $config->getString('site') ?>/js/vendor/buttons.colVis.min.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/vendor/jszip.min.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/vendor/dataTables.colReorder.min.js"></script>

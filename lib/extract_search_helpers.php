@@ -161,18 +161,49 @@ function _fasta_key_for_type(string $type): ?string {
  * @param string $db_path      Path to organism.sqlite
  * @return array [$uniquename => $feature_type|null]  null = not found in DB
  */
-function buildTypedIds(array $uniquenames, string $db_path): array {
+/**
+ * Map feature uniquenames to their feature_type.
+ *
+ * $assembly and $gene_set are optional but SHOULD be passed whenever the caller knows
+ * them. Without them this looks a uniquename up across the organism's entire database,
+ * and a uniquename is only unique within a gene set — an organism carrying two gene sets
+ * (or two assemblies) can return several rows for one name, whereupon the last row
+ * silently wins and a feature can be typed from the wrong gene set. The sibling
+ * buildTypedIdsForGenes() below has always scoped its lookups with `f.gene_set_id = ?`;
+ * this one did not, which is the inconsistency that made the bug easy to miss.
+ */
+function buildTypedIds(array $uniquenames, string $db_path, string $assembly = '', string $gene_set = ''): array {
     $result = array_fill_keys($uniquenames, null);
     if (empty($uniquenames) || !file_exists($db_path)) {
         return $result;
     }
     $placeholders = implode(',', array_fill(0, count($uniquenames), '?'));
+    $scoped = ($assembly !== '' || $gene_set !== '');
+
+    $sql = "SELECT f.feature_uniquename, f.feature_type FROM feature f";
+    if ($scoped) {
+        $sql .= " JOIN gene_set gs ON gs.gene_set_id = f.gene_set_id"
+              . " JOIN genome   g  ON g.genome_id    = gs.genome_id";
+    }
+    $sql .= " WHERE f.feature_uniquename IN ($placeholders)";
+
+    $params = array_values($uniquenames);
+    if ($gene_set !== '') {
+        $sql .= " AND gs.gene_set_name = ?";
+        $params[] = $gene_set;
+    }
+    if ($assembly !== '') {
+        // Accept either the accession or the human-readable genome name, as the rest of
+        // the app does when it resolves an assembly.
+        $sql .= " AND (g.genome_accession = ? OR g.genome_name = ?)";
+        $params[] = $assembly;
+        $params[] = $assembly;
+    }
+
     try {
         $dbh  = getDbConnection($db_path);
-        $stmt = $dbh->prepare(
-            "SELECT feature_uniquename, feature_type FROM feature WHERE feature_uniquename IN ($placeholders)"
-        );
-        $stmt->execute(array_values($uniquenames));
+        $stmt = $dbh->prepare($sql);
+        $stmt->execute($params);
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $result[$row['feature_uniquename']] = $row['feature_type'];
         }
