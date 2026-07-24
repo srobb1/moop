@@ -8,3 +8,9 @@ slurm_logs/
 
 # Scratch / working data written during a run.
 data/
+
+# Generated, not source: run_all_v2.sh truncates and rebuilds this on every run by
+# scanning GENOMES/*/*/*/metadata.yaml for "active: true". Tracking it means every
+# run shows a spurious diff, and a run against a wrong or unmounted GENOMES path
+# silently empties the tracked copy.
+active_genesets.tsv
