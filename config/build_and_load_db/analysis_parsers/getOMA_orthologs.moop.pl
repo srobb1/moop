@@ -94,7 +94,7 @@ foreach my $ORG (sort keys %hits){
     print OUT "## Annotation Source: OMA ORTHOLOGS ($analysis)
 ## Annotation Source Version: $OMA_DB_V
 ## Annotation Accession URL: https://omabrowser.org/oma/home/
-## Annotation Source URL: $db_url 
+## Annotation Source URL: $db_url
 ## Annotation Type: Orthologs
 ## Annotation Creation Date: $date\n";
     print OUT join("\t","## Gene","${analysis}_ORTHOLOG","Description","ORTHOLOG_TYPE"),"\n";

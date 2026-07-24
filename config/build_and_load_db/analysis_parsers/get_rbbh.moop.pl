@@ -73,10 +73,10 @@ $src    =~ s/\s*$//;
 $id_url =~ s/\s*$//;
 $date   =~ s/\s*$//;
 open OUT, ">$src_nospace.RBBH.moop.tsv" or die "Can't open >$src_nospace.RBBH.moop.tsv for writing $! \n";
-print OUT "## Annotation Source: $src 
+print OUT "## Annotation Source: $src
 ## Annotation Source Version: $src_version
 ## Annotation Source URL: $src_url
-## Annotation Accession URL: $id_url 
+## Annotation Accession URL: $id_url
 ## Annotation Type: RBBH Homolog
 ## Annotation Creation Date: $date\n";
 print OUT join("\t","## Gene", "Accession","Accession_Description","Score"),"\n";

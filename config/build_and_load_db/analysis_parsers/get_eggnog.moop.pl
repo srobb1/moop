@@ -32,7 +32,7 @@ open ORTHO, ">eggnog_orthologs.moop.tsv" or die "Can't opne eggnog_orthologs.moo
 print ORTHO "## Annotation Source: EggNOG
 ## Annotation Source Version: 5.0.2
 ## Annotation Accession URL: http://eggnog5.embl.de/
-## Annotation Source URL: http://eggnog5.embl.de/ 
+## Annotation Source URL: http://eggnog5.embl.de/
 ## Annotation Type: Orthologs
 ## Annotation Creation Date: $date\n";
 print ORTHO join("\t","## Gene","EggNOG_seed_ortholog","Description","Seed_evalue"),"\n";
@@ -77,7 +77,7 @@ open OUT, ">EggNOG2GO.eggnog.moop.tsv" or die "Can't open EggNOG2GO.eggnog.moop.
 print OUT "## Annotation Source: EggNOG ($analysis)
 ## Annotation Source Version: EggNOG 5.0
 ## Annotation Accession URL: https://amigo.geneontology.org/amigo/term/
-## Annotation Source URL: http://eggnog5.embl.de/ 
+## Annotation Source URL: http://eggnog5.embl.de/
 ## Annotation Type: Gene Ontology
 ## Annotation Creation Date: $date\n";
 print OUT join("\t","## Gene","${analysis}","Description","NameSpace"),"\n";

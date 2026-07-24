@@ -42,7 +42,7 @@ print  "## Annotation Source: OMA2GO
 ## Annotation Source Version: $OMA_DB_V
 ## Annotation Source URL: https://omabrowser.org/oma/home/
 ## Annotation Accession URL: https://www.ensembl.org/Multi/Search/Results?q=
-## Annotation Type: Gene Ontology 
+## Annotation Type: Gene Ontology
 ## Annotation Creation Date: $date
 ## ID GO_ID	GO_DESCRIPTION	NAMESPACE\n";
 my %hits;

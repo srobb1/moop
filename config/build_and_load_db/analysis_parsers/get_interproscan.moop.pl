@@ -97,8 +97,8 @@ foreach my $analysis (sort keys %annot){
   print "Starting: $analysis.iprscan.moop.tsv\n";
   open OUT, ">$analysis.iprscan.moop.tsv" or die "Can't open $analysis.iprscan.tsv for writing $! \n";
   print OUT "## Annotation Source: InterProScan ($analysis)
-## Annotation Source Version: $version 
-## Annotation Accession URL: $annotation_url 
+## Annotation Source Version: $version
+## Annotation Accession URL: $annotation_url
 ## Annotation Source URL: https://www.ebi.ac.uk/interpro/
 ## Annotation Type: $annotation_type
 ## Annotation Creation Date: $date\n";
