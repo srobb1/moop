@@ -21,6 +21,28 @@
 -- stemming (searching "binding" also finds bind/binds/bound). It does NOT match
 -- mid-word fragments ("inase" will not match "kinase").
 --
+-- CONTENTLESS (content = ''): FTS5 stores only the inverted index, not a second
+-- copy of the indexed text. Without it, FTS5 keeps a full duplicate of every
+-- indexed column in an internal _content table -- 307 MB of a 722 MB organism
+-- database, roughly 43% of the file, duplicating text that already lives in
+-- feature and annotation. That copy competes for page cache against a corpus far
+-- larger than RAM, which is where the cold-query cost comes from.
+--
+-- Safe here because MOOP's queries use these tables ONLY for MATCH and rowid --
+-- every displayed column is selected from the real tables via the rowid join
+-- (see searchFeaturesAndAnnotations / searchFeaturesByNameDescription in
+-- lib/database_queries.php). bm25() ranking still works: it reads the index and
+-- _docsize, not _content. There is no snippet()/highlight() call anywhere.
+--
+-- Constraint to respect: a contentless FTS5 table supports INSERT only -- no
+-- UPDATE or DELETE (contentless_delete arrived in SQLite 3.43; this host is on
+-- 3.34.1). That is exactly the drop-and-rebuild pattern below, so it costs
+-- nothing. If you ever need incremental FTS updates, this must be revisited.
+--
+-- RECLAIMING SPACE ON EXISTING DATABASES: re-running this script drops the old
+-- FTS tables and rebuilds them contentless, but SQLite keeps the freed pages in
+-- the file. Run VACUUM afterwards to actually shrink it on disk.
+--
 -- Two indexes mirror MOOP's two text-search code paths:
 --   feature_annotation_search  ->  searchFeaturesAndAnnotations()
 --   feature_search             ->  searchFeaturesByNameDescription()  (incl. unannotated features)
@@ -40,6 +62,7 @@ CREATE VIRTUAL TABLE feature_annotation_search USING fts5(
     feature_description,
     annotation_description,
     annotation_accession,
+    content = '',
     tokenize = 'porter unicode61'
 );
 INSERT INTO feature_annotation_search(
@@ -58,6 +81,7 @@ JOIN annotation a ON a.annotation_id = fa.annotation_id;
 CREATE VIRTUAL TABLE feature_search USING fts5(
     feature_name,
     feature_description,
+    content = '',
     tokenize = 'porter unicode61'
 );
 INSERT INTO feature_search(rowid, feature_name, feature_description)
