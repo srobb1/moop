@@ -25,11 +25,30 @@ $(document).ready(function () {
 
     // ── Scope tree ──────────────────────────────────────────────────────────
 
-    // Row click — toggle selection (no visible checkbox; whole row is the target)
-    $(document).on('click', '.scope-gs-full-row', function () {
+    // Row click — toggle selection (no visible checkbox; whole row is the target).
+    //
+    // In SIMPLE view a row stands for a whole organism (its per-gene-set rows are collapsed
+    // into one), so clicking it selects or deselects ALL of that organism's gene sets — which
+    // is what the help promises and what makes the collapse honest. In DETAIL view each row
+    // is its own gene set and toggles just itself. Mirrors MOOPmart's initScopeList().
+    $(document).on('click', '.scope-gs-full-row', function (e) {
         const cb = $(this).find('.scope-gs-cb')[0];
-        cb.checked = !cb.checked;
-        $(this).toggleClass('selected', cb.checked);
+        if (!cb || e.target === cb) return;
+
+        if ($('#scope-show-detail').is(':checked')) {
+            cb.checked = !cb.checked;
+            $(this).toggleClass('selected', cb.checked);
+        } else {
+            const org    = cb.dataset.org;
+            const orgCbs = $('.scope-gs-cb').filter(function () { return this.dataset.org === org; });
+            // Toggle off only when every one of the organism's gene sets is already on; from a
+            // partial state (some picked in Detail view) a click selects them all.
+            const allOn = orgCbs.toArray().every(c => c.checked);
+            orgCbs.each(function () {
+                this.checked = !allOn;
+                $(this).closest('.scope-gs-full-row').toggleClass('selected', !allOn);
+            });
+        }
         onScopeChange();
     });
 
@@ -60,7 +79,7 @@ $(document).ready(function () {
         if (countBadge) countBadge.textContent = orgCount;
 
         if (!orgCount) {
-            panel.innerHTML = '<div class="text-muted small p-2 fst-italic">None — will search all organisms</div>';
+            panel.innerHTML = '<div class="text-muted small p-2 fst-italic">None yet — pick at least one organism</div>';
             return;
         }
 
@@ -106,7 +125,9 @@ $(document).ready(function () {
         );
     }
 
-    // Scope filter — show/hide rows; if match is in hidden detail, force-reveal + highlight exact text
+    // Scope filter — show/hide rows; if the match is in hidden detail, force-reveal + highlight
+    // the exact text. Always matches the FULL search text (organism, common name, group,
+    // assembly AND gene set) because that is what the placeholder promises.
     function runScopeFilter() {
         const q           = $('#scope-filter').val().trim().toLowerCase();
         const detailHidden = !$('#scope-show-detail').is(':checked');
@@ -114,27 +135,40 @@ $(document).ready(function () {
         $('.scope-gs-full-row').each(function () {
             const $row = $(this);
             if (!q) {
-                $row.show().removeClass('scope-detail-forced scope-detail-matched');
+                // Back to the stylesheet's decision — which in simple view keeps the secondary
+                // rows hidden. Setting .show() here would defeat the collapse.
+                this.style.display = '';
+                $row.removeClass('scope-detail-forced scope-detail-matched');
                 highlightInDetail($row, '');
                 return;
             }
             const all    = String($row.data('search') || '');
             const simple = String($row.data('search-simple') || all);
             const detail = String($row.data('search-detail') || '');
-            const match  = all.includes(q);
-            $row.toggle(match);
-            if (match) {
-                const detailMatch = detail.includes(q);
-                if (detailMatch && detailHidden && !simple.includes(q)) {
-                    $row.addClass('scope-detail-forced scope-detail-matched');
-                } else {
-                    $row.removeClass('scope-detail-forced scope-detail-matched');
-                }
-                highlightInDetail($row, detailMatch ? q : '');
-            } else {
+
+            if (!all.includes(q)) {
+                this.style.display = 'none';
                 $row.removeClass('scope-detail-forced scope-detail-matched');
                 highlightInDetail($row, '');
+                return;
             }
+
+            const detailMatch = detail.includes(q);
+            const detailOnly  = detailMatch && !simple.includes(q);
+
+            // Simple view: a SECONDARY row shows only when the query hit its own assembly or
+            // gene set. Filtering by an organism name must not re-expose the very duplicate
+            // rows the collapse hid.
+            if (detailHidden && $row.hasClass('scope-row-secondary') && !detailOnly) {
+                this.style.display = 'none';
+                $row.removeClass('scope-detail-forced scope-detail-matched');
+                highlightInDetail($row, '');
+                return;
+            }
+
+            this.style.display = 'flex';
+            $row.toggleClass('scope-detail-forced scope-detail-matched', detailHidden && detailOnly);
+            highlightInDetail($row, detailMatch ? q : '');
         });
     }
 
@@ -146,29 +180,37 @@ $(document).ready(function () {
         runScopeFilter(); // re-evaluate forced reveals
     });
 
-    // Select All scope — confirm first
-    $('#scope-select-all').on('click', function () {
-        const total   = $('.scope-gs-cb').length;
+    // One toggle instead of an All / None pair. Its label states what the click will do, so it
+    // doubles as a readout of whether everything is selected. Deselecting is immediate;
+    // selecting all still routes through the "this can take a while" warning, because an
+    // every-organism search is the one query we most want people to choose deliberately.
+    $('.scope-toggle-all').on('click', function () {
+        const boxes = $('.scope-gs-cb');
+        const allOn = boxes.length > 0 && boxes.toArray().every(cb => cb.checked);
+
+        if (allOn) {
+            boxes.prop('checked', false);
+            $('.scope-gs-full-row').removeClass('selected');
+            onScopeChange();
+            return;
+        }
+
         const countEl = document.getElementById('select-all-orgs-count');
-        if (countEl) countEl.textContent = total + (total === 1 ? ' gene set' : ' gene sets across all organisms');
+        if (countEl) countEl.textContent = boxes.length + (boxes.length === 1 ? ' gene set' : ' gene sets');
         const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('select-all-orgs-modal'));
         $('#select-all-orgs-confirm').off('click.selall').on('click.selall', function () {
             modal.hide();
-            $('.scope-gs-cb').prop('checked', true);
+            boxes.prop('checked', true);
             $('.scope-gs-full-row').addClass('selected');
             onScopeChange();
         });
         modal.show();
     });
-    $('#scope-deselect-all').on('click', function () {
-        $('.scope-gs-cb').prop('checked', false);
-        $('.scope-gs-full-row').removeClass('selected');
-        onScopeChange();
-    });
 
     // Called whenever any scope checkbox changes
     let sourcesLoadTimer = null;
     function onScopeChange() {
+        clearSelectHint();   // they just did the thing the hint asked for
         updateScopeSummary();
         updateSearchSelectedPanel();
         clearTimeout(sourcesLoadTimer);
@@ -183,14 +225,29 @@ $(document).ready(function () {
         return Array.from(seen);
     }
 
+    // The counts line under the list, plus the toggle's label. Says organisms / assemblies /
+    // gene sets in full rather than a bare number, because those three are exactly what a
+    // click can change without the list making it obvious — selecting one organism row in
+    // simple view can take four gene sets with it. Same readout as MOOPmart's #mm-scope-counts.
     function updateScopeSummary() {
-        const checkedGs  = $('.scope-gs-cb:checked').length;
-        const totalGs    = $('.scope-gs-cb').length;
-        const checkedOrg = getCheckedOrganisms().length;
-        const totalOrg   = allOrganisms.length;
-        let txt = checkedOrg + ' / ' + totalOrg + ' organism' + (totalOrg !== 1 ? 's' : '');
-        if (checkedGs < totalGs) txt += ', ' + checkedGs + ' / ' + totalGs + ' gene sets';
-        $('#scope-summary').text(txt);
+        const boxes = $('.scope-gs-cb');
+        const allOn = boxes.length > 0 && boxes.toArray().every(cb => cb.checked);
+        $('.scope-toggle-all-label').text(allOn ? 'Deselect all' : 'Select all');
+
+        const el = document.getElementById('scope-counts');
+        if (!el) return;
+
+        const checked = boxes.filter(':checked').toArray();
+        if (!checked.length) {
+            el.textContent = 'Select at least one organism above';
+            return;
+        }
+        const orgs = new Set(checked.map(c => c.dataset.org)).size;
+        const asms = new Set(checked.map(c => c.dataset.org + '|' + c.dataset.asm)).size;
+        const gs   = checked.length;
+        el.textContent = `${orgs} organism${orgs !== 1 ? 's' : ''}, `
+                       + `${asms} assembl${asms !== 1 ? 'ies' : 'y'}, `
+                       + `${gs} gene set${gs !== 1 ? 's' : ''} selected`;
     }
 
     // Build selectedScope object for AnnotationSearch from current tree state.
@@ -222,7 +279,7 @@ $(document).ready(function () {
 
     function loadAnnotationSources(organisms) {
         if (!organisms.length) {
-            $('#sourcesPanel').html('<p class="text-muted small p-3">Select organisms in section&nbsp;② to see available annotation types.</p>');
+            $('#sourcesPanel').html('<p class="text-muted small p-3">Choose organisms in Step <span class="step-ref">2</span> — the types listed here are the ones those organisms actually carry.</p>');
             $('#sources-filter-wrap').hide();
             updateSourcesSummary();
             updateAnnotTypesPanel();
@@ -330,6 +387,8 @@ $(document).ready(function () {
         updateAnnotTypesPanel();
     });
 
+    $(document).on('click', '.source-ind-row, .source-type-row', clearSelectHint);
+
     // Individual source row click
     $(document).on('click', '.source-ind-row', function () {
         const cb   = $(this).find('.source-cb')[0];
@@ -361,23 +420,18 @@ $(document).ready(function () {
 
     $(document).on('input', '#sources-filter', filterSources);
 
-    // Select All / Deselect All sources
-    $('#sources-select-all').on('click', function () {
-        $('.source-cb').each(function () {
-            this.checked = true;
-            sourceOverrides[$(this).data('source')] = true;
+    // Same single toggle as the scope list, so the two selectors on this page behave alike.
+    // No confirmation here: annotation types narrow a search that is already scoped to chosen
+    // organisms, so selecting all of them is not the runaway query the organism list guards.
+    $('.sources-toggle-all').on('click', function () {
+        const boxes = $('.source-cb');
+        if (!boxes.length) return;
+        const next = !boxes.toArray().every(cb => cb.checked);
+        boxes.each(function () {
+            this.checked = next;
+            sourceOverrides[$(this).data('source')] = next;
         });
-        $('.source-ind-row').addClass('selected');
-        syncAllTypeRows();
-        updateSourcesSummary();
-        updateAnnotTypesPanel();
-    });
-    $('#sources-deselect-all').on('click', function () {
-        $('.source-cb').each(function () {
-            this.checked = false;
-            sourceOverrides[$(this).data('source')] = false;
-        });
-        $('.source-ind-row').removeClass('selected');
+        $('.source-ind-row').toggleClass('selected', next);
         syncAllTypeRows();
         updateSourcesSummary();
         updateAnnotTypesPanel();
@@ -444,33 +498,57 @@ $(document).ready(function () {
 
     // ── Search form submit ───────────────────────────────────────────────────
 
+    // The one inline "you skipped a step" note, in place of the browser alert() and the modal
+    // interrupt this page used to fire. It names the step that is actually blocking — the old
+    // modal always pointed at Step 3, which with no organisms picked is an empty box.
+    function showSelectHint(html) {
+        const hint = document.getElementById('search-select-hint');
+        if (!hint) return;
+        hint.innerHTML = '<i class="fa fa-arrow-up me-1"></i> ' + html;
+        hint.style.display = 'flex';
+        hint.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    function clearSelectHint() {
+        const hint = document.getElementById('search-select-hint');
+        if (hint) hint.style.display = 'none';
+    }
+    // Fixing what the hint complained about should retract it, or it reads as a stale scold.
+    $(document).on('input', '#searchKeywords', clearSelectHint);
+
     $('#searchForm').on('submit', function (e) {
         e.preventDefault();
 
-        const checkedOrgs  = getCheckedOrganisms();
-        const checkedTypes = $('.source-cb:checked').length;
+        const keywords    = $('#searchKeywords').val().trim();
+        const checkedOrgs = getCheckedOrganisms();
 
-        // Require at least one annotation type
-        if (checkedTypes === 0) {
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('no-sources-modal')).show();
+        // Guards run in page order, so the hint always points at the FIRST thing to fix.
+        if (keywords.length < 3) {
+            showSelectHint('Enter at least three characters in Step <span class="step-ref">1</span>.');
+            return;
+        }
+        // A search is never run unscoped. Falling back to every organism used to be the
+        // behaviour here; across 85 databases that is the single most expensive query the
+        // site can issue, and nobody asked for it on purpose.
+        if (!checkedOrgs.length) {
+            showSelectHint('Choose at least one organism in Step <span class="step-ref">2</span>.');
+            return;
+        }
+        if ($('.source-cb:checked').length === 0) {
+            showSelectHint('Choose at least one annotation type in Step <span class="step-ref">3</span>.');
             return;
         }
 
-        const proceed = () => {
-            const activeOrgs = checkedOrgs.length ? checkedOrgs : allOrganisms;
-            searchManager.selectedScope       = buildSelectedScope();
-            searchManager.selectedSources     = getCheckedSources();
-            searchManager.config.organismsVar = activeOrgs;
-            searchManager.config.totalVar     = activeOrgs.length;
-            searchManager.handleSearch();
-            // Scroll results into view after a brief delay so they start rendering
-            setTimeout(() => {
-                const results = document.getElementById('searchResults');
-                if (results) results.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 200);
-        };
-
-        proceed();
+        clearSelectHint();
+        searchManager.selectedScope       = buildSelectedScope();
+        searchManager.selectedSources     = getCheckedSources();
+        searchManager.config.organismsVar = checkedOrgs;
+        searchManager.config.totalVar     = checkedOrgs.length;
+        searchManager.handleSearch();
+        // Scroll results into view after a brief delay so they start rendering
+        setTimeout(() => {
+            const results = document.getElementById('searchResults');
+            if (results) results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200);
     });
 
     // ── Init ─────────────────────────────────────────────────────────────────

@@ -164,15 +164,58 @@ squeeze at the end of a session. Recommend:
 3. Switch search to it; verify the force-reveal/highlight and its selected panel.
 4. Delete the two old copies and any dead `js/scope-filter.js` tree.
 
-Until then, search.php still has the duplicate-row bug. If the extraction is deferred,
-apply the MOOPmart collapse fix to search.php as an interim — but that is a THIRD copy of
-the fix, which is the argument for doing the extraction instead.
+## Interim taken 2026-07-23 — search.php brought to parity BEFORE the extraction
+
+The user chose to fix search.php now and extract next session, so the two selectors are
+deliberately in sync at the point extraction starts. **They are now behaviourally
+identical**, which makes the extraction a de-duplication rather than a reconciliation —
+the reconciliation is already done, and that was the risky half.
+
+Applied to `tools/pages/search.php` + `js/search-display.js`:
+
+- one-row-per-organism collapse (`.scope-row-secondary`, `.scope-gs-count`), matching
+  `.mm-scope-row-secondary` / `.mm-scope-gs-count`;
+- simple-view row click selects **all** of that organism's gene sets;
+- filter no longer re-exposes the collapsed secondary rows (the bug the collapse creates
+  if the filter just calls `.show()`);
+- All/None pair → one `.scope-toggle-all` whose label states its next action, keeping the
+  select-all confirmation;
+- `#scope-counts` — "N organisms, M assemblies, K gene sets selected", same readout as
+  `#mm-scope-counts`.
+
+So the extraction should now take **either** page as the reference; they no longer differ.
+
+### Decisions made here that the component must carry
+
+- **Selection is mandatory. There is no implicit "all".** search.php used to fall back to
+  `allOrganisms` when nothing was checked — an unscoped fan-out over 85 databases, i.e.
+  the most expensive query the site can issue, run by accident. The user's framing
+  (2026-07-23): *"I'd rather them pick what they really want… that might bog down the
+  system for everyone. I am providing customizable searches and managing resources."*
+  The shared component must not reintroduce an implicit select-all, and the same applies
+  to annotation types (MOOP deliberately ships none-selected, not all-selected).
+- **Blocking is an inline amber hint, not a modal or an `alert()`** — `.tools-select-hint`,
+  as BLAST and Retrieve Sequences use. The message must name the step that is actually
+  blocking; search's old modal always said "section ③" even when the real blocker was an
+  empty Step 2, which is what made ③ empty in the first place.
+
+### Still to decide during extraction: the "Selected" panel
+
+search.php has a right-hand **Selected** panel (grouped by organism, `×` to remove one,
+count badge); MOOPmart has only the counts footer. The user asked (2026-07-23) whether
+MOOPmart should get the panel too. **Recommendation: yes, as part of the component, not
+as a hand-copy now** — a third copy of scope UI written the day before it is deleted is
+exactly the duplication this plan exists to end. Make the panel an option of the shared
+component (`showSelectedPanel: true|false`) so a page opts in; the counts line is
+unconditional. Height note: the panel is capped at **180px to match the organism list**
+beside it, so the card is one rectangle — see `feedback_scope_list_height_deliberate`,
+that 180px is a deliberate choice and must not be raised.
 
 ## Also pending on these pages (fold into the extraction)
 
-- **All / None → one toggle button** (user asked, 2026-07-23), like the group page's
-  toggle whose label states its next action. Both selectors have the two-button pair;
-  the shared component should have the single toggle, preserving the select-all warning.
+- ~~**All / None → one toggle button**~~ — done on BOTH pages 2026-07-23 (`.mm-toggle-all`,
+  `.scope-toggle-all`). The component inherits the single toggle plus the select-all
+  warning; do not regress to the pair.
 
 Related: `notes/MOOPMART_FEATURE_IDEAS.md`, the group-page toggle (commit 1c65a6c),
 `lib/help_ui.php`.
