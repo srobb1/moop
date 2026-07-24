@@ -364,11 +364,26 @@ foreach ($children as $child) {
 }
 $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 
-// Build typed ID map and sequence list (parent + all children)
-$typed_ids = [$feature_uniquename => $type];
+// Build typed ID map and sequence list (parent + all children).
+//
+// The map comes from the shared expansion so every sequence-retrieval path in the app
+// walks the hierarchy the same way — see expandFeaturesToAllSequenceTypes(). This page
+// starts at the feature the user is looking at, so the DESCENDANTS half is what does the
+// work here (a gene yields all its isoforms with their CDS and proteins); the ancestors
+// half is what makes the same call correct when the starting point is an mRNA or protein.
+// $accessible_gene_set_ids is passed through as the access filter, exactly as the
+// getChildren() call above does — dropping it would expand into gene sets the viewer
+// cannot see.
+$typed_ids = expandFeaturesToAllSequenceTypes(
+    [$feature_uniquename], $db, '', '', $accessible_gene_set_ids
+);
+// Guarantee the feature itself is present even if the expansion found nothing.
+$typed_ids[$feature_uniquename] = $typed_ids[$feature_uniquename] ?? $type;
+
+// The on-page sequence list stays driven by $children, which is also what the annotation
+// query and the hierarchical display use.
 $retrieve_these_seqs = [$feature_uniquename];
 foreach ($children as $child) {
-    $typed_ids[$child['feature_uniquename']] = $child['feature_type'];
     $retrieve_these_seqs[] = $child['feature_uniquename'];
 }
 $retrieve_these_seqs = array_unique($retrieve_these_seqs);

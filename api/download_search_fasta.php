@@ -77,10 +77,32 @@ foreach ($valid_organisms as $organism => $uniquenames) {
     $sources_by_group  = getAccessibleAssemblies($organism);
     $organism_sources  = flattenSourcesList($sources_by_group);
 
+    // De-duplicate by gene-set directory. getAccessibleAssemblies() is keyed BY GROUP, so an
+    // organism belonging to two groups yields the same gene set once per group — Nematostella
+    // returns 4 sources for its 2 real gene sets. Extracting per source therefore wrote every
+    // sequence twice. That predates this file's expansion change; it was simply less visible
+    // when only transcripts were emitted (2 features -> 4 records instead of 2).
+    $seen_paths = [];
+    $organism_sources = array_values(array_filter($organism_sources, function ($s) use (&$seen_paths) {
+        $key = $s['path'] ?? '';
+        if ($key === '' || isset($seen_paths[$key])) return false;
+        $seen_paths[$key] = true;
+        return true;
+    }));
+
     foreach ($organism_sources as $source) {
         if (!is_dir($source['path'])) continue;
 
-        $typed_ids = buildTypedIds($uniquenames, "$organism_data/$organism/organism.sqlite");
+        // Expand to every related sequence type, and scope to this source's assembly and
+        // gene set. buildTypedIds() typed each id as itself, so a search returning mRNAs
+        // downloaded transcripts only — the same gap that made the per-table FASTA button
+        // return no CDS or protein.
+        $typed_ids = expandFeaturesToAllSequenceTypes(
+            $uniquenames,
+            organism_db_path($organism),
+            $source['assembly'] ?? '',
+            $source['gene_set'] ?? ''
+        );
         $result = extractSequencesForAllTypes($source['path'], $typed_ids, $sequence_types, $organism, $source['assembly']);
         if ($result['success']) {
             foreach ($result['content'] as $content) {

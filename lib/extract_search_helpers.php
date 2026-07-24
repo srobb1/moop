@@ -259,29 +259,40 @@ function buildTypedIds(array $uniquenames, string $db_path, string $assembly = '
  * gene set (see buildTypedIds()). The walk itself stays inside one gene set naturally,
  * because parent and child rows share a gene_set_id.
  *
+ * Both walks are single recursive CTEs, the same shape getChildren() in
+ * lib/parent_functions.php already used — one query per direction rather than one per
+ * level of the hierarchy. `UNION` (not `UNION ALL`) makes them cycle-safe: a feature_id
+ * already in the working set is never re-added, so a malformed parent chain cannot spin.
+ *
+ * $gene_set_ids is the ACCESS FILTER, and any caller that has one must pass it. The parent
+ * page restricts its feature walk to the gene sets the viewer is allowed to see; expanding
+ * without that restriction would surface features from a gene set the user has no access
+ * to. It is applied to the rows the walks return, not merely to the seed.
+ *
+ * @param array  $uniquenames  the selected features
+ * @param string $db_path      organism.sqlite
+ * @param string $assembly     optional scope — accession or genome name
+ * @param string $gene_set     optional scope — gene set name
+ * @param array  $gene_set_ids optional ACCESS filter — accessible gene_set_id values
  * @return array uniquename => feature_type, ready for extractSequencesForAllTypes()
  */
 function expandFeaturesToAllSequenceTypes(
     array  $uniquenames,
     string $db_path,
     string $assembly = '',
-    string $gene_set = ''
+    string $gene_set = '',
+    array  $gene_set_ids = []
 ): array {
     if (empty($uniquenames) || !file_exists($db_path)) {
         return [];
     }
 
-    // Depth guard: the hierarchy is a few levels deep, but a malformed parent chain must
-    // not spin forever. Visited-id tracking already breaks cycles; this bounds the rest.
-    $MAX_DEPTH = 20;
-
     try {
         $dbh = getDbConnection($db_path);
 
-        // --- The selected features, scoped to this assembly / gene set ----------------
+        // --- Seed: the selected features, scoped to this assembly / gene set ----------
         $ph     = implode(',', array_fill(0, count($uniquenames), '?'));
-        $sql    = "SELECT f.feature_id, f.feature_uniquename, f.feature_type, f.parent_feature_id
-                     FROM feature f";
+        $sql    = "SELECT f.feature_id FROM feature f";
         $params = array_values($uniquenames);
         if ($assembly !== '' || $gene_set !== '') {
             $sql .= " JOIN gene_set gs ON gs.gene_set_id = f.gene_set_id
@@ -295,59 +306,56 @@ function expandFeaturesToAllSequenceTypes(
         }
         $stmt = $dbh->prepare($sql);
         $stmt->execute($params);
-        $selected = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        if (!$selected) {
+        $seed_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!$seed_ids) {
             return buildTypedIds($uniquenames, $db_path, $assembly, $gene_set);
         }
 
-        $typed   = [];   // uniquename => feature_type (the answer)
-        $seen    = [];   // feature_id => true, so a diamond or cycle cannot loop
-        $collect = function (array $rows) use (&$typed, &$seen) {
-            $new = [];
-            foreach ($rows as $r) {
-                if (isset($seen[$r['feature_id']])) continue;
-                $seen[$r['feature_id']] = true;
-                $typed[$r['feature_uniquename']] = $r['feature_type'];
-                $new[] = $r;
+        // Access filter, applied to every row the walks return as well as the seed.
+        $gs_clause = '';
+        $gs_params = [];
+        if (!empty($gene_set_ids)) {
+            $gsph      = implode(',', array_fill(0, count($gene_set_ids), '?'));
+            $gs_clause = " AND f.gene_set_id IN ($gsph)";
+            $gs_params = array_values($gene_set_ids);
+        }
+
+        $seed_ph = implode(',', array_fill(0, count($seed_ids), '?'));
+
+        // --- Down: every descendant, in ONE recursive query ---------------------------
+        $descendants = "WITH RECURSIVE d(feature_id) AS (
+                            SELECT feature_id FROM feature WHERE feature_id IN ($seed_ph)
+                            UNION
+                            SELECT f.feature_id FROM feature f JOIN d ON f.parent_feature_id = d.feature_id
+                        )
+                        SELECT f.feature_uniquename, f.feature_type
+                          FROM feature f JOIN d ON d.feature_id = f.feature_id
+                         WHERE 1=1 $gs_clause";
+
+        // --- Up: every ancestor of the SEED rows only ---------------------------------
+        // Climbing from the seed (not from the descendants) is what keeps sibling
+        // branches out: we never descend again from anything found on the way up.
+        $ancestors = "WITH RECURSIVE a(feature_id, parent_feature_id) AS (
+                          SELECT feature_id, parent_feature_id FROM feature WHERE feature_id IN ($seed_ph)
+                          UNION
+                          SELECT f.feature_id, f.parent_feature_id
+                            FROM feature f JOIN a ON f.feature_id = a.parent_feature_id
+                      )
+                      SELECT f.feature_uniquename, f.feature_type
+                        FROM feature f JOIN a ON a.feature_id = f.feature_id
+                       WHERE 1=1 $gs_clause";
+
+        $typed = [];
+        foreach ([$descendants, $ancestors] as $query) {
+            $s = $dbh->prepare($query);
+            $s->execute(array_merge(array_values($seed_ids), $gs_params));
+            foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $typed[$row['feature_uniquename']] = $row['feature_type'];
             }
-            return $new;
-        };
-
-        $fetchChildren = function (array $parentIds) use ($dbh) {
-            if (!$parentIds) return [];
-            $p = implode(',', array_fill(0, count($parentIds), '?'));
-            $s = $dbh->prepare("SELECT feature_id, feature_uniquename, feature_type, parent_feature_id
-                                  FROM feature WHERE parent_feature_id IN ($p)");
-            $s->execute(array_values($parentIds));
-            return $s->fetchAll(PDO::FETCH_ASSOC);
-        };
-        $fetchByIds = function (array $ids) use ($dbh) {
-            if (!$ids) return [];
-            $p = implode(',', array_fill(0, count($ids), '?'));
-            $s = $dbh->prepare("SELECT feature_id, feature_uniquename, feature_type, parent_feature_id
-                                  FROM feature WHERE feature_id IN ($p)");
-            $s->execute(array_values($ids));
-            return $s->fetchAll(PDO::FETCH_ASSOC);
-        };
-
-        $frontier = $collect($selected);
-
-        // --- Down: every descendant --------------------------------------------------
-        $level = $frontier;
-        for ($d = 0; $d < $MAX_DEPTH && $level; $d++) {
-            $level = $collect($fetchChildren(array_column($level, 'feature_id')));
         }
 
-        // --- Up: every ancestor of the SELECTED features only -------------------------
-        // Climbing from the selected rows (not from the descendants just gathered) is what
-        // keeps sibling branches out: we never descend again from anything found up here.
-        $level = $frontier;
-        for ($d = 0; $d < $MAX_DEPTH && $level; $d++) {
-            $parentIds = array_values(array_filter(array_column($level, 'parent_feature_id')));
-            $level = $collect($fetchByIds($parentIds));
-        }
-
-        return $typed;
+        return $typed ?: buildTypedIds($uniquenames, $db_path, $assembly, $gene_set);
 
     } catch (Exception $e) {
         // Fall back to the unexpanded behaviour rather than returning nothing.

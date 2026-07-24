@@ -91,7 +91,7 @@ $sequence_types = $config->getSequenceTypes();
 $by_organism = [];
 foreach ($selected as $src) {
     $org = $src['organism'];
-    $by_organism[$org]['db_path'] = "$organism_data/$org/organism.sqlite";
+    $by_organism[$org]['db_path'] = organism_db_path($org);
     $by_organism[$org]['sources'][] = $src;
 }
 
@@ -370,9 +370,17 @@ if ($output_format === 'tsv') {
                 // Pre-built FASTA files: protein, transcript, cds
                 // $gs_features is gene-level; expand to mRNA/CDS/protein children for extraction
                 $gene_uniquenames = array_column($gs_features, 'uniquename');
-                $db_path  = "$organism_data/$org/organism.sqlite";
+                $db_path  = organism_db_path($org);
                 $gs_id_int = (int)($gs_features[0]['gene_set_id'] ?? 0);
-                $typed_ids = buildTypedIdsForGenes($gene_uniquenames, $gs_id_int, $db_path);
+                // Feature-type agnostic descendant walk, replacing buildTypedIdsForGenes()'s
+                // three hardcoded levels (mRNA -> CDS -> protein). Starting from genes, the
+                // descendants walk yields every isoform and its CDS and protein, which is
+                // what that function produced by hand. The gene_set_id is passed as the
+                // access filter so the expansion cannot leave this gene set.
+                $typed_ids = expandFeaturesToAllSequenceTypes(
+                    $gene_uniquenames, $db_path, $assembly, '',
+                    $gs_id_int ? [$gs_id_int] : []
+                );
                 $extract_result = extractSequencesForAllTypes($gs_path, $typed_ids, $sequence_types, $org, $assembly);
                 if (isset($extract_result['content'][$fasta_mode])) {
                     fwrite($out, $extract_result['content'][$fasta_mode]);

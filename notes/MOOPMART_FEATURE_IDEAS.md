@@ -43,3 +43,35 @@ the second is more useful and more honest about query size.
 Related: the organism Select-All warning (`tools/pages/moopmart.php` #mm-select-all-modal),
 `notes/SEARCH_COLD_CACHE_PLAN.md` (query cost), the annotation-count wiring in
 `js/modules/moopmart.js`.
+
+---
+
+## Make MOOPmart's sequence types agnostic too (user, 2026-07-23 — "eventually, not now")
+
+The feature-expansion side of MOOPmart is already type-agnostic as of 2026-07-23: its FASTA
+export now calls `expandFeaturesToAllSequenceTypes()` (a pure parent/child graph walk) instead
+of `buildTypedIdsForGenes()`, which hardcoded gene -> mRNA -> CDS -> protein as three
+sequential queries. Verified equivalent on 25 genes: 87 features either way, zero difference.
+
+**What is still type-coupled is the OUTPUT SELECTOR** — `$fasta_mode` and the
+`sequence_types` config:
+
+- `api/moopmart_export.php` splits on `$genomic_modes` (gene / upstream / downstream / exons,
+  handled by `moopmartStreamGenomicFasta`) versus the pre-built FASTA modes
+  (protein / transcript / cds), and then writes exactly one of them:
+  `$extract_result['content'][$fasta_mode]`.
+- `_fasta_key_for_type()` in `lib/extract_search_helpers.php` is the remaining hardcoded map
+  from DB `feature_type` to a `sequence_types` config key: mRNA|transcript -> transcript,
+  CDS|cds -> cds, protein|polypeptide -> protein. It returns null for anything else, which is
+  what makes "gene" and "exon" harmless to include in an expansion.
+
+So a new level in the hierarchy would be walked correctly today, but would have no FASTA file
+and no picker entry. Making that agnostic means driving the mode list from `sequence_types`
+(admin config) plus what the gene-set directory actually contains, rather than from a literal
+list in code — i.e. the picker becomes "which of the sequence files this gene set has do you
+want", and `_fasta_key_for_type()` becomes a lookup into the same config instead of a static
+array.
+
+Worth pairing with `scripts/check_sequence_id_match.sh`, which already reports, per gene set
+and per type, whether a FASTA's keys match the database — the same inventory the picker would
+need.

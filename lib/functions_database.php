@@ -5,8 +5,29 @@
  */
 
 /**
+ * Path to an organism's SQLite database.
+ *
+ * MOOP keeps one database per organism (see CLAUDE.md §9 and decision_one_db_per_organism),
+ * always at organisms/{organism}/organism.sqlite. That path was being rebuilt inline in
+ * 94 places across 39 files, under eight different local names — $db, $db_file, $db_path,
+ * built from $organism_data or $organism_data_path, keyed by $org / $organism /
+ * $organism_name / $org_name. Every one of those sites also needed the organism_data path
+ * already in scope, which is the reason the variable kept getting threaded through
+ * functions that had no other use for it.
+ *
+ * Resolving through ConfigManager here means a caller needs the organism name and nothing
+ * else. Use this instead of interpolating the path again.
+ *
+ * @param string $organism Organism directory name (e.g. 'Nematostella_vectensis')
+ * @return string Absolute path to that organism's organism.sqlite
+ */
+function organism_db_path(string $organism): string {
+    return ConfigManager::getInstance()->getPath('organism_data') . '/' . $organism . '/organism.sqlite';
+}
+
+/**
  * Validates database file is readable and accessible
- * 
+ *
  * @param string $dbFile - Path to SQLite database file
  * @return array - Validation results with 'valid' and 'error' keys
  */
