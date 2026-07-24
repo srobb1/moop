@@ -17,9 +17,18 @@ for arg in "$@"; do
   esac
 done
 
-REPO=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/build_and_load_db/v2
+# Where this pipeline lives, derived from this script's own location rather than
+# hardcoded, so a git checkout works wherever it is cloned. Everything below is
+# relative to it (and the sbatch takes REPO=$SLURM_SUBMIT_DIR, which is this cd).
+REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "$REPO"
 
+# slurm_logs/ is where "#SBATCH --output=slurm_logs/..." writes. Git does not track
+# empty directories, so a fresh clone has none and every job would lose its output.
+mkdir -p slurm_logs
+
+# Site data, deliberately OUTSIDE the repo: genome trees and annotation releases are
+# large, shared, and not version-controlled with the code.
 GENOMES=/n/sci/SCI-004223-SBGENOMES/genomes_v2
 GENESETS_FILE="$REPO/active_genesets.tsv"
 

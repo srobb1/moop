@@ -1,0 +1,10 @@
+# Run artefacts produced inside the pipeline directory. The code is versioned;
+# the output of running it is not.
+
+# SLURM job output. run_all_v2.sh creates this directory, because
+# "#SBATCH --output=slurm_logs/..." silently loses output if it does not exist
+# and git cannot track an empty directory.
+slurm_logs/
+
+# Scratch / working data written during a run.
+data/
