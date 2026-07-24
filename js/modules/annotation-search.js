@@ -617,11 +617,20 @@ class AnnotationSearch {
                 : s;
         };
 
-        const headers = ['Organism', 'Genus', 'Species', 'Feature ID', 'Feature Type', 'Feature Name', 'Feature Description', 'Annotation Source', 'Annotation ID', 'Annotation Description', 'Score'];
+        // Assembly and Gene Set sit with the other provenance columns, right after Species,
+        // matching where they appear in the results table. Without them a downloaded row
+        // cannot say which assembly or gene set it came from — and an organism can carry
+        // several of each. resultAssemblyLabel() is shared with the table (defined in
+        // js/modules/shared-results-table.js) so the two can never format an assembly
+        // differently. This projection is wider than the on-screen table (it adds Organism,
+        // Genus and Score, and spans every organism searched), so it stays an explicit list;
+        // if you add a column to RESULT_COLUMNS that belongs in a download, add it here too.
+        const headers = ['Organism', 'Genus', 'Species', 'Assembly', 'Gene Set', 'Feature ID', 'Feature Type', 'Feature Name', 'Feature Description', 'Annotation Source', 'Annotation ID', 'Annotation Description', 'Score'];
         const rows = [headers.join(',')];
         this.allResults.forEach(r => {
             rows.push([
                 r.organism, r.genus, r.species,
+                resultAssemblyLabel(r), r.gene_set,
                 r.feature_uniquename, r.feature_type, r.feature_name, r.feature_description,
                 r.annotation_source_name, r.annotation_accession, r.annotation_description, r.score
             ].map(escape).join(','));

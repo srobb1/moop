@@ -158,6 +158,13 @@ foreach ($results as $row) {
         'annotation_accession' => $row['annotation_accession'] ?? '',
         'annotation_description' => htmlspecialchars(decodeAnnotationText($row['annotation_description'] ?? ''), ENT_QUOTES, 'UTF-8'),
         'genome_accession' => $row['genome_accession'] ?? '',
+        // Assembly and gene set travel with every result row. Both were already JOINed by
+        // all three search queries (the scope filter needs them) — only the SELECT list left
+        // them out, so carrying them costs nothing. A result is not fully identified without
+        // them: an organism can have several assemblies, and an assembly several gene sets,
+        // so "gene X in Nematostella" is ambiguous on its own.
+        'genome_name' => $row['genome_name'] ?? '',
+        'gene_set'    => $row['gene_set_name'] ?? '',
         'uniquename_search' => $uniquename_search
     ];
 }

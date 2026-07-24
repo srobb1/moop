@@ -438,7 +438,7 @@ function searchFeaturesByNameDescription($search_term, $is_quoted_search, $dbFil
                    NULL AS annotation_accession, NULL AS annotation_description,
                    NULL AS score, NULL AS date, NULL AS annotation_source_name,
                    o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
-                   g.genome_accession,
+                   g.genome_accession, g.genome_name, gs.gene_set_name,
                    (f.feature_name LIKE ?) AS name_match
             FROM feature_search fs
             JOIN feature   f  ON f.feature_id   = fs.rowid
@@ -485,7 +485,7 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
                    a.annotation_accession, a.annotation_description,
                    fa.score, fa.date, ans.annotation_source_name,
                    o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
-                   g.genome_accession,
+                   g.genome_accession, g.genome_name, gs.gene_set_name,
                    (f.feature_name LIKE ?) AS name_match
             FROM feature_annotation_search fas
             JOIN feature_annotation  fa  ON fa.feature_annotation_id = fas.rowid
@@ -531,7 +531,7 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
     if ($organism_name) {
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
-                         g.genome_accession
+                         g.genome_accession, g.genome_name, gs.gene_set_name
                   FROM feature f, organism o, gene_set gs, genome g
                   WHERE f.organism_id = o.organism_id
                     AND f.gene_set_id = gs.gene_set_id
@@ -563,7 +563,7 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
     } else {
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
-                         g.genome_accession
+                         g.genome_accession, g.genome_name, gs.gene_set_name
                   FROM feature f, organism o, gene_set gs, genome g
                   WHERE f.organism_id = o.organism_id
                     AND f.gene_set_id = gs.gene_set_id
