@@ -72,6 +72,58 @@ list in code — i.e. the picker becomes "which of the sequence files this gene 
 want", and `_fasta_key_for_type()` becomes a lookup into the same config instead of a static
 array.
 
+### The five hardcoded sites (mapped 2026-07-23)
+
+| # | Where | What is literal |
+|---|---|---|
+| 1 | `lib/extract_search_helpers.php` `_fasta_key_for_type()` | static map: `mRNA\|transcript -> transcript`, `CDS\|cds -> cds`, `protein\|polypeptide -> protein`; **null for anything else** |
+| 2 | `api/moopmart_export.php:36` | `$valid_fasta_modes = ['gene','upstream','downstream','exons','protein','transcript','cds']` |
+| 3 | `api/moopmart_export.php:317` | `$genomic_modes = ['gene','upstream','downstream','exons']` |
+| 4 | `tools/pages/moopmart.php:706` | the picker itself: `['gene'=>'Genomic','transcript'=>'mRNA','cds'=>'CDS','protein'=>'Protein']` |
+| 5 | `tools/pages/moopmart.php:286` | prose: "Paste gene, mRNA or protein IDs" |
+
+Site 1 is the load-bearing one. It returns null for unrecognised types, which is *why* a new
+level in the hierarchy is walked correctly by the expansion and then silently produces no
+sequence: it has no config key, so it never gets a bucket.
+
+### What the config would have to gain
+
+`sequence_types` already declares the file patterns and is the natural source of truth:
+
+```
+protein    pattern=protein.aa.fa
+transcript pattern=transcript.nt.fa
+cds        pattern=cds.nt.fa
+genome     pattern=genome.fa
+```
+
+What it does NOT declare is **which database feature_types feed each entry** — that mapping
+lives only in `_fasta_key_for_type()`. So the change is to move it into the config:
+
+```php
+'transcript' => ['pattern' => 'transcript.nt.fa', 'feature_types' => ['mRNA', 'transcript']],
+'cds'        => ['pattern' => 'cds.nt.fa',        'feature_types' => ['CDS', 'cds']],
+'protein'    => ['pattern' => 'protein.aa.fa',    'feature_types' => ['protein', 'polypeptide']],
+```
+
+Then `_fasta_key_for_type()` becomes a lookup into that, sites 2 and 4 derive from
+`array_keys($sequence_types)`, and adding a sequence type is a config edit rather than five
+code edits. An admin adding a type to the config would get a working picker entry.
+
+### One distinction to KEEP
+
+`$genomic_modes` (gene / upstream / downstream / exons) are **computed** from the genome FASTA
+plus the GFF by `moopmartStreamGenomicFasta()`, not read from a per-feature FASTA file. That is
+a genuinely different mechanism, not an oversight — so it should stay a distinction, just a
+*declared* one (e.g. a `source: computed|file` key per entry) rather than a literal list in
+two places.
+
+### Sequencing
+
+Do site 1 first and alone — it is the one with behavioural reach, and
+`scripts/check_sequence_id_match.sh` can verify no gene set changed which types it resolves.
+Sites 2-5 are presentation and follow safely once the map is config-driven.
+
 Worth pairing with `scripts/check_sequence_id_match.sh`, which already reports, per gene set
 and per type, whether a FASTA's keys match the database — the same inventory the picker would
 need.
