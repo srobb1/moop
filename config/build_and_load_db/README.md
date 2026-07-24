@@ -70,13 +70,18 @@ now exit non-zero when any record fails to match.
 
 ## Requirements
 
-Perl 5.10+ with `DBI` and `DBD::SQLite`, and `sqlite3`. Without a system Perl that has
-them, a self-contained environment works and needs no root:
+Perl 5.10+ with `DBI`, `DBD::SQLite` and `URI::Escape`, plus `sqlite3`. Without a system
+Perl that has them, a self-contained environment works and needs no root:
 
 ```sh
-micromamba create -n moop-dbtools -c conda-forge -c bioconda perl perl-dbi perl-dbd-sqlite
+micromamba create -n moop-dbtools -c conda-forge -c bioconda \
+    perl perl-dbi perl-dbd-sqlite perl-uri
 micromamba run -n moop-dbtools perl data_loaders/load_genes_sqlite.pl ...
 ```
+
+`perl-uri` supplies `URI::Escape`, which `analysis_parsers/parse_GFF3_to_MOOP_TSV.pl`
+needs to decode percent-escapes in GFF attributes. It is easy to miss because the
+loaders themselves do not use it — only the parsers do.
 
 ## Load order
 

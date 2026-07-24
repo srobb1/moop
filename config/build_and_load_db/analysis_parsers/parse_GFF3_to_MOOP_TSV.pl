@@ -195,20 +195,28 @@ sub emit_generic {
     }
 
     # Pass 1: collect feature types and first GFF CDS ID per mRNA/transcript
-    my (%feature_types, %tx_to_gff_cds);
+    my (%feature_types, %tx_to_gff_cds, %tx_has_cds);
     open my $fh, '<', $gff or die "Can't open $gff: $!\n";
     while (my $line = <$fh>) {
         chomp $line;
         next if $line =~ /^#/;
         my @f = split /\t/, $line;
-        next unless @f >= 9 && $line =~ /\bID=/;
+        next unless @f >= 9;
         my ($type, $attrs) = @f[2, 8];
         my ($id)     = $attrs =~ /\bID=([^;]+)/;
         my ($parent) = $attrs =~ /\bParent=([^;]+)/;
-        next unless defined $id;
-        $feature_types{$id} = $type;
-        if (($type eq 'CDS') && defined $parent) {
-            $tx_to_gff_cds{$parent} //= $id;
+        $feature_types{$id} = $type if defined $id;
+
+        # A CDS line need not carry ID= -- plenty of GFFs give only Parent=:
+        #
+        #   chr1  ONThybrid  CDS  17528  18205  .  -  0  Parent=SnovcT0000001.1
+        #
+        # This block used to skip every line without ID=, so those transcripts
+        # looked non-coding. Record "this transcript has a CDS" separately from
+        # "the CDS's own id", since only the first is always available.
+        if ($type eq 'CDS' && defined $parent) {
+            $tx_has_cds{$parent}     = 1;
+            $tx_to_gff_cds{$parent} //= $id if defined $id;
         }
     }
     close $fh;
@@ -225,7 +233,28 @@ sub emit_generic {
 
         my ($id)        = $attrs =~ /\bID=([^;]+)/;
         my ($parent_id) = $attrs =~ /\bParent=([^;]+)/;
-        ($parent_id)    = $attrs =~ /\bgeneID=([^;]+)/ unless defined $parent_id;
+
+        # Some GFFs link a transcript to its gene with geneID= instead of Parent=:
+        #
+        #   transcript  ID=SnovcT0000001.1;geneID=SnovcG0000001;Name=...
+        #
+        # Fall back to it, but ONLY for transcript-level rows, and never when it
+        # names the row itself. Gene lines in those same files carry geneID=
+        # pointing at their own ID:
+        #
+        #   gene  ID=SnovcG0000001;geneID=SnovcG0000001;Name=SnovcG0000001;
+        #
+        # An unguarded fallback therefore made every gene its own parent --
+        # 13,218 such rows in Schmidtea_nova and 14,313 in Schmidtea_lugubris.
+        # A self-parented row makes any recursive walk up the tree run forever.
+        if (!defined $parent_id && ($type eq 'mRNA' || $type eq 'transcript')) {
+            my ($gene_ref) = $attrs =~ /\bgeneID=([^;]+)/;
+            if (defined $gene_ref && defined $id && $gene_ref eq $id) {
+                warn "WARNING: $type $id has geneID= naming itself; treating as no parent\n";
+            } elsif (defined $gene_ref) {
+                $parent_id = $gene_ref;
+            }
+        }
         $parent_id //= '';
         my $parent_type = $parent_id ? ($feature_types{$parent_id} // '') : '';
 
@@ -238,6 +267,22 @@ sub emit_generic {
 
         if ($type eq 'mRNA' || $type eq 'transcript') {
             my $gff_cds = $tx_to_gff_cds{$id};
+
+            # A transcript with no CDS is non-coding -- it has no protein and no
+            # coding sequence, so emitting cds/protein rows for it invents two
+            # features that can never have sequence. They are not retrievable and
+            # not an error anywhere; they simply return nothing.
+            #
+            # Measured on Nematostella NV2: 31 of 200 sampled cds features had no
+            # entry in cds.nt.fa, all of the synthesised "$id:cds" form, and all
+            # from transcripts whose GFF has exon+mRNA but no CDS.
+            #
+            # Emit only when the GFF says there is a CDS, or a FASTA actually
+            # holds a sequence under one of the names we would use.
+            my $has_cds = $tx_has_cds{$id} || defined $gff_cds
+                || (%cds_ids  && ($cds_ids{"$id:cds"}  || $cds_ids{$id}))
+                || (%prot_ids && ($prot_ids{"$id:pep"} || $prot_ids{$id}));
+            next unless $has_cds;
 
             # Determine CDS uniquename
             my $cds_id;

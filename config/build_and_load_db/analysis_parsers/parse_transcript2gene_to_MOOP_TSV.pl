@@ -160,6 +160,30 @@ for my $gene_id (sort keys %gene_txs) {
         my ($parent_id, $parent_type) = exists $cds_uniquename{$prot_id}
             ? ($cds_uniquename{$prot_id}, 'CDS')
             : resolve_parent($prot_id, $gene_id, \%tx_known);
-        print join("\t", $prot_id, 'protein', $parent_id, $parent_type, $pname, $pdesc), "\n";
+
+        # Protein gets a ":pep" uniquename, exactly as CDS gets ":cds" above.
+        #
+        # On the T2G path the transcript, CDS and protein FASTAs all key on the
+        # SAME identifier -- the type is decided by which file you read. Emitting
+        # the protein under its raw id therefore produced a row whose uniquename
+        # equalled its own parent transcript's, which the loader collapsed into a
+        # single self-parented row (parent_feature_id = feature_id): an infinite
+        # loop for anything walking up the tree, and gene sets with no protein
+        # rows at all, so their sequences were unreachable.
+        #
+        # rename_t2g_fasta.pl applies the matching ":cds"/":pep" suffixes to the
+        # FASTA copies, which keeps the invariant that feature_uniquename IS the
+        # FASTA lookup key. The transcript deliberately stays bare.
+        my $uniquename = "$prot_id:pep";
+
+        # Defensive: never emit a feature that is its own parent, whatever the
+        # source data says. This is what makes the walk terminate.
+        if ($uniquename eq $parent_id) {
+            warn "WARNING: $uniquename resolves to itself as parent; "
+               . "parenting to gene $gene_id instead\n";
+            ($parent_id, $parent_type) = ($gene_id, 'gene');
+        }
+
+        print join("\t", $uniquename, 'protein', $parent_id, $parent_type, $pname, $pdesc), "\n";
     }
 }

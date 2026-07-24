@@ -594,6 +594,25 @@ else
     && mv protein.aa.fa.tmp protein.aa.fa \
     || { rm -f protein.aa.fa.tmp; echo "ERROR: failed to clean protein.aa.fa"; exit 1; }
 
+  # ── Give the three T2G FASTAs distinct ids ──────────────────────────────────
+  # On this path transcript.nt.fa, cds.nt.fa and protein.aa.fa all key on the SAME
+  # identifier -- the type is decided by which file you read. MOOP needs
+  # feature_uniquename to be both unique and the FASTA lookup key, which one
+  # shared id cannot satisfy: the rows collapse into a single self-parented
+  # feature, and the protein sequences become unreachable.
+  #
+  # Suffix CDS and protein to match what parse_transcript2gene_to_MOOP_TSV.pl
+  # emits. transcript.nt.fa deliberately keeps its bare id, as the mRNA row does
+  # on every other path. Idempotent, so re-running over renamed copies is a no-op.
+  if [ -s cds.nt.fa ]; then
+    perl "$SCRIPTS/rename_t2g_fasta.pl" cds.nt.fa :cds \
+      || { echo "ERROR: failed to suffix cds.nt.fa"; exit 1; }
+  fi
+  if [ -s protein.aa.fa ]; then
+    perl "$SCRIPTS/rename_t2g_fasta.pl" protein.aa.fa :pep \
+      || { echo "ERROR: failed to suffix protein.aa.fa"; exit 1; }
+  fi
+
   has_data features.tsv || REBUILD=true
   if $REBUILD; then
     echo "Building features.tsv from transcript2gene.txt"
