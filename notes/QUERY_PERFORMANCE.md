@@ -168,3 +168,42 @@ Two corollaries for anyone chasing a "slow query" report in future:
 
 Related: [CLAUDE.md §9](../CLAUDE.md), [FTS5 search plan](../notes/), Expression Explorer
 precompute rationale.
+
+---
+
+## Working set by search path (measured 2026-07-27)
+
+The two search paths have very different footprints, which matters because it decides how
+much has to stay resident for the *front door* to be fast.
+
+| organism | post-reload size | feature search | annotation search |
+|---|---|---|---|
+| Schmidtea_polychroa | 117 MB | 13 MB (11%) | 101 MB (86%) |
+| Petromyzon_marinus | 174 MB | 44 MB (25%) | 133 MB (76%) |
+| Nematostella_vectensis | 349 MB | 36 MB (10%) | 306 MB (88%) |
+
+**Feature search** (`searchFeaturesByNameDescription`, the main search box) reads the
+`feature_search` FTS index joined to `feature` by rowid, plus the tiny gene_set/genome/
+organism lookups. It never touches `annotation` or `feature_annotation`. ~15% of a
+database, so roughly **5.5 GB across all 85** — which fits in the current 12 GB of page
+cache.
+
+**Annotation search** (`searchFeaturesAndAnnotations`) reads the much larger
+`feature_annotation_search` index plus `annotation` and `feature_annotation` to display
+results. ~85% of a database — essentially the whole corpus, ~37 GB post-reload. This is
+what drives the RAM requirement, not the front door.
+
+Practical consequence: after the reload, keeping only the feature-search objects resident
+(e.g. `vmtouch`) makes the primary search path fast with **no hardware change**. Deep
+annotation search is the part that needs more memory or faster storage.
+
+### PRAGMA mmap_size — tested, NOT adopted
+
+Tested at 256 MB against the FTS hot path: **0.3 ms/query without, 0.4 ms/query with** —
+no benefit. The theory (SQLite's page cache double-buffering against the OS page cache)
+does not apply at MOOP's scale, because SQLite's default cache is only 2 MB per
+connection, and the memcpy it avoids is invisible on small FTS lookups.
+
+Not adopted, because mmap turns an I/O error into SIGBUS — a killed php-fpm worker rather
+than a catchable exception. Real downside, unmeasurable upside. Revisit only if a workload
+appears that does large sequential scans.
