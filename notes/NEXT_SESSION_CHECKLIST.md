@@ -65,3 +65,69 @@ Remaining cleanup and fixes identified during March 2026 audit sessions.
 - [x] Help files audit — fixed permission-management.php, system-requirements.php
 - [x] Docs accuracy — rewrote CONFIG_GUIDE.md, SECURITY_GUIDE.md, fixed PERMISSIONS_GUIDE.md
 - [x] Help gaps assessed — identified 4 new pages needed + USER_GUIDE.md fixes
+
+---
+
+## Paused 2026-07-27 — decisions still open
+
+### 1. Connection reuse — keep or revert? (commit `ddc5bfe`)
+
+`getDbConnection()` now caches one PDO handle per database file per request, instead of
+opening a new one on every `fetchData()` call.
+
+**It is not a performance fix, and it was originally presented as one.** Measured:
+
+| | 11 queries |
+|---|---|
+| warm, fresh connections | 2.3 ms |
+| warm, reused | 0.5 ms |
+| cold, fresh (first run) | 75.6 ms |
+| cold, reused | 2.8 ms |
+| cold, fresh (second run) | **4.7 ms** — does not reproduce |
+
+The warm saving is real and consistent: ~1.8 ms on a ~450 ms gene page. Invisible.
+
+The cold figure was the justification and it does not hold. `dd oflag=nocache` eviction is
+advisory and not reliable enough to trust either number, and the mechanism is weaker than
+claimed anyway: the FIRST open pays the seek for the header and schema pages, after which
+they are cached, so opens 2-11 were never going to be expensive.
+
+Correct, free, strictly less work — but tidiness, not speed. **Decide: keep or revert.**
+
+Lesson worth keeping either way: this was reasoning about the cold path instead of
+measuring it, which is the exact failure CLAUDE.md §9 warns about.
+
+### 2. `generateTreeHTML()` computes the gene-page hierarchy a second time
+
+`tools/parent.php:355` builds it with ONE access-filtered CTE
+(`getChildrenHierarchical()`); `tools/pages/parent.php:222` then builds the same tree
+again with one query per node — and passes only 4 arguments, so `$gene_set_ids` defaults
+to `[]` and that path is NOT access-filtered.
+
+The filter gap looks harmless in practice (children never cross gene sets, and the parent
+was already access-checked), but it is the same data fetched two ways with two different
+security postures. Fix: render from `$children_hierarchical`, already in `$data`. That
+would also retire the cycle guard added to it in `8ef74d4`.
+
+**This is the last thing found that is actually wrong rather than untidy.**
+
+### 3. Offered, not done: move `feature_annotation.date` to `annotation_source`
+
+440,610 rows storing **2 distinct values** = 4.2 MB per organism (~2.2%), ~1.5 GB across
+the deployment. It is per-source data (from the `## Annotation Creation Date` header), not
+per-row. `annotation_source` is ALREADY joined in every query that displays a date, so the
+move costs no new join. Cheapest done during the reload, since the schema is being
+recreated anyway. Also worth deciding `PRAGMA page_size` at the same time (currently the
+4096 default; larger pages may suit a rotational volume — untested).
+
+### 4. Three unused-but-not-broken query helpers
+
+`getParentFeature`, `getFeaturesByType`, `searchFeaturesByUniquename` in
+`lib/database_queries.php`. Not defects; they belong to
+`notes/UNUSED_FUNCTIONS_CLEANUP_PLAN.md`.
+
+### 5. The finding most worth acting on
+
+**The main search box touches only ~15% of a database** (~5.5 GB across all 85), which
+fits in the RAM already on the box. Deep annotation search touches ~85%. So the front door
+could be fast after the reload with NO hardware change — see `notes/QUERY_PERFORMANCE.md`.
