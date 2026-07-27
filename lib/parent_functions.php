@@ -6,6 +6,37 @@
  */
 
 /**
+ * Maximum depth any feature-hierarchy walk will follow.
+ *
+ * MOOP's real hierarchy is gene -> mRNA -> CDS -> protein: four levels. Twenty is
+ * far past anything legitimate, so on correct data this limit never binds and the
+ * walks return exactly what they always did.
+ *
+ * It exists because a cycle in parent_feature_id makes an unguarded recursive CTE
+ * run forever -- not slowly, but literally without end, pinning a php-fpm worker
+ * at 100% CPU until something kills it. That is not hypothetical: as of
+ * 2026-07-27 three shipped organisms carry 66,596 features whose
+ * parent_feature_id equals their own feature_id (Bipalium_kewense 39,065,
+ * Schmidtea_lugubris 14,313, Schmidtea_nova 13,218), every one of them reachable
+ * from a gene-page URL.
+ *
+ * The database loader now refuses to write a feature as its own parent, and the
+ * reload will clear the existing rows -- but a loader fix only applies to data
+ * that has been reloaded, and it only tests for DIRECT self-reference. A two-row
+ * cycle (A's parent is B, B's parent is A) still loads clean, passes the loader's
+ * integrity checks, and hangs exactly the same way. This depth cap is the only
+ * thing that catches that shape, so it stays after the reload.
+ *
+ * SQLite 3.42+ has a built-in CYCLE clause; this deployment is on 3.34.1, which
+ * does not, hence the manual counter.
+ *
+ * @see config/build_and_load_db/data_loaders/load_genes_sqlite.pl
+ */
+if (!defined('MOOP_HIERARCHY_MAX_DEPTH')) {
+    define('MOOP_HIERARCHY_MAX_DEPTH', 20);
+}
+
+/**
  * Get hierarchy of features (ancestors)
  * Traverses up the feature hierarchy from a given feature to its parents/grandparents
  * Optionally filters by genome_ids for permission-based access
@@ -34,18 +65,29 @@ function getAncestors($feature_uniquename, $dbFile, $gene_set_ids = []) {
         array_push($params, ...$gene_set_ids);
     }
 
+    // Cycle-guarded: never step onto the row we are already on (a self-parent,
+    // which is what exists in the data today), and never climb deeper than a real
+    // hierarchy goes (which also catches multi-row cycles). See
+    // MOOP_HIERARCHY_MAX_DEPTH above. 'depth' is bookkeeping and is dropped by the
+    // outer SELECT, so callers see the same six columns as before.
     $query = "WITH RECURSIVE ancestors AS (
         SELECT f.feature_id, f.feature_uniquename, f.feature_name,
-               f.feature_description, f.feature_type, f.parent_feature_id
+               f.feature_description, f.feature_type, f.parent_feature_id,
+               0 AS depth
         FROM   feature f
         WHERE  f.feature_uniquename = ? $gs_clause
         UNION ALL
         SELECT f.feature_id, f.feature_uniquename, f.feature_name,
-               f.feature_description, f.feature_type, f.parent_feature_id
+               f.feature_description, f.feature_type, f.parent_feature_id,
+               a.depth + 1
         FROM   feature f
         JOIN   ancestors a ON f.feature_id = a.parent_feature_id
+        WHERE  a.depth < " . MOOP_HIERARCHY_MAX_DEPTH . "
+          AND  f.feature_id <> a.feature_id
     )
-    SELECT * FROM ancestors";
+    SELECT feature_id, feature_uniquename, feature_name,
+           feature_description, feature_type, parent_feature_id
+    FROM   ancestors";
 
     return fetchData($query, $dbFile, $params);
 }
@@ -95,18 +137,29 @@ function getChildren($feature_id, $dbFile, $gene_set_ids = []) {
         array_push($params, ...$gene_set_ids);
     }
 
+    // Cycle-guarded, same reasoning as getAncestors() -- walking DOWN loops just as
+    // readily as walking up. The seed also excludes a self-parented row, which
+    // would otherwise be returned as its own child: a feature that is its own
+    // parent is not a child of anything.
     $query = "WITH RECURSIVE descendants AS (
         SELECT f.feature_id, f.feature_uniquename, f.feature_name,
-               f.feature_description, f.feature_type, f.parent_feature_id
+               f.feature_description, f.feature_type, f.parent_feature_id,
+               0 AS depth
         FROM   feature f
         WHERE  f.parent_feature_id = ? $gs_clause
+          AND  f.feature_id <> f.parent_feature_id
         UNION ALL
         SELECT f.feature_id, f.feature_uniquename, f.feature_name,
-               f.feature_description, f.feature_type, f.parent_feature_id
+               f.feature_description, f.feature_type, f.parent_feature_id,
+               d.depth + 1
         FROM   feature f
         JOIN   descendants d ON f.parent_feature_id = d.feature_id
+        WHERE  d.depth < " . MOOP_HIERARCHY_MAX_DEPTH . "
+          AND  f.feature_id <> d.feature_id
     )
-    SELECT * FROM descendants";
+    SELECT feature_id, feature_uniquename, feature_name,
+           feature_description, feature_type, parent_feature_id
+    FROM   descendants";
 
     return fetchData($query, $dbFile, $params);
 }
@@ -310,18 +363,37 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile, $gene_set_ids = [])
  * Generate tree-style HTML for feature hierarchy
  * Creates a hierarchical list with box-drawing characters (like Unix 'tree' command)
  *
+ * Cycle-guarded, and it needs its own guard rather than inheriting getChildren()'s:
+ * this function does NOT use a recursive CTE. It recurses in PHP, one query per node
+ * (the N+1 pattern getChildren() was rewritten to replace — this one was left behind).
+ * On a self-parented feature getChildrenByFeatureId() returns that feature as its own
+ * child, so it recursed until PHP ran out of memory: a 500 on the gene page, at ~8s
+ * and 2 GB, for every one of Schmidtea_nova's 13,218 self-parented genes.
+ *
  * @param int $feature_id - The parent feature ID
  * @param string $dbFile - Path to SQLite database
  * @param string $prefix - Internal use for recursion
  * @param bool $is_last - Internal use for recursion
+ * @param int $depth - Internal use for recursion; see MOOP_HIERARCHY_MAX_DEPTH
  * @return string - HTML string with nested ul/li tree structure
  */
-function generateTreeHTML($feature_id, $dbFile, $all_annotations = [], $analysis_order = [], $prefix = '', $is_last = true, $gene_set_ids = []) {
+function generateTreeHTML($feature_id, $dbFile, $all_annotations = [], $analysis_order = [], $prefix = '', $is_last = true, $gene_set_ids = [], $depth = 0) {
+    if ($depth >= MOOP_HIERARCHY_MAX_DEPTH) {
+        return '';
+    }
+
     $results = getChildrenByFeatureId($feature_id, $dbFile, $gene_set_ids);
+
+    // A feature that is its own parent is not its own child. Dropping it here is what
+    // stops the recursion; the depth cap above covers longer cycles.
+    $results = array_filter($results, function ($row) use ($feature_id) {
+        return (int) $row['feature_id'] !== (int) $feature_id;
+    });
 
     if (empty($results)) {
         return '';
     }
+    $results = array_values($results);
 
     $html = "<ul>";
     $total = count($results);
@@ -379,7 +451,7 @@ function generateTreeHTML($feature_id, $dbFile, $all_annotations = [], $analysis
         }
         
         // Recursive call for nested children
-        $html .= generateTreeHTML($child_feature_id, $dbFile, $all_annotations, $analysis_order, $prefix, $is_last_child, $gene_set_ids);
+        $html .= generateTreeHTML($child_feature_id, $dbFile, $all_annotations, $analysis_order, $prefix, $is_last_child, $gene_set_ids, $depth + 1);
         $html .= "</li>";
     }
     $html .= "</ul>";

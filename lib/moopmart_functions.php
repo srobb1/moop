@@ -13,6 +13,12 @@
  *   lib/blast_functions.php     — loadFeatureCoords(), extractFastaRegion(), reverseComplement()
  */
 
+// Required outright rather than relied on transitively: the ID-resolution CTE below
+// uses MOOP_HIERARCHY_MAX_DEPTH, and an undefined constant is a fatal Error in PHP 8.
+// Every other include of this file already uses include_once/require_once, so this
+// is idempotent.
+require_once __DIR__ . '/parent_functions.php';
+
 /** Max rows a preview endpoint materialises and returns. Counts stay exact regardless. */
 const MOOPMART_PREVIEW_ROW_CAP = 100;
 
@@ -46,12 +52,19 @@ function moopmartResolveInputIds(array $input_ids, string $db_path, array $gene_
     $ph_ids = implode(',', array_fill(0, count($input_ids), '?'));
     $ph_gs  = implode(',', array_fill(0, count($gene_set_ids), '?'));
 
+    // Cycle-guarded (MOOP_HIERARCHY_MAX_DEPTH, defined in parent_functions.php).
+    // Note what the guard does NOT do: a self-parented feature now terminates, but
+    // never satisfies the "parent_feature_id IS NULL" test below, so it resolves to
+    // nothing. That is deliberate -- the cure is reloading the data, not teaching
+    // this query to accept a broken hierarchy as a root. Before the guard the same
+    // input hung the request outright, so no working case is lost.
     $query = "WITH RECURSIVE chain AS (
         SELECT f.feature_uniquename AS input_name,
                f.feature_type       AS input_type,
                f.feature_id,
                f.feature_uniquename AS node_name,
-               f.parent_feature_id
+               f.parent_feature_id,
+               0 AS depth
         FROM   feature f
         WHERE  f.feature_uniquename IN ($ph_ids)
           AND  f.gene_set_id IN ($ph_gs)
@@ -60,9 +73,12 @@ function moopmartResolveInputIds(array $input_ids, string $db_path, array $gene_
                c.input_type,
                f.feature_id,
                f.feature_uniquename,
-               f.parent_feature_id
+               f.parent_feature_id,
+               c.depth + 1
         FROM   feature f
         JOIN   chain c ON f.feature_id = c.parent_feature_id
+        WHERE  c.depth < " . MOOP_HIERARCHY_MAX_DEPTH . "
+          AND  f.feature_id <> c.feature_id
     )
     SELECT input_name, input_type, node_name AS gene_uniquename
     FROM   chain
