@@ -84,23 +84,30 @@ reporting success. A load that attaches no annotations is a failed load.
 ### Step 5 — full run, then verify
 
 ```sh
-bash run_all_v2.sh --force         # add --no-copy to build without the rsync
+bash run_all_v2.sh --reload        # add --no-copy to build without the rsync
 bash scripts/check_status.sh > status.after.log
 diff status.before.log status.after.log
 ```
 
-**`--force` is required here, and it was added on 2026-07-27 because this step did not
+**`--reload` is required here, and it was added on 2026-07-27 because this step did not
 work as written.** Every build step is gated on its own output already existing
 (`has_data features.tsv || REBUILD=true`), so a plain `bash run_all_v2.sh` over the
 existing tree would have rebuilt nothing and reloaded nothing — it would have re-copied
-the same broken databases and reported success. `--force` bypasses those gates *and*
+the same broken databases and reported success. `--reload` bypasses those gates *and*
 drops each `organism.sqlite` so it is recreated from the current schema, which is the
 only way the new constraints can apply: `UNIQUE`, `NOT NULL` and a corrected
 `FOREIGN KEY` cannot be added to an existing SQLite file.
 
-The drop is coordinated per organism by `MOOP_RELOAD_TOKEN`, so an organism's second
-and third gene sets load alongside the first rather than each deleting the last one's
-work. See the README section "Incremental runs vs. a reload".
+**The unit of work is now the ORGANISM, not the gene set** (2026-07-27). One job owns
+one `organism.sqlite`, so a reload's scope and the database's scope are the same thing
+and dropping is safe by construction. To reload part of an organism afterwards:
+
+```sh
+MOOP_RELOAD=1 sbatch scripts/moop_process_genome_data_v2.sbatch Org Assembly GeneSet
+```
+
+which deletes only that gene set's rows (`scripts/delete_gene_set.sh`) and leaves its
+siblings alone. See the README section "Incremental runs vs. a reload".
 
 Checking progress mid-run is now safe. `check_status.sh` used to rewrite
 `active_genesets.tsv`, which was also the file the running SLURM array indexed into by
@@ -126,19 +133,22 @@ along; it should now resolve to the gene.
 
 ## 3. Still open — not done, deliberately
 
-**Web-side cycle guards.** The data fix is the cure, but the guard is the seatbelt and
-should go in regardless, so bad data can never pin a worker again:
+**Web-side cycle guards — DONE 2026-07-27** (commit `8ef74d4`), and there were FOUR
+walks, not the two listed here:
 
-- `lib/moopmart_functions.php` (~line 49) — the `WITH RECURSIVE` CTE
-- `lib/parent_functions.php` — `getAncestors()`
+- `getAncestors()` and `getChildren()` in `lib/parent_functions.php`
+- `moopmartResolveInputIds()` in `lib/moopmart_functions.php`
+- `generateTreeHTML()` in `lib/parent_functions.php` — **not a CTE at all.** It recurses
+  in PHP, one query per node, so it never appeared in a search for `WITH RECURSIVE`, and
+  the first three guards did not fix the gene page.
 
-SQLite here is **3.34.1** (both CLI and `pdo_sqlite`), so the built-in `CYCLE` clause
-(3.42+) is unavailable. Use the tested form:
+The symptom was worse than "a pinned worker": `generateTreeHTML()` recursed until PHP
+exhausted memory, so the gene page returned a hard **500 at ~8s and 2 GB** for all
+66,596 self-parented features (Bipalium_kewense 39,065, Schmidtea_lugubris 14,313,
+Schmidtea_nova 13,218). Now 200 in 0.6–5.0s; healthy pages byte-identical.
 
-```sql
-AND f.feature_id <> c.feature_id   -- don't follow a self-reference
-WHERE c.depth < 20                 -- and never recurse deeper than 20
-```
+The two CTEs in `lib/extract_search_helpers.php` use `UNION` rather than `UNION ALL`,
+which deduplicates and therefore already terminates. They need no guard.
 
 **FTS space reclaim (~20 GB).** The FTS index is now contentless, but existing databases
 keep the old `_content` tables until rebuilt. `setup_new_moopdb_and_load_data.sh` does this
@@ -165,6 +175,19 @@ than a fire.
 
 **Parastichopus_parvimensis** — 0 features, 306,781 orphaned annotations. The new checks
 catch this class now; the reload should fix it, and `NO_FEATURES` will say so if not.
+
+**Schmidtea_mediterranea is missing 4 of its 5 gene sets** (found 2026-07-27). The
+active list has `schMedA2h1_orig`, `schMedA2h2_orig`, `schMedS3h1_WBPS19`,
+`schMedS3h2_WBPS19` and `smed_20140614`; the live `organism.sqlite` holds only
+`schMedS3h1_WBPS19` (50,739 features). All five assembly directories ARE on the web
+server, so their FASTAs and BLAST indexes copied — only the database rows are absent.
+Four fifths of the flagship planarian is invisible to search, MOOPmart and gene pages.
+The other six multi-gene-set organisms match exactly (2/2, 2/2, 2/2, 3/3, 2/2, 2/2), so
+this is not systemic. Run `check_status.sh` before the reload to see whether those four
+report `NO_FEATURES` (never loaded) or `NOT_BUILT` (inputs missing).
+
+**`test_ejr` is `active: true` but has no database and no directory on the web server.**
+A reload will process it. Probably wants `active: false`.
 
 ---
 

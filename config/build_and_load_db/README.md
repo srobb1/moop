@@ -57,53 +57,67 @@ When this invariant breaks, **nothing errors** — sequence retrieval simply ret
 nothing. Verify with `scripts/check_sequence_id_match.sh`, and note that the renamers
 now exit non-zero when any record fails to match.
 
-## Incremental runs vs. a reload — `--force`
+## Incremental runs vs. a reload — `--reload`
 
 Every build step is gated on its own output already existing (`has_data features.tsv
 || REBUILD=true`, and so on). That makes a re-run cheap when you are adding one new
-gene set to an otherwise current tree — which is the common case.
+gene set to an otherwise current tree — which is the common case, and it leaves the
+organism's existing gene sets completely untouched.
 
 It also means **a plain re-run over a fully built tree rebuilds nothing and reloads
 nothing.** It cannot pick up a fixed parser or a fixed loader, because it never re-runs
-them. Use `--force` for that:
+them. Use `--reload` for that.
 
 ```sh
 bash run_all_v2.sh              # incremental: only what is missing
-bash run_all_v2.sh --force      # regenerate intermediates AND reload every database
-bash run_all_v2.sh --force --no-copy
+bash run_all_v2.sh --reload     # regenerate intermediates AND reload every database
+bash run_all_v2.sh --reload --no-copy
 ```
 
-`--force` does two distinct things:
+### The invariant
 
-1. Sets `REBUILD=true` up front, so `isoforms.tsv`, `geneNames.tsv` and `features.tsv`
-   are regenerated from source instead of reused.
-2. **Drops each `organism.sqlite`** so it is recreated from `create_schema_sqlite.sql`.
-   This part is not optional: constraints (`UNIQUE`, `NOT NULL`, a corrected
-   `FOREIGN KEY`) cannot be added to an existing SQLite file, so loading into a
-   surviving database silently keeps the OLD schema while reporting success.
+**A reload invalidates exactly what the invocation names, and nothing else.**
 
-The database is per **organism** but jobs run per **gene set**, so the drop is
-coordinated by `MOOP_RELOAD_TOKEN`: the first gene set to reach an organism with a new
-token drops the database and records the token; that organism's other gene sets see
-their own token already recorded and load alongside. It happens inside the `flock`
-`setup_new_moopdb_and_load_data.sh` already holds, so concurrent array tasks cannot
-both decide they are first.
+| invocation | what is invalidated |
+|---|---|
+| `run_all_v2.sh` | nothing; builds only what is missing |
+| `run_all_v2.sh --reload` | every `organism.sqlite` dropped, every intermediate rebuilt |
+| `sbatch …sbatch Foo` | nothing; builds only Foo's missing gene sets |
+| `MOOP_RELOAD=1 sbatch …sbatch Foo` | Foo's database dropped, all its gene sets rebuilt |
+| `MOOP_RELOAD=1 sbatch …sbatch Foo ASM1 gsC` | **only gsC**: its rows deleted from Foo's database, its intermediates removed, then reloaded. gsA and gsB untouched |
 
-For a single organism by hand:
+That last row is why the unit of work is the organism (see the header of
+`moop_process_genome_data_v2.sbatch`). `organism.sqlite` holds every gene set, so a job
+that owned only one gene set could not drop it safely.
 
-```sh
-FORCE_RELOAD=1 sbatch scripts/moop_process_genome_data_v2.sbatch Organism Assembly GeneSet
-```
+Dropping matters on its own: constraints (`UNIQUE`, `NOT NULL`, a corrected
+`FOREIGN KEY`) cannot be added to an existing SQLite file, so loading into a surviving
+database silently keeps the OLD schema while reporting success.
 
-`MOOP_RELOAD_TOKEN` defaults to the SLURM job id there, which is what you want.
+The narrowed case deletes rows via `scripts/delete_gene_set.sh` before reloading,
+rather than just re-running the loaders. Both loaders **upsert** — matching on
+`(uniquename, gene_set_id)` and `(feature_id, annotation_id)` — so a re-run corrects
+what is still present and adds what is new, but leaves behind every row the new files
+no longer contain. Commit `3566673` stopped emitting `:cds`/`:pep` rows for non-coding
+transcripts; without the deletion, reloading with the fixed parser would add the
+correct rows, keep all the bogus ones, and report success.
 
-**Not touched by `--force`:** `genome.json` and `geneset.json`, including the
+**Not touched by `--reload`, deliberately:** `genome.json`, `geneset.json` and the
 `date_added` they carry. Those are site metadata, not derived data. `organism.json`
 *is* regenerated, because the rebuild path has always done that.
 
+`--force` is accepted as an alias for `--reload`.
+
 ## Components
 
-- `run_all_v2.sh` — top-level driver
+- `run_all_v2.sh` — top-level driver; submits a SLURM array over ORGANISMS
+- `scripts/moop_process_genome_data_v2.sbatch` — one job = one ORGANISM. Resolves that
+  organism's active gene sets (narrowed by the optional assembly/gene-set arguments),
+  loops over them, then runs the whole-database steps ONCE and copies to moop
+- `scripts/process_one_geneset.sh` — builds and loads a single gene set. Was
+  `moop_process_genome_data_v2.sbatch` until 2026-07-27
+- `scripts/delete_gene_set.sh` — removes one gene set from an organism database,
+  leaving its siblings intact. Used by a narrowed reload
 - `scripts/list_active_genesets.sh` — **the** definition of "which genesets are
   active". `run_all_v2.sh` and `scripts/check_status.sh` both call it; it prints to
   stdout and writes no file, so it cannot disturb a run in flight
@@ -112,9 +126,9 @@ FORCE_RELOAD=1 sbatch scripts/moop_process_genome_data_v2.sbatch Organism Assemb
   under `runs/`, because a task finds its work by line number and the list therefore
   has to stay byte-identical for the whole life of the array — which a status check
   rewriting the same path used to break
-- `scripts/moop_process_genome_data_v2.sbatch` — main SLURM job; processes one organism
 - `scripts/setup_new_moopdb_and_load_data.sh` — creates the SQLite DB and loads a gene
   set plus its annotations. Gates annotation loading on features actually existing.
+  Never drops the database — invalidation belongs to the organism-level job
 - `data_loaders/` — schema, FTS index builder, and the gene/annotation loaders
 - `analysis_parsers/` — GFF/FASTA parsers and analysis-output converters
 - `scripts/make_*_moop_files.sh` — per-analysis-type file preparation
@@ -139,15 +153,25 @@ loaders themselves do not use it — only the parsers do.
 Order matters — annotations attach to features by uniquename, and the FTS index is built
 from both.
 
+**Per gene set** — `setup_new_moopdb_and_load_data.sh` does these three, in order:
+
 1. `data_loaders/create_schema_sqlite.sql` (once per organism database)
 2. `data_loaders/load_genes_sqlite.pl` — one gene set at a time
 3. `data_loaders/load_annotations_sqlite.pl` — accepts many files in ONE invocation;
    it builds its caches once per run, so calling it per file scales badly
+
+**Per organism, ONCE, after every gene set has loaded** — `moop_process_genome_data_v2.sbatch`:
+
 4. `data_loaders/make_annotation_sources_cache.pl`
 5. `data_loaders/build_fts_index.sql`, then `VACUUM`
 
-`setup_new_moopdb_and_load_data.sh` does all five in order.
+Steps 4 and 5 rewrite the whole organism database, so running them per gene set did the
+same work N times over an ever-growing file — three full FTS rebuilds and three
+`VACUUM`s for a 1.8 GB, 3-gene-set organism. Keep them at the organism level.
 
-Every loader runs integrity checks at the end and reports problems rather than exiting 0
-regardless. A load that attaches no annotations, or leaves a feature as its own parent,
-is reported as a failure.
+Every loader runs integrity checks at the end. `load_genes_sqlite.pl` **exits non-zero**
+on a structural problem — zero features, a text `'NULL'` parent, a self-parent, a
+dangling parent, zero roots — so the pipeline stops instead of loading annotations onto
+a hierarchy the website cannot walk. A source row that named itself as its own parent is
+a warning, not fatal: the loader already handled it correctly as a root.
+`load_annotations_sqlite.pl` exits non-zero when it attaches nothing at all.

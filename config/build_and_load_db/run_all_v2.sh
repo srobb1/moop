@@ -4,33 +4,33 @@
 ## and contains "active: true" (case-insensitive).
 ## %10 = run at most 10 tasks concurrently.
 ##
-## Usage: bash run_all_v2.sh [--no-copy] [--force]
+## Usage: bash run_all_v2.sh [--no-copy] [--reload]
 ##   --no-copy   Build everything but skip the final rsync to the live moop app
 ##               (moop_process_genome_data_v2.sbatch still runs copy2moop_v2.sh
 ##               unless SKIP_COPY=1 is set, which this flag does).
-##   --force     Rebuild and RELOAD everything, ignoring the "already built" checks.
+##   --reload    Rebuild and reload everything, ignoring the "already built" checks.
 ##               See the block below -- without it a re-run is very nearly a no-op.
+##               (--force is accepted as an alias.)
 
 SKIP_COPY=0
-FORCE_RELOAD=0
+MOOP_RELOAD=0
 for arg in "$@"; do
   case "$arg" in
-    --no-copy) SKIP_COPY=1 ;;
-    --force)   FORCE_RELOAD=1 ;;
+    --no-copy)         SKIP_COPY=1 ;;
+    --reload|--force)  MOOP_RELOAD=1 ;;
     *) echo "Unknown argument: $arg" >&2
-       echo "Usage: bash run_all_v2.sh [--no-copy] [--force]" >&2
+       echo "Usage: bash run_all_v2.sh [--no-copy] [--reload]" >&2
        exit 1 ;;
   esac
 done
 
-## Why --force exists
+## Why --reload exists
 ##
 ## Every build step is gated on its own output already existing:
 ##
 ##     has_data isoforms.tsv || REBUILD=true
 ##     has_data geneNames.tsv || REBUILD=true
 ##     has_data features.tsv  || REBUILD=true
-##     if $REBUILD; then ... setup_new_moopdb_and_load_data.sh ... fi
 ##
 ## That makes a re-run cheap, which is right for adding a new geneset to a tree that
 ## is otherwise current. But it means that on a tree where everything was already
@@ -38,26 +38,20 @@ done
 ## re-copies. So it cannot be used to pick up a fix to a parser or a loader, which is
 ## exactly what a reload is for.
 ##
-## --force sets REBUILD=true up front in both branches of the sbatch, so features.tsv
-## and friends are regenerated from source, and it drops each organism.sqlite so the
-## database is recreated from create_schema_sqlite.sql. That second part matters on
-## its own: constraints added to the schema (UNIQUE, NOT NULL, a corrected FOREIGN
-## KEY) cannot be applied to an existing SQLite file, so a load into a surviving
-## database silently keeps the OLD schema.
+## --reload invalidates EXACTLY what the run covers, and nothing else. Here that is
+## every organism, so every organism.sqlite is dropped and recreated from
+## create_schema_sqlite.sql. Dropping matters on its own: constraints added to the
+## schema (UNIQUE, NOT NULL, a corrected FOREIGN KEY) cannot be applied to an existing
+## SQLite file, so a load into a surviving database silently keeps the OLD schema.
 ##
-## The database is per ORGANISM but tasks are per GENE SET, so the drop cannot simply
-## happen per task -- gene set B would delete what gene set A just loaded. Instead
-## every task in one run shares MOOP_RELOAD_TOKEN, and setup_new_moopdb_and_load_data.sh
-## drops the database only for the first task to reach a given organism (inside the
-## flock it already holds). Later gene sets of the same organism load alongside it.
+## To reload part of an organism, invoke the job directly -- it narrows, and the
+## deletion narrows with it, so an organism's other gene sets are untouched:
 ##
-## NOT touched by --force, deliberately: genome.json, geneset.json, and the "date_added"
-## they carry. Those are site metadata, not derived data. organism.json IS regenerated,
-## because the REBUILD path has always done that.
-RELOAD_TOKEN=""
-if [ "$FORCE_RELOAD" -eq 1 ]; then
-  RELOAD_TOKEN="force-$(date +%Y%m%dT%H%M%S)-$$"
-fi
+##     MOOP_RELOAD=1 sbatch scripts/moop_process_genome_data_v2.sbatch Org Asm GeneSet
+##
+## NOT touched by --reload, deliberately: genome.json, geneset.json, and the
+## "date_added" they carry. Those are site metadata, not derived data. organism.json
+## IS regenerated, because the rebuild path has always done that.
 
 # Where this pipeline lives, derived from this script's own location rather than
 # hardcoded, so a git checkout works wherever it is cloned. Everything below is
@@ -89,29 +83,37 @@ mkdir -p slurm_logs
 mkdir -p runs
 RUN_ID="$(date +%Y%m%dT%H%M%S)-$$"
 GENESETS_FILE="$REPO/runs/genesets.$RUN_ID.tsv"
+ORGANISMS_FILE="$REPO/runs/organisms.$RUN_ID.tsv"
 
 bash "$REPO/scripts/list_active_genesets.sh" > "$GENESETS_FILE" || exit 1
+cut -f1 "$GENESETS_FILE" | sort -u > "$ORGANISMS_FILE"
 cp "$GENESETS_FILE" "$REPO/active_genesets.tsv"
 
-N=$(wc -l < "$GENESETS_FILE")
+NGS=$(wc -l < "$GENESETS_FILE")
+N=$(wc -l < "$ORGANISMS_FILE")
 if [ "$N" -eq 0 ]; then
   echo "No active genesets found (active: true in metadata.yaml)."
-  rm -f "$GENESETS_FILE"
+  rm -f "$GENESETS_FILE" "$ORGANISMS_FILE"
   exit 1
 fi
 
-echo "Submitting $N active geneset(s):"
+## The ARRAY indexes organisms, not gene sets -- one job owns one organism, because
+## organism.sqlite is per organism (see the header of the sbatch). Each job then reads
+## its own gene sets out of the frozen $GENESETS_FILE.
+echo "Submitting $N organism(s), $NGS active geneset(s):"
 cat "$GENESETS_FILE"
-echo "Task list (frozen for this run): $GENESETS_FILE"
+echo "Task lists (frozen for this run):"
+echo "  organisms: $ORGANISMS_FILE"
+echo "  genesets : $GENESETS_FILE"
 
 [ "$SKIP_COPY" -eq 1 ] && echo "--no-copy set: skipping rsync to the live moop app for this run."
-if [ "$FORCE_RELOAD" -eq 1 ]; then
+if [ "$MOOP_RELOAD" -eq 1 ]; then
   echo ""
-  echo "--force set: rebuilding intermediates AND dropping each organism.sqlite so it"
-  echo "             is recreated from the current schema. Reload token: $RELOAD_TOKEN"
+  echo "--reload set: rebuilding intermediates AND dropping all $N organism.sqlite"
+  echo "              databases, so each is recreated from the current schema."
   echo ""
 fi
 
 sbatch --array=0-$((N - 1))%10 \
-  --export=ALL,GENESETS_FILE="$GENESETS_FILE",SKIP_COPY="$SKIP_COPY",FORCE_RELOAD="$FORCE_RELOAD",MOOP_RELOAD_TOKEN="$RELOAD_TOKEN" \
+  --export=ALL,GENESETS_FILE="$GENESETS_FILE",ORGANISMS_FILE="$ORGANISMS_FILE",SKIP_COPY="$SKIP_COPY",MOOP_RELOAD="$MOOP_RELOAD" \
   scripts/moop_process_genome_data_v2.sbatch
