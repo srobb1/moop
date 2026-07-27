@@ -195,3 +195,63 @@ read — Postgres does index lookup then heap fetch, same as SQLite. See the SQL
 Postgres assessment earlier in this file's history: the web code has ONE connection point,
 so a driver swap is small; the real work is FTS5 → tsvector/GIN, the ATTACH fan-out, the
 loader, and deployment.
+
+---
+
+# ⭐ START HERE — session state, 2026-07-27
+
+Everything below is either committed or waiting. Nothing is half-edited.
+
+## Done and committed today (8 commits, `8ef74d4`..`ccfc110`) — NOT pushed
+
+| commit | what |
+|---|---|
+| `8ef74d4` | web: cycle guards on 4 hierarchy walks — gene page was a **hard 500** for 66,596 self-parented features, now 200 |
+| `54dad13` | loaders: gene loader now EXITS NON-ZERO on a bad hierarchy instead of printing and returning 0 |
+| `a6f7a2d` | build: `--reload`, and the `active_genesets.tsv` race that let a status check renumber a live array |
+| `205f817` | build: **unit of work is now the ORGANISM, not the gene set** |
+| `c9c9e34` | notes: RAM ask sized from measurement + growth formula |
+| `3a5f159` | notes: working set per search path; `mmap_size` tested and REJECTED |
+| `decf41d` | loaders: retry a gene set built but never loaded; flag untrimmed sources |
+| `ddc5bfe` | db: per-request connection reuse; deleted 2 dead+broken query helpers |
+
+## The three things actually blocking progress
+
+**1. Run the reload.** All code is done; it has never run. `notes/PIPELINE_RELOAD_PLAN.md`
+has the step-by-step. Untested against real data — no SLURM/genomes/DBI on the webserver.
+Prove one organism first. Halves the databases, 66 GB → ~37 GB.
+
+**2. Run the `prefix='2 3 4'` experiment** (see the Eric section above). ~10 minutes, and
+it decides whether the remaining slowness is indexing or row-fetching. **Do this before
+asking IT for hardware.**
+
+**3. The IT message is drafted but MUST NOT be sent as written.** It claims BLAST needs
+flash because indexes are 38 GB. That is wrong — actual BLAST index files are **0.3 GB**;
+the 38 GB was mostly sequence data. Eric caught it. Rewrite around Eric's advice: ask for
+**one** thing, 32 GB framed as a reversible test. Full drafts and the growth formula are in
+`notes/IT_REQUEST_RAM_INCREASE.md`.
+
+## Then: the actual launch priority, still not started
+
+**Walking every user-facing page for UX and helpful tips.** This is what the session was
+meant to get to. Plan and page checklist: `notes/USER_PAGE_HELP_AUDIT.md`. Seven pages
+have no `(i)` help at all; `index.php` and `parent.php` matter most. Settle the
+search-level-inconsistency semantics (`notes/SEARCH_FEATURE_LEVEL_INCONSISTENCY.md`)
+BEFORE writing help that describes results.
+
+## Data problems found today, not yet fixed
+
+- **Schmidtea_mediterranea ships 1 of its 5 active gene sets.** All five assembly
+  directories copied to the web server; only the database rows are missing. `decf41d`
+  fixes the *mechanism* (a gene set built but never loaded was skipped forever), but the
+  four gene sets still need loading. Run `check_status.sh` to see whether they report
+  `NO_FEATURES` or `NOT_BUILT`.
+- **`test_ejr`** is `active: true` with no database and no directory on the server. A
+  reload will process it. Probably wants `active: false`.
+
+## Smaller open items
+
+Items 1–5 in the section above this one: connection-reuse keep-or-revert,
+`generateTreeHTML`'s duplicate unfiltered walk (**the last actual defect found**), the
+`feature_annotation.date` normalisation + `page_size` decision for the reload, three
+unused query helpers, and the working-set finding.
