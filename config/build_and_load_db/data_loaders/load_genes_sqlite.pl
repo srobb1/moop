@@ -238,7 +238,9 @@ while (my $line = <FEATURES>) {
 # Commit changes
 $dbh->commit;
 
-print "Data loaded successfully!  inserted=$inserted_rows updated=$updated_rows\n";
+# Deliberately NOT "loaded successfully" -- every INSERT succeeding is not the same
+# thing as a usable load, and the integrity checks below are what decide that.
+print "Rows committed:  inserted=$inserted_rows updated=$updated_rows\n";
 
 # ----------------------------------------------------------------------
 # Post-load integrity checks.
@@ -273,34 +275,59 @@ print "\n--- integrity check ---\n";
 printf "  features                 %d\n", $total;
 printf "  roots (parent IS NULL)   %d\n", $roots;
 
-my @problems;
-push @problems, "the feature file produced NO features at all -- organism, genome and"
+# FATAL problems: the database is in a state that produces silently wrong results
+# on the website. These stop the pipeline (non-zero exit) so the failure is caught
+# here rather than by a user getting an empty page months later.
+my @fatal;
+push @fatal, "the feature file produced NO features at all -- organism, genome and"
     . " gene_set rows were still created, so this looks like a successful load"
     . " while leaving nothing for annotations to attach to"
     if !$total;
-push @problems, "$bad_parent_type feature(s) store a non-integer, non-NULL parent_feature_id"
+push @fatal, "$bad_parent_type feature(s) store a non-integer, non-NULL parent_feature_id"
     . " (the string 'NULL' or '' -- these roots are unreachable by IS NULL)"
     if $bad_parent_type;
-push @problems, "$self_parents feature(s) are their own parent (a recursive walk will not terminate)"
+push @fatal, "$self_parents feature(s) are their own parent (a recursive walk will not terminate)"
     if $self_parents;
-push @problems, "$dangling feature(s) point at a parent_feature_id that does not exist"
+push @fatal, "$dangling feature(s) point at a parent_feature_id that does not exist"
     if $dangling;
-push @problems, "0 roots -- nothing can bubble up to a top-level feature"
+push @fatal, "0 roots -- nothing can bubble up to a top-level feature"
     if !$roots && $total;
-push @problems, "$self_parent_rows source row(s) named themselves as their own parent"
+
+# WARNINGS: a defect in the SOURCE file that this loader already handled safely.
+# Not fatal -- the rows were loaded correctly as roots -- but worth knowing which
+# gene sets carry it, because it points at a parser or an upstream GFF to fix.
+my @warnings;
+push @warnings, "$self_parent_rows source row(s) named themselves as their own parent"
     . " and were loaded as roots instead (e.g. $self_parent_example)"
     . " -- check for geneID=/Parent= pointing at the row's own ID"
     if $self_parent_rows;
 
-if (@problems) {
+foreach my $warning (@warnings) {
+    print "  ~  WARNING: $warning\n";
+}
+
+if (@fatal) {
     print "  !! PROBLEMS FOUND\n";
-    foreach my $problem (@problems) {
+    foreach my $problem (@fatal) {
         print "     - $problem\n";
     }
-    print "  !! The database loaded, but features above will not resolve correctly.\n";
-} else {
-    print "  OK - no parent/hierarchy problems found\n";
+    print "-----------------------\n";
+
+    # Exit NON-ZERO. This block used to print exactly the same complaint and then
+    # exit 0, so setup_new_moopdb_and_load_data.sh -- which runs under "set -e" --
+    # read it as a clean load and carried straight on to loading annotations. The
+    # only thing that actually halted the pipeline was its separate "0 features"
+    # test, so every other defect here was a comment in a SLURM log rather than a
+    # gate. A load that produces a hierarchy the website cannot walk is a FAILED
+    # load, even though every INSERT succeeded.
+    print STDERR "\n!! LOAD FAILED: $dbfile has hierarchy defects (listed above).\n"
+               . "!! Refusing to report success -- annotations must not be loaded\n"
+               . "!! on top of this, and it must not be copied to the web server.\n";
+    $dbh->disconnect;
+    exit 1;
 }
+
+print "  OK - no parent/hierarchy problems found\n" if !@warnings;
 print "-----------------------\n";
 
 $dbh->disconnect;
