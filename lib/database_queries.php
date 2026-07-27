@@ -212,44 +212,26 @@ function searchFeaturesByUniquename($search_term, $dbFile, $organism_name = '') 
     return fetchData($query, $dbFile, $params);
 }
 
-/**
- * Get all annotations for a feature
- * Returns annotations with their sources and metadata
- * 
- * @param int $feature_id - Feature ID to get annotations for
- * @param string $dbFile - Path to SQLite database
- * @return array - Array of annotation records
+/*
+ * REMOVED 2026-07-27: getAnnotationsByFeature() and getOrganismInfo().
+ *
+ * Both were dead (no callers anywhere; only referenced in the generated
+ * docs/function_registry.json) AND both were broken, so neither could have been called
+ * without taking the request down:
+ *
+ *   getAnnotationsByFeature()  selected fa.additional_info -- a column that exists in no
+ *                             version of create_schema_sqlite.sql, past or present. The
+ *                             query throws, and fetchData() turns that into die().
+ *
+ *   getOrganismInfo()          called fetchData($query, [$organism_name, $organism_name],
+ *                             $dbFile) -- the signature is (sql, dbFile, params), so it
+ *                             passed an array where the database path belongs. PDO would
+ *                             be handed "Array" as a filename.
+ *
+ * Deleted rather than repaired: nothing wants them, and a broken helper that looks usable
+ * is worse than no helper. Annotations for a feature are served by
+ * getAllAnnotationsForFeatures() in parent_functions.php, which batches by feature id.
  */
-function getAnnotationsByFeature($feature_id, $dbFile) {
-    $query = "SELECT a.annotation_id, a.annotation_accession, a.annotation_description, 
-                     ans.annotation_source_name, ans.annotation_source_id,
-                     fa.score, fa.date, fa.additional_info
-              FROM annotation a
-              JOIN feature_annotation fa ON a.annotation_id = fa.annotation_id
-              JOIN annotation_source ans ON a.annotation_source_id = ans.annotation_source_id
-              WHERE fa.feature_id = ?
-              ORDER BY fa.date DESC";
-    
-    return fetchData($query, $dbFile, [$feature_id]);
-}
-
-/**
- * Get organism information
- * Returns complete organism record with taxonomic data
- * 
- * @param string $organism_name - Organism name (genus + species)
- * @param string $dbFile - Path to SQLite database
- * @return array - Organism record, or empty array if not found
- */
-function getOrganismInfo($organism_name, $dbFile) {
-    $query = "SELECT organism_id, genus, species, common_name, subtype, taxon_id
-              FROM organism
-              WHERE (genus || ' ' || species = ? OR common_name = ?)
-              LIMIT 1";
-    
-    $results = fetchData($query, [$organism_name, $organism_name], $dbFile);
-    return !empty($results) ? $results[0] : [];
-}
 
 /**
  * Get assembly/genome statistics

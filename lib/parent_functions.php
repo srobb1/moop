@@ -273,7 +273,15 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
     foreach ($results as $row) {
         $hit_id = htmlspecialchars(trim($row['annotation_accession']));
         $hit_description = htmlspecialchars($row['annotation_description']);
-        $hit_score = htmlspecialchars($row['score']);
+        // feature_annotation.score is REAL and NULLABLE since the 2026-07-24 schema change
+        // (df088cb). It used to be TEXT NOT NULL, where annotation types carrying no score
+        // stored the literal string "-" -- 43% of rows in the sampled organism. Those load
+        // as NULL now, so without this the column renders as a blank cell where it used to
+        // read "-", and the reader cannot tell "no score" from "we failed to show it".
+        // Also keeps NULL out of htmlspecialchars(), which is deprecated in PHP 8.1+.
+        $hit_score = ($row['score'] === null || $row['score'] === '')
+            ? '<span class="text-muted">—</span>'
+            : htmlspecialchars((string) $row['score']);
         $annotation_source = htmlspecialchars($row['annotation_source_name']);
         $annotation_accession_url = htmlspecialchars(trim($row['annotation_accession_url']));
         $hit_id_link = $annotation_accession_url . urlencode(trim($row['annotation_accession']));

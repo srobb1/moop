@@ -258,6 +258,31 @@ function getDbConnection($dbFile) {
     // (api/feature_search.php) must stay writable AND enable URI filenames so it can
     // ATTACH the real DBs as 'file:...?mode=ro' (also read-only). SQLITE_OPEN_URI has no
     // PDO constant here (PHP 8.0), so use its literal value 0x40.
+    // Reuse an already-open handle for the same file, for the life of the request.
+    //
+    // Opening a SQLite connection is not free: PDO opens the file, reads the header, and
+    // parses sqlite_schema before the first statement can run. Measured on this host, a
+    // small indexed query costs 0.178 ms with a fresh connection and 0.015 ms on a reused
+    // one -- the open is 92% of the call. A single gene page makes 11 fetchData() calls
+    // against ONE database, so it was paying that eleven times.
+    //
+    // It matters more than the warm numbers suggest. Each open has to read the file header
+    // and schema pages, and on this deployment those are usually cold (66 GB of databases
+    // against ~12 GB of page cache, on a rotational volume), so every redundant open risks
+    // a disk seek. The cross-organism search fans out over 85 databases, which multiplies
+    // it further.
+    //
+    // Safe because these connections are READ-ONLY, no transaction spans two fetchData()
+    // calls, and PHP handles one request per process. Handles close when the request ends.
+    //
+    // ':memory:' is deliberately NOT cached: it is the coordinator used for cross-organism
+    // ATTACH (api/feature_search.php), each use wants a clean database, and reusing one
+    // would carry a previous caller's ATTACHed schemas into the next.
+    static $pool = [];
+    if ($dbFile !== ':memory:' && isset($pool[$dbFile])) {
+        return $pool[$dbFile];
+    }
+
     $uri_flag = defined('PDO::SQLITE_OPEN_URI') ? PDO::SQLITE_OPEN_URI : 0x40;
     $open_flags = ($dbFile === ':memory:')
         ? (PDO::SQLITE_OPEN_READWRITE | PDO::SQLITE_OPEN_CREATE | $uri_flag)
@@ -267,6 +292,10 @@ function getDbConnection($dbFile) {
     $dbh->sqliteCreateFunction('REGEXP', function($pattern, $text) {
         return preg_match('/' . $pattern . '/i', $text) ? 1 : 0;
     }, 2);
+
+    if ($dbFile !== ':memory:') {
+        $pool[$dbFile] = $dbh;
+    }
     return $dbh;
 }
 
