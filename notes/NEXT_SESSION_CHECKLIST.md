@@ -131,3 +131,67 @@ recreated anyway. Also worth deciding `PRAGMA page_size` at the same time (curre
 **The main search box touches only ~15% of a database** (~5.5 GB across all 85), which
 fits in the RAM already on the box. Deep annotation search touches ~85%. So the front door
 could be fast after the reload with NO hardware change — see `notes/QUERY_PERFORMANCE.md`.
+
+---
+
+## Search performance — where the discussion with Eric landed (2026-07-27)
+
+**He independently reached the same conclusion the measurements did.** "It's slow initially
+because you need the whole table and not just the index." That is exactly the working-set
+split measured in `notes/QUERY_PERFORMANCE.md`: feature/ID search touches ~15% of a
+database (index + rowid lookups), annotation search touches ~85%, because after the FTS
+index says *which* rows match, those rows must be fetched from wherever they live in the
+file. Two independent routes to the same answer.
+
+That matters for the IT ask: the cold cost is **fetching matched rows**, not finding them.
+
+### Where he was right, and we were wrong
+
+- **BLAST.** The earlier "38 GB of BLAST indexes" conflated index and sequence files.
+  Actual split: `.pin`/`.nin` index = **0.3 GB**; `.psq`/`.nsq` sequence = 36 GB;
+  `.phr`/`.nhr` = 4.1 GB. BLAST *indices* would fit in RAM trivially. This invalidated the
+  "37 + 38 > 64 GB so BLAST can't fit" argument used to favour flash.
+- **"Ask for one thing."** Asking for RAM *and* flash likely yields neither. His framing —
+  request 32 GB as a reversible performance test, roll back if benchmarks don't move — is
+  the better approach.
+- **Connection count doesn't explain cold vs warm.** Confirmed independently; see item 1
+  above.
+- **There is still a LIKE.** `searchFeaturesByUniquenameForSearch()`, called from
+  `tools/annotation_search_ajax.php:111`, runs `LIKE '%term%'` on `feature_uniquename`.
+  Plan: `SCAN TABLE feature USING COVERING INDEX feature_unqiuename_idx`. It is a covering
+  scan (3.5 MB index, never touches the table) and substring matching is genuinely wanted
+  on IDs, but the claim "no more LIKE" was overstated.
+
+### Real gap he surfaced: no `prefix=` on the FTS5 tables
+
+Deployed DDL is `fts5(..., tokenize = 'porter unicode61')` with no `prefix` option, while
+every search MOOP issues is a prefix query (`"kinase"*`). Without a prefix index, FTS5
+range-scans the term list to resolve those.
+
+**NOT YET TESTED.** Add `prefix='2 3 4'` to `build_fts_index.sql`, rebuild ONE organism,
+re-time a cold annotation search. This is the experiment that settles the argument:
+
+- if cold time drops materially → it was partly an indexing problem, fixed for free
+- if it does not move → hard evidence the cost is row fetching, which is the strongest
+  possible support for the RAM request
+
+Do this BEFORE asking IT for anything.
+
+### Open question that is a product decision, not a performance one
+
+Porter/FTS5 tokenise on word boundaries, so prefix works (`transpos` → `transposase`) but
+**infix does not** (`posase` will not find `transposase`). Eric is correct, and this is
+true of Postgres GIN as well — infix needs trigram indexing (`pg_trgm`), which is
+expensive. Question for the user: **do MOOP users need mid-word annotation search?** If
+yes it is a functional gap, not just a tuning one. If no, this is a non-issue and should
+be said plainly.
+
+### Eric's larger argument, still open
+
+"The best solution is probably a proper DB server." Worth taking seriously for the
+cross-organism search: one buffer pool beats 85 separate files, and he is right that
+touching fewer files is better. But note it does not change the physics of a cold random
+read — Postgres does index lookup then heap fetch, same as SQLite. See the SQLite-vs-
+Postgres assessment earlier in this file's history: the web code has ONE connection point,
+so a driver swap is small; the real work is FTS5 → tsvector/GIN, the ATTACH fan-out, the
+loader, and deployment.
