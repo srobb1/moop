@@ -231,6 +231,40 @@ if ($total_annotations && !$attached) {
     _exit(1);
 }
 
+# Whitespace on an annotation source name is silent poison, and it is USER-VISIBLE:
+# annotation_source_name is what the Annotation Search step-3 list, the source filter
+# modal and MOOPmart's criteria dropdown are built from. "Ensembl Homo sapiens " and
+# "Ensembl Homo sapiens" appear as two indistinguishable entries, and picking one
+# searches half the annotations. 17 such pairs existed in the sampled organism.
+#
+# The header parse now trims (\s*(.+?)\s*$), and the schema has
+# UNIQUE(annotation_source_name, annotation_source_version) -- so this should be
+# impossible. Check anyway: the cost is one query, and the failure mode is invisible.
+{
+    my ($untrimmed) = $dbh->selectrow_array(
+        "SELECT COUNT(*) FROM annotation_source
+          WHERE annotation_source_name    <> TRIM(annotation_source_name)
+             OR annotation_source_version <> TRIM(annotation_source_version)");
+
+    if ($untrimmed) {
+        my $rows = $dbh->selectall_arrayref(
+            "SELECT annotation_source_name, annotation_source_version
+               FROM annotation_source
+              WHERE annotation_source_name    <> TRIM(annotation_source_name)
+                 OR annotation_source_version <> TRIM(annotation_source_version)
+              LIMIT 10");
+        print STDERR "\n!! WARNING: $untrimmed annotation source(s) have leading or trailing\n"
+                   . "!! whitespace in their name or version. Users see these as duplicate,\n"
+                   . "!! indistinguishable entries, and selecting one searches only half the\n"
+                   . "!! annotations. Offenders (up to 10):\n";
+        foreach my $row (@$rows) {
+            print STDERR sprintf("!!   [%s] version [%s]\n", $row->[0] // '', $row->[1] // '');
+        }
+        print STDERR "!! A fresh load should never produce these -- the header parse trims.\n"
+                   . "!! Seeing them means this database predates that fix and needs a reload.\n\n";
+    }
+}
+
 if ($count_not_found) {
     my $pct = sprintf '%.1f', 100 * $count_not_found / ($total_annotations || 1);
     print STDERR "\n!! WARNING: $count_not_found of $total_annotations annotation line(s) "

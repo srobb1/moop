@@ -64,6 +64,29 @@ echo "Mode     : $($HAS_GFF && echo genome || echo transcriptome)"
 ## returns true if file exists, is non-empty, and has more than a header line
 has_data() { [ -s "$1" ] && [ "$(wc -l < "$1")" -gt 1 ]; }
 
+## Has THIS gene set actually been LOADED into the organism database?
+##
+## "Built" and "loaded" are different questions and only the second one matters.
+## features.tsv existing proves the parser ran; it says nothing about whether the load
+## that follows it succeeded. When a load failed, features.tsv was still sitting there,
+## so "has_data features.tsv" was satisfied and every future run skipped the gene set
+## -- permanently, and silently. It never retried and nothing reported it.
+##
+## This is the most likely explanation for Schmidtea_mediterranea shipping 1 of its 5
+## active gene sets while all five assembly directories copied to the web server
+## normally. Checking the RESULT rather than the inputs is the same move check_status.sh
+## made in 04f89b7.
+geneset_loaded() {
+  local db="$DATA/$THIS_ORG/organism.sqlite"
+  [ -s "$db" ] || return 1
+  local n
+  n=$(sqlite3 -readonly "$db" \
+        "SELECT COUNT(*) FROM feature f
+           JOIN gene_set gs ON gs.gene_set_id = f.gene_set_id
+          WHERE gs.gene_set_name = '${GENE_SET//\'/\'\'}';" 2>/dev/null)
+  [ "${n:-0}" -gt 0 ]
+}
+
 infer_source() {
   case "$1" in
     GCF_*) echo "RefSeq"  ;;
@@ -502,6 +525,14 @@ if $HAS_GFF; then
       || { rm -f features.tsv.tmp; echo "ERROR: failed to build features.tsv"; exit 1; }
   fi
 
+  ## Load if anything was rebuilt above, OR if this gene set simply is not in the
+  ## database -- see geneset_loaded(). Without the second test a failed load is never
+  ## retried, because its features.tsv survives to satisfy the gate above.
+  if ! geneset_loaded; then
+    $REBUILD || echo "NOTE: features.tsv exists but '$GENE_SET' has no rows in organism.sqlite — loading it"
+    REBUILD=true
+  fi
+
   if $REBUILD; then
     sh "$SCRIPTS/setup_new_moopdb_and_load_data.sh" "$THIS_ORG" "$GENE_SET" "$DATA/$THIS_ORG"
 
@@ -622,6 +653,14 @@ else
       "$GENESET_DIR/protein2gene.txt" "$GENESET_DIR/cds2gene.txt" > features.tsv.tmp \
       && mv features.tsv.tmp features.tsv \
       || { rm -f features.tsv.tmp; echo "ERROR: failed to build features.tsv"; exit 1; }
+  fi
+
+  ## Load if anything was rebuilt above, OR if this gene set simply is not in the
+  ## database -- see geneset_loaded(). Without the second test a failed load is never
+  ## retried, because its features.tsv survives to satisfy the gate above.
+  if ! geneset_loaded; then
+    $REBUILD || echo "NOTE: features.tsv exists but '$GENE_SET' has no rows in organism.sqlite — loading it"
+    REBUILD=true
   fi
 
   if $REBUILD; then
