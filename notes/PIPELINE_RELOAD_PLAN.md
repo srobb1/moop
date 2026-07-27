@@ -9,6 +9,31 @@ All work is committed and **pushed** — 10 commits, `d250421`..`3566673`.
 
 ---
 
+## Status, 2026-07-27
+
+**All CODE work is complete and committed.** What remains is running it.
+
+| | state |
+|---|---|
+| Loader / parser / schema fixes | ✅ done, `d250421`..`3566673` |
+| Web-side cycle guards (4 walks, not 2) | ✅ done, `8ef74d4` |
+| Gene loader exits non-zero on a bad hierarchy | ✅ done, `54dad13` |
+| `--reload`, and the task-list race | ✅ done, `a6f7a2d` |
+| **Unit of work: gene set → ORGANISM** | ✅ done, `205f817` |
+| **The reload itself, on compute** | ⬜ **NOT RUN** |
+| Repairing the 85 live databases | ⬜ blocked on the reload |
+
+The restructure means step 5 below is a single `--reload` run, and a later
+gene-set-level fix is a narrowed re-run that leaves its siblings alone. Nothing in
+this document still asks you to write code — sections 2 and 3 are the run plan and
+the open non-code items.
+
+The pipeline changes are **untested against real data** — this webserver has no SLURM,
+no genomes tree and no DBI. The orchestration was tested with stubs. Prove it on one
+organism (step 4) before the full run.
+
+---
+
 ## 1. Why a reload is needed at all
 
 `parent_feature_id` never held a real SQL NULL in any of the 85 databases, so **nothing
