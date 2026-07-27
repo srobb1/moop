@@ -13,4 +13,16 @@ data/
 # scanning GENOMES/*/*/*/metadata.yaml for "active: true". Tracking it means every
 # run shows a spurious diff, and a run against a wrong or unmounted GENOMES path
 # silently empties the tracked copy.
+#
+# Nothing READS this any more -- it is a human-readable snapshot of "what is active
+# right now". The SLURM array indexes into runs/genesets.<id>.tsv instead, so that a
+# status check (or a second submission) cannot renumber a running array's task list.
 active_genesets.tsv
+
+# Per-run frozen copies of the task list, one per submission. Kept after the run so a
+# finished array can still be matched to exactly the genesets it was given.
+runs/
+
+# check_status.sh's own listing. Separate from the above on purpose: it used to share
+# active_genesets.tsv with run_all_v2.sh and truncated it out from under live jobs.
+status_genesets.tsv

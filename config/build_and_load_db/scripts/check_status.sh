@@ -33,25 +33,29 @@
 
 REPO=$(realpath "$(dirname "${BASH_SOURCE[0]}")/..")
 DATA="$REPO/data"
-GENOMES=/n/sci/SCI-004223-SBGENOMES/genomes_v2
+# Ask list_active_genesets.sh where the genomes tree is rather than repeating the
+# literal -- it owns that default, and it honours a GENOMES override from the
+# environment. Exported so the listing call below reads the same tree this script
+# then checks against.
+GENOMES=$(bash "$REPO/scripts/list_active_genesets.sh" --genomes-dir)
+export GENOMES
 ANNOTATIONS=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/annotations/SBGENOMES_2026-05-21
 REMOTE=moop
 REMOTE_BASE=/var/www/html/moop/organisms
 
-## Check every *active* geneset (same detection as run_all_v2.sh):
-## GENOMES/<organism>/<assembly>/<geneset>/metadata.yaml exists and contains "active: true".
-GENESETS="$REPO/active_genesets.tsv"
+## Check every *active* geneset, using the SAME definition of "active" as
+## run_all_v2.sh -- one shared script rather than a second copy of the loop, which is
+## how the two definitions drift.
+##
+## Note the private output path. This script used to write $REPO/active_genesets.tsv,
+## which is where run_all_v2.sh ALSO wrote the list its SLURM array indexes into by
+## line number. Running a status check to see how a reload was going therefore
+## truncated and rewrote the task list of the run being checked. It writes its own
+## file now, and list_active_genesets.sh writes no file at all, so a status check can
+## never disturb a run in flight.
+GENESETS="$REPO/status_genesets.tsv"
 
-> "$GENESETS"
-for META in "$GENOMES"/*/*/*/metadata.yaml; do
-  [ -f "$META" ] || continue
-  grep -qiE '^active:[[:space:]]*true[[:space:]]*$' "$META" || continue
-  GENESET_DIR=$(dirname "$META")
-  GENE_SET=$(basename "$GENESET_DIR")
-  ASSEMBLY=$(basename "$(dirname "$GENESET_DIR")")
-  THIS_ORG=$(basename "$(dirname "$(dirname "$GENESET_DIR")")")
-  printf '%s\t%s\t%s\n' "$THIS_ORG" "$ASSEMBLY" "$GENE_SET" >> "$GENESETS"
-done
+bash "$REPO/scripts/list_active_genesets.sh" > "$GENESETS" || exit 1
 
 output_lines=()
 log() {

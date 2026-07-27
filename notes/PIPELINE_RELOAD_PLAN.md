@@ -84,10 +84,30 @@ reporting success. A load that attaches no annotations is a failed load.
 ### Step 5 — full run, then verify
 
 ```sh
-bash run_all_v2.sh                 # or --no-copy to build without the rsync
+bash run_all_v2.sh --force         # add --no-copy to build without the rsync
 bash scripts/check_status.sh > status.after.log
 diff status.before.log status.after.log
 ```
+
+**`--force` is required here, and it was added on 2026-07-27 because this step did not
+work as written.** Every build step is gated on its own output already existing
+(`has_data features.tsv || REBUILD=true`), so a plain `bash run_all_v2.sh` over the
+existing tree would have rebuilt nothing and reloaded nothing — it would have re-copied
+the same broken databases and reported success. `--force` bypasses those gates *and*
+drops each `organism.sqlite` so it is recreated from the current schema, which is the
+only way the new constraints can apply: `UNIQUE`, `NOT NULL` and a corrected
+`FOREIGN KEY` cannot be added to an existing SQLite file.
+
+The drop is coordinated per organism by `MOOP_RELOAD_TOKEN`, so an organism's second
+and third gene sets load alongside the first rather than each deleting the last one's
+work. See the README section "Incremental runs vs. a reload".
+
+Checking progress mid-run is now safe. `check_status.sh` used to rewrite
+`active_genesets.tsv`, which was also the file the running SLURM array indexed into by
+line number — so looking at how the reload was going could renumber the task list
+underneath the still-queued tasks. The array now reads a frozen per-run snapshot under
+`runs/`, and both scripts get their listing from `scripts/list_active_genesets.sh`,
+which writes no file at all.
 
 `BAD_PARENTS`, `ID_MISMATCH`, `NO_FEATURES` and `ORPHAN_ANNOT` should all be gone. If any
 remain, the tag names the exact failure.

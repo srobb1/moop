@@ -57,10 +57,61 @@ When this invariant breaks, **nothing errors** — sequence retrieval simply ret
 nothing. Verify with `scripts/check_sequence_id_match.sh`, and note that the renamers
 now exit non-zero when any record fails to match.
 
+## Incremental runs vs. a reload — `--force`
+
+Every build step is gated on its own output already existing (`has_data features.tsv
+|| REBUILD=true`, and so on). That makes a re-run cheap when you are adding one new
+gene set to an otherwise current tree — which is the common case.
+
+It also means **a plain re-run over a fully built tree rebuilds nothing and reloads
+nothing.** It cannot pick up a fixed parser or a fixed loader, because it never re-runs
+them. Use `--force` for that:
+
+```sh
+bash run_all_v2.sh              # incremental: only what is missing
+bash run_all_v2.sh --force      # regenerate intermediates AND reload every database
+bash run_all_v2.sh --force --no-copy
+```
+
+`--force` does two distinct things:
+
+1. Sets `REBUILD=true` up front, so `isoforms.tsv`, `geneNames.tsv` and `features.tsv`
+   are regenerated from source instead of reused.
+2. **Drops each `organism.sqlite`** so it is recreated from `create_schema_sqlite.sql`.
+   This part is not optional: constraints (`UNIQUE`, `NOT NULL`, a corrected
+   `FOREIGN KEY`) cannot be added to an existing SQLite file, so loading into a
+   surviving database silently keeps the OLD schema while reporting success.
+
+The database is per **organism** but jobs run per **gene set**, so the drop is
+coordinated by `MOOP_RELOAD_TOKEN`: the first gene set to reach an organism with a new
+token drops the database and records the token; that organism's other gene sets see
+their own token already recorded and load alongside. It happens inside the `flock`
+`setup_new_moopdb_and_load_data.sh` already holds, so concurrent array tasks cannot
+both decide they are first.
+
+For a single organism by hand:
+
+```sh
+FORCE_RELOAD=1 sbatch scripts/moop_process_genome_data_v2.sbatch Organism Assembly GeneSet
+```
+
+`MOOP_RELOAD_TOKEN` defaults to the SLURM job id there, which is what you want.
+
+**Not touched by `--force`:** `genome.json` and `geneset.json`, including the
+`date_added` they carry. Those are site metadata, not derived data. `organism.json`
+*is* regenerated, because the rebuild path has always done that.
+
 ## Components
 
 - `run_all_v2.sh` — top-level driver
-- `active_genesets.tsv` — organism / assembly / gene set list the driver iterates
+- `scripts/list_active_genesets.sh` — **the** definition of "which genesets are
+  active". `run_all_v2.sh` and `scripts/check_status.sh` both call it; it prints to
+  stdout and writes no file, so it cannot disturb a run in flight
+- `active_genesets.tsv` — human-readable snapshot of what was active at the last
+  submission. **Nothing reads it.** The SLURM array indexes into a frozen per-run copy
+  under `runs/`, because a task finds its work by line number and the list therefore
+  has to stay byte-identical for the whole life of the array — which a status check
+  rewriting the same path used to break
 - `scripts/moop_process_genome_data_v2.sbatch` — main SLURM job; processes one organism
 - `scripts/setup_new_moopdb_and_load_data.sh` — creates the SQLite DB and loads a gene
   set plus its annotations. Gates annotation loading on features actually existing.

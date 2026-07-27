@@ -57,6 +57,39 @@ fi
 exec 200>"$LOCKFILE"
 flock -x 200
 
+## ── Forced reload: drop the database ONCE per organism per run ────────────────
+##
+## Needed because a schema is not editable in place. UNIQUE constraints, NOT NULL,
+## and a corrected FOREIGN KEY cannot be added to an existing SQLite file, so loading
+## into a surviving database keeps the OLD schema while every command reports success
+## -- the reload looks like it worked and none of the new guarantees are there.
+##
+## The database is per ORGANISM but this script runs per GENE SET, so an unconditional
+## "rm" would have gene set B delete what gene set A just loaded. MOOP_RELOAD_TOKEN
+## identifies one reload run: the first gene set to arrive with a new token drops the
+## database and records the token; the rest of that organism's gene sets see their own
+## token already recorded and load alongside. This runs INSIDE the flock above, so two
+## concurrent array tasks for one organism cannot both decide they are first.
+RELOAD_MARKER="$ORG_DATA_DIR/.reload_token"
+
+if [ "${FORCE_RELOAD:-0}" = "1" ]; then
+    token=${MOOP_RELOAD_TOKEN:-}
+    if [ -z "$token" ]; then
+        echo "ERROR: FORCE_RELOAD=1 but MOOP_RELOAD_TOKEN is empty." >&2
+        echo "       Without a token every gene set would delete the previous one's work." >&2
+        exit 1
+    fi
+
+    if [ "$(cat "$RELOAD_MARKER" 2>/dev/null)" = "$token" ]; then
+        echo "Reload $token already dropped $DB (earlier gene set of this organism); appending."
+    else
+        echo "Reload $token: dropping $DB so it is recreated from the current schema"
+        # -wal/-shm only exist if something opened the DB in WAL mode; harmless if absent.
+        rm -f "$DB" "$DB-wal" "$DB-shm" "$ORG_DATA_DIR/annotation_sources_cache.json"
+        printf '%s\n' "$token" > "$RELOAD_MARKER"
+    fi
+fi
+
 if [ ! -e "$DB" ]; then
   echo "Creating schema: $DB"
   sqlite3 "$DB" < "$SCRIPT_DIR/create_schema_sqlite.sql"

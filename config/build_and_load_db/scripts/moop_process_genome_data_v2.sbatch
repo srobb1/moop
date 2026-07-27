@@ -39,6 +39,20 @@ fi
 [ -n "$THIS_ORG" ] && [ -n "$ASSEMBLY" ] && [ -n "$GENE_SET" ] \
   || { echo "Usage: $0 <organism> <assembly> <gene_set>  (or run as array job)"; exit 1; }
 
+## Force a full rebuild + reload, ignoring the "output already exists" gates below.
+##
+## Set by run_all_v2.sh --force. Also settable by hand for a single job:
+##     FORCE_RELOAD=1 sbatch scripts/moop_process_genome_data_v2.sbatch Org Asm GeneSet
+##
+## MOOP_RELOAD_TOKEN identifies ONE reload run. setup_new_moopdb_and_load_data.sh
+## drops organism.sqlite only for the first geneset of an organism to present a given
+## token, so the other genesets of that organism load into the fresh database instead
+## of each deleting the last one's work. Defaulting it to the job id keeps a hand-run
+## single job correct too.
+FORCE_RELOAD=${FORCE_RELOAD:-0}
+MOOP_RELOAD_TOKEN=${MOOP_RELOAD_TOKEN:-${SLURM_ARRAY_JOB_ID:-${SLURM_JOB_ID:-manual-$(date +%s)}}}
+export FORCE_RELOAD MOOP_RELOAD_TOKEN
+
 SCRIPTS=$REPO/scripts
 DATA=$REPO/data
 
@@ -424,7 +438,12 @@ if $HAS_GFF; then
 
   check_missing_files_gff
 
+  # --force (FORCE_RELOAD=1) starts this true, so every 'has_data X || REBUILD=true'
+  # gate below is bypassed and X is regenerated from source. That is the whole point
+  # of a reload: picking up a fixed parser means rebuilding features.tsv, not reusing
+  # the one the OLD parser wrote.
   REBUILD=false
+  [ "$FORCE_RELOAD" = "1" ] && REBUILD=true
 
   has_data isoforms.tsv || REBUILD=true
   if $REBUILD; then
@@ -552,7 +571,12 @@ else
 
   check_missing_files_t2g
 
+  # --force (FORCE_RELOAD=1) starts this true, so every 'has_data X || REBUILD=true'
+  # gate below is bypassed and X is regenerated from source. That is the whole point
+  # of a reload: picking up a fixed parser means rebuilding features.tsv, not reusing
+  # the one the OLD parser wrote.
   REBUILD=false
+  [ "$FORCE_RELOAD" = "1" ] && REBUILD=true
 
   has_data isoforms.tsv || REBUILD=true
   if $REBUILD; then
