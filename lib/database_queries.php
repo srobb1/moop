@@ -488,13 +488,30 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
         foreach ($source_names as $s) { $params[] = $s; }
     }
 
-    // Named genes first (hard tier); then bm25 relevance weighting name:10, feature_desc:5,
-    // annotation_desc:2, annotation_accession:3; then a stable id tiebreak. bm25 must stay
-    // in ORDER BY only (it errors if projected as a column or wrapped in an aggregate).
+    // Named genes first (hard tier); then rows that literally contain the term; then bm25
+    // relevance weighting name:10, feature_desc:5, annotation_desc:2, annotation_accession:3;
+    // then a stable id tiebreak. bm25 must stay in ORDER BY only (it errors if projected as
+    // a column or wrapped in an aggregate).
+    //
+    // The literal tier exists because the porter tokenizer stems the QUERY term as well as
+    // the indexed text, and we append '*' to every term, so a stemmed query then
+    // prefix-matches far more than the user typed. Measured on Nematostella: "transpos"
+    // matches 79,142 rows though only 4,028 contain that string -- it stems toward
+    // "transpo" and reaches TRANSPORT. Those stem-only rows were OUTRANKING the real hits,
+    // burying 3,893 of them below the result cap; the top 100 was 19% relevant.
+    //
+    // Sorting literal matches above stem-only ones makes that top 100 100% relevant while
+    // keeping the stem matches as a harmless tail. Deliberately NOT fixed by changing the
+    // tokenizer: 'unicode61' (no stemming) would destroy plural search, which is constant
+    // in this domain -- "proteins" 716,560 -> 38,658 rows, "transposons" 3,082 -> 1.
+    // Costs nothing measurable (cold 1516 vs 1524 ms, warm 47 vs 44 ms).
     $sql .= " ORDER BY name_match DESC,
+                       (a.annotation_description LIKE ?) DESC,
                        bm25(feature_annotation_search, 10.0, 5.0, 2.0, 3.0),
                        f.feature_uniquename
               LIMIT " . moop_search_query_limit();
+    $params[] = $name_like;   // must be appended LAST: this placeholder follows every
+                              // scope/source filter added to the WHERE clause above.
 
     return runFtsSearch($dbFile, $sql, $params);
 }
