@@ -118,9 +118,16 @@ class AnnotationSearch {
             note = $('<div class="search-org-note text-muted small mt-2"></div>');
             form.after(note);
         }
-        const n = this.config.totalVar;
+        // Count organisms the scope filter actually leaves, not the checkbox total --
+        // scoping to one gene set announced "across 49 organisms" while querying one.
+        const n = this.organismsInScope().length;
+        const selected = this.config.totalVar;
         if (n > 1) {
             note.html(`Searching across <strong>${n}</strong> organism${n !== 1 ? 's' : ''}. <a href="#organismsSection">Select or deselect</a> to customize.`);
+        } else if (n === 1 && selected > 1) {
+            // Narrowed by the scope filter rather than by the organism list; saying nothing
+            // here would read as "the filter did nothing".
+            note.html(`Searching <strong>1</strong> organism (narrowed by the scope filter). <a href="#organismsSection">Select or deselect</a> to customize.`);
         } else {
             note.html('');
         }
@@ -238,6 +245,7 @@ class AnnotationSearch {
             onApply: (selectedScope) => {
                 this.selectedScope = selectedScope;
                 this.updateScopeButtonState();
+                this.updateOrganismNote();   // the note counts scoped organisms now
             }
         });
         filter.show();
@@ -246,19 +254,30 @@ class AnnotationSearch {
     clearScope() {
         this.selectedScope = null;
         this.updateScopeButtonState();
+        this.updateOrganismNote();   // back to the full organism count
     }
 
-    countExcludedGeneSets() {
-        if (!this.selectedScope) return 0;
-        let excluded = 0;
+    /**
+     * Gene sets currently in scope, as {included, total}.
+     *
+     * The badge deliberately reports INCLUDED, not excluded. Counting exclusions is
+     * correct arithmetic but answers the wrong question: selecting 1 of 49 gene sets
+     * produced a badge reading "48", and unticking a single gene set produced "1",
+     * which looks like "1 selected" and means the opposite. Showing included/total
+     * is unambiguous in both directions.
+     */
+    countScopedGeneSets() {
+        if (!this.selectedScope) return { included: 0, total: 0 };
+        let included = 0, total = 0;
         for (const org in this.selectedScope) {
             for (const accession in this.selectedScope[org]) {
                 for (const gs in this.selectedScope[org][accession]) {
-                    if (!this.selectedScope[org][accession][gs]) excluded++;
+                    total++;
+                    if (this.selectedScope[org][accession][gs]) included++;
                 }
             }
         }
-        return excluded;
+        return { included, total };
     }
 
     updateScopeButtonState() {
@@ -267,16 +286,34 @@ class AnnotationSearch {
         const clearBtn = form.find('.btn-clear-scope');
         if (!scopeBtn.length) return;
 
-        const excluded = this.countExcludedGeneSets();
-        if (excluded > 0) {
+        const { included, total } = this.countScopedGeneSets();
+        // "Filtered" means something is excluded. Everything-selected is the same as no
+        // filter at all, so the button stays in its resting state rather than claiming
+        // 49/49 is a filter.
+        if (total > 0 && included < total) {
             scopeBtn.removeClass('btn-outline-secondary').addClass('btn-primary');
-            scopeBtn.html(`<i class="fa fa-sitemap"></i><span class="badge badge-filter">${excluded}</span>`);
+            // Badge is tiny -- the bare number only. The "of N" lives in the tooltip.
+            scopeBtn.attr('title', `Scope Filter — searching ${included} of ${total} gene sets`);
+            scopeBtn.html(`<i class="fa fa-sitemap"></i><span class="badge badge-filter">${included}</span>`);
             clearBtn.show();
         } else {
             scopeBtn.removeClass('btn-primary').addClass('btn-outline-secondary');
+            scopeBtn.attr('title', 'Scope Filter (Organisms / Assemblies / Gene Sets)');
             scopeBtn.html('<i class="fa fa-sitemap"></i>');
             clearBtn.hide();
         }
+    }
+
+    /**
+     * The organisms a search will actually query, after the scope filter.
+     * getScopePairsForOrganism() returns [] for an organism scoped out entirely, and
+     * null when there is no filter at all.
+     */
+    organismsInScope() {
+        return (this.config.organismsVar || []).filter(org => {
+            const pairs = this.getScopePairsForOrganism(org);
+            return !(pairs !== null && pairs.length === 0);
+        });
     }
 
     /**
@@ -321,9 +358,12 @@ class AnnotationSearch {
         // guard keys on totalVar, which is 1 on the single-organism pages, so it only ever
         // fires on the multi pages (groups / multi-organism / taxonomy). Confirmed once per
         // page, so a user who accepts the cost is not nagged on every subsequent search.
+        // Count what will really be queried. Scoping down to a single gene set still
+        // prompted "search 48 organisms?" while 47 of them were about to be skipped.
         const LARGE_SEARCH = 15;
-        if (this.config.totalVar >= LARGE_SEARCH && !this._largeSearchConfirmed) {
-            this.confirmLargeSearch(this.config.totalVar, () => {
+        const scopedCount = this.organismsInScope().length;
+        if (scopedCount >= LARGE_SEARCH && !this._largeSearchConfirmed) {
+            this.confirmLargeSearch(scopedCount, () => {
                 this._largeSearchConfirmed = true;
                 this.handleSearch();
             });
@@ -399,8 +439,13 @@ class AnnotationSearch {
      * Search all organisms in parallel with a concurrency limit of 5.
      */
     searchAllOrganisms(keywords, quotedSearch) {
-        const total = this.config.totalVar;
-        const organisms = this.config.organismsVar;
+        // Organisms the scope filter leaves something to search. Everything the user is
+        // told -- the confirm prompt, this progress bar, the note under the form -- counts
+        // THESE, not the organism checkboxes. Scoping down to one gene set used to still
+        // announce "48 organisms" and count 48 steps of progress, 47 of which completed
+        // instantly, because the counts read config.totalVar and ignored the scope filter.
+        const organisms = this.organismsInScope();
+        const total = organisms.length;
         let nextIndex = 0;
         let completed = 0;
 
@@ -409,20 +454,9 @@ class AnnotationSearch {
             const index = nextIndex++;
             const organism = organisms[index];
 
-            // Check scope filter — skip organism if entirely excluded
+            // Non-null with entries, or null for "no filter" — organisms scoped out
+            // entirely are already gone, filtered by organismsInScope() above.
             const scopePairs = this.getScopePairsForOrganism(organism);
-            if (scopePairs !== null && scopePairs.length === 0) {
-                completed++;
-                const progress = Math.round((completed / total) * 100);
-                $('#progressFill').css('width', progress + '%').text(progress + '%');
-                $('#progressText').html(`Searching... (${completed}/${total} complete)`);
-                if (completed >= total) {
-                    this.finishSearch();
-                } else {
-                    launchNext();
-                }
-                return;
-            }
 
             const ajaxData = {
                 search_keywords: keywords,
