@@ -92,10 +92,29 @@ echo help_modal(
                     'html'  => true,
                 ],
                 [
-                    'label' => 'Short words are skipped',
-                    'text'  => 'Terms under three characters are ignored, so <code>P53 tumor</code> '
-                             . 'searches only for <em>tumor</em>. Quote it — <code>"P53"</code> — '
-                             . 'to search it anyway.',
+                    // Replaces a "short words are skipped" card that described behaviour the
+                    // code never had: every word is searched, including numbers, and that is
+                    // wanted -- "histone deacetylase 1" ranks HDAC1 first, while dropping the
+                    // "1" ranks HDAC8 first. The three-character minimum is on the whole box.
+                    'label' => 'Numbers count',
+                    'text'  => 'Every word you type must match, numbers included. '
+                             . '<code>histone deacetylase 1</code> finds <em>HDAC1</em>, where '
+                             . 'leaving off the <code>1</code> returns the whole family.',
+                    'html'  => true,
+                ],
+                [
+                    'label' => 'Word endings are handled',
+                    'text'  => 'Searching <code>kinases</code> also finds <em>kinase</em>, and '
+                             . '<code>regulated</code> finds <em>regulate</em>. Because of this a '
+                             . 'shortened word can reach further than you expect — '
+                             . '<code>transpos</code> also matches <em>transport</em>. Records '
+                             . 'containing exactly what you typed are listed first.',
+                    'html'  => true,
+                ],
+                [
+                    'label' => 'Matching starts at the beginning of a word',
+                    'text'  => '<code>transpos</code> finds <em>transposase</em>, but nothing '
+                             . 'finds <em>retrotransposase</em> from the middle of the word.',
                     'html'  => true,
                 ],
             ],

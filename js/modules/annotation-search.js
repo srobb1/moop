@@ -375,18 +375,18 @@ class AnnotationSearch {
         let searchExplanation = '';
 
         if (!quotedSearch) {
-            const terms = keywords.trim().split(/\s+/).filter(t => t.length >= 3);
-            const shortTerms = keywords.trim().split(/\s+/).filter(t => t.length < 3);
-
+            // EVERY term is searched, including short ones. This used to split the terms
+            // and announce that anything under three characters had been "ignored" -- it
+            // never was, the unsplit string always went to the server, and it should not
+            // be: in this domain the short token is usually a gene number and the most
+            // specific thing the user typed. "histone deacetylase 1" ranks HDAC1 first;
+            // dropping the "1" ranks HDAC8 first. The 3-character minimum applies to the
+            // whole query (see the length guard above), not to individual words.
+            const terms = keywords.trim().split(/\s+/).filter(t => t.length > 0);
             const boldTerms = terms.map(t => `<strong>${t}</strong>`).join(', ');
 
-            if (shortTerms.length > 0) {
-                searchExplanation = `<br><small class="text-muted">Searching with: ${boldTerms} (terms with fewer than 3 characters like "${shortTerms.join('", "')}" are ignored)</small>`;
-            } else if (terms.length > 1) {
-                searchExplanation = `<br><small class="text-muted">Searching with: ${boldTerms}</small>`;
-            }
-
-            if (quotedSearch === false && terms.length > 1) {
+            if (terms.length > 1) {
+                searchExplanation = `<br><small class="text-muted">Searching with: ${boldTerms} — a record must contain all of them.</small>`;
                 searchExplanation += `<br><small class="text-muted">Tip: Use quotes like <code>"exact phrase"</code> to search for exact phrase instead of individual terms.</small>`;
             }
         }
