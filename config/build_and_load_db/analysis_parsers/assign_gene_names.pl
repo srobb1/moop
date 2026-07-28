@@ -78,6 +78,22 @@ foreach my $annotation_file (@annotation_files){
     # infiles should be sorted by score
     my $group_id = $all_ids{$id};
 
+    # Annotation ids name a PROTEIN; isoforms.tsv lists TRANSCRIPTS.
+    #
+    # On the GFF path isoforms.tsv is built from genes.gff, so it holds transcript
+    # ids (bkew...._0_1.1) while the homolog and domain files carry the ORF ids the
+    # analysis ran on (bkew...._0_1.1.p2). Every lookup then missed and every line
+    # was skipped, so geneNames.tsv came out as a 28-byte header with no rows and
+    # nothing in the gene set got a name or description.
+    #
+    # Strip a trailing ".p<N>" ORF marker and try again -- the same resolution
+    # parse_transcript2gene_to_MOOP_TSV.pl::resolve_parent and the annotation
+    # loader already use, so all three agree on what a protein id means.
+    if (!defined $group_id && $id =~ /\.p\d+$/i) {
+        (my $base = $id) =~ s/\.p\d+$//i;
+        $group_id = $all_ids{$base};
+    }
+
     # An annotation whose id is not a transcript of THIS gene set has no gene to
     # name. That is a NORMAL condition, not an error: the analysis runs on every
     # ORF of every isoform, while the gene set keeps one ORF per gene
