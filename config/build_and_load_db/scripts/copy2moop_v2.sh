@@ -11,7 +11,7 @@ LOGFILE=$REPO/copy2moop_$(date +%Y%m%d).log
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S')  $*" | tee -a "$LOGFILE"; }
 
-GENOMES=/n/sci/SCI-004223-SBGENOMES/genomes_v2
+source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
 GENOME_DIR=$GENOMES/$THIS_ORG/$ASSEMBLY
 ORG_DATA=$DATA/$THIS_ORG
 ASSEMBLY_DATA=$ORG_DATA/$ASSEMBLY

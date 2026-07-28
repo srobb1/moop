@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-## Generates a stop-codon-clean protein FASTA for one genomes_v2 gene-set, for
+## Generates a stop-codon-clean protein FASTA for one genomes/v2 gene-set, for
 ## use as the DIAMOND / InterProScan query. Both tools choke on raw Mender
 ## output, which can contain internal '.' stop-codon markers (e.g. see
 ## CCA3t005136001.1 in Chamaeleo_calyptratus/CCA3/MENDER_20260701 — DIAMOND
@@ -23,10 +23,11 @@ set -euo pipefail
 ORG=${1:-}; ASSEMBLY=${2:-}; GENESET=${3:-}
 [ -n "$GENESET" ] || { echo "Usage: $0 <organism> <assembly> <geneset>" >&2; exit 1; }
 
+source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
 BASE=/n/sci/SCI-004223-SBGENOMES
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-RAW_FASTA=$BASE/genomes_v2/$ORG/$ASSEMBLY/$GENESET/protein.aa.fa
+RAW_FASTA=$GENOMES/$ORG/$ASSEMBLY/$GENESET/protein.aa.fa
 [ -s "$RAW_FASTA" ] || { echo "ERROR: missing $RAW_FASTA" >&2; exit 1; }
 
 CLEAN_DIR=/scratch/$USER/tmp/clean_fasta/$ORG/$ASSEMBLY/$GENESET

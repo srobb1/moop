@@ -7,7 +7,7 @@
 #SBATCH --output=/n/sci/SCI-004223-SBGENOMES/slurm_logs/diamond/%x_%j.out
 #SBATCH --error=/n/sci/SCI-004223-SBGENOMES/slurm_logs/diamond/%x_%j.err
 #
-# DIAMOND blastp vs UniProt Swiss-Prot for one genomes_v2 gene-set. Writes
+# DIAMOND blastp vs UniProt Swiss-Prot for one genomes/v2 gene-set. Writes
 # straight into the ANNOTATIONS/<run>/<org>/<assembly>/<geneset>/ layout that
 # moop_process_genome_data_v2.sbatch expects (diamond_blast/UNIPROT_sprot/tophit.tsv.gz),
 # instead of the old species-keyed genomes/<species>/current/ layout that
@@ -25,13 +25,18 @@ set -euo pipefail
 ORG=$1; ASSEMBLY=$2; GENESET=$3
 [ -n "$GENESET" ] || { echo "Usage: $0 <organism> <assembly> <geneset>"; exit 1; }
 
+# GENOMES and ANNOTATIONS from the single definition, so this writes where the build
+# will later look for it. Writing to a stale tree is silent: the build reports
+# MISS_DIAMOND and there is nothing to say the results went somewhere else.
+source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
+
 BASE=/n/sci/SCI-004223-SBGENOMES
-QUERY=${QUERY_FASTA:-$BASE/genomes_v2/$ORG/$ASSEMBLY/$GENESET/protein.aa.fa}
+QUERY=${QUERY_FASTA:-$GENOMES/$ORG/$ASSEMBLY/$GENESET/protein.aa.fa}
 DB=$BASE/db/UNIPROT_sprot/current/peptide
 
 [ -s "$QUERY" ] || { echo "ERROR: missing $QUERY"; exit 1; }
 
-ANNOTATIONS_DIR=${ANNOTATIONS_DIR:-$BASE/dev/smr_dev/moop/annotations/SBGENOMES_2026-05-21}
+ANNOTATIONS_DIR=${ANNOTATIONS_DIR:-$ANNOTATIONS}
 OUT_DIR=$ANNOTATIONS_DIR/$ORG/$ASSEMBLY/$GENESET/diamond_blast/UNIPROT_sprot
 mkdir -p "$OUT_DIR"
 OUT_FILE=$OUT_DIR/tophit.tsv

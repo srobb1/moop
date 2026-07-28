@@ -10,7 +10,7 @@ SCRIPTS="$REPO/scripts"
 
 ## Copy every *active* organism/assembly/geneset (same detection as run_all_v2.sh):
 ## GENOMES/<organism>/<assembly>/<geneset>/metadata.yaml exists and contains "active: true".
-GENOMES=/n/sci/SCI-004223-SBGENOMES/genomes_v2
+source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
 GENESETS_FILE="$REPO/active_genesets.tsv"
 
 > "$GENESETS_FILE"

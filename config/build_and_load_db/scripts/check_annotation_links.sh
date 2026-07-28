@@ -17,10 +17,9 @@
 set -uo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 
-# Same default as check_status.sh / process_one_geneset.sh, but overridable here so a
-# moved tree can be tested without editing code. Those two hardcode it; see the note
-# printed at the end.
-ANNOTATIONS=${ANNOTATIONS:-/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/annotations/SBGENOMES_2026-05-21}
+# GENOMES and ANNOTATIONS come from the single definition, so this checks exactly the
+# tree the build will read. Override either in the environment to test a moved tree.
+source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
 
 REPAIR=0; DO_IT=0; OLD=""; NEW=""
 while [ $# -gt 0 ]; do
@@ -115,8 +114,7 @@ if [ "$REPAIR" = "1" ]; then
 fi
 
 echo ""
-echo "NOTE: ANNOTATIONS is hardcoded in scripts/check_status.sh and"
-echo "      scripts/process_one_geneset.sh, and carries a DATE. When the analysis"
-echo "      tree is regenerated under a new name, both must be edited or every"
-echo "      gene set silently reports MISS_*. Consider making it one overridable"
-echo "      value that both read."
+echo "NOTE: ANNOTATIONS carries a DATE and is defined in scripts/paths.sh. When the"
+echo "      analysis tree is regenerated under a new name, change it THERE, once --"
+echo "      every script reads that one value. Forgetting makes every gene set"
+echo "      report MISS_*, which looks identical to analysis that never ran."

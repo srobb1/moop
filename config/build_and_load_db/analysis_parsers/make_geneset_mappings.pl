@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 # make_geneset_mappings.pl
 #
-# For every geneset directory under genomes_v2:
+# For every geneset directory under genomes/v2:
 #   1. Generate genes.gtf from genes.gff via gffread (if GTF is absent)
 #   2. Generate transcript2gene.txt (if absent)
 #   3. Generate protein2gene.txt (if absent)
@@ -17,7 +17,7 @@
 # to a single organism/assembly/geneset instead of the whole tree.
 #
 # Options:
-#   --base-dir DIR         Root directory to scan (default: /n/sci/SCI-004223-SBGENOMES/genomes_v2)
+#   --base-dir DIR         Root directory to scan (default: /n/sci/SCI-004223-SBGENOMES/genomes/v2)
 #   --dry-run              Show what would be done without writing any files
 #   --force                Overwrite existing transcript2gene.txt / protein2gene.txt
 #   --skip-gtf             Do not generate GTF files
@@ -29,7 +29,7 @@ use strict;
 use warnings;
 use Getopt::Long;
 
-my $BASE_DIR            = '/n/sci/SCI-004223-SBGENOMES/genomes_v2';
+my $BASE_DIR            = $ENV{GENOMES} || '/n/sci/SCI-004223-SBGENOMES/genomes/v2';   # see scripts/paths.sh
 my $DRY_RUN             = 0;
 my $VERBOSE             = 0;
 my $FORCE               = 0;
@@ -48,7 +48,7 @@ GetOptions(
 ) or die usage();
 
 # Allow a bare positional path as shorthand for --base-dir, e.g.:
-#   perl make_geneset_mappings.pl /path/to/genomes_v2/SomeOrganism
+#   perl make_geneset_mappings.pl /path/to/genomes/v2/SomeOrganism
 if (@ARGV) {
     die usage() if @ARGV > 1;
     $BASE_DIR = shift @ARGV;
@@ -582,7 +582,7 @@ DIR is an optional positional shorthand for --base-dir (scope the run to
 one organism/assembly/geneset instead of the whole tree).
 
 Options:
-  --base-dir DIR    Root directory to scan [default: /n/sci/SCI-004223-SBGENOMES/genomes_v2]
+  --base-dir DIR    Root directory to scan [default: /n/sci/SCI-004223-SBGENOMES/genomes/v2]
   --dry-run         Show actions without writing files
   --force           Regenerate existing transcript2gene.txt / protein2gene.txt
   --skip-gtf        Do not generate GTF files

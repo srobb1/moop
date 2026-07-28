@@ -21,7 +21,7 @@
 
 set -uo pipefail
 
-GENOMES=${GENOMES:-/n/sci/SCI-004223-SBGENOMES/genomes_v2}
+source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
 
 # This script owns the default location of the genomes tree, so callers that need the
 # path for their own checks (check_status.sh does) can ask for it instead of keeping a

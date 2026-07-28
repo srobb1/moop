@@ -33,13 +33,12 @@
 
 REPO=$(realpath "$(dirname "${BASH_SOURCE[0]}")/..")
 DATA="$REPO/data"
-# Ask list_active_genesets.sh where the genomes tree is rather than repeating the
-# literal -- it owns that default, and it honours a GENOMES override from the
-# environment. Exported so the listing call below reads the same tree this script
-# then checks against.
-GENOMES=$(bash "$REPO/scripts/list_active_genesets.sh" --genomes-dir)
-export GENOMES
-ANNOTATIONS=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/annotations/SBGENOMES_2026-05-21
+# GENOMES and ANNOTATIONS both come from scripts/paths.sh, the single definition.
+# ANNOTATIONS matters here more than it looks: this script tests its inputs with -f,
+# so if it is empty or points at a stale tree, every gene set reports MISS_* and the
+# output is indistinguishable from analysis that was never run.
+source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
+
 REMOTE=moop
 REMOTE_BASE=/var/www/html/moop/organisms
 

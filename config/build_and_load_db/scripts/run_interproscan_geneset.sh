@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-## Submits the 100-task InterProScan array for one genomes_v2 gene-set,
+## Submits the 100-task InterProScan array for one genomes/v2 gene-set,
 ## blocks until it finishes (sbatch --wait), then combines/sorts the chunk
 ## results into the ANNOTATIONS layout moop_process_genome_data_v2.sbatch
 ## expects (interproscan/iprscan_results.tsv.gz).

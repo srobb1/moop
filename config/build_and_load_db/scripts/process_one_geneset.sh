@@ -33,8 +33,10 @@ REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 SCRIPTS=$REPO/scripts
 DATA=$REPO/data
 
-GENOMES=/n/sci/SCI-004223-SBGENOMES/genomes_v2
-ANNOTATIONS=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/annotations/SBGENOMES_2026-05-21
+## Overridable so a moved tree needs no code edit. It moved once already:
+## genomes_v2 -> genomes/v2, and this value was hardcoded in seven files.
+source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
+
 
 GENESET_DIR=$GENOMES/$THIS_ORG/$ASSEMBLY/$GENE_SET
 GENOME_DIR=$GENOMES/$THIS_ORG/$ASSEMBLY
