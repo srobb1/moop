@@ -85,7 +85,28 @@ while (my $line = <$in>) {
     $renamed++;
     my $rest = $header;
     $rest =~ s/^>\Q$id\E\s*//;
-    print $out ($rest eq '' ? ">$id$suffix\n" : ">$id$suffix $rest\n") unless $dry_run;
+
+    # Record the identifier this sequence had BEFORE we touched it.
+    #
+    # The suffix is MOOP's, added after the analysis ran and invisible to it, so the
+    # renamed id appears in no file the depositor produced and in nothing the user
+    # typed. Without this the original is simply gone from the FASTA -- and it is the
+    # id that BLAST hits are reported under, so users were shown "...p1:pep", which
+    # exists nowhere else in their data.
+    #
+    # Keeping it here also puts the fact and its cause in one place: this script
+    # performs the rename, so this script states what was renamed.
+    # load_annotations_sqlite.pl undoes the same rename on the lookup side.
+    #
+    # Format is a KEY=value token in the DESCRIPTION, never in the id, so BLAST,
+    # samtools faidx and every existing header parser are unaffected.
+    my $prefix = "ORG_ID=$id";
+    # Do not stack tokens if a header already carries one.
+    $prefix = '' if $rest =~ /(?:^|\s)ORG_ID=/;
+
+    my @parts = grep { $_ ne '' } ($prefix, $rest);
+    my $desc  = join ' ', @parts;
+    print $out ($desc eq '' ? ">$id$suffix\n" : ">$id$suffix $desc\n") unless $dry_run;
 }
 close $in;
 
