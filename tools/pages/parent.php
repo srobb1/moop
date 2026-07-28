@@ -219,7 +219,7 @@
                                 <?php if ($parent_annot_count > 0): ?>
                                     <span class="badge bg-success text-white badge-sm"><?= $parent_annot_count ?> annotation<?= $parent_annot_count > 1 ? 's' : '' ?></span>
                                 <?php endif; ?>
-                                <?= generateTreeHTML($feature_id, $db, $all_annotations, $analysis_order) ?>
+                                <?= generateTreeHTML($children_hierarchical, $all_annotations, $analysis_order) ?>
                             </li>
                         </ul>
                     </div>

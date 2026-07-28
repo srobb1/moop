@@ -187,11 +187,21 @@ function getChildrenHierarchical($feature_id, $dbFile, $gene_set_ids = []) {
     return _buildChildTree($feature_id, $by_parent);
 }
 
-function _buildChildTree($parent_id, array &$by_parent) {
+function _buildChildTree($parent_id, array &$by_parent, array $seen = []) {
+    // getChildren()'s CTE rejects a row that is its own parent, and caps depth, but a
+    // longer loop (A parents B, B parents A) still arrives here as two rows that point
+    // at each other -- and this walk would then recurse until PHP ran out of memory.
+    // Cheap insurance, and the loaders are known to have produced cyclic parentage.
+    if (isset($seen[$parent_id])) {
+        return [];
+    }
+    $seen[$parent_id] = true;
+
     $children = $by_parent[$parent_id] ?? [];
     foreach ($children as &$child) {
-        $child['grandchildren'] = _buildChildTree($child['feature_id'], $by_parent);
+        $child['grandchildren'] = _buildChildTree($child['feature_id'], $by_parent, $seen);
     }
+    unset($child);
     return $children;
 }
 
@@ -334,7 +344,7 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile, $gene_set_ids = [])
 
     $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_type,
               a.annotation_accession, a.annotation_description,
-              fa.score, fa.date,
+              fa.score, ans.annotation_date AS date,
               ans.annotation_source_name, ans.annotation_accession_url, ans.annotation_type
         FROM annotation a, feature f, feature_annotation fa, annotation_source ans, gene_set gs, genome g, organism o
         WHERE f.organism_id = o.organism_id
@@ -371,37 +381,33 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile, $gene_set_ids = [])
  * Generate tree-style HTML for feature hierarchy
  * Creates a hierarchical list with box-drawing characters (like Unix 'tree' command)
  *
- * Cycle-guarded, and it needs its own guard rather than inheriting getChildren()'s:
- * this function does NOT use a recursive CTE. It recurses in PHP, one query per node
- * (the N+1 pattern getChildren() was rewritten to replace — this one was left behind).
- * On a self-parented feature getChildrenByFeatureId() returns that feature as its own
- * child, so it recursed until PHP ran out of memory: a 500 on the gene page, at ~8s
- * and 2 GB, for every one of Schmidtea_nova's 13,218 self-parented genes.
+ * Renders the tree ALREADY BUILT by getChildrenHierarchical() — it does not fetch
+ * anything. It used to take a feature_id and re-walk the hierarchy itself, one query
+ * per node, which meant the gene page built the same tree twice by two different
+ * routes. Worse, the two routes had different security postures: the page called this
+ * with four arguments, so $gene_set_ids defaulted to [], and getChildrenByFeatureId()
+ * drops its "gene_set_id IN (...)" clause entirely when that array is empty. The
+ * second walk was therefore NOT access-filtered.
  *
- * @param int $feature_id - The parent feature ID
- * @param string $dbFile - Path to SQLite database
- * @param string $prefix - Internal use for recursion
- * @param bool $is_last - Internal use for recursion
- * @param int $depth - Internal use for recursion; see MOOP_HIERARCHY_MAX_DEPTH
+ * Taking the built array also retires this function's own cycle guard (added in
+ * 8ef74d4 after self-parented features recursed until PHP ran out of memory — a 500
+ * on the gene page for every one of Schmidtea_nova's 13,218 self-parented genes).
+ * A finite array cannot recurse forever; the cycle handling now lives in one place,
+ * getChildren()'s CTE and _buildChildTree()'s visited set.
+ *
+ * @param array $children        Nodes from getChildrenHierarchical() (each may carry
+ *                               a 'grandchildren' array)
+ * @param array $all_annotations Annotation counts keyed by feature_id
+ * @param array $analysis_order  Annotation-type order, for the anchor link
+ * @param int   $depth           Internal use for recursion
  * @return string - HTML string with nested ul/li tree structure
  */
-function generateTreeHTML($feature_id, $dbFile, $all_annotations = [], $analysis_order = [], $prefix = '', $is_last = true, $gene_set_ids = [], $depth = 0) {
-    if ($depth >= MOOP_HIERARCHY_MAX_DEPTH) {
+function generateTreeHTML(array $children, $all_annotations = [], $analysis_order = [], $depth = 0) {
+    if ($depth >= MOOP_HIERARCHY_MAX_DEPTH || empty($children)) {
         return '';
     }
 
-    $results = getChildrenByFeatureId($feature_id, $dbFile, $gene_set_ids);
-
-    // A feature that is its own parent is not its own child. Dropping it here is what
-    // stops the recursion; the depth cap above covers longer cycles.
-    $results = array_filter($results, function ($row) use ($feature_id) {
-        return (int) $row['feature_id'] !== (int) $feature_id;
-    });
-
-    if (empty($results)) {
-        return '';
-    }
-    $results = array_values($results);
+    $results = array_values($children);
 
     $html = "<ul>";
     $total = count($results);
@@ -458,8 +464,8 @@ function generateTreeHTML($feature_id, $dbFile, $all_annotations = [], $analysis
             $html .= " <span class=\"badge bg-success text-white badge-sm\">$child_annot_count annotation" . ($child_annot_count > 1 ? 's' : '') . "</span>";
         }
         
-        // Recursive call for nested children
-        $html .= generateTreeHTML($child_feature_id, $dbFile, $all_annotations, $analysis_order, $prefix, $is_last_child, $gene_set_ids, $depth + 1);
+        // Nested children were fetched with the parent, in the same CTE.
+        $html .= generateTreeHTML($row['grandchildren'] ?? [], $all_annotations, $analysis_order, $depth + 1);
         $html .= "</li>";
     }
     $html .= "</ul>";
