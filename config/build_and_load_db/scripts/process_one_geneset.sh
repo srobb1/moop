@@ -558,7 +558,7 @@ if $HAS_GFF; then
   fi
 
   if $REBUILD; then
-    sh "$SCRIPTS/setup_new_moopdb_and_load_data.sh" "$THIS_ORG" "$GENE_SET" "$DATA/$THIS_ORG"
+    sh "$SCRIPTS/setup_new_moopdb_and_load_data.sh" "$THIS_ORG" "$GENE_SET" "$DATA/$THIS_ORG" "$GENESET_DATA"
 
     CHILDREN="mRNA,transcript"
     if [[ "$GFF_SOURCE" == "refseq" ]]; then
@@ -688,7 +688,7 @@ else
   fi
 
   if $REBUILD; then
-    sh "$SCRIPTS/setup_new_moopdb_and_load_data.sh" "$THIS_ORG" "$GENE_SET" "$DATA/$THIS_ORG"
+    sh "$SCRIPTS/setup_new_moopdb_and_load_data.sh" "$THIS_ORG" "$GENE_SET" "$DATA/$THIS_ORG" "$GENESET_DATA"
     perl "$REPO/analysis_parsers/make_organisms_config.pl" \
       "$GENESET_DIR/metadata.yaml" gene "mRNA,transcript"
     mv organism.json "$DATA/$THIS_ORG/organism.json"

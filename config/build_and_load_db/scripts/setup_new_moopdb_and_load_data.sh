@@ -34,21 +34,46 @@ if [ -z "$SCRIPT_DIR" ]; then
     exit 1
 fi
 
-ORG=${1:?Usage: $0 <ORGANISM> [GENE_SET_NAME] [ORG_DATA_DIR]}
+ORG=${1:?Usage: $0 <ORGANISM> [GENE_SET_NAME] [ORG_DATA_DIR] [GENESET_DATA_DIR]}
 GENE_SET_NAME=${2:-primary}
-ORG_DATA_DIR=${3:-.}   # organism-level output dir; defaults to cwd for backward compat
+ORG_DATA_DIR=${3:-.}   # organism-level: holds organism.sqlite and the lock
+
+## TWO DIRECTORIES, and they are not the same one.
+##
+## The database is per ORGANISM. features.tsv and the *.moop.tsv annotation files are
+## per GENE SET, and live under <org>/<assembly>/<gene_set>/. Before the organism
+## became the unit of work both were the cwd, so one variable served for both. The
+## refactor started passing the organism directory as ORG_DATA_DIR -- which correctly
+## moved the database up a level, and silently took features.tsv and every annotation
+## file with it.
+##
+## The result was a reload that built every intermediate correctly and then failed with
+## "features file missing or empty: <org>/features.tsv" while features.tsv sat in
+## <org>/<assembly>/<gene_set>/. Worse, had that check passed, load_files() globbed the
+## same wrong directory, so the load would have attached ZERO annotations and the only
+## sign would have been the loader's own integrity gate.
+##
+## Defaults to cwd, which is where process_one_geneset.sh runs from, so an old caller
+## passing three arguments still behaves as it did.
+GENESET_DATA_DIR=${4:-$PWD}
 
 DB="$ORG_DATA_DIR/organism.sqlite"
 LOCKFILE="$ORG_DATA_DIR/.organism.lock"
-FEATURES="$ORG_DATA_DIR/features.tsv"
+FEATURES="$GENESET_DATA_DIR/features.tsv"
 
 if [ ! -d "$ORG_DATA_DIR" ]; then
     echo "ERROR: organism data dir not found: $ORG_DATA_DIR" >&2
     exit 1
 fi
+if [ ! -d "$GENESET_DATA_DIR" ]; then
+    echo "ERROR: gene-set data dir not found: $GENESET_DATA_DIR" >&2
+    exit 1
+fi
 if [ ! -s "$FEATURES" ]; then
     echo "ERROR: features file missing or empty: $FEATURES" >&2
     echo "       Refusing to load annotations against a database with no features." >&2
+    echo "       (organism dir: $ORG_DATA_DIR)" >&2
+    echo "       (gene-set dir: $GENESET_DATA_DIR — features.tsv belongs HERE)" >&2
     exit 1
 fi
 
@@ -97,10 +122,15 @@ load_files() {
     local description="$2"
 
     echo "Loading $description"
-    local files=("$ORG_DATA_DIR"/$pattern)
+    ## Per GENE SET, like features.tsv -- not the organism directory, which holds
+    ## only organism.sqlite and the lock.
+    local files=("$GENESET_DATA_DIR"/$pattern)
 
-    if [ ${#files[@]} -eq 0 ]; then
-        echo "  Warning: No files found matching $pattern"
+    ## An unmatched glob leaves the pattern itself as the single element, so a
+    ## count of 1 does not mean a file was found. Checking existence is what makes
+    ## "no annotation files here" visible instead of passing a literal '*' to perl.
+    if [ ${#files[@]} -eq 0 ] || [ ! -e "${files[0]}" ]; then
+        echo "  Warning: No files found matching $pattern in $GENESET_DATA_DIR"
         return 0
     fi
 
