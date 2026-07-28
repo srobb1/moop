@@ -92,6 +92,10 @@ my (%annotation_cache, %feature_cache, %feature_annotation_cache,
     %feature_type_cache, %parent_cache, %source_cache_loaded, %ambiguous_uniquename);
 
 my $count_not_found = 0;
+# Annotations whose id only matched after undoing MOOP's own :pep/:cds rename.
+# Reported at the end: a large number is normal and means the rename is doing its
+# job silently; it is NOT a warning.
+my $count_renamed_match = 0;
 
 # Preload feature cache once for the whole run
 {
@@ -220,6 +224,8 @@ print "Inserted feature_annotation rows: $total_insert\n";
 print "Updated feature_annotation rows: $total_update\n";
 print "Already existing: $total_existing\n";
 print "Features not found: $count_not_found\n";
+print "Matched after undoing MOOP's :pep/:cds rename: $count_renamed_match\n"
+    if $count_renamed_match;
 
 # ----------------------------------------------------------------------
 # Load sanity check. A load that attaches nothing is a FAILED load even though
@@ -424,7 +430,40 @@ These are required for a load
         # annotation behind with nothing pointing at it -- and still exited 0
         # reporting success. That is how one organism ended up with 306,781
         # annotations, 57 sources and zero features.
+        ## Resolve the annotation's identifier to a feature.
+        ##
+        ## The identifier in an annotation file is the one the ANALYSIS ran on, which
+        ## is the identifier the depositor's FASTA carried. MOOP then appends ":pep"
+        ## and ":cds" to its own copies -- not to describe the data, but because on the
+        ## T2G path transcript.nt.fa, cds.nt.fa and protein.aa.fa all key on the SAME
+        ## identifier, and feature_uniquename has to be unique.
+        ##
+        ## That rename is ours. It happens after the analysis, it is invisible to the
+        ## analysis, and it must never be the reason an annotation fails to attach.
+        ## Undoing it is therefore our responsibility here, not the depositor's problem
+        ## to solve by renaming their sequences -- assembler-assigned ids are what they
+        ## are, and the original data stays original.
+        ##
+        ## Measured on Bipalium_vagum, whose ids carry TransDecoder's ".p1": 5,615 of
+        ## 5,615 annotation ids matched nothing as written and all 5,615 matched with
+        ## ":pep" appended. The whole file -- 21,199 annotations -- was being dropped
+        ## for a suffix MOOP itself added.
+        ##
+        ## ":pep" is tried before ":cds" because these analyses are protein-based.
+        ## find_annotation_target() then floats the annotation up to the transcript,
+        ## so the result is identical to a direct hit either way.
         my $feature_id = $feature_cache{$unique_name};
+        my $matched_as = $unique_name;
+        if (!defined $feature_id) {
+            foreach my $suffix (':pep', ':cds') {
+                my $candidate = $unique_name . $suffix;
+                next unless defined $feature_cache{$candidate};
+                $feature_id = $feature_cache{$candidate};
+                $matched_as = $candidate;
+                $count_renamed_match++;
+                last;
+            }
+        }
         unless (defined $feature_id) {
             $count_not_found++;
             warn "NOT Found: feature: $unique_name\n" if $count_not_found <= 20;
