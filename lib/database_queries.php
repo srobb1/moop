@@ -462,30 +462,75 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
     if ($match === '') return ['results' => [], 'capped' => false, 'warning' => null];
 
     $name_like = '%' . ftsPrimaryTerm($search_term, $is_quoted_search) . '%';
+    $date_expr = moop_annotation_date_expr($dbFile);
 
-    $sql = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
+    $columns = "f.feature_uniquename, f.feature_name, f.feature_description,
                    a.annotation_accession, a.annotation_description,
-                   fa.score, ans.annotation_date AS date, ans.annotation_source_name,
+                   fa.score, $date_expr AS date, ans.annotation_source_name,
                    o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
                    g.genome_accession, g.genome_name, gs.gene_set_name,
-                   (f.feature_name LIKE ?) AS name_match
-            FROM feature_annotation_search fas
-            JOIN feature_annotation  fa  ON fa.feature_annotation_id = fas.rowid
+                   (f.feature_name LIKE ?) AS name_match";
+
+    $joins = "JOIN feature_annotation  fa  ON fa.feature_annotation_id = %ROWID%
             JOIN feature             f   ON f.feature_id             = fa.feature_id
             JOIN annotation          a   ON a.annotation_id          = fa.annotation_id
             JOIN annotation_source   ans ON ans.annotation_source_id = a.annotation_source_id
             JOIN organism            o   ON o.organism_id            = f.organism_id
             JOIN gene_set            gs  ON gs.gene_set_id           = f.gene_set_id
-            JOIN genome              g   ON g.genome_id              = gs.genome_id
-            WHERE feature_annotation_search MATCH ?";
-    $params = [$name_like, $match];
+            JOIN genome              g   ON g.genome_id              = gs.genome_id";
 
-    appendScopeFilters($sql, $params, $assembly_accession, $gene_set_name, $scope_pairs);
+    $filtered = ($assembly_accession !== '' || $gene_set_name !== ''
+                 || !empty($scope_pairs) || !empty($source_names));
 
-    if (!empty($source_names)) {
-        $placeholders = implode(',', array_fill(0, count($source_names), '?'));
-        $sql .= " AND ans.annotation_source_name IN ($placeholders)";
-        foreach ($source_names as $s) { $params[] = $s; }
+    if (!$filtered) {
+        // FAST PATH — rank inside the FTS index, then fetch only the survivors.
+        //
+        // The general shape below joins EVERY matched row and sorts the lot, so
+        // "binding" reads 121,780 rows to display 2,500 of them. Measured on
+        // Nematostella, cold: 179 MB read and 3.4 s. bm25() needs only the index, so
+        // the pool can be chosen before touching feature/annotation at all: 53 MB read
+        // and 2.7 s, and across 85 organisms the working set for one cross-organism
+        // search drops from ~13.4 GB to ~3.6 GB -- from larger than the page cache to
+        // comfortably inside it, which is what lets a second search be warm (45 ms).
+        //
+        // Pool is TWICE the cap, not the cap: at 1x the top 100 already diverged for
+        // "transpos", because bm25 orders stem-noise arbitrarily and the finer tiers
+        // below re-rank within whatever it hands over. At 2x the top 100 is identical
+        // for every term tested, and "binding"/"kinase" match the old results outright.
+        //
+        // ONLY when nothing is filtered. Scope and source filters live on tables the
+        // pool cannot see, so they would apply AFTER the pool was chosen -- a search
+        // limited to one annotation source could come back near-empty because the pool
+        // filled up with rows from other sources. Filtered searches take the general
+        // shape, where the filter narrows before ranking.
+        $pool_size = (int) (moop_search_results_limit() * 2);
+        $sql = "WITH pool AS (
+                    SELECT rowid AS rid,
+                           bm25(feature_annotation_search, 10.0, 5.0, 2.0, 3.0) AS rank
+                    FROM feature_annotation_search
+                    WHERE feature_annotation_search MATCH ?
+                    ORDER BY rank
+                    LIMIT $pool_size
+                )
+                SELECT $columns
+                FROM pool
+                " . str_replace('%ROWID%', 'pool.rid', $joins) . "
+                WHERE 1=1";
+        $params = [$match, $name_like];
+    } else {
+        $sql = "SELECT $columns
+                FROM feature_annotation_search fas
+                " . str_replace('%ROWID%', 'fas.rowid', $joins) . "
+                WHERE feature_annotation_search MATCH ?";
+        $params = [$name_like, $match];
+
+        appendScopeFilters($sql, $params, $assembly_accession, $gene_set_name, $scope_pairs);
+
+        if (!empty($source_names)) {
+            $placeholders = implode(',', array_fill(0, count($source_names), '?'));
+            $sql .= " AND ans.annotation_source_name IN ($placeholders)";
+            foreach ($source_names as $s) { $params[] = $s; }
+        }
     }
 
     // Named genes first (hard tier); then rows that literally contain the term; then bm25
@@ -505,9 +550,15 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
     // tokenizer: 'unicode61' (no stemming) would destroy plural search, which is constant
     // in this domain -- "proteins" 716,560 -> 38,658 rows, "transposons" 3,082 -> 1.
     // Costs nothing measurable (cold 1516 vs 1524 ms, warm 47 vs 44 ms).
+    // On the fast path bm25() is already computed, as pool.rank -- and it CANNOT be
+    // called again here, because the FTS table is no longer in the FROM clause.
+    $rank_expr = $filtered
+        ? 'bm25(feature_annotation_search, 10.0, 5.0, 2.0, 3.0)'
+        : 'pool.rank';
+
     $sql .= " ORDER BY name_match DESC,
                        (a.annotation_description LIKE ?) DESC,
-                       bm25(feature_annotation_search, 10.0, 5.0, 2.0, 3.0),
+                       $rank_expr,
                        f.feature_uniquename
               LIMIT " . moop_search_query_limit();
     $params[] = $name_like;   // must be appended LAST: this placeholder follows every

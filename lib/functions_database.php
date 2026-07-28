@@ -308,6 +308,41 @@ function getDbConnection($dbFile) {
  * @return array - Array of associative arrays (results)
  * @throws PDOException if query fails
  */
+/**
+ * SQL expression for the annotation date, for a database that may or may not have
+ * been reloaded yet.
+ *
+ * TRANSITIONAL. f7117e2 moved the date from feature_annotation.date to
+ * annotation_source.annotation_date, because it is one value per source and storing
+ * it per row cost ~1.5 GB across the deployment. The schema and loader ship with
+ * that change, but the 85 deployed databases are only rebuilt when the reload runs,
+ * organism by organism. Both shapes therefore exist at once, and a query naming a
+ * column the file does not have does not degrade -- it throws, and the caller's
+ * catch turns that into an empty result set. Annotation search silently returned
+ * ZERO rows on every organism until this was added.
+ *
+ * Delete this, and inline 'ans.annotation_date', once every organism is reloaded.
+ * The return value is one of two fixed literals and never contains user input.
+ *
+ * @param string $dbFile Path to organism.sqlite
+ * @return string 'ans.annotation_date' (reloaded) or 'fa.date' (not yet)
+ */
+function moop_annotation_date_expr($dbFile) {
+    static $cache = [];
+    if (!array_key_exists($dbFile, $cache)) {
+        $new = false;
+        try {
+            foreach (fetchData("PRAGMA table_info(annotation_source)", $dbFile) as $col) {
+                if (($col['name'] ?? '') === 'annotation_date') { $new = true; break; }
+            }
+        } catch (Throwable $e) {
+            // Unreadable/absent table: fall back to the pre-reload shape.
+        }
+        $cache[$dbFile] = $new ? 'ans.annotation_date' : 'fa.date';
+    }
+    return $cache[$dbFile];
+}
+
 function fetchData($sql, $dbFile, $params = []) {
     try {
         $dbh = getDbConnection($dbFile);

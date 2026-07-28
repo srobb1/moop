@@ -344,7 +344,7 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile, $gene_set_ids = [])
 
     $query = "SELECT f.feature_id, f.feature_uniquename, f.feature_type,
               a.annotation_accession, a.annotation_description,
-              fa.score, ans.annotation_date AS date,
+              fa.score, " . moop_annotation_date_expr($dbFile) . " AS date,
               ans.annotation_source_name, ans.annotation_accession_url, ans.annotation_type
         FROM annotation a, feature f, feature_annotation fa, annotation_source ans, gene_set gs, genome g, organism o
         WHERE f.organism_id = o.organism_id
