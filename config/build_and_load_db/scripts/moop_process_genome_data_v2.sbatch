@@ -46,6 +46,45 @@ REPO=${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
 SCRIPTS=$REPO/scripts
 DATA=$REPO/data
 
+## REPO comes from SLURM_SUBMIT_DIR -- the directory sbatch was SUBMITTED FROM, not
+## where this script lives, and it wins over the fallback above. Submitting from the
+## wrong directory therefore points DATA (where organism.sqlite is built) and every
+## loader path at somewhere arbitrary, and the failure that follows names a missing
+## file rather than the actual mistake. Fail here instead, saying what to do.
+## run_all_v2.sh is unaffected: it cds to its own location before submitting.
+if [ ! -d "$SCRIPTS" ] || [ ! -d "$REPO/data_loaders" ]; then
+  echo "ERROR: REPO=$REPO does not look like the pipeline directory." >&2
+  echo "       (expected $REPO/scripts and $REPO/data_loaders to exist)" >&2
+  echo "" >&2
+  echo "       sbatch takes REPO from SLURM_SUBMIT_DIR, i.e. WHERE YOU RAN sbatch." >&2
+  echo "       cd to .../moop-pipeline/config/build_and_load_db first, then submit:" >&2
+  echo "           sbatch scripts/$(basename "$0") --reload <organism>" >&2
+  exit 1
+fi
+
+## --reload / --force may be given as a FLAG, anywhere among the arguments, as well
+## as through the MOOP_RELOAD environment variable. The array path has to use the
+## environment (run_all_v2.sh passes it via sbatch --export), but a hand-run should
+## not depend on remembering that these two differ:
+##
+##     MOOP_RELOAD=1 sbatch ... Org      # works: sets it in sbatch's environment
+##     MOOP_RELOAD=1 ; sbatch ... Org    # SILENTLY DOES NOT: a plain shell variable
+##                                       # is not exported, so the job never sees it,
+##                                       # MOOP_RELOAD defaults to 0, every step is
+##                                       # skipped as "already built", and the run
+##                                       # reports success having done nothing.
+##
+## NOTE: the flag must come AFTER the script path, or sbatch will try to parse it.
+CLI_RELOAD=0
+ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --reload|--force) CLI_RELOAD=1 ;;
+    *)                ARGS+=("$arg") ;;
+  esac
+done
+set -- "${ARGS[@]:-}"
+
 if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
   ORGANISMS_FILE="${ORGANISMS_FILE:-$REPO/active_organisms.tsv}"
   THIS_ORG=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$ORGANISMS_FILE")
@@ -57,8 +96,11 @@ else
   WANT_GENESET=${3:-}
 fi
 
-[ -n "$THIS_ORG" ] \
-  || { echo "Usage: $0 <organism> [assembly] [gene_set]  (or run as an array job)"; exit 1; }
+[ -n "$THIS_ORG" ] || {
+  echo "Usage: $0 [--reload] <organism> [assembly] [gene_set]  (or run as an array job)"
+  echo "       --reload may also be given as MOOP_RELOAD=1 in the environment."
+  exit 1
+}
 
 ## ── --reload: rebuild and reload, ignoring the "already built" checks ─────────
 ##
@@ -82,6 +124,7 @@ fi
 ## non-coding transcripts, so a plain re-run with the fixed parser would add the
 ## correct rows and keep every bogus one, and report success.
 MOOP_RELOAD=${MOOP_RELOAD:-${FORCE_RELOAD:-0}}     # FORCE_RELOAD: accepted alias
+[ "$CLI_RELOAD" = "1" ] && MOOP_RELOAD=1           # --reload flag wins over the default
 export MOOP_RELOAD
 
 NARROWED=false
