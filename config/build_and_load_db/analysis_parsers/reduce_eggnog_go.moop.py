@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+#
+# Needs the 'goatools' conda environment. process_one_geneset.sh activates it before
+# calling this (make_eggnog_moop), so there is nothing for a caller to do.
+#
+# This used to print "DO THIS: conda activate goatools" unconditionally on line 10 --
+# on every gene set of every run, whether or not anything was wrong. It read as a
+# warning that the build was misconfigured when the environment was in fact active.
+# It also could not have helped: the import below fails first if the environment is
+# missing, so by the time that line ran the advice was always already unnecessary.
+# The import IS the check; if it raises, the traceback names the missing module.
 
 import sys
 from goatools.obo_parser import GODag
@@ -7,7 +17,6 @@ import os
 import subprocess
 
 
-print("DO THIS: conda activate  goatools")
 def usage():
     print(f"Usage: {sys.argv[0]} <input_file>")
     print("Please provide a tab-delimited file with at least two columns:")
