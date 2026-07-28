@@ -52,6 +52,28 @@ HAS_T2G=false
 [ -s "$GENESET_DIR/transcript2gene.txt" ] && HAS_T2G=true
 
 if ! $HAS_GFF && ! $HAS_T2G; then
+  ## A reload has ALREADY DROPPED the database by the time we get here, so "nothing to
+  ## process" is not a skip -- it is a request to rebuild that produced nothing. Returning
+  ## success let the caller carry on and fail three steps later with
+  ##     ERROR: organism.sqlite does not exist after processing 1 gene set(s)
+  ## which names the symptom and not the cause. That is exactly what happened when
+  ## genomes_v2 moved to genomes/v2: the real problem was a directory that no longer
+  ## existed, and nothing in the output said so.
+  ##
+  ## Without --reload this stays a skip: an inactive or not-yet-delivered gene set is a
+  ## normal thing to walk past, and the whole run should not stop for it.
+  if [ "${MOOP_RELOAD:-0}" = "1" ]; then
+    echo "ERROR: $THIS_ORG/$ASSEMBLY/$GENE_SET — reload requested, but there is nothing to build." >&2
+    echo "       Looked for, and found neither:" >&2
+    echo "         $GENESET_DIR/genes.gff" >&2
+    echo "         $GENESET_DIR/transcript2gene.txt" >&2
+    if [ ! -d "$GENESET_DIR" ]; then
+      echo "       The gene-set directory does not exist at all." >&2
+      echo "       GENOMES is currently: $GENOMES" >&2
+      echo "       If the data tree moved, set it in scripts/paths.sh (or override GENOMES)." >&2
+    fi
+    exit 1
+  fi
   echo "SKIP: $THIS_ORG/$ASSEMBLY/$GENE_SET — no genes.gff or transcript2gene.txt, nothing to process."
   exit 0
 fi
