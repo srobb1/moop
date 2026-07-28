@@ -47,19 +47,19 @@ $dbh->{AutoCommit} = 0;
 
 # Prepare statements (reused across all files)
 my $sth_get_annotation_source = $dbh->prepare(q{
-    SELECT annotation_source_id, annotation_accession_url, annotation_source_url, annotation_type
+    SELECT annotation_source_id, annotation_accession_url, annotation_source_url, annotation_type, annotation_date
     FROM annotation_source
     WHERE annotation_source_name = ? AND annotation_source_version = ?
 });
 
 my $sth_insert_annotation_source = $dbh->prepare(q{
-    INSERT INTO annotation_source (annotation_source_name, annotation_source_version, annotation_accession_url, annotation_source_url, annotation_type)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO annotation_source (annotation_source_name, annotation_source_version, annotation_accession_url, annotation_source_url, annotation_type, annotation_date)
+    VALUES (?, ?, ?, ?, ?, ?)
 });
 
 my $sth_update_annotation_source = $dbh->prepare(q{
     UPDATE annotation_source
-    SET annotation_accession_url = ? , annotation_source_url = ?, annotation_type = ?
+    SET annotation_accession_url = ? , annotation_source_url = ?, annotation_type = ?, annotation_date = ?
     WHERE annotation_source_id = ?
 });
 
@@ -74,14 +74,16 @@ my $sth_get_annotations_for_source = $dbh->prepare(q{
     WHERE annotation_source_id = ?
 });
 
+# No date column here: the annotation date is one value per SOURCE (from the file's
+# "## Annotation Creation Date" header) and now lives on annotation_source.
 my $sth_insert_feature_annotation = $dbh->prepare(q{
-    INSERT INTO feature_annotation (feature_id, annotation_id, score, date)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO feature_annotation (feature_id, annotation_id, score)
+    VALUES (?, ?, ?)
 });
 
 my $sth_update_feature_annotation = $dbh->prepare(q{
     UPDATE feature_annotation
-    SET score = ?, date = ?
+    SET score = ?
     WHERE feature_annotation_id = ?
 });
 
@@ -118,15 +120,14 @@ my $count_not_found = 0;
 # Preload feature_annotation cache once for the whole run
 {
     my $sth = $dbh->prepare(q{
-        SELECT feature_annotation_id, feature_id, annotation_id, score, date FROM feature_annotation
+        SELECT feature_annotation_id, feature_id, annotation_id, score FROM feature_annotation
     });
     $sth->execute();
-    while (my ($faid, $fid, $aid, $score, $d) = $sth->fetchrow_array) {
+    while (my ($faid, $fid, $aid, $score) = $sth->fetchrow_array) {
         # Keep score as-is (possibly undef): NULL and 0.0 are different facts.
         $feature_annotation_cache{ join('|', $fid, $aid) } = {
             id    => $faid,
             score => $score,
-            date  => $d // '',
         };
     }
 }
@@ -340,18 +341,19 @@ These are required for a load
 
     # Ensure annotation_source exists
     $sth_get_annotation_source->execute($source, $source_version);
-    my ($source_id, $existing_accession_url, $existing_source_url, $existing_type) =
+    my ($source_id, $existing_accession_url, $existing_source_url, $existing_type, $existing_date) =
         $sth_get_annotation_source->fetchrow_array;
     if (!$source_id) {
-        $sth_insert_annotation_source->execute($source, $source_version, $accession_url, $source_url, $annotation_type);
+        $sth_insert_annotation_source->execute($source, $source_version, $accession_url, $source_url, $annotation_type, $date);
         $source_id = $dbh->sqlite_last_insert_rowid();
         print "Inserted annotation_source: $source ($source_version) -> id $source_id\n";
     } else {
         print "Found annotation_source id $source_id for $source ($source_version)\n";
         if (($existing_accession_url // '') ne ($accession_url // '') ||
             ($existing_source_url // '') ne ($source_url // '') ||
-            ($existing_type // '') ne ($annotation_type // '')) {
-            $sth_update_annotation_source->execute($accession_url, $source_url, $annotation_type, $source_id);
+            ($existing_type // '') ne ($annotation_type // '') ||
+            ($existing_date // '') ne ($date // '')) {
+            $sth_update_annotation_source->execute($accession_url, $source_url, $annotation_type, $date, $source_id);
             print "Updated annotation_source id $source_id\n";
         }
     }
@@ -434,9 +436,9 @@ These are required for a load
         my $existing = $feature_annotation_cache{$fakey};
 
         if (!$existing) {
-            $sth_insert_feature_annotation->execute($feature_id, $annotation_id, $hit_score, $date);
+            $sth_insert_feature_annotation->execute($feature_id, $annotation_id, $hit_score);
             my $faid = $dbh->sqlite_last_insert_rowid();
-            $feature_annotation_cache{$fakey} = { id => $faid, score => $hit_score, date => $date };
+            $feature_annotation_cache{$fakey} = { id => $faid, score => $hit_score };
             $count_insert++;
         } else {
             # Compare score NUMERICALLY. A string compare would see the stored
@@ -447,10 +449,11 @@ These are required for a load
                    ((defined $old_score) xor (defined $hit_score))
                 || (defined $old_score && defined $hit_score && $old_score != $hit_score);
 
-            if ($score_changed || ($existing->{date} // '') ne ($date // '')) {
-                $sth_update_feature_annotation->execute($hit_score, $date, $existing->{id});
+            # Only the score can differ per row now; a changed date is a property of
+            # the source and is written once, above, not re-checked millions of times.
+            if ($score_changed) {
+                $sth_update_feature_annotation->execute($hit_score, $existing->{id});
                 $existing->{score} = $hit_score;
-                $existing->{date}  = $date;
                 $count_update++;
             } else {
                 $count_existing++;

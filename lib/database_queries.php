@@ -465,7 +465,7 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
 
     $sql = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
                    a.annotation_accession, a.annotation_description,
-                   fa.score, fa.date, ans.annotation_source_name,
+                   fa.score, ans.annotation_date AS date, ans.annotation_source_name,
                    o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
                    g.genome_accession, g.genome_name, gs.gene_set_name,
                    (f.feature_name LIKE ?) AS name_match

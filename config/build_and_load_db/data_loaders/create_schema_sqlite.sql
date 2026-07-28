@@ -107,6 +107,11 @@ CREATE TABLE annotation_source (
     annotation_accession_url TEXT,
     annotation_source_url TEXT,
     annotation_type TEXT NOT NULL,
+    -- From the source file's "## Annotation Creation Date" header: one value per
+    -- source, which is why it belongs here rather than on every feature_annotation
+    -- row. Nullable, because a pre-existing source row may be seen again before any
+    -- file supplies the header.
+    annotation_date DATE,
     -- The loader already looks a source up by exactly this pair, but nothing
     -- enforced it. Untrimmed header values then produced "Ensembl Homo sapiens "
     -- alongside "Ensembl Homo sapiens": two sources a user cannot tell apart in
@@ -144,7 +149,14 @@ CREATE TABLE feature_annotation (
     -- rows would masquerade as the most significant hits. Load them as NULL,
     -- which means "no score" and sorts apart from real values.
     score REAL,
-    date DATE NOT NULL,
+    -- NOTE: the annotation date is NOT here. It comes from the source file's
+    -- "## Annotation Creation Date" header, so it is one value per SOURCE, not per
+    -- row -- and storing it per row cost 4.2 MB in a 194 MB organism (~2.2%), about
+    -- 1.5 GB across the deployment, to repeat a handful of distinct strings millions
+    -- of times. Verified functionally dependent before moving it: every one of
+    -- Nematostella's 62 annotation sources has exactly ONE distinct date across all
+    -- 1,397,415 rows. It now lives on annotation_source.annotation_date, which every
+    -- query that displays a date already joins.
     -- One annotation can attach to one feature once. Deduplication previously
     -- existed only in the loader's in-memory hash, so it protected a single run
     -- and nothing else.
