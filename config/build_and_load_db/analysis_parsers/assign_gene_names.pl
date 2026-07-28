@@ -16,6 +16,11 @@ my %selected_ids;
 my %group_names;
 my %names;
 
+# Annotation ids that are not a transcript of this gene set. Counted, reported
+# once at the end, and otherwise ignored -- see the skip in the annotation loop.
+my %unknown_ids;
+my $unknown_lines = 0;
+
 open TGROUPS, $isoforms or die "cant open transcript grouping file: $isoforms $! \n";
 # CCA3t002600001.1;CCA3t002600002.1;CCA3t002600003.1	None CCA3t002600001.1 
 # [semicolon sep list of isoforms]	[selected transcript. optional] [gene id. optional] 
@@ -72,6 +77,28 @@ foreach my $annotation_file (@annotation_files){
     # annotation files are in order of preference, so we will only store the first hit we come across
     # infiles should be sorted by score
     my $group_id = $all_ids{$id};
+
+    # An annotation whose id is not a transcript of THIS gene set has no gene to
+    # name. That is a NORMAL condition, not an error: the analysis runs on every
+    # ORF of every isoform, while the gene set keeps one ORF per gene
+    # (select_longest_orf_geneset.pl), so annotations on the other ~68% of ORFs
+    # arrive here with nothing to attach to.
+    #
+    # It used to fall through with $group_id undef, which cost twice over. Perl
+    # warned on both uses below -- 60,380 lines from 22,893 input lines in one
+    # Bipalium_kewense run, burying anything real in the log. Worse, undef becomes
+    # the EMPTY-STRING hash key, so every unknown id from every annotation source
+    # collapsed into one shared $group_names{''} bucket where the first arrival
+    # won and the rest were silently dropped.
+    #
+    # Counted here and reported once at the end, so the expected case is a single
+    # number and a genuinely surprising one is still visible.
+    unless (defined $group_id) {
+        $unknown_ids{$id}++;
+        $unknown_lines++;
+        next;
+    }
+
     # if we already have a selected id, record the info here, we dont want to record anyohter id's hit info
     if(exists $selected_ids{$group_id} and $selected_ids{$group_id} eq $id){
       $group_names{$group_id}{$rank}{$sort_score}{hit_desc}=$hit_desc;
@@ -133,3 +160,13 @@ foreach my $group_id (sort keys %names){
     print join("\t",$id,$main_id,$group_id,$hit_desc,"$src|$type|$selected_id|$hit_id|$score"),"\n";
   }
 } 
+
+# One line instead of tens of thousands. STDERR so it cannot contaminate the
+# geneNames.tsv this script writes to STDOUT.
+if ($unknown_lines) {
+    printf STDERR "NOTE: %d annotation line(s) across %d distinct id(s) were not "
+                . "transcripts of this gene set and were skipped when naming genes.\n"
+                . "      Expected: the analysis covers every ORF of every isoform, "
+                . "while the gene set keeps one ORF per gene.\n",
+        $unknown_lines, scalar keys %unknown_ids;
+}
