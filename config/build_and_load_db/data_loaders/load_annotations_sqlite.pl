@@ -205,7 +205,15 @@ $sth_get_annotations_for_source->finish();
 $sth_insert_feature_annotation->finish();
 $sth_update_feature_annotation->finish();
 
-$dbh->disconnect;
+# NOTE: the handle is NOT disconnected here. The whitespace check below queries
+# annotation_source, and disconnecting first made it die on its first statement --
+#   DBD::SQLite::db selectrow_array failed: attempt to prepare on inactive database handle
+# Because setup_new_moopdb_and_load_data.sh runs under `set -e`, that death aborted
+# the whole annotation phase at whichever load_files() call happened to be running.
+# On Bipalium_kewense that was the 3rd of 9, so homologs, RBBH, InterProScan, ProtNLM,
+# Eggnog2GO and OMA2GO were never loaded at all: 17,065 annotations were written where
+# the organism really has 606,190, and the run still reported "OK ... Done".
+# The disconnect now happens after every check that needs the handle.
 
 print "Total Annotations processed: $total_annotations\n";
 print "Inserted feature_annotation rows: $total_insert\n";
@@ -274,9 +282,12 @@ if ($count_not_found) {
                . "usual cause (scripts/check_sequence_id_match.sh).\n\n";
 }
 
+## Every check that needs the database has now run.
+$dbh->disconnect;
+
 print "Done.\n";
 
-## All work is committed and the DB handle is already disconnected above, so
+## All work is committed and the DB handle is disconnected just above, so
 ## skip Perl's normal global destruction here: with the large caches this
 ## script builds (feature/feature_annotation tables for genesets with tens
 ## of thousands of rows), destroying them via Perl's ordinary teardown has
