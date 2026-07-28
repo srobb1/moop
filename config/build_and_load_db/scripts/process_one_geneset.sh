@@ -180,6 +180,35 @@ write_genome_json
 cd "$GENESET_DATA"
 [ -e tophit.tsv ] && rm tophit.tsv
 
+## A reload must invalidate the PARSED ANNOTATION FILES too, not just the database.
+##
+## Every make_*_moop() below is gated on its own output already existing
+## (`has_data PANTHER.iprscan.moop.tsv || make_interproscan_moop`), and those gates
+## run BEFORE MOOP_RELOAD sets REBUILD further down. So --reload dropped
+## organism.sqlite and then rebuilt it from whatever .moop.tsv files happened to be
+## sitting here -- however old.
+##
+## That is not hypothetical. On Bipalium_kewense the source iprscan.tsv is a SYMLINK
+## into the analysis tree, so it silently followed a re-run of InterProScan, while
+## the parsed files stayed as generated on 2026-07-06:
+##
+##   iprscan.tsv               -> symlink, follows the live analysis
+##   Pfam.iprscan.moop.tsv        2026-07-06 15:33   ids WITHOUT .p1
+##   (source iprscan.tsv today)                      ids WITH    .p1
+##
+## Nothing strips .p1 anywhere in this pipeline -- the parsed files simply predated
+## the ids they were being matched against. 49% of annotation lines failed to attach
+## for three weeks, and every reload faithfully reproduced it.
+##
+## Regenerating is cheap (a parse of files already on disk) and re-running the
+## ANALYSIS is not needed. Deleting only the derived .moop.tsv files and the source
+## copies/symlinks that feed them; the FASTAs and features.tsv are handled by
+## REBUILD further down.
+if [ "${MOOP_RELOAD:-0}" = "1" ]; then
+  echo "Reload: discarding parsed annotation files so they are rebuilt from the current analysis"
+  rm -f ./*.moop.tsv iprscan.tsv tophit.tsv
+fi
+
 # ── Diamond / BLAST homologs ──────────────────────────────────────────────────
 make_diamond_moop() {
   local DBLAST_DIR="$ANALYSIS_DIR/diamond_blast"
