@@ -31,15 +31,17 @@ die "Usage: $0 genes.sqlite annotations.tsv [annotations2.tsv ...]\n"
 ## same intent is precisely how a rename quietly stops matching -- see the Bipalium
 ## vagum note further down, where a suffix MOOP itself added silently cost 21,199
 ## annotations.
-my $strip_prefix = '';
+my ($strip_prefix, $add_prefix) = ('', '');
 {
     my $dir = dirname($annot_files[0]);
     if (open my $manifest, '<', "$dir/.id_prefix_stripped") {
         my $line = <$manifest>;
         close $manifest;
         chomp($line) if defined $line;
-        $strip_prefix = defined $line ? $line : '';
-        print "Feature IDs had the prefix '$strip_prefix' stripped by MOOP; "
+        ($strip_prefix, $add_prefix) = split /\t/, ($line // ''), 2;
+        $strip_prefix = '' unless defined $strip_prefix;
+        $add_prefix   = '' unless defined $add_prefix;
+        print "Feature IDs were rewritten by MOOP: '$strip_prefix' -> '$add_prefix'; "
             . "annotation IDs will be normalized to match\n"
             if length $strip_prefix;
     }
@@ -489,9 +491,9 @@ These are required for a load
             ## to before for every gene set that has not opted in.
             my @candidates = ("$unique_name:pep", "$unique_name:cds");
             if (length $strip_prefix) {
-                my $stripped = $unique_name;
-                if ($stripped =~ s/^\Q$strip_prefix\E//) {
-                    push @candidates, $stripped, "$stripped:pep", "$stripped:cds";
+                my $rewritten = $unique_name;
+                if ($rewritten =~ s/^\Q$strip_prefix\E/$add_prefix/) {
+                    push @candidates, $rewritten, "$rewritten:pep", "$rewritten:cds";
                 }
             }
             foreach my $candidate (@candidates) {

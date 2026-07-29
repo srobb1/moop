@@ -538,6 +538,11 @@ if $HAS_GFF; then
   ## MOOP's own ID normalization, opt-in per gene set via metadata.yaml:
   ##
   ##     moop-strip-id-prefix: Bradypodion_ventrale_
+  ##     moop-add-id-prefix:   braven_
+  ##
+  ## The add key is optional -- omit it to drop the prefix entirely. Both are
+  ## literals; the 3-of-genus + 3-of-species convention is for the curator filling
+  ## in the file, not something computed here (see strip_id_prefix.pl for why).
   ##
   ## Runs BEFORE every other rename and before anything is derived from these
   ## files, so genes.gtf, features.tsv, feature_coords.tsv, geneNames.tsv and
@@ -545,13 +550,18 @@ if $HAS_GFF; then
   ##
   ## Absent key = no invocation = IDs untouched. That is what makes a run over
   ## everything safe for the ~90 gene sets that do not opt in.
-  STRIP_PREFIX=$(sed -n 's/^moop-strip-id-prefix:[[:space:]]*//p' \
-                   "$GENESET_DIR/metadata.yaml" 2>/dev/null | head -1)
-  STRIP_PREFIX=${STRIP_PREFIX%$'\r'}
-  STRIP_PREFIX=${STRIP_PREFIX%\"}; STRIP_PREFIX=${STRIP_PREFIX#\"}
-  STRIP_PREFIX=${STRIP_PREFIX%\'}; STRIP_PREFIX=${STRIP_PREFIX#\'}
+  read_meta_key() {
+    local value
+    value=$(sed -n "s/^$1:[[:space:]]*//p" "$GENESET_DIR/metadata.yaml" 2>/dev/null | head -1)
+    value=${value%$'\r'}
+    value=${value%\"}; value=${value#\"}
+    value=${value%\'}; value=${value#\'}
+    printf '%s' "$value"
+  }
+  STRIP_PREFIX=$(read_meta_key moop-strip-id-prefix)
+  ADD_PREFIX=$(read_meta_key moop-add-id-prefix)
   if [ -n "$STRIP_PREFIX" ]; then
-    perl "$SCRIPTS/strip_id_prefix.pl" "$STRIP_PREFIX" \
+    perl "$SCRIPTS/strip_id_prefix.pl" --strip "$STRIP_PREFIX" --add "$ADD_PREFIX" \
       genes.gff protein.aa.fa cds.nt.fa transcript.nt.fa \
       || { echo "ERROR: strip_id_prefix.pl failed for $THIS_ORG [$ASSEMBLY/$GENE_SET]"; exit 1; }
   fi
