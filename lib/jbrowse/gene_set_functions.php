@@ -81,7 +81,24 @@ function prepareGeneSetForJBrowse(
     }
 
     // ── bgzip + tabix ────────────────────────────────────────────────────────
-    if ($force || !file_exists($gz_file)) {
+    // FRESHNESS, not existence.
+    //
+    // These tests used to be `!file_exists($gz_file)`, so once a .gz had ever been built
+    // it was never rebuilt unless someone passed $force by hand. But a gene-set reload
+    // rewrites the source GFF underneath it, and annotations.gff3 is a SYMLINK into
+    // organisms/ -- so the uncompressed file silently follows every reload while the
+    // compressed copy JBrowse actually reads stays frozen. Nothing reported it, because
+    // "already exists" reads like success.
+    //
+    // Measured 2026-07-29: 41 of 69 gene tracks were serving indexes older than their own
+    // GFF, some by two months. The Bradypodion pair was worse than stale -- their feature
+    // IDs had just been shortened, so JBrowse was serving IDs that no longer existed in
+    // the database and every gene-page link into the browser missed.
+    //
+    // filemtime() follows symlinks, so this compares against the real GFF.
+    $gz_stale = !file_exists($gz_file)
+             || (file_exists($target_gff) && filemtime($gz_file) < filemtime($target_gff));
+    if ($force || $gz_stale) {
         foreach ([$tbi_file, $csi_file, $gz_file] as $f) {
             if (file_exists($f)) unlink($f);
         }
@@ -111,7 +128,15 @@ function prepareGeneSetForJBrowse(
     }
 
     if (file_exists($gz_file)) {
-        $need_index = $force || (!file_exists($tbi_file) && !file_exists($csi_file));
+        // Same freshness rule one level down: an index older than the .gz it describes
+        // points at the wrong offsets, which is worse than no index at all.
+        $have_index = file_exists($tbi_file) || file_exists($csi_file);
+        $index_stale = !$have_index;
+        if ($have_index) {
+            $existing_index = file_exists($tbi_file) ? $tbi_file : $csi_file;
+            $index_stale = filemtime($existing_index) < filemtime($gz_file);
+        }
+        $need_index = $force || $index_stale;
         if ($need_index) {
             if (file_exists($tbi_file)) unlink($tbi_file);
             if (file_exists($csi_file)) unlink($csi_file);

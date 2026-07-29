@@ -140,6 +140,12 @@ function housekeeping_task_registry(): array {
             'desc'  => 'Syncs the local NCBI taxonomy dump if it is more than 30 days old. Reads a local timestamp first, so no network call happens unless an update is actually due.',
         ],
         [
+            'name'  => 'jbrowse_indexes',
+            'fn'    => 'housekeeping_check_jbrowse_indexes',
+            'label' => 'JBrowse track indexes',
+            'desc'  => 'Counts gene tracks whose bgzip/tabix index is older than its source GFF. annotations.gff3 is a symlink into organisms/ so it follows every gene-set reload, while the .gz JBrowse actually reads is a snapshot that only changes on an explicit re-prep — so a reload stales the browser track silently. Stat calls only; reports rather than rebuilds, because re-compressing a 100 MB+ GFF belongs behind a button.',
+        ],
+        [
             'name'  => 'jbrowse_version',
             'fn'    => 'housekeeping_check_jbrowse_version',
             'label' => 'JBrowse2 version',
@@ -724,6 +730,81 @@ function housekeeping_permission_check() {
 
     $_SESSION['perm_summary'] = $summary;
     housekeeping_persist_status('perm_summary', $summary);
+}
+
+/**
+ * Count JBrowse gene tracks whose bgzip/tabix index is older than its source GFF.
+ *
+ * WHY THIS EXISTS. data/genomes/{org}/{asm}/{gs}/annotations.gff3 is a SYMLINK into
+ * organisms/, so it silently follows every gene-set reload -- while annotations.gff3.gz,
+ * which is what JBrowse actually reads, is a snapshot that only changes when someone
+ * re-preps it by hand. Nothing tied the two together, so a reload staled the browser
+ * track and said nothing. On 2026-07-29 that was 41 of 69 tracks, some two months
+ * behind; the two Bradypodion gene sets were serving feature IDs that no longer existed
+ * in the database at all, so every gene-page link into JBrowse missed.
+ *
+ * Stat calls only -- one per gene set, no file contents read -- so this is cheap enough
+ * to run on the housekeeping interval. It reports; it does not rebuild. Rebuilding
+ * re-compresses a GFF that can be over 100 MB and belongs behind a button the admin
+ * presses, not inside a page load.
+ */
+function housekeeping_check_jbrowse_indexes() {
+    $config    = ConfigManager::getInstance();
+    $site_path = $config->getPath('site_path');
+    $base      = "$site_path/data/genomes";
+
+    $summary = ['total' => 0, 'stale' => 0, 'missing' => 0, 'examples' => [], 'checked_at' => time()];
+
+    if (!is_dir($base)) {
+        $_SESSION['jbrowse_index_summary'] = $summary;
+        housekeeping_persist_status('jbrowse_index_summary', $summary);
+        return;
+    }
+
+    foreach (glob("$base/*/*/*/annotations.gff3") as $gff) {
+        // glob() does not follow into the symlink; file_exists() does, and a dangling
+        // link means the gene set is gone rather than stale.
+        if (!file_exists($gff)) {
+            continue;
+        }
+        $summary['total']++;
+
+        $gz  = "$gff.gz";
+        $tbi = "$gz.tbi";
+        $csi = "$gz.csi";
+
+        $why = null;
+        if (!file_exists($gz)) {
+            $summary['missing']++;
+            $why = 'no compressed GFF';
+        } elseif (filemtime($gz) < filemtime($gff)) {
+            $summary['stale']++;
+            $why = 'index older than GFF';
+        } elseif (!file_exists($tbi) && !file_exists($csi)) {
+            $summary['missing']++;
+            $why = 'no tabix index';
+        } else {
+            $index = file_exists($tbi) ? $tbi : $csi;
+            if (filemtime($index) < filemtime($gz)) {
+                $summary['stale']++;
+                $why = 'tabix index older than compressed GFF';
+            }
+        }
+
+        // Enough to identify the gene set on the manager page; the page re-checks live.
+        if ($why !== null && count($summary['examples']) < 60) {
+            $parts = explode('/', substr($gff, strlen($base) + 1));
+            $summary['examples'][] = [
+                'organism' => $parts[0] ?? '?',
+                'assembly' => $parts[1] ?? '?',
+                'gene_set' => $parts[2] ?? '?',
+                'why'      => $why,
+            ];
+        }
+    }
+
+    $_SESSION['jbrowse_index_summary'] = $summary;
+    housekeeping_persist_status('jbrowse_index_summary', $summary);
 }
 
 /**
