@@ -112,6 +112,18 @@ fi
 
 ## organism.sqlite is the file the live site actually serves, so confirm it landed
 ## and at the right size rather than trusting rsync's exit code alone.
+##
+## Check it exists LOCALLY first. send() skips a missing file (`elif [ -e ]`) and
+## verify_remote returns early on one, so a database that was never built looked
+## exactly like a successful publish: 36 files copied, "OK" logged, and the live
+## site still serving a three-week-old database. For the one file the site
+## actually serves, absent is a failure, not a skip.
+if [ ! -s "$ORG_DATA/organism.sqlite" ]; then
+  log "FAIL  $THIS_ORG  [$ASSEMBLY/$GENE_SET] — $ORG_DATA/organism.sqlite is missing or empty"
+  log "      Nothing was published. The build did not leave a database where the copy"
+  log "      step looks for it (REPO=$REPO, so ORG_DATA=$ORG_DATA)."
+  exit 1
+fi
 verify_remote "$ORG_DATA/organism.sqlite" "$REMOTE_ORG_PATH/organism.sqlite"
 
 if [ "$FAILED" -ne 0 ]; then
