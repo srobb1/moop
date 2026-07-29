@@ -93,28 +93,32 @@ echo help_modal(
                 ],
                 [
                     // Replaces a "short words are skipped" card that described behaviour the
-                    // code never had: every word is searched, including numbers, and that is
-                    // wanted -- "histone deacetylase 1" ranks HDAC1 first, while dropping the
-                    // "1" ranks HDAC8 first. The three-character minimum is on the whole box.
-                    'label' => 'Numbers count',
-                    'text'  => 'Every word you type must match, numbers included. '
-                             . '<code>histone deacetylase 1</code> finds <em>HDAC1</em>, where '
-                             . 'leaving off the <code>1</code> returns the whole family.',
+                    // code never had: every word IS searched, numbers included, and keeping the
+                    // number is what narrows the result. Measured on Myotis_myotis:
+                    //   "histone" AND "deacetylase"            9,258 rows  (every HDAC)
+                    //   "histone" AND "deacetylase" AND "1"    4,254 rows  (HDAC1 at the top)
+                    // The search minimum is per-TERM (>= 2 chars in one word), not on the whole
+                    // box -- see moop_search_input_is_usable() / js/modules/search-terms.js.
+                    'label' => 'Search the symbol, not the number',
+                    'text'  => 'For one family member type the symbol: <code>hdac1</code> is far '
+                             . 'sharper than <code>histone deacetylase 1</code>. A bare '
+                             . '<code>1</code> also matches <em>10</em> and <em>11</em>, and the '
+                             . '<code>.1</code> in accession numbers.',
                     'html'  => true,
                 ],
                 [
                     'label' => 'Word endings are handled',
-                    'text'  => 'Searching <code>kinases</code> also finds <em>kinase</em>, and '
-                             . '<code>regulated</code> finds <em>regulate</em>. Because of this a '
-                             . 'shortened word can reach further than you expect — '
-                             . '<code>transpos</code> also matches <em>transport</em>. Records '
-                             . 'containing exactly what you typed are listed first.',
+                    'text'  => '<code>kinases</code> also finds <em>kinase</em>, and '
+                             . '<code>transport</code> also finds <em>transporter</em>. '
+                             . 'Exact matches are listed first, so type the whole word if you '
+                             . 'get more than you expected.',
                     'html'  => true,
                 ],
                 [
                     'label' => 'Matching starts at the beginning of a word',
-                    'text'  => '<code>transpos</code> finds <em>transposase</em>, but nothing '
-                             . 'finds <em>retrotransposase</em> from the middle of the word.',
+                    'text'  => '<code>wnt</code> finds <em>wnt8b</em>, but <code>transposase</code> '
+                             . 'will not find <em>retrotransposase</em> — matching starts at the '
+                             . 'beginning, not the middle.',
                     'html'  => true,
                 ],
             ],
@@ -129,8 +133,13 @@ echo help_modal(
                 ],
                 [
                     'label' => 'Then annotations',
+                    // gloss() belongs in `text` with html=>true, never in `label` --
+                    // help_modal() always escapes labels (lib/help_ui.php:136), so markup
+                    // there renders as visible literal HTML.
                     'text'  => 'If no identifier matches — or you typed more than one word — the '
-                             . 'search runs across annotation descriptions and related fields.',
+                             . 'search runs across ' . gloss('annotation', 'annotation') . ' '
+                             . 'descriptions and related fields.',
+                    'html'  => true,
                 ],
                 [
                     'label' => 'Limit which annotations',
