@@ -313,10 +313,58 @@ function getAssemblyGeneSets($assembly, $dbFile) {
  * Quoted mode: the whole input is one exact phrase query ("zinc finger").
  *
  * The index tokenizer is 'porter unicode61' (see build_fts_index.sql), so matching
- * is also case/accent-insensitive with English stemming (binding ~ binds ~ bound).
+ * is also case/accent-insensitive with English stemming (binding ~ binds ~ bind).
+ *
+ * NOT "~ bound". Porter is pure SUFFIX-STRIPPING with no dictionary and no irregular
+ * forms, verified against the tokenizer: `bound` matches only `bound`, `ran` only `ran`,
+ * `mice` only `mice`. Worth stating because the old example implied otherwise, and because
+ * the guarantee it gives is useful — every collapse porter performs preserves a common
+ * prefix, which is what lets the results table locate a stem match by trimming the typed
+ * term rather than re-implementing porter in JavaScript (js/modules/search-terms.js).
  *
  * Returns '' when nothing searchable remains — the caller treats that as no results.
  */
+/**
+ * Is this search input worth running? Mirrors js/modules/search-terms.js.
+ *
+ * THE RULE: at least one term of 2+ characters. Per-term, NOT total input length.
+ *
+ * Terms are AND-ed into a prefix query below, so a short term alongside others is
+ * constrained by them; a short term alone is not. Measured on Myotis_myotis:
+ *
+ *   "1"*                                      1,855,918 rows   <- alone: useless
+ *   "histone"* AND "deacetylase"*                 9,258 rows
+ *   "histone"* AND "deacetylase"* AND "1"*        4,254 rows   <- keeping it HELPS
+ *
+ * So short terms are kept, not dropped -- dropping them was costing precision. What must
+ * be refused is a query with nothing selective in it at all: `a` matches 1,164,973 rows
+ * against a 2,500 cap, so the user gets 2,500 arbitrary rows.
+ *
+ * The previous gate tested total length >= 3 in TWO JavaScript files and nothing here.
+ * That blocked real two-character gene symbols outright -- AR, C3, F8 (haemophilia A), CS,
+ * PC, SI -- with no search run and no explanation, while `histone deacetylase 1` passed
+ * only because the whole string is long.
+ *
+ * This copy is the load-bearing one. The JS gives a fast, specific message, but a
+ * hand-made request bypasses it entirely, and a lone `1` fanned out across selected
+ * organisms is a 1.86M-row scan per database against a 32 ms disk.
+ */
+function moop_search_input_is_usable($search_term, $is_quoted_search) {
+    $trimmed = trim((string)$search_term);
+    if ($trimmed === '') return false;
+
+    // Quoted input is ONE phrase, so its length is the phrase's length.
+    $terms = $is_quoted_search
+        ? [$trimmed]
+        : preg_split('/\s+/', $trimmed, -1, PREG_SPLIT_NO_EMPTY);
+
+    foreach ($terms as $term) {
+        if (!preg_match('/[\p{L}\p{N}]/u', $term)) continue;
+        if (mb_strlen($term) >= 2) return true;
+    }
+    return false;
+}
+
 function buildFtsMatchExpr($search_term, $is_quoted_search) {
     // Wrap a token/phrase as an FTS5 string literal ("" escapes an embedded quote).
     $as_fts_string = function ($s) { return '"' . str_replace('"', '""', $s) . '"'; };

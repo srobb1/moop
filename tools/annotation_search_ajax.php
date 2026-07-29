@@ -79,6 +79,21 @@ if (!$is_admin && !$user_has_group_access && !$organism_is_public && !$user_has_
 // Sanitize search input using function from search_functions.php
 $search_input = sanitize_search_input($search_keywords, $quoted_search);
 
+// Refuse a query with nothing selective in it, BEFORE opening any database. The browser
+// checks this too (js/modules/search-terms.js) for a faster message, but that is a
+// courtesy: a hand-made request skips it, and a lone "1" is a 1.86M-row scan per organism.
+// Checked here rather than after the access checks above so an unauthorised caller still
+// gets "Access denied" and learns nothing about the data.
+if (!moop_search_input_is_usable($search_input, $quoted_search)) {
+    echo json_encode([
+        'error'   => 'Enter at least 2 characters in one word. Single letters match too '
+                   . 'much to be useful; short words are fine alongside longer ones, '
+                   . 'e.g. "histone deacetylase 1".',
+        'results' => [],
+    ]);
+    exit;
+}
+
 // Build database path
 $db = "$organism_data/$organism/organism.sqlite";
 if (!file_exists($db)) {

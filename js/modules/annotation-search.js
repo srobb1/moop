@@ -347,8 +347,9 @@ class AnnotationSearch {
         const keywords = $('#searchKeywords').val().trim();
         this.currentKeywords = keywords;
 
-        if (keywords.length < 3) {
-            alert('Please enter at least 3 characters to search');
+        // Per-term, not total length -- see js/modules/search-terms.js for the measurements.
+        if (!moopSearchInputIsUsable(keywords)) {
+            alert(moopSearchInputHint());
             return;
         }
 

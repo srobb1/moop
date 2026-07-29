@@ -522,8 +522,10 @@ $(document).ready(function () {
         const checkedOrgs = getCheckedOrganisms();
 
         // Guards run in page order, so the hint always points at the FIRST thing to fix.
-        if (keywords.length < 3) {
-            showSelectHint('Enter at least three characters in Step <span class="step-ref">1</span>.');
+        // Per-term, not total length: `F8` is a real gene and must be searchable, while a
+        // lone `1` matches 1.86M rows. See js/modules/search-terms.js.
+        if (!moopSearchInputIsUsable(keywords)) {
+            showSelectHint('Step <span class="step-ref">1</span>: ' + moopSearchInputHint());
             return;
         }
         // A search is never run unscoped. Falling back to every organism used to be the

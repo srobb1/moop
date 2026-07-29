@@ -225,6 +225,8 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
         <!-- MOOP shared modules - Available to all pages -->
         <script src="/<?= $config->getString('site') ?>/js/modules/csrf.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/utilities.js"></script>
+        <!-- Before shared-results-table.js and annotation-search.js: both call into it. -->
+        <script src="/<?= $config->getString('site') ?>/js/modules/search-terms.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/datatable-config.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/shared-results-table.js"></script>
         <script src="/<?= $config->getString('site') ?>/js/modules/glossary.js"></script>
