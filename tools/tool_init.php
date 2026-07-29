@@ -19,10 +19,13 @@
  *   ?>
  */
 
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// Session cookie attributes are set in ONE place, and only BEFORE the session starts.
+// This used to call session_start() directly, several lines ahead of access_control.php
+// -- so by the time moop_session_start() ran it found a live session and returned early,
+// and every public tool page got PHP's default cookie: no HttpOnly, no SameSite, no
+// Secure, and (after the per-scheme split) the wrong cookie name entirely.
+require_once __DIR__ . '/../includes/session_init.php';
+moop_session_start();
 
 // Load access control and configuration
 include_once __DIR__ . '/../includes/access_control.php';

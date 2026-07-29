@@ -80,8 +80,11 @@ if (!ob_start('ob_gzhandler')) {
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 
-// Initialize session and access control
-session_start();
+// Initialize session and access control. Must go through moop_session_start() --
+// session_set_cookie_params() and session_name() have no effect once the session
+// has begun, so a direct session_start() here silently opts this endpoint out.
+require_once __DIR__ . '/../../includes/session_init.php';
+moop_session_start();
 require_once __DIR__ . '/../../includes/access_control.php';
 require_once __DIR__ . '/../../lib/functions_access.php';
 require_once __DIR__ . '/../../lib/jbrowse/track_token.php';
