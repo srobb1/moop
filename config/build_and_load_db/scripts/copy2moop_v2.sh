@@ -208,7 +208,40 @@ verify_remote() {
   FAILED=1
 }
 
-## Returns 0 published/current, 1 failed, 2 nothing built locally.
+## A database can be PRESENT, non-empty, and still not publishable.
+##
+## Amphimedon_queenslandica's 2026-07-28 build died at makeblastdb on a duplicate
+## seq_id AFTER the loader had already written 90,829 features and 831,932
+## annotations, so it left an 84 MB database that looks fully populated. The build
+## stopped before the whole-database steps, which is where the FTS index is created.
+## The pipeline knew exactly what that meant and said so:
+##
+##   ERROR: gene set GCF_000090795.2/RS_2026_04 failed -- stopping.
+##          Not running the whole-database steps and not copying to moop
+##
+## A copy driven from the filesystem cannot see that log line. Checking only for a
+## missing organism.sqlite let --all publish it, and because MOOP's search is
+## FTS-only the live site then answered `no such table: feature_annotation_search`
+## for that organism -- an error page, not an empty result.
+##
+## The FTS tables are created by the whole-database steps and by nothing else, so
+## their presence IS the surviving record of a build that ran to completion. This
+## reconstructs the pipeline's own decision from the artifact rather than trusting
+## that a file exists.
+##
+## Fails CLOSED: if sqlite3 cannot be run or the database cannot be read, that is a
+## refusal to publish, not a reason to skip the check. sqlite3 is already required
+## on this host -- moop_process_genome_data_v2.sbatch builds the FTS index with it.
+db_is_complete() {
+  local db="$1" n
+  n=$(sqlite3 -readonly "$db" \
+        "SELECT count(*) FROM sqlite_master
+          WHERE type='table' AND name IN ('feature_search','feature_annotation_search');" 2>/dev/null) \
+    || return 1
+  [ "$n" = "2" ]
+}
+
+## Returns 0 published/current, 1 failed, 2 nothing publishable built locally.
 copy_one_geneset() {
   local THIS_ORG="$1" ASSEMBLY="$2" GENE_SET="$3"
 
@@ -235,6 +268,15 @@ copy_one_geneset() {
     log "SKIP  $THIS_ORG  [$ASSEMBLY/$GENE_SET] — no organism.sqlite in $ORG_DATA"
     log "      Nothing published. The build did not leave a database where the copy"
     log "      step looks for it (REPO=$REPO). This gene set needs a build, not a copy."
+    return 2
+  fi
+
+  if ! db_is_complete "$ORG_DATA/organism.sqlite"; then
+    log "SKIP  $THIS_ORG  [$ASSEMBLY/$GENE_SET] — organism.sqlite has no FTS index"
+    log "      The build wrote features and annotations but stopped before the"
+    log "      whole-database steps, so this database is incomplete and searching it"
+    log "      would fail. Publishing it would REPLACE a working copy on the live"
+    log "      site. Fix the build and re-run this organism; do not copy."
     return 2
   fi
 
@@ -340,7 +382,7 @@ if $ALL; then
   ## when it should not be.
   log "     $($DRY_RUN && echo 'would copy ' || echo 'copied     ') : $n_ok"
   log "     already ok  : $n_same"
-  log "     not built   : $n_nobuild   (no organism.sqlite here — needs a build, not a copy)"
+  log "     not publishable : $n_nobuild   (missing or incomplete database — needs a build, not a copy)"
   log "     FAILED      : $n_fail"
   for f in ${FAILED_LIST+"${FAILED_LIST[@]}"}; do log "       $f"; done
 
