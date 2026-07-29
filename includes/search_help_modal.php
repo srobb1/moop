@@ -76,13 +76,15 @@ echo help_modal(
             'cards'   => [
                 [
                     'label' => 'One word',
-                    'text'  => 'Finds every record containing it. Example: <code>kinase</code>',
+                    'text'  => 'Matches from the <strong>start</strong> of a word. '
+                             . '<code>wnt</code> finds <em>wnt8b</em>, but <code>transposase</code> '
+                             . 'will not find <em>retrotransposase</em> — never from the middle.',
                     'html'  => true,
                 ],
                 [
                     'label' => 'Several words',
-                    'text'  => 'All of them must appear, in any order and anywhere in the text. '
-                             . '<code>kinase domain</code> finds records containing both.',
+                    'text'  => 'All of them must appear, in any order. '
+                             . '<code>kinase domain</code> finds records with both.',
                     'html'  => true,
                 ],
                 [
@@ -92,33 +94,11 @@ echo help_modal(
                     'html'  => true,
                 ],
                 [
-                    // Replaces a "short words are skipped" card that described behaviour the
-                    // code never had: every word IS searched, numbers included, and keeping the
-                    // number is what narrows the result. Measured on Myotis_myotis:
-                    //   "histone" AND "deacetylase"            9,258 rows  (every HDAC)
-                    //   "histone" AND "deacetylase" AND "1"    4,254 rows  (HDAC1 at the top)
-                    // The search minimum is per-TERM (>= 2 chars in one word), not on the whole
-                    // box -- see moop_search_input_is_usable() / js/modules/search-terms.js.
-                    'label' => 'Search the symbol, not the number',
-                    'text'  => 'For one family member type the symbol: <code>hdac1</code> is far '
-                             . 'sharper than <code>histone deacetylase 1</code>. A bare '
-                             . '<code>1</code> also matches <em>10</em> and <em>11</em>, and the '
-                             . '<code>.1</code> in accession numbers.',
-                    'html'  => true,
-                ],
-                [
                     'label' => 'Word endings are handled',
                     'text'  => '<code>kinases</code> also finds <em>kinase</em>, and '
                              . '<code>transport</code> also finds <em>transporter</em>. '
                              . 'Exact matches are listed first, so type the whole word if you '
                              . 'get more than you expected.',
-                    'html'  => true,
-                ],
-                [
-                    'label' => 'Matching starts at the beginning of a word',
-                    'text'  => '<code>wnt</code> finds <em>wnt8b</em>, but <code>transposase</code> '
-                             . 'will not find <em>retrotransposase</em> — matching starts at the '
-                             . 'beginning, not the middle.',
                     'html'  => true,
                 ],
             ],
