@@ -20,6 +20,31 @@ my @annot_files = @ARGV;
 die "Usage: $0 genes.sqlite annotations.tsv [annotations2.tsv ...]\n"
     if !$dbfile or !@annot_files;
 
+## MOOP may have stripped a per-organism prefix from the feature IDs in its own copy
+## of this gene set -- strip_id_prefix.pl, opt-in via `moop-strip-id-prefix` in
+## metadata.yaml. The annotation files predate that: they were produced by analyses
+## run against the depositor's sequences, so they still carry the full IDs.
+##
+## Read what was ACTUALLY DONE from the manifest the strip step wrote beside these
+## files, not from metadata.yaml. One source of truth: whatever normalization the
+## features received, the join applies the same one. Two independent readers of the
+## same intent is precisely how a rename quietly stops matching -- see the Bipalium
+## vagum note further down, where a suffix MOOP itself added silently cost 21,199
+## annotations.
+my $strip_prefix = '';
+{
+    my $dir = dirname($annot_files[0]);
+    if (open my $manifest, '<', "$dir/.id_prefix_stripped") {
+        my $line = <$manifest>;
+        close $manifest;
+        chomp($line) if defined $line;
+        $strip_prefix = defined $line ? $line : '';
+        print "Feature IDs had the prefix '$strip_prefix' stripped by MOOP; "
+            . "annotation IDs will be normalized to match\n"
+            if length $strip_prefix;
+    }
+}
+
 # Connect with AutoCommit off for one big transaction
 my $dbh = DBI->connect(
     "dbi:SQLite:dbname=$dbfile", "", "",
@@ -455,8 +480,21 @@ These are required for a load
         my $feature_id = $feature_cache{$unique_name};
         my $matched_as = $unique_name;
         if (!defined $feature_id) {
-            foreach my $suffix (':pep', ':cds') {
-                my $candidate = $unique_name . $suffix;
+            ## Candidates in order: MOOP's ":pep"/":cds" suffix first, then the same
+            ## two against the prefix-stripped form (see $strip_prefix above -- also
+            ## ours, also invisible to the analysis, also our job to undo).
+            ##
+            ## When no prefix was stripped the stripped form equals the original and
+            ## the extra candidates are never pushed, so this behaves byte-identically
+            ## to before for every gene set that has not opted in.
+            my @candidates = ("$unique_name:pep", "$unique_name:cds");
+            if (length $strip_prefix) {
+                my $stripped = $unique_name;
+                if ($stripped =~ s/^\Q$strip_prefix\E//) {
+                    push @candidates, $stripped, "$stripped:pep", "$stripped:cds";
+                }
+            }
+            foreach my $candidate (@candidates) {
                 next unless defined $feature_cache{$candidate};
                 $feature_id = $feature_cache{$candidate};
                 $matched_as = $candidate;
