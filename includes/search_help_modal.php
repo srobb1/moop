@@ -88,9 +88,9 @@ echo help_modal(
                     'html'  => true,
                 ],
                 [
-                    'label' => 'An exact phrase',
-                    'text'  => 'Put it in quotes. <code>"ABC transporter"</code> matches that '
-                             . 'phrase only, not the two words apart.',
+                    'label' => 'Words together',
+                    'text'  => 'Put it in quotes. <code>"ABC transporter"</code> needs those words '
+                             . 'side by side, in that order — not scattered through the record.',
                     'html'  => true,
                 ],
                 [
