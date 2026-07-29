@@ -251,7 +251,10 @@ if [ "${SKIP_COPY:-0}" -eq 1 ]; then
 else
   for entry in "${GENESETS[@]}"; do
     IFS=$'\t' read -r asm gs <<< "$entry"
-    sh "$SCRIPTS/copy2moop_v2.sh" "$THIS_ORG" "$asm" "$gs" || exit 1
+    ## Pass REPO explicitly. This script has it from $SLURM_SUBMIT_DIR; letting the
+    ## copy re-derive it from its own location sent it into the git checkout when
+    ## scripts/ is a symlink, so the build wrote to one tree and the copy read another.
+    REPO="$REPO" sh "$SCRIPTS/copy2moop_v2.sh" "$THIS_ORG" "$asm" "$gs" || exit 1
   done
 fi
 

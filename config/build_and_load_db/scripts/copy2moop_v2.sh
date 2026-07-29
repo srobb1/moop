@@ -5,7 +5,23 @@ GENE_SET=$3
 [ -n "$THIS_ORG" ] && [ -n "$ASSEMBLY" ] && [ -n "$GENE_SET" ] \
   || { echo "Usage: $0 <organism> <assembly> <gene_set>"; exit 1; }
 
-REPO=$(realpath "$(dirname "${BASH_SOURCE[0]}")/..")
+## WHERE THE DATA IS. This must agree with the caller, and it used not to.
+##
+## This was `realpath "$(dirname "${BASH_SOURCE[0]}")/.."`, and realpath RESOLVES
+## SYMLINKS. Where the working tree's scripts/ is a symlink into the git checkout
+## -- which is how the v2 tree is arranged -- that walked out of the tree entirely:
+##
+##   invoked from   .../moop/build_and_load_db/v2
+##   REPO became    .../moop/moop-pipeline/config/build_and_load_db
+##
+## The sbatch takes REPO from $SLURM_SUBMIT_DIR, so the BUILD wrote to v2/data
+## while the COPY looked in moop-pipeline/data. One pipeline, two answers to the
+## same question, and the file simply was not where this half expected it.
+##
+## Now: an inherited REPO wins (the caller already knows, and passing it beats
+## re-deriving it), and the fallback uses `cd`+`pwd`, which keeps the logical path
+## rather than resolving the symlink out from under us.
+REPO=${REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
 DATA=$REPO/data
 LOGFILE=$REPO/copy2moop_$(date +%Y%m%d).log
 
