@@ -26,6 +26,9 @@ DATA=$REPO/data
 LOGFILE=$REPO/copy2moop_$(date +%Y%m%d).log
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S')  $*" | tee -a "$LOGFILE"; }
+## Same thing on stderr, for anything that runs inside $( ). log() writes to stdout,
+## so a retry notice emitted during `have=$(... )` would be captured as the value.
+logerr() { echo "$(date '+%Y-%m-%d %H:%M:%S')  $*" | tee -a "$LOGFILE" >&2; }
 
 source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
 GENOME_DIR=$GENOMES/$THIS_ORG/$ASSEMBLY
@@ -55,7 +58,40 @@ REMOTE_GENESET_PATH="$REMOTE_ASSEMBLY_PATH/$GENE_SET"
 ## the files are verified present on the far side.
 FAILED=0
 
-if ! ssh "$REMOTE" "mkdir -p '$REMOTE_GENESET_PATH'"; then
+## EVERY connection here goes to one host, and the whole SLURM array hits it at once.
+## sshd's default MaxStartups is 10:30:100 -- it starts randomly REFUSING connections
+## at 10 concurrent unauthenticated sessions. The array runs at concurrency 10 and each
+## organism opens several connections, so the limit is reached routinely.
+##
+## On 2026-07-28 that dropped the copy for 10 of 81 organisms: `rsync error: unexplained
+## error (code 255)`, "connection unexpectedly closed", clustered in time with two pairs
+## sharing a timestamp to the second. Every one of those databases had built correctly.
+## The data was fine; the transport was not. Nothing about the retry below makes a
+## genuine failure pass -- it only stops a refused connection from being reported as one.
+##
+## Jitter is not decoration: a fixed delay re-synchronises the herd it is meant to
+## break up, so all ten tasks would collide again on the next attempt.
+SSH_OPTS=(-o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
+RETRIES=${COPY_RETRIES:-4}
+
+retry() {
+  local what="$1"; shift
+  local attempt=1 rc=0 delay
+  while : ; do
+    "$@" && return 0
+    rc=$?
+    [ "$attempt" -ge "$RETRIES" ] && break
+    delay=$(( attempt * 10 + RANDOM % 15 ))
+    logerr "WARN  $what — exit $rc, attempt $attempt/$RETRIES, retrying in ${delay}s"
+    sleep "$delay"
+    attempt=$(( attempt + 1 ))
+  done
+  logerr "FAIL  $what — exit $rc after $RETRIES attempts"
+  return "$rc"
+}
+
+if ! retry "ssh mkdir $REMOTE_GENESET_PATH" \
+     ssh "${SSH_OPTS[@]}" "$REMOTE" "mkdir -p '$REMOTE_GENESET_PATH'"; then
   log "FAIL  $THIS_ORG  [$ASSEMBLY/$GENE_SET] — cannot ssh to '$REMOTE' or create $REMOTE_GENESET_PATH"
   log "      Nothing was copied. If this ran on a compute node, check that it can"
   log "      reach '$REMOTE' — a login node being able to is not the same thing."
@@ -77,8 +113,18 @@ send() {
     fi
   done
   [ "${#to_send[@]}" -eq 0 ] && return 0
-  if ! rsync -azL "${to_send[@]}" "$REMOTE:$dest/"; then
-    log "FAIL  rsync to $dest returned $? for: ${to_send[*]}"
+  ## --partial keeps the bytes of an interrupted transfer so a retry resumes instead
+  ## of restarting a 2 GB genome from zero; --timeout turns a silently wedged
+  ## connection into a failure the retry can act on, rather than a hung job.
+  ##
+  ## The exit status reported here used to be `$?` read inside `if ! rsync ...; then`,
+  ## which is the status of the `!` -- always 0. Every transport failure logged
+  ## "returned 0", which is precisely the message that sends you looking at the data
+  ## instead of the network. retry() captures the real status.
+  if ! retry "rsync to $dest" \
+       rsync -azL --partial --timeout=120 -e "ssh ${SSH_OPTS[*]}" \
+         "${to_send[@]}" "$REMOTE:$dest/"; then
+    logerr "      files: ${to_send[*]}"
     FAILED=1
   fi
 }
@@ -92,7 +138,18 @@ verify_remote() {
   [ -e "$local_file" ] || return 0
   local want have
   want=$(stat -c %s "$local_file")
-  have=$(ssh "$REMOTE" "stat -c %s '$remote_path' 2>/dev/null" || echo missing)
+  ## `|| echo missing` conflated two different things: ssh not running, and the file
+  ## not being there. A dropped connection -- the exact failure being retried against
+  ## above -- would then report a publish that HAD succeeded as incomplete. Now the
+  ## remote side answers ABSENT for a missing file (and exits 0), so a non-zero ssh
+  ## means transport, and only transport.
+  if ! have=$(retry "stat $remote_path" \
+                ssh "${SSH_OPTS[@]}" "$REMOTE" \
+                  "stat -c %s '$remote_path' 2>/dev/null || echo ABSENT"); then
+    log "FAIL  cannot reach $REMOTE to verify $(basename "$local_file") — publish unconfirmed"
+    FAILED=1
+    return 1
+  fi
   if [ "$have" = "$want" ]; then
     return 0
   fi
