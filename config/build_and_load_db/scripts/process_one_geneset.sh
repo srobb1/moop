@@ -538,7 +538,7 @@ if $HAS_GFF; then
   ## MOOP's own ID normalization, opt-in per gene set via metadata.yaml:
   ##
   ##     moop-strip-id-prefix: Bradypodion_ventrale_
-  ##     moop-add-id-prefix:   braven_
+  ##     moop-add-id-prefix:   BraVen_
   ##
   ## The add key is optional -- omit it to drop the prefix entirely. Both are
   ## literals; the 3-of-genus + 3-of-species convention is for the curator filling

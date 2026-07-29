@@ -27,14 +27,14 @@ use File::Basename qw(dirname);
 # had no FTS index either. Sister species Bradypodion_pumilum lands on exactly 50
 # -- working today with zero characters to spare.
 #
-#     --strip Bradypodion_ventrale_ --add braven_
-#     braven_JAWDJE010000001.1_000001.1:pep                  37
+#     --strip Bradypodion_ventrale_ --add BraVen_
+#     BraVen_JAWDJE010000001.1_000001.1:pep                  37
 #
 # ---------------------------------------------------------------------------
 # THE SHORT CODE IS A HUMAN CONVENTION, NOT A COMPUTATION
 #
 # Both prefixes are literals from metadata.yaml. The convention is 3 letters of
-# genus + 3 of species, lowercased ("braven_"), and across all 85 organisms in
+# genus + 3 of species, each capitalised ("BraVen_"), and across all 85 organisms in
 # this corpus that yields 85 distinct codes with no collisions.
 #
 # It is NOT collision-proof in general, which is exactly why this script does not
