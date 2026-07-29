@@ -157,22 +157,46 @@ function resultFeatureUrl(ctx, uniquename) {
     return url;
 }
 
-/** Wrap search terms in a highlight span. Quoted input highlights the phrase as a unit. */
+/**
+ * Wrap search terms in a highlight span. Quoted input highlights the phrase as a unit.
+ *
+ * TWO COLOURS, because FTS5 matches on the stem and the user typed a word:
+ *   amber  — the word you typed, found literally.
+ *   blue   — a stem variant: you typed `proteins`, this record says `protein`.
+ *
+ * Without the second colour a stem-matched row arrives with NOTHING marked, because the
+ * literal search for `proteins` never finds `protein` — the user sees a result they cannot
+ * account for. The distinct colour also flags the stem-widened hits the help warns about
+ * (`transpos` reaching `transporter`), so a surprising result explains itself.
+ *
+ * FTS5's own highlight() would be the right tool and is unavailable: the index is
+ * contentless, so there is no stored text to mark. See moopTermHighlight().
+ */
 function highlightSearchTerms(text, keywords) {
     if (!text) return text || '';
     if (!keywords) return text;
-    const HL  = `<strong style="background-color: #fff3cd; font-weight: bold;">$&</strong>`;
+    const EXACT = `<strong style="background-color: #fff3cd; font-weight: bold;">$&</strong>`;
+    const STEM  = `<strong style="background-color: #cff4fc; font-weight: bold;">$&</strong>`;
     const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     const trimmed = keywords.trim();
     if (/^".+"$/.test(trimmed)) {
-        return text.replace(new RegExp(esc(trimmed.slice(1, -1)), 'gi'), HL);
+        return text.replace(new RegExp(esc(trimmed.slice(1, -1)), 'gi'), EXACT);
     }
-    const terms = trimmed.split(/\s+/).filter(t => t.length >= 3);
+    // Same threshold as the search gate, and that matters: this used to require 3 while the
+    // gate allowed anything 3+ overall, so a two-character term inside a longer query ran
+    // but was never highlighted -- rows came back with nothing marked, reading as broken.
+    const terms = moopHighlightableTerms(trimmed);
     if (terms.length === 0) return text;
     let highlighted = text;
     terms.forEach(term => {
-        highlighted = highlighted.replace(new RegExp(esc(term), 'gi'), HL);
+        // Trim the term until it is found; null means this cell is not why the row matched.
+        const hit = moopTermHighlight(highlighted, term);
+        if (!hit) return;
+        highlighted = highlighted.replace(
+            new RegExp(esc(hit.text), 'gi'),
+            hit.exact ? EXACT : STEM
+        );
     });
     return highlighted;
 }
