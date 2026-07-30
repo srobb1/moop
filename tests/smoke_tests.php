@@ -67,6 +67,40 @@ $_SESSION = ['access_level' => 'COLLABORATOR', 'access' => ['Made_Up_Org' => ['G
 ok(has_assembly_access('Made_Up_Org', 'GCA_x') === true,  'COLLABORATOR can access an assembly in its list');
 ok(has_assembly_access('Made_Up_Org', 'GCA_y') === false, 'COLLABORATOR cannot access an assembly not in its list');
 
+// has_gene_set_access(): the finer check, and the ways it must differ from the one above.
+//
+// These two disagree, and the direction matters: has_assembly_access() is satisfied by the
+// assembly KEY EXISTING, so a collaborator granted one gene set passes it for every gene set
+// on that assembly. Anything deciding what a user may see has to use the gene-set check --
+// getAccessibleOrganismsInGroup() used the assembly one until 2026-07-30 because it predates
+// the gene-set layer.
+group('gene-set access is finer than assembly access');
+$_SESSION = ['access_level' => 'COLLABORATOR',
+             'access' => ['Made_Up_Org' => ['GCA_x' => ['gs_alpha']]]];
+ok(has_gene_set_access('Made_Up_Org', 'GCA_x', 'gs_alpha') === true,
+   'COLLABORATOR reaches a gene set that was granted');
+ok(has_gene_set_access('Made_Up_Org', 'GCA_x', 'gs_beta') === false,
+   'COLLABORATOR is denied a gene set on the SAME assembly that was not granted');
+ok(has_assembly_access('Made_Up_Org', 'GCA_x') === true,
+   'the assembly check passes for that same user -- which is why it is the wrong check');
+
+$_SESSION = ['access_level' => 'COLLABORATOR',
+             'access' => ['Made_Up_Org' => ['GCA_x' => ['*']]]];
+ok(has_gene_set_access('Made_Up_Org', 'GCA_x', 'anything_at_all') === true,
+   "'*' grants every gene set on the assembly");
+
+// Legacy shapes must DENY or GRANT, never fatal. in_array() on a non-array is a
+// TypeError in PHP 8, i.e. a 500 on every page that resolves access.
+$_SESSION = ['access_level' => 'COLLABORATOR',
+             'access' => ['Made_Up_Org' => ['GCA_x' => true]]];
+ok(has_gene_set_access('Made_Up_Org', 'GCA_x', 'gs_alpha') === true,
+   'legacy {asm: true} means the whole assembly, and does not throw');
+
+$_SESSION = ['access_level' => 'COLLABORATOR',
+             'access' => ['Made_Up_Org' => ['GCA_1', 'GCA_2']]];
+ok(has_gene_set_access('Made_Up_Org', 'GCA_1', 'gs_alpha') === false,
+   'legacy {org: [asm,...]} list shape denies rather than throwing');
+
 // ----------------------------------------------------------------------------
 group('search-query building — FTS expression + scope filters');
 

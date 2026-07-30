@@ -121,50 +121,65 @@ function getPublicGroupCards($group_data) {
 }
 
 /**
- * Filter organisms in a group to only those with at least one accessible assembly
- * Respects user permissions for assembly access
- * 
+ * Organisms in a group that this user can actually see, with only the assemblies
+ * they can see under each.
+ *
+ * ACCESS IS DECIDED AT GENE-SET LEVEL, not assembly level. That distinction is not
+ * cosmetic: for a COLLABORATOR, has_assembly_access() returns true when the assembly
+ * KEY EXISTS in their access list, whatever it maps to, while has_gene_set_access()
+ * requires the gene set itself (or '*'). So a user granted one gene set on an
+ * assembly passes the assembly check for EVERY gene set on it. This function used
+ * the assembly check -- it predates the gene-set layer and was not updated with it.
+ *
+ * It also used to return the UNFILTERED assembly list: an organism qualified if any
+ * one of its assemblies was accessible, and then every assembly came back, readable
+ * or not. Nothing consumed those values (tools/pages/groups.php binds $assemblies in
+ * its foreach and never reads it), so nothing leaked -- but the next caller to use
+ * the return value would have inherited an access bug, which is exactly what a
+ * scope-tree built from this would have done.
+ *
+ * Deliberately NOT delegated to getAccessibleAssemblies(): that resolves genome and
+ * gene-set ids out of each organism's SQLite, which costs ~1.6 s cold, and this runs
+ * once per group in getOrganismGroups(). The group metadata already carries
+ * organism/assembly/gene_set per entry, so the correct check is available for free.
+ *
  * @param string $group_name The group name to filter
- * @param array $group_data Array of organism/assembly/groups data
- * @return array Filtered array of organism => [accessible_assemblies]
+ * @param array  $group_data Array of organism/assembly/gene_set/groups entries
+ * @return array organism => [accessible assembly, ...], organisms sorted
  */
 function getAccessibleOrganismsInGroup($group_name, $group_data) {
-    $group_organisms = [];
-    
-    // Find all organisms/assemblies in this group
-    foreach ($group_data as $data) {
-        if (in_array($group_name, $data['groups'])) {
-            $organism = $data['organism'];
-            $assembly = $data['assembly'];
-            
-            if (!isset($group_organisms[$organism])) {
-                $group_organisms[$organism] = [];
-            }
-            $group_organisms[$organism][] = $assembly;
-        }
-    }
-    
-    // Filter: only keep organisms with at least one accessible assembly
     $accessible_organisms = [];
-    foreach ($group_organisms as $organism => $assemblies) {
-        $has_accessible_assembly = false;
-        
-        foreach ($assemblies as $assembly) {
-            // Check if user has access to this specific assembly
-            if (has_assembly_access($organism, $assembly)) {
-                $has_accessible_assembly = true;
-                break;
-            }
+
+    foreach ($group_data as $data) {
+        if (!in_array($group_name, $data['groups'] ?? [], true)) {
+            continue;
         }
-        
-        if ($has_accessible_assembly) {
-            $accessible_organisms[$organism] = $assemblies;
+
+        $organism = $data['organism'];
+        $assembly = $data['assembly'];
+        $gene_set = $data['gene_set'] ?? 'v1';
+
+        if (!has_gene_set_access($organism, $assembly, $gene_set)) {
+            continue;
+        }
+
+        // One entry per assembly: several gene sets on one assembly must not
+        // produce the same assembly several times.
+        if (!isset($accessible_organisms[$organism])) {
+            $accessible_organisms[$organism] = [];
+        }
+        if (!in_array($assembly, $accessible_organisms[$organism], true)) {
+            $accessible_organisms[$organism][] = $assembly;
         }
     }
-    
-    // Sort organisms alphabetically
+
+    foreach ($accessible_organisms as &$assemblies) {
+        sort($assemblies);
+    }
+    unset($assemblies);
+
     ksort($accessible_organisms);
-    
+
     return $accessible_organisms;
 }
 

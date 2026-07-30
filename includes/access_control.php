@@ -483,7 +483,17 @@ function has_gene_set_access($organism_name, $assembly_name, $gene_set) {
     if (has_access('COLLABORATOR')) {
         $user_access = get_user_access();
         $allowed = $user_access[$organism_name][$assembly_name] ?? [];
-        return in_array('*', $allowed) || in_array($gene_set, $allowed);
+
+        // users.json carries TWO access shapes (admin/manage_users.php:277 handles both):
+        //   new  {org: {asm: [gene_set, ...]}}
+        //   old  {org: [asm, ...]}            -- a list, so [$assembly] misses and we deny
+        // A third, `{asm: true}`, means "the whole assembly" and predates gene sets.
+        // Without this coercion in_array() receives a bool and PHP 8 throws a TypeError,
+        // which is a 500 on every page that resolves access -- not a denial.
+        if ($allowed === true)  return true;
+        if (!is_array($allowed)) return false;
+
+        return in_array('*', $allowed, true) || in_array($gene_set, $allowed, true);
     }
 
     return false;
