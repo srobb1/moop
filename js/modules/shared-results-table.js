@@ -101,11 +101,11 @@ const RESULT_COLUMNS = [
     },
     {
         key: 'name', label: 'Name', width: 180, variants: ['*'],
-        render: (r, ctx) => highlightSearchTerms(r.feature_name, ctx.keywords) || '—'
+        render: (r, ctx) => highlightSearchTerms(r.feature_name, ctx.keywords, moopRowHighlightText(r)) || '—'
     },
     {
         key: 'description', label: 'Description', width: 300, variants: ['*'], wrap: true,
-        render: (r, ctx) => highlightSearchTerms(r.feature_description, ctx.keywords) || '—'
+        render: (r, ctx) => highlightSearchTerms(r.feature_description, ctx.keywords, moopRowHighlightText(r)) || '—'
     },
     {
         key: 'ann_source', label: 'Annotation Source', width: 300, variants: ['full'],
@@ -117,7 +117,7 @@ const RESULT_COLUMNS = [
     },
     {
         key: 'ann_desc', label: 'Annotation Description', width: 500, variants: ['full'], wrap: true,
-        render: (r, ctx) => highlightSearchTerms(r.annotation_description, ctx.keywords) || ''
+        render: (r, ctx) => highlightSearchTerms(r.annotation_description, ctx.keywords, moopRowHighlightText(r)) || ''
     },
     {
         key: 'matches', label: 'Matches', width: 120, variants: ['simple'],
@@ -166,7 +166,16 @@ function resultFeatureUrl(ctx, uniquename) {
  * FTS5's own highlight() would be the right tool and is unavailable: the index is
  * contentless, so there is no stored text to mark. See moopTermHighlight().
  */
-function highlightSearchTerms(text, keywords) {
+/**
+ * The row's highlightable text, joined. Used to decide whether a term was found LITERALLY
+ * anywhere in this row -- if it was, no cell falls back to a shortened guess.
+ */
+function moopRowHighlightText(r) {
+    return [r.feature_name, r.feature_description, r.annotation_description]
+        .filter(Boolean).join('   ');
+}
+
+function highlightSearchTerms(text, keywords, rowText) {
     if (!text) return text || '';
     if (!keywords) return text;
     const EXACT = `<strong style="background-color: #fff3cd; font-weight: bold;">$&</strong>`;
@@ -183,9 +192,13 @@ function highlightSearchTerms(text, keywords) {
     const terms = moopHighlightableTerms(trimmed);
     if (terms.length === 0) return text;
     let highlighted = text;
+    const haystack = rowText ? String(rowText).toLowerCase() : '';
     terms.forEach(term => {
+        // Did the user's literal term appear ANYWHERE in this row? If so, cells that lack
+        // it mark nothing, rather than guessing with a shortened prefix.
+        const exactInRow = haystack !== '' && haystack.indexOf(term.toLowerCase()) !== -1;
         // Trim the term until it is found; null means this cell is not why the row matched.
-        const hit = moopTermHighlight(highlighted, term);
+        const hit = moopTermHighlight(highlighted, term, exactInRow);
         if (!hit) return;
         highlighted = highlighted.replace(
             new RegExp(esc(hit.text), 'gi'),

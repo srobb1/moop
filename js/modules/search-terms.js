@@ -128,14 +128,43 @@ function moopHighlightableTerms(input) {
  * cell -- e.g. `F8` matched on feature_name while the description reads "coagulation
  * factor VIII" -- and marking nothing is the correct answer, not a failure.
  */
-function moopTermHighlight(text, term) {
+function moopTermHighlight(text, term, exactFoundInRow) {
     if (!text || !term) return null;
     const hay = String(text);
-    for (let n = term.length; n >= MOOP_MIN_TERM_LENGTH; n--) {
+    const lower = hay.toLowerCase();
+
+    // The literal term the user typed, wherever it appears.
+    if (lower.indexOf(term.toLowerCase()) !== -1) {
+        return { text: term, exact: true };
+    }
+
+    // The exact term was found SOMEWHERE ELSE in this row, so this row is explained and a
+    // shortened guess here adds nothing but noise. Searching HDAC used to mark `HD` inside
+    // "PHD finger protein 12" in the Description column while the Annotation Description
+    // legitimately matched `HDAC` -- and because Description comes first, the wrong,
+    // shorter mark is the one the user sees first.
+    if (exactFoundInRow) return null;
+
+    for (let n = term.length - 1; n >= MOOP_MIN_TERM_LENGTH; n--) {
         const probe = term.slice(0, n);
-        if (hay.toLowerCase().indexOf(probe.toLowerCase()) !== -1) {
-            return { text: probe, exact: n === term.length };
+        const at = lower.indexOf(probe.toLowerCase());
+        if (at === -1) continue;
+        // A shortened probe must land at a WORD START. Porter only strips suffixes, so a
+        // stem and its inflection share a prefix FROM THE BEGINNING OF THE WORD: `protein`
+        // opens `proteins`. A mid-word hit is never that relationship -- `HD` inside `PHD`
+        // is a coincidence of letters, not a stem. Without this test the trimming loop will
+        // eventually find almost any short prefix somewhere in a long description.
+        if (at > 0 && /[A-Za-z0-9]/.test(hay[at - 1])) {
+            // Try later positions of the same probe before giving up on this length.
+            let next = lower.indexOf(probe.toLowerCase(), at + 1);
+            let ok = false;
+            while (next !== -1) {
+                if (!/[A-Za-z0-9]/.test(hay[next - 1])) { ok = true; break; }
+                next = lower.indexOf(probe.toLowerCase(), next + 1);
+            }
+            if (!ok) continue;
         }
+        return { text: probe, exact: false };
     }
     return null;
 }
