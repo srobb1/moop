@@ -219,8 +219,22 @@ class ScopeFilter {
                 </div>`;
         }
 
+        // Deliberately NOT `modal fade`. Measured on the Bats group page: every piece of
+        // our own work -- fetch, build, handler binding, indeterminate sweep -- totals
+        // ~7 ms, while click-to-visible was 387 ms. The other 380 ms was purely the fade
+        // transition, so the modal felt slow for a reason that had nothing to do with the
+        // tree size (147 checkboxes, 116 KB of HTML, 0.6 ms to build).
+        //
+        // Dropping `fade` also fixes a real bug. Bootstrap's Modal.hide() returns early
+        // while _isTransitioning is true, so clicking Apply -- or Cancel, or pressing Esc
+        // -- within ~350 ms of opening left the modal STUCK OPEN with its backdrop, while
+        // onApply() had already run. The filter applied but the UI looked broken, and it
+        // took a second click to clear. Measured: stuck at 0/100/200/300 ms, fine from
+        // 400 ms. Without `fade`, _isAnimated() is false, Bootstrap completes the
+        // transition synchronously, and the window closes to zero -- which also covers
+        // Cancel and Esc, whose handlers are Bootstrap's own and cannot be intercepted here.
         return `
-            <div class="modal fade" id="scopeFilterModal" tabindex="-1">
+            <div class="modal" id="scopeFilterModal" tabindex="-1">
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
