@@ -1,7 +1,10 @@
 <?php
+// Versioned asset URLs (?v=filemtime). Shared with head-resources.php.
+require_once __DIR__ . '/asset_url.php';
+
 /**
  * PAGE LAYOUT SYSTEM - Core Infrastructure
- * 
+ *
  * ========== CLEAN ARCHITECTURE OVERVIEW ==========
  * 
  * DATA FLOW:
@@ -140,7 +143,7 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
         <?php
         if (isset($page_styles) && is_array($page_styles)) {
             foreach ($page_styles as $style) {
-                echo '<link rel="stylesheet" href="' . htmlspecialchars($style) . '">' . "\n";
+                echo '<link rel="stylesheet" href="' . moop_asset_url_from_site_path($style) . '">' . "\n";
             }
         }
         ?>
@@ -207,36 +210,36 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
         <script>window.MOOP_SEARCH_RESULTS_LIMIT = <?= (int)moop_search_results_limit() ?>;</script>
 
         <!-- Vendor JS — self-hosted, no external CDN dependency -->
-        <script src="/<?= $config->getString('site') ?>/js/vendor/jquery.min.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/vendor/bootstrap.bundle.min.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/vendor/jquery.dataTables.min.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/vendor/dataTables.bootstrap5.min.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/vendor/dataTables.buttons.min.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/vendor/buttons.bootstrap5.min.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/vendor/buttons.html5.min.js"></script>
+        <script src="<?= moop_asset_url('js/vendor/jquery.min.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/vendor/bootstrap.bundle.min.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/vendor/jquery.dataTables.min.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/vendor/dataTables.bootstrap5.min.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/vendor/dataTables.buttons.min.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/vendor/buttons.bootstrap5.min.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/vendor/buttons.html5.min.js') ?>"></script>
 <?php /* buttons.print.min.js is deliberately NOT loaded: the Print/PDF button was removed
          (it could not produce a PDF — pdfmake is not vendored — and a wide genomic table is
          not a paper artefact). Copy/CSV/Excel cover taking the data away; Ctrl+P still
          prints the page. See notes/RESULTS_TABLE_TOOLBAR_REVIEW.md. */ ?>
-        <script src="/<?= $config->getString('site') ?>/js/vendor/buttons.colVis.min.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/vendor/jszip.min.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/vendor/dataTables.colReorder.min.js"></script>
+        <script src="<?= moop_asset_url('js/vendor/buttons.colVis.min.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/vendor/jszip.min.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/vendor/dataTables.colReorder.min.js') ?>"></script>
         
         <!-- MOOP shared modules - Available to all pages -->
-        <script src="/<?= $config->getString('site') ?>/js/modules/csrf.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/modules/utilities.js"></script>
+        <script src="<?= moop_asset_url('js/modules/csrf.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/modules/utilities.js') ?>"></script>
         <!-- Before shared-results-table.js and annotation-search.js: both call into it. -->
-        <script src="/<?= $config->getString('site') ?>/js/modules/search-terms.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/modules/datatable-config.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/modules/shared-results-table.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/modules/glossary.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/modules/field-help.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/modules/annotation-search.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/modules/advanced-search-filter.js"></script>
-        <script src="/<?= $config->getString('site') ?>/js/modules/scope-filter.js"></script>
+        <script src="<?= moop_asset_url('js/modules/search-terms.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/modules/datatable-config.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/modules/shared-results-table.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/modules/glossary.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/modules/field-help.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/modules/annotation-search.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/modules/advanced-search-filter.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/modules/scope-filter.js') ?>"></script>
         
         <!-- Loading Indicator - Available to all pages for database scanning operations -->
-        <script src="/<?= $config->getString('site') ?>/js/loading-indicator.js"></script>
+        <script src="<?= moop_asset_url('js/loading-indicator.js') ?>"></script>
         
         <!-- Inline scripts - Page-specific variable definitions (must load before page_script) -->
         <?php
@@ -303,11 +306,10 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
             // Handle both string and array
             $scripts = is_array($page_script) ? $page_script : [$page_script];
             foreach ($scripts as $script) {
-                // Append filemtime as ?v= for cache-busting on file changes
-                $abs = $_SERVER['DOCUMENT_ROOT'] . $script;
-                $ver = file_exists($abs) ? filemtime($abs) : 0;
-                $versioned = htmlspecialchars($script) . ($ver ? '?v=' . $ver : '');
-                echo '<script src="' . $versioned . '"></script>' . "\n";
+                // Same versioning as every other local asset -- see moop_asset_url() at
+                // the top of this file. $script arrives site-prefixed ('/moop/js/x.js'),
+                // so strip that prefix before resolving it against the app root.
+                echo '<script src="' . moop_asset_url_from_site_path($script) . '"></script>' . "\n";
             }
         }
         ?>

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/asset_url.php';   // versioned asset URLs (?v=filemtime)
 /**
  * HEAD RESOURCES - CSS and Meta Tags for <head>
  *
@@ -30,28 +31,28 @@ $site = $config->getString('site');
     <?php endif; ?>
 
     <!-- Bootstrap 5.3.2 CSS — self-hosted -->
-    <link href="/<?= $site ?>/css/bootstrap.min.css" rel="stylesheet">
+    <link href="<?= moop_asset_url('css/bootstrap.min.css') ?>" rel="stylesheet">
 
     <!-- MOOP Base Styles (global styles + loader animation) -->
-    <link rel="stylesheet" href="/<?= $site ?>/css/moop.css">
+    <link rel="stylesheet" href="<?= moop_asset_url('css/moop.css') ?>">
 
     <!-- Display Styles (feature colors, badges, etc.) -->
-    <link rel="stylesheet" href="/<?= $site ?>/css/display.css">
+    <link rel="stylesheet" href="<?= moop_asset_url('css/display.css') ?>">
 
     <!-- Breadcrumb Trail Styles -->
-    <link rel="stylesheet" href="/<?= $site ?>/css/breadcrumbs.css">
+    <link rel="stylesheet" href="<?= moop_asset_url('css/breadcrumbs.css') ?>">
 
     <!-- Search Controls Styles (search and filter buttons) -->
-    <link rel="stylesheet" href="/<?= $site ?>/css/search-controls.css">
+    <link rel="stylesheet" href="<?= moop_asset_url('css/search-controls.css') ?>">
 
     <!-- Loading Indicator Styles (for database scanning operations) -->
-    <link rel="stylesheet" href="/<?= $site ?>/css/loading-indicator.css">
+    <link rel="stylesheet" href="<?= moop_asset_url('css/loading-indicator.css') ?>">
 
     <!-- Admin section cards. Loaded globally rather than via each admin page's page_styles:
          a per-page opt-in is how the card styling drifted into four different idioms in the
          first place, and a new admin page would simply forget it. Class-scoped (.adm-*), so
          it costs public pages nothing but the request. -->
-    <link rel="stylesheet" href="/<?= $site ?>/css/admin-cards.css">
+    <link rel="stylesheet" href="<?= moop_asset_url('css/admin-cards.css') ?>">
 
     <!-- Optional custom CSS if defined in config -->
     <?php
@@ -65,9 +66,9 @@ $site = $config->getString('site');
     ?>
 
     <!-- DataTables 1.13.4 — self-hosted -->
-    <link rel="stylesheet" href="/<?= $site ?>/css/datatables/dataTables.bootstrap5.min.css">
-    <link rel="stylesheet" href="/<?= $site ?>/css/datatables/buttons.bootstrap5.min.css">
-    <link rel="stylesheet" href="/<?= $site ?>/css/datatables/colReorder.dataTables.min.css">
+    <link rel="stylesheet" href="<?= moop_asset_url('css/datatables/dataTables.bootstrap5.min.css') ?>">
+    <link rel="stylesheet" href="<?= moop_asset_url('css/datatables/buttons.bootstrap5.min.css') ?>">
+    <link rel="stylesheet" href="<?= moop_asset_url('css/datatables/colReorder.dataTables.min.css') ?>">
 
     <!-- Font Awesome 5.7.0 — self-hosted -->
-    <link rel="stylesheet" href="/<?= $site ?>/css/fontawesome/all.css">
+    <link rel="stylesheet" href="<?= moop_asset_url('css/fontawesome/all.css') ?>">
