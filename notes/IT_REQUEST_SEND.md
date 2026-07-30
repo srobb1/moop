@@ -60,6 +60,26 @@ Note the size: this group's entire working set is **629 MB**. It is not too larg
 it simply does not survive, because 12 GB of cache is shared across 32.7 GB of databases and
 is reclaimed continuously (see the counters below).
 
+### That it does not survive is now measured directly, not inferred
+
+The same search was run twice on 2026-07-30, with **nothing changed but the passage of
+time** — same term, same 49 organisms, same concurrency:
+
+| | 15:57 | 18:26 |
+|---|---|---|
+| wall clock | **1.3 s** | **70.5 s** |
+| read from disk | 0.0 MB | **536.5 MB** |
+| **refaults** (pages evicted, then needed again) | 0 | **137,312** |
+| free memory at the time | — | 0.6 GB |
+
+**137,312 refaults x 4 KB = 536.4 MB, against 536.5 MB actually read.** To the nearest
+megabyte, *every byte this search read from disk was a page the machine had already held in
+memory and discarded.* Not new data being loaded — the same data, fetched twice.
+
+That is the whole request in one line: the working set is **536 MB on a 15 GB machine**, it
+was resident, and it did not last the afternoon. The problem is not that the data is too
+large to cache. It is that there is not enough cache for it to stay cached.
+
 ### Why the usual memory metrics will not show this
 
 **A "memory used %" or "swap %" threshold cannot detect this workload.** Page cache is
