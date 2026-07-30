@@ -145,16 +145,10 @@ function resultAssemblyLabel(r) {
     return acc || '—';
 }
 
-/** Feature page URL, carrying multi-organism search context when the page has it. */
+/** Feature page URL. */
 function resultFeatureUrl(ctx, uniquename) {
-    let url = `${ctx.sitePath}/${ctx.linkBasePath}?organism=${encodeURIComponent(ctx.organism)}`
-            + `&uniquename=${encodeURIComponent(uniquename)}`;
-    if (typeof pageContext !== 'undefined' && pageContext.multi_search && Array.isArray(pageContext.multi_search)) {
-        pageContext.multi_search.forEach(org => {
-            url += '&multi_search[]=' + encodeURIComponent(org);
-        });
-    }
-    return url;
+    return `${ctx.sitePath}/${ctx.linkBasePath}?organism=${encodeURIComponent(ctx.organism)}`
+         + `&uniquename=${encodeURIComponent(uniquename)}`;
 }
 
 /**
