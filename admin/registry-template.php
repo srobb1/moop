@@ -19,7 +19,7 @@
  * 3. Child page defines $display_config with:
  *    - title: Page title
  *    - content_file: Path to content file (pages/manage_registry.php, etc.)
- *    - page_script: Path to page-specific JS (js/registry.js, etc.)
+ *    - page_script: Path to page-specific JS (js/manage-registry.js, etc.)
  *    - inline_scripts: Array of JS code strings (optional)
  * 4. This template renders the page using layout.php
  * 
@@ -28,7 +28,7 @@
  * - $display_config = [
  *     'title' => 'Registry Title',
  *     'content_file' => '/path/to/content.php',
- *     'page_script' => '/moop/js/registry.js' or ['/moop/js/script1.js', '/moop/js/script2.js'],
+ *     'page_script' => '/moop/js/manage-registry.js' or ['/moop/js/script1.js', '/moop/js/script2.js'],
  *     'inline_scripts' => ['const var1 = "value";'] (optional)
  *   ]
  * - $data = [... any variables needed by content file ...]
@@ -41,7 +41,7 @@
  *   $display_config = [
  *       'title' => 'PHP Function Registry',
  *       'content_file' => __DIR__ . '/pages/manage_registry.php',
- *       'page_script' => '/' . $site . '/js/registry.js',
+ *       'page_script' => '/' . $site . '/js/manage-registry.js',
  *   ];
  *   
  *   $data = ['site' => $site, ...];
