@@ -66,6 +66,7 @@ function moop_permission_check_mode(string $name): string {
         'Genome Data Directory'           => 1,  // data/genomes — gff.gz + tabix
         'Cache Directory'                 => 1,  // cache_path
         'Organism Cache File'             => 1,  // under cache_path
+        'Gene Set Identity Cache'         => 1,  // under cache_path — lib/gene_set_identity.php
         'Images Directory'                => 1,  // images/ — organism images upload HERE, flat
                                                 //   (handle_image_upload.php -> absolute_images_path)
         'Documentation Directory'         => 1,  // docs/ — the admin "Generate registry" button
@@ -582,6 +583,21 @@ function moop_build_permission_items($config, array $ctx): array {
             'required_group' => $web_group,
             'reason' => 'Written by background cache refresh process run as web server user',
             'why_write' => 'The "Update Cache" background process (run as apache) must be able to overwrite this file',
+        ],
+
+        // Gene Set Identity Cache - Write Required
+        [
+            'name' => 'Gene Set Identity Cache',
+            'description' => 'JSON cache of genome/gene_set ids and names, so resolving access does not open every organism database',
+            'type' => 'file',
+            'paths' => [
+                moop_gene_set_identity_file(),
+            ],
+            'required_perms' => '664',
+            'required_owner' => $moop_owner,
+            'required_group' => $web_group,
+            'reason' => 'Rewritten by any web request whose organism database has changed',
+            'why_write' => 'getAccessibleGeneSets() (every tool page) refreshes this when an organism.sqlite mtime/size changes',
         ],
 
         // Cache Directory - Write Required (only when cache_path is configured)
