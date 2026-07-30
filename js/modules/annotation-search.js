@@ -567,9 +567,13 @@ class AnnotationSearch {
         let capMessageHtml = '';
         if (this.cappedOrganisms.length > 0) {
             const cappedList = this.cappedOrganisms.join(', ');
+            // The limit is configurable (search_results_limit), so read it rather than
+            // hardcoding -- a message that names the wrong number is worse than none.
+            const lim = (window.MOOP_SEARCH_RESULTS_LIMIT || 2500).toLocaleString();
             capMessageHtml = `<div class="alert alert-warning mb-3">
-                <strong>Search results are capped at 2,500.</strong> Use Advanced Filter or add more search terms to refine.
+                <strong>Search results are capped at ${lim} per organism.</strong> Use Advanced Filter or add more search terms to refine.
                 The following organism searches were capped: <em>${cappedList}</em>
+                <br><small>Downloads from this search are capped too, and their filename says so.</small>
             </div>`;
         }
 
@@ -634,6 +638,28 @@ class AnnotationSearch {
         }
     }
 
+    /**
+     * Download filename, which SAYS SO when the data is capped.
+     *
+     * A per-organism search stops at the results limit, so an export of a broad search is
+     * truncated -- 15 organisms x 2,500 was 37,500 rows that looked like a complete answer.
+     * The cap was announced on screen and nowhere in the file, so the moment it left the
+     * browser nothing recorded that it was partial, and a file outlives the page that
+     * produced it.
+     *
+     * The marker goes in the FILENAME rather than inside the CSV: a comment line before the
+     * header breaks every parser that reads the first row as column names, and a trailing
+     * note row reads as data. A filename travels with the file, survives being emailed, and
+     * breaks nothing.
+     */
+    exportFilename(ext) {
+        const label = this.currentKeywords.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        const date = new Date().toISOString().slice(0, 10);
+        const capped = (this.cappedOrganisms || []).length > 0
+            ? `_CAPPED-${window.MOOP_SEARCH_RESULTS_LIMIT || 'limit'}-per-organism` : '';
+        return (label ? `annotation_search_${label}_${date}` : `annotation_search_${date}`) + capped + '.' + ext;
+    }
+
     downloadResults() {
         const decodeHtml = (html) => {
             const txt = document.createElement('textarea');
@@ -670,9 +696,7 @@ class AnnotationSearch {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        const csvLabel = this.currentKeywords.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
-        const csvDate = new Date().toISOString().slice(0, 10);
-        a.download = csvLabel ? `annotation_search_${csvLabel}_${csvDate}.csv` : `annotation_search_${csvDate}.csv`;
+        a.download = this.exportFilename('csv');
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -714,7 +738,11 @@ class AnnotationSearch {
         const labelInput = document.createElement('input');
         labelInput.type = 'hidden';
         labelInput.name = 'label';
-        labelInput.value = this.currentKeywords;
+        // Same marker the CSV carries: this export is built from capped results, and the
+        // file outlives the page that warned about it.
+        labelInput.value = this.currentKeywords
+            + ((this.cappedOrganisms || []).length > 0
+                ? `_CAPPED-${window.MOOP_SEARCH_RESULTS_LIMIT || 'limit'}-per-organism` : '');
         form.appendChild(labelInput);
 
         document.body.appendChild(form);
