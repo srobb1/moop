@@ -34,6 +34,7 @@ usage:
   persistence.py --show                          # print every run so far, side by side
 """
 import argparse, json, os, subprocess, time
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 BASE = "http://172.16.2.52/moop/tools/annotation_search_ajax.php"
@@ -101,17 +102,46 @@ def show():
         print(f"{r['when']:20} {r['term']:12} {str(r['group']):8} {r['orgs']:5d} "
               f"{r['seconds']:9.1f} {r['mb_read']:9.1f} {r['refaults']:10d} "
               f"{r['cache_gb']:9.1f} {r.get('free_gb', float('nan')):8.1f}")
-    if len(rows) > 1:
-        a, b = rows[0], rows[-1]
-        if a["term"] != b["term"] or a["group"] != b["group"]:
-            print("\n  !! first and last runs used different query settings -- not comparable.")
-            return
-        print(f"\n  first run {a['seconds']:.1f}s ({a['mb_read']:.0f} MB read)"
-              f"  ->  latest {b['seconds']:.1f}s ({b['mb_read']:.0f} MB read)")
-        if b["mb_read"] < 20:
-            print("  latest run read almost nothing from disk: the working set SURVIVED.")
-        elif b["seconds"] > a["seconds"] * 2:
-            print("  latest run is much slower AND read from disk: the working set was EVICTED.")
+    if len(rows) < 2:
+        return
+
+    # Compare the LAST TWO runs, not first-vs-last, and weigh the GAP between them.
+    #
+    # Survival is a question about elapsed time. A fast run ten minutes after a slow one
+    # only shows that the slow one warmed the cache -- which is guaranteed, not evidence.
+    # An earlier version compared rows[0] to rows[-1] and announced "the working set
+    # SURVIVED" for exactly that case. A benchmark that draws a flattering conclusion from
+    # a meaningless pair is worse than no benchmark.
+    a, b = rows[-2], rows[-1]
+    if a["term"] != b["term"] or a["group"] != b["group"]:
+        print("\n  !! the last two runs used different query settings -- not comparable.")
+        return
+
+    fmt = "%Y-%m-%d %H:%M:%S"
+    gap_h = (datetime.strptime(b["when"], fmt) - datetime.strptime(a["when"], fmt)).total_seconds() / 3600.0
+    warm = min((r["seconds"] for r in rows if r["mb_read"] < 20), default=None)
+
+    print(f"\n  latest run: {b['seconds']:.1f}s, {b['mb_read']:.0f} MB read, "
+          f"{b['refaults']:,} refaults — {gap_h:.1f} h after the previous run")
+    if warm is not None:
+        print(f"  warm floor across all runs: {warm:.1f}s")
+
+    if b["mb_read"] < 20:
+        if gap_h < 1.0:
+            print(f"  INCONCLUSIVE: this is a warm re-run only {gap_h*60:.0f} minutes after the")
+            print( "  previous one, which had already loaded these pages. It says nothing about")
+            print( "  survival. Leave hours of NORMAL USE between runs, then repeat.")
+        else:
+            print(f"  SURVIVED {gap_h:.1f} h: read essentially nothing, so the pages stayed resident")
+            print( "  across that gap. If this holds overnight, RAM is not the bottleneck.")
+    else:
+        refault_mb = b["refaults"] * 4096 / 1048576
+        share = (refault_mb / b["mb_read"] * 100) if b["mb_read"] else 0
+        print(f"  EVICTED within {gap_h:.1f} h: it went back to disk for {b['mb_read']:.0f} MB.")
+        print(f"  {b['refaults']:,} refaults x 4 KB = {refault_mb:.0f} MB, i.e. {share:.0f}% of that I/O")
+        print( "  was pages the machine had ALREADY held and discarded — the same data, twice.")
+        if b.get("free_gb") is not None and b["free_gb"] > NORMAL_FREE_GB:
+            print(f"  (but {b['free_gb']:.1f} GB was free, so treat this cautiously)")
 
 
 def main():
