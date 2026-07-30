@@ -57,18 +57,16 @@ class AnnotationSearch {
         if (form.find('.search-controls').length === 0) {
             const submitBtn = form.find('button[type="submit"]');
 
+            // No separate "clear scope" button: clearing is reopening the modal and
+            // ticking things back on, which is where the user already is. A second
+            // icon that appears and disappears next to the first one costs more
+            // attention than the action it saves.
             const scopeBtn = this.config.noScopeFilter ? '' : `
                     <!-- Scope filter button (organisms / assemblies / gene sets) -->
                     <button type="button" class="btn btn-icon btn-scope-filter btn-outline-secondary"
                             title="Scope Filter (Organisms / Assemblies / Gene Sets)"
                             data-bs-toggle="tooltip" data-bs-placement="bottom">
                         <i class="fa fa-sitemap"></i>
-                    </button>
-                    <button type="button" class="btn btn-icon btn-clear-scope btn-outline-secondary"
-                            title="Clear Scope Filter"
-                            data-bs-toggle="tooltip" data-bs-placement="bottom"
-                            style="display: none;">
-                        <i class="fa fa-times"></i>
                     </button>`;
 
             const buttonGroup = `
@@ -98,7 +96,6 @@ class AnnotationSearch {
 
             if (!this.config.noScopeFilter) {
                 form.find('.btn-scope-filter').on('click', () => this.showScopeFilterModal());
-                form.find('.btn-clear-scope').on('click', () => this.clearScope());
             }
 
             const tooltipTriggerList = [].slice.call(form.find('[data-bs-toggle="tooltip"]'));
@@ -251,12 +248,6 @@ class AnnotationSearch {
         filter.show();
     }
 
-    clearScope() {
-        this.selectedScope = null;
-        this.updateScopeButtonState();
-        this.updateOrganismNote();   // back to the full organism count
-    }
-
     /**
      * Gene sets currently in scope, as {included, total}.
      *
@@ -283,7 +274,6 @@ class AnnotationSearch {
     updateScopeButtonState() {
         const form     = $(this.config.formSelector);
         const scopeBtn = form.find('.btn-scope-filter');
-        const clearBtn = form.find('.btn-clear-scope');
         if (!scopeBtn.length) return;
 
         const { included, total } = this.countScopedGeneSets();
@@ -295,12 +285,10 @@ class AnnotationSearch {
             // Badge is tiny -- the bare number only. The "of N" lives in the tooltip.
             scopeBtn.attr('title', `Scope Filter — searching ${included} of ${total} gene sets`);
             scopeBtn.html(`<i class="fa fa-sitemap"></i><span class="badge badge-filter">${included}</span>`);
-            clearBtn.show();
         } else {
             scopeBtn.removeClass('btn-primary').addClass('btn-outline-secondary');
             scopeBtn.attr('title', 'Scope Filter (Organisms / Assemblies / Gene Sets)');
             scopeBtn.html('<i class="fa fa-sitemap"></i>');
-            clearBtn.hide();
         }
     }
 
