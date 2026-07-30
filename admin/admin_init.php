@@ -22,6 +22,11 @@
  *   ?>
  */
 
+// FIRST, before anything can fail: capture PHP fatals to logs/error.log. See
+// includes/fatal_log.php -- nginx shows one generic page for 500/502/503/504 and the real
+// message goes to a root-only log, so a crash otherwise leaves no readable trace.
+require_once __DIR__ . '/../includes/fatal_log.php';
+
 // Start session if not already started
 require_once __DIR__ . '/../includes/session_init.php';
 if (session_status() === PHP_SESSION_NONE) {
