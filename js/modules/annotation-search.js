@@ -119,15 +119,29 @@ class AnnotationSearch {
         // scoping to one gene set announced "across 49 organisms" while querying one.
         const n = this.organismsInScope().length;
         const selected = this.config.totalVar;
+        // Names BOTH ways to narrow, because the scope filter is an unlabelled icon that a
+        // new user has no reason to open. Kept to one short sentence: this sits under the
+        // search box on every results page, so length here is a tax on every search.
+        // "gene set" is a live link -- it opens the same modal the icon does, which is the
+        // only affordance telling a first-time user that icon exists.
+        const narrow = 'Narrow by <a href="#organismsSection">organism</a> or '
+                     + '<a href="#" class="scope-note-link">gene set</a>.';
         if (n > 1) {
-            note.html(`Searching across <strong>${n}</strong> organism${n !== 1 ? 's' : ''}. <a href="#organismsSection">Select or deselect</a> to customize.`);
+            note.html(`Searching <strong>${n}</strong> organisms. ${narrow}`);
         } else if (n === 1 && selected > 1) {
             // Narrowed by the scope filter rather than by the organism list; saying nothing
             // here would read as "the filter did nothing".
-            note.html(`Searching <strong>1</strong> organism (narrowed by the scope filter). <a href="#organismsSection">Select or deselect</a> to customize.`);
+            note.html(`Searching <strong>1</strong> organism, narrowed by gene set. ${narrow}`);
         } else {
             note.html('');
         }
+
+        // Delegated once per note render; .off() first so repeated renders do not stack
+        // handlers and open the modal N times.
+        note.off('click.scopeNote').on('click.scopeNote', '.scope-note-link', (e) => {
+            e.preventDefault();
+            this.showScopeFilterModal();
+        });
     }
 
     /**
