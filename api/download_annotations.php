@@ -14,6 +14,11 @@
 include_once __DIR__ . '/../tools/tool_init.php';
 include_once __DIR__ . '/../lib/parent_functions.php';
 include_once __DIR__ . '/../lib/moop_functions.php';
+// flattenSourcesList() lives here. Without it this endpoint was a hard 500 on every
+// request — the "Download All Annotations" button on every gene page (tools/pages/parent.php)
+// never worked. tools/parent.php gets the function because it includes this file too; the
+// API endpoint was written from parent.php's body without parent.php's include list.
+include_once __DIR__ . '/../lib/extract_search_helpers.php';
 
 if (empty($_GET['organism']) || empty($_GET['uniquename'])) {
     http_response_code(400);
