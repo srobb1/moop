@@ -4,9 +4,10 @@
 completed — every figure below was re-measured on that date. Two earlier drafts contained
 wrong numbers (§5 records both, and why), so nothing here is carried over on trust.
 
-**Order of the asks changed.** Storage now leads. It is cheaper, it is a placement change
-rather than a purchase, and IT's own monitoring can confirm it without any new
-instrumentation.
+**RAM leads. Storage is the smaller, cheaper complement.** An earlier version of this file
+put storage first on the strength of a 60× device-latency gap. That gap is real but it is a
+*device* characteristic, not a *query* one — see §5, trap 4. Measured on real searches,
+flash buys **~2×** and sufficient RAM buys **~13×**.
 
 ---
 
@@ -45,8 +46,46 @@ a cache hit cannot masquerade as a disk read):
 | **sdb (data)** | **32–34 ms** | 59–64 ms |
 | sda (root) | **0.5 ms** | 0.8 ms |
 
-**~60× apart on the same VM.** End to end: the same database copied to `sda`, identical cold
-query, both verified 0.0 % resident → **248 ms → 14 ms (17×)**.
+**~60× apart on the same VM** — *as a device*. That is the honest per-read figure and it is
+why the volume is worth moving, but **it does not translate into 60× on query time**: the
+kernel reads ahead in 128 KB chunks, which amortises seeks that a 4 K random benchmark
+deliberately defeats.
+
+What it is worth in practice: the same 853 MB database copied to each volume, real search
+terms, eviction verified at 0.0 % resident before every cold run. **I/O time is reported as
+cold − warm**, so CPU is excluded, and bytes read come from `/proc/diskstats`:
+
+| search term | MB read | flash I/O | spinning I/O | flash MB/s | spin MB/s | ratio |
+|---|---|---|---|---|---|---|
+| `kinase` | 59.8 | 696 ms | 710 ms | 86 | 84 | **1.0×** |
+| `receptor` | 95.9 | 491 ms | 961 ms | 195 | 101 | 2.0× |
+| `"zinc finger"` | 65.6 | 307 ms | 843 ms | 213 | 78 | **2.7×** |
+| `transposases` | 2.1 | 105 ms | 123 ms | 20 | 17 | 1.2× |
+
+> **Faster storage is worth ~2× on real queries**, not 17× and not 60×.
+
+**Why the device gap does not carry through.** These queries read 2–96 MB in largely
+*sequential* runs — SQLite plus kernel readahead see to that — and a spinning disk streams
+at 78–101 MB/s. The 32 ms figure is random-access latency, which readahead mostly avoids
+paying. `kinase` is the clearest case: both volumes deliver ~85 MB/s, so the disk is not the
+constraint at all and flash buys literally nothing.
+
+### ⚠️ A single-database test cannot make the RAM case — only the storage one
+
+Myotis is 853 MB. It fits in 12 GB of cache with room to spare, so copying one database
+between volumes measures **device speed** and nothing else. That is why every such test —
+ours and IT's — lands on 2–3×.
+
+The memory problem is **32.7 GB not fitting in 12 GB**, and it only appears across the
+corpus: a cross-organism search, or a second visitor arriving after the first has already
+evicted what they need. That is what the refault delta measures, and it cannot be reproduced
+on a single copied file. **Do not let the storage test stand in for the memory case.**
+
+**If you benchmark this yourself:** use `"zinc finger"` (66 MB read, 141 ms warm — I/O
+dominates, clean signal). Avoid `kinase`, which is CPU-capped and cannot discriminate, and
+avoid `transposases`/`maelstrom`, which read ~2 MB and show nothing. Always report
+`cold − warm` and MB read: raw cold time hides whether you measured disk or CPU, and without
+bytes a fast result may just mean the query touched almost nothing.
 
 **Why the latency itself settles the question.** A solid-state device answers a random read
 in roughly **0.1–1 ms** — nothing has to move. **20–35 ms is seek time plus rotational
@@ -218,6 +257,15 @@ recorded rather than quietly fixed.
    calls `mincore`.
 3. **Stale corpus size.** Drafts written before the reload quoted 67 GB and a 7,051 ms cold
    `COUNT(*)`. Both are superseded: 32.7 GB, and 8,390 ms on a real search.
+4. **"Flash fixes cold queries, 17×" — a device number sold as a query number.** The 60×
+   O_DIRECT gap is a correct measurement of the *device* under 4 K random reads. It does not
+   survive contact with real queries, which read sequentially enough that readahead hides
+   most of the seek cost: measured, flash is worth **~2×**, and on `kinase` **nothing at
+   all**. This inverted the recommendation — an earlier version of this file told the reader
+   to take storage over RAM if only one ask could land, which was backwards.
+   **The lesson: a microbenchmark characterises hardware, not a workload.** Before quoting a
+   ratio, check it against the query users actually run, and isolate I/O with `cold − warm`
+   so CPU cannot masquerade as disk.
 
 **The standing rule: never report a cold measurement without verifying eviction in the same
 run.** `coldwarm.py` prints residency before and after and refuses to time anything if
@@ -231,8 +279,14 @@ eviction did not take.
   cross-organism working set inside the cache), so **do not claim search is broken**. The
   cold penalty is now sharpest on first touch of an organism, gene pages and bulk export.
   The 8,390 ms figure above is honest and current, but it is a *cold* first touch.
-- If only one ask can land, take **storage**. RAM removes the penalty; flash reduces it ~17×,
-  costs nothing, and needs no capacity argument.
+- **If only one ask can land, take RAM** — it is worth ~6× what flash is (12.8× vs 2.0×
+  median on real searches), because it removes the read rather than speeding it up. Storage
+  is still worth asking for in the same breath: it is a placement change, their own
+  monitoring already evidences it, and the two compound.
+- **`kinase` was 1.0× — flash bought nothing.** Its warm time is 288 ms, so that query is
+  CPU-bound, not I/O-bound: neither ask fixes it. Common high-frequency terms across an
+  85-organism fan-out are a *query cost* problem and belong with the search work, not this
+  request.
 
 ### 🔍 Something evicts the database cache overnight — unidentified
 
