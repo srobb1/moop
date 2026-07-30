@@ -164,7 +164,8 @@ if (empty($sequence_errors) && !empty($available_sequences) && (!empty($gene_nam
 
 // Handle download request if present (BEFORE displaying HTML)
 if ($download_file_flag && !empty($sequence_type) && isset($available_sequences[$sequence_type]['sequences'])) {
-    handleSequenceDownload($download_file_flag, $sequence_type, $available_sequences[$sequence_type]['sequences']);
+    handleSequenceDownload($download_file_flag, $sequence_type, $available_sequences[$sequence_type]['sequences'],
+        [$organism_name ?? '', $cur_assembly_name ?? '']);
 }
 
 // Display error messages if any occurred

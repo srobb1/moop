@@ -11,6 +11,7 @@
 ob_start();
 
 require_once __DIR__ . '/../includes/session_init.php';
+require_once __DIR__ . '/download_filename.php';
 moop_session_start();
 
 // Get parameters
@@ -104,7 +105,11 @@ if (!file_exists($fasta_file)) {
 }
 
 // Generate download filename with organism and assembly prefix
-$filename = "{$organism}.{$assembly}.{$pattern}";
+// Dots separated the parts here and nowhere else, which reads as a chain of file
+// extensions. Underscores between parts; the pattern keeps its own extension.
+$pattern_base = preg_replace('/\.(fa|fasta|faa|fna|txt|gz)$/i', '', $pattern);
+$pattern_ext  = ltrim(substr($pattern, strlen($pattern_base)), '.') ?: 'fa';
+$filename = moop_download_filename('sequences', [$organism, $assembly, $pattern_base], $pattern_ext);
 
 // Get file size
 $file_size = filesize($fasta_file);

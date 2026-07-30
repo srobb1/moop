@@ -277,7 +277,8 @@ if (!empty($sequence_ids_provided)) {
     $should_scroll_to_results = !empty($displayed_content);
     
     // Handle download request if present
-    handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type] ?? null);
+    handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type] ?? null,
+        [$organism_name ?? '', $assembly_param ?? '']);
 }
 
 // Get available sequence types from all accessible sources

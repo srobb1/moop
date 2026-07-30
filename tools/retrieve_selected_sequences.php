@@ -147,7 +147,8 @@ if (!empty($sequence_ids_provided)) {
     }
     
     // Handle download request if present
-    handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type] ?? null);
+    handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type] ?? null,
+        [$organism_name ?? '', $assembly_name ?? '', $gene_set_name ?? '']);
 }
 
 // Parse form data for display

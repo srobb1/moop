@@ -20,6 +20,7 @@ include_once __DIR__ . '/../lib/functions_database.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/moopmart_functions.php';
+require_once __DIR__ . '/../lib/download_filename.php';
 
 csrf_protect();
 
@@ -168,9 +169,16 @@ $organismChunks = function (string $org, array $org_data) use (
     }
 };
 
-$date     = date('Ymd_His');
 $ext      = $output_format === 'fasta' ? 'fa' : 'tsv';
-$filename = "moopmart_{$output_format}_{$date}.{$ext}";
+// A MOOPmart export can span several organisms, so naming it after one would be a lie and
+// naming it after none loses the provenance entirely. moop_download_scope_label() gives the
+// organism when there is exactly one and "N-organisms" when there are more. The old name --
+// moopmart_tsv_20260730_224455 -- said neither, and used the only Ymd_His date in the app.
+$filename = moop_download_filename(
+    'moopmart',
+    [moop_download_scope_label(array_keys($by_organism)), $output_format],
+    $ext
+);
 
 set_time_limit(0);
 while (ob_get_level()) ob_end_clean();

@@ -592,9 +592,13 @@ function formatSequenceResults($displayed_content, $sequence_types) {
  * @param string $sequence_type - Type of sequence (for filename)
  * @param string $file_format - Format (fasta or txt)
  */
-function sendFileDownload($content, $sequence_type, $file_format = 'fasta') {
+function sendFileDownload($content, $sequence_type, $file_format = 'fasta', array $scope = []) {
     $ext = ($file_format === 'txt') ? 'txt' : 'fasta';
-    $filename = "sequences_{$sequence_type}_" . date("Y-m-d_His") . ".{$ext}";
+    // $scope carries organism/assembly/gene set. It is OPTIONAL so no caller breaks, but a
+    // caller that omits it produces sequences_pep_2026-07-30.fasta -- which does not say
+    // which organism, so two organisms collide in one download folder. Pass what you have.
+    require_once __DIR__ . '/download_filename.php';
+    $filename = moop_download_filename('sequences', array_merge($scope, [$sequence_type]), $ext);
     
     header('Content-Type: application/octet-stream');
     header("Content-Disposition: attachment; filename={$filename}");
@@ -712,7 +716,7 @@ function getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_type
  * @param array|string $sequence_data - Either array of sequences or a string
  * @return bool - True if download was sent and script exited, false otherwise
  */
-function handleSequenceDownload($download_flag, $sequence_type, $sequence_data) {
+function handleSequenceDownload($download_flag, $sequence_type, $sequence_data, array $scope = []) {
     if (!$download_flag || empty($sequence_type)) {
         return false;
     }
@@ -731,7 +735,7 @@ function handleSequenceDownload($download_flag, $sequence_type, $sequence_data) 
     
     if (!empty($fasta_content)) {
         $file_format = $_POST['file_format'] ?? 'fasta';
-        sendFileDownload($fasta_content, $sequence_type, $file_format);
+        sendFileDownload($fasta_content, $sequence_type, $file_format, $scope);
         exit;
     }
     

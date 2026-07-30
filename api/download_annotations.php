@@ -19,6 +19,7 @@ include_once __DIR__ . '/../lib/moop_functions.php';
 // never worked. tools/parent.php gets the function because it includes this file too; the
 // API endpoint was written from parent.php's body without parent.php's include list.
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
+require_once __DIR__ . '/../lib/download_filename.php';
 
 if (empty($_GET['organism']) || empty($_GET['uniquename'])) {
     http_response_code(400);
@@ -76,7 +77,9 @@ foreach ($children as $child) {
 $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 
 // Stream CSV
-$filename = $feature_uniquename . '_annotations.csv';
+// Was {feature}_annotations.csv: no organism, no date. Two organisms can carry the same
+// feature id, so the old name collided in a downloads folder.
+$filename = moop_download_filename('annotations', [$organism_name, $feature_uniquename], 'csv');
 header('Content-Type: text/csv');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 header('Cache-Control: no-cache');

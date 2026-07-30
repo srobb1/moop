@@ -16,6 +16,7 @@
 
 ob_start();
 include_once __DIR__ . '/../tools/tool_init.php';
+require_once __DIR__ . '/../lib/download_filename.php';
 ob_end_clean();
 
 $blocked_exts = array_flip([
@@ -122,7 +123,8 @@ $cmd = 'tar -czf - -C ' . escapeshellarg($real_data_dir) . ' '
 if (count($valid_relative_paths) === 1) {
     $archive_name = pathinfo($valid_relative_paths[0], PATHINFO_FILENAME) . '.tar.gz';
 } else {
-    $archive_name = 'moop_downloads_' . date('Ymd_His') . '.tar.gz';
+    // Y-m-d like every other export; Ymd_His was the only place using that format.
+    $archive_name = moop_download_filename('moop_downloads', [], 'tar.gz');
 }
 
 if (ob_get_level()) ob_end_clean();

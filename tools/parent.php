@@ -400,7 +400,8 @@ if ($download_file_flag && !empty($sequence_type)) {
             if (ob_get_level()) {
                 ob_end_clean();
             }
-            handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type]);
+            handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type],
+                [$organism_name ?? '', $genome_accession ?? '', $gene_set_name ?? '', $feature_uniquename ?? '']);
         }
     }
 }
