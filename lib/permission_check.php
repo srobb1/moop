@@ -590,8 +590,18 @@ function moop_build_permission_items($config, array $ctx): array {
             'name' => 'Gene Set Identity Cache',
             'description' => 'JSON cache of genome/gene_set ids and names, so resolving access does not open every organism database',
             'type' => 'file',
+            // require_once, not an assumption: this file is also loaded by the DETACHED
+            // background housekeeping process, whose include set is narrower than an admin
+            // request's. On the web functions_access.php had already pulled this in, so the
+            // call resolved and the rule looked fine; in the background it threw
+            // "Call to undefined function", housekeeping's per-task try/catch swallowed it
+            // into the root-only php-fpm log, and the dashboard silently kept serving a
+            // 25-hour-old summary while the Permission Manager page reported 0 issues.
             'paths' => [
-                moop_gene_set_identity_file(),
+                (function () {
+                    require_once __DIR__ . '/gene_set_identity.php';
+                    return moop_gene_set_identity_file();
+                })(),
             ],
             'required_perms' => '664',
             'required_owner' => $moop_owner,
