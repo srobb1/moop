@@ -384,6 +384,43 @@ Full detail: `docs/SELINUX_AND_HARDENING.md`.
 
 ---
 
+### 12. Tests — run both before you commit
+
+```bash
+php  tests/smoke_tests.php      # access control, search-query building, cache invalidation
+node tests/js_smoke_tests.js    # search-term rules + results-table highlighting
+```
+
+Both are plain assertions with **no framework and no dependencies** — same philosophy as the
+rest of the repo — and both are hermetic (mocked `$_SESSION`, temp files, no site data), so
+they pass on any checkout. Exit 0 = all pass. `.github/workflows/ci.yml` runs both on every
+push, each preceded by a syntax sweep (`php -l` over all PHP, `node --check` over all
+non-vendor JS).
+
+**The JS suite exists because search behaviour lives in JavaScript.** Which input is usable
+and what gets highlighted in a results row are pure functions in `js/modules/search-terms.js`
+and `js/modules/shared-results-table.js`, and no PHP test can see them. It loads the real
+module files into a `vm` context, so a test cannot drift from the shipped source the way a
+copied fixture would.
+
+**Prove a new test can fail before you trust it.** `MOOP_JS_ROOT` points the suite at another
+checkout of the modules:
+
+```bash
+git show <commit>:js/modules/search-terms.js > /tmp/old/js/modules/search-terms.js   # etc.
+MOOP_JS_ROOT=/tmp/old node tests/js_smoke_tests.js     # must go RED
+```
+
+That is how the highlighting fix was verified — the same assertions are green on current
+code and red on the revision before it. A test that has never failed is not evidence.
+
+**Check the exit code, not the output.** `node tests/js_smoke_tests.js | tail` reports the
+exit status of `tail`, so a suite that aborts mid-run reads as a pass. The JS suite installs
+an `uncaughtException` handler that turns a mid-run throw into a reported failure and
+`exit 1` — but the piping trap is yours to avoid.
+
+---
+
 ## Security Notes (Recent Sprint — March 2026)
 
 The following were added/fixed; keep these patterns:

@@ -4,6 +4,11 @@ name: CI
 # assert-based smoke tests over the critical paths (access control, search-query
 # building, cache invalidation). No site data or secrets required — the tests are
 # hermetic (mocked $_SESSION + temp files).
+#
+# The JavaScript half mirrors it exactly: node --check over every non-vendor .js, then
+# tests/js_smoke_tests.js. That side exists because MOOP's search behaviour — which input
+# is usable, and what gets highlighted in a results row — lives in JS, is pure, and has
+# been wrong before in ways no PHP test could see.
 
 on:
   push:
@@ -11,7 +16,7 @@ on:
 
 jobs:
   lint-and-test:
-    name: php -l lint + smoke tests
+    name: php + js lint and smoke tests
     runs-on: ubuntu-latest
 
     steps:
@@ -41,3 +46,21 @@ jobs:
         env:
           VALIDATE_CONFIG: 'false'   # skip config-completeness validation (no site data in CI)
         run: php tests/smoke_tests.php
+
+      # js/vendor is excluded for the same reason ./vendor is above: third-party bundles
+      # are not ours to fix, and a minified file's syntax is upstream's problem.
+      - name: Lint every JS file (node --check)
+        run: |
+          status=0
+          while IFS= read -r -d '' file; do
+            if ! node --check "$file" >/dev/null 2>&1; then
+              echo "::error file=$file::JavaScript syntax error"
+              node --check "$file" || true
+              status=1
+            fi
+          done < <(find js -path 'js/vendor' -prune -o -name '*.js' -print0)
+          if [ "$status" -eq 0 ]; then echo "All non-vendor JS files pass node --check"; fi
+          exit $status
+
+      - name: Run JS smoke tests
+        run: node tests/js_smoke_tests.js
