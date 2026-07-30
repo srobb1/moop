@@ -395,6 +395,103 @@ function ftsPrimaryTerm($search_term, $is_quoted_search) {
 }
 
 /**
+ * The porter stem of one term, as SQLite's OWN tokenizer computes it.
+ *
+ * Asked of SQLite rather than reimplemented in PHP on purpose: the stem has to agree with
+ * what the index actually stored, and a hand-written porter would have to be kept in sync
+ * with SQLite's forever (js/modules/search-terms.js declines the same job for the same
+ * reason). An in-memory database, so it touches no organism file and needs no write access.
+ *
+ * Returns '' when the term is not a single word, when stemming is unavailable, or when the
+ * stem is not a prefix of the term. Every caller treats '' as "skip the stem tier", so a
+ * failure here degrades to the previous ranking rather than breaking search.
+ *
+ * THE PREFIX GUARANTEE. SQLite's porter only ever TRUNCATES -- verified against the
+ * tokenizer across the suffix-replacing cases the textbook algorithm rewrites:
+ *
+ *   relational -> relat   (not "relate")     electricity -> electr
+ *   digitizer  -> digit                      vietnamization -> vietnam
+ *   transposases -> transposas               transposons -> transposon
+ *
+ * so the stem is always a leading substring of the typed word. The check below enforces
+ * that rather than trusting it, because the whole point of the stem tier is that
+ * '%stem%' is a LOOSER pattern than '%term%' -- if some future tokenizer returned a stem
+ * that were not a prefix, the tier would silently rank on an unrelated string.
+ */
+function moop_porter_stem($term) {
+    static $cache = [];
+    static $pdo   = null;
+
+    $term = trim((string) $term);
+    if ($term === '') return '';
+    if (array_key_exists($term, $cache)) return $cache[$term];
+
+    // One word only. A term the tokenizer would split (punctuation, hyphens) has no single
+    // stem, and concatenating the pieces would invent a string that is in no document.
+    if (!preg_match('/^[\p{L}\p{N}]+$/u', $term)) return $cache[$term] = '';
+
+    try {
+        if ($pdo === null) {
+            $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            $pdo->exec("CREATE VIRTUAL TABLE stemmer USING fts5(w, tokenize='porter unicode61')");
+            $pdo->exec("CREATE VIRTUAL TABLE stemvocab USING fts5vocab(stemmer, row)");
+        }
+        $pdo->exec('DELETE FROM stemmer');
+        $ins = $pdo->prepare('INSERT INTO stemmer(w) VALUES (?)');
+        $ins->execute([$term]);
+        $stem = $pdo->query('SELECT term FROM stemvocab')->fetchColumn();
+    } catch (Throwable $e) {
+        // No fts5, or the tokenizer changed shape. Ranking falls back; search still works.
+        return $cache[$term] = '';
+    }
+
+    if (!is_string($stem) || $stem === '') return $cache[$term] = '';
+
+    $term_lc = mb_strtolower($term);
+    if (strpos($term_lc, $stem) !== 0) return $cache[$term] = '';   // see prefix guarantee
+
+    return $cache[$term] = $stem;
+}
+
+/**
+ * The LIKE pattern for the stem-match ranking tier, or '' when that tier does not apply.
+ *
+ * WHY THIS TIER EXISTS. FTS5 matched on the stem, but the literal tier above it tests the
+ * word the user TYPED, so a plural search credits only the rows carrying that same plural
+ * -- and in this data the singular is far more common. Measured on
+ * Craseonycteris_thonglongyai, "transposons": 234 matching rows, of which just 2 contain
+ * "transposons" but 125 contain "transposon". Two rows therefore decided the whole top of
+ * the list and everything below them fell back to bm25, which put six annotations of one
+ * unnamed gene -- "Homeodomain-like", "consensus disorder prediction", "-" -- above MAEL,
+ * whose description reads "maelstrom spermatogenic transposon silencer". Same shape for
+ * "transposases" (27 of 517 -> 336) and "receptors" (7,155 of 146,173 -> 57,673).
+ *
+ * WHY IT IS ADDED BENEATH THE LITERAL TIER RATHER THAN REPLACING IT. The literal tier is
+ * load-bearing: it is what fixed the porter precision bug, where "transpos" stems to
+ * "transpo" and so prefix-matches TRANSPORT. Widening that tier to the stem would hand
+ * that back. Keeping the exact tier first cannot: for "transpos" the 1,326 rows containing
+ * it still sort above the 64,725 the stem reaches, so the top 100 is untouched --
+ * confirmed 100/100 relevant before and after. "kinase" is unaffected by construction
+ * (36,434 rows match '%kinase%' and '%kinas%' alike).
+ *
+ * Quoted phrases are deliberately excluded: a phrase has no single stem, and phrase search
+ * is the tool a user reaches for when they want exactness.
+ */
+function ftsStemLikePattern($search_term, $is_quoted_search) {
+    if ($is_quoted_search) return '';
+
+    $primary = ftsPrimaryTerm($search_term, $is_quoted_search);
+    if ($primary === '') return '';
+
+    $stem = moop_porter_stem($primary);
+    // Nothing to add when the typed word IS its own stem -- the tier would duplicate the
+    // literal one above it and cost a second LIKE per row for an identical answer.
+    if ($stem === '' || $stem === mb_strtolower($primary)) return '';
+
+    return '%' . $stem . '%';
+}
+
+/**
  * Append the assembly / gene-set scope filters shared by both FTS search paths.
  * scope_pairs (list of {assembly, gene_set}) overrides the single assembly/gene_set.
  */
@@ -480,9 +577,17 @@ function searchFeaturesByNameDescription($search_term, $is_quoted_search, $dbFil
 
     appendScopeFilters($sql, $params, $assembly_accession, $gene_set_name, $scope_pairs);
 
-    // Named genes first (hard tier), then bm25 relevance (name col weighted 10, desc 5),
-    // then a stable id tiebreak. bm25 must stay in ORDER BY only (it errors if projected).
+    // Named genes first (hard tier), then -- among rows bm25 cannot tell apart -- the ones
+    // that carry a name at all, then bm25 relevance (name col weighted 10, desc 5), then a
+    // stable id tiebreak. bm25 must stay in ORDER BY only (it errors if projected).
+    //
+    // The has-a-name tie-break is the same rule the annotation search applies, and it is
+    // here so the two cannot disagree: this path runs when the user deselects every
+    // annotation source, which is a toggle on the same screen, not a different feature.
+    // Without it "transposases" put an unnamed MARINER MOS1 TRANSPOSASE-LIKE PROTEIN above
+    // the named mariner transposases carrying the same description.
     $sql .= " ORDER BY name_match DESC,
+                       (COALESCE(f.feature_name, '') <> '') DESC,
                        bm25(feature_search, 10.0, 5.0),
                        f.feature_uniquename
               LIMIT " . moop_search_query_limit();
@@ -604,13 +709,37 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
         ? 'bm25(feature_annotation_search, 10.0, 5.0, 2.0, 3.0)'
         : 'pool.rank';
 
+    // Beneath the literal tier, the same test against the STEM of the typed word, so a
+    // plural search still credits the singular records that FTS5 actually matched. See
+    // ftsStemLikePattern() for the measurements and for why it goes below, not instead of.
+    $stem_like = ftsStemLikePattern($search_term, $is_quoted_search);
+    $stem_tier = $stem_like === '' ? '' : "(a.annotation_description LIKE ?) DESC,\n                       ";
+
+    // Then, AMONG ROWS THAT MATCHED EQUALLY WELL, the ones whose gene carries a name.
+    //
+    // This is a tie-break, not a preference for named genes, and the difference is the
+    // whole point. It is read only after the tiers above have already separated exact
+    // matches from stem matches, so an unnamed feature NEVER falls below a weaker match --
+    // it falls below an EQUAL one that a reader can identify. Searching "transposases"
+    // returned ten identical unnamed rows carrying one shared EggNOG domain
+    // ("Putative DNA-binding domain in centromere protein B, mouse jerky and
+    // transposases.") above THAP9, HMGXB3, POGK and TIGD1 -- which hold that same domain,
+    // and a name. Nothing distinguished those ten to bm25, so it ordered them arbitrarily
+    // and they filled the screen.
+    //
+    // Deliberately NOT a filter and not a higher tier: an unnamed feature with a good
+    // annotation is often exactly the target -- gene naming is incomplete, which is why
+    // annotations are searchable in the first place.
     $sql .= " ORDER BY name_match DESC,
                        (a.annotation_description LIKE ?) DESC,
+                       $stem_tier(COALESCE(f.feature_name, '') <> '') DESC,
                        $rank_expr,
                        f.feature_uniquename
               LIMIT " . moop_search_query_limit();
-    $params[] = $name_like;   // must be appended LAST: this placeholder follows every
-                              // scope/source filter added to the WHERE clause above.
+    // These must be appended LAST, and in this order: both placeholders sit in the ORDER BY,
+    // which follows every scope/source filter added to the WHERE clause above.
+    $params[] = $name_like;
+    if ($stem_like !== '') $params[] = $stem_like;
 
     return runFtsSearch($dbFile, $sql, $params);
 }
