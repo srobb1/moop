@@ -157,7 +157,7 @@ $selinux_on = function_exists('moop_selinux_enforcing') && moop_selinux_enforcin
     </div>
     <div class="card-body">
         <?php 
-        $all_checks = array_merge($checks, $assembly_subdir_issues, $fasta_file_issues);
+        $all_checks = array_merge($checks, $assembly_subdir_issues, $fasta_file_issues, $exec_file_issues);
         $total = count($all_checks);
         $ok = count(array_filter($all_checks, fn($c) => empty($c['issues'])));
         $warning = $total - $ok;
@@ -415,7 +415,32 @@ foreach ($grouped as $group_name => $items):
         </div>
         <?php endif; ?>
 
-        <?php if (empty($assembly_subdir_issues) && empty($fasta_file_issues)): ?>
+        <?php if (!empty($exec_file_issues)): ?>
+        <h6 class="mb-3"><i class="fa fa-file-code"></i> Executable Data Files</h6>
+        <p class="text-danger mb-3"><strong>⚠️ Data files carrying the execute bit:</strong></p>
+        <div class="mb-3">
+            <?php foreach ($exec_file_issues as $issue): ?>
+            <div class="alert alert-warning mb-2">
+                <strong><?= htmlspecialchars($issue['path']) ?></strong><br>
+                <small>
+                    Current: <?= htmlspecialchars($issue['current_perms']) ?>
+                    <?php if (!empty($issue['issues'])): ?>
+                        — <?= htmlspecialchars(implode('; ', $issue['issues'])) ?>
+                    <?php endif; ?>
+                </small>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <p class="mb-2"><strong>To clear the execute bit from data files, run:</strong></p>
+        <div class="fix-command">
+            <?php // Files only: directories legitimately need the traverse bit, so -type f is
+                  // not optional here. This is the inverse of the `chmod -R 775` that usually
+                  // causes it. ?>
+            sudo find <?= escapeshellarg($organism_data) ?> -type f -perm /111 -exec chmod a-x {} +
+        </div>
+        <?php endif; ?>
+
+        <?php if (empty($assembly_subdir_issues) && empty($fasta_file_issues) && empty($exec_file_issues)): ?>
         <p class="mb-0 text-success"><strong><i class="fa fa-check-circle"></i> ✓ All assembly subdirectories and FASTA files have correct permissions.</strong></p>
         <?php endif; ?>
     </div>

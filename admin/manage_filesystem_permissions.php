@@ -21,6 +21,11 @@ $collected              = moop_collect_permission_checks($config);
 $checks                 = $collected['checks'];
 $assembly_subdir_issues = $collected['assembly_subdir_issues'];
 $fasta_file_issues      = $collected['fasta_file_issues'];
+// The dashboard counts these (moop_permission_findings uses exec_file_issues), so this
+// page has to render them or the two disagree -- which they did: the dashboard said
+// "1 permission area to address — Executable Data Files (1)" and linked here, where the
+// count merged everything EXCEPT exec_file_issues and therefore read 0.
+$exec_file_issues       = $collected['exec_file_issues'] ?? [];
 $organism_data          = $collected['organism_data'];
 $web_user               = $collected['web_user'];
 $web_group              = $collected['web_group'];
@@ -34,6 +39,7 @@ $data = [
     'checks' => $checks,
     'assembly_subdir_issues' => $assembly_subdir_issues,
     'fasta_file_issues' => $fasta_file_issues,
+    'exec_file_issues' => $exec_file_issues,
     'organism_data' => $organism_data,
     'moop_owner' => $moop_owner,
     'web_user' => $web_user,
