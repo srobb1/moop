@@ -71,7 +71,7 @@ function getOrganismImagePath($organism_info, $images_path = 'moop/images', $abs
     // 2. Fall back to NCBI taxonomy image if taxon_id exists
     if (!empty($organism_info['taxon_id'])) {
         $ncbi_image_file = "$absolute_images_path/ncbi_taxonomy/" . $organism_info['taxon_id'] . '.jpg';
-        if (file_exists($ncbi_image_file)) {
+        if (moop_is_real_image($ncbi_image_file)) {
             return "/$site/images/ncbi_taxonomy/" . $organism_info['taxon_id'] . ".jpg";
         }
     }
@@ -87,7 +87,7 @@ function getOrganismImagePath($organism_info, $images_path = 'moop/images', $abs
         foreach ([$safe_name, $safe_name_underscore] as $name_variant) {
             foreach (['jpg', 'jpeg', 'png', 'gif', 'webp'] as $ext) {
                 $cached_file = "$wikimedia_dir/$name_variant.$ext";
-                if (file_exists($cached_file)) {
+                if (moop_is_real_image($cached_file)) {
                     return "/$site/images/wikimedia/" . rawurlencode("$name_variant.$ext");
                 }
             }
@@ -154,7 +154,10 @@ function getOrganismImageCaption($organism_info, $absolute_images_path = '') {
     // NCBI taxonomy caption with link
     if (!empty($organism_info['taxon_id'])) {
         $ncbi_image_file = "$absolute_images_path/ncbi_taxonomy/" . $organism_info['taxon_id'] . '.jpg';
-        if (file_exists($ncbi_image_file)) {
+        // Same validity test as getOrganismImagePath(), or the two disagree: a poisoned
+        // cache entry would fall through to the Wikipedia image while the caption still
+        // credited NCBI.
+        if (moop_is_real_image($ncbi_image_file)) {
             $result['caption'] = 'Image from NCBI Taxonomy';
             $result['link'] = 'https://www.ncbi.nlm.nih.gov/datasets/taxonomy/' . htmlspecialchars($organism_info['taxon_id']);
             return $result;
@@ -167,7 +170,7 @@ function getOrganismImageCaption($organism_info, $absolute_images_path = '') {
         $safe_name = basename($scientific_name);
         $wikimedia_dir = "$absolute_images_path/wikimedia";
         foreach (['jpg', 'jpeg', 'png', 'gif', 'webp'] as $ext) {
-            if (file_exists("$wikimedia_dir/$safe_name.$ext")) {
+            if (moop_is_real_image("$wikimedia_dir/$safe_name.$ext")) {
                 $result['caption'] = 'Image from Wikipedia';
                 $result['link'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $scientific_name);
                 return $result;
@@ -336,6 +339,40 @@ function setupOrganismDisplayContext($organism_name, $organism_data_dir, $check_
         'name' => $organism_name,
         'info' => $organism_info
     ];
+}
+
+/**
+ * Is this cached file actually an image, or an error body someone saved with an image name?
+ *
+ * The image caches are filled by HTTP fetches, and a failed fetch can still write a file.
+ * images/ncbi_taxonomy/163372.jpg was 170 bytes of NCBI's JSON 404 --
+ * {"error":"Not Found","code":404,...} -- saved with a .jpg name back in May 2026. It
+ * served HTTP 200 as image/jpeg forever after, so nothing downstream could tell: not a 404
+ * check, not a request monitor, not a zero-byte sweep. It simply rendered as a broken image
+ * on every page showing that organism.
+ *
+ * The fetcher validates its response now (HTTP 200 + image/* + length), but the CACHE READ
+ * did not, so one bad file already on disk was returned forever. Checking the magic bytes
+ * makes a poisoned entry fall through to the next fallback instead of rendering broken.
+ *
+ * Cheap: 12 bytes off the head of a file that is already in page cache, on a path that
+ * previously called file_exists() anyway.
+ */
+function moop_is_real_image(string $path): bool
+{
+    if ($path === '' || !is_file($path) || filesize($path) < 100) {
+        return false;
+    }
+    $fh = @fopen($path, 'rb');
+    if ($fh === false) return false;
+    $head = fread($fh, 12);
+    fclose($fh);
+    if ($head === false || strlen($head) < 12) return false;
+
+    return str_starts_with($head, "\xFF\xD8\xFF")                          // JPEG
+        || str_starts_with($head, "\x89PNG\r\n\x1a\n")                     // PNG
+        || str_starts_with($head, "GIF87a") || str_starts_with($head, "GIF89a") // GIF
+        || (str_starts_with($head, "RIFF") && substr($head, 8, 4) === "WEBP");  // WebP
 }
 
 /**
