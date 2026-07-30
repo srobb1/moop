@@ -282,6 +282,26 @@ const DataTableExportConfig = {
             ...this.buttonDefs[buttonType],
             className: 'btn btn-sm btn-secondary',
             exportOptions: exportOptions,
+            // Without this, DataTables names the file after the PAGE TITLE -- so on a group
+            // search every organism's table exported as the same name, and fifteen
+            // downloads landed as "Planaria (1).csv" ... "Planaria (14).csv" with nothing
+            // saying which organism each held.
+            //
+            // Derived from THIS table's id (dt.table().node()), never a page-wide DOM read,
+            // for the same reason the export guard above is scoped to dt: several of these
+            // tables exist on one page. Matches the PHP convention in
+            // lib/download_filename.php -- what_scope_date.
+            filename: function () {
+                let org = '';
+                try {
+                    const id = (this.table().node() || {}).id || '';
+                    org = id.replace(/^.*?resultsTable_/, '').replace(/^annotationTable_?/, '');
+                } catch (e) { /* fall through to an unscoped but still dated name */ }
+                const parts = ['results'];
+                if (org) parts.push(org);
+                parts.push(new Date().toISOString().slice(0, 10));
+                return parts.join('_');
+            },
             // Guard reads THIS table via dt, so a sibling table's selection cannot
             // satisfy it and produce a headers-only file.
             init: selectedRowsOnly ? function(dt, node, config) {
