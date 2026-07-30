@@ -36,18 +36,29 @@ capacity, not process memory. Measured with `mincore(2)` across all 85 files:
 
 > **32.7 GB of databases, of which 3.33 GB is resident — 10.2 %.**
 
-Nine reads in ten reach the disk. The user-visible effect, on a real search against one
-organism, with the cache verified empty before the cold run:
+Nine reads in ten reach the disk.
 
-| | time |
-|---|---|
-| **Cold** — data not in cache | **8,390 ms** |
-| **Warm** — data in cache | **4.6 ms** |
+### What that costs a user
 
-The query is identical in both cases. The only variable is whether the bytes are already in
-memory. In practice the first person to touch an organism waits several seconds and the next
-waits milliseconds — and with 85 organisms against 12 GB of usable cache, most visits are the
-first kind.
+Searching one of our organism groups — **"Bats", 49 organisms** — is an ordinary action a
+visitor performs from the front page. The browser issues one request per organism, five at a
+time. Measured end to end through the live site:
+
+| | wall clock | disk read |
+|---|---|---|
+| **As the site behaves today** (data not cached) | **89.3 s** | 629 MB |
+| **The identical search, repeated immediately** (data cached) | **1.4 s** | 0 MB |
+
+**A 63× difference, and nothing changed but what was in memory.** The slowest single
+organism took 14.8 s; the median took 9.0 s.
+
+Ninety seconds is not a slow search — it is a search a user abandons. The second run
+finishing in 1.4 s is what the application is capable of when the data is resident, and it
+is what every visitor would get with enough cache to keep it there.
+
+Note the size: this group's entire working set is **629 MB**. It is not too large to cache —
+it simply does not survive, because 12 GB of cache is shared across 32.7 GB of databases and
+is reclaimed continuously (see the counters below).
 
 ### Why the usual memory metrics will not show this
 
@@ -136,9 +147,19 @@ isolated as *cold − warm* so CPU is excluded, and bytes read taken from `/proc
 | `receptor` | 95.9 | 491 ms | 961 ms | 2.0× |
 | `"zinc finger"` | 65.6 | 307 ms | 843 ms | 2.7× |
 
-**Faster storage is worth roughly 2× on real queries** — worthwhile, but smaller than the
-device latency alone would suggest, because these queries read in largely sequential runs
-that readahead handles well. It is the second ask for that reason, not the first.
+**Taken alone, a single query gains roughly 2× from flash** — smaller than the device latency
+suggests, because one query reads in largely sequential runs that readahead handles well.
+
+**Under real concurrency it is worse than that comparison implies.** During the 49-organism
+group search above, the volume delivered **629 MB in 89 s — about 7 MB/s**, against the
+78–101 MB/s it sustains for a single sequential reader. Five concurrent readers on five
+different files turn sequential access into seek contention, which is precisely the case a
+rotational disk handles worst and flash does not pay for at all.
+
+We have not measured the group search on flash — `/home` has only 1.3 GB free, so the corpus
+cannot be staged there. We therefore state the measured single-query figure (2×) rather than
+an estimate, and note that the concurrent case is where the 20.77 ms average latency in your
+own monitoring is actually being paid.
 
 ---
 
