@@ -186,7 +186,7 @@ const DataTableExportConfig = {
         rowNodes.forEach(node => {
             const asm = decodeURIComponent($(node).attr('data-genome-accession') || '');
             const gs  = decodeURIComponent($(node).attr('data-gene-set') || '');
-            const key = asm + ' ' + gs;
+            const key = asm + '\u0000' + gs;
             if (!groups[key]) groups[key] = { assembly: asm, geneSet: gs, nodes: [] };
             groups[key].nodes.push(node);
         });
