@@ -18,7 +18,7 @@ $site          = $config->getString('site', 'moop');
 $organism_data = $config->getPath('organism_data');
 
 // Build organism → assemblies map from accessible sources
-$raw_sources     = flattenSourcesList(getAccessibleAssemblies());
+$raw_sources     = flattenSourcesList(getAccessibleGeneSets());
 $scope_tree      = [];   // [organism] = [assembly, ...]
 $organism_info   = [];   // [organism] = {genus, species, common_name}
 $organism_groups = [];   // [organism] = [group, ...]

@@ -207,7 +207,7 @@ $_SESSION['role'] = 'admin' or null;  // 'admin' for admin users, null for colla
 ```
 1. Visitor (not logged in) accesses download_fasta.php
    ↓
-2. getAccessibleAssemblies() is called
+2. getAccessibleGeneSets() is called
    - Loops through all assemblies in metadata
    - For each: checks is_public_assembly()
    - Only "Public" assemblies returned
@@ -241,7 +241,7 @@ $_SESSION['role'] = 'admin' or null;  // 'admin' for admin users, null for colla
    ↓
 3. Visits download_fasta.php
    ↓
-4. getAccessibleAssemblies() is called
+4. getAccessibleGeneSets() is called
    - Checks Anoura/GCA_004027475.1: is_public? YES → INCLUDE
    - Checks Anoura/assembly_v1: in $_SESSION['access']? YES → INCLUDE
    - Checks Lasiurus/GCA_011751065.1: in $_SESSION['access']? YES → INCLUDE
@@ -279,7 +279,7 @@ $_SESSION['role'] = 'admin' or null;  // 'admin' for admin users, null for colla
    ↓
 4. Visits download_fasta.php
    ↓
-5. getAccessibleAssemblies() is called
+5. getAccessibleGeneSets() is called
    - For EVERY assembly: has_access('ADMIN') → TRUE
    - All assemblies included (regardless of Public group or users.json)
    ↓
@@ -458,7 +458,7 @@ The "Public" group is special - it's the ONLY group that affects permissions:
 - **fasta_extract.php** - Extract and download sequences for features
 
 Both tools:
-1. Call `getAccessibleAssemblies()` to show only accessible assemblies
+1. Call `getAccessibleGeneSets()` to show only accessible assemblies
 2. Validate permissions with `has_assembly_access()` before allowing download
 3. Redirect to login if not logged in and assembly is private
 4. Redirect to access_denied if logged in but don't have permission

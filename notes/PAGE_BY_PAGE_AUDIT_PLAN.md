@@ -322,7 +322,7 @@ CLAUDE.md access-control section (contradicted by #3).
   The file's *real* defects (now fixed) were **drift** — it never received two commits that
   `config.php` got:
   - `b31104e` "JBrowse config access fix": load the assembly JSON *first*, then authorize with
-    `canUserAccessAssembly()` against its `defaultAccessLevel`. `getAccessibleAssemblies()` checks
+    `canUserAccessAssembly()` against its `defaultAccessLevel`. `getAccessibleGeneSets()` checks
     **gene-set** groups, not genome-browser access, and returns empty for PUBLIC users — so
     config-optimized was **403-ing every PUBLIC user** on PUBLIC assemblies (fail-closed, unusable).
   - `5a3fc5c` "sort Gene Models first": category ordering. Ported into `getTrackReferences()` (not the

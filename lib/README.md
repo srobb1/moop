@@ -37,7 +37,7 @@ $organisms = getAccessibleOrganisms();
 
 **Key Functions:**
 - `getAccessibleOrganisms()` - Get organisms user can access
-- `getAccessibleAssemblies()` - Get assemblies user can access  
+- `getAccessibleGeneSets()` - Get assemblies user can access  
 - `getAccessibleGroups()` - Get groups user can access
 - `getOrganismList($organism_data)` - Load all organisms
 - `flattenSourcesList($sources_by_group)` - Flatten nested sources

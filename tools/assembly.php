@@ -61,7 +61,7 @@ if (empty($assembly_info)) {
 
 // Get gene sets for this assembly, filtered to what the current user can access
 $all_gene_sets = getAssemblyGeneSets($assembly_info['genome_accession'], $db_path);
-$accessible_sources = flattenSourcesList(getAccessibleAssemblies($organism_name, $assembly_info['genome_accession']));
+$accessible_sources = flattenSourcesList(getAccessibleGeneSets($organism_name, $assembly_info['genome_accession']));
 $accessible_gene_set_names = array_flip(array_column($accessible_sources, 'gene_set'));
 $gene_sets = array_values(array_filter($all_gene_sets, fn($gs) => isset($accessible_gene_set_names[$gs['gene_set_name']])));
 

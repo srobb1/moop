@@ -67,7 +67,7 @@ $organism_result = parseOrganismParameter($organisms_param, '');
 $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
 
 // Get ALL accessible assemblies organized by group and organism
-$sources_by_group = getAccessibleAssemblies();
+$sources_by_group = getAccessibleGeneSets();
 $accessible_sources = flattenSourcesList($sources_by_group);
 
 // Initialize variables

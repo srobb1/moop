@@ -191,7 +191,7 @@ function generateOptimizedAssemblyConfig($organism, $assembly, $user_access_leve
     }
 
     // 2. VALIDATE PERMISSIONS using defaultAccessLevel from assembly JSON
-    // (getAccessibleAssemblies checks gene-set groups, not genome browser access)
+    // (getAccessibleGeneSets checks gene-set groups, not genome browser access)
     $assembly_access_level = $assembly_definition['defaultAccessLevel'] ?? 'PUBLIC';
     if (!canUserAccessAssembly($user_access_level, $assembly_access_level, $organism, $assembly)) {
         http_response_code(403);
@@ -403,7 +403,7 @@ function serveSingleTrackConfig($track_id, $organism, $assembly, $user_access_le
     }
     
     // Validate assembly permissions using defaultAccessLevel from the assembly JSON
-    // (getAccessibleAssemblies checks gene-set groups, not genome browser access)
+    // (getAccessibleGeneSets checks gene-set groups, not genome browser access)
     $metadata_path = __DIR__ . '/../../metadata';
     $assembly_def_file = "$metadata_path/jbrowse2-configs/assemblies/{$organism}_{$assembly}.json";
     $assembly_definition = loadJsonFile($assembly_def_file, []);

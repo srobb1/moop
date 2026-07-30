@@ -211,6 +211,13 @@ function resolveSourceSelection($organism, $assembly, $accessible_sources, $gene
  * Get gene_sets accessible to current user
  * Filters gene_sets based on user access level and group membership
  *
+ * Named getAccessibleAssemblies() until 2026-07-30, by which time the name was a lie:
+ * it resolves access with has_gene_set_access() and returns one entry per
+ * (organism, assembly, gene_set) tuple. The docblock had said "gene_sets" for some
+ * time; only the identifier still said assemblies. That mattered --
+ * getAccessibleOrganismsInGroup() went on using the coarser has_assembly_access()
+ * and nothing looked wrong, because the two names appeared to agree.
+ *
  * Each entry in the returned structure represents one (organism, assembly, gene_set) tuple.
  * The return shape is: array<group_name, array<organism_name, array<source>>>
  * where each source includes: organism, assembly, gene_set, genome_name,
@@ -221,7 +228,7 @@ function resolveSourceSelection($organism, $assembly, $accessible_sources, $gene
  * @param string|null $specific_gene_set Optional gene_set to filter by
  * @return array Organized by group -> organism -> [sources]
  */
-function getAccessibleAssemblies($specific_organism = null, $specific_assembly = null, $specific_gene_set = null) {
+function getAccessibleGeneSets($specific_organism = null, $specific_assembly = null, $specific_gene_set = null) {
     $config = ConfigManager::getInstance();
     $organism_data = $config->getPath('organism_data');
     $metadata_path = $config->getPath('metadata_path');

@@ -37,7 +37,7 @@ $valid_fasta_modes = ['gene', 'upstream', 'downstream', 'exons', 'protein', 'tra
 if (!in_array($fasta_mode, $valid_fasta_modes)) $fasta_mode = 'gene';
 
 // --- Resolve accessible sources ---
-$all_accessible    = flattenSourcesList(getAccessibleAssemblies());
+$all_accessible    = flattenSourcesList(getAccessibleGeneSets());
 $accessible_by_key = [];
 foreach ($all_accessible as $src) {
     $key = $src['organism'] . '|' . $src['assembly'] . '|' . ($src['gene_set'] ?? '');

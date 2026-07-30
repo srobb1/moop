@@ -36,7 +36,7 @@ if ($organism === '') { echo $empty(''); exit; }
 $selected_raw = $_POST['sources'] ?? [];
 if (!is_array($selected_raw)) $selected_raw = [$selected_raw];
 
-$all_accessible    = flattenSourcesList(getAccessibleAssemblies());
+$all_accessible    = flattenSourcesList(getAccessibleGeneSets());
 $accessible_by_key = [];
 foreach ($all_accessible as $src) {
     $key = $src['organism'] . '|' . $src['assembly'] . '|' . ($src['gene_set'] ?? '');

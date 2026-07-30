@@ -10,7 +10,7 @@ Identified March 2026 after deploying to a machine with 85 organisms.
 - [x] **manage_groups.php DataTables** — Replaced broken `sortTable()` onclick handlers with DataTables initialization on both group tables.
 - [x] **manage_annotations.php cache warming** — Added annotation DB scanning to `warm_organism_cache.php`. The page already self-caches via `sqlite_mod_time` after first load; the CLI script ensures first load doesn't timeout.
 - [x] **manage_taxonomy_tree.php metadata** — Reads organism metadata from organism cache file instead of scanning 85 organism.json files.
-- [x] **getAccessibleAssemblies() session cache** — Results cached in `$_SESSION` with groups file mtime + access level invalidation. Tool pages (BLAST, retrieve sequences, etc.) no longer re-scan on every page load.
+- [x] **getAccessibleGeneSets() session cache** — Results cached in `$_SESSION` with groups file mtime + access level invalidation. Tool pages (BLAST, retrieve sequences, etc.) no longer re-scan on every page load.
 - [x] **Tool page dropdowns** — Already had built-in text filter via `source-list.php` + `source-list-manager.js`. No change needed.
 
 ## Remaining

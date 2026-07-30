@@ -74,10 +74,10 @@ header('Cache-Control: no-cache');
 $found_any = false;
 
 foreach ($valid_organisms as $organism => $uniquenames) {
-    $sources_by_group  = getAccessibleAssemblies($organism);
+    $sources_by_group  = getAccessibleGeneSets($organism);
     $organism_sources  = flattenSourcesList($sources_by_group);
 
-    // De-duplicate by gene-set directory. getAccessibleAssemblies() is keyed BY GROUP, so an
+    // De-duplicate by gene-set directory. getAccessibleGeneSets() is keyed BY GROUP, so an
     // organism belonging to two groups yields the same gene set once per group — Nematostella
     // returns 4 sources for its 2 real gene sets. Extracting per source therefore wrote every
     // sequence twice. That predates this file's expansion change; it was simply less visible

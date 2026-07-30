@@ -22,7 +22,7 @@
  * - Return selected source information for the filter input
  * 
  * @param array $context - Parsed context parameters (['organism', 'assembly', 'group'])
- * @param array $sources_by_group - Nested sources array from getAccessibleAssemblies()
+ * @param array $sources_by_group - Nested sources array from getAccessibleGeneSets()
  * @param array $accessible_sources - Flat sources array
  * @param string $selected_organism - Pre-selected organism (from POST/GET)
  * @param string $assembly_param - Pre-selected assembly parameter (from POST/GET)

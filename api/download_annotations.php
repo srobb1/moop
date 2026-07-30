@@ -29,7 +29,7 @@ $organism_name    = $organism_context['name'];
 $db = verifyOrganismDatabase($organism_name, $organism_data);
 
 // Permission-based gene_set filtering (same as parent.php)
-$sources_by_group        = getAccessibleAssemblies($organism_name);
+$sources_by_group        = getAccessibleGeneSets($organism_name);
 $accessible_sources      = flattenSourcesList($sources_by_group);
 $accessible_gene_set_ids = array_values(array_filter(array_column($accessible_sources, 'gene_set_id')));
 

@@ -15,7 +15,7 @@ if (empty($organisms_param)) {
 }
 
 $requested = array_values(array_filter(array_map('trim', explode(',', $organisms_param))));
-$accessible = getAccessibleAssemblies();
+$accessible = getAccessibleGeneSets();
 
 // Flatten group-keyed result into $by_organism[$org][$accession|$gene_set] = source
 // Using a composite key to deduplicate across groups.

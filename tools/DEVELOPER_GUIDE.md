@@ -228,7 +228,7 @@ After `tool_init.php`, these are available:
 
 **lib/functions_data.php:**
 - `getAccessibleOrganisms()` - Get organisms user can access
-- `getAccessibleAssemblies()` - Get assemblies user can access
+- `getAccessibleGeneSets()` - Get assemblies user can access
 - `getAccessibleGroups()` - Get groups user can access
 - Data retrieval helpers
 
@@ -328,7 +328,7 @@ $display_name = $context['display_name']; // "organism > assembly" format
 **Helper Functions:**
 - `parseContextParameters()` - Parse org/assembly/group from URL
 - `getAccessibleOrganisms()` - Get organisms user can access
-- `getAccessibleAssemblies()` - Get assemblies user can access
+- `getAccessibleGeneSets()` - Get assemblies user can access
 - `filterAssembliesByOrganism()` - Filter assemblies to specific organism
 
 ---
@@ -399,7 +399,7 @@ For tools that need users to select organisms/assemblies:
 ```php
 include_once __DIR__ . '/../includes/source-selector-helpers.php';
 
-$sources_by_group = getAccessibleAssemblies();
+$sources_by_group = getAccessibleGeneSets();
 $context = parseContextParameters();
 
 // Returns selection info

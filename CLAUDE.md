@@ -56,7 +56,7 @@ moop/
 ├── lib/                Shared PHP function libraries
 │   ├── moop_functions.php      Organism/assembly listing helpers
 │   ├── blast_functions.php     BLAST execution and result parsing
-│   ├── functions_access.php    Access helpers (getAccessibleAssemblies, etc.)
+│   ├── functions_access.php    Access helpers (getAccessibleGeneSets, etc.)
 │   ├── functions_database.php  PDO/SQLite query helpers
 │   ├── functions_validation.php Input validation helpers
 │   ├── functions_login_protection.php  Brute-force login protection

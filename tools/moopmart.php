@@ -16,7 +16,7 @@ include_once __DIR__ . '/../lib/moop_functions.php';
 $organism_data = $config->getPath('organism_data');
 $siteTitle     = $config->getString('siteTitle');
 
-$all_accessible = flattenSourcesList(getAccessibleAssemblies());
+$all_accessible = flattenSourcesList(getAccessibleGeneSets());
 
 // Build scope tree with deduplication: organism => assembly => [gene_sets]
 $scope_tree     = [];

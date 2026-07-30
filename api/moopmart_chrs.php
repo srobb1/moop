@@ -22,7 +22,7 @@ if (!$source_key) {
 }
 
 // Validate the requested source against what the user can actually access
-$all_accessible    = flattenSourcesList(getAccessibleAssemblies());
+$all_accessible    = flattenSourcesList(getAccessibleGeneSets());
 $accessible_by_key = [];
 foreach ($all_accessible as $src) {
     $key = $src['organism'] . '|' . $src['assembly'] . '|' . ($src['gene_set'] ?? '');

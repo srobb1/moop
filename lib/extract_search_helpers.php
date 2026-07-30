@@ -608,7 +608,7 @@ function sendFileDownload($content, $sequence_type, $file_format = 'fasta') {
  * 
  * Filters nested sources array by organism list
  * 
- * @param array $sources_by_group - Nested array from getAccessibleAssemblies()
+ * @param array $sources_by_group - Nested array from getAccessibleGeneSets()
  * @param array $filter_organisms - Optional organism filter list
  * @return array - Nested array [group][organism][...assemblies]
  */
@@ -638,7 +638,7 @@ function buildFilteredSourcesList($sources_by_group, $filter_organisms = []) {
  * Converts nested [group][organism][...sources] structure to flat list
  * Useful for iterating all sources without nested loops
  * 
- * @param array $sources_by_group - Nested array from getAccessibleAssemblies()
+ * @param array $sources_by_group - Nested array from getAccessibleGeneSets()
  * @return array - Flat list of all sources
  */
 function flattenSourcesList($sources_by_group) {

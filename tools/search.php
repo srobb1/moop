@@ -32,7 +32,7 @@ $ctx_group    = $context['group'];
 
 // Build scope tree: organism → assembly → [gene_sets]
 // Also collect organism display info (genus/species/common_name)
-$raw_sources    = flattenSourcesList(getAccessibleAssemblies());
+$raw_sources    = flattenSourcesList(getAccessibleGeneSets());
 $scope_tree     = [];   // [organism][assembly] = [gene_set, ...]
 $organism_info  = [];   // [organism] = ['genus'=>..., 'species'=>..., 'common_name'=>...]
 $assembly_names = [];   // [organism][assembly] = genome_name (human-readable name if set)
@@ -88,7 +88,7 @@ if ($ctx_organism) {
     if ($ctx_assembly) $scope_context['assembly'] = $ctx_assembly;
     if ($ctx_gene_set) $scope_context['gene_set'] = $ctx_gene_set;
 } elseif ($ctx_group) {
-    $sources_by_group   = getAccessibleAssemblies();
+    $sources_by_group   = getAccessibleGeneSets();
     $group_organisms    = array_keys($sources_by_group[$ctx_group] ?? []);
     if (!empty($group_organisms)) {
         $scope_context = ['organisms' => $group_organisms];

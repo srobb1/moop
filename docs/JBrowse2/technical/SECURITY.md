@@ -1914,7 +1914,7 @@ if (empty($organism) || empty($assembly)) {
 }
 
 // Verify user still has access
-$accessible = getAccessibleAssemblies($organism, $assembly);
+$accessible = getAccessibleGeneSets($organism, $assembly);
 if (empty($accessible)) {
     http_response_code(403);
     echo json_encode(['error' => 'Access denied to this assembly']);

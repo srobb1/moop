@@ -46,7 +46,7 @@ $context = parseContextParameters();
 $display_name = $context['display_name'];
 
 // Get ALL accessible assemblies early (needed for source selection)
-$sources_by_group = getAccessibleAssemblies();
+$sources_by_group = getAccessibleGeneSets();
 $accessible_sources = flattenSourcesList($sources_by_group);
 
 // Get organisms for filtering - support both array and comma-separated string formats

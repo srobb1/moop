@@ -138,7 +138,7 @@ function getPublicGroupCards($group_data) {
  * the return value would have inherited an access bug, which is exactly what a
  * scope-tree built from this would have done.
  *
- * Deliberately NOT delegated to getAccessibleAssemblies(): that resolves genome and
+ * Deliberately NOT delegated to getAccessibleGeneSets(): that resolves genome and
  * gene-set ids out of each organism's SQLite, which costs ~1.6 s cold, and this runs
  * once per group in getOrganismGroups(). The group metadata already carries
  * organism/assembly/gene_set per entry, so the correct check is available for free.

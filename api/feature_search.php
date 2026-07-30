@@ -29,7 +29,7 @@ $site          = $config->getString('site', 'moop');
 $organism_data = $config->getPath('organism_data');
 
 // Flat list of every source the current user can access
-$accessible = flattenSourcesList(getAccessibleAssemblies());
+$accessible = flattenSourcesList(getAccessibleGeneSets());
 
 if (empty($accessible)) {
     echo json_encode(['results' => []]);

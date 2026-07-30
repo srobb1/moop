@@ -224,6 +224,18 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
         </button>
       </div>
 
+      <!-- Inline field help — visible, no JS. Deliberately does NOT repeat the
+           modal: it gives the actionable rule and points at the modal for the
+           per-type detail, so each fact keeps one home. -->
+      <div class="px-3 pt-3">
+        <div class="form-text moop-help">
+          <i class="fa fa-circle-info"></i>Search looks only inside the types you select here —
+          leave one unselected and its annotations are skipped. Not sure what a type covers?
+          Open <strong>About annotation types</strong> (<i class="fa fa-info-circle"></i> above)
+          for a description of each.
+        </div>
+      </div>
+
       <div class="row g-0" style="min-height:120px;">
 
         <!-- Left: annotation types list -->

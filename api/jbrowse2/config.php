@@ -206,7 +206,7 @@ function generateAssemblyConfig($organism, $assembly, $user_access_level) {
     }
 
     // 2. VALIDATE PERMISSIONS using defaultAccessLevel from assembly JSON
-    // (getAccessibleAssemblies checks gene-set groups, not genome browser access)
+    // (getAccessibleGeneSets checks gene-set groups, not genome browser access)
     $assembly_access_level = $assembly_definition['defaultAccessLevel'] ?? 'PUBLIC';
     if (!canUserAccessAssembly($user_access_level, $assembly_access_level, $organism, $assembly)) {
         http_response_code(403);

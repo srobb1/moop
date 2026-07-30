@@ -47,7 +47,7 @@ function _downloads_format_size(int $bytes): string {
 }
 
 // Get accessible assemblies
-$sources_by_group   = getAccessibleAssemblies();
+$sources_by_group   = getAccessibleGeneSets();
 $accessible_sources = flattenSourcesList($sources_by_group);
 
 // Handle organisms[] POSTed from groups page (same pattern as retrieve_sequences/blast)
