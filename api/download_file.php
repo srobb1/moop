@@ -20,6 +20,9 @@ ob_start();
 include_once __DIR__ . '/../tools/tool_init.php';
 ob_end_clean();
 
+// tool_init.php does not pull this in, and the filename is built below.
+require_once __DIR__ . '/../lib/download_filename.php';
+
 $blocked_exts = array_flip([
     // BLAST nucleotide DB
     'ndb', 'nhr', 'nin', 'njs', 'nog', 'nos', 'not', 'nsq', 'ntf', 'nto',
@@ -126,8 +129,21 @@ $basename = basename($file_path);
 
 if (ob_get_level()) ob_end_clean();
 
+// Name the file for where it CAME FROM, not just what it is. Sent as its own basename,
+// three organisms' gene models all downloaded as "genes.gff", "genes (1).gff",
+// "genes (2).gff" -- which is exactly the collision lib/download_filename.php exists to
+// prevent. The organism, assembly and gene set are already in the request.
+//
+// The original stem is kept as the {what}, so a file the user recognises by name stays
+// recognisable; scope and date are appended around it.
+$download_name = moop_download_filename(
+    pathinfo($basename, PATHINFO_FILENAME),
+    array_filter([$organism, $assembly, $gene_set]),
+    pathinfo($basename, PATHINFO_EXTENSION) ?: 'txt'
+);
+
 header('Content-Type: ' . $mime);
-header('Content-Disposition: attachment; filename="' . str_replace('"', '\\"', $basename) . '"');
+header('Content-Disposition: attachment; filename="' . str_replace('"', '\\"', $download_name) . '"');
 header('Content-Length: ' . filesize($file_path));
 header('Cache-Control: no-store');
 header('Pragma: no-cache');
