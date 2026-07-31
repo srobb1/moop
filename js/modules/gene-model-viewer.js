@@ -52,6 +52,23 @@
     let   currentFasta    = null;     // ready-to-download content (FASTA or GFF3)
     let   currentFilename = null;     // filename for download
 
+    /**
+     * Build a download name matching lib/download_filename.php: {what}_{scope}_{Y-m-d}.{ext}
+     *
+     * These three downloads named the feature and its coordinates but carried no organism
+     * and no date, so two organisms' files for the same-numbered feature collided, and
+     * nothing in the name said when it was taken.
+     *
+     * Joined with '_' so dots INSIDE a part survive -- feature ids legitimately contain
+     * them (bkew.kc1.004061_0_1.4), and mangling one makes the id unusable for pasting
+     * back into a search. Dots as separators were the bug in fasta_download_handler.
+     */
+    function moopDownloadName(what, ext) {
+        const date = new Date().toISOString().slice(0, 10);
+        return [what, typeof moopOrganism !== 'undefined' ? moopOrganism : '', date]
+            .filter(Boolean).join('_') + '.' + ext;
+    }
+
     function init() {
         if (typeof geneModelData === 'undefined' || !geneModelData) return;
         const svg = document.getElementById('gene-model-svg');
@@ -565,7 +582,7 @@
                 currentRegion   = { type: 'Genomic', id: gene.id, seqname: gene.seqname, start: gene.start, end: gene.end, strand: gene.strand };
                 currentSequence = null;
                 currentFasta    = fasta;
-                currentFilename = `${gene.id || gene.seqname}_${gene.start}-${gene.end}_genomic.fa`;
+                currentFilename = moopDownloadName(`${gene.id || gene.seqname}_${gene.start}-${gene.end}_genomic`, 'fa');
 
                 document.getElementById('seq-region-loading').style.display = 'none';
                 document.getElementById('seq-region-content').style.display  = 'block';
@@ -614,7 +631,7 @@
                 currentRegion   = { type: 'GFF', id: gene.id, seqname: gene.seqname, start: gene.start, end: gene.end, strand: gene.strand };
                 currentSequence = null;
                 currentFasta    = gffText;
-                currentFilename = `${gene.id || gene.seqname}_gene.gff3`;
+                currentFilename = moopDownloadName(`${gene.id || gene.seqname}_gene`, 'gff3');
 
                 document.getElementById('seq-region-loading').style.display = 'none';
                 document.getElementById('seq-region-content').style.display  = 'block';
@@ -644,7 +661,7 @@
         const header = `>${region.isoform} ${region.type} ${region.seqname}:${region.start}-${region.end}(${region.strand})`;
         const body   = seq.match(/.{1,60}/g)?.join('\n') ?? seq;
         currentFasta    = header + '\n' + body;
-        currentFilename = `${region.isoform}_${region.type}_${region.seqname}-${region.start}-${region.end}.fa`;
+        currentFilename = moopDownloadName(`${region.isoform}_${region.type}_${region.seqname}-${region.start}-${region.end}`, 'fa');
         document.getElementById('seq-region-sequence').textContent = currentFasta;
 
         document.getElementById('seq-region-loading').style.display = 'none';
