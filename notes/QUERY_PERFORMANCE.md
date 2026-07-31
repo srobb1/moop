@@ -1,41 +1,55 @@
 # Query performance — what is fast, what is slow, and what actually decides it
 
-Measured 2026-07-22 against the live databases on this host. Every number below is real, not
-estimated.
+Measured 2026-07-22 against the live databases on this host, **and re-measured 2026-07-31
+after the reload and the FTS rebuild.** Every number below is real, not estimated.
 
 **The short version: query shape matters far less than whether the data is already in the
-OS page cache.** The same `COUNT(*)` took **7,051 ms cold and 2 ms warm** — a ~3,500×
-difference, on identical SQL. Optimising SQL is worth doing, but it is second-order next to
-cache residency.
+OS page cache — and, it turns out, far less than whether the bytes are contiguous.** The
+same `COUNT(*)` took **401 ms cold and 2.7 ms warm** (~150×). Optimising SQL is worth
+doing, but it is second-order next to cache residency and disk layout.
 
 ---
 
 ## The structural fact everything follows from
 
-| | |
-|---|---|
-| Organism databases | **85**, totalling **66.2 GB** |
-| Largest single DB | 1,915 MB (`Myotis_myotis`) |
-| Host RAM | 15 GB, of which ~12 GB is page cache |
+| | 2026-07-22 | **2026-07-31** |
+|---|---|---|
+| Organism databases | 85, totalling 66.2 GB | 85, totalling **33 GB** |
+| Largest single DB | 1,915 MB (`Myotis_myotis`) | — |
+| Host RAM | 15 GB, ~12 GB page cache | unchanged |
 
-**Roughly 18% of the data can be resident at once.** So a cold read is the *normal* case, not
-the exception — especially for a cross-organism search, which touches databases nobody has
+**Roughly a third of the data can now be resident at once**, up from 18%. A cold read is
+still the *normal* case for a cross-organism search, which touches databases nobody has
 opened recently. This is not a misconfiguration; it is the shape of the deployment.
 
 ---
 
 ## Cold vs warm — the measurement that matters
 
-Same query, same database, back to back:
+Same query, same database, same row count, back to back:
 
 ```
 COUNT(*) FROM annotation   (Procerodes_sp, 182,405 rows)
-  cold : 7051.8 ms      <- first touch, reading from disk
-  warm :    2.0 ms      <- pages now cached
+
+  2026-07-22   cold : 7051.8 ms     warm : 2.0 ms
+  2026-07-31   cold :  400.6 ms     warm : 2.7 ms      <- 17.6x faster cold
 ```
 
-Ten seconds of "slow query" was almost entirely disk I/O. Before optimising any query, check
-whether you are measuring the query or the disk.
+**Nothing about the query changed. The bytes moved.** Two things did it, and neither was a
+query optimisation:
+
+- the 2026-07-30 **reload** — contentless FTS dropped the duplicate `_content` table and
+  `date` moved off `feature_annotation` onto `annotation_source`, halving the corpus;
+- the 2026-07-31 **FTS rebuild**, which ran `VACUUM` — defragmenting each file so the
+  annotation table's pages are contiguous instead of scattered through it.
+
+The same lesson arrived independently from the search fan-out the same day: throughput went
+from 16 MB/s to 27 MB/s not by reading less, but by reading in rowid order instead of
+scattered lookups. **On this disk, contiguity is worth more than volume.**
+
+Seven seconds of "slow query" was almost entirely disk I/O, and most of that was seeking.
+Before optimising any query, check whether you are measuring the query, the cache, or the
+disk layout.
 
 ⚠️ **Methodology caveat:** dropping the page cache needs root, which this measurement did not
 have. "Cold" here means *not yet touched in this session*, which is a fair proxy but not a

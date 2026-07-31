@@ -262,12 +262,23 @@ reads like one, and it works against the goal the schema is built around. Where 
 creates a staleness risk, the answer is regeneration discipline (proactive build + a rebuild
 control), not schema growth.
 
-**Measured, on this host:** 85 databases totalling 66 GB against ~12 GB of page cache, so
-most data is cold most of the time — and cold is what dominates. The same `COUNT(*)` took
-**7,051 ms cold and 2 ms warm**. Every megabyte added to a database competes for that cache
-and evicts something a user is about to need. Before optimising SQL, check you are not
-actually measuring the disk. Numbers, fast/slow query shapes and the cross-organism fan-out
-cost: `notes/QUERY_PERFORMANCE.md`.
+**Measured, on this host (figures refreshed 2026-07-31):** 85 databases totalling **33 GB**
+against ~12 GB of page cache, so most data is still cold most of the time — and cold is what
+dominates. `COUNT(*) FROM annotation` on Procerodes_sp takes **401 ms cold and 2.7 ms warm**
+(~150×). Every megabyte added to a database competes for that cache and evicts something a
+user is about to need. Before optimising SQL, check you are not actually measuring the disk.
+
+⚠️ **Earlier revisions of this file said 66 GB and 7,051 ms cold.** Both were true when
+written and are now stale by an order of magnitude: the 2026-07-30 reload halved the corpus
+(contentless FTS, `date` moved to `annotation_source`) and the 2026-07-31 FTS rebuild ran
+`VACUUM`, which made each annotation table contiguous rather than scattered through its
+file. **Same SQL, same rows, 17.6× faster purely from where the bytes sit.** The argument
+above is unchanged — cache residency still dominates query shape — but do not quote the old
+multiplier.
+
+Numbers, fast/slow query shapes and the cross-organism fan-out cost:
+`notes/QUERY_PERFORMANCE.md`. The cold-search cost model, and why `bm25()` was removed from
+the search fast path, is `notes/SEARCH_COST_MODEL_2026-07-31.md`.
 
 ### 9b. Say so when the code is bad — the user wants to know
 
