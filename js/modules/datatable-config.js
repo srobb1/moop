@@ -274,6 +274,22 @@ const DataTableExportConfig = {
         const exportOptions = {
             columns: function(idx, data, node) {
                 return !$(node).hasClass(DataTableExportConfig.NO_EXPORT_CLASS);
+            },
+            format: {
+                // A <br> is a line break that CARRIES MEANING -- the Species column puts the
+                // common name under the binomial. DataTables strips tags for export and puts
+                // nothing in their place, so the two ran together as one word:
+                // "Bipalium kewenseHammerhead Worm". Found by reading a downloaded file.
+                //
+                // Replaced before the tag strip, so the separator survives it.
+                body: function (data) {
+                    if (typeof data !== 'string') return data;
+                    return data
+                        .replace(/<br\s*\/?>/gi, ' — ')
+                        .replace(/<[^>]+>/g, '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                }
             }
         };
 
