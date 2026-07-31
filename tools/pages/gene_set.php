@@ -56,8 +56,39 @@
   </div>
 
   <!-- Gene Set Header -->
+  <?php
+  /* The organism's picture, as on the organism and assembly pages. It is the same image on
+     all three, which is the point: it says WHICH organism you are inside without reading a
+     word, and the three pages are otherwise near-identical slabs of metadata. */
+  $image_data = getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path);
+  $image_src  = $image_data['image_path'];
+  $image_info = ['caption' => $image_data['caption'], 'link' => $image_data['link']];
+  $show_image = !empty($image_src);
+  $image_alt  = htmlspecialchars($organism_info['common_name'] ?? $organism_name);
+  ?>
   <div class="row mb-4" id="geneSetHeader">
-    <div class="col-12">
+    <?php if ($show_image): ?>
+      <div class="col-md-4 mb-3">
+        <div class="card shadow-sm">
+          <img src="<?= $image_src ?>" class="card-img-top" alt="<?= $image_alt ?>">
+          <?php if (!empty($image_info['caption'])): ?>
+            <div class="card-body">
+              <p class="card-text small text-muted">
+                <?php if (!empty($image_info['link'])): ?>
+                  <a href="<?= $image_info['link'] ?>" target="_blank" class="text-decoration-none">
+                    <?= $image_info['caption'] ?> <i class="fa fa-external-link-alt fa-xs"></i>
+                  </a>
+                <?php else: ?>
+                  <?= $image_info['caption'] ?>
+                <?php endif; ?>
+              </p>
+            </div>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
+
+    <div class="<?= $show_image ? 'col-md-8' : 'col-12' ?>">
       <div class="feature-header gene-set-header-custom shadow">
         <h1><?= htmlspecialchars($gene_set_name) ?> <span class="badge bg-white text-gene-set ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;">Gene Set</span></h1>
         <div class="feature-overview-body" style="padding:0;">
