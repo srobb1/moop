@@ -1,3 +1,8 @@
 {"when": "2026-07-30 15:57:14", "term": "piwi", "group": "Bats", "orgs": 49, "conc": 5, "seconds": 1.34, "mb_read": 0.0, "refaults": 0, "majfaults": 0, "cache_gb": 2.11}
 {"when": "2026-07-30 18:26:39", "term": "piwi", "group": "Bats", "orgs": 49, "conc": 5, "seconds": 70.46, "mb_read": 536.5, "refaults": 137312, "majfaults": 2, "cache_gb": 11.77, "free_gb": 0.57}
 {"when": "2026-07-30 18:36:22", "term": "piwi", "group": "Bats", "orgs": 49, "conc": 5, "seconds": 1.4, "mb_read": 0.0, "refaults": 0, "majfaults": 0, "cache_gb": 11.78, "free_gb": 0.57}
+{"when": "2026-07-31 08:25:16", "term": "piwi", "group": "Bats", "orgs": 49, "conc": 5, "seconds": 1.31, "mb_read": 0.0, "refaults": 0, "majfaults": 0, "cache_gb": 12.18, "free_gb": 0.52}
+{"when": "2026-07-31 08:32:00", "term": "helicase", "group": "Bats", "orgs": 49, "conc": 5, "seconds": 156.92, "mb_read": 2517.2, "refaults": 146000, "majfaults": 6, "cache_gb": 11.93, "free_gb": 0.37}
+{"when": "2026-07-31 08:32:35", "term": "piwi", "group": "Bats", "orgs": 49, "conc": 5, "seconds": 1.34, "mb_read": 0.0, "refaults": 0, "majfaults": 1, "cache_gb": 11.93, "free_gb": 0.48}
+{"when": "2026-07-31 08:33:02", "term": "helicase", "group": "Bats", "orgs": 49, "conc": 5, "seconds": 1.73, "mb_read": 0.0, "refaults": 0, "majfaults": 0, "cache_gb": 11.93, "free_gb": 0.36}
+{"when": "2026-07-31 08:40:43", "term": "pax", "group": "Bats", "orgs": 49, "conc": 5, "seconds": 2.26, "mb_read": 0.6, "refaults": 165, "majfaults": 0, "cache_gb": 11.94, "free_gb": 0.33, "sdb_before_mb": 767509.2, "sdb_after_mb": 767509.8, "refault_before": 59413673, "refault_after": 59413838}

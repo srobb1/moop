@@ -28,6 +28,11 @@ RULES, learned the hard way:
   - Bytes read comes from /proc/diskstats for sdb (the data volume). A run that is
     slow with ~0 MB read was slow for some other reason -- say so rather than
     filing it as evidence for RAM.
+  - MEASURE THE GAP, NOT JUST ITS LENGTH. "Survived 14 hours" means nothing if the
+    machine was idle for all 14 -- nothing competed, so nothing had to be evicted.
+    Survival is only evidence when something was actually pushing for that memory.
+    Each run therefore records the ABSOLUTE counters as well as its own deltas, so
+    the next run can subtract and report how much I/O happened in between.
 
 usage:
   persistence.py --term piwi --group Bats        # run and append to persistence.log
@@ -91,6 +96,18 @@ def one(org, term):
                     f"{BASE}?search_keywords={term}&organism={org}"], check=False)
 
 
+def gap_io(prev, cur):
+    """MB read from sdb, and refaults, BETWEEN the end of `prev` and the start of `cur`.
+
+    Returns (mb, refaults) or None when either run predates the absolute counters.
+    Old log lines only ever recorded per-run deltas, which cannot answer this.
+    """
+    if "sdb_after_mb" not in prev or "sdb_before_mb" not in cur:
+        return None
+    return (cur["sdb_before_mb"] - prev["sdb_after_mb"],
+            cur["refault_before"] - prev["refault_after"])
+
+
 def show():
     if not os.path.exists(LOG):
         print("no runs recorded yet")
@@ -112,28 +129,55 @@ def show():
     # An earlier version compared rows[0] to rows[-1] and announced "the working set
     # SURVIVED" for exactly that case. A benchmark that draws a flattering conclusion from
     # a meaningless pair is worse than no benchmark.
-    a, b = rows[-2], rows[-1]
-    if a["term"] != b["term"] or a["group"] != b["group"]:
-        print("\n  !! the last two runs used different query settings -- not comparable.")
+    # The log holds one series PER TERM -- a second term interleaved with the first is
+    # normal and useful. So compare the latest run against the previous run with the SAME
+    # settings, not against whatever row happens to sit above it.
+    b = rows[-1]
+    a = next((r for r in reversed(rows[:-1])
+              if r["term"] == b["term"] and r["group"] == b["group"]), None)
+    if a is None:
+        print(f"\n  only one run so far for term {b['term']!r} — re-run it later to test survival.")
         return
 
     fmt = "%Y-%m-%d %H:%M:%S"
     gap_h = (datetime.strptime(b["when"], fmt) - datetime.strptime(a["when"], fmt)).total_seconds() / 3600.0
-    warm = min((r["seconds"] for r in rows if r["mb_read"] < 20), default=None)
+    same = [r for r in rows if r["term"] == b["term"] and r["group"] == b["group"]]
+    warm = min((r["seconds"] for r in same if r["mb_read"] < 20), default=None)
 
     print(f"\n  latest run: {b['seconds']:.1f}s, {b['mb_read']:.0f} MB read, "
-          f"{b['refaults']:,} refaults — {gap_h:.1f} h after the previous run")
+          f"{b['refaults']:,} refaults — {gap_h:.1f} h after the previous {b['term']!r} run")
     if warm is not None:
-        print(f"  warm floor across all runs: {warm:.1f}s")
+        print(f"  warm floor for {b['term']!r}: {warm:.1f}s")
+
+    # How hard was the cache pushed while we were not looking? Without this, an idle gap
+    # and a punishing one are indistinguishable, and the idle one reads as good news.
+    gap = gap_io(a, b)
+    if gap is None:
+        gap_gb = None
+        print("  (gap I/O unknown: one of these runs predates the absolute counters)")
+    else:
+        gap_gb, gap_refaults = gap[0] / 1024.0, gap[1]
+        print(f"  during the gap the machine read {gap_gb:.1f} GB from sdb "
+              f"and took {gap_refaults:,} refaults")
 
     if b["mb_read"] < 20:
+        # To evict our pages the kernel must have needed the space, which takes roughly a
+        # cache-sized volume of other reads. Less than that and survival proves nothing.
+        turnover = gap_gb is not None and gap_gb >= b["cache_gb"]
         if gap_h < 1.0:
             print(f"  INCONCLUSIVE: this is a warm re-run only {gap_h*60:.0f} minutes after the")
             print( "  previous one, which had already loaded these pages. It says nothing about")
             print( "  survival. Leave hours of NORMAL USE between runs, then repeat.")
+        elif turnover:
+            print(f"  SURVIVED {gap_h:.1f} h AND {gap_gb:.1f} GB of competing reads — more than the")
+            print(f"  {b['cache_gb']:.1f} GB cache holds, so these pages were kept in preference to")
+            print( "  others. That is real evidence that RAM is not the bottleneck.")
         else:
-            print(f"  SURVIVED {gap_h:.1f} h: read essentially nothing, so the pages stayed resident")
-            print( "  across that gap. If this holds overnight, RAM is not the bottleneck.")
+            print(f"  SURVIVED {gap_h:.1f} h, but the gap was QUIET", end="")
+            print(f" ({gap_gb:.1f} GB read)." if gap_gb is not None else ".")
+            print( "  Nothing competed for the memory, so nothing had to be evicted — this is not")
+            print( "  yet evidence that the working set holds up under load. Repeat across a gap")
+            print( "  with real traffic, or with other organisms being searched.")
     else:
         refault_mb = b["refaults"] * 4096 / 1048576
         share = (refault_mb / b["mb_read"] * 100) if b["mb_read"] else 0
@@ -163,7 +207,8 @@ def main():
     v0, d0, t0 = vmstat(), sdb_mb(), time.perf_counter()
     with ThreadPoolExecutor(max_workers=args.conc) as ex:
         list(ex.map(lambda o: one(o, args.term), orgs))
-    elapsed, mb, v1 = time.perf_counter() - t0, sdb_mb() - d0, vmstat()
+    elapsed, v1, d1 = time.perf_counter() - t0, vmstat(), sdb_mb()
+    mb = d1 - d0
 
     rec = {
         "when": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -173,6 +218,11 @@ def main():
         "majfaults": v1["pgmajfault"] - v0["pgmajfault"],
         "cache_gb": round(cache_gb(), 2),
         "free_gb": round(meminfo_gb("MemFree"), 2),
+        # Absolute, since boot. The deltas above describe THIS run; these let the next
+        # run measure what happened in the gap between them. Both are needed.
+        "sdb_before_mb": round(d0, 1), "sdb_after_mb": round(d1, 1),
+        "refault_before": v0["workingset_refault_file"],
+        "refault_after": v1["workingset_refault_file"],
     }
     with open(LOG, "a") as fh:
         fh.write(json.dumps(rec) + "\n")
