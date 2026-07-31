@@ -47,6 +47,15 @@ jobs:
           VALIDATE_CONFIG: 'false'   # skip config-completeness validation (no site data in CI)
         run: php tests/smoke_tests.php
 
+      # Ranking is asserted separately because it needs a real (throwaway) database, which
+      # the smoke tests deliberately avoid. It builds its own fixture in the temp dir, so it
+      # is still hermetic. Counting string matches cannot catch a ranking bug -- every metric
+      # we had scored the "nexin" failure 100/100 -- so these assert ORDERINGS instead.
+      - name: Run search ranking tests
+        env:
+          VALIDATE_CONFIG: 'false'
+        run: php tests/search_ranking_tests.php
+
       # js/vendor is excluded for the same reason ./vendor is above: third-party bundles
       # are not ours to fix, and a minified file's syntax is upstream's problem.
       - name: Lint every JS file (node --check)
