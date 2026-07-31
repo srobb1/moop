@@ -230,6 +230,41 @@ function resolveSourceSelection($organism, $assembly, $accessible_sources, $gene
  * @param string|null $specific_gene_set Optional gene_set to filter by
  * @return array Organized by group -> organism -> [sources]
  */
+/**
+ * How many assemblies and gene sets a search over these organisms would actually cover.
+ *
+ * For the note under the search box, which has to say what is being searched BEFORE the
+ * user opens anything. The scope filter learns this from get_organism_hierarchy.php over
+ * AJAX, so its numbers do not exist at page load -- but the page can compute them, and
+ * cheaply, since getAccessibleGeneSets() is already session-cached.
+ *
+ * Derived from getAccessibleGeneSets() -- the SAME source the scope modal reads -- and
+ * deduplicated on accession|gene_set exactly as that endpoint does, because one gene set
+ * appears once per group it belongs to. Counting the raw rows would announce more gene
+ * sets than the modal then lists, and a note that disagrees with the control it points at
+ * is worse than no note.
+ *
+ * @param  array $organisms organism names
+ * @return array ['assemblies' => int, 'gene_sets' => int]
+ */
+function countAccessibleScope(array $organisms): array {
+    if (empty($organisms)) return ['assemblies' => 0, 'gene_sets' => 0];
+
+    $assemblies = [];
+    $gene_sets  = [];
+    foreach (getAccessibleGeneSets() as $org_data) {
+        foreach ($org_data as $org => $sources) {
+            if (!in_array($org, $organisms, true)) continue;
+            foreach ($sources as $source) {
+                $accession = $source['genome_accession'] ?? $source['assembly'];
+                $assemblies[$org . '|' . $accession] = true;
+                $gene_sets[$org . '|' . $accession . '|' . ($source['gene_set'] ?? '')] = true;
+            }
+        }
+    }
+    return ['assemblies' => count($assemblies), 'gene_sets' => count($gene_sets)];
+}
+
 function getAccessibleGeneSets($specific_organism = null, $specific_assembly = null, $specific_gene_set = null) {
     $config = ConfigManager::getInstance();
     $organism_data = $config->getPath('organism_data');

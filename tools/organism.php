@@ -114,9 +114,14 @@ $display_config = [
     'page_script' => [
         '/' . $site . '/js/organism-display.js'
     ],
+    // Counts for the note under the search box. Computed here rather than fetched, because
+    // the note has to say what is being searched BEFORE the user opens the scope filter --
+    // which is the only thing that would otherwise reveal that assemblies and gene sets
+    // exist at all on a single-organism page.
     'inline_scripts' => [
         "const sitePath = '/" . $site . "';",
         "const organismName = '" . addslashes($organism_name) . "';",
+        "const scopeCounts = " . json_encode(countAccessibleScope([$organism_name])) . ";",
         "const siteTitle = '" . addslashes($config->getString('siteTitle')) . "';"
     ]
 ];

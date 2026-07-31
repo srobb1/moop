@@ -14,7 +14,10 @@ $(document).ready(function() {
         totalVar: 1,
         hideSections: ['#organismHeader', '#organismContent'],
         scrollToResults: false,
-        noReadMoreButton: true
+        noReadMoreButton: true,
+        // What this organism holds, from PHP. Lets the note say what is being searched at
+        // page load; the scope filter only learns the same numbers after its AJAX fetch.
+        scopeCounts: (typeof scopeCounts !== 'undefined') ? scopeCounts : null
     });
 
     searchManager.init();

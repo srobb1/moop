@@ -26,6 +26,9 @@ class AnnotationSearch {
             extraAjaxParams: config.extraAjaxParams || {},
             noReadMoreButton: config.noReadMoreButton || false,
             noScopeFilter: config.noScopeFilter || false,
+            // {assemblies, gene_sets} from PHP, or null. The scope filter fetches the same
+            // hierarchy over AJAX, so this is the only source available before it is opened.
+            scopeCounts: config.scopeCounts || null,
             sitePath: config.sitePath || window.sitePath
         };
 
@@ -123,6 +126,10 @@ class AnnotationSearch {
         // only affordance telling a first-time user that icon exists.
         const narrow = 'Narrow by <a href="#organismsSection">organism</a> or '
                      + '<a href="#" class="scope-note-link">gene set</a>.';
+        // On a single-organism page there is no organism list to jump to, so offer only
+        // the control that exists.
+        const narrowGeneSetOnly = 'Narrow by <a href="#" class="scope-note-link">gene set</a>.';
+
         if (n > 1) {
             note.html(`Searching <strong>${n}</strong> organisms. ${narrow}`);
         } else if (n === 1 && selected > 1) {
@@ -130,7 +137,33 @@ class AnnotationSearch {
             // here would read as "the filter did nothing".
             note.html(`Searching <strong>1</strong> organism, narrowed by gene set. ${narrow}`);
         } else {
-            note.html('');
+            // ONE organism and one to choose from -- the organism page. This used to print
+            // nothing, which left the scope icon as an unlabelled control a first-time user
+            // has no reason to open, on the page where narrowing to a gene set is most
+            // likely to be what they want. Say what is being searched, and name the way to
+            // change it, exactly as the multi-organism case does.
+            // Before the scope filter has ever been opened, selectedScope is null and
+            // countScopedGeneSets() returns 0/0 -- so fall back to what PHP counted. Without
+            // this the note appears only AFTER filtering, which is exactly backwards: it is
+            // needed most before, to say what is being searched and that it can be narrowed.
+            let { included, total } = this.countScopedGeneSets();
+            if (total === 0 && this.config.scopeCounts) {
+                total = included = this.config.scopeCounts.gene_sets || 0;
+            }
+            // Name assemblies only when there is more than one. The page already lists
+            // them as chips, so repeating "1 assembly" spends a line to say nothing; more
+            // than one is the case where the gene set count needs explaining.
+            const asm = (this.config.scopeCounts || {}).assemblies || 0;
+            const across = asm > 1 ? ` in ${asm} assemblies` : '';
+            if (total > 1) {
+                note.html(included < total
+                    ? `Searching <strong>${included}</strong> of ${total} gene sets${across}. ${narrowGeneSetOnly}`
+                    : `Searching all <strong>${total}</strong> gene sets${across}. ${narrowGeneSetOnly}`);
+            } else {
+                // A single gene set cannot be narrowed, so a "narrow by" link would offer a
+                // modal that can do nothing. Name what is searched and stop there.
+                note.html(total === 1 ? 'Searching this organism\'s only gene set.' : '');
+            }
         }
 
         // Delegated once per note render; .off() first so repeated renders do not stack
