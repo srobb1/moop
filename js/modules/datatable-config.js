@@ -265,6 +265,12 @@ const DataTableExportConfig = {
      * readability, present in the file.
      */
     createButton: function(buttonType, selectedRowsOnly = false) {
+        // Captured by init() below, read by filename(). DataTables invokes filename() with
+        // NO `this` binding, so the obvious this.table() throws -- and because that call sat
+        // inside a try/catch it failed SILENTLY, yielding an empty organism and a file named
+        // plain "results_<date>.csv". Verified by downloading, not by reading: two tables
+        // exported and only one file landed, because both wanted the same name.
+        let boundDt = null;
         const exportOptions = {
             columns: function(idx, data, node) {
                 return !$(node).hasClass(DataTableExportConfig.NO_EXPORT_CLASS);
@@ -294,7 +300,7 @@ const DataTableExportConfig = {
             filename: function () {
                 let org = '';
                 try {
-                    const id = (this.table().node() || {}).id || '';
+                    const id = (boundDt && boundDt.table().node() || {}).id || '';
                     org = id.replace(/^.*?resultsTable_/, '').replace(/^annotationTable_?/, '');
                 } catch (e) { /* fall through to an unscoped but still dated name */ }
                 const parts = ['results'];
@@ -304,7 +310,11 @@ const DataTableExportConfig = {
             },
             // Guard reads THIS table via dt, so a sibling table's selection cannot
             // satisfy it and produce a headers-only file.
-            init: selectedRowsOnly ? function(dt, node, config) {
+            // Always defined now: init is the only place DataTables hands us the dt, and
+            // filename() needs it. The selected-rows guard stays conditional inside.
+            init: function(dt, node, config) {
+                boundDt = dt;
+                if (!selectedRowsOnly) return;
                 $(node).on('click.dt', function(e) {
                     if (DataTableExportConfig.selectedRowNodes(dt).length === 0) {
                         e.preventDefault();
@@ -313,7 +323,7 @@ const DataTableExportConfig = {
                         return false;
                     }
                 });
-            } : undefined
+            }
         };
     },
 
