@@ -71,12 +71,15 @@ function getWikipediaTaxonomyData($rank_name) {
     
     // Extract description from intro
     if (!empty($page['extract'])) {
-        $description = $page['extract'];
-        // Truncate if too long
-        if (strlen($description) > 500) {
-            $description = substr($description, 0, 500) . '...';
-        }
-        $result['description'] = trim($description);
+        // NOT truncated. The request above already passes exintro=true, which asks
+        // Wikipedia for the lead section ONLY -- so what arrives is exactly the article's
+        // first section, and cutting it again served no purpose. The old 500-character
+        // limit chopped mid-word ("...where its slender colum...") with no way to read on.
+        //
+        // It was also byte-based: strlen/substr on UTF-8 can sever a multi-byte character
+        // and emit a broken byte. Dropping the cut removes that hazard rather than papering
+        // over it with mb_ equivalents.
+        $result['description'] = trim($page['extract']);
     }
     
     // Extract image (try thumbnail first, then original)
@@ -163,11 +166,9 @@ function getWikipediaTaxonomyDataFromSearch($rank_name) {
         }
         
         if (!empty($page['extract'])) {
-            $description = $page['extract'];
-            if (strlen($description) > 500) {
-                $description = substr($description, 0, 500) . '...';
-            }
-            $result['description'] = trim($description);
+            // exintro=true already limits this to the lead section -- see the note on the
+            // first of these four call sites. No second cut.
+            $result['description'] = trim($page['extract']);
         }
         
         if (!empty($page['thumbnail']['source'])) {
@@ -251,11 +252,9 @@ function getWikipediaOrganismData($organism_name, $scientific_name = '') {
         $result['wikipedia_url'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $actual_title);
         
         if (!empty($page['extract'])) {
-            $description = $page['extract'];
-            if (strlen($description) > 500) {
-                $description = substr($description, 0, 500) . '...';
-            }
-            $result['description'] = trim($description);
+            // exintro=true already limits this to the lead section -- see the note on the
+            // first of these four call sites. No second cut.
+            $result['description'] = trim($page['extract']);
         }
         
         if (!empty($page['thumbnail']['source'])) {
@@ -360,11 +359,8 @@ function getWikipediaOrganismDataFromSearch($organism_name) {
             continue;
         }
 
-        $description = $page['extract'];
-        if (strlen($description) > 500) {
-            $description = substr($description, 0, 500) . '...';
-        }
-        $result['description'] = trim($description);
+        // exintro=true already limits this to the lead section. No second cut.
+        $result['description'] = trim($page['extract']);
 
         if (!empty($page['thumbnail']['source'])) {
             $result['image_url'] = $page['thumbnail']['source'];
@@ -378,4 +374,46 @@ function getWikipediaOrganismDataFromSearch($organism_name) {
     }
     
     return $result;
+}
+
+/**
+ * Italicise an organism's scientific name inside Wikipedia prose.
+ *
+ * The extract is fetched with explaintext=true, which returns PLAIN TEXT -- so Wikipedia's
+ * own italics are stripped, and a binomial that must be italicised by convention arrives as
+ * ordinary words. Asking for HTML instead would bring the whole article's markup along with
+ * it, and with it the job of sanitising someone else's HTML before echoing it.
+ *
+ * So restore just the one thing we can name with certainty: this organism's own binomial,
+ * which the caller already knows. Nothing else is touched.
+ *
+ * Operates only on text OUTSIDE tags -- stored descriptions carry a little markup, and a
+ * naive str_replace would happily rewrite an attribute value.
+ *
+ * @param string $html   description text, may contain simple markup
+ * @param string $genus
+ * @param string $species
+ * @return string
+ */
+function moop_italicise_binomial(string $html, string $genus, string $species): string {
+    $genus   = trim($genus);
+    $species = trim($species);
+    if ($genus === '' || $species === '') {
+        return $html;
+    }
+
+    $binomial = preg_quote($genus . ' ' . $species, '/');
+    // Also the abbreviated form Wikipedia uses after first mention: "N. vectensis".
+    $abbrev   = preg_quote(mb_substr($genus, 0, 1) . '. ' . $species, '/');
+    $pattern  = '/\b(' . $binomial . '|' . $abbrev . ')\b/u';
+
+    // Split on tags, keeping them, and rewrite only the text between.
+    $parts = preg_split('/(<[^>]*>)/', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+    foreach ($parts as $i => $part) {
+        if ($part === '' || $part[0] === '<') {
+            continue;
+        }
+        $parts[$i] = preg_replace($pattern, '<em>$1</em>', $part);
+    }
+    return implode('', $parts);
 }

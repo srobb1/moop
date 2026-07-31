@@ -747,10 +747,14 @@ a:hover .link-icon {
   color: #b45309;
 }
 
+  /* NOT uppercase. These bars carry NAMES whose case is meaningful: a scientific binomial
+     is Genus + species, and "NEMATOSTELLA VECTENSIS" loses the distinction a biologist
+     reads it by. Assembly names are worse -- jaNemVect1.1 became JANEMVECT1.1, destroying
+     the Darwin Tree of Life casing that IS the identifier. The letter-spacing and weight
+     carry the "label" feel on their own. */
 .assembly-header-custom h1 {
   font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   font-size: 0.8rem;
   margin: 0;
   padding: 0.6rem 1.25rem;
@@ -802,11 +806,15 @@ a:hover .link-icon {
 
 /* h2 as well as h1: a page has ONE h1, and the About box is a second box using this same
    bar treatment. Styling only h1 would have forced a duplicate h1 to get the look. */
+  /* NOT uppercase. These bars carry NAMES whose case is meaningful: a scientific binomial
+     is Genus + species, and "NEMATOSTELLA VECTENSIS" loses the distinction a biologist
+     reads it by. Assembly names are worse -- jaNemVect1.1 became JANEMVECT1.1, destroying
+     the Darwin Tree of Life casing that IS the identifier. The letter-spacing and weight
+     carry the "label" feel on their own. */
 .organism-header-custom h1,
 .organism-header-custom h2 {
   font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   font-size: 0.8rem;
   margin: 0;
   padding: 0.6rem 1.25rem;
@@ -835,10 +843,14 @@ a:hover .link-icon {
   overflow: hidden;
 }
 
+  /* NOT uppercase. These bars carry NAMES whose case is meaningful: a scientific binomial
+     is Genus + species, and "NEMATOSTELLA VECTENSIS" loses the distinction a biologist
+     reads it by. Assembly names are worse -- jaNemVect1.1 became JANEMVECT1.1, destroying
+     the Darwin Tree of Life casing that IS the identifier. The letter-spacing and weight
+     carry the "label" feel on their own. */
 .gene-set-header-custom h1 {
   font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   font-size: 0.8rem;
   margin: 0;
   padding: 0.6rem 1.25rem;

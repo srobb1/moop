@@ -266,10 +266,18 @@
           <h2>About <?= htmlspecialchars($organism_info['common_name'] ?? $organism_name) ?></h2>
           <div class="feature-overview-body">
             <div class="organism-text">
+              <?php /* Wikipedia's extract arrives as plain text (explaintext=true), so the
+                       italics a scientific name requires by convention are stripped. Put
+                       them back for THIS organism's binomial only -- the one name we can
+                       identify with certainty. */ ?>
               <?php foreach ($organism_info['html_p'] as $paragraph): ?>
                 <p class="<?= htmlspecialchars($paragraph['class'] ?? '') ?>" 
                    style="<?= htmlspecialchars($paragraph['style'] ?? '') ?>">
-                  <?= $paragraph['text'] ?>
+                  <?= moop_italicise_binomial(
+                        $paragraph['text'],
+                        $organism_info['genus'] ?? '',
+                        $organism_info['species'] ?? ''
+                      ) ?>
                 </p>
               <?php endforeach; ?>
             </div>
