@@ -259,11 +259,12 @@
   <?php if (!empty($organism_info['html_p']) && is_array($organism_info['html_p'])): ?>
     <div class="row mb-4">
       <div class="col-12">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <?php /* h5-weight, teal, matching the section headings on the info box above.
-                     An h3 here outweighed the organism's own name in the card beside it. */ ?>
-            <h2 class="card-title h5 mb-3" style="color:#0f766e; font-weight:600;">About <?= htmlspecialchars($organism_info['common_name'] ?? $organism_name) ?></h2>
+        <?php /* Same shell as the info box above it -- .feature-header with the teal title
+                 bar -- so the two boxes on this page are visibly the same kind of thing
+                 rather than one bar-topped card and one plain one. */ ?>
+        <div class="feature-header organism-header-custom shadow">
+          <h2>About <?= htmlspecialchars($organism_info['common_name'] ?? $organism_name) ?></h2>
+          <div class="feature-overview-body">
             <div class="organism-text">
               <?php foreach ($organism_info['html_p'] as $paragraph): ?>
                 <p class="<?= htmlspecialchars($paragraph['class'] ?? '') ?>" 

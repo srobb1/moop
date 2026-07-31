@@ -134,3 +134,21 @@ help triggers that open nothing · glossary terms that are not wired · popovers
 behind a modal · pages with no page-level `(i)` · icon-only controls with no title/aria ·
 console errors and non-200 requests. Driving it in headless Chrome is what caught the badge
 bug today; reading the markup would not have.
+
+### About-box text: three data-level findings (2026-07-31, not fixed)
+
+Style was fixed (teal bar, 70ch measure, ragged right — `911b8e6` and follow-up). These are
+in the DATA and were left alone:
+
+1. **We truncate the Wikipedia text ourselves, and need not.** `lib/wikipedia_functions.php`
+   already passes `exintro=true`, which asks Wikipedia for the intro section only — exactly
+   "the whole first section". It then cuts that to 500 characters and appends "...", so
+   Nematostella ends mid-word at "...where its slender colum...". Removing the cut yields
+   the full lead. The same four lines are duplicated at :77, :168, :256 and :365.
+2. **The cut is byte-based, not character-based.** `strlen`/`substr` on UTF-8 can sever a
+   multi-byte character and emit a broken byte; `mb_strlen`/`mb_substr` are the correct
+   calls if a limit is kept at all.
+3. **Source attribution is baked into the stored text.** The description string ends
+   `<br><br><small class="text-muted">…`, so the markup and the attribution travel with the
+   data rather than being rendered from `text_src`. That is why hard breaks appear in prose
+   the browser should be free to reflow.

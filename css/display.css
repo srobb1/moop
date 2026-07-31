@@ -800,7 +800,10 @@ a:hover .link-icon {
   overflow: hidden;
 }
 
-.organism-header-custom h1 {
+/* h2 as well as h1: a page has ONE h1, and the About box is a second box using this same
+   bar treatment. Styling only h1 would have forced a duplicate h1 to get the look. */
+.organism-header-custom h1,
+.organism-header-custom h2 {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
