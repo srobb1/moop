@@ -172,7 +172,7 @@ function resultFeatureUrl(ctx, uniquename) {
  */
 function moopRowHighlightText(r) {
     return [r.feature_name, r.feature_description, r.annotation_description]
-        .filter(Boolean).join('   ');
+        .filter(Boolean).join(' \0 ');
 }
 
 function highlightSearchTerms(text, keywords, rowText) {
