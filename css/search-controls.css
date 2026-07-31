@@ -115,6 +115,14 @@
     border-radius: 50%;
 }
 
+/* .btn .badge -- from Bootstrap -- sets position:relative; top:-1px, and at specificity
+   (0,2,0) it beat a bare .badge-filter (0,1,0). The badge then rejoined the button's flex
+   row instead of floating over its corner, so it PUSHED THE ICON OFF CENTRE (measured:
+   icon 1px past the left edge with 23px of dead space on the right) and overflowed the
+   button's right edge by 9px. Every filter button looked misaligned the moment a filter
+   was applied. Scoped through .btn to reach (0,3,0) so it wins regardless of the order
+   Bootstrap and this file happen to load in. */
+.btn .badge.badge-filter,
 .badge-filter {
     position: absolute;
     top: -8px;
