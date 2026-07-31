@@ -96,3 +96,41 @@ search, and the index is where they land from nowhere.
 `notes/USE_CASES_AND_HELP_ROUTER_PLAN.md`, `notes/SHARED_SCOPE_SELECTOR_PLAN.md`,
 `notes/SEARCH_FEATURE_LEVEL_INCONSISTENCY.md`, `notes/ADMIN_UI_FOLLOWUPS.md`
 (admin side, separate).
+
+---
+
+## Findings from the organism-page pass (2026-07-31, driven in headless Chrome)
+
+`tools/organism.php?organism=Anoura_caudifer` — 200, 0.37 s, no console errors, no failed
+requests. All six visible help popups open and read accurately: How to search · search
+results · taxonomy lineage counts · member of groups · `assembly` (glossary) · Assemblies.
+
+**Fixed in this pass**
+- Filter badge shoved the button icon off centre on every page — `.btn .badge` (0,2,0) beat
+  `.badge-filter` (0,1,0), so the badge rejoined the flex row instead of floating over the
+  corner. `25c6c8c`.
+- No note under the search box on a single-organism page, so the scope filter was an
+  unlabelled icon and nothing said assemblies or gene sets existed. `72aa12d`.
+- Clear-source-filter X removed, matching the scope filter. `9b2d66f`.
+
+**⏭️ OPEN — candidates for the one-pass audit script**
+- **Glossary terms inside modals appear un-glossed.** `js/modules/glossary.js` inits on
+  DOMContentLoaded over the whole document, so terms in markup present at load *should* be
+  wired — but Bootstrap popovers raised from inside a `.modal` commonly render behind it, or
+  under its backdrop, unless given `container` + a z-index above the modal. NOT yet
+  diagnosed; check whether the popover is missing, or present and invisible.
+- **No page-level `(i)`** on the organism page. Every popup explains a *field*; none says
+  what the page is for. Same gap on `assembly`, `gene_set`, `groups`, `multi_organism`,
+  `parent`, `index`, `retrieve_selected_sequences`, `jbrowse2`.
+- **No sense of scale.** Taxonomy, groups and assembly chips, but never "45,518 genes" — a
+  visitor cannot tell whether this organism holds anything for them without searching blind.
+- **Scope badge number may not be intelligible.** Unticking 98 of 147 boxes produced a badge
+  reading `16`; confirm what that counts and whether a user could work it out.
+- Site banner is a marine-invertebrate plate on a bat page (site-wide, may be deliberate).
+
+### The audit script the user asked for (2026-07-31)
+Rather than fixing these page by page, walk every user-facing page once and report:
+help triggers that open nothing · glossary terms that are not wired · popovers that render
+behind a modal · pages with no page-level `(i)` · icon-only controls with no title/aria ·
+console errors and non-200 requests. Driving it in headless Chrome is what caught the badge
+bug today; reading the markup would not have.
