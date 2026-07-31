@@ -230,17 +230,41 @@ echo "Generating annotation_sources_cache.json"
 perl "$REPO/data_loaders/make_annotation_sources_cache.pl" \
   "$DB" "$ORG_DATA/annotation_sources_cache.json" || exit 1
 
+# Keep SQLite's scratch files next to the database, NOT in the node's /tmp.
+#
+# Both steps below spill: the FTS merge writes intermediate segments, and VACUUM writes
+# a COMPLETE second copy of the database. Unset, SQLite uses /tmp, which on a compute
+# node may be small, node-local, or shared with every other job on the box. When this
+# happened on the web host -- a 4 GB /tmp, four concurrent rebuilds -- it reported
+# "database or disk is full" while the data volume had 649 GB free, which sends you
+# looking at entirely the wrong filesystem. $ORG_DATA is guaranteed to have room,
+# because the database being written already lives there.
+export SQLITE_TMPDIR="${SQLITE_TMPDIR:-$ORG_DATA}"
+
 echo "Building FTS5 search index"
 sqlite3 "$DB" < "$REPO/data_loaders/build_fts_index.sql" || exit 1
 
 # The FTS index is contentless, and a rebuild frees the old pages inside the file
 # without returning them to the filesystem. VACUUM is what actually shrinks it --
 # worth it because database size is what competes for page cache, and cold reads are
-# this deployment's dominant cost. Needs temporary free space roughly equal to the
-# database size. Set MOOP_SKIP_VACUUM=1 to skip.
+# this deployment's dominant cost. Measured 2026-07-31: compacting made a representative
+# COUNT(*) 17.6x faster cold (7,051 -> 401 ms) on identical SQL, purely by making the
+# table's pages contiguous rather than scattered through the file.
+#
+# Needs temporary free space roughly equal to the database size. Set MOOP_SKIP_VACUUM=1
+# to skip.
+#
+# A FAILURE HERE IS NOT FATAL. The index above is already built and committed; VACUUM
+# only reclaims freed pages, so failing it leaves a CORRECT database that is merely
+# larger than it needs to be. Exiting would discard a good build over a space
+# optimisation -- and the organism would then be missing from the site entirely, which
+# is far worse than a fragmented file.
 if [ "${MOOP_SKIP_VACUUM:-0}" != "1" ]; then
   echo "Compacting database (VACUUM)"
-  sqlite3 "$DB" "VACUUM;" || exit 1
+  if ! sqlite3 "$DB" "VACUUM;"; then
+    echo "WARNING: VACUUM failed for $THIS_ORG -- database is correct but not compacted."
+    echo "WARNING: re-run 'sqlite3 $DB \"VACUUM;\"' with space available in $SQLITE_TMPDIR."
+  fi
 fi
 
 ## ── Copy to moop ──────────────────────────────────────────────────────────────
